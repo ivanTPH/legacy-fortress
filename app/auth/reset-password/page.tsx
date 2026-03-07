@@ -2,54 +2,71 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import BrandMark from "@/app/(app)/components/BrandMark";
+import { parseRecoveryParams, getRecoveryValidationMessage } from "@/lib/auth/recovery";
 import { waitForActiveUser } from "@/lib/auth/session";
+import { trackClientEvent } from "@/lib/observability/clientEvents";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function ResetPasswordPage() {
+  const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [status, setStatus] = useState("Validating reset link...");
   const [ready, setReady] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [completed, setCompleted] = useState(false);
 
   useEffect(() => {
     let mounted = true;
 
     async function bootstrap() {
       try {
-        const url = new URL(window.location.href);
-        const code = url.searchParams.get("code");
-        if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error) throw error;
-        }
+        const { tokenHash, type, accessToken, refreshToken, hasPkceCode } = parseRecoveryParams(window.location.href);
 
-        const hash = new URLSearchParams(window.location.hash.slice(1));
-        const accessToken = hash.get("access_token");
-        const refreshToken = hash.get("refresh_token");
-        if (accessToken && refreshToken) {
+        if (tokenHash && type === "recovery") {
+          const { error } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: "recovery",
+          });
+          if (error) throw error;
+          trackClientEvent("auth.recovery.verify_otp.success");
+        } else if (accessToken && refreshToken) {
           const { error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
           });
           if (error) throw error;
+          trackClientEvent("auth.recovery.set_session.success");
+        } else if (hasPkceCode) {
+          // Recovery should not rely on PKCE verifier storage in this page.
+          // If we only have `?code=...`, ask user to request a token-hash based reset link.
+          throw new Error("pkce code verifier not found");
+        }
+
+        // Remove sensitive URL material from address bar.
+        if (window.location.hash || window.location.search.includes("token_hash")) {
+          window.history.replaceState({}, document.title, "/auth/reset-password");
         }
 
         const user = await waitForActiveUser(supabase, { attempts: 6, delayMs: 150 });
         if (!user) {
-          setStatus("Reset session is invalid or expired. Request a new reset link.");
+          setStatus("This recovery session is invalid or expired. Please request a new password reset email.");
           setReady(false);
+          trackClientEvent("auth.recovery.invalid_session");
           return;
         }
 
         if (!mounted) return;
         setReady(true);
-        setStatus("");
+        setStatus("Recovery link verified. Enter your new password.");
+        trackClientEvent("auth.recovery.ready");
       } catch (error) {
         if (!mounted) return;
         setReady(false);
-        setStatus(`Could not validate reset link: ${error instanceof Error ? error.message : "Unknown error"}`);
+        setStatus(getRecoveryValidationMessage(error));
+        trackClientEvent("auth.recovery.validation_error");
       }
     }
 
@@ -57,7 +74,7 @@ export default function ResetPasswordPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [router]);
 
   async function updatePassword() {
     if (password.length < 10) {
@@ -75,13 +92,21 @@ export default function ResetPasswordPage() {
     setSaving(false);
 
     if (error) {
-      setStatus(`Could not reset password: ${error.message}`);
+      setStatus("Password reset failed. Please request a new reset email and try again.");
+      trackClientEvent("auth.recovery.update_password.error");
       return;
     }
 
+    await supabase.auth.signOut();
     setPassword("");
     setConfirmPassword("");
-    setStatus("Password updated. You can now sign in.");
+    setCompleted(true);
+    setReady(false);
+    setStatus("Password updated successfully. Redirecting to sign in...");
+    trackClientEvent("auth.recovery.update_password.success");
+    window.setTimeout(() => {
+      router.replace("/signin?reset=success");
+    }, 1200);
   }
 
   return (
@@ -129,12 +154,21 @@ export default function ResetPasswordPage() {
             className="lf-primary-btn"
             type="button"
             onClick={() => void updatePassword()}
-            disabled={!ready || saving || !password || !confirmPassword}
+            disabled={!ready || saving || completed || !password || !confirmPassword}
           >
             {saving ? "Updating..." : "Update password"}
           </button>
 
           {status ? <div className="lf-muted-note">{status}</div> : null}
+
+          <button
+            className="lf-link-btn"
+            type="button"
+            onClick={() => router.push("/signin")}
+            style={{ justifyContent: "center" }}
+          >
+            Go to sign in
+          </button>
 
           <p className="lf-muted-note">
             Back to <Link className="lf-inline-link" href="/signin">Sign in</Link>

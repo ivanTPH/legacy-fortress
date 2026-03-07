@@ -20,7 +20,11 @@ export default function ForgotPasswordPage() {
     const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/reset-password` : undefined;
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
     setSending(false);
-    setStatus(error ? `Reset request failed: ${error.message}` : "Password reset link sent.");
+    setStatus(
+      error
+        ? "Reset request failed. Please confirm your email and try again."
+        : "Password reset link sent. Open the latest email and follow the secure reset link.",
+    );
   }
 
   return (

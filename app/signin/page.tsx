@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import BrandMark from "../(app)/components/BrandMark";
 import OAuthButtons from "../../components/auth/OAuthButtons";
 import { waitForActiveUser } from "../../lib/auth/session";
@@ -22,6 +22,7 @@ function toSignInErrorMessage(raw: string) {
 
 export default function SignInPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState("");
@@ -41,6 +42,12 @@ export default function SignInPage() {
       mounted = false;
     };
   }, [router]);
+
+  useEffect(() => {
+    if (searchParams.get("reset") === "success") {
+      setStatus("Password updated successfully. Please sign in with your new password.");
+    }
+  }, [searchParams]);
 
   async function signIn() {
     setSigningIn(true);

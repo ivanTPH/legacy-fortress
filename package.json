@@ -12,7 +12,7 @@
     "crawl:links": "node scripts/link-crawler.mjs",
     "matrix:routes": "node scripts/generate-route-matrix.mjs",
     "test:navigation": "node --test tests/menu-key-actions.test.mjs tests/route-parity.test.mjs",
-    "test:core": "node --test tests/menu-key-actions.test.mjs tests/menu-state.test.mjs tests/route-parity.test.mjs tests/auth-and-schema-guards.test.mjs",
+    "test:core": "node --test tests/menu-key-actions.test.mjs tests/menu-state.test.mjs tests/route-parity.test.mjs tests/auth-and-schema-guards.test.mjs tests/recovery-flow.test.mjs",
     "test:e2e": "playwright test"
   },
   "dependencies": {
