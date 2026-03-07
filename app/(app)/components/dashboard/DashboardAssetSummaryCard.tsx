@@ -1,0 +1,135 @@
+import Link from "next/link";
+import type { CSSProperties, ReactNode } from "react";
+
+type AssetItemLink = {
+  id: string;
+  label: string;
+  href: string;
+  meta?: string;
+};
+
+type DashboardAssetSummaryCardProps = {
+  icon: ReactNode;
+  title: string;
+  href: string;
+  addedAt?: string | null;
+  value: string;
+  detail: string;
+  obscured?: boolean;
+  items?: AssetItemLink[];
+  emptyActionLabel?: string;
+};
+
+export default function DashboardAssetSummaryCard({
+  icon,
+  title,
+  href,
+  addedAt,
+  value,
+  detail,
+  obscured = false,
+  items = [],
+  emptyActionLabel = "Add first record",
+}: DashboardAssetSummaryCardProps) {
+  return (
+    <div style={cardStyle}>
+      <Link href={href} style={{ textDecoration: "none", color: "inherit", display: "grid", gap: 8 }}>
+        <div style={headerStyle}>
+          <span style={iconStyle}>{icon}</span>
+          <span style={titleStyle}>{title}</span>
+        </div>
+        <div style={dateStyle}>Added: {formatDateTime(addedAt)}</div>
+        <div style={valueStyle}>{obscured ? "Restricted" : value}</div>
+        <div style={detailStyle}>{obscured ? "Detail hidden for this role" : detail}</div>
+      </Link>
+
+      <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: 8, display: "grid", gap: 6 }}>
+        {items.length ? (
+          items.slice(0, 4).map((item) => (
+            <Link key={item.id} href={item.href} style={itemLinkStyle}>
+              <span>{item.label}</span>
+              {item.meta ? <span style={{ color: "#94a3b8", fontSize: 12 }}>{item.meta}</span> : null}
+            </Link>
+          ))
+        ) : (
+          <Link href={href} style={itemLinkStyle}>
+            <span>{emptyActionLabel}</span>
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function formatDateTime(input?: string | null) {
+  if (!input) return "Not yet added";
+  try {
+    return new Date(input).toLocaleString();
+  } catch {
+    return input;
+  }
+}
+
+const cardStyle: CSSProperties = {
+  display: "grid",
+  gap: 8,
+  border: "1px solid #e5e7eb",
+  borderRadius: 16,
+  padding: 14,
+  background: "#fff",
+  textDecoration: "none",
+  color: "#111827",
+  boxShadow: "0 1px 2px rgba(16,24,40,0.06)",
+};
+
+const headerStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  minHeight: 24,
+};
+
+const iconStyle: CSSProperties = {
+  width: 24,
+  height: 24,
+  borderRadius: 8,
+  background: "#111827",
+  color: "#fff",
+  display: "inline-grid",
+  placeItems: "center",
+  flexShrink: 0,
+};
+
+const titleStyle: CSSProperties = {
+  fontSize: 15,
+  fontWeight: 700,
+};
+
+const dateStyle: CSSProperties = {
+  fontSize: 12,
+  color: "#6b7280",
+};
+
+const valueStyle: CSSProperties = {
+  fontSize: 20,
+  fontWeight: 800,
+  lineHeight: 1.2,
+};
+
+const detailStyle: CSSProperties = {
+  fontSize: 13,
+  color: "#6b7280",
+};
+
+const itemLinkStyle: CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 8,
+  border: "1px solid #eef2f7",
+  borderRadius: 10,
+  padding: "6px 8px",
+  textDecoration: "none",
+  color: "#0f172a",
+  fontSize: 13,
+};
