@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import BrandMark from "../(app)/components/BrandMark";
@@ -22,7 +22,6 @@ function toSignInErrorMessage(raw: string) {
 
 export default function SignInPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState("");
@@ -42,12 +41,6 @@ export default function SignInPage() {
       mounted = false;
     };
   }, [router]);
-
-  useEffect(() => {
-    if (searchParams.get("reset") === "success") {
-      setStatus("Password updated successfully. Please sign in with your new password.");
-    }
-  }, [searchParams]);
 
   async function signIn() {
     setSigningIn(true);
@@ -92,6 +85,10 @@ export default function SignInPage() {
 
       <section className="lf-auth-form-side">
         <div className="lf-auth-card">
+          <Suspense fallback={null}>
+            <ResetStatusSync onResetSuccess={() => setStatus("Password updated successfully. Please sign in with your new password.")} />
+          </Suspense>
+
           <h1>Sign in</h1>
           <p className="lf-auth-subtext">Use email/password or continue with a trusted provider.</p>
 
@@ -130,4 +127,14 @@ export default function SignInPage() {
       </section>
     </main>
   );
+}
+
+function ResetStatusSync({ onResetSuccess }: { onResetSuccess: () => void }) {
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("reset") === "success") onResetSuccess();
+  }, [onResetSuccess, searchParams]);
+
+  return null;
 }
