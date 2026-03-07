@@ -1,6 +1,6 @@
-type PublicEnv = {
-  NEXT_PUBLIC_SUPABASE_URL: string;
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: string;
+export const publicEnv: PublicEnv = {
+  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
 };
 
 function requireEnv(name: keyof PublicEnv): string {
@@ -10,11 +10,6 @@ function requireEnv(name: keyof PublicEnv): string {
   }
   return value;
 }
-
-export const publicEnv: PublicEnv = {
-  NEXT_PUBLIC_SUPABASE_URL: requireEnv("NEXT_PUBLIC_SUPABASE_URL"),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
-};
 
 export const recommendedServerEnv = [
   "STRIPE_SECRET",
