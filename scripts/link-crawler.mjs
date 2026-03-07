@@ -57,7 +57,12 @@ function normalize(route) {
 
 function toRoute(file) {
   const rel = file.replace(appDir, "").replace(/\/page\.tsx$/, "");
-  return rel === "" ? "/" : rel;
+  const clean = rel
+    .split("/")
+    .filter(Boolean)
+    .filter((part) => !(part.startsWith("(") && part.endsWith(")")))
+    .join("/");
+  return clean === "" ? "/" : `/${clean}`;
 }
 
 function walk(dir) {
@@ -85,4 +90,3 @@ function matchesDynamic(pattern, target) {
   }
   return true;
 }
-

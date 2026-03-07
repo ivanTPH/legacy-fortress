@@ -18,7 +18,7 @@ export default function SignUpForm() {
 
     try {
       const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback?next=${encodeURIComponent("/onboarding")}` : undefined;
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -31,8 +31,12 @@ export default function SignUpForm() {
         return;
       }
 
-      setStatus("Account created. Check your inbox to verify your email and continue onboarding.");
-      router.push("/onboarding");
+      if (data.session) {
+        router.replace("/onboarding");
+        return;
+      }
+
+      setStatus("Account created. Verify your email from the link sent, then sign in to continue onboarding.");
     } finally {
       setSubmitting(false);
     }

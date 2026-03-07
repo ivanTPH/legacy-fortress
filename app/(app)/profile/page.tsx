@@ -13,7 +13,9 @@ import {
   primaryBtn,
   textAreaStyle,
 } from "../components/settings/SettingsPrimitives";
+import { waitForActiveUser } from "../../../lib/auth/session";
 import { supabase } from "../../../lib/supabaseClient";
+import { isMissingColumnError } from "../../../lib/supabaseErrors";
 import { maskNationalInsuranceNumber } from "../../../lib/security/identity";
 import { normalizePhone, normalizePostCode, sanitizeAddress, sanitizeName } from "../../../lib/validation/profile";
 import { sanitizeFileName, validateUploadFile } from "../../../lib/validation/upload";
@@ -64,6 +66,10 @@ const EMPTY: ProfileForm = {
   ni_input: "",
 };
 
+function isMissingAvatarPathError(error: { message?: string } | null) {
+  return isMissingColumnError(error, "avatar_path");
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -73,6 +79,7 @@ export default function ProfilePage() {
   const [maskedNi, setMaskedNi] = useState("Not set");
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarPathSupported, setAvatarPathSupported] = useState(true);
 
   useEffect(() => {
     let mounted = true;
@@ -82,10 +89,7 @@ export default function ProfilePage() {
       setStatus("");
 
       try {
-        const { data: userData, error: authError } = await supabase.auth.getUser();
-        if (authError) throw authError;
-
-        const user = userData.user;
+        const user = await waitForActiveUser(supabase, { attempts: 6, delayMs: 130 });
         if (!user) {
           router.replace("/signin");
           return;
@@ -93,12 +97,27 @@ export default function ProfilePage() {
 
         const baseEmail = user.email ?? "";
 
-        const [profileRes, contactRes, addressRes, sensitiveRes] = await Promise.all([
-          supabase
-            .from("user_profiles")
-            .select("first_name,last_name,display_name,date_of_birth,about,notification_email,preferred_currency,language,avatar_path")
-            .eq("user_id", user.id)
-            .maybeSingle(),
+        const profileWithAvatar = await supabase
+          .from("user_profiles")
+          .select("first_name,last_name,display_name,date_of_birth,about,notification_email,preferred_currency,language,avatar_path")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        const profileRes = isMissingAvatarPathError(profileWithAvatar.error)
+          ? await supabase
+              .from("user_profiles")
+              .select("first_name,last_name,display_name,date_of_birth,about,notification_email,preferred_currency,language")
+              .eq("user_id", user.id)
+              .maybeSingle()
+          : profileWithAvatar;
+
+        if (isMissingAvatarPathError(profileWithAvatar.error)) {
+          setAvatarPathSupported(false);
+        } else {
+          setAvatarPathSupported(true);
+        }
+
+        const [contactRes, addressRes, sensitiveRes] = await Promise.all([
           supabase
             .from("contact_details")
             .select("secondary_email,telephone,mobile_number")
@@ -198,9 +217,7 @@ export default function ProfilePage() {
     setStatus("");
 
     try {
-      const { data: userData, error: authError } = await supabase.auth.getUser();
-      if (authError) throw authError;
-      const user = userData.user;
+      const user = await waitForActiveUser(supabase, { attempts: 6, delayMs: 130 });
       if (!user) {
         router.replace("/signin");
         return;
@@ -208,7 +225,7 @@ export default function ProfilePage() {
 
       const now = new Date().toISOString();
 
-      const profilePayload = {
+      const profilePayload: Record<string, string | null> = {
         user_id: user.id,
         first_name: sanitizeName(form.first_name) || null,
         last_name: sanitizeName(form.last_name) || null,
@@ -218,9 +235,11 @@ export default function ProfilePage() {
         notification_email: form.notification_email.trim() || form.primary_email,
         preferred_currency: form.preferred_currency || "GBP",
         language: form.language || "English",
-        avatar_path: form.avatar_path || null,
         updated_at: now,
       };
+      if (avatarPathSupported) {
+        profilePayload.avatar_path = form.avatar_path || null;
+      }
 
       const contactPayload = {
         user_id: user.id,
@@ -241,11 +260,18 @@ export default function ProfilePage() {
         updated_at: now,
       };
 
-      const [profileRes, contactRes, addressRes] = await Promise.all([
-        supabase.from("user_profiles").upsert(profilePayload, { onConflict: "user_id" }),
+      let profileRes = await supabase.from("user_profiles").upsert(profilePayload, { onConflict: "user_id" });
+      const [contactRes, addressRes] = await Promise.all([
         supabase.from("contact_details").upsert(contactPayload, { onConflict: "user_id" }),
         supabase.from("addresses").upsert(addressPayload, { onConflict: "user_id" }),
       ]);
+
+      if (isMissingAvatarPathError(profileRes.error)) {
+        setAvatarPathSupported(false);
+        const profilePayloadWithoutAvatar = { ...profilePayload };
+        delete profilePayloadWithoutAvatar.avatar_path;
+        profileRes = await supabase.from("user_profiles").upsert(profilePayloadWithoutAvatar, { onConflict: "user_id" });
+      }
 
       if (profileRes.error || contactRes.error || addressRes.error) {
         throw new Error(profileRes.error?.message || contactRes.error?.message || addressRes.error?.message);
@@ -286,9 +312,7 @@ export default function ProfilePage() {
     setStatus("");
 
     try {
-      const { data: userData, error: authError } = await supabase.auth.getUser();
-      if (authError) throw authError;
-      const user = userData.user;
+      const user = await waitForActiveUser(supabase, { attempts: 6, delayMs: 130 });
       if (!user) {
         router.replace("/signin");
         return;
@@ -335,7 +359,7 @@ export default function ProfilePage() {
       return;
     }
 
-    const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/` : undefined;
+    const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/reset-password` : undefined;
     const { error } = await supabase.auth.resetPasswordForEmail(form.primary_email, { redirectTo });
     setStatus(error ? `❌ Password reset failed: ${error.message}` : "✅ Password reset email sent");
   };

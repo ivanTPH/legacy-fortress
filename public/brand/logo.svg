@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="Legacy Fortress logo">
+  <rect x="64" y="64" width="896" height="896" rx="220" fill="#0a0a0a"/>
+  <g fill="#ffffff" transform="translate(0.5 0.5)">
+    <circle cx="384" cy="384" r="56"/>
+    <circle cx="512" cy="384" r="56"/>
+    <circle cx="640" cy="384" r="56"/>
+    <circle cx="384" cy="512" r="56"/>
+    <circle cx="512" cy="512" r="56"/>
+    <circle cx="640" cy="512" r="56"/>
+    <circle cx="384" cy="640" r="56"/>
+    <circle cx="512" cy="640" r="56"/>
+    <circle cx="640" cy="640" r="56"/>
+  </g>
+</svg>

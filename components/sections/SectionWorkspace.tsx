@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
+import { waitForActiveUser } from "../../lib/auth/session";
+import { trackClientEvent } from "../../lib/observability/clientEvents";
 import { supabase } from "../../lib/supabaseClient";
+import { isMissingRelationError, toSafeSupabaseMessage } from "../../lib/supabaseErrors";
 import { formatCurrency } from "../../lib/currency";
 import { sanitizeFileName, validateUploadFile } from "../../lib/validation/upload";
 
@@ -57,6 +60,7 @@ export default function SectionWorkspace({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
+  const [tableUnavailable, setTableUnavailable] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -78,8 +82,15 @@ export default function SectionWorkspace({
 
       if (error) {
         setRows([]);
-        setStatus(`⚠️ Could not load records: ${error.message}`);
+        if (isMissingRelationError(error, "section_entries")) {
+          setTableUnavailable(true);
+          trackClientEvent("schema.drift.detected", { relation: "section_entries", source: "workspace.load" });
+          setStatus("This section is temporarily unavailable while data tables are being prepared. Please try again shortly.");
+        } else {
+          setStatus(`⚠️ Could not load records: ${toSafeSupabaseMessage(error, "Unknown error")}`);
+        }
       } else {
+        setTableUnavailable(false);
         const mapped = ((data ?? []) as SectionEntryRow[]).map((row) => ({
           id: row.id,
           title: row.title ?? "",
@@ -105,6 +116,7 @@ export default function SectionWorkspace({
   );
 
   async function reload() {
+    if (tableUnavailable) return;
     const user = await requireUser(router);
     if (!user) return;
     const { data, error } = await supabase
@@ -114,7 +126,14 @@ export default function SectionWorkspace({
       .eq("section_key", sectionKey)
       .eq("category_key", categoryKey)
       .order("created_at", { ascending: false });
-    if (error) return;
+    if (error) {
+      if (isMissingRelationError(error, "section_entries")) {
+        setTableUnavailable(true);
+        trackClientEvent("schema.drift.detected", { relation: "section_entries", source: "workspace.reload" });
+        setStatus("This section is temporarily unavailable while data tables are being prepared.");
+      }
+      return;
+    }
     setRows(
       ((data ?? []) as SectionEntryRow[]).map((row) => ({
         id: row.id,
@@ -129,6 +148,10 @@ export default function SectionWorkspace({
   }
 
   async function save() {
+    if (tableUnavailable) {
+      setStatus("Cannot save yet. Section data table is unavailable.");
+      return;
+    }
     setSaving(true);
     setStatus("");
     const user = await requireUser(router);
@@ -153,7 +176,13 @@ export default function SectionWorkspace({
       : await supabase.from("section_entries").insert(payload);
 
     if (result.error) {
-      setStatus(`❌ Save failed: ${result.error.message}`);
+      if (isMissingRelationError(result.error, "section_entries")) {
+        setTableUnavailable(true);
+        trackClientEvent("schema.drift.detected", { relation: "section_entries", source: "workspace.save" });
+        setStatus("Cannot save right now because this section table is unavailable.");
+      } else {
+        setStatus(`❌ Save failed: ${toSafeSupabaseMessage(result.error, "Unknown error")}`);
+      }
       setSaving(false);
       return;
     }
@@ -167,6 +196,7 @@ export default function SectionWorkspace({
   }
 
   async function remove(id: string) {
+    if (tableUnavailable) return;
     const ok = window.confirm("Delete this record?");
     if (!ok) return;
 
@@ -180,7 +210,13 @@ export default function SectionWorkspace({
 
     const { error } = await supabase.from("section_entries").delete().eq("id", id).eq("user_id", user.id);
     if (error) {
-      setStatus(`❌ Delete failed: ${error.message}`);
+      if (isMissingRelationError(error, "section_entries")) {
+        setTableUnavailable(true);
+        trackClientEvent("schema.drift.detected", { relation: "section_entries", source: "workspace.delete" });
+        setStatus("Cannot delete right now because this section table is unavailable.");
+      } else {
+        setStatus(`❌ Delete failed: ${toSafeSupabaseMessage(error, "Unknown error")}`);
+      }
       return;
     }
 
@@ -205,6 +241,10 @@ export default function SectionWorkspace({
   }
 
   async function uploadAttachment(rowId: string, file: File) {
+    if (tableUnavailable) {
+      setStatus("Upload unavailable until section data tables are ready.");
+      return;
+    }
     const validation = validateUploadFile(file, {
       allowedMimeTypes: ["application/pdf", "image/jpeg", "image/png"],
       maxBytes: 10 * 1024 * 1024,
@@ -235,7 +275,13 @@ export default function SectionWorkspace({
 
     setUploadingFor(null);
     if (error) {
-      setStatus(`❌ Upload linked failed: ${error.message}`);
+      if (isMissingRelationError(error, "section_entries")) {
+        setTableUnavailable(true);
+        trackClientEvent("schema.drift.detected", { relation: "section_entries", source: "workspace.upload" });
+        setStatus("File uploaded but record linkage is unavailable because the section table is missing.");
+      } else {
+        setStatus(`❌ Upload linked failed: ${toSafeSupabaseMessage(error, "Unknown error")}`);
+      }
       return;
     }
 
@@ -267,14 +313,14 @@ export default function SectionWorkspace({
       </div>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-        <button style={primaryBtn} onClick={() => setShowForm(true)}>{addLabel}</button>
+        <button style={primaryBtn} onClick={() => setShowForm(true)} disabled={tableUnavailable}>{addLabel}</button>
         {showForm ? <button style={ghostBtn} onClick={() => { setShowForm(false); setEditingId(null); setForm(EMPTY_FORM); }}>Cancel</button> : null}
         <span style={{ color: "#64748b", fontSize: 13 }}>Total tracked value: {formatCurrency(totalValue, "GBP")}</span>
       </div>
 
       {status ? <div style={{ color: "#64748b", fontSize: 13 }}>{status}</div> : null}
 
-      {showForm ? (
+      {showForm && !tableUnavailable ? (
         <section style={cardStyle}>
           <h2 style={{ margin: 0, fontSize: 17 }}>{editingId ? "Edit record" : "Add record"}</h2>
           <div className="lf-content-grid">
@@ -290,8 +336,9 @@ export default function SectionWorkspace({
       <section style={cardStyle}>
         <h2 style={{ margin: 0, fontSize: 17 }}>Saved records</h2>
         {loading ? <div style={{ color: "#64748b" }}>Loading records...</div> : null}
-        {!loading && rows.length === 0 ? <div style={{ color: "#64748b" }}>No records yet.</div> : null}
-        {!loading ? (
+        {!loading && tableUnavailable ? <div style={{ color: "#64748b" }}>Section table unavailable. Run latest migrations and refresh.</div> : null}
+        {!loading && !tableUnavailable && rows.length === 0 ? <div style={{ color: "#64748b" }}>No records yet.</div> : null}
+        {!loading && !tableUnavailable ? (
           <div style={{ display: "grid", gap: 10 }}>
             {rows.map((row) => (
               <article key={row.id} style={rowCardStyle}>
@@ -330,12 +377,12 @@ export default function SectionWorkspace({
 }
 
 async function requireUser(router: ReturnType<typeof useRouter>) {
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data.user) {
+  const user = await waitForActiveUser(supabase, { attempts: 5, delayMs: 120 });
+  if (!user) {
     router.replace("/signin");
     return null;
   }
-  return data.user;
+  return user;
 }
 
 function formatDate(value: string) {
@@ -419,4 +466,3 @@ const dangerBtn: CSSProperties = {
   color: "#991b1b",
   background: "#fff1f2",
 };
-

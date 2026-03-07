@@ -11,6 +11,7 @@ import {
   inputStyle,
   primaryBtn,
 } from "../../components/settings/SettingsPrimitives";
+import { waitForActiveUser } from "../../../../lib/auth/session";
 import { supabase } from "../../../../lib/supabaseClient";
 import { normalizePhone } from "../../../../lib/validation/profile";
 
@@ -30,14 +31,7 @@ export default function SecurityPage() {
     async function load() {
       setLoading(true);
       setStatus("");
-      const { data: userData, error: authError } = await supabase.auth.getUser();
-      if (authError) {
-        setStatus(`⚠️ ${authError.message}`);
-        setLoading(false);
-        return;
-      }
-
-      const user = userData.user;
+      const user = await waitForActiveUser(supabase, { attempts: 6, delayMs: 130 });
       if (!user) {
         router.replace("/signin");
         return;
@@ -106,15 +100,15 @@ export default function SecurityPage() {
       return;
     }
 
-    const { data: userData, error: authError } = await supabase.auth.getUser();
-    if (authError || !userData.user) {
+    const user = await waitForActiveUser(supabase, { attempts: 6, delayMs: 130 });
+    if (!user) {
       router.replace("/signin");
       return;
     }
 
     const { error } = await supabase.from("contact_details").upsert(
       {
-        user_id: userData.user.id,
+        user_id: user.id,
         mobile_number: value,
         mobile_verified: true,
         mobile_verified_at: new Date().toISOString(),
@@ -134,14 +128,14 @@ export default function SecurityPage() {
   };
 
   const sendPasswordReset = async () => {
-    const { data: userData, error: authError } = await supabase.auth.getUser();
-    if (authError || !userData.user?.email) {
+    const user = await waitForActiveUser(supabase, { attempts: 6, delayMs: 130 });
+    if (!user?.email) {
       setStatus("❌ Could not load signed-in email.");
       return;
     }
 
-    const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/` : undefined;
-    const { error } = await supabase.auth.resetPasswordForEmail(userData.user.email, { redirectTo });
+    const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/reset-password` : undefined;
+    const { error } = await supabase.auth.resetPasswordForEmail(user.email, { redirectTo });
     setStatus(error ? `❌ Password reset failed: ${error.message}` : "✅ Password reset email sent.");
   };
 

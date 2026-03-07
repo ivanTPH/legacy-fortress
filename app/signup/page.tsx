@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import BrandMark from "../(app)/components/BrandMark";
 import SignUpForm from "../../components/auth/SignUpForm";
+import { waitForActiveUser } from "../../lib/auth/session";
+import { getOrCreateOnboardingState } from "../../lib/onboarding";
 import { supabase } from "../../lib/supabaseClient";
 
 export default function SignUpPage() {
@@ -13,9 +15,11 @@ export default function SignUpPage() {
   useEffect(() => {
     let mounted = true;
     async function guard() {
-      const { data } = await supabase.auth.getUser();
+      const user = await waitForActiveUser(supabase, { attempts: 3, delayMs: 120 });
       if (!mounted) return;
-      if (data.user) router.replace("/onboarding");
+      if (!user) return;
+      const onboarding = await getOrCreateOnboardingState(supabase, user.id);
+      router.replace(onboarding.is_completed ? "/dashboard" : "/onboarding");
     }
     void guard();
     return () => {

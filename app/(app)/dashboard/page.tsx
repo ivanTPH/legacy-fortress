@@ -17,6 +17,7 @@ import { formatCurrency } from "../../../lib/currency";
 import { computeFinancialTotals } from "../../../lib/financialTotals";
 import { buildCompletionChecklist, type CompletionInput } from "../../../lib/dashboard/completion";
 import { shouldObscureSection, type AccessActivationStatus, type CollaboratorRole } from "../../../lib/access-control/roles";
+import { waitForActiveUser } from "../../../lib/auth/session";
 import { supabase } from "../../../lib/supabaseClient";
 
 type FinancialRow = {
@@ -96,10 +97,7 @@ export default function DashboardPage() {
       setStatus("");
 
       try {
-        const { data: userData, error: authError } = await supabase.auth.getUser();
-        if (authError) throw authError;
-
-        const user = userData.user;
+        const user = await waitForActiveUser(supabase, { attempts: 6, delayMs: 130 });
         if (!user) {
           router.replace("/signin");
           return;

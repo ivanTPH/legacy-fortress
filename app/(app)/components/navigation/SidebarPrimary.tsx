@@ -1,13 +1,13 @@
 import Link from "next/link";
-import type { KeyboardEvent } from "react";
+import type { KeyboardEvent, MouseEvent } from "react";
 import type { NavNode } from "../../navigation/navigation.config";
 
 type SidebarPrimaryProps = {
   items: NavNode[];
   activeTopId: string | null;
   highlightedTopId: string | null;
-  onHoverTop: (id: string | null, anchorEl?: HTMLElement) => void;
-  onFocusTop: (id: string | null, anchorEl?: HTMLElement) => void;
+  flyoutId?: string;
+  onActivateTop: (event: MouseEvent<HTMLAnchorElement>, item: NavNode, anchorEl: HTMLElement) => void;
   onKeyDownTop: (event: KeyboardEvent<HTMLAnchorElement>, item: NavNode) => void;
 };
 
@@ -15,8 +15,8 @@ export default function SidebarPrimary({
   items,
   activeTopId,
   highlightedTopId,
-  onHoverTop,
-  onFocusTop,
+  flyoutId,
+  onActivateTop,
   onKeyDownTop,
 }: SidebarPrimaryProps) {
   return (
@@ -32,10 +32,10 @@ export default function SidebarPrimary({
             role="menuitem"
             aria-haspopup={item.children?.length ? "menu" : undefined}
             aria-expanded={isHighlighted ? "true" : undefined}
+            aria-controls={item.children?.length ? flyoutId : undefined}
             aria-current={isActive ? "page" : undefined}
             className={`lf-nav-item ${isActive ? "is-active" : ""} ${isHighlighted ? "is-open" : ""}`}
-            onMouseEnter={(event) => onHoverTop(item.id, event.currentTarget)}
-            onFocus={(event) => onFocusTop(item.id, event.currentTarget)}
+            onClick={(event) => onActivateTop(event, item, event.currentTarget)}
             onKeyDown={(event) => onKeyDownTop(event, item)}
           >
             <span className="lf-nav-icon">{item.icon}</span>

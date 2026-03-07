@@ -1,27 +1,29 @@
 import Link from "next/link";
-import type { KeyboardEvent } from "react";
+import type { KeyboardEvent, MouseEvent } from "react";
 import type { NavNode } from "../../navigation/navigation.config";
 
 type FlyoutMenuProps = {
+  menuId: string;
   level: 2 | 3;
   parentLabel: string;
   items: NavNode[];
   highlightedId: string | null;
+  childMenuId?: string;
   activeChainIds: Set<string>;
-  onHoverItem: (id: string | null, anchorEl?: HTMLElement) => void;
-  onFocusItem: (id: string | null, anchorEl?: HTMLElement) => void;
+  onActivateItem: (event: MouseEvent<HTMLAnchorElement>, item: NavNode, level: 2 | 3, anchorEl: HTMLElement) => void;
   onKeyDownItem: (event: KeyboardEvent<HTMLAnchorElement>, item: NavNode, level: 2 | 3) => void;
   topOffset?: number;
 };
 
 export default function FlyoutMenu({
+  menuId,
   level,
   parentLabel,
   items,
   highlightedId,
+  childMenuId,
   activeChainIds,
-  onHoverItem,
-  onFocusItem,
+  onActivateItem,
   onKeyDownItem,
   topOffset,
 }: FlyoutMenuProps) {
@@ -31,6 +33,7 @@ export default function FlyoutMenu({
     <div
       className={`lf-flyout lf-flyout-l${level}`}
       role="menu"
+      id={menuId}
       aria-label={`${parentLabel} submenu`}
       style={typeof topOffset === "number" ? { top: topOffset } : undefined}
     >
@@ -44,9 +47,9 @@ export default function FlyoutMenu({
             role="menuitem"
             aria-haspopup={item.children?.length ? "menu" : undefined}
             aria-expanded={isOpen ? "true" : undefined}
+            aria-controls={item.children?.length ? childMenuId : undefined}
             className={`lf-flyout-item ${isActive ? "is-active" : ""} ${isOpen ? "is-open" : ""}`}
-            onMouseEnter={(event) => onHoverItem(item.id, event.currentTarget)}
-            onFocus={(event) => onFocusItem(item.id, event.currentTarget)}
+            onClick={(event) => onActivateItem(event, item, level, event.currentTarget)}
             onKeyDown={(event) => onKeyDownItem(event, item, level)}
           >
             <span className="lf-flyout-label">{item.label}</span>

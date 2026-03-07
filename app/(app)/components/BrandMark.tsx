@@ -1,41 +1,36 @@
-import React from "react";
+import Image from "next/image";
 
 type BrandMarkProps = {
   size?: number;
+  alt?: string;
   className?: string;
+  priority?: boolean;
 };
 
-export default function BrandMark({ size = 40, className }: BrandMarkProps) {
-  const dot = Math.max(4, Math.floor((size - 18) / 3));
-
+export default function BrandMark({
+  size = 40,
+  alt = "Legacy Fortress",
+  className,
+  priority = false,
+}: BrandMarkProps) {
   return (
-    <div
+    <span
       className={className}
-      aria-hidden
       style={{
+        display: "inline-flex",
         width: size,
         height: size,
-        borderRadius: 12,
-        background: "linear-gradient(145deg, #10141f 0%, #1a2433 100%)",
-        border: "1px solid #243244",
-        display: "grid",
-        gridTemplateColumns: "repeat(3, 1fr)",
-        gap: 4,
-        padding: 8,
-        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)",
       }}
     >
-      {Array.from({ length: 9 }).map((_, index) => (
-        <span
-          key={index}
-          style={{
-            width: dot,
-            height: dot,
-            borderRadius: 999,
-            background: "rgba(255,255,255,0.95)",
-          }}
-        />
-      ))}
-    </div>
+      <Image
+        src="/brand/logo.png"
+        alt={alt}
+        width={size}
+        height={size}
+        priority={priority}
+        sizes={`${size}px`}
+        style={{ width: size, height: size }}
+      />
+    </span>
   );
 }

@@ -10,7 +10,10 @@
     "audit:routes": "node scripts/route-audit.mjs",
     "validate:env": "node scripts/validate-env.mjs",
     "crawl:links": "node scripts/link-crawler.mjs",
-    "matrix:routes": "node scripts/generate-route-matrix.mjs"
+    "matrix:routes": "node scripts/generate-route-matrix.mjs",
+    "test:navigation": "node --test tests/menu-key-actions.test.mjs tests/route-parity.test.mjs",
+    "test:core": "node --test tests/menu-key-actions.test.mjs tests/menu-state.test.mjs tests/route-parity.test.mjs tests/auth-and-schema-guards.test.mjs",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.98.0",
@@ -19,6 +22,7 @@
     "react-dom": "19.2.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -26,6 +30,7 @@
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "pngjs": "^7.0.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

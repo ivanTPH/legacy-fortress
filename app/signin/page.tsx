@@ -5,8 +5,20 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import BrandMark from "../(app)/components/BrandMark";
 import OAuthButtons from "../../components/auth/OAuthButtons";
+import { waitForActiveUser } from "../../lib/auth/session";
 import { getOrCreateOnboardingState } from "../../lib/onboarding";
 import { supabase } from "../../lib/supabaseClient";
+
+function toSignInErrorMessage(raw: string) {
+  const message = raw.toLowerCase();
+  if (message.includes("invalid login credentials")) {
+    return "Invalid email or password. If you just signed up, verify your email first and then sign in.";
+  }
+  if (message.includes("email not confirmed")) {
+    return "Please verify your email before signing in.";
+  }
+  return raw;
+}
 
 export default function SignInPage() {
   const router = useRouter();
@@ -18,9 +30,11 @@ export default function SignInPage() {
   useEffect(() => {
     let mounted = true;
     async function guard() {
-      const { data } = await supabase.auth.getUser();
+      const user = await waitForActiveUser(supabase, { attempts: 3, delayMs: 120 });
       if (!mounted) return;
-      if (data.user) router.replace("/dashboard");
+      if (!user) return;
+      const onboarding = await getOrCreateOnboardingState(supabase, user.id);
+      router.replace(onboarding.is_completed ? "/dashboard" : "/onboarding");
     }
     void guard();
     return () => {
@@ -33,18 +47,19 @@ export default function SignInPage() {
     setStatus("Signing in...");
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        setStatus(`Sign in failed: ${error.message}`);
+        setStatus(`Sign in failed: ${toSignInErrorMessage(error.message)}`);
         return;
       }
-      const { data } = await supabase.auth.getUser();
-      if (!data.user) {
+
+      const user = data.user ?? (await waitForActiveUser(supabase, { attempts: 6, delayMs: 180 }));
+      if (!user) {
         setStatus("Signed in but user session could not be loaded.");
         return;
       }
 
-      const onboarding = await getOrCreateOnboardingState(supabase, data.user.id);
+      const onboarding = await getOrCreateOnboardingState(supabase, user.id);
       router.replace(onboarding.is_completed ? "/dashboard" : "/onboarding");
     } finally {
       setSigningIn(false);

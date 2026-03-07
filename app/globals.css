@@ -240,7 +240,7 @@ textarea {
 .lf-brand-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   padding: 2px 4px;
 }
 

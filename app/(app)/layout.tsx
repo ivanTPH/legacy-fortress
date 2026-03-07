@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import BrandMark from "./components/BrandMark";
@@ -11,10 +11,12 @@ import SidebarPrimary from "./components/navigation/SidebarPrimary";
 import { accountNavigation, mainNavigation, type NavNode } from "./navigation/navigation.config";
 import { getBreadcrumbsByPath, getChildrenById, getOpenMenuChain, normalizePath } from "./navigation/navigation.utils";
 import { computeFlyoutTop } from "../../lib/navigation/flyoutPosition";
+import { waitForActiveUser } from "../../lib/auth/session";
+import { trackClientEvent } from "../../lib/observability/clientEvents";
 import { getOrCreateOnboardingState } from "../../lib/onboarding";
+import { getFlyoutMenuKeyAction, getTopMenuKeyAction } from "../../lib/navigation/menuKeyActions";
+import { initialMenuState, menuReducer, type MenuCloseReason } from "../../lib/navigation/menuState";
 import { supabase } from "../../lib/supabaseClient";
-
-const FLYOUT_CLOSE_DELAY_MS = 170;
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -22,16 +24,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const [email, setEmail] = useState("");
   const [initials, setInitials] = useState("LF");
+  const [authReady, setAuthReady] = useState(false);
 
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [mobileExpandedIds, setMobileExpandedIds] = useState<Set<string>>(new Set());
-
-  const [openPrimaryId, setOpenPrimaryId] = useState<string | null>(null);
-  const [openSecondaryId, setOpenSecondaryId] = useState<string | null>(null);
-  const [level2Top, setLevel2Top] = useState(80);
-  const [level3Top, setLevel3Top] = useState(80);
-
-  const closeTimerRef = useRef<number | null>(null);
+  const [menuState, dispatchMenu] = useReducer(menuReducer, initialMenuState);
   const navWrapRef = useRef<HTMLDivElement | null>(null);
 
   const topLevelItems = mainNavigation.filter((item) => item.isEnabled !== false);
@@ -41,14 +36,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const activeChainIds = useMemo(() => new Set(activeChain.map((node) => node.id)), [activeChain]);
 
   const activePrimary = activeChain[0] ?? null;
-  const effectivePrimaryId = openPrimaryId ?? activePrimary?.id ?? null;
-  const level2Items = getChildrenById(effectivePrimaryId);
+  const level2Items = getChildrenById(menuState.openPrimaryId);
 
   const activeSecondary = activeChain[1] ?? null;
-  const effectiveSecondaryId =
-    openSecondaryId ??
-    (activeSecondary && level2Items.some((item) => item.id === activeSecondary.id) ? activeSecondary.id : null);
-  const level3Items = getChildrenById(effectiveSecondaryId);
+  const openSecondaryNode = level2Items.find((item) => item.id === menuState.openSecondaryId) ?? null;
+  const level3Items = getChildrenById(menuState.openSecondaryId);
 
   const breadcrumbs = useMemo(() => {
     const byConfig = getBreadcrumbsByPath(pathname);
@@ -67,49 +59,55 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   const currentNode = breadcrumbs[breadcrumbs.length - 1] ?? null;
+  const level2FlyoutId = "lf-flyout-level-2";
+  const level3FlyoutId = "lf-flyout-level-3";
 
-  const clearFlyoutClose = useCallback(() => {
-    if (closeTimerRef.current !== null) {
-      window.clearTimeout(closeTimerRef.current);
-      closeTimerRef.current = null;
-    }
-  }, []);
-
-  const scheduleFlyoutClose = useCallback(() => {
-    clearFlyoutClose();
-    closeTimerRef.current = window.setTimeout(() => {
-      setOpenPrimaryId(null);
-      setOpenSecondaryId(null);
-    }, FLYOUT_CLOSE_DELAY_MS);
-  }, [clearFlyoutClose]);
+  const closeNavigationState = useCallback(
+    (reason: MenuCloseReason, closeMobile = true) => {
+      dispatchMenu({ type: "close_all", reason, closeMobile });
+      trackClientEvent("menu.close", { reason, closeMobile });
+    },
+    [],
+  );
 
   useEffect(() => {
     let mounted = true;
 
     async function guard() {
-      const { data, error } = await supabase.auth.getUser();
-      if (error || !data.user) {
+      const user = await waitForActiveUser(supabase, { attempts: 6, delayMs: 150 });
+      if (!user) {
         router.replace("/signin");
         return;
       }
 
-      const onboarding = await getOrCreateOnboardingState(supabase, data.user.id);
+      const onboarding = await getOrCreateOnboardingState(supabase, user.id);
       if (!onboarding.is_completed) {
         router.replace("/onboarding");
         return;
       }
 
       if (!mounted) return;
-      const nextEmail = data.user.email ?? "";
+      const nextEmail = user.email ?? "";
       setEmail(nextEmail);
       setInitials(makeInitials(nextEmail));
+      setAuthReady(true);
     }
 
     void guard();
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (!session) {
+        setAuthReady(false);
         router.replace("/signin");
+        return;
+      }
+
+      if (!mounted) return;
+      if (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") {
+        const nextEmail = session.user.email ?? "";
+        setEmail(nextEmail);
+        setInitials(makeInitials(nextEmail));
+        setAuthReady(true);
       }
     });
 
@@ -120,33 +118,41 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   useEffect(() => {
-    function onDocClick(event: MouseEvent) {
+    function onDocClick(event: Event) {
       const target = event.target as Node;
-      if (!navWrapRef.current?.contains(target)) {
-        clearFlyoutClose();
-        setOpenPrimaryId(null);
-        setOpenSecondaryId(null);
-      }
+      if (!navWrapRef.current?.contains(target)) closeNavigationState("outside_click", false);
     }
 
     document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("touchstart", onDocClick);
     return () => {
       document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("touchstart", onDocClick);
     };
-  }, [clearFlyoutClose]);
+  }, [closeNavigationState]);
 
-  useEffect(() => () => clearFlyoutClose(), [clearFlyoutClose]);
+  useEffect(() => {
+    queueMicrotask(() => {
+      closeNavigationState("route_change");
+    });
+  }, [pathname, closeNavigationState]);
 
-  function openPrimary(nodeId: string | null) {
-    clearFlyoutClose();
-    setOpenPrimaryId(nodeId);
-    setOpenSecondaryId(null);
-  }
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mediaQuery = window.matchMedia("(max-width: 1024px)");
+    const onChange = () => closeNavigationState("breakpoint_change");
+    mediaQuery.addEventListener("change", onChange);
+    return () => mediaQuery.removeEventListener("change", onChange);
+  }, [closeNavigationState]);
 
-  function openSecondary(nodeId: string | null) {
-    clearFlyoutClose();
-    setOpenSecondaryId(nodeId);
-  }
+  useEffect(() => {
+    function onEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") closeNavigationState("escape");
+    }
+
+    document.addEventListener("keydown", onEscape);
+    return () => document.removeEventListener("keydown", onEscape);
+  }, [closeNavigationState]);
 
   function resolveFlyoutTop(anchorEl: HTMLElement | undefined, itemCount: number) {
     if (!anchorEl || !navWrapRef.current || !window) return null;
@@ -162,104 +168,113 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     });
   }
 
-  function openPrimaryFromAnchor(node: NavNode, anchorEl?: HTMLElement) {
-    if (!node.children?.length) {
-      setOpenPrimaryId(null);
-      setOpenSecondaryId(null);
-      return;
-    }
-
-    const top = resolveFlyoutTop(anchorEl, node.children.length);
-    if (typeof top === "number") setLevel2Top(top);
-    openPrimary(node.id);
-  }
-
-  function openSecondaryFromAnchor(node: NavNode, anchorEl?: HTMLElement) {
-    if (!node.children?.length) {
-      setOpenSecondaryId(null);
-      return;
-    }
-
-    const top = resolveFlyoutTop(anchorEl, node.children.length);
-    if (typeof top === "number") setLevel3Top(top);
-    openSecondary(node.id);
-  }
-
   function navigateTo(path: string) {
+    closeNavigationState("item_select");
     router.push(path);
-    setOpenPrimaryId(null);
-    setOpenSecondaryId(null);
   }
 
-  function onTopKeyDown(event: KeyboardEvent<HTMLAnchorElement>, item: NavNode) {
+  function onTopKeyDown(event: ReactKeyboardEvent<HTMLAnchorElement>, item: NavNode) {
     const currentIndex = topLevelItems.findIndex((node) => node.id === item.id);
 
-    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    const action = getTopMenuKeyAction({ key: event.key, hasChildren: Boolean(item.children?.length) });
+
+    if (action === "focus-next" || action === "focus-prev") {
       event.preventDefault();
-      const delta = event.key === "ArrowDown" ? 1 : -1;
+      const delta = action === "focus-next" ? 1 : -1;
       const nextIndex = (currentIndex + delta + topLevelItems.length) % topLevelItems.length;
       const nextId = topLevelItems[nextIndex]?.id;
       if (!nextId) return;
       const nextElement = document.querySelector<HTMLElement>(`[data-nav-id='${nextId}']`);
       nextElement?.focus();
+      return;
     }
 
-    if (event.key === "ArrowRight" && item.children?.length) {
+    if (action === "open-primary" && item.children?.length) {
       event.preventDefault();
-      openPrimary(item.id);
+      dispatchMenu({ type: "toggle_primary", id: item.id });
+      trackClientEvent("menu.open_primary", { id: item.id, via: "keyboard" });
+      return;
     }
 
-    if (event.key === "Escape") {
+    if (action === "close-all") {
       event.preventDefault();
-      setOpenPrimaryId(null);
-      setOpenSecondaryId(null);
+      closeNavigationState("escape");
+      return;
     }
 
-    if (event.key === "Enter" || event.key === " ") {
+    if (action === "navigate") {
       event.preventDefault();
-      if (item.children?.length) {
-        openPrimary(item.id);
-      } else {
-        navigateTo(item.path);
-      }
+      navigateTo(item.path);
     }
   }
 
-  function onFlyoutKeyDown(event: KeyboardEvent<HTMLAnchorElement>, item: NavNode, level: 2 | 3) {
-    if (event.key === "Escape") {
+  function onFlyoutKeyDown(event: ReactKeyboardEvent<HTMLAnchorElement>, item: NavNode, level: 2 | 3) {
+    const action = getFlyoutMenuKeyAction({
+      key: event.key,
+      hasChildren: Boolean(item.children?.length),
+      level,
+    });
+
+    if (action === "close-all") {
       event.preventDefault();
-      if (level === 3) {
-        setOpenSecondaryId(null);
-      } else {
-        setOpenPrimaryId(null);
-      }
+      closeNavigationState("escape");
       return;
     }
 
-    if ((event.key === "Enter" || event.key === " ") && item.children?.length && level === 2) {
+    if (action === "close-secondary") {
       event.preventDefault();
-      openSecondary(item.id);
+      dispatchMenu({ type: "collapse_secondary" });
+      trackClientEvent("menu.close_secondary", { reason: "parent_collapse" });
       return;
     }
 
-    if (event.key === "ArrowRight" && item.children?.length && level === 2) {
+    if (action === "open-secondary" && item.children?.length) {
       event.preventDefault();
-      openSecondary(item.id);
+      dispatchMenu({ type: "toggle_secondary", id: item.id });
+      trackClientEvent("menu.open_secondary", { id: item.id, via: "keyboard" });
+      return;
+    }
+
+    if (action === "navigate") {
+      event.preventDefault();
+      navigateTo(item.path);
     }
   }
 
   const signOut = async () => {
-    setMobileNavOpen(false);
+    dispatchMenu({ type: "set_mobile_nav", open: false });
     await supabase.auth.signOut();
     router.replace("/signin");
   };
 
+  if (!authReady) {
+    return (
+      <main className="lf-auth">
+        <section className="lf-auth-form-side">
+          <div className="lf-auth-card">
+            <h1>Checking session</h1>
+            <p className="lf-auth-subtext">Validating your secure session...</p>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <div className="lf-shell">
-      <div className="lf-nav-wrap" ref={navWrapRef} onMouseEnter={clearFlyoutClose} onMouseLeave={scheduleFlyoutClose}>
+      <div
+        className="lf-nav-wrap"
+        ref={navWrapRef}
+        data-menu-open={menuState.openPrimaryId ? "true" : "false"}
+        onBlurCapture={(event) => {
+          const next = event.relatedTarget as Node | null;
+          if (next && navWrapRef.current?.contains(next)) return;
+          closeNavigationState("focus_leave", false);
+        }}
+      >
         <aside className="lf-sidebar">
           <div className="lf-brand-row">
-            <BrandMark size={44} />
+            <BrandMark size={32} priority />
             <div>
               <div className="lf-brand-title">Legacy Fortress</div>
               <div className="lf-brand-subtitle">Estate Command Center</div>
@@ -279,16 +294,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <SidebarPrimary
             items={topLevelItems}
             activeTopId={activePrimary?.id ?? null}
-            highlightedTopId={effectivePrimaryId}
-            onHoverTop={(id, anchorEl) => {
-              const node = topLevelItems.find((item) => item.id === id);
-              if (!node) return;
-              openPrimaryFromAnchor(node, anchorEl);
-            }}
-            onFocusTop={(id, anchorEl) => {
-              const node = topLevelItems.find((item) => item.id === id);
-              if (!node) return;
-              openPrimaryFromAnchor(node, anchorEl);
+            highlightedTopId={menuState.openPrimaryId}
+            flyoutId={level2FlyoutId}
+            onActivateTop={(event, item, anchorEl) => {
+              if (item.children?.length) {
+                event.preventDefault();
+                const top = resolveFlyoutTop(anchorEl, item.children.length);
+                dispatchMenu({ type: "toggle_primary", id: item.id, top });
+                trackClientEvent("menu.open_primary", { id: item.id, via: "click" });
+                return;
+              }
+              closeNavigationState("item_select", false);
             }}
             onKeyDownTop={onTopKeyDown}
           />
@@ -298,7 +314,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               {accountItems.map((item) => {
                 const isActive = normalizePath(pathname) === normalizePath(item.path);
                 return (
-                  <Link key={item.id} href={item.path} className={`lf-account-link ${isActive ? "is-active" : ""}`}>
+                  <Link key={item.id} href={item.path} className={`lf-account-link ${isActive ? "is-active" : ""}`} onClick={() => closeNavigationState("item_select")}>
                     <span className="lf-nav-icon">{item.icon}</span>
                     <span>{item.label}</span>
                   </Link>
@@ -319,39 +335,41 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
 
-        {effectivePrimaryId && level2Items.length ? (
+        {menuState.openPrimaryId && level2Items.length ? (
           <FlyoutMenu
+            menuId={level2FlyoutId}
             level={2}
             parentLabel={activePrimary?.label ?? "submenu"}
             items={level2Items}
-            highlightedId={effectiveSecondaryId}
+            highlightedId={menuState.openSecondaryId}
+            childMenuId={level3FlyoutId}
             activeChainIds={activeChainIds}
-            onHoverItem={(id, anchorEl) => {
-              const node = level2Items.find((item) => item.id === id);
-              if (!node) return;
-              openSecondaryFromAnchor(node, anchorEl);
-            }}
-            onFocusItem={(id, anchorEl) => {
-              const node = level2Items.find((item) => item.id === id);
-              if (!node) return;
-              openSecondaryFromAnchor(node, anchorEl);
+            onActivateItem={(event, item, _level, anchorEl) => {
+              if (item.children?.length) {
+                event.preventDefault();
+                const top = resolveFlyoutTop(anchorEl, item.children.length);
+                dispatchMenu({ type: "toggle_secondary", id: item.id, top });
+                trackClientEvent("menu.open_secondary", { id: item.id, via: "click" });
+                return;
+              }
+              closeNavigationState("item_select", false);
             }}
             onKeyDownItem={onFlyoutKeyDown}
-            topOffset={level2Top}
+            topOffset={menuState.level2Top}
           />
         ) : null}
 
-        {effectiveSecondaryId && level3Items.length ? (
+        {menuState.openSecondaryId && level3Items.length ? (
           <FlyoutMenu
+            menuId={level3FlyoutId}
             level={3}
-            parentLabel={activeSecondary?.label ?? "submenu"}
+            parentLabel={openSecondaryNode?.label ?? activeSecondary?.label ?? "submenu"}
             items={level3Items}
             highlightedId={null}
             activeChainIds={activeChainIds}
-            onHoverItem={() => undefined}
-            onFocusItem={() => undefined}
+            onActivateItem={() => closeNavigationState("item_select", false)}
             onKeyDownItem={onFlyoutKeyDown}
-            topOffset={level3Top}
+            topOffset={menuState.level3Top}
           />
         ) : null}
       </div>
@@ -361,8 +379,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <button
             className="lf-menu-btn"
             type="button"
-            onClick={() => setMobileNavOpen((prev) => !prev)}
-            aria-expanded={mobileNavOpen}
+            onClick={() => dispatchMenu({ type: "toggle_mobile_nav" })}
+            aria-expanded={menuState.mobileNavOpen}
             aria-label="Toggle navigation menu"
           >
             <span />
@@ -379,17 +397,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="lf-topbar-pill">Private · Encrypted</div>
         </header>
 
-        {mobileNavOpen ? (
+        {menuState.mobileNavOpen ? (
           <>
             <button
               className="lf-mobile-backdrop"
               type="button"
               aria-label="Close navigation menu"
-              onClick={() => setMobileNavOpen(false)}
+              onClick={() => closeNavigationState("outside_click")}
             />
             <aside className="lf-mobile-drawer" aria-label="Mobile Navigation">
               <div className="lf-brand-row">
-                <BrandMark size={40} />
+                <BrandMark size={32} priority />
                 <div>
                   <div className="lf-brand-title">Legacy Fortress</div>
                   <div className="lf-brand-subtitle">Estate Command Center</div>
@@ -398,17 +416,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
               <MobileNavTree
                 items={topLevelItems}
-                expandedIds={new Set([...activeChainIds, ...mobileExpandedIds])}
+                expandedIds={new Set([...activeChainIds, ...menuState.mobileExpandedIds])}
                 activeChainIds={activeChainIds}
                 onToggle={(id) => {
-                  setMobileExpandedIds((prev) => {
-                    const copy = new Set(prev);
-                    if (copy.has(id)) copy.delete(id);
-                    else copy.add(id);
-                    return copy;
-                  });
+                  dispatchMenu({ type: "toggle_mobile_expand", id });
                 }}
-                onNavigate={() => setMobileNavOpen(false)}
+                onNavigate={() => closeNavigationState("item_select")}
               />
 
               <nav aria-label="Account and preferences" className="lf-account-nav">
@@ -419,7 +432,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       key={item.id}
                       href={item.path}
                       className={`lf-account-link ${isActive ? "is-active" : ""}`}
-                      onClick={() => setMobileNavOpen(false)}
+                      onClick={() => closeNavigationState("item_select")}
                     >
                       <span className="lf-nav-icon">{item.icon}</span>
                       <span>{item.label}</span>

@@ -5,6 +5,7 @@ import type { OnboardingStateRow } from "./types";
 type SupabaseClientLike = typeof supabase;
 
 const DEFAULT_STEP: OnboardingStepId = "identity";
+const FALLBACK_COMPLETE_STEP: OnboardingStepId = "complete";
 
 export function nextStep(step: OnboardingStepId): OnboardingStepId {
   const idx = ONBOARDING_STEPS.findIndex((s) => s.id === step);
@@ -28,10 +29,10 @@ export async function getOrCreateOnboardingState(client: SupabaseClientLike, use
     if (message.includes("relation") || message.includes("does not exist")) {
       return {
         user_id: userId,
-        current_step: DEFAULT_STEP,
-        completed_steps: [],
-        is_completed: false,
-        terms_accepted: false,
+        current_step: FALLBACK_COMPLETE_STEP,
+        completed_steps: [FALLBACK_COMPLETE_STEP],
+        is_completed: true,
+        terms_accepted: true,
         marketing_opt_in: false,
         tour_opt_in: false,
       };
@@ -57,10 +58,10 @@ export async function getOrCreateOnboardingState(client: SupabaseClientLike, use
     if (error?.message?.toLowerCase().includes("does not exist")) {
       return {
         user_id: userId,
-        current_step: DEFAULT_STEP,
-        completed_steps: [],
-        is_completed: false,
-        terms_accepted: false,
+        current_step: FALLBACK_COMPLETE_STEP,
+        completed_steps: [FALLBACK_COMPLETE_STEP],
+        is_completed: true,
+        terms_accepted: true,
         marketing_opt_in: false,
         tour_opt_in: false,
       };
@@ -89,7 +90,20 @@ export async function saveOnboardingState(
     .select("user_id,current_step,completed_steps,is_completed,terms_accepted,marketing_opt_in,tour_opt_in")
     .single();
 
-  if (error || !data) throw new Error(error?.message || "Could not save onboarding state");
+  if (error || !data) {
+    if (error?.message?.toLowerCase().includes("does not exist")) {
+      return {
+        user_id: userId,
+        current_step: patch.current_step ?? FALLBACK_COMPLETE_STEP,
+        completed_steps: patch.completed_steps ?? [FALLBACK_COMPLETE_STEP],
+        is_completed: patch.is_completed ?? true,
+        terms_accepted: patch.terms_accepted ?? true,
+        marketing_opt_in: patch.marketing_opt_in ?? false,
+        tour_opt_in: patch.tour_opt_in ?? false,
+      } as OnboardingStateRow;
+    }
+    throw new Error(error?.message || "Could not save onboarding state");
+  }
   return data as OnboardingStateRow;
 }
 
