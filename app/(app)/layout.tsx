@@ -383,7 +383,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               event.preventDefault();
               navigateTo(item.path);
             }}
-            onPointerDownItem={() => {}}
             onKeyDownItem={onFlyoutKeyDown}
             topOffset={menuState.level2Top}
           />
@@ -401,7 +400,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               event.preventDefault();
               navigateTo(item.path);
             }}
-            onPointerDownItem={() => {}}
             onKeyDownItem={onFlyoutKeyDown}
             topOffset={menuState.level3Top}
           />

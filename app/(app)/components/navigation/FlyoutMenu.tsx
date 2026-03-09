@@ -49,6 +49,7 @@ export default function FlyoutMenu({
             aria-expanded={isOpen ? "true" : undefined}
             aria-controls={item.children?.length ? childMenuId : undefined}
             className={`lf-flyout-item ${isActive ? "is-active" : ""} ${isOpen ? "is-open" : ""}`}
+            data-nav-leaf={!item.children?.length ? "true" : "false"}
             onClick={(event) => onActivateItem(event, item, level, event.currentTarget)}
             onKeyDown={(event) => onKeyDownItem(event, item, level)}
           >
