@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { digitalCategoryOptions, digitalSubcategories, optionLabel } from "../../../../lib/categoryConfig";
 import { supabase } from "../../../../lib/supabaseClient";
+import { getSafeUserData } from "../../../../lib/auth/requireActiveUser";
 import { sanitizeFileName, validateUploadFile } from "../../../../lib/validation/upload";
 
 type DigitalRecord = {
@@ -86,7 +87,7 @@ export default function DigitalVaultPage() {
       setStatus("");
 
       try {
-        const { data: userData, error: authError } = await supabase.auth.getUser();
+        const { data: userData, error: authError } = await getSafeUserData(supabase);
         if (authError) {
           throw authError;
         }
@@ -186,7 +187,7 @@ export default function DigitalVaultPage() {
     setStatus("");
 
     try {
-      const { data: userData, error: authError } = await supabase.auth.getUser();
+      const { data: userData, error: authError } = await getSafeUserData(supabase);
       if (authError) {
         throw authError;
       }
@@ -237,7 +238,7 @@ export default function DigitalVaultPage() {
     if (!ok) return;
 
     try {
-      const { data: userData, error: authError } = await supabase.auth.getUser();
+      const { data: userData, error: authError } = await getSafeUserData(supabase);
       if (authError) throw authError;
       const user = userData.user;
       if (!user) {
@@ -269,7 +270,7 @@ export default function DigitalVaultPage() {
       setStatus(`❌ ${validation.error}. Allowed: PDF, JPG, PNG up to 10MB.`);
       return;
     }
-    const { data: userData, error: authError } = await supabase.auth.getUser();
+    const { data: userData, error: authError } = await getSafeUserData(supabase);
     if (authError || !userData.user) {
       router.replace("/signin");
       return;

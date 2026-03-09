@@ -6,6 +6,7 @@ import { financialSubtypes, financialTypeOptions, optionLabel } from "../../../.
 import { computeFinancialTotals } from "../../../../lib/financialTotals";
 import { formatCurrency } from "../../../../lib/currency";
 import { supabase } from "../../../../lib/supabaseClient";
+import { getSafeUserData } from "../../../../lib/auth/requireActiveUser";
 import { getBankLogoFromRecord } from "../../../../lib/bankLogos";
 import FinancialSummary from "./components/FinancialSummary";
 import BankLogo from "../../components/BankLogo";
@@ -102,7 +103,7 @@ export default function FinancialVaultPage() {
       setLoading(true);
       setStatus("");
       try {
-        const { data: userData, error: authError } = await supabase.auth.getUser();
+        const { data: userData, error: authError } = await getSafeUserData(supabase);
         if (authError) throw authError;
 
         const user = userData.user;
@@ -186,7 +187,7 @@ export default function FinancialVaultPage() {
     setStatus("");
 
     try {
-      const { data: userData, error: authError } = await supabase.auth.getUser();
+      const { data: userData, error: authError } = await getSafeUserData(supabase);
       if (authError) throw authError;
       const user = userData.user;
       if (!user) {
@@ -240,7 +241,7 @@ export default function FinancialVaultPage() {
     if (!ok) return;
 
     try {
-      const { data: userData, error: authError } = await supabase.auth.getUser();
+      const { data: userData, error: authError } = await getSafeUserData(supabase);
       if (authError) throw authError;
       const user = userData.user;
       if (!user) {

@@ -5,12 +5,12 @@ import { toSafeInternalPath } from "../lib/auth/session.ts";
 import { isMissingRelationError, isMissingColumnError } from "../lib/supabaseErrors.ts";
 
 test("toSafeInternalPath only allows app-internal paths", () => {
-  assert.equal(toSafeInternalPath("/dashboard", "/signin"), "/dashboard");
-  assert.equal(toSafeInternalPath("/onboarding?step=1", "/signin"), "/onboarding?step=1");
-  assert.equal(toSafeInternalPath("https://evil.test", "/signin"), "/signin");
-  assert.equal(toSafeInternalPath("//evil.test", "/signin"), "/signin");
-  assert.equal(toSafeInternalPath("dashboard", "/signin"), "/signin");
-  assert.equal(toSafeInternalPath(null, "/signin"), "/signin");
+  assert.equal(toSafeInternalPath("/dashboard", "/sign-in"), "/dashboard");
+  assert.equal(toSafeInternalPath("/onboarding?step=1", "/sign-in"), "/onboarding?step=1");
+  assert.equal(toSafeInternalPath("https://evil.test", "/sign-in"), "/sign-in");
+  assert.equal(toSafeInternalPath("//evil.test", "/sign-in"), "/sign-in");
+  assert.equal(toSafeInternalPath("dashboard", "/sign-in"), "/sign-in");
+  assert.equal(toSafeInternalPath(null, "/sign-in"), "/sign-in");
 });
 
 test("isMissingRelationError detects schema-cache and relation drift", () => {

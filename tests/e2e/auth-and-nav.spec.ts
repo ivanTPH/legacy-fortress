@@ -3,10 +3,10 @@ import { requireAuthFixture, signInAsSeedUser } from "./helpers/auth";
 
 test.describe("Auth and navigation regressions", () => {
   test("public auth pages load", async ({ page }) => {
-    await page.goto("/signin");
+    await page.goto("/sign-in");
     await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible();
 
-    await page.goto("/signup");
+    await page.goto("/sign-up");
     await expect(page.getByRole("heading", { name: /create account/i })).toBeVisible();
 
     await page.goto("/forgot-password");
@@ -20,17 +20,17 @@ test.describe("Auth and navigation regressions", () => {
     await expect(page.getByRole("heading", { name: /dashboard/i })).toBeVisible();
 
     await page.reload();
-    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page).toHaveURL(/\/(app\/dashboard|dashboard)/);
 
     await page.getByRole("button", { name: /sign out/i }).click();
-    await expect(page).toHaveURL(/\/signin/);
+    await expect(page).toHaveURL(/\/sign-in/);
   });
 
   test("desktop nav flyout closes after selection and escape", async ({ page }) => {
     requireAuthFixture();
     await signInAsSeedUser(page);
 
-    await page.goto("/dashboard");
+    await page.goto("/app/dashboard");
     const legalMenu = page.getByRole("menuitem", { name: /legal/i }).first();
     await legalMenu.click();
 
@@ -49,7 +49,7 @@ test.describe("Auth and navigation regressions", () => {
   test("outside click and route change always close flyout", async ({ page }) => {
     requireAuthFixture();
     await signInAsSeedUser(page);
-    await page.goto("/dashboard");
+    await page.goto("/app/dashboard");
 
     const legalMenu = page.getByRole("menuitem", { name: /legal/i }).first();
     const willsSubmenu = page.getByRole("menuitem", { name: /wills/i }).first();

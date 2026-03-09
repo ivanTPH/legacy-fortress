@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CSSProperties } from "react";
 import { supabase } from "../../../../lib/supabaseClient";
+import { getSafeUserData } from "../../../../lib/auth/requireActiveUser";
 import { sanitizeFileName, validateUploadFile } from "../../../../lib/validation/upload";
 
 type Assignment = {
@@ -35,7 +36,7 @@ export default function DeathCertificatePage() {
 
     async function load() {
       setLoading(true);
-      const { data: userData, error: authError } = await supabase.auth.getUser();
+      const { data: userData, error: authError } = await getSafeUserData(supabase);
       if (authError || !userData.user) {
         router.replace("/signin");
         return;
@@ -85,7 +86,7 @@ export default function DeathCertificatePage() {
       return;
     }
 
-    const { data: userData, error: authError } = await supabase.auth.getUser();
+    const { data: userData, error: authError } = await getSafeUserData(supabase);
     if (authError || !userData.user) {
       router.replace("/signin");
       return;

@@ -132,7 +132,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (authState === "none") {
-      router.replace("/sign-in");
+      router.replace("/signin");
     }
   }, [authState, router]);
 
@@ -261,7 +261,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     dispatchMenu({ type: "set_mobile_nav", open: false });
     await supabase.auth.signOut();
-    router.replace("/sign-in");
+    router.replace("/signin");
   };
 
   if (authState !== "ready") {

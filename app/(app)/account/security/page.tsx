@@ -134,7 +134,7 @@ export default function SecurityPage() {
       return;
     }
 
-    const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/reset-password` : undefined;
+    const redirectTo = "https://legacy-fortress-web.vercel.app/reset-password";
     const { error } = await supabase.auth.resetPasswordForEmail(user.email, { redirectTo });
     setStatus(error ? `❌ Password reset failed: ${error.message}` : "✅ Password reset email sent.");
   };

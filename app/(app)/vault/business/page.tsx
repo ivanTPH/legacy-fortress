@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { businessSubtypes, businessTypeOptions, optionLabel } from "../../../../lib/categoryConfig";
 import { formatCurrency } from "../../../../lib/currency";
 import { supabase } from "../../../../lib/supabaseClient";
+import { getSafeUserData } from "../../../../lib/auth/requireActiveUser";
 import { sanitizeFileName, validateUploadFile } from "../../../../lib/validation/upload";
 
 type BusinessInterest = {
@@ -91,7 +92,7 @@ export default function BusinessVaultPage() {
       setStatus("");
 
       try {
-        const { data: userData, error: authError } = await supabase.auth.getUser();
+        const { data: userData, error: authError } = await getSafeUserData(supabase);
         if (authError) {
           throw authError;
         }
@@ -192,7 +193,7 @@ export default function BusinessVaultPage() {
     setStatus("");
 
     try {
-      const { data: userData, error: authError } = await supabase.auth.getUser();
+      const { data: userData, error: authError } = await getSafeUserData(supabase);
       if (authError) {
         throw authError;
       }
@@ -245,7 +246,7 @@ export default function BusinessVaultPage() {
     if (!ok) return;
 
     try {
-      const { data: userData, error: authError } = await supabase.auth.getUser();
+      const { data: userData, error: authError } = await getSafeUserData(supabase);
       if (authError) throw authError;
       const user = userData.user;
       if (!user) {
@@ -277,7 +278,7 @@ export default function BusinessVaultPage() {
       setStatus(`❌ ${validation.error}. Allowed: PDF, JPG, PNG up to 10MB.`);
       return;
     }
-    const { data: userData, error: authError } = await supabase.auth.getUser();
+    const { data: userData, error: authError } = await getSafeUserData(supabase);
     if (authError || !userData.user) {
       router.replace("/signin");
       return;

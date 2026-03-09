@@ -8,6 +8,7 @@ import {
   type CollaboratorRole,
 } from "../../../../lib/access-control/roles";
 import { supabase } from "../../../../lib/supabaseClient";
+import { getSafeUserData } from "../../../../lib/auth/requireActiveUser";
 import InvitationStatusBadge, { type InvitationStatus } from "./InvitationStatusBadge";
 import RoleBadge from "./RoleBadge";
 
@@ -55,7 +56,7 @@ export default function ContactInvitationManager() {
     setLoading(true);
     setStatus("");
 
-    const { data: userData, error: authError } = await supabase.auth.getUser();
+    const { data: userData, error: authError } = await getSafeUserData(supabase);
     if (authError || !userData.user) {
       router.replace("/signin");
       return;
@@ -129,7 +130,7 @@ export default function ContactInvitationManager() {
         return;
       }
 
-      const { data: userData, error: authError } = await supabase.auth.getUser();
+      const { data: userData, error: authError } = await getSafeUserData(supabase);
       if (authError || !userData.user) {
         router.replace("/signin");
         return;
@@ -203,7 +204,7 @@ export default function ContactInvitationManager() {
 
   async function sendInvite(row: InvitationRow, resend = false) {
     setStatus("");
-    const { data: userData, error: authError } = await supabase.auth.getUser();
+    const { data: userData, error: authError } = await getSafeUserData(supabase);
     if (authError || !userData.user) {
       router.replace("/signin");
       return;
@@ -258,7 +259,7 @@ export default function ContactInvitationManager() {
     const ok = window.confirm(`Delete ${row.contact_name || row.contact_email}?`);
     if (!ok) return;
 
-    const { data: userData, error: authError } = await supabase.auth.getUser();
+    const { data: userData, error: authError } = await getSafeUserData(supabase);
     if (authError || !userData.user) {
       router.replace("/signin");
       return;
@@ -289,7 +290,7 @@ export default function ContactInvitationManager() {
   }
 
   async function updateStatus(row: InvitationRow, nextStatus: InvitationStatus) {
-    const { data: userData, error: authError } = await supabase.auth.getUser();
+    const { data: userData, error: authError } = await getSafeUserData(supabase);
     if (authError || !userData.user) {
       router.replace("/signin");
       return;

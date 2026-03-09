@@ -19,7 +19,7 @@ export default function SignUpPage() {
       if (!mounted) return;
       if (!user) return;
       const onboarding = await getOrCreateOnboardingState(supabase, user.id);
-      router.replace(onboarding.is_completed ? "/dashboard" : "/onboarding");
+      router.replace(onboarding.is_completed ? "/app/dashboard" : "/app/onboarding");
     }
     void guard();
     return () => {

@@ -32,7 +32,7 @@ export default function OnboardingPage() {
       setMarketingOptIn(onboarding.marketing_opt_in);
 
       if (onboarding.is_completed) {
-        router.replace("/dashboard");
+        router.replace("/app/dashboard");
         return;
       }
 
@@ -68,7 +68,7 @@ export default function OnboardingPage() {
         marketing_opt_in: marketingOptIn,
       });
 
-      router.replace("/dashboard");
+      router.replace("/app/dashboard");
     } catch (error) {
       setStatus(`Could not complete onboarding: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {

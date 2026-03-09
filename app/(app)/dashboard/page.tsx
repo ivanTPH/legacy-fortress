@@ -125,7 +125,7 @@ export default function DashboardPage() {
       try {
         const user = await waitForActiveUser(supabase, { attempts: 6, delayMs: 130 });
         if (!user) {
-          router.replace("/sign-in");
+          router.replace("/signin");
           return;
         }
 

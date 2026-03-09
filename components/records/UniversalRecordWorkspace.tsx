@@ -1898,7 +1898,7 @@ function groupByBucket(items: RecordAttachment[]) {
 async function requireUser(router: ReturnType<typeof useRouter>) {
   const user = await waitForActiveUser(supabase, { attempts: 5, delayMs: 120 });
   if (!user) {
-    router.replace("/sign-in");
+    router.replace("/signin");
     return null;
   }
   return user;

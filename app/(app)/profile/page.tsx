@@ -15,7 +15,7 @@ import {
 } from "../components/settings/SettingsPrimitives";
 import { waitForActiveUser } from "../../../lib/auth/session";
 import { supabase } from "../../../lib/supabaseClient";
-import { isMissingColumnError } from "../../../lib/supabaseErrors";
+import { isMissingColumnError, isMissingRelationError } from "../../../lib/supabaseErrors";
 import { maskNationalInsuranceNumber } from "../../../lib/security/identity";
 import { normalizePhone, normalizePostCode, sanitizeAddress, sanitizeName } from "../../../lib/validation/profile";
 import { sanitizeFileName, validateUploadFile } from "../../../lib/validation/upload";
@@ -70,6 +70,28 @@ function isMissingAvatarPathError(error: { message?: string } | null) {
   return isMissingColumnError(error, "avatar_path");
 }
 
+const AVATAR_BUCKET_CANDIDATES = ["vault-docs", "avatars"] as const;
+
+async function getAvatarPreview(path: string) {
+  for (const bucket of AVATAR_BUCKET_CANDIDATES) {
+    const signed = await supabase.storage.from(bucket).createSignedUrl(path, 3600);
+    if (!signed.error && signed.data?.signedUrl) {
+      return { bucket, signedUrl: signed.data.signedUrl } as const;
+    }
+  }
+  return null;
+}
+
+function splitDisplayName(name: string | null | undefined) {
+  const safe = (name ?? "").trim();
+  if (!safe) return { first: "", last: "" };
+  const parts = safe.split(/\s+/);
+  return {
+    first: parts[0] ?? "",
+    last: parts.slice(1).join(" "),
+  };
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -80,6 +102,9 @@ export default function ProfilePage() {
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarPathSupported, setAvatarPathSupported] = useState(true);
+  const [avatarBucket, setAvatarBucket] = useState<string>("");
+  const [firstNameSupported, setFirstNameSupported] = useState(true);
+  const [lastNameSupported, setLastNameSupported] = useState(true);
 
   useEffect(() => {
     let mounted = true;
@@ -97,25 +122,42 @@ export default function ProfilePage() {
 
         const baseEmail = user.email ?? "";
 
-        const profileWithAvatar = await supabase
+        const profileWithAll = await supabase
           .from("user_profiles")
           .select("first_name,last_name,display_name,date_of_birth,about,notification_email,preferred_currency,language,avatar_path")
           .eq("user_id", user.id)
           .maybeSingle();
 
-        const profileRes = isMissingAvatarPathError(profileWithAvatar.error)
-          ? await supabase
-              .from("user_profiles")
-              .select("first_name,last_name,display_name,date_of_birth,about,notification_email,preferred_currency,language")
-              .eq("user_id", user.id)
-              .maybeSingle()
-          : profileWithAvatar;
+        const missingAvatarPath = isMissingAvatarPathError(profileWithAll.error);
+        const missingFirstName = isMissingColumnError(profileWithAll.error, "first_name");
+        const missingLastName = isMissingColumnError(profileWithAll.error, "last_name");
 
-        if (isMissingAvatarPathError(profileWithAvatar.error)) {
-          setAvatarPathSupported(false);
-        } else {
-          setAvatarPathSupported(true);
+        let profileRes = profileWithAll;
+        if (missingAvatarPath || missingFirstName || missingLastName) {
+          const selectColumns = [
+            !missingFirstName ? "first_name" : null,
+            !missingLastName ? "last_name" : null,
+            "display_name",
+            "date_of_birth",
+            "about",
+            "notification_email",
+            "preferred_currency",
+            "language",
+            !missingAvatarPath ? "avatar_path" : null,
+          ]
+            .filter(Boolean)
+            .join(",");
+
+          profileRes = await supabase
+            .from("user_profiles")
+            .select(selectColumns)
+            .eq("user_id", user.id)
+            .maybeSingle();
         }
+
+        setAvatarPathSupported(!missingAvatarPath);
+        setFirstNameSupported(!missingFirstName);
+        setLastNameSupported(!missingLastName);
 
         const [contactRes, addressRes, sensitiveRes] = await Promise.all([
           supabase
@@ -149,6 +191,21 @@ export default function ProfilePage() {
           avatar_path?: string | null;
         };
 
+        const splitName = splitDisplayName(profile.display_name);
+        const resolvedFirstName = missingFirstName
+          ? splitName.first
+          : (profile.first_name ?? "");
+        const resolvedLastName = missingLastName
+          ? splitName.last
+          : (profile.last_name ?? "");
+
+        if (isMissingRelationError(contactRes.error, "contact_details")) {
+          setStatus("Profile loaded. Contact details table is not available in this environment.");
+        }
+        if (isMissingRelationError(addressRes.error, "addresses")) {
+          setStatus("Profile loaded. Address table is not available in this environment.");
+        }
+
         const contact = (contactRes.data ?? {}) as {
           secondary_email?: string | null;
           telephone?: string | null;
@@ -166,8 +223,8 @@ export default function ProfilePage() {
 
         setForm({
           avatar_path: profile.avatar_path ?? "",
-          first_name: profile.first_name ?? "",
-          last_name: profile.last_name ?? "",
+          first_name: resolvedFirstName,
+          last_name: resolvedLastName,
           display_name: profile.display_name ?? "",
           primary_email: baseEmail,
           secondary_email: contact.secondary_email ?? "",
@@ -191,10 +248,17 @@ export default function ProfilePage() {
         setMaskedNi(maskedFromDb ?? "Not set");
 
         if (profile.avatar_path) {
-          const signed = await supabase.storage.from("avatars").createSignedUrl(profile.avatar_path, 3600);
-          if (!signed.error && signed.data?.signedUrl && mounted) {
-            setAvatarPreviewUrl(signed.data.signedUrl);
+          const avatar = await getAvatarPreview(profile.avatar_path);
+          if (avatar && mounted) {
+            setAvatarPreviewUrl(avatar.signedUrl);
+            setAvatarBucket(avatar.bucket);
+          } else if (mounted) {
+            setAvatarPreviewUrl("");
+            setAvatarBucket("");
           }
+        } else if (mounted) {
+          setAvatarPreviewUrl("");
+          setAvatarBucket("");
         }
       } catch (error) {
         if (!mounted) return;
@@ -224,12 +288,13 @@ export default function ProfilePage() {
       }
 
       const now = new Date().toISOString();
+      const normalizedFirstName = sanitizeName(form.first_name) || "";
+      const normalizedLastName = sanitizeName(form.last_name) || "";
+      const normalizedDisplayName = form.display_name.trim() || [normalizedFirstName, normalizedLastName].filter(Boolean).join(" ").trim() || null;
 
       const profilePayload: Record<string, string | null> = {
         user_id: user.id,
-        first_name: sanitizeName(form.first_name) || null,
-        last_name: sanitizeName(form.last_name) || null,
-        display_name: form.display_name.trim() || null,
+        display_name: normalizedDisplayName,
         date_of_birth: form.date_of_birth || null,
         about: form.about.trim() || null,
         notification_email: form.notification_email.trim() || form.primary_email,
@@ -237,6 +302,12 @@ export default function ProfilePage() {
         language: form.language || "English",
         updated_at: now,
       };
+      if (firstNameSupported) {
+        profilePayload.first_name = normalizedFirstName || null;
+      }
+      if (lastNameSupported) {
+        profilePayload.last_name = normalizedLastName || null;
+      }
       if (avatarPathSupported) {
         profilePayload.avatar_path = form.avatar_path || null;
       }
@@ -260,7 +331,8 @@ export default function ProfilePage() {
         updated_at: now,
       };
 
-      let profileRes = await supabase.from("user_profiles").upsert(profilePayload, { onConflict: "user_id" });
+      const profileWritePayload = { ...profilePayload };
+      let profileRes = await supabase.from("user_profiles").upsert(profileWritePayload, { onConflict: "user_id" });
       const [contactRes, addressRes] = await Promise.all([
         supabase.from("contact_details").upsert(contactPayload, { onConflict: "user_id" }),
         supabase.from("addresses").upsert(addressPayload, { onConflict: "user_id" }),
@@ -268,12 +340,24 @@ export default function ProfilePage() {
 
       if (isMissingAvatarPathError(profileRes.error)) {
         setAvatarPathSupported(false);
-        const profilePayloadWithoutAvatar = { ...profilePayload };
-        delete profilePayloadWithoutAvatar.avatar_path;
-        profileRes = await supabase.from("user_profiles").upsert(profilePayloadWithoutAvatar, { onConflict: "user_id" });
+        delete profileWritePayload.avatar_path;
+        profileRes = await supabase.from("user_profiles").upsert(profileWritePayload, { onConflict: "user_id" });
+      }
+      if (isMissingColumnError(profileRes.error, "first_name")) {
+        setFirstNameSupported(false);
+        delete profileWritePayload.first_name;
+        profileRes = await supabase.from("user_profiles").upsert(profileWritePayload, { onConflict: "user_id" });
+      }
+      if (isMissingColumnError(profileRes.error, "last_name")) {
+        setLastNameSupported(false);
+        delete profileWritePayload.last_name;
+        profileRes = await supabase.from("user_profiles").upsert(profileWritePayload, { onConflict: "user_id" });
       }
 
-      if (profileRes.error || contactRes.error || addressRes.error) {
+      const contactTableMissing = isMissingRelationError(contactRes.error, "contact_details");
+      const addressTableMissing = isMissingRelationError(addressRes.error, "addresses");
+
+      if (profileRes.error || (contactRes.error && !contactTableMissing) || (addressRes.error && !addressTableMissing)) {
         throw new Error(profileRes.error?.message || contactRes.error?.message || addressRes.error?.message);
       }
 
@@ -290,7 +374,11 @@ export default function ProfilePage() {
         setForm((current) => ({ ...current, ni_input: "" }));
       }
 
-      setStatus("✅ Profile saved");
+      if (contactTableMissing || addressTableMissing) {
+        setStatus("✅ Core profile saved. Contact/address tables are unavailable in this environment.");
+      } else {
+        setStatus("✅ Profile saved");
+      }
     } catch (error) {
       setStatus(`❌ Save failed: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
@@ -319,21 +407,36 @@ export default function ProfilePage() {
       }
 
       const safeName = sanitizeFileName(file.name);
-      const path = `${user.id}/${Date.now()}-${safeName}`;
+      const path = `profiles/${user.id}/avatar-${Date.now()}-${safeName}`;
 
-      const upload = await supabase.storage.from("avatars").upload(path, file, {
-        cacheControl: "3600",
-        upsert: false,
-      });
+      let chosenBucket = "";
+      let uploadError = "";
+      for (const bucket of AVATAR_BUCKET_CANDIDATES) {
+        const upload = await supabase.storage.from(bucket).upload(path, file, {
+          cacheControl: "3600",
+          upsert: true,
+        });
+        if (!upload.error) {
+          chosenBucket = bucket;
+          break;
+        }
+        uploadError = upload.error.message;
+        if (!upload.error.message.toLowerCase().includes("bucket not found")) {
+          throw upload.error;
+        }
+      }
 
-      if (upload.error) throw upload.error;
+      if (!chosenBucket) {
+        throw new Error(uploadError || "No valid storage bucket is configured for avatars.");
+      }
 
-      const signed = await supabase.storage.from("avatars").createSignedUrl(path, 3600);
+      const signed = await supabase.storage.from(chosenBucket).createSignedUrl(path, 3600);
       setAvatarPreviewUrl(signed.data?.signedUrl ?? "");
+      setAvatarBucket(chosenBucket);
       setForm((current) => ({ ...current, avatar_path: path }));
-      setStatus("✅ Avatar uploaded. Save profile to persist.");
+      setStatus("✅ Profile picture uploaded. Save profile to persist.");
     } catch (error) {
-      setStatus(`❌ Avatar upload failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      setStatus(`❌ Profile picture upload failed: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setAvatarUploading(false);
     }
@@ -343,13 +446,28 @@ export default function ProfilePage() {
     if (!form.avatar_path) return;
 
     try {
-      const remove = await supabase.storage.from("avatars").remove([form.avatar_path]);
-      if (remove.error) throw remove.error;
+      const bucketsToTry = avatarBucket
+        ? [avatarBucket, ...AVATAR_BUCKET_CANDIDATES.filter((bucket) => bucket !== avatarBucket)]
+        : [...AVATAR_BUCKET_CANDIDATES];
+
+      let removed = false;
+      for (const bucket of bucketsToTry) {
+        const remove = await supabase.storage.from(bucket).remove([form.avatar_path]);
+        if (!remove.error) {
+          removed = true;
+          break;
+        }
+      }
+
+      if (!removed) {
+        throw new Error("Avatar file could not be removed from storage.");
+      }
       setForm((current) => ({ ...current, avatar_path: "" }));
       setAvatarPreviewUrl("");
-      setStatus("✅ Avatar removed. Save profile to persist.");
+      setAvatarBucket("");
+      setStatus("✅ Profile picture removed. Save profile to persist.");
     } catch (error) {
-      setStatus(`❌ Could not remove avatar: ${error instanceof Error ? error.message : "Unknown error"}`);
+      setStatus(`❌ Could not remove profile picture: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
   }
 
@@ -359,7 +477,7 @@ export default function ProfilePage() {
       return;
     }
 
-    const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/reset-password` : undefined;
+    const redirectTo = "https://legacy-fortress-web.vercel.app/reset-password";
     const { error } = await supabase.auth.resetPasswordForEmail(form.primary_email, { redirectTo });
     setStatus(error ? `❌ Password reset failed: ${error.message}` : "✅ Password reset email sent");
   };
@@ -369,7 +487,54 @@ export default function ProfilePage() {
       title="Profile"
       subtitle="Manage your identity, contact information, address details, and account profile settings."
     >
-      <SettingsCard title="Identity and avatar" description="Primary email is your verified sign-in identity.">
+      <SettingsCard title="Saved profile summary" description="Your current saved details appear here first.">
+        {loading ? (
+          <div style={{ color: "#6b7280" }}>Loading saved profile...</div>
+        ) : (
+          <div style={{ display: "grid", gap: 12 }}>
+            <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+              <div
+                style={{
+                  width: 66,
+                  height: 66,
+                  borderRadius: 12,
+                  border: "1px solid #e5e7eb",
+                  overflow: "hidden",
+                  background: "#f8fafc",
+                  display: "grid",
+                  placeItems: "center",
+                  color: "#6b7280",
+                  fontSize: 12,
+                }}
+              >
+                {avatarPreviewUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={avatarPreviewUrl} alt="Saved profile picture" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  "No picture"
+                )}
+              </div>
+              <div style={{ display: "grid", gap: 4 }}>
+                <div style={{ fontWeight: 700, fontSize: 16 }}>
+                  {[form.first_name, form.last_name].filter(Boolean).join(" ").trim() || form.display_name || "No name saved"}
+                </div>
+                <div style={{ color: "#64748b", fontSize: 13 }}>{form.primary_email || "No email saved"}</div>
+                <div style={{ color: "#64748b", fontSize: 13 }}>
+                  {[form.house_name_or_number, form.street_name, form.town, form.city, form.post_code, form.country]
+                    .filter(Boolean)
+                    .join(", ") || "No address saved"}
+                </div>
+              </div>
+            </div>
+            <div style={{ color: "#64748b", fontSize: 13 }}>
+              Phone: {form.mobile_number || form.telephone || "Not set"} · Notification email: {form.notification_email || "Not set"}
+            </div>
+            <div style={{ color: "#64748b", fontSize: 13 }}>National Insurance: {maskedNi}</div>
+          </div>
+        )}
+      </SettingsCard>
+
+      <SettingsCard title="Identity and profile picture" description="Primary email is your verified sign-in identity.">
         {loading ? <div style={{ color: "#6b7280" }}>Loading...</div> : null}
 
         <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
@@ -389,15 +554,15 @@ export default function ProfilePage() {
           >
             {avatarPreviewUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={avatarPreviewUrl} alt="Profile avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              <img src={avatarPreviewUrl} alt="Profile picture" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             ) : (
-              "No avatar"
+              "No picture"
             )}
           </div>
 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <label style={{ ...primaryBtn, display: "inline-flex", alignItems: "center", cursor: "pointer" }}>
-              Upload avatar
+              Upload picture
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
@@ -412,7 +577,7 @@ export default function ProfilePage() {
               />
             </label>
             <button type="button" style={ghostBtn} onClick={removeAvatar}>
-              Delete avatar
+              Delete picture
             </button>
           </div>
         </div>

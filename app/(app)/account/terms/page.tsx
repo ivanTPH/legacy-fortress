@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SettingsCard, SettingsPageShell } from "../../components/settings/SettingsPrimitives";
 import { supabase } from "../../../../lib/supabaseClient";
+import { getSafeUserData } from "../../../../lib/auth/requireActiveUser";
 
 type TermsRow = {
   terms_version: string | null;
@@ -21,7 +22,7 @@ export default function TermsPage() {
     let mounted = true;
 
     async function load() {
-      const { data: userData, error: authError } = await supabase.auth.getUser();
+      const { data: userData, error: authError } = await getSafeUserData(supabase);
       if (authError || !userData.user) {
         router.replace("/signin");
         return;

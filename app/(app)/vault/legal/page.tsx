@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../../../lib/supabaseClient";
+import { getSafeUserData } from "../../../../lib/auth/requireActiveUser";
 
 type LegalRow = {
   id: string;
@@ -21,7 +22,7 @@ export default function LegalVaultPage() {
   useEffect(() => {
     let mounted = true;
     async function load() {
-      const { data: userData, error: authError } = await supabase.auth.getUser();
+      const { data: userData, error: authError } = await getSafeUserData(supabase);
       if (authError || !userData.user) {
         router.replace("/signin");
         return;

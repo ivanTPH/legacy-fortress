@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SettingsCard, SettingsPageShell, StatusNote, primaryBtn } from "../../components/settings/SettingsPrimitives";
 import { supabase } from "../../../../lib/supabaseClient";
+import { getSafeUserData } from "../../../../lib/auth/requireActiveUser";
 
 type Comms = {
   sms_enabled: boolean;
@@ -31,7 +32,7 @@ export default function CommunicationsPreferencesPage() {
 
     async function load() {
       setLoading(true);
-      const { data: userData, error: authError } = await supabase.auth.getUser();
+      const { data: userData, error: authError } = await getSafeUserData(supabase);
       if (authError || !userData.user) {
         router.replace("/signin");
         return;
@@ -67,7 +68,7 @@ export default function CommunicationsPreferencesPage() {
     setSaving(true);
     setStatus("");
 
-    const { data: userData, error: authError } = await supabase.auth.getUser();
+    const { data: userData, error: authError } = await getSafeUserData(supabase);
     if (authError || !userData.user) {
       router.replace("/signin");
       return;

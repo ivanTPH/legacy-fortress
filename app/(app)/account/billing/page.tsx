@@ -12,6 +12,7 @@ import {
   primaryBtn,
 } from "../../components/settings/SettingsPrimitives";
 import { supabase } from "../../../../lib/supabaseClient";
+import { getSafeUserData } from "../../../../lib/auth/requireActiveUser";
 
 type BillingForm = {
   monthly_charge: string;
@@ -45,7 +46,7 @@ export default function BillingPage() {
       setLoading(true);
       setStatus("");
 
-      const { data: userData, error: authError } = await supabase.auth.getUser();
+      const { data: userData, error: authError } = await getSafeUserData(supabase);
       if (authError || !userData.user) {
         router.replace("/signin");
         return;
@@ -96,7 +97,7 @@ export default function BillingPage() {
     setStatus("");
 
     try {
-      const { data: userData, error: authError } = await supabase.auth.getUser();
+      const { data: userData, error: authError } = await getSafeUserData(supabase);
       if (authError || !userData.user) {
         router.replace("/signin");
         return;

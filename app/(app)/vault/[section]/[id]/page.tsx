@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { formatCurrency } from "../../../../../lib/currency";
 import { supabase } from "../../../../../lib/supabaseClient";
+import { getSafeUserData } from "@/lib/auth/requireActiveUser";
 
 type SectionKey = "personal" | "financial" | "legal" | "property" | "business" | "digital";
 
@@ -92,7 +93,7 @@ export default function VaultAssetDetailPage() {
       setLoading(true);
       setStatus("");
 
-      const { data: userData, error: authError } = await supabase.auth.getUser();
+      const { data: userData, error: authError } = await getSafeUserData(supabase);
       if (authError || !userData.user) {
         router.replace("/signin");
         return;
@@ -140,7 +141,7 @@ export default function VaultAssetDetailPage() {
     setSaving(true);
     setStatus("");
 
-    const { data: userData, error: authError } = await supabase.auth.getUser();
+    const { data: userData, error: authError } = await getSafeUserData(supabase);
     if (authError || !userData.user) {
       router.replace("/signin");
       return;

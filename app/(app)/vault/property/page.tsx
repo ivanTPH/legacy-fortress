@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { formatCurrency } from "../../../../lib/currency";
 import { propertyTypeOptions } from "../../../../lib/categoryConfig";
 import { supabase } from "../../../../lib/supabaseClient";
+import { getSafeUserData } from "../../../../lib/auth/requireActiveUser";
 import { sanitizeFileName, validateUploadFile } from "../../../../lib/validation/upload";
 
 type PropertyAsset = {
@@ -87,7 +88,7 @@ export default function PropertyVaultPage() {
       setStatus("");
 
       try {
-        const { data: userData, error: authError } = await supabase.auth.getUser();
+        const { data: userData, error: authError } = await getSafeUserData(supabase);
         if (authError) {
           throw authError;
         }
@@ -187,7 +188,7 @@ export default function PropertyVaultPage() {
     setStatus("");
 
     try {
-      const { data: userData, error: authError } = await supabase.auth.getUser();
+      const { data: userData, error: authError } = await getSafeUserData(supabase);
       if (authError) {
         throw authError;
       }
@@ -238,7 +239,7 @@ export default function PropertyVaultPage() {
     if (!ok) return;
 
     try {
-      const { data: userData, error: authError } = await supabase.auth.getUser();
+      const { data: userData, error: authError } = await getSafeUserData(supabase);
       if (authError) throw authError;
       const user = userData.user;
       if (!user) {
@@ -271,7 +272,7 @@ export default function PropertyVaultPage() {
       return;
     }
 
-    const { data: userData, error: authError } = await supabase.auth.getUser();
+    const { data: userData, error: authError } = await getSafeUserData(supabase);
     if (authError || !userData.user) {
       router.replace("/signin");
       return;

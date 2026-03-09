@@ -6,10 +6,11 @@ import { useRouter } from "next/navigation";
 import type { CSSProperties } from "react";
 import { LEGAL_CATEGORIES } from "../../../lib/legalCategories";
 import { supabase } from "../../../lib/supabaseClient";
+import { getSafeUserData } from "@/lib/auth/requireActiveUser";
 
 type LegalRow = {
   id: string;
-  document_type: string | null;
+  category_key: string | null;
   created_at: string | null;
 };
 
@@ -26,16 +27,17 @@ export default function LegalOverviewPage() {
       setLoading(true);
       setStatus("");
 
-      const { data: userData, error: authError } = await supabase.auth.getUser();
+      const { data: userData, error: authError } = await getSafeUserData(supabase);
       if (authError || !userData.user) {
         router.replace("/signin");
         return;
       }
 
       const { data, error } = await supabase
-        .from("legal_documents")
-        .select("id,document_type,created_at")
-        .eq("user_id", userData.user.id)
+        .from("records")
+        .select("id,category_key,created_at")
+        .eq("owner_user_id", userData.user.id)
+        .eq("section_key", "legal")
         .order("created_at", { ascending: false });
 
       if (!mounted) return;
@@ -59,7 +61,7 @@ export default function LegalOverviewPage() {
   const counts = useMemo(() => {
     const byType = new Map<string, number>();
     for (const row of rows) {
-      const type = row.document_type || "other";
+      const type = row.category_key || "other-legal-documents";
       byType.set(type, (byType.get(type) ?? 0) + 1);
     }
     return byType;
@@ -79,7 +81,7 @@ export default function LegalOverviewPage() {
 
       <div className="lf-content-grid">
         {LEGAL_CATEGORIES.map((category) => {
-          const total = category.matchTypes.reduce((sum, key) => sum + (counts.get(key) ?? 0), 0);
+          const total = counts.get(category.slug) ?? 0;
           return (
             <Link key={category.slug} href={`/legal/${category.slug}`} style={cardStyle}>
               <div style={{ fontWeight: 700 }}>{category.label}</div>

@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { createClient } from "@supabase/supabase-js";
 import BrandMark from "../(app)/components/BrandMark";
-import { supabase } from "../../lib/supabaseClient";
+import { publicEnv } from "../../lib/env";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState("");
+  const [isSuccess, setIsSuccess] = useState(false);
   const [sending, setSending] = useState(false);
 
   async function sendReset() {
@@ -17,14 +19,24 @@ export default function ForgotPasswordPage() {
     }
 
     setSending(true);
-    const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/reset-password` : undefined;
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
+    setIsSuccess(false);
+    const redirectTo = "https://legacy-fortress-web.vercel.app/reset-password";
+    const recoveryClient = createClient(publicEnv.NEXT_PUBLIC_SUPABASE_URL, publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+      auth: {
+        flowType: "implicit",
+        detectSessionInUrl: false,
+        persistSession: false,
+      },
+    });
+    const { error } = await recoveryClient.auth.resetPasswordForEmail(email.trim(), { redirectTo });
     setSending(false);
-    setStatus(
-      error
-        ? "Reset request failed. Please confirm your email and try again."
-        : "Password reset link sent. Open the latest email and follow the secure reset link.",
-    );
+    if (error) {
+      setStatus(`Reset request failed: ${error.message}`);
+      return;
+    }
+
+    setIsSuccess(true);
+    setStatus("Password reset link sent. Please check your email.");
   }
 
   return (
@@ -44,14 +56,18 @@ export default function ForgotPasswordPage() {
           <h1>Forgot password</h1>
           <p className="lf-auth-subtext">Send a secure password reset link to your sign-in email.</p>
 
-          <label className="lf-label">
-            <span>Email</span>
-            <input className="lf-input" value={email} onChange={(e) => setEmail(e.target.value)} type="email" />
-          </label>
+          {!isSuccess ? (
+            <>
+              <label className="lf-label">
+                <span>Email</span>
+                <input className="lf-input" value={email} onChange={(e) => setEmail(e.target.value)} type="email" />
+              </label>
 
-          <button className="lf-primary-btn" onClick={() => void sendReset()} disabled={sending || !email.trim()}>
-            {sending ? "Sending..." : "Send reset link"}
-          </button>
+              <button className="lf-primary-btn" onClick={() => void sendReset()} disabled={sending || !email.trim()}>
+                {sending ? "Sending..." : "Send reset link"}
+              </button>
+            </>
+          ) : null}
 
           {status ? <div className="lf-muted-note">{status}</div> : null}
           <p className="lf-muted-note">

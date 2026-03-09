@@ -9,12 +9,12 @@ export function requireAuthFixture() {
 }
 
 export async function signInAsSeedUser(page: Page) {
-  await page.goto("/signin");
+  await page.goto("/sign-in");
   await page.getByLabel("Email").fill(process.env.E2E_USER_EMAIL!);
   await page.getByLabel("Password").fill(process.env.E2E_USER_PASSWORD!);
   await page.getByRole("button", { name: /sign in/i }).click();
 
-  await expect(page).toHaveURL(/\/(dashboard|onboarding)/);
+  await expect(page).toHaveURL(/\/(app\/dashboard|app\/onboarding|dashboard|onboarding)/);
 
   if (page.url().includes("/onboarding")) {
     const terms = page.getByLabel(/i accept the terms and conditions/i);
@@ -22,6 +22,6 @@ export async function signInAsSeedUser(page: Page) {
       await terms.check();
       await page.getByRole("button", { name: /go to dashboard/i }).click();
     }
-    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page).toHaveURL(/\/(app\/dashboard|dashboard)/);
   }
 }
