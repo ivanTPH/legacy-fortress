@@ -1761,7 +1761,21 @@ function detectProvider(input: string, catalog: ProviderCatalogRow[]) {
 function mergeCatalogRows(rows: ProviderCatalogRow[]) {
   const byKey = new Map<string, ProviderCatalogRow>();
   for (const row of DEFAULT_PROVIDER_CATALOG) byKey.set(row.provider_key, row);
-  for (const row of rows) byKey.set(row.provider_key, row);
+  for (const row of rows) {
+    const existing = byKey.get(row.provider_key);
+    if (!existing) {
+      byKey.set(row.provider_key, row);
+      continue;
+    }
+    byKey.set(row.provider_key, {
+      ...existing,
+      ...row,
+      // Keep default/built-in branding when DB row leaves branding empty.
+      logo_path: row.logo_path ?? existing.logo_path,
+      icon_text: row.icon_text ?? existing.icon_text,
+      match_terms: row.match_terms?.length ? row.match_terms : existing.match_terms,
+    });
+  }
   return Array.from(byKey.values());
 }
 

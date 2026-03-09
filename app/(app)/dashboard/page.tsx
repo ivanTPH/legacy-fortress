@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import DashboardAssetSummaryCard from "../components/dashboard/DashboardAssetSummaryCard";
 import CompletionChecklist from "../components/dashboard/CompletionChecklist";
 import ContactInvitationManager from "../components/dashboard/ContactInvitationManager";
@@ -74,6 +75,16 @@ type PersonalRow = {
   updated_at: string | null;
 };
 
+type ProfileSummary = {
+  displayName: string;
+  primaryEmail: string;
+  secondaryEmail: string;
+  mobile: string;
+  telephone: string;
+  address: string;
+  avatarUrl: string;
+};
+
 export default function DashboardPage() {
   const router = useRouter();
 
@@ -91,6 +102,15 @@ export default function DashboardPage() {
   const [businessRows, setBusinessRows] = useState<BusinessRow[]>([]);
   const [digitalRows, setDigitalRows] = useState<DigitalRow[]>([]);
   const [personalRows, setPersonalRows] = useState<PersonalRow[]>([]);
+  const [profileSummary, setProfileSummary] = useState<ProfileSummary>({
+    displayName: "Secure Account",
+    primaryEmail: "",
+    secondaryEmail: "",
+    mobile: "",
+    telephone: "",
+    address: "",
+    avatarUrl: "",
+  });
 
   const viewerRole: CollaboratorRole = "owner";
   const viewerActivation: AccessActivationStatus = "active";
@@ -110,7 +130,7 @@ export default function DashboardPage() {
         }
 
         const [
-          profileRes,
+          profileWithAvatarRes,
           contactRes,
           addressRes,
           financialRes,
@@ -120,9 +140,21 @@ export default function DashboardPage() {
           digitalRes,
           personalRes,
         ] = await Promise.all([
-          supabase.from("user_profiles").select("user_id").eq("user_id", user.id).maybeSingle(),
-          supabase.from("contact_details").select("user_id").eq("user_id", user.id).maybeSingle(),
-          supabase.from("addresses").select("user_id").eq("user_id", user.id).maybeSingle(),
+          supabase
+            .from("user_profiles")
+            .select("user_id,display_name,avatar_path")
+            .eq("user_id", user.id)
+            .maybeSingle(),
+          supabase
+            .from("contact_details")
+            .select("user_id,secondary_email,mobile_number,telephone")
+            .eq("user_id", user.id)
+            .maybeSingle(),
+          supabase
+            .from("addresses")
+            .select("user_id,house_name_or_number,street_name,town,city,country,post_code")
+            .eq("user_id", user.id)
+            .maybeSingle(),
           supabase
             .from("records")
             .select("id,category_key,title,provider_name,summary,value_minor,currency_code,status,metadata,created_at,updated_at")
@@ -159,11 +191,54 @@ export default function DashboardPage() {
             .order("updated_at", { ascending: false }),
         ]);
 
+        let profileRes = profileWithAvatarRes;
+        if (profileWithAvatarRes.error?.message?.includes("avatar_path")) {
+          profileRes = await supabase
+            .from("user_profiles")
+            .select("user_id,display_name")
+            .eq("user_id", user.id)
+            .maybeSingle();
+        }
+
         if (!mounted) return;
 
         setHasProfileRecord(Boolean(profileRes.data) && !profileRes.error);
         setHasContactRecord(Boolean(contactRes.data) && !contactRes.error);
         setHasAddressRecord(Boolean(addressRes.data) && !addressRes.error);
+
+        const profileData = (profileRes.data ?? null) as { display_name?: string | null; avatar_path?: string | null } | null;
+        const contactData = (contactRes.data ?? null) as { secondary_email?: string | null; mobile_number?: string | null; telephone?: string | null } | null;
+        const addressData = (addressRes.data ?? null) as {
+          house_name_or_number?: string | null;
+          street_name?: string | null;
+          town?: string | null;
+          city?: string | null;
+          country?: string | null;
+          post_code?: string | null;
+        } | null;
+        const avatarUrl = profileData?.avatar_path
+          ? await getAvatarPreview(profileData.avatar_path)
+          : "";
+        const address = [
+          addressData?.house_name_or_number,
+          addressData?.street_name,
+          addressData?.town,
+          addressData?.city,
+          addressData?.country,
+          addressData?.post_code,
+        ]
+          .filter(Boolean)
+          .join(", ");
+
+        setProfileSummary({
+          displayName: profileData?.display_name || user.email?.split("@")[0] || "Secure Account",
+          primaryEmail: user.email ?? "",
+          secondaryEmail: contactData?.secondary_email ?? "",
+          mobile: contactData?.mobile_number ?? "",
+          telephone: contactData?.telephone ?? "",
+          address,
+          avatarUrl,
+        });
 
         if (financialRes.error) {
           setStatus("⚠️ Financial summary could not be loaded.");
@@ -356,7 +431,7 @@ export default function DashboardPage() {
         <DashboardAssetSummaryCard
           icon={<WalletIcon size={13} />}
           title="Finances"
-          href="/vault/financial"
+          href="/finances/bank"
           addedAt={financialSummary.addedAt}
           value={financialSummary.valueText}
           detail={financialSummary.detailText}
@@ -428,6 +503,59 @@ export default function DashboardPage() {
 
       <CompletionChecklist items={checklist} />
 
+      <section
+        style={{
+          border: "1px solid #e2e8f0",
+          borderRadius: 12,
+          background: "#fff",
+          padding: 14,
+          display: "grid",
+          gap: 10,
+        }}
+      >
+        <h2 style={{ margin: 0, fontSize: 16 }}>Profile summary</h2>
+        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          {profileSummary.avatarUrl ? (
+            <Image
+              src={profileSummary.avatarUrl}
+              alt={`${profileSummary.displayName} picture`}
+              width={48}
+              height={48}
+              style={{ borderRadius: "999px", objectFit: "cover" }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: "999px",
+                border: "1px solid #d1d5db",
+                background: "#f8fafc",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: 700,
+                color: "#334155",
+              }}
+            >
+              {makeInitials(profileSummary.displayName)}
+            </div>
+          )}
+          <div style={{ display: "grid", gap: 4 }}>
+            <div style={{ fontWeight: 700 }}>{profileSummary.displayName}</div>
+            {profileSummary.address ? <div style={{ color: "#64748b", fontSize: 13 }}>{profileSummary.address}</div> : null}
+            <div style={{ color: "#64748b", fontSize: 13 }}>
+              {[profileSummary.primaryEmail, profileSummary.secondaryEmail].filter(Boolean).join(" · ") || "No email saved"}
+            </div>
+            {(profileSummary.mobile || profileSummary.telephone) ? (
+              <div style={{ color: "#64748b", fontSize: 13 }}>
+                {[profileSummary.mobile, profileSummary.telephone].filter(Boolean).join(" · ")}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </section>
+
       <ContactInvitationManager />
     </div>
   );
@@ -441,4 +569,20 @@ function latestDate(values: Array<string | null | undefined>) {
     .filter((value) => Number.isFinite(value))
     .sort((a, b) => b - a)[0];
   return Number.isFinite(max) ? new Date(max).toISOString() : null;
+}
+
+async function getAvatarPreview(path: string) {
+  const buckets = ["vault-docs", "avatars"];
+  for (const bucket of buckets) {
+    const signed = await supabase.storage.from(bucket).createSignedUrl(path, 3600);
+    if (!signed.error && signed.data?.signedUrl) return signed.data.signedUrl;
+  }
+  return "";
+}
+
+function makeInitials(input: string) {
+  const clean = input.trim();
+  if (!clean) return "LF";
+  const parts = clean.split(/\s+/).slice(0, 2);
+  return parts.map((part) => part[0]?.toUpperCase() ?? "").join("") || "LF";
 }

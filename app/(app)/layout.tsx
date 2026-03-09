@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import Image from "next/image";
 import BrandMark from "./components/BrandMark";
 import Breadcrumbs from "./components/navigation/Breadcrumbs";
 import FlyoutMenu from "./components/navigation/FlyoutMenu";
@@ -11,7 +12,6 @@ import SidebarPrimary from "./components/navigation/SidebarPrimary";
 import { accountNavigation, mainNavigation, type NavNode } from "./navigation/navigation.config";
 import { getBreadcrumbsByPath, getChildrenById, getOpenMenuChain, normalizePath } from "./navigation/navigation.utils";
 import { computeFlyoutTop } from "../../lib/navigation/flyoutPosition";
-import { waitForActiveUser } from "../../lib/auth/session";
 import { trackClientEvent } from "../../lib/observability/clientEvents";
 import { getOrCreateOnboardingState } from "../../lib/onboarding";
 import { getFlyoutMenuKeyAction, getTopMenuKeyAction } from "../../lib/navigation/menuKeyActions";
@@ -23,8 +23,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
+  const [displayName, setDisplayName] = useState("Secure Account");
   const [initials, setInitials] = useState("LF");
-  const [authReady, setAuthReady] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [authState, setAuthState] = useState<"checking" | "ready" | "none">("checking");
 
   const [menuState, dispatchMenu] = useReducer(menuReducer, initialMenuState);
   const navWrapRef = useRef<HTMLDivElement | null>(null);
@@ -51,7 +53,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       .filter(Boolean)
       .map((segment, index, arr) => ({
         id: `fallback-${index}`,
-        label: segment.replace(/-/g, " ").replace(/\b\w/g, (char) => char.toUpperCase()),
+        label: toFriendlyPathLabel(segment),
         path: `/${arr.slice(0, index + 1).join("/")}`,
       }));
 
@@ -74,40 +76,51 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     let mounted = true;
 
     async function guard() {
-      const user = await waitForActiveUser(supabase, { attempts: 6, delayMs: 150 });
+      if (!mounted) return;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData.session?.user ?? null;
       if (!user) {
-        router.replace("/signin");
+        setAuthState("none");
         return;
       }
+
+      console.info("[auth][layout] session resolved", {
+        userId: user.id,
+        persistenceLocation: typeof window !== "undefined" && window.localStorage ? "localStorage" : "memory",
+      });
 
       const onboarding = await getOrCreateOnboardingState(supabase, user.id);
+      if (!mounted) return;
       if (!onboarding.is_completed) {
-        router.replace("/onboarding");
+        router.replace("/app/onboarding");
         return;
       }
 
-      if (!mounted) return;
       const nextEmail = user.email ?? "";
       setEmail(nextEmail);
-      setInitials(makeInitials(nextEmail));
-      setAuthReady(true);
+      await hydrateUserChip(user.id, nextEmail, mounted, setDisplayName, setInitials, setAvatarUrl);
+      setAuthState("ready");
     }
 
     void guard();
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
       if (!session) {
-        setAuthReady(false);
-        router.replace("/signin");
+        setAuthState("none");
         return;
       }
 
-      if (!mounted) return;
       if (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") {
+        console.info("[auth][layout] auth state update", {
+          event,
+          userId: session.user.id,
+          persistenceLocation: typeof window !== "undefined" && window.localStorage ? "localStorage" : "memory",
+        });
         const nextEmail = session.user.email ?? "";
         setEmail(nextEmail);
-        setInitials(makeInitials(nextEmail));
-        setAuthReady(true);
+        void hydrateUserChip(session.user.id, nextEmail, mounted, setDisplayName, setInitials, setAvatarUrl);
+        setAuthState("ready");
       }
     });
 
@@ -118,16 +131,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   useEffect(() => {
+    if (authState === "none") {
+      router.replace("/sign-in");
+    }
+  }, [authState, router]);
+
+  useEffect(() => {
     function onDocClick(event: Event) {
       const target = event.target as Node;
       if (!navWrapRef.current?.contains(target)) closeNavigationState("outside_click", false);
     }
 
-    document.addEventListener("mousedown", onDocClick);
-    document.addEventListener("touchstart", onDocClick);
+    document.addEventListener("pointerdown", onDocClick, { capture: true });
     return () => {
-      document.removeEventListener("mousedown", onDocClick);
-      document.removeEventListener("touchstart", onDocClick);
+      document.removeEventListener("pointerdown", onDocClick, { capture: true });
     };
   }, [closeNavigationState]);
 
@@ -244,10 +261,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     dispatchMenu({ type: "set_mobile_nav", open: false });
     await supabase.auth.signOut();
-    router.replace("/signin");
+    router.replace("/sign-in");
   };
 
-  if (!authReady) {
+  if (authState !== "ready") {
     return (
       <main className="lf-auth">
         <section className="lf-auth-form-side">
@@ -296,6 +313,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             activeTopId={activePrimary?.id ?? null}
             highlightedTopId={menuState.openPrimaryId}
             flyoutId={level2FlyoutId}
+            onPointerDownTop={() => {}}
             onActivateTop={(event, item, anchorEl) => {
               if (item.children?.length) {
                 event.preventDefault();
@@ -304,7 +322,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 trackClientEvent("menu.open_primary", { id: item.id, via: "click" });
                 return;
               }
-              closeNavigationState("item_select", false);
+              event.preventDefault();
+              navigateTo(item.path);
             }}
             onKeyDownTop={onTopKeyDown}
           />
@@ -323,9 +342,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </nav>
 
             <div className="lf-user-card">
-              <div className="lf-user-avatar">{initials}</div>
+              {avatarUrl ? (
+                <Image
+                  src={avatarUrl}
+                  alt={`${displayName} picture`}
+                  width={36}
+                  height={36}
+                  style={{ borderRadius: "999px", objectFit: "cover" }}
+                />
+              ) : (
+                <div className="lf-user-avatar">{initials}</div>
+              )}
               <div>
-                <div className="lf-user-name">Secure Account</div>
+                <div className="lf-user-name">{displayName}</div>
                 <div className="lf-user-email">{email || "Signed in"}</div>
               </div>
               <button className="lf-signout" onClick={signOut} type="button">
@@ -352,8 +381,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 trackClientEvent("menu.open_secondary", { id: item.id, via: "click" });
                 return;
               }
-              closeNavigationState("item_select", false);
+              event.preventDefault();
+              navigateTo(item.path);
             }}
+            onPointerDownItem={() => {}}
             onKeyDownItem={onFlyoutKeyDown}
             topOffset={menuState.level2Top}
           />
@@ -367,7 +398,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             items={level3Items}
             highlightedId={null}
             activeChainIds={activeChainIds}
-            onActivateItem={() => closeNavigationState("item_select", false)}
+            onActivateItem={(event, item) => {
+              event.preventDefault();
+              navigateTo(item.path);
+            }}
+            onPointerDownItem={() => {}}
             onKeyDownItem={onFlyoutKeyDown}
             topOffset={menuState.level3Top}
           />
@@ -443,9 +478,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
               <div className="lf-sidebar-foot">
                 <div className="lf-user-card">
-                  <div className="lf-user-avatar">{initials}</div>
+                  {avatarUrl ? (
+                    <Image
+                      src={avatarUrl}
+                      alt={`${displayName} picture`}
+                      width={36}
+                      height={36}
+                      style={{ borderRadius: "999px", objectFit: "cover" }}
+                    />
+                  ) : (
+                    <div className="lf-user-avatar">{initials}</div>
+                  )}
                   <div>
-                    <div className="lf-user-name">Secure Account</div>
+                    <div className="lf-user-name">{displayName}</div>
                     <div className="lf-user-email">{email || "Signed in"}</div>
                   </div>
                   <button className="lf-signout" onClick={signOut} type="button">
@@ -471,4 +516,62 @@ function makeInitials(email: string) {
     return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
   }
   return local.slice(0, 2).toUpperCase();
+}
+
+async function hydrateUserChip(
+  userId: string,
+  email: string,
+  mounted: boolean,
+  setDisplayName: (value: string) => void,
+  setInitials: (value: string) => void,
+  setAvatarUrl: (value: string) => void,
+) {
+  let profileRes = await supabase
+    .from("user_profiles")
+    .select("display_name,avatar_path")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (profileRes.error?.message?.includes("avatar_path")) {
+    profileRes = await supabase
+      .from("user_profiles")
+      .select("display_name")
+      .eq("user_id", userId)
+      .maybeSingle();
+  }
+  if (!mounted) return;
+  const profile = (profileRes.data ?? null) as { display_name?: string | null; avatar_path?: string | null } | null;
+  const nextName = profile?.display_name?.trim() || email.split("@")[0] || "Secure Account";
+  setDisplayName(nextName);
+  setInitials(makeInitials(nextName));
+  if (profile?.avatar_path) {
+    const avatar = await getAvatarPreview(profile.avatar_path);
+    if (!mounted) return;
+    setAvatarUrl(avatar);
+  } else {
+    setAvatarUrl("");
+  }
+}
+
+async function getAvatarPreview(path: string) {
+  for (const bucket of ["vault-docs", "avatars"]) {
+    const signed = await supabase.storage.from(bucket).createSignedUrl(path, 3600);
+    if (!signed.error && signed.data?.signedUrl) return signed.data.signedUrl;
+  }
+  return "";
+}
+
+function toFriendlyPathLabel(segment: string) {
+  const cleaned = segment.trim();
+  if (!cleaned) return "Untitled record";
+
+  // Hide internal IDs in breadcrumb/title fallbacks for dynamic detail routes.
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(cleaned)) {
+    return "Untitled record";
+  }
+
+  if (/^[A-Za-z0-9_-]{20,}$/.test(cleaned)) {
+    return "Untitled record";
+  }
+
+  return cleaned.replace(/-/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }
