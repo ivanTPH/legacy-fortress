@@ -1,5 +1,6 @@
 import Link from "next/link";
-import type { CSSProperties, ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from "react";
 
 type AssetItemLink = {
   id: string;
@@ -31,8 +32,29 @@ export default function DashboardAssetSummaryCard({
   items = [],
   emptyActionLabel = "Add first record",
 }: DashboardAssetSummaryCardProps) {
+  const router = useRouter();
+
+  function onCardClick(event: MouseEvent<HTMLDivElement>) {
+    const target = event.target as HTMLElement;
+    if (target.closest("a")) return;
+    router.push(href);
+  }
+
+  function onCardKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    router.push(href);
+  }
+
   return (
-    <div style={cardStyle}>
+    <div
+      style={cardStyle}
+      role="link"
+      tabIndex={0}
+      onClick={onCardClick}
+      onKeyDown={onCardKeyDown}
+      aria-label={`${title} summary`}
+    >
       <Link href={href} style={{ textDecoration: "none", color: "inherit", display: "grid", gap: 8 }}>
         <div style={headerStyle}>
           <span style={iconStyle}>{icon}</span>
