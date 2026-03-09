@@ -12,12 +12,12 @@ import { supabase } from "../../lib/supabaseClient";
 function toSignInErrorMessage(raw: string) {
   const message = raw.toLowerCase();
   if (message.includes("invalid login credentials")) {
-    return "Invalid email or password. If you just signed up, verify your email first and then sign in.";
+    return `Invalid email or password. If you just signed up, verify your email first and then sign in. (Supabase: ${raw})`;
   }
   if (message.includes("email not confirmed")) {
-    return "Please verify your email before signing in.";
+    return `Please verify your email before signing in. (Supabase: ${raw})`;
   }
-  return raw;
+  return `Authentication error: ${raw}`;
 }
 
 export default function SignInPage() {
@@ -32,8 +32,12 @@ export default function SignInPage() {
     async function guard() {
       try {
         const { data: sessionData } = await supabase.auth.getSession();
+        console.info("[auth][signin] existing session check", {
+          hasSession: Boolean(sessionData.session?.user),
+        });
         if (!mounted) return;
         if (!sessionData.session?.user) return;
+        console.info("[auth][signin] redirect chosen", { path: "/app/dashboard", reason: "existing_session" });
         router.replace("/app/dashboard");
       } catch (error) {
         if (!mounted) return;
@@ -53,7 +57,12 @@ export default function SignInPage() {
     setSigningIn(true);
 
     try {
+      console.info("[auth][signin] signInWithPassword started");
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      console.info("[auth][signin] signInWithPassword returned", {
+        errorMessage: error?.message ?? null,
+        hasSession: Boolean(data.session),
+      });
       if (error) {
         setStatus(`Sign in failed: ${toSignInErrorMessage(error.message)}`);
         return;
@@ -64,6 +73,9 @@ export default function SignInPage() {
       }
 
       const confirmedUser = await waitForActiveUser(supabase, { attempts: 6, delayMs: 120 });
+      console.info("[auth][signin] waitForActiveUser resolved", {
+        resolvedUser: Boolean(confirmedUser),
+      });
       if (!confirmedUser) {
         setStatus("Sign in failed: Session was not persisted in this browser.");
         return;
@@ -75,6 +87,7 @@ export default function SignInPage() {
         persistenceLocation,
       });
 
+      console.info("[auth][signin] redirect chosen", { path: "/app/dashboard", reason: "successful_sign_in" });
       router.replace("/app/dashboard");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
