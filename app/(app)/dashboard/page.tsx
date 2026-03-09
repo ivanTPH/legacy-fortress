@@ -14,7 +14,6 @@ import {
   WalletIcon,
 } from "../components/NavIcons";
 import { formatCurrency } from "../../../lib/currency";
-import { computeFinancialTotals } from "../../../lib/financialTotals";
 import { buildCompletionChecklist, type CompletionInput } from "../../../lib/dashboard/completion";
 import { shouldObscureSection, type AccessActivationStatus, type CollaboratorRole } from "../../../lib/access-control/roles";
 import { waitForActiveUser } from "../../../lib/auth/session";
@@ -22,11 +21,16 @@ import { supabase } from "../../../lib/supabaseClient";
 
 type FinancialRow = {
   id: string;
-  account_type: string | null;
-  account_name: string | null;
-  balance: number | null;
-  currency: string | null;
+  category_key: string;
+  title: string | null;
+  provider_name: string | null;
+  summary: string | null;
+  value_minor: number | null;
+  currency_code: string | null;
+  status: "active" | "archived" | null;
+  metadata: Record<string, unknown> | null;
   created_at: string | null;
+  updated_at: string | null;
 };
 
 type LegalRow = {
@@ -62,10 +66,12 @@ type DigitalRow = {
 
 type PersonalRow = {
   id: string;
-  item_name: string | null;
-  possession_type: string | null;
-  estimated_value: number | null;
+  title: string | null;
+  status: "active" | "archived" | null;
+  value_minor: number | null;
+  metadata: Record<string, unknown> | null;
   created_at: string | null;
+  updated_at: string | null;
 };
 
 export default function DashboardPage() {
@@ -99,7 +105,7 @@ export default function DashboardPage() {
       try {
         const user = await waitForActiveUser(supabase, { attempts: 6, delayMs: 130 });
         if (!user) {
-          router.replace("/signin");
+          router.replace("/sign-in");
           return;
         }
 
@@ -118,10 +124,12 @@ export default function DashboardPage() {
           supabase.from("contact_details").select("user_id").eq("user_id", user.id).maybeSingle(),
           supabase.from("addresses").select("user_id").eq("user_id", user.id).maybeSingle(),
           supabase
-            .from("financial_accounts")
-            .select("id,account_type,account_name,balance,currency,created_at")
-            .eq("user_id", user.id)
-            .order("created_at", { ascending: false }),
+            .from("records")
+            .select("id,category_key,title,provider_name,summary,value_minor,currency_code,status,metadata,created_at,updated_at")
+            .eq("owner_user_id", user.id)
+            .eq("section_key", "finances")
+            .in("category_key", ["bank", "investments", "pensions", "insurance", "debts"])
+            .order("updated_at", { ascending: false }),
           supabase
             .from("legal_documents")
             .select("id,title,document_type,created_at")
@@ -143,10 +151,12 @@ export default function DashboardPage() {
             .eq("user_id", user.id)
             .order("created_at", { ascending: false }),
           supabase
-            .from("personal_possessions")
-            .select("id,item_name,possession_type,estimated_value,created_at")
-            .eq("user_id", user.id)
-            .order("created_at", { ascending: false }),
+            .from("records")
+            .select("id,title,status,value_minor,metadata,created_at,updated_at")
+            .eq("owner_user_id", user.id)
+            .eq("section_key", "personal")
+            .eq("category_key", "possessions")
+            .order("updated_at", { ascending: false }),
         ]);
 
         if (!mounted) return;
@@ -161,7 +171,7 @@ export default function DashboardPage() {
         } else {
           const rows = (financialRes.data ?? []) as FinancialRow[];
           setFinancialRows(rows);
-          const firstCurrency = rows.find((row) => row.currency)?.currency;
+          const firstCurrency = rows.find((row) => row.currency_code)?.currency_code;
           if (firstCurrency) setCurrency(firstCurrency);
         }
 
@@ -186,19 +196,47 @@ export default function DashboardPage() {
   }, [router]);
 
   const financialSummary = useMemo(() => {
-    const totals = computeFinancialTotals(
-      financialRows.map((row) => ({ account_type: row.account_type ?? "bank", balance: Number(row.balance ?? 0) })),
-    );
-    const bankAccountCount = financialRows.filter((row) => row.account_type === "bank" || row.account_type === "savings").length;
+    const activeRows = financialRows.filter((row) => row.status !== "archived");
+    const archivedRows = financialRows.filter((row) => row.status === "archived");
+    const assetsMinor = activeRows
+      .filter((row) => row.category_key !== "debts")
+      .reduce((sum, row) => sum + Number(row.value_minor ?? 0), 0);
+    const liabilitiesMinor = activeRows
+      .filter((row) => row.category_key === "debts")
+      .reduce((sum, row) => sum + Number(row.value_minor ?? 0), 0);
+    const netMajor = (assetsMinor - liabilitiesMinor) / 100;
     return {
-      addedAt: latestDate(financialRows.map((row) => row.created_at)),
-      valueText: formatCurrency(totals.net, currency),
-      detailText: `${bankAccountCount} bank account(s) · Assets ${formatCurrency(totals.assets, currency)} · Liabilities ${formatCurrency(totals.liabilities, currency)}`,
+      addedAt: latestDate(financialRows.map((row) => row.updated_at ?? row.created_at)),
+      valueText: financialRows.length ? formatCurrency(netMajor, currency) : "No finance records",
+      detailText: `${activeRows.length} active · ${archivedRows.length} archived · Assets ${formatCurrency(assetsMinor / 100, currency)} · Liabilities ${formatCurrency(liabilitiesMinor / 100, currency)}`,
       items: financialRows.slice(0, 3).map((row) => ({
         id: row.id,
-        label: row.account_name || row.account_type || "Financial account",
-        href: `/vault/financial/${row.id}`,
-        meta: formatCurrency(Number(row.balance ?? 0), row.currency || currency),
+        label:
+          row.title ||
+          row.provider_name ||
+          (row.category_key === "bank"
+            ? (row.metadata?.bank_name as string | undefined)
+            : row.category_key === "investments"
+              ? (row.metadata?.investment_provider as string | undefined)
+              : row.category_key === "pensions"
+                ? (row.metadata?.pension_provider as string | undefined)
+                : row.category_key === "insurance"
+                  ? (row.metadata?.insurer_name as string | undefined)
+                  : row.category_key === "debts"
+                    ? (row.metadata?.creditor_name as string | undefined)
+                    : null) ||
+          "Finance record",
+        href:
+          row.category_key === "bank"
+            ? "/finances/bank"
+            : row.category_key === "investments"
+              ? "/finances/investments"
+              : row.category_key === "pensions"
+                ? "/finances/pensions"
+                : row.category_key === "insurance"
+                  ? "/finances/insurance"
+                  : "/finances/debts",
+        meta: `${row.category_key[0].toUpperCase()}${row.category_key.slice(1)} · ${formatCurrency(Number(row.value_minor ?? 0) / 100, row.currency_code || currency)}`,
       })),
     };
   }, [financialRows, currency]);
@@ -258,16 +296,21 @@ export default function DashboardPage() {
   }), [digitalRows]);
 
   const personalSummary = useMemo(() => {
-    const total = personalRows.reduce((sum, row) => sum + Number(row.estimated_value ?? 0), 0);
+    const activeRows = personalRows.filter((row) => row.status !== "archived");
+    const archivedRows = personalRows.filter((row) => row.status === "archived");
+    const activeTotal = activeRows.reduce((sum, row) => sum + Number(row.value_minor ?? 0), 0) / 100;
+    const archivedTotal = archivedRows.reduce((sum, row) => sum + Number(row.value_minor ?? 0), 0) / 100;
     return {
-      addedAt: latestDate(personalRows.map((row) => row.created_at)),
-      valueText: personalRows.length ? formatCurrency(total, currency) : "No items",
-      detailText: `${personalRows.length} possession record(s)`,
+      addedAt: latestDate(personalRows.map((row) => row.updated_at ?? row.created_at)),
+      valueText: personalRows.length ? formatCurrency(activeTotal, currency) : "No items",
+      detailText: `${activeRows.length} active · ${archivedRows.length} archived · Archived value ${formatCurrency(archivedTotal, currency)}`,
       items: personalRows.slice(0, 3).map((row) => ({
         id: row.id,
-        label: row.item_name || row.possession_type || "Personal possession",
-        href: `/vault/personal/${row.id}`,
-        meta: row.possession_type || "Possession",
+        label: row.title || "Personal possession",
+        href: "/vault/personal",
+        meta:
+          (row.metadata?.category as string | undefined)?.replace(/_/g, " ") ||
+          (row.status === "archived" ? "Archived" : "Possession"),
       })),
     };
   }, [personalRows, currency]);
