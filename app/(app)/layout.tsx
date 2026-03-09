@@ -16,6 +16,7 @@ import { trackClientEvent } from "../../lib/observability/clientEvents";
 import { getOrCreateOnboardingState } from "../../lib/onboarding";
 import { getFlyoutMenuKeyAction, getTopMenuKeyAction } from "../../lib/navigation/menuKeyActions";
 import { initialMenuState, menuReducer, type MenuCloseReason } from "../../lib/navigation/menuState";
+import { waitForActiveUser } from "../../lib/auth/session";
 import { supabase } from "../../lib/supabaseClient";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -77,8 +78,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
     async function guard() {
       if (!mounted) return;
-      const { data: sessionData } = await supabase.auth.getSession();
-      const user = sessionData.session?.user ?? null;
+      const user = await waitForActiveUser(supabase, { attempts: 6, delayMs: 120 });
       if (!user) {
         setAuthState("none");
         return;

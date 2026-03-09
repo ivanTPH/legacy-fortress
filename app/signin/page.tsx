@@ -2,11 +2,11 @@
 
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import type { FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import BrandMark from "../(app)/components/BrandMark";
 import OAuthButtons from "../../components/auth/OAuthButtons";
 import { waitForActiveUser } from "../../lib/auth/session";
-import { getOrCreateOnboardingState } from "../../lib/onboarding";
 import { supabase } from "../../lib/supabaseClient";
 
 function toSignInErrorMessage(raw: string) {
@@ -30,11 +30,16 @@ export default function SignInPage() {
   useEffect(() => {
     let mounted = true;
     async function guard() {
-      const user = await waitForActiveUser(supabase, { attempts: 3, delayMs: 120 });
-      if (!mounted) return;
-      if (!user) return;
-      const onboarding = await getOrCreateOnboardingState(supabase, user.id);
-      router.replace(onboarding.is_completed ? "/dashboard" : "/onboarding");
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (!mounted) return;
+        if (!sessionData.session?.user) return;
+        router.replace("/app/dashboard");
+      } catch (error) {
+        if (!mounted) return;
+        const message = error instanceof Error ? error.message : "Unknown error";
+        setStatus(`Sign in check failed: ${message}`);
+      }
     }
     void guard();
     return () => {
@@ -42,9 +47,10 @@ export default function SignInPage() {
     };
   }, [router]);
 
-  async function signIn() {
+  async function signIn(event?: FormEvent<HTMLFormElement>) {
+    event?.preventDefault();
+    setStatus("");
     setSigningIn(true);
-    setStatus("Signing in...");
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -52,15 +58,27 @@ export default function SignInPage() {
         setStatus(`Sign in failed: ${toSignInErrorMessage(error.message)}`);
         return;
       }
-
-      const user = data.user ?? (await waitForActiveUser(supabase, { attempts: 6, delayMs: 180 }));
-      if (!user) {
-        setStatus("Signed in but user session could not be loaded.");
+      if (!data.session) {
+        setStatus("Sign in failed: No active session returned.");
         return;
       }
 
-      const onboarding = await getOrCreateOnboardingState(supabase, user.id);
-      router.replace(onboarding.is_completed ? "/dashboard" : "/onboarding");
+      const confirmedUser = await waitForActiveUser(supabase, { attempts: 6, delayMs: 120 });
+      if (!confirmedUser) {
+        setStatus("Sign in failed: Session was not persisted in this browser.");
+        return;
+      }
+
+      const persistenceLocation = typeof window !== "undefined" && window.localStorage ? "localStorage" : "memory";
+      console.info("[auth][signin] session established", {
+        userId: confirmedUser.id,
+        persistenceLocation,
+      });
+
+      router.replace("/app/dashboard");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      setStatus(`Sign in failed: ${message}`);
     } finally {
       setSigningIn(false);
     }
@@ -86,29 +104,38 @@ export default function SignInPage() {
       <section className="lf-auth-form-side">
         <div className="lf-auth-card">
           <Suspense fallback={null}>
-            <ResetStatusSync onResetSuccess={() => setStatus("Password updated successfully. Please sign in with your new password.")} />
+            <ResetStatusSync
+              onResetSuccess={() => setStatus("Password updated successfully. Please sign in with your new password.")}
+            />
           </Suspense>
 
           <h1>Sign in</h1>
           <p className="lf-auth-subtext">Use email/password or continue with a trusted provider.</p>
 
-          <label className="lf-label">
-            <span>Email</span>
-            <input className="lf-input" value={email} onChange={(e) => setEmail(e.target.value)} type="email" />
-          </label>
+          <form
+            onSubmit={(event) => {
+              void signIn(event);
+            }}
+            style={{ display: "grid", gap: 12 }}
+          >
+            <label className="lf-label">
+              <span>Email</span>
+              <input className="lf-input" value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" />
+            </label>
 
-          <label className="lf-label">
-            <span>Password</span>
-            <input className="lf-input" value={password} onChange={(e) => setPassword(e.target.value)} type="password" />
-          </label>
+            <label className="lf-label">
+              <span>Password</span>
+              <input className="lf-input" value={password} onChange={(e) => setPassword(e.target.value)} type="password" autoComplete="current-password" />
+            </label>
 
-          <p className="lf-muted-note" style={{ marginTop: -4 }}>
-            <Link className="lf-inline-link" href="/forgot-password">Forgot password?</Link>
-          </p>
+            <p className="lf-muted-note" style={{ marginTop: -4 }}>
+              <Link className="lf-inline-link" href="/forgot-password">Forgot password?</Link>
+            </p>
 
-          <button className="lf-primary-btn" onClick={() => void signIn()} disabled={!email || !password || signingIn}>
-            {signingIn ? "Signing in..." : "Sign in"}
-          </button>
+            <button className="lf-primary-btn" type="submit" disabled={!email || !password || signingIn}>
+              {signingIn ? "Signing in..." : "Sign in"}
+            </button>
+          </form>
 
           <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#9ca3af", fontSize: 12 }}>
             <span style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
@@ -116,12 +143,12 @@ export default function SignInPage() {
             <span style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
           </div>
 
-          <OAuthButtons nextPath="/dashboard" />
+          <OAuthButtons nextPath="/app/dashboard" />
 
-          {status ? <div className="lf-muted-note">{status}</div> : null}
+          {status ? <div className="lf-muted-note" role="alert">{status}</div> : null}
 
           <p className="lf-muted-note">
-            New to Legacy Fortress? <Link className="lf-inline-link" href="/signup">Create account</Link>
+            New to Legacy Fortress? <Link className="lf-inline-link" href="/sign-up">Create account</Link>
           </p>
         </div>
       </section>
@@ -129,7 +156,11 @@ export default function SignInPage() {
   );
 }
 
-function ResetStatusSync({ onResetSuccess }: { onResetSuccess: () => void }) {
+function ResetStatusSync({
+  onResetSuccess,
+}: {
+  onResetSuccess: () => void;
+}) {
   const searchParams = useSearchParams();
 
   useEffect(() => {
