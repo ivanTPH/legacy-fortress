@@ -35,6 +35,7 @@ export default function SidebarPrimary({
             aria-controls={item.children?.length ? flyoutId : undefined}
             aria-current={isActive ? "page" : undefined}
             className={`lf-nav-item ${isActive ? "is-active" : ""} ${isHighlighted ? "is-open" : ""}`}
+            data-nav-leaf={!item.children?.length ? "true" : "false"}
             onClick={(event) => onActivateTop(event, item, event.currentTarget)}
             onKeyDown={(event) => onKeyDownTop(event, item)}
           >

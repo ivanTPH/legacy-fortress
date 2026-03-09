@@ -313,7 +313,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             activeTopId={activePrimary?.id ?? null}
             highlightedTopId={menuState.openPrimaryId}
             flyoutId={level2FlyoutId}
-            onPointerDownTop={() => {}}
             onActivateTop={(event, item, anchorEl) => {
               if (item.children?.length) {
                 event.preventDefault();
