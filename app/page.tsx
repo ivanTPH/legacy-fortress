@@ -17,7 +17,7 @@ export default function LandingPage() {
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <Link href="/signin" style={ghostBtnStyle}>Sign in</Link>
-            <Link href="/signup" style={primaryBtnStyle}>Get started</Link>
+            <Link href="/sign-up" style={primaryBtnStyle}>Get started</Link>
           </div>
         </header>
 
@@ -26,7 +26,7 @@ export default function LandingPage() {
             <h1 style={{ fontSize: 42, lineHeight: 1.08, margin: 0, letterSpacing: "-0.02em" }}>{LANDING_COPY.heroTitle}</h1>
             <p style={{ margin: 0, color: "#334155", fontSize: 18 }}>{LANDING_COPY.heroSubtitle}</p>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <Link href="/signup" style={primaryBtnStyle}>Get started</Link>
+              <Link href="/sign-up" style={primaryBtnStyle}>Get started</Link>
               <Link href="#how-it-works" style={ghostBtnStyle}>Learn how it works</Link>
             </div>
             <div style={{ color: "#0f766e", fontSize: 13, fontWeight: 600 }}>
@@ -113,7 +113,7 @@ export default function LandingPage() {
             Give loved ones, executors, and advisers a better path when it matters most.
           </p>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <Link href="/signup" style={primaryBtnStyle}>Create account</Link>
+            <Link href="/sign-up" style={primaryBtnStyle}>Create account</Link>
             <Link href="/signin" style={ghostBtnDarkStyle}>Sign in</Link>
           </div>
         </div>
