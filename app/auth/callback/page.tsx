@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { trackClientEvent } from "@/lib/observability/clientEvents";
 import { supabase } from "@/lib/supabaseClient";
-import { toSafeInternalPath, waitForActiveUser } from "@/lib/auth/session";
-import { getOrCreateOnboardingState } from "@/lib/onboarding";
+import { waitForActiveUser } from "@/lib/auth/session";
+import { bootstrapAuthenticatedUser } from "@/lib/auth/bootstrap";
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -44,7 +44,7 @@ export default function AuthCallbackPage() {
           }
           if (type === "recovery") {
             trackClientEvent("auth.callback.recovery");
-            router.replace("/auth/reset-password");
+            router.replace("/reset-password");
             return;
           }
         }
@@ -54,20 +54,20 @@ export default function AuthCallbackPage() {
           throw new Error("No active session found after authentication.");
         }
 
-        const onboarding = await getOrCreateOnboardingState(supabase, user.id);
         const next = new URL(window.location.href).searchParams.get("next");
-        const destination = onboarding.is_completed
-          ? toSafeInternalPath(next, "/dashboard")
-          : "/onboarding";
+        const bootstrap = await bootstrapAuthenticatedUser(supabase, {
+          userId: user.id,
+          nextPath: next,
+        });
+        const destination = bootstrap.destination;
         trackClientEvent("auth.callback.redirect", {
           destination,
-          onboardingComplete: onboarding.is_completed,
+          onboardingComplete: bootstrap.onboardingComplete,
         });
 
         setMsg("Signed in! Redirecting...");
         router.replace(destination);
       } catch (error: unknown) {
-        console.error(error);
         trackClientEvent("auth.callback.error");
         setMsg(`Sign-in failed: ${getErrorMessage(error)}`);
       }

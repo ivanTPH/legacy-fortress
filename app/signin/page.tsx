@@ -2,10 +2,12 @@
 
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import type { FormEvent } from "react";
+import type { CSSProperties, FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import BrandMark from "../(app)/components/BrandMark";
+import Icon from "../../components/ui/Icon";
 import OAuthButtons from "../../components/auth/OAuthButtons";
+import { bootstrapAuthenticatedUser } from "../../lib/auth/bootstrap";
 import { waitForActiveUser } from "../../lib/auth/session";
 import { supabase } from "../../lib/supabaseClient";
 
@@ -25,6 +27,7 @@ export default function SignInPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
 
   useEffect(() => {
@@ -32,13 +35,10 @@ export default function SignInPage() {
     async function guard() {
       try {
         const { data: sessionData } = await supabase.auth.getSession();
-        console.info("[auth][signin] existing session check", {
-          hasSession: Boolean(sessionData.session?.user),
-        });
         if (!mounted) return;
         if (!sessionData.session?.user) return;
-        console.info("[auth][signin] redirect chosen", { path: "/app/dashboard", reason: "existing_session" });
-        router.replace("/app/dashboard");
+        const bootstrap = await bootstrapAuthenticatedUser(supabase, { userId: sessionData.session.user.id });
+        router.replace(bootstrap.destination);
       } catch (error) {
         if (!mounted) return;
         const message = error instanceof Error ? error.message : "Unknown error";
@@ -57,12 +57,7 @@ export default function SignInPage() {
     setSigningIn(true);
 
     try {
-      console.info("[auth][signin] signInWithPassword started");
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      console.info("[auth][signin] signInWithPassword returned", {
-        errorMessage: error?.message ?? null,
-        hasSession: Boolean(data.session),
-      });
       if (error) {
         setStatus(`Sign in failed: ${toSignInErrorMessage(error.message)}`);
         return;
@@ -73,22 +68,13 @@ export default function SignInPage() {
       }
 
       const confirmedUser = await waitForActiveUser(supabase, { attempts: 6, delayMs: 120 });
-      console.info("[auth][signin] waitForActiveUser resolved", {
-        resolvedUser: Boolean(confirmedUser),
-      });
       if (!confirmedUser) {
         setStatus("Sign in failed: Session was not persisted in this browser.");
         return;
       }
 
-      const persistenceLocation = typeof window !== "undefined" && window.localStorage ? "localStorage" : "memory";
-      console.info("[auth][signin] session established", {
-        userId: confirmedUser.id,
-        persistenceLocation,
-      });
-
-      console.info("[auth][signin] redirect chosen", { path: "/app/dashboard", reason: "successful_sign_in" });
-      router.replace("/app/dashboard");
+      const bootstrap = await bootstrapAuthenticatedUser(supabase, { userId: confirmedUser.id });
+      router.replace(bootstrap.destination);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
       setStatus(`Sign in failed: ${message}`);
@@ -132,13 +118,30 @@ export default function SignInPage() {
             style={{ display: "grid", gap: 12 }}
           >
             <label className="lf-label">
-              <span>Email</span>
+              <span>Email *</span>
               <input className="lf-input" value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" />
             </label>
 
             <label className="lf-label">
-              <span>Password</span>
-              <input className="lf-input" value={password} onChange={(e) => setPassword(e.target.value)} type="password" autoComplete="current-password" />
+              <span>Password *</span>
+              <span style={{ position: "relative", display: "block" }}>
+                <input
+                  className="lf-input"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  style={{ paddingRight: 44 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((value) => !value)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  style={passwordToggleStyle}
+                >
+                  <Icon name={showPassword ? "visibility_off" : "visibility"} size={18} />
+                </button>
+              </span>
             </label>
 
             <p className="lf-muted-note" style={{ marginTop: -4 }}>
@@ -146,6 +149,7 @@ export default function SignInPage() {
             </p>
 
             <button className="lf-primary-btn" type="submit" disabled={!email || !password || signingIn}>
+              <Icon name="login" size={16} />
               {signingIn ? "Signing in..." : "Sign in"}
             </button>
           </form>
@@ -182,3 +186,17 @@ function ResetStatusSync({
 
   return null;
 }
+
+const passwordToggleStyle = {
+  position: "absolute",
+  right: 10,
+  top: "50%",
+  transform: "translateY(-50%)",
+  border: "none",
+  background: "transparent",
+  color: "#475569",
+  cursor: "pointer",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+} satisfies CSSProperties;

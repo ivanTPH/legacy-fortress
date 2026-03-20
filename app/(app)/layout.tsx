@@ -13,10 +13,11 @@ import { accountNavigation, mainNavigation, type NavNode } from "./navigation/na
 import { getBreadcrumbsByPath, getChildrenById, getOpenMenuChain, normalizePath } from "./navigation/navigation.utils";
 import { computeFlyoutTop } from "../../lib/navigation/flyoutPosition";
 import { trackClientEvent } from "../../lib/observability/clientEvents";
-import { getOrCreateOnboardingState } from "../../lib/onboarding";
 import { getFlyoutMenuKeyAction, getTopMenuKeyAction } from "../../lib/navigation/menuKeyActions";
 import { initialMenuState, menuReducer, type MenuCloseReason } from "../../lib/navigation/menuState";
+import { bootstrapAuthenticatedUser } from "../../lib/auth/bootstrap";
 import { waitForActiveUser } from "../../lib/auth/session";
+import { loadProfileIdentityChip } from "../../lib/profile/workspace";
 import { supabase } from "../../lib/supabaseClient";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -28,6 +29,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [initials, setInitials] = useState("LF");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [authState, setAuthState] = useState<"checking" | "ready" | "none">("checking");
+  const devSmokeMode = useMemo(
+    () =>
+      typeof window !== "undefined"
+      && process.env.NODE_ENV === "development"
+      && new URLSearchParams(window.location.search).get("lf_dev_smoke") === "1",
+    [],
+  );
+  const effectiveAuthState = devSmokeMode ? "ready" : authState;
+  const effectiveEmail = devSmokeMode ? "smoke-user@legacy-fortress.local" : email;
+  const effectiveDisplayName = devSmokeMode ? "Smoke User" : displayName;
+  const effectiveInitials = devSmokeMode ? "SU" : initials;
+  const effectiveAvatarUrl = devSmokeMode ? "" : avatarUrl;
 
   const [menuState, dispatchMenu] = useReducer(menuReducer, initialMenuState);
   const navWrapRef = useRef<HTMLDivElement | null>(null);
@@ -75,6 +88,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
+    if (devSmokeMode) return () => { mounted = false; };
 
     async function guard() {
       if (!mounted) return;
@@ -84,14 +98,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      console.info("[auth][layout] session resolved", {
-        userId: user.id,
-        persistenceLocation: typeof window !== "undefined" && window.localStorage ? "localStorage" : "memory",
-      });
-
-      const onboarding = await getOrCreateOnboardingState(supabase, user.id);
+      let onboardingCompleted = true;
+      try {
+        const bootstrap = await bootstrapAuthenticatedUser(supabase, { userId: user.id });
+        onboardingCompleted = bootstrap.onboardingComplete;
+      } catch {
+        onboardingCompleted = false;
+      }
       if (!mounted) return;
-      if (!onboarding.is_completed) {
+      if (!onboardingCompleted) {
         router.replace("/app/onboarding");
         return;
       }
@@ -112,11 +127,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       }
 
       if (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") {
-        console.info("[auth][layout] auth state update", {
-          event,
-          userId: session.user.id,
-          persistenceLocation: typeof window !== "undefined" && window.localStorage ? "localStorage" : "memory",
-        });
         const nextEmail = session.user.email ?? "";
         setEmail(nextEmail);
         void hydrateUserChip(session.user.id, nextEmail, mounted, setDisplayName, setInitials, setAvatarUrl);
@@ -128,13 +138,34 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       mounted = false;
       sub.subscription.unsubscribe();
     };
-  }, [router]);
+  }, [devSmokeMode, router]);
 
   useEffect(() => {
-    if (authState === "none") {
+    if (effectiveAuthState === "none" && !devSmokeMode) {
       router.replace("/signin");
     }
-  }, [authState, router]);
+  }, [effectiveAuthState, devSmokeMode, router]);
+
+  useEffect(() => {
+    if (devSmokeMode || typeof window === "undefined") return;
+
+    async function refreshUserChip() {
+      const user = await waitForActiveUser(supabase, { attempts: 2, delayMs: 80 });
+      if (!user) return;
+      const nextEmail = user.email ?? "";
+      setEmail(nextEmail);
+      await hydrateUserChip(user.id, nextEmail, true, setDisplayName, setInitials, setAvatarUrl);
+    }
+
+    const onProfileUpdated = () => {
+      void refreshUserChip();
+    };
+
+    window.addEventListener("lf-profile-updated", onProfileUpdated);
+    return () => {
+      window.removeEventListener("lf-profile-updated", onProfileUpdated);
+    };
+  }, [devSmokeMode]);
 
   useEffect(() => {
     function onDocClick(event: Event) {
@@ -264,7 +295,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     router.replace("/signin");
   };
 
-  if (authState !== "ready") {
+  if (effectiveAuthState !== "ready") {
     return (
       <main className="lf-auth">
         <section className="lf-auth-form-side">
@@ -341,20 +372,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </nav>
 
             <div className="lf-user-card">
-              {avatarUrl ? (
+              {effectiveAvatarUrl ? (
                 <Image
-                  src={avatarUrl}
-                  alt={`${displayName} picture`}
+                  src={effectiveAvatarUrl}
+                  alt={`${effectiveDisplayName} picture`}
                   width={36}
                   height={36}
                   style={{ borderRadius: "999px", objectFit: "cover" }}
                 />
               ) : (
-                <div className="lf-user-avatar">{initials}</div>
+                <div className="lf-user-avatar">{effectiveInitials}</div>
               )}
               <div>
-                <div className="lf-user-name">{displayName}</div>
-                <div className="lf-user-email">{email || "Signed in"}</div>
+                <div className="lf-user-name">{effectiveDisplayName}</div>
+                <div className="lf-user-email">{effectiveEmail || "Signed in"}</div>
               </div>
               <button className="lf-signout" onClick={signOut} type="button">
                 Sign out
@@ -475,20 +506,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
               <div className="lf-sidebar-foot">
                 <div className="lf-user-card">
-                  {avatarUrl ? (
+                  {effectiveAvatarUrl ? (
                     <Image
-                      src={avatarUrl}
-                      alt={`${displayName} picture`}
+                      src={effectiveAvatarUrl}
+                      alt={`${effectiveDisplayName} picture`}
                       width={36}
                       height={36}
                       style={{ borderRadius: "999px", objectFit: "cover" }}
                     />
                   ) : (
-                    <div className="lf-user-avatar">{initials}</div>
+                    <div className="lf-user-avatar">{effectiveInitials}</div>
                   )}
                   <div>
-                    <div className="lf-user-name">{displayName}</div>
-                    <div className="lf-user-email">{email || "Signed in"}</div>
+                    <div className="lf-user-name">{effectiveDisplayName}</div>
+                    <div className="lf-user-email">{effectiveEmail || "Signed in"}</div>
                   </div>
                   <button className="lf-signout" onClick={signOut} type="button">
                     Sign out
@@ -523,38 +554,11 @@ async function hydrateUserChip(
   setInitials: (value: string) => void,
   setAvatarUrl: (value: string) => void,
 ) {
-  let profileRes = await supabase
-    .from("user_profiles")
-    .select("display_name,avatar_path")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (profileRes.error?.message?.includes("avatar_path")) {
-    profileRes = await supabase
-      .from("user_profiles")
-      .select("display_name")
-      .eq("user_id", userId)
-      .maybeSingle();
-  }
+  const profile = await loadProfileIdentityChip(supabase, { userId, email });
   if (!mounted) return;
-  const profile = (profileRes.data ?? null) as { display_name?: string | null; avatar_path?: string | null } | null;
-  const nextName = profile?.display_name?.trim() || email.split("@")[0] || "Secure Account";
-  setDisplayName(nextName);
-  setInitials(makeInitials(nextName));
-  if (profile?.avatar_path) {
-    const avatar = await getAvatarPreview(profile.avatar_path);
-    if (!mounted) return;
-    setAvatarUrl(avatar);
-  } else {
-    setAvatarUrl("");
-  }
-}
-
-async function getAvatarPreview(path: string) {
-  for (const bucket of ["vault-docs", "avatars"]) {
-    const signed = await supabase.storage.from(bucket).createSignedUrl(path, 3600);
-    if (!signed.error && signed.data?.signedUrl) return signed.data.signedUrl;
-  }
-  return "";
+  setDisplayName(profile.displayName);
+  setInitials(makeInitials(profile.displayName));
+  setAvatarUrl(profile.avatarUrl);
 }
 
 function toFriendlyPathLabel(segment: string) {

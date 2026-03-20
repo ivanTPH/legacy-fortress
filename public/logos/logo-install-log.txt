@@ -1,0 +1,38 @@
+public/logos/banks/barclays.svg | https://cdn.simpleicons.org/barclays | already existed
+public/logos/banks/hsbc.svg | https://cdn.simpleicons.org/hsbc | already existed
+public/logos/banks/lloyds.svg | https://cdn.simpleicons.org/lloydsbank | already existed
+public/logos/banks/natwest.svg | https://cdn.simpleicons.org/natwest | already existed
+public/logos/banks/santander.svg | https://cdn.simpleicons.org/santander | already existed
+public/logos/banks/nationwide.svg | https://cdn.simpleicons.org/nationwidesociety | already existed
+public/logos/banks/rbs.svg | https://cdn.simpleicons.org/royalbankofscotland | already existed
+public/logos/banks/co-operative.svg | https://cdn.simpleicons.org/coop | already existed
+public/logos/banks/virgin-money.svg | https://cdn.simpleicons.org/virginmoney | already existed
+public/logos/banks/deutsche-bank.svg | https://cdn.simpleicons.org/deutschebank | already existed
+public/logos/banks/citibank.svg | https://cdn.simpleicons.org/citi | failed
+public/logos/banks/revolut.svg | https://cdn.simpleicons.org/revolut | already existed
+public/logos/banks/monzo.svg | https://cdn.simpleicons.org/monzo | already existed
+public/logos/banks/starling.svg | https://cdn.simpleicons.org/starlingbank | already existed
+public/logos/banks/tsb.svg | https://cdn.simpleicons.org/tsb | failed
+public/logos/banks/metro-bank.svg | https://cdn.simpleicons.org/metro | already existed
+public/logos/banks/first-direct.svg | https://cdn.simpleicons.org/firstdirect | failed
+public/logos/banks/zopa.svg | https://cdn.simpleicons.org/zopa | failed
+public/logos/banks/allica.svg | https://cdn.simpleicons.org/allica | failed
+public/logos/banks/chase.svg | https://cdn.simpleicons.org/chase | already existed
+public/logos/banks/atom.svg | https://cdn.simpleicons.org/atom | failed
+public/logos/banks/wise.svg | https://cdn.simpleicons.org/wise | already existed
+public/logos/banks/paypal.svg | https://cdn.simpleicons.org/paypal | already existed
+public/logos/banks/ulster.svg | https://cdn.simpleicons.org/ulsterbank | failed
+public/logos/banks/bank-of-scotland.svg | https://cdn.simpleicons.org/bankofscotland | failed
+public/logos/banks/danske-bank.svg | https://cdn.simpleicons.org/danskebank | failed
+public/logos/banks/handelsbanken.svg | https://cdn.simpleicons.org/handelsbanken | failed
+public/logos/social/facebook.svg | https://cdn.simpleicons.org/facebook | already existed
+public/logos/social/instagram.svg | https://cdn.simpleicons.org/instagram | already existed
+public/logos/social/x.svg | https://cdn.simpleicons.org/x | already existed
+public/logos/social/linkedin.svg | https://cdn.simpleicons.org/linkedin | failed
+public/logos/social/tiktok.svg | https://cdn.simpleicons.org/tiktok | already existed
+public/logos/social/youtube.svg | https://cdn.simpleicons.org/youtube | already existed
+public/logos/subscriptions/netflix.svg | https://cdn.simpleicons.org/netflix | already existed
+public/logos/subscriptions/spotify.svg | https://cdn.simpleicons.org/spotify | already existed
+public/logos/subscriptions/amazon-prime.svg | https://cdn.simpleicons.org/amazonprime | failed
+public/logos/subscriptions/disney-plus.svg | https://cdn.simpleicons.org/disneyplus | failed
+public/logos/subscriptions/apple-music.svg | https://cdn.simpleicons.org/applemusic | already existed

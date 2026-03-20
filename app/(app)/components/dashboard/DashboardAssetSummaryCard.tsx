@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from "react";
+import Icon from "../../../../components/ui/Icon";
 
 type AssetItemLink = {
   id: string;
@@ -19,6 +20,7 @@ type DashboardAssetSummaryCardProps = {
   obscured?: boolean;
   items?: AssetItemLink[];
   emptyActionLabel?: string;
+  onEmptyActionClick?: () => void;
 };
 
 export default function DashboardAssetSummaryCard({
@@ -31,6 +33,7 @@ export default function DashboardAssetSummaryCard({
   obscured = false,
   items = [],
   emptyActionLabel = "Add first record",
+  onEmptyActionClick,
 }: DashboardAssetSummaryCardProps) {
   const router = useRouter();
 
@@ -69,13 +72,38 @@ export default function DashboardAssetSummaryCard({
         {items.length ? (
           items.slice(0, 4).map((item) => (
             <Link key={item.id} href={item.href} style={itemLinkStyle}>
-              <span>{item.label}</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <Icon name="chevron_right" size={16} />
+                {item.label}
+              </span>
               {item.meta ? <span style={{ color: "#94a3b8", fontSize: 12 }}>{item.meta}</span> : null}
             </Link>
           ))
+        ) : onEmptyActionClick ? (
+          <button
+            type="button"
+            style={{ ...itemLinkStyle, background: "#fff", width: "100%", textAlign: "left", cursor: "pointer" }}
+            onPointerDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onEmptyActionClick();
+            }}
+          >
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <Icon name="add_circle" size={16} />
+              {emptyActionLabel}
+            </span>
+          </button>
         ) : (
           <Link href={href} style={itemLinkStyle}>
-            <span>{emptyActionLabel}</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <Icon name="open_in_new" size={16} />
+              {emptyActionLabel}
+            </span>
           </Link>
         )}
       </div>

@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Icon from "../../components/ui/Icon";
+import { bootstrapAuthenticatedUser } from "../../lib/auth/bootstrap";
 import { supabase } from "../../lib/supabaseClient";
 import { waitForActiveUser } from "../../lib/auth/session";
 import { getOrCreateOnboardingState, saveOnboardingState } from "../../lib/onboarding";
@@ -24,6 +26,8 @@ export default function OnboardingPage() {
         router.replace("/signin");
         return;
       }
+
+      await bootstrapAuthenticatedUser(supabase, { userId: user.id });
 
       const onboarding = await getOrCreateOnboardingState(supabase, user.id);
       if (!mounted) return;
@@ -60,6 +64,8 @@ export default function OnboardingPage() {
         return;
       }
 
+      await bootstrapAuthenticatedUser(supabase, { userId: user.id });
+
       await saveOnboardingState(supabase, user.id, {
         current_step: "complete",
         completed_steps: ["identity", "verification", "consent", "personal_details", "complete"],
@@ -68,7 +74,7 @@ export default function OnboardingPage() {
         marketing_opt_in: marketingOptIn,
       });
 
-      router.replace("/app/dashboard");
+      router.replace("/profile?source=onboarding");
     } catch (error) {
       setStatus(`Could not complete onboarding: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
@@ -97,6 +103,10 @@ export default function OnboardingPage() {
           <p className="lf-auth-subtext">
             Complete these essentials once to unlock your dashboard on mobile and desktop.
           </p>
+          <div className="lf-muted-note" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <Icon name="account_tree" size={16} />
+            Your initial organisation and wallet context will be resolved before you continue.
+          </div>
 
           <label className="lf-label" style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <input
@@ -117,7 +127,8 @@ export default function OnboardingPage() {
           </label>
 
           <button className="lf-primary-btn" onClick={() => void completeOnboarding()} disabled={saving}>
-            {saving ? "Saving..." : "Go to dashboard"}
+            <Icon name="arrow_forward" size={16} />
+            {saving ? "Saving..." : "Continue to profile"}
           </button>
 
           {status ? <div className="lf-muted-note">{status}</div> : null}

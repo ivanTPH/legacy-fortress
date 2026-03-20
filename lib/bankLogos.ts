@@ -1,3 +1,5 @@
+import { resolveInstitutionBrand } from "./institutions/logoMap";
+
 export type BankProviderKey =
   | "hsbc"
   | "barclays"
@@ -20,15 +22,15 @@ export type BankDetectionInput = {
 };
 
 export const bankLogos: Record<BankProviderKey, string> = {
-  hsbc: "/logos/banks/hsbc.svg",
-  barclays: "/logos/banks/barclays.svg",
-  lloyds: "/logos/banks/lloyds.svg",
-  natwest: "/logos/banks/natwest.svg",
-  santander: "/logos/banks/santander.svg",
-  nationwide: "/logos/banks/nationwide.svg",
-  revolut: "/logos/banks/revolut.svg",
-  monzo: "/logos/banks/monzo.svg",
-  starling: "/logos/banks/starling.svg",
+  hsbc: "/institutions/hsbc.png",
+  barclays: "/institutions/barclays.webp",
+  lloyds: "/institutions/lloyds.png",
+  natwest: "/icons/bank-default.svg",
+  santander: "/icons/bank-default.svg",
+  nationwide: "/icons/bank-default.svg",
+  revolut: "/icons/bank-default.svg",
+  monzo: "/icons/bank-default.svg",
+  starling: "/icons/bank-default.svg",
   default: "/icons/bank-default.svg",
 };
 
@@ -108,15 +110,17 @@ export function getBankLogo(bankName: string): string {
 }
 
 export function getBankLogoFromRecord(input: BankDetectionInput) {
-  const providerKey = resolveBankProviderKey(input);
-  const logoSrc = bankLogos[providerKey];
   const bankLabel =
     input.bank_name || input.provider || input.institution || input.account_provider || input.bank_identifier;
+  const brand = resolveInstitutionBrand(bankLabel);
+  const providerKey = resolveBankProviderKey(input);
+  const logoSrc = brand?.logoPath ?? bankLogos[providerKey];
+  const altName = brand?.displayName ?? (providerKey === "default" ? "Bank" : readableBankName(providerKey));
 
   return {
     logoSrc,
     providerKey,
-    alt: providerKey === "default" ? "Bank icon" : `${readableBankName(providerKey)} Bank logo`,
+    alt: providerKey === "default" && !brand ? "Bank icon" : `${altName} logo`,
     bankLabel: bankLabel?.trim() || "Unknown Bank",
   };
 }

@@ -44,26 +44,27 @@ const SECTION_CONFIG: Record<SectionKey, SectionConfig> = {
   },
   property: {
     label: "Property record",
-    table: "property_assets",
-    select: "id,address,property_type,estimated_value,mortgage_balance,notes,created_at,updated_at",
+    table: "assets",
+    select: "id,title,value_minor,currency_code,summary,metadata_json,section_key,category_key,created_at,updated_at",
     basePath: "/vault/property",
-    title: (row) => (row.address as string) || (row.property_type as string) || "Property",
-    value: (row) => formatCurrency(Number(row.estimated_value ?? 0) - Number(row.mortgage_balance ?? 0), "GBP"),
+    title: (row) => (row.title as string) || ((row.metadata_json as Record<string, unknown> | null)?.property_name as string) || "Property",
+    value: (row) => formatCurrency(Number(row.value_minor ?? 0) / 100, String(row.currency_code || "GBP")),
   },
   business: {
     label: "Business record",
-    table: "business_interests",
-    select: "id,entity_name,entity_type,estimated_value,notes,created_at,updated_at",
+    table: "assets",
+    select: "id,title,value_minor,currency_code,summary,metadata_json,section_key,category_key,created_at,updated_at",
     basePath: "/vault/business",
-    title: (row) => (row.entity_name as string) || (row.entity_type as string) || "Business record",
-    value: (row) => formatCurrency(Number(row.estimated_value ?? 0), "GBP"),
+    title: (row) => (row.title as string) || ((row.metadata_json as Record<string, unknown> | null)?.business_name as string) || "Business record",
+    value: (row) => formatCurrency(Number(row.value_minor ?? 0) / 100, String(row.currency_code || "GBP")),
   },
   digital: {
     label: "Digital record",
-    table: "digital_assets",
-    select: "id,service_name,category,username_or_email,recovery_method,has_2fa,executor_instructions,notes,created_at,updated_at",
+    table: "assets",
+    select: "id,title,value_minor,currency_code,summary,metadata_json,section_key,category_key,created_at,updated_at",
     basePath: "/vault/digital",
-    title: (row) => (row.service_name as string) || (row.category as string) || "Digital account",
+    title: (row) => (row.title as string) || ((row.metadata_json as Record<string, unknown> | null)?.asset_name as string) || "Digital account",
+    value: (row) => formatCurrency(Number(row.value_minor ?? 0) / 100, String(row.currency_code || "GBP")),
   },
 };
 
@@ -99,12 +100,22 @@ export default function VaultAssetDetailPage() {
         return;
       }
 
-      const { data, error } = await supabase
+      let query = supabase
         .from(config.table)
         .select(config.select)
-        .eq("id", id)
-        .eq("user_id", userData.user.id)
-        .maybeSingle();
+        .eq("id", id);
+
+      if (section === "property" || section === "business" || section === "digital") {
+        query = query
+          .eq("owner_user_id", userData.user.id)
+          .eq("section_key", section)
+          .eq("category_key", section === "property" ? "property" : section === "business" ? "business" : "digital")
+          .is("deleted_at", null);
+      } else {
+        query = query.eq("user_id", userData.user.id);
+      }
+
+      const { data, error } = await query.maybeSingle();
 
       if (!mounted) return;
 
@@ -123,7 +134,7 @@ export default function VaultAssetDetailPage() {
     return () => {
       mounted = false;
     };
-  }, [config, id, router]);
+  }, [config, id, router, section]);
 
   const displayTitle = useMemo(() => {
     if (!config || !row) return "Asset detail";
@@ -147,11 +158,23 @@ export default function VaultAssetDetailPage() {
       return;
     }
 
-    const { error } = await supabase
-      .from(config.table)
-      .delete()
-      .eq("id", id)
-      .eq("user_id", userData.user.id);
+    const action =
+      section === "property" || section === "business" || section === "digital"
+        ? supabase
+            .from(config.table)
+            .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+            .eq("id", id)
+            .eq("owner_user_id", userData.user.id)
+            .eq("section_key", section)
+            .eq("category_key", section === "property" ? "property" : section === "business" ? "business" : "digital")
+            .is("deleted_at", null)
+        : supabase
+            .from(config.table)
+            .delete()
+            .eq("id", id)
+            .eq("user_id", userData.user.id);
+
+    const { error } = await action;
 
     if (error) {
       setStatus(`❌ Delete failed: ${error.message}`);
@@ -207,13 +230,21 @@ export default function VaultAssetDetailPage() {
 
             <div style={{ display: "grid", gap: 8 }}>
               {Object.entries(row)
-                .filter(([key]) => !["id", "user_id", "created_at", "updated_at"].includes(key))
+                .filter(([key]) => !["id", "user_id", "owner_user_id", "created_at", "updated_at", "metadata_json", "section_key", "category_key"].includes(key))
                 .map(([key, value]) => (
                   <div key={key} style={{ display: "grid", gap: 2 }}>
                     <div style={{ fontSize: 12, color: "#64748b", textTransform: "capitalize" }}>{key.replace(/_/g, " ")}</div>
                     <div style={{ fontSize: 14, color: "#111827" }}>{formatValue(value)}</div>
                   </div>
                 ))}
+              {(section === "property" || section === "business" || section === "digital") && row.metadata_json && typeof row.metadata_json === "object"
+                ? Object.entries(row.metadata_json as Record<string, unknown>).map(([key, value]) => (
+                    <div key={`meta-${key}`} style={{ display: "grid", gap: 2 }}>
+                      <div style={{ fontSize: 12, color: "#64748b", textTransform: "capitalize" }}>{key.replace(/_/g, " ")}</div>
+                      <div style={{ fontSize: 14, color: "#111827" }}>{formatValue(value)}</div>
+                    </div>
+                  ))
+                : null}
             </div>
           </section>
 

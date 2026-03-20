@@ -13,7 +13,8 @@
     "matrix:routes": "node scripts/generate-route-matrix.mjs",
     "test:navigation": "node --test tests/menu-key-actions.test.mjs tests/route-parity.test.mjs",
     "test:core": "node --test tests/menu-key-actions.test.mjs tests/menu-state.test.mjs tests/route-parity.test.mjs tests/auth-and-schema-guards.test.mjs tests/recovery-flow.test.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "smoke:local:dashboard-bank": "node scripts/smoke-dashboard-bank-dev.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.98.0",

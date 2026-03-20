@@ -3,7 +3,6 @@ export type Option = { value: string; label: string };
 export const personalPossessionCategories: Option[] = [
   { value: "watches", label: "Watches" },
   { value: "jewellery", label: "Jewellery" },
-  { value: "cars_vehicles", label: "Cars / Vehicles" },
   { value: "household_contents", label: "Household contents" },
   { value: "collectibles", label: "Collectibles" },
   { value: "art", label: "Art" },
@@ -24,12 +23,6 @@ export const personalPossessionSubcategories: Record<string, Option[]> = {
     { value: "rings", label: "Rings" },
     { value: "necklaces", label: "Necklaces" },
     { value: "bracelets", label: "Bracelets" },
-    { value: "other", label: "Other" },
-  ],
-  cars_vehicles: [
-    { value: "owned_vehicle", label: "Owned vehicle" },
-    { value: "financed_vehicle", label: "Financed vehicle" },
-    { value: "other_vehicle", label: "Other vehicle" },
     { value: "other", label: "Other" },
   ],
   household_contents: [

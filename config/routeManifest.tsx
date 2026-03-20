@@ -69,11 +69,19 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     icon: <PersonIcon />,
     enabled: on,
     children: [
+      { id: "personal-next-of-kin", label: "Next of Kin", path: "/personal#next-of-kin", enabled: on },
       { id: "personal-possessions", label: "Possessions", path: "/vault/personal", enabled: on },
       { id: "personal-subscriptions", label: "Subscriptions", path: "/personal/subscriptions", enabled: on },
-      { id: "personal-digital", label: "Social / Digital Accounts", path: "/vault/digital", enabled: on },
+      { id: "personal-social-media", label: "Social media", path: "/personal/social-media", enabled: on },
       { id: "personal-wishes", label: "Personal Wishes", path: "/personal/wishes", enabled: on },
     ],
+  },
+  {
+    id: "trust",
+    label: "Trust",
+    path: "/trust",
+    icon: <SupportIcon />,
+    enabled: on,
   },
   {
     id: "property",
@@ -92,7 +100,6 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     path: "/business",
     icon: <BriefcaseIcon />,
     enabled: on,
-    children: [{ id: "business-interests", label: "Business Interests", path: "/vault/business", enabled: on }],
   },
   {
     id: "cars-transport",
@@ -100,7 +107,6 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     path: "/cars-transport",
     icon: <BuildingIcon />,
     enabled: on,
-    children: [{ id: "cars-records", label: "Transport Records", path: "/cars-transport", enabled: on }],
   },
   {
     id: "employment",
@@ -108,7 +114,6 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     path: "/employment",
     icon: <BriefcaseIcon />,
     enabled: on,
-    children: [{ id: "employment-records", label: "Employment Records", path: "/employment", enabled: on }],
   },
   {
     id: "support",
@@ -137,4 +142,3 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
 export const ACCOUNT_ROUTE_MANIFEST: AppRouteNode[] = [
   { id: "account-profile", label: "Profile", path: "/profile", icon: <PersonIcon />, enabled: on },
 ];
-

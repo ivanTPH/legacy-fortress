@@ -35,6 +35,8 @@ type SectionWorkspaceProps = {
   title: string;
   subtitle: string;
   addLabel?: string;
+  uploadsRequireCanonicalParent?: boolean;
+  uploadBlockedMessage?: string;
 };
 
 const EMPTY_FORM = {
@@ -50,6 +52,8 @@ export default function SectionWorkspace({
   title,
   subtitle,
   addLabel = "Add record",
+  uploadsRequireCanonicalParent = false,
+  uploadBlockedMessage = "Uploads are blocked until a canonical parent asset can be selected.",
 }: SectionWorkspaceProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -61,6 +65,7 @@ export default function SectionWorkspace({
   const [form, setForm] = useState(EMPTY_FORM);
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
   const [tableUnavailable, setTableUnavailable] = useState(false);
+  const directUploadsEnabled = !uploadsRequireCanonicalParent;
 
   useEffect(() => {
     let mounted = true;
@@ -240,7 +245,7 @@ export default function SectionWorkspace({
     setShowForm(true);
   }
 
-  async function uploadAttachment(rowId: string, file: File) {
+  async function uploadLegacyAttachment(rowId: string, file: File) {
     if (tableUnavailable) {
       setStatus("Upload unavailable until section data tables are ready.");
       return;
@@ -333,6 +338,7 @@ export default function SectionWorkspace({
         </section>
       ) : null}
 
+      {loading || tableUnavailable || rows.length > 0 ? (
       <section style={cardStyle}>
         <h2 style={{ margin: 0, fontSize: 17 }}>Saved records</h2>
         {loading ? <div style={{ color: "#64748b" }}>Loading records...</div> : null}
@@ -345,26 +351,41 @@ export default function SectionWorkspace({
                 <div style={{ display: "grid", gap: 3 }}>
                   <div style={{ fontWeight: 700 }}>{row.title || "Untitled record"}</div>
                   <div style={{ color: "#64748b", fontSize: 13 }}>{row.summary || "No summary provided."}</div>
-                  <div style={{ color: "#94a3b8", fontSize: 12 }}>
-                    Added {formatDate(row.created_at)} · {formatCurrency(row.estimated_value, "GBP")}
-                  </div>
+                <div style={{ color: "#94a3b8", fontSize: 12 }}>
+                  Added {formatDate(row.created_at)} · {formatCurrency(row.estimated_value, "GBP")}
                 </div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {!directUploadsEnabled ? (
+                  <div style={{ color: "#64748b", fontSize: 13 }}>
+                    Parent asset required: attach documents from the relevant asset workspace.
+                  </div>
+                ) : null}
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <button style={ghostBtn} onClick={() => startEdit(row)}>Edit</button>
                   <button style={dangerBtn} onClick={() => void remove(row.id)}>Delete</button>
-                  <label style={ghostBtn}>
-                    {uploadingFor === row.id ? "Uploading..." : "Upload file"}
-                    <input
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-                      style={{ display: "none" }}
-                      onChange={(event) => {
-                        const file = event.target.files?.[0];
-                        if (file) void uploadAttachment(row.id, file);
-                        event.currentTarget.value = "";
-                      }}
-                    />
-                  </label>
+                  {!directUploadsEnabled ? (
+                    <button
+                      type="button"
+                      style={ghostBtn}
+                      onClick={() => setStatus(uploadBlockedMessage)}
+                    >
+                      Attach from asset
+                    </button>
+                  ) : (
+                    <label style={ghostBtn}>
+                      {uploadingFor === row.id ? "Uploading..." : "Upload file"}
+                      <input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                        style={{ display: "none" }}
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (file) void uploadLegacyAttachment(row.id, file);
+                          event.currentTarget.value = "";
+                        }}
+                      />
+                    </label>
+                  )}
                   {row.file_path ? <button style={ghostBtn} onClick={() => void downloadAttachment(row.file_path)}>View / download</button> : null}
                 </div>
               </article>
@@ -372,6 +393,7 @@ export default function SectionWorkspace({
           </div>
         ) : null}
       </section>
+      ) : null}
     </section>
   );
 }

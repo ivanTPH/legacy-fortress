@@ -1,16 +1,14 @@
 "use client";
 
-import SectionWorkspace from "../../../../components/sections/SectionWorkspace";
+import UniversalRecordWorkspace from "../../../../components/records/UniversalRecordWorkspace";
 
 export default function PersonalSubscriptionsPage() {
   return (
-    <SectionWorkspace
+    <UniversalRecordWorkspace
       sectionKey="personal"
       categoryKey="subscriptions"
       title="Personal · Subscriptions"
-      subtitle="Track subscriptions, providers, renewal dates, and cancellation guidance."
-      addLabel="Add subscription"
+      subtitle="Track recurring subscriptions with linked contacts, documents, and clean archive controls."
     />
   );
 }
-

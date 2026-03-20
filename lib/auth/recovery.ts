@@ -1,4 +1,5 @@
 export type RecoveryParams = {
+  code: string | null;
   tokenHash: string | null;
   type: string | null;
   accessToken: string | null;
@@ -11,6 +12,7 @@ export function parseRecoveryParams(urlString: string): RecoveryParams {
   const hash = new URLSearchParams(url.hash.startsWith("#") ? url.hash.slice(1) : url.hash);
 
   return {
+    code: url.searchParams.get("code"),
     tokenHash: url.searchParams.get("token_hash"),
     type: url.searchParams.get("type"),
     accessToken: hash.get("access_token"),
@@ -28,7 +30,7 @@ export function getRecoveryValidationMessage(error: unknown): string {
   }
 
   if (message.includes("pkce code verifier not found")) {
-    return "This recovery link is not valid in this browser session. Request a new reset email and open it in the same browser.";
+    return "This recovery link is invalid or expired. Please request a new password reset email.";
   }
 
   return "Could not validate this recovery link. Please request a new password reset email.";

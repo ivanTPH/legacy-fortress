@@ -1,16 +1,14 @@
 "use client";
 
-import SectionWorkspace from "../../../../components/sections/SectionWorkspace";
+import UniversalRecordWorkspace from "../../../../components/records/UniversalRecordWorkspace";
 
 export default function DebtsPage() {
   return (
-    <SectionWorkspace
+    <UniversalRecordWorkspace
       sectionKey="finances"
       categoryKey="debts"
       title="Finances · Debts"
       subtitle="Track loans, balances, repayment instructions, and supporting files."
-      addLabel="Add debt record"
     />
   );
 }
-

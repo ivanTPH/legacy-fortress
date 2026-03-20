@@ -1,16 +1,13 @@
 "use client";
 
-import SectionWorkspace from "../../../../components/sections/SectionWorkspace";
+import DocumentsWorkspace from "../../../../components/documents/DocumentsWorkspace";
 
 export default function PropertyDocumentsPage() {
   return (
-    <SectionWorkspace
-      sectionKey="property"
-      categoryKey="documents"
-      title="Property · Documents"
-      subtitle="Upload deeds, tenancy records, utility references, and insurance files."
-      addLabel="Add property document record"
+    <DocumentsWorkspace
+      title="Property Documents"
+      subtitle="Link deeds, statements, valuations, and supporting files directly to the correct property asset."
+      sectionFilter="property"
     />
   );
 }
-
