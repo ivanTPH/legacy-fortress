@@ -20,9 +20,9 @@ export default function CompletionChecklist({ items }: CompletionChecklistProps)
       aria-label="Completion checklist"
     >
       <div>
-        <h2 style={{ margin: 0, fontSize: 18 }}>Completion checklist</h2>
+        <h2 style={{ margin: 0, fontSize: 18 }}>What a strong record still needs</h2>
         <p style={{ margin: "4px 0 0", color: "#6b7280", fontSize: 13 }}>
-          Track progress across each key estate section.
+          See which parts of the record an executor could rely on today, and where a little more detail would make the account safer and easier to use.
         </p>
       </div>
 
@@ -49,13 +49,13 @@ export default function CompletionChecklist({ items }: CompletionChecklistProps)
                   <span style={{ fontSize: 12, color: "#6b7280" }}>{humanizeCompletionStatus(item.status)}</span>
                 </div>
                 <div style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}>
-                  {item.missingItems > 0 ? `${item.missingItems} item(s) remaining` : "No missing items"}
+                  {item.missingItems > 0 ? `${item.missingItems} item(s) still to review` : "Ready for someone else to review"}
                 </div>
               </div>
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontWeight: 700 }}>{item.percent}%</div>
                 <div style={{ fontSize: 12, color: "#6b7280" }}>
-                  {item.status === "complete" ? "Review details" : "Continue setup"}
+                  {item.status === "complete" ? "Review details" : "Improve next"}
                 </div>
               </div>
             </Link>

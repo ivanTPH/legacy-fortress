@@ -104,7 +104,7 @@ export default function ResetPasswordPage() {
     setStatus("Password updated successfully. Redirecting to sign in...");
     trackClientEvent("auth.recovery.update_password.success");
     window.setTimeout(() => {
-      router.replace("/signin?reset=success");
+      router.replace("/sign-in?reset=success");
     }, 1200);
   }
 
@@ -163,14 +163,14 @@ export default function ResetPasswordPage() {
           <button
             className="lf-link-btn"
             type="button"
-            onClick={() => router.push("/signin")}
+            onClick={() => router.push("/sign-in")}
             style={{ justifyContent: "center" }}
           >
             Go to sign in
           </button>
 
           <p className="lf-muted-note">
-            Back to <Link className="lf-inline-link" href="/signin">Sign in</Link>
+            Back to <Link className="lf-inline-link" href="/sign-in">Sign in</Link>
           </p>
           <p className="lf-muted-note">
             Need a new link? <Link className="lf-inline-link" href="/forgot-password">Request password reset</Link>

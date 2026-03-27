@@ -67,8 +67,8 @@ export const ASSET_CATEGORIES: AssetCategory[] = [
   {
     id: "support",
     label: "Support",
-    icon: "support_agent",
-    description: "Support records, guidance, service contacts and related help resources",
+    icon: "headphones",
+    description: "Support notes, guidance, service contacts and related support resources",
     order: 8,
     enabled: true,
   },

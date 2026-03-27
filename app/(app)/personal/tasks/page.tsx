@@ -8,8 +8,8 @@ export default function PersonalTasksPage() {
       sectionId="tasks"
       sectionKey="personal"
       categoryKey="tasks"
-      title="Personal · Tasks & Action Tracking"
-      subtitle="Track estate actions against canonical assets, beneficiaries, executors, and supporting documents."
+      title="Personal · Tasks & Follow-up"
+      subtitle="Track the practical follow-up that still matters: who needs to be called, which records need checking, and what would help someone act confidently later."
     />
   );
 }

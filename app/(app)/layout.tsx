@@ -3,8 +3,8 @@
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import Image from "next/image";
 import BrandMark from "./components/BrandMark";
+import Icon from "../../components/ui/Icon";
 import Breadcrumbs from "./components/navigation/Breadcrumbs";
 import FlyoutMenu from "./components/navigation/FlyoutMenu";
 import MobileNavTree from "./components/navigation/MobileNavTree";
@@ -17,8 +17,24 @@ import { getFlyoutMenuKeyAction, getTopMenuKeyAction } from "../../lib/navigatio
 import { initialMenuState, menuReducer, type MenuCloseReason } from "../../lib/navigation/menuState";
 import { bootstrapAuthenticatedUser } from "../../lib/auth/bootstrap";
 import { waitForActiveUser } from "../../lib/auth/session";
+import { appendDevBankRequestTrace, isDevBankTraceEnabled } from "../../lib/devSmoke";
+import { appendProfileAvatarTrace, maskAvatarUrl } from "../../lib/profile/avatarTrace";
 import { loadProfileIdentityChip } from "../../lib/profile/workspace";
+import { buildDashboardSearchHref } from "../../lib/records/discovery";
 import { supabase } from "../../lib/supabaseClient";
+import { ViewerAccessProvider } from "../../components/access/ViewerAccessContext";
+import { DEMO_EXPERIENCE_LABEL, DEMO_EXPERIENCE_SUBLABEL, isDemoSessionUser } from "../../lib/demo/config";
+import {
+  canViewPath,
+  clearStoredLinkedGrantId,
+  filterNavigationTreeForViewer,
+  getRoleLabel,
+  hasLinkedAccountAccess,
+  getStoredLinkedGrantId,
+  loadViewerAccessState,
+  setStoredLinkedGrantId,
+  type ViewerAccessState,
+} from "../../lib/access-control/viewerAccess";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -26,9 +42,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("Secure Account");
+  const [telephone, setTelephone] = useState("");
   const [initials, setInitials] = useState("LF");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
+  const [avatarRetryKey, setAvatarRetryKey] = useState("");
   const [authState, setAuthState] = useState<"checking" | "ready" | "none">("checking");
+  const [isDemoExperience, setIsDemoExperience] = useState(false);
+  const [viewerAccess, setViewerAccess] = useState<ViewerAccessState | null>(null);
+  const [shellSearch, setShellSearch] = useState("");
   const devSmokeMode = useMemo(
     () =>
       typeof window !== "undefined"
@@ -39,14 +61,37 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const effectiveAuthState = devSmokeMode ? "ready" : authState;
   const effectiveEmail = devSmokeMode ? "smoke-user@legacy-fortress.local" : email;
   const effectiveDisplayName = devSmokeMode ? "Smoke User" : displayName;
+  const effectiveTelephone = devSmokeMode ? "0207 000 0000" : telephone;
   const effectiveInitials = devSmokeMode ? "SU" : initials;
   const effectiveAvatarUrl = devSmokeMode ? "" : avatarUrl;
+  const renderedAvatarUrl = effectiveAvatarUrl && !avatarLoadFailed ? effectiveAvatarUrl : "";
 
   const [menuState, dispatchMenu] = useReducer(menuReducer, initialMenuState);
   const navWrapRef = useRef<HTMLDivElement | null>(null);
 
-  const topLevelItems = mainNavigation.filter((item) => item.isEnabled !== false);
-  const accountItems = accountNavigation.filter((item) => item.isEnabled !== false);
+  const baseTopLevelItems = mainNavigation.filter((item) => item.isEnabled !== false);
+  const baseAccountItems = accountNavigation.filter((item) => item.isEnabled !== false);
+  const resolvedViewerAccess = viewerAccess ?? {
+    mode: "owner",
+    grantId: null,
+    sessionUserId: "",
+    targetOwnerUserId: "",
+    accountHolderName: effectiveDisplayName,
+    linkedContactId: null,
+    linkedContactName: "",
+    viewerRole: "owner",
+    activationStatus: "active",
+    readOnly: false,
+    canUpgradeToOwnAccount: false,
+  } satisfies ViewerAccessState;
+  const topLevelItems = useMemo(
+    () => filterNavigationTreeForViewer(baseTopLevelItems, resolvedViewerAccess),
+    [baseTopLevelItems, resolvedViewerAccess],
+  );
+  const accountItems = useMemo(
+    () => filterNavigationTreeForViewer(baseAccountItems, resolvedViewerAccess),
+    [baseAccountItems, resolvedViewerAccess],
+  );
 
   const activeChain = useMemo(() => getOpenMenuChain(pathname), [pathname]);
   const activeChainIds = useMemo(() => new Set(activeChain.map((node) => node.id)), [activeChain]);
@@ -87,34 +132,169 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
+    if (typeof window === "undefined" || process.env.NODE_ENV !== "development") return;
+    if (!isDevBankTraceEnabled()) return;
+
+    type FetchWithTraceState = typeof window.fetch & {
+      __lfBankTraceWrapped?: boolean;
+      __lfBankTraceOriginal?: typeof window.fetch;
+    };
+
+    const currentFetch = window.fetch as FetchWithTraceState;
+    if (currentFetch.__lfBankTraceWrapped) return;
+
+    const originalFetch = currentFetch.bind(window);
+
+    function classifyRequestStage(method: string, url: URL) {
+      const pathname = window.location.pathname;
+      if (!url.pathname.includes("/rest/v1/")) return "other";
+      if (pathname.startsWith("/finances/bank")) {
+        if (method === "POST" || method === "PATCH" || method === "PUT") return "submit";
+        return "page-load-or-reload";
+      }
+      if (pathname.startsWith("/dashboard")) {
+        return "dashboard-load";
+      }
+      return "other";
+    }
+
+    const wrappedFetch: FetchWithTraceState = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const requestUrl = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+      const url = new URL(requestUrl, window.location.origin);
+      const method = (init?.method ?? (input instanceof Request ? input.method : "GET")).toUpperCase();
+      const isPostgrest = url.pathname.includes("/rest/v1/");
+      const isAssetsRequest = url.pathname.includes("/rest/v1/assets");
+
+      const requestHeaders = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
+      const tracedHeaders = {
+        acceptProfile: requestHeaders.get("accept-profile") ?? "",
+        contentProfile: requestHeaders.get("content-profile") ?? "",
+        prefer: requestHeaders.get("prefer") ?? "",
+        xClientInfo: requestHeaders.get("x-client-info") ?? "",
+      };
+
+      let bodyPreview = "";
+      if (typeof init?.body === "string") {
+        bodyPreview = init.body;
+      }
+
+      if (isPostgrest) {
+        appendDevBankRequestTrace(
+          `[network:${isAssetsRequest ? "assets" : "postgrest"}] helper=app-layout-fetch stage=${classifyRequestStage(method, url)} method=${method} url=${url.origin}${url.pathname} query=${url.search || "<none>"} headers=${JSON.stringify(tracedHeaders)} body=${bodyPreview || "<none>"}`,
+        );
+      }
+
+      try {
+        const response = await originalFetch(input, init);
+        if (isPostgrest && !response.ok) {
+          const cloned = response.clone();
+          const errorBody = await cloned.text().catch(() => "");
+          appendDevBankRequestTrace(
+            `[network-error:${isAssetsRequest ? "assets" : "postgrest"}] helper=app-layout-fetch stage=${classifyRequestStage(method, url)} status=${response.status} body=${errorBody || "<empty>"}`,
+          );
+        }
+        return response;
+      } catch (error) {
+        appendDevBankRequestTrace(
+          `[network-throw:${isAssetsRequest ? "assets" : "postgrest"}] helper=app-layout-fetch stage=${classifyRequestStage(method, url)} message=${error instanceof Error ? error.message : String(error)}`,
+        );
+        throw error;
+      }
+    }) as FetchWithTraceState;
+
+    wrappedFetch.__lfBankTraceWrapped = true;
+    wrappedFetch.__lfBankTraceOriginal = originalFetch;
+    window.fetch = wrappedFetch;
+
+    return () => {
+      const activeFetch = window.fetch as FetchWithTraceState;
+      if (activeFetch.__lfBankTraceOriginal) {
+        window.fetch = activeFetch.__lfBankTraceOriginal;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     let mounted = true;
     if (devSmokeMode) return () => { mounted = false; };
+
+    async function hydrateAuthenticatedSession(user: {
+      id: string;
+      email?: string | null;
+      user_metadata?: unknown;
+      app_metadata?: unknown;
+    }) {
+      if (!mounted) return;
+      const userId = user.id;
+      const nextEmail = user.email ?? "";
+      setEmail(nextEmail);
+      setIsDemoExperience(
+        isDemoSessionUser({
+          email: nextEmail,
+          userMetadata: user.user_metadata,
+          appMetadata: user.app_metadata,
+        }),
+      );
+      await hydrateUserChip(userId, nextEmail, mounted, setDisplayName, setTelephone, setInitials, setAvatarUrl);
+      if (!mounted) return;
+      try {
+        const nextViewer = await loadViewerAccessState(supabase, userId, {
+          preferredGrantId: getStoredLinkedGrantId(),
+          fallbackDisplayName: nextEmail.split("@")[0] || "Secure Account",
+        });
+        if (!mounted) return;
+        setViewerAccess(nextViewer);
+      } catch {
+        if (!mounted) return;
+        setViewerAccess({
+          mode: "owner",
+          grantId: null,
+          sessionUserId: userId,
+          targetOwnerUserId: userId,
+          accountHolderName: nextEmail.split("@")[0] || "Secure Account",
+          linkedContactId: null,
+          linkedContactName: "",
+          viewerRole: "owner",
+          activationStatus: "active",
+          readOnly: false,
+          canUpgradeToOwnAccount: false,
+        });
+      }
+      setAuthState("ready");
+    }
 
     async function guard() {
       if (!mounted) return;
       const user = await waitForActiveUser(supabase, { attempts: 6, delayMs: 120 });
       if (!user) {
+        setIsDemoExperience(false);
         setAuthState("none");
         return;
       }
 
+      let bootstrapDestination = "/onboarding?required=1";
       let onboardingCompleted = true;
       try {
         const bootstrap = await bootstrapAuthenticatedUser(supabase, { userId: user.id });
+        bootstrapDestination = bootstrap.destination;
         onboardingCompleted = bootstrap.onboardingComplete;
       } catch {
         onboardingCompleted = false;
       }
+      if (!onboardingCompleted) {
+        try {
+          onboardingCompleted = await hasLinkedAccountAccess(supabase, user.id);
+        } catch {
+          onboardingCompleted = false;
+        }
+      }
       if (!mounted) return;
       if (!onboardingCompleted) {
-        router.replace("/app/onboarding");
+        router.replace(bootstrapDestination);
         return;
       }
 
-      const nextEmail = user.email ?? "";
-      setEmail(nextEmail);
-      await hydrateUserChip(user.id, nextEmail, mounted, setDisplayName, setInitials, setAvatarUrl);
-      setAuthState("ready");
+      await hydrateAuthenticatedSession(user);
     }
 
     void guard();
@@ -122,15 +302,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
       if (!session) {
+        setViewerAccess(null);
+        setIsDemoExperience(false);
         setAuthState("none");
         return;
       }
 
       if (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") {
-        const nextEmail = session.user.email ?? "";
-        setEmail(nextEmail);
-        void hydrateUserChip(session.user.id, nextEmail, mounted, setDisplayName, setInitials, setAvatarUrl);
-        setAuthState("ready");
+        void hydrateAuthenticatedSession(session.user);
       }
     });
 
@@ -141,10 +320,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [devSmokeMode, router]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const nextValue =
+      pathname === "/dashboard"
+        ? new URLSearchParams(window.location.search).get("search") ?? ""
+        : "";
+    setShellSearch(nextValue);
+  }, [pathname]);
+
+  useEffect(() => {
     if (effectiveAuthState === "none" && !devSmokeMode) {
-      router.replace("/signin");
+      router.replace("/sign-in");
     }
   }, [effectiveAuthState, devSmokeMode, router]);
+
+  useEffect(() => {
+    if (effectiveAuthState !== "ready" || !viewerAccess || viewerAccess.mode !== "linked") return;
+    if (!canViewPath(pathname, viewerAccess)) {
+      router.replace("/dashboard");
+    }
+  }, [effectiveAuthState, pathname, router, viewerAccess]);
 
   useEffect(() => {
     if (devSmokeMode || typeof window === "undefined") return;
@@ -154,10 +349,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       if (!user) return;
       const nextEmail = user.email ?? "";
       setEmail(nextEmail);
-      await hydrateUserChip(user.id, nextEmail, true, setDisplayName, setInitials, setAvatarUrl);
+      await hydrateUserChip(user.id, nextEmail, true, setDisplayName, setTelephone, setInitials, setAvatarUrl);
     }
 
-    const onProfileUpdated = () => {
+    const onProfileUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<{ displayName?: string; avatarUrl?: string }>).detail;
+      if (detail?.displayName) {
+        setDisplayName(detail.displayName);
+        setInitials(makeInitials(detail.displayName));
+      }
+      if (typeof detail?.avatarUrl === "string") {
+        setAvatarUrl(detail.avatarUrl);
+      }
       void refreshUserChip();
     };
 
@@ -166,6 +369,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       window.removeEventListener("lf-profile-updated", onProfileUpdated);
     };
   }, [devSmokeMode]);
+
+  useEffect(() => {
+    setAvatarLoadFailed(false);
+    setAvatarRetryKey("");
+  }, [effectiveAvatarUrl]);
+
+  useEffect(() => {
+    appendProfileAvatarTrace(
+      `[sidebar-render] image_shown=${renderedAvatarUrl ? "yes" : "no"} reason=${renderedAvatarUrl ? "usable-avatar-url" : "fallback-initials"}`,
+    );
+  }, [renderedAvatarUrl]);
 
   useEffect(() => {
     function onDocClick(event: Event) {
@@ -219,6 +433,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   function navigateTo(path: string) {
     closeNavigationState("item_select");
     router.push(path);
+  }
+
+  function submitShellSearch() {
+    const destination = buildDashboardSearchHref(shellSearch);
+    closeNavigationState("item_select", false);
+    router.push(destination);
   }
 
   function onTopKeyDown(event: ReactKeyboardEvent<HTMLAnchorElement>, item: NavNode) {
@@ -291,9 +511,42 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     dispatchMenu({ type: "set_mobile_nav", open: false });
+    clearStoredLinkedGrantId();
+    setIsDemoExperience(false);
     await supabase.auth.signOut();
-    router.replace("/signin");
+    router.replace("/sign-in");
   };
+
+  const viewerContextValue = useMemo(
+    () => ({
+      viewer: resolvedViewerAccess,
+      setLinkedGrant: (grantId: string) => {
+        setStoredLinkedGrantId(grantId);
+        setViewerAccess((current) => current ? { ...current, grantId } : current);
+      },
+      clearLinkedGrant: () => {
+        clearStoredLinkedGrantId();
+        setViewerAccess((current) => current
+          ? {
+              mode: "owner",
+              grantId: null,
+              sessionUserId: current.sessionUserId,
+              targetOwnerUserId: current.sessionUserId,
+              accountHolderName: effectiveDisplayName,
+              linkedContactId: null,
+              linkedContactName: "",
+              viewerRole: "owner",
+              activationStatus: "active",
+              readOnly: false,
+              canUpgradeToOwnAccount: false,
+            }
+          : current);
+        router.push("/dashboard");
+      },
+    }),
+    [effectiveDisplayName, resolvedViewerAccess, router],
+  );
+  const hideTopbarHeading = normalizePath(pathname) === "/dashboard";
 
   if (effectiveAuthState !== "ready") {
     return (
@@ -309,6 +562,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
+    <ViewerAccessProvider value={viewerContextValue}>
     <div className="lf-shell">
       <div
         className="lf-nav-wrap"
@@ -329,15 +583,29 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          <label className="lf-search-wrap">
+          <form
+            className="lf-search-wrap"
+            onSubmit={(event) => {
+              event.preventDefault();
+              submitShellSearch();
+            }}
+            role="search"
+            aria-label="Search estate records"
+          >
             <span className="lf-search-icon" aria-hidden>
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8">
                 <circle cx="11" cy="11" r="7" />
                 <path d="M16.5 16.5 21 21" />
               </svg>
             </span>
-            <input className="lf-search" placeholder="Search" aria-label="Search" />
-          </label>
+            <input
+              className="lf-search"
+              placeholder="Search records"
+              aria-label="Search records"
+              value={shellSearch}
+              onChange={(event) => setShellSearch(event.target.value)}
+            />
+          </form>
 
           <SidebarPrimary
             items={topLevelItems}
@@ -371,22 +639,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               })}
             </nav>
 
-            <div className="lf-user-card">
-              {effectiveAvatarUrl ? (
-                <Image
-                  src={effectiveAvatarUrl}
-                  alt={`${effectiveDisplayName} picture`}
-                  width={36}
-                  height={36}
-                  style={{ borderRadius: "999px", objectFit: "cover" }}
-                />
-              ) : (
-                <div className="lf-user-avatar">{effectiveInitials}</div>
-              )}
-              <div>
-                <div className="lf-user-name">{effectiveDisplayName}</div>
-                <div className="lf-user-email">{effectiveEmail || "Signed in"}</div>
-              </div>
+            <div className="lf-sidebar-actions">
               <button className="lf-signout" onClick={signOut} type="button">
                 Sign out
               </button>
@@ -453,11 +706,52 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
           <div className="lf-topbar-main">
             <Breadcrumbs items={breadcrumbs} />
-            <div className="lf-topbar-title">{currentNode?.label ?? "Dashboard"}</div>
-            {currentNode?.description ? <div className="lf-topbar-desc">{currentNode.description}</div> : null}
+            {!hideTopbarHeading ? <div className="lf-topbar-title">{currentNode?.label ?? "Dashboard"}</div> : null}
+            {!hideTopbarHeading && currentNode?.description ? <div className="lf-topbar-desc">{currentNode.description}</div> : null}
           </div>
 
-          <div className="lf-topbar-pill">Private · Encrypted</div>
+          <div className="lf-topbar-actions">
+            <div
+              className="lf-topbar-security"
+              aria-label={
+                resolvedViewerAccess.mode === "linked"
+                  ? `${getRoleLabel(resolvedViewerAccess.viewerRole)} view-only access`
+                  : "Private and secure account"
+              }
+              title={
+                resolvedViewerAccess.mode === "linked"
+                  ? `${getRoleLabel(resolvedViewerAccess.viewerRole)} view-only access`
+                  : "Private and secure account"
+              }
+            >
+              <Icon name={resolvedViewerAccess.mode === "linked" ? "visibility_lock" : "lock"} size={16} />
+            </div>
+            <Link href="/profile" className="lf-topbar-user" aria-label="Edit account details">
+              {renderedAvatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={renderedAvatarUrl}
+                  alt={`${effectiveDisplayName} picture`}
+                  className="lf-topbar-user-avatar-img"
+                  onError={() => {
+                    appendProfileAvatarTrace(`[sidebar-image:error] url=${maskAvatarUrl(renderedAvatarUrl)}`);
+                    if (avatarRetryKey !== renderedAvatarUrl) {
+                      setAvatarRetryKey(renderedAvatarUrl);
+                      void refreshSidebarAvatar(setDisplayName, setTelephone, setInitials, setAvatarUrl, setAvatarLoadFailed, effectiveEmail);
+                      return;
+                    }
+                    setAvatarLoadFailed(true);
+                  }}
+                />
+              ) : (
+                <div className="lf-topbar-user-avatar">{effectiveInitials}</div>
+              )}
+              <div className="lf-topbar-user-copy">
+                <div className="lf-topbar-user-name">{effectiveDisplayName}</div>
+                <div className="lf-topbar-user-meta">{effectiveTelephone || "Add a phone number"}</div>
+              </div>
+            </Link>
+          </div>
         </header>
 
         {menuState.mobileNavOpen ? (
@@ -506,13 +800,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
               <div className="lf-sidebar-foot">
                 <div className="lf-user-card">
-                  {effectiveAvatarUrl ? (
-                    <Image
-                      src={effectiveAvatarUrl}
+                  {renderedAvatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={renderedAvatarUrl}
                       alt={`${effectiveDisplayName} picture`}
-                      width={36}
-                      height={36}
-                      style={{ borderRadius: "999px", objectFit: "cover" }}
+                      style={{ width: 36, height: 36, borderRadius: "999px", objectFit: "cover" }}
+                      onError={() => {
+                        appendProfileAvatarTrace(`[sidebar-image:error] url=${maskAvatarUrl(renderedAvatarUrl)}`);
+                        if (avatarRetryKey !== renderedAvatarUrl) {
+                          setAvatarRetryKey(renderedAvatarUrl);
+                          void refreshSidebarAvatar(setDisplayName, setTelephone, setInitials, setAvatarUrl, setAvatarLoadFailed, effectiveEmail);
+                          return;
+                        }
+                        setAvatarLoadFailed(true);
+                      }}
                     />
                   ) : (
                     <div className="lf-user-avatar">{effectiveInitials}</div>
@@ -530,9 +832,66 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </>
         ) : null}
 
-        <main className="lf-main-content">{children}</main>
+        <main className="lf-main-content">
+          {isDemoExperience ? (
+            <section
+              style={{
+                border: "1px solid #c7d2fe",
+                background: "#eef2ff",
+                borderRadius: 14,
+                padding: 12,
+                marginBottom: 14,
+                display: "grid",
+                gap: 4,
+              }}
+            >
+              <div style={{ fontWeight: 700 }}>{DEMO_EXPERIENCE_LABEL} · {DEMO_EXPERIENCE_SUBLABEL}</div>
+              <div style={{ color: "#475569", fontSize: 13 }}>
+                You are viewing synthetic review data in a separate demo account. Admin controls and owner credentials are not part of this session.
+              </div>
+            </section>
+          ) : null}
+          {resolvedViewerAccess.mode === "linked" ? (
+            <section
+              style={{
+                border: "1px solid #cbd5e1",
+                background: "#f8fafc",
+                borderRadius: 14,
+                padding: 12,
+                marginBottom: 14,
+                display: "flex",
+                gap: 12,
+                flexWrap: "wrap",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <div style={{ display: "grid", gap: 4 }}>
+                <div style={{ fontWeight: 700 }}>
+                  Viewing {resolvedViewerAccess.accountHolderName}&apos;s estate records
+                </div>
+                <div style={{ color: "#475569", fontSize: 13 }}>
+                  You are signed in as {resolvedViewerAccess.linkedContactName || effectiveDisplayName} with {getRoleLabel(resolvedViewerAccess.viewerRole)} access. You can review shared records and documents, but changes stay with the account holder.
+                </div>
+                <div style={{ color: "#64748b", fontSize: 13 }}>
+                  This linked view does not replace your own account. If you want your own private estate record, you can start one separately at any time.
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button type="button" className="lf-link-btn" onClick={() => viewerContextValue.clearLinkedGrant()}>
+                  Return to my own account
+                </button>
+                <Link href="/onboarding" className="lf-primary-btn">
+                  Start your own secure account
+                </Link>
+              </div>
+            </section>
+          ) : null}
+          {children}
+        </main>
       </div>
     </div>
+    </ViewerAccessProvider>
   );
 }
 
@@ -551,14 +910,39 @@ async function hydrateUserChip(
   email: string,
   mounted: boolean,
   setDisplayName: (value: string) => void,
+  setTelephone: (value: string) => void,
   setInitials: (value: string) => void,
   setAvatarUrl: (value: string) => void,
 ) {
   const profile = await loadProfileIdentityChip(supabase, { userId, email });
   if (!mounted) return;
+  appendProfileAvatarTrace(
+    `[preview-url] source=sidebar resolved=${profile.avatarUrl ? "yes" : "no"} reason=${profile.avatarUrl ? "signed-url-created" : "signed-url-missing"} url=${maskAvatarUrl(profile.avatarUrl)}`,
+  );
+  appendProfileAvatarTrace(
+    `[sidebar-hydrate] user=${userId} display=${profile.displayName || "<none>"} avatar_url=${maskAvatarUrl(profile.avatarUrl)}`,
+  );
   setDisplayName(profile.displayName);
+  setTelephone(profile.telephone);
   setInitials(makeInitials(profile.displayName));
   setAvatarUrl(profile.avatarUrl);
+}
+
+async function refreshSidebarAvatar(
+  setDisplayName: (value: string) => void,
+  setTelephone: (value: string) => void,
+  setInitials: (value: string) => void,
+  setAvatarUrl: (value: string) => void,
+  setAvatarLoadFailed: (value: boolean) => void,
+  email: string,
+) {
+  const user = await waitForActiveUser(supabase, { attempts: 2, delayMs: 80 });
+  if (!user) {
+    setAvatarLoadFailed(true);
+    return;
+  }
+  await hydrateUserChip(user.id, email || (user.email ?? ""), true, setDisplayName, setTelephone, setInitials, setAvatarUrl);
+  setAvatarLoadFailed(false);
 }
 
 function toFriendlyPathLabel(segment: string) {

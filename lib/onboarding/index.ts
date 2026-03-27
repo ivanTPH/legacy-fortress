@@ -9,6 +9,8 @@ type SupabaseClientLike = typeof supabase;
 const DEFAULT_STEP: OnboardingStepId = "identity";
 const FALLBACK_COMPLETE_STEP: OnboardingStepId = "complete";
 const ONBOARDING_TABLE = "user_onboarding_state";
+const TERMS_TABLE = "terms_acceptances";
+export const CURRENT_TERMS_VERSION = "legacy-fortress-2026-03";
 
 type OnboardingSchema = {
   exists: boolean;
@@ -104,6 +106,132 @@ export function markStepComplete(state: OnboardingStateRow, step: OnboardingStep
 export function shouldGateToOnboarding(state: OnboardingStateRow | null) {
   if (!state) return true;
   return !state.is_completed;
+}
+
+export async function getTermsAcceptanceState(client: SupabaseClientLike, userId: string) {
+  const tableExists = await hasTable(client, TERMS_TABLE);
+  if (!tableExists) {
+    return fallbackTermsAcceptanceState(userId);
+  }
+
+  const [hasUserId, hasTermsVersion, hasAccepted, hasAcceptedAt, hasSource, hasUpdatedAt] = await Promise.all([
+    hasColumn(client, TERMS_TABLE, "user_id"),
+    hasColumn(client, TERMS_TABLE, "terms_version"),
+    hasColumn(client, TERMS_TABLE, "accepted"),
+    hasColumn(client, TERMS_TABLE, "accepted_at"),
+    hasColumn(client, TERMS_TABLE, "source"),
+    hasColumn(client, TERMS_TABLE, "updated_at"),
+  ]);
+
+  if (!hasUserId || !hasAccepted) {
+    return fallbackTermsAcceptanceState(userId);
+  }
+
+  const selectedColumns = [
+    "user_id",
+    hasTermsVersion ? "terms_version" : null,
+    "accepted",
+    hasAcceptedAt ? "accepted_at" : null,
+    hasSource ? "source" : null,
+    hasUpdatedAt ? "updated_at" : null,
+  ]
+    .filter(Boolean)
+    .join(",");
+
+  const { data, error } = await client
+    .from(TERMS_TABLE)
+    .select(selectedColumns)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingRelationError(error, TERMS_TABLE)) {
+      return fallbackTermsAcceptanceState(userId);
+    }
+    throw new Error(error.message || "Could not load terms acceptance state");
+  }
+
+  return normalizeTermsAcceptanceState(data as Record<string, unknown> | null, userId);
+}
+
+export async function saveTermsAcceptance(
+  client: SupabaseClientLike,
+  userId: string,
+  {
+    accepted,
+    source = "onboarding",
+    termsVersion = CURRENT_TERMS_VERSION,
+  }: {
+    accepted: boolean;
+    source?: string;
+    termsVersion?: string;
+  },
+) {
+  const tableExists = await hasTable(client, TERMS_TABLE);
+  if (!tableExists) {
+    return fallbackTermsAcceptanceState(userId);
+  }
+
+  const [hasUserId, hasTermsVersion, hasAccepted, hasAcceptedAt, hasSource, hasUpdatedAt] = await Promise.all([
+    hasColumn(client, TERMS_TABLE, "user_id"),
+    hasColumn(client, TERMS_TABLE, "terms_version"),
+    hasColumn(client, TERMS_TABLE, "accepted"),
+    hasColumn(client, TERMS_TABLE, "accepted_at"),
+    hasColumn(client, TERMS_TABLE, "source"),
+    hasColumn(client, TERMS_TABLE, "updated_at"),
+  ]);
+
+  if (!hasUserId || !hasAccepted) {
+    return fallbackTermsAcceptanceState(userId);
+  }
+
+  const now = new Date().toISOString();
+  const payload: Record<string, unknown> = { user_id: userId, accepted };
+  if (hasTermsVersion) payload.terms_version = termsVersion;
+  if (hasAcceptedAt) payload.accepted_at = accepted ? now : null;
+  if (hasSource) payload.source = source;
+  if (hasUpdatedAt) payload.updated_at = now;
+
+  const selectedColumns = [
+    "user_id",
+    hasTermsVersion ? "terms_version" : null,
+    "accepted",
+    hasAcceptedAt ? "accepted_at" : null,
+    hasSource ? "source" : null,
+    hasUpdatedAt ? "updated_at" : null,
+  ]
+    .filter(Boolean)
+    .join(",");
+
+  const { data, error } = await client
+    .from(TERMS_TABLE)
+    .upsert(payload, { onConflict: "user_id" })
+    .select(selectedColumns)
+    .single();
+
+  if (error || !data) {
+    if (isMissingRelationError(error, TERMS_TABLE)) {
+      return normalizeTermsAcceptanceState(payload, userId);
+    }
+    throw new Error(error?.message || "Could not save terms acceptance");
+  }
+
+  const normalized = normalizeTermsAcceptanceState(data as unknown as Record<string, unknown>, userId);
+  if (!normalized.accepted) {
+    return normalized;
+  }
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const confirmed = await getTermsAcceptanceState(client, userId);
+    if (confirmed.accepted) {
+      return confirmed;
+    }
+    if (attempt < 3) {
+      await new Promise((resolve) => setTimeout(resolve, 120));
+    }
+  }
+
+  return normalized;
 }
 
 async function getOnboardingSchema(client: SupabaseClientLike): Promise<OnboardingSchema> {
@@ -226,5 +354,27 @@ function fallbackOnboardingState(userId: string): OnboardingStateRow {
     terms_accepted: true,
     marketing_opt_in: false,
     tour_opt_in: false,
+  };
+}
+
+function normalizeTermsAcceptanceState(row: Record<string, unknown> | null | undefined, userId: string) {
+  return {
+    user_id: String(row?.["user_id"] ?? userId),
+    terms_version: typeof row?.["terms_version"] === "string" ? String(row["terms_version"]) : CURRENT_TERMS_VERSION,
+    accepted: Boolean(row?.["accepted"] ?? false),
+    accepted_at: typeof row?.["accepted_at"] === "string" ? String(row["accepted_at"]) : null,
+    source: typeof row?.["source"] === "string" ? String(row["source"]) : "onboarding",
+    updated_at: typeof row?.["updated_at"] === "string" ? String(row["updated_at"]) : null,
+  };
+}
+
+function fallbackTermsAcceptanceState(userId: string) {
+  return {
+    user_id: userId,
+    terms_version: CURRENT_TERMS_VERSION,
+    accepted: true,
+    accepted_at: null,
+    source: "fallback",
+    updated_at: null,
   };
 }

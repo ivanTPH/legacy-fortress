@@ -21,6 +21,8 @@ type DashboardAssetSummaryCardProps = {
   items?: AssetItemLink[];
   emptyActionLabel?: string;
   onEmptyActionClick?: () => void;
+  className?: string;
+  overview?: ReactNode;
 };
 
 export default function DashboardAssetSummaryCard({
@@ -34,6 +36,8 @@ export default function DashboardAssetSummaryCard({
   items = [],
   emptyActionLabel = "Add first record",
   onEmptyActionClick,
+  className = "",
+  overview,
 }: DashboardAssetSummaryCardProps) {
   const router = useRouter();
 
@@ -51,6 +55,7 @@ export default function DashboardAssetSummaryCard({
 
   return (
     <div
+      className={className}
       style={cardStyle}
       role="link"
       tabIndex={0}
@@ -58,20 +63,20 @@ export default function DashboardAssetSummaryCard({
       onKeyDown={onCardKeyDown}
       aria-label={`${title} summary`}
     >
-      <Link href={href} style={{ textDecoration: "none", color: "inherit", display: "grid", gap: 8 }}>
+      <Link href={href} style={summaryLinkStyle}>
         <div style={headerStyle}>
           <span style={iconStyle}>{icon}</span>
           <span style={titleStyle}>{title}</span>
         </div>
-        <div style={dateStyle}>Added: {formatDateTime(addedAt)}</div>
         <div style={valueStyle}>{obscured ? "Restricted" : value}</div>
         <div style={detailStyle}>{obscured ? "Detail hidden for this role" : detail}</div>
+        {overview ? <div style={overviewWrapStyle}>{overview}</div> : null}
       </Link>
 
       <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: 8, display: "grid", gap: 6 }}>
         {items.length ? (
           items.slice(0, 4).map((item) => (
-            <Link key={item.id} href={item.href} style={itemLinkStyle}>
+            <Link key={item.id} href={item.href} style={itemLinkStyle} className="lf-dashboard-item-link">
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                 <Icon name="chevron_right" size={16} />
                 {item.label}
@@ -106,15 +111,22 @@ export default function DashboardAssetSummaryCard({
             </span>
           </Link>
         )}
+        <div style={footerStyle}>
+          <span style={dateStyle}>Updated {formatDateStamp(addedAt)}</span>
+        </div>
       </div>
     </div>
   );
 }
 
-function formatDateTime(input?: string | null) {
+function formatDateStamp(input?: string | null) {
   if (!input) return "Not yet added";
   try {
-    return new Date(input).toLocaleString();
+    return new Intl.DateTimeFormat("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+    }).format(new Date(input));
   } catch {
     return input;
   }
@@ -122,7 +134,10 @@ function formatDateTime(input?: string | null) {
 
 const cardStyle: CSSProperties = {
   display: "grid",
+  gridTemplateRows: "1fr auto",
+  alignContent: "start",
   gap: 8,
+  height: "100%",
   border: "1px solid #e5e7eb",
   borderRadius: 16,
   padding: 14,
@@ -130,6 +145,14 @@ const cardStyle: CSSProperties = {
   textDecoration: "none",
   color: "#111827",
   boxShadow: "0 1px 2px rgba(16,24,40,0.06)",
+};
+
+const summaryLinkStyle: CSSProperties = {
+  textDecoration: "none",
+  color: "inherit",
+  display: "grid",
+  gap: 8,
+  alignContent: "start",
 };
 
 const headerStyle: CSSProperties = {
@@ -160,6 +183,11 @@ const dateStyle: CSSProperties = {
   color: "#6b7280",
 };
 
+const footerStyle: CSSProperties = {
+  display: "flex",
+  justifyContent: "flex-end",
+};
+
 const valueStyle: CSSProperties = {
   fontSize: 20,
   fontWeight: 800,
@@ -182,4 +210,11 @@ const itemLinkStyle: CSSProperties = {
   textDecoration: "none",
   color: "#0f172a",
   fontSize: 13,
+};
+
+const overviewWrapStyle: CSSProperties = {
+  border: "1px solid #eef2f7",
+  borderRadius: 12,
+  background: "#f8fafc",
+  padding: 10,
 };

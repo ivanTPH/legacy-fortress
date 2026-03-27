@@ -20,7 +20,7 @@ export const BANK_WORKSPACE_CONFIG: ManagedAssetWorkspaceConfig = {
   sectionKey: "finances",
   categoryKey: "bank",
   title: "Finances · Bank accounts",
-  subtitle: "Capture account details, protect sensitive fields, and link statements or photos in one guided workspace.",
+  subtitle: "Keep account details, balances, and supporting statements together so they are easy to review when needed.",
   readsCanonicalAssets: true,
   canonicalCategorySlug: "bank-accounts",
   fieldConfigCategorySlug: "bank-accounts",

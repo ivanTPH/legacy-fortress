@@ -68,3 +68,19 @@ npm run crawl:links
 3. Vercel preview URL is created automatically.
 4. Test auth flows and core routes in preview.
 5. Merge to `main` for production deployment.
+
+## Project Operating Rules
+
+Reference these repo-truth docs before changing architecture:
+
+- [Project Structure](./docs/PROJECT_STRUCTURE.md)
+- [Build And Release](./docs/BUILD_AND_RELEASE.md)
+- [Attachment And Document Architecture](./docs/ATTACHMENT_AND_DOCUMENT_ARCHITECTURE.md)
+- [Known Tech Debt](./docs/KNOWN_TECH_DEBT.md)
+
+Guardrails:
+
+- Prefer shared/canonical workspace patterns over page-local CRUD.
+- Prefer shared attachment/document components over new page-specific file UIs.
+- Prefer config-driven asset fields where canonical field config already exists.
+- Avoid introducing new legacy patterns when a shared component or helper already exists.

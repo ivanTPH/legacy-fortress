@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   SettingsCard,
@@ -15,7 +16,6 @@ import {
 } from "../../../lib/assets/fieldDictionary";
 import {
   DateInput,
-  FileDropzone,
   FormField,
   SelectInput,
   TextAreaInput,
@@ -26,6 +26,7 @@ import { waitForActiveUser } from "../../../lib/auth/session";
 import { supabase } from "../../../lib/supabaseClient";
 import { validateUploadFile } from "../../../lib/validation/upload";
 import {
+  buildProfileAvatarStoragePath,
   EMPTY_PROFILE_FORM,
   PROFILE_CURRENCY_OPTIONS,
   PROFILE_LANGUAGE_OPTIONS,
@@ -36,14 +37,36 @@ import {
   type ProfileWorkspaceForm,
   type ProfileWorkspaceSupport,
 } from "../../../lib/profile/workspace";
+import {
+  appendProfileAvatarTrace,
+  clearProfileAvatarTrace,
+  isProfileAvatarTraceEnabled,
+  maskAvatarStoragePath,
+  maskAvatarUrl,
+  profileAvatarTraceEventName,
+  readProfileAvatarTrace,
+} from "../../../lib/profile/avatarTrace";
+import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
+
+const PROFILE_AVATAR_INPUT_ID = "profile-avatar-input";
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { viewer } = useViewerAccess();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
   const [form, setForm] = useState<ProfileWorkspaceForm>(EMPTY_PROFILE_FORM);
   const [support, setSupport] = useState<ProfileWorkspaceSupport>({
+    avatarPathSupported: true,
+    firstNameSupported: true,
+    lastNameSupported: true,
+  });
+  const [savedForm, setSavedForm] = useState<ProfileWorkspaceForm>(EMPTY_PROFILE_FORM);
+  const [savedMaskedNi, setSavedMaskedNi] = useState("Not set");
+  const [savedAvatarPreviewUrl, setSavedAvatarPreviewUrl] = useState("");
+  const [savedAvatarBucket, setSavedAvatarBucket] = useState<string>("");
+  const [savedSupport, setSavedSupport] = useState<ProfileWorkspaceSupport>({
     avatarPathSupported: true,
     firstNameSupported: true,
     lastNameSupported: true,
@@ -55,7 +78,27 @@ export default function ProfilePage() {
   const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
   const [pendingAvatarPreviewUrl, setPendingAvatarPreviewUrl] = useState("");
   const [avatarPathToDelete, setAvatarPathToDelete] = useState("");
-  const [profileReviewConfirmed, setProfileReviewConfirmed] = useState(false);
+  const [avatarTraceLines, setAvatarTraceLines] = useState<string[]>([]);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const pendingAvatarFileRef = useRef<File | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
+  const editorPanelRef = useRef<HTMLElement | null>(null);
+
+  const avatarTraceEnabled = useMemo(
+    () => typeof window !== "undefined" && isProfileAvatarTraceEnabled(),
+    [],
+  );
+
+  useEffect(() => {
+    if (!avatarTraceEnabled || typeof window === "undefined") return;
+    clearProfileAvatarTrace();
+    const sync = () => setAvatarTraceLines(readProfileAvatarTrace());
+    sync();
+    window.addEventListener(profileAvatarTraceEventName(), sync);
+    return () => {
+      window.removeEventListener(profileAvatarTraceEventName(), sync);
+    };
+  }, [avatarTraceEnabled]);
 
   useEffect(() => {
     let mounted = true;
@@ -66,14 +109,15 @@ export default function ProfilePage() {
 
       try {
         const user = await waitForActiveUser(supabase, { attempts: 6, delayMs: 130 });
+        appendProfileAvatarTrace(`[profile-load] session=${user ? "present" : "missing"} user=${user?.id ?? "<none>"}`);
         if (!user) {
-          router.replace("/signin");
+          router.replace("/sign-in");
           return;
         }
 
         const loaded = await loadProfileWorkspace(supabase, {
-          userId: user.id,
-          baseEmail: user.email ?? "",
+          userId: viewer.targetOwnerUserId || user.id,
+          baseEmail: viewer.mode === "linked" ? "" : user.email ?? "",
         });
         if (!mounted) return;
         setForm(loaded.form);
@@ -81,10 +125,24 @@ export default function ProfilePage() {
         setAvatarPreviewUrl(loaded.avatarPreviewUrl);
         setAvatarBucket(loaded.avatarBucket);
         setSupport(loaded.support);
+        setSavedForm(loaded.form);
+        setSavedMaskedNi(loaded.maskedNi);
+        setSavedAvatarPreviewUrl(loaded.avatarPreviewUrl);
+        setSavedAvatarBucket(loaded.avatarBucket);
+        setSavedSupport(loaded.support);
+        pendingAvatarFileRef.current = null;
         setPendingAvatarFile(null);
-        setProfileReviewConfirmed(false);
+        setPendingAvatarPreviewUrl("");
+        setAvatarPathToDelete("");
+        setEditorOpen(false);
+        appendProfileAvatarTrace(
+          `[profile-load] row_avatar_path=${maskAvatarStoragePath(loaded.form.avatar_path)} preview_url=${maskAvatarUrl(loaded.avatarPreviewUrl)}`,
+        );
         if (loaded.notice) setStatus(loaded.notice);
       } catch (error) {
+        appendProfileAvatarTrace(
+          `[profile-load:error] message=${error instanceof Error ? error.message : String(error)}`,
+        );
         if (!mounted) return;
         setStatus(`⚠️ Could not load profile settings: ${error instanceof Error ? error.message : "Unknown error"}`);
       } finally {
@@ -96,40 +154,133 @@ export default function ProfilePage() {
     return () => {
       mounted = false;
     };
-  }, [router]);
+  }, [router, viewer.mode, viewer.targetOwnerUserId]);
 
   useEffect(() => {
     if (!pendingAvatarFile) {
       setPendingAvatarPreviewUrl("");
+      appendProfileAvatarTrace("[preview-stage] no");
       return;
     }
 
     const objectUrl = URL.createObjectURL(pendingAvatarFile);
     setPendingAvatarPreviewUrl(objectUrl);
+    appendProfileAvatarTrace(
+      `[preview-stage] yes name=${pendingAvatarFile.name} type=${pendingAvatarFile.type || "unknown"}`,
+    );
     return () => {
       URL.revokeObjectURL(objectUrl);
     };
   }, [pendingAvatarFile]);
 
   const canSave = useMemo(() => !loading && !saving && !avatarUploading, [loading, saving, avatarUploading]);
-  const displayedAvatarUrl = pendingAvatarPreviewUrl || avatarPreviewUrl;
+  const savedSummaryAvatarUrl = avatarPreviewUrl;
+  const displayedAvatarUrl = pendingAvatarPreviewUrl || (avatarPathToDelete ? "" : avatarPreviewUrl);
   const hasPendingProfileMediaChange = Boolean(pendingAvatarFile || avatarPathToDelete);
+  const hasSavedAvatar = Boolean(form.avatar_path && !avatarPathToDelete);
+  const hasStagedAvatarSelection = Boolean(pendingAvatarFile);
+  const hasRecentPhotoSuccess = status.startsWith("✅") && /profile picture|photo|Profile saved/i.test(status);
+  const summaryName = [form.first_name, form.last_name].filter(Boolean).join(" ").trim() || form.display_name || "No name saved";
+  const profileReadiness = useMemo(() => {
+    const identityReady = Boolean(summaryName && summaryName !== "No name saved" && form.primary_email);
+    const contactReady = Boolean(form.mobile_number || form.telephone || form.notification_email);
+    const addressReady = Boolean(form.house_name_or_number || form.street_name || form.city || form.post_code || form.country);
+    return {
+      identityReady,
+      contactReady,
+      addressReady,
+      completed: [identityReady, contactReady, addressReady].filter(Boolean).length,
+    };
+  }, [
+    form.city,
+    form.country,
+    form.house_name_or_number,
+    form.mobile_number,
+    form.notification_email,
+    form.post_code,
+    form.primary_email,
+    form.street_name,
+    form.telephone,
+    summaryName,
+  ]);
+  const summaryAvatarFallback = useMemo(() => {
+    const base = summaryName && summaryName !== "No name saved" ? summaryName : form.primary_email || "LF";
+    return base
+      .split(/[\s@._-]+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("") || "LF";
+  }, [summaryName, form.primary_email]);
+
+  useEffect(() => {
+    if (!avatarTraceEnabled) return;
+    appendProfileAvatarTrace(
+      `[summary-render] image_shown=${savedSummaryAvatarUrl ? "yes" : "no"} reason=${savedSummaryAvatarUrl ? "saved-avatar-url" : "no-saved-avatar-url"}`,
+    );
+  }, [avatarTraceEnabled, savedSummaryAvatarUrl]);
+
+  useEffect(() => {
+    appendProfileAvatarTrace(`[mode] ${editorOpen ? "edit" : "summary"}`);
+    appendProfileAvatarTrace(`[edit-render] shown=${editorOpen ? "yes" : "no"}`);
+    if (!editorOpen) return;
+    editorPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [editorOpen]);
+
+  function clearStagedAvatarFile() {
+    pendingAvatarFileRef.current = null;
+    setPendingAvatarFile(null);
+    appendProfileAvatarTrace("[file-select] no reason=cleared");
+  }
+
+  function restoreSavedState() {
+    pendingAvatarFileRef.current = null;
+    setPendingAvatarFile(null);
+    setPendingAvatarPreviewUrl("");
+    setAvatarPathToDelete("");
+    setForm(savedForm);
+    setMaskedNi(savedMaskedNi);
+    setAvatarPreviewUrl(savedAvatarPreviewUrl);
+    setAvatarBucket(savedAvatarBucket);
+    setSupport(savedSupport);
+  }
+
+  function triggerAvatarPicker() {
+    avatarInputRef.current?.click();
+  }
+
+  function onAvatarInputChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    if (!file) {
+      appendProfileAvatarTrace("[file-select] no reason=no-file");
+      return;
+    }
+    onSelectAvatar(file);
+    event.currentTarget.value = "";
+  }
 
   async function save() {
+    if (viewer.readOnly) {
+      setStatus("This profile is view-only in linked access mode.");
+      return;
+    }
     setSaving(true);
     setStatus("");
     let uploadedAvatarPath = "";
     let uploadedAvatarBucket = "";
+    let profileWriteCompleted = false;
+    let avatarPersistedAfterReload = false;
+    const stagedAvatarFile = pendingAvatarFileRef.current ?? pendingAvatarFile;
+    appendProfileAvatarTrace(
+      `[save-click] avatar_change_pending=${hasPendingProfileMediaChange ? "yes" : "no"} file_selected=${stagedAvatarFile ? "yes" : "no"} staged_avatar_path=${maskAvatarStoragePath(form.avatar_path)}`,
+    );
 
     try {
       const user = await waitForActiveUser(supabase, { attempts: 6, delayMs: 130 });
+      appendProfileAvatarTrace(`[save] session=${user ? "present" : "missing"} user=${user?.id ?? "<none>"}`);
       if (!user) {
-        router.replace("/signin");
+        router.replace("/sign-in");
         return;
-      }
-
-      if (hasPendingProfileMediaChange && !profileReviewConfirmed) {
-        throw new Error("Confirm the profile media change before saving.");
       }
 
       const previousAvatarPath = form.avatar_path;
@@ -137,24 +288,43 @@ export default function ProfilePage() {
       let nextAvatarPreviewUrl = avatarPreviewUrl;
       let nextAvatarBucket = avatarBucket;
 
-      if (pendingAvatarFile) {
+      if (stagedAvatarFile) {
         setAvatarUploading(true);
-        const uploadedAvatar = await uploadProfileAvatarFile(supabase, {
-          userId: user.id,
-          file: pendingAvatarFile,
-        });
+        appendProfileAvatarTrace(
+          `[upload] attempted bucket=avatars|vault-docs path=${maskAvatarStoragePath(buildProfileAvatarStoragePath(user.id, stagedAvatarFile.name))}`,
+        );
+        let uploadedAvatar;
+        try {
+          uploadedAvatar = await uploadProfileAvatarFile(supabase, {
+            userId: user.id,
+            file: stagedAvatarFile,
+          });
+        } catch (error) {
+          appendProfileAvatarTrace(
+            `[upload] failure reason=${error instanceof Error ? error.message : String(error)}`,
+          );
+          throw error;
+        }
         uploadedAvatarPath = uploadedAvatar.path;
         uploadedAvatarBucket = uploadedAvatar.bucket;
+        appendProfileAvatarTrace(
+          `[upload] success bucket=${uploadedAvatar.bucket} tried=${uploadedAvatar.attemptedBuckets.join("|")} path=${maskAvatarStoragePath(uploadedAvatar.path)} preview_url=${maskAvatarUrl(uploadedAvatar.previewUrl)}`,
+        );
         nextForm = { ...nextForm, avatar_path: uploadedAvatar.path };
         nextAvatarPreviewUrl = uploadedAvatar.previewUrl;
         nextAvatarBucket = uploadedAvatar.bucket;
       }
 
+      appendProfileAvatarTrace(`[profile-save] attempted avatar_path=${maskAvatarStoragePath(nextForm.avatar_path)}`);
       const saveResult = await saveProfileWorkspace(supabase, {
         userId: user.id,
         form: nextForm,
         support,
       });
+      profileWriteCompleted = true;
+      appendProfileAvatarTrace(
+        `[profile-save] avatar_path_written=${maskAvatarStoragePath(nextForm.avatar_path)} avatar_supported=${saveResult.support.avatarPathSupported ? "yes" : "no"}`,
+      );
 
       if (uploadedAvatarPath && !saveResult.support.avatarPathSupported) {
         await removeProfileAvatarFile(supabase, {
@@ -180,21 +350,64 @@ export default function ProfilePage() {
 
       setSupport({ ...saveResult.support });
       setMaskedNi(saveResult.maskedNi);
-      setForm({
-        ...nextForm,
-        ni_input: "",
+      const reloaded = await loadProfileWorkspace(supabase, {
+        userId: user.id,
+        baseEmail: user.email ?? "",
       });
-      setAvatarPreviewUrl(nextAvatarPreviewUrl);
-      setAvatarBucket(nextAvatarBucket);
+      appendProfileAvatarTrace(
+        `[profile-reload] avatar_path_read_back=${maskAvatarStoragePath(reloaded.form.avatar_path)}`,
+      );
+      appendProfileAvatarTrace(
+        `[preview-url] source=profile resolved=${reloaded.avatarPreviewUrl ? "yes" : "no"} reason=${reloaded.avatarPreviewUrl ? "signed-url-created" : "signed-url-missing"} url=${maskAvatarUrl(reloaded.avatarPreviewUrl)}`,
+      );
+      if (uploadedAvatarPath && reloaded.form.avatar_path !== uploadedAvatarPath) {
+        throw new Error("Profile row did not persist the uploaded avatar path.");
+      }
+      if (uploadedAvatarPath && !reloaded.avatarPreviewUrl) {
+        avatarPersistedAfterReload = reloaded.form.avatar_path === uploadedAvatarPath;
+        throw new Error("Avatar path saved, but a usable preview URL could not be resolved.");
+      }
+      if (!uploadedAvatarPath && avatarPathToDelete && reloaded.form.avatar_path) {
+        throw new Error("Avatar removal did not persist to the profile row.");
+      }
+      avatarPersistedAfterReload = Boolean(!uploadedAvatarPath || reloaded.form.avatar_path === uploadedAvatarPath);
+      setForm(reloaded.form);
+      setMaskedNi(reloaded.maskedNi || saveResult.maskedNi);
+      setAvatarPreviewUrl(reloaded.avatarPreviewUrl || nextAvatarPreviewUrl);
+      setAvatarBucket(reloaded.avatarBucket || nextAvatarBucket);
+      setSupport(reloaded.support);
+      setSavedForm(reloaded.form);
+      setSavedMaskedNi(reloaded.maskedNi || saveResult.maskedNi);
+      setSavedAvatarPreviewUrl(reloaded.avatarPreviewUrl || nextAvatarPreviewUrl);
+      setSavedAvatarBucket(reloaded.avatarBucket || nextAvatarBucket);
+      setSavedSupport(reloaded.support);
+      pendingAvatarFileRef.current = null;
       setPendingAvatarFile(null);
       setAvatarPathToDelete("");
-      setProfileReviewConfirmed(false);
+      appendProfileAvatarTrace("[edit-open] no reason=save-success");
+      appendProfileAvatarTrace("[save-success] return-to-summary=yes");
+      setEditorOpen(false);
       if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("lf-profile-updated"));
+        window.dispatchEvent(
+          new CustomEvent("lf-profile-updated", {
+            detail: {
+              displayName:
+                reloaded.form.display_name.trim()
+                || [reloaded.form.first_name, reloaded.form.last_name].filter(Boolean).join(" ").trim()
+                || (user.email ?? "").split("@")[0]
+                || "Secure Account",
+              avatarUrl: reloaded.avatarPreviewUrl || nextAvatarPreviewUrl,
+            },
+          }),
+        );
       }
-      setStatus(`✅ ${saveResult.status}`);
+      appendProfileAvatarTrace("[sidebar-refresh] event_dispatched=yes");
+      setStatus(uploadedAvatarPath ? "✅ Photo updated" : avatarPathToDelete ? "✅ Photo removed" : `✅ ${saveResult.status}`);
     } catch (error) {
-      if (uploadedAvatarPath) {
+      appendProfileAvatarTrace(
+        `[save:error] message=${error instanceof Error ? error.message : String(error)}`,
+      );
+      if (uploadedAvatarPath && (!profileWriteCompleted || !avatarPersistedAfterReload)) {
         try {
           await removeProfileAvatarFile(supabase, {
             path: uploadedAvatarPath,
@@ -221,24 +434,28 @@ export default function ProfilePage() {
       return;
     }
 
+    pendingAvatarFileRef.current = file;
     setPendingAvatarFile(file);
     setAvatarPathToDelete(form.avatar_path || avatarPathToDelete);
-    setProfileReviewConfirmed(false);
+    setEditorOpen(true);
+    appendProfileAvatarTrace(`[file-select] yes name=${file.name} type=${file.type || "unknown"} size=${file.size}`);
     setStatus("");
     setStatus("✅ Profile picture ready. Confirm and save profile to persist.");
   }
 
   function removeAvatar() {
     if (!form.avatar_path && !pendingAvatarFile) return;
+    clearStagedAvatarFile();
     setAvatarPathToDelete(form.avatar_path || avatarPathToDelete);
-    setPendingAvatarFile(null);
-    setAvatarPreviewUrl("");
-    setForm((current) => ({ ...current, avatar_path: "" }));
-    setProfileReviewConfirmed(false);
+    setEditorOpen(true);
     setStatus("✅ Profile picture removal staged. Confirm and save profile to persist.");
   }
 
   const sendPasswordReset = async () => {
+    if (viewer.readOnly) {
+      setStatus("Password reset is only available in your own account.");
+      return;
+    }
     if (!form.primary_email) {
       setStatus("❌ Signed-in email is required.");
       return;
@@ -252,9 +469,10 @@ export default function ProfilePage() {
   return (
     <SettingsPageShell
       title="Profile"
-      subtitle="Manage your identity, contact information, address details, and account profile settings."
+      subtitle="Keep the identity, contact, and address details an executor, family member, or advisor would expect to find first."
     >
-      <SettingsCard title="Saved profile summary" description="Your current saved details appear here first.">
+      {!editorOpen ? (
+      <SettingsCard title="Saved profile summary" description="These are the core details someone would rely on first to confirm identity, make contact, and trust the record.">
         {loading ? (
           <div style={{ color: "#6b7280" }}>Loading saved profile...</div>
         ) : (
@@ -274,16 +492,16 @@ export default function ProfilePage() {
                   fontSize: 12,
                 }}
               >
-                {avatarPreviewUrl ? (
+                {savedSummaryAvatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={avatarPreviewUrl} alt="Saved profile picture" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <img src={savedSummaryAvatarUrl} alt="Saved profile picture" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 ) : (
-                  "No picture"
+                  <span style={{ fontWeight: 700, fontSize: 16 }}>{summaryAvatarFallback}</span>
                 )}
               </div>
               <div style={{ display: "grid", gap: 4 }}>
                 <div style={{ fontWeight: 700, fontSize: 16 }}>
-                  {[form.first_name, form.last_name].filter(Boolean).join(" ").trim() || form.display_name || "No name saved"}
+                  {summaryName}
                 </div>
                 <div style={{ color: "#64748b", fontSize: 13 }}>{form.primary_email || "No email saved"}</div>
                 <div style={{ color: "#64748b", fontSize: 13 }}>
@@ -293,39 +511,65 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <span style={profileReadiness.completed === 3 ? readyPillStyle : reviewPillStyle}>
+                {profileReadiness.completed === 3 ? "Profile ready for trusted review" : `${profileReadiness.completed} of 3 essentials in place`}
+              </span>
+              <span style={microPillStyle}>Identity {profileReadiness.identityReady ? "saved" : "needs review"}</span>
+              <span style={microPillStyle}>Contact {profileReadiness.contactReady ? "saved" : "needs review"}</span>
+              <span style={microPillStyle}>Address {profileReadiness.addressReady ? "saved" : "needs review"}</span>
+            </div>
             <div style={{ color: "#64748b", fontSize: 13 }}>
-              Phone: {form.mobile_number || form.telephone || "Not set"} · Notification email: {form.notification_email || "Not set"}
+              Main phone: {form.mobile_number || form.telephone || "Not set"} · Notification email: {form.notification_email || "Not set"}
             </div>
             <div style={{ color: "#64748b", fontSize: 13 }}>National Insurance: {maskedNi}</div>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+              {!viewer.readOnly ? (
+                <button
+                  type="button"
+                  style={ghostBtn}
+                  onClick={() => {
+                    appendProfileAvatarTrace("[edit-open] yes");
+                    setEditorOpen(true);
+                  }}
+                >
+                  <Icon name="edit" size={16} />
+                  Edit profile
+                </button>
+              ) : (
+                <span style={{ color: "#475569", fontSize: 13 }}>
+                  View-only access. Profile changes stay with the account holder.
+                </span>
+              )}
+              <StatusNote message={status} />
+            </div>
           </div>
         )}
       </SettingsCard>
+      ) : null}
 
-      <SettingsCard title="Identity and profile picture" description="Primary email is your verified sign-in identity.">
+      {editorOpen ? (
+      <SettingsCard title="Edit profile" description="Keep your saved identity, contact, and address details clear enough for someone else to trust and use.">
+        <section ref={editorPanelRef}>
         {loading ? <div style={{ color: "#6b7280" }}>Loading...</div> : null}
 
-        <FormField
-          label="Profile picture"
-          iconName="account_box"
-          helpText="Upload a profile image only. Supporting estate documents should be linked from the relevant canonical asset workspace."
-        >
-          <FileDropzone
-            label={displayedAvatarUrl ? "Replace profile picture" : "Drop a profile picture here"}
-            accept="image/png,image/jpeg,image/webp"
-            file={pendingAvatarFile}
-            onFileSelect={(file) => {
-              onSelectAvatar(file);
-            }}
-            disabled={avatarUploading || saving}
-          />
-        </FormField>
+        <div style={{ display: "grid", gap: 12, padding: 14, border: "1px solid #e5e7eb", borderRadius: 14, background: "#fcfcfd" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700 }}>
+              <Icon name="account_box" size={18} />
+              Profile photo
+            </div>
+            <div style={{ color: "#64748b", fontSize: 13 }}>
+              Upload PNG, JPG, or WebP up to 2MB.
+            </div>
+          </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
           <div
             style={{
-              width: 74,
-              height: 74,
-              borderRadius: 14,
+              width: 96,
+              height: 96,
+              borderRadius: 18,
               border: "1px solid #e5e7eb",
               overflow: "hidden",
               background: "#f8fafc",
@@ -339,45 +583,86 @@ export default function ProfilePage() {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={displayedAvatarUrl} alt="Profile picture" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             ) : (
-              <Icon name="person" size={22} />
+              <span style={{ fontWeight: 700, fontSize: 24 }}>{summaryAvatarFallback}</span>
             )}
           </div>
 
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {displayedAvatarUrl ? (
+          <div style={{ display: "grid", gap: 10, alignItems: "start" }}>
+            {!hasStagedAvatarSelection ? (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                <label
+                  htmlFor={PROFILE_AVATAR_INPUT_ID}
+                  role="button"
+                  style={{
+                    ...ghostBtn,
+                    position: "relative",
+                    overflow: "hidden",
+                    opacity: avatarUploading || saving ? 0.6 : 1,
+                    cursor: avatarUploading || saving ? "not-allowed" : "pointer",
+                    pointerEvents: avatarUploading || saving ? "none" : "auto",
+                  }}
+                  aria-disabled={avatarUploading || saving}
+                >
+                  <input
+                    id={PROFILE_AVATAR_INPUT_ID}
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={onAvatarInputChange}
+                    disabled={avatarUploading || saving}
+                    aria-label="Choose profile photo"
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
+                      height: "100%",
+                      opacity: 0,
+                      cursor: avatarUploading || saving ? "not-allowed" : "pointer",
+                    }}
+                  />
+                  <Icon name={hasSavedAvatar ? "photo_camera" : "add_a_photo"} size={16} />
+                  {hasSavedAvatar ? "Change photo" : "Add photo"}
+                </label>
+                {hasRecentPhotoSuccess ? (
+                  <span style={{ color: "#15803d", fontSize: 13, fontWeight: 600 }}>Photo updated</span>
+                ) : null}
+              </div>
+            ) : (
               <>
-                <a href={displayedAvatarUrl} target="_blank" rel="noreferrer" style={ghostBtn}>
-                  <Icon name="open_in_new" size={16} />
-                  View picture
-                </a>
-                <a href={displayedAvatarUrl} download="profile-picture" style={ghostBtn}>
-                  <Icon name="download" size={16} />
-                  Download
-                </a>
-                <button type="button" style={ghostBtn} onClick={() => window.open(displayedAvatarUrl, "_blank", "noopener,noreferrer")?.print()}>
-                  <Icon name="print" size={16} />
-                  Print
-                </button>
+                <div style={{ color: "#64748b", fontSize: 13 }}>
+                  Staged preview ready: {pendingAvatarFile?.name}
+                </div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                  <button type="button" disabled={!canSave} style={primaryBtn} onClick={() => void save()}>
+                    <Icon name="save" size={16} />
+                    {saving ? "Saving..." : "Save photo"}
+                  </button>
+                  <button
+                    type="button"
+                    style={ghostBtn}
+                    onClick={() => {
+                      clearStagedAvatarFile();
+                      setAvatarPathToDelete("");
+                    }}
+                    disabled={saving || avatarUploading}
+                  >
+                    <Icon name="close" size={16} />
+                    Cancel
+                  </button>
+                </div>
               </>
+            )}
+
+            {avatarPathToDelete && !hasStagedAvatarSelection ? (
+              <div style={{ color: "#64748b", fontSize: 13 }}>
+                Saved photo will be removed when you save.
+              </div>
             ) : null}
-            <button type="button" style={ghostBtn} onClick={() => void removeAvatar()}>
-              <Icon name="delete" size={16} />
-              Delete picture
-            </button>
           </div>
         </div>
 
-        {hasPendingProfileMediaChange ? (
-          <label style={{ display: "flex", alignItems: "center", gap: 10, color: "#475569", fontSize: 14 }}>
-            <input
-              type="checkbox"
-              checked={profileReviewConfirmed}
-              onChange={(event) => setProfileReviewConfirmed(event.target.checked)}
-              disabled={saving || avatarUploading}
-            />
-            I confirm the profile picture change is correct before saving.
-          </label>
-        ) : null}
+        {status.startsWith("❌") ? <StatusNote message={status} /> : null}
+        </div>
 
         <div style={gridStyle}>
           <FormField label="First name" iconName="badge" required>
@@ -393,9 +678,12 @@ export default function ProfilePage() {
             <DateInput value={form.date_of_birth} onChange={(value) => setForm({ ...form, date_of_birth: value })} disabled={saving} />
           </FormField>
         </div>
+        </section>
       </SettingsCard>
+      ) : null}
 
-      <SettingsCard title="Contact details" description="Add secondary contact channels for executor communication.">
+      {editorOpen ? (
+      <SettingsCard title="Contact details" description="Add the phone numbers and email addresses someone should use if they need to reach you or verify your details.">
         <div style={gridStyle}>
           <FormField label="Primary email (verified)" iconName="mail" required>
             <TextInput value={form.primary_email} onChange={() => undefined} disabled />
@@ -414,8 +702,10 @@ export default function ProfilePage() {
           </FormField>
         </div>
       </SettingsCard>
+      ) : null}
 
-      <SettingsCard title="Address" description="Store current address details for profile and legal references.">
+      {editorOpen ? (
+      <SettingsCard title="Address" description="Store the main residential address that should appear across profile, legal, and account records.">
         <div style={gridStyle}>
           <FormField label="House name or number" iconName="home">
             <TextInput value={form.house_name_or_number} onChange={(value) => setForm({ ...form, house_name_or_number: value })} disabled={saving} />
@@ -442,8 +732,10 @@ export default function ProfilePage() {
           </FormField>
         </div>
       </SettingsCard>
+      ) : null}
 
-      <SettingsCard title="Sensitive identity" description="National Insurance number is masked in UI and encrypted at rest.">
+      {editorOpen ? (
+      <SettingsCard title="Sensitive identity" description="National Insurance details stay masked in the interface and encrypted at rest.">
         <div style={gridStyle}>
           <FormField label="Current NI number" iconName="shield_lock">
             <TextInput value={maskedNi} onChange={() => undefined} disabled />
@@ -453,8 +745,10 @@ export default function ProfilePage() {
           </FormField>
         </div>
       </SettingsCard>
+      ) : null}
 
-      <SettingsCard title="Preferences and account" description="Account-level defaults for language and valuation display.">
+      {editorOpen ? (
+      <SettingsCard title="Preferences and account" description="Set the display defaults that keep the rest of the workspace consistent and easy to review.">
         <div style={gridStyle}>
           <FormField label="Preferred currency" iconName="currency_exchange">
             <SelectInput value={form.preferred_currency} onChange={(value) => setForm({ ...form, preferred_currency: value })} options={PROFILE_CURRENCY_OPTIONS} disabled={saving} />
@@ -478,16 +772,91 @@ export default function ProfilePage() {
             <Icon name="save" size={16} />
             {saving ? "Saving..." : "Save profile"}
           </button>
+          <button
+            type="button"
+            style={ghostBtn}
+            onClick={() => {
+              restoreSavedState();
+              appendProfileAvatarTrace("[edit-open] no reason=user-close");
+              setEditorOpen(false);
+            }}
+            disabled={saving || avatarUploading}
+          >
+            <Icon name="close" size={16} />
+            Close editor
+          </button>
           <button type="button" style={ghostBtn} onClick={() => void sendPasswordReset()}>
             <Icon name="lock_reset" size={16} />
             Send password reset
           </button>
-          <StatusNote message={status} />
         </div>
         <div style={{ color: "#6b7280", fontSize: 13 }}>
           For password change, recovery options, and mobile verification controls, open Security settings.
         </div>
       </SettingsCard>
+      ) : null}
+
+      <div id="account-settings">
+      <SettingsCard title="Account settings" description="Security, billing, terms, communications, and reminders now stay linked from Profile so account controls have one clear home.">
+        <div className="lf-content-grid">
+          {[
+            { href: "/account/security", label: "Security", desc: "Password, recovery, and mobile verification controls." },
+            { href: "/account/billing", label: "Billing and Account", desc: "Plan status, limits, and subscription readiness." },
+            { href: "/account/terms", label: "Terms and Conditions", desc: "Review the current terms status and acceptance record." },
+            { href: "/account/communications-preferences", label: "Communications Preferences", desc: "Choose how service updates reach you." },
+            { href: "/account/reminder-preferences", label: "Reminder Preferences", desc: "Control reminder timing and destinations." },
+          ].map((item) => (
+            <Link key={item.href} href={item.href} style={accountLinkCardStyle}>
+              <div style={{ fontWeight: 700 }}>{item.label}</div>
+              <div style={{ color: "#64748b", fontSize: 13 }}>{item.desc}</div>
+            </Link>
+          ))}
+        </div>
+      </SettingsCard>
+      </div>
+
+      {avatarTraceEnabled ? (
+        <SettingsCard title="DEV avatar trace" description="Temporary local trace for upload, save, reload, and sidebar hydrate.">
+          <div style={{ display: "grid", gap: 8, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12 }}>
+            {avatarTraceLines.length ? avatarTraceLines.map((line, index) => (
+              <div key={`${index}-${line}`}>{line}</div>
+            )) : (
+              <div style={{ color: "#64748b" }}>No avatar trace entries yet.</div>
+            )}
+          </div>
+        </SettingsCard>
+      ) : null}
     </SettingsPageShell>
   );
 }
+
+const microPillStyle = {
+  borderRadius: 999,
+  padding: "5px 9px",
+  fontSize: 12,
+  background: "#f3f4f6",
+  color: "#334155",
+} as const;
+
+const reviewPillStyle = {
+  ...microPillStyle,
+  background: "#fff7ed",
+  color: "#9a3412",
+};
+
+const readyPillStyle = {
+  ...microPillStyle,
+  background: "#ecfdf3",
+  color: "#166534",
+};
+
+const accountLinkCardStyle = {
+  border: "1px solid #e5e7eb",
+  borderRadius: 12,
+  padding: 12,
+  background: "#fff",
+  textDecoration: "none",
+  color: "#111827",
+  display: "grid",
+  gap: 6,
+} as const;

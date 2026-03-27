@@ -1,7 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ensureWalletContext, type WalletContext } from "../canonicalPersistence";
-import { getOrCreateOnboardingState } from "../onboarding";
+import { getOrCreateOnboardingState, getTermsAcceptanceState } from "../onboarding";
 import { toSafeInternalPath } from "./session";
+import { hasLinkedAccountAccess } from "../access-control/viewerAccess";
+import { resolveBootstrapDestination } from "./bootstrapRules";
+import { ensureOwnerPlanProfile } from "../accountPlan";
 
 type AnySupabaseClient = SupabaseClient;
 
@@ -16,7 +19,7 @@ export async function bootstrapAuthenticatedUser(
   {
     userId,
     nextPath,
-    completedDestination = "/app/dashboard",
+    completedDestination = "/dashboard",
   }: {
     userId: string;
     nextPath?: string | null;
@@ -25,12 +28,28 @@ export async function bootstrapAuthenticatedUser(
 ): Promise<AuthBootstrapResult> {
   const wallet = await ensureWalletContext(client, userId);
   const onboarding = await getOrCreateOnboardingState(client, userId);
+  const linkedAccessAvailable = await hasLinkedAccountAccess(client, userId);
+  if (!linkedAccessAvailable) {
+    await ensureOwnerPlanProfile(client, userId);
+  }
+  const canBypassOnboarding = linkedAccessAvailable || isInvitationAcceptPath(nextPath);
+  const terms = canBypassOnboarding ? null : await getTermsAcceptanceState(client, userId);
+  const access = resolveBootstrapDestination({
+    nextPath,
+    completedDestination,
+    canBypassOnboarding,
+    onboardingCompleted: onboarding.is_completed,
+    termsAccepted: Boolean(terms?.accepted),
+  });
 
   return {
     wallet,
-    onboardingComplete: onboarding.is_completed,
-    destination: onboarding.is_completed
-      ? toSafeInternalPath(nextPath, completedDestination)
-      : "/app/onboarding",
+    onboardingComplete: access.onboardingComplete,
+    destination: access.destination,
   };
+}
+
+function isInvitationAcceptPath(nextPath: string | null | undefined) {
+  const safe = toSafeInternalPath(nextPath, "");
+  return safe.startsWith("/invite/accept");
 }

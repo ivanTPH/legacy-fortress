@@ -1,6 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { hasColumn, hasTable } from "./schemaSafe";
 import { isMissingColumnError, isMissingRelationError } from "./supabaseErrors";
+import { appendDevBankRequestTrace, mergeDevBankContextTrace } from "./devSmoke";
+import {
+  buildSensitivePayloadFallbackResult,
+  buildSensitivePayloadSuccessResult,
+  isSensitivePayloadHydrationCapabilityError,
+  type SensitivePayloadHydrationResult,
+} from "./assets/sensitiveHydration";
 
 type AnySupabaseClient = SupabaseClient;
 type WalletRow = {
@@ -11,6 +18,27 @@ type MaybeSingleWalletResult = {
   data: WalletRow | null;
   error: { message: string } | null;
 };
+const walletReadContextInFlight = new Map<string, Promise<WalletReadContext>>();
+
+function traceWalletResolution(step: string, details: Record<string, unknown>) {
+  const detailText = Object.entries(details)
+    .map(([key, value]) => `${key}=${value == null ? "<null>" : String(value)}`)
+    .join(" ");
+  appendDevBankRequestTrace(`[wallet-resolution] ${step}${detailText ? ` ${detailText}` : ""}`);
+  mergeDevBankContextTrace({
+    source: "canonicalPersistence",
+    stage: `wallet.${step}`,
+    userId: details.userId != null ? String(details.userId) : undefined,
+    organisationId: details.organisationId != null ? String(details.organisationId) : undefined,
+    walletId: details.walletId != null ? String(details.walletId) : undefined,
+    error:
+      typeof details.reason === "string"
+        ? details.reason
+        : step.endsWith("fail")
+          ? "Wallet resolution failed."
+          : null,
+  });
+}
 
 export type WalletContext = {
   organisationId: string | null;
@@ -74,16 +102,25 @@ export function stripSensitiveMetadata(metadata: Record<string, unknown>) {
 export async function loadSensitiveAssetPayloads(
   client: AnySupabaseClient,
   assetIds: string[],
-): Promise<Map<string, Record<string, unknown>>> {
+): Promise<SensitivePayloadHydrationResult> {
   const ids = assetIds.map((value) => value.trim()).filter(Boolean);
-  if (!ids.length) return new Map();
+  if (!ids.length) {
+    return buildSensitivePayloadSuccessResult(new Map());
+  }
 
   const response = await client.rpc("get_assets_sensitive_payloads", {
     p_asset_ids: ids,
   });
 
   if (response.error) {
-    throw new Error(response.error.message);
+    const message = response.error.message;
+    if (isSensitivePayloadHydrationCapabilityError(message)) {
+      appendDevBankRequestTrace(
+        `[sensitive-hydration] decrypt_support=unavailable fallback=yes assets=${ids.length} skipped_fields=${SENSITIVE_ASSET_METADATA_KEYS.join(",")} reason=${message}`,
+      );
+      return buildSensitivePayloadFallbackResult(SENSITIVE_ASSET_METADATA_KEYS);
+    }
+    throw new Error(message);
   }
 
   const rows = (response.data ?? []) as Array<{
@@ -96,16 +133,22 @@ export async function loadSensitiveAssetPayloads(
     if (!assetId) continue;
     payloads.set(assetId, row.payload ?? {});
   }
-  return payloads;
+  appendDevBankRequestTrace(
+    `[sensitive-hydration] decrypt_support=available fallback=no assets=${ids.length} hydrated=${payloads.size} partial=${Math.max(ids.length - payloads.size, 0)} skipped_fields=none`,
+  );
+  return buildSensitivePayloadSuccessResult(payloads);
 }
 
 export async function ensureWalletContext(client: AnySupabaseClient, userId: string): Promise<WalletContext> {
+  traceWalletResolution("ensure.start", { userId });
   if (!userId.trim()) {
+    traceWalletResolution("ensure.fail", { reason: "user-id-missing" });
     throw new Error("Wallet resolution failed: user id is required.");
   }
 
   const walletTableExists = await hasTable(client, "wallets");
   if (!walletTableExists) {
+    traceWalletResolution("ensure.fail", { reason: "wallets-table-unavailable" });
     throw new Error("Wallet resolution failed: wallets table is unavailable.");
   }
 
@@ -126,6 +169,7 @@ export async function ensureWalletContext(client: AnySupabaseClient, userId: str
   ]);
 
   if (!hasWalletOwnerUserId) {
+    traceWalletResolution("ensure.fail", { reason: "wallet-owner-column-unavailable" });
     throw new Error("Wallet resolution failed: wallets.owner_user_id is unavailable.");
   }
 
@@ -136,26 +180,30 @@ export async function ensureWalletContext(client: AnySupabaseClient, userId: str
   let walletId = existing.walletId ?? "";
   let organisationId = existing.organisationId ?? "";
 
-  const existingWalletWithOrg = await findPreferredWallet(client, userId, {
-    hasWalletOrganisationId,
-    hasWalletStatus,
-    hasWalletCreatedAt,
-  });
-  if (existingWalletWithOrg.error) {
-    if (!isMissingRelationError(existingWalletWithOrg.error, "wallets")) {
-      throw new Error(existingWalletWithOrg.error.message);
+  if (!walletId || (!organisationId && hasWalletOrganisationId)) {
+    const existingWalletWithOrg = await findPreferredWallet(client, userId, {
+      hasWalletOrganisationId,
+      hasWalletStatus,
+      hasWalletCreatedAt,
+    });
+    if (existingWalletWithOrg.error) {
+      if (!isMissingRelationError(existingWalletWithOrg.error, "wallets")) {
+        traceWalletResolution("ensure.fail", { reason: existingWalletWithOrg.error.message });
+        throw new Error(existingWalletWithOrg.error.message);
+      }
+      traceWalletResolution("ensure.fail", { reason: "wallets-table-unavailable" });
+      throw new Error("Wallet resolution failed: wallets table is unavailable.");
     }
-    throw new Error("Wallet resolution failed: wallets table is unavailable.");
-  }
 
-  if (!walletId) {
-    walletId = existingWalletWithOrg.data?.id ? String(existingWalletWithOrg.data.id) : "";
-  }
-  if (!organisationId) {
-    organisationId =
-      hasWalletOrganisationId && existingWalletWithOrg.data?.organisation_id
-        ? String(existingWalletWithOrg.data.organisation_id)
-        : "";
+    if (!walletId) {
+      walletId = existingWalletWithOrg.data?.id ? String(existingWalletWithOrg.data.id) : "";
+    }
+    if (!organisationId) {
+      organisationId =
+        hasWalletOrganisationId && existingWalletWithOrg.data?.organisation_id
+          ? String(existingWalletWithOrg.data.organisation_id)
+          : "";
+    }
   }
 
   const [hasOrganisationOwnerUserId, hasOrganisationCreatedAt] = hasOrganisationTable
@@ -191,6 +239,7 @@ export async function ensureWalletContext(client: AnySupabaseClient, userId: str
       .single();
 
     if (createdOrganisation.error || !createdOrganisation.data?.id) {
+      traceWalletResolution("ensure.fail", { reason: createdOrganisation.error?.message || "create-organisation-failed" });
       throw new Error(createdOrganisation.error?.message || "Could not create organisation.");
     }
     organisationId = String(createdOrganisation.data.id);
@@ -198,6 +247,7 @@ export async function ensureWalletContext(client: AnySupabaseClient, userId: str
 
   if (!walletId) {
     if (hasWalletOrganisationId && !organisationId) {
+      traceWalletResolution("ensure.fail", { reason: "organisation-context-unavailable" });
       throw new Error("Wallet resolution failed: wallets.organisation_id is required but organisation context is unavailable.");
     }
     const walletInsertPayload: Record<string, unknown> = {
@@ -216,13 +266,16 @@ export async function ensureWalletContext(client: AnySupabaseClient, userId: str
       .single();
 
     if (createdWallet.error || !createdWallet.data?.id) {
+      traceWalletResolution("ensure.fail", { reason: createdWallet.error?.message || "create-wallet-failed" });
       throw new Error(createdWallet.error?.message || "Could not create wallet.");
     }
 
     walletId = String(createdWallet.data.id);
+    traceWalletResolution("ensure.created-wallet", { userId, walletId, organisationId: organisationId || null });
   }
 
   if (!walletId) {
+    traceWalletResolution("ensure.fail", { reason: "wallet-unresolved" });
     throw new Error("Could not resolve canonical wallet context.");
   }
 
@@ -237,6 +290,7 @@ export async function ensureWalletContext(client: AnySupabaseClient, userId: str
         .eq("id", walletId)
         .eq("owner_user_id", userId);
       if (walletNormalize.error) {
+        traceWalletResolution("ensure.fail", { reason: walletNormalize.error.message });
         throw new Error(walletNormalize.error.message);
       }
     }
@@ -250,6 +304,7 @@ export async function ensureWalletContext(client: AnySupabaseClient, userId: str
       .maybeSingle();
 
     if (walletWithOrg.error && !isMissingColumnError(walletWithOrg.error, "organisation_id")) {
+      traceWalletResolution("ensure.fail", { reason: walletWithOrg.error.message });
       throw new Error(walletWithOrg.error.message);
     }
 
@@ -262,11 +317,13 @@ export async function ensureWalletContext(client: AnySupabaseClient, userId: str
         .eq("id", walletId)
         .eq("owner_user_id", userId);
       if (walletUpdate.error && !isMissingColumnError(walletUpdate.error, "organisation_id")) {
+        traceWalletResolution("ensure.fail", { reason: walletUpdate.error.message });
         throw new Error(walletUpdate.error.message);
       }
     }
   }
 
+  traceWalletResolution("ensure.success", { userId, walletId, organisationId: organisationId || null });
   return { walletId, organisationId: organisationId || null };
 }
 
@@ -274,85 +331,128 @@ export async function resolveWalletContextForRead(
   client: AnySupabaseClient,
   userId: string,
 ): Promise<WalletReadContext> {
-  if (!userId.trim()) {
+  const normalizedUserId = userId.trim();
+  if (!normalizedUserId) {
+    traceWalletResolution("read.fail", { reason: "user-id-missing" });
     return { walletId: null, organisationId: null, warning: "user-id-missing" };
   }
 
-  const walletTableExists = await hasTable(client, "wallets");
-  if (!walletTableExists) {
-    return { walletId: null, organisationId: null, warning: "wallets-table-unavailable" };
+  const existingPromise = walletReadContextInFlight.get(normalizedUserId);
+  if (existingPromise) {
+    traceWalletResolution("read.reuse-inflight", { userId: normalizedUserId });
+    return existingPromise;
   }
 
-  const [hasWalletStatus, hasWalletCreatedAt, hasWalletOwnerUserId, hasWalletOrganisationId] =
-    await Promise.all([
-      hasColumn(client, "wallets", "status"),
-      hasColumn(client, "wallets", "created_at"),
-      hasColumn(client, "wallets", "owner_user_id"),
-      hasColumn(client, "wallets", "organisation_id"),
-    ]);
+  const promise = (async () => {
+    traceWalletResolution("read.start", { userId: normalizedUserId });
+    if (!normalizedUserId) {
+      return { walletId: null, organisationId: null, warning: "user-id-missing" };
+    }
 
-  if (!hasWalletOwnerUserId) {
-    return { walletId: null, organisationId: null, warning: "wallet-owner-column-unavailable" };
-  }
-
-  const walletRes = await findPreferredWallet(client, userId, {
-    hasWalletOrganisationId,
-    hasWalletStatus,
-    hasWalletCreatedAt,
-  });
-  if (walletRes.error) {
-    if (isMissingRelationError(walletRes.error, "wallets")) {
+    const walletTableExists = await hasTable(client, "wallets");
+    if (!walletTableExists) {
+      traceWalletResolution("read.fail", { userId: normalizedUserId, reason: "wallets-table-unavailable" });
       return { walletId: null, organisationId: null, warning: "wallets-table-unavailable" };
     }
-    return { walletId: null, organisationId: null, warning: walletRes.error.message };
-  }
 
-  const walletId = walletRes.data?.id ? String(walletRes.data.id) : null;
-  let organisationId = walletRes.data?.organisation_id ? String(walletRes.data.organisation_id) : null;
-  if (!walletId) {
-    let fallbackOrganisationId: string | null = null;
+    const [hasWalletStatus, hasWalletCreatedAt, hasWalletOwnerUserId, hasWalletOrganisationId] =
+      await Promise.all([
+        hasColumn(client, "wallets", "status"),
+        hasColumn(client, "wallets", "created_at"),
+        hasColumn(client, "wallets", "owner_user_id"),
+        hasColumn(client, "wallets", "organisation_id"),
+      ]);
+
+    if (!hasWalletOwnerUserId) {
+      traceWalletResolution("read.fail", { userId: normalizedUserId, reason: "wallet-owner-column-unavailable" });
+      return { walletId: null, organisationId: null, warning: "wallet-owner-column-unavailable" };
+    }
+
+    const walletRes = await findPreferredWallet(client, normalizedUserId, {
+      hasWalletOrganisationId,
+      hasWalletStatus,
+      hasWalletCreatedAt,
+    });
+    if (walletRes.error) {
+      if (isMissingRelationError(walletRes.error, "wallets")) {
+        traceWalletResolution("read.fail", { userId: normalizedUserId, reason: "wallets-table-unavailable" });
+        return { walletId: null, organisationId: null, warning: "wallets-table-unavailable" };
+      }
+      traceWalletResolution("read.fail", { userId: normalizedUserId, reason: walletRes.error.message });
+      return { walletId: null, organisationId: null, warning: walletRes.error.message };
+    }
+
+    const walletId = walletRes.data?.id ? String(walletRes.data.id) : null;
+    let organisationId = walletRes.data?.organisation_id ? String(walletRes.data.organisation_id) : null;
+    if (!walletId) {
+      let fallbackOrganisationId: string | null = null;
+
+      const hasOrganisationsTable = await hasTable(client, "organisations");
+      if (hasOrganisationsTable) {
+        const hasOrgOwnerUserId = await hasColumn(client, "organisations", "owner_user_id");
+        if (hasOrgOwnerUserId) {
+          const orgRes = await client
+            .from("organisations")
+            .select("id")
+            .eq("owner_user_id", normalizedUserId)
+            .limit(1)
+            .maybeSingle();
+
+          if (!orgRes.error && orgRes.data?.id) {
+            fallbackOrganisationId = String(orgRes.data.id);
+          }
+        }
+      }
+
+      traceWalletResolution("read.fail", {
+        userId: normalizedUserId,
+        reason: "wallet-not-found",
+        organisationId: fallbackOrganisationId,
+      });
+      return { walletId: null, organisationId: fallbackOrganisationId, warning: "wallet-not-found" };
+    }
 
     const hasOrganisationsTable = await hasTable(client, "organisations");
-    if (hasOrganisationsTable) {
+    if (!hasOrganisationsTable) {
+      traceWalletResolution("read.success", {
+        userId: normalizedUserId,
+        walletId,
+        organisationId,
+        warning: "organisations-table-unavailable",
+      });
+      return { walletId, organisationId, warning: "organisations-table-unavailable" };
+    }
+
+    if (!organisationId) {
       const hasOrgOwnerUserId = await hasColumn(client, "organisations", "owner_user_id");
       if (hasOrgOwnerUserId) {
         const orgRes = await client
           .from("organisations")
           .select("id")
-          .eq("owner_user_id", userId)
+          .eq("owner_user_id", normalizedUserId)
           .limit(1)
           .maybeSingle();
-
         if (!orgRes.error && orgRes.data?.id) {
-          fallbackOrganisationId = String(orgRes.data.id);
+          organisationId = String(orgRes.data.id);
         }
       }
     }
 
-    return { walletId: null, organisationId: fallbackOrganisationId, warning: "wallet-not-found" };
-  }
+    traceWalletResolution("read.success", {
+      userId: normalizedUserId,
+      walletId,
+      organisationId,
+      warning: null,
+    });
+    return { walletId, organisationId, warning: null };
+  })();
 
-  const hasOrganisationsTable = await hasTable(client, "organisations");
-  if (!hasOrganisationsTable) {
-    return { walletId, organisationId, warning: "organisations-table-unavailable" };
+  walletReadContextInFlight.set(normalizedUserId, promise);
+  try {
+    return await promise;
+  } finally {
+    walletReadContextInFlight.delete(normalizedUserId);
   }
-
-  if (!organisationId) {
-    const hasOrgOwnerUserId = await hasColumn(client, "organisations", "owner_user_id");
-    if (hasOrgOwnerUserId) {
-      const orgRes = await client
-        .from("organisations")
-        .select("id")
-        .eq("owner_user_id", userId)
-        .limit(1)
-        .maybeSingle();
-      if (!orgRes.error && orgRes.data?.id) {
-        organisationId = String(orgRes.data.id);
-      }
-    }
-  }
-
-  return { walletId, organisationId, warning: null };
 }
 
 async function findPreferredWallet(

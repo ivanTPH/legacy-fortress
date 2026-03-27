@@ -1,6 +1,7 @@
 "use client";
 
-import type { AssetCategoryFormConfig } from "../../../lib/assets/fieldDictionary";
+import { useId } from "react";
+import { shouldShowAssetField, type AssetCategoryFormConfig } from "../../../lib/assets/fieldDictionary";
 import {
   DateInput,
   FileUploadPlaceholder,
@@ -27,25 +28,34 @@ export default function ConfigDrivenAssetFields({
   onChange,
   disabled = false,
 }: ConfigDrivenAssetFieldsProps) {
+  const fieldIdPrefix = useId();
+
   return (
     <>
       {config.fields.map((field) => {
+        if (!shouldShowAssetField(field, values)) {
+          return null;
+        }
         const value = values[field.key] ?? "";
         const showOther = field.supportsOther && value === "__other" && field.otherKey;
+        const fieldId = `${fieldIdPrefix}-${config.categorySlug}-${field.key}`;
+        const otherFieldId = field.otherKey ? `${fieldId}-other` : undefined;
 
         return (
           <div key={field.key} style={{ display: "grid", gap: 6 }}>
-            <FormField label={field.label} iconName={field.iconName} required={field.required} error={errors[field.key]} helpText={field.helpText}>
+            <FormField fieldId={fieldId} label={field.label} iconName={field.iconName} required={field.required} error={errors[field.key]} helpText={field.helpText}>
               {field.inputType === "text" ? (
-                <TextInput value={value} onChange={(next) => onChange(field.key, next)} placeholder={field.placeholder} disabled={disabled} />
+                <TextInput id={fieldId} ariaLabel={field.label} value={value} onChange={(next) => onChange(field.key, next)} placeholder={field.placeholder} disabled={disabled} />
               ) : null}
 
               {field.inputType === "textarea" ? (
-                <TextAreaInput value={value} onChange={(next) => onChange(field.key, next)} placeholder={field.placeholder} disabled={disabled} />
+                <TextAreaInput id={fieldId} ariaLabel={field.label} value={value} onChange={(next) => onChange(field.key, next)} placeholder={field.placeholder} disabled={disabled} />
               ) : null}
 
               {field.inputType === "select" ? (
                 <SelectInput
+                  id={fieldId}
+                  ariaLabel={field.label}
                   value={value}
                   onChange={(next) => onChange(field.key, next)}
                   options={field.options ?? []}
@@ -55,11 +65,11 @@ export default function ConfigDrivenAssetFields({
               ) : null}
 
               {field.inputType === "number" || field.inputType === "currency" ? (
-                <NumberInput value={value} onChange={(next) => onChange(field.key, next)} placeholder={field.placeholder} disabled={disabled} />
+                <NumberInput id={fieldId} ariaLabel={field.label} value={value} onChange={(next) => onChange(field.key, next)} placeholder={field.placeholder} disabled={disabled} />
               ) : null}
 
               {field.inputType === "date" ? (
-                <DateInput value={value} onChange={(next) => onChange(field.key, next)} disabled={disabled} />
+                <DateInput id={fieldId} ariaLabel={field.label} value={value} onChange={(next) => onChange(field.key, next)} disabled={disabled} />
               ) : null}
 
               {field.inputType === "toggle" ? (
@@ -71,12 +81,15 @@ export default function ConfigDrivenAssetFields({
 
             {showOther ? (
               <FormField
+                fieldId={otherFieldId}
                 label={`${field.label} (Other)`}
                 required
                 error={field.otherKey ? errors[field.otherKey] : undefined}
                 helpText="Provide a custom value"
               >
                 <TextInput
+                  id={otherFieldId}
+                  ariaLabel={`${field.label} (Other)`}
                   value={field.otherKey ? (values[field.otherKey] ?? "") : ""}
                   onChange={(next) => {
                     if (field.otherKey) onChange(field.otherKey, next);

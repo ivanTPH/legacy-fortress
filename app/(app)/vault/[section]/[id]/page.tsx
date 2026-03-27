@@ -6,6 +6,8 @@ import { useParams, useRouter } from "next/navigation";
 import { formatCurrency } from "../../../../../lib/currency";
 import { supabase } from "../../../../../lib/supabaseClient";
 import { getSafeUserData } from "@/lib/auth/requireActiveUser";
+import AttachmentGallery from "../../../../../components/documents/AttachmentGallery";
+import { getStoredFileSignedUrl, isPrintableDocumentMimeType } from "../../../../../lib/assets/documentLinks";
 
 type SectionKey = "personal" | "financial" | "legal" | "property" | "business" | "digital";
 
@@ -203,6 +205,46 @@ export default function VaultAssetDetailPage() {
     URL.revokeObjectURL(url);
   }
 
+  async function resolveLegalFilePreview() {
+    if (section !== "legal" || !row?.file_path || typeof row.file_path !== "string") return null;
+    return getStoredFileSignedUrl(supabase, {
+      storageBucket: "vault-docs",
+      storagePath: row.file_path,
+      expiresInSeconds: 120,
+    });
+  }
+
+  async function printLegalFile() {
+    if (section !== "legal" || !row?.file_path || typeof row.file_path !== "string") return;
+    const mimeType = inferMimeTypeFromPath(row.file_path);
+    if (!isPrintableDocumentMimeType(mimeType)) {
+      setStatus("Print is available for PDF and image files only.");
+      return;
+    }
+    const signedUrl = await resolveLegalFilePreview();
+    if (!signedUrl) {
+      setStatus("Could not prepare legal file for print.");
+      return;
+    }
+    const frame = document.createElement("iframe");
+    frame.style.position = "fixed";
+    frame.style.right = "0";
+    frame.style.bottom = "0";
+    frame.style.width = "0";
+    frame.style.height = "0";
+    frame.style.border = "0";
+    document.body.appendChild(frame);
+    frame.onload = () => {
+      try {
+        frame.contentWindow?.focus();
+        frame.contentWindow?.print();
+      } finally {
+        setTimeout(() => frame.remove(), 2_000);
+      }
+    };
+    frame.src = signedUrl;
+  }
+
   return (
     <div style={{ display: "grid", gap: 14, maxWidth: 920 }}>
       <div>
@@ -252,15 +294,26 @@ export default function VaultAssetDetailPage() {
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <Link href={config.basePath} style={linkBtnStyle}>Back to section</Link>
               <Link href={`${config.basePath}?edit=${id}`} style={linkBtnStyle}>Edit in section</Link>
-              {section === "legal" && row.file_path ? (
-                <button type="button" style={buttonStyle} onClick={() => void downloadLegalFile()}>
-                  Download file
-                </button>
-              ) : null}
               <button type="button" style={deleteBtnStyle} disabled={saving} onClick={() => void remove()}>
                 {saving ? "Deleting..." : "Delete"}
               </button>
             </div>
+            {section === "legal" && row.file_path ? (
+              <AttachmentGallery
+                items={[
+                  {
+                    id: String(row.id ?? id),
+                    fileName: `${displayTitle}.${inferExtensionFromPath(String(row.file_path ?? ""))}`,
+                    mimeType: inferMimeTypeFromPath(String(row.file_path ?? "")),
+                    createdAt: String(row.updated_at ?? row.created_at ?? ""),
+                  },
+                ]}
+                emptyText="No file linked."
+                onResolvePreviewUrl={() => resolveLegalFilePreview()}
+                onDownload={() => void downloadLegalFile()}
+                onPrint={() => void printLegalFile()}
+              />
+            ) : null}
             {status ? <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div> : null}
           </section>
         </>
@@ -291,6 +344,20 @@ function formatValue(value: unknown) {
   if (value === null || value === undefined || value === "") return "-";
   if (typeof value === "boolean") return value ? "Yes" : "No";
   return String(value);
+}
+
+function inferExtensionFromPath(path: string) {
+  const extension = path.split(".").pop()?.trim().toLowerCase();
+  return extension || "file";
+}
+
+function inferMimeTypeFromPath(path: string) {
+  const extension = inferExtensionFromPath(path);
+  if (extension === "pdf") return "application/pdf";
+  if (extension === "png") return "image/png";
+  if (extension === "jpg" || extension === "jpeg") return "image/jpeg";
+  if (extension === "txt") return "text/plain";
+  return "application/octet-stream";
 }
 
 const cardStyle: CSSProperties = {

@@ -1,5 +1,10 @@
-import { redirect } from "next/navigation";
+import { Suspense } from "react";
+import SignInPageClient from "./SignInPageClient";
 
-export default function SignInAliasPage() {
-  redirect("/signin");
+export default function SignInPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignInPageClient />
+    </Suspense>
+  );
 }

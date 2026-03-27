@@ -11,7 +11,14 @@ function tableKey(table: string) {
 }
 
 function columnKey(table: string, column: string) {
-  return `${tableKey(table)}:${column.trim().toLowerCase()}`;
+  return `${tableKey(table)}:${normalizeSchemaColumnName(column)}`;
+}
+
+function normalizeSchemaColumnName(column: string) {
+  return column
+    .trim()
+    .toLowerCase()
+    .replace(/[-\s]+/g, "_");
 }
 
 export async function hasTable(client: AnySupabaseClient, table: string): Promise<boolean> {
@@ -38,7 +45,8 @@ export async function hasColumn(
   table: string,
   column: string,
 ): Promise<boolean> {
-  const key = columnKey(table, column);
+  const normalizedColumn = normalizeSchemaColumnName(column);
+  const key = columnKey(table, normalizedColumn);
   if (columnCache.has(key)) return columnCache.get(key) as boolean;
 
   const tableExists = await hasTable(client, table);
@@ -47,9 +55,17 @@ export async function hasColumn(
     return false;
   }
 
-  const result = await client.from(table).select(column).limit(1).maybeSingle();
+  if (process.env.NODE_ENV === "development" && normalizedColumn !== column.trim().toLowerCase()) {
+    console.info("[schemaSafe] normalized schema column", {
+      table,
+      requestedColumn: column,
+      normalizedColumn,
+    });
+  }
+
+  const result = await client.from(table).select(normalizedColumn).limit(1).maybeSingle();
   if (result.error) {
-    if (isMissingColumnError(result.error, column) || isMissingRelationError(result.error, table)) {
+    if (isMissingColumnError(result.error, normalizedColumn) || isMissingRelationError(result.error, table)) {
       columnCache.set(key, false);
       return false;
     }
@@ -61,4 +77,3 @@ export async function hasColumn(
   columnCache.set(key, true);
   return true;
 }
-

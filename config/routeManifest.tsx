@@ -2,11 +2,14 @@ import type { ReactNode } from "react";
 import {
   BriefcaseIcon,
   BuildingIcon,
+  CarIcon,
+  ContactsIcon,
   DashboardIcon,
   DocumentIcon,
+  HelpIcon,
+  PersonalIcon,
   PersonIcon,
-  SettingsIcon,
-  SupportIcon,
+  TrustIcon,
   WalletIcon,
 } from "../app/(app)/components/NavIcons";
 
@@ -66,10 +69,9 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     id: "personal",
     label: "Personal",
     path: "/personal",
-    icon: <PersonIcon />,
+    icon: <PersonalIcon />,
     enabled: on,
     children: [
-      { id: "personal-next-of-kin", label: "Next of Kin", path: "/personal#next-of-kin", enabled: on },
       { id: "personal-possessions", label: "Possessions", path: "/vault/personal", enabled: on },
       { id: "personal-subscriptions", label: "Subscriptions", path: "/personal/subscriptions", enabled: on },
       { id: "personal-social-media", label: "Social media", path: "/personal/social-media", enabled: on },
@@ -77,10 +79,17 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     ],
   },
   {
+    id: "people-contacts",
+    label: "Contacts",
+    path: "/contacts",
+    icon: <ContactsIcon />,
+    enabled: on,
+  },
+  {
     id: "trust",
-    label: "Trust",
+    label: "Executors",
     path: "/trust",
-    icon: <SupportIcon />,
+    icon: <TrustIcon />,
     enabled: on,
   },
   {
@@ -100,34 +109,34 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     path: "/business",
     icon: <BriefcaseIcon />,
     enabled: on,
+    children: [
+      { id: "business-interests", label: "Business Interests", path: "/business", enabled: on },
+      { id: "business-employment", label: "Employment", path: "/employment", enabled: on },
+    ],
   },
   {
     id: "cars-transport",
     label: "Cars & Transport",
     path: "/cars-transport",
-    icon: <BuildingIcon />,
-    enabled: on,
-  },
-  {
-    id: "employment",
-    label: "Employment",
-    path: "/employment",
-    icon: <BriefcaseIcon />,
+    icon: <CarIcon />,
     enabled: on,
   },
   {
     id: "support",
     label: "Support",
     path: "/support",
-    icon: <SupportIcon />,
+    icon: <HelpIcon />,
     enabled: on,
-    children: [{ id: "support-help", label: "Help Centre", path: "/support", enabled: on }],
+    children: [{ id: "support-help", label: "Support", path: "/support", enabled: on }],
   },
+];
+
+export const ACCOUNT_ROUTE_MANIFEST: AppRouteNode[] = [
   {
-    id: "settings",
-    label: "Settings",
-    path: "/settings",
-    icon: <SettingsIcon />,
+    id: "account-profile",
+    label: "Profile",
+    path: "/profile",
+    icon: <PersonIcon />,
     enabled: on,
     children: [
       { id: "settings-security", label: "Security", path: "/account/security", enabled: on },
@@ -137,8 +146,4 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
       { id: "settings-reminders", label: "Reminder Preferences", path: "/account/reminder-preferences", enabled: on },
     ],
   },
-];
-
-export const ACCOUNT_ROUTE_MANIFEST: AppRouteNode[] = [
-  { id: "account-profile", label: "Profile", path: "/profile", icon: <PersonIcon />, enabled: on },
 ];

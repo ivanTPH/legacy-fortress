@@ -8,7 +8,7 @@ type OAuthButtonsProps = {
   nextPath?: string;
 };
 
-export default function OAuthButtons({ nextPath = "/app/onboarding" }: OAuthButtonsProps) {
+export default function OAuthButtons({ nextPath = "/onboarding" }: OAuthButtonsProps) {
   const [status, setStatus] = useState("");
 
   async function oauth(provider: "google" | "apple") {

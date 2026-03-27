@@ -23,7 +23,7 @@ export default function NotFoundPage() {
           <Link href="/dashboard" style={btnStyle}>
             Go to dashboard
           </Link>
-          <Link href="/signin" style={ghostStyle}>
+          <Link href="/sign-in" style={ghostStyle}>
             Sign in
           </Link>
         </div>
@@ -53,4 +53,3 @@ const ghostStyle = {
   fontSize: 13,
   fontWeight: 600,
 };
-

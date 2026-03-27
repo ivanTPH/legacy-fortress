@@ -8,9 +8,8 @@ export default function SupportPage() {
       sectionKey="support"
       categoryKey="help_requests"
       title="Support"
-      subtitle="Log support requests, guidance notes, and operational help records."
-      addLabel="Add support request"
+      subtitle="Log guidance notes, support requests, and practical support records."
+      addLabel="Add support record"
     />
   );
 }
-

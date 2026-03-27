@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
-import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
+import { createSupabaseAdminClient, getSupabaseAdminConfigIssue } from "@/lib/supabaseAdmin";
 import { isMissingColumnError, isMissingRelationError } from "@/lib/supabaseErrors";
 
 export async function GET() {
   const admin = createSupabaseAdminClient();
   if (!admin) {
+    const issue = getSupabaseAdminConfigIssue();
     return NextResponse.json(
       {
         ok: false,
         message: "Supabase admin client unavailable",
+        issue,
         checks: [],
       },
       { status: 503 },

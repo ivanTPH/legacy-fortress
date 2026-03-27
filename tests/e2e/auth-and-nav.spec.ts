@@ -20,7 +20,7 @@ test.describe("Auth and navigation regressions", () => {
     await expect(page.getByRole("heading", { name: /dashboard/i })).toBeVisible();
 
     await page.reload();
-    await expect(page).toHaveURL(/\/(app\/dashboard|dashboard)/);
+    await expect(page).toHaveURL(/\/dashboard/);
 
     await page.getByRole("button", { name: /sign out/i }).click();
     await expect(page).toHaveURL(/\/sign-in/);
@@ -30,7 +30,7 @@ test.describe("Auth and navigation regressions", () => {
     requireAuthFixture();
     await signInAsSeedUser(page);
 
-    await page.goto("/app/dashboard");
+    await page.goto("/dashboard");
     const legalMenu = page.getByRole("menuitem", { name: /legal/i }).first();
     await legalMenu.click();
 
@@ -49,7 +49,7 @@ test.describe("Auth and navigation regressions", () => {
   test("outside click and route change always close flyout", async ({ page }) => {
     requireAuthFixture();
     await signInAsSeedUser(page);
-    await page.goto("/app/dashboard");
+    await page.goto("/dashboard");
 
     const legalMenu = page.getByRole("menuitem", { name: /legal/i }).first();
     const willsSubmenu = page.getByRole("menuitem", { name: /wills/i }).first();

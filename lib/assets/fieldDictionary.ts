@@ -36,6 +36,10 @@ export type AssetFieldConfig = {
   extractionSupported?: boolean;
   sensitive?: boolean;
   contributesToCompleteness?: boolean;
+  showWhen?: {
+    fieldKey: string;
+    equals: string;
+  };
 };
 
 export type AssetCategoryFormConfig = {
@@ -105,9 +109,18 @@ export const DEBT_TYPE_OPTIONS: AssetFieldOption[] = [
   { label: "Other", value: "__other" },
 ];
 
+export const IDENTITY_DOCUMENT_TYPE_OPTIONS: AssetFieldOption[] = [
+  { label: "Passport", value: "passport" },
+  { label: "Driving licence", value: "driving_licence" },
+  { label: "National identity card", value: "national_identity_card" },
+  { label: "Residence permit", value: "residence_permit" },
+  { label: "Birth certificate", value: "birth_certificate" },
+  { label: "Marriage certificate", value: "marriage_certificate" },
+  { label: "Other", value: "__other" },
+];
+
 export const PROPERTY_TYPE_OPTIONS: AssetFieldOption[] = [
   { label: "Residential home", value: "residential" },
-  { label: "Rental property", value: "rental" },
   { label: "Commercial property", value: "commercial" },
   { label: "Land / plot", value: "land" },
   { label: "Foreign property", value: "foreign_property" },
@@ -120,6 +133,22 @@ export const PROPERTY_OWNERSHIP_OPTIONS: AssetFieldOption[] = [
   { label: "Tenants in common", value: "tenants_in_common" },
   { label: "Trust", value: "trust" },
   { label: "Company owned", value: "company" },
+  { label: "Other", value: "__other" },
+];
+
+export const PROPERTY_OCCUPANCY_OPTIONS: AssetFieldOption[] = [
+  { label: "Main residence", value: "main_residence" },
+  { label: "Second home", value: "second_home" },
+  { label: "Rental property", value: "rental_property" },
+  { label: "Vacant", value: "vacant" },
+  { label: "Other", value: "__other" },
+];
+
+export const TENANCY_TYPE_OPTIONS: AssetFieldOption[] = [
+  { label: "Assured shorthold tenancy", value: "assured_shorthold_tenancy" },
+  { label: "Periodic tenancy", value: "periodic_tenancy" },
+  { label: "Holiday let", value: "holiday_let" },
+  { label: "Private arrangement", value: "private_arrangement" },
   { label: "Other", value: "__other" },
 ];
 
@@ -305,14 +334,16 @@ const CATEGORY_FORM_CONFIGS: AssetCategoryFormConfig[] = [
     title: "Bank account",
     fields: [
       SHARED_TITLE,
-      field({ key: "institution_name", label: "Institution name", iconName: "account_balance", inputType: "text", required: true, placeholder: "e.g. HSBC" }),
+      field({ key: "provider_name", label: "Bank / provider name", iconName: "account_balance", inputType: "text", required: true, placeholder: "e.g. HSBC" }),
       field({ key: "account_type", label: "Account type", iconName: "category", inputType: "select", required: true, options: ACCOUNT_TYPE_OPTIONS, supportsOther: true, otherKey: "account_type_other" }),
+      field({ key: "account_holder", label: "Account holder", iconName: "person", inputType: "text", required: true, placeholder: "e.g. Jane Doe" }),
       field({ key: "account_number", label: "Account number", iconName: "pin", inputType: "text", required: true, placeholder: "e.g. 12345678", sensitive: true }),
       field({ key: "sort_code", label: "Sort code", iconName: "tag", inputType: "text", required: false, placeholder: "e.g. 10-20-30", sensitive: true }),
+      field({ key: "iban", label: "IBAN", iconName: "badge", inputType: "text", required: false, sensitive: true }),
       field({ key: "country", label: "Country", iconName: "public", inputType: "select", required: true, options: COUNTRY_OPTIONS, supportsOther: true, otherKey: "country_other" }),
       SHARED_CURRENCY,
-      field({ key: "estimated_value", label: "Estimated/current value", iconName: "payments", inputType: "number", required: false, placeholder: "e.g. 120000" }),
-      field({ key: "last_updated_on", label: "Last updated", iconName: "event", inputType: "date", required: false }),
+      field({ key: "current_balance", label: "Current balance", iconName: "payments", inputType: "number", required: false, placeholder: "e.g. 120000" }),
+      field({ key: "valuation_date", label: "Balance last updated", iconName: "event", inputType: "date", required: false }),
       field({ key: "notes", label: "Notes", iconName: "notes", inputType: "textarea", required: false, placeholder: "Optional notes" }),
     ],
   },
@@ -360,6 +391,19 @@ const CATEGORY_FORM_CONFIGS: AssetCategoryFormConfig[] = [
     ],
   },
   {
+    categorySlug: "identity-documents",
+    title: "Identity document",
+    fields: [
+      field({ ...SHARED_TITLE, label: "Document title", iconName: "badge", placeholder: "e.g. UK passport" }),
+      field({ key: "identity_document_type", label: "Document type", iconName: "badge", inputType: "select", required: true, options: IDENTITY_DOCUMENT_TYPE_OPTIONS, supportsOther: true, otherKey: "identity_document_type_other" }),
+      field({ key: "identity_document_number", label: "Document number", iconName: "tag", inputType: "text", required: false, sensitive: true, placeholder: "e.g. 123456789" }),
+      field({ key: "identity_document_country", label: "Issuing country", iconName: "public", inputType: "select", required: false, options: COUNTRY_OPTIONS, supportsOther: true, otherKey: "identity_document_country_other" }),
+      field({ key: "identity_issue_date", label: "Issue date", iconName: "event", inputType: "date", required: false }),
+      field({ key: "renewal_date", label: "Renewal / expiry date", iconName: "event_available", inputType: "date", required: false }),
+      field({ key: "notes", label: "Notes", iconName: "notes", inputType: "textarea", required: false, placeholder: "Optional supporting notes" }),
+    ],
+  },
+  {
     categorySlug: "possessions",
     title: "Possession",
     fields: [
@@ -379,12 +423,89 @@ const CATEGORY_FORM_CONFIGS: AssetCategoryFormConfig[] = [
       field({ key: "ownership_type", label: "Ownership type", iconName: "groups", inputType: "select", required: true, options: PROPERTY_OWNERSHIP_OPTIONS, supportsOther: true, otherKey: "ownership_type_other" }),
       field({ key: "property_address", label: "Address", iconName: "location_on", inputType: "textarea", required: true, sensitive: true, placeholder: "Enter the full property address" }),
       field({ key: "property_country", label: "Country", iconName: "public", inputType: "select", required: true, options: COUNTRY_OPTIONS, supportsOther: true, otherKey: "property_country_other" }),
+      field({
+        key: "occupancy_status",
+        label: "Occupancy status",
+        iconName: "meeting_room",
+        inputType: "select",
+        required: true,
+        options: PROPERTY_OCCUPANCY_OPTIONS,
+        supportsOther: true,
+        otherKey: "occupancy_status_other",
+      }),
+      field({
+        key: "tenant_name",
+        label: "Tenant name",
+        iconName: "person",
+        inputType: "text",
+        required: false,
+        showWhen: { fieldKey: "occupancy_status", equals: "rental_property" },
+      }),
+      field({
+        key: "tenancy_type",
+        label: "Tenancy type",
+        iconName: "home",
+        inputType: "select",
+        required: false,
+        options: TENANCY_TYPE_OPTIONS,
+        supportsOther: true,
+        otherKey: "tenancy_type_other",
+        showWhen: { fieldKey: "occupancy_status", equals: "rental_property" },
+      }),
+      field({
+        key: "managing_agent",
+        label: "Managing agent",
+        iconName: "support_agent",
+        inputType: "text",
+        required: false,
+        showWhen: { fieldKey: "occupancy_status", equals: "rental_property" },
+      }),
+      field({
+        key: "managing_agent_contact",
+        label: "Managing agent contact",
+        iconName: "call",
+        inputType: "text",
+        required: false,
+        showWhen: { fieldKey: "occupancy_status", equals: "rental_property" },
+      }),
+      field({
+        key: "monthly_rent",
+        label: "Monthly rent",
+        iconName: "payments",
+        inputType: "currency",
+        required: false,
+        showWhen: { fieldKey: "occupancy_status", equals: "rental_property" },
+      }),
+      field({
+        key: "tenancy_end_date",
+        label: "Tenancy end date",
+        iconName: "event",
+        inputType: "date",
+        required: false,
+        showWhen: { fieldKey: "occupancy_status", equals: "rental_property" },
+      }),
+      field({
+        key: "deposit_scheme_reference",
+        label: "Deposit scheme reference",
+        iconName: "badge",
+        inputType: "text",
+        required: false,
+        showWhen: { fieldKey: "occupancy_status", equals: "rental_property" },
+      }),
       field({ key: "estimated_value", label: "Estimated value", iconName: "payments", inputType: "number", required: true }),
       SHARED_CURRENCY,
       field({ key: "valuation_date", label: "Valuation date", iconName: "event", inputType: "date", required: false }),
       field({ key: "mortgage_status", label: "Mortgage status", iconName: "account_balance_wallet", inputType: "select", required: true, options: MORTGAGE_STATUS_OPTIONS, supportsOther: true, otherKey: "mortgage_status_other" }),
       field({ key: "mortgage_lender", label: "Mortgage lender", iconName: "account_balance", inputType: "text", required: false }),
       field({ key: "mortgage_balance", label: "Mortgage balance", iconName: "request_quote", inputType: "number", required: false }),
+      field({
+        key: "lease_or_tenant_summary",
+        label: "Lease / tenant summary",
+        iconName: "description",
+        inputType: "textarea",
+        required: false,
+        showWhen: { fieldKey: "property_type", equals: "commercial" },
+      }),
       field({ key: "notes", label: "Notes", iconName: "notes", inputType: "textarea", required: false }),
     ],
   },
@@ -419,6 +540,19 @@ const CATEGORY_FORM_CONFIGS: AssetCategoryFormConfig[] = [
       field({ key: "valuation_date", label: "Valuation date", iconName: "event", inputType: "date", required: false }),
       field({ key: "access_contact", label: "Access contact / custodian", iconName: "contact_support", inputType: "text", required: false, placeholder: "e.g. Recovery contact or custodian" }),
       field({ key: "digital_status", label: "Status", iconName: "task_alt", inputType: "select", required: true, options: DIGITAL_STATUS_OPTIONS, supportsOther: true, otherKey: "digital_status_other" }),
+      field({ key: "notes", label: "Notes", iconName: "notes", inputType: "textarea", required: false }),
+    ],
+  },
+  {
+    categorySlug: "social-media",
+    title: "Social media account",
+    fields: [
+      field({ ...SHARED_TITLE, label: "Platform / social media name", iconName: "alternate_email", placeholder: "e.g. Instagram" }),
+      field({ key: "social_profile_url", label: "Profile or account URL", iconName: "link", inputType: "text", required: false, placeholder: "e.g. https://instagram.com/example" }),
+      field({ key: "social_username", label: "Username or handle", iconName: "badge", inputType: "text", required: false, placeholder: "e.g. @example" }),
+      field({ key: "social_login_email", label: "Email / login", iconName: "mail", inputType: "text", required: false, placeholder: "e.g. example@email.com" }),
+      field({ key: "social_credential_hint", label: "Password / credential hint", iconName: "key", inputType: "text", required: false, placeholder: "Store a hint only", helpText: "Use a hint or access note rather than a full password where possible." }),
+      field({ key: "social_recovery_notes", label: "Recovery / handover notes", iconName: "shield", inputType: "textarea", required: false, placeholder: "Recovery email, 2FA notes, or handover guidance" }),
       field({ key: "notes", label: "Notes", iconName: "notes", inputType: "textarea", required: false }),
     ],
   },
@@ -496,10 +630,16 @@ export function buildInitialAssetFormValues(config: AssetCategoryFormConfig) {
   return values;
 }
 
+export function shouldShowAssetField(field: AssetFieldConfig, values: Record<string, string>) {
+  if (!field.showWhen) return true;
+  return `${values[field.showWhen.fieldKey] ?? ""}`.trim() === field.showWhen.equals;
+}
+
 export function validateAssetFormValues(config: AssetCategoryFormConfig, values: Record<string, string>) {
   const errors: Record<string, string> = {};
 
   for (const field of config.fields) {
+    if (!shouldShowAssetField(field, values)) continue;
     const raw = `${values[field.key] ?? ""}`.trim();
     const usingOther = field.supportsOther && raw === "__other" && field.otherKey;
     const value = usingOther ? `${values[field.otherKey ?? ""] ?? ""}`.trim() : raw;
@@ -544,6 +684,7 @@ export function resolveConfiguredFieldValue(field: AssetFieldConfig, values: Rec
 export function getCanonicalAssetMetadataFromValues(config: AssetCategoryFormConfig, values: Record<string, string>) {
   const metadata: Record<string, unknown> = {};
   for (const field of config.fields) {
+    if (!shouldShowAssetField(field, values)) continue;
     if (field.key === "title") continue;
     const value = resolveConfiguredFieldValue(field, values);
     if (!value) continue;
@@ -564,7 +705,9 @@ export function getSensitiveFieldKeys(config: AssetCategoryFormConfig) {
 }
 
 export function getCompleteness(config: AssetCategoryFormConfig, values: Record<string, string>) {
-  const requiredFields = config.fields.filter((field) => field.contributesToCompleteness ?? field.required);
+  const requiredFields = config.fields.filter(
+    (field) => (field.contributesToCompleteness ?? field.required) && shouldShowAssetField(field, values),
+  );
   if (!requiredFields.length) {
     return { completed: 0, total: 0, ratio: 1 };
   }

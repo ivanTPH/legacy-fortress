@@ -1,3 +1,6 @@
+import { normalizeBankAssetRow } from "../assets/bankAsset";
+import { formatCurrency } from "../currency";
+
 export type DashboardAssetRow = {
   id: string;
   section_key?: string | null;
@@ -7,6 +10,14 @@ export type DashboardAssetRow = {
   deleted_at?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+  title?: string | null;
+  provider_name?: string | null;
+  provider_key?: string | null;
+  value_minor?: number | null;
+  estimated_value_minor?: number | null;
+  currency_code?: string | null;
+  metadata?: Record<string, unknown> | null;
+  metadata_json?: Record<string, unknown> | null;
 };
 
 export type DashboardDocumentRow = {
@@ -21,6 +32,7 @@ export type DashboardDocumentRow = {
 };
 
 export type DashboardAssetBucket = "finance" | "property" | "business" | "digital" | "tasks" | "other";
+export type FinanceCategoryKey = "bank" | "investments" | "pensions" | "insurance" | "debts";
 export type DashboardSummaryItem = {
   id: string;
   label: string;
@@ -33,6 +45,18 @@ export type DashboardBucketSummary = {
   detailText: string;
   items: DashboardSummaryItem[];
 };
+export type DashboardFinanceSummary = DashboardBucketSummary & {
+  totalMajor: number;
+  includedCount: number;
+  categoryCount: number;
+};
+export type ScopedAssetTotals = {
+  activeValueMajor: number;
+  archivedValueMajor: number;
+  activeCount: number;
+  archivedCount: number;
+  missingValueCount: number;
+};
 export type DashboardRecentActivityItem = {
   id: string;
   kind: "asset" | "document";
@@ -43,7 +67,7 @@ export type DashboardRecentActivityItem = {
   icon: string;
 };
 
-const FINANCE_CATEGORY_KEYS = new Set(["bank", "investments", "insurance", "pensions", "debts", "loans-liabilities"]);
+const FINANCE_CATEGORY_KEYS = new Set(["bank", "bank-account", "bank-accounts", "investments", "investment", "insurance", "pensions", "pension", "debts", "debt", "loans-liabilities"]);
 const PROPERTY_CATEGORY_KEYS = new Set(["property", "properties"]);
 const BUSINESS_CATEGORY_KEYS = new Set(["business-interests", "business", "businesses"]);
 const DIGITAL_CATEGORY_KEYS = new Set(["digital-assets", "digital", "digital-accounts"]);
@@ -55,7 +79,7 @@ export function getLiveAssets<T extends DashboardAssetRow>(rows: T[]) {
 
 export function getDashboardAssetBucket(row: Pick<DashboardAssetRow, "section_key" | "category_key">): DashboardAssetBucket {
   const sectionKey = normalizeCategoryToken(String(row.section_key ?? ""));
-  const categoryKey = normalizeCategoryToken(String(row.category_key ?? ""));
+  const categoryKey = getNormalizedDashboardCategoryKey(row);
 
   if (sectionKey === "finances" || FINANCE_CATEGORY_KEYS.has(categoryKey)) return "finance";
   if (sectionKey === "property" || PROPERTY_CATEGORY_KEYS.has(categoryKey)) return "property";
@@ -88,6 +112,154 @@ export function countAssetsByBucket(rows: DashboardAssetRow[]) {
 
 export function countCanonicalDocuments(rows: DashboardDocumentRow[]) {
   return rows.filter((row) => Boolean(String(row.asset_id ?? "").trim())).length;
+}
+
+export function getAssetsForFinanceCategory<T extends DashboardAssetRow>(rows: T[], categoryKey: FinanceCategoryKey) {
+  const liveRows = getAssetsForBucket(rows, "finance");
+  return liveRows.filter((row) => {
+    const normalizedCategory = getNormalizedDashboardCategoryKey(row);
+    if (categoryKey === "debts") {
+      return normalizedCategory === "debts" || normalizedCategory === "debt" || normalizedCategory === "loans-liabilities";
+    }
+    if (categoryKey === "bank") {
+      return normalizedCategory === "bank" || normalizedCategory === "bank-account" || normalizedCategory === "bank-accounts";
+    }
+    return normalizedCategory === categoryKey;
+  });
+}
+
+export function summarizeScopedAssetRows<T extends DashboardAssetRow>(rows: T[]): ScopedAssetTotals {
+  let activeValueMajor = 0;
+  let archivedValueMajor = 0;
+  let activeCount = 0;
+  let archivedCount = 0;
+  let missingValueCount = 0;
+
+  for (const row of rows) {
+    if (row.deleted_at) continue;
+
+    const valueMajor = getDashboardAssetValueMajor(row);
+    const isArchived = row.status === "archived" || Boolean(row.archived_at);
+    if (!valueMajor) missingValueCount += 1;
+
+    if (isArchived) {
+      archivedCount += 1;
+      archivedValueMajor += valueMajor;
+    } else {
+      activeCount += 1;
+      activeValueMajor += valueMajor;
+    }
+  }
+
+  return { activeValueMajor, archivedValueMajor, activeCount, archivedCount, missingValueCount };
+}
+
+export function getDashboardAssetValueMajor(row: DashboardAssetRow) {
+  if (isNormalizedBankCategory(getNormalizedDashboardCategoryKey(row))) {
+    return normalizeBankAssetRow(row).current_balance;
+  }
+
+  if (typeof row.estimated_value_minor === "number") return row.estimated_value_minor / 100;
+  if (typeof row.value_minor === "number") return row.value_minor / 100;
+
+  const metadata = row.metadata_json ?? row.metadata ?? {};
+  const candidateKeys = [
+    "estimated_value_minor",
+    "current_balance_minor",
+    "outstanding_balance_minor",
+    "cover_amount_minor",
+    "estimated_value",
+    "current_balance",
+    "outstanding_balance",
+    "cover_amount",
+    "value",
+  ];
+
+  for (const key of candidateKeys) {
+    const raw = metadata[key];
+    if (typeof raw === "number" && Number.isFinite(raw)) {
+      return key.endsWith("_minor") ? raw / 100 : raw;
+    }
+    if (typeof raw === "string") {
+      const parsed = Number(raw.replace(/[^0-9.-]/g, ""));
+      if (Number.isFinite(parsed)) {
+        return key.endsWith("_minor") ? parsed / 100 : parsed;
+      }
+    }
+  }
+
+  return 0;
+}
+
+export function buildFinanceSummary<T extends DashboardAssetRow>(
+  rows: T[],
+  {
+    createdId,
+    currency,
+    getHref,
+    itemLimit = 3,
+  }: {
+    createdId: string;
+    currency: string;
+    getHref: (categoryKey: string) => string;
+    itemLimit?: number;
+  },
+): DashboardFinanceSummary {
+  const canonicalFinanceRows = sortRowsByDescendingValue(prioritizeCreatedAsset(getAssetsForBucket(rows, "finance"), createdId));
+  const totalMajor = canonicalFinanceRows.reduce((sum, row) => sum + getFinanceRowValueMajor(row), 0);
+  const categoryCount = new Set(
+    canonicalFinanceRows
+      .map((row) => canonicalizeFinanceCategoryKey(getNormalizedDashboardCategoryKey(row)))
+      .filter(Boolean),
+  ).size;
+
+  return {
+    addedAt: latestTimestamp(canonicalFinanceRows.map((row) => row.updated_at ?? row.created_at)),
+    valueText: canonicalFinanceRows.length ? formatCurrency(totalMajor, currency) : "No records yet",
+    detailText: canonicalFinanceRows.length
+      ? `${canonicalFinanceRows.length} finance record(s) across ${categoryCount || 1} categor${(categoryCount || 1) === 1 ? "y" : "ies"}`
+      : "No records yet",
+    items: canonicalFinanceRows.slice(0, itemLimit).map((row) => ({
+      id: `asset-${row.id}`,
+      label: getFinanceRowLabel(row),
+      href: getHref(canonicalizeFinanceCategoryKey(getNormalizedDashboardCategoryKey(row))),
+      meta: formatCurrency(getFinanceRowValueMajor(row), getFinanceRowCurrencyCode(row) || currency),
+    })),
+    totalMajor,
+    includedCount: canonicalFinanceRows.length,
+    categoryCount,
+  };
+}
+
+export function buildFinanceCategorySummary<T extends DashboardAssetRow>(
+  rows: T[],
+  {
+    categoryKey,
+    currency,
+    href,
+    itemLimit = 3,
+  }: {
+    categoryKey: FinanceCategoryKey;
+    currency: string;
+    href: string;
+    itemLimit?: number;
+  },
+): DashboardBucketSummary & { includedCount: number; totalMajor: number } {
+  const scopedRows = sortRowsByDescendingValue(getAssetsForFinanceCategory(rows, categoryKey));
+  const totals = summarizeScopedAssetRows(scopedRows);
+  return {
+    addedAt: latestTimestamp(scopedRows.map((row) => row.updated_at ?? row.created_at)),
+    valueText: scopedRows.length ? formatCurrency(totals.activeValueMajor, currency) : "No records yet",
+    detailText: scopedRows.length ? `${totals.activeCount} active record(s)` : "No records yet",
+    items: scopedRows.slice(0, itemLimit).map((row) => ({
+      id: `asset-${row.id}`,
+      label: getFinanceRowLabel(row),
+      href,
+      meta: formatCurrency(getFinanceRowValueMajor(row), getFinanceRowCurrencyCode(row) || currency),
+    })),
+    includedCount: scopedRows.length,
+    totalMajor: totals.activeValueMajor,
+  };
 }
 
 export function getDocumentsForAssetBucket<T extends DashboardDocumentRow>(
@@ -185,6 +357,16 @@ export function prioritizeCreatedAsset<T extends { id: string }>(rows: T[], crea
   return [created, ...rows.filter((row) => row.id !== createdId)];
 }
 
+function sortRowsByDescendingValue<T extends DashboardAssetRow>(rows: T[]) {
+  return [...rows].sort((left, right) => {
+    const valueDiff = getDashboardAssetValueMajor(right) - getDashboardAssetValueMajor(left);
+    if (valueDiff !== 0) return valueDiff;
+    const rightTime = new Date(right.updated_at ?? right.created_at ?? 0).getTime();
+    const leftTime = new Date(left.updated_at ?? left.created_at ?? 0).getTime();
+    return rightTime - leftTime;
+  });
+}
+
 export function getLegalDocuments<T extends DashboardDocumentRow>(rows: T[]) {
   return rows.filter((row) => {
     const key = `${row.category_key || row.document_type || ""}`.toLowerCase();
@@ -208,4 +390,79 @@ function normalizeCategoryToken(value: string) {
     .toLowerCase()
     .replace(/[_\s]+/g, "-")
     .replace(/[^a-z0-9-]/g, "");
+}
+
+function getFinanceRowLabel(row: DashboardAssetRow) {
+  const categoryKey = getNormalizedDashboardCategoryKey(row);
+  const metadata = row.metadata_json ?? row.metadata ?? {};
+
+  if (isNormalizedBankCategory(categoryKey)) {
+    const bankAsset = normalizeBankAssetRow(row);
+    return bankAsset.provider_name || bankAsset.title || row.provider_name || row.title || "Bank account";
+  }
+
+  return (
+    readString(
+      row.title,
+      row.provider_name,
+      metadata["investment_provider"],
+      metadata["pension_provider"],
+      metadata["insurer_name"],
+      metadata["creditor_name"],
+    ) || "Finance asset"
+  );
+}
+
+function getFinanceRowValueMajor(row: DashboardAssetRow) {
+  const categoryKey = getNormalizedDashboardCategoryKey(row);
+
+  if (isNormalizedBankCategory(categoryKey)) {
+    return normalizeBankAssetRow(row).current_balance;
+  }
+
+  return getDashboardAssetValueMajor(row);
+}
+
+function getFinanceRowCurrencyCode(row: DashboardAssetRow) {
+  const categoryKey = getNormalizedDashboardCategoryKey(row);
+  const metadata = row.metadata_json ?? row.metadata ?? {};
+
+  if (isNormalizedBankCategory(categoryKey)) {
+    return normalizeBankAssetRow(row).currency;
+  }
+
+  return readString(metadata["currency_code"], metadata["currency"], row.currency_code).toUpperCase();
+}
+
+function getNormalizedDashboardCategoryKey(row: Pick<DashboardAssetRow, "category_key" | "metadata" | "metadata_json">) {
+  const metadata = row.metadata_json ?? row.metadata ?? {};
+  return normalizeCategoryToken(
+    String(
+      row.category_key
+        ?? metadata["asset_category_token"]
+        ?? metadata["category_slug"]
+        ?? "",
+    ),
+  );
+}
+
+function isNormalizedBankCategory(categoryKey: string) {
+  return categoryKey === "bank" || categoryKey === "bank-account" || categoryKey === "bank-accounts";
+}
+
+function canonicalizeFinanceCategoryKey(categoryKey: string) {
+  if (isNormalizedBankCategory(categoryKey)) return "bank";
+  if (categoryKey === "investment") return "investments";
+  if (categoryKey === "pension") return "pensions";
+  if (categoryKey === "debt" || categoryKey === "loans-liabilities") return "debts";
+  return categoryKey;
+}
+
+function readString(...values: Array<unknown>) {
+  for (const value of values) {
+    if (typeof value !== "string") continue;
+    const trimmed = value.trim();
+    if (trimmed) return trimmed;
+  }
+  return "";
 }

@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CSSProperties } from "react";
-import { LEGAL_CATEGORIES } from "../../../lib/legalCategories";
+import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
+import { assetMatchesLegalCategory, LEGAL_CATEGORIES } from "../../../lib/legalCategories";
+import { fetchCanonicalAssets } from "../../../lib/assets/fetchCanonicalAssets";
+import { resolveWalletContextForRead } from "../../../lib/canonicalPersistence";
 import { supabase } from "../../../lib/supabaseClient";
 import { getSafeUserData } from "@/lib/auth/requireActiveUser";
 
@@ -14,8 +17,18 @@ type LegalRow = {
   created_at: string | null;
 };
 
+type LegalAssetRow = {
+  id: string;
+  section_key: string | null;
+  category_key: string | null;
+  title: string | null;
+  metadata_json: Record<string, unknown> | null;
+  created_at: string | null;
+};
+
 export default function LegalOverviewPage() {
   const router = useRouter();
+  const { viewer } = useViewerAccess();
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState("");
   const [rows, setRows] = useState<LegalRow[]>([]);
@@ -29,24 +42,48 @@ export default function LegalOverviewPage() {
 
       const { data: userData, error: authError } = await getSafeUserData(supabase);
       if (authError || !userData.user) {
-        router.replace("/signin");
+        router.replace("/sign-in");
         return;
       }
+      const ownerUserId = viewer.targetOwnerUserId || userData.user.id;
 
-      const { data, error } = await supabase
-        .from("records")
-        .select("id,category_key,created_at")
-        .eq("owner_user_id", userData.user.id)
-        .eq("section_key", "legal")
-        .order("created_at", { ascending: false });
+      const [legacyResult, walletContext] = await Promise.all([
+        supabase
+          .from("records")
+          .select("id,category_key,created_at")
+          .eq("owner_user_id", ownerUserId)
+          .eq("section_key", "legal")
+          .order("created_at", { ascending: false }),
+        resolveWalletContextForRead(supabase, ownerUserId),
+      ]);
+
+      const canonicalResult = await fetchCanonicalAssets(supabase, {
+        userId: ownerUserId,
+        walletId: walletContext.walletId,
+        sectionKeys: ["legal", "personal"],
+        select: "id,title,section_key,category_key,metadata_json,created_at",
+      });
 
       if (!mounted) return;
 
-      if (error) {
-        setStatus(`⚠️ Could not load legal summary: ${error.message}`);
+      if (legacyResult.error || canonicalResult.error) {
+        const message = legacyResult.error?.message ?? canonicalResult.error?.message ?? "Unknown error";
+        setStatus(`⚠️ Could not load legal summary: ${message}`);
         setRows([]);
       } else {
-        setRows((data ?? []) as LegalRow[]);
+        const legacyRows = (legacyResult.data ?? []) as LegalRow[];
+        const canonicalRows = ((canonicalResult.data ?? []) as LegalAssetRow[]).reduce<LegalRow[]>((result, row) => {
+            const matchedCategory = LEGAL_CATEGORIES.find((category) => assetMatchesLegalCategory(row, category.slug));
+            if (!matchedCategory) return result;
+            result.push({
+              id: String(row.id),
+              category_key: matchedCategory.slug,
+              created_at: row.created_at,
+            });
+            return result;
+          }, []);
+
+        setRows([...legacyRows, ...canonicalRows]);
       }
 
       setLoading(false);
@@ -56,7 +93,7 @@ export default function LegalOverviewPage() {
     return () => {
       mounted = false;
     };
-  }, [router]);
+  }, [router, viewer.targetOwnerUserId]);
 
   const counts = useMemo(() => {
     const byType = new Map<string, number>();
@@ -72,7 +109,7 @@ export default function LegalOverviewPage() {
       <div>
         <h1 style={{ margin: 0, fontSize: 28 }}>Legal</h1>
         <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
-          Choose a legal category to view, add, edit, and manage records.
+          Review the core documents an executor would expect to find, from wills and powers of attorney to supporting certificates.
         </p>
       </div>
 
@@ -86,7 +123,9 @@ export default function LegalOverviewPage() {
             <Link key={category.slug} href={`/legal/${category.slug}`} style={cardStyle}>
               <div style={{ fontWeight: 700 }}>{category.label}</div>
               <div style={{ color: "#6b7280", fontSize: 13 }}>{category.description}</div>
-              <div style={{ color: "#334155", fontSize: 13 }}>{total} record(s)</div>
+              <div style={{ color: "#334155", fontSize: 13 }}>
+                {total === 0 ? "Nothing saved yet" : `${total} record${total === 1 ? "" : "s"} ready to review`}
+              </div>
             </Link>
           );
         })}

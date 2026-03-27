@@ -1,3 +1,5 @@
-import OnboardingPage from "../../../onboarding/page";
+import { redirect } from "next/navigation";
 
-export default OnboardingPage;
+export default function AppOnboardingAliasPage() {
+  redirect("/onboarding");
+}

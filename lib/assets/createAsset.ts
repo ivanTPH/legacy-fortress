@@ -13,6 +13,8 @@ import { normalizeCanonicalExecutorMetadata } from "./executorAsset";
 import { normalizeCanonicalTaskMetadata } from "./taskAsset";
 import { hasColumn } from "../schemaSafe";
 import { isMissingColumnError, isMissingRelationError } from "../supabaseErrors";
+import { appendDevBankTrace, mergeDevBankContextTrace } from "../devSmoke";
+import { assertOwnerCanCreateRecord, ensureOwnerPlanProfile } from "../accountPlan";
 
 type AnySupabaseClient = SupabaseClient;
 
@@ -51,9 +53,34 @@ export type UpdateAssetInput = {
 };
 
 type CategoryLookup = {
-  id: string;
+  id: string | null;
   token: string;
 };
+
+const ASSET_PGCRYPTO_REPAIR_MIGRATION = "supabase/migrations/20260321123000_fix_asset_payload_pgcrypto_schema_qualification.sql";
+
+async function assertCanonicalAssetWriteSchema(client: AnySupabaseClient) {
+  const requiredColumns = [
+    "wallet_id",
+    "owner_user_id",
+    "section_key",
+    "category_key",
+    "metadata_json",
+  ] as const;
+
+  const availability = await Promise.all(
+    requiredColumns.map(async (column) => ({
+      column,
+      present: await hasColumn(client, "assets", column),
+    })),
+  );
+  const missingColumns = availability.filter((entry) => !entry.present).map((entry) => entry.column);
+  if (missingColumns.length === 0) return;
+
+  throw new Error(
+    `Canonical asset save blocked: connected database is missing assets column${missingColumns.length === 1 ? "" : "s"} ${missingColumns.join(", ")}. Apply supabase/migrations/20260315162000_canonical_wallet_asset_document_model.sql to the active project.`,
+  );
+}
 
 export async function lookupCategoryBySlug(client: AnySupabaseClient, slug: string): Promise<CategoryLookup> {
   const normalizedSlug = normalizeCategoryToken(slug);
@@ -88,11 +115,81 @@ export async function lookupCategoryBySlug(client: AnySupabaseClient, slug: stri
     }
   }
 
-  throw new Error(`Category not found for slug: ${slug}`);
+  return {
+    id: null,
+    token: normalizedSlug,
+  };
+}
+
+function normalizeSensitivePayloadPersistenceError(message: string) {
+  const normalized = message.trim();
+
+  if (
+    normalized.includes("pgp_sym_encrypt(text, text) does not exist")
+    || normalized.includes("function extensions.pgp_sym_encrypt")
+    || normalized.includes("function pgp_sym_decrypt(bytea, text) does not exist")
+  ) {
+    return `Sensitive field encryption is unavailable in the active database. Apply ${ASSET_PGCRYPTO_REPAIR_MIGRATION} to the active project.`;
+  }
+
+  if (
+    normalized.includes("asset_payload_encryption_key")
+    || normalized.includes("Sensitive field encryption is not configured")
+  ) {
+    return "Sensitive field encryption is not configured.";
+  }
+
+  return normalized;
+}
+
+async function upsertSensitiveAssetPayload(
+  client: AnySupabaseClient,
+  {
+    assetId,
+    payload,
+    rollbackAssetOnFailure,
+    userId,
+  }: {
+    assetId: string;
+    payload: Record<string, unknown>;
+    rollbackAssetOnFailure?: boolean;
+    userId?: string;
+  },
+) {
+  if (Object.keys(payload).length === 0) return;
+
+  const sensitiveRes = await client.rpc("upsert_asset_sensitive_payload", {
+    p_asset_id: assetId,
+    p_payload: payload,
+  });
+  if (!sensitiveRes.error) return;
+
+  const normalizedMessage = normalizeSensitivePayloadPersistenceError(sensitiveRes.error.message);
+
+  if (rollbackAssetOnFailure && userId) {
+    const rollbackRes = await client
+      .from("assets")
+      .delete()
+      .eq("id", assetId)
+      .eq("owner_user_id", userId);
+    if (rollbackRes.error) {
+      throw new Error(`${normalizedMessage} Cleanup after failed encryption also failed: ${rollbackRes.error.message}`);
+    }
+  }
+
+  throw new Error(normalizedMessage);
 }
 
 export async function createAsset(client: AnySupabaseClient, input: CreateAssetInput): Promise<CreateAssetResult> {
   validateCreateAssetInput(input);
+  mergeDevBankContextTrace({
+    source: "createAsset",
+    stage: "asset.create.start",
+    userId: input.userId,
+    error: null,
+    assetInsertReached: false,
+    createdAssetId: null,
+  });
 
   const normalizedMetadata: Record<string, unknown> =
     input.categorySlug === "bank-accounts"
@@ -133,23 +230,49 @@ export async function createAsset(client: AnySupabaseClient, input: CreateAssetI
     validateTaskAssetMetadata(normalizedMetadata);
   }
 
+  await assertCanonicalAssetWriteSchema(client);
+  const ownerPlan = await ensureOwnerPlanProfile(client, input.userId);
+  const assetCountRes = await client
+    .from("assets")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_user_id", input.userId)
+    .is("deleted_at", null);
+  if (assetCountRes.error) {
+    throw new Error(assetCountRes.error.message);
+  }
+  assertOwnerCanCreateRecord(ownerPlan, Number(assetCountRes.count ?? 0));
+
   const wallet = await ensureWalletContext(client, input.userId);
+  mergeDevBankContextTrace({
+    source: "createAsset",
+    stage: "asset.wallet-context-ready",
+    userId: input.userId,
+    organisationId: wallet.organisationId,
+    walletId: wallet.walletId,
+    error: null,
+  });
   const category = await lookupCategoryBySlug(client, input.categorySlug);
   const sectionKey = sectionKeyFromCategory(input.categorySlug);
   const categoryKey = categoryKeyFromSlug(input.categorySlug);
   const hasAssetOrganisationId = await hasColumn(client, "assets", "organisation_id");
 
-  const currency = String(normalizedMetadata["currency_code"] ?? normalizedMetadata["currency"] ?? "GBP").trim().toUpperCase() || "GBP";
-  const estimatedValue = Number(normalizedMetadata["value_major"] ?? normalizedMetadata["estimated_value"] ?? 0);
+  const currency = String(normalizedMetadata["currency"] ?? normalizedMetadata["currency_code"] ?? "GBP").trim().toUpperCase() || "GBP";
+  const estimatedValue = Number(
+    input.categorySlug === "bank-accounts"
+      ? normalizedMetadata["current_balance"] ?? normalizedMetadata["balance"] ?? 0
+      : normalizedMetadata["value_major"] ?? normalizedMetadata["estimated_value"] ?? 0,
+  );
   const valueMinor = Number.isFinite(estimatedValue) ? Math.round(estimatedValue * 100) : 0;
 
-  const metadata = {
+  const metadata: Record<string, unknown> = {
     ...normalizedMetadata,
     visibility: input.visibility ?? "private",
-    asset_category_id: category.id,
     asset_category_token: category.token,
     category_slug: input.categorySlug,
   };
+  if (category.id) {
+    metadata["asset_category_id"] = category.id;
+  }
 
   const sensitivePayload = extractSensitiveMetadata(metadata);
   const publicMetadata = stripSensitiveMetadata(metadata);
@@ -177,25 +300,59 @@ export async function createAsset(client: AnySupabaseClient, input: CreateAssetI
     payload.organisation_id = wallet.organisationId;
   }
 
+  mergeDevBankContextTrace({
+    source: "createAsset",
+    stage: "asset.insert.pending",
+    userId: input.userId,
+    organisationId: wallet.organisationId,
+    walletId: wallet.walletId,
+    assetInsertReached: true,
+    error: null,
+  });
   const insertRes = await client.from("assets").insert(payload).select("id").single();
   if (insertRes.error) {
+    mergeDevBankContextTrace({
+      source: "createAsset",
+      stage: "asset.insert.error",
+      userId: input.userId,
+      organisationId: wallet.organisationId,
+      walletId: wallet.walletId,
+      assetInsertReached: true,
+      error: insertRes.error.message,
+    });
     throw new Error(insertRes.error.message);
   }
 
   const createdId = String(insertRes.data?.id ?? "").trim();
   if (!createdId) {
+    mergeDevBankContextTrace({
+      source: "createAsset",
+      stage: "asset.insert.error",
+      userId: input.userId,
+      organisationId: wallet.organisationId,
+      walletId: wallet.walletId,
+      assetInsertReached: true,
+      error: "Failed to create asset record.",
+    });
     throw new Error("Failed to create asset record.");
   }
+  mergeDevBankContextTrace({
+    source: "createAsset",
+    stage: "asset.insert.success",
+    userId: input.userId,
+    organisationId: wallet.organisationId,
+    walletId: wallet.walletId,
+    assetInsertReached: true,
+    createdAssetId: createdId,
+    error: null,
+  });
 
-  if (Object.keys(sensitivePayload).length > 0) {
-    const sensitiveRes = await client.rpc("upsert_asset_sensitive_payload", {
-      p_asset_id: createdId,
-      p_payload: sensitivePayload,
-    });
-    if (sensitiveRes.error) {
-      throw new Error(sensitiveRes.error.message);
-    }
-  }
+  await upsertSensitiveAssetPayload(client, {
+    assetId: createdId,
+    payload: sensitivePayload,
+    rollbackAssetOnFailure: true,
+    userId: input.userId,
+  });
 
   const verifyRes = await client
     .from("assets")
@@ -253,6 +410,22 @@ export async function createAsset(client: AnySupabaseClient, input: CreateAssetI
     }
   }
 
+  if (input.categorySlug === "bank-accounts") {
+    appendDevBankTrace({
+      kind: "create",
+      source: "createAsset",
+      timestamp: new Date().toISOString(),
+      userId: input.userId,
+      organisationId: wallet.organisationId,
+      walletId: wallet.walletId,
+      createdAssetId: createdId,
+      assetIds: [createdId],
+      categorySlug: input.categorySlug,
+      assetCategoryToken: String(metadata["asset_category_token"] ?? ""),
+      titles: [String(payload.title ?? "").trim()],
+    });
+  }
+
   return { id: createdId, row };
 }
 
@@ -298,21 +471,29 @@ export async function updateAsset(client: AnySupabaseClient, input: UpdateAssetI
     validateTaskAssetMetadata(normalizedMetadata);
   }
 
+  await assertCanonicalAssetWriteSchema(client);
+
   const wallet = await ensureWalletContext(client, input.userId);
   const category = await lookupCategoryBySlug(client, input.categorySlug);
   const sectionKey = sectionKeyFromCategory(input.categorySlug);
   const categoryKey = categoryKeyFromSlug(input.categorySlug);
-  const currency = String(normalizedMetadata["currency_code"] ?? normalizedMetadata["currency"] ?? "GBP").trim().toUpperCase() || "GBP";
-  const estimatedValue = Number(normalizedMetadata["value_major"] ?? normalizedMetadata["estimated_value"] ?? 0);
+  const currency = String(normalizedMetadata["currency"] ?? normalizedMetadata["currency_code"] ?? "GBP").trim().toUpperCase() || "GBP";
+  const estimatedValue = Number(
+    input.categorySlug === "bank-accounts"
+      ? normalizedMetadata["current_balance"] ?? normalizedMetadata["balance"] ?? 0
+      : normalizedMetadata["value_major"] ?? normalizedMetadata["estimated_value"] ?? 0,
+  );
   const valueMinor = Number.isFinite(estimatedValue) ? Math.round(estimatedValue * 100) : 0;
 
-  const metadata = {
+  const metadata: Record<string, unknown> = {
     ...normalizedMetadata,
     visibility: input.visibility ?? "private",
-    asset_category_id: category.id,
     asset_category_token: category.token,
     category_slug: input.categorySlug,
   };
+  if (category.id) {
+    metadata["asset_category_id"] = category.id;
+  }
 
   const sensitivePayload = extractSensitiveMetadata(metadata);
   const publicMetadata = stripSensitiveMetadata(metadata);
@@ -357,13 +538,10 @@ export async function updateAsset(client: AnySupabaseClient, input: UpdateAssetI
     throw new Error("Failed to update asset record.");
   }
 
-  const sensitiveRes = await client.rpc("upsert_asset_sensitive_payload", {
-    p_asset_id: updatedId,
-    p_payload: sensitivePayload,
+  await upsertSensitiveAssetPayload(client, {
+    assetId: updatedId,
+    payload: sensitivePayload,
   });
-  if (sensitiveRes.error) {
-    throw new Error(sensitiveRes.error.message);
-  }
 
   const verifyRes = await client
     .from("assets")
@@ -394,20 +572,24 @@ function validateCreateAssetInput(input: CreateAssetInput) {
   if (!input.title?.trim()) throw new Error("Title is required.");
 }
 
+export { normalizeSensitivePayloadPersistenceError };
+
 function validateUpdateAssetInput(input: UpdateAssetInput) {
   if (!input.assetId?.trim()) throw new Error("Asset id is required.");
   validateCreateAssetInput(input);
 }
 
 function validateBankAssetMetadata(metadata: Record<string, unknown>) {
-  const institution = String(metadata["institution_name"] ?? "").trim();
+  const providerName = String(metadata["provider_name"] ?? metadata["institution_name"] ?? "").trim();
   const accountType = String(metadata["account_type"] ?? "").trim();
+  const accountHolder = String(metadata["account_holder"] ?? metadata["account_holder_name"] ?? "").trim();
   const accountNumber = String(metadata["account_number"] ?? "").trim();
-  const country = String(metadata["country_code"] ?? metadata["country"] ?? "").trim();
-  const currency = String(metadata["currency_code"] ?? metadata["currency"] ?? "").trim();
+  const country = String(metadata["country"] ?? metadata["country_code"] ?? "").trim();
+  const currency = String(metadata["currency"] ?? metadata["currency_code"] ?? "").trim();
 
-  if (!institution) throw new Error("Institution Name is required.");
+  if (!providerName) throw new Error("Provider Name is required.");
   if (!accountType) throw new Error("Account Type is required.");
+  if (!accountHolder) throw new Error("Account Holder is required.");
   if (!accountNumber) throw new Error("Account Number is required.");
   if (!country) throw new Error("Country is required.");
   if (!currency) throw new Error("Currency is required.");
@@ -418,11 +600,13 @@ function validatePropertyAssetMetadata(metadata: Record<string, unknown>) {
   const ownershipType = String(metadata["ownership_type"] ?? "").trim();
   const address = String(metadata["property_address"] ?? "").trim();
   const country = String(metadata["property_country"] ?? "").trim();
+  const occupancyStatus = String(metadata["occupancy_status"] ?? "").trim();
 
   if (!propertyType) throw new Error("Property Type is required.");
   if (!ownershipType) throw new Error("Ownership Type is required.");
   if (!address) throw new Error("Address is required.");
   if (!country) throw new Error("Country is required.");
+  if (!occupancyStatus) throw new Error("Occupancy Status is required.");
 }
 
 function validateBusinessAssetMetadata(metadata: Record<string, unknown>) {

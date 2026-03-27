@@ -25,6 +25,56 @@ CREATE TABLE IF NOT EXISTS public.wallets (
   CONSTRAINT wallets_status_check CHECK (status IN ('active', 'archived'))
 );
 
+-- Harden a pre-existing legacy wallets table so the canonical migration can run safely
+-- even when wallets already exists without the canonical columns.
+ALTER TABLE public.wallets
+  ADD COLUMN IF NOT EXISTS organisation_id uuid REFERENCES public.organisations(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS owner_user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS label text,
+  ADD COLUMN IF NOT EXISTS status text,
+  ADD COLUMN IF NOT EXISTS created_at timestamptz,
+  ADD COLUMN IF NOT EXISTS updated_at timestamptz;
+
+ALTER TABLE public.wallets
+  ALTER COLUMN label SET DEFAULT 'Primary wallet',
+  ALTER COLUMN status SET DEFAULT 'active',
+  ALTER COLUMN created_at SET DEFAULT timezone('utc', now()),
+  ALTER COLUMN updated_at SET DEFAULT timezone('utc', now());
+
+UPDATE public.wallets
+SET
+  label = COALESCE(NULLIF(label, ''), 'Primary wallet'),
+  status = COALESCE(NULLIF(status, ''), 'active'),
+  created_at = COALESCE(created_at, timezone('utc', now())),
+  updated_at = COALESCE(updated_at, timezone('utc', now()))
+WHERE
+  label IS NULL
+  OR label = ''
+  OR status IS NULL
+  OR status = ''
+  OR created_at IS NULL
+  OR updated_at IS NULL;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE n.nspname = 'public'
+      AND t.relname = 'wallets'
+      AND c.conname = 'wallets_status_check'
+  ) THEN
+    EXECUTE $sql$
+      ALTER TABLE public.wallets
+      ADD CONSTRAINT wallets_status_check
+      CHECK (status IN ('active', 'archived'))
+      NOT VALID
+    $sql$;
+  END IF;
+END $$;
+
 CREATE UNIQUE INDEX IF NOT EXISTS wallets_owner_active_uidx
   ON public.wallets (owner_user_id)
   WHERE status = 'active';
@@ -55,6 +105,146 @@ CREATE TABLE IF NOT EXISTS public.assets (
   CONSTRAINT assets_visibility_check CHECK (visibility IN ('private', 'shared'))
 );
 
+-- Harden a pre-existing legacy assets table so the canonical migration can run safely
+-- even when assets already exists without the canonical columns.
+ALTER TABLE public.assets
+  ADD COLUMN IF NOT EXISTS organisation_id uuid REFERENCES public.organisations(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS wallet_id uuid REFERENCES public.wallets(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS owner_user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS section_key text,
+  ADD COLUMN IF NOT EXISTS category_key text,
+  ADD COLUMN IF NOT EXISTS title text,
+  ADD COLUMN IF NOT EXISTS provider_name text,
+  ADD COLUMN IF NOT EXISTS provider_key text,
+  ADD COLUMN IF NOT EXISTS summary text,
+  ADD COLUMN IF NOT EXISTS value_minor bigint,
+  ADD COLUMN IF NOT EXISTS currency_code text,
+  ADD COLUMN IF NOT EXISTS visibility text,
+  ADD COLUMN IF NOT EXISTS status text,
+  ADD COLUMN IF NOT EXISTS metadata_json jsonb,
+  ADD COLUMN IF NOT EXISTS created_at timestamptz,
+  ADD COLUMN IF NOT EXISTS updated_at timestamptz,
+  ADD COLUMN IF NOT EXISTS archived_at timestamptz,
+  ADD COLUMN IF NOT EXISTS deleted_at timestamptz;
+
+ALTER TABLE public.assets
+  ALTER COLUMN value_minor SET DEFAULT 0,
+  ALTER COLUMN currency_code SET DEFAULT 'GBP',
+  ALTER COLUMN visibility SET DEFAULT 'private',
+  ALTER COLUMN status SET DEFAULT 'active',
+  ALTER COLUMN metadata_json SET DEFAULT '{}'::jsonb,
+  ALTER COLUMN created_at SET DEFAULT timezone('utc', now()),
+  ALTER COLUMN updated_at SET DEFAULT timezone('utc', now());
+
+UPDATE public.assets
+SET
+  value_minor = COALESCE(value_minor, 0),
+  currency_code = COALESCE(NULLIF(currency_code, ''), 'GBP'),
+  visibility = COALESCE(NULLIF(visibility, ''), 'private'),
+  status = COALESCE(NULLIF(status, ''), 'active'),
+  metadata_json = COALESCE(metadata_json, '{}'::jsonb),
+  created_at = COALESCE(created_at, timezone('utc', now())),
+  updated_at = COALESCE(updated_at, timezone('utc', now()))
+WHERE
+  value_minor IS NULL
+  OR currency_code IS NULL
+  OR currency_code = ''
+  OR visibility IS NULL
+  OR visibility = ''
+  OR status IS NULL
+  OR status = ''
+  OR metadata_json IS NULL
+  OR created_at IS NULL
+  OR updated_at IS NULL;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE n.nspname = 'public'
+      AND t.relname = 'assets'
+      AND c.conname = 'assets_status_check'
+  ) THEN
+    EXECUTE $sql$
+      ALTER TABLE public.assets
+      ADD CONSTRAINT assets_status_check
+      CHECK (status IN ('active', 'archived'))
+      NOT VALID
+    $sql$;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE n.nspname = 'public'
+      AND t.relname = 'assets'
+      AND c.conname = 'assets_currency_code_check'
+  ) THEN
+    EXECUTE $sql$
+      ALTER TABLE public.assets
+      ADD CONSTRAINT assets_currency_code_check
+      CHECK (char_length(currency_code) = 3)
+      NOT VALID
+    $sql$;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE n.nspname = 'public'
+      AND t.relname = 'assets'
+      AND c.conname = 'assets_value_minor_non_negative'
+  ) THEN
+    EXECUTE $sql$
+      ALTER TABLE public.assets
+      ADD CONSTRAINT assets_value_minor_non_negative
+      CHECK (value_minor >= 0)
+      NOT VALID
+    $sql$;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE n.nspname = 'public'
+      AND t.relname = 'assets'
+      AND c.conname = 'assets_visibility_check'
+  ) THEN
+    EXECUTE $sql$
+      ALTER TABLE public.assets
+      ADD CONSTRAINT assets_visibility_check
+      CHECK (visibility IN ('private', 'shared'))
+      NOT VALID
+    $sql$;
+  END IF;
+END $$;
+
+-- Relax known legacy assets requirements that conflict with canonical inserts/backfills.
+-- These columns are not part of the canonical runtime contract, so they must not block
+-- canonical assets rows from being created when a pre-existing legacy assets table exists.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'assets'
+      AND column_name = 'category_id'
+      AND is_nullable = 'NO'
+  ) THEN
+    EXECUTE 'ALTER TABLE public.assets ALTER COLUMN category_id DROP NOT NULL';
+  END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS assets_owner_wallet_category_idx
   ON public.assets (owner_user_id, wallet_id, section_key, category_key, updated_at DESC);
 
@@ -79,6 +269,95 @@ CREATE TABLE IF NOT EXISTS public.documents (
   deleted_at timestamptz,
   CONSTRAINT documents_kind_check CHECK (document_kind IN ('document', 'photo'))
 );
+
+-- Harden a pre-existing legacy documents table so the canonical migration can run safely
+-- even when documents already exists without the canonical columns.
+ALTER TABLE public.documents
+  ADD COLUMN IF NOT EXISTS organisation_id uuid REFERENCES public.organisations(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS wallet_id uuid REFERENCES public.wallets(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS asset_id uuid REFERENCES public.assets(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS owner_user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS file_path text,
+  ADD COLUMN IF NOT EXISTS document_type text,
+  ADD COLUMN IF NOT EXISTS storage_bucket text,
+  ADD COLUMN IF NOT EXISTS storage_path text,
+  ADD COLUMN IF NOT EXISTS file_name text,
+  ADD COLUMN IF NOT EXISTS mime_type text,
+  ADD COLUMN IF NOT EXISTS size_bytes bigint,
+  ADD COLUMN IF NOT EXISTS checksum text,
+  ADD COLUMN IF NOT EXISTS document_kind text,
+  ADD COLUMN IF NOT EXISTS created_at timestamptz,
+  ADD COLUMN IF NOT EXISTS updated_at timestamptz,
+  ADD COLUMN IF NOT EXISTS deleted_at timestamptz;
+
+ALTER TABLE public.documents
+  ALTER COLUMN storage_bucket SET DEFAULT 'vault-docs',
+  ALTER COLUMN size_bytes SET DEFAULT 0,
+  ALTER COLUMN document_kind SET DEFAULT 'document',
+  ALTER COLUMN created_at SET DEFAULT timezone('utc', now()),
+  ALTER COLUMN updated_at SET DEFAULT timezone('utc', now());
+
+UPDATE public.documents
+SET
+  file_path = COALESCE(file_path, storage_path),
+  document_type = COALESCE(document_type, document_kind),
+  storage_bucket = COALESCE(NULLIF(storage_bucket, ''), 'vault-docs'),
+  size_bytes = COALESCE(size_bytes, 0),
+  document_kind = COALESCE(NULLIF(document_kind, ''), 'document'),
+  created_at = COALESCE(created_at, timezone('utc', now())),
+  updated_at = COALESCE(updated_at, timezone('utc', now()))
+WHERE
+  file_path IS NULL
+  OR document_type IS NULL
+  OR storage_bucket IS NULL
+  OR storage_bucket = ''
+  OR size_bytes IS NULL
+  OR document_kind IS NULL
+  OR document_kind = ''
+  OR created_at IS NULL
+  OR updated_at IS NULL;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'documents'
+      AND column_name = 'file_path'
+      AND is_nullable = 'NO'
+  ) THEN
+    EXECUTE 'ALTER TABLE public.documents ALTER COLUMN file_path DROP NOT NULL';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'documents'
+      AND column_name = 'document_type'
+      AND is_nullable = 'NO'
+  ) THEN
+    EXECUTE 'ALTER TABLE public.documents ALTER COLUMN document_type DROP NOT NULL';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE n.nspname = 'public'
+      AND t.relname = 'documents'
+      AND c.conname = 'documents_kind_check'
+  ) THEN
+    EXECUTE $sql$
+      ALTER TABLE public.documents
+      ADD CONSTRAINT documents_kind_check
+      CHECK (document_kind IN ('document', 'photo'))
+      NOT VALID
+    $sql$;
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS documents_owner_asset_idx
   ON public.documents (owner_user_id, asset_id, created_at DESC);
@@ -187,8 +466,8 @@ BEGIN
   ) VALUES (
     p_asset_id,
     v_user_id,
-    pgp_sym_encrypt(v_payload_text, coalesce(current_setting('app.settings.asset_payload_encryption_key', true), 'legacy-fortress-dev-key')),
-    encode(digest(v_payload_text, 'sha256'), 'hex'),
+    extensions.pgp_sym_encrypt(v_payload_text, coalesce(current_setting('app.settings.asset_payload_encryption_key', true), 'legacy-fortress-dev-key')),
+    encode(extensions.digest(v_payload_text, 'sha256'), 'hex'),
     timezone('utc', now())
   )
   ON CONFLICT (asset_id)
@@ -221,7 +500,7 @@ BEGIN
   RETURN QUERY
   SELECT
     aep.asset_id,
-    pgp_sym_decrypt(aep.payload_encrypted, coalesce(current_setting('app.settings.asset_payload_encryption_key', true), 'legacy-fortress-dev-key'))::jsonb AS payload
+    extensions.pgp_sym_decrypt(aep.payload_encrypted, coalesce(current_setting('app.settings.asset_payload_encryption_key', true), 'legacy-fortress-dev-key'))::jsonb AS payload
   FROM public.asset_encrypted_payloads aep
   JOIN public.assets a ON a.id = aep.asset_id
   WHERE a.owner_user_id = v_user_id

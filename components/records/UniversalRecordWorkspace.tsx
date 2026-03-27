@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -12,6 +13,7 @@ import ConfigDrivenAssetFields from "../forms/asset/ConfigDrivenAssetFields";
 import { FileDropzone, FormField } from "../forms/asset/AssetFormControls";
 import { ActionIconButton } from "../ui/IconButton";
 import Icon from "../ui/Icon";
+import AttachmentGallery, { AttachmentGallerySummary } from "../documents/AttachmentGallery";
 import { waitForActiveUser } from "../../lib/auth/session";
 import { formatCurrency } from "../../lib/currency";
 import {
@@ -20,11 +22,13 @@ import {
   resolveConfiguredFieldValue,
   validateAssetFormValues,
 } from "../../lib/assets/fieldDictionary";
+import { getLegalLinkedContactDefinition } from "../../lib/legalCategories";
 import {
   buildCanonicalBankEditSeed,
   normalizeCanonicalBankMetadata,
-  readCanonicalBankAsset,
+  normalizeBankAssetRow,
 } from "../../lib/assets/bankAsset";
+import { mergeWorkspaceSaveMetadata } from "../../lib/assets/workspaceSaveMetadata";
 import {
   buildCanonicalBusinessEditSeed,
   normalizeCanonicalBusinessMetadata,
@@ -57,6 +61,7 @@ import {
 } from "../../lib/assets/propertyAsset";
 import { createAsset, updateAsset } from "../../lib/assets/createAsset";
 import { fetchCanonicalAssets } from "../../lib/assets/fetchCanonicalAssets";
+import { notifyCanonicalAssetMutation } from "../../lib/assets/liveSync";
 import {
   assertWorkspaceRowsMatchCategory,
   getManagedAssetWorkspaceConfig,
@@ -70,14 +75,43 @@ import {
   isPrintableDocumentMimeType,
   resolveCanonicalAssetDocumentContext,
 } from "../../lib/assets/documentLinks";
+import { mergeWorkspaceAttachments } from "../../lib/assets/mergeWorkspaceAttachments";
 import {
   filterDiscoveryRecords,
 } from "../../lib/records/discovery";
+import { summarizeScopedAssetRows } from "../../lib/dashboard/summary";
 import { supabase } from "../../lib/supabaseClient";
 import { validateUploadFile } from "../../lib/validation/upload";
+import {
+  loadCanonicalContactsByIds,
+  syncCanonicalContact,
+  unlinkCanonicalContactSource,
+  type CanonicalContactContext,
+  type CanonicalContactRow,
+} from "../../lib/contacts/canonicalContacts";
+import {
+  resolveLatestSavedContactIdentityReference,
+  resolveSavedCanonicalContactIdForSource,
+} from "../../lib/contacts/contactIdentity";
+import { buildContactsWorkspaceHref } from "../../lib/contacts/contactRouting";
+import {
+  appendDevBankTrace,
+  mergeDevBankContextTrace,
+  readDevBankContextTrace,
+  clearDevBankRequestTrace,
+  readDevBankRequestTrace,
+  isDevBankTraceEnabled,
+  readDevBankTrace,
+  subscribeToDevBankTrace,
+  type CanonicalBankContextTrace,
+  type CanonicalBankTraceEntry,
+} from "../../lib/devSmoke";
+import { useViewerAccess } from "../access/ViewerAccessContext";
+import { getPlanLimitRedirectHref } from "../../lib/accountPlan";
 
 type RecordStatus = "active" | "archived";
 type WorkspaceVariant = "default" | "possessions" | "trusted_contacts";
+const DEV_BANK_BUILD_MARKER = "LF_TRACE_BUILD_MARKER: ec9c21b+banktrace-20260320-2038";
 
 type UniversalRecordRow = {
   id: string;
@@ -117,9 +151,15 @@ type RecordContact = {
   id: string;
   record_id: string;
   owner_user_id: string;
+  contact_id: string | null;
   contact_name: string;
   contact_email: string | null;
+  contact_phone: string | null;
   contact_role: string | null;
+  relationship: string | null;
+  invite_status: string | null;
+  verification_status: string | null;
+  linked_context: CanonicalContactContext[];
   notes: string | null;
   created_at: string;
 };
@@ -141,6 +181,8 @@ type WorkspaceProps = {
   subtitle: string;
   variant?: WorkspaceVariant;
   sectionId?: string;
+  forceCanonicalRead?: boolean;
+  recordFilter?: (row: UniversalRecordRow) => boolean;
 };
 
 type EditForm = {
@@ -188,6 +230,17 @@ type EditForm = {
   property_address: string;
   property_country: string;
   property_country_other: string;
+  occupancy_status: string;
+  occupancy_status_other: string;
+  tenant_name: string;
+  tenancy_type: string;
+  tenancy_type_other: string;
+  managing_agent: string;
+  managing_agent_contact: string;
+  monthly_rent: string;
+  tenancy_end_date: string;
+  deposit_scheme_reference: string;
+  lease_or_tenant_summary: string;
   property_valuation_date: string;
   mortgage_status: string;
   mortgage_status_other: string;
@@ -213,6 +266,11 @@ type EditForm = {
   digital_access_contact: string;
   digital_status: string;
   digital_status_other: string;
+  social_profile_url: string;
+  social_username: string;
+  social_login_email: string;
+  social_credential_hint: string;
+  social_recovery_notes: string;
   beneficiary_preferred_name: string;
   beneficiary_relationship_to_user: string;
   beneficiary_relationship_to_user_other: string;
@@ -286,6 +344,12 @@ type EditForm = {
   insurer_email: string;
   broker_name: string;
   broker_contact: string;
+  identity_document_type: string;
+  identity_document_type_other: string;
+  identity_document_number: string;
+  identity_document_country: string;
+  identity_document_country_other: string;
+  identity_issue_date: string;
   creditor_name: string;
   debt_type: string;
   debt_reference: string;
@@ -344,6 +408,17 @@ const EMPTY_FORM: EditForm = {
   property_address: "",
   property_country: "",
   property_country_other: "",
+  occupancy_status: "",
+  occupancy_status_other: "",
+  tenant_name: "",
+  tenancy_type: "",
+  tenancy_type_other: "",
+  managing_agent: "",
+  managing_agent_contact: "",
+  monthly_rent: "",
+  tenancy_end_date: "",
+  deposit_scheme_reference: "",
+  lease_or_tenant_summary: "",
   property_valuation_date: "",
   mortgage_status: "",
   mortgage_status_other: "",
@@ -369,6 +444,11 @@ const EMPTY_FORM: EditForm = {
   digital_access_contact: "",
   digital_status: "",
   digital_status_other: "",
+  social_profile_url: "",
+  social_username: "",
+  social_login_email: "",
+  social_credential_hint: "",
+  social_recovery_notes: "",
   beneficiary_preferred_name: "",
   beneficiary_relationship_to_user: "",
   beneficiary_relationship_to_user_other: "",
@@ -442,6 +522,12 @@ const EMPTY_FORM: EditForm = {
   insurer_email: "",
   broker_name: "",
   broker_contact: "",
+  identity_document_type: "",
+  identity_document_type_other: "",
+  identity_document_number: "",
+  identity_document_country: "",
+  identity_document_country_other: "",
+  identity_issue_date: "",
   creditor_name: "",
   debt_type: "",
   debt_reference: "",
@@ -511,6 +597,8 @@ const TASK_FORM_CONFIG = getAssetCategoryFormConfig("tasks");
 const BUSINESS_FORM_CONFIG = getAssetCategoryFormConfig("business-interests");
 const DIGITAL_FORM_CONFIG = getAssetCategoryFormConfig("digital-assets");
 const PROPERTY_FORM_CONFIG = getAssetCategoryFormConfig("property");
+const IDENTITY_DOCUMENT_FORM_CONFIG = getAssetCategoryFormConfig("identity-documents");
+const SOCIAL_MEDIA_FORM_CONFIG = getAssetCategoryFormConfig("social-media");
 export default function UniversalRecordWorkspace({
   sectionKey,
   categoryKey,
@@ -518,8 +606,11 @@ export default function UniversalRecordWorkspace({
   subtitle,
   variant = "default",
   sectionId,
+  forceCanonicalRead = false,
+  recordFilter,
 }: WorkspaceProps) {
   const router = useRouter();
+  const { viewer } = useViewerAccess();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
@@ -545,23 +636,35 @@ export default function UniversalRecordWorkspace({
   const [sortBy, setSortBy] = useState<"updated_desc" | "updated_asc" | "value_desc" | "value_asc">("updated_desc");
   const [photoPreviews, setPhotoPreviews] = useState<Record<string, string>>({});
   const [failedThumbs, setFailedThumbs] = useState<Record<string, boolean>>({});
+  const [devBankTraceEntries, setDevBankTraceEntries] = useState<CanonicalBankTraceEntry[]>([]);
+  const [devBankContextTrace, setDevBankContextTrace] = useState<CanonicalBankContextTrace | null>(null);
+  const [devBankRequestTrace, setDevBankRequestTrace] = useState<string[]>([]);
+  const [submitError, setSubmitError] = useState("");
+  const [devBankSubmitTrace, setDevBankSubmitTrace] = useState<string[]>([]);
   const formSectionRef = useRef<HTMLElement | null>(null);
 
   const isPossessions = variant === "possessions";
   const isTrustedContacts = variant === "trusted_contacts";
   const isFinanceSection = sectionKey === "finances";
   const isBankCategory = isFinanceSection && categoryKey === "bank";
+  const devBankTraceEnabled = isBankCategory && isDevBankTraceEnabled();
   useMemo(() => validateManagedAssetWorkspaceConfig(sectionKey, categoryKey), [sectionKey, categoryKey]);
   const managedAssetWorkspaceConfig = getManagedAssetWorkspaceConfig(sectionKey, categoryKey);
   const canonicalCategorySlug = resolveCanonicalCategorySlug(sectionKey, categoryKey);
   const usesCanonicalAssets = Boolean(canonicalCategorySlug);
-  const usesCanonicalAssetReadPath = Boolean(managedAssetWorkspaceConfig?.readsCanonicalAssets) || usesCanonicalAssets;
+  const usesCanonicalAssetReadPath = forceCanonicalRead || Boolean(managedAssetWorkspaceConfig?.readsCanonicalAssets) || usesCanonicalAssets;
   const isCanonicalBeneficiary = canonicalCategorySlug === "beneficiaries";
   const isCanonicalExecutor = canonicalCategorySlug === "executors";
   const isCanonicalTask = canonicalCategorySlug === "tasks";
   const isCanonicalBusiness = canonicalCategorySlug === "business-interests";
   const isCanonicalDigital = canonicalCategorySlug === "digital-assets";
+  const isSocialMedia = sectionKey === "personal" && categoryKey === "social-media";
   const isCanonicalProperty = canonicalCategorySlug === "property";
+  const isIdentityDocuments = sectionKey === "legal" && categoryKey === "identity-documents";
+  const legalLinkedContactDefinition = sectionKey === "legal" ? getLegalLinkedContactDefinition(categoryKey) : null;
+  const defaultLegalContactRole = legalLinkedContactDefinition?.defaultRole ?? "";
+  const usesStructuredWorkspaceForm = isFinanceSection || usesCanonicalAssets || isIdentityDocuments || isSocialMedia;
+  const hasStagedExtractionInput = Boolean(pendingDocumentFile || pendingPhotoFile);
   const addLabel = isPossessions
     ? "Add possession"
     : isTrustedContacts
@@ -606,24 +709,67 @@ export default function UniversalRecordWorkspace({
             : "Save record";
 
   useEffect(() => {
+    if (!devBankTraceEnabled) return;
+    setDevBankTraceEntries(readDevBankTrace());
+    setDevBankContextTrace(readDevBankContextTrace());
+    setDevBankRequestTrace(readDevBankRequestTrace());
+    return subscribeToDevBankTrace(() => {
+      setDevBankTraceEntries(readDevBankTrace());
+      setDevBankContextTrace(readDevBankContextTrace());
+      setDevBankRequestTrace(readDevBankRequestTrace());
+    });
+  }, [devBankTraceEnabled]);
+
+  function resetBankSubmitTrace() {
+    setSubmitError("");
+    setDevBankSubmitTrace([]);
+    clearDevBankRequestTrace();
+  }
+
+  function pushBankSubmitTrace(step: string) {
+    if (!devBankTraceEnabled) return;
+    setDevBankSubmitTrace((prev) => [...prev, `${new Date().toISOString()} ${step}`].slice(-12));
+  }
+
+  useEffect(() => {
     let mounted = true;
     async function load() {
       setLoading(true);
       setStatus("");
+      mergeDevBankContextTrace({
+        source: "UniversalRecordWorkspace.load",
+        stage: "bank.page-load.start",
+        error: null,
+      });
       if (!isCanonicalTask) {
         setTaskRelationOptions([]);
         setTaskExecutorOptions([]);
         setTaskBeneficiaryOptions([]);
       }
       const user = await requireUser(router);
-      if (!user || !mounted) return;
+      if (!user || !mounted) {
+        if (mounted) {
+          setStatus("Could not load records: no active signed-in session.");
+          setLoading(false);
+        }
+        return;
+      }
+      const targetOwnerUserId = viewer.targetOwnerUserId || user.id;
+      mergeDevBankContextTrace({
+        source: "UniversalRecordWorkspace.load",
+        stage: "bank.page-load.user-ready",
+        sessionPresent: true,
+        userId: user.id,
+        error: null,
+      });
 
       const [recordsResult, catalogResult] = await Promise.all([
         loadWorkspaceRows({
-          userId: user.id,
+          userId: targetOwnerUserId,
           sectionKey,
           categoryKey,
           usesCanonicalAssets: usesCanonicalAssetReadPath,
+          recordFilter,
         }),
         supabase
           .from("provider_catalog")
@@ -632,9 +778,9 @@ export default function UniversalRecordWorkspace({
       ]);
 
       if (isCanonicalTask) {
-        const walletContext = await resolveWalletContextForRead(supabase, user.id);
+        const walletContext = await resolveWalletContextForRead(supabase, targetOwnerUserId);
         const taskLinkResult = await fetchCanonicalAssets(supabase, {
-          userId: user.id,
+          userId: targetOwnerUserId,
           walletId: walletContext.walletId,
           select: "id,title,section_key,category_key",
         });
@@ -670,6 +816,12 @@ export default function UniversalRecordWorkspace({
       if (!mounted) return;
       if (!recordsResult.ok) {
         setStatus(`Could not load records: ${recordsResult.error}`);
+        mergeDevBankContextTrace({
+          source: "UniversalRecordWorkspace.load",
+          stage: "bank.page-load.error",
+          userId: user.id,
+          error: recordsResult.error,
+        });
         setRecords([]);
         setAttachments([]);
         setContacts([]);
@@ -678,6 +830,12 @@ export default function UniversalRecordWorkspace({
       }
 
       const nextRecords = recordsResult.rows;
+      mergeDevBankContextTrace({
+        source: "UniversalRecordWorkspace.load",
+        stage: "bank.page-load.records-ready",
+        userId: user.id,
+        error: null,
+      });
       if (recordsResult.warning) {
         setStatus(`Loaded records, but some encrypted fields could not be hydrated: ${recordsResult.warning}`);
       }
@@ -698,24 +856,21 @@ export default function UniversalRecordWorkspace({
         supabase
           .from("documents")
           .select("id,asset_id,owner_user_id,storage_bucket,storage_path,file_name,mime_type,size_bytes,checksum,created_at,document_kind")
-          .eq("owner_user_id", user.id)
+          .eq("owner_user_id", targetOwnerUserId)
           .in("asset_id", ids)
           .is("deleted_at", null)
           .order("created_at", { ascending: false }),
         supabase
           .from("attachments")
           .select("id,record_id,owner_user_id,storage_bucket,storage_path,file_name,mime_type,size_bytes,checksum,created_at")
-          .eq("owner_user_id", user.id)
+          .eq("owner_user_id", targetOwnerUserId)
           .in("record_id", ids)
           .order("created_at", { ascending: false }),
-        usesCanonicalAssetReadPath
-          ? Promise.resolve({ data: [], error: null })
-          : supabase
-              .from("record_contacts")
-              .select("id,record_id,owner_user_id,contact_name,contact_email,contact_role,notes,created_at")
-              .eq("owner_user_id", user.id)
-              .in("record_id", ids)
-              .order("created_at", { ascending: false }),
+        loadWorkspaceContacts({
+          userId: targetOwnerUserId,
+          ids,
+          usesCanonicalAssetReadPath,
+        }),
       ]);
 
       if (!mounted) return;
@@ -723,16 +878,23 @@ export default function UniversalRecordWorkspace({
         setStatus(`Could not load attachments: ${documentsResult.error.message}`);
         setAttachments([]);
       } else {
-        setAttachments([
-          ...(!documentsResult.error
-            ? mapDocumentRowsToAttachments((documentsResult.data ?? []) as Array<Record<string, unknown>>)
-            : []),
-          ...(!attachmentsResult.error
-            ? mapLegacyAttachmentRowsToAttachments((attachmentsResult.data ?? []) as Array<Record<string, unknown>>)
-            : []),
-        ]);
+        setAttachments(
+          mergeWorkspaceAttachments({
+            documents: !documentsResult.error
+              ? mapDocumentRowsToAttachments((documentsResult.data ?? []) as Array<Record<string, unknown>>)
+              : [],
+            legacyAttachments: !attachmentsResult.error
+              ? mapLegacyAttachmentRowsToAttachments((attachmentsResult.data ?? []) as Array<Record<string, unknown>>)
+              : [],
+          }),
+        );
       }
-      setContacts((contactsResult.data ?? []) as RecordContact[]);
+      if (contactsResult.ok) {
+        setContacts(contactsResult.rows);
+      } else {
+        setContacts([]);
+        setStatus((prev) => prev || `Could not load contacts: ${contactsResult.error}`);
+      }
       setLoading(false);
     }
 
@@ -740,19 +902,15 @@ export default function UniversalRecordWorkspace({
     return () => {
       mounted = false;
     };
-  }, [categoryKey, isCanonicalTask, router, sectionKey, usesCanonicalAssetReadPath]);
+  }, [categoryKey, forceCanonicalRead, isCanonicalTask, recordFilter, router, sectionKey, usesCanonicalAssetReadPath, viewer.targetOwnerUserId]);
 
   const totals = useMemo(() => {
-    let active = 0;
-    let archived = 0;
-    let missingValue = 0;
-    for (const row of records) {
-      const major = toMajorUnits(row.value_minor);
-      if (!major) missingValue += 1;
-      if (row.status === "archived") archived += major;
-      else active += major;
-    }
-    return { active, archived, missingValue };
+    const summary = summarizeScopedAssetRows(records);
+    return {
+      active: summary.activeValueMajor,
+      archived: summary.archivedValueMajor,
+      missingValue: summary.missingValueCount,
+    };
   }, [records]);
 
   const filteredRecords = useMemo(() => {
@@ -812,11 +970,21 @@ export default function UniversalRecordWorkspace({
     setPendingPhotoFile(null);
     setPendingDocumentFile(null);
     setAssetReviewConfirmed(false);
+    resetBankSubmitTrace();
     setFormVisible(true);
   }
 
   function startEdit(row: UniversalRecordRow) {
-    const rowContact = usesCanonicalAssets ? null : contacts.find((item) => item.record_id === row.id);
+    const rowContactReference = resolveLatestSavedContactIdentityReference(
+      contacts.map((item) => ({
+        ...item,
+        sourceId: item.record_id,
+        contactId: item.contact_id,
+        createdAt: item.created_at,
+      })),
+      row.id,
+    );
+    const rowContact = rowContactReference ?? null;
     const canonicalBankSeed = buildCanonicalBankEditSeed({
       title: row.title,
       provider_name: row.provider_name,
@@ -855,7 +1023,7 @@ export default function UniversalRecordWorkspace({
       value_minor: row.value_minor,
       metadata: row.metadata,
     });
-    const bankName = canonicalBankSeed.institution_name;
+    const bankName = canonicalBankSeed.provider_name || canonicalBankSeed.institution_name;
     const investmentProvider = String(row.metadata?.investment_provider ?? row.provider_name ?? "");
     const pensionProvider = String(row.metadata?.pension_provider ?? row.provider_name ?? "");
     const insurerName = String(row.metadata?.insurer_name ?? row.provider_name ?? "");
@@ -865,7 +1033,7 @@ export default function UniversalRecordWorkspace({
     const currency = toSelectableValue(BANK_FORM_CONFIG, "currency", canonicalBankSeed.currency_code);
     setEditingId(row.id);
     setForm({
-      title: row.title ?? "",
+      title: isCanonicalExecutor && rowContact?.contact_name ? rowContact.contact_name : row.title ?? "",
       provider_name: row.provider_name ?? "",
       summary: row.summary ?? "",
       value_major: canonicalBankSeed.value_major,
@@ -873,7 +1041,7 @@ export default function UniversalRecordWorkspace({
       notes: canonicalBankSeed.notes || String(rowContact?.notes ?? ""),
       contact_name: usesCanonicalAssets ? "" : rowContact?.contact_name ?? "",
       contact_email: usesCanonicalAssets ? "" : rowContact?.contact_email ?? "",
-      contact_role: usesCanonicalAssets ? "" : rowContact?.contact_role ?? String(row.metadata?.relationship ?? ""),
+      contact_role: usesCanonicalAssets ? "" : rowContact?.relationship ?? rowContact?.contact_role ?? String(row.metadata?.relationship ?? ""),
       possession_category: String(row.metadata?.category ?? "watches"),
       possession_subtype: String(row.metadata?.subtype ?? ""),
       description: String(row.metadata?.description ?? ""),
@@ -888,14 +1056,14 @@ export default function UniversalRecordWorkspace({
       bank_provider_key: canonicalBankSeed.provider_key,
       bank_account_type: bankAccountType.selected,
       bank_account_type_other: bankAccountType.other,
-      account_holder_name: String(row.metadata?.account_holder_name ?? ""),
+      account_holder_name: canonicalBankSeed.account_holder,
       sort_code: canonicalBankSeed.sort_code,
       account_number: canonicalBankSeed.account_number,
       country: country.selected,
       country_other: country.other,
       currency_other: currency.other,
       last_updated_on: canonicalBankSeed.last_updated_on,
-      iban: String(row.metadata?.iban ?? ""),
+      iban: canonicalBankSeed.iban,
       swift_bic: String(row.metadata?.swift_bic ?? ""),
       branch_name: String(row.metadata?.branch_name ?? ""),
       branch_address: String(row.metadata?.branch_address ?? ""),
@@ -909,6 +1077,17 @@ export default function UniversalRecordWorkspace({
       property_address: canonicalPropertySeed.property_address,
       property_country: canonicalPropertySeed.property_country,
       property_country_other: canonicalPropertySeed.property_country_other,
+      occupancy_status: canonicalPropertySeed.occupancy_status,
+      occupancy_status_other: canonicalPropertySeed.occupancy_status_other,
+      tenant_name: canonicalPropertySeed.tenant_name,
+      tenancy_type: canonicalPropertySeed.tenancy_type,
+      tenancy_type_other: canonicalPropertySeed.tenancy_type_other,
+      managing_agent: canonicalPropertySeed.managing_agent,
+      managing_agent_contact: canonicalPropertySeed.managing_agent_contact,
+      monthly_rent: canonicalPropertySeed.monthly_rent_major,
+      tenancy_end_date: canonicalPropertySeed.tenancy_end_date,
+      deposit_scheme_reference: canonicalPropertySeed.deposit_scheme_reference,
+      lease_or_tenant_summary: canonicalPropertySeed.lease_or_tenant_summary,
       property_valuation_date: canonicalPropertySeed.valuation_date,
       mortgage_status: canonicalPropertySeed.mortgage_status,
       mortgage_status_other: canonicalPropertySeed.mortgage_status_other,
@@ -934,6 +1113,11 @@ export default function UniversalRecordWorkspace({
       digital_access_contact: canonicalDigitalSeed.access_contact,
       digital_status: canonicalDigitalSeed.digital_status,
       digital_status_other: canonicalDigitalSeed.digital_status_other,
+      social_profile_url: String(row.metadata?.social_profile_url ?? ""),
+      social_username: String(row.metadata?.social_username ?? ""),
+      social_login_email: String(row.metadata?.social_login_email ?? ""),
+      social_credential_hint: String(row.metadata?.social_credential_hint ?? ""),
+      social_recovery_notes: String(row.metadata?.social_recovery_notes ?? ""),
       beneficiary_preferred_name: canonicalBeneficiarySeed.preferred_name,
       beneficiary_relationship_to_user: canonicalBeneficiarySeed.relationship_to_user,
       beneficiary_relationship_to_user_other: canonicalBeneficiarySeed.relationship_to_user_other,
@@ -953,8 +1137,8 @@ export default function UniversalRecordWorkspace({
       executor_type_other: canonicalExecutorSeed.executor_type_other,
       executor_relationship_to_user: canonicalExecutorSeed.relationship_to_user,
       executor_relationship_to_user_other: canonicalExecutorSeed.relationship_to_user_other,
-      executor_contact_email: canonicalExecutorSeed.contact_email,
-      executor_contact_phone: canonicalExecutorSeed.contact_phone,
+      executor_contact_email: rowContact?.contact_email ?? canonicalExecutorSeed.contact_email,
+      executor_contact_phone: rowContact?.contact_phone ?? canonicalExecutorSeed.contact_phone,
       executor_authority_level: canonicalExecutorSeed.authority_level,
       executor_authority_level_other: canonicalExecutorSeed.authority_level_other,
       executor_jurisdiction: canonicalExecutorSeed.jurisdiction,
@@ -1007,6 +1191,12 @@ export default function UniversalRecordWorkspace({
       insurer_email: String(row.metadata?.insurer_email ?? ""),
       broker_name: String(row.metadata?.broker_name ?? ""),
       broker_contact: String(row.metadata?.broker_contact ?? ""),
+      identity_document_type: String(row.metadata?.identity_document_type ?? ""),
+      identity_document_type_other: String(row.metadata?.identity_document_type_other ?? ""),
+      identity_document_number: String(row.metadata?.identity_document_number ?? ""),
+      identity_document_country: String(row.metadata?.identity_document_country ?? ""),
+      identity_document_country_other: String(row.metadata?.identity_document_country_other ?? ""),
+      identity_issue_date: String(row.metadata?.identity_issue_date ?? ""),
       creditor_name: creditorName,
       debt_type: String(row.metadata?.debt_type ?? ""),
       debt_reference: String(row.metadata?.debt_reference ?? ""),
@@ -1022,6 +1212,7 @@ export default function UniversalRecordWorkspace({
     setPendingPhotoFile(null);
     setPendingDocumentFile(null);
     setAssetReviewConfirmed(false);
+    resetBankSubmitTrace();
     setFormVisible(true);
     requestAnimationFrame(() => {
       formSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1038,13 +1229,47 @@ export default function UniversalRecordWorkspace({
   }
 
   async function saveRecord() {
+    if (saving) return;
+    if (viewer.readOnly) {
+      setStatus("This linked account is view-only.");
+      return;
+    }
     setSaving(true);
     setStatus("");
+    setSubmitError("");
+    pushBankSubmitTrace("submit clicked");
+    mergeDevBankContextTrace({
+      source: "UniversalRecordWorkspace.saveRecord",
+      stage: "bank.save.submit-clicked",
+      error: null,
+      createdAssetId: null,
+      assetInsertReached: false,
+    });
     const user = await requireUser(router);
     if (!user) {
+      const message = "Save blocked: no active signed-in session.";
+      setSubmitError(message);
+      setStatus(message);
+      pushBankSubmitTrace("submit blocked: no signed-in user");
+      mergeDevBankContextTrace({
+        source: "UniversalRecordWorkspace.saveRecord",
+        stage: "bank.save.auth-missing",
+        sessionPresent: false,
+        userId: null,
+        error: message,
+        assetInsertReached: false,
+      });
       setSaving(false);
       return;
     }
+    mergeDevBankContextTrace({
+      source: "UniversalRecordWorkspace.saveRecord",
+      stage: "bank.save.user-ready",
+      sessionPresent: true,
+      userId: user.id,
+      error: null,
+      assetInsertReached: false,
+    });
 
     const financeDraft = getFinanceDraft(categoryKey, form);
     const canonicalAssetDraft = canonicalCategorySlug
@@ -1054,15 +1279,46 @@ export default function UniversalRecordWorkspace({
           taskBeneficiaryOptions,
         })
       : null;
+    if (isBankCategory && BANK_FORM_CONFIG) {
+      const bankErrors = validateAssetFormValues(BANK_FORM_CONFIG, bankFormToConfigValues(form));
+      if (!String(financeDraft.metadata.account_holder ?? "").trim()) {
+        bankErrors.account_holder = "Account holder is required.";
+      }
+      const firstBankError = Object.entries(bankErrors).find((entry) => Boolean(entry[1]));
+      if (firstBankError) {
+        const [fieldKey, message] = firstBankError;
+        const fieldLabel =
+          fieldKey === "account_holder"
+            ? "Account holder"
+            : BANK_FORM_CONFIG.fields.find((field) => field.key === fieldKey)?.label ?? fieldKey;
+        const fullMessage = `${fieldLabel}: ${message}`;
+        setSubmitError(fullMessage);
+        setStatus(fullMessage);
+        pushBankSubmitTrace(`validation failed: ${fieldKey} -> ${message}`);
+        mergeDevBankContextTrace({
+          source: "UniversalRecordWorkspace.saveRecord",
+          stage: "bank.save.validation-failed",
+          userId: user.id,
+          error: fullMessage,
+          assetInsertReached: false,
+        });
+        setSaving(false);
+        return;
+      }
+    }
     if (isCanonicalProperty) {
       const propertyMetadata = (canonicalAssetDraft?.metadata ?? {}) as Record<string, unknown>;
       if (!canonicalAssetDraft?.title) {
+        setSubmitError("Property name is required.");
         setStatus("Property name is required.");
+        pushBankSubmitTrace("validation failed: property name");
         setSaving(false);
         return;
       }
       if (!String(propertyMetadata.property_type ?? "").trim()) {
+        setSubmitError("Property Type is required.");
         setStatus("Property Type is required.");
+        pushBankSubmitTrace("validation failed: property_type");
         setSaving(false);
         return;
       }
@@ -1212,19 +1468,50 @@ export default function UniversalRecordWorkspace({
         return;
       }
     }
+    if (isIdentityDocuments && IDENTITY_DOCUMENT_FORM_CONFIG) {
+      const identityErrors = validateAssetFormValues(IDENTITY_DOCUMENT_FORM_CONFIG, identityDocumentFormToConfigValues(form));
+      const firstIdentityError = Object.entries(identityErrors).find((entry) => Boolean(entry[1]));
+      if (firstIdentityError) {
+        const [fieldKey, message] = firstIdentityError;
+        const fieldLabel = IDENTITY_DOCUMENT_FORM_CONFIG.fields.find((field) => field.key === fieldKey)?.label ?? fieldKey;
+        const fullMessage = `${fieldLabel}: ${message}`;
+        setSubmitError(fullMessage);
+        setStatus(fullMessage);
+        setSaving(false);
+        return;
+      }
+    }
     if (!form.title.trim() && !(isFinanceSection && financeDraft.title) && !(usesCanonicalAssets && canonicalAssetDraft?.title)) {
-      setStatus(isTrustedContacts ? "Please enter the contact's full name before saving." : "Please enter an item title before saving.");
+      const message = isTrustedContacts ? "Please enter the contact's full name before saving." : "Please enter an item title before saving.";
+      setSubmitError(message);
+      setStatus(message);
+      pushBankSubmitTrace("validation failed: title");
+      mergeDevBankContextTrace({
+        source: "UniversalRecordWorkspace.saveRecord",
+        stage: "bank.save.validation-failed",
+        userId: user.id,
+        error: message,
+        assetInsertReached: false,
+      });
       setSaving(false);
       return;
     }
     if (Number(form.value_major || 0) < 0) {
+      setSubmitError("Estimated value cannot be negative.");
       setStatus("Estimated value cannot be negative.");
+      pushBankSubmitTrace("validation failed: negative value");
+      mergeDevBankContextTrace({
+        source: "UniversalRecordWorkspace.saveRecord",
+        stage: "bank.save.validation-failed",
+        userId: user.id,
+        error: "Estimated value cannot be negative.",
+        assetInsertReached: false,
+      });
       setSaving(false);
       return;
     }
-    if (usesCanonicalAssets && !assetReviewConfirmed) {
-      setStatus(
-        isCanonicalProperty
+    if (usesCanonicalAssets && hasStagedExtractionInput && !assetReviewConfirmed) {
+      const message = isCanonicalProperty
           ? "Review and confirm the property details before saving."
           : isCanonicalBusiness
             ? "Review and confirm the business details before saving."
@@ -1235,17 +1522,29 @@ export default function UniversalRecordWorkspace({
                 : isCanonicalExecutor
                   ? "Review and confirm the executor details before saving."
                   : isCanonicalTask
-                    ? "Review and confirm the task details before saving."
-            : "Review and confirm the bank account details before saving.",
-      );
+                ? "Review and confirm the task details before saving."
+            : "Review and confirm the bank account details before saving.";
+      setSubmitError(message);
+      setStatus(message);
+      pushBankSubmitTrace("validation failed: extraction confirmation not checked");
+      mergeDevBankContextTrace({
+        source: "UniversalRecordWorkspace.saveRecord",
+        stage: "bank.save.validation-failed",
+        userId: user.id,
+        error: message,
+        assetInsertReached: false,
+      });
       setSaving(false);
       return;
     }
+    pushBankSubmitTrace("validation passed");
 
     const providerInput = (usesCanonicalAssets ? canonicalAssetDraft?.providerName : isFinanceSection ? financeDraft.providerName : form.provider_name) ?? "";
     const providerMatch = detectProvider(providerInput, catalog);
     const resolvedBankProviderKey = providerMatch?.provider_key ?? null;
-    const metadata = {
+    const resolvedLegacyContactRole = form.contact_role.trim() || defaultLegalContactRole || null;
+    const metadata = mergeWorkspaceSaveMetadata({
+      baseMetadata: {
       notes: form.notes.trim() || null,
       category: isPossessions ? form.possession_category : null,
       subtype: isPossessions ? form.possession_subtype || null : null,
@@ -1259,9 +1558,24 @@ export default function UniversalRecordWorkspace({
       address: isTrustedContacts ? form.address.trim() || null : null,
       preferred_contact_method: isTrustedContacts ? form.preferred_contact_method.trim() || null : null,
       contact_label: isTrustedContacts ? form.contact_label.trim() || null : null,
+      identity_document_type: isIdentityDocuments ? form.identity_document_type.trim() || null : null,
+      identity_document_type_other: isIdentityDocuments ? form.identity_document_type_other.trim() || null : null,
+      identity_document_number: isIdentityDocuments ? form.identity_document_number.trim() || null : null,
+      identity_document_country: isIdentityDocuments ? form.identity_document_country.trim() || null : null,
+      identity_document_country_other: isIdentityDocuments ? form.identity_document_country_other.trim() || null : null,
+      identity_issue_date: isIdentityDocuments ? form.identity_issue_date || null : null,
+      renewal_date: isIdentityDocuments ? form.renewal_date || null : null,
+      social_profile_url: isSocialMedia ? form.social_profile_url.trim() || null : null,
+      social_username: isSocialMedia ? form.social_username.trim() || null : null,
+      social_login_email: isSocialMedia ? form.social_login_email.trim() || null : null,
+      social_credential_hint: isSocialMedia ? form.social_credential_hint.trim() || null : null,
+      social_recovery_notes: isSocialMedia ? form.social_recovery_notes.trim() || null : null,
       finance_category: isFinanceSection ? categoryKey : null,
-      ...financeDraft.metadata,
-    };
+      },
+      financeMetadata: financeDraft.metadata,
+      canonicalMetadata: (canonicalAssetDraft?.metadata ?? {}) as Record<string, unknown>,
+      usesCanonicalAssets,
+    });
     const normalizedMetadata =
       isBankCategory && usesCanonicalAssets
         ? normalizeCanonicalBankMetadata(metadata, {
@@ -1304,20 +1618,27 @@ export default function UniversalRecordWorkspace({
       section_key: sectionKey,
       category_key: categoryKey,
       title: usesCanonicalAssets ? canonicalAssetDraft?.title ?? null : isFinanceSection ? financeDraft.title : form.title.trim() || null,
-      provider_name: usesCanonicalAssets ? canonicalAssetDraft?.providerName ?? null : isFinanceSection ? financeDraft.providerName : form.provider_name.trim() || null,
+      provider_name: usesCanonicalAssets ? canonicalAssetDraft?.providerName ?? null : isFinanceSection ? financeDraft.providerName : isSocialMedia ? form.title.trim() || null : form.provider_name.trim() || null,
       provider_key: resolvedBankProviderKey,
       summary: usesCanonicalAssets
         ? canonicalAssetDraft?.summary ?? null
         : isFinanceSection
         ? financeDraft.summary
+        : isSocialMedia
+        ? [form.social_username.trim(), form.social_profile_url.trim()].filter(Boolean).join(" · ") || null
         : isTrustedContacts
         ? [form.contact_role.trim(), form.contact_email.trim()].filter(Boolean).join(" · ") || null
+        : legalLinkedContactDefinition
+        ? [resolvedLegacyContactRole, form.contact_name.trim() || form.contact_email.trim()].filter(Boolean).join(" · ") || null
         : form.summary.trim() || null,
       value_minor: isTrustedContacts ? null : usesCanonicalAssets ? toMinorUnits(canonicalAssetDraft?.valueMajor ?? "0") : isFinanceSection ? toMinorUnits(financeDraft.valueMajor) : toMinorUnits(form.value_major),
       currency_code: canonicalCurrencyCode,
       metadata: normalizedMetadata,
       updated_at: new Date().toISOString(),
     };
+    pushBankSubmitTrace(
+      `payload prepared: title="${String(payload.title ?? "").trim() || "n/a"}" provider="${String(payload.provider_name ?? "").trim() || "n/a"}" category="${canonicalCategorySlug ?? categoryKey}"`,
+    );
 
     let recordId = editingId;
     try {
@@ -1329,6 +1650,16 @@ export default function UniversalRecordWorkspace({
           metadata: normalizedMetadata,
           visibility: "private" as const,
         };
+        pushBankSubmitTrace(
+          `createAsset started: slug="${assetInput.categorySlug}" title="${assetInput.title || "n/a"}" provider_key="${resolvedBankProviderKey ?? "n/a"}"`,
+        );
+        mergeDevBankContextTrace({
+          source: "UniversalRecordWorkspace.saveRecord",
+          stage: "bank.save.create-asset-started",
+          userId: user.id,
+          error: null,
+          assetInsertReached: false,
+        });
         const assetResult = editingId
           ? await updateAsset(supabase, {
               assetId: editingId,
@@ -1336,6 +1667,35 @@ export default function UniversalRecordWorkspace({
             })
           : await createAsset(supabase, assetInput);
         recordId = assetResult.id;
+        if (isCanonicalExecutor && recordId) {
+          const executorContactMetadata = normalizedMetadata as Record<string, unknown>;
+          await syncCanonicalContact(supabase, {
+            ownerUserId: user.id,
+            fullName: String(payload.title ?? "").trim() || "Contact",
+            email: form.executor_contact_email.trim() || null,
+            phone: form.executor_contact_phone.trim() || null,
+            contactRole: String(executorContactMetadata["executor_type"] ?? "").trim() || "executor",
+            relationship: String(executorContactMetadata["relationship_to_user"] ?? "").trim() || null,
+            sourceType: "executor_asset",
+            link: {
+              sourceKind: "asset",
+              sourceId: recordId,
+              sectionKey,
+              categoryKey,
+              label: String(payload.title ?? "").trim() || "Executor",
+              role: String(executorContactMetadata["executor_type"] ?? "").trim() || "executor",
+            },
+          });
+        }
+        pushBankSubmitTrace(`createAsset success: asset_id="${recordId}"`);
+        mergeDevBankContextTrace({
+          source: "UniversalRecordWorkspace.saveRecord",
+          stage: "bank.save.create-asset-success",
+          userId: user.id,
+          createdAssetId: recordId,
+          error: null,
+          assetInsertReached: true,
+        });
       } else if (editingId) {
         const updateResult = await supabase
           .from("records")
@@ -1356,7 +1716,21 @@ export default function UniversalRecordWorkspace({
         recordId = insertResult.data.id;
       }
     } catch (error) {
-      setStatus(`Save failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      setSubmitError(message);
+      setStatus(`Save failed: ${message}`);
+      const redirectHref = getPlanLimitRedirectHref(error);
+      if (redirectHref) {
+        router.push(redirectHref);
+      }
+      pushBankSubmitTrace(`createAsset error: ${message}`);
+      mergeDevBankContextTrace({
+        source: "UniversalRecordWorkspace.saveRecord",
+        stage: "bank.save.error",
+        userId: user.id,
+        error: message,
+        assetInsertReached: false,
+      });
       setSaving(false);
       return;
     }
@@ -1369,18 +1743,66 @@ export default function UniversalRecordWorkspace({
         form.contact_role.trim() ||
         (isTrustedContacts && form.title.trim()) ||
         (isTrustedContacts && form.provider_name.trim());
-      if (hasContact && !usesCanonicalAssets) {
+      const managesLegacyRecordContacts =
+        !usesCanonicalAssets
+        && (isTrustedContacts || contacts.some((item) => item.record_id === recordId) || Boolean(form.contact_name.trim() || form.contact_email.trim() || form.contact_role.trim()));
+      if (managesLegacyRecordContacts) {
+        const existingCanonicalContactId = resolveSavedCanonicalContactIdForSource(
+          contacts.map((item) => ({
+            sourceId: item.record_id,
+            contactId: item.contact_id,
+            createdAt: item.created_at,
+          })),
+          recordId,
+        );
         await supabase.from("record_contacts").delete().eq("record_id", recordId).eq("owner_user_id", user.id);
-        const contactResult = await supabase.from("record_contacts").insert({
-          record_id: recordId,
-          owner_user_id: user.id,
-          contact_name: isTrustedContacts ? form.title.trim() || "Contact" : form.contact_name.trim() || "Contact",
-          contact_email: form.contact_email.trim() || null,
-          contact_role: form.contact_role.trim() || null,
-          notes: form.notes.trim() || null,
-        });
-        if (contactResult.error) {
-          setStatus(`Saved record, but contact failed: ${contactResult.error.message}`);
+        try {
+          await unlinkCanonicalContactSource(supabase, {
+            ownerUserId: user.id,
+            sourceKind: "record",
+            sourceId: recordId,
+          });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Unknown error";
+          setStatus(`Saved record, but contact unlink failed: ${message}`);
+        }
+        if (hasContact) {
+          try {
+            const canonicalContact = await syncCanonicalContact(supabase, {
+              ownerUserId: user.id,
+              existingContactId: existingCanonicalContactId,
+              fullName: isTrustedContacts ? form.title.trim() || "Contact" : form.contact_name.trim() || "Contact",
+              email: form.contact_email.trim() || null,
+              phone: isTrustedContacts ? form.provider_name.trim() || null : null,
+              contactRole: isTrustedContacts ? "next_of_kin" : resolvedLegacyContactRole,
+              relationship: isTrustedContacts ? form.contact_role.trim() || null : null,
+              sourceType: isTrustedContacts ? "next_of_kin" : "record_contact",
+              link: {
+                sourceKind: "record",
+                sourceId: recordId,
+                sectionKey,
+                categoryKey,
+                label: isTrustedContacts ? "Next of kin" : legalLinkedContactDefinition?.contactNameLabel ?? "Record contact",
+                role: isTrustedContacts ? form.contact_role.trim() || null : resolvedLegacyContactRole,
+              },
+            });
+
+            const contactResult = await supabase.from("record_contacts").insert({
+              record_id: recordId,
+              owner_user_id: user.id,
+              contact_id: canonicalContact.id,
+              contact_name: canonicalContact.full_name,
+              contact_email: canonicalContact.email,
+              contact_role: canonicalContact.relationship ?? canonicalContact.contact_role,
+              notes: form.notes.trim() || null,
+            });
+            if (contactResult.error) {
+              setStatus(`Saved record, but contact failed: ${contactResult.error.message}`);
+            }
+          } catch (error) {
+            const message = error instanceof Error ? error.message : "Unknown error";
+            setStatus(`Saved record, but contact failed: ${message}`);
+          }
         }
       }
 
@@ -1410,12 +1832,49 @@ export default function UniversalRecordWorkspace({
     }
 
     setStatus(uploadWarning ? `Saved successfully. ${uploadWarning}` : "Saved successfully.");
+    pushBankSubmitTrace(`reload started: asset_id="${recordId ?? ""}"`);
+    mergeDevBankContextTrace({
+      source: "UniversalRecordWorkspace.saveRecord",
+      stage: "bank.save.reload-started",
+      userId: user.id,
+      createdAssetId: recordId ?? null,
+      error: null,
+      assetInsertReached: true,
+    });
     cancelForm();
-    await reloadWorkspace(router, sectionKey, categoryKey, setRecords, setAttachments, setContacts, setStatus);
+    await reloadWorkspace(router, sectionKey, categoryKey, setRecords, setAttachments, setContacts, setStatus, {
+      targetOwnerUserId: viewer.targetOwnerUserId,
+      forceCanonicalRead,
+      recordFilter,
+    });
+    if (recordId && usesCanonicalAssets) {
+      pushBankSubmitTrace(`sync notified: section="${sectionKey}" category="${categoryKey}" asset_id="${recordId}"`);
+      notifyCanonicalAssetMutation({
+        assetId: recordId,
+        sectionKey,
+        categoryKey,
+        source: "UniversalRecordWorkspace.saveRecord",
+      });
+      pushBankSubmitTrace("router.refresh triggered");
+      router.refresh();
+    }
+    pushBankSubmitTrace(`reload completed: asset_id="${recordId ?? ""}"`);
+    mergeDevBankContextTrace({
+      source: "UniversalRecordWorkspace.saveRecord",
+      stage: "bank.save.reload-complete",
+      userId: user.id,
+      createdAssetId: recordId ?? null,
+      error: null,
+      assetInsertReached: true,
+    });
     setSaving(false);
   }
 
   async function archiveRecord(recordId: string) {
+    if (viewer.readOnly) {
+      setStatus("This linked account is view-only.");
+      return;
+    }
     setArchivingFor(recordId);
     setStatus("");
     const user = await requireUser(router);
@@ -1441,10 +1900,18 @@ export default function UniversalRecordWorkspace({
       return;
     }
     setStatus("Record archived.");
-    await reloadWorkspace(router, sectionKey, categoryKey, setRecords, setAttachments, setContacts, setStatus);
+    await reloadWorkspace(router, sectionKey, categoryKey, setRecords, setAttachments, setContacts, setStatus, {
+      targetOwnerUserId: viewer.targetOwnerUserId,
+      forceCanonicalRead,
+      recordFilter,
+    });
   }
 
   async function deleteRecord(recordId: string) {
+    if (viewer.readOnly) {
+      setStatus("This linked account is view-only.");
+      return;
+    }
     const confirmed = window.confirm("Delete this record permanently?");
     if (!confirmed) return;
     const user = await requireUser(router);
@@ -1468,13 +1935,40 @@ export default function UniversalRecordWorkspace({
       setStatus(`Delete failed: ${result.error.message}`);
       return;
     }
+    try {
+      if (usesCanonicalAssets && isCanonicalExecutor) {
+        await unlinkCanonicalContactSource(supabase, {
+          ownerUserId: user.id,
+          sourceKind: "asset",
+          sourceId: recordId,
+        });
+      }
+      if (!usesCanonicalAssets && (isTrustedContacts || contacts.some((item) => item.record_id === recordId))) {
+        await unlinkCanonicalContactSource(supabase, {
+          ownerUserId: user.id,
+          sourceKind: "record",
+          sourceId: recordId,
+        });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      setStatus(`Record deleted, but contact link cleanup failed: ${message}`);
+    }
     setStatus("Record deleted.");
     setOpenRecordId((prev) => (prev === recordId ? null : prev));
     if (editingId === recordId) cancelForm();
-    await reloadWorkspace(router, sectionKey, categoryKey, setRecords, setAttachments, setContacts, setStatus);
+    await reloadWorkspace(router, sectionKey, categoryKey, setRecords, setAttachments, setContacts, setStatus, {
+      targetOwnerUserId: viewer.targetOwnerUserId,
+      forceCanonicalRead,
+      recordFilter,
+    });
   }
 
   async function uploadAttachment(recordId: string, file: File, kind: "document" | "photo") {
+    if (viewer.readOnly) {
+      setStatus("This linked account is view-only.");
+      return;
+    }
     const validation = validateUploadFile(file, {
       allowedMimeTypes: kind === "photo" ? ["image/jpeg", "image/png"] : ["application/pdf", "image/jpeg", "image/png"],
       maxBytes: 15 * 1024 * 1024,
@@ -1514,10 +2008,18 @@ export default function UniversalRecordWorkspace({
     }
 
     setStatus(kind === "photo" ? `Photo uploaded to ${parentLabel}.` : `Attachment uploaded to ${parentLabel}.`);
-    await reloadWorkspace(router, sectionKey, categoryKey, setRecords, setAttachments, setContacts, setStatus);
+    await reloadWorkspace(router, sectionKey, categoryKey, setRecords, setAttachments, setContacts, setStatus, {
+      targetOwnerUserId: viewer.targetOwnerUserId,
+      forceCanonicalRead,
+      recordFilter,
+    });
   }
 
   async function removeAttachment(item: RecordAttachment) {
+    if (viewer.readOnly) {
+      setStatus("This linked account is view-only.");
+      return;
+    }
     const confirmed = window.confirm(`Remove "${item.file_name}" from this record?`);
     if (!confirmed) return;
     const user = await requireUser(router);
@@ -1546,16 +2048,11 @@ export default function UniversalRecordWorkspace({
       return;
     }
     setStatus("Attachment removed.");
-    await reloadWorkspace(router, sectionKey, categoryKey, setRecords, setAttachments, setContacts, setStatus);
-  }
-
-  async function openAttachment(item: RecordAttachment) {
-    const signedUrl = await getAttachmentSignedUrl(item, 120);
-    if (!signedUrl) {
-      setStatus(`Could not open ${item.file_name || "this file"}.`);
-      return;
-    }
-    window.open(signedUrl, "_blank", "noopener,noreferrer");
+    await reloadWorkspace(router, sectionKey, categoryKey, setRecords, setAttachments, setContacts, setStatus, {
+      targetOwnerUserId: viewer.targetOwnerUserId,
+      forceCanonicalRead,
+      recordFilter,
+    });
   }
 
   async function downloadAttachment(item: RecordAttachment) {
@@ -1633,13 +2130,26 @@ export default function UniversalRecordWorkspace({
   }
 
   const renderRow = (row: UniversalRecordRow) => {
+    const canonicalBankAsset =
+      isBankCategory
+        ? normalizeBankAssetRow({
+            title: row.title,
+            provider_name: row.provider_name,
+            provider_key: row.provider_key,
+            currency_code: row.currency_code,
+            value_minor: row.value_minor,
+            metadata: row.metadata,
+          })
+        : null;
+    const bankProviderName = canonicalBankAsset?.provider_name || canonicalBankAsset?.title || "Unnamed bank account";
     const providerInput =
+      (isBankCategory ? bankProviderName : null) ??
       row.provider_name ??
       row.provider_key ??
       row.title ??
       String(
         (categoryKey === "bank"
-          ? row.metadata?.institution_name ?? row.metadata?.bank_name
+          ? row.metadata?.provider_name ?? row.metadata?.institution_name ?? row.metadata?.bank_name
           : categoryKey === "investments"
             ? row.metadata?.investment_provider
             : categoryKey === "pensions"
@@ -1653,17 +2163,6 @@ export default function UniversalRecordWorkspace({
     const provider =
       findProviderByKey(row.provider_key, catalog) ??
       detectProvider(providerInput, catalog);
-    const canonicalBankAsset =
-      isBankCategory
-        ? readCanonicalBankAsset({
-            title: row.title,
-            provider_name: row.provider_name,
-            provider_key: row.provider_key,
-            currency_code: row.currency_code,
-            value_minor: row.value_minor,
-            metadata: row.metadata,
-          })
-        : null;
     const canonicalPropertyAsset =
       isCanonicalProperty
         ? readCanonicalPropertyAsset({
@@ -1713,6 +2212,16 @@ export default function UniversalRecordWorkspace({
           })
         : null;
     const rowAttachments = attachments.filter((item) => item.record_id === row.id);
+    const attachmentGalleryItems = rowAttachments.map((item) => ({
+      id: item.id,
+      fileName: item.file_name,
+      mimeType: item.mime_type,
+      createdAt: item.created_at,
+      thumbnailUrl: item.document_kind === "photo" ? photoPreviews[row.id] ?? "" : "",
+      metaLabel: item.parent_label || "",
+      attachment: item,
+    }));
+
     const rowContacts = contacts.filter((item) => item.record_id === row.id);
     const primaryContact = rowContacts[0] ?? null;
     const isOpen = openRecordId === row.id;
@@ -1727,7 +2236,7 @@ export default function UniversalRecordWorkspace({
     const leadingVisualWidth = previewUrl && !thumbFailed ? 40 : 32;
 
     return (
-      <article key={row.id} style={recordCardStyle}>
+      <article key={row.id} style={recordCardStyle} className="lf-record-card">
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             {previewUrl && !thumbFailed ? (
@@ -1746,12 +2255,14 @@ export default function UniversalRecordWorkspace({
             ) : (
               <ProviderBadge
                 provider={provider}
-                fallbackLabel={row.provider_name ?? row.title ?? "Record"}
+                fallbackLabel={isBankCategory ? bankProviderName : row.provider_name ?? row.title ?? "Record"}
                 categoryKey={isPossessions ? categoryKeyFromRow : isFinanceSection ? categoryKey : undefined}
               />
             )}
             <div style={{ display: "grid", gap: 4 }}>
-              <div style={{ fontWeight: 700 }}>{row.title || "Untitled record"}</div>
+              <div style={{ fontWeight: 700 }}>
+                {isBankCategory ? bankProviderName : row.title || "Untitled record"}
+              </div>
               {isTrustedContacts ? (
                 <>
                   <div style={{ color: "#64748b", fontSize: 13 }}>
@@ -1804,12 +2315,12 @@ export default function UniversalRecordWorkspace({
               ) : isCanonicalExecutor ? (
                 <>
                   <div style={{ color: "#64748b", fontSize: 13 }}>
-                    {canonicalExecutorAsset?.executor_summary || "Executor / trusted contact"}
+                    {primaryContact?.contact_role || canonicalExecutorAsset?.executor_summary || "Executor / trusted contact"}
                   </div>
                   <div style={{ color: "#64748b", fontSize: 13 }}>
-                    {canonicalExecutorAsset?.jurisdiction || "Jurisdiction not set"}
+                    {canonicalExecutorAsset?.jurisdiction || primaryContact?.relationship || "Jurisdiction not set"}
                     {" · "}
-                    {canonicalExecutorAsset?.executor_status || "Status not set"}
+                    {primaryContact?.verification_status || canonicalExecutorAsset?.executor_status || "Status not set"}
                   </div>
                   <div style={{ color: "#94a3b8", fontSize: 12 }}>
                     {canonicalExecutorAsset?.appointed_on ? `Appointed ${canonicalExecutorAsset.appointed_on} · ` : ""}
@@ -1870,7 +2381,7 @@ export default function UniversalRecordWorkspace({
                     <div style={{ color: "#64748b", fontSize: 13 }}>
                       {canonicalBankAsset?.account_type || "Account"}
                       {" · "}
-                      {(row.metadata?.account_holder_name as string | undefined) || "Holder not set"}
+                      {canonicalBankAsset?.account_holder || "Holder not set"}
                     </div>
                   ) : null}
                   {categoryKey === "bank" ? (
@@ -1901,22 +2412,38 @@ export default function UniversalRecordWorkspace({
                   ) : null}
                   <div style={{ color: "#94a3b8", fontSize: 12 }}>
                     {formatCurrency(
-                      canonicalBankAsset?.value_major ?? toMajorUnits(row.value_minor),
-                      canonicalBankAsset?.currency_code || (row.currency_code ?? "GBP").toUpperCase(),
+                      canonicalBankAsset?.current_balance ?? toMajorUnits(row.value_minor),
+                      canonicalBankAsset?.currency || (row.currency_code ?? "GBP").toUpperCase(),
                     )} · Updated {formatDate(row.updated_at)}
                   </div>
                 </>
               ) : (
                 <>
-                  <div style={{ color: "#64748b", fontSize: 13 }}>{row.summary || "No summary provided."}</div>
+                  <div style={{ color: "#64748b", fontSize: 13 }}>
+                    {isIdentityDocuments
+                      ? [String(row.metadata?.identity_document_type ?? ""), String(row.metadata?.identity_document_number ?? "").trim() ? "Reference on file" : ""].filter(Boolean).join(" · ") || "Identity document"
+                      : row.summary || "No summary provided."}
+                  </div>
                   <div style={{ color: "#94a3b8", fontSize: 12 }}>
                     {categoryLabel ? `${categoryLabel} · ` : ""}
                     {formatCurrency(toMajorUnits(row.value_minor), (row.currency_code ?? "GBP").toUpperCase())}
                     {" · "}
                     Updated {formatDate(row.updated_at)}
                   </div>
+                  {primaryContact && legalLinkedContactDefinition ? (
+                    <div style={{ color: "#64748b", fontSize: 12 }}>
+                      {legalLinkedContactDefinition.contactNameLabel}: {primaryContact.contact_name || "Not set"}
+                      {primaryContact.contact_role ? ` · ${primaryContact.contact_role}` : ""}
+                    </div>
+                  ) : null}
                 </>
               )}
+              {attachmentGalleryItems.length > 0 ? (
+                <AttachmentGallerySummary items={attachmentGalleryItems} />
+              ) : null}
+              <div style={recordUpdateStampStyle}>
+                Last updated by {viewer.mode === "linked" ? viewer.accountHolderName : "you"} on {formatDate(row.updated_at)}
+              </div>
             </div>
           </div>
           <span style={row.status === "archived" ? archivedPillStyle : activePillStyle}>
@@ -1924,17 +2451,17 @@ export default function UniversalRecordWorkspace({
           </span>
         </div>
 
-        <div style={{ ...recordActionsStyle, marginLeft: leadingVisualWidth + 10 }}>
-          <ActionIconButton action="edit" label="Edit record" onClick={() => startEdit(row)} />
+        <div style={{ ...recordActionsStyle, marginLeft: leadingVisualWidth + 10 }} className="lf-record-card-actions">
+          {!viewer.readOnly ? <ActionIconButton action="edit" label="Edit record" onClick={() => startEdit(row)} /> : null}
           {isPossessions || usesCanonicalAssets ? (
             <ActionIconButton
               action="attachments"
-              label={isOpen ? "Hide attachments" : "Attachments"}
+              label={isOpen ? "Hide documents" : attachmentGalleryItems.length > 0 ? `Open document${attachmentGalleryItems.length === 1 ? "" : "s"}` : "Documents"}
               onClick={() => setOpenRecordId((prev) => (prev === row.id ? null : row.id))}
             />
           ) : null}
-          <ActionIconButton action="delete" label="Delete record" onClick={() => void deleteRecord(row.id)} />
-          {!isPossessions && !isTrustedContacts && !usesCanonicalAssets && !isFinanceSection ? (
+          {!viewer.readOnly ? <ActionIconButton action="delete" label="Delete record" onClick={() => void deleteRecord(row.id)} /> : null}
+          {!viewer.readOnly && !isPossessions && !isTrustedContacts && !usesCanonicalAssets && !isFinanceSection ? (
             <>
               <button type="button" style={ghostBtn} onClick={() => setOpenRecordId((prev) => (prev === row.id ? null : row.id))}>
                 {isOpen ? "Hide" : "View"}
@@ -2005,18 +2532,18 @@ export default function UniversalRecordWorkspace({
             ) : isCanonicalExecutor ? (
               <div style={{ color: "#475569", fontSize: 13, display: "grid", gap: 2 }}>
                 <div>Role / type: {canonicalExecutorAsset?.executor_type || "Not set"}</div>
-                <div>Relationship: {canonicalExecutorAsset?.relationship_to_user || "Not set"}</div>
+                <div>Relationship: {primaryContact?.relationship || canonicalExecutorAsset?.relationship_to_user || "Not set"}</div>
                 <div>Authority level: {canonicalExecutorAsset?.authority_level || "Not set"}</div>
                 <div>Jurisdiction: {canonicalExecutorAsset?.jurisdiction || "Not set"}</div>
-                <div>Status: {canonicalExecutorAsset?.executor_status || "Not set"}</div>
+                <div>Status: {primaryContact?.verification_status || canonicalExecutorAsset?.executor_status || "Not set"}</div>
                 <div>Appointed on: {canonicalExecutorAsset?.appointed_on || "Not set"}</div>
                 <div>Beneficiary reference: {canonicalExecutorAsset?.beneficiary_reference || "Not set"}</div>
                 <div>Instruction reference: {canonicalExecutorAsset?.instruction_reference || "Not set"}</div>
                 <div>
-                  <MaskedField label="Email" value={canonicalExecutorAsset?.contact_email ?? ""} />
+                  <MaskedField label="Email" value={primaryContact?.contact_email ?? canonicalExecutorAsset?.contact_email ?? ""} />
                 </div>
                 <div>
-                  <MaskedField label="Phone" value={canonicalExecutorAsset?.contact_phone ?? ""} />
+                  <MaskedField label="Phone" value={primaryContact?.contact_phone ?? canonicalExecutorAsset?.contact_phone ?? ""} />
                 </div>
                 <div>
                   <MaskedField label="Address" value={canonicalExecutorAsset?.executor_address ?? ""} />
@@ -2076,12 +2603,30 @@ export default function UniversalRecordWorkspace({
               <div style={{ color: "#475569", fontSize: 13, display: "grid", gap: 2 }}>
                 {categoryKey === "bank" ? (
                   <>
-                    <div>Institution: {canonicalBankAsset?.institution_name || "Not set"}</div>
+                    <div>Provider: {canonicalBankAsset?.provider_name || "Not set"}</div>
                     <div>Provider key: {canonicalBankAsset?.provider_key || "Not set"}</div>
-                    <div>Country: {canonicalBankAsset?.country_code || "Not set"}</div>
-                    <div>Last updated: {canonicalBankAsset?.last_updated_on || "Not set"}</div>
+                    <div>Account type: {canonicalBankAsset?.account_type || "Not set"}</div>
+                    <div>Account holder: {canonicalBankAsset?.account_holder || "Not set"}</div>
+                    <div>Country: {canonicalBankAsset?.country || "Not set"}</div>
+                    <div>Currency: {canonicalBankAsset?.currency || "Not set"}</div>
                     <div>
-                      <MaskedField label="IBAN" value={String(row.metadata?.iban ?? "")} />
+                      Current balance:{" "}
+                      {canonicalBankAsset?.current_balance
+                        ? formatCurrency(
+                            canonicalBankAsset.current_balance,
+                            canonicalBankAsset.currency || (row.currency_code ?? "GBP").toUpperCase(),
+                          )
+                        : "Not set"}
+                    </div>
+                    <div>Valuation date: {canonicalBankAsset?.valuation_date || "Not set"}</div>
+                    <div>
+                      <MaskedField label="Account number" value={canonicalBankAsset?.account_number ?? ""} />
+                    </div>
+                    <div>
+                      <MaskedField label="Sort code" value={canonicalBankAsset?.sort_code ?? ""} />
+                    </div>
+                    <div>
+                      <MaskedField label="IBAN" value={canonicalBankAsset?.iban ?? ""} />
                     </div>
                   </>
                 ) : null}
@@ -2095,6 +2640,17 @@ export default function UniversalRecordWorkspace({
                 {categoryKey === "insurance" ? <div>Renewal date: {String(row.metadata?.renewal_date ?? "Not set")}</div> : null}
                 {categoryKey === "debts" ? <div>Repayment: {String(row.metadata?.repayment_amount ?? "Not set")} ({String(row.metadata?.repayment_frequency ?? "frequency not set")})</div> : null}
                 <div>Notes: {categoryKey === "bank" ? canonicalBankAsset?.notes || "No additional notes." : String(row.metadata?.notes ?? "No additional notes.")}</div>
+              </div>
+            ) : isIdentityDocuments ? (
+              <div style={{ color: "#475569", fontSize: 13, display: "grid", gap: 2 }}>
+                <div>Document type: {String(row.metadata?.identity_document_type ?? "Not set")}</div>
+                <div>
+                  <MaskedField label="Document number" value={String(row.metadata?.identity_document_number ?? "")} />
+                </div>
+                <div>Issuing country: {String(row.metadata?.identity_document_country ?? "Not set")}</div>
+                <div>Issue date: {String(row.metadata?.identity_issue_date ?? "Not set")}</div>
+                <div>Renewal / expiry date: {String(row.metadata?.renewal_date ?? "Not set")}</div>
+                <div>Notes: {String(row.metadata?.notes ?? "No additional notes.")}</div>
               </div>
             ) : (
               <div style={{ color: "#475569", fontSize: 13 }}>
@@ -2116,34 +2672,18 @@ export default function UniversalRecordWorkspace({
               {rowAttachments.length === 0 ? (
                 <div style={{ color: "#64748b", fontSize: 13 }}>No files uploaded.</div>
               ) : (
-                <div style={{ display: "grid", gap: 6 }}>
-                  {rowAttachments.map((item) => (
-                    <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                      <button type="button" style={inlineLinkBtn} onClick={() => void openAttachment(item)}>
-                        <Icon name="open_in_new" size={16} />
-                        {item.file_name}
-                      </button>
-                      <button type="button" style={miniGhostBtn} onClick={() => void downloadAttachment(item)}>
-                        <Icon name="download" size={16} />
-                        Download
-                      </button>
-                      {isPrintableDocumentMimeType(item.mime_type) ? (
-                        <button type="button" style={miniGhostBtn} onClick={() => void printAttachment(item)}>
-                          <Icon name="print" size={16} />
-                          Print
-                        </button>
-                      ) : null}
-                      <button type="button" style={miniGhostBtn} onClick={() => void removeAttachment(item)}>
-                        <Icon name="delete" size={16} />
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                <AttachmentGallery
+                  items={attachmentGalleryItems}
+                  emptyText="No files uploaded."
+                  onResolvePreviewUrl={(entry) => getAttachmentSignedUrl(entry.attachment, 120)}
+                  onDownload={(entry) => void downloadAttachment(entry.attachment)}
+                  onPrint={(entry) => void printAttachment(entry.attachment)}
+                  onRemove={viewer.readOnly ? undefined : (entry) => void removeAttachment(entry.attachment)}
+                />
               )}
             </div>
 
-            {usesCanonicalAssets ? (
+            {usesCanonicalAssets && !viewer.readOnly ? (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <label style={ghostBtn}>
                   {uploadingFor === row.id
@@ -2176,20 +2716,24 @@ export default function UniversalRecordWorkspace({
               </div>
             ) : null}
 
-            {!usesCanonicalAssets ? (
+            {rowContacts.length > 0 ? (
               <div style={{ display: "grid", gap: 6 }}>
-                <div style={{ fontSize: 13, fontWeight: 700 }}>Contacts</div>
-                {rowContacts.length === 0 ? (
-                  <div style={{ color: "#64748b", fontSize: 13 }}>No contacts linked.</div>
-                ) : (
-                  rowContacts.map((item) => (
-                    <div key={item.id} style={{ color: "#475569", fontSize: 13 }}>
-                      {item.contact_name}
-                      {item.contact_role ? ` · ${item.contact_role}` : ""}
-                      {item.contact_email ? ` · ${item.contact_email}` : ""}
-                    </div>
-                  ))
-                )}
+                <div style={{ fontSize: 13, fontWeight: 700 }}>Linked contacts</div>
+                {rowContacts.map((item) => (
+                  <div key={item.id} style={{ color: "#475569", fontSize: 13 }}>
+                    {item.contact_id ? (
+                      <Link href={buildContactsWorkspaceHref(item.contact_id)} style={linkedContactLinkStyle}>
+                        {item.contact_name || "Unnamed contact"}
+                      </Link>
+                    ) : (
+                      <span>{item.contact_name || "Unnamed contact"}</span>
+                    )}
+                    {item.relationship ? ` · ${item.relationship}` : item.contact_role ? ` · ${item.contact_role}` : ""}
+                    {item.contact_email ? ` · ${item.contact_email}` : ""}
+                    {item.contact_phone ? ` · ${item.contact_phone}` : ""}
+                    {item.invite_status ? ` · ${item.invite_status.replace(/_/g, " ")}` : ""}
+                  </div>
+                ))}
               </div>
             ) : null}
           </div>
@@ -2220,14 +2764,131 @@ export default function UniversalRecordWorkspace({
       ) : null}
 
       {status ? <div style={{ color: "#475569", fontSize: 13 }}>{status}</div> : null}
+      {devBankTraceEnabled ? (
+        <section
+          style={{
+            border: "1px dashed #f59e0b",
+            borderRadius: 12,
+            background: "#fff7ed",
+            padding: 12,
+            display: "grid",
+            gap: 10,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Icon name="bug_report" size={16} />
+            <strong style={{ fontSize: 14 }}>DEV bank flow trace</strong>
+          </div>
+          <div style={{ fontSize: 12, color: "#7c2d12", display: "grid", gap: 6 }}>
+            <div>
+              Auth/context: session <code>{devBankContextTrace?.sessionPresent == null ? "n/a" : devBankContextTrace.sessionPresent ? "yes" : "no"}</code> · user <code>{devBankContextTrace?.userId ?? "n/a"}</code> · organisation <code>{devBankContextTrace?.organisationId ?? "n/a"}</code> · wallet <code>{devBankContextTrace?.walletId ?? "n/a"}</code>
+            </div>
+            <div>
+              Current stage: <code>{devBankContextTrace?.stage ?? "n/a"}</code> · asset insert reached <code>{devBankContextTrace?.assetInsertReached ? "yes" : "no"}</code>
+            </div>
+            {devBankContextTrace?.error ? (
+              <div>
+                Current error: <code>{devBankContextTrace.error}</code>
+              </div>
+            ) : null}
+            <div>
+              Latest create: {
+                (() => {
+                  const entry = devBankTraceEntries.filter((item) => item.kind === "create").at(-1);
+                  return (
+                    <>
+                      user <code>{entry?.userId ?? "n/a"}</code> · organisation <code>{entry?.organisationId ?? "n/a"}</code> · wallet <code>{entry?.walletId ?? "n/a"}</code> · asset <code>{entry?.createdAssetId ?? "n/a"}</code>
+                    </>
+                  );
+                })()
+              }
+            </div>
+            <div>
+              Latest bank page load: {
+                (() => {
+                  const entry = devBankTraceEntries.filter((item) => item.kind === "bank-load").at(-1);
+                  return (
+                    <>
+                      user <code>{entry?.userId ?? "n/a"}</code> · organisation <code>{entry?.organisationId ?? "n/a"}</code> · wallet <code>{entry?.walletId ?? "n/a"}</code> · ids <code>{(entry?.assetIds ?? []).join(", ") || "none"}</code>
+                    </>
+                  );
+                })()
+              }
+            </div>
+            <div>
+              Bank category trace: {
+                (() => {
+                  const entry = devBankTraceEntries.filter((item) => item.kind === "bank-load").at(-1);
+                  return <code>{(entry?.assetCategoryTokens ?? []).join(", ") || entry?.assetCategoryToken || "none"}</code>;
+                })()
+              }
+            </div>
+            <div>
+              Build marker: <code>{DEV_BANK_BUILD_MARKER}</code>
+            </div>
+            {devBankSubmitTrace.length ? (
+              <div style={{ display: "grid", gap: 4 }}>
+                <strong style={{ fontSize: 12 }}>Submit trace</strong>
+                {devBankSubmitTrace.map((step, index) => (
+                  <code key={`${index}-${step}`} style={{ whiteSpace: "pre-wrap" }}>{step}</code>
+                ))}
+              </div>
+            ) : null}
+            {devBankRequestTrace.length ? (
+              <div style={{ display: "grid", gap: 4 }}>
+                <strong style={{ fontSize: 12 }}>Assets request trace</strong>
+                {devBankRequestTrace.slice(-12).map((step, index) => (
+                  <code key={`${index}-${step}`} style={{ whiteSpace: "pre-wrap" }}>{step}</code>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+      {devBankTraceEnabled ? (
+        <aside
+          style={{
+            position: "fixed",
+            right: 16,
+            bottom: 16,
+            width: "min(520px, calc(100vw - 32px))",
+            maxHeight: "45vh",
+            overflow: "auto",
+            zIndex: 70,
+            border: "1px solid #f59e0b",
+            borderRadius: 12,
+            background: "#111827",
+            color: "#f8fafc",
+            padding: 12,
+            boxShadow: "0 16px 40px rgba(15, 23, 42, 0.3)",
+            display: "grid",
+            gap: 8,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Icon name="lan" size={16} />
+            <strong style={{ fontSize: 13 }}>DEV PostgREST trace</strong>
+          </div>
+          <div style={{ fontSize: 11, color: "#cbd5e1" }}>
+            {DEV_BANK_BUILD_MARKER}
+          </div>
+          {devBankRequestTrace.length ? (
+            devBankRequestTrace.slice(-14).map((step, index) => (
+              <code key={`${index}-${step}`} style={{ whiteSpace: "pre-wrap", fontSize: 11, color: "#fde68a" }}>{step}</code>
+            ))
+          ) : (
+            <div style={{ fontSize: 12, color: "#94a3b8" }}>No PostgREST assets requests captured yet.</div>
+          )}
+        </aside>
+      ) : null}
 
-      {loading || hasAnyRecords ? (
+      {!loading && hasAnyRecords ? (
       <section style={cardStyle} ref={formSectionRef}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           <h2 style={{ margin: 0, fontSize: 17 }}>Existing records</h2>
-          <button type="button" style={primaryBtn} onClick={startCreate}>
+          {!viewer.readOnly ? <button type="button" style={primaryBtn} onClick={startCreate}>
             {addLabel}
-          </button>
+          </button> : null}
         </div>
 
         {!isTrustedContacts ? (
@@ -2339,13 +3000,15 @@ export default function UniversalRecordWorkspace({
             <div style={{ color: "#64748b", fontSize: 13 }}>
               Click <strong>{addLabel}</strong> to create a new record.
             </div>
-            <div>
-              <button type="button" style={primaryBtn} onClick={startCreate}>
-                {addLabel}
-              </button>
-            </div>
+            {!hasAnyRecords ? (
+              <div>
+                {!viewer.readOnly ? <button type="button" style={primaryBtn} onClick={startCreate}>
+                  {addLabel}
+                </button> : null}
+              </div>
+            ) : null}
           </div>
-        ) : isFinanceSection || usesCanonicalAssets ? (
+        ) : usesStructuredWorkspaceForm ? (
           <FinanceFields
             sectionKey={sectionKey}
             categoryKey={categoryKey}
@@ -2483,15 +3146,15 @@ export default function UniversalRecordWorkspace({
           {!isTrustedContacts ? (
             <>
               <label style={fieldStyle}>
-                <span style={labelStyle}>Contact name</span>
+                <span style={labelStyle}>{legalLinkedContactDefinition?.contactNameLabel ?? "Contact name"}</span>
                 <input style={inputStyle} value={form.contact_name} onChange={(event) => setForm((prev) => ({ ...prev, contact_name: event.target.value }))} />
               </label>
               <label style={fieldStyle}>
-                <span style={labelStyle}>Contact email</span>
+                <span style={labelStyle}>{legalLinkedContactDefinition?.contactEmailLabel ?? "Contact email"}</span>
                 <input style={inputStyle} value={form.contact_email} onChange={(event) => setForm((prev) => ({ ...prev, contact_email: event.target.value }))} />
               </label>
               <label style={fieldStyle}>
-                <span style={labelStyle}>Contact role</span>
+                <span style={labelStyle}>{legalLinkedContactDefinition?.contactRoleLabel ?? "Contact role"}</span>
                 <input style={inputStyle} value={form.contact_role} onChange={(event) => setForm((prev) => ({ ...prev, contact_role: event.target.value }))} />
               </label>
             </>
@@ -2501,6 +3164,26 @@ export default function UniversalRecordWorkspace({
 
         {formVisible ? (
           <div style={{ display: "grid", gap: 12 }}>
+            {submitError ? (
+              <div
+                style={{
+                  border: "1px solid #fecaca",
+                  background: "#fef2f2",
+                  color: "#991b1b",
+                  borderRadius: 10,
+                  padding: 12,
+                  fontSize: 13,
+                  display: "grid",
+                  gap: 4,
+                }}
+              >
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontWeight: 700 }}>
+                  <Icon name="error" size={16} />
+                  Save blocked
+                </div>
+                <div>{submitError}</div>
+              </div>
+            ) : null}
             {usesCanonicalAssets && !editingId ? (
               <div className="lf-content-grid">
                 <FormField label="Statement or supporting document" iconName="upload_file" helpText="This file will be attached to the asset after save.">
@@ -2563,7 +3246,7 @@ export default function UniversalRecordWorkspace({
                 </FormField>
               </div>
             ) : null}
-            {usesCanonicalAssets ? (
+            {usesCanonicalAssets && hasStagedExtractionInput ? (
               <label style={confirmationCardStyle}>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontWeight: 700 }}>
                   <Icon name="fact_check" size={18} />
@@ -2695,21 +3378,21 @@ export default function UniversalRecordWorkspace({
                 </label> : null}
               </>
             ) : null}
-            <button type="button" style={primaryBtn} disabled={saving} onClick={() => void saveRecord()}>
+            {!viewer.readOnly ? <button type="button" style={primaryBtn} disabled={saving} onClick={() => void saveRecord()}>
               <Icon name="save" size={16} style={{ marginRight: 6, verticalAlign: "text-bottom" }} />
               {saving ? "Saving..." : editingId ? "Save changes" : saveLabel}
-            </button>
+            </button> : null}
             <button type="button" style={ghostBtn} onClick={cancelForm}>
               <Icon name="close" size={16} />
               Cancel
             </button>
-            {editingId ? (
+            {editingId && !viewer.readOnly ? (
               <button type="button" style={dangerBtn} onClick={() => void deleteRecord(editingId)}>
                 <Icon name="delete" size={16} />
                 Delete
               </button>
             ) : null}
-            {editingId ? (
+            {editingId && !viewer.readOnly ? (
               <>
                 <label style={ghostBtn}>
                   <Icon name="upload_file" size={16} />
@@ -2751,30 +3434,23 @@ export default function UniversalRecordWorkspace({
             {attachments.filter((item) => item.record_id === editingId).length === 0 ? (
               <div style={{ color: "#64748b", fontSize: 13 }}>No attachments yet for this asset.</div>
             ) : (
-              attachments
-                .filter((item) => item.record_id === editingId)
-                .map((item) => (
-                  <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <button type="button" style={inlineLinkBtn} onClick={() => void openAttachment(item)}>
-                      <Icon name="open_in_new" size={16} />
-                      Open {item.file_name}
-                    </button>
-                    <button type="button" style={miniGhostBtn} onClick={() => void downloadAttachment(item)}>
-                      <Icon name="download" size={16} />
-                      Download
-                    </button>
-                    {isPrintableDocumentMimeType(item.mime_type) ? (
-                      <button type="button" style={miniGhostBtn} onClick={() => void printAttachment(item)}>
-                        <Icon name="print" size={16} />
-                        Print
-                      </button>
-                    ) : null}
-                    <button type="button" style={miniGhostBtn} onClick={() => void removeAttachment(item)}>
-                      <Icon name="delete" size={16} />
-                      Remove
-                    </button>
-                  </div>
-                ))
+              <AttachmentGallery
+                items={attachments
+                  .filter((item) => item.record_id === editingId)
+                  .map((item) => ({
+                    id: item.id,
+                    fileName: item.file_name,
+                    mimeType: item.mime_type,
+                    createdAt: item.created_at,
+                    thumbnailUrl: item.document_kind === "photo" ? photoPreviews[item.record_id] ?? "" : "",
+                    attachment: item,
+                  }))}
+                emptyText="No attachments yet for this asset."
+                onResolvePreviewUrl={(entry) => getAttachmentSignedUrl(entry.attachment, 120)}
+                onDownload={(entry) => void downloadAttachment(entry.attachment)}
+                onPrint={(entry) => void printAttachment(entry.attachment)}
+                onRemove={viewer.readOnly ? undefined : (entry) => void removeAttachment(entry.attachment)}
+              />
             )}
           </div>
         ) : null}
@@ -2848,6 +3524,50 @@ function FinanceFields({
     );
   }
 
+  if (sectionKey === "legal" && categoryKey === "identity-documents") {
+    if (!IDENTITY_DOCUMENT_FORM_CONFIG) {
+      return <div style={{ color: "#b91c1c", fontSize: 13 }}>Identity document form configuration is unavailable.</div>;
+    }
+    const legalContactDefinition = getLegalLinkedContactDefinition(categoryKey);
+    const identityValues = identityDocumentFormToConfigValues(form);
+    const identityErrors = validateAssetFormValues(IDENTITY_DOCUMENT_FORM_CONFIG, identityValues);
+
+    return (
+      <div style={{ display: "grid", gap: 16 }}>
+        <FormSection title="Document details" description="Keep the key identity reference details in the saved record, then attach scans or photos below.">
+          <ConfigDrivenAssetFields
+            config={pickConfigFields(IDENTITY_DOCUMENT_FORM_CONFIG, ["title", "identity_document_type", "identity_document_number", "identity_document_country"])}
+            values={identityValues}
+            errors={identityErrors}
+            onChange={(key, value) => {
+              setForm((prev) => applyIdentityDocumentConfigFieldChange(prev, key, value));
+            }}
+          />
+        </FormSection>
+        <FormSection title="Dates and notes" description="Track issue and renewal dates so the document can be reviewed without opening edit mode later.">
+          <ConfigDrivenAssetFields
+            config={pickConfigFields(IDENTITY_DOCUMENT_FORM_CONFIG, ["identity_issue_date", "renewal_date", "notes"])}
+            values={identityValues}
+            errors={identityErrors}
+            onChange={(key, value) => {
+              setForm((prev) => applyIdentityDocumentConfigFieldChange(prev, key, value));
+            }}
+          />
+        </FormSection>
+        <FormSection
+          title={legalContactDefinition?.contactNameLabel ?? "Linked contact"}
+          description={legalContactDefinition?.description ?? "Optionally link the named person or family contact attached to this document."}
+        >
+          <div className="lf-content-grid">
+            <FieldInput label={legalContactDefinition?.contactNameLabel ?? "Contact name"} value={form.contact_name} onChange={(value) => setForm((prev) => ({ ...prev, contact_name: value }))} />
+            <FieldInput label={legalContactDefinition?.contactEmailLabel ?? "Contact email"} value={form.contact_email} onChange={(value) => setForm((prev) => ({ ...prev, contact_email: value }))} />
+            <FieldInput label={legalContactDefinition?.contactRoleLabel ?? "Contact role"} value={form.contact_role} onChange={(value) => setForm((prev) => ({ ...prev, contact_role: value }))} />
+          </div>
+        </FormSection>
+      </div>
+    );
+  }
+
   if (sectionKey === "digital" && categoryKey === "digital") {
     if (!DIGITAL_FORM_CONFIG) {
       return <div style={{ color: "#b91c1c", fontSize: 13 }}>Digital form configuration is unavailable.</div>;
@@ -2865,6 +3585,39 @@ function FinanceFields({
             setForm((prev) => applyDigitalConfigFieldChange(prev, key, value));
           }}
         />
+      </div>
+    );
+  }
+
+  if (sectionKey === "personal" && categoryKey === "social-media") {
+    if (!SOCIAL_MEDIA_FORM_CONFIG) {
+      return <div style={{ color: "#b91c1c", fontSize: 13 }}>Social media form configuration is unavailable.</div>;
+    }
+    const socialValues = socialMediaFormToConfigValues(form);
+    const socialErrors = validateAssetFormValues(SOCIAL_MEDIA_FORM_CONFIG, socialValues);
+
+    return (
+      <div style={{ display: "grid", gap: 16 }}>
+        <FormSection title="Account" description="Capture the platform, profile URL, and handle so someone can recognise and locate the account quickly.">
+          <ConfigDrivenAssetFields
+            config={pickConfigFields(SOCIAL_MEDIA_FORM_CONFIG, ["title", "social_profile_url", "social_username", "social_login_email"])}
+            values={socialValues}
+            errors={socialErrors}
+            onChange={(key, value) => {
+              setForm((prev) => applySocialMediaConfigFieldChange(prev, key, value));
+            }}
+          />
+        </FormSection>
+        <FormSection title="Access & recovery" description="Store hints and recovery notes only when they help with handover and review.">
+          <ConfigDrivenAssetFields
+            config={pickConfigFields(SOCIAL_MEDIA_FORM_CONFIG, ["social_credential_hint", "social_recovery_notes", "notes"])}
+            values={socialValues}
+            errors={socialErrors}
+            onChange={(key, value) => {
+              setForm((prev) => applySocialMediaConfigFieldChange(prev, key, value));
+            }}
+          />
+        </FormSection>
       </div>
     );
   }
@@ -3044,14 +3797,6 @@ function FinanceFields({
             setForm((prev) => applyBankConfigFieldChange(prev, key, value));
           }}
         />
-        <FieldInput label="Account holder name" iconName="person" value={form.account_holder_name} onChange={(value) => setForm((prev) => ({ ...prev, account_holder_name: value }))} />
-        <FieldInput label="IBAN" iconName="badge" value={form.iban} onChange={(value) => setForm((prev) => ({ ...prev, iban: value }))} />
-        <FieldInput label="SWIFT / BIC" iconName="qr_code" value={form.swift_bic} onChange={(value) => setForm((prev) => ({ ...prev, swift_bic: value }))} />
-        <FieldInput label="Branch name" iconName="location_city" value={form.branch_name} onChange={(value) => setForm((prev) => ({ ...prev, branch_name: value }))} />
-        <FieldInput label="Branch address" iconName="home_pin" value={form.branch_address} onChange={(value) => setForm((prev) => ({ ...prev, branch_address: value }))} />
-        <FieldInput label="Bank contact phone" iconName="call" value={form.bank_contact_phone} onChange={(value) => setForm((prev) => ({ ...prev, bank_contact_phone: value }))} />
-        <FieldInput label="Bank contact email" iconName="mail" value={form.bank_contact_email} onChange={(value) => setForm((prev) => ({ ...prev, bank_contact_email: value }))} />
-        <FieldInput label="Online banking URL" iconName="language" value={form.online_banking_url} onChange={(value) => setForm((prev) => ({ ...prev, online_banking_url: value }))} />
       </div>
     );
   }
@@ -3203,17 +3948,33 @@ function pickConfigFields(
 function bankFormToConfigValues(form: EditForm): Record<string, string> {
   return {
     title: form.title,
-    institution_name: form.bank_name,
+    provider_name: form.bank_name,
     account_type: form.bank_account_type,
     account_type_other: form.bank_account_type_other,
+    account_holder: form.account_holder_name,
     account_number: form.account_number,
     sort_code: form.sort_code,
+    iban: form.iban,
     country: form.country,
     country_other: form.country_other,
     currency: form.currency_code,
     currency_other: form.currency_other,
-    estimated_value: form.value_major,
-    last_updated_on: form.last_updated_on,
+    current_balance: form.value_major,
+    valuation_date: form.last_updated_on,
+    notes: form.notes,
+  };
+}
+
+function identityDocumentFormToConfigValues(form: EditForm): Record<string, string> {
+  return {
+    title: form.title,
+    identity_document_type: form.identity_document_type,
+    identity_document_type_other: form.identity_document_type_other,
+    identity_document_number: form.identity_document_number,
+    identity_document_country: form.identity_document_country,
+    identity_document_country_other: form.identity_document_country_other,
+    identity_issue_date: form.identity_issue_date,
+    renewal_date: form.renewal_date,
     notes: form.notes,
   };
 }
@@ -3228,6 +3989,17 @@ function propertyFormToConfigValues(form: EditForm): Record<string, string> {
     property_address: form.property_address,
     property_country: form.property_country,
     property_country_other: form.property_country_other,
+    occupancy_status: form.occupancy_status,
+    occupancy_status_other: form.occupancy_status_other,
+    tenant_name: form.tenant_name,
+    tenancy_type: form.tenancy_type,
+    tenancy_type_other: form.tenancy_type_other,
+    managing_agent: form.managing_agent,
+    managing_agent_contact: form.managing_agent_contact,
+    monthly_rent: form.monthly_rent,
+    tenancy_end_date: form.tenancy_end_date,
+    deposit_scheme_reference: form.deposit_scheme_reference,
+    lease_or_tenant_summary: form.lease_or_tenant_summary,
     estimated_value: form.value_major,
     currency: form.currency_code,
     currency_other: form.currency_other,
@@ -3276,6 +4048,18 @@ function digitalFormToConfigValues(form: EditForm): Record<string, string> {
     access_contact: form.digital_access_contact,
     digital_status: form.digital_status,
     digital_status_other: form.digital_status_other,
+    notes: form.notes,
+  };
+}
+
+function socialMediaFormToConfigValues(form: EditForm): Record<string, string> {
+  return {
+    title: form.title,
+    social_profile_url: form.social_profile_url,
+    social_username: form.social_username,
+    social_login_email: form.social_login_email,
+    social_credential_hint: form.social_credential_hint,
+    social_recovery_notes: form.social_recovery_notes,
     notes: form.notes,
   };
 }
@@ -3346,13 +4130,15 @@ function taskFormToConfigValues(form: EditForm): Record<string, string> {
 
 function applyBankConfigFieldChange(prev: EditForm, key: string, value: string): EditForm {
   if (key === "title") return { ...prev, title: value };
-  if (key === "institution_name") return { ...prev, bank_name: value };
+  if (key === "provider_name") return { ...prev, bank_name: value };
   if (key === "account_type") return { ...prev, bank_account_type: value };
   if (key === "account_type_other") return { ...prev, bank_account_type_other: value };
+  if (key === "account_holder") return { ...prev, account_holder_name: value };
   if (key === "account_number") return { ...prev, account_number: value };
   if (key === "sort_code") return { ...prev, sort_code: value };
-  if (key === "estimated_value") return { ...prev, value_major: value };
-  if (key === "last_updated_on") return { ...prev, last_updated_on: value };
+  if (key === "iban") return { ...prev, iban: value };
+  if (key === "current_balance") return { ...prev, value_major: value };
+  if (key === "valuation_date") return { ...prev, last_updated_on: value };
   if (key === "notes") return { ...prev, notes: value };
 
   if (key === "country_other") return { ...prev, country_other: value };
@@ -3385,6 +4171,31 @@ function applyBankConfigFieldChange(prev: EditForm, key: string, value: string):
   return prev;
 }
 
+function applyIdentityDocumentConfigFieldChange(prev: EditForm, key: string, value: string): EditForm {
+  if (key === "title") return { ...prev, title: value };
+  if (key === "identity_document_type") {
+    return {
+      ...prev,
+      identity_document_type: value,
+      identity_document_type_other: value === "__other" ? prev.identity_document_type_other : "",
+    };
+  }
+  if (key === "identity_document_type_other") return { ...prev, identity_document_type_other: value };
+  if (key === "identity_document_number") return { ...prev, identity_document_number: value };
+  if (key === "identity_document_country") {
+    return {
+      ...prev,
+      identity_document_country: value,
+      identity_document_country_other: value === "__other" ? prev.identity_document_country_other : "",
+    };
+  }
+  if (key === "identity_document_country_other") return { ...prev, identity_document_country_other: value };
+  if (key === "identity_issue_date") return { ...prev, identity_issue_date: value };
+  if (key === "renewal_date") return { ...prev, renewal_date: value };
+  if (key === "notes") return { ...prev, notes: value };
+  return prev;
+}
+
 function applyPropertyConfigFieldChange(prev: EditForm, key: string, value: string): EditForm {
   if (key === "title") return { ...prev, title: value };
   if (key === "property_type") return { ...prev, property_type: value, property_type_other: value === "__other" ? prev.property_type_other : "" };
@@ -3394,6 +4205,17 @@ function applyPropertyConfigFieldChange(prev: EditForm, key: string, value: stri
   }
   if (key === "ownership_type_other") return { ...prev, property_ownership_type_other: value };
   if (key === "property_address") return { ...prev, property_address: value };
+  if (key === "occupancy_status") return { ...prev, occupancy_status: value, occupancy_status_other: value === "__other" ? prev.occupancy_status_other : "" };
+  if (key === "occupancy_status_other") return { ...prev, occupancy_status_other: value };
+  if (key === "tenant_name") return { ...prev, tenant_name: value };
+  if (key === "tenancy_type") return { ...prev, tenancy_type: value, tenancy_type_other: value === "__other" ? prev.tenancy_type_other : "" };
+  if (key === "tenancy_type_other") return { ...prev, tenancy_type_other: value };
+  if (key === "managing_agent") return { ...prev, managing_agent: value };
+  if (key === "managing_agent_contact") return { ...prev, managing_agent_contact: value };
+  if (key === "monthly_rent") return { ...prev, monthly_rent: value };
+  if (key === "tenancy_end_date") return { ...prev, tenancy_end_date: value };
+  if (key === "deposit_scheme_reference") return { ...prev, deposit_scheme_reference: value };
+  if (key === "lease_or_tenant_summary") return { ...prev, lease_or_tenant_summary: value };
   if (key === "estimated_value") return { ...prev, value_major: value };
   if (key === "valuation_date") return { ...prev, property_valuation_date: value };
   if (key === "mortgage_status") return { ...prev, mortgage_status: value, mortgage_status_other: value === "__other" ? prev.mortgage_status_other : "" };
@@ -3512,6 +4334,17 @@ function applyDigitalConfigFieldChange(prev: EditForm, key: string, value: strin
     };
   }
 
+  return prev;
+}
+
+function applySocialMediaConfigFieldChange(prev: EditForm, key: string, value: string): EditForm {
+  if (key === "title") return { ...prev, title: value };
+  if (key === "social_profile_url") return { ...prev, social_profile_url: value };
+  if (key === "social_username") return { ...prev, social_username: value };
+  if (key === "social_login_email") return { ...prev, social_login_email: value };
+  if (key === "social_credential_hint") return { ...prev, social_credential_hint: value };
+  if (key === "social_recovery_notes") return { ...prev, social_recovery_notes: value };
+  if (key === "notes") return { ...prev, notes: value };
   return prev;
 }
 
@@ -3728,17 +4561,16 @@ function getFinanceDraft(categoryKey: string, form: EditForm) {
       valueMajor: form.value_major || "0",
       currencyCode: resolvedCurrency || "GBP",
       metadata: {
-        institution_name: resolvedBankName || null,
         provider_name: resolvedBankName || null,
         account_type: resolvedAccountType || null,
-        account_holder_name: form.account_holder_name.trim() || null,
+        account_holder: form.account_holder_name.trim() || null,
         sort_code: form.sort_code.trim() || null,
         account_number: form.account_number.trim() || null,
-        country_code: resolvedCountry || null,
-        currency_code: resolvedCurrency || null,
-        value_major: form.value_major ? Number(form.value_major) : null,
-        last_updated_on: form.last_updated_on || null,
         iban: form.iban.trim() || null,
+        current_balance: form.value_major ? Number(form.value_major) : null,
+        valuation_date: form.last_updated_on || null,
+        country: resolvedCountry || null,
+        currency: resolvedCurrency || null,
         swift_bic: form.swift_bic.trim() || null,
         branch_name: form.branch_name.trim() || null,
         branch_address: form.branch_address.trim() || null,
@@ -4044,11 +4876,15 @@ function getCanonicalAssetDraft(
   const propertyTypeField = PROPERTY_FORM_CONFIG?.fields.find((field) => field.key === "property_type");
   const ownershipTypeField = PROPERTY_FORM_CONFIG?.fields.find((field) => field.key === "ownership_type");
   const countryField = PROPERTY_FORM_CONFIG?.fields.find((field) => field.key === "property_country");
+  const occupancyField = PROPERTY_FORM_CONFIG?.fields.find((field) => field.key === "occupancy_status");
+  const tenancyTypeField = PROPERTY_FORM_CONFIG?.fields.find((field) => field.key === "tenancy_type");
   const currencyField = PROPERTY_FORM_CONFIG?.fields.find((field) => field.key === "currency");
   const mortgageField = PROPERTY_FORM_CONFIG?.fields.find((field) => field.key === "mortgage_status");
   const resolvedPropertyType = propertyTypeField ? resolveConfiguredFieldValue(propertyTypeField, values) : form.property_type.trim();
   const resolvedOwnershipType = ownershipTypeField ? resolveConfiguredFieldValue(ownershipTypeField, values) : form.property_ownership_type.trim();
   const resolvedCountry = countryField ? resolveConfiguredFieldValue(countryField, values) : form.property_country.trim();
+  const resolvedOccupancyStatus = occupancyField ? resolveConfiguredFieldValue(occupancyField, values) : form.occupancy_status.trim();
+  const resolvedTenancyType = tenancyTypeField ? resolveConfiguredFieldValue(tenancyTypeField, values) : form.tenancy_type.trim();
   const resolvedCurrency = (currencyField ? resolveConfiguredFieldValue(currencyField, values) : form.currency_code).toUpperCase();
   const resolvedMortgageStatus = mortgageField ? resolveConfiguredFieldValue(mortgageField, values) : form.mortgage_status.trim();
 
@@ -4064,6 +4900,15 @@ function getCanonicalAssetDraft(
       ownership_type: resolvedOwnershipType || null,
       property_address: form.property_address.trim() || null,
       property_country: resolvedCountry || null,
+      occupancy_status: resolvedOccupancyStatus || null,
+      tenant_name: form.tenant_name.trim() || null,
+      tenancy_type: resolvedTenancyType || null,
+      managing_agent: form.managing_agent.trim() || null,
+      managing_agent_contact: form.managing_agent_contact.trim() || null,
+      monthly_rent: form.monthly_rent ? Number(form.monthly_rent) : null,
+      tenancy_end_date: form.tenancy_end_date || null,
+      deposit_scheme_reference: form.deposit_scheme_reference.trim() || null,
+      lease_or_tenant_summary: form.lease_or_tenant_summary.trim() || null,
       currency_code: resolvedCurrency || null,
       estimated_value: form.value_major ? Number(form.value_major) : null,
       valuation_date: form.property_valuation_date || null,
@@ -4301,11 +5146,13 @@ async function loadWorkspaceRows({
   sectionKey,
   categoryKey,
   usesCanonicalAssets,
+  recordFilter,
 }: {
   userId: string;
   sectionKey: string;
   categoryKey: string;
   usesCanonicalAssets: boolean;
+  recordFilter?: (row: UniversalRecordRow) => boolean;
 }): Promise<{ ok: true; rows: UniversalRecordRow[]; warning?: string } | { ok: false; error: string }> {
   if (!usesCanonicalAssets) {
     const recordsResult = await supabase
@@ -4321,7 +5168,7 @@ async function loadWorkspaceRows({
     }
     const rows = (recordsResult.data ?? []) as UniversalRecordRow[];
     assertWorkspaceRowsMatchCategory(rows, { sectionKey, categoryKey });
-    return { ok: true, rows };
+    return { ok: true, rows: recordFilter ? rows.filter(recordFilter) : rows };
   }
 
   const walletContext = await resolveWalletContextForRead(supabase, userId);
@@ -4359,7 +5206,9 @@ async function loadWorkspaceRows({
   let sensitivePayloads = new Map<string, Record<string, unknown>>();
   let warning = "";
   try {
-    sensitivePayloads = await loadSensitiveAssetPayloads(supabase, ids);
+    const hydrationResult = await loadSensitiveAssetPayloads(supabase, ids);
+    sensitivePayloads = hydrationResult.payloads;
+    warning = hydrationResult.warning ?? "";
   } catch (error) {
     warning = error instanceof Error ? error.message : "Could not load encrypted asset fields.";
   }
@@ -4374,7 +5223,12 @@ async function loadWorkspaceRows({
       section_key: String(row.section_key ?? ""),
       category_key: String(row.category_key ?? ""),
       title: typeof row.title === "string" ? row.title : null,
-      provider_name: typeof row.provider_name === "string" ? row.provider_name : null,
+      provider_name:
+        typeof publicMetadata.provider_name === "string"
+          ? publicMetadata.provider_name
+          : typeof row.provider_name === "string"
+            ? row.provider_name
+            : null,
       provider_key: typeof row.provider_key === "string" ? row.provider_key : null,
       summary: typeof row.summary === "string" ? row.summary : null,
       value_minor: typeof row.value_minor === "number" ? row.value_minor : Number(row.value_minor ?? 0),
@@ -4388,11 +5242,30 @@ async function loadWorkspaceRows({
   });
 
   assertWorkspaceRowsMatchCategory(canonicalRows, { sectionKey, categoryKey });
+  const filteredRows = recordFilter ? canonicalRows.filter(recordFilter) : canonicalRows;
+
+  if (sectionKey === "finances" && categoryKey === "bank") {
+    appendDevBankTrace({
+      kind: "bank-load",
+      source: "UniversalRecordWorkspace.loadWorkspaceRows",
+      timestamp: new Date().toISOString(),
+      userId,
+      organisationId: walletContext.organisationId,
+      walletId: walletContext.walletId,
+      assetIds: filteredRows.map((row) => row.id),
+      assetCategoryTokens: filteredRows.map((row) =>
+        String(row.metadata?.asset_category_token ?? row.metadata?.category_slug ?? "").trim(),
+      ),
+      titles: filteredRows.map((row) =>
+        String(row.metadata?.provider_name ?? row.provider_name ?? row.metadata?.institution_name ?? row.title ?? "").trim(),
+      ),
+    });
+  }
 
   return {
     ok: true,
     warning,
-    rows: canonicalRows,
+    rows: filteredRows,
   };
 }
 
@@ -4404,17 +5277,28 @@ async function reloadWorkspace(
   setAttachments: (rows: RecordAttachment[]) => void,
   setContacts: (rows: RecordContact[]) => void,
   setStatus: (value: string) => void,
+  {
+    targetOwnerUserId,
+    forceCanonicalRead = false,
+    recordFilter,
+  }: {
+    targetOwnerUserId?: string | null;
+    forceCanonicalRead?: boolean;
+    recordFilter?: ((row: UniversalRecordRow) => boolean) | undefined;
+  } = {},
 ) {
   const user = await requireUser(router);
   if (!user) return;
+  const effectiveOwnerUserId = targetOwnerUserId || user.id;
 
   const usesCanonicalAssets = Boolean(resolveCanonicalCategorySlug(sectionKey, categoryKey));
-  const usesCanonicalAssetReadPath = Boolean(getManagedAssetWorkspaceConfig(sectionKey, categoryKey)?.readsCanonicalAssets) || usesCanonicalAssets;
+  const usesCanonicalAssetReadPath = forceCanonicalRead || Boolean(getManagedAssetWorkspaceConfig(sectionKey, categoryKey)?.readsCanonicalAssets) || usesCanonicalAssets;
   const recordsResult = await loadWorkspaceRows({
-    userId: user.id,
+    userId: effectiveOwnerUserId,
     sectionKey,
     categoryKey,
     usesCanonicalAssets: usesCanonicalAssetReadPath,
+    recordFilter,
   });
 
   if (!recordsResult.ok) {
@@ -4437,46 +5321,148 @@ async function reloadWorkspace(
     supabase
       .from("documents")
       .select("id,asset_id,owner_user_id,storage_bucket,storage_path,file_name,mime_type,size_bytes,checksum,created_at,document_kind")
-      .eq("owner_user_id", user.id)
+      .eq("owner_user_id", effectiveOwnerUserId)
       .in("asset_id", ids)
       .is("deleted_at", null)
       .order("created_at", { ascending: false }),
     supabase
       .from("attachments")
       .select("id,record_id,owner_user_id,storage_bucket,storage_path,file_name,mime_type,size_bytes,checksum,created_at")
-      .eq("owner_user_id", user.id)
+      .eq("owner_user_id", effectiveOwnerUserId)
       .in("record_id", ids)
       .order("created_at", { ascending: false }),
-    usesCanonicalAssetReadPath
-      ? Promise.resolve({ data: [], error: null })
-      : supabase
-          .from("record_contacts")
-          .select("id,record_id,owner_user_id,contact_name,contact_email,contact_role,notes,created_at")
-          .eq("owner_user_id", user.id)
-          .in("record_id", ids)
-          .order("created_at", { ascending: false }),
+    loadWorkspaceContacts({
+      userId: effectiveOwnerUserId,
+      ids,
+      usesCanonicalAssetReadPath,
+    }),
   ]);
 
   if (documentsResult.error && attachmentsResult.error) {
     setStatus(`Could not refresh attachments: ${documentsResult.error.message}`);
   } else {
-    setAttachments([
-      ...(!documentsResult.error
-        ? mapDocumentRowsToAttachments((documentsResult.data ?? []) as Array<Record<string, unknown>>)
-        : []),
-      ...(!attachmentsResult.error
-        ? mapLegacyAttachmentRowsToAttachments((attachmentsResult.data ?? []) as Array<Record<string, unknown>>)
-        : []),
-    ]);
+    setAttachments(
+      mergeWorkspaceAttachments({
+        documents: !documentsResult.error
+          ? mapDocumentRowsToAttachments((documentsResult.data ?? []) as Array<Record<string, unknown>>)
+          : [],
+        legacyAttachments: !attachmentsResult.error
+          ? mapLegacyAttachmentRowsToAttachments((attachmentsResult.data ?? []) as Array<Record<string, unknown>>)
+          : [],
+      }),
+    );
   }
-  if (contactsResult.error) setStatus(`Could not refresh contacts: ${contactsResult.error.message}`);
-  setContacts((contactsResult.data ?? []) as RecordContact[]);
+  if (!contactsResult.ok) setStatus(`Could not refresh contacts: ${contactsResult.error}`);
+  setContacts(contactsResult.ok ? contactsResult.rows : []);
 }
 
 function toMinorUnits(valueMajorText: string) {
   const parsed = Number(valueMajorText || 0);
   if (!Number.isFinite(parsed)) return 0;
   return Math.round(parsed * 100);
+}
+
+async function loadWorkspaceContacts({
+  userId,
+  ids,
+  usesCanonicalAssetReadPath,
+}: {
+  userId: string;
+  ids: string[];
+  usesCanonicalAssetReadPath: boolean;
+}): Promise<{ ok: true; rows: RecordContact[] } | { ok: false; error: string }> {
+  if (ids.length === 0) return { ok: true, rows: [] };
+
+  if (usesCanonicalAssetReadPath) {
+    const linksRes = await supabase
+      .from("contact_links")
+      .select("id,owner_user_id,contact_id,source_id,source_kind,context_label,role_label,created_at")
+      .eq("owner_user_id", userId)
+      .eq("source_kind", "asset")
+      .in("source_id", ids);
+    if (linksRes.error) return { ok: false, error: linksRes.error.message };
+
+    const linkRows = ((linksRes.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+      id: String(row.id ?? ""),
+      owner_user_id: String(row.owner_user_id ?? userId),
+      contact_id: String(row.contact_id ?? ""),
+      record_id: String(row.source_id ?? ""),
+      contact_name: "",
+      contact_email: null,
+      contact_phone: null,
+      contact_role: typeof row.role_label === "string" ? row.role_label : null,
+      relationship: null,
+      invite_status: null,
+      verification_status: null,
+      linked_context: [],
+      notes: typeof row.context_label === "string" ? row.context_label : null,
+      created_at: String(row.created_at ?? ""),
+    })) as RecordContact[];
+
+    return {
+      ok: true,
+      rows: await mergeRecordContactsWithCanonicalContacts(userId, linkRows),
+    };
+  }
+
+  const contactsRes = await supabase
+    .from("record_contacts")
+    .select("id,record_id,owner_user_id,contact_id,contact_name,contact_email,contact_role,notes,created_at")
+    .eq("owner_user_id", userId)
+    .in("record_id", ids)
+    .order("created_at", { ascending: false });
+  if (contactsRes.error) return { ok: false, error: contactsRes.error.message };
+
+  const baseRows = ((contactsRes.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+    id: String(row.id ?? ""),
+    record_id: String(row.record_id ?? ""),
+    owner_user_id: String(row.owner_user_id ?? userId),
+    contact_id: typeof row.contact_id === "string" ? row.contact_id : null,
+    contact_name: String(row.contact_name ?? ""),
+    contact_email: typeof row.contact_email === "string" ? row.contact_email : null,
+    contact_phone: null,
+    contact_role: typeof row.contact_role === "string" ? row.contact_role : null,
+    relationship: null,
+    invite_status: null,
+    verification_status: null,
+    linked_context: [],
+    notes: typeof row.notes === "string" ? row.notes : null,
+    created_at: String(row.created_at ?? ""),
+  })) as RecordContact[];
+
+  return {
+    ok: true,
+    rows: await mergeRecordContactsWithCanonicalContacts(userId, baseRows),
+  };
+}
+
+async function mergeRecordContactsWithCanonicalContacts(userId: string, rows: RecordContact[]) {
+  const contactIds = rows.map((row) => String(row.contact_id ?? "").trim()).filter(Boolean);
+  if (contactIds.length === 0) return rows;
+
+  let canonicalContacts: CanonicalContactRow[] = [];
+  try {
+    canonicalContacts = await loadCanonicalContactsByIds(supabase, userId, contactIds);
+  } catch {
+    return rows;
+  }
+
+  const canonicalById = new Map(canonicalContacts.map((row) => [row.id, row]));
+  return rows.map((row) => {
+    const canonical = row.contact_id ? canonicalById.get(row.contact_id) : null;
+    if (!canonical) return row;
+    return {
+      ...row,
+      contact_name: canonical.full_name || row.contact_name,
+      contact_email: canonical.email ?? row.contact_email,
+      contact_phone: canonical.phone ?? row.contact_phone,
+      contact_role: canonical.contact_role ?? row.contact_role,
+      relationship: canonical.relationship ?? row.relationship ?? row.contact_role,
+      invite_status: canonical.invite_status ?? row.invite_status,
+      verification_status: canonical.verification_status ?? row.verification_status,
+      linked_context: canonical.linked_context ?? row.linked_context,
+    };
+  });
 }
 
 function toMajorUnits(valueMinor: number | null) {
@@ -4497,7 +5483,7 @@ function groupByBucket(items: RecordAttachment[]) {
 async function requireUser(router: ReturnType<typeof useRouter>) {
   const user = await waitForActiveUser(supabase, { attempts: 5, delayMs: 120 });
   if (!user) {
-    router.replace("/signin");
+    router.replace("/sign-in");
     return null;
   }
   return user;
@@ -4622,6 +5608,17 @@ const maskedRowStyle: CSSProperties = {
   flexWrap: "wrap",
   alignItems: "center",
   gap: 12,
+};
+
+const recordUpdateStampStyle: CSSProperties = {
+  color: "#94a3b8",
+  fontSize: 12,
+};
+
+const linkedContactLinkStyle: CSSProperties = {
+  color: "#1d4ed8",
+  fontWeight: 600,
+  textDecoration: "none",
 };
 
 const confirmationCardStyle: CSSProperties = {

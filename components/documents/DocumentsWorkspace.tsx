@@ -16,12 +16,14 @@ import {
 import { supabase } from "../../lib/supabaseClient";
 import { validateUploadFile } from "../../lib/validation/upload";
 import { FileDropzone, FormField, SelectInput, TextInput } from "../forms/asset/AssetFormControls";
+import AttachmentGallery from "./AttachmentGallery";
 import {
   filterDiscoveryDocuments,
   formatDiscoveryCategoryLabel,
   formatDiscoverySectionLabel,
 } from "../../lib/records/discovery";
 import Icon from "../ui/Icon";
+import { useViewerAccess } from "../access/ViewerAccessContext";
 
 type DocumentsWorkspaceProps = {
   title: string;
@@ -31,6 +33,7 @@ type DocumentsWorkspaceProps = {
 
 export default function DocumentsWorkspace({ title, subtitle, sectionFilter }: DocumentsWorkspaceProps) {
   const router = useRouter();
+  const { viewer } = useViewerAccess();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
@@ -58,7 +61,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter }: D
 
       try {
         const result = await loadCanonicalDocumentWorkspaceData(supabase, {
-          ownerUserId: user.id,
+          ownerUserId: viewer.targetOwnerUserId || user.id,
           sectionKeys: sectionFilter ? [sectionFilter] : undefined,
         });
         if (!mounted) return;
@@ -78,7 +81,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter }: D
     return () => {
       mounted = false;
     };
-  }, [router, sectionFilter]);
+  }, [router, sectionFilter, viewer.targetOwnerUserId]);
 
   const assetOptions = useMemo(
     () =>
@@ -117,7 +120,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter }: D
     if (!user) return;
     try {
       const result = await loadCanonicalDocumentWorkspaceData(supabase, {
-        ownerUserId: user.id,
+        ownerUserId: viewer.targetOwnerUserId || user.id,
         sectionKeys: sectionFilter ? [sectionFilter] : undefined,
       });
       setAssets(result.assets);
@@ -128,6 +131,10 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter }: D
   }
 
   async function handleUpload() {
+    if (viewer.readOnly) {
+      setFormError("This linked account is view-only.");
+      return;
+    }
     setFormError("");
     const user = await requireUser(router);
     if (!user) return;
@@ -186,19 +193,6 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter }: D
     setReviewConfirmed(false);
     setStatus(`Document linked to ${asset?.parentLabel ?? "the selected asset"}.`);
     await reloadDocuments();
-  }
-
-  async function openDocument(item: CanonicalDocumentWorkspaceItem) {
-    const signedUrl = await getStoredFileSignedUrl(supabase, {
-      storageBucket: item.storageBucket,
-      storagePath: item.storagePath,
-      expiresInSeconds: 120,
-    });
-    if (!signedUrl) {
-      setStatus(`Could not open ${item.fileName || "this file"}.`);
-      return;
-    }
-    window.open(signedUrl, "_blank", "noopener,noreferrer");
   }
 
   async function downloadDocument(item: CanonicalDocumentWorkspaceItem) {
@@ -314,6 +308,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter }: D
         </div>
       </div>
 
+      {!viewer.readOnly ? (
       <div style={workspaceCardStyle}>
         <div style={{ display: "grid", gap: 6 }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontWeight: 700 }}>
@@ -410,6 +405,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter }: D
           {status ? <div style={{ color: "#475569", fontSize: 13, alignSelf: "center" }}>{status}</div> : null}
         </div>
       </div>
+      ) : null}
 
       <div style={workspaceCardStyle}>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontWeight: 700 }}>
@@ -444,50 +440,27 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter }: D
             {hasDocumentFilters ? "No linked documents match the current search or filters." : "No linked documents yet."}
           </div>
         ) : (
-          <div style={{ display: "grid", gap: 10 }}>
-            {filteredDocuments.map((item) => (
-              <article key={item.id} style={documentCardStyle}>
-                <div style={{ display: "grid", gap: 6 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <Icon name={item.documentKind === "photo" ? "photo_camera" : "description"} size={18} />
-                    <button type="button" style={inlineLinkBtn} onClick={() => void openDocument(item)}>
-                      {item.fileName}
-                    </button>
-                  </div>
-                  <div style={{ color: "#475569", fontSize: 13 }}>
-                    Linked to <strong>{item.parentLabel}</strong> in {formatDiscoverySectionLabel(item.sectionKey)} / {formatDiscoveryCategoryLabel(item.categoryKey)}
-                  </div>
-                  <div style={{ color: "#64748b", fontSize: 12 }}>
-                    {item.documentKind === "photo" ? "Photo" : "Document"} · {formatDate(item.createdAt)}
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button type="button" style={miniGhostBtn} onClick={() => void openDocument(item)}>
-                    <Icon name="open_in_new" size={16} />
-                    View
-                  </button>
-                  <button type="button" style={miniGhostBtn} onClick={() => void downloadDocument(item)}>
-                    <Icon name="download" size={16} />
-                    Download
-                  </button>
-                  <button type="button" style={miniGhostBtn} onClick={() => router.push(getAssetWorkspaceHref(item.sectionKey, item.categoryKey))}>
-                    <Icon name="account_tree" size={16} />
-                    Open asset
-                  </button>
-                  {isPrintableDocumentMimeType(item.mimeType) ? (
-                    <button type="button" style={miniGhostBtn} onClick={() => void printDocument(item)}>
-                      <Icon name="print" size={16} />
-                      Print
-                    </button>
-                  ) : null}
-                  <button type="button" style={dangerGhostBtn} onClick={() => void removeDocument(item)}>
-                    <Icon name="delete" size={16} />
-                    Remove
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
+          <AttachmentGallery
+            items={filteredDocuments.map((item) => ({
+              id: item.id,
+              fileName: item.fileName,
+              mimeType: item.mimeType,
+              createdAt: item.createdAt,
+              metaLabel: `Linked to ${item.parentLabel} in ${formatDiscoverySectionLabel(item.sectionKey)} / ${formatDiscoveryCategoryLabel(item.categoryKey)}`,
+              document: item,
+            }))}
+            emptyText={hasDocumentFilters ? "No linked documents match the current search or filters." : "No linked documents yet."}
+            onResolvePreviewUrl={(entry) => getStoredFileSignedUrl(supabase, {
+              storageBucket: entry.document.storageBucket,
+              storagePath: entry.document.storagePath,
+              expiresInSeconds: 120,
+            })}
+            onDownload={(entry) => void downloadDocument(entry.document)}
+            onPrint={(entry) => void printDocument(entry.document)}
+            onRemove={viewer.readOnly ? undefined : (entry) => void removeDocument(entry.document)}
+            onOpenRelated={(entry) => router.push(getAssetWorkspaceHref(entry.document.sectionKey, entry.document.categoryKey))}
+            openRelatedLabel="Open asset"
+          />
         )}
       </div>
     </section>
@@ -497,7 +470,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter }: D
 async function requireUser(router: ReturnType<typeof useRouter>) {
   const user = await waitForActiveUser(supabase, { attempts: 5, delayMs: 120 });
   if (!user) {
-    router.replace("/signin");
+    router.replace("/sign-in");
     return null;
   }
   return user;
@@ -530,45 +503,6 @@ const workspaceCardStyle: CSSProperties = {
   background: "#fff",
   display: "grid",
   gap: 12,
-};
-
-const documentCardStyle: CSSProperties = {
-  border: "1px solid #e2e8f0",
-  borderRadius: 12,
-  padding: 12,
-  background: "#fff",
-  display: "grid",
-  gap: 10,
-};
-
-const inlineLinkBtn: CSSProperties = {
-  border: "none",
-  background: "transparent",
-  color: "#0f172a",
-  padding: 0,
-  cursor: "pointer",
-  fontSize: 14,
-  fontWeight: 700,
-};
-
-const miniGhostBtn: CSSProperties = {
-  border: "1px solid #cbd5e1",
-  background: "#fff",
-  color: "#0f172a",
-  borderRadius: 10,
-  padding: "7px 10px",
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 6,
-  cursor: "pointer",
-  fontSize: 13,
-};
-
-const dangerGhostBtn: CSSProperties = {
-  ...miniGhostBtn,
-  color: "#991b1b",
-  borderColor: "#fecaca",
-  background: "#fff7f7",
 };
 
 const primaryBtnStyle: CSSProperties = {

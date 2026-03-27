@@ -1,7 +1,7 @@
 import * as assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createAsset, updateAsset } from "../lib/assets/createAsset";
-import { readCanonicalBankAsset } from "../lib/assets/bankAsset";
+import { normalizeBankAssetRow } from "../lib/assets/bankAsset";
 import { fetchCanonicalAssets } from "../lib/assets/fetchCanonicalAssets";
 import { BANK_WORKSPACE_CONFIG } from "../lib/assets/workspaceCategoryConfig";
 import { countAssetsByBucket, getAssetsForBucket } from "../lib/dashboard/summary";
@@ -434,7 +434,7 @@ async function main() {
     `Bank page query should return both synthetic Bank assets. Returned ids=${bankPageRows.map((row) => String(row.id ?? "")).join(",")}`,
   );
 
-  const bankTitles = bankPageRows.map((row) => readCanonicalBankAsset({
+  const bankTitles = bankPageRows.map((row) => normalizeBankAssetRow({
     title: String(row.title ?? ""),
     provider_name: typeof row.provider_name === "string" ? row.provider_name : null,
     provider_key: typeof row.provider_key === "string" ? row.provider_key : null,

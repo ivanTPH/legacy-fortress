@@ -21,9 +21,22 @@ export default function InvitationStatusBadge({
         fontSize: 12,
       }}
     >
-      {invitationStatus} · {activationStatus.replace(/_/g, " ")}
+      {formatInvitationStatus(invitationStatus)} · {formatActivationStatus(activationStatus)}
     </span>
   );
+}
+
+function formatInvitationStatus(status: InvitationStatus) {
+  if (status === "pending") return "Pending invitation";
+  if (status === "accepted") return "Invitation accepted";
+  if (status === "rejected") return "Invitation rejected";
+  return "Invitation revoked";
+}
+
+function formatActivationStatus(status: AccessActivationStatus) {
+  if (status === "invited") return "Awaiting sign-in";
+  if (status === "accepted") return "Awaiting verification";
+  return status.replace(/_/g, " ");
 }
 
 function getTone(status: InvitationStatus) {

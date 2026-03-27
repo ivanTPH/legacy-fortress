@@ -50,7 +50,16 @@ export type LoadedProfileWorkspace = {
 export type ProfileIdentityChip = {
   displayName: string;
   avatarUrl: string;
+  telephone: string;
 };
+
+export function resolveProfileIdentityDisplayName(profileDisplayName: string | null | undefined, email: string) {
+  return profileDisplayName?.trim() || email.split("@")[0] || "Secure Account";
+}
+
+export function buildProfileAvatarStoragePath(userId: string, fileName: string, now = Date.now()) {
+  return `${userId}/avatar-${now}-${sanitizeFileName(fileName)}`;
+}
 
 export const EMPTY_PROFILE_FORM: ProfileWorkspaceForm = {
   avatar_path: "",
@@ -87,7 +96,7 @@ export const PROFILE_LANGUAGE_OPTIONS = [
 ];
 
 export const PROFILE_CURRENCY_OPTIONS = CURRENCY_OPTIONS.filter((option) => option.value !== "__other");
-export const AVATAR_BUCKET_CANDIDATES = ["vault-docs", "avatars"] as const;
+export const AVATAR_BUCKET_CANDIDATES = ["avatars", "vault-docs"] as const;
 
 export async function loadProfileWorkspace(
   client: AnySupabaseClient,
@@ -181,6 +190,10 @@ export async function loadProfileWorkspace(
   const countryValue = mapSelectValue(address.country, COUNTRY_OPTIONS);
   const languageValue = mapSelectValue(profile.language, PROFILE_LANGUAGE_OPTIONS);
   const avatar = profile.avatar_path ? await getProfileAvatarPreview(client, profile.avatar_path) : null;
+  const resolvedPrimaryEmail =
+    baseEmail
+    || String(profile.notification_email ?? "").trim()
+    || String(contact.secondary_email ?? "").trim();
 
   let notice = "";
   if (isMissingRelationError(contactRes.error, "contact_details")) {
@@ -195,7 +208,7 @@ export async function loadProfileWorkspace(
       first_name: missingFirstName ? splitName.first : (profile.first_name ?? ""),
       last_name: missingLastName ? splitName.last : (profile.last_name ?? ""),
       display_name: profile.display_name ?? "",
-      primary_email: baseEmail,
+      primary_email: resolvedPrimaryEmail,
       secondary_email: contact.secondary_email ?? "",
       telephone: contact.telephone ?? "",
       mobile_number: contact.mobile_number ?? "",
@@ -208,7 +221,7 @@ export async function loadProfileWorkspace(
       post_code: address.post_code ?? "",
       date_of_birth: profile.date_of_birth ?? "",
       about: profile.about ?? "",
-      notification_email: profile.notification_email ?? baseEmail,
+      notification_email: profile.notification_email ?? resolvedPrimaryEmail,
       preferred_currency: profile.preferred_currency ?? "GBP",
       language: languageValue.selected || "English",
       language_other: languageValue.other,
@@ -256,12 +269,22 @@ export async function loadProfileIdentityChip(
   }
 
   const profile = (profileRes.data ?? null) as { display_name?: string | null; avatar_path?: string | null } | null;
-  const displayName = profile?.display_name?.trim() || email.split("@")[0] || "Secure Account";
+  const displayName = resolveProfileIdentityDisplayName(profile?.display_name, email);
   const avatar = profile?.avatar_path ? await getProfileAvatarPreview(client, profile.avatar_path) : null;
+  const contactRes = await client
+    .from("contact_details")
+    .select("telephone,mobile_number")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const contact = (!contactRes.error ? (contactRes.data ?? null) : null) as {
+    telephone?: string | null;
+    mobile_number?: string | null;
+  } | null;
 
   return {
     displayName,
     avatarUrl: avatar?.signedUrl ?? "",
+    telephone: String(contact?.telephone ?? contact?.mobile_number ?? "").trim(),
   };
 }
 
@@ -383,12 +406,13 @@ export async function uploadProfileAvatarFile(
     file: File;
   },
 ) {
-  const safeName = sanitizeFileName(file.name);
-  const path = `profiles/${userId}/avatar-${Date.now()}-${safeName}`;
+  const path = buildProfileAvatarStoragePath(userId, file.name);
 
   let chosenBucket = "";
   let uploadError = "";
+  const attemptedBuckets: string[] = [];
   for (const bucket of AVATAR_BUCKET_CANDIDATES) {
+    attemptedBuckets.push(bucket);
     const upload = await client.storage.from(bucket).upload(path, file, {
       cacheControl: "3600",
       upsert: true,
@@ -399,7 +423,7 @@ export async function uploadProfileAvatarFile(
     }
     uploadError = upload.error.message;
     if (!upload.error.message.toLowerCase().includes("bucket not found")) {
-      throw upload.error;
+      throw new Error(`Avatar upload failed for bucket ${bucket}: ${upload.error.message}`);
     }
   }
 
@@ -412,6 +436,7 @@ export async function uploadProfileAvatarFile(
     path,
     bucket: chosenBucket,
     previewUrl: signed.data?.signedUrl ?? "",
+    attemptedBuckets,
   };
 }
 

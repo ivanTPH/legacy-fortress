@@ -6,6 +6,7 @@ import AssetCreateModalCore from "../../app/(app)/components/dashboard/AssetCrea
 import type { AssetQuickCreateInput } from "../../app/(app)/components/dashboard/AssetCreateModal";
 import { createAsset } from "../../lib/assets/createAsset";
 import { resolveConfiguredFieldValue, getCanonicalAssetMetadataFromValues } from "../../lib/assets/fieldDictionary";
+import { notifyCanonicalAssetMutation } from "../../lib/assets/liveSync";
 import { waitForActiveUser } from "../../lib/auth/session";
 import { supabase } from "../../lib/supabaseClient";
 
@@ -74,6 +75,26 @@ export default function AssetCreateModal({ assetTypeId, open, onClose }: Props) 
         visibility: "private",
       });
 
+      notifyCanonicalAssetMutation({
+        assetId: created.id,
+        sectionKey:
+          categorySlug === "bank-accounts"
+            ? "finances"
+            : categorySlug === "business-interests"
+              ? "business"
+              : categorySlug === "digital-assets"
+                ? "digital"
+                : "property",
+        categoryKey:
+          categorySlug === "bank-accounts"
+            ? "bank"
+            : categorySlug === "business-interests"
+              ? "business"
+              : categorySlug === "digital-assets"
+                ? "digital"
+                : "property",
+        source: "components/assets/AssetCreateModal.onSubmit",
+      });
       onClose();
       router.replace(`/dashboard?created=1&category=${encodeURIComponent(categorySlug)}&createdId=${encodeURIComponent(created.id)}`);
       router.refresh();

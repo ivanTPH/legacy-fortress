@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
+import Icon from "../../../../components/ui/Icon";
+import { ActionIconButton, IconButton } from "../../../../components/ui/IconButton";
 import {
   ROLE_RULES,
   type AccessActivationStatus,
@@ -11,9 +13,18 @@ import { supabase } from "../../../../lib/supabaseClient";
 import { getSafeUserData } from "../../../../lib/auth/requireActiveUser";
 import InvitationStatusBadge, { type InvitationStatus } from "./InvitationStatusBadge";
 import RoleBadge from "./RoleBadge";
+import {
+  loadCanonicalContactsByIds,
+  mapActivationStatusToVerificationStatus,
+  syncCanonicalContact,
+  type CanonicalContactRow,
+} from "../../../../lib/contacts/canonicalContacts";
+import { buildInvitationEmailDraft } from "../../../../lib/contacts/invitations";
+import { assertOwnerCanSendInvitation, ensureOwnerPlanProfile, getPlanLimitRedirectHref } from "../../../../lib/accountPlan";
 
 type InvitationRow = {
   id: string;
+  contact_id: string | null;
   contact_name: string;
   contact_email: string;
   assigned_role: CollaboratorRole;
@@ -28,8 +39,6 @@ type RoleAssignmentRow = {
   assigned_role: CollaboratorRole;
   activation_status: AccessActivationStatus;
 };
-
-const editableStatuses: InvitationStatus[] = ["pending", "accepted", "rejected"];
 
 export default function ContactInvitationManager() {
   const router = useRouter();
@@ -51,6 +60,12 @@ export default function ContactInvitationManager() {
         .map((key) => ({ value: key, label: ROLE_RULES[key].label })),
     [],
   );
+  const invitationSummary = useMemo(() => {
+    const invited = rows.filter((row) => row.invitation_status === "pending").length;
+    const accepted = rows.filter((row) => row.invitation_status === "accepted" || row.activation_status === "active" || row.activation_status === "verified").length;
+    const readyToSend = rows.filter((row) => !row.sent_at && row.invitation_status === "pending").length;
+    return { total: rows.length, invited, accepted, readyToSend };
+  }, [rows]);
 
   const loadRows = useCallback(async () => {
     setLoading(true);
@@ -58,7 +73,7 @@ export default function ContactInvitationManager() {
 
     const { data: userData, error: authError } = await getSafeUserData(supabase);
     if (authError || !userData.user) {
-      router.replace("/signin");
+      router.replace("/sign-in");
       return;
     }
 
@@ -67,7 +82,7 @@ export default function ContactInvitationManager() {
     const [invRes, roleRes] = await Promise.all([
       supabase
         .from("contact_invitations")
-        .select("id,contact_name,contact_email,assigned_role,invitation_status,invited_at,sent_at")
+        .select("id,contact_id,contact_name,contact_email,assigned_role,invitation_status,invited_at,sent_at")
         .eq("owner_user_id", userId)
         .order("invited_at", { ascending: false }),
       supabase
@@ -88,8 +103,24 @@ export default function ContactInvitationManager() {
       roleMap.set(row.invitation_id, row);
     }
 
+    const contactIds = ((invRes.data ?? []) as Array<{ contact_id: string | null }>)
+      .map((row) => String(row.contact_id ?? "").trim())
+      .filter(Boolean);
+    let canonicalContacts: CanonicalContactRow[] = [];
+    if (contactIds.length > 0) {
+      try {
+        canonicalContacts = await loadCanonicalContactsByIds(supabase, userId, contactIds);
+      } catch (error) {
+        setStatus(
+          `⚠️ Invitations loaded, but shared contacts could not be resolved: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
+      }
+    }
+    const canonicalById = new Map(canonicalContacts.map((row) => [row.id, row]));
+
     const mapped = ((invRes.data ?? []) as Array<{
       id: string;
+      contact_id: string | null;
       contact_name: string | null;
       contact_email: string | null;
       assigned_role: CollaboratorRole | null;
@@ -98,10 +129,12 @@ export default function ContactInvitationManager() {
       sent_at: string | null;
     }>).map((row) => {
       const assignment = roleMap.get(row.id);
+      const canonical = row.contact_id ? canonicalById.get(row.contact_id) : null;
       return {
         id: row.id,
-        contact_name: row.contact_name ?? "",
-        contact_email: row.contact_email ?? "",
+        contact_id: row.contact_id ?? canonical?.id ?? null,
+        contact_name: canonical?.full_name ?? row.contact_name ?? "",
+        contact_email: canonical?.email ?? row.contact_email ?? "",
         assigned_role: assignment?.assigned_role ?? row.assigned_role ?? "professional_advisor",
         invitation_status: row.invitation_status ?? "pending",
         activation_status: assignment?.activation_status ?? "invited",
@@ -132,17 +165,28 @@ export default function ContactInvitationManager() {
 
       const { data: userData, error: authError } = await getSafeUserData(supabase);
       if (authError || !userData.user) {
-        router.replace("/signin");
+        router.replace("/sign-in");
         return;
       }
 
       const userId = userData.user.id;
       const now = new Date().toISOString();
+      const currentEditingRow = editingId ? rows.find((row) => row.id === editingId) ?? null : null;
+      const canonicalContact = await syncCanonicalContact(supabase, {
+        ownerUserId: userId,
+        existingContactId: currentEditingRow?.contact_id ?? null,
+        fullName: nameTrim,
+        email: emailTrim,
+        contactRole: role,
+        sourceType: "invitation",
+        inviteStatus: editingId ? "invite_sent" : "not_invited",
+        verificationStatus: editingId ? "invited" : "not_verified",
+      });
 
       if (editingId) {
         const updateRes = await supabase
           .from("contact_invitations")
-          .update({ contact_name: nameTrim, contact_email: emailTrim, assigned_role: role, updated_at: now })
+          .update({ contact_id: canonicalContact.id, contact_name: nameTrim, contact_email: emailTrim, assigned_role: role, updated_at: now })
           .eq("id", editingId)
           .eq("owner_user_id", userId);
 
@@ -161,11 +205,33 @@ export default function ContactInvitationManager() {
           );
 
         if (assignRes.error) throw assignRes.error;
+
+        await syncCanonicalContact(supabase, {
+          ownerUserId: userId,
+          existingContactId: canonicalContact.id,
+          fullName: nameTrim,
+          email: emailTrim,
+          contactRole: role,
+          sourceType: "invitation",
+          inviteStatus: "invite_sent",
+          verificationStatus: currentEditingRow
+            ? mapActivationStatusToVerificationStatus(currentEditingRow.activation_status)
+            : "invited",
+          link: {
+            sourceKind: "invitation",
+            sourceId: editingId,
+            sectionKey: "dashboard",
+            categoryKey: "contacts",
+            label: "Contact invitation",
+            role,
+          },
+        });
       } else {
         const insertRes = await supabase
           .from("contact_invitations")
           .insert({
             owner_user_id: userId,
+            contact_id: canonicalContact.id,
             contact_name: nameTrim,
             contact_email: emailTrim,
             assigned_role: role,
@@ -187,6 +253,25 @@ export default function ContactInvitationManager() {
         });
 
         if (assignRes.error) throw assignRes.error;
+
+        await syncCanonicalContact(supabase, {
+          ownerUserId: userId,
+          existingContactId: canonicalContact.id,
+          fullName: nameTrim,
+          email: emailTrim,
+          contactRole: role,
+          sourceType: "invitation",
+          inviteStatus: "invite_sent",
+          verificationStatus: "invited",
+          link: {
+            sourceKind: "invitation",
+            sourceId: insertRes.data.id,
+            sectionKey: "dashboard",
+            categoryKey: "contacts",
+            label: "Contact invitation",
+            role,
+          },
+        });
       }
 
       setEditingId(null);
@@ -206,13 +291,66 @@ export default function ContactInvitationManager() {
     setStatus("");
     const { data: userData, error: authError } = await getSafeUserData(supabase);
     if (authError || !userData.user) {
-      router.replace("/signin");
+      router.replace("/sign-in");
+      return;
+    }
+    const ownerPlan = await ensureOwnerPlanProfile(supabase, userData.user.id);
+    const inviteCountRes = await supabase
+      .from("contact_invitations")
+      .select("id", { count: "exact", head: true })
+      .eq("owner_user_id", userData.user.id)
+      .neq("invitation_status", "revoked");
+    if (inviteCountRes.error) {
+      setStatus(`❌ Could not check invitation allowance: ${inviteCountRes.error.message}`);
+      return;
+    }
+    try {
+      assertOwnerCanSendInvitation(ownerPlan, Number(inviteCountRes.count ?? 0));
+    } catch (error) {
+      setStatus(`❌ ${error instanceof Error ? error.message : "Invitation limit reached."}`);
+      const redirectHref = getPlanLimitRedirectHref(error);
+      if (redirectHref) {
+        router.push(redirectHref);
+      }
       return;
     }
 
     const token = crypto.randomUUID().replace(/-/g, "");
     const tokenHash = await sha256(token);
     const now = new Date().toISOString();
+    const { data: ownerProfile } = await supabase
+      .from("user_profiles")
+      .select("display_name")
+      .eq("user_id", userData.user.id)
+      .maybeSingle();
+    const emailDraft = buildInvitationEmailDraft({
+      invitationId: row.id,
+      token,
+      assignedRole: row.assigned_role,
+      accountHolderName: String(ownerProfile?.display_name ?? "").trim() || userData.user.email?.split("@")[0] || "the account holder",
+    });
+    const deliveryResult = await supabase.auth.signInWithOtp({
+      email: row.contact_email,
+      options: {
+        shouldCreateUser: true,
+        emailRedirectTo:
+          typeof window !== "undefined"
+            ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(emailDraft.acceptPath)}`
+            : undefined,
+        data: {
+          invitation_id: row.id,
+          invitation_role: row.assigned_role,
+          account_holder_name:
+            String(ownerProfile?.display_name ?? "").trim() || userData.user.email?.split("@")[0] || "the account holder",
+          linked_access: "view_only",
+        },
+      },
+    });
+
+    if (deliveryResult.error) {
+      setStatus(`❌ Could not ${resend ? "resend" : "send"} invitation email: ${deliveryResult.error.message}`);
+      return;
+    }
 
     const { error } = await supabase
       .from("contact_invitations")
@@ -231,17 +369,45 @@ export default function ContactInvitationManager() {
       return;
     }
 
+    if (row.contact_id) {
+      await syncCanonicalContact(supabase, {
+        ownerUserId: userData.user.id,
+        existingContactId: row.contact_id,
+        fullName: row.contact_name,
+        email: row.contact_email,
+        contactRole: row.assigned_role,
+        sourceType: "invitation",
+        inviteStatus: "invite_sent",
+        verificationStatus: mapActivationStatusToVerificationStatus(row.activation_status),
+        link: {
+          sourceKind: "invitation",
+          sourceId: row.id,
+          sectionKey: "dashboard",
+          categoryKey: "contacts",
+          label: "Contact invitation",
+          role: row.assigned_role,
+        },
+      });
+    }
+
     const { error: eventError } = await supabase.from("invitation_events").insert({
       owner_user_id: userData.user.id,
       invitation_id: row.id,
       event_type: resend ? "resent" : "sent",
-      payload: { contact_email: row.contact_email, token_hint: token.slice(-6) },
+      payload: {
+        contact_email: row.contact_email,
+        token_hint: token.slice(-6),
+        subject: emailDraft.subject,
+        preview: emailDraft.preview,
+        body_text: emailDraft.bodyText,
+        accept_path: emailDraft.acceptPath,
+      },
     });
 
     if (eventError) {
-      setStatus(`⚠️ Invite updated but event log failed: ${eventError.message}`);
+      setStatus(`⚠️ Invitation email sent, but event log failed: ${eventError.message}`);
     } else {
-      setStatus(`✅ Invitation ${resend ? "resent" : "sent"}.`);
+      setStatus(`✅ Invitation email ${resend ? "resent" : "sent"} to ${row.contact_email}.`);
     }
 
     await loadRows();
@@ -261,7 +427,7 @@ export default function ContactInvitationManager() {
 
     const { data: userData, error: authError } = await getSafeUserData(supabase);
     if (authError || !userData.user) {
-      router.replace("/signin");
+      router.replace("/sign-in");
       return;
     }
 
@@ -285,170 +451,229 @@ export default function ContactInvitationManager() {
       return;
     }
 
+    if (row.contact_id) {
+      await syncCanonicalContact(supabase, {
+        ownerUserId: userData.user.id,
+        existingContactId: row.contact_id,
+        fullName: row.contact_name,
+        email: row.contact_email,
+        contactRole: row.assigned_role,
+        sourceType: "invitation",
+        inviteStatus: "revoked",
+        verificationStatus: "revoked",
+        link: {
+          sourceKind: "invitation",
+          sourceId: row.id,
+          sectionKey: "dashboard",
+          categoryKey: "contacts",
+          label: "Contact invitation",
+          role: row.assigned_role,
+        },
+      });
+    }
+
     setStatus("✅ Contact revoked.");
-    await loadRows();
-  }
-
-  async function updateStatus(row: InvitationRow, nextStatus: InvitationStatus) {
-    const { data: userData, error: authError } = await getSafeUserData(supabase);
-    if (authError || !userData.user) {
-      router.replace("/signin");
-      return;
-    }
-
-    const now = new Date().toISOString();
-    const patch: Record<string, string> = { invitation_status: nextStatus, updated_at: now };
-    if (nextStatus === "accepted") patch.accepted_at = now;
-    if (nextStatus === "rejected") patch.rejected_at = now;
-
-    const { error } = await supabase
-      .from("contact_invitations")
-      .update(patch)
-      .eq("id", row.id)
-      .eq("owner_user_id", userData.user.id);
-
-    if (error) {
-      setStatus(`❌ Status update failed: ${error.message}`);
-      return;
-    }
-
-    const activationStatus: AccessActivationStatus =
-      nextStatus === "accepted" ? "accepted" : nextStatus === "rejected" ? "rejected" : "invited";
-
-    await supabase
-      .from("role_assignments")
-      .update({ activation_status: activationStatus, updated_at: now })
-      .eq("invitation_id", row.id)
-      .eq("owner_user_id", userData.user.id);
-
     await loadRows();
   }
 
   return (
     <section
-      style={{
-        border: "1px solid #e5e7eb",
-        borderRadius: 16,
-        background: "#fff",
-        padding: 14,
-        display: "grid",
-        gap: 12,
-      }}
+      style={panelStyle}
       aria-label="Contact invitation management"
     >
-      <div>
-        <h2 style={{ margin: 0, fontSize: 18 }}>Contacts, invitations and roles</h2>
-        <p style={{ margin: "4px 0 0", color: "#6b7280", fontSize: 13 }}>
-          Invite trusted contacts, assign roles, and track invitation and activation status.
-        </p>
+      <div style={panelHeaderStyle}>
+        <div style={{ display: "grid", gap: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={sectionIconStyle}>
+              <Icon name="contacts" size={16} />
+            </div>
+            <h2 style={{ margin: 0, fontSize: 18 }}>Contacts, invitations and roles</h2>
+          </div>
+          <p style={{ margin: 0, color: "#6b7280", fontSize: 13 }}>
+            Keep trusted contacts, invitation progress, and assigned access roles easy to review in one place.
+          </p>
+        </div>
       </div>
 
-      <div className="lf-content-grid">
-        <label style={fieldStyle}>
-          <span style={fieldLabelStyle}>Name</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
-        </label>
-        <label style={fieldStyle}>
-          <span style={fieldLabelStyle}>Email</span>
-          <input value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} type="email" />
-        </label>
-        <label style={fieldStyle}>
-          <span style={fieldLabelStyle}>Role</span>
-          <select value={role} onChange={(e) => setRole(e.target.value as CollaboratorRole)} style={inputStyle}>
-            {roleOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+      <div style={summaryGridStyle}>
+        <div style={summaryCardStyle}>
+          <span style={summaryLabelStyle}>Contacts</span>
+          <strong style={summaryValueStyle}>{invitationSummary.total}</strong>
+          <span style={summaryHelpStyle}>Tracked here</span>
+        </div>
+        <div style={summaryCardStyle}>
+          <span style={summaryLabelStyle}>Pending</span>
+          <strong style={summaryValueStyle}>{invitationSummary.invited}</strong>
+          <span style={summaryHelpStyle}>Awaiting response</span>
+        </div>
+        <div style={summaryCardStyle}>
+          <span style={summaryLabelStyle}>Accepted</span>
+          <strong style={summaryValueStyle}>{invitationSummary.accepted}</strong>
+          <span style={summaryHelpStyle}>Linked or verified</span>
+        </div>
+        <div style={summaryCardStyle}>
+          <span style={summaryLabelStyle}>Ready to send</span>
+          <strong style={summaryValueStyle}>{invitationSummary.readyToSend}</strong>
+          <span style={summaryHelpStyle}>Saved but unsent</span>
+        </div>
       </div>
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button type="button" style={primaryBtnStyle} disabled={saving} onClick={() => void saveContact()}>
-          {saving ? "Saving..." : editingId ? "Update contact" : "Add contact"}
-        </button>
-        {editingId ? (
-          <button
-            type="button"
-            style={ghostBtnStyle}
-            onClick={() => {
-              setEditingId(null);
-              setName("");
-              setEmail("");
-              setRole("professional_advisor");
-            }}
-          >
-            Cancel
+      <div style={sectionBlockStyle}>
+        <div style={sectionHeaderStyle}>
+          <div>
+            <h3 style={sectionTitleStyle}>{editingId ? "Edit contact" : "Add contact"}</h3>
+            <p style={sectionIntroStyle}>
+              Save the contact first, then send or resend their invitation when you are ready.
+            </p>
+          </div>
+        </div>
+
+        <div className="lf-content-grid" style={{ gap: 10 }}>
+          <label style={fieldStyle}>
+            <span style={fieldLabelStyle}>Name</span>
+            <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} placeholder="Full name" />
+          </label>
+          <label style={fieldStyle}>
+            <span style={fieldLabelStyle}>Email</span>
+            <input value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} type="email" placeholder="name@example.com" />
+          </label>
+          <label style={fieldStyle}>
+            <span style={fieldLabelStyle}>Role</span>
+            <select value={role} onChange={(e) => setRole(e.target.value as CollaboratorRole)} style={inputStyle}>
+              {roleOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button type="button" style={primaryBtnStyle} disabled={saving} onClick={() => void saveContact()}>
+            {saving ? "Saving..." : editingId ? "Update contact" : "Add contact"}
           </button>
-        ) : null}
+          {editingId ? (
+            <button
+              type="button"
+              style={ghostBtnStyle}
+              onClick={() => {
+                setEditingId(null);
+                setName("");
+                setEmail("");
+                setRole("professional_advisor");
+              }}
+            >
+              Cancel
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {status ? <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div> : null}
 
-      {loading ? (
-        <div style={{ color: "#6b7280" }}>Loading invitations...</div>
-      ) : rows.length === 0 ? (
-        <div style={{ color: "#6b7280" }}>No contacts invited yet.</div>
-      ) : (
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <thead>
-              <tr style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>
-                <th style={thStyle}>Contact</th>
-                <th style={thStyle}>Role</th>
-                <th style={thStyle}>Status</th>
-                <th style={thStyle}>Invited</th>
-                <th style={thStyle}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                  <td style={tdStyle}>
-                    <div style={{ fontWeight: 700 }}>{row.contact_name}</div>
-                    <div style={{ color: "#6b7280" }}>{row.contact_email}</div>
-                  </td>
-                  <td style={tdStyle}>
-                    <RoleBadge role={row.assigned_role} />
-                  </td>
-                  <td style={tdStyle}>
-                    <div style={{ display: "grid", gap: 6 }}>
-                      <InvitationStatusBadge invitationStatus={row.invitation_status} activationStatus={row.activation_status} />
-                      <select
-                        value={row.invitation_status}
-                        onChange={(e) => void updateStatus(row, e.target.value as InvitationStatus)}
-                        style={miniSelectStyle}
-                        aria-label={`Update status for ${row.contact_name}`}
-                      >
-                        {editableStatuses.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </td>
-                  <td style={tdStyle}>{formatDateTime(row.sent_at ?? row.invited_at)}</td>
-                  <td style={tdStyle}>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                      <button type="button" style={miniBtnStyle} onClick={() => startEdit(row)}>
-                        Edit
-                      </button>
-                      <button type="button" style={miniBtnStyle} onClick={() => void remove(row)}>
-                        Delete
-                      </button>
-                      <button type="button" style={miniBtnStyle} onClick={() => void sendInvite(row, Boolean(row.sent_at))}>
-                        {row.sent_at ? "Resend" : "Send"}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div style={sectionBlockStyle}>
+        <div style={sectionHeaderStyle}>
+          <div>
+            <h3 style={sectionTitleStyle}>Invitation queue</h3>
+            <p style={sectionIntroStyle}>
+              Review access roles, invitation state, and the latest action for each contact.
+            </p>
+          </div>
         </div>
-      )}
+
+        {loading ? (
+          <div style={{ color: "#6b7280" }}>Loading invitations...</div>
+        ) : rows.length === 0 ? (
+          <div style={emptyStateStyle}>
+            <Icon name="mail" size={16} />
+            No contacts invited yet.
+          </div>
+        ) : (
+          <>
+            <div style={{ overflowX: "auto" }} className="lf-contact-invitations-table-wrap lf-desktop-only">
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }} className="lf-contact-invitations-table">
+                <thead>
+                  <tr style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>
+                    <th style={thStyle}>Contact</th>
+                    <th style={thStyle}>Status</th>
+                    <th style={thStyle}>Role</th>
+                    <th style={thStyle}>Invited</th>
+                    <th style={thStyle}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr key={row.id} style={{ borderBottom: "1px solid #f1f5f9" }} className="lf-contact-invitations-row">
+                      <td style={tdStyle} data-label="Contact">
+                        <div style={{ display: "grid", gap: 4 }}>
+                          <div style={{ fontWeight: 700 }}>{row.contact_name}</div>
+                          <div style={{ color: "#6b7280" }}>{row.contact_email}</div>
+                        </div>
+                      </td>
+                      <td style={tdStyle} data-label="Status">
+                        <div style={{ display: "grid", gap: 6 }}>
+                          <InvitationStatusBadge invitationStatus={row.invitation_status} activationStatus={row.activation_status} />
+                          <span style={{ color: "#64748b", fontSize: 12 }}>{formatStatusSummary(row)}</span>
+                        </div>
+                      </td>
+                      <td style={tdStyle} data-label="Role">
+                        <RoleBadge role={row.assigned_role} />
+                      </td>
+                      <td style={tdStyle} data-label="Invited">{formatShortDate(row.sent_at ?? row.invited_at)}</td>
+                      <td style={tdStyle} data-label="Actions">
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          <ActionIconButton action="edit" label={`Edit ${row.contact_name || row.contact_email}`} onClick={() => startEdit(row)} />
+                          <IconButton
+                            icon={row.sent_at ? "forward_to_inbox" : "send"}
+                            label={row.sent_at ? `Resend invitation to ${row.contact_email}` : `Send invitation to ${row.contact_email}`}
+                            onClick={() => void sendInvite(row, Boolean(row.sent_at))}
+                          />
+                          <ActionIconButton action="delete" label={`Remove ${row.contact_name || row.contact_email}`} onClick={() => void remove(row)} />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="lf-mobile-only" style={{ display: "grid", gap: 10 }}>
+              {rows.map((row) => (
+                <article key={`${row.id}-mobile`} style={mobileCardStyle}>
+                  <div style={{ display: "grid", gap: 6 }}>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
+                      <div style={{ display: "grid", gap: 4 }}>
+                        <div style={{ fontWeight: 700 }}>{row.contact_name}</div>
+                        <div style={{ color: "#6b7280", fontSize: 13 }}>{row.contact_email}</div>
+                      </div>
+                      <RoleBadge role={row.assigned_role} />
+                    </div>
+                    <InvitationStatusBadge invitationStatus={row.invitation_status} activationStatus={row.activation_status} />
+                    <div style={{ color: "#64748b", fontSize: 12 }}>{formatStatusSummary(row)}</div>
+                  </div>
+
+                  <div style={mobileMetaBlockStyle}>
+                    <div style={mobileMetaRowStyle}>
+                      <span style={mobileMetaLabelStyle}>Invited</span>
+                      <span>{formatShortDate(row.sent_at ?? row.invited_at)}</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    <ActionIconButton action="edit" label={`Edit ${row.contact_name || row.contact_email}`} onClick={() => startEdit(row)} />
+                    <IconButton
+                      icon={row.sent_at ? "forward_to_inbox" : "send"}
+                      label={row.sent_at ? `Resend invitation to ${row.contact_email}` : `Send invitation to ${row.contact_email}`}
+                      onClick={() => void sendInvite(row, Boolean(row.sent_at))}
+                    />
+                    <ActionIconButton action="delete" label={`Remove ${row.contact_name || row.contact_email}`} onClick={() => void remove(row)} />
+                  </div>
+                </article>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     </section>
   );
 }
@@ -459,13 +684,121 @@ async function sha256(input: string) {
   return [...new Uint8Array(hashBuffer)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-function formatDateTime(input: string) {
+function formatShortDate(input: string) {
   try {
-    return new Date(input).toLocaleString();
+    return new Intl.DateTimeFormat("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+    }).format(new Date(input));
   } catch {
     return input;
   }
 }
+
+function formatStatusSummary(row: InvitationRow) {
+  if (row.activation_status === "active" || row.activation_status === "verified") {
+    return "Access linked and verified.";
+  }
+  if (row.invitation_status === "accepted") {
+    return "Invitation accepted and awaiting final verification.";
+  }
+  if (row.invitation_status === "rejected") {
+    return "Invitation rejected.";
+  }
+  return row.sent_at ? "Invitation sent and awaiting response." : "Invitation ready to send.";
+}
+
+const panelStyle: CSSProperties = {
+  border: "1px solid #e5e7eb",
+  borderRadius: 16,
+  background: "#fff",
+  padding: 16,
+  display: "grid",
+  gap: 14,
+};
+
+const panelHeaderStyle: CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "flex-start",
+  gap: 12,
+};
+
+const sectionBlockStyle: CSSProperties = {
+  border: "1px solid #eef2f7",
+  borderRadius: 14,
+  background: "#fcfdff",
+  padding: 14,
+  display: "grid",
+  gap: 12,
+};
+
+const sectionHeaderStyle: CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "flex-start",
+  gap: 12,
+};
+
+const sectionTitleStyle: CSSProperties = {
+  margin: 0,
+  fontSize: 15,
+  fontWeight: 700,
+  color: "#0f172a",
+};
+
+const sectionIntroStyle: CSSProperties = {
+  margin: "4px 0 0",
+  color: "#64748b",
+  fontSize: 13,
+};
+
+const sectionIconStyle: CSSProperties = {
+  width: 28,
+  height: 28,
+  borderRadius: 10,
+  background: "#f1f5f9",
+  border: "1px solid #e2e8f0",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: "#0f172a",
+};
+
+const summaryGridStyle: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+  gap: 10,
+};
+
+const summaryCardStyle: CSSProperties = {
+  border: "1px solid #eef2f7",
+  borderRadius: 14,
+  background: "#f8fafc",
+  padding: 12,
+  display: "grid",
+  gap: 4,
+};
+
+const summaryLabelStyle: CSSProperties = {
+  fontSize: 12,
+  color: "#64748b",
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: "0.02em",
+};
+
+const summaryValueStyle: CSSProperties = {
+  fontSize: 24,
+  lineHeight: 1,
+  color: "#0f172a",
+};
+
+const summaryHelpStyle: CSSProperties = {
+  fontSize: 12,
+  color: "#64748b",
+};
 
 const fieldStyle: CSSProperties = { display: "grid", gap: 6 };
 const fieldLabelStyle: CSSProperties = { fontSize: 12, color: "#374151" };
@@ -485,6 +818,40 @@ const primaryBtnStyle: CSSProperties = {
   fontSize: 13,
   cursor: "pointer",
 };
+
+const mobileCardStyle: CSSProperties = {
+  border: "1px solid #e5e7eb",
+  borderRadius: 12,
+  background: "#fff",
+  padding: 12,
+  display: "grid",
+  gap: 10,
+};
+
+const mobileMetaBlockStyle: CSSProperties = {
+  display: "grid",
+  gap: 8,
+};
+
+const mobileMetaRowStyle: CSSProperties = {
+  display: "grid",
+  gap: 4,
+};
+
+const mobileMetaLabelStyle: CSSProperties = {
+  fontSize: 11,
+  fontWeight: 700,
+  letterSpacing: "0.02em",
+  textTransform: "uppercase",
+  color: "#64748b",
+};
+const emptyStateStyle: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  fontSize: 13,
+  color: "#64748b",
+};
 const ghostBtnStyle: CSSProperties = {
   border: "1px solid #d1d5db",
   background: "#fff",
@@ -496,19 +863,3 @@ const ghostBtnStyle: CSSProperties = {
 };
 const thStyle: CSSProperties = { padding: "8px 6px", fontSize: 12, color: "#64748b", fontWeight: 600 };
 const tdStyle: CSSProperties = { padding: "10px 6px", verticalAlign: "top" };
-const miniBtnStyle: CSSProperties = {
-  border: "1px solid #d1d5db",
-  background: "#fff",
-  color: "#111827",
-  borderRadius: 8,
-  padding: "5px 8px",
-  fontSize: 12,
-  cursor: "pointer",
-};
-const miniSelectStyle: CSSProperties = {
-  border: "1px solid #d1d5db",
-  borderRadius: 8,
-  padding: "4px 6px",
-  fontSize: 12,
-  background: "#fff",
-};

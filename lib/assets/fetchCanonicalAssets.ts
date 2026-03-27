@@ -11,21 +11,64 @@ function normalizeCategoryToken(value: unknown) {
   return String(value ?? "").trim().toLowerCase();
 }
 
+function normalizeCanonicalAssetSelectClause(select: string) {
+  const replacements: Record<string, string> = {
+    "owner-user-id": "owner_user_id",
+    "wallet-id": "wallet_id",
+    "organisation-id": "organisation_id",
+    "section-key": "section_key",
+    "category-key": "category_key",
+    "metadata-json": "metadata_json",
+    "asset-category-token": "asset_category_token",
+    "category-slug": "category_slug",
+  };
+
+  let normalized = select;
+  for (const [wrong, right] of Object.entries(replacements)) {
+    normalized = normalized.replaceAll(wrong, right);
+  }
+
+  if (process.env.NODE_ENV === "development" && normalized !== select) {
+    console.info("[fetchCanonicalAssets] normalized asset select clause", {
+      requestedSelect: select,
+      normalizedSelect: normalized,
+    });
+  }
+
+  return normalized;
+}
+
 function resolveDerivedAssetCategoryIdentity(row: CanonicalAssetQueryRow) {
   const metadata = ((row.metadata_json as Record<string, unknown> | null) ?? row.metadata ?? {}) as Record<string, unknown>;
   const rawSectionKey = normalizeCategoryToken(row.section_key);
   const rawCategoryKey = normalizeCategoryToken(row.category_key);
-
-  if (rawSectionKey && rawCategoryKey) {
-    return { sectionKey: rawSectionKey, categoryKey: rawCategoryKey };
-  }
-
-  const token = normalizeCategoryToken(
+  const normalizedToken = normalizeCategoryToken(
     row.asset_category_token
       ?? row.category_slug
       ?? metadata["asset_category_token"]
       ?? metadata["category_slug"],
   );
+
+  if (rawSectionKey === "finances") {
+    if (rawCategoryKey === "bank-accounts" || rawCategoryKey === "bank-account" || normalizedToken === "bank-accounts" || normalizedToken === "bank-account") {
+      return { sectionKey: "finances", categoryKey: "bank" };
+    }
+    if (rawCategoryKey === "investment" || normalizedToken === "investment") {
+      return { sectionKey: "finances", categoryKey: "investments" };
+    }
+    if (rawCategoryKey === "pension" || normalizedToken === "pension") {
+      return { sectionKey: "finances", categoryKey: "pensions" };
+    }
+    if (rawCategoryKey === "debt" || normalizedToken === "debt") {
+      return { sectionKey: "finances", categoryKey: "debts" };
+    }
+  }
+
+  if (rawSectionKey && rawCategoryKey) {
+    return { sectionKey: rawSectionKey, categoryKey: rawCategoryKey };
+  }
+
+  const token = normalizedToken;
 
   if (token === "bank-accounts" || token === "bank-account" || token === "bank") {
     return { sectionKey: "finances", categoryKey: "bank" };
@@ -165,9 +208,11 @@ export async function fetchCanonicalAssets(
     requiresDeletedAt,
   });
 
+  const normalizedSelect = normalizeCanonicalAssetSelectClause(select);
+
   let query = client
     .from("assets")
-    .select(select)
+    .select(normalizedSelect)
     .order("updated_at", { ascending: false });
 
   if (requiresOwnerUserId) query = query.eq("owner_user_id", userId);

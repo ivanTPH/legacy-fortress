@@ -7,7 +7,13 @@ import { bootstrapAuthenticatedUser } from "../../lib/auth/bootstrap";
 import { supabase } from "../../lib/supabaseClient";
 import OAuthButtons from "./OAuthButtons";
 
-export default function SignUpForm() {
+export default function SignUpForm({
+  nextPath = "/onboarding",
+  compact = false,
+}: {
+  nextPath?: string;
+  compact?: boolean;
+}) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,7 +38,7 @@ export default function SignUpForm() {
     setStatus("Creating account...");
 
     try {
-      const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback?next=${encodeURIComponent("/app/onboarding")}` : undefined;
+      const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}` : undefined;
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -48,7 +54,7 @@ export default function SignUpForm() {
       }
 
       if (data.user?.id && data.session) {
-        const bootstrap = await bootstrapAuthenticatedUser(supabase, { userId: data.user.id });
+        const bootstrap = await bootstrapAuthenticatedUser(supabase, { userId: data.user.id, nextPath });
         router.replace(bootstrap.destination);
         return;
       }
@@ -63,7 +69,7 @@ export default function SignUpForm() {
   }
 
   return (
-    <div style={{ display: "grid", gap: 12 }}>
+    <div style={{ display: "grid", gap: compact ? 10 : 12 }}>
       <label className="lf-label">
         <span>Email *</span>
         <input
@@ -113,13 +119,19 @@ export default function SignUpForm() {
         {submitting ? "Creating..." : "Create account"}
       </button>
 
+      {!compact ? (
+        <div className="lf-muted-note" style={{ marginTop: -2 }}>
+          After sign-up you will be guided through a short setup so your dashboard starts with clear, meaningful progress.
+        </div>
+      ) : null}
+
       <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#9ca3af", fontSize: 12 }}>
         <span style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
         or
         <span style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
       </div>
 
-      <OAuthButtons nextPath="/app/onboarding" />
+      <OAuthButtons nextPath={nextPath} />
 
       {status ? <div className="lf-muted-note">{status}</div> : null}
     </div>

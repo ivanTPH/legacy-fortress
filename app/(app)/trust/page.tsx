@@ -8,8 +8,8 @@ export default function TrustPage() {
       sectionId="executors"
       sectionKey="personal"
       categoryKey="executors"
-      title="Personal · Executors / Trusted Contacts"
-      subtitle="Store executors and trusted contacts with authority, jurisdiction, supporting notes, and linked documents."
+      title="Executors & Trusted Contacts"
+      subtitle="Keep the contacts who may need authority, visibility, or practical responsibility clearly documented alongside supporting records."
     />
   );
 }

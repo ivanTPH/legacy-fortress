@@ -1,44 +1,43 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Image from "next/image";
 import DashboardAssetSummaryCard from "../components/dashboard/DashboardAssetSummaryCard";
-import CompletionChecklist from "../components/dashboard/CompletionChecklist";
 import ContactInvitationManager from "../components/dashboard/ContactInvitationManager";
-import AssetCreateModal from "../components/dashboard/AssetCreateModal";
-import type { AssetQuickCreateInput } from "../components/dashboard/AssetCreateModal";
 import Icon from "../../../components/ui/Icon";
-import { readCanonicalBankAsset } from "../../../lib/assets/bankAsset";
 import { formatCurrency } from "../../../lib/currency";
-import { buildCompletionChecklist, type CompletionInput } from "../../../lib/dashboard/completion";
 import {
+  buildFinanceSummary,
   buildBucketSummary,
-  buildRecentCanonicalActivity,
-  countCanonicalDocuments,
-  countAssetsByBucket,
-  getDashboardAssetBucket,
+  getDashboardAssetValueMajor,
   getAssetsForBucket,
   getLegalDocuments,
   latestTimestamp,
-  prioritizeCreatedAsset,
 } from "../../../lib/dashboard/summary";
 import { shouldObscureSection, type AccessActivationStatus, type CollaboratorRole } from "../../../lib/access-control/roles";
+import { canViewPath } from "../../../lib/access-control/viewerAccess";
 import { waitForActiveUser } from "../../../lib/auth/session";
 import { supabase } from "../../../lib/supabaseClient";
 import { isMissingColumnError, isMissingRelationError } from "../../../lib/supabaseErrors";
-import { createAsset } from "../../../lib/assets/createAsset";
 import { fetchCanonicalAssets } from "../../../lib/assets/fetchCanonicalAssets";
-import { getCanonicalAssetMetadataFromValues, resolveConfiguredFieldValue } from "../../../lib/assets/fieldDictionary";
-import { resolveWalletContextForRead } from "../../../lib/canonicalPersistence";
-import { getDevSmokeVariant, isDevSmokeModeEnabled } from "../../../lib/devSmoke";
+import { loadCanonicalContactsForOwner } from "../../../lib/contacts/canonicalContacts";
 import { buildDashboardDiscoveryResults } from "../../../lib/records/discovery";
-
-type ProfileRow = {
-  user_id?: string | null;
-  display_name?: string | null;
-  avatar_path?: string | null;
-};
+import {
+  notifyCanonicalAssetMutation,
+  shouldRefreshDashboardForAssetMutation,
+  subscribeToCanonicalAssetMutation,
+} from "../../../lib/assets/liveSync";
+import { resolveWalletContextForRead } from "../../../lib/canonicalPersistence";
+import {
+  appendDevBankTrace,
+  getDevSmokeVariant,
+  isDevBankTraceEnabled,
+  isDevSmokeModeEnabled,
+  readDevBankTrace,
+  subscribeToDevBankTrace,
+  type CanonicalBankTraceEntry,
+} from "../../../lib/devSmoke";
+import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
 
 type AssetRow = {
   id: string;
@@ -75,6 +74,24 @@ type DocumentRow = {
   created_at: string | null;
 };
 
+type AttachmentRow = {
+  id: string;
+  record_id?: string | null;
+  owner_user_id?: string | null;
+  storage_bucket?: string | null;
+  storage_path?: string | null;
+  file_name?: string | null;
+  mime_type?: string | null;
+  created_at?: string | null;
+};
+
+type SectionEntrySearchRow = {
+  id: string;
+  title?: string | null;
+  section_key?: string | null;
+  category_key?: string | null;
+};
+
 type ReminderRow = {
   id: string;
   status?: string | null;
@@ -85,59 +102,65 @@ type ReminderRow = {
   user_id?: string | null;
 };
 
-type ProfileSummary = {
-  displayName: string;
-  primaryEmail: string;
-  secondaryEmail: string;
-  mobile: string;
-  telephone: string;
-  address: string;
-  avatarUrl: string;
+type ContactDiscoveryRow = {
+  id: string;
+  full_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  contact_role?: string | null;
+  relationship?: string | null;
+  linked_context?: Array<{
+    label?: string | null;
+    role?: string | null;
+    section_key?: string | null;
+    category_key?: string | null;
+  }> | null;
 };
-
-type QuickCreateType = "bank-accounts" | "property" | "business-interests" | "digital-assets";
 
 export default function DashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { viewer } = useViewerAccess();
 
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState("");
-  const [discoveryQuery, setDiscoveryQuery] = useState("");
-  const [discoveryKindFilter, setDiscoveryKindFilter] = useState<"all" | "asset" | "document" | "navigation">("all");
   const [currency, setCurrency] = useState("GBP");
-  const [currentUserId, setCurrentUserId] = useState("");
   const [refreshToken, setRefreshToken] = useState(0);
-  const [quickCreateType, setQuickCreateType] = useState<QuickCreateType | null>(null);
-  const [quickCreateSaving, setQuickCreateSaving] = useState(false);
-  const [quickCreateError, setQuickCreateError] = useState("");
+  const [devBankTraceEntries, setDevBankTraceEntries] = useState<CanonicalBankTraceEntry[]>([]);
   const createdAssetId = searchParams.get("createdId") ?? "";
   const devSmokeMode = isDevSmokeModeEnabled(searchParams);
   const devSmokeVariant = getDevSmokeVariant(searchParams);
-
-  const [hasProfileRecord, setHasProfileRecord] = useState(false);
-  const [hasContactRecord, setHasContactRecord] = useState(false);
-  const [hasAddressRecord, setHasAddressRecord] = useState(false);
+  const devBankTraceEnabled = isDevBankTraceEnabled(searchParams);
 
   const [assetRows, setAssetRows] = useState<AssetRow[]>([]);
   const [documentRows, setDocumentRows] = useState<DocumentRow[]>([]);
-  const [reminderRows, setReminderRows] = useState<ReminderRow[]>([]);
+  const [attachmentRows, setAttachmentRows] = useState<AttachmentRow[]>([]);
+  const [contactRows, setContactRows] = useState<ContactDiscoveryRow[]>([]);
+  const [sectionEntryRows, setSectionEntryRows] = useState<SectionEntrySearchRow[]>([]);
 
-  const [profileSummary, setProfileSummary] = useState<ProfileSummary>({
-    displayName: "Secure Account",
-    primaryEmail: "",
-    secondaryEmail: "",
-    mobile: "",
-    telephone: "",
-    address: "",
-    avatarUrl: "",
-  });
-
-  const viewerRole: CollaboratorRole = "owner";
-  const viewerActivation: AccessActivationStatus = "active";
-  const assetCounts = useMemo(() => countAssetsByBucket(assetRows), [assetRows]);
+  const viewerRole: CollaboratorRole = viewer.viewerRole;
+  const viewerActivation: AccessActivationStatus = viewer.activationStatus;
+  const canViewTasks = canViewPath("/personal/tasks", viewer);
   const legalDocuments = useMemo(() => getLegalDocuments(documentRows), [documentRows]);
-  const canonicalDocumentCount = useMemo(() => countCanonicalDocuments(documentRows), [documentRows]);
+  const legalAssets = useMemo(
+    () => assetRows.filter((row) => row.deleted_at == null && row.archived_at == null && row.status !== "archived" && String(row.section_key ?? "") === "legal"),
+    [assetRows],
+  );
+
+  useEffect(() => {
+    if (!devBankTraceEnabled) return;
+    setDevBankTraceEntries(readDevBankTrace());
+    return subscribeToDevBankTrace(() => {
+      setDevBankTraceEntries(readDevBankTrace());
+    });
+  }, [devBankTraceEnabled]);
+
+  useEffect(() => {
+    return subscribeToCanonicalAssetMutation((detail) => {
+      if (!shouldRefreshDashboardForAssetMutation(detail)) return;
+      setRefreshToken((prev) => prev + 1);
+    });
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -150,39 +173,21 @@ export default function DashboardPage() {
         const user = await waitForActiveUser(supabase, { attempts: 6, delayMs: 130 });
         if (!user) {
           if (!devSmokeMode) {
-            router.replace("/signin");
+            router.replace("/sign-in");
             return;
           }
-          applyDevSmokeDashboardState(devSmokeVariant, setHasProfileRecord, setHasContactRecord, setHasAddressRecord, setAssetRows, setDocumentRows, setReminderRows, setCurrency, setProfileSummary);
-          setCurrentUserId("dev-smoke-user");
+          applyDevSmokeDashboardState(devSmokeVariant, setAssetRows, setDocumentRows, setAttachmentRows, setCurrency, setContactRows);
           return;
         }
-        setCurrentUserId(user.id);
-
-        const wallet = await resolveWalletContextForRead(supabase, user.id);
-        const [profileRes, assetsRes, documentsRes, remindersRes] = await Promise.all([
-          fetchProfile(user.id),
-          fetchCanonicalAssets(supabase, { userId: user.id, walletId: wallet.walletId }),
-          fetchDocuments(user.id, wallet.walletId),
-          fetchReminders(user.id),
+        const targetOwnerUserId = viewer.targetOwnerUserId || user.id;
+        const wallet = await resolveWalletContextForRead(supabase, targetOwnerUserId);
+        const [assetsRes, documentsRes, contactsRes, sectionEntriesRes] = await Promise.all([
+          fetchCanonicalAssets(supabase, { userId: targetOwnerUserId, walletId: wallet.walletId }),
+          fetchDocuments(targetOwnerUserId, wallet.walletId),
+          loadCanonicalContactsForOwner(supabase, targetOwnerUserId),
+          fetchSectionEntries(targetOwnerUserId),
         ]);
         if (!mounted) return;
-
-        const profileData = (profileRes.data ?? null) as ProfileRow | null;
-        setHasProfileRecord(Boolean(profileData) && !profileRes.error);
-        setHasContactRecord(false);
-        setHasAddressRecord(false);
-
-        const avatarUrl = profileData?.avatar_path ? await getAvatarPreview(profileData.avatar_path) : "";
-        setProfileSummary({
-          displayName: profileData?.display_name || user.email?.split("@")[0] || "Secure Account",
-          primaryEmail: user.email ?? "",
-          secondaryEmail: "",
-          mobile: "",
-          telephone: "",
-          address: "",
-          avatarUrl,
-        });
 
         const warnings: string[] = [];
         if (wallet.warning && wallet.warning !== "organisations-table-unavailable" && wallet.warning !== "wallet-not-found") {
@@ -194,15 +199,28 @@ export default function DashboardPage() {
         if (documentsRes.error && !isMissingRelationError(documentsRes.error, "documents")) {
           warnings.push("Document summary could not be fully loaded.");
         }
-        if (remindersRes.error && !isMissingRelationError(remindersRes.error, "reminders")) {
-          warnings.push("Reminder summary could not be fully loaded.");
-        }
         if (warnings.length > 0) {
           setStatus(`⚠️ ${warnings[0]}`);
         }
 
         const assets = ((assetsRes.data ?? []) as unknown) as AssetRow[];
+        const financeAssets = getAssetsForBucket(assets, "finance");
         setAssetRows(assets);
+        appendDevBankTrace({
+          kind: "dashboard-load",
+          source: "DashboardPage.load",
+          timestamp: new Date().toISOString(),
+          userId: targetOwnerUserId,
+          organisationId: wallet.organisationId,
+          walletId: wallet.walletId,
+          assetIds: financeAssets.map((row) => row.id),
+          assetCategoryTokens: financeAssets.map((row) =>
+            String((row.metadata_json ?? row.metadata ?? {})["asset_category_token"] ?? (row.metadata_json ?? row.metadata ?? {})["category_slug"] ?? ""),
+          ),
+          titles: financeAssets.map((row) =>
+            String((row.metadata_json ?? row.metadata ?? {})["provider_name"] ?? row.provider_name ?? (row.metadata_json ?? row.metadata ?? {})["institution_name"] ?? row.title ?? "").trim(),
+          ),
+        });
 
         const firstCurrency =
           assets.find((row) => row.currency_code)?.currency_code ||
@@ -210,8 +228,18 @@ export default function DashboardPage() {
           "GBP";
         setCurrency(firstCurrency);
 
+        const attachmentsRes = await fetchAttachments(targetOwnerUserId);
+        if (attachmentsRes.error && !isMissingRelationError(attachmentsRes.error, "attachments")) {
+          warnings.push("Attachment search results could not be fully loaded.");
+        }
+        if (sectionEntriesRes.error && !isMissingRelationError(sectionEntriesRes.error, "section_entries")) {
+          warnings.push("Attachment parent records could not be fully resolved.");
+        }
+
         setDocumentRows((documentsRes.data ?? []) as DocumentRow[]);
-        setReminderRows((remindersRes.data ?? []) as ReminderRow[]);
+        setAttachmentRows((attachmentsRes.data ?? []) as AttachmentRow[]);
+        setContactRows((contactsRes ?? []) as ContactDiscoveryRow[]);
+        setSectionEntryRows((sectionEntriesRes.data ?? []) as SectionEntrySearchRow[]);
 
       } catch (error) {
         if (!mounted) return;
@@ -226,7 +254,7 @@ export default function DashboardPage() {
     return () => {
       mounted = false;
     };
-  }, [devSmokeMode, devSmokeVariant, router, refreshToken]);
+  }, [devSmokeMode, devSmokeVariant, router, refreshToken, viewer.accountHolderName, viewer.mode, viewer.targetOwnerUserId]);
 
   useEffect(() => {
     if (searchParams.get("created") !== "1") return;
@@ -237,48 +265,37 @@ export default function DashboardPage() {
   }, [searchParams]);
 
 const financialSummary = useMemo(() => {
-  const canonicalFinanceRows = prioritizeCreatedAsset(getAssetsForBucket(assetRows, "finance"), createdAssetId);
-  const totalMajor = canonicalFinanceRows.reduce((sum, row) => sum + getAssetValueMajor(row), 0);
-
-  return {
-    addedAt: latestTimestamp(canonicalFinanceRows.map((row) => row.updated_at ?? row.created_at)),
-    valueText: canonicalFinanceRows.length
-      ? formatCurrency(totalMajor, currency)
-      : "No records yet",
-    detailText: canonicalFinanceRows.length
-      ? `${canonicalFinanceRows.length} finance record(s)`
-      : "No records yet",
-    items: canonicalFinanceRows.map((row) => {
-        const bankAsset = readCanonicalBankAsset({
-          title: row.title,
-          provider_name: row.provider_name,
-          provider_key: row.provider_key ?? null,
-          currency_code: row.currency_code ?? null,
-          value_minor: row.value_minor ?? row.estimated_value_minor ?? null,
-          metadata: row.metadata_json ?? row.metadata ?? null,
-        });
-        return {
-          id: `asset-${row.id}`,
-          label: bankAsset.institution_name || bankAsset.title || "Finance asset",
-          href: getFinanceWorkspaceHref(String(row.category_key ?? "")),
-          meta: formatCurrency(bankAsset.value_major, bankAsset.currency_code || currency),
-        };
-      }).slice(0, 3),
-  };
+  return buildFinanceSummary(assetRows, {
+    createdId: createdAssetId,
+    currency,
+    getHref: getFinanceWorkspaceHref,
+  });
 }, [assetRows, currency, createdAssetId]);
 const legalSummary = useMemo(() => {
-    return {
-      addedAt: latestTimestamp(legalDocuments.map((row) => row.created_at)),
-      valueText: legalDocuments.length ? `${legalDocuments.length}` : "No records yet",
-      detailText: legalDocuments.length ? `${legalDocuments.length} legal document(s)` : "No records yet",
-      items: legalDocuments.slice(0, 3).map((row) => ({
+    const legalItems = [
+      ...legalAssets.map((row) => ({
+        id: `asset-${row.id}`,
+        label: row.title || "Legal record",
+        href: "/legal",
+        meta: row.category_key || "Asset",
+      })),
+      ...legalDocuments.map((row) => ({
         id: row.id,
         label: row.title || row.document_type || "Legal document",
         href: "/legal",
         meta: row.document_type || "Document",
       })),
+    ];
+    return {
+      addedAt: latestTimestamp([
+        ...legalAssets.map((row) => row.updated_at ?? row.created_at),
+        ...legalDocuments.map((row) => row.created_at),
+      ]),
+      valueText: legalItems.length ? `${legalItems.length}` : "No records yet",
+      detailText: legalItems.length ? `${legalItems.length} legal record(s)` : "No records yet",
+      items: legalItems.slice(0, 3),
     };
-  }, [legalDocuments]);
+  }, [legalAssets, legalDocuments]);
 
   const propertySummary = useMemo(() => {
     return buildBucketSummary(getAssetsForBucket(assetRows, "property"), {
@@ -332,493 +349,220 @@ const legalSummary = useMemo(() => {
     });
   }, [assetRows, createdAssetId]);
 
-  const recentActivity = useMemo(
+  const latestCreateTrace = devBankTraceEntries.filter((entry) => entry.kind === "create").at(-1) ?? null;
+  const latestDashboardTrace = devBankTraceEntries.filter((entry) => entry.kind === "dashboard-load").at(-1) ?? null;
+  const latestBankLoadTrace = devBankTraceEntries.filter((entry) => entry.kind === "bank-load").at(-1) ?? null;
+  const searchQuery = String(searchParams.get("search") ?? "").trim();
+  const discoveryResults = useMemo(
     () =>
-      buildRecentCanonicalActivity({
+      buildDashboardDiscoveryResults({
+        query: searchQuery,
         assets: assetRows,
-        documents: documentRows,
-        assetHrefForBucket: getDashboardBucketHref,
-        assetLabelForBucket: getDashboardBucketLabel,
+        contacts: contactRows.map((row) => ({
+          id: row.id,
+          fullName: row.full_name ?? null,
+          email: row.email ?? null,
+          phone: row.phone ?? null,
+          contactRole: row.contact_role ?? null,
+          relationship: row.relationship ?? null,
+          linkedContext: row.linked_context ?? null,
+        })),
+        documents: documentRows.map((row) => ({
+          id: row.id,
+          title: row.title ?? null,
+          fileName: row.file_name ?? row.title ?? null,
+          parentLabel: resolveParentLabel(row.asset_id, assetRows, row.title ?? row.document_type ?? null),
+          sectionKey: resolveDocumentSectionKey(row, assetRows),
+          categoryKey: row.category_key ?? null,
+          documentKind: row.document_kind ?? row.document_type ?? null,
+        })),
+        attachments: attachmentRows.map((row) => ({
+          id: row.id,
+          fileName: row.file_name ?? null,
+          parentLabel: resolveSearchParentLabel(row.record_id, assetRows, sectionEntryRows, null),
+          sectionKey: resolveAttachmentSectionKey(row, assetRows, sectionEntryRows),
+          categoryKey: resolveAttachmentCategoryKey(row, assetRows, sectionEntryRows),
+          mimeType: row.mime_type ?? null,
+          metaLabel: resolveSearchParentLabel(row.record_id, assetRows, sectionEntryRows, null),
+        })),
+        assetHref: (asset) => getDiscoveryAssetHref(asset),
+        assetIcon: (asset) => getDiscoveryAssetIcon(asset),
+        contactHref: (contact) => `/contacts?contact=${contact.id}`,
+        documentHref: (document) => getDiscoveryDocumentHref(document.sectionKey, document.categoryKey, document.parentLabel),
+        attachmentHref: (attachment) => getDiscoveryAttachmentHref(attachment.sectionKey, attachment.categoryKey),
+        extraLinks: DASHBOARD_SEARCH_LINKS,
       }),
-    [assetRows, documentRows],
+    [assetRows, attachmentRows, contactRows, documentRows, searchQuery, sectionEntryRows],
   );
-  const discoveryResults = useMemo(() => {
-    const results = buildDashboardDiscoveryResults({
-      query: discoveryQuery,
-      assets: assetRows,
-      documents: documentRows.map((row) => ({
-        id: row.id,
-        fileName: row.file_name,
-        parentLabel: findAssetParentLabel(assetRows, row.asset_id),
-        sectionKey: findAssetSectionKey(assetRows, row.asset_id),
-        categoryKey: findAssetCategoryKey(assetRows, row.asset_id),
-        documentKind: row.document_kind,
-      })),
-      assetHref: (asset) => getDashboardBucketHref(getDashboardAssetBucket(asset)),
-      assetIcon: (asset) => getBucketIcon(getDashboardAssetBucket(asset)),
-      documentHref: (document) =>
-        getDocumentWorkspaceHref(String(document.sectionKey ?? ""), String(document.categoryKey ?? "")),
-      extraLinks: [
-        {
-          id: "profile",
-          label: "Profile",
-          description: "Personal details and supporting profile records",
-          href: "/profile",
-          icon: "person",
-          keywords: ["personal details", "identity", "contact", "address"],
-        },
-        {
-          id: "beneficiaries",
-          label: "Beneficiaries",
-          description: "Canonical beneficiary records",
-          href: "/personal/beneficiaries",
-          icon: "group",
-        },
-        {
-          id: "executors",
-          label: "Executors & Trusted Contacts",
-          description: "Executor and trusted contact workspace",
-          href: "/trust",
-          icon: "shield_person",
-          keywords: ["trusted contacts"],
-        },
-        {
-          id: "tasks",
-          label: "Tasks & Action Tracking",
-          description: "Canonical task records linked to assets and people",
-          href: "/personal/tasks",
-          icon: "task",
-          keywords: ["actions", "action tracking"],
-        },
-        {
-          id: "wishes",
-          label: "Wishes",
-          description: "Personal wishes and guidance",
-          href: "/personal/wishes",
-          icon: "favorite",
-          keywords: ["instructions", "guidance"],
-        },
-      ],
-    });
-    return discoveryKindFilter === "all" ? results : results.filter((item) => item.kind === discoveryKindFilter);
-  }, [assetRows, discoveryKindFilter, discoveryQuery, documentRows]);
-
-const completionInput: CompletionInput = useMemo(
-  () => ({
-    profile: {
-      hasProfile: hasProfileRecord,
-      hasAddress: hasAddressRecord,
-      hasContact: hasContactRecord,
-    },
-    personal: { total: 0 },
-    financial: {
-      total: assetCounts.finance,
-    },
-    legal: {
-      total: legalDocuments.length,
-    },
-    property: {
-      total: assetCounts.property,
-    },
-    business: {
-      total: assetCounts.business,
-    },
-    digital: {
-      total: assetCounts.digital,
-    },
-  }),
-  [hasProfileRecord, hasAddressRecord, hasContactRecord, assetCounts, legalDocuments],
-);
-
-  const checklist = useMemo(() => buildCompletionChecklist(completionInput), [completionInput]);
-
-  const quickCreateLabel = useMemo(() => {
-    switch (quickCreateType) {
-      case "bank-accounts":
-        return "Bank account";
-      case "property":
-        return "Property";
-      case "business-interests":
-        return "Business interest";
-      case "digital-assets":
-        return "Digital account";
-      default:
-        return "Asset";
-    }
-  }, [quickCreateType]);
-
-  async function handleQuickCreateSubmit(input: AssetQuickCreateInput): Promise<boolean> {
-    if (!quickCreateType) return false;
-    if (!currentUserId) {
-      setQuickCreateError("You must be signed in to create assets.");
-      return false;
-    }
-    const titleField = input.config.fields.find((field) => field.key === "title");
-    const title = titleField
-      ? resolveConfiguredFieldValue(titleField, input.values)
-      : `${input.values["title"] ?? ""}`;
-    if (!title.trim()) {
-      setQuickCreateError("Title is required.");
-      return false;
-    }
-
-    setQuickCreateSaving(true);
-    setQuickCreateError("");
-
-    try {
-      const metadata = buildQuickCreateMetadata(quickCreateType, input);
-
-      const created = await createAsset(supabase, {
-        userId: currentUserId,
-        categorySlug: quickCreateType,
-        title: title.trim(),
-        metadata,
-        visibility: "private",
-      });
-
-      setQuickCreateType(null);
-      setQuickCreateError("");
-      setRefreshToken((prev) => prev + 1);
-      const destination = getQuickCreateSuccessRoute(quickCreateType, created.id);
-      router.replace(destination);
-      router.refresh();
-      return true;
-    } catch (error) {
-      setQuickCreateError(error instanceof Error ? error.message : "Could not create asset.");
-      return false;
-    } finally {
-      setQuickCreateSaving(false);
-    }
-  }
-
-  function openQuickCreate(type: QuickCreateType) {
-    setQuickCreateError("");
-    setQuickCreateType(type);
-  }
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
-      <div>
-        <h1 style={{ fontSize: 26, margin: 0 }}>Dashboard</h1>
-        <p style={{ marginTop: 6, color: "#6b7280" }}>
-          Review your estate record summaries, completion progress, and collaborator invitation status.
-        </p>
+      <div style={dashboardHeaderStyle}>
+        <div>
+          <h1 style={{ fontSize: 26, margin: 0 }}>Dashboard - Review your estate records</h1>
+        </div>
       </div>
 
       {status ? <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div> : null}
       {loading ? <div style={{ color: "#6b7280" }}>Loading dashboard summary...</div> : null}
-
-      <div className="lf-content-grid">
-        <DashboardAssetSummaryCard
-          icon={<Icon name="person" size={13} />}
-          title="Profile"
-          href="/profile"
-          addedAt={hasProfileRecord ? new Date().toISOString() : null}
-          value={hasProfileRecord ? "Configured" : "No records yet"}
-          detail={hasProfileRecord ? "Profile exists" : "No records yet"}
-          emptyActionLabel="Open profile setup"
-        />
-
-        <DashboardAssetSummaryCard
-          icon={<Icon name="account_balance" size={13} />}
-          title="Finances"
-          href="/finances/bank"
-          addedAt={financialSummary.addedAt}
-          value={financialSummary.valueText}
-          detail={financialSummary.detailText}
-          items={financialSummary.items}
-          emptyActionLabel="Add first account"
-          onEmptyActionClick={() => openQuickCreate("bank-accounts")}
-          obscured={shouldObscureSection(viewerRole, "financial", viewerActivation)}
-        />
-
-        <DashboardAssetSummaryCard
-          icon={<Icon name="description" size={13} />}
-          title="Legal"
-          href="/legal"
-          addedAt={legalSummary.addedAt}
-          value={legalSummary.valueText}
-          detail={legalSummary.detailText}
-          items={legalSummary.items}
-          emptyActionLabel="Add legal document"
-          obscured={shouldObscureSection(viewerRole, "legal", viewerActivation)}
-        />
-
-        <DashboardAssetSummaryCard
-          icon={<Icon name="home" size={13} />}
-          title="Property"
-          href="/property"
-          addedAt={propertySummary.addedAt}
-          value={propertySummary.valueText}
-          detail={propertySummary.detailText}
-          items={propertySummary.items}
-          emptyActionLabel="Add property"
-          onEmptyActionClick={() => openQuickCreate("property")}
-          obscured={shouldObscureSection(viewerRole, "property", viewerActivation)}
-        />
-
-        <DashboardAssetSummaryCard
-          icon={<Icon name="business_center" size={13} />}
-          title="Business"
-          href="/business"
-          addedAt={businessSummary.addedAt}
-          value={businessSummary.valueText}
-          detail={businessSummary.detailText}
-          items={businessSummary.items}
-          emptyActionLabel="Add business interest"
-          onEmptyActionClick={() => openQuickCreate("business-interests")}
-          obscured={shouldObscureSection(viewerRole, "business", viewerActivation)}
-        />
-
-        <DashboardAssetSummaryCard
-          icon={<Icon name="devices" size={13} />}
-          title="Digital"
-          href="/vault/digital"
-          addedAt={digitalSummary.addedAt}
-          value={digitalSummary.valueText}
-          detail={digitalSummary.detailText}
-          items={digitalSummary.items}
-          emptyActionLabel="Add digital account"
-          onEmptyActionClick={() => openQuickCreate("digital-assets")}
-          obscured={shouldObscureSection(viewerRole, "digital", viewerActivation)}
-        />
-
-        <DashboardAssetSummaryCard
-          icon={<Icon name="task" size={13} />}
-          title="Tasks"
-          href="/personal/tasks"
-          addedAt={taskSummary.addedAt}
-          value={taskSummary.valueText}
-          detail={taskSummary.detailText}
-          items={taskSummary.items}
-          emptyActionLabel="Open tasks"
-        />
-      </div>
-
-      <AssetCreateModal
-        open={Boolean(quickCreateType)}
-        categorySlug={quickCreateType}
-        categoryLabel={quickCreateLabel}
-        saving={quickCreateSaving}
-        error={quickCreateError}
-        success=""
-        onClose={() => {
-          if (quickCreateSaving) return;
-          setQuickCreateType(null);
-          setQuickCreateError("");
-        }}
-        onSubmit={handleQuickCreateSubmit}
-      />
-
-      <CompletionChecklist items={checklist} />
-
-      <section
-        style={{
-          border: "1px solid #e2e8f0",
-          borderRadius: 12,
-          background: "#fff",
-          padding: 14,
-          display: "grid",
-          gap: 12,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <Icon name="monitoring" size={18} />
-          <h2 style={{ margin: 0, fontSize: 16 }}>Canonical totals & activity</h2>
-        </div>
-        <div className="lf-content-grid" style={{ gap: 10 }}>
-          <div style={metricCardStyle}>
-            <div style={metricLabelStyle}>Total assets</div>
-            <div style={metricValueStyle}>{assetCounts.finance + assetCounts.property + assetCounts.business + assetCounts.digital + assetCounts.tasks}</div>
-            <div style={metricHelpStyle}>Bank, property, business, digital, and task assets</div>
-          </div>
-          <div style={metricCardStyle}>
-            <div style={metricLabelStyle}>Linked documents</div>
-            <div style={metricValueStyle}>{canonicalDocumentCount}</div>
-            <div style={metricHelpStyle}>Documents linked directly to canonical assets</div>
-          </div>
-          <div style={metricCardStyle}>
-            <div style={metricLabelStyle}>Reminders</div>
-            <div style={metricValueStyle}>{reminderRows.length}</div>
-            <div style={metricHelpStyle}>Scheduled reminder records</div>
-          </div>
-          <div style={metricCardStyle}>
-            <div style={metricLabelStyle}>Open tasks</div>
-            <div style={metricValueStyle}>{getAssetsForBucket(assetRows, "tasks").filter((row) => String((row.metadata_json ?? row.metadata ?? {})["task_status"] ?? "") !== "completed").length}</div>
-            <div style={metricHelpStyle}>Canonical task records not marked complete</div>
-          </div>
-        </div>
-        {recentActivity.length ? (
-          <div style={{ display: "grid", gap: 8 }}>
-            {recentActivity.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                style={activityRowStyle}
-                onClick={() => router.push(item.href)}
-              >
-                <span style={activityIconStyle}>
-                  <Icon name={item.icon} size={16} />
-                </span>
-                <span style={{ display: "grid", gap: 2, textAlign: "left", flex: 1 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700 }}>{item.title}</span>
-                  <span style={{ fontSize: 12, color: "#64748b" }}>{item.description}</span>
-                </span>
-                <span style={{ fontSize: 12, color: "#94a3b8" }}>{formatDashboardDate(item.timestamp)}</span>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div style={emptyActivityStyle}>
-            <Icon name="hourglass_empty" size={16} />
-            No recent canonical asset or document activity yet.
-          </div>
-        )}
-      </section>
-
-      <section
-        style={{
-          border: "1px solid #e2e8f0",
-          borderRadius: 12,
-          background: "#fff",
-          padding: 14,
-          display: "grid",
-          gap: 12,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <Icon name="search" size={18} />
-          <h2 style={{ margin: 0, fontSize: 16 }}>Quick find</h2>
-        </div>
-        <div className="lf-content-grid" style={{ gap: 10 }}>
-          <label style={{ display: "grid", gap: 6 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>Search</span>
-            <div style={dashboardSearchWrapStyle}>
-              <Icon name="search" size={16} />
-              <input
-                value={discoveryQuery}
-                onChange={(event) => setDiscoveryQuery(event.target.value)}
-                placeholder="Find assets, linked documents, profile pages, wishes, beneficiaries, executors, or tasks"
-                style={dashboardSearchInputStyle}
-              />
+      {searchQuery ? (
+        <section style={searchResultsPanelStyle} aria-label="Search results">
+          <div style={{ display: "grid", gap: 4 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={overviewIconStyle}>
+                <Icon name="search" size={16} />
+              </div>
+              <h2 style={{ margin: 0, fontSize: 18 }}>Search results</h2>
             </div>
-          </label>
-          <label style={{ display: "grid", gap: 6 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>Result type</span>
-            <select
-              value={discoveryKindFilter}
-              onChange={(event) => setDiscoveryKindFilter(event.target.value as typeof discoveryKindFilter)}
-              style={dashboardFilterSelectStyle}
-            >
-              <option value="all">All results</option>
-              <option value="asset">Assets</option>
-              <option value="document">Documents</option>
-              <option value="navigation">Pages</option>
-            </select>
-          </label>
-        </div>
-        {!discoveryQuery.trim() ? (
-          <div style={emptyActivityStyle}>
-            <Icon name="search" size={16} />
-            Search canonical assets, linked documents, and shared workspaces from one place.
+            <div style={{ color: "#64748b", fontSize: 13 }}>
+              Results for <strong>{searchQuery}</strong> from your current estate records and key destinations.
+            </div>
           </div>
-        ) : discoveryResults.length ? (
-          <div style={{ display: "grid", gap: 8 }}>
-            {discoveryResults.map((item) => (
-              <button key={item.id} type="button" style={activityRowStyle} onClick={() => router.push(item.href)}>
-                <span style={activityIconStyle}>
-                  <Icon name={item.icon} size={16} />
-                </span>
-                <span style={{ display: "grid", gap: 2, textAlign: "left", flex: 1 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700 }}>{item.label}</span>
-                  <span style={{ fontSize: 12, color: "#64748b" }}>{item.description}</span>
-                </span>
-                <span style={{ fontSize: 12, color: "#94a3b8", textTransform: "capitalize" }}>{item.kind}</span>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div style={emptyActivityStyle}>
-            <Icon name="filter_alt_off" size={16} />
-            No canonical records or shared workspaces match that search.
-          </div>
-        )}
-      </section>
-
-      <section
-        style={{
-          border: "1px solid #e2e8f0",
-          borderRadius: 12,
-          background: "#fff",
-          padding: 14,
-          display: "grid",
-          gap: 10,
-        }}
-      >
-        <h2 style={{ margin: 0, fontSize: 16 }}>Profile summary</h2>
-        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-          {profileSummary.avatarUrl ? (
-            <Image
-              src={profileSummary.avatarUrl}
-              alt={`${profileSummary.displayName} picture`}
-              width={48}
-              height={48}
-              style={{ borderRadius: "999px", objectFit: "cover" }}
-            />
+          {discoveryResults.length === 0 ? (
+            <div style={searchEmptyStateStyle}>No matching records, contacts, or sections found.</div>
           ) : (
-            <div
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: "999px",
-                border: "1px solid #d1d5db",
-                background: "#f8fafc",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontWeight: 700,
-                color: "#334155",
-              }}
-            >
-              {makeInitials(profileSummary.displayName)}
+            <div style={{ display: "grid", gap: 10 }}>
+              {discoveryResults.map((result) => (
+                <a key={result.id} href={result.href} style={searchResultStyle}>
+                  <span style={searchResultIconStyle}>
+                    <Icon name={result.icon} size={16} />
+                  </span>
+                  <span style={{ display: "grid", gap: 3, minWidth: 0 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>{result.label}</span>
+                    <span style={{ fontSize: 13, color: "#64748b" }}>{result.description || "Open this destination"}</span>
+                  </span>
+                </a>
+              ))}
             </div>
           )}
-          <div style={{ display: "grid", gap: 4 }}>
-            <div style={{ fontWeight: 700 }}>{profileSummary.displayName}</div>
-            {profileSummary.address ? <div style={{ color: "#64748b", fontSize: 13 }}>{profileSummary.address}</div> : null}
-            <div style={{ color: "#64748b", fontSize: 13 }}>
-              {[profileSummary.primaryEmail, profileSummary.secondaryEmail].filter(Boolean).join(" · ") || "No email saved"}
-            </div>
-            {(profileSummary.mobile || profileSummary.telephone) ? (
-              <div style={{ color: "#64748b", fontSize: 13 }}>
-                {[profileSummary.mobile, profileSummary.telephone].filter(Boolean).join(" · ")}
-              </div>
-            ) : null}
+        </section>
+      ) : null}
+      {devBankTraceEnabled ? (
+        <section
+          style={{
+            border: "1px dashed #f59e0b",
+            borderRadius: 12,
+            background: "#fff7ed",
+            padding: 12,
+            display: "grid",
+            gap: 10,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Icon name="bug_report" size={16} />
+            <strong style={{ fontSize: 14 }}>DEV bank flow trace</strong>
           </div>
+          <div style={{ fontSize: 12, color: "#7c2d12", display: "grid", gap: 6 }}>
+            <div>
+              Dashboard context: user <code>{latestDashboardTrace?.userId ?? "n/a"}</code> · organisation <code>{latestDashboardTrace?.organisationId ?? "n/a"}</code> · wallet <code>{latestDashboardTrace?.walletId ?? "n/a"}</code>
+            </div>
+            <div>
+              Latest create: asset <code>{latestCreateTrace?.createdAssetId ?? "n/a"}</code> · wallet <code>{latestCreateTrace?.walletId ?? "n/a"}</code> · category <code>{latestCreateTrace?.categorySlug ?? latestCreateTrace?.assetCategoryToken ?? "n/a"}</code>
+            </div>
+            <div>
+              Latest bank page load: wallet <code>{latestBankLoadTrace?.walletId ?? "n/a"}</code> · ids <code>{(latestBankLoadTrace?.assetIds ?? []).join(", ") || "none"}</code>
+            </div>
+            <div>
+              Dashboard asset ids: <code>{(latestDashboardTrace?.assetIds ?? []).join(", ") || "none"}</code>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      <section
+        style={{
+          border: "1px solid #e2e8f0",
+          borderRadius: 16,
+          background: "#fff",
+          padding: 16,
+          display: "grid",
+          gap: 12,
+        }}
+      >
+        <div style={{ display: "grid", gap: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={overviewIconStyle}>
+              <Icon name="dashboard" size={16} />
+            </div>
+            <h2 style={{ margin: 0, fontSize: 18 }}>Overview</h2>
+          </div>
+          <div style={{ color: "#64748b", fontSize: 13 }}>
+            Open the main areas of your estate record from one simplified overview.
+          </div>
+        </div>
+        <div className="lf-content-grid">
+          <DashboardAssetSummaryCard
+            icon={<Icon name="account_balance" size={13} />}
+            title="All finances"
+            href="/finances"
+            addedAt={financialSummary.addedAt}
+            value={financialSummary.valueText}
+            detail={financialSummary.detailText}
+            emptyActionLabel="Review finance records"
+            obscured={shouldObscureSection(viewerRole, "financial", viewerActivation)}
+          />
+
+          <DashboardAssetSummaryCard
+            icon={<Icon name="description" size={13} />}
+            title="Legal"
+            href="/legal"
+            addedAt={legalSummary.addedAt}
+            value={legalSummary.valueText}
+            detail={legalSummary.detailText}
+            emptyActionLabel="Review legal records"
+            obscured={shouldObscureSection(viewerRole, "legal", viewerActivation)}
+          />
+
+          <DashboardAssetSummaryCard
+            icon={<Icon name="home" size={13} />}
+            title="Property"
+            href="/property"
+            addedAt={propertySummary.addedAt}
+            value={propertySummary.valueText}
+            detail={propertySummary.detailText}
+            emptyActionLabel="Review property records"
+            obscured={shouldObscureSection(viewerRole, "property", viewerActivation)}
+          />
+
+          <DashboardAssetSummaryCard
+            icon={<Icon name="business_center" size={13} />}
+            title="Business"
+            href="/business"
+            addedAt={businessSummary.addedAt}
+            value={businessSummary.valueText}
+            detail={businessSummary.detailText}
+            emptyActionLabel="Review business records"
+            obscured={shouldObscureSection(viewerRole, "business", viewerActivation)}
+          />
+
+          <DashboardAssetSummaryCard
+            icon={<Icon name="devices" size={13} />}
+            title="Digital"
+            href="/vault/digital"
+            addedAt={digitalSummary.addedAt}
+            value={digitalSummary.valueText}
+            detail={digitalSummary.detailText}
+            emptyActionLabel="Review digital records"
+            obscured={shouldObscureSection(viewerRole, "digital", viewerActivation)}
+          />
+
+          {canViewTasks ? (
+            <DashboardAssetSummaryCard
+              icon={<Icon name="task" size={13} />}
+              title="Tasks"
+              href="/personal/tasks"
+              addedAt={taskSummary.addedAt}
+              value={taskSummary.valueText}
+              detail={taskSummary.detailText}
+              emptyActionLabel="Review tasks"
+            />
+          ) : null}
         </div>
       </section>
 
-      <ContactInvitationManager />
+      {!viewer.readOnly ? <ContactInvitationManager /> : null}
     </div>
   );
-}
-
-async function fetchProfile(userId: string) {
-  let response = await supabase
-    .from("profiles")
-    .select("user_id,display_name,avatar_path")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (response.error && (isMissingRelationError(response.error, "profiles") || isMissingColumnError(response.error, "avatar_path"))) {
-    response = await supabase
-      .from("profiles")
-      .select("user_id,display_name")
-      .eq("user_id", userId)
-      .maybeSingle();
-  }
-
-  return response;
 }
 
 async function fetchDocuments(userId: string, walletId: string | null) {
@@ -826,6 +570,7 @@ async function fetchDocuments(userId: string, walletId: string | null) {
     .from("documents")
     .select("*")
     .eq("owner_user_id", userId)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (walletId) query = query.eq("wallet_id", walletId);
@@ -836,6 +581,7 @@ async function fetchDocuments(userId: string, walletId: string | null) {
       .from("documents")
       .select("*")
       .eq("created_by", userId)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false });
     if (!response.error && walletId) {
       response = await supabase
@@ -843,6 +589,7 @@ async function fetchDocuments(userId: string, walletId: string | null) {
         .select("*")
         .eq("created_by", userId)
         .eq("wallet_id", walletId)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
     }
   }
@@ -850,31 +597,20 @@ async function fetchDocuments(userId: string, walletId: string | null) {
   return response;
 }
 
-async function fetchReminders(userId: string) {
-  let response = await supabase
-    .from("reminders")
-    .select("*")
-    .eq("user_id", userId)
-    .order("scheduled_for", { ascending: true });
-
-  if (response.error && isMissingColumnError(response.error, "user_id")) {
-    response = await supabase
-      .from("reminders")
-      .select("*")
-      .eq("owner_user_id", userId)
-      .order("scheduled_for", { ascending: true });
-  }
-
-  return response;
+async function fetchAttachments(userId: string) {
+  return supabase
+    .from("attachments")
+    .select("id,record_id,owner_user_id,storage_bucket,storage_path,file_name,mime_type,created_at")
+    .eq("owner_user_id", userId)
+    .order("created_at", { ascending: false });
 }
 
-function getDashboardBucketHref(bucket: ReturnType<typeof getDashboardAssetBucket>) {
-  if (bucket === "finance") return "/finances/bank";
-  if (bucket === "property") return "/property";
-  if (bucket === "business") return "/business";
-  if (bucket === "digital") return "/vault/digital";
-  if (bucket === "tasks") return "/personal/tasks";
-  return "/dashboard";
+async function fetchSectionEntries(userId: string) {
+  return supabase
+    .from("section_entries")
+    .select("id,title,section_key,category_key")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
 }
 
 function getFinanceWorkspaceHref(categoryKey: string) {
@@ -885,79 +621,8 @@ function getFinanceWorkspaceHref(categoryKey: string) {
   return "/finances/bank";
 }
 
-function getDashboardBucketLabel(bucket: ReturnType<typeof getDashboardAssetBucket>) {
-  if (bucket === "finance") return "Bank Accounts";
-  if (bucket === "property") return "Property";
-  if (bucket === "business") return "Business Interests";
-  if (bucket === "digital") return "Digital Assets";
-  if (bucket === "tasks") return "Tasks";
-  return "Assets";
-}
-
-function getBucketIcon(bucket: ReturnType<typeof getDashboardAssetBucket>) {
-  if (bucket === "finance") return "account_balance";
-  if (bucket === "property") return "home";
-  if (bucket === "business") return "business_center";
-  if (bucket === "digital") return "devices";
-  if (bucket === "tasks") return "task";
-  return "inventory_2";
-}
-
-function findAssetParentLabel(rows: AssetRow[], assetId: string | null | undefined) {
-  const match = rows.find((row) => row.id === String(assetId ?? ""));
-  return String(match?.title ?? match?.provider_name ?? "").trim() || "Linked asset";
-}
-
-function findAssetSectionKey(rows: AssetRow[], assetId: string | null | undefined) {
-  return String(rows.find((row) => row.id === String(assetId ?? ""))?.section_key ?? "").trim();
-}
-
-function findAssetCategoryKey(rows: AssetRow[], assetId: string | null | undefined) {
-  return String(rows.find((row) => row.id === String(assetId ?? ""))?.category_key ?? "").trim();
-}
-
-function getDocumentWorkspaceHref(sectionKey: string, categoryKey: string) {
-  if (sectionKey === "property") return "/property/documents";
-  if (sectionKey === "personal" && categoryKey === "beneficiaries") return "/personal/beneficiaries";
-  if (sectionKey === "personal" && categoryKey === "executors") return "/trust";
-  if (sectionKey === "personal" && categoryKey === "tasks") return "/personal/tasks";
-  if (sectionKey === "finances") return "/finances/bank";
-  if (sectionKey === "business") return "/business";
-  if (sectionKey === "digital") return "/vault/digital";
-  return "/dashboard";
-}
-
 function getAssetValueMajor(row: AssetRow) {
-  if (typeof row.estimated_value_minor === "number") return row.estimated_value_minor / 100;
-  if (typeof row.value_minor === "number") return row.value_minor / 100;
-
-  const metadata = row.metadata_json ?? row.metadata ?? {};
-  const candidateKeys = [
-    "estimated_value_minor",
-    "current_balance_minor",
-    "outstanding_balance_minor",
-    "cover_amount_minor",
-    "estimated_value",
-    "current_balance",
-    "outstanding_balance",
-    "cover_amount",
-    "value",
-  ];
-
-  for (const key of candidateKeys) {
-    const raw = metadata[key];
-    if (typeof raw === "number" && Number.isFinite(raw)) {
-      return key.endsWith("_minor") ? raw / 100 : raw;
-    }
-    if (typeof raw === "string") {
-      const parsed = Number(raw.replace(/[^0-9.-]/g, ""));
-      if (Number.isFinite(parsed)) {
-        return key.endsWith("_minor") ? parsed / 100 : parsed;
-      }
-    }
-  }
-
-  return 0;
+  return getDashboardAssetValueMajor(row);
 }
 
 function inferFirstCurrencyFromMetadata(rows: AssetRow[]) {
@@ -969,49 +634,19 @@ function inferFirstCurrencyFromMetadata(rows: AssetRow[]) {
   return "";
 }
 
-function formatDashboardDate(input?: string | null) {
-  if (!input) return "No date";
-  try {
-    return new Date(input).toLocaleDateString();
-  } catch {
-    return input;
-  }
-}
-
-async function getAvatarPreview(path: string) {
-  const buckets = ["vault-docs", "avatars"];
-  for (const bucket of buckets) {
-    const signed = await supabase.storage.from(bucket).createSignedUrl(path, 3600);
-    if (!signed.error && signed.data?.signedUrl) return signed.data.signedUrl;
-  }
-  return "";
-}
-
-function makeInitials(input: string) {
-  const clean = input.trim();
-  if (!clean) return "LF";
-  const parts = clean.split(/\s+/).slice(0, 2);
-  return parts.map((part) => part[0]?.toUpperCase() ?? "").join("") || "LF";
-}
-
-function buildQuickCreateMetadata(_type: QuickCreateType, input: AssetQuickCreateInput) {
-  return getCanonicalAssetMetadataFromValues(input.config, input.values);
-}
-
-function getQuickCreateSuccessRoute(type: QuickCreateType, createdId: string) {
-  return `/dashboard?created=1&category=${encodeURIComponent(type)}&createdId=${encodeURIComponent(createdId)}`;
-}
+const dashboardHeaderStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+} satisfies CSSProperties;
 
 function applyDevSmokeDashboardState(
   variant: "empty" | "fixture",
-  setHasProfileRecord: (value: boolean) => void,
-  setHasContactRecord: (value: boolean) => void,
-  setHasAddressRecord: (value: boolean) => void,
   setAssetRows: (rows: AssetRow[]) => void,
   setDocumentRows: (rows: DocumentRow[]) => void,
-  setReminderRows: (rows: ReminderRow[]) => void,
+  setAttachmentRows: (rows: AttachmentRow[]) => void,
   setCurrency: (value: string) => void,
-  setProfileSummary: (value: ProfileSummary) => void,
+  setContactRows: (rows: ContactDiscoveryRow[]) => void,
 ) {
   const now = new Date().toISOString();
   const fixtureAssets: AssetRow[] =
@@ -1043,64 +678,16 @@ function applyDevSmokeDashboardState(
         ]
       : [];
 
-  setHasProfileRecord(variant === "fixture");
-  setHasContactRecord(variant === "fixture");
-  setHasAddressRecord(variant === "fixture");
   setAssetRows(fixtureAssets);
   setDocumentRows([]);
-  setReminderRows([]);
+  setAttachmentRows([]);
   setCurrency("GBP");
-  setProfileSummary({
-    displayName: variant === "fixture" ? "Smoke User" : "Secure Account",
-    primaryEmail: variant === "fixture" ? "smoke-user@legacy-fortress.local" : "",
-    secondaryEmail: "",
-    mobile: "",
-    telephone: "",
-    address: variant === "fixture" ? "1 Smoke Test Lane, London" : "",
-    avatarUrl: "",
-  });
+  setContactRows([]);
 }
 
-const metricCardStyle = {
-  border: "1px solid #e2e8f0",
-  borderRadius: 12,
-  padding: 12,
-  background: "#f8fafc",
-  display: "grid",
-  gap: 4,
-} satisfies React.CSSProperties;
-
-const metricLabelStyle = {
-  fontSize: 12,
-  color: "#64748b",
-} satisfies React.CSSProperties;
-
-const metricValueStyle = {
-  fontSize: 24,
-  fontWeight: 800,
-  color: "#0f172a",
-} satisfies React.CSSProperties;
-
-const metricHelpStyle = {
-  fontSize: 12,
-  color: "#64748b",
-} satisfies React.CSSProperties;
-
-const activityRowStyle = {
-  border: "1px solid #e2e8f0",
-  borderRadius: 12,
-  background: "#fff",
-  padding: "10px 12px",
-  display: "flex",
-  alignItems: "center",
-  gap: 10,
-  width: "100%",
-  cursor: "pointer",
-} satisfies React.CSSProperties;
-
-const activityIconStyle = {
-  width: 32,
-  height: 32,
+const overviewIconStyle = {
+  width: 28,
+  height: 28,
   borderRadius: 10,
   background: "#f1f5f9",
   border: "1px solid #e2e8f0",
@@ -1111,41 +698,196 @@ const activityIconStyle = {
   flexShrink: 0,
 } satisfies React.CSSProperties;
 
-const emptyActivityStyle = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 8,
-  fontSize: 13,
-  color: "#64748b",
-} satisfies React.CSSProperties;
+const searchResultsPanelStyle = {
+  border: "1px solid #dbeafe",
+  borderRadius: 16,
+  background: "#f8fbff",
+  padding: 16,
+  display: "grid",
+  gap: 12,
+} satisfies CSSProperties;
 
-const dashboardSearchWrapStyle = {
-  border: "1px solid #cbd5e1",
-  borderRadius: 12,
+const searchEmptyStateStyle = {
+  border: "1px dashed #cbd5e1",
+  borderRadius: 14,
+  padding: 14,
+  color: "#64748b",
   background: "#fff",
-  padding: "0 12px",
+} satisfies CSSProperties;
+
+const searchResultStyle = {
+  textDecoration: "none",
+  color: "#0f172a",
+  border: "1px solid #e2e8f0",
+  borderRadius: 14,
+  background: "#fff",
+  padding: 12,
   display: "flex",
   alignItems: "center",
-  gap: 8,
-  minHeight: 42,
-  color: "#475569",
-} satisfies React.CSSProperties;
+  gap: 10,
+} satisfies CSSProperties;
 
-const dashboardSearchInputStyle = {
-  border: "none",
-  outline: "none",
-  width: "100%",
-  fontSize: 14,
-  color: "#0f172a",
-  background: "transparent",
-} satisfies React.CSSProperties;
+const searchResultIconStyle = {
+  width: 32,
+  height: 32,
+  borderRadius: 10,
+  background: "#eff6ff",
+  border: "1px solid #dbeafe",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: "#1d4ed8",
+  flexShrink: 0,
+} satisfies CSSProperties;
 
-const dashboardFilterSelectStyle = {
-  border: "1px solid #cbd5e1",
-  borderRadius: 12,
-  background: "#fff",
-  minHeight: 42,
-  padding: "0 12px",
-  fontSize: 14,
-  color: "#0f172a",
-} satisfies React.CSSProperties;
+const DASHBOARD_SEARCH_LINKS = [
+  {
+    id: "contacts",
+    label: "Contacts",
+    description: "Open the shared contacts workspace.",
+    href: "/contacts",
+    icon: "contacts",
+    keywords: ["people", "executors", "trustees", "advisors"],
+  },
+  {
+    id: "profile",
+    label: "Account details",
+    description: "Update your account name, phone, and address details.",
+    href: "/profile",
+    icon: "account_circle",
+    keywords: ["profile", "account", "phone", "avatar"],
+  },
+  {
+    id: "legal-identity",
+    label: "Identity documents",
+    description: "Review legal identity documents and linked contacts.",
+    href: "/legal/identity-documents",
+    icon: "badge",
+    keywords: ["passport", "driving licence", "identity"],
+  },
+  {
+    id: "social-media",
+    label: "Social media",
+    description: "Open saved social media records.",
+    href: "/personal/social-media",
+    icon: "public",
+    keywords: ["digital", "accounts", "social"],
+  },
+] satisfies Array<{
+  id: string;
+  label: string;
+  description: string;
+  href: string;
+  icon: string;
+  keywords: string[];
+}>;
+
+function getDiscoveryAssetHref(asset: AssetRow) {
+  const section = String(asset.section_key ?? "").trim();
+  if (section === "finances") return getFinanceWorkspaceHref(String(asset.category_key ?? ""));
+  if (section === "legal") return getLegalWorkspaceHref(String(asset.category_key ?? ""));
+  if (section === "property") return "/property";
+  if (section === "business") return "/business";
+  if (section === "digital") return "/vault/digital";
+  if (section === "personal") return getPersonalWorkspaceHref(String(asset.category_key ?? ""));
+  return "/dashboard";
+}
+
+function getDiscoveryAssetIcon(asset: AssetRow) {
+  const section = String(asset.section_key ?? "").trim();
+  if (section === "finances") return "account_balance";
+  if (section === "legal") return "description";
+  if (section === "property") return "home";
+  if (section === "business") return "business_center";
+  if (section === "digital") return "devices";
+  if (section === "personal") return "inventory_2";
+  return "description";
+}
+
+function resolveDocumentSectionKey(row: DocumentRow, assets: AssetRow[]) {
+  const parent = findAssetById(row.asset_id, assets);
+  if (parent?.section_key) return String(parent.section_key);
+  if (row.category_key === "identity-documents" || row.document_type === "identity-document") return "legal";
+  return row.category_key === "photo" ? "personal" : "legal";
+}
+
+function resolveAttachmentSectionKey(row: AttachmentRow, assets: AssetRow[], sectionEntries: SectionEntrySearchRow[]) {
+  const parent = findSearchParentById(row.record_id, assets, sectionEntries);
+  return String(parent?.section_key ?? "");
+}
+
+function resolveAttachmentCategoryKey(row: AttachmentRow, assets: AssetRow[], sectionEntries: SectionEntrySearchRow[]) {
+  const parent = findSearchParentById(row.record_id, assets, sectionEntries);
+  return String(parent?.category_key ?? "");
+}
+
+function findAssetById(assetId: string | null | undefined, assets: AssetRow[]) {
+  return assets.find((row) => row.id === assetId) ?? null;
+}
+
+function findSectionEntryById(entryId: string | null | undefined, sectionEntries: SectionEntrySearchRow[]) {
+  return sectionEntries.find((row) => row.id === entryId) ?? null;
+}
+
+function findSearchParentById(parentId: string | null | undefined, assets: AssetRow[], sectionEntries: SectionEntrySearchRow[]) {
+  return findAssetById(parentId, assets) ?? findSectionEntryById(parentId, sectionEntries);
+}
+
+function resolveParentLabel(assetId: string | null | undefined, assets: AssetRow[], fallback: string | null) {
+  const parent = findAssetById(assetId, assets);
+  return String(parent?.title ?? parent?.provider_name ?? fallback ?? "").trim() || null;
+}
+
+function resolveSearchParentLabel(
+  parentId: string | null | undefined,
+  assets: AssetRow[],
+  sectionEntries: SectionEntrySearchRow[],
+  fallback: string | null,
+) {
+  const parent = findSearchParentById(parentId, assets, sectionEntries);
+  const providerName = parent && "provider_name" in parent ? String(parent.provider_name ?? "").trim() : "";
+  return String(parent?.title ?? providerName ?? fallback ?? "").trim() || null;
+}
+
+function getDiscoveryDocumentHref(
+  sectionKey: string | null | undefined,
+  categoryKey: string | null | undefined,
+  parentLabel: string | null | undefined,
+) {
+  const normalizedSection = String(sectionKey ?? "").trim();
+  if (normalizedSection === "personal") return getPersonalWorkspaceHref(String(categoryKey ?? ""));
+  if (normalizedSection === "finances") return "/finances";
+  if (normalizedSection === "legal") return getLegalWorkspaceHref(String(categoryKey ?? ""), parentLabel);
+  if (normalizedSection === "property") return "/property";
+  if (normalizedSection === "business") return "/business";
+  if (normalizedSection === "digital") return "/vault/digital";
+  return "/dashboard";
+}
+
+function getDiscoveryAttachmentHref(sectionKey: string | null | undefined, categoryKey: string | null | undefined) {
+  const normalizedSection = String(sectionKey ?? "").trim();
+  if (normalizedSection === "finances") return "/finances";
+  if (normalizedSection === "legal") return getLegalWorkspaceHref(String(categoryKey ?? ""));
+  if (normalizedSection === "property") return "/property";
+  if (normalizedSection === "business") return "/business";
+  if (normalizedSection === "digital") return "/vault/digital";
+  if (normalizedSection === "personal") return getPersonalWorkspaceHref(String(categoryKey ?? ""));
+  return "/dashboard";
+}
+
+function getLegalWorkspaceHref(categoryKey: string, parentLabel?: string | null) {
+  const normalizedCategory = String(categoryKey ?? "").trim();
+  if (normalizedCategory === "identity-documents") return "/legal/identity-documents";
+  if (normalizedCategory === "power-of-attorney") return "/legal/power-of-attorney";
+  if (normalizedCategory === "wills") return "/legal/wills";
+  if (normalizedCategory === "death-certificate") return "/legal/death-certificate";
+  if ((parentLabel ?? "").toLowerCase().includes("identity")) return "/legal/identity-documents";
+  return "/legal";
+}
+
+function getPersonalWorkspaceHref(categoryKey: string) {
+  const normalizedCategory = String(categoryKey ?? "").trim();
+  if (normalizedCategory === "social-media") return "/personal/social-media";
+  if (normalizedCategory === "tasks") return "/personal/tasks";
+  return "/personal";
+}

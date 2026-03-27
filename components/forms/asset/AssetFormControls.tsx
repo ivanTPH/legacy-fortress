@@ -1,10 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type ReactNode } from "react";
+import {
+  cloneElement,
+  isValidElement,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type DragEvent,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import type { AssetFieldOption } from "../../../lib/assets/fieldDictionary";
 import Icon from "../../ui/Icon";
 
 type SharedProps = {
+  fieldId?: string;
   label: string;
   iconName?: string;
   required?: boolean;
@@ -13,54 +26,78 @@ type SharedProps = {
   children: ReactNode;
 };
 
-export function FormField({ label, iconName, required = false, error, helpText, children }: SharedProps) {
+export function FormField({ fieldId, label, iconName, required = false, error, helpText, children }: SharedProps) {
+  const generatedFieldId = useId();
+  const resolvedFieldId = fieldId ?? generatedFieldId;
+  const childElement = isValidElement(children)
+    ? (children as ReactElement<{ id?: string; ariaLabel?: string; "aria-label"?: string }>)
+    : null;
+  const resolvedChildren = childElement
+    ? cloneElement(childElement, {
+      id: childElement.props.id ?? resolvedFieldId,
+      ariaLabel: childElement.props["aria-label"] ?? childElement.props.ariaLabel ?? label,
+    })
+    : children;
+
   return (
-    <label style={fieldWrapStyle}>
-      <span style={labelStyle}>
+    <div style={fieldWrapStyle}>
+      <label htmlFor={resolvedFieldId} style={labelStyle}>
         {iconName ? <Icon name={iconName} size={16} style={{ color: "#475569" }} /> : null}
         {label}
         {required ? " *" : ""}
-      </span>
-      {children}
+      </label>
+      {resolvedChildren}
       <ValidationText error={error} helpText={helpText} />
-    </label>
+    </div>
   );
 }
 
 export function TextInput({
+  id,
+  ariaLabel,
   value,
   onChange,
   placeholder,
   disabled,
 }: {
+  id?: string;
+  ariaLabel?: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
 }) {
-  return <input value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} style={inputStyle} disabled={disabled} />;
+  return <input id={id} aria-label={ariaLabel} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} style={inputStyle} disabled={disabled} />;
 }
 
 export function NumberInput({
+  id,
+  ariaLabel,
   value,
   onChange,
   placeholder,
   disabled,
 }: {
+  id?: string;
+  ariaLabel?: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
 }) {
-  return <input type="number" value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} style={inputStyle} disabled={disabled} />;
+  return <input id={id} aria-label={ariaLabel} type="number" value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} style={inputStyle} disabled={disabled} />;
 }
 
 export function TextAreaInput({
+  id,
+  ariaLabel,
   value,
   onChange,
   placeholder,
   disabled,
 }: {
+  id?: string;
+  ariaLabel?: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -68,6 +105,8 @@ export function TextAreaInput({
 }) {
   return (
     <textarea
+      id={id}
+      aria-label={ariaLabel}
       value={value}
       onChange={(event) => onChange(event.target.value)}
       placeholder={placeholder}
@@ -78,20 +117,49 @@ export function TextAreaInput({
 }
 
 export function SelectInput({
+  id,
+  ariaLabel,
   value,
   onChange,
   options,
   disabled,
   placeholder,
 }: {
+  id?: string;
+  ariaLabel?: string;
   value: string;
   onChange: (value: string) => void;
   options: AssetFieldOption[];
   disabled?: boolean;
   placeholder?: string;
 }) {
+  const selectRef = useRef<HTMLSelectElement | null>(null);
+
+  useEffect(() => {
+    const node = selectRef.current;
+    if (!node) return;
+
+    const syncValue = () => onChange(node.value);
+    node.addEventListener("input", syncValue);
+    node.addEventListener("change", syncValue);
+    return () => {
+      node.removeEventListener("input", syncValue);
+      node.removeEventListener("change", syncValue);
+    };
+  }, [onChange]);
+
   return (
-    <select value={value} onChange={(event) => onChange(event.target.value)} style={inputStyle} disabled={disabled}>
+    <select
+      ref={selectRef}
+      id={id}
+      aria-label={ariaLabel}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      onInput={(event) => onChange((event.target as HTMLSelectElement).value)}
+      onBlur={(event) => onChange(event.target.value)}
+      style={inputStyle}
+      disabled={disabled}
+    >
       <option value="">{placeholder ?? "Select an option"}</option>
       {options.map((option) => (
         <option key={option.value} value={option.value}>
@@ -103,15 +171,19 @@ export function SelectInput({
 }
 
 export function DateInput({
+  id,
+  ariaLabel,
   value,
   onChange,
   disabled,
 }: {
+  id?: string;
+  ariaLabel?: string;
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
 }) {
-  return <input type="date" value={value} onChange={(event) => onChange(event.target.value)} style={inputStyle} disabled={disabled} />;
+  return <input id={id} aria-label={ariaLabel} type="date" value={value} onChange={(event) => onChange(event.target.value)} style={inputStyle} disabled={disabled} />;
 }
 
 export function ToggleInput({
@@ -144,6 +216,8 @@ export function FileUploadPlaceholder() {
 }
 
 export function FileDropzone({
+  id,
+  ariaLabel,
   label,
   accept,
   file,
@@ -151,6 +225,8 @@ export function FileDropzone({
   onClear,
   disabled = false,
 }: {
+  id?: string;
+  ariaLabel?: string;
   label: string;
   accept: string;
   file: File | null;
@@ -206,8 +282,10 @@ export function FileDropzone({
       }}
     >
       <input
+        id={id}
         ref={inputRef}
         type="file"
+        aria-label={ariaLabel ?? label}
         accept={accept}
         disabled={disabled}
         style={{ display: "none" }}
