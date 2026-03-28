@@ -389,7 +389,23 @@ export default function ContactsNetworkWorkspace() {
       {status ? <div style={{ color: "#b91c1c", fontSize: 13 }}>{status}</div> : null}
       {loading ? <div style={{ color: "#64748b" }}>Loading contacts network...</div> : null}
 
-      {!viewer.readOnly && editingContactId ? (
+      {!viewer.readOnly && selectedContactId ? (
+        <section style={panelStyle}>
+          <div style={{ display: "grid", gap: 3 }}>
+            <div style={{ fontSize: 18, fontWeight: 700 }}>Selected contact admin</div>
+            <div style={{ color: "#64748b", fontSize: 13 }}>
+              Manage the selected contact here, including invite state, role, permissions, notes, deletion, and exact linked-record scope.
+            </div>
+          </div>
+          <ContactInvitationManager
+            mode="full"
+            selectedContactId={selectedContactId}
+            selectedContactProfile={selectedContact}
+          />
+        </section>
+      ) : null}
+
+      {!viewer.readOnly && editingContactId && !selectedContactId ? (
         <section style={panelStyle}>
           <div style={{ display: "grid", gap: 3 }}>
             <div style={{ fontSize: 18, fontWeight: 700 }}>Edit contact</div>
@@ -544,7 +560,7 @@ export default function ContactsNetworkWorkspace() {
         </div>
       ) : null}
 
-      {!viewer.readOnly && showAccessReview ? (
+      {!viewer.readOnly && showAccessReview && !selectedContactId ? (
         <section style={panelStyle}>
           <div style={{ display: "grid", gap: 3 }}>
           <div style={{ fontSize: 18, fontWeight: 700 }}>Invitation access review</div>
