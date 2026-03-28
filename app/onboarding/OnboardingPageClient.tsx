@@ -10,9 +10,11 @@ import { waitForActiveUser } from "../../lib/auth/session";
 import { getOrCreateOnboardingState, saveOnboardingState, saveTermsAcceptance } from "../../lib/onboarding";
 import {
   VAULT_CATEGORY_DEFINITIONS,
+  getVaultSubsectionsForGroup,
   loadVaultPreferences,
   saveVaultPreferences,
   type VaultPreferences,
+  type VaultSubsectionKey,
 } from "../../lib/vaultPreferences";
 
 export default function OnboardingPageClient() {
@@ -97,6 +99,16 @@ export default function OnboardingPageClient() {
     }
   }
 
+  function toggleSubsection(key: VaultSubsectionKey) {
+    setVaultPreferences((current) => current ? {
+      ...current,
+      subsections: {
+        ...current.subsections,
+        [key]: !current.subsections[key],
+      },
+    } : current);
+  }
+
   if (loading) {
     return (
       <main className="lf-auth">
@@ -144,10 +156,20 @@ export default function OnboardingPageClient() {
             </div>
             <ul style={{ margin: 0, paddingLeft: 18, color: "#334155", display: "grid", gap: 6 }}>
               <li>Profile: confirm who you are and how someone should reach you.</li>
-              {(vaultPreferences?.finances ?? true) ? <li>Finances: add bank accounts, pensions, insurance, and supporting statements.</li> : null}
-              {(vaultPreferences?.legal ?? true) ? <li>Legal: save wills, powers of attorney, and important documents in one place.</li> : null}
+              {(vaultPreferences?.groups.finances ?? true) ? <li>Finances: add {[
+                vaultPreferences?.subsections.finances_bank ? "bank accounts" : null,
+                vaultPreferences?.subsections.finances_pensions ? "pensions" : null,
+                vaultPreferences?.subsections.finances_insurance ? "insurance" : null,
+                vaultPreferences?.subsections.finances_investments ? "investments" : null,
+                vaultPreferences?.subsections.finances_debts ? "debts" : null,
+              ].filter(Boolean).join(", ") || "your financial records"} and supporting statements.</li> : null}
+              {(vaultPreferences?.groups.legal ?? true) ? <li>Legal: save {[
+                vaultPreferences?.subsections.legal_wills ? "wills" : null,
+                vaultPreferences?.subsections.legal_power_of_attorney ? "powers of attorney" : null,
+                vaultPreferences?.subsections.legal_identity_documents ? "identity documents" : null,
+              ].filter(Boolean).join(", ") || "important legal documents"} in one place.</li> : null}
               <li>Contacts: record executors, next of kin, trustees, and advisors clearly.</li>
-              {(vaultPreferences?.tasks ?? true) ? <li>Tasks &amp; Follow-up: capture what still needs attention so progress feels visible.</li> : null}
+              {(vaultPreferences?.groups.tasks ?? true) ? <li>Tasks &amp; Follow-up: capture what still needs attention so progress feels visible.</li> : null}
             </ul>
           </section>
 
@@ -184,12 +206,36 @@ export default function OnboardingPageClient() {
                     <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <input
                         type="checkbox"
-                        checked={vaultPreferences[category.key]}
-                        onChange={() => setVaultPreferences((current) => current ? { ...current, [category.key]: !current[category.key] } : current)}
+                        checked={vaultPreferences.groups[category.key]}
+                        onChange={() => setVaultPreferences((current) => current ? {
+                          ...current,
+                          groups: {
+                            ...current.groups,
+                            [category.key]: !current.groups[category.key],
+                          },
+                        } : current)}
                       />
                       <span style={{ fontWeight: 700 }}>{category.label}</span>
                     </span>
                     <span style={{ color: "#64748b", fontSize: 13 }}>{category.description}</span>
+                    {getVaultSubsectionsForGroup(category.key).length ? (
+                      <span style={{ display: "grid", gap: 6, paddingLeft: 24 }}>
+                        {getVaultSubsectionsForGroup(category.key).map((subsection) => (
+                          <label key={subsection.key} style={{ display: "grid", gap: 3 }}>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                              <input
+                                type="checkbox"
+                                checked={vaultPreferences.subsections[subsection.key]}
+                                disabled={!vaultPreferences.groups[category.key]}
+                                onChange={() => toggleSubsection(subsection.key)}
+                              />
+                              <span style={{ fontWeight: 600, fontSize: 13 }}>{subsection.label}</span>
+                            </span>
+                            <span style={{ color: "#64748b", fontSize: 12 }}>{subsection.description}</span>
+                          </label>
+                        ))}
+                      </span>
+                    ) : null}
                   </label>
                 ))}
               </div>

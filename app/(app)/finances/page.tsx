@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import DashboardAssetSummaryCard from "../components/dashboard/DashboardAssetSummaryCard";
 import Icon from "../../../components/ui/Icon";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
+import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
 import { waitForActiveUser } from "../../../lib/auth/session";
 import { supabase } from "../../../lib/supabaseClient";
 import { fetchCanonicalAssets } from "../../../lib/assets/fetchCanonicalAssets";
@@ -14,6 +15,7 @@ import {
   type DashboardAssetRow,
   type FinanceCategoryKey,
 } from "../../../lib/dashboard/summary";
+import { isVaultSubsectionEnabled, type VaultSubsectionKey } from "../../../lib/vaultPreferences";
 import {
   shouldRefreshDashboardForAssetMutation,
   subscribeToCanonicalAssetMutation,
@@ -21,6 +23,7 @@ import {
 
 type FinanceSectionCard = {
   key: FinanceCategoryKey;
+  preferenceKey: VaultSubsectionKey;
   title: string;
   href: string;
   description: string;
@@ -28,16 +31,17 @@ type FinanceSectionCard = {
 };
 
 const FINANCE_SECTION_CARDS: FinanceSectionCard[] = [
-  { key: "bank", title: "Bank", href: "/finances/bank", description: "Current and savings accounts with provider logos.", icon: "account_balance" },
-  { key: "investments", title: "Investments", href: "/finances/investments", description: "Record portfolios, funds, and investment platforms.", icon: "trending_up" },
-  { key: "pensions", title: "Pensions", href: "/finances/pensions", description: "Track pension providers, values, and notes.", icon: "savings" },
-  { key: "insurance", title: "Insurance", href: "/finances/insurance", description: "Capture life and protection policy references.", icon: "health_and_safety" },
-  { key: "debts", title: "Debts", href: "/finances/debts", description: "Track liabilities and repayment obligations.", icon: "credit_card" },
+  { key: "bank", preferenceKey: "finances_bank", title: "Bank", href: "/finances/bank", description: "Current and savings accounts with provider logos.", icon: "account_balance" },
+  { key: "investments", preferenceKey: "finances_investments", title: "Investments", href: "/finances/investments", description: "Record portfolios, funds, and investment platforms.", icon: "trending_up" },
+  { key: "pensions", preferenceKey: "finances_pensions", title: "Pensions", href: "/finances/pensions", description: "Track pension providers, values, and notes.", icon: "savings" },
+  { key: "insurance", preferenceKey: "finances_insurance", title: "Insurance", href: "/finances/insurance", description: "Capture life and protection policy references.", icon: "health_and_safety" },
+  { key: "debts", preferenceKey: "finances_debts", title: "Debts", href: "/finances/debts", description: "Track liabilities and repayment obligations.", icon: "credit_card" },
 ];
 
 export default function FinancesOverviewPage() {
   const router = useRouter();
   const { viewer } = useViewerAccess();
+  const { preferences } = useVaultPreferences();
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState("");
   const [refreshToken, setRefreshToken] = useState(0);
@@ -113,8 +117,8 @@ export default function FinancesOverviewPage() {
         currency,
         href: section.href,
       }),
-    })),
-    [assetRows, currency],
+    })).filter((section) => isVaultSubsectionEnabled(preferences, section.preferenceKey)),
+    [assetRows, currency, preferences],
   );
 
   return (
@@ -128,6 +132,7 @@ export default function FinancesOverviewPage() {
       {status ? <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div> : null}
       {loading ? <div style={{ color: "#6b7280" }}>Loading finance summary...</div> : null}
 
+      {summaries.length ? (
       <div className="lf-content-grid">
         {summaries.map((section) => (
           <div key={section.href} className="lf-finance-summary-tile">
@@ -145,6 +150,11 @@ export default function FinancesOverviewPage() {
           </div>
         ))}
       </div>
+      ) : (
+        <div style={{ color: "#64748b", fontSize: 13 }}>
+          Finance subsections are currently hidden by My Vault preferences. Re-enable them in Account / My Vault at any time.
+        </div>
+      )}
     </section>
   );
 }

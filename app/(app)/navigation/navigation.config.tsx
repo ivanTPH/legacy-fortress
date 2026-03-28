@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { AppRouteNode } from "../../../config/routeManifest";
 import { ACCOUNT_ROUTE_MANIFEST, APP_ROUTE_MANIFEST } from "../../../config/routeManifest";
-import type { VaultCategoryGroupKey } from "../../../lib/vaultPreferences";
+import type { VaultCategoryGroupKey, VaultSubsectionKey } from "../../../lib/vaultPreferences";
 
 export type NavNode = {
   id: string;
@@ -12,6 +12,7 @@ export type NavNode = {
   isEnabled?: boolean;
   rolesAllowed?: string[];
   vaultCategoryKey?: VaultCategoryGroupKey;
+  vaultSubsectionKey?: VaultSubsectionKey;
   children?: NavNode[];
 };
 
@@ -24,6 +25,7 @@ function mapRouteNode(node: AppRouteNode): NavNode {
     icon: node.icon,
     isEnabled: node.enabled !== false,
     vaultCategoryKey: node.vaultCategoryKey,
+    vaultSubsectionKey: node.vaultSubsectionKey,
     children: node.children?.map(mapRouteNode),
   };
 }

@@ -3,16 +3,21 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import Icon from "../../../components/ui/Icon";
+import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
+import { isVaultSubsectionEnabled, type VaultSubsectionKey } from "../../../lib/vaultPreferences";
 
 const items = [
-  { href: "/vault/personal", label: "Possessions", desc: "Keep household items, keepsakes, and practical belongings visible with photos, notes, and supporting documents.", icon: "inventory_2" },
-  { href: "/personal/subscriptions", label: "Subscriptions", desc: "Track recurring services, renewal dates, and provider details that someone may need to stop or transfer later.", icon: "subscriptions" },
-  { href: "/personal/social-media", label: "Social media", desc: "Record social platforms, digital identities, and related account details in one place.", icon: "alternate_email" },
-  { href: "/personal/wishes", label: "Personal wishes", desc: "Capture personal guidance, funeral wishes, and other instructions that help people act with confidence.", icon: "favorite" },
-  { href: "/personal/tasks", label: "Tasks & follow-up", desc: "Track the practical actions that still need attention so executor readiness does not rely on memory alone.", icon: "task" },
+  { href: "/vault/personal", label: "Possessions", desc: "Keep household items, keepsakes, and practical belongings visible with photos, notes, and supporting documents.", icon: "inventory_2", preferenceKey: "personal_possessions" as VaultSubsectionKey },
+  { href: "/personal/subscriptions", label: "Subscriptions", desc: "Track recurring services, renewal dates, and provider details that someone may need to stop or transfer later.", icon: "subscriptions", preferenceKey: "personal_subscriptions" as VaultSubsectionKey },
+  { href: "/personal/social-media", label: "Social media", desc: "Record social platforms, digital identities, and related account details in one place.", icon: "alternate_email", preferenceKey: "personal_social_media" as VaultSubsectionKey },
+  { href: "/personal/wishes", label: "Personal wishes", desc: "Capture personal guidance, funeral wishes, and other instructions that help people act with confidence.", icon: "favorite", preferenceKey: "personal_wishes" as VaultSubsectionKey },
+  { href: "/personal/tasks", label: "Tasks & follow-up", desc: "Track the practical actions that still need attention so executor readiness does not rely on memory alone.", icon: "task", preferenceKey: "tasks_follow_up" as VaultSubsectionKey },
 ];
 
 export default function PersonalOverviewPage() {
+  const { preferences } = useVaultPreferences();
+  const visibleItems = items.filter((item) => isVaultSubsectionEnabled(preferences, item.preferenceKey));
+
   return (
     <section style={{ display: "grid", gap: 14 }}>
       <div style={{ display: "grid", gap: 6 }}>
@@ -35,8 +40,9 @@ export default function PersonalOverviewPage() {
           Open contacts
         </Link>
       </section>
+      {visibleItems.length ? (
       <div className="lf-content-grid">
-        {items.map((item) => (
+        {visibleItems.map((item) => (
           <Link key={item.href} href={item.href} style={cardStyle}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontWeight: 700 }}>
               <Icon name={item.icon} size={18} />
@@ -46,6 +52,11 @@ export default function PersonalOverviewPage() {
           </Link>
         ))}
       </div>
+      ) : (
+        <div style={{ color: "#64748b", fontSize: 13 }}>
+          Personal subsections are currently hidden by My Vault preferences. Re-enable them in Account / My Vault at any time.
+        </div>
+      )}
     </section>
   );
 }

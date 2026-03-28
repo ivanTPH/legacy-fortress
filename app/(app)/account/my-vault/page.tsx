@@ -7,9 +7,11 @@ import { supabase } from "../../../../lib/supabaseClient";
 import { useVaultPreferences } from "../../../../components/vault/VaultPreferencesContext";
 import {
   VAULT_CATEGORY_DEFINITIONS,
+  getVaultSubsectionsForGroup,
   loadVaultPreferences,
   saveVaultPreferences,
   type VaultCategoryGroupKey,
+  type VaultSubsectionKey,
 } from "../../../../lib/vaultPreferences";
 import {
   SettingsCard,
@@ -59,7 +61,7 @@ export default function MyVaultPage() {
   }, [setPreferences]);
 
   const enabledCount = useMemo(
-    () => VAULT_CATEGORY_DEFINITIONS.filter((item) => draft[item.key]).length,
+    () => VAULT_CATEGORY_DEFINITIONS.filter((item) => draft.groups[item.key]).length,
     [draft],
   );
 
@@ -81,17 +83,33 @@ export default function MyVaultPage() {
   }
 
   function toggleCategory(key: VaultCategoryGroupKey) {
-    setDraft((current) => ({ ...current, [key]: !current[key] }));
+    setDraft((current) => ({
+      ...current,
+      groups: {
+        ...current.groups,
+        [key]: !current.groups[key],
+      },
+    }));
+  }
+
+  function toggleSubsection(key: VaultSubsectionKey) {
+    setDraft((current) => ({
+      ...current,
+      subsections: {
+        ...current.subsections,
+        [key]: !current.subsections[key],
+      },
+    }));
   }
 
   return (
     <SettingsPageShell
       title="My Vault"
-      subtitle="Choose which record groups stay visible across navigation, the dashboard, onboarding follow-up, and shared empty-state guidance."
+      subtitle="Choose which record groups and subsections stay visible across navigation, the dashboard, onboarding follow-up, and shared empty-state guidance."
     >
       <SettingsCard
         title="Visible vault categories"
-        description="Hide the sections you do not use today, then turn them back on later without losing any saved records."
+        description="Hide the sections you do not use today, then refine subsection visibility and turn them back on later without losing any saved records."
       >
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
           <div style={{ fontSize: 13, color: "#64748b" }}>
@@ -105,7 +123,7 @@ export default function MyVaultPage() {
               <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
                 <input
                   type="checkbox"
-                  checked={draft[category.key]}
+                  checked={draft.groups[category.key]}
                   onChange={() => toggleCategory(category.key)}
                   style={{ marginTop: 3 }}
                 />
@@ -117,6 +135,24 @@ export default function MyVaultPage() {
                     <strong style={{ fontSize: 14 }}>{category.label}</strong>
                   </div>
                   <div style={{ color: "#64748b", fontSize: 13 }}>{category.description}</div>
+                  {getVaultSubsectionsForGroup(category.key).length ? (
+                    <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
+                      {getVaultSubsectionsForGroup(category.key).map((subsection) => (
+                        <label key={subsection.key} style={subToggleRowStyle}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                            <input
+                              type="checkbox"
+                              checked={draft.subsections[subsection.key]}
+                              disabled={!draft.groups[category.key]}
+                              onChange={() => toggleSubsection(subsection.key)}
+                            />
+                            <span style={{ fontWeight: 600, fontSize: 13 }}>{subsection.label}</span>
+                          </span>
+                          <span style={{ color: "#64748b", fontSize: 12 }}>{subsection.description}</span>
+                        </label>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </label>
@@ -160,4 +196,11 @@ const toggleIconStyle = {
   alignItems: "center",
   justifyContent: "center",
   flexShrink: 0,
+} as const;
+
+const subToggleRowStyle = {
+  borderTop: "1px solid #e5e7eb",
+  paddingTop: 8,
+  display: "grid",
+  gap: 4,
 } as const;

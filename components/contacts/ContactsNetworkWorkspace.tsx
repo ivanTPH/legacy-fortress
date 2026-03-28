@@ -113,6 +113,15 @@ export default function ContactsNetworkWorkspace() {
 
   const selectedContactId = String(searchParams.get("contact") ?? "").trim();
 
+  useEffect(() => {
+    if (viewer.readOnly || loading || !selectedContactId) return;
+    const selected = contacts.find((item) => item.id === selectedContactId);
+    if (!selected) return;
+    setShowAccessReview(true);
+    setEditingContactId(selected.id);
+    setContactForm(buildEditableContactValues(selected));
+  }, [contacts, loading, selectedContactId, viewer.readOnly]);
+
   async function saveEditedContact() {
     if (viewer.readOnly || !editingContactId) return;
 
@@ -217,7 +226,7 @@ export default function ContactsNetworkWorkspace() {
           <div style={{ display: "grid", gap: 3 }}>
             <div style={{ fontSize: 18, fontWeight: 700 }}>Edit contact</div>
             <div style={{ color: "#64748b", fontSize: 13 }}>
-              Update the shared contact record while preserving canonical contact identity, invitation state, and record links.
+              Update the shared contact record here, then use the invitation access review below for resend, deletion, notes, role, and permission controls.
             </div>
           </div>
           <div className="lf-content-grid">
@@ -327,10 +336,10 @@ export default function ContactsNetworkWorkspace() {
           <div style={{ display: "grid", gap: 3 }}>
           <div style={{ fontSize: 18, fontWeight: 700 }}>Invitation access review</div>
           <div style={{ color: "#64748b", fontSize: 13 }}>
-              Review invitations, role assignments, contact edits, and access progress here when you need the fuller management view.
+              Review invitations, role assignments, resend state, notes, and access permissions here when you need the fuller management view.
           </div>
         </div>
-          <ContactInvitationManager mode="full" />
+          <ContactInvitationManager mode="full" selectedContactId={selectedContactId} />
         </section>
       ) : null}
     </section>

@@ -165,9 +165,11 @@ export function getDashboardAssetValueMajor(row: DashboardAssetRow) {
   const metadata = row.metadata_json ?? row.metadata ?? {};
   const candidateKeys = [
     "estimated_value_minor",
+    "estimated_value_major",
     "current_balance_minor",
     "outstanding_balance_minor",
     "cover_amount_minor",
+    "value_major",
     "estimated_value",
     "current_balance",
     "outstanding_balance",

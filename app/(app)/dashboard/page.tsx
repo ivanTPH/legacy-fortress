@@ -329,6 +329,10 @@ const legalSummary = useMemo(() => {
     return buildBucketSummary(getAssetsForBucket(assetRows, "property"), {
       createdId: createdAssetId,
       detailLabel: "property asset(s)",
+      valueTextBuilder: (rows) => {
+        const totalMajor = rows.reduce((sum, row) => sum + getAssetValueMajor(row), 0);
+        return totalMajor > 0 ? formatCurrency(totalMajor, currency) : `${rows.length}`;
+      },
       itemBuilder: (row) => ({
         id: row.id,
         label: row.title || "Property asset",
@@ -342,6 +346,10 @@ const legalSummary = useMemo(() => {
     return buildBucketSummary(getAssetsForBucket(assetRows, "business"), {
       createdId: createdAssetId,
       detailLabel: "business interest(s)",
+      valueTextBuilder: (rows) => {
+        const totalMajor = rows.reduce((sum, row) => sum + getAssetValueMajor(row), 0);
+        return totalMajor > 0 ? formatCurrency(totalMajor, currency) : `${rows.length}`;
+      },
       itemBuilder: (row) => ({
         id: row.id,
         label: row.title || "Business interest",
@@ -611,7 +619,7 @@ const legalSummary = useMemo(() => {
         </div>
         ) : (
           <div style={searchEmptyStateStyle}>
-            Your dashboard overview is currently hidden by My Vault preferences. Re-enable categories in Account / My Vault at any time.
+            Your dashboard overview is currently hidden by My Vault preferences. Re-enable categories or subsections in Account / My Vault at any time.
           </div>
         )}
       </section>

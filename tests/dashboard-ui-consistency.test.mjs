@@ -26,10 +26,16 @@ test("contacts keeps the fuller invitation management view while dashboard stays
   const contactsWorkspace = fs.readFileSync(path.join(root, "components/contacts/ContactsNetworkWorkspace.tsx"), "utf8");
   const invitationManager = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/ContactInvitationManager.tsx"), "utf8");
 
-  assert.match(contactsWorkspace, /<ContactInvitationManager mode="full" \/>/);
+  assert.match(contactsWorkspace, /<ContactInvitationManager mode="full" selectedContactId=\{selectedContactId\} \/>/);
   assert.match(invitationManager, /mode\?: "full" \| "dashboard"/);
+  assert.match(invitationManager, /selectedContactId\?: string/);
+  assert.match(invitationManager, /Owner notes/);
+  assert.match(invitationManager, /Permission level/);
+  assert.match(invitationManager, /Access scope/);
   assert.match(invitationManager, /Open Contacts/);
   assert.match(invitationManager, /buildContactsWorkspaceHref/);
+  assert.doesNotMatch(invitationManager, /Invitation sent and awaiting activation/);
+  assert.doesNotMatch(invitationManager, /Signed in and verified\./);
   assert.doesNotMatch(invitationManager, />Resend<\/th>/);
   assert.match(invitationManager, /function canSendInvite/);
   assert.match(invitationManager, /function canResendInvite/);

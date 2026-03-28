@@ -9,6 +9,7 @@ import {
   ROLE_RULES,
   type AccessActivationStatus,
   type CollaboratorRole,
+  type SectionKey,
 } from "../../../../lib/access-control/roles";
 import { supabase } from "../../../../lib/supabaseClient";
 import { getSafeUserData } from "../../../../lib/auth/requireActiveUser";
@@ -35,15 +36,33 @@ type InvitationRow = {
   activation_status: AccessActivationStatus;
   invited_at: string;
   sent_at: string | null;
+  permissions_override?: Record<string, unknown> | null;
 };
 
 type RoleAssignmentRow = {
   invitation_id: string;
   assigned_role: CollaboratorRole;
   activation_status: AccessActivationStatus;
+  permissions_override?: Record<string, unknown> | null;
 };
 
-export default function ContactInvitationManager({ mode = "full" }: { mode?: "full" | "dashboard" }) {
+const ACCESS_SCOPE_OPTIONS: Array<{ key: SectionKey; label: string }> = [
+  { key: "financial", label: "Finances" },
+  { key: "legal", label: "Legal" },
+  { key: "property", label: "Property" },
+  { key: "business", label: "Business" },
+  { key: "personal", label: "Personal" },
+  { key: "digital", label: "Digital" },
+  { key: "profile", label: "Profile" },
+];
+
+export default function ContactInvitationManager({
+  mode = "full",
+  selectedContactId = "",
+}: {
+  mode?: "full" | "dashboard";
+  selectedContactId?: string;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -53,6 +72,9 @@ export default function ContactInvitationManager({ mode = "full" }: { mode?: "fu
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<CollaboratorRole>("professional_advisor");
+  const [ownerNotes, setOwnerNotes] = useState("");
+  const [accessLevel, setAccessLevel] = useState<"view_only" | "view_edit">("view_only");
+  const [allowedSections, setAllowedSections] = useState<SectionKey[]>([]);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const isDashboardMode = mode === "dashboard";
@@ -66,7 +88,10 @@ export default function ContactInvitationManager({ mode = "full" }: { mode?: "fu
   );
   const invitationSummary = useMemo(() => {
     const invited = rows.filter((row) => resolveInvitationBadgeState(row.invitation_status, row.activation_status, row.sent_at).label === "Pending").length;
-    const accepted = rows.filter((row) => row.invitation_status === "accepted" || row.activation_status === "active" || row.activation_status === "verified").length;
+    const accepted = rows.filter((row) => {
+      const label = resolveInvitationBadgeState(row.invitation_status, row.activation_status, row.sent_at).label;
+      return label === "Accepted" || label === "Verified";
+    }).length;
     const readyToSend = rows.filter((row) => resolveInvitationBadgeState(row.invitation_status, row.activation_status, row.sent_at).label === "Ready to send").length;
     return { total: rows.length, invited, accepted, readyToSend };
   }, [rows]);
@@ -91,7 +116,7 @@ export default function ContactInvitationManager({ mode = "full" }: { mode?: "fu
         .order("invited_at", { ascending: false }),
       supabase
         .from("role_assignments")
-        .select("invitation_id,assigned_role,activation_status")
+        .select("invitation_id,assigned_role,activation_status,permissions_override")
         .eq("owner_user_id", userId),
     ]);
 
@@ -144,6 +169,7 @@ export default function ContactInvitationManager({ mode = "full" }: { mode?: "fu
         activation_status: assignment?.activation_status ?? "invited",
         invited_at: row.invited_at,
         sent_at: row.sent_at,
+        permissions_override: assignment?.permissions_override ?? null,
       };
     });
 
@@ -154,6 +180,19 @@ export default function ContactInvitationManager({ mode = "full" }: { mode?: "fu
   useEffect(() => {
     void loadRows();
   }, [loadRows]);
+
+  useEffect(() => {
+    if (isDashboardMode) return;
+    const normalizedContactId = String(selectedContactId ?? "").trim();
+    if (!normalizedContactId) return;
+    const selectedRow = rows.find((row) => row.contact_id === normalizedContactId);
+    if (!selectedRow) return;
+    startEdit(selectedRow);
+  }, [isDashboardMode, rows, selectedContactId]);
+
+  useEffect(() => {
+    setAllowedSections((current) => current.filter((section) => ROLE_RULES[role].allowedSections.includes(section)));
+  }, [role]);
 
   async function saveContact() {
     setSaving(true);
@@ -176,6 +215,20 @@ export default function ContactInvitationManager({ mode = "full" }: { mode?: "fu
       const userId = userData.user.id;
       const now = new Date().toISOString();
       const currentEditingRow = editingId ? rows.find((row) => row.id === editingId) ?? null : null;
+      const currentPermissions = currentEditingRow ? loadPermissionsOverride(currentEditingRow) : null;
+      const permissionsOverride = {
+        read_only: accessLevel !== "view_edit",
+        allowed_sections: allowedSections,
+        owner_notes: ownerNotes.trim() || null,
+        asset_ids: currentPermissions?.asset_ids ?? [],
+        record_ids: currentPermissions?.record_ids ?? [],
+      };
+      const currentInviteStatus = currentEditingRow
+        ? mapRowToCanonicalInviteStatus(currentEditingRow)
+        : "not_invited";
+      const currentVerificationStatus = currentEditingRow
+        ? mapActivationStatusToVerificationStatus(currentEditingRow.activation_status)
+        : "not_verified";
       const canonicalContact = await syncCanonicalContact(supabase, {
         ownerUserId: userId,
         existingContactId: currentEditingRow?.contact_id ?? null,
@@ -183,8 +236,8 @@ export default function ContactInvitationManager({ mode = "full" }: { mode?: "fu
         email: emailTrim,
         contactRole: role,
         sourceType: "invitation",
-        inviteStatus: editingId ? "invite_sent" : "not_invited",
-        verificationStatus: editingId ? "invited" : "not_verified",
+        inviteStatus: currentInviteStatus,
+        verificationStatus: currentVerificationStatus,
       });
 
       if (editingId) {
@@ -203,6 +256,7 @@ export default function ContactInvitationManager({ mode = "full" }: { mode?: "fu
               owner_user_id: userId,
               invitation_id: editingId,
               assigned_role: role,
+              permissions_override: permissionsOverride,
               updated_at: now,
             },
             { onConflict: "invitation_id" },
@@ -217,10 +271,8 @@ export default function ContactInvitationManager({ mode = "full" }: { mode?: "fu
           email: emailTrim,
           contactRole: role,
           sourceType: "invitation",
-          inviteStatus: "invite_sent",
-          verificationStatus: currentEditingRow
-            ? mapActivationStatusToVerificationStatus(currentEditingRow.activation_status)
-            : "invited",
+          inviteStatus: currentInviteStatus,
+          verificationStatus: currentVerificationStatus,
           link: {
             sourceKind: "invitation",
             sourceId: editingId,
@@ -253,6 +305,7 @@ export default function ContactInvitationManager({ mode = "full" }: { mode?: "fu
           invitation_id: insertRes.data.id,
           assigned_role: role,
           activation_status: "invited",
+          permissions_override: permissionsOverride,
           updated_at: now,
         });
 
@@ -282,6 +335,9 @@ export default function ContactInvitationManager({ mode = "full" }: { mode?: "fu
       setName("");
       setEmail("");
       setRole("professional_advisor");
+      setOwnerNotes("");
+      setAccessLevel("view_only");
+      setAllowedSections([]);
       setStatus("✅ Contact saved.");
       await loadRows();
     } catch (error) {
@@ -414,10 +470,14 @@ export default function ContactInvitationManager({ mode = "full" }: { mode?: "fu
   }
 
   function startEdit(row: InvitationRow) {
+    const permissions = loadPermissionsOverride(row);
     setEditingId(row.id);
     setName(row.contact_name);
     setEmail(row.contact_email);
     setRole(row.assigned_role);
+    setOwnerNotes(permissions.owner_notes);
+    setAccessLevel(permissions.read_only ? "view_only" : "view_edit");
+    setAllowedSections(permissions.allowed_sections);
   }
 
   async function remove(row: InvitationRow) {
@@ -534,7 +594,7 @@ export default function ContactInvitationManager({ mode = "full" }: { mode?: "fu
           <div>
             <h3 style={sectionTitleStyle}>{editingId ? "Edit contact" : "Add contact"}</h3>
             <p style={sectionIntroStyle}>
-              Save the contact first, then send or resend their invitation when you are ready.
+              Save the contact first, then manage role, resend, owner notes, and access scope from the same shared admin surface.
             </p>
           </div>
         </div>
@@ -558,6 +618,44 @@ export default function ContactInvitationManager({ mode = "full" }: { mode?: "fu
               ))}
             </select>
           </label>
+          <label style={fieldStyle}>
+            <span style={fieldLabelStyle}>Permission level</span>
+            <select value={accessLevel} onChange={(e) => setAccessLevel(e.target.value as "view_only" | "view_edit")} style={inputStyle}>
+              <option value="view_only">View only</option>
+              <option value="view_edit">View + edit</option>
+            </select>
+          </label>
+          <label style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
+            <span style={fieldLabelStyle}>Owner notes</span>
+            <textarea
+              value={ownerNotes}
+              onChange={(e) => setOwnerNotes(e.target.value)}
+              style={{ ...inputStyle, minHeight: 88, resize: "vertical" }}
+              placeholder="Optional handover or access notes"
+            />
+          </label>
+          <div style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
+            <span style={fieldLabelStyle}>Access scope</span>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {ACCESS_SCOPE_OPTIONS
+                .filter((option) => ROLE_RULES[role].allowedSections.includes(option.key))
+                .map((option) => {
+                  const checked = allowedSections.includes(option.key);
+                  return (
+                    <label key={option.key} style={scopeChipStyle}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          setAllowedSections((current) => checked ? current.filter((item) => item !== option.key) : [...current, option.key]);
+                        }}
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  );
+                })}
+            </div>
+          </div>
         </div>
 
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -573,6 +671,9 @@ export default function ContactInvitationManager({ mode = "full" }: { mode?: "fu
                 setName("");
                 setEmail("");
                 setRole("professional_advisor");
+                setOwnerNotes("");
+                setAccessLevel("view_only");
+                setAllowedSections([]);
               }}
             >
               Cancel
@@ -635,10 +736,7 @@ export default function ContactInvitationManager({ mode = "full" }: { mode?: "fu
                               <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>{resolveInvitationBadgeState(row.invitation_status, row.activation_status, row.sent_at).label}</span>
                             </div>
                           ) : (
-                            <>
-                              <InvitationStatusBadge invitationStatus={row.invitation_status} activationStatus={row.activation_status} sentAt={row.sent_at} />
-                              <span style={{ color: "#64748b", fontSize: 12 }}>{formatStatusSummary(row)}</span>
-                            </>
+                            <InvitationStatusBadge invitationStatus={row.invitation_status} activationStatus={row.activation_status} sentAt={row.sent_at} />
                           )}
                         </div>
                       </td>
@@ -716,10 +814,7 @@ export default function ContactInvitationManager({ mode = "full" }: { mode?: "fu
                         <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>{resolveInvitationBadgeState(row.invitation_status, row.activation_status, row.sent_at).label}</span>
                       </div>
                     ) : (
-                      <>
-                        <InvitationStatusBadge invitationStatus={row.invitation_status} activationStatus={row.activation_status} sentAt={row.sent_at} />
-                        <div style={{ color: "#64748b", fontSize: 12 }}>{formatStatusSummary(row)}</div>
-                      </>
+                      <InvitationStatusBadge invitationStatus={row.invitation_status} activationStatus={row.activation_status} sentAt={row.sent_at} />
                     )}
                   </div>
 
@@ -802,20 +897,6 @@ function formatShortDate(input: string) {
   }
 }
 
-function formatStatusSummary(row: InvitationRow) {
-  if (row.activation_status === "active" || row.activation_status === "verified") {
-    return "Signed in and verified.";
-  }
-  if (row.invitation_status === "revoked") return "Invitation revoked.";
-  if (row.invitation_status === "accepted") {
-    return "Signed in and awaiting verification.";
-  }
-  if (row.invitation_status === "rejected") {
-    return "Invitation rejected.";
-  }
-  return row.sent_at ? "Invitation sent and awaiting activation." : "Contact saved and ready to invite.";
-}
-
 function canResendInvite(row: InvitationRow) {
   return Boolean(String(row.sent_at ?? "").trim()) && row.invitation_status !== "revoked" && row.activation_status !== "active" && row.activation_status !== "verified";
 }
@@ -830,6 +911,28 @@ function getInvitationStatusIcon(row: InvitationRow) {
   if (state.tone === "danger") return { icon: "cancel", tone: "danger" as const, label: state.label };
   if (state.tone === "warning") return { icon: "schedule", tone: "warning" as const, label: state.label };
   return { icon: "mail", tone: "neutral" as const, label: state.label };
+}
+
+function mapRowToCanonicalInviteStatus(row: InvitationRow) {
+  if (row.invitation_status === "revoked") return "revoked" as const;
+  if (row.invitation_status === "rejected") return "rejected" as const;
+  if (row.activation_status === "active" || row.activation_status === "verified" || row.activation_status === "accepted" || row.invitation_status === "accepted") {
+    return "accepted" as const;
+  }
+  return row.sent_at ? "invite_sent" as const : "not_invited" as const;
+}
+
+function loadPermissionsOverride(row: InvitationRow) {
+  const source = (row.permissions_override && typeof row.permissions_override === "object" ? row.permissions_override : {}) as Record<string, unknown>;
+  return {
+    read_only: source["read_only"] !== false,
+    allowed_sections: Array.isArray(source["allowed_sections"])
+      ? source["allowed_sections"].map((item) => `${item}`.trim()).filter(Boolean) as SectionKey[]
+      : [],
+    owner_notes: typeof source["owner_notes"] === "string" ? source["owner_notes"] : "",
+    asset_ids: Array.isArray(source["asset_ids"]) ? source["asset_ids"].map((item) => `${item}`.trim()).filter(Boolean) : [],
+    record_ids: Array.isArray(source["record_ids"]) ? source["record_ids"].map((item) => `${item}`.trim()).filter(Boolean) : [],
+  };
 }
 
 const panelStyle: CSSProperties = {
@@ -950,6 +1053,17 @@ const summaryHelpStyle: CSSProperties = {
 
 const fieldStyle: CSSProperties = { display: "grid", gap: 6 };
 const fieldLabelStyle: CSSProperties = { fontSize: 12, color: "#374151" };
+const scopeChipStyle: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  padding: "8px 10px",
+  borderRadius: 999,
+  border: "1px solid #dbe3eb",
+  background: "#fff",
+  fontSize: 13,
+  color: "#0f172a",
+};
 const inputStyle: CSSProperties = {
   width: "100%",
   padding: 10,

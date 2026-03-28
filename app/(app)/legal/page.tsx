@@ -5,11 +5,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CSSProperties } from "react";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
+import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
 import { assetMatchesLegalCategory, LEGAL_CATEGORIES } from "../../../lib/legalCategories";
 import { fetchCanonicalAssets } from "../../../lib/assets/fetchCanonicalAssets";
 import { resolveWalletContextForRead } from "../../../lib/canonicalPersistence";
 import { supabase } from "../../../lib/supabaseClient";
 import { getSafeUserData } from "@/lib/auth/requireActiveUser";
+import { isVaultSubsectionEnabled, type VaultSubsectionKey } from "../../../lib/vaultPreferences";
 
 type LegalRow = {
   id: string;
@@ -29,6 +31,7 @@ type LegalAssetRow = {
 export default function LegalOverviewPage() {
   const router = useRouter();
   const { viewer } = useViewerAccess();
+  const { preferences } = useVaultPreferences();
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState("");
   const [rows, setRows] = useState<LegalRow[]>([]);
@@ -104,6 +107,8 @@ export default function LegalOverviewPage() {
     return byType;
   }, [rows]);
 
+  const visibleCategories = useMemo(() => LEGAL_CATEGORIES.filter((category) => isVaultSubsectionEnabled(preferences, mapLegalSlugToPreferenceKey(category.slug))), [preferences]);
+
   return (
     <section style={{ display: "grid", gap: 14 }}>
       <div style={{ display: "grid", gap: 6 }}>
@@ -115,8 +120,9 @@ export default function LegalOverviewPage() {
       {status ? <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div> : null}
       {loading ? <div style={{ color: "#6b7280" }}>Loading legal categories...</div> : null}
 
+      {visibleCategories.length ? (
       <div className="lf-content-grid">
-        {LEGAL_CATEGORIES.map((category) => {
+        {visibleCategories.map((category) => {
           const total = counts.get(category.slug) ?? 0;
           return (
             <Link key={category.slug} href={`/legal/${category.slug}`} style={cardStyle}>
@@ -129,8 +135,34 @@ export default function LegalOverviewPage() {
           );
         })}
       </div>
+      ) : (
+        <div style={{ color: "#64748b", fontSize: 13 }}>
+          Legal subsections are currently hidden by My Vault preferences. Re-enable them in Account / My Vault at any time.
+        </div>
+      )}
     </section>
   );
+}
+
+function mapLegalSlugToPreferenceKey(slug: string): VaultSubsectionKey {
+  switch (slug) {
+    case "wills":
+      return "legal_wills";
+    case "trusts":
+      return "legal_trusts";
+    case "power-of-attorney":
+      return "legal_power_of_attorney";
+    case "funeral-wishes":
+      return "legal_funeral_wishes";
+    case "marriage-divorce-documents":
+      return "legal_marriage_divorce_documents";
+    case "identity-documents":
+      return "legal_identity_documents";
+    case "death-certificate":
+      return "legal_death_certificate";
+    default:
+      return "legal_other_legal_documents";
+  }
 }
 
 const cardStyle: CSSProperties = {

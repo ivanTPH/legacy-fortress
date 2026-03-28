@@ -13,6 +13,7 @@ test("onboarding includes vault category selection and persists shared preferenc
   assert.match(config, /"vault_categories"/);
   assert.match(onboardingPage, /Choose your vault categories/);
   assert.match(onboardingPage, /saveVaultPreferences/);
+  assert.match(onboardingPage, /getVaultSubsectionsForGroup/);
   assert.match(onboardingPage, /"vault_categories"/);
   assert.match(settingsRoute, /router\.replace\("\/account\/my-vault"\)/);
 });

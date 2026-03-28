@@ -19,5 +19,13 @@ export function resolveInvitationBadgeState(
   if (!String(sentAt ?? "").trim()) {
     return { tone: "neutral" as const, label: "Ready to send" };
   }
+  if (
+    activationStatus === "accepted"
+    || activationStatus === "pending_verification"
+    || activationStatus === "verification_submitted"
+    || invitationStatus === "accepted"
+  ) {
+    return { tone: "success" as const, label: "Accepted" };
+  }
   return { tone: "warning" as const, label: "Pending" };
 }

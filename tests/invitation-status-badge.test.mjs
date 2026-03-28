@@ -19,9 +19,12 @@ test("pending badge only applies after an invite has been sent and before activa
     tone: "warning",
     label: "Pending",
   });
+});
+
+test("accepted badge appears after sign-in begins before verification completes", () => {
   assert.deepEqual(resolveInvitationBadgeState("accepted", "accepted", "2026-03-28T10:00:00.000Z"), {
-    tone: "warning",
-    label: "Pending",
+    tone: "success",
+    label: "Accepted",
   });
 });
 

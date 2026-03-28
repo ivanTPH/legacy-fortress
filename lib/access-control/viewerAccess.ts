@@ -48,6 +48,7 @@ export type ViewerPermissionsOverride = {
   allowedSections: SectionKey[];
   assetIds: string[];
   recordIds: string[];
+  ownerNotes?: string;
 };
 
 export function buildInvitationAcceptPath(invitationId: string, token: string) {
@@ -312,6 +313,7 @@ function normalizePermissionsOverride(value: Record<string, unknown> | null): Vi
     allowedSections: normalizeSectionKeys(source["allowed_sections"] ?? source["section_keys"]),
     assetIds: normalizeStringArray(source["asset_ids"]),
     recordIds: normalizeStringArray(source["record_ids"]),
+    ownerNotes: typeof source["owner_notes"] === "string" ? source["owner_notes"].trim() : undefined,
   };
 }
 

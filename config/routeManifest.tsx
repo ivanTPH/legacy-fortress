@@ -12,7 +12,7 @@ import {
   TrustIcon,
   WalletIcon,
 } from "../app/(app)/components/NavIcons";
-import type { VaultCategoryGroupKey } from "../lib/vaultPreferences";
+import type { VaultCategoryGroupKey, VaultSubsectionKey } from "../lib/vaultPreferences";
 
 export type AppRouteNode = {
   id: string;
@@ -21,6 +21,7 @@ export type AppRouteNode = {
   description?: string;
   icon?: ReactNode;
   vaultCategoryKey?: VaultCategoryGroupKey;
+  vaultSubsectionKey?: VaultSubsectionKey;
   children?: AppRouteNode[];
   enabled?: boolean;
 };
@@ -44,14 +45,14 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     vaultCategoryKey: "legal",
     enabled: on,
     children: [
-      { id: "legal-wills", label: "Wills", path: "/legal/wills", enabled: on },
-      { id: "legal-trusts", label: "Trusts", path: "/legal/trusts", enabled: on },
-      { id: "legal-poa", label: "Power of Attorney", path: "/legal/power-of-attorney", enabled: on },
-      { id: "legal-funeral", label: "Funeral Wishes", path: "/legal/funeral-wishes", enabled: on },
-      { id: "legal-marriage", label: "Marriage / Divorce Documents", path: "/legal/marriage-divorce-documents", enabled: on },
-      { id: "legal-identity", label: "Identity Documents", path: "/legal/identity-documents", enabled: on },
-      { id: "legal-other", label: "Other Legal Documents", path: "/legal/other-legal-documents", enabled: on },
-      { id: "legal-verification", label: "Death Certificate Verification", path: "/legal/death-certificate", enabled: on },
+      { id: "legal-wills", label: "Wills", path: "/legal/wills", vaultSubsectionKey: "legal_wills", enabled: on },
+      { id: "legal-trusts", label: "Trusts", path: "/legal/trusts", vaultSubsectionKey: "legal_trusts", enabled: on },
+      { id: "legal-poa", label: "Power of Attorney", path: "/legal/power-of-attorney", vaultSubsectionKey: "legal_power_of_attorney", enabled: on },
+      { id: "legal-funeral", label: "Funeral Wishes", path: "/legal/funeral-wishes", vaultSubsectionKey: "legal_funeral_wishes", enabled: on },
+      { id: "legal-marriage", label: "Marriage / Divorce Documents", path: "/legal/marriage-divorce-documents", vaultSubsectionKey: "legal_marriage_divorce_documents", enabled: on },
+      { id: "legal-identity", label: "Identity Documents", path: "/legal/identity-documents", vaultSubsectionKey: "legal_identity_documents", enabled: on },
+      { id: "legal-other", label: "Other Legal Documents", path: "/legal/other-legal-documents", vaultSubsectionKey: "legal_other_legal_documents", enabled: on },
+      { id: "legal-verification", label: "Death Certificate Verification", path: "/legal/death-certificate", vaultSubsectionKey: "legal_death_certificate", enabled: on },
     ],
   },
   {
@@ -62,11 +63,11 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     vaultCategoryKey: "finances",
     enabled: on,
     children: [
-      { id: "finances-bank", label: "Bank", path: "/finances/bank", enabled: on },
-      { id: "finances-pensions", label: "Pensions", path: "/finances/pensions", enabled: on },
-      { id: "finances-investments", label: "Investments", path: "/finances/investments", enabled: on },
-      { id: "finances-insurance", label: "Insurance", path: "/finances/insurance", enabled: on },
-      { id: "finances-debts", label: "Debts", path: "/finances/debts", enabled: on },
+      { id: "finances-bank", label: "Bank", path: "/finances/bank", vaultSubsectionKey: "finances_bank", enabled: on },
+      { id: "finances-pensions", label: "Pensions", path: "/finances/pensions", vaultSubsectionKey: "finances_pensions", enabled: on },
+      { id: "finances-investments", label: "Investments", path: "/finances/investments", vaultSubsectionKey: "finances_investments", enabled: on },
+      { id: "finances-insurance", label: "Insurance", path: "/finances/insurance", vaultSubsectionKey: "finances_insurance", enabled: on },
+      { id: "finances-debts", label: "Debts", path: "/finances/debts", vaultSubsectionKey: "finances_debts", enabled: on },
     ],
   },
   {
@@ -77,10 +78,10 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     vaultCategoryKey: "personal",
     enabled: on,
     children: [
-      { id: "personal-possessions", label: "Possessions", path: "/vault/personal", enabled: on },
-      { id: "personal-subscriptions", label: "Subscriptions", path: "/personal/subscriptions", enabled: on },
-      { id: "personal-social-media", label: "Social media", path: "/personal/social-media", enabled: on },
-      { id: "personal-wishes", label: "Personal Wishes", path: "/personal/wishes", enabled: on },
+      { id: "personal-possessions", label: "Possessions", path: "/vault/personal", vaultSubsectionKey: "personal_possessions", enabled: on },
+      { id: "personal-subscriptions", label: "Subscriptions", path: "/personal/subscriptions", vaultSubsectionKey: "personal_subscriptions", enabled: on },
+      { id: "personal-social-media", label: "Social media", path: "/personal/social-media", vaultSubsectionKey: "personal_social_media", enabled: on },
+      { id: "personal-wishes", label: "Personal Wishes", path: "/personal/wishes", vaultSubsectionKey: "personal_wishes", enabled: on },
     ],
   },
   {
@@ -106,8 +107,8 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     vaultCategoryKey: "property",
     enabled: on,
     children: [
-      { id: "property-records", label: "Property Records", path: "/vault/property", enabled: on },
-      { id: "property-documents", label: "Property Documents", path: "/property/documents", enabled: on },
+      { id: "property-records", label: "Property Records", path: "/vault/property", vaultSubsectionKey: "property_records", enabled: on },
+      { id: "property-documents", label: "Property Documents", path: "/property/documents", vaultSubsectionKey: "property_documents", enabled: on },
     ],
   },
   {
@@ -118,8 +119,8 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     vaultCategoryKey: "business",
     enabled: on,
     children: [
-      { id: "business-interests", label: "Business Interests", path: "/business", enabled: on },
-      { id: "business-employment", label: "Employment", path: "/employment", enabled: on },
+      { id: "business-interests", label: "Business Interests", path: "/business", vaultSubsectionKey: "business_interests", enabled: on },
+      { id: "business-employment", label: "Employment", path: "/employment", vaultSubsectionKey: "business_employment", enabled: on },
     ],
   },
   {
