@@ -83,6 +83,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     activationStatus: "active",
     readOnly: false,
     canUpgradeToOwnAccount: false,
+    permissionsOverride: {
+      allowedSections: [],
+      assetIds: [],
+      recordIds: [],
+    },
+    assignedAssetIds: [],
+    assignedRecordIds: [],
+    assignedSectionKeys: [],
   } satisfies ViewerAccessState;
   const topLevelItems = useMemo(
     () => filterNavigationTreeForViewer(baseTopLevelItems, resolvedViewerAccess),
@@ -258,6 +266,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           activationStatus: "active",
           readOnly: false,
           canUpgradeToOwnAccount: false,
+          permissionsOverride: {
+            allowedSections: [],
+            assetIds: [],
+            recordIds: [],
+          },
+          assignedAssetIds: [],
+          assignedRecordIds: [],
+          assignedSectionKeys: [],
         });
       }
       setAuthState("ready");
@@ -539,6 +555,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               activationStatus: "active",
               readOnly: false,
               canUpgradeToOwnAccount: false,
+              permissionsOverride: {
+                allowedSections: [],
+                assetIds: [],
+                recordIds: [],
+              },
+              assignedAssetIds: [],
+              assignedRecordIds: [],
+              assignedSectionKeys: [],
             }
           : current);
         router.push("/dashboard");
