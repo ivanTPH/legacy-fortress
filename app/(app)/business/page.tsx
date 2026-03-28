@@ -9,12 +9,9 @@ export default function BusinessOverviewPage() {
   return (
     <section style={{ display: "grid", gap: 14 }}>
       <div style={{ display: "grid", gap: 6 }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 28 }}>Business</h1>
-          <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
-            Review business interests first, then open employment records as a related business and workplace sub-category.
-          </p>
-        </div>
+        <p style={{ margin: 0, color: "#6b7280" }}>
+          Review business interests first, then open employment records as a related business and workplace sub-category.
+        </p>
         <Link href="/employment" style={employmentCardStyle}>
           <div style={{ fontWeight: 700 }}>Employment</div>
           <div style={{ color: "#64748b", fontSize: 13 }}>

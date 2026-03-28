@@ -818,9 +818,11 @@ textarea {
 }
 
 .lf-topbar-title {
-  margin: 2px 0 0;
-  font-size: 24px;
-  line-height: 1;
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: #111827;
 }
 
 .lf-topbar-pill {
@@ -834,6 +836,8 @@ textarea {
 
 .lf-topbar-main {
   min-width: 0;
+  display: grid;
+  gap: 4px;
 }
 
 .lf-topbar-actions {
@@ -845,12 +849,12 @@ textarea {
 }
 
 .lf-topbar-security {
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   border-radius: 999px;
   border: 1px solid #dbe3ec;
   background: rgba(248, 250, 252, 0.92);
-  color: #526071;
+  color: #667085;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -931,6 +935,7 @@ textarea {
   flex-wrap: wrap;
   color: #98a2b3;
   font-size: 12px;
+  min-height: 16px;
 }
 
 .lf-crumb-wrap {
@@ -949,8 +954,8 @@ textarea {
 }
 
 .lf-crumb-current {
-  color: #111827;
-  font-weight: 600;
+  color: #98a2b3;
+  font-weight: 500;
 }
 
 .lf-crumb-sep {

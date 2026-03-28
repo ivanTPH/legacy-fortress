@@ -8,6 +8,12 @@ import { bootstrapAuthenticatedUser } from "../../lib/auth/bootstrap";
 import { supabase } from "../../lib/supabaseClient";
 import { waitForActiveUser } from "../../lib/auth/session";
 import { getOrCreateOnboardingState, saveOnboardingState, saveTermsAcceptance } from "../../lib/onboarding";
+import {
+  VAULT_CATEGORY_DEFINITIONS,
+  loadVaultPreferences,
+  saveVaultPreferences,
+  type VaultPreferences,
+} from "../../lib/vaultPreferences";
 
 export default function OnboardingPageClient() {
   const router = useRouter();
@@ -17,6 +23,7 @@ export default function OnboardingPageClient() {
   const [status, setStatus] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [marketingOptIn, setMarketingOptIn] = useState(false);
+  const [vaultPreferences, setVaultPreferences] = useState<VaultPreferences | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -31,10 +38,12 @@ export default function OnboardingPageClient() {
       await bootstrapAuthenticatedUser(supabase, { userId: user.id });
 
       const onboarding = await getOrCreateOnboardingState(supabase, user.id);
+      const nextVaultPreferences = await loadVaultPreferences(supabase, user.id);
       if (!mounted) return;
 
       setTermsAccepted(onboarding.terms_accepted);
       setMarketingOptIn(onboarding.marketing_opt_in);
+      setVaultPreferences(nextVaultPreferences);
 
       if (onboarding.is_completed) {
         router.replace("/dashboard");
@@ -70,10 +79,11 @@ export default function OnboardingPageClient() {
         accepted: true,
         source: "onboarding",
       });
+      await saveVaultPreferences(supabase, user.id, vaultPreferences ?? await loadVaultPreferences(supabase, user.id));
 
       await saveOnboardingState(supabase, user.id, {
         current_step: "complete",
-        completed_steps: ["identity", "verification", "consent", "personal_details", "complete"],
+        completed_steps: ["identity", "verification", "consent", "personal_details", "vault_categories", "complete"],
         is_completed: true,
         terms_accepted: true,
         marketing_opt_in: marketingOptIn,
@@ -134,12 +144,57 @@ export default function OnboardingPageClient() {
             </div>
             <ul style={{ margin: 0, paddingLeft: 18, color: "#334155", display: "grid", gap: 6 }}>
               <li>Profile: confirm who you are and how someone should reach you.</li>
-              <li>Finances: add bank accounts, pensions, insurance, and supporting statements.</li>
-              <li>Legal: save wills, powers of attorney, and important documents in one place.</li>
+              {(vaultPreferences?.finances ?? true) ? <li>Finances: add bank accounts, pensions, insurance, and supporting statements.</li> : null}
+              {(vaultPreferences?.legal ?? true) ? <li>Legal: save wills, powers of attorney, and important documents in one place.</li> : null}
               <li>Contacts: record executors, next of kin, trustees, and advisors clearly.</li>
-              <li>Tasks &amp; Follow-up: capture what still needs attention so progress feels visible.</li>
+              {(vaultPreferences?.tasks ?? true) ? <li>Tasks &amp; Follow-up: capture what still needs attention so progress feels visible.</li> : null}
             </ul>
           </section>
+
+          {vaultPreferences ? (
+            <section
+              style={{
+                border: "1px solid #dbe3eb",
+                borderRadius: 14,
+                background: "#fff",
+                padding: 14,
+                display: "grid",
+                gap: 12,
+              }}
+            >
+              <div style={{ display: "grid", gap: 4 }}>
+                <div style={{ fontWeight: 700 }}>Choose your vault categories</div>
+                <div style={{ color: "#475569", fontSize: 14 }}>
+                  Keep only the sections you want to focus on right now. You can change these later in My Vault settings.
+                </div>
+              </div>
+              <div className="lf-content-grid" style={{ gap: 10 }}>
+                {VAULT_CATEGORY_DEFINITIONS.map((category) => (
+                  <label
+                    key={category.key}
+                    style={{
+                      border: "1px solid #e5e7eb",
+                      borderRadius: 12,
+                      padding: 12,
+                      background: "#f8fafc",
+                      display: "grid",
+                      gap: 6,
+                    }}
+                  >
+                    <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <input
+                        type="checkbox"
+                        checked={vaultPreferences[category.key]}
+                        onChange={() => setVaultPreferences((current) => current ? { ...current, [category.key]: !current[category.key] } : current)}
+                      />
+                      <span style={{ fontWeight: 700 }}>{category.label}</span>
+                    </span>
+                    <span style={{ color: "#64748b", fontSize: 13 }}>{category.description}</span>
+                  </label>
+                ))}
+              </div>
+            </section>
+          ) : null}
 
           <label className="lf-label" style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <input
@@ -167,7 +222,7 @@ export default function OnboardingPageClient() {
           {status ? <div className="lf-muted-note">{status}</div> : null}
           <div className="lf-muted-note" style={{ display: "grid", gap: 4 }}>
             <div>You can add the rest in stages. Good progress means the next person can quickly understand who to contact, what exists, and what still needs review.</div>
-            <div>Profile, finances, legal records, contacts, and tasks will then guide the rest of your dashboard.</div>
+            <div>Profile, your selected vault sections, contacts, and the next practical tasks will then guide the rest of your dashboard.</div>
           </div>
           <p className="lf-muted-note">
             Need a different account? <Link className="lf-inline-link" href="/sign-in">Sign in</Link>

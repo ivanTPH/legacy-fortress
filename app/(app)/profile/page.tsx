@@ -802,6 +802,7 @@ export default function ProfilePage() {
           {[
             { href: "/account/security", label: "Security", desc: "Password, recovery, and mobile verification controls." },
             { href: "/account/billing", label: "Billing and Account", desc: "Plan status, limits, and subscription readiness." },
+            { href: "/account/my-vault", label: "My Vault", desc: "Choose which category groups stay visible across your workspace." },
             { href: "/account/terms", label: "Terms and Conditions", desc: "Review the current terms status and acceptance record." },
             { href: "/account/communications-preferences", label: "Communications Preferences", desc: "Choose how service updates reach you." },
             { href: "/account/reminder-preferences", label: "Reminder Preferences", desc: "Control reminder timing and destinations." },

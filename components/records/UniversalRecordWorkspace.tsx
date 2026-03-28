@@ -107,6 +107,7 @@ import {
   type CanonicalBankTraceEntry,
 } from "../../lib/devSmoke";
 import { useViewerAccess } from "../access/ViewerAccessContext";
+import { filterAssetIdsForViewer, filterRecordIdsForViewer } from "../../lib/access-control/viewerAccess";
 import { getPlanLimitRedirectHref } from "../../lib/accountPlan";
 
 type RecordStatus = "active" | "archived";
@@ -179,6 +180,7 @@ type WorkspaceProps = {
   categoryKey: string;
   title: string;
   subtitle: string;
+  showPageHeading?: boolean;
   variant?: WorkspaceVariant;
   sectionId?: string;
   forceCanonicalRead?: boolean;
@@ -604,6 +606,7 @@ export default function UniversalRecordWorkspace({
   categoryKey,
   title,
   subtitle,
+  showPageHeading = false,
   variant = "default",
   sectionId,
   forceCanonicalRead = false,
@@ -829,7 +832,9 @@ export default function UniversalRecordWorkspace({
         return;
       }
 
-      const nextRecords = recordsResult.rows;
+      const nextRecords = usesCanonicalAssetReadPath
+        ? filterAssetIdsForViewer(recordsResult.rows, viewer)
+        : filterRecordIdsForViewer(recordsResult.rows, viewer);
       mergeDevBankContextTrace({
         source: "UniversalRecordWorkspace.load",
         stage: "bank.page-load.records-ready",
@@ -1846,6 +1851,7 @@ export default function UniversalRecordWorkspace({
       targetOwnerUserId: viewer.targetOwnerUserId,
       forceCanonicalRead,
       recordFilter,
+      viewer,
     });
     if (recordId && usesCanonicalAssets) {
       pushBankSubmitTrace(`sync notified: section="${sectionKey}" category="${categoryKey}" asset_id="${recordId}"`);
@@ -1904,6 +1910,7 @@ export default function UniversalRecordWorkspace({
       targetOwnerUserId: viewer.targetOwnerUserId,
       forceCanonicalRead,
       recordFilter,
+      viewer,
     });
   }
 
@@ -1961,6 +1968,7 @@ export default function UniversalRecordWorkspace({
       targetOwnerUserId: viewer.targetOwnerUserId,
       forceCanonicalRead,
       recordFilter,
+      viewer,
     });
   }
 
@@ -2012,6 +2020,7 @@ export default function UniversalRecordWorkspace({
       targetOwnerUserId: viewer.targetOwnerUserId,
       forceCanonicalRead,
       recordFilter,
+      viewer,
     });
   }
 
@@ -2052,6 +2061,7 @@ export default function UniversalRecordWorkspace({
       targetOwnerUserId: viewer.targetOwnerUserId,
       forceCanonicalRead,
       recordFilter,
+      viewer,
     });
   }
 
@@ -2746,9 +2756,15 @@ export default function UniversalRecordWorkspace({
 
   return (
     <section id={sectionId} style={{ display: "grid", gap: 14 }}>
-      <div>
-        <h1 style={{ margin: 0, fontSize: 28 }}>{title}</h1>
-        <p style={{ margin: "6px 0 0", color: "#6b7280" }}>{subtitle}</p>
+      <div style={{ display: "grid", gap: 6 }}>
+        {showPageHeading ? <h1 style={{ margin: 0, fontSize: 28 }}>{title}</h1> : null}
+        <p style={{ margin: showPageHeading ? "6px 0 0" : 0, color: "#6b7280" }}>{subtitle}</p>
+        {viewer.mode === "linked" ? (
+          <div style={linkedPanelChipStyle}>
+            <Icon name="visibility_lock" size={14} />
+            {viewer.readOnly ? "Read-only shared panel" : "Shared panel"}
+          </div>
+        ) : null}
       </div>
 
       {isPossessions ? (
@@ -5281,10 +5297,12 @@ async function reloadWorkspace(
     targetOwnerUserId,
     forceCanonicalRead = false,
     recordFilter,
+    viewer,
   }: {
     targetOwnerUserId?: string | null;
     forceCanonicalRead?: boolean;
     recordFilter?: ((row: UniversalRecordRow) => boolean) | undefined;
+    viewer?: ReturnType<typeof useViewerAccess>["viewer"];
   } = {},
 ) {
   const user = await requireUser(router);
@@ -5305,7 +5323,11 @@ async function reloadWorkspace(
     setStatus(`Could not refresh records: ${recordsResult.error}`);
     return;
   }
-  const nextRecords = recordsResult.rows;
+  const nextRecords = viewer
+    ? (usesCanonicalAssetReadPath
+        ? filterAssetIdsForViewer(recordsResult.rows, viewer)
+        : filterRecordIdsForViewer(recordsResult.rows, viewer))
+    : recordsResult.rows;
   if (recordsResult.warning) {
     setStatus(`Records refreshed, but some encrypted fields could not be hydrated: ${recordsResult.warning}`);
   }
@@ -5504,6 +5526,21 @@ const cardStyle: CSSProperties = {
   padding: 14,
   display: "grid",
   gap: 12,
+};
+
+const linkedPanelChipStyle: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  width: "fit-content",
+  marginTop: 8,
+  borderRadius: 999,
+  border: "1px solid #cbd5e1",
+  background: "#f8fafc",
+  color: "#475569",
+  padding: "4px 10px",
+  fontSize: 12,
+  fontWeight: 700,
 };
 
 const recordCardStyle: CSSProperties = {

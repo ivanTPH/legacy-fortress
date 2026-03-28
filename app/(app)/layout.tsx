@@ -23,6 +23,7 @@ import { loadProfileIdentityChip } from "../../lib/profile/workspace";
 import { buildDashboardSearchHref } from "../../lib/records/discovery";
 import { supabase } from "../../lib/supabaseClient";
 import { ViewerAccessProvider } from "../../components/access/ViewerAccessContext";
+import { VaultPreferencesProvider } from "../../components/vault/VaultPreferencesContext";
 import { DEMO_EXPERIENCE_LABEL, DEMO_EXPERIENCE_SUBLABEL, isDemoSessionUser } from "../../lib/demo/config";
 import {
   canViewPath,
@@ -35,6 +36,11 @@ import {
   setStoredLinkedGrantId,
   type ViewerAccessState,
 } from "../../lib/access-control/viewerAccess";
+import {
+  filterNodesByVaultPreferences,
+  getDefaultVaultPreferences,
+  loadVaultPreferences,
+} from "../../lib/vaultPreferences";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -50,6 +56,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [authState, setAuthState] = useState<"checking" | "ready" | "none">("checking");
   const [isDemoExperience, setIsDemoExperience] = useState(false);
   const [viewerAccess, setViewerAccess] = useState<ViewerAccessState | null>(null);
+  const [vaultPreferences, setVaultPreferences] = useState(getDefaultVaultPreferences);
   const [shellSearch, setShellSearch] = useState("");
   const devSmokeMode = useMemo(
     () =>
@@ -93,12 +100,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     assignedSectionKeys: [],
   } satisfies ViewerAccessState;
   const topLevelItems = useMemo(
-    () => filterNavigationTreeForViewer(baseTopLevelItems, resolvedViewerAccess),
-    [baseTopLevelItems, resolvedViewerAccess],
+    () => filterNodesByVaultPreferences(filterNavigationTreeForViewer(baseTopLevelItems, resolvedViewerAccess), vaultPreferences),
+    [baseTopLevelItems, resolvedViewerAccess, vaultPreferences],
   );
   const accountItems = useMemo(
-    () => filterNavigationTreeForViewer(baseAccountItems, resolvedViewerAccess),
-    [baseAccountItems, resolvedViewerAccess],
+    () => filterNodesByVaultPreferences(filterNavigationTreeForViewer(baseAccountItems, resolvedViewerAccess), vaultPreferences),
+    [baseAccountItems, resolvedViewerAccess, vaultPreferences],
   );
 
   const activeChain = useMemo(() => getOpenMenuChain(pathname), [pathname]);
@@ -351,6 +358,40 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [effectiveAuthState, devSmokeMode, router]);
 
   useEffect(() => {
+    let mounted = true;
+    if (devSmokeMode) {
+      setVaultPreferences(getDefaultVaultPreferences());
+      return () => {
+        mounted = false;
+      };
+    }
+    if (effectiveAuthState !== "ready") {
+      return () => {
+        mounted = false;
+      };
+    }
+
+    async function hydratePreferences() {
+      try {
+        const user = await waitForActiveUser(supabase, { attempts: 4, delayMs: 100 });
+        if (!mounted || !user) return;
+        const ownerUserId = resolvedViewerAccess.targetOwnerUserId || user.id;
+        const nextPreferences = await loadVaultPreferences(supabase, ownerUserId);
+        if (!mounted) return;
+        setVaultPreferences(nextPreferences);
+      } catch {
+        if (!mounted) return;
+        setVaultPreferences(getDefaultVaultPreferences());
+      }
+    }
+
+    void hydratePreferences();
+    return () => {
+      mounted = false;
+    };
+  }, [devSmokeMode, effectiveAuthState, resolvedViewerAccess.targetOwnerUserId]);
+
+  useEffect(() => {
     if (effectiveAuthState !== "ready" || !viewerAccess || viewerAccess.mode !== "linked") return;
     if (!canViewPath(pathname, viewerAccess)) {
       router.replace("/dashboard");
@@ -570,7 +611,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }),
     [effectiveDisplayName, resolvedViewerAccess, router],
   );
-  const hideTopbarHeading = normalizePath(pathname) === "/dashboard";
+  const normalizedPathname = normalizePath(pathname);
+  const topbarTitle = normalizedPathname === "/dashboard"
+    ? "Dashboard - Review your estate records"
+    : currentNode?.label ?? "Dashboard";
+  const topbarBreadcrumbs = normalizedPathname === "/dashboard" ? [] : breadcrumbs.slice(0, -1);
 
   if (effectiveAuthState !== "ready") {
     return (
@@ -587,6 +632,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <ViewerAccessProvider value={viewerContextValue}>
+    <VaultPreferencesProvider value={{ preferences: vaultPreferences, setPreferences: setVaultPreferences }}>
     <div className="lf-shell">
       <div
         className="lf-nav-wrap"
@@ -729,9 +775,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </button>
 
           <div className="lf-topbar-main">
-            <Breadcrumbs items={breadcrumbs} />
-            {!hideTopbarHeading ? <div className="lf-topbar-title">{currentNode?.label ?? "Dashboard"}</div> : null}
-            {!hideTopbarHeading && currentNode?.description ? <div className="lf-topbar-desc">{currentNode.description}</div> : null}
+            <Breadcrumbs items={topbarBreadcrumbs} />
+            <div className="lf-topbar-title">{topbarTitle}</div>
           </div>
 
           <div className="lf-topbar-actions">
@@ -748,7 +793,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   : "Private and secure account"
               }
             >
-              <Icon name={resolvedViewerAccess.mode === "linked" ? "visibility_lock" : "lock"} size={16} />
+              <Icon name={resolvedViewerAccess.mode === "linked" ? "visibility_lock" : "verified_user"} size={16} />
             </div>
             <Link href="/profile" className="lf-topbar-user" aria-label="Edit account details">
               {renderedAvatarUrl ? (
@@ -915,6 +960,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
       </div>
     </div>
+    </VaultPreferencesProvider>
     </ViewerAccessProvider>
   );
 }

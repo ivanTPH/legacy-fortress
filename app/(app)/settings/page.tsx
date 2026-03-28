@@ -7,7 +7,7 @@ export default function SettingsOverviewPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace("/profile#account-settings");
+    router.replace("/account/my-vault");
   }, [router]);
 
   return null;

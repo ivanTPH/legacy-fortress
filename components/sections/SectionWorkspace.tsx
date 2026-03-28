@@ -10,6 +10,7 @@ import { formatCurrency } from "../../lib/currency";
 import { sanitizeFileName, validateUploadFile } from "../../lib/validation/upload";
 import AttachmentGallery, { AttachmentGallerySummary } from "../documents/AttachmentGallery";
 import { useViewerAccess } from "../access/ViewerAccessContext";
+import Icon from "../ui/Icon";
 
 type SectionEntry = {
   id: string;
@@ -48,6 +49,7 @@ type SectionWorkspaceProps = {
   categoryKey: string;
   title: string;
   subtitle: string;
+  showPageHeading?: boolean;
   addLabel?: string;
   uploadsRequireCanonicalParent?: boolean;
   uploadBlockedMessage?: string;
@@ -70,6 +72,7 @@ export default function SectionWorkspace({
   categoryKey,
   title,
   subtitle,
+  showPageHeading = false,
   addLabel = "Add record",
   uploadsRequireCanonicalParent = false,
   uploadBlockedMessage = "Uploads are blocked until a canonical parent asset can be selected.",
@@ -470,9 +473,15 @@ export default function SectionWorkspace({
 
   return (
     <section style={{ display: "grid", gap: 14 }}>
-      <div>
-        <h1 style={{ margin: 0, fontSize: 28 }}>{title}</h1>
-        <p style={{ margin: "6px 0 0", color: "#6b7280" }}>{subtitle}</p>
+      <div style={{ display: "grid", gap: 6 }}>
+        {showPageHeading ? <h1 style={{ margin: 0, fontSize: 28 }}>{title}</h1> : null}
+        <p style={{ margin: showPageHeading ? "6px 0 0" : 0, color: "#6b7280" }}>{subtitle}</p>
+        {viewer.mode === "linked" ? (
+          <div style={linkedPanelChipStyle}>
+            <Icon name="visibility_lock" size={14} />
+            {viewer.readOnly ? "Read-only shared panel" : "Shared panel"}
+          </div>
+        ) : null}
       </div>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -732,6 +741,21 @@ const primaryBtn: CSSProperties = {
   fontSize: 13,
   fontWeight: 600,
   cursor: "pointer",
+};
+
+const linkedPanelChipStyle: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  width: "fit-content",
+  marginTop: 8,
+  borderRadius: 999,
+  border: "1px solid #cbd5e1",
+  background: "#f8fafc",
+  color: "#475569",
+  padding: "4px 10px",
+  fontSize: 12,
+  fontWeight: 700,
 };
 
 const ghostBtn: CSSProperties = {

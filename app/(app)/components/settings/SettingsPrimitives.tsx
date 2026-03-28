@@ -3,10 +3,7 @@ import type { CSSProperties, ReactNode } from "react";
 export function SettingsPageShell({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return (
     <div style={{ display: "grid", gap: 16, maxWidth: 1080 }}>
-      <div>
-        <h1 style={{ fontSize: 28, margin: 0 }}>{title}</h1>
-        <p style={{ marginTop: 6, color: "#6b7280" }}>{subtitle}</p>
-      </div>
+      <div aria-label={title} style={{ color: "#6b7280" }}>{subtitle}</div>
       {children}
     </div>
   );

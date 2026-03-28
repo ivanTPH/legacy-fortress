@@ -184,8 +184,7 @@ export default function ContactsNetworkWorkspace() {
 
   return (
     <section style={{ display: "grid", gap: 14 }}>
-      <div>
-        <h1 style={{ margin: 0, fontSize: 28 }}>Contacts</h1>
+      <div style={{ display: "grid", gap: 6 }}>
         <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
           Review the full contacts network someone may need to understand quickly across family, executors, trustees, advisers, and other key contacts.
         </p>

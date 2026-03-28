@@ -119,8 +119,7 @@ export default function FinancesOverviewPage() {
 
   return (
     <section style={{ display: "grid", gap: 14 }}>
-      <div>
-        <h1 style={{ margin: 0, fontSize: 28 }}>Finances</h1>
+      <div style={{ display: "grid", gap: 6 }}>
         <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
           Review each finance category at a glance, then open the category page to add, edit, or archive records.
         </p>

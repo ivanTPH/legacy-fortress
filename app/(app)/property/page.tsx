@@ -11,8 +11,7 @@ const items = [
 export default function PropertyOverviewPage() {
   return (
     <section style={{ display: "grid", gap: 14 }}>
-      <div>
-        <h1 style={{ margin: 0, fontSize: 28 }}>Property</h1>
+      <div style={{ display: "grid", gap: 6 }}>
         <p style={{ margin: "6px 0 0", color: "#6b7280" }}>Manage records and supporting property documentation.</p>
       </div>
       <div className="lf-content-grid">
@@ -37,4 +36,3 @@ const cardStyle: CSSProperties = {
   display: "grid",
   gap: 8,
 };
-

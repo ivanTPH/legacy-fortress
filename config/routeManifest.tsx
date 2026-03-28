@@ -12,6 +12,7 @@ import {
   TrustIcon,
   WalletIcon,
 } from "../app/(app)/components/NavIcons";
+import type { VaultCategoryGroupKey } from "../lib/vaultPreferences";
 
 export type AppRouteNode = {
   id: string;
@@ -19,6 +20,7 @@ export type AppRouteNode = {
   path: string;
   description?: string;
   icon?: ReactNode;
+  vaultCategoryKey?: VaultCategoryGroupKey;
   children?: AppRouteNode[];
   enabled?: boolean;
 };
@@ -39,6 +41,7 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     label: "Legal",
     path: "/legal",
     icon: <DocumentIcon />,
+    vaultCategoryKey: "legal",
     enabled: on,
     children: [
       { id: "legal-wills", label: "Wills", path: "/legal/wills", enabled: on },
@@ -56,6 +59,7 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     label: "Finances",
     path: "/finances",
     icon: <WalletIcon />,
+    vaultCategoryKey: "finances",
     enabled: on,
     children: [
       { id: "finances-bank", label: "Bank", path: "/finances/bank", enabled: on },
@@ -70,6 +74,7 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     label: "Personal",
     path: "/personal",
     icon: <PersonalIcon />,
+    vaultCategoryKey: "personal",
     enabled: on,
     children: [
       { id: "personal-possessions", label: "Possessions", path: "/vault/personal", enabled: on },
@@ -90,6 +95,7 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     label: "Executors",
     path: "/trust",
     icon: <TrustIcon />,
+    vaultCategoryKey: "executors",
     enabled: on,
   },
   {
@@ -97,6 +103,7 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     label: "Property",
     path: "/property",
     icon: <BuildingIcon />,
+    vaultCategoryKey: "property",
     enabled: on,
     children: [
       { id: "property-records", label: "Property Records", path: "/vault/property", enabled: on },
@@ -108,6 +115,7 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     label: "Business",
     path: "/business",
     icon: <BriefcaseIcon />,
+    vaultCategoryKey: "business",
     enabled: on,
     children: [
       { id: "business-interests", label: "Business Interests", path: "/business", enabled: on },
@@ -119,6 +127,7 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     label: "Cars & Transport",
     path: "/cars-transport",
     icon: <CarIcon />,
+    vaultCategoryKey: "cars_transport",
     enabled: on,
   },
   {
@@ -141,6 +150,7 @@ export const ACCOUNT_ROUTE_MANIFEST: AppRouteNode[] = [
     children: [
       { id: "settings-security", label: "Security", path: "/account/security", enabled: on },
       { id: "settings-billing", label: "Billing and Account", path: "/account/billing", enabled: on },
+      { id: "settings-my-vault", label: "My Vault", path: "/account/my-vault", enabled: on },
       { id: "settings-terms", label: "Terms and Conditions", path: "/account/terms", enabled: on },
       { id: "settings-comms", label: "Communications Preferences", path: "/account/communications-preferences", enabled: on },
       { id: "settings-reminders", label: "Reminder Preferences", path: "/account/reminder-preferences", enabled: on },

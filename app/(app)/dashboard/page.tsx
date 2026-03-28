@@ -38,6 +38,8 @@ import {
   type CanonicalBankTraceEntry,
 } from "../../../lib/devSmoke";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
+import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
+import { isVaultCategoryEnabled } from "../../../lib/vaultPreferences";
 
 type AssetRow = {
   id: string;
@@ -121,6 +123,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { viewer } = useViewerAccess();
+  const { preferences } = useVaultPreferences();
 
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState("");
@@ -146,6 +149,12 @@ export default function DashboardPage() {
   const canViewBusiness = canViewPath("/business", viewer);
   const canViewDigital = canViewPath("/vault/digital", viewer);
   const canViewTasks = canViewPath("/personal/tasks", viewer);
+  const showFinancialCard = canViewFinancial && isVaultCategoryEnabled(preferences, "finances");
+  const showLegalCard = canViewLegal && isVaultCategoryEnabled(preferences, "legal");
+  const showPropertyCard = canViewProperty && isVaultCategoryEnabled(preferences, "property");
+  const showBusinessCard = canViewBusiness && isVaultCategoryEnabled(preferences, "business");
+  const showDigitalCard = canViewDigital && isVaultCategoryEnabled(preferences, "digital");
+  const showTaskCard = canViewTasks && isVaultCategoryEnabled(preferences, "tasks");
   const legalDocuments = useMemo(() => getLegalDocuments(documentRows), [documentRows]);
   const legalAssets = useMemo(
     () => assetRows.filter((row) => row.deleted_at == null && row.archived_at == null && row.status !== "archived" && String(row.section_key ?? "") === "legal"),
@@ -416,12 +425,6 @@ const legalSummary = useMemo(() => {
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
-      <div style={dashboardHeaderStyle}>
-        <div>
-          <h1 style={{ fontSize: 26, margin: 0 }}>Dashboard - Review your estate records</h1>
-        </div>
-      </div>
-
       {status ? <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div> : null}
       {loading ? <div style={{ color: "#6b7280" }}>Loading dashboard summary...</div> : null}
       {searchQuery ? (
@@ -505,28 +508,29 @@ const legalSummary = useMemo(() => {
             </div>
             <h2 style={{ margin: 0, fontSize: 18 }}>Overview</h2>
           </div>
-          <div style={{ color: "#64748b", fontSize: 13 }}>
-            Open the main areas of your estate record from one simplified overview.
-          </div>
+        <div style={{ color: "#64748b", fontSize: 13 }}>
+          Open the main areas of your estate record from one simplified overview.
         </div>
+        </div>
+        {showFinancialCard || showLegalCard || showPropertyCard || showBusinessCard || showDigitalCard || showTaskCard ? (
         <div className="lf-content-grid">
-          {canViewFinancial ? (
+          {showFinancialCard ? (
             <DashboardAssetSummaryCard
               icon={<Icon name="account_balance" size={13} />}
               title="All finances"
               href="/finances"
               addedAt={financialSummary.addedAt}
-              value={String(financeRecordCount)}
+              value={financialSummary.valueText}
               detail={`finance record${financeRecordCount === 1 ? "" : "s"}`}
               obscured={shouldObscureSection(viewerRole, "financial", viewerActivation)}
               inlineSummary
               hideItems
               actionLabel="Open finance records"
-              actionIcon="visibility"
+              actionIcon="open_in_new"
             />
           ) : null}
 
-          {canViewLegal ? (
+          {showLegalCard ? (
             <DashboardAssetSummaryCard
               icon={<Icon name="description" size={13} />}
               title="Legal"
@@ -538,43 +542,43 @@ const legalSummary = useMemo(() => {
               inlineSummary
               hideItems
               actionLabel="Open legal records"
-              actionIcon="visibility"
+              actionIcon="open_in_new"
             />
           ) : null}
 
-          {canViewProperty ? (
+          {showPropertyCard ? (
             <DashboardAssetSummaryCard
               icon={<Icon name="home" size={13} />}
               title="Property"
               href="/property"
               addedAt={propertySummary.addedAt}
-              value={String(propertyRecordCount)}
+              value={propertySummary.valueText}
               detail={`property record${propertyRecordCount === 1 ? "" : "s"}`}
               obscured={shouldObscureSection(viewerRole, "property", viewerActivation)}
               inlineSummary
               hideItems
               actionLabel="Open property records"
-              actionIcon="visibility"
+              actionIcon="open_in_new"
             />
           ) : null}
 
-          {canViewBusiness ? (
+          {showBusinessCard ? (
             <DashboardAssetSummaryCard
               icon={<Icon name="business_center" size={13} />}
               title="Business"
               href="/business"
               addedAt={businessSummary.addedAt}
-              value={String(businessRecordCount)}
+              value={businessSummary.valueText}
               detail={`business record${businessRecordCount === 1 ? "" : "s"}`}
               obscured={shouldObscureSection(viewerRole, "business", viewerActivation)}
               inlineSummary
               hideItems
               actionLabel="Open business records"
-              actionIcon="visibility"
+              actionIcon="open_in_new"
             />
           ) : null}
 
-          {canViewDigital ? (
+          {showDigitalCard ? (
             <DashboardAssetSummaryCard
               icon={<Icon name="devices" size={13} />}
               title="Digital"
@@ -586,11 +590,11 @@ const legalSummary = useMemo(() => {
               inlineSummary
               hideItems
               actionLabel="Open digital records"
-              actionIcon="visibility"
+              actionIcon="open_in_new"
             />
           ) : null}
 
-          {canViewTasks ? (
+          {showTaskCard ? (
             <DashboardAssetSummaryCard
               icon={<Icon name="task" size={13} />}
               title="Tasks"
@@ -601,10 +605,15 @@ const legalSummary = useMemo(() => {
               inlineSummary
               hideItems
               actionLabel="Open tasks"
-              actionIcon="visibility"
+              actionIcon="open_in_new"
             />
           ) : null}
         </div>
+        ) : (
+          <div style={searchEmptyStateStyle}>
+            Your dashboard overview is currently hidden by My Vault preferences. Re-enable categories in Account / My Vault at any time.
+          </div>
+        )}
       </section>
 
       {!viewer.readOnly ? <ContactInvitationManager mode="dashboard" /> : null}
@@ -680,12 +689,6 @@ function inferFirstCurrencyFromMetadata(rows: AssetRow[]) {
   }
   return "";
 }
-
-const dashboardHeaderStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: 8,
-} satisfies CSSProperties;
 
 function applyDevSmokeDashboardState(
   variant: "empty" | "fixture",

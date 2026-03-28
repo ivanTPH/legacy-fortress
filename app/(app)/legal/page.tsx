@@ -106,8 +106,7 @@ export default function LegalOverviewPage() {
 
   return (
     <section style={{ display: "grid", gap: 14 }}>
-      <div>
-        <h1 style={{ margin: 0, fontSize: 28 }}>Legal</h1>
+      <div style={{ display: "grid", gap: 6 }}>
         <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
           Review the core documents an executor would expect to find, from wills and powers of attorney to supporting certificates.
         </p>

@@ -24,14 +24,16 @@ import {
 } from "../../lib/records/discovery";
 import Icon from "../ui/Icon";
 import { useViewerAccess } from "../access/ViewerAccessContext";
+import { filterAssetIdsForViewer } from "../../lib/access-control/viewerAccess";
 
 type DocumentsWorkspaceProps = {
   title: string;
   subtitle: string;
   sectionFilter?: SupportedDocumentSectionKey;
+  showPageHeading?: boolean;
 };
 
-export default function DocumentsWorkspace({ title, subtitle, sectionFilter }: DocumentsWorkspaceProps) {
+export default function DocumentsWorkspace({ title, subtitle, sectionFilter, showPageHeading = false }: DocumentsWorkspaceProps) {
   const router = useRouter();
   const { viewer } = useViewerAccess();
   const [loading, setLoading] = useState(true);
@@ -65,8 +67,10 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter }: D
           sectionKeys: sectionFilter ? [sectionFilter] : undefined,
         });
         if (!mounted) return;
-        setAssets(result.assets);
-        setDocuments(result.documents);
+        const scopedAssets = filterAssetIdsForViewer(result.assets, viewer);
+        const allowedAssetIds = new Set(scopedAssets.map((asset) => asset.id));
+        setAssets(scopedAssets);
+        setDocuments(result.documents.filter((item) => allowedAssetIds.has(item.assetId)));
       } catch (error) {
         if (!mounted) return;
         setStatus(error instanceof Error ? `Could not load documents: ${error.message}` : "Could not load documents.");
@@ -123,8 +127,10 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter }: D
         ownerUserId: viewer.targetOwnerUserId || user.id,
         sectionKeys: sectionFilter ? [sectionFilter] : undefined,
       });
-      setAssets(result.assets);
-      setDocuments(result.documents);
+      const scopedAssets = filterAssetIdsForViewer(result.assets, viewer);
+      const allowedAssetIds = new Set(scopedAssets.map((asset) => asset.id));
+      setAssets(scopedAssets);
+      setDocuments(result.documents.filter((item) => allowedAssetIds.has(item.assetId)));
     } catch (error) {
       setStatus(error instanceof Error ? `Could not refresh documents: ${error.message}` : "Could not refresh documents.");
     }
@@ -301,11 +307,17 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter }: D
   return (
     <section style={{ display: "grid", gap: 16 }}>
       <div style={{ display: "grid", gap: 6 }}>
-        <h1 style={{ margin: 0, fontSize: 28 }}>{title}</h1>
+        {showPageHeading ? <h1 style={{ margin: 0, fontSize: 28 }}>{title}</h1> : null}
         <p style={{ margin: 0, color: "#64748b" }}>{subtitle}</p>
         <div style={{ color: "#64748b", fontSize: 13 }}>
           Documents are always linked through the canonical chain: organisation to wallet to asset to document.
         </div>
+        {viewer.mode === "linked" ? (
+          <div style={linkedPanelChipStyle}>
+            <Icon name="visibility_lock" size={14} />
+            {viewer.readOnly ? "Read-only shared panel" : "Shared panel"}
+          </div>
+        ) : null}
       </div>
 
       {!viewer.readOnly ? (
@@ -503,6 +515,20 @@ const workspaceCardStyle: CSSProperties = {
   background: "#fff",
   display: "grid",
   gap: 12,
+};
+
+const linkedPanelChipStyle: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  width: "fit-content",
+  borderRadius: 999,
+  border: "1px solid #cbd5e1",
+  background: "#f8fafc",
+  color: "#475569",
+  padding: "4px 10px",
+  fontSize: 12,
+  fontWeight: 700,
 };
 
 const primaryBtnStyle: CSSProperties = {

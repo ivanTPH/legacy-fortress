@@ -65,9 +65,9 @@ export default function ContactInvitationManager({ mode = "full" }: { mode?: "fu
     [],
   );
   const invitationSummary = useMemo(() => {
-    const invited = rows.filter((row) => row.invitation_status === "pending").length;
+    const invited = rows.filter((row) => resolveInvitationBadgeState(row.invitation_status, row.activation_status, row.sent_at).label === "Pending").length;
     const accepted = rows.filter((row) => row.invitation_status === "accepted" || row.activation_status === "active" || row.activation_status === "verified").length;
-    const readyToSend = rows.filter((row) => !row.sent_at && row.invitation_status === "pending").length;
+    const readyToSend = rows.filter((row) => resolveInvitationBadgeState(row.invitation_status, row.activation_status, row.sent_at).label === "Ready to send").length;
     return { total: rows.length, invited, accepted, readyToSend };
   }, [rows]);
 
@@ -491,7 +491,7 @@ export default function ContactInvitationManager({ mode = "full" }: { mode?: "fu
           </div>
           <p style={{ margin: 0, color: "#6b7280", fontSize: 13 }}>
             {isDashboardMode
-              ? "Review invitation progress here, then open Contacts for contact editing, access notes, and richer controls."
+              ? "Review invitation progress here, then open Contacts for contact editing, removal, access notes, and richer controls."
               : "Keep trusted contacts, invitation progress, and assigned access roles easy to review in one place."}
           </p>
         </div>
@@ -590,7 +590,7 @@ export default function ContactInvitationManager({ mode = "full" }: { mode?: "fu
             <h3 style={sectionTitleStyle}>Invitation queue</h3>
             <p style={sectionIntroStyle}>
               {isDashboardMode
-                ? "Review invitation state here, then open Contacts for contact edits and detailed access management."
+                ? "Review invitation state here, send or resend from the queue, then open Contacts for contact edits and detailed access management."
                 : "Review access roles, invitation state, and the latest action for each contact."}
             </p>
           </div>
@@ -611,7 +611,6 @@ export default function ContactInvitationManager({ mode = "full" }: { mode?: "fu
                   <tr style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>
                     <th style={thStyle}>Contact</th>
                     <th style={thStyle}>Status</th>
-                    {isDashboardMode ? <th style={thStyle}>Resend</th> : null}
                     <th style={thStyle}>Role</th>
                     <th style={thStyle}>{isDashboardMode ? "Date" : "Invited"}</th>
                     <th style={thStyle}>Actions</th>
@@ -643,19 +642,6 @@ export default function ContactInvitationManager({ mode = "full" }: { mode?: "fu
                           )}
                         </div>
                       </td>
-                      {isDashboardMode ? (
-                        <td style={tdStyle} data-label="Resend">
-                          {canResendInvite(row) ? (
-                            <IconButton
-                              icon={row.sent_at ? "forward_to_inbox" : "send"}
-                              label={row.sent_at ? `Resend invitation to ${row.contact_email}` : `Send invitation to ${row.contact_email}`}
-                              onClick={() => void sendInvite(row, Boolean(row.sent_at))}
-                            />
-                          ) : (
-                            <span style={mutedDashStyle}>-</span>
-                          )}
-                        </td>
-                      ) : null}
                       <td style={tdStyle} data-label="Role">
                         <RoleBadge role={row.assigned_role} />
                       </td>
@@ -663,19 +649,44 @@ export default function ContactInvitationManager({ mode = "full" }: { mode?: "fu
                       <td style={tdStyle} data-label="Actions">
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                           {isDashboardMode ? (
-                            <IconButton
-                              icon="open_in_new"
-                              label={`Open ${row.contact_name || row.contact_email} in Contacts`}
-                              onClick={() => router.push(buildContactsWorkspaceHref(row.contact_id ?? ""))}
-                            />
+                            <>
+                              {canSendInvite(row) ? (
+                                <IconButton
+                                  icon="send"
+                                  label={`Send invitation to ${row.contact_email}`}
+                                  onClick={() => void sendInvite(row, false)}
+                                />
+                              ) : null}
+                              {canResendInvite(row) ? (
+                                <IconButton
+                                  icon="forward_to_inbox"
+                                  label={`Resend invitation to ${row.contact_email}`}
+                                  onClick={() => void sendInvite(row, true)}
+                                />
+                              ) : null}
+                              <IconButton
+                                icon="open_in_new"
+                                label={`Open ${row.contact_name || row.contact_email} in Contacts`}
+                                onClick={() => router.push(buildContactsWorkspaceHref(row.contact_id ?? ""))}
+                              />
+                            </>
                           ) : (
                             <>
                               <ActionIconButton action="edit" label={`Edit ${row.contact_name || row.contact_email}`} onClick={() => startEdit(row)} />
-                              <IconButton
-                                icon={row.sent_at ? "forward_to_inbox" : "send"}
-                                label={row.sent_at ? `Resend invitation to ${row.contact_email}` : `Send invitation to ${row.contact_email}`}
-                                onClick={() => void sendInvite(row, Boolean(row.sent_at))}
-                              />
+                              {canSendInvite(row) ? (
+                                <IconButton
+                                  icon="send"
+                                  label={`Send invitation to ${row.contact_email}`}
+                                  onClick={() => void sendInvite(row, false)}
+                                />
+                              ) : null}
+                              {canResendInvite(row) ? (
+                                <IconButton
+                                  icon="forward_to_inbox"
+                                  label={`Resend invitation to ${row.contact_email}`}
+                                  onClick={() => void sendInvite(row, true)}
+                                />
+                              ) : null}
                               <ActionIconButton action="delete" label={`Remove ${row.contact_name || row.contact_email}`} onClick={() => void remove(row)} />
                             </>
                           )}
@@ -722,11 +733,18 @@ export default function ContactInvitationManager({ mode = "full" }: { mode?: "fu
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     {isDashboardMode ? (
                       <>
+                        {canSendInvite(row) ? (
+                          <IconButton
+                            icon="send"
+                            label={`Send invitation to ${row.contact_email}`}
+                            onClick={() => void sendInvite(row, false)}
+                          />
+                        ) : null}
                         {canResendInvite(row) ? (
                           <IconButton
-                            icon={row.sent_at ? "forward_to_inbox" : "send"}
-                            label={row.sent_at ? `Resend invitation to ${row.contact_email}` : `Send invitation to ${row.contact_email}`}
-                            onClick={() => void sendInvite(row, Boolean(row.sent_at))}
+                            icon="forward_to_inbox"
+                            label={`Resend invitation to ${row.contact_email}`}
+                            onClick={() => void sendInvite(row, true)}
                           />
                         ) : null}
                         <IconButton
@@ -738,11 +756,20 @@ export default function ContactInvitationManager({ mode = "full" }: { mode?: "fu
                     ) : (
                       <>
                         <ActionIconButton action="edit" label={`Edit ${row.contact_name || row.contact_email}`} onClick={() => startEdit(row)} />
-                        <IconButton
-                          icon={row.sent_at ? "forward_to_inbox" : "send"}
-                          label={row.sent_at ? `Resend invitation to ${row.contact_email}` : `Send invitation to ${row.contact_email}`}
-                          onClick={() => void sendInvite(row, Boolean(row.sent_at))}
-                        />
+                        {canSendInvite(row) ? (
+                          <IconButton
+                            icon="send"
+                            label={`Send invitation to ${row.contact_email}`}
+                            onClick={() => void sendInvite(row, false)}
+                          />
+                        ) : null}
+                        {canResendInvite(row) ? (
+                          <IconButton
+                            icon="forward_to_inbox"
+                            label={`Resend invitation to ${row.contact_email}`}
+                            onClick={() => void sendInvite(row, true)}
+                          />
+                        ) : null}
                         <ActionIconButton action="delete" label={`Remove ${row.contact_name || row.contact_email}`} onClick={() => void remove(row)} />
                       </>
                     )}
@@ -790,7 +817,11 @@ function formatStatusSummary(row: InvitationRow) {
 }
 
 function canResendInvite(row: InvitationRow) {
-  return row.invitation_status !== "revoked" && row.activation_status !== "active" && row.activation_status !== "verified";
+  return Boolean(String(row.sent_at ?? "").trim()) && row.invitation_status !== "revoked" && row.activation_status !== "active" && row.activation_status !== "verified";
+}
+
+function canSendInvite(row: InvitationRow) {
+  return !String(row.sent_at ?? "").trim() && row.invitation_status !== "revoked" && row.activation_status !== "active" && row.activation_status !== "verified";
 }
 
 function getInvitationStatusIcon(row: InvitationRow) {
