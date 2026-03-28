@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 const { buildInvitationEmailDraft } = await import("../lib/contacts/invitations.ts");
-const { canViewPath } = await import("../lib/access-control/viewerAccess.ts");
+const { canViewPath, filterAssetIdsForViewer } = await import("../lib/access-control/viewerAccess.ts");
 
 test("invitation email draft includes role, account holder, and secure accept path", () => {
   const draft = buildInvitationEmailDraft({
@@ -32,6 +32,10 @@ test("executors can view all core linked-account routes", () => {
     activationStatus: "accepted",
     readOnly: true,
     canUpgradeToOwnAccount: true,
+    permissionsOverride: { allowedSections: [], assetIds: [], recordIds: [] },
+    assignedAssetIds: [],
+    assignedRecordIds: [],
+    assignedSectionKeys: [],
   };
 
   assert.equal(canViewPath("/dashboard", viewer), true);
@@ -54,6 +58,10 @@ test("accountants stay out of personal routes while keeping financial visibility
     activationStatus: "accepted",
     readOnly: true,
     canUpgradeToOwnAccount: true,
+    permissionsOverride: { allowedSections: ["financial"], assetIds: ["asset-1"], recordIds: [] },
+    assignedAssetIds: ["asset-1"],
+    assignedRecordIds: [],
+    assignedSectionKeys: ["financial"],
   };
 
   assert.equal(canViewPath("/finances/bank", viewer), true);
@@ -61,4 +69,33 @@ test("accountants stay out of personal routes while keeping financial visibility
   assert.equal(canViewPath("/contacts", viewer), false);
   assert.equal(canViewPath("/personal/contacts", viewer), false);
   assert.equal(canViewPath("/property", viewer), false);
+  assert.equal(canViewPath("/account/billing", viewer), false);
+});
+
+test("linked viewers only keep assigned asset rows in shared loaders", () => {
+  const viewer = {
+    mode: "linked",
+    grantId: "grant-3",
+    sessionUserId: "viewer-3",
+    targetOwnerUserId: "owner-1",
+    accountHolderName: "Bill Smith",
+    linkedContactId: "contact-3",
+    linkedContactName: "Alex Grant",
+    viewerRole: "financial_advisor",
+    activationStatus: "active",
+    readOnly: false,
+    canUpgradeToOwnAccount: true,
+    permissionsOverride: { allowedSections: ["financial"], assetIds: ["asset-keep"], recordIds: [] },
+    assignedAssetIds: ["asset-keep"],
+    assignedRecordIds: [],
+    assignedSectionKeys: ["financial"],
+  };
+
+  const rows = filterAssetIdsForViewer([
+    { id: "asset-keep", section_key: "finances" },
+    { id: "asset-drop", section_key: "finances" },
+    { id: "asset-legal", section_key: "legal" },
+  ], viewer);
+
+  assert.deepEqual(rows.map((row) => row.id), ["asset-keep"]);
 });

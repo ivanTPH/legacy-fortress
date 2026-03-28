@@ -37,6 +37,17 @@ export type ViewerAccessState = {
   activationStatus: AccessActivationStatus;
   readOnly: boolean;
   canUpgradeToOwnAccount: boolean;
+  permissionsOverride: ViewerPermissionsOverride;
+  assignedAssetIds: string[];
+  assignedRecordIds: string[];
+  assignedSectionKeys: SectionKey[];
+};
+
+export type ViewerPermissionsOverride = {
+  readOnly?: boolean;
+  allowedSections: SectionKey[];
+  assetIds: string[];
+  recordIds: string[];
 };
 
 export function buildInvitationAcceptPath(invitationId: string, token: string) {
@@ -123,10 +134,16 @@ export async function loadViewerAccessState(
       activationStatus: "active",
       readOnly: false,
       canUpgradeToOwnAccount: false,
+      permissionsOverride: EMPTY_VIEWER_PERMISSIONS_OVERRIDE,
+      assignedAssetIds: [],
+      assignedRecordIds: [],
+      assignedSectionKeys: [],
     };
   }
 
-  const [contactRes, profileRes, legacyProfileRes] = await Promise.all([
+  const permissionsOverride = normalizePermissionsOverride(selectedGrant.permissions_override);
+
+  const [contactRes, profileRes, legacyProfileRes, assetLinksRes, recordLinksRes] = await Promise.all([
     selectedGrant.contact_id
       ? client
           .from("contacts")
@@ -145,6 +162,21 @@ export async function loadViewerAccessState(
       .select("display_name")
       .eq("user_id", selectedGrant.owner_user_id)
       .maybeSingle(),
+    selectedGrant.contact_id
+      ? client
+          .from("contact_links")
+          .select("source_id,section_key")
+          .eq("owner_user_id", selectedGrant.owner_user_id)
+          .eq("contact_id", selectedGrant.contact_id)
+          .eq("source_kind", "asset")
+      : Promise.resolve({ data: [], error: null }),
+    selectedGrant.contact_id
+      ? client
+          .from("record_contacts")
+          .select("record_id")
+          .eq("owner_user_id", selectedGrant.owner_user_id)
+          .eq("contact_id", selectedGrant.contact_id)
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
   const accountHolderName =
@@ -153,6 +185,23 @@ export async function loadViewerAccessState(
     || fallbackDisplayName;
 
   const linkedContactName = String((contactRes as { data?: { full_name?: string | null } | null }).data?.full_name ?? "").trim();
+  const linkedAssetIds = ((assetLinksRes as { data?: Array<{ source_id?: string | null }> | null }).data ?? [])
+    .map((row) => String(row.source_id ?? "").trim())
+    .filter(Boolean);
+  const linkedRecordIds = ((recordLinksRes as { data?: Array<{ record_id?: string | null }> | null }).data ?? [])
+    .map((row) => String(row.record_id ?? "").trim())
+    .filter(Boolean);
+  const recordSectionKeys = linkedRecordIds.length
+    ? await loadRecordSectionKeys(client, selectedGrant.owner_user_id, linkedRecordIds)
+    : [];
+  const assetSectionKeys = ((assetLinksRes as { data?: Array<{ section_key?: string | null }> | null }).data ?? [])
+    .map((row) => normalizeSectionKey(row.section_key))
+    .filter((value): value is SectionKey => Boolean(value));
+  const assignedSectionKeys = Array.from(new Set([
+    ...permissionsOverride.allowedSections,
+    ...assetSectionKeys,
+    ...recordSectionKeys,
+  ]));
 
   return {
     mode: "linked",
@@ -164,8 +213,12 @@ export async function loadViewerAccessState(
     linkedContactName,
     viewerRole: selectedGrant.assigned_role,
     activationStatus: selectedGrant.activation_status,
-    readOnly: true,
+    readOnly: permissionsOverride.readOnly ?? true,
     canUpgradeToOwnAccount: true,
+    permissionsOverride,
+    assignedAssetIds: Array.from(new Set([...permissionsOverride.assetIds, ...linkedAssetIds])),
+    assignedRecordIds: Array.from(new Set([...permissionsOverride.recordIds, ...linkedRecordIds])),
+    assignedSectionKeys,
   };
 }
 
@@ -188,7 +241,13 @@ export function mapPathnameToSectionKey(pathname: string): SectionKey | null {
 export function canViewPath(pathname: string, viewer: ViewerAccessState) {
   const section = mapPathnameToSectionKey(pathname);
   if (!section) return true;
-  return canAccessSection(viewer.viewerRole, section, "view", viewer.activationStatus);
+  if (!canAccessSection(viewer.viewerRole, section, "view", viewer.activationStatus)) return false;
+  if (viewer.mode !== "linked") return true;
+  if (pathname.startsWith("/account") || pathname.startsWith("/settings")) return false;
+  if (viewer.assignedSectionKeys.length > 0 && section !== "dashboard" && !viewer.assignedSectionKeys.includes(section)) {
+    return false;
+  }
+  return true;
 }
 
 export function filterNavigationTreeForViewer<
@@ -200,4 +259,100 @@ export function filterNavigationTreeForViewer<
       ...node,
       children: node.children ? filterNavigationTreeForViewer(node.children, viewer) : node.children,
     }));
+}
+
+export function filterAssetIdsForViewer<T extends { id: string; section_key?: string | null; sectionKey?: string | null }>(
+  rows: T[],
+  viewer: ViewerAccessState,
+) {
+  if (viewer.mode !== "linked") return rows;
+  const allowedIds = new Set(viewer.assignedAssetIds);
+  return rows.filter((row) => {
+    const id = String(row.id ?? "").trim();
+    if (!id || !allowedIds.has(id)) return false;
+    const section = normalizeSectionKey(row.section_key ?? row.sectionKey);
+    return section ? canViewPath(sectionPathMap[section], viewer) : true;
+  });
+}
+
+export function filterRecordIdsForViewer<T extends { id?: string; record_id?: string | null; recordId?: string | null }>(
+  rows: T[],
+  viewer: ViewerAccessState,
+) {
+  if (viewer.mode !== "linked") return rows;
+  const allowedIds = new Set(viewer.assignedRecordIds);
+  return rows.filter((row) => {
+    const id = String(row.record_id ?? row.recordId ?? row.id ?? "").trim();
+    return Boolean(id) && allowedIds.has(id);
+  });
+}
+
+const EMPTY_VIEWER_PERMISSIONS_OVERRIDE: ViewerPermissionsOverride = {
+  allowedSections: [],
+  assetIds: [],
+  recordIds: [],
+};
+
+const sectionPathMap: Record<SectionKey, string> = {
+  dashboard: "/dashboard",
+  profile: "/profile",
+  personal: "/personal",
+  financial: "/finances",
+  legal: "/legal",
+  property: "/property",
+  business: "/business",
+  digital: "/vault/digital",
+  settings: "/account",
+};
+
+function normalizePermissionsOverride(value: Record<string, unknown> | null): ViewerPermissionsOverride {
+  const source = value && typeof value === "object" ? value : {};
+  return {
+    readOnly: readOptionalBoolean(source["read_only"]),
+    allowedSections: normalizeSectionKeys(source["allowed_sections"] ?? source["section_keys"]),
+    assetIds: normalizeStringArray(source["asset_ids"]),
+    recordIds: normalizeStringArray(source["record_ids"]),
+  };
+}
+
+function readOptionalBoolean(value: unknown) {
+  if (typeof value === "boolean") return value;
+  return undefined;
+}
+
+function normalizeStringArray(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => String(item ?? "").trim())
+    .filter(Boolean);
+}
+
+function normalizeSectionKeys(value: unknown) {
+  return normalizeStringArray(value)
+    .map((item) => normalizeSectionKey(item))
+    .filter((item): item is SectionKey => Boolean(item));
+}
+
+function normalizeSectionKey(value: unknown): SectionKey | null {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (!normalized) return null;
+  if (normalized === "finances") return "financial";
+  if (normalized === "vault/digital" || normalized === "digital") return "digital";
+  if (normalized === "settings" || normalized === "account") return "settings";
+  if (normalized === "profile" || normalized === "dashboard" || normalized === "personal" || normalized === "financial" || normalized === "legal" || normalized === "property" || normalized === "business") {
+    return normalized as SectionKey;
+  }
+  return null;
+}
+
+async function loadRecordSectionKeys(client: AnySupabaseClient, ownerUserId: string, recordIds: string[]) {
+  const result = await client
+    .from("records")
+    .select("section_key")
+    .eq("owner_user_id", ownerUserId)
+    .in("id", recordIds);
+  if (result.error) return [];
+  return ((result.data ?? []) as Array<{ section_key?: string | null }>)
+    .map((row) => normalizeSectionKey(row.section_key))
+    .filter((value): value is SectionKey => Boolean(value));
 }

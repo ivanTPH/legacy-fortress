@@ -1,15 +1,17 @@
 import type { AccessActivationStatus } from "../../../../lib/access-control/roles";
-
-export type InvitationStatus = "pending" | "accepted" | "rejected" | "revoked";
+import { resolveInvitationBadgeState, type InvitationStatus } from "../../../../lib/contacts/invitationStatus";
 
 export default function InvitationStatusBadge({
   invitationStatus,
   activationStatus,
+  sentAt,
 }: {
   invitationStatus: InvitationStatus;
   activationStatus: AccessActivationStatus;
+  sentAt?: string | null;
 }) {
-  const tone = getTone(invitationStatus);
+  const state = resolveInvitationBadgeState(invitationStatus, activationStatus, sentAt);
+  const tone = getTone(state);
   return (
     <span
       style={{
@@ -21,31 +23,18 @@ export default function InvitationStatusBadge({
         fontSize: 12,
       }}
     >
-      {formatInvitationStatus(invitationStatus)} · {formatActivationStatus(activationStatus)}
+      {state.label}
     </span>
   );
 }
 
-function formatInvitationStatus(status: InvitationStatus) {
-  if (status === "pending") return "Pending invitation";
-  if (status === "accepted") return "Invitation accepted";
-  if (status === "rejected") return "Invitation rejected";
-  return "Invitation revoked";
-}
-
-function formatActivationStatus(status: AccessActivationStatus) {
-  if (status === "invited") return "Awaiting sign-in";
-  if (status === "accepted") return "Awaiting verification";
-  return status.replace(/_/g, " ");
-}
-
-function getTone(status: InvitationStatus) {
-  switch (status) {
-    case "accepted":
+function getTone(status: ReturnType<typeof resolveInvitationBadgeState>) {
+  switch (status.tone) {
+    case "success":
       return { border: "#a7f3d0", text: "#065f46", bg: "#ecfdf5" };
-    case "rejected":
+    case "danger":
       return { border: "#fecaca", text: "#991b1b", bg: "#fef2f2" };
-    case "revoked":
+    case "neutral":
       return { border: "#e5e7eb", text: "#374151", bg: "#f9fafb" };
     default:
       return { border: "#fde68a", text: "#92400e", bg: "#fffbeb" };
