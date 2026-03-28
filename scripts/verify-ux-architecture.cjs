@@ -56,6 +56,9 @@ async function verifyDashboard(page) {
   const openButtons = await page.locator('.lf-icon-btn[title^="Open "]').evaluateAll((nodes) =>
     nodes.map((node) => node.getAttribute("title") || ""),
   );
+  const cardTexts = await page.locator('[role="link"][aria-label$="summary"]').evaluateAll((nodes) =>
+    nodes.map((node) => node.textContent || ""),
+  );
   const addContactVisible = await page.getByText("Add contact", { exact: true }).count();
   const hasOpenLegalTooltip = await page.locator('.lf-icon-btn[title="Open legal records"]').count();
   const hasOpenFinanceTooltip = await page.locator('.lf-icon-btn[title="Open finance records"]').count();
@@ -64,11 +67,12 @@ async function verifyDashboard(page) {
 
   return {
     topbarTitle: topbarTitle?.trim() || "",
-    compactInlineStatsPresent: /(No records yet|finance record|legal record|property record|business record|digital record|task)/i.test(bodyText),
+    compactInlineStatsPresent: cardTexts.some((text) => /(£|No records yet|finance record|legal record|property record|business record|digital record|task)/i.test(text)),
     oldTextCtasRemoved: !hasReviewLegalText,
     topRightCardActionsPresent: hasOpenLegalTooltip > 0 && hasOpenFinanceTooltip > 0,
     dashboardQueueOnly: addContactVisible === 0,
     duplicateDashboardHeading: hasDuplicateDashboardHeading,
+    cardTexts,
     openButtonTitles: openButtons,
   };
 }
