@@ -326,12 +326,12 @@ export default function ContactsNetworkWorkspace() {
       {!viewer.readOnly && showAccessReview ? (
         <section style={panelStyle}>
           <div style={{ display: "grid", gap: 3 }}>
-            <div style={{ fontSize: 18, fontWeight: 700 }}>Invitation access review</div>
-            <div style={{ color: "#64748b", fontSize: 13 }}>
-              Review invitations, role assignments, and verification progress when you are actively checking access permissions.
-            </div>
+          <div style={{ fontSize: 18, fontWeight: 700 }}>Invitation access review</div>
+          <div style={{ color: "#64748b", fontSize: 13 }}>
+              Review invitations, role assignments, contact edits, and access progress here when you need the fuller management view.
           </div>
-          <ContactInvitationManager />
+        </div>
+          <ContactInvitationManager mode="full" />
         </section>
       ) : null}
     </section>

@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type CSSProperties } from "react";
 import Icon from "../ui/Icon";
+import { IconButton } from "../ui/IconButton";
 
 export type AttachmentGalleryItem = {
   id: string;
@@ -151,33 +152,28 @@ export default function AttachmentGallery<T extends AttachmentGalleryItem>({
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button type="button" style={miniGhostBtn} onClick={() => void openPreview(item)}>
-                    <Icon name="visibility" size={16} />
-                    {previewLoadingId === item.id ? loadingText : isImageMime(item.mimeType) || isIframePreviewMime(item.mimeType) ? "Open preview" : "Open file"}
-                  </button>
+                  <IconButton
+                    icon="visibility"
+                    label={
+                      previewLoadingId === item.id
+                        ? loadingText
+                        : isImageMime(item.mimeType) || isIframePreviewMime(item.mimeType)
+                          ? `Open preview for ${item.fileName || "this file"}`
+                          : `Open ${item.fileName || "this file"}`
+                    }
+                    onClick={() => void openPreview(item)}
+                  />
                   {onDownload ? (
-                    <button type="button" style={miniGhostBtn} onClick={() => onDownload(item)}>
-                      <Icon name="download" size={16} />
-                      Download
-                    </button>
+                    <IconButton icon="download" label={`Download ${item.fileName || "this file"}`} onClick={() => onDownload(item)} />
                   ) : null}
                   {onOpenRelated ? (
-                    <button type="button" style={miniGhostBtn} onClick={() => onOpenRelated(item)}>
-                      <Icon name="account_tree" size={16} />
-                      {openRelatedLabel}
-                    </button>
+                    <IconButton icon="open_in_new" label={openRelatedLabel} onClick={() => onOpenRelated(item)} />
                   ) : null}
                   {onPrint && printable ? (
-                    <button type="button" style={miniGhostBtn} onClick={() => onPrint(item)}>
-                      <Icon name="print" size={16} />
-                      Print
-                    </button>
+                    <IconButton icon="print" label={`Print ${item.fileName || "this file"}`} onClick={() => onPrint(item)} />
                   ) : null}
                   {onRemove ? (
-                    <button type="button" style={dangerGhostBtn} onClick={() => onRemove(item)}>
-                      <Icon name="delete" size={16} />
-                      Remove
-                    </button>
+                    <IconButton icon="delete" label={`Remove ${item.fileName || "this file"}`} danger onClick={() => onRemove(item)} />
                   ) : null}
                 </div>
               </article>
@@ -196,10 +192,7 @@ export default function AttachmentGallery<T extends AttachmentGalleryItem>({
                 <div style={{ fontWeight: 700, wordBreak: "break-word" }}>{preview.item.fileName || "Attachment preview"}</div>
                 <div style={{ color: "#64748b", fontSize: 12 }}>{formatMime(preview.item.mimeType)}</div>
               </div>
-              <button type="button" style={miniGhostBtn} onClick={() => setPreview(null)}>
-                <Icon name="close" size={16} />
-                Close
-              </button>
+              <IconButton icon="close" label="Close preview" onClick={() => setPreview(null)} />
             </div>
             <div style={viewerStyle}>
               {isImageMime(preview.item.mimeType) ? (
@@ -213,10 +206,7 @@ export default function AttachmentGallery<T extends AttachmentGalleryItem>({
                     This file cannot be previewed safely in the app yet. Download it to inspect it locally.
                   </div>
                   {onDownload ? (
-                    <button type="button" style={miniGhostBtn} onClick={() => onDownload(preview.item)}>
-                      <Icon name="download" size={16} />
-                      Download file
-                    </button>
+                    <IconButton icon="download" label={`Download ${preview.item.fileName || "this file"}`} onClick={() => onDownload(preview.item)} />
                   ) : null}
                 </div>
               )}
@@ -291,26 +281,6 @@ const fileBadgeStyle: CSSProperties = {
   background: "#f8fafc",
   border: "1px solid #e2e8f0",
   color: "#334155",
-};
-
-const miniGhostBtn: CSSProperties = {
-  border: "1px solid #cbd5e1",
-  background: "#fff",
-  color: "#0f172a",
-  borderRadius: 10,
-  padding: "7px 10px",
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 6,
-  cursor: "pointer",
-  fontSize: 13,
-};
-
-const dangerGhostBtn: CSSProperties = {
-  ...miniGhostBtn,
-  color: "#991b1b",
-  borderColor: "#fecaca",
-  background: "#fff7f7",
 };
 
 const summaryCardStyle: CSSProperties = {

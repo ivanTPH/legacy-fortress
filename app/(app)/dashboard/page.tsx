@@ -15,7 +15,7 @@ import {
   latestTimestamp,
 } from "../../../lib/dashboard/summary";
 import { shouldObscureSection, type AccessActivationStatus, type CollaboratorRole } from "../../../lib/access-control/roles";
-import { canViewPath } from "../../../lib/access-control/viewerAccess";
+import { canViewPath, filterAssetIdsForViewer, filterRecordIdsForViewer } from "../../../lib/access-control/viewerAccess";
 import { waitForActiveUser } from "../../../lib/auth/session";
 import { supabase } from "../../../lib/supabaseClient";
 import { isMissingColumnError, isMissingRelationError } from "../../../lib/supabaseErrors";
@@ -140,12 +140,23 @@ export default function DashboardPage() {
 
   const viewerRole: CollaboratorRole = viewer.viewerRole;
   const viewerActivation: AccessActivationStatus = viewer.activationStatus;
+  const canViewFinancial = canViewPath("/finances", viewer);
+  const canViewLegal = canViewPath("/legal", viewer);
+  const canViewProperty = canViewPath("/property", viewer);
+  const canViewBusiness = canViewPath("/business", viewer);
+  const canViewDigital = canViewPath("/vault/digital", viewer);
   const canViewTasks = canViewPath("/personal/tasks", viewer);
   const legalDocuments = useMemo(() => getLegalDocuments(documentRows), [documentRows]);
   const legalAssets = useMemo(
     () => assetRows.filter((row) => row.deleted_at == null && row.archived_at == null && row.status !== "archived" && String(row.section_key ?? "") === "legal"),
     [assetRows],
   );
+  const financeRecordCount = useMemo(() => getAssetsForBucket(assetRows, "finance").length, [assetRows]);
+  const propertyRecordCount = useMemo(() => getAssetsForBucket(assetRows, "property").length, [assetRows]);
+  const businessRecordCount = useMemo(() => getAssetsForBucket(assetRows, "business").length, [assetRows]);
+  const digitalRecordCount = useMemo(() => getAssetsForBucket(assetRows, "digital").length, [assetRows]);
+  const taskRecordCount = useMemo(() => getAssetsForBucket(assetRows, "tasks").length, [assetRows]);
+  const legalRecordCount = legalAssets.length + legalDocuments.length;
 
   useEffect(() => {
     if (!devBankTraceEnabled) return;
@@ -203,7 +214,7 @@ export default function DashboardPage() {
           setStatus(`⚠️ ${warnings[0]}`);
         }
 
-        const assets = ((assetsRes.data ?? []) as unknown) as AssetRow[];
+        const assets = filterAssetIdsForViewer((((assetsRes.data ?? []) as unknown) as AssetRow[]), viewer);
         const financeAssets = getAssetsForBucket(assets, "finance");
         setAssetRows(assets);
         appendDevBankTrace({
@@ -236,10 +247,18 @@ export default function DashboardPage() {
           warnings.push("Attachment parent records could not be fully resolved.");
         }
 
-        setDocumentRows((documentsRes.data ?? []) as DocumentRow[]);
-        setAttachmentRows((attachmentsRes.data ?? []) as AttachmentRow[]);
-        setContactRows((contactsRes ?? []) as ContactDiscoveryRow[]);
-        setSectionEntryRows((sectionEntriesRes.data ?? []) as SectionEntrySearchRow[]);
+        const scopedSectionEntries = filterRecordIdsForViewer(((sectionEntriesRes.data ?? []) as SectionEntrySearchRow[]), viewer);
+        const allowedAssetIds = new Set(assets.map((row) => row.id));
+        const allowedRecordIds = new Set(scopedSectionEntries.map((row) => row.id));
+
+        setDocumentRows(
+          ((documentsRes.data ?? []) as DocumentRow[]).filter((row) => !row.asset_id || allowedAssetIds.has(String(row.asset_id))),
+        );
+        setAttachmentRows(
+          filterRecordIdsForViewer(((attachmentsRes.data ?? []) as AttachmentRow[]), viewer),
+        );
+        setContactRows(viewer.mode === "linked" ? [] : ((contactsRes ?? []) as ContactDiscoveryRow[]));
+        setSectionEntryRows(scopedSectionEntries.filter((row) => allowedRecordIds.has(String(row.id)) || allowedRecordIds.size === 0));
 
       } catch (error) {
         if (!mounted) return;
@@ -491,60 +510,85 @@ const legalSummary = useMemo(() => {
           </div>
         </div>
         <div className="lf-content-grid">
-          <DashboardAssetSummaryCard
-            icon={<Icon name="account_balance" size={13} />}
-            title="All finances"
-            href="/finances"
-            addedAt={financialSummary.addedAt}
-            value={financialSummary.valueText}
-            detail={financialSummary.detailText}
-            emptyActionLabel="Review finance records"
-            obscured={shouldObscureSection(viewerRole, "financial", viewerActivation)}
-          />
+          {canViewFinancial ? (
+            <DashboardAssetSummaryCard
+              icon={<Icon name="account_balance" size={13} />}
+              title="All finances"
+              href="/finances"
+              addedAt={financialSummary.addedAt}
+              value={String(financeRecordCount)}
+              detail={`finance record${financeRecordCount === 1 ? "" : "s"}`}
+              obscured={shouldObscureSection(viewerRole, "financial", viewerActivation)}
+              inlineSummary
+              hideItems
+              actionLabel="Open finance records"
+              actionIcon="visibility"
+            />
+          ) : null}
 
-          <DashboardAssetSummaryCard
-            icon={<Icon name="description" size={13} />}
-            title="Legal"
-            href="/legal"
-            addedAt={legalSummary.addedAt}
-            value={legalSummary.valueText}
-            detail={legalSummary.detailText}
-            emptyActionLabel="Review legal records"
-            obscured={shouldObscureSection(viewerRole, "legal", viewerActivation)}
-          />
+          {canViewLegal ? (
+            <DashboardAssetSummaryCard
+              icon={<Icon name="description" size={13} />}
+              title="Legal"
+              href="/legal"
+              addedAt={legalSummary.addedAt}
+              value={String(legalRecordCount)}
+              detail={`legal record${legalRecordCount === 1 ? "" : "s"}`}
+              obscured={shouldObscureSection(viewerRole, "legal", viewerActivation)}
+              inlineSummary
+              hideItems
+              actionLabel="Open legal records"
+              actionIcon="visibility"
+            />
+          ) : null}
 
-          <DashboardAssetSummaryCard
-            icon={<Icon name="home" size={13} />}
-            title="Property"
-            href="/property"
-            addedAt={propertySummary.addedAt}
-            value={propertySummary.valueText}
-            detail={propertySummary.detailText}
-            emptyActionLabel="Review property records"
-            obscured={shouldObscureSection(viewerRole, "property", viewerActivation)}
-          />
+          {canViewProperty ? (
+            <DashboardAssetSummaryCard
+              icon={<Icon name="home" size={13} />}
+              title="Property"
+              href="/property"
+              addedAt={propertySummary.addedAt}
+              value={String(propertyRecordCount)}
+              detail={`property record${propertyRecordCount === 1 ? "" : "s"}`}
+              obscured={shouldObscureSection(viewerRole, "property", viewerActivation)}
+              inlineSummary
+              hideItems
+              actionLabel="Open property records"
+              actionIcon="visibility"
+            />
+          ) : null}
 
-          <DashboardAssetSummaryCard
-            icon={<Icon name="business_center" size={13} />}
-            title="Business"
-            href="/business"
-            addedAt={businessSummary.addedAt}
-            value={businessSummary.valueText}
-            detail={businessSummary.detailText}
-            emptyActionLabel="Review business records"
-            obscured={shouldObscureSection(viewerRole, "business", viewerActivation)}
-          />
+          {canViewBusiness ? (
+            <DashboardAssetSummaryCard
+              icon={<Icon name="business_center" size={13} />}
+              title="Business"
+              href="/business"
+              addedAt={businessSummary.addedAt}
+              value={String(businessRecordCount)}
+              detail={`business record${businessRecordCount === 1 ? "" : "s"}`}
+              obscured={shouldObscureSection(viewerRole, "business", viewerActivation)}
+              inlineSummary
+              hideItems
+              actionLabel="Open business records"
+              actionIcon="visibility"
+            />
+          ) : null}
 
-          <DashboardAssetSummaryCard
-            icon={<Icon name="devices" size={13} />}
-            title="Digital"
-            href="/vault/digital"
-            addedAt={digitalSummary.addedAt}
-            value={digitalSummary.valueText}
-            detail={digitalSummary.detailText}
-            emptyActionLabel="Review digital records"
-            obscured={shouldObscureSection(viewerRole, "digital", viewerActivation)}
-          />
+          {canViewDigital ? (
+            <DashboardAssetSummaryCard
+              icon={<Icon name="devices" size={13} />}
+              title="Digital"
+              href="/vault/digital"
+              addedAt={digitalSummary.addedAt}
+              value={String(digitalRecordCount)}
+              detail={`digital record${digitalRecordCount === 1 ? "" : "s"}`}
+              obscured={shouldObscureSection(viewerRole, "digital", viewerActivation)}
+              inlineSummary
+              hideItems
+              actionLabel="Open digital records"
+              actionIcon="visibility"
+            />
+          ) : null}
 
           {canViewTasks ? (
             <DashboardAssetSummaryCard
@@ -552,15 +596,18 @@ const legalSummary = useMemo(() => {
               title="Tasks"
               href="/personal/tasks"
               addedAt={taskSummary.addedAt}
-              value={taskSummary.valueText}
-              detail={taskSummary.detailText}
-              emptyActionLabel="Review tasks"
+              value={String(taskRecordCount)}
+              detail={`task${taskRecordCount === 1 ? "" : "s"}`}
+              inlineSummary
+              hideItems
+              actionLabel="Open tasks"
+              actionIcon="visibility"
             />
           ) : null}
         </div>
       </section>
 
-      {!viewer.readOnly ? <ContactInvitationManager /> : null}
+      {!viewer.readOnly ? <ContactInvitationManager mode="dashboard" /> : null}
     </div>
   );
 }

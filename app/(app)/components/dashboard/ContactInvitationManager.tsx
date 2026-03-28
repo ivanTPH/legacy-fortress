@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Icon from "../../../../components/ui/Icon";
-import { ActionIconButton, IconButton } from "../../../../components/ui/IconButton";
+import { ActionIconButton, IconButton, StatusIcon } from "../../../../components/ui/IconButton";
 import {
   ROLE_RULES,
   type AccessActivationStatus,
@@ -11,7 +12,7 @@ import {
 } from "../../../../lib/access-control/roles";
 import { supabase } from "../../../../lib/supabaseClient";
 import { getSafeUserData } from "../../../../lib/auth/requireActiveUser";
-import InvitationStatusBadge, { type InvitationStatus } from "./InvitationStatusBadge";
+import InvitationStatusBadge from "./InvitationStatusBadge";
 import RoleBadge from "./RoleBadge";
 import {
   loadCanonicalContactsByIds,
@@ -19,8 +20,10 @@ import {
   syncCanonicalContact,
   type CanonicalContactRow,
 } from "../../../../lib/contacts/canonicalContacts";
+import { buildContactsWorkspaceHref } from "../../../../lib/contacts/contactRouting";
 import { buildInvitationEmailDraft } from "../../../../lib/contacts/invitations";
-import { assertOwnerCanSendInvitation, ensureOwnerPlanProfile, getPlanLimitRedirectHref } from "../../../../lib/accountPlan";
+import { resolveInvitationBadgeState, type InvitationStatus } from "../../../../lib/contacts/invitationStatus";
+import { assertOwnerCanSendInvitation, ensureOwnerPlanProfile } from "../../../../lib/accountPlan";
 
 type InvitationRow = {
   id: string;
@@ -40,7 +43,7 @@ type RoleAssignmentRow = {
   activation_status: AccessActivationStatus;
 };
 
-export default function ContactInvitationManager() {
+export default function ContactInvitationManager({ mode = "full" }: { mode?: "full" | "dashboard" }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -52,6 +55,7 @@ export default function ContactInvitationManager() {
   const [role, setRole] = useState<CollaboratorRole>("professional_advisor");
 
   const [editingId, setEditingId] = useState<string | null>(null);
+  const isDashboardMode = mode === "dashboard";
 
   const roleOptions = useMemo(
     () =>
@@ -308,10 +312,6 @@ export default function ContactInvitationManager() {
       assertOwnerCanSendInvitation(ownerPlan, Number(inviteCountRes.count ?? 0));
     } catch (error) {
       setStatus(`❌ ${error instanceof Error ? error.message : "Invitation limit reached."}`);
-      const redirectHref = getPlanLimitRedirectHref(error);
-      if (redirectHref) {
-        router.push(redirectHref);
-      }
       return;
     }
 
@@ -487,14 +487,23 @@ export default function ContactInvitationManager() {
             <div style={sectionIconStyle}>
               <Icon name="contacts" size={16} />
             </div>
-            <h2 style={{ margin: 0, fontSize: 18 }}>Contacts, invitations and roles</h2>
+            <h2 style={{ margin: 0, fontSize: 18 }}>{isDashboardMode ? "Contacts and invitations" : "Contacts, invitations and roles"}</h2>
           </div>
           <p style={{ margin: 0, color: "#6b7280", fontSize: 13 }}>
-            Keep trusted contacts, invitation progress, and assigned access roles easy to review in one place.
+            {isDashboardMode
+              ? "Review invitation progress here, then open Contacts for contact editing, access notes, and richer controls."
+              : "Keep trusted contacts, invitation progress, and assigned access roles easy to review in one place."}
           </p>
         </div>
+        {isDashboardMode ? (
+          <Link href="/contacts" style={contactsLinkStyle} title="Open Contacts">
+            <Icon name="open_in_new" size={16} />
+            Open Contacts
+          </Link>
+        ) : null}
       </div>
 
+      {!isDashboardMode ? (
       <div style={summaryGridStyle}>
         <div style={summaryCardStyle}>
           <span style={summaryLabelStyle}>Contacts</span>
@@ -517,7 +526,9 @@ export default function ContactInvitationManager() {
           <span style={summaryHelpStyle}>Saved but unsent</span>
         </div>
       </div>
+      ) : null}
 
+      {!isDashboardMode ? (
       <div style={sectionBlockStyle}>
         <div style={sectionHeaderStyle}>
           <div>
@@ -569,6 +580,7 @@ export default function ContactInvitationManager() {
           ) : null}
         </div>
       </div>
+      ) : null}
 
       {status ? <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div> : null}
 
@@ -577,7 +589,9 @@ export default function ContactInvitationManager() {
           <div>
             <h3 style={sectionTitleStyle}>Invitation queue</h3>
             <p style={sectionIntroStyle}>
-              Review access roles, invitation state, and the latest action for each contact.
+              {isDashboardMode
+                ? "Review invitation state here, then open Contacts for contact edits and detailed access management."
+                : "Review access roles, invitation state, and the latest action for each contact."}
             </p>
           </div>
         </div>
@@ -597,8 +611,9 @@ export default function ContactInvitationManager() {
                   <tr style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>
                     <th style={thStyle}>Contact</th>
                     <th style={thStyle}>Status</th>
+                    {isDashboardMode ? <th style={thStyle}>Resend</th> : null}
                     <th style={thStyle}>Role</th>
-                    <th style={thStyle}>Invited</th>
+                    <th style={thStyle}>{isDashboardMode ? "Date" : "Invited"}</th>
                     <th style={thStyle}>Actions</th>
                   </tr>
                 </thead>
@@ -607,29 +622,63 @@ export default function ContactInvitationManager() {
                     <tr key={row.id} style={{ borderBottom: "1px solid #f1f5f9" }} className="lf-contact-invitations-row">
                       <td style={tdStyle} data-label="Contact">
                         <div style={{ display: "grid", gap: 4 }}>
-                          <div style={{ fontWeight: 700 }}>{row.contact_name}</div>
+                          <Link href={buildContactsWorkspaceHref(row.contact_id ?? "")} style={contactLinkStyle} title={`Open ${row.contact_name || row.contact_email} in Contacts`}>
+                            {row.contact_name}
+                          </Link>
                           <div style={{ color: "#6b7280" }}>{row.contact_email}</div>
                         </div>
                       </td>
                       <td style={tdStyle} data-label="Status">
                         <div style={{ display: "grid", gap: 6 }}>
-                          <InvitationStatusBadge invitationStatus={row.invitation_status} activationStatus={row.activation_status} />
-                          <span style={{ color: "#64748b", fontSize: 12 }}>{formatStatusSummary(row)}</span>
+                          {isDashboardMode ? (
+                            <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                              <StatusIcon {...getInvitationStatusIcon(row)} />
+                              <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>{resolveInvitationBadgeState(row.invitation_status, row.activation_status, row.sent_at).label}</span>
+                            </div>
+                          ) : (
+                            <>
+                              <InvitationStatusBadge invitationStatus={row.invitation_status} activationStatus={row.activation_status} sentAt={row.sent_at} />
+                              <span style={{ color: "#64748b", fontSize: 12 }}>{formatStatusSummary(row)}</span>
+                            </>
+                          )}
                         </div>
                       </td>
+                      {isDashboardMode ? (
+                        <td style={tdStyle} data-label="Resend">
+                          {canResendInvite(row) ? (
+                            <IconButton
+                              icon={row.sent_at ? "forward_to_inbox" : "send"}
+                              label={row.sent_at ? `Resend invitation to ${row.contact_email}` : `Send invitation to ${row.contact_email}`}
+                              onClick={() => void sendInvite(row, Boolean(row.sent_at))}
+                            />
+                          ) : (
+                            <span style={mutedDashStyle}>-</span>
+                          )}
+                        </td>
+                      ) : null}
                       <td style={tdStyle} data-label="Role">
                         <RoleBadge role={row.assigned_role} />
                       </td>
-                      <td style={tdStyle} data-label="Invited">{formatShortDate(row.sent_at ?? row.invited_at)}</td>
+                      <td style={tdStyle} data-label={isDashboardMode ? "Date" : "Invited"}>{formatShortDate(row.sent_at ?? row.invited_at)}</td>
                       <td style={tdStyle} data-label="Actions">
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                          <ActionIconButton action="edit" label={`Edit ${row.contact_name || row.contact_email}`} onClick={() => startEdit(row)} />
-                          <IconButton
-                            icon={row.sent_at ? "forward_to_inbox" : "send"}
-                            label={row.sent_at ? `Resend invitation to ${row.contact_email}` : `Send invitation to ${row.contact_email}`}
-                            onClick={() => void sendInvite(row, Boolean(row.sent_at))}
-                          />
-                          <ActionIconButton action="delete" label={`Remove ${row.contact_name || row.contact_email}`} onClick={() => void remove(row)} />
+                          {isDashboardMode ? (
+                            <IconButton
+                              icon="open_in_new"
+                              label={`Open ${row.contact_name || row.contact_email} in Contacts`}
+                              onClick={() => router.push(buildContactsWorkspaceHref(row.contact_id ?? ""))}
+                            />
+                          ) : (
+                            <>
+                              <ActionIconButton action="edit" label={`Edit ${row.contact_name || row.contact_email}`} onClick={() => startEdit(row)} />
+                              <IconButton
+                                icon={row.sent_at ? "forward_to_inbox" : "send"}
+                                label={row.sent_at ? `Resend invitation to ${row.contact_email}` : `Send invitation to ${row.contact_email}`}
+                                onClick={() => void sendInvite(row, Boolean(row.sent_at))}
+                              />
+                              <ActionIconButton action="delete" label={`Remove ${row.contact_name || row.contact_email}`} onClick={() => void remove(row)} />
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -643,30 +692,60 @@ export default function ContactInvitationManager() {
                   <div style={{ display: "grid", gap: 6 }}>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
                       <div style={{ display: "grid", gap: 4 }}>
-                        <div style={{ fontWeight: 700 }}>{row.contact_name}</div>
+                        <Link href={buildContactsWorkspaceHref(row.contact_id ?? "")} style={contactLinkStyle} title={`Open ${row.contact_name || row.contact_email} in Contacts`}>
+                          {row.contact_name}
+                        </Link>
                         <div style={{ color: "#6b7280", fontSize: 13 }}>{row.contact_email}</div>
                       </div>
                       <RoleBadge role={row.assigned_role} />
                     </div>
-                    <InvitationStatusBadge invitationStatus={row.invitation_status} activationStatus={row.activation_status} />
-                    <div style={{ color: "#64748b", fontSize: 12 }}>{formatStatusSummary(row)}</div>
+                    {isDashboardMode ? (
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                        <StatusIcon {...getInvitationStatusIcon(row)} />
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>{resolveInvitationBadgeState(row.invitation_status, row.activation_status, row.sent_at).label}</span>
+                      </div>
+                    ) : (
+                      <>
+                        <InvitationStatusBadge invitationStatus={row.invitation_status} activationStatus={row.activation_status} sentAt={row.sent_at} />
+                        <div style={{ color: "#64748b", fontSize: 12 }}>{formatStatusSummary(row)}</div>
+                      </>
+                    )}
                   </div>
 
                   <div style={mobileMetaBlockStyle}>
                     <div style={mobileMetaRowStyle}>
-                      <span style={mobileMetaLabelStyle}>Invited</span>
+                      <span style={mobileMetaLabelStyle}>{isDashboardMode ? "Date" : "Invited"}</span>
                       <span>{formatShortDate(row.sent_at ?? row.invited_at)}</span>
                     </div>
                   </div>
 
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    <ActionIconButton action="edit" label={`Edit ${row.contact_name || row.contact_email}`} onClick={() => startEdit(row)} />
-                    <IconButton
-                      icon={row.sent_at ? "forward_to_inbox" : "send"}
-                      label={row.sent_at ? `Resend invitation to ${row.contact_email}` : `Send invitation to ${row.contact_email}`}
-                      onClick={() => void sendInvite(row, Boolean(row.sent_at))}
-                    />
-                    <ActionIconButton action="delete" label={`Remove ${row.contact_name || row.contact_email}`} onClick={() => void remove(row)} />
+                    {isDashboardMode ? (
+                      <>
+                        {canResendInvite(row) ? (
+                          <IconButton
+                            icon={row.sent_at ? "forward_to_inbox" : "send"}
+                            label={row.sent_at ? `Resend invitation to ${row.contact_email}` : `Send invitation to ${row.contact_email}`}
+                            onClick={() => void sendInvite(row, Boolean(row.sent_at))}
+                          />
+                        ) : null}
+                        <IconButton
+                          icon="open_in_new"
+                          label={`Open ${row.contact_name || row.contact_email} in Contacts`}
+                          onClick={() => router.push(buildContactsWorkspaceHref(row.contact_id ?? ""))}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <ActionIconButton action="edit" label={`Edit ${row.contact_name || row.contact_email}`} onClick={() => startEdit(row)} />
+                        <IconButton
+                          icon={row.sent_at ? "forward_to_inbox" : "send"}
+                          label={row.sent_at ? `Resend invitation to ${row.contact_email}` : `Send invitation to ${row.contact_email}`}
+                          onClick={() => void sendInvite(row, Boolean(row.sent_at))}
+                        />
+                        <ActionIconButton action="delete" label={`Remove ${row.contact_name || row.contact_email}`} onClick={() => void remove(row)} />
+                      </>
+                    )}
                   </div>
                 </article>
               ))}
@@ -698,15 +777,28 @@ function formatShortDate(input: string) {
 
 function formatStatusSummary(row: InvitationRow) {
   if (row.activation_status === "active" || row.activation_status === "verified") {
-    return "Access linked and verified.";
+    return "Signed in and verified.";
   }
+  if (row.invitation_status === "revoked") return "Invitation revoked.";
   if (row.invitation_status === "accepted") {
-    return "Invitation accepted and awaiting final verification.";
+    return "Signed in and awaiting verification.";
   }
   if (row.invitation_status === "rejected") {
     return "Invitation rejected.";
   }
-  return row.sent_at ? "Invitation sent and awaiting response." : "Invitation ready to send.";
+  return row.sent_at ? "Invitation sent and awaiting activation." : "Contact saved and ready to invite.";
+}
+
+function canResendInvite(row: InvitationRow) {
+  return row.invitation_status !== "revoked" && row.activation_status !== "active" && row.activation_status !== "verified";
+}
+
+function getInvitationStatusIcon(row: InvitationRow) {
+  const state = resolveInvitationBadgeState(row.invitation_status, row.activation_status, row.sent_at);
+  if (state.tone === "success") return { icon: "verified", tone: "success" as const, label: state.label };
+  if (state.tone === "danger") return { icon: "cancel", tone: "danger" as const, label: state.label };
+  if (state.tone === "warning") return { icon: "schedule", tone: "warning" as const, label: state.label };
+  return { icon: "mail", tone: "neutral" as const, label: state.label };
 }
 
 const panelStyle: CSSProperties = {
@@ -752,6 +844,31 @@ const sectionIntroStyle: CSSProperties = {
   margin: "4px 0 0",
   color: "#64748b",
   fontSize: 13,
+};
+
+const contactLinkStyle: CSSProperties = {
+  fontWeight: 700,
+  color: "#0f172a",
+  textDecoration: "none",
+};
+
+const contactsLinkStyle: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  textDecoration: "none",
+  color: "#0f172a",
+  fontSize: 13,
+  fontWeight: 600,
+  border: "1px solid #cbd5e1",
+  borderRadius: 999,
+  padding: "7px 10px",
+  background: "#fff",
+};
+
+const mutedDashStyle: CSSProperties = {
+  color: "#94a3b8",
+  fontSize: 16,
 };
 
 const sectionIconStyle: CSSProperties = {

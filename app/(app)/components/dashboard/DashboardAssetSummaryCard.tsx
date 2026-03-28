@@ -2,6 +2,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from "react";
 import Icon from "../../../../components/ui/Icon";
+import { IconButton } from "../../../../components/ui/IconButton";
 
 type AssetItemLink = {
   id: string;
@@ -23,6 +24,10 @@ type DashboardAssetSummaryCardProps = {
   onEmptyActionClick?: () => void;
   className?: string;
   overview?: ReactNode;
+  inlineSummary?: boolean;
+  actionLabel?: string;
+  actionIcon?: string;
+  hideItems?: boolean;
 };
 
 export default function DashboardAssetSummaryCard({
@@ -38,6 +43,10 @@ export default function DashboardAssetSummaryCard({
   onEmptyActionClick,
   className = "",
   overview,
+  inlineSummary = false,
+  actionLabel,
+  actionIcon = "open_in_new",
+  hideItems = false,
 }: DashboardAssetSummaryCardProps) {
   const router = useRouter();
 
@@ -63,18 +72,42 @@ export default function DashboardAssetSummaryCard({
       onKeyDown={onCardKeyDown}
       aria-label={`${title} summary`}
     >
-      <Link href={href} style={summaryLinkStyle}>
+      <div style={summaryLinkStyle}>
         <div style={headerStyle}>
-          <span style={iconStyle}>{icon}</span>
-          <span style={titleStyle}>{title}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+            <span style={iconStyle}>{icon}</span>
+            <span style={titleStyle}>{title}</span>
+          </div>
+          <IconButton
+            icon={actionIcon}
+            label={actionLabel ?? `Open ${title}`}
+            onPointerDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              router.push(href);
+            }}
+          />
         </div>
-        <div style={valueStyle}>{obscured ? "Restricted" : value}</div>
-        <div style={detailStyle}>{obscured ? "Detail hidden for this role" : detail}</div>
+        {inlineSummary ? (
+          <div style={inlineSummaryStyle}>
+            <span style={valueStyle}>{obscured ? "Restricted" : value}</span>
+            <span style={detailStyle}>{obscured ? "Detail hidden for this role" : detail}</span>
+          </div>
+        ) : (
+          <>
+            <div style={valueStyle}>{obscured ? "Restricted" : value}</div>
+            <div style={detailStyle}>{obscured ? "Detail hidden for this role" : detail}</div>
+          </>
+        )}
         {overview ? <div style={overviewWrapStyle}>{overview}</div> : null}
-      </Link>
+      </div>
 
       <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: 8, display: "grid", gap: 6 }}>
-        {items.length ? (
+        {!hideItems && items.length ? (
           items.slice(0, 4).map((item) => (
             <Link key={item.id} href={item.href} style={itemLinkStyle} className="lf-dashboard-item-link">
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
@@ -84,7 +117,7 @@ export default function DashboardAssetSummaryCard({
               {item.meta ? <span style={{ color: "#94a3b8", fontSize: 12 }}>{item.meta}</span> : null}
             </Link>
           ))
-        ) : onEmptyActionClick ? (
+        ) : !hideItems && onEmptyActionClick ? (
           <button
             type="button"
             style={{ ...itemLinkStyle, background: "#fff", width: "100%", textAlign: "left", cursor: "pointer" }}
@@ -103,16 +136,16 @@ export default function DashboardAssetSummaryCard({
               {emptyActionLabel}
             </span>
           </button>
-        ) : (
+        ) : !hideItems ? (
           <Link href={href} style={itemLinkStyle}>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
               <Icon name="open_in_new" size={16} />
               {emptyActionLabel}
             </span>
           </Link>
-        )}
+        ) : null}
         <div style={footerStyle}>
-          <span style={dateStyle}>Updated {formatDateStamp(addedAt)}</span>
+          <span style={dateStyle}>{formatDateStamp(addedAt)}</span>
         </div>
       </div>
     </div>
@@ -158,6 +191,7 @@ const summaryLinkStyle: CSSProperties = {
 const headerStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
+  justifyContent: "space-between",
   gap: 8,
   minHeight: 24,
 };
@@ -197,6 +231,13 @@ const valueStyle: CSSProperties = {
 const detailStyle: CSSProperties = {
   fontSize: 13,
   color: "#6b7280",
+};
+
+const inlineSummaryStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "baseline",
+  gap: 6,
+  flexWrap: "wrap",
 };
 
 const itemLinkStyle: CSSProperties = {
