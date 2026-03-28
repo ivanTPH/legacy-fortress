@@ -50,6 +50,7 @@ export type CanonicalContactRow = {
   invite_status: CanonicalContactInviteStatus;
   verification_status: CanonicalContactVerificationStatus;
   source_type: CanonicalContactSourceType;
+  validation_overrides: Record<string, { manually_confirmed?: boolean; updated_at?: string }>;
   created_at: string;
   updated_at: string;
 };
@@ -251,6 +252,74 @@ export async function loadCanonicalContactsForOwner(
 
   const contacts = ((res.data ?? []) as Array<Record<string, unknown>>).map(normalizeCanonicalContactRow);
   return hydrateCanonicalContacts(contacts, await loadCanonicalContactSupport(client, ownerUserId, contacts.map((row) => row.id)));
+}
+
+export async function deleteCanonicalContact(
+  client: AnySupabaseClient,
+  {
+    ownerUserId,
+    contactId,
+  }: {
+    ownerUserId: string;
+    contactId: string;
+  },
+) {
+  const inviteRes = await client
+    .from("contact_invitations")
+    .select("id")
+    .eq("owner_user_id", ownerUserId)
+    .eq("contact_id", contactId);
+
+  if (inviteRes.error) {
+    throw new Error(inviteRes.error.message);
+  }
+
+  const invitationIds = ((inviteRes.data ?? []) as Array<Record<string, unknown>>)
+    .map((row) => String(row.id ?? "").trim())
+    .filter(Boolean);
+
+  const grantDeleteRequests = [
+    client
+      .from("account_access_grants")
+      .delete()
+      .eq("owner_user_id", ownerUserId)
+      .eq("contact_id", contactId),
+  ];
+  if (invitationIds.length > 0) {
+    grantDeleteRequests.push(
+      client
+        .from("account_access_grants")
+        .delete()
+        .eq("owner_user_id", ownerUserId)
+        .in("invitation_id", invitationIds),
+    );
+  }
+
+  const [grantsByContactRes, grantsByInvitationRes, invitationDeleteRes, recordContactsRes, deleteRes] = await Promise.all([
+    grantDeleteRequests[0],
+    grantDeleteRequests[1] ?? Promise.resolve({ error: null }),
+    client
+      .from("contact_invitations")
+      .delete()
+      .eq("owner_user_id", ownerUserId)
+      .eq("contact_id", contactId),
+    client
+      .from("record_contacts")
+      .update({ contact_id: null })
+      .eq("owner_user_id", ownerUserId)
+      .eq("contact_id", contactId),
+    client
+      .from("contacts")
+      .delete()
+      .eq("owner_user_id", ownerUserId)
+      .eq("id", contactId),
+  ]);
+
+  if (grantsByContactRes.error) throw new Error(grantsByContactRes.error.message);
+  if (grantsByInvitationRes?.error) throw new Error(grantsByInvitationRes.error.message);
+  if (invitationDeleteRes.error) throw new Error(invitationDeleteRes.error.message);
+  if (recordContactsRes.error) throw new Error(recordContactsRes.error.message);
+  if (deleteRes.error) throw new Error(deleteRes.error.message);
 }
 
 export function mapInvitationStatusToCanonicalInviteStatus(status: string): CanonicalContactInviteStatus {
@@ -761,6 +830,7 @@ function normalizeCanonicalContactRow(row: Record<string, unknown>): CanonicalCo
     invite_status: mapStoredInviteStatus(row.invite_status),
     verification_status: mapStoredVerificationStatus(row.verification_status),
     source_type: mapStoredSourceType(row.source_type),
+    validation_overrides: readValidationOverrides(row.validation_overrides),
     created_at: String(row.created_at ?? ""),
     updated_at: String(row.updated_at ?? ""),
   };
@@ -837,9 +907,22 @@ function mapStoredSourceType(value: unknown): CanonicalContactSourceType {
   return "manual";
 }
 
+function readValidationOverrides(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.entries(value as Record<string, unknown>).reduce<Record<string, { manually_confirmed?: boolean; updated_at?: string }>>((acc, [key, entry]) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return acc;
+    const source = entry as Record<string, unknown>;
+    acc[key] = {
+      manually_confirmed: source.manually_confirmed === true,
+      updated_at: typeof source.updated_at === "string" ? source.updated_at : undefined,
+    };
+    return acc;
+  }, {});
+}
+
 function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
 const CONTACT_SELECT =
-  "id,owner_user_id,full_name,email,email_normalized,phone,contact_role,relationship,linked_context,invite_status,verification_status,source_type,created_at,updated_at";
+  "id,owner_user_id,full_name,email,email_normalized,phone,contact_role,relationship,linked_context,invite_status,verification_status,source_type,validation_overrides,created_at,updated_at";

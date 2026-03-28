@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { waitForActiveUser } from "../../lib/auth/session";
 import { trackClientEvent } from "../../lib/observability/clientEvents";
 import { supabase } from "../../lib/supabaseClient";
@@ -79,6 +79,7 @@ export default function SectionWorkspace({
   extraFields = [],
 }: SectionWorkspaceProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { viewer } = useViewerAccess();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -91,6 +92,7 @@ export default function SectionWorkspace({
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
   const [tableUnavailable, setTableUnavailable] = useState(false);
   const directUploadsEnabled = !uploadsRequireCanonicalParent;
+  const selectedEntryId = String(searchParams.get("record") ?? "").trim();
 
   useEffect(() => {
     let mounted = true;
@@ -525,7 +527,7 @@ export default function SectionWorkspace({
         {!loading && !tableUnavailable ? (
           <div style={{ display: "grid", gap: 10 }}>
             {rows.map((row) => (
-              <article key={row.id} style={rowCardStyle}>
+              <article key={row.id} style={selectedEntryId === row.id ? selectedRowCardStyle : rowCardStyle} data-record-id={row.id}>
                 <div style={{ display: "grid", gap: 3 }}>
                   <div style={{ fontWeight: 700 }}>{row.title || "Untitled record"}</div>
                   <div style={{ color: "#64748b", fontSize: 13 }}>{row.summary || "No summary provided."}</div>
@@ -706,6 +708,12 @@ const rowCardStyle: CSSProperties = {
   padding: 12,
   display: "grid",
   gap: 10,
+};
+
+const selectedRowCardStyle: CSSProperties = {
+  ...rowCardStyle,
+  borderColor: "#2563eb",
+  boxShadow: "0 0 0 2px rgba(37, 99, 235, 0.12)",
 };
 
 const fieldStyle: CSSProperties = {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   optionLabel,
   personalPossessionCategories,
@@ -613,6 +613,7 @@ export default function UniversalRecordWorkspace({
   recordFilter,
 }: WorkspaceProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { viewer } = useViewerAccess();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -667,6 +668,12 @@ export default function UniversalRecordWorkspace({
   const legalLinkedContactDefinition = sectionKey === "legal" ? getLegalLinkedContactDefinition(categoryKey) : null;
   const defaultLegalContactRole = legalLinkedContactDefinition?.defaultRole ?? "";
   const usesStructuredWorkspaceForm = isFinanceSection || usesCanonicalAssets || isIdentityDocuments || isSocialMedia;
+  const selectedWorkspaceRecordId = String(
+    searchParams.get(usesCanonicalAssetReadPath ? "asset" : "record")
+    || searchParams.get("asset")
+    || searchParams.get("record")
+    || "",
+  ).trim();
   const hasStagedExtractionInput = Boolean(pendingDocumentFile || pendingPhotoFile);
   const addLabel = isPossessions
     ? "Add possession"
@@ -968,6 +975,11 @@ export default function UniversalRecordWorkspace({
       cancelled = true;
     };
   }, [attachments]);
+
+  useEffect(() => {
+    if (!selectedWorkspaceRecordId) return;
+    setOpenRecordId(selectedWorkspaceRecordId);
+  }, [selectedWorkspaceRecordId]);
 
   function startCreate() {
     setEditingId(null);
@@ -2246,7 +2258,7 @@ export default function UniversalRecordWorkspace({
     const leadingVisualWidth = previewUrl && !thumbFailed ? 40 : 32;
 
     return (
-      <article key={row.id} style={recordCardStyle} className="lf-record-card">
+      <article key={row.id} style={selectedWorkspaceRecordId === row.id ? selectedRecordCardStyle : recordCardStyle} className="lf-record-card" data-record-id={row.id}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             {previewUrl && !thumbFailed ? (
@@ -5550,6 +5562,12 @@ const recordCardStyle: CSSProperties = {
   padding: 12,
   display: "grid",
   gap: 10,
+};
+
+const selectedRecordCardStyle: CSSProperties = {
+  ...recordCardStyle,
+  borderColor: "#2563eb",
+  boxShadow: "0 0 0 2px rgba(37, 99, 235, 0.12)",
 };
 
 const recordActionsStyle: CSSProperties = {

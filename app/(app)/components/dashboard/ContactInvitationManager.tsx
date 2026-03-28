@@ -16,12 +16,13 @@ import { getSafeUserData } from "../../../../lib/auth/requireActiveUser";
 import InvitationStatusBadge from "./InvitationStatusBadge";
 import RoleBadge from "./RoleBadge";
 import {
+  deleteCanonicalContact,
   loadCanonicalContactsByIds,
   mapActivationStatusToVerificationStatus,
   syncCanonicalContact,
   type CanonicalContactRow,
 } from "../../../../lib/contacts/canonicalContacts";
-import { buildContactsWorkspaceHref } from "../../../../lib/contacts/contactRouting";
+import { buildContactsWorkspaceHref, buildLinkedContactRecordHref } from "../../../../lib/contacts/contactRouting";
 import { buildInvitationEmailDraft } from "../../../../lib/contacts/invitations";
 import { resolveInvitationBadgeState, type InvitationStatus } from "../../../../lib/contacts/invitationStatus";
 import { assertOwnerCanSendInvitation, ensureOwnerPlanProfile } from "../../../../lib/accountPlan";
@@ -37,6 +38,7 @@ type InvitationRow = {
   invited_at: string;
   sent_at: string | null;
   permissions_override?: Record<string, unknown> | null;
+  linked_context: CanonicalContactRow["linked_context"];
 };
 
 type RoleAssignmentRow = {
@@ -59,9 +61,11 @@ const ACCESS_SCOPE_OPTIONS: Array<{ key: SectionKey; label: string }> = [
 export default function ContactInvitationManager({
   mode = "full",
   selectedContactId = "",
+  selectedContactProfile = null,
 }: {
   mode?: "full" | "dashboard";
   selectedContactId?: string;
+  selectedContactProfile?: Pick<CanonicalContactRow, "id" | "full_name" | "email" | "contact_role" | "linked_context"> | null;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -75,8 +79,11 @@ export default function ContactInvitationManager({
   const [ownerNotes, setOwnerNotes] = useState("");
   const [accessLevel, setAccessLevel] = useState<"view_only" | "view_edit">("view_only");
   const [allowedSections, setAllowedSections] = useState<SectionKey[]>([]);
+  const [allowedAssetIds, setAllowedAssetIds] = useState<string[]>([]);
+  const [allowedRecordIds, setAllowedRecordIds] = useState<string[]>([]);
 
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [draftContactId, setDraftContactId] = useState<string | null>(null);
   const isDashboardMode = mode === "dashboard";
 
   const roleOptions = useMemo(
@@ -170,6 +177,7 @@ export default function ContactInvitationManager({
         invited_at: row.invited_at,
         sent_at: row.sent_at,
         permissions_override: assignment?.permissions_override ?? null,
+        linked_context: canonical?.linked_context ?? [],
       };
     });
 
@@ -186,15 +194,28 @@ export default function ContactInvitationManager({
     const normalizedContactId = String(selectedContactId ?? "").trim();
     if (!normalizedContactId) return;
     const selectedRow = rows.find((row) => row.contact_id === normalizedContactId);
-    if (!selectedRow) return;
-    startEdit(selectedRow);
-  }, [isDashboardMode, rows, selectedContactId]);
+    if (selectedRow) {
+      startEdit(selectedRow);
+      return;
+    }
+    if (!selectedContactProfile || selectedContactProfile.id !== normalizedContactId) return;
+    setEditingId(null);
+    setDraftContactId(selectedContactProfile.id);
+    setName(selectedContactProfile.full_name || "");
+    setEmail(selectedContactProfile.email || "");
+    setRole(normalizeCollaboratorRole(selectedContactProfile.contact_role));
+    setOwnerNotes("");
+    setAccessLevel("view_only");
+    setAllowedSections([]);
+    setAllowedAssetIds([]);
+    setAllowedRecordIds([]);
+  }, [isDashboardMode, rows, selectedContactId, selectedContactProfile]);
 
   useEffect(() => {
     setAllowedSections((current) => current.filter((section) => ROLE_RULES[role].allowedSections.includes(section)));
   }, [role]);
 
-  async function saveContact() {
+  async function saveContact({ sendAfterSave = false }: { sendAfterSave?: boolean } = {}) {
     setSaving(true);
     setStatus("");
 
@@ -220,8 +241,8 @@ export default function ContactInvitationManager({
         read_only: accessLevel !== "view_edit",
         allowed_sections: allowedSections,
         owner_notes: ownerNotes.trim() || null,
-        asset_ids: currentPermissions?.asset_ids ?? [],
-        record_ids: currentPermissions?.record_ids ?? [],
+        asset_ids: allowedAssetIds.length > 0 ? allowedAssetIds : currentPermissions?.asset_ids ?? [],
+        record_ids: allowedRecordIds.length > 0 ? allowedRecordIds : currentPermissions?.record_ids ?? [],
       };
       const currentInviteStatus = currentEditingRow
         ? mapRowToCanonicalInviteStatus(currentEditingRow)
@@ -231,7 +252,7 @@ export default function ContactInvitationManager({
         : "not_verified";
       const canonicalContact = await syncCanonicalContact(supabase, {
         ownerUserId: userId,
-        existingContactId: currentEditingRow?.contact_id ?? null,
+        existingContactId: currentEditingRow?.contact_id ?? draftContactId ?? null,
         fullName: nameTrim,
         email: emailTrim,
         contactRole: role,
@@ -318,8 +339,8 @@ export default function ContactInvitationManager({
           email: emailTrim,
           contactRole: role,
           sourceType: "invitation",
-          inviteStatus: "invite_sent",
-          verificationStatus: "invited",
+          inviteStatus: "not_invited",
+          verificationStatus: "not_verified",
           link: {
             sourceKind: "invitation",
             sourceId: insertRes.data.id,
@@ -329,15 +350,35 @@ export default function ContactInvitationManager({
             role,
           },
         });
+
+        if (sendAfterSave) {
+          await sendInvite({
+            id: String(insertRes.data.id),
+            contact_id: canonicalContact.id,
+            contact_name: nameTrim,
+            contact_email: emailTrim,
+            assigned_role: role,
+            invitation_status: "pending",
+            activation_status: "invited",
+            invited_at: now,
+            sent_at: null,
+            permissions_override: permissionsOverride,
+            linked_context: selectedContactProfile?.linked_context ?? [],
+          }, false);
+          return;
+        }
       }
 
       setEditingId(null);
+      setDraftContactId(null);
       setName("");
       setEmail("");
       setRole("professional_advisor");
       setOwnerNotes("");
       setAccessLevel("view_only");
       setAllowedSections([]);
+      setAllowedAssetIds([]);
+      setAllowedRecordIds([]);
       setStatus("✅ Contact saved.");
       await loadRows();
     } catch (error) {
@@ -354,21 +395,23 @@ export default function ContactInvitationManager({
       router.replace("/sign-in");
       return;
     }
-    const ownerPlan = await ensureOwnerPlanProfile(supabase, userData.user.id);
-    const inviteCountRes = await supabase
-      .from("contact_invitations")
-      .select("id", { count: "exact", head: true })
-      .eq("owner_user_id", userData.user.id)
-      .neq("invitation_status", "revoked");
-    if (inviteCountRes.error) {
-      setStatus(`❌ Could not check invitation allowance: ${inviteCountRes.error.message}`);
-      return;
-    }
-    try {
-      assertOwnerCanSendInvitation(ownerPlan, Number(inviteCountRes.count ?? 0));
-    } catch (error) {
-      setStatus(`❌ ${error instanceof Error ? error.message : "Invitation limit reached."}`);
-      return;
+    if (!resend) {
+      const ownerPlan = await ensureOwnerPlanProfile(supabase, userData.user.id);
+      const inviteCountRes = await supabase
+        .from("contact_invitations")
+        .select("id", { count: "exact", head: true })
+        .eq("owner_user_id", userData.user.id)
+        .neq("invitation_status", "revoked");
+      if (inviteCountRes.error) {
+        setStatus(`❌ Could not check invitation allowance: ${inviteCountRes.error.message}`);
+        return;
+      }
+      try {
+        assertOwnerCanSendInvitation(ownerPlan, Number(inviteCountRes.count ?? 0));
+      } catch (error) {
+        setStatus(`❌ ${error instanceof Error ? error.message : "Invitation limit reached."}`);
+        return;
+      }
     }
 
     const token = crypto.randomUUID().replace(/-/g, "");
@@ -472,68 +515,90 @@ export default function ContactInvitationManager({
   function startEdit(row: InvitationRow) {
     const permissions = loadPermissionsOverride(row);
     setEditingId(row.id);
+    setDraftContactId(row.contact_id ?? null);
     setName(row.contact_name);
     setEmail(row.contact_email);
     setRole(row.assigned_role);
     setOwnerNotes(permissions.owner_notes);
     setAccessLevel(permissions.read_only ? "view_only" : "view_edit");
     setAllowedSections(permissions.allowed_sections);
+    setAllowedAssetIds(permissions.asset_ids);
+    setAllowedRecordIds(permissions.record_ids);
   }
 
   async function remove(row: InvitationRow) {
     setStatus("");
-    const ok = window.confirm(`Delete ${row.contact_name || row.contact_email}?`);
+    const ok = window.confirm(`Delete ${row.contact_name || row.contact_email}? This removes the invitation, linked access, and shared contact entry.`);
     if (!ok) return;
 
-    const { data: userData, error: authError } = await getSafeUserData(supabase);
-    if (authError || !userData.user) {
-      router.replace("/sign-in");
-      return;
+    try {
+      const { data: userData, error: authError } = await getSafeUserData(supabase);
+      if (authError || !userData.user) {
+        router.replace("/sign-in");
+        return;
+      }
+
+      if (row.contact_id) {
+        await deleteCanonicalContact(supabase, {
+          ownerUserId: userData.user.id,
+          contactId: row.contact_id,
+        });
+      } else {
+        const [grantsRes, invitationRes] = await Promise.all([
+          supabase.from("account_access_grants").delete().eq("owner_user_id", userData.user.id).eq("invitation_id", row.id),
+          supabase.from("contact_invitations").delete().eq("owner_user_id", userData.user.id).eq("id", row.id),
+        ]);
+        if (grantsRes.error || invitationRes.error) {
+          setStatus(`❌ Could not delete contact: ${grantsRes.error?.message || invitationRes.error?.message}`);
+          return;
+        }
+      }
+
+      setStatus("✅ Contact deleted.");
+      if (editingId === row.id) {
+        setEditingId(null);
+        setOwnerNotes("");
+        setAllowedSections([]);
+        setAllowedAssetIds([]);
+        setAllowedRecordIds([]);
+      }
+      await loadRows();
+    } catch (error) {
+      setStatus(`❌ Could not delete contact: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
+  }
 
-    const now = new Date().toISOString();
+  async function removeSelectedDraftContact() {
+    if (!draftContactId) return;
+    const ok = window.confirm(`Delete ${name || "this contact"}? This removes the shared contact entry and any linked invitation access.`);
+    if (!ok) return;
 
-    const [inv, roleAssign] = await Promise.all([
-      supabase
-        .from("contact_invitations")
-        .update({ invitation_status: "revoked", revoked_at: now, updated_at: now })
-        .eq("id", row.id)
-        .eq("owner_user_id", userData.user.id),
-      supabase
-        .from("role_assignments")
-        .update({ activation_status: "revoked", updated_at: now })
-        .eq("invitation_id", row.id)
-        .eq("owner_user_id", userData.user.id),
-    ]);
+    try {
+      const { data: userData, error: authError } = await getSafeUserData(supabase);
+      if (authError || !userData.user) {
+        router.replace("/sign-in");
+        return;
+      }
 
-    if (inv.error || roleAssign.error) {
-      setStatus(`❌ Could not revoke contact: ${inv.error?.message || roleAssign.error?.message}`);
-      return;
-    }
-
-    if (row.contact_id) {
-      await syncCanonicalContact(supabase, {
+      await deleteCanonicalContact(supabase, {
         ownerUserId: userData.user.id,
-        existingContactId: row.contact_id,
-        fullName: row.contact_name,
-        email: row.contact_email,
-        contactRole: row.assigned_role,
-        sourceType: "invitation",
-        inviteStatus: "revoked",
-        verificationStatus: "revoked",
-        link: {
-          sourceKind: "invitation",
-          sourceId: row.id,
-          sectionKey: "dashboard",
-          categoryKey: "contacts",
-          label: "Contact invitation",
-          role: row.assigned_role,
-        },
+        contactId: draftContactId,
       });
-    }
 
-    setStatus("✅ Contact revoked.");
-    await loadRows();
+      setStatus("✅ Contact deleted.");
+      setDraftContactId(null);
+      setEditingId(null);
+      setName("");
+      setEmail("");
+      setOwnerNotes("");
+      setAllowedSections([]);
+      setAllowedAssetIds([]);
+      setAllowedRecordIds([]);
+      router.push("/contacts");
+      await loadRows();
+    } catch (error) {
+      setStatus(`❌ Could not delete contact: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
   }
 
   return (
@@ -592,9 +657,9 @@ export default function ContactInvitationManager({
       <div style={sectionBlockStyle}>
         <div style={sectionHeaderStyle}>
           <div>
-            <h3 style={sectionTitleStyle}>{editingId ? "Edit contact" : "Add contact"}</h3>
+            <h3 style={sectionTitleStyle}>{editingId || draftContactId ? "Manage contact" : "Add contact"}</h3>
             <p style={sectionIntroStyle}>
-              Save the contact first, then manage role, resend, owner notes, and access scope from the same shared admin surface.
+              Save the selected contact here, then manage role, invitation state, internal notes, category access, and exact linked-record scope from the same shared admin surface.
             </p>
           </div>
         </div>
@@ -609,8 +674,8 @@ export default function ContactInvitationManager({
             <input value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} type="email" placeholder="name@example.com" />
           </label>
           <label style={fieldStyle}>
-            <span style={fieldLabelStyle}>Role</span>
-            <select value={role} onChange={(e) => setRole(e.target.value as CollaboratorRole)} style={inputStyle}>
+              <span style={fieldLabelStyle}>Role</span>
+              <select value={role} onChange={(e) => setRole(e.target.value as CollaboratorRole)} style={inputStyle}>
               {roleOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -635,7 +700,7 @@ export default function ContactInvitationManager({
             />
           </label>
           <div style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
-            <span style={fieldLabelStyle}>Access scope</span>
+            <span style={fieldLabelStyle}>Category access</span>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {ACCESS_SCOPE_OPTIONS
                 .filter((option) => ROLE_RULES[role].allowedSections.includes(option.key))
@@ -656,24 +721,85 @@ export default function ContactInvitationManager({
                 })}
             </div>
           </div>
+          {editingId || draftContactId ? (
+            <div style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
+              <span style={fieldLabelStyle}>Specific linked records</span>
+              <div style={{ color: "#64748b", fontSize: 12 }}>
+                Narrow this contact to exact linked records as well as, or instead of, whole categories.
+              </div>
+              <div style={{ display: "grid", gap: 8 }}>
+                {getScopedLinkOptions(editingId ? rows.find((item) => item.id === editingId)?.linked_context ?? [] : selectedContactProfile?.linked_context ?? []).map((option) => {
+                  const checked = option.sourceKind === "asset"
+                    ? allowedAssetIds.includes(option.sourceId)
+                    : allowedRecordIds.includes(option.sourceId);
+                  const href = buildLinkedContactRecordHref({
+                    source_kind: option.sourceKind,
+                    source_id: option.sourceId,
+                    section_key: option.sectionKey,
+                    category_key: option.categoryKey,
+                    label: option.label,
+                    role: option.role,
+                  });
+
+                  return (
+                    <label key={`${option.sourceKind}:${option.sourceId}`} style={scopeChipStyle}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          if (option.sourceKind === "asset") {
+                            setAllowedAssetIds((current) => checked ? current.filter((item) => item !== option.sourceId) : [...current, option.sourceId]);
+                            return;
+                          }
+                          setAllowedRecordIds((current) => checked ? current.filter((item) => item !== option.sourceId) : [...current, option.sourceId]);
+                        }}
+                      />
+                      <span>{option.label}</span>
+                      {href ? (
+                        <Link href={href} style={{ color: "#1d4ed8", textDecoration: "none", fontWeight: 600 }}>
+                          Open
+                        </Link>
+                      ) : null}
+                    </label>
+                  );
+                })}
+                {getScopedLinkOptions(editingId ? rows.find((item) => item.id === editingId)?.linked_context ?? [] : selectedContactProfile?.linked_context ?? []).length === 0 ? (
+                  <div style={{ color: "#64748b", fontSize: 12 }}>No linked records are available yet for granular scope.</div>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button type="button" style={primaryBtnStyle} disabled={saving} onClick={() => void saveContact()}>
-            {saving ? "Saving..." : editingId ? "Update contact" : "Add contact"}
+            {saving ? "Saving..." : editingId ? "Update contact" : draftContactId ? "Save access setup" : "Add contact"}
           </button>
+          {!editingId && draftContactId && email.trim() ? (
+            <button type="button" style={ghostBtnStyle} disabled={saving} onClick={() => void saveContact({ sendAfterSave: true })}>
+              {saving ? "Saving..." : "Save and send invite"}
+            </button>
+          ) : null}
+          {!editingId && draftContactId ? (
+            <button type="button" style={dangerBtnStyle} disabled={saving} onClick={() => void removeSelectedDraftContact()}>
+              Delete contact
+            </button>
+          ) : null}
           {editingId ? (
             <button
               type="button"
               style={ghostBtnStyle}
               onClick={() => {
                 setEditingId(null);
+                setDraftContactId(null);
                 setName("");
                 setEmail("");
                 setRole("professional_advisor");
                 setOwnerNotes("");
                 setAccessLevel("view_only");
                 setAllowedSections([]);
+                setAllowedAssetIds([]);
+                setAllowedRecordIds([]);
               }}
             >
               Cancel
@@ -785,7 +911,7 @@ export default function ContactInvitationManager({
                                   onClick={() => void sendInvite(row, true)}
                                 />
                               ) : null}
-                              <ActionIconButton action="delete" label={`Remove ${row.contact_name || row.contact_email}`} onClick={() => void remove(row)} />
+                              <ActionIconButton action="delete" label={`Delete ${row.contact_name || row.contact_email}`} onClick={() => void remove(row)} />
                             </>
                           )}
                         </div>
@@ -865,7 +991,7 @@ export default function ContactInvitationManager({
                             onClick={() => void sendInvite(row, true)}
                           />
                         ) : null}
-                        <ActionIconButton action="delete" label={`Remove ${row.contact_name || row.contact_email}`} onClick={() => void remove(row)} />
+                        <ActionIconButton action="delete" label={`Delete ${row.contact_name || row.contact_email}`} onClick={() => void remove(row)} />
                       </>
                     )}
                   </div>
@@ -933,6 +1059,27 @@ function loadPermissionsOverride(row: InvitationRow) {
     asset_ids: Array.isArray(source["asset_ids"]) ? source["asset_ids"].map((item) => `${item}`.trim()).filter(Boolean) : [],
     record_ids: Array.isArray(source["record_ids"]) ? source["record_ids"].map((item) => `${item}`.trim()).filter(Boolean) : [],
   };
+}
+
+function getScopedLinkOptions(contexts: CanonicalContactRow["linked_context"]) {
+  return contexts
+    .filter((context) => context.source_kind === "asset" || context.source_kind === "record")
+    .map((context) => ({
+      sourceKind: context.source_kind,
+      sourceId: context.source_id,
+      sectionKey: context.section_key ?? null,
+      categoryKey: context.category_key ?? null,
+      role: context.role ?? null,
+      label: context.label || [context.section_key, context.category_key, context.role].filter(Boolean).join(" · ") || "Linked record",
+    }));
+}
+
+function normalizeCollaboratorRole(value: string | null | undefined): CollaboratorRole {
+  const normalized = String(value ?? "").trim();
+  if (normalized && normalized in ROLE_RULES && normalized !== "owner") {
+    return normalized as CollaboratorRole;
+  }
+  return "professional_advisor";
 }
 
 const panelStyle: CSSProperties = {
@@ -1118,6 +1265,15 @@ const ghostBtnStyle: CSSProperties = {
   border: "1px solid #d1d5db",
   background: "#fff",
   color: "#111827",
+  borderRadius: 10,
+  padding: "9px 12px",
+  fontSize: 13,
+  cursor: "pointer",
+};
+const dangerBtnStyle: CSSProperties = {
+  border: "1px solid #dc2626",
+  background: "#fff",
+  color: "#b91c1c",
   borderRadius: 10,
   padding: "9px 12px",
   fontSize: 13,

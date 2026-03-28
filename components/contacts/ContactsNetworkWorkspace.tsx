@@ -5,13 +5,22 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 import { waitForActiveUser } from "../../lib/auth/session";
-import { loadCanonicalContactsForOwner, syncCanonicalContact, type CanonicalContactInviteStatus, type CanonicalContactSourceType, type CanonicalContactVerificationStatus } from "../../lib/contacts/canonicalContacts";
+import {
+  loadCanonicalContactsForOwner,
+  syncCanonicalContact,
+  type CanonicalContactContext,
+  type CanonicalContactInviteStatus,
+  type CanonicalContactSourceType,
+  type CanonicalContactVerificationStatus,
+} from "../../lib/contacts/canonicalContacts";
 import { resolveContactGroupKey } from "../../lib/contacts/contactGrouping";
 import { buildCanonicalContactEditInput, buildContactProjectionUpdates, buildEditableContactValues, type EditableContactValues } from "../../lib/contacts/contactEditing";
-import { buildContactsWorkspaceHref } from "../../lib/contacts/contactRouting";
+import { buildContactLinkValidationKey, evaluateContactLinkValidation, flattenSearchableValue } from "../../lib/contacts/contactLinkValidation";
+import { buildContactsWorkspaceHref, buildLinkedContactRecordHref } from "../../lib/contacts/contactRouting";
+import { resolveContactStatusBadge } from "../../lib/contacts/contactStatus";
 import ContactInvitationManager from "../../app/(app)/components/dashboard/ContactInvitationManager";
 import { useViewerAccess } from "../access/ViewerAccessContext";
-import { ActionIconButton } from "../ui/IconButton";
+import { ActionIconButton, IconButton } from "../ui/IconButton";
 
 type ContactRow = {
   id: string;
@@ -31,6 +40,7 @@ type ContactRow = {
     label?: string | null;
     role?: string | null;
   }>;
+  validation_overrides?: Record<string, { manually_confirmed?: boolean; updated_at?: string }>;
   updated_at: string;
 };
 
@@ -52,6 +62,8 @@ export default function ContactsNetworkWorkspace() {
   const [showAccessReview, setShowAccessReview] = useState(false);
   const [editingContactId, setEditingContactId] = useState<string | null>(null);
   const [savingContact, setSavingContact] = useState(false);
+  const [validationSourceText, setValidationSourceText] = useState<Record<string, string>>({});
+  const [confirmingValidationKey, setConfirmingValidationKey] = useState("");
   const [contactForm, setContactForm] = useState<EditableContactValues>({
     fullName: "",
     email: "",
@@ -89,6 +101,105 @@ export default function ContactsNetworkWorkspace() {
     };
   }, [router, viewer.targetOwnerUserId]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadValidationEvidence() {
+      const user = await waitForActiveUser(supabase, { attempts: 5, delayMs: 120 });
+      const ownerUserId = viewer.targetOwnerUserId || user?.id;
+      if (!ownerUserId) return;
+
+      const contexts = contacts.flatMap((contact) => contact.linked_context ?? []);
+      const assetIds = Array.from(new Set(
+        contexts
+          .filter((item) => item.source_kind === "asset")
+          .map((item) => String(item.source_id ?? "").trim())
+          .filter(Boolean),
+      ));
+      const recordIds = Array.from(new Set(
+        contexts
+          .filter((item) => item.source_kind === "record")
+          .map((item) => String(item.source_id ?? "").trim())
+          .filter(Boolean),
+      ));
+
+      const nextEvidence: Record<string, string> = {};
+
+      const [
+        assetRows,
+        documentRows,
+        recordRows,
+        attachmentRows,
+      ] = await Promise.all([
+        assetIds.length
+          ? supabase.from("assets").select("id,title,summary,metadata_json").eq("owner_user_id", ownerUserId).in("id", assetIds)
+          : Promise.resolve({ data: [], error: null }),
+        assetIds.length
+          ? supabase.from("documents").select("asset_id,file_name,document_kind").eq("owner_user_id", ownerUserId).in("asset_id", assetIds).is("deleted_at", null)
+          : Promise.resolve({ data: [], error: null }),
+        recordIds.length
+          ? supabase.from("records").select("id,title,summary,metadata").eq("owner_user_id", ownerUserId).in("id", recordIds)
+          : Promise.resolve({ data: [], error: null }),
+        recordIds.length
+          ? supabase.from("attachments").select("record_id,file_name").eq("owner_user_id", ownerUserId).in("record_id", recordIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+
+      if (cancelled) return;
+
+      const documentsByAssetId = new Map<string, string[]>();
+      for (const row of ((documentRows.data ?? []) as Array<Record<string, unknown>>)) {
+        const assetId = String(row.asset_id ?? "").trim();
+        if (!assetId) continue;
+        const items = documentsByAssetId.get(assetId) ?? [];
+        items.push([row.file_name, row.document_kind].filter(Boolean).join(" "));
+        documentsByAssetId.set(assetId, items);
+      }
+
+      const attachmentsByRecordId = new Map<string, string[]>();
+      for (const row of ((attachmentRows.data ?? []) as Array<Record<string, unknown>>)) {
+        const recordId = String(row.record_id ?? "").trim();
+        if (!recordId) continue;
+        const items = attachmentsByRecordId.get(recordId) ?? [];
+        items.push(String(row.file_name ?? "").trim());
+        attachmentsByRecordId.set(recordId, items);
+      }
+
+      for (const row of ((assetRows.data ?? []) as Array<Record<string, unknown>>)) {
+        const id = String(row.id ?? "").trim();
+        if (!id) continue;
+        nextEvidence[`asset:${id}`] = [
+          row.title,
+          row.summary,
+          flattenSearchableValue(row.metadata_json),
+          ...(documentsByAssetId.get(id) ?? []),
+        ]
+          .filter(Boolean)
+          .join(" ");
+      }
+
+      for (const row of ((recordRows.data ?? []) as Array<Record<string, unknown>>)) {
+        const id = String(row.id ?? "").trim();
+        if (!id) continue;
+        nextEvidence[`record:${id}`] = [
+          row.title,
+          row.summary,
+          flattenSearchableValue(row.metadata),
+          ...(attachmentsByRecordId.get(id) ?? []),
+        ]
+          .filter(Boolean)
+          .join(" ");
+      }
+
+      setValidationSourceText(nextEvidence);
+    }
+
+    void loadValidationEvidence();
+    return () => {
+      cancelled = true;
+    };
+  }, [contacts, viewer.targetOwnerUserId]);
+
   const groupedContacts = useMemo(() => {
     const map = new Map<string, ContactRow[]>();
     for (const group of GROUPS) map.set(group.key, []);
@@ -112,6 +223,24 @@ export default function ContactsNetworkWorkspace() {
   );
 
   const selectedContactId = String(searchParams.get("contact") ?? "").trim();
+  const selectedContact = useMemo(
+    () => {
+      const match = contacts.find((item) => item.id === selectedContactId);
+      if (!match) return null;
+      return {
+        id: match.id,
+        full_name: match.full_name,
+        email: match.email,
+        contact_role: match.contact_role,
+        linked_context: (match.linked_context ?? []).filter(
+          (context): context is CanonicalContactContext =>
+            (context?.source_kind === "asset" || context?.source_kind === "record" || context?.source_kind === "invitation") &&
+            Boolean(context?.source_id),
+        ),
+      };
+    },
+    [contacts, selectedContactId],
+  );
 
   useEffect(() => {
     if (viewer.readOnly || loading || !selectedContactId) return;
@@ -189,6 +318,45 @@ export default function ContactsNetworkWorkspace() {
     setEditingContactId(contact.id);
     setContactForm(buildEditableContactValues(contact));
     router.replace(buildContactsWorkspaceHref(contact.id));
+  }
+
+  async function confirmLinkedRecord(contact: ContactRow, context: ContactRow["linked_context"][number]) {
+    if (viewer.readOnly) return;
+    const user = await waitForActiveUser(supabase, { attempts: 5, delayMs: 120 });
+    if (!user) {
+      router.replace("/sign-in");
+      return;
+    }
+
+    const key = buildContactLinkValidationKey({
+      source_kind: context.source_kind === "asset" || context.source_kind === "invitation" ? context.source_kind : "record",
+      source_id: String(context.source_id ?? ""),
+    });
+    const ownerUserId = viewer.targetOwnerUserId || user.id;
+    const nextOverrides = {
+      ...(contact.validation_overrides ?? {}),
+      [key]: {
+        manually_confirmed: true,
+        updated_at: new Date().toISOString(),
+      },
+    };
+
+    setConfirmingValidationKey(key);
+    const updateRes = await supabase
+      .from("contacts")
+      .update({ validation_overrides: nextOverrides, updated_at: new Date().toISOString() })
+      .eq("owner_user_id", ownerUserId)
+      .eq("id", contact.id);
+
+    if (updateRes.error) {
+      setStatus(`Could not confirm linked record: ${updateRes.error.message}`);
+      setConfirmingValidationKey("");
+      return;
+    }
+
+    const loaded = await loadCanonicalContactsForOwner(supabase, ownerUserId);
+    setContacts(loaded as ContactRow[]);
+    setConfirmingValidationKey("");
   }
 
   return (
@@ -295,8 +463,11 @@ export default function ContactsNetworkWorkspace() {
                             <Link href={buildContactsWorkspaceHref(contact.id)} style={contactTitleLinkStyle}>
                               {contact.full_name || "Unnamed contact"}
                             </Link>
-                            <StatusPill label={formatInviteStatus(contact.invite_status)} tone="neutral" />
-                            <StatusPill label={formatVerificationStatus(contact.verification_status)} tone={contact.verification_status === "verified" || contact.verification_status === "active" ? "positive" : "neutral"} />
+                            <StatusPill {...resolveContactStatusBadge({
+                              email: contact.email,
+                              inviteStatus: contact.invite_status,
+                              verificationStatus: contact.verification_status,
+                            })} />
                             {!viewer.readOnly ? (
                               <ActionIconButton action="edit" label={`Edit ${contact.full_name || "contact"}`} onClick={() => startEdit(contact)} />
                             ) : null}
@@ -307,18 +478,60 @@ export default function ContactsNetworkWorkspace() {
                           <div style={{ color: "#64748b", fontSize: 13 }}>
                             {contact.email || "No email"}{" · "}{contact.phone || "No phone"}
                           </div>
-                          <div style={{ color: "#475569", fontSize: 12 }}>
-                            {buildStatusSummary(contact)}
-                          </div>
                           <div style={{ color: "#475569", fontSize: 12, fontWeight: 600 }}>
                             Linked roles and records
                           </div>
-                          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                            {(contact.linked_context ?? []).map((context, index) => (
-                              <span key={`${contact.id}-${index}`} style={contextPillStyle}>
-                                {context.label || formatContextLabel(context)}
-                              </span>
-                            ))}
+                          <div style={{ display: "grid", gap: 8 }}>
+                            {(contact.linked_context ?? []).map((context, index) => {
+                              const href = buildLinkedContactRecordHref({
+                                source_kind: context.source_kind === "asset" || context.source_kind === "invitation" ? context.source_kind : "record",
+                                source_id: String(context.source_id ?? ""),
+                                section_key: context.section_key ?? null,
+                                category_key: context.category_key ?? null,
+                                label: context.label ?? null,
+                                role: context.role ?? null,
+                              });
+                              const validationKey = buildContactLinkValidationKey({
+                                source_kind: context.source_kind === "asset" || context.source_kind === "invitation" ? context.source_kind : "record",
+                                source_id: String(context.source_id ?? ""),
+                              });
+                              const manuallyConfirmed = contact.validation_overrides?.[validationKey]?.manually_confirmed === true;
+                              const validation = (context.source_kind === "asset" || context.source_kind === "record")
+                                ? evaluateContactLinkValidation({
+                                    contactName: contact.full_name,
+                                    sourceText: [
+                                      validationSourceText[validationKey],
+                                      context.label,
+                                      context.role,
+                                    ].filter(Boolean).join(" "),
+                                    manuallyConfirmed,
+                                  })
+                                : null;
+
+                              return (
+                                <div key={`${contact.id}-${index}`} style={linkedContextRowStyle}>
+                                  {href ? (
+                                    <Link href={href} style={contextLinkStyle} title={`Open ${context.label || formatContextLabel(context)}`}>
+                                      {context.label || formatContextLabel(context)}
+                                    </Link>
+                                  ) : (
+                                    <span style={contextPillStyle}>{context.label || formatContextLabel(context)}</span>
+                                  )}
+                                  {validation ? <ValidationBadge validation={validation} /> : null}
+                                  {validation?.state === "warning" && selectedContactId === contact.id && !viewer.readOnly ? (
+                                    <IconButton
+                                      icon="verified"
+                                      label={`Confirm ${context.label || formatContextLabel(context)} is the correct record for ${contact.full_name}`}
+                                      onClick={() => void confirmLinkedRecord(contact, context)}
+                                      disabled={confirmingValidationKey === validationKey}
+                                    />
+                                  ) : null}
+                                  {validation?.state === "warning" && selectedContactId === contact.id ? (
+                                    <div style={validationHelpStyle}>{validation.warning}</div>
+                                  ) : null}
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       </article>
@@ -339,37 +552,19 @@ export default function ContactsNetworkWorkspace() {
               Review invitations, role assignments, resend state, notes, and access permissions here when you need the fuller management view.
           </div>
         </div>
-          <ContactInvitationManager mode="full" selectedContactId={selectedContactId} />
+          <ContactInvitationManager
+            mode="full"
+            selectedContactId={selectedContactId}
+            selectedContactProfile={selectedContact}
+          />
         </section>
       ) : null}
     </section>
   );
 }
 
-function formatInviteStatus(value: string) {
-  if (value === "invite_sent") return "Invitation sent";
-  if (value === "accepted") return "Invitation accepted";
-  if (value === "rejected") return "Invitation rejected";
-  if (value === "revoked") return "Invitation revoked";
-  return "No invitation";
-}
-
-function formatVerificationStatus(value: string) {
-  if (!value) return "Not verified";
-  return value.replace(/_/g, " ");
-}
-
 function formatContextLabel(context: ContactRow["linked_context"][number]) {
   return [context.section_key, context.category_key, context.role].filter(Boolean).join(" · ") || "Linked context";
-}
-
-function buildStatusSummary(contact: ContactRow) {
-  const invite = formatInviteStatus(contact.invite_status);
-  const verification = formatVerificationStatus(contact.verification_status);
-  if (invite === "No invitation") return `${verification}. Invitation not yet started.`;
-  if (invite === "Invitation sent") return `${verification}. Waiting for the invitation to be accepted.`;
-  if (invite === "Invitation accepted") return `${verification}. Access is linked to this contact.`;
-  return `${invite}. ${verification}.`;
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
@@ -381,8 +576,25 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function StatusPill({ label, tone }: { label: string; tone: "neutral" | "positive" }) {
-  return <span style={tone === "positive" ? positivePillStyle : neutralPillStyle}>{label}</span>;
+function StatusPill({ label, tone }: { label: string; tone: "neutral" | "success" | "warning" | "danger" }) {
+  if (tone === "success") return <span style={positivePillStyle}>{label}</span>;
+  if (tone === "warning") return <span style={warningPillStyle}>{label}</span>;
+  if (tone === "danger") return <span style={dangerPillStyle}>{label}</span>;
+  return <span style={neutralPillStyle}>{label}</span>;
+}
+
+function ValidationBadge({
+  validation,
+}: {
+  validation: ReturnType<typeof evaluateContactLinkValidation>;
+}) {
+  if (validation.state === "matched") {
+    return <span style={matchedValidationStyle}>{validation.label}</span>;
+  }
+  if (validation.state === "confirmed") {
+    return <span style={confirmedValidationStyle}>{validation.label}</span>;
+  }
+  return <span style={warningPillStyle}>{validation.label}</span>;
 }
 
 const panelStyle: CSSProperties = {
@@ -421,6 +633,18 @@ const positivePillStyle: CSSProperties = {
   color: "#166534",
 };
 
+const warningPillStyle: CSSProperties = {
+  ...neutralPillStyle,
+  background: "#fef3c7",
+  color: "#92400e",
+};
+
+const dangerPillStyle: CSSProperties = {
+  ...neutralPillStyle,
+  background: "#fee2e2",
+  color: "#991b1b",
+};
+
 const fieldStyle: CSSProperties = {
   display: "grid",
   gap: 6,
@@ -446,6 +670,36 @@ const contextPillStyle: CSSProperties = {
   fontSize: 11,
   background: "#eff6ff",
   color: "#1d4ed8",
+};
+
+const contextLinkStyle: CSSProperties = {
+  ...contextPillStyle,
+  textDecoration: "none",
+  fontWeight: 600,
+};
+
+const linkedContextRowStyle: CSSProperties = {
+  display: "flex",
+  gap: 8,
+  flexWrap: "wrap",
+  alignItems: "center",
+};
+
+const matchedValidationStyle: CSSProperties = {
+  ...neutralPillStyle,
+  background: "#dbeafe",
+  color: "#1d4ed8",
+};
+
+const confirmedValidationStyle: CSSProperties = {
+  ...neutralPillStyle,
+  background: "#dcfce7",
+  color: "#166534",
+};
+
+const validationHelpStyle: CSSProperties = {
+  color: "#92400e",
+  fontSize: 12,
 };
 
 const linkPillStyle: CSSProperties = {
