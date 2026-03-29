@@ -16,6 +16,53 @@
   --lf-shadow-md: 0 14px 32px rgba(16, 24, 40, 0.08);
 }
 
+.lf-shell[data-lf-text-size="large"] {
+  font-size: 1.06rem;
+}
+
+.lf-shell[data-lf-text-size="xlarge"] {
+  font-size: 1.12rem;
+}
+
+.lf-shell[data-lf-spacing="comfortable"] .lf-main-content,
+.lf-shell[data-lf-spacing="comfortable"] .lf-content-wrap {
+  gap: 1.15rem;
+}
+
+.lf-shell[data-lf-spacing="comfortable"] .lf-contact-card,
+.lf-shell[data-lf-spacing="comfortable"] .lf-contact-invitations-row,
+.lf-shell[data-lf-spacing="comfortable"] .lf-dashboard-card,
+.lf-shell[data-lf-spacing="comfortable"] .lf-support-card {
+  padding: 16px !important;
+}
+
+.lf-shell[data-lf-contrast="high"] {
+  background: #ffffff;
+  color: #000000;
+}
+
+.lf-shell[data-lf-contrast="high"] .lf-topbar,
+.lf-shell[data-lf-contrast="high"] .lf-sidebar,
+.lf-shell[data-lf-contrast="high"] .lf-contact-card,
+.lf-shell[data-lf-contrast="high"] .lf-contact-invitations-row,
+.lf-shell[data-lf-contrast="high"] .lf-dashboard-card,
+.lf-shell[data-lf-contrast="high"] .lf-support-card,
+.lf-shell[data-lf-contrast="high"] section {
+  border-color: #111827 !important;
+  box-shadow: none !important;
+}
+
+.lf-shell[data-lf-contrast="high"] a,
+.lf-shell[data-lf-contrast="high"] button {
+  color: #000000;
+}
+
+.lf-shell[data-lf-contrast="high"] .lf-primary-btn,
+.lf-shell[data-lf-contrast="high"] .lf-icon-btn,
+.lf-shell[data-lf-contrast="high"] .lf-topbar-security {
+  border-color: #000000 !important;
+}
+
 * {
   box-sizing: border-box;
 }

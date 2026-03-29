@@ -71,7 +71,7 @@ export const ROLE_RULES: Record<CollaboratorRole, RoleRule> = {
   },
   professional_advisor: {
     role: "professional_advisor",
-    label: "Professional Advisor",
+    label: "Advisor",
     allowedSections: ["dashboard", "financial", "legal", "property", "business", "settings"],
     allowedActions: ["view", "view_summary", "view_detail", "download"],
     obscuredSections: ["personal", "digital", "profile"],
@@ -87,10 +87,10 @@ export const ROLE_RULES: Record<CollaboratorRole, RoleRule> = {
   },
   financial_advisor: {
     role: "financial_advisor",
-    label: "Financial Advisor",
-    allowedSections: ["dashboard", "financial"],
+    label: "Advisor",
+    allowedSections: ["dashboard", "financial", "legal", "property", "business"],
     allowedActions: ["view", "view_summary", "view_detail", "download"],
-    obscuredSections: ["profile", "personal", "legal", "property", "business", "digital"],
+    obscuredSections: ["profile", "personal", "digital"],
     requiresVerifiedActivation: false,
   },
   lawyer: {
@@ -120,9 +120,9 @@ export const ROLE_RULES: Record<CollaboratorRole, RoleRule> = {
   friend_or_family: {
     role: "friend_or_family",
     label: "Friend or Family",
-    allowedSections: ["dashboard", "profile", "personal", "legal"],
+    allowedSections: ["dashboard", "profile", "personal", "financial", "legal", "property", "business", "digital"],
     allowedActions: ["view", "view_summary", "view_detail", "download"],
-    obscuredSections: ["financial", "property", "business", "digital"],
+    obscuredSections: [],
     requiresVerifiedActivation: false,
   },
 };

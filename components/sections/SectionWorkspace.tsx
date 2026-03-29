@@ -11,6 +11,9 @@ import { sanitizeFileName, validateUploadFile } from "../../lib/validation/uploa
 import AttachmentGallery, { AttachmentGallerySummary } from "../documents/AttachmentGallery";
 import { useViewerAccess } from "../access/ViewerAccessContext";
 import Icon from "../ui/Icon";
+import { canEditRecordForViewer } from "../../lib/access-control/viewerAccess";
+import InfoTip from "../ui/InfoTip";
+import { getWorkspaceHelpMessage } from "../../lib/workspaceHelp";
 
 type SectionEntry = {
   id: string;
@@ -93,6 +96,9 @@ export default function SectionWorkspace({
   const [tableUnavailable, setTableUnavailable] = useState(false);
   const directUploadsEnabled = !uploadsRequireCanonicalParent;
   const selectedEntryId = String(searchParams.get("record") ?? "").trim();
+  const canCreateRecords = viewer.mode !== "linked";
+  const canEditRow = (recordId: string) => canEditRecordForViewer(recordId, viewer);
+  const helpMessage = getWorkspaceHelpMessage(sectionKey, categoryKey);
 
   useEffect(() => {
     let mounted = true;
@@ -184,7 +190,11 @@ export default function SectionWorkspace({
   }
 
   async function save() {
-    if (viewer.readOnly) {
+    if (!editingId && !canCreateRecords) {
+      setStatus("This linked account cannot create new records.");
+      return;
+    }
+    if (editingId && !canEditRow(editingId)) {
       setStatus("This linked account is view-only.");
       return;
     }
@@ -241,7 +251,7 @@ export default function SectionWorkspace({
   }
 
   async function remove(id: string) {
-    if (viewer.readOnly) {
+    if (viewer.mode === "linked") {
       setStatus("This linked account is view-only.");
       return;
     }
@@ -280,6 +290,10 @@ export default function SectionWorkspace({
   }
 
   function startEdit(row: SectionEntry) {
+    if (!canEditRow(row.id)) {
+      setStatus("This linked account is view-only.");
+      return;
+    }
     setEditingId(row.id);
     setForm({
       title: row.title,
@@ -292,7 +306,7 @@ export default function SectionWorkspace({
   }
 
   async function uploadLegacyAttachment(rowId: string, file: File) {
-    if (viewer.readOnly) {
+    if (!canEditRow(rowId)) {
       setStatus("This linked account is view-only.");
       return;
     }
@@ -433,6 +447,10 @@ export default function SectionWorkspace({
   }
 
   async function removeAttachment(rowId: string, item: SectionAttachment) {
+    if (!canEditRow(rowId)) {
+      setStatus("This linked account is view-only.");
+      return;
+    }
     const user = await requireUser(router);
     if (!user) return;
     const row = rows.find((entry) => entry.id === rowId);
@@ -476,7 +494,12 @@ export default function SectionWorkspace({
   return (
     <section style={{ display: "grid", gap: 14 }}>
       <div style={{ display: "grid", gap: 6 }}>
-        {showPageHeading ? <h1 style={{ margin: 0, fontSize: 28 }}>{title}</h1> : null}
+        {showPageHeading ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <h1 style={{ margin: 0, fontSize: 28 }}>{title}</h1>
+            {helpMessage ? <InfoTip label={`Explain ${title}`} message={helpMessage} /> : null}
+          </div>
+        ) : null}
         <p style={{ margin: showPageHeading ? "6px 0 0" : 0, color: "#6b7280" }}>{subtitle}</p>
         {viewer.mode === "linked" ? (
           <div style={linkedPanelChipStyle}>
@@ -487,7 +510,7 @@ export default function SectionWorkspace({
       </div>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-        {!viewer.readOnly ? <button style={primaryBtn} onClick={() => setShowForm(true)} disabled={tableUnavailable}>{addLabel}</button> : null}
+        {canCreateRecords ? <button style={primaryBtn} onClick={() => setShowForm(true)} disabled={tableUnavailable}>{addLabel}</button> : null}
         {showForm ? <button style={ghostBtn} onClick={() => { setShowForm(false); setEditingId(null); setForm(EMPTY_FORM); setExtraFieldValues({}); }}>Cancel</button> : null}
         <span style={{ color: "#64748b", fontSize: 13 }}>Total tracked value: {formatCurrency(totalValue, "GBP")}</span>
       </div>
@@ -514,7 +537,7 @@ export default function SectionWorkspace({
             ))}
             <label style={fieldStyle}><span style={labelStyle}>Details</span><textarea style={textAreaStyle} value={form.details_text} onChange={(e) => setForm({ ...form, details_text: e.target.value })} /></label>
           </div>
-          {!viewer.readOnly ? <button style={primaryBtn} disabled={saving} onClick={() => void save()}>{saving ? "Saving..." : "Save record"}</button> : null}
+          {(!editingId ? canCreateRecords : canEditRow(editingId)) ? <button style={primaryBtn} disabled={saving} onClick={() => void save()}>{saving ? "Saving..." : "Save record"}</button> : null}
         </section>
       ) : null}
 
@@ -560,8 +583,8 @@ export default function SectionWorkspace({
                   ) : null}
                 </div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  {!viewer.readOnly ? <button style={ghostBtn} onClick={() => startEdit(row)}>Edit</button> : null}
-                  {!viewer.readOnly ? <button style={dangerBtn} onClick={() => void remove(row.id)}>Delete</button> : null}
+                  {canEditRow(row.id) ? <button style={ghostBtn} onClick={() => startEdit(row)}>Edit</button> : null}
+                  {viewer.mode !== "linked" ? <button style={dangerBtn} onClick={() => void remove(row.id)}>Delete</button> : null}
                   {!directUploadsEnabled ? (
                     <button
                       type="button"
@@ -570,7 +593,7 @@ export default function SectionWorkspace({
                     >
                       Attach from asset
                     </button>
-                  ) : !viewer.readOnly ? (
+                  ) : canEditRow(row.id) ? (
                     <label style={ghostBtn}>
                       {uploadingFor === row.id ? "Uploading..." : "Upload file"}
                       <input
@@ -598,7 +621,7 @@ export default function SectionWorkspace({
                   onResolvePreviewUrl={(entry) => resolveAttachmentUrl(entry.attachment)}
                   onDownload={(entry) => void downloadAttachment(entry.attachment)}
                   onPrint={(entry) => void printAttachment(entry.attachment)}
-                  onRemove={viewer.readOnly ? undefined : (entry) => void removeAttachment(row.id, entry.attachment)}
+                  onRemove={canEditRow(row.id) ? (entry) => void removeAttachment(row.id, entry.attachment) : undefined}
                 />
               </article>
             ))}

@@ -24,7 +24,8 @@ import {
 } from "../../lib/records/discovery";
 import Icon from "../ui/Icon";
 import { useViewerAccess } from "../access/ViewerAccessContext";
-import { filterAssetIdsForViewer } from "../../lib/access-control/viewerAccess";
+import { canEditAssetForViewer, filterAssetIdsForViewer } from "../../lib/access-control/viewerAccess";
+import InfoTip from "../ui/InfoTip";
 
 type DocumentsWorkspaceProps = {
   title: string;
@@ -51,6 +52,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
   const [documentSectionFilter, setDocumentSectionFilter] = useState<"all" | SupportedDocumentSectionKey>(
     sectionFilter ?? "all",
   );
+  const canManageAnyDocuments = viewer.mode !== "linked" || viewer.editableAssetIds.length > 0;
 
   useEffect(() => {
     let mounted = true;
@@ -137,7 +139,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
   }
 
   async function handleUpload() {
-    if (viewer.readOnly) {
+    if (!canEditAssetForViewer(selectedAssetId, viewer)) {
       setFormError("This linked account is view-only.");
       return;
     }
@@ -282,6 +284,10 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
   }
 
   async function removeDocument(item: CanonicalDocumentWorkspaceItem) {
+    if (!canEditAssetForViewer(item.assetId, viewer)) {
+      setStatus("This linked account is view-only.");
+      return;
+    }
     const confirmed = window.confirm(`Remove "${item.fileName}" from ${item.parentLabel}?`);
     if (!confirmed) return;
 
@@ -307,7 +313,15 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
   return (
     <section style={{ display: "grid", gap: 16 }}>
       <div style={{ display: "grid", gap: 6 }}>
-        {showPageHeading ? <h1 style={{ margin: 0, fontSize: 28 }}>{title}</h1> : null}
+        {showPageHeading ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <h1 style={{ margin: 0, fontSize: 28 }}>{title}</h1>
+            <InfoTip
+              label={`Explain ${title}`}
+              message="Link and review supporting documents here. Every file stays attached to its parent asset so people can understand what it belongs to."
+            />
+          </div>
+        ) : null}
         <p style={{ margin: 0, color: "#64748b" }}>{subtitle}</p>
         <div style={{ color: "#64748b", fontSize: 13 }}>
           Documents are always linked through the canonical chain: organisation to wallet to asset to document.
@@ -320,7 +334,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
         ) : null}
       </div>
 
-      {!viewer.readOnly ? (
+      {canManageAnyDocuments ? (
       <div style={workspaceCardStyle}>
         <div style={{ display: "grid", gap: 6 }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontWeight: 700 }}>
@@ -469,7 +483,10 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
             })}
             onDownload={(entry) => void downloadDocument(entry.document)}
             onPrint={(entry) => void printDocument(entry.document)}
-            onRemove={viewer.readOnly ? undefined : (entry) => void removeDocument(entry.document)}
+            onRemove={(entry) => {
+              if (!canEditAssetForViewer(entry.document.assetId, viewer)) return;
+              void removeDocument(entry.document);
+            }}
             onOpenRelated={(entry) => router.push(getAssetWorkspaceHref(entry.document.sectionKey, entry.document.categoryKey))}
             openRelatedLabel="Open asset"
           />

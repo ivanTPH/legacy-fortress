@@ -40,6 +40,8 @@ export type ViewerAccessState = {
   permissionsOverride: ViewerPermissionsOverride;
   assignedAssetIds: string[];
   assignedRecordIds: string[];
+  editableAssetIds: string[];
+  editableRecordIds: string[];
   assignedSectionKeys: SectionKey[];
 };
 
@@ -48,6 +50,8 @@ export type ViewerPermissionsOverride = {
   allowedSections: SectionKey[];
   assetIds: string[];
   recordIds: string[];
+  editableAssetIds: string[];
+  editableRecordIds: string[];
   ownerNotes?: string;
 };
 
@@ -138,6 +142,8 @@ export async function loadViewerAccessState(
       permissionsOverride: EMPTY_VIEWER_PERMISSIONS_OVERRIDE,
       assignedAssetIds: [],
       assignedRecordIds: [],
+      editableAssetIds: [],
+      editableRecordIds: [],
       assignedSectionKeys: [],
     };
   }
@@ -219,6 +225,8 @@ export async function loadViewerAccessState(
     permissionsOverride,
     assignedAssetIds: Array.from(new Set([...permissionsOverride.assetIds, ...linkedAssetIds])),
     assignedRecordIds: Array.from(new Set([...permissionsOverride.recordIds, ...linkedRecordIds])),
+    editableAssetIds: permissionsOverride.editableAssetIds,
+    editableRecordIds: permissionsOverride.editableRecordIds,
     assignedSectionKeys,
   };
 }
@@ -288,10 +296,26 @@ export function filterRecordIdsForViewer<T extends { id?: string; record_id?: st
   });
 }
 
+export function canEditAssetForViewer(assetId: string | null | undefined, viewer: ViewerAccessState) {
+  const normalizedId = String(assetId ?? "").trim();
+  if (!normalizedId) return false;
+  if (viewer.mode !== "linked") return true;
+  return viewer.editableAssetIds.includes(normalizedId);
+}
+
+export function canEditRecordForViewer(recordId: string | null | undefined, viewer: ViewerAccessState) {
+  const normalizedId = String(recordId ?? "").trim();
+  if (!normalizedId) return false;
+  if (viewer.mode !== "linked") return true;
+  return viewer.editableRecordIds.includes(normalizedId);
+}
+
 const EMPTY_VIEWER_PERMISSIONS_OVERRIDE: ViewerPermissionsOverride = {
   allowedSections: [],
   assetIds: [],
   recordIds: [],
+  editableAssetIds: [],
+  editableRecordIds: [],
 };
 
 const sectionPathMap: Record<SectionKey, string> = {
@@ -313,6 +337,8 @@ function normalizePermissionsOverride(value: Record<string, unknown> | null): Vi
     allowedSections: normalizeSectionKeys(source["allowed_sections"] ?? source["section_keys"]),
     assetIds: normalizeStringArray(source["asset_ids"]),
     recordIds: normalizeStringArray(source["record_ids"]),
+    editableAssetIds: normalizeStringArray(source["editable_asset_ids"]),
+    editableRecordIds: normalizeStringArray(source["editable_record_ids"]),
     ownerNotes: typeof source["owner_notes"] === "string" ? source["owner_notes"].trim() : undefined,
   };
 }

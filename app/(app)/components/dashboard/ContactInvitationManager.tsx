@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type Dispatch, type SetStateAction } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Icon from "../../../../components/ui/Icon";
+import InfoTip from "../../../../components/ui/InfoTip";
 import { ActionIconButton, IconButton, StatusIcon } from "../../../../components/ui/IconButton";
 import {
   ROLE_RULES,
@@ -26,6 +27,12 @@ import { buildContactsWorkspaceHref, buildLinkedContactRecordHref } from "../../
 import { buildInvitationEmailDraft } from "../../../../lib/contacts/invitations";
 import { resolveInvitationBadgeState, type InvitationStatus } from "../../../../lib/contacts/invitationStatus";
 import { assertOwnerCanSendInvitation, ensureOwnerPlanProfile } from "../../../../lib/accountPlan";
+import { useVaultPreferences } from "../../../../components/vault/VaultPreferencesContext";
+import { isVaultCategoryEnabled } from "../../../../lib/vaultPreferences";
+import {
+  buildScopedPermissionPayload,
+  normalizeContactPermissionsOverride,
+} from "../../../../lib/contacts/contactPermissions";
 
 type InvitationRow = {
   id: string;
@@ -48,6 +55,16 @@ type RoleAssignmentRow = {
   permissions_override?: Record<string, unknown> | null;
 };
 
+type ScopeItem = {
+  sourceKind: "asset" | "record";
+  sourceId: string;
+  sectionKey: SectionKey;
+  categoryKey: string | null;
+  label: string;
+  meta: string;
+  role: string | null;
+};
+
 const ACCESS_SCOPE_OPTIONS: Array<{ key: SectionKey; label: string }> = [
   { key: "financial", label: "Finances" },
   { key: "legal", label: "Legal" },
@@ -68,6 +85,7 @@ export default function ContactInvitationManager({
   selectedContactProfile?: Pick<CanonicalContactRow, "id" | "full_name" | "email" | "contact_role" | "linked_context"> | null;
 }) {
   const router = useRouter();
+  const { preferences } = useVaultPreferences();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
@@ -77,10 +95,12 @@ export default function ContactInvitationManager({
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<CollaboratorRole>("professional_advisor");
   const [ownerNotes, setOwnerNotes] = useState("");
-  const [accessLevel, setAccessLevel] = useState<"view_only" | "view_edit">("view_only");
   const [allowedSections, setAllowedSections] = useState<SectionKey[]>([]);
   const [allowedAssetIds, setAllowedAssetIds] = useState<string[]>([]);
   const [allowedRecordIds, setAllowedRecordIds] = useState<string[]>([]);
+  const [editableAssetIds, setEditableAssetIds] = useState<string[]>([]);
+  const [editableRecordIds, setEditableRecordIds] = useState<string[]>([]);
+  const [scopeItems, setScopeItems] = useState<ScopeItem[]>([]);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftContactId, setDraftContactId] = useState<string | null>(null);
@@ -89,7 +109,7 @@ export default function ContactInvitationManager({
   const roleOptions = useMemo(
     () =>
       (Object.keys(ROLE_RULES) as CollaboratorRole[])
-        .filter((key) => key !== "owner")
+        .filter((key) => key !== "owner" && key !== "financial_advisor")
         .map((key) => ({ value: key, label: ROLE_RULES[key].label })),
     [],
   );
@@ -115,7 +135,7 @@ export default function ContactInvitationManager({
 
     const userId = userData.user.id;
 
-    const [invRes, roleRes] = await Promise.all([
+    const [invRes, roleRes, assetsRes, recordsRes] = await Promise.all([
       supabase
         .from("contact_invitations")
         .select("id,contact_id,contact_name,contact_email,assigned_role,invitation_status,invited_at,sent_at")
@@ -125,6 +145,16 @@ export default function ContactInvitationManager({
         .from("role_assignments")
         .select("invitation_id,assigned_role,activation_status,permissions_override")
         .eq("owner_user_id", userId),
+      supabase
+        .from("assets")
+        .select("id,section_key,category_key,title,provider_name")
+        .eq("owner_user_id", userId)
+        .is("deleted_at", null)
+        .is("archived_at", null),
+      supabase
+        .from("section_entries")
+        .select("id,section_key,category_key,title,summary")
+        .eq("user_id", userId),
     ]);
 
     if (invRes.error) {
@@ -182,6 +212,14 @@ export default function ContactInvitationManager({
     });
 
     setRows(mapped);
+    setScopeItems([
+      ...(((assetsRes.data ?? []) as Array<Record<string, unknown>>)
+        .map((row) => mapScopeAssetRow(row))
+        .filter((row): row is ScopeItem => Boolean(row))),
+      ...(((recordsRes.data ?? []) as Array<Record<string, unknown>>)
+        .map((row) => mapScopeRecordRow(row))
+        .filter((row): row is ScopeItem => Boolean(row))),
+    ]);
     setLoading(false);
   }, [router]);
 
@@ -205,15 +243,24 @@ export default function ContactInvitationManager({
     setEmail(selectedContactProfile.email || "");
     setRole(normalizeCollaboratorRole(selectedContactProfile.contact_role));
     setOwnerNotes("");
-    setAccessLevel("view_only");
     setAllowedSections([]);
     setAllowedAssetIds([]);
     setAllowedRecordIds([]);
+    setEditableAssetIds([]);
+    setEditableRecordIds([]);
   }, [isDashboardMode, rows, selectedContactId, selectedContactProfile]);
 
   useEffect(() => {
     setAllowedSections((current) => current.filter((section) => ROLE_RULES[role].allowedSections.includes(section)));
   }, [role]);
+
+  useEffect(() => {
+    const scopedItems = getScopedItemsForSections(scopeItems, allowedSections);
+    setAllowedAssetIds(scopedItems.filter((item) => item.sourceKind === "asset").map((item) => item.sourceId));
+    setAllowedRecordIds(scopedItems.filter((item) => item.sourceKind === "record").map((item) => item.sourceId));
+    setEditableAssetIds((current) => current.filter((id) => scopedItems.some((item) => item.sourceKind === "asset" && item.sourceId === id)));
+    setEditableRecordIds((current) => current.filter((id) => scopedItems.some((item) => item.sourceKind === "record" && item.sourceId === id)));
+  }, [allowedSections, scopeItems]);
 
   async function saveContact({ sendAfterSave = false }: { sendAfterSave?: boolean } = {}) {
     setSaving(true);
@@ -236,14 +283,14 @@ export default function ContactInvitationManager({
       const userId = userData.user.id;
       const now = new Date().toISOString();
       const currentEditingRow = editingId ? rows.find((row) => row.id === editingId) ?? null : null;
-      const currentPermissions = currentEditingRow ? loadPermissionsOverride(currentEditingRow) : null;
-      const permissionsOverride = {
-        read_only: accessLevel !== "view_edit",
-        allowed_sections: allowedSections,
-        owner_notes: ownerNotes.trim() || null,
-        asset_ids: allowedAssetIds.length > 0 ? allowedAssetIds : currentPermissions?.asset_ids ?? [],
-        record_ids: allowedRecordIds.length > 0 ? allowedRecordIds : currentPermissions?.record_ids ?? [],
-      };
+      const permissionsOverride = buildScopedPermissionPayload({
+        allowedSections,
+        ownerNotes,
+        assetIds: allowedAssetIds.length > 0 ? allowedAssetIds : [],
+        recordIds: allowedRecordIds.length > 0 ? allowedRecordIds : [],
+        editableAssetIds,
+        editableRecordIds,
+      });
       const currentInviteStatus = currentEditingRow
         ? mapRowToCanonicalInviteStatus(currentEditingRow)
         : "not_invited";
@@ -375,10 +422,11 @@ export default function ContactInvitationManager({
       setEmail("");
       setRole("professional_advisor");
       setOwnerNotes("");
-      setAccessLevel("view_only");
       setAllowedSections([]);
       setAllowedAssetIds([]);
       setAllowedRecordIds([]);
+      setEditableAssetIds([]);
+      setEditableRecordIds([]);
       setStatus("✅ Contact saved.");
       await loadRows();
     } catch (error) {
@@ -520,10 +568,11 @@ export default function ContactInvitationManager({
     setEmail(row.contact_email);
     setRole(row.assigned_role);
     setOwnerNotes(permissions.owner_notes);
-    setAccessLevel(permissions.read_only ? "view_only" : "view_edit");
     setAllowedSections(permissions.allowed_sections);
     setAllowedAssetIds(permissions.asset_ids);
     setAllowedRecordIds(permissions.record_ids);
+    setEditableAssetIds(permissions.editable_asset_ids);
+    setEditableRecordIds(permissions.editable_record_ids);
   }
 
   async function remove(row: InvitationRow) {
@@ -594,6 +643,8 @@ export default function ContactInvitationManager({
       setAllowedSections([]);
       setAllowedAssetIds([]);
       setAllowedRecordIds([]);
+      setEditableAssetIds([]);
+      setEditableRecordIds([]);
       router.push("/contacts");
       await loadRows();
     } catch (error) {
@@ -657,7 +708,13 @@ export default function ContactInvitationManager({
       <div style={sectionBlockStyle}>
         <div style={sectionHeaderStyle}>
           <div>
-            <h3 style={sectionTitleStyle}>{editingId || draftContactId ? "Manage contact" : "Add contact"}</h3>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <h3 style={sectionTitleStyle}>{editingId || draftContactId ? "Manage contact" : "Add contact"}</h3>
+              <InfoTip
+                label="Explain contact access setup"
+                message="Invite trusted people, choose the categories they can review, and allow edit access only on the specific records that really need it."
+              />
+            </div>
             <p style={sectionIntroStyle}>
               Save the selected contact here, then manage role, invitation state, internal notes, category access, and exact linked-record scope from the same shared admin surface.
             </p>
@@ -683,13 +740,6 @@ export default function ContactInvitationManager({
               ))}
             </select>
           </label>
-          <label style={fieldStyle}>
-            <span style={fieldLabelStyle}>Permission level</span>
-            <select value={accessLevel} onChange={(e) => setAccessLevel(e.target.value as "view_only" | "view_edit")} style={inputStyle}>
-              <option value="view_only">View only</option>
-              <option value="view_edit">View + edit</option>
-            </select>
-          </label>
           <label style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
             <span style={fieldLabelStyle}>Owner notes</span>
             <textarea
@@ -701,9 +751,11 @@ export default function ContactInvitationManager({
           </label>
           <div style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
             <span style={fieldLabelStyle}>Category access</span>
+            <div style={{ color: "#64748b", fontSize: 12 }}>
+              Choose the visible categories this contact can review. Records beneath each selected category start as view only, then you can allow editing record by record.
+            </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {ACCESS_SCOPE_OPTIONS
-                .filter((option) => ROLE_RULES[role].allowedSections.includes(option.key))
+              {getVisibleAccessScopeOptions(preferences, role)
                 .map((option) => {
                   const checked = allowedSections.includes(option.key);
                   return (
@@ -721,17 +773,17 @@ export default function ContactInvitationManager({
                 })}
             </div>
           </div>
-          {editingId || draftContactId ? (
+          {allowedSections.length ? (
             <div style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
-              <span style={fieldLabelStyle}>Specific linked records</span>
+              <span style={fieldLabelStyle}>Linked records and document permissions</span>
               <div style={{ color: "#64748b", fontSize: 12 }}>
-                Narrow this contact to exact linked records as well as, or instead of, whole categories.
+                Each listed record is included through the selected category. Leave it on view only by default, or switch it to edit when the contact should be able to update that exact record.
               </div>
               <div style={{ display: "grid", gap: 8 }}>
-                {getScopedLinkOptions(editingId ? rows.find((item) => item.id === editingId)?.linked_context ?? [] : selectedContactProfile?.linked_context ?? []).map((option) => {
-                  const checked = option.sourceKind === "asset"
-                    ? allowedAssetIds.includes(option.sourceId)
-                    : allowedRecordIds.includes(option.sourceId);
+                {getScopedItemsForSections(scopeItems, allowedSections).map((option) => {
+                  const editable = option.sourceKind === "asset"
+                    ? editableAssetIds.includes(option.sourceId)
+                    : editableRecordIds.includes(option.sourceId);
                   const href = buildLinkedContactRecordHref({
                     source_kind: option.sourceKind,
                     source_id: option.sourceId,
@@ -742,29 +794,37 @@ export default function ContactInvitationManager({
                   });
 
                   return (
-                    <label key={`${option.sourceKind}:${option.sourceId}`} style={scopeChipStyle}>
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => {
-                          if (option.sourceKind === "asset") {
-                            setAllowedAssetIds((current) => checked ? current.filter((item) => item !== option.sourceId) : [...current, option.sourceId]);
-                            return;
-                          }
-                          setAllowedRecordIds((current) => checked ? current.filter((item) => item !== option.sourceId) : [...current, option.sourceId]);
-                        }}
-                      />
-                      <span>{option.label}</span>
+                    <div key={`${option.sourceKind}:${option.sourceId}`} style={scopePermissionRowStyle}>
+                      <div style={{ display: "grid", gap: 2 }}>
+                        <span style={{ fontWeight: 600 }}>{option.label}</span>
+                        <span style={{ color: "#64748b", fontSize: 12 }}>{option.meta}</span>
+                      </div>
                       {href ? (
                         <Link href={href} style={{ color: "#1d4ed8", textDecoration: "none", fontWeight: 600 }}>
                           Open
                         </Link>
                       ) : null}
-                    </label>
+                      <div style={permissionToggleStyle} role="group" aria-label={`Permission for ${option.label}`}>
+                        <button
+                          type="button"
+                          style={editable ? permissionOffButtonStyle : permissionOnButtonStyle}
+                          onClick={() => toggleScopedEditPermission(option, false, setEditableAssetIds, setEditableRecordIds)}
+                        >
+                          View only
+                        </button>
+                        <button
+                          type="button"
+                          style={editable ? permissionOnButtonStyle : permissionOffButtonStyle}
+                          onClick={() => toggleScopedEditPermission(option, true, setEditableAssetIds, setEditableRecordIds)}
+                        >
+                          Edit document
+                        </button>
+                      </div>
+                    </div>
                   );
                 })}
-                {getScopedLinkOptions(editingId ? rows.find((item) => item.id === editingId)?.linked_context ?? [] : selectedContactProfile?.linked_context ?? []).length === 0 ? (
-                  <div style={{ color: "#64748b", fontSize: 12 }}>No linked records are available yet for granular scope.</div>
+                {getScopedItemsForSections(scopeItems, allowedSections).length === 0 ? (
+                  <div style={{ color: "#64748b", fontSize: 12 }}>No saved records are available yet in the selected categories.</div>
                 ) : null}
               </div>
             </div>
@@ -785,6 +845,22 @@ export default function ContactInvitationManager({
               Delete contact
             </button>
           ) : null}
+          {(editingId || draftContactId) ? (
+            <button
+              type="button"
+              style={ghostBtnStyle}
+              disabled={saving}
+              onClick={() => {
+                setEditingId(null);
+                setDraftContactId(null);
+                setName("");
+                setEmail("");
+                setStatus("Choose the replacement contact details, then save to reuse this access setup.");
+              }}
+            >
+              Replace contact
+            </button>
+          ) : null}
           {editingId ? (
             <button
               type="button"
@@ -796,10 +872,11 @@ export default function ContactInvitationManager({
                 setEmail("");
                 setRole("professional_advisor");
                 setOwnerNotes("");
-                setAccessLevel("view_only");
                 setAllowedSections([]);
                 setAllowedAssetIds([]);
                 setAllowedRecordIds([]);
+                setEditableAssetIds([]);
+                setEditableRecordIds([]);
               }}
             >
               Cancel
@@ -840,7 +917,7 @@ export default function ContactInvitationManager({
                     <th style={thStyle}>Status</th>
                     <th style={thStyle}>Role</th>
                     <th style={thStyle}>{isDashboardMode ? "Date" : "Invited"}</th>
-                    <th style={thStyle}>Actions</th>
+                    <th style={thStyle}>{isDashboardMode ? "Edit" : "Actions"}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -859,7 +936,7 @@ export default function ContactInvitationManager({
                           {isDashboardMode ? (
                             <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                               <StatusIcon {...getInvitationStatusIcon(row)} />
-                              <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>{resolveInvitationBadgeState(row.invitation_status, row.activation_status, row.sent_at).label}</span>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>{getDashboardInvitationStatusLabel(row)}</span>
                             </div>
                           ) : (
                             <InvitationStatusBadge invitationStatus={row.invitation_status} activationStatus={row.activation_status} sentAt={row.sent_at} />
@@ -870,7 +947,7 @@ export default function ContactInvitationManager({
                         <RoleBadge role={row.assigned_role} />
                       </td>
                       <td style={tdStyle} data-label={isDashboardMode ? "Date" : "Invited"}>{formatShortDate(row.sent_at ?? row.invited_at)}</td>
-                      <td style={tdStyle} data-label="Actions">
+                      <td style={tdStyle} data-label={isDashboardMode ? "Edit" : "Actions"}>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                           {isDashboardMode ? (
                             <>
@@ -937,7 +1014,7 @@ export default function ContactInvitationManager({
                     {isDashboardMode ? (
                       <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                         <StatusIcon {...getInvitationStatusIcon(row)} />
-                        <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>{resolveInvitationBadgeState(row.invitation_status, row.activation_status, row.sent_at).label}</span>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>{getDashboardInvitationStatusLabel(row)}</span>
                       </div>
                     ) : (
                       <InvitationStatusBadge invitationStatus={row.invitation_status} activationStatus={row.activation_status} sentAt={row.sent_at} />
@@ -1049,16 +1126,93 @@ function mapRowToCanonicalInviteStatus(row: InvitationRow) {
 }
 
 function loadPermissionsOverride(row: InvitationRow) {
-  const source = (row.permissions_override && typeof row.permissions_override === "object" ? row.permissions_override : {}) as Record<string, unknown>;
+  return normalizeContactPermissionsOverride(row.permissions_override);
+}
+
+function getDashboardInvitationStatusLabel(row: InvitationRow) {
+  const label = resolveInvitationBadgeState(row.invitation_status, row.activation_status, row.sent_at).label;
+  return label === "Ready to send" ? "Send email" : label;
+}
+
+function getVisibleAccessScopeOptions(
+  preferences: ReturnType<typeof useVaultPreferences>["preferences"],
+  role: CollaboratorRole,
+) {
+  return ACCESS_SCOPE_OPTIONS
+    .filter((option) => ROLE_RULES[role].allowedSections.includes(option.key))
+    .filter((option) => {
+      if (option.key === "financial") return isVaultCategoryEnabled(preferences, "finances");
+      if (option.key === "legal") return isVaultCategoryEnabled(preferences, "legal");
+      if (option.key === "property") return isVaultCategoryEnabled(preferences, "property");
+      if (option.key === "business") return isVaultCategoryEnabled(preferences, "business");
+      if (option.key === "personal") return isVaultCategoryEnabled(preferences, "personal");
+      if (option.key === "digital") return isVaultCategoryEnabled(preferences, "digital");
+      return true;
+    });
+}
+
+function getScopedItemsForSections(items: ScopeItem[], sections: SectionKey[]) {
+  const allowed = new Set(sections);
+  return items.filter((item) => allowed.has(item.sectionKey));
+}
+
+function toggleScopedEditPermission(
+  item: ScopeItem,
+  nextEditable: boolean,
+  setEditableAssetIds: Dispatch<SetStateAction<string[]>>,
+  setEditableRecordIds: Dispatch<SetStateAction<string[]>>,
+) {
+  if (item.sourceKind === "asset") {
+    setEditableAssetIds((current) =>
+      nextEditable
+        ? Array.from(new Set([...current, item.sourceId]))
+        : current.filter((id) => id !== item.sourceId),
+    );
+    return;
+  }
+  setEditableRecordIds((current) =>
+    nextEditable
+      ? Array.from(new Set([...current, item.sourceId]))
+      : current.filter((id) => id !== item.sourceId),
+  );
+}
+
+function mapScopeAssetRow(row: Record<string, unknown>): ScopeItem | null {
+  const sectionKey = normalizeSectionKey(row.section_key);
+  const sourceId = String(row.id ?? "").trim();
+  if (!sectionKey || !sourceId) return null;
   return {
-    read_only: source["read_only"] !== false,
-    allowed_sections: Array.isArray(source["allowed_sections"])
-      ? source["allowed_sections"].map((item) => `${item}`.trim()).filter(Boolean) as SectionKey[]
-      : [],
-    owner_notes: typeof source["owner_notes"] === "string" ? source["owner_notes"] : "",
-    asset_ids: Array.isArray(source["asset_ids"]) ? source["asset_ids"].map((item) => `${item}`.trim()).filter(Boolean) : [],
-    record_ids: Array.isArray(source["record_ids"]) ? source["record_ids"].map((item) => `${item}`.trim()).filter(Boolean) : [],
+    sourceKind: "asset",
+    sourceId,
+    sectionKey,
+    categoryKey: String(row.category_key ?? "").trim() || null,
+    label: String(row.title ?? row.provider_name ?? "Untitled record").trim() || "Untitled record",
+    meta: [String(row.category_key ?? "").trim(), "Canonical record"].filter(Boolean).join(" · "),
+    role: null,
   };
+}
+
+function mapScopeRecordRow(row: Record<string, unknown>): ScopeItem | null {
+  const sectionKey = normalizeSectionKey(row.section_key);
+  const sourceId = String(row.id ?? "").trim();
+  if (!sectionKey || !sourceId) return null;
+  return {
+    sourceKind: "record",
+    sourceId,
+    sectionKey,
+    categoryKey: String(row.category_key ?? "").trim() || null,
+    label: String(row.title ?? row.summary ?? "Untitled record").trim() || "Untitled record",
+    meta: [String(row.category_key ?? "").trim(), "Workspace record"].filter(Boolean).join(" · "),
+    role: null,
+  };
+}
+
+function normalizeSectionKey(value: unknown): SectionKey | null {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized === "financial" || normalized === "legal" || normalized === "property" || normalized === "business" || normalized === "personal" || normalized === "digital" || normalized === "profile") {
+    return normalized as SectionKey;
+  }
+  return null;
 }
 
 function getScopedLinkOptions(contexts: CanonicalContactRow["linked_context"]) {
@@ -1268,6 +1422,37 @@ const ghostBtnStyle: CSSProperties = {
   borderRadius: 10,
   padding: "9px 12px",
   fontSize: 13,
+  cursor: "pointer",
+};
+const scopePermissionRowStyle: CSSProperties = {
+  display: "grid",
+  gap: 10,
+  border: "1px solid #e5e7eb",
+  borderRadius: 12,
+  background: "#fff",
+  padding: 12,
+};
+const permissionToggleStyle: CSSProperties = {
+  display: "inline-flex",
+  gap: 6,
+  flexWrap: "wrap",
+};
+const permissionOnButtonStyle: CSSProperties = {
+  border: "1px solid #111827",
+  background: "#111827",
+  color: "#fff",
+  borderRadius: 999,
+  padding: "7px 10px",
+  fontSize: 12,
+  cursor: "pointer",
+};
+const permissionOffButtonStyle: CSSProperties = {
+  border: "1px solid #d1d5db",
+  background: "#fff",
+  color: "#111827",
+  borderRadius: 999,
+  padding: "7px 10px",
+  fontSize: 12,
   cursor: "pointer",
 };
 const dangerBtnStyle: CSSProperties = {

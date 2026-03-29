@@ -21,6 +21,7 @@ import { resolveContactStatusBadge } from "../../lib/contacts/contactStatus";
 import ContactInvitationManager from "../../app/(app)/components/dashboard/ContactInvitationManager";
 import { useViewerAccess } from "../access/ViewerAccessContext";
 import { ActionIconButton, IconButton } from "../ui/IconButton";
+import InfoTip from "../ui/InfoTip";
 
 type ContactRow = {
   id: string;
@@ -48,7 +49,7 @@ const GROUPS = [
   { key: "next_of_kin", label: "Next of kin", description: "Family or emergency contacts someone should be able to find first." },
   { key: "executors", label: "Executors", description: "People expected to help administer the estate or carry formal executor duties." },
   { key: "trustees", label: "Trustees", description: "Trust-related contacts who need to remain linked across records and decisions." },
-  { key: "advisors", label: "Professional advisors", description: "Solicitors, accountants, financial advisers, and similar professional contacts." },
+  { key: "advisors", label: "Advisors", description: "Solicitors, accountants, financial advisers, and similar professional contacts." },
   { key: "key_contacts", label: "Key contacts", description: "Other important people or provider-facing contacts linked to live records." },
 ] as const;
 
@@ -362,9 +363,15 @@ export default function ContactsNetworkWorkspace() {
   return (
     <section style={{ display: "grid", gap: 14 }}>
       <div style={{ display: "grid", gap: 6 }}>
-        <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
-          Review the full contacts network someone may need to understand quickly across family, executors, trustees, advisers, and other key contacts.
-        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
+            Review the full contacts network someone may need to understand quickly across family, executors, trustees, advisers, and other key contacts.
+          </p>
+          <InfoTip
+            label="Explain the Contacts section"
+            message="Use Contacts to invite trusted people, set what they can review or edit, keep internal notes, and jump directly to the linked records that explain why they matter."
+          />
+        </div>
         <p style={{ margin: "6px 0 0", color: "#64748b", fontSize: 13 }}>
           Each contact appears once with a clear primary role, then shows the linked records and responsibilities that give them context.
         </p>

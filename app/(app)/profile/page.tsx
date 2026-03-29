@@ -11,6 +11,7 @@ import {
   gridStyle,
   primaryBtn,
 } from "../components/settings/SettingsPrimitives";
+import InfoTip from "../../../components/ui/InfoTip";
 import {
   COUNTRY_OPTIONS,
 } from "../../../lib/assets/fieldDictionary";
@@ -47,14 +48,21 @@ import {
   readProfileAvatarTrace,
 } from "../../../lib/profile/avatarTrace";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
+import { useAccessibilityPreferences } from "../../../components/accessibility/AccessibilityPreferencesContext";
+import {
+  saveAccessibilityPreferences,
+  type AccessibilityPreferences,
+} from "../../../lib/accessibilityPreferences";
 
 const PROFILE_AVATAR_INPUT_ID = "profile-avatar-input";
 
 export default function ProfilePage() {
   const router = useRouter();
   const { viewer } = useViewerAccess();
+  const { preferences: accessibilityPreferences, setPreferences: setAccessibilityPreferences } = useAccessibilityPreferences();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingAccessibility, setSavingAccessibility] = useState(false);
   const [status, setStatus] = useState("");
   const [form, setForm] = useState<ProfileWorkspaceForm>(EMPTY_PROFILE_FORM);
   const [support, setSupport] = useState<ProfileWorkspaceSupport>({
@@ -80,6 +88,7 @@ export default function ProfilePage() {
   const [avatarPathToDelete, setAvatarPathToDelete] = useState("");
   const [avatarTraceLines, setAvatarTraceLines] = useState<string[]>([]);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [accessibilityDraft, setAccessibilityDraft] = useState<AccessibilityPreferences>(accessibilityPreferences);
   const pendingAvatarFileRef = useRef<File | null>(null);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const editorPanelRef = useRef<HTMLElement | null>(null);
@@ -99,6 +108,10 @@ export default function ProfilePage() {
       window.removeEventListener(profileAvatarTraceEventName(), sync);
     };
   }, [avatarTraceEnabled]);
+
+  useEffect(() => {
+    setAccessibilityDraft(accessibilityPreferences);
+  }, [accessibilityPreferences]);
 
   useEffect(() => {
     let mounted = true;
@@ -257,6 +270,28 @@ export default function ProfilePage() {
     }
     onSelectAvatar(file);
     event.currentTarget.value = "";
+  }
+
+  async function saveAccessibility() {
+    if (viewer.readOnly) return;
+    setSavingAccessibility(true);
+    setStatus("");
+
+    try {
+      const user = await waitForActiveUser(supabase, { attempts: 4, delayMs: 100 });
+      if (!user) {
+        router.replace("/sign-in");
+        return;
+      }
+      const saved = await saveAccessibilityPreferences(supabase, user.id, accessibilityDraft);
+      setAccessibilityPreferences(saved);
+      setAccessibilityDraft(saved);
+      setStatus("Accessibility preferences saved.");
+    } catch (error) {
+      setStatus(`Could not save accessibility preferences: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setSavingAccessibility(false);
+    }
   }
 
   async function save() {
@@ -797,6 +832,91 @@ export default function ProfilePage() {
       ) : null}
 
       <div id="account-settings">
+      <SettingsCard
+        title="Accessibility and guided help"
+        description="Set the reading and guidance preferences that make the workspace easier to use across dashboard, support, contacts, and records."
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <strong style={{ fontSize: 14 }}>Personal accessibility preferences</strong>
+          <InfoTip
+            label="Explain accessibility preferences"
+            message="Choose larger text, stronger contrast, roomier spacing, read-aloud support, and a guided help mode. These settings apply across the signed-in workspace."
+          />
+        </div>
+        <div style={gridStyle}>
+          <FormField label="Text size" iconName="format_size">
+            <SelectInput
+              value={accessibilityDraft.textSize}
+              onChange={(value) => setAccessibilityDraft((current) => ({ ...current, textSize: value as AccessibilityPreferences["textSize"] }))}
+              options={[
+                { value: "default", label: "Standard" },
+                { value: "large", label: "Large" },
+                { value: "xlarge", label: "Extra large" },
+              ]}
+              disabled={savingAccessibility}
+            />
+          </FormField>
+          <FormField label="Contrast mode" iconName="contrast">
+            <SelectInput
+              value={accessibilityDraft.contrastMode}
+              onChange={(value) => setAccessibilityDraft((current) => ({ ...current, contrastMode: value as AccessibilityPreferences["contrastMode"] }))}
+              options={[
+                { value: "default", label: "Standard" },
+                { value: "high", label: "High contrast" },
+              ]}
+              disabled={savingAccessibility}
+            />
+          </FormField>
+          <FormField label="Layout spacing" iconName="open_in_full">
+            <SelectInput
+              value={accessibilityDraft.spacingMode}
+              onChange={(value) => setAccessibilityDraft((current) => ({ ...current, spacingMode: value as AccessibilityPreferences["spacingMode"] }))}
+              options={[
+                { value: "default", label: "Standard" },
+                { value: "comfortable", label: "More space" },
+              ]}
+              disabled={savingAccessibility}
+            />
+          </FormField>
+        </div>
+        <div style={{ display: "grid", gap: 10 }}>
+          <label style={preferenceToggleStyle}>
+            <input
+              type="checkbox"
+              checked={accessibilityDraft.helpWizardEnabled}
+              onChange={(event) => setAccessibilityDraft((current) => ({ ...current, helpWizardEnabled: event.target.checked }))}
+            />
+            <span>
+              <strong>Help wizard</strong>
+              <span style={preferenceHelpStyle}>Show guided next-step hints in places like Support and contact access setup.</span>
+            </span>
+          </label>
+          <label style={preferenceToggleStyle}>
+            <input
+              type="checkbox"
+              checked={accessibilityDraft.readAloudEnabled}
+              onChange={(event) => setAccessibilityDraft((current) => ({ ...current, readAloudEnabled: event.target.checked }))}
+            />
+            <span>
+              <strong>Read aloud support</strong>
+              <span style={preferenceHelpStyle}>Enable spoken guidance controls where read-aloud support is offered.</span>
+            </span>
+          </label>
+        </div>
+        {!viewer.readOnly ? (
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button type="button" style={primaryBtn} disabled={savingAccessibility} onClick={() => void saveAccessibility()}>
+              <Icon name="save" size={16} />
+              {savingAccessibility ? "Saving..." : "Save accessibility preferences"}
+            </button>
+            <button type="button" style={ghostBtn} disabled={savingAccessibility} onClick={() => setAccessibilityDraft(accessibilityPreferences)}>
+              <Icon name="restart_alt" size={16} />
+              Reset changes
+            </button>
+          </div>
+        ) : null}
+      </SettingsCard>
+
       <SettingsCard title="Account settings" description="Security, billing, terms, communications, and reminders now stay linked from Profile so account controls have one clear home.">
         <div className="lf-content-grid">
           {[
@@ -837,6 +957,23 @@ const microPillStyle = {
   fontSize: 12,
   background: "#f3f4f6",
   color: "#334155",
+} as const;
+
+const preferenceToggleStyle = {
+  display: "flex",
+  alignItems: "flex-start",
+  gap: 10,
+  border: "1px solid #e5e7eb",
+  borderRadius: 12,
+  padding: 12,
+  background: "#fff",
+} as const;
+
+const preferenceHelpStyle = {
+  display: "block",
+  color: "#64748b",
+  fontSize: 13,
+  marginTop: 4,
 } as const;
 
 const reviewPillStyle = {

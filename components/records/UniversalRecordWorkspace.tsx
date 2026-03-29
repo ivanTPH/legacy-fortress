@@ -13,6 +13,7 @@ import ConfigDrivenAssetFields from "../forms/asset/ConfigDrivenAssetFields";
 import { FileDropzone, FormField } from "../forms/asset/AssetFormControls";
 import { ActionIconButton } from "../ui/IconButton";
 import Icon from "../ui/Icon";
+import InfoTip from "../ui/InfoTip";
 import AttachmentGallery, { AttachmentGallerySummary } from "../documents/AttachmentGallery";
 import { waitForActiveUser } from "../../lib/auth/session";
 import { formatCurrency } from "../../lib/currency";
@@ -107,8 +108,9 @@ import {
   type CanonicalBankTraceEntry,
 } from "../../lib/devSmoke";
 import { useViewerAccess } from "../access/ViewerAccessContext";
-import { filterAssetIdsForViewer, filterRecordIdsForViewer } from "../../lib/access-control/viewerAccess";
+import { canEditAssetForViewer, canEditRecordForViewer, filterAssetIdsForViewer, filterRecordIdsForViewer } from "../../lib/access-control/viewerAccess";
 import { getPlanLimitRedirectHref } from "../../lib/accountPlan";
+import { getWorkspaceHelpMessage } from "../../lib/workspaceHelp";
 
 type RecordStatus = "active" | "archived";
 type WorkspaceVariant = "default" | "possessions" | "trusted_contacts";
@@ -668,6 +670,10 @@ export default function UniversalRecordWorkspace({
   const legalLinkedContactDefinition = sectionKey === "legal" ? getLegalLinkedContactDefinition(categoryKey) : null;
   const defaultLegalContactRole = legalLinkedContactDefinition?.defaultRole ?? "";
   const usesStructuredWorkspaceForm = isFinanceSection || usesCanonicalAssets || isIdentityDocuments || isSocialMedia;
+  const canCreateRecords = viewer.mode !== "linked";
+  const canEditWorkspaceRow = (recordId: string) =>
+    usesCanonicalAssets ? canEditAssetForViewer(recordId, viewer) : canEditRecordForViewer(recordId, viewer);
+  const helpMessage = getWorkspaceHelpMessage(sectionKey, categoryKey);
   const selectedWorkspaceRecordId = String(
     searchParams.get(usesCanonicalAssetReadPath ? "asset" : "record")
     || searchParams.get("asset")
@@ -1247,7 +1253,11 @@ export default function UniversalRecordWorkspace({
 
   async function saveRecord() {
     if (saving) return;
-    if (viewer.readOnly) {
+    if (!editingId && !canCreateRecords) {
+      setStatus("This linked account cannot create new records.");
+      return;
+    }
+    if (editingId && !canEditWorkspaceRow(editingId)) {
       setStatus("This linked account is view-only.");
       return;
     }
@@ -1889,7 +1899,7 @@ export default function UniversalRecordWorkspace({
   }
 
   async function archiveRecord(recordId: string) {
-    if (viewer.readOnly) {
+    if (viewer.mode === "linked") {
       setStatus("This linked account is view-only.");
       return;
     }
@@ -1927,7 +1937,7 @@ export default function UniversalRecordWorkspace({
   }
 
   async function deleteRecord(recordId: string) {
-    if (viewer.readOnly) {
+    if (viewer.mode === "linked") {
       setStatus("This linked account is view-only.");
       return;
     }
@@ -1985,7 +1995,7 @@ export default function UniversalRecordWorkspace({
   }
 
   async function uploadAttachment(recordId: string, file: File, kind: "document" | "photo") {
-    if (viewer.readOnly) {
+    if (!canEditWorkspaceRow(recordId)) {
       setStatus("This linked account is view-only.");
       return;
     }
@@ -2037,7 +2047,7 @@ export default function UniversalRecordWorkspace({
   }
 
   async function removeAttachment(item: RecordAttachment) {
-    if (viewer.readOnly) {
+    if (!canEditWorkspaceRow(item.record_id)) {
       setStatus("This linked account is view-only.");
       return;
     }
@@ -2474,7 +2484,7 @@ export default function UniversalRecordWorkspace({
         </div>
 
         <div style={{ ...recordActionsStyle, marginLeft: leadingVisualWidth + 10 }} className="lf-record-card-actions">
-          {!viewer.readOnly ? <ActionIconButton action="edit" label="Edit record" onClick={() => startEdit(row)} /> : null}
+          {canEditWorkspaceRow(row.id) ? <ActionIconButton action="edit" label="Edit record" onClick={() => startEdit(row)} /> : null}
           {isPossessions || usesCanonicalAssets ? (
             <ActionIconButton
               action="attachments"
@@ -2482,30 +2492,32 @@ export default function UniversalRecordWorkspace({
               onClick={() => setOpenRecordId((prev) => (prev === row.id ? null : row.id))}
             />
           ) : null}
-          {!viewer.readOnly ? <ActionIconButton action="delete" label="Delete record" onClick={() => void deleteRecord(row.id)} /> : null}
-          {!viewer.readOnly && !isPossessions && !isTrustedContacts && !usesCanonicalAssets && !isFinanceSection ? (
+          {viewer.mode !== "linked" ? <ActionIconButton action="delete" label="Delete record" onClick={() => void deleteRecord(row.id)} /> : null}
+          {!isPossessions && !isTrustedContacts && !usesCanonicalAssets && !isFinanceSection ? (
             <>
               <button type="button" style={ghostBtn} onClick={() => setOpenRecordId((prev) => (prev === row.id ? null : row.id))}>
                 {isOpen ? "Hide" : "View"}
               </button>
-              {row.status !== "archived" ? (
+              {viewer.mode !== "linked" && row.status !== "archived" ? (
                 <button type="button" style={ghostBtn} disabled={archivingFor === row.id} onClick={() => void archiveRecord(row.id)}>
                   {archivingFor === row.id ? "Archiving..." : "Archive"}
                 </button>
               ) : null}
-              <label style={ghostBtn}>
-                {uploadingFor === row.id ? "Uploading..." : "Upload document"}
-                <input
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-                  style={{ display: "none" }}
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (file) void uploadAttachment(row.id, file, "document");
-                    event.currentTarget.value = "";
-                  }}
-                />
-              </label>
+              {canEditWorkspaceRow(row.id) ? (
+                <label style={ghostBtn}>
+                  {uploadingFor === row.id ? "Uploading..." : "Upload document"}
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                    style={{ display: "none" }}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) void uploadAttachment(row.id, file, "document");
+                      event.currentTarget.value = "";
+                    }}
+                  />
+                </label>
+              ) : null}
             </>
           ) : null}
         </div>
@@ -2700,12 +2712,12 @@ export default function UniversalRecordWorkspace({
                   onResolvePreviewUrl={(entry) => getAttachmentSignedUrl(entry.attachment, 120)}
                   onDownload={(entry) => void downloadAttachment(entry.attachment)}
                   onPrint={(entry) => void printAttachment(entry.attachment)}
-                  onRemove={viewer.readOnly ? undefined : (entry) => void removeAttachment(entry.attachment)}
+                  onRemove={canEditWorkspaceRow(row.id) ? (entry) => void removeAttachment(entry.attachment) : undefined}
                 />
               )}
             </div>
 
-            {usesCanonicalAssets && !viewer.readOnly ? (
+            {usesCanonicalAssets && canEditWorkspaceRow(row.id) ? (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <label style={ghostBtn}>
                   {uploadingFor === row.id
@@ -2769,7 +2781,12 @@ export default function UniversalRecordWorkspace({
   return (
     <section id={sectionId} style={{ display: "grid", gap: 14 }}>
       <div style={{ display: "grid", gap: 6 }}>
-        {showPageHeading ? <h1 style={{ margin: 0, fontSize: 28 }}>{title}</h1> : null}
+        {showPageHeading ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <h1 style={{ margin: 0, fontSize: 28 }}>{title}</h1>
+            {helpMessage ? <InfoTip label={`Explain ${title}`} message={helpMessage} /> : null}
+          </div>
+        ) : null}
         <p style={{ margin: showPageHeading ? "6px 0 0" : 0, color: "#6b7280" }}>{subtitle}</p>
         {viewer.mode === "linked" ? (
           <div style={linkedPanelChipStyle}>
@@ -2914,7 +2931,7 @@ export default function UniversalRecordWorkspace({
       <section style={cardStyle} ref={formSectionRef}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           <h2 style={{ margin: 0, fontSize: 17 }}>Existing records</h2>
-          {!viewer.readOnly ? <button type="button" style={primaryBtn} onClick={startCreate}>
+          {canCreateRecords ? <button type="button" style={primaryBtn} onClick={startCreate}>
             {addLabel}
           </button> : null}
         </div>
@@ -3030,7 +3047,7 @@ export default function UniversalRecordWorkspace({
             </div>
             {!hasAnyRecords ? (
               <div>
-                {!viewer.readOnly ? <button type="button" style={primaryBtn} onClick={startCreate}>
+                {canCreateRecords ? <button type="button" style={primaryBtn} onClick={startCreate}>
                   {addLabel}
                 </button> : null}
               </div>
@@ -3406,7 +3423,7 @@ export default function UniversalRecordWorkspace({
                 </label> : null}
               </>
             ) : null}
-            {!viewer.readOnly ? <button type="button" style={primaryBtn} disabled={saving} onClick={() => void saveRecord()}>
+            {(!editingId ? canCreateRecords : canEditWorkspaceRow(editingId)) ? <button type="button" style={primaryBtn} disabled={saving} onClick={() => void saveRecord()}>
               <Icon name="save" size={16} style={{ marginRight: 6, verticalAlign: "text-bottom" }} />
               {saving ? "Saving..." : editingId ? "Save changes" : saveLabel}
             </button> : null}
@@ -3414,13 +3431,13 @@ export default function UniversalRecordWorkspace({
               <Icon name="close" size={16} />
               Cancel
             </button>
-            {editingId && !viewer.readOnly ? (
+            {editingId && viewer.mode !== "linked" ? (
               <button type="button" style={dangerBtn} onClick={() => void deleteRecord(editingId)}>
                 <Icon name="delete" size={16} />
                 Delete
               </button>
             ) : null}
-            {editingId && !viewer.readOnly ? (
+            {editingId && canEditWorkspaceRow(editingId) ? (
               <>
                 <label style={ghostBtn}>
                   <Icon name="upload_file" size={16} />

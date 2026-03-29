@@ -24,6 +24,7 @@ import { buildDashboardSearchHref } from "../../lib/records/discovery";
 import { supabase } from "../../lib/supabaseClient";
 import { ViewerAccessProvider } from "../../components/access/ViewerAccessContext";
 import { VaultPreferencesProvider } from "../../components/vault/VaultPreferencesContext";
+import { AccessibilityPreferencesProvider } from "../../components/accessibility/AccessibilityPreferencesContext";
 import { DEMO_EXPERIENCE_LABEL, DEMO_EXPERIENCE_SUBLABEL, isDemoSessionUser } from "../../lib/demo/config";
 import {
   canViewPath,
@@ -41,6 +42,10 @@ import {
   getDefaultVaultPreferences,
   loadVaultPreferences,
 } from "../../lib/vaultPreferences";
+import {
+  getDefaultAccessibilityPreferences,
+  loadAccessibilityPreferences,
+} from "../../lib/accessibilityPreferences";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -57,6 +62,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isDemoExperience, setIsDemoExperience] = useState(false);
   const [viewerAccess, setViewerAccess] = useState<ViewerAccessState | null>(null);
   const [vaultPreferences, setVaultPreferences] = useState(getDefaultVaultPreferences);
+  const [accessibilityPreferences, setAccessibilityPreferences] = useState(getDefaultAccessibilityPreferences);
   const [shellSearch, setShellSearch] = useState("");
   const devSmokeMode = useMemo(
     () =>
@@ -94,9 +100,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       allowedSections: [],
       assetIds: [],
       recordIds: [],
+      editableAssetIds: [],
+      editableRecordIds: [],
     },
     assignedAssetIds: [],
     assignedRecordIds: [],
+    editableAssetIds: [],
+    editableRecordIds: [],
     assignedSectionKeys: [],
   } satisfies ViewerAccessState;
   const topLevelItems = useMemo(
@@ -277,9 +287,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             allowedSections: [],
             assetIds: [],
             recordIds: [],
+            editableAssetIds: [],
+            editableRecordIds: [],
           },
           assignedAssetIds: [],
           assignedRecordIds: [],
+          editableAssetIds: [],
+          editableRecordIds: [],
           assignedSectionKeys: [],
         });
       }
@@ -390,6 +404,39 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       mounted = false;
     };
   }, [devSmokeMode, effectiveAuthState, resolvedViewerAccess.targetOwnerUserId]);
+
+  useEffect(() => {
+    let mounted = true;
+    if (devSmokeMode) {
+      setAccessibilityPreferences(getDefaultAccessibilityPreferences());
+      return () => {
+        mounted = false;
+      };
+    }
+    if (effectiveAuthState !== "ready") {
+      return () => {
+        mounted = false;
+      };
+    }
+
+    async function hydrateAccessibility() {
+      try {
+        const user = await waitForActiveUser(supabase, { attempts: 4, delayMs: 100 });
+        if (!mounted || !user) return;
+        const nextPreferences = await loadAccessibilityPreferences(supabase, user.id);
+        if (!mounted) return;
+        setAccessibilityPreferences(nextPreferences);
+      } catch {
+        if (!mounted) return;
+        setAccessibilityPreferences(getDefaultAccessibilityPreferences());
+      }
+    }
+
+    void hydrateAccessibility();
+    return () => {
+      mounted = false;
+    };
+  }, [devSmokeMode, effectiveAuthState]);
 
   useEffect(() => {
     if (effectiveAuthState !== "ready" || !viewerAccess || viewerAccess.mode !== "linked") return;
@@ -600,9 +647,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 allowedSections: [],
                 assetIds: [],
                 recordIds: [],
+                editableAssetIds: [],
+                editableRecordIds: [],
               },
               assignedAssetIds: [],
               assignedRecordIds: [],
+              editableAssetIds: [],
+              editableRecordIds: [],
               assignedSectionKeys: [],
             }
           : current);
@@ -632,8 +683,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <ViewerAccessProvider value={viewerContextValue}>
+    <AccessibilityPreferencesProvider value={{ preferences: accessibilityPreferences, setPreferences: setAccessibilityPreferences }}>
     <VaultPreferencesProvider value={{ preferences: vaultPreferences, setPreferences: setVaultPreferences }}>
-    <div className="lf-shell">
+    <div
+      className="lf-shell"
+      data-lf-text-size={accessibilityPreferences.textSize}
+      data-lf-contrast={accessibilityPreferences.contrastMode}
+      data-lf-spacing={accessibilityPreferences.spacingMode}
+      data-lf-help-wizard={accessibilityPreferences.helpWizardEnabled ? "true" : "false"}
+      data-lf-read-aloud={accessibilityPreferences.readAloudEnabled ? "true" : "false"}
+    >
       <div
         className="lf-nav-wrap"
         ref={navWrapRef}
@@ -961,6 +1020,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
     </div>
     </VaultPreferencesProvider>
+    </AccessibilityPreferencesProvider>
     </ViewerAccessProvider>
   );
 }

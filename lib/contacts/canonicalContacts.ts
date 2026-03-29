@@ -712,12 +712,12 @@ export function resolveCanonicalContactDisplayRole(
   const candidates = [...contextTerms, invitationRole, directRole, directRelationship].filter(Boolean);
 
   const exact = candidates.find((item) => item === "executor" || item === "co_executor" || item === "power_of_attorney" || item === "trustee" || item === "accountant" || item === "lawyer" || item === "financial_advisor" || item === "professional_advisor" || item === "friend_or_family");
-  if (exact) return exact;
+  if (exact) return exact === "financial_advisor" ? "professional_advisor" : exact;
   if (candidates.some((item) => item.includes("executor") || item.includes("power of attorney") || item.includes("power_of_attorney"))) return "executor";
   if (candidates.some((item) => item.includes("trustee"))) return "trustee";
   if (candidates.some((item) => item.includes("accountant"))) return "accountant";
   if (candidates.some((item) => item.includes("lawyer") || item.includes("solicitor"))) return "lawyer";
-  if (candidates.some((item) => item.includes("financial advisor") || item.includes("financial_advisor") || item.includes("financial adviser"))) return "financial_advisor";
+  if (candidates.some((item) => item.includes("financial advisor") || item.includes("financial_advisor") || item.includes("financial adviser"))) return "professional_advisor";
   if (candidates.some((item) => item.includes("advisor") || item.includes("adviser") || item.includes("professional"))) return "professional_advisor";
   if (candidates.some((item) => item.includes("family") || item.includes("spouse") || item.includes("child") || item.includes("parent") || item.includes("sibling") || item.includes("next of kin"))) return "friend_or_family";
   return directRole || invitationRole || null;
