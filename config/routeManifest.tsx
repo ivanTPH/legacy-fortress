@@ -137,7 +137,6 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     path: "/support",
     icon: <HelpIcon />,
     enabled: on,
-    children: [{ id: "support-help", label: "Support", path: "/support", enabled: on }],
   },
 ];
 

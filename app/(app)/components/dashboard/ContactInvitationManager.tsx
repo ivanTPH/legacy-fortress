@@ -28,7 +28,7 @@ import { buildInvitationEmailDraft } from "../../../../lib/contacts/invitations"
 import { resolveInvitationBadgeState, type InvitationStatus } from "../../../../lib/contacts/invitationStatus";
 import { assertOwnerCanSendInvitation, ensureOwnerPlanProfile } from "../../../../lib/accountPlan";
 import { useVaultPreferences } from "../../../../components/vault/VaultPreferencesContext";
-import { isVaultCategoryEnabled } from "../../../../lib/vaultPreferences";
+import { getVaultSubsectionsForGroup, isVaultCategoryEnabled, isVaultSubsectionEnabled, type VaultCategoryGroupKey } from "../../../../lib/vaultPreferences";
 import {
   buildScopedPermissionPayload,
   normalizeContactPermissionsOverride,
@@ -63,6 +63,13 @@ type ScopeItem = {
   label: string;
   meta: string;
   role: string | null;
+};
+
+type ScopedResourceGroup = {
+  key: string;
+  label: string;
+  description: string;
+  items: ScopeItem[];
 };
 
 const ACCESS_SCOPE_OPTIONS: Array<{ key: SectionKey; label: string }> = [
@@ -781,54 +788,72 @@ export default function ContactInvitationManager({
             <div style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
               <span style={fieldLabelStyle}>Linked records and document permissions</span>
               <div style={{ color: "#64748b", fontSize: 12 }}>
-                Each listed record is included through the selected category. Leave it on view only by default, or switch it to edit when the contact should be able to update that exact record.
+                Each selected category expands into the actual visible record types and saved records in the vault. Every linked record starts on View, and Edit must be enabled explicitly record by record.
               </div>
               <div style={{ display: "grid", gap: 8 }}>
-                {getScopedItemsForSections(scopeItems, allowedSections).map((option) => {
-                  const editable = option.sourceKind === "asset"
-                    ? editableAssetIds.includes(option.sourceId)
-                    : editableRecordIds.includes(option.sourceId);
-                  const href = buildLinkedContactRecordHref({
-                    source_kind: option.sourceKind,
-                    source_id: option.sourceId,
-                    section_key: option.sectionKey,
-                    category_key: option.categoryKey,
-                    label: option.label,
-                    role: option.role,
-                  });
-
-                  return (
-                    <div key={`${option.sourceKind}:${option.sourceId}`} style={scopePermissionRowStyle}>
-                      <div style={{ display: "grid", gap: 2 }}>
-                        <span style={{ fontWeight: 600 }}>{option.label}</span>
-                        <span style={{ color: "#64748b", fontSize: 12 }}>{option.meta}</span>
-                      </div>
-                      {href ? (
-                        <Link href={href} style={{ color: "#1d4ed8", textDecoration: "none", fontWeight: 600 }}>
-                          Open
-                        </Link>
-                      ) : null}
-                      <div style={permissionToggleStyle} role="group" aria-label={`Permission for ${option.label}`}>
-                        <button
-                          type="button"
-                          style={editable ? permissionOffButtonStyle : permissionOnButtonStyle}
-                          onClick={() => toggleScopedEditPermission(option, false, setEditableAssetIds, setEditableRecordIds)}
-                        >
-                          View only
-                        </button>
-                        <button
-                          type="button"
-                          style={editable ? permissionOnButtonStyle : permissionOffButtonStyle}
-                          onClick={() => toggleScopedEditPermission(option, true, setEditableAssetIds, setEditableRecordIds)}
-                        >
-                          Edit document
-                        </button>
-                      </div>
+                {getScopedResourceGroups(scopeItems, allowedSections, preferences).map((group) => (
+                  <div key={group.key} style={resourceGroupStyle}>
+                    <div style={{ display: "grid", gap: 2 }}>
+                      <strong style={{ fontSize: 13, color: "#0f172a" }}>{group.label}</strong>
+                      <span style={{ color: "#64748b", fontSize: 12 }}>{group.description}</span>
                     </div>
-                  );
-                })}
-                {getScopedItemsForSections(scopeItems, allowedSections).length === 0 ? (
-                  <div style={{ color: "#64748b", fontSize: 12 }}>No saved records are available yet in the selected categories.</div>
+                    {group.items.length ? (
+                      <div style={{ display: "grid", gap: 8 }}>
+                        {group.items.map((option) => {
+                          const editable = option.sourceKind === "asset"
+                            ? editableAssetIds.includes(option.sourceId)
+                            : editableRecordIds.includes(option.sourceId);
+                          const href = buildLinkedContactRecordHref({
+                            source_kind: option.sourceKind,
+                            source_id: option.sourceId,
+                            section_key: option.sectionKey,
+                            category_key: option.categoryKey,
+                            label: option.label,
+                            role: option.role,
+                          });
+
+                          return (
+                            <div key={`${group.key}-${option.sourceKind}:${option.sourceId}`} style={scopePermissionRowStyle}>
+                              <div style={{ display: "grid", gap: 2 }}>
+                                <span style={{ fontWeight: 600 }}>{option.label}</span>
+                                <span style={{ color: "#64748b", fontSize: 12 }}>{option.meta}</span>
+                              </div>
+                              {href ? (
+                                <Link href={href} style={{ color: "#1d4ed8", textDecoration: "none", fontWeight: 600 }}>
+                                  Open record
+                                </Link>
+                              ) : null}
+                              <div style={permissionToggleStyle} role="group" aria-label={`Permission for ${option.label}`}>
+                                <button
+                                  type="button"
+                                  style={editable ? permissionOffButtonStyle : permissionOnButtonStyle}
+                                  onClick={() => toggleScopedEditPermission(option, false, setEditableAssetIds, setEditableRecordIds)}
+                                  title={`Keep ${option.label} on view access`}
+                                >
+                                  View
+                                </button>
+                                <button
+                                  type="button"
+                                  style={editable ? permissionOnButtonStyle : permissionOffButtonStyle}
+                                  onClick={() => toggleScopedEditPermission(option, true, setEditableAssetIds, setEditableRecordIds)}
+                                  title={`Allow edit access for ${option.label}`}
+                                >
+                                  Edit
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div style={{ color: "#64748b", fontSize: 12 }}>
+                        No saved records are visible here yet, but this resource type remains linked to the selected category.
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {getScopedResourceGroups(scopeItems, allowedSections, preferences).length === 0 ? (
+                  <div style={{ color: "#64748b", fontSize: 12 }}>No visible record types are available yet in the selected categories.</div>
                 ) : null}
               </div>
             </div>
@@ -836,23 +861,33 @@ export default function ContactInvitationManager({
         </div>
 
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button type="button" style={primaryBtnStyle} disabled={saving} onClick={() => void saveContact()}>
-            {saving ? "Saving..." : editingId ? "Update contact" : draftContactId ? "Save access setup" : "Add contact"}
+          <button
+            type="button"
+            style={primaryBtnStyle}
+            title={editingId ? "Save contact changes" : draftContactId ? "Save this contact access setup" : "Add this contact"}
+            disabled={saving}
+            onClick={() => void saveContact()}
+          >
+            <Icon name={editingId ? "save" : "person_add"} size={16} />
+            {saving ? "Saving..." : editingId ? "Save" : draftContactId ? "Add" : "Add"}
           </button>
           {!editingId && draftContactId && email.trim() ? (
-            <button type="button" style={ghostBtnStyle} disabled={saving} onClick={() => void saveContact({ sendAfterSave: true })}>
-              {saving ? "Saving..." : "Save and send invite"}
+            <button type="button" style={ghostBtnStyle} title="Save this contact and send the invite email" disabled={saving} onClick={() => void saveContact({ sendAfterSave: true })}>
+              <Icon name="send" size={16} />
+              {saving ? "Saving..." : "Send invite"}
             </button>
           ) : null}
           {!editingId && draftContactId ? (
-            <button type="button" style={dangerBtnStyle} disabled={saving} onClick={() => void removeSelectedDraftContact()}>
-              Delete contact
+            <button type="button" style={dangerBtnStyle} title="Delete this contact and any linked invite access" disabled={saving} onClick={() => void removeSelectedDraftContact()}>
+              <Icon name="delete" size={16} />
+              Delete
             </button>
           ) : null}
           {(editingId || draftContactId) ? (
             <button
               type="button"
               style={ghostBtnStyle}
+              title="Replace this contact while keeping the shared access setup"
               disabled={saving}
               onClick={() => {
                 setEditingId(null);
@@ -862,28 +897,33 @@ export default function ContactInvitationManager({
                 setStatus("Choose the replacement contact details, then save to reuse this access setup.");
               }}
             >
-              Replace contact
+              <Icon name="swap_horiz" size={16} />
+              Replace
             </button>
           ) : null}
           {editingId && currentEditingRow && canSendInvite(currentEditingRow) ? (
-            <button type="button" style={ghostBtnStyle} disabled={saving} onClick={() => void sendInvite(currentEditingRow, false)}>
+            <button type="button" style={ghostBtnStyle} title={`Send invite to ${currentEditingRow.contact_email}`} disabled={saving} onClick={() => void sendInvite(currentEditingRow, false)}>
+              <Icon name="send" size={16} />
               Send invite
             </button>
           ) : null}
           {editingId && currentEditingRow && canResendInvite(currentEditingRow) ? (
-            <button type="button" style={ghostBtnStyle} disabled={saving} onClick={() => void sendInvite(currentEditingRow, true)}>
-              Resend invite
+            <button type="button" style={ghostBtnStyle} title={`Send invite again to ${currentEditingRow.contact_email}`} disabled={saving} onClick={() => void sendInvite(currentEditingRow, true)}>
+              <Icon name="forward_to_inbox" size={16} />
+              Send invite again
             </button>
           ) : null}
           {editingId && currentEditingRow ? (
-            <button type="button" style={dangerBtnStyle} disabled={saving} onClick={() => void remove(currentEditingRow)}>
-              Delete contact
+            <button type="button" style={dangerBtnStyle} title={`Delete ${currentEditingRow.contact_name || currentEditingRow.contact_email}`} disabled={saving} onClick={() => void remove(currentEditingRow)}>
+              <Icon name="delete" size={16} />
+              Delete
             </button>
           ) : null}
           {editingId ? (
             <button
               type="button"
               style={ghostBtnStyle}
+              title="Cancel contact changes"
               onClick={() => {
                 setEditingId(null);
                 setDraftContactId(null);
@@ -898,6 +938,7 @@ export default function ContactInvitationManager({
                 setEditableRecordIds([]);
               }}
             >
+              <Icon name="close" size={16} />
               Cancel
             </button>
           ) : null}
@@ -953,10 +994,22 @@ export default function ContactInvitationManager({
                       <td style={tdStyle} data-label="Status">
                         <div style={{ display: "grid", gap: 6 }}>
                           {isDashboardMode ? (
-                            <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                              <StatusIcon {...getInvitationStatusIcon(row)} />
-                              <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>{getDashboardInvitationStatusLabel(row)}</span>
-                            </div>
+                            canSendInvite(row) ? (
+                              <button
+                                type="button"
+                                style={dashboardStatusActionStyle}
+                                title={`Send email invitation to ${row.contact_email}`}
+                                onClick={() => void sendInvite(row, false)}
+                              >
+                                <StatusIcon icon="send" tone="neutral" label={`Send email invitation to ${row.contact_email}`} />
+                                <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>Send email</span>
+                              </button>
+                            ) : (
+                              <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                                <StatusIcon {...getInvitationStatusIcon(row)} />
+                                <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>{getDashboardInvitationStatusLabel(row)}</span>
+                              </div>
+                            )
                           ) : (
                             <InvitationStatusBadge invitationStatus={row.invitation_status} activationStatus={row.activation_status} sentAt={row.sent_at} />
                           )}
@@ -969,27 +1022,11 @@ export default function ContactInvitationManager({
                       <td style={tdStyle} data-label={isDashboardMode ? "Edit" : "Actions"}>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                           {isDashboardMode ? (
-                            <>
-                              {canSendInvite(row) ? (
-                                <IconButton
-                                  icon="send"
-                                  label={`Send invitation to ${row.contact_email}`}
-                                  onClick={() => void sendInvite(row, false)}
-                                />
-                              ) : null}
-                              {canResendInvite(row) ? (
-                                <IconButton
-                                  icon="forward_to_inbox"
-                                  label={`Resend invitation to ${row.contact_email}`}
-                                  onClick={() => void sendInvite(row, true)}
-                                />
-                              ) : null}
-                              <IconButton
-                                icon="open_in_new"
-                                label={`Open ${row.contact_name || row.contact_email} in Contacts`}
-                                onClick={() => router.push(buildContactsWorkspaceHref(row.contact_id ?? ""))}
-                              />
-                            </>
+                            <ActionIconButton
+                              action="edit"
+                              label={`Edit ${row.contact_name || row.contact_email} in Contacts`}
+                              onClick={() => router.push(buildContactsWorkspaceHref(row.contact_id ?? ""))}
+                            />
                           ) : (
                             <>
                               <ActionIconButton action="edit" label={`Edit ${row.contact_name || row.contact_email}`} onClick={() => startEdit(row)} />
@@ -1049,27 +1086,11 @@ export default function ContactInvitationManager({
 
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     {isDashboardMode ? (
-                      <>
-                        {canSendInvite(row) ? (
-                          <IconButton
-                            icon="send"
-                            label={`Send invitation to ${row.contact_email}`}
-                            onClick={() => void sendInvite(row, false)}
-                          />
-                        ) : null}
-                        {canResendInvite(row) ? (
-                          <IconButton
-                            icon="forward_to_inbox"
-                            label={`Resend invitation to ${row.contact_email}`}
-                            onClick={() => void sendInvite(row, true)}
-                          />
-                        ) : null}
-                        <IconButton
-                          icon="open_in_new"
-                          label={`Open ${row.contact_name || row.contact_email} in Contacts`}
-                          onClick={() => router.push(buildContactsWorkspaceHref(row.contact_id ?? ""))}
-                        />
-                      </>
+                      <ActionIconButton
+                        action="edit"
+                        label={`Edit ${row.contact_name || row.contact_email} in Contacts`}
+                        onClick={() => router.push(buildContactsWorkspaceHref(row.contact_id ?? ""))}
+                      />
                     ) : (
                       <>
                         <ActionIconButton action="edit" label={`Edit ${row.contact_name || row.contact_email}`} onClick={() => startEdit(row)} />
@@ -1173,6 +1194,109 @@ function getVisibleAccessScopeOptions(
 function getScopedItemsForSections(items: ScopeItem[], sections: SectionKey[]) {
   const allowed = new Set(sections);
   return items.filter((item) => allowed.has(item.sectionKey));
+}
+
+function getScopedResourceGroups(
+  items: ScopeItem[],
+  sections: SectionKey[],
+  preferences: ReturnType<typeof useVaultPreferences>["preferences"],
+): ScopedResourceGroup[] {
+  const scopedItems = getScopedItemsForSections(items, sections);
+  const grouped = new Map<string, ScopedResourceGroup>();
+
+  for (const section of sections) {
+    const groupKey = mapSectionToVaultGroup(section);
+    if (groupKey && !isVaultCategoryEnabled(preferences, groupKey)) continue;
+
+    const sectionItems = scopedItems.filter((item) => item.sectionKey === section);
+    const subsectionDefinitions = groupKey ? getVaultSubsectionsForGroup(groupKey) : [];
+
+    if (subsectionDefinitions.length > 0) {
+      for (const subsection of subsectionDefinitions) {
+        if (!isVaultSubsectionEnabled(preferences, subsection.key)) continue;
+        const subsectionItems = sectionItems.filter(
+          (item) => mapSectionCategoryToVaultSubsection(item.sectionKey, item.categoryKey) === subsection.key,
+        );
+        grouped.set(subsection.key, {
+          key: subsection.key,
+          label: subsection.label,
+          description: subsection.description,
+          items: subsectionItems,
+        });
+      }
+      continue;
+    }
+
+    grouped.set(section, {
+      key: section,
+      label: ACCESS_SCOPE_OPTIONS.find((option) => option.key === section)?.label ?? section,
+      description: "Visible records in this category can be shared here and upgraded to edit only where needed.",
+      items: sectionItems,
+    });
+  }
+
+  return Array.from(grouped.values());
+}
+
+function mapSectionToVaultGroup(sectionKey: SectionKey): VaultCategoryGroupKey | null {
+  switch (sectionKey) {
+    case "financial":
+      return "finances";
+    case "legal":
+      return "legal";
+    case "property":
+      return "property";
+    case "business":
+      return "business";
+    case "personal":
+      return "personal";
+    case "digital":
+      return "digital";
+    default:
+      return null;
+  }
+}
+
+function mapSectionCategoryToVaultSubsection(sectionKey: SectionKey, categoryKey: string | null): ReturnType<typeof getVaultSubsectionsForGroup>[number]["key"] | null {
+  const normalizedCategory = String(categoryKey ?? "").trim().toLowerCase();
+
+  if (sectionKey === "financial") {
+    if (normalizedCategory === "bank") return "finances_bank";
+    if (normalizedCategory === "pensions") return "finances_pensions";
+    if (normalizedCategory === "investments") return "finances_investments";
+    if (normalizedCategory === "insurance") return "finances_insurance";
+    if (normalizedCategory === "debts") return "finances_debts";
+  }
+
+  if (sectionKey === "legal") {
+    if (normalizedCategory === "wills") return "legal_wills";
+    if (normalizedCategory === "trusts") return "legal_trusts";
+    if (normalizedCategory === "power-of-attorney") return "legal_power_of_attorney";
+    if (normalizedCategory === "funeral-wishes") return "legal_funeral_wishes";
+    if (normalizedCategory === "marriage-divorce-documents") return "legal_marriage_divorce_documents";
+    if (normalizedCategory === "identity-documents") return "legal_identity_documents";
+    if (normalizedCategory === "other-legal-documents") return "legal_other_legal_documents";
+    if (normalizedCategory === "death-certificate") return "legal_death_certificate";
+  }
+
+  if (sectionKey === "personal") {
+    if (normalizedCategory === "possessions") return "personal_possessions";
+    if (normalizedCategory === "subscriptions") return "personal_subscriptions";
+    if (normalizedCategory === "social-media") return "personal_social_media";
+    if (normalizedCategory === "wishes") return "personal_wishes";
+  }
+
+  if (sectionKey === "property") {
+    if (normalizedCategory === "property-documents" || normalizedCategory === "documents") return "property_documents";
+    return "property_records";
+  }
+
+  if (sectionKey === "business") {
+    if (normalizedCategory === "employment") return "business_employment";
+    return "business_interests";
+  }
+
+  return null;
 }
 
 function toggleScopedEditPermission(
@@ -1481,6 +1605,26 @@ const dangerBtnStyle: CSSProperties = {
   borderRadius: 10,
   padding: "9px 12px",
   fontSize: 13,
+  cursor: "pointer",
+};
+const resourceGroupStyle: CSSProperties = {
+  border: "1px solid #dbe3eb",
+  borderRadius: 14,
+  background: "#f8fafc",
+  padding: 12,
+  display: "grid",
+  gap: 10,
+};
+const dashboardStatusActionStyle: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  width: "fit-content",
+  border: "1px solid #cbd5e1",
+  borderRadius: 999,
+  background: "#fff",
+  color: "#0f172a",
+  padding: "6px 10px",
   cursor: "pointer",
 };
 const thStyle: CSSProperties = { padding: "8px 6px", fontSize: 12, color: "#64748b", fontWeight: 600 };

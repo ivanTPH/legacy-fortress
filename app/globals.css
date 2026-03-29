@@ -24,6 +24,42 @@
   font-size: 1.12rem;
 }
 
+.lf-shell[data-lf-text-size="large"] .lf-sidebar,
+.lf-shell[data-lf-text-size="large"] .lf-topbar,
+.lf-shell[data-lf-text-size="large"] .lf-main-content,
+.lf-shell[data-lf-text-size="large"] .lf-content-wrap,
+.lf-shell[data-lf-text-size="large"] .lf-dashboard-card,
+.lf-shell[data-lf-text-size="large"] .lf-contact-card,
+.lf-shell[data-lf-text-size="large"] .lf-contact-invitations-row,
+.lf-shell[data-lf-text-size="large"] .lf-support-card,
+.lf-shell[data-lf-text-size="large"] table,
+.lf-shell[data-lf-text-size="large"] form,
+.lf-shell[data-lf-text-size="large"] label,
+.lf-shell[data-lf-text-size="large"] input,
+.lf-shell[data-lf-text-size="large"] select,
+.lf-shell[data-lf-text-size="large"] textarea,
+.lf-shell[data-lf-text-size="large"] button {
+  font-size: 1em;
+}
+
+.lf-shell[data-lf-text-size="xlarge"] .lf-sidebar,
+.lf-shell[data-lf-text-size="xlarge"] .lf-topbar,
+.lf-shell[data-lf-text-size="xlarge"] .lf-main-content,
+.lf-shell[data-lf-text-size="xlarge"] .lf-content-wrap,
+.lf-shell[data-lf-text-size="xlarge"] .lf-dashboard-card,
+.lf-shell[data-lf-text-size="xlarge"] .lf-contact-card,
+.lf-shell[data-lf-text-size="xlarge"] .lf-contact-invitations-row,
+.lf-shell[data-lf-text-size="xlarge"] .lf-support-card,
+.lf-shell[data-lf-text-size="xlarge"] table,
+.lf-shell[data-lf-text-size="xlarge"] form,
+.lf-shell[data-lf-text-size="xlarge"] label,
+.lf-shell[data-lf-text-size="xlarge"] input,
+.lf-shell[data-lf-text-size="xlarge"] select,
+.lf-shell[data-lf-text-size="xlarge"] textarea,
+.lf-shell[data-lf-text-size="xlarge"] button {
+  font-size: 1em;
+}
+
 .lf-shell[data-lf-spacing="comfortable"] .lf-main-content,
 .lf-shell[data-lf-spacing="comfortable"] .lf-content-wrap {
   gap: 1.15rem;
@@ -53,7 +89,15 @@
 }
 
 .lf-shell[data-lf-contrast="high"] a,
-.lf-shell[data-lf-contrast="high"] button {
+.lf-shell[data-lf-contrast="high"] button,
+.lf-shell[data-lf-contrast="high"] input,
+.lf-shell[data-lf-contrast="high"] select,
+.lf-shell[data-lf-contrast="high"] textarea,
+.lf-shell[data-lf-contrast="high"] th,
+.lf-shell[data-lf-contrast="high"] td,
+.lf-shell[data-lf-contrast="high"] p,
+.lf-shell[data-lf-contrast="high"] span,
+.lf-shell[data-lf-contrast="high"] label {
   color: #000000;
 }
 
@@ -61,6 +105,25 @@
 .lf-shell[data-lf-contrast="high"] .lf-icon-btn,
 .lf-shell[data-lf-contrast="high"] .lf-topbar-security {
   border-color: #000000 !important;
+}
+
+.lf-shell[data-lf-contrast="high"] input,
+.lf-shell[data-lf-contrast="high"] select,
+.lf-shell[data-lf-contrast="high"] textarea,
+.lf-shell[data-lf-contrast="high"] button,
+.lf-shell[data-lf-contrast="high"] table,
+.lf-shell[data-lf-contrast="high"] .lf-dashboard-card,
+.lf-shell[data-lf-contrast="high"] .lf-contact-card,
+.lf-shell[data-lf-contrast="high"] .lf-contact-invitations-row,
+.lf-shell[data-lf-contrast="high"] .lf-support-card {
+  background: #ffffff !important;
+}
+
+.lf-shell[data-lf-contrast="high"] .lf-sidebar a,
+.lf-shell[data-lf-contrast="high"] .lf-topbar a,
+.lf-shell[data-lf-contrast="high"] .lf-sidebar button,
+.lf-shell[data-lf-contrast="high"] .lf-topbar button {
+  color: #000000 !important;
 }
 
 * {
