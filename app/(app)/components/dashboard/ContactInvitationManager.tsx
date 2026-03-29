@@ -96,6 +96,7 @@ export default function ContactInvitationManager({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
+  const [recentlySentById, setRecentlySentById] = useState<Record<string, number>>({});
   const [rows, setRows] = useState<InvitationRow[]>([]);
 
   const [name, setName] = useState("");
@@ -133,6 +134,30 @@ export default function ContactInvitationManager({
     () => (editingId ? rows.find((row) => row.id === editingId) ?? null : null),
     [editingId, rows],
   );
+  const statusAction = useMemo(() => {
+    if (!status.includes("Starter plan limit reached")) return null;
+    return {
+      href: "/account/billing?reason=plan-limit",
+      label: "Upgrade plan / Manage subscription",
+      detail: "Open the subscription panel",
+    };
+  }, [status]);
+
+  const isRecentlySent = useCallback(
+    (rowId: string) => Boolean(recentlySentById[rowId]),
+    [recentlySentById],
+  );
+
+  const markRecentlySent = useCallback((rowId: string) => {
+    setRecentlySentById((current) => ({ ...current, [rowId]: Date.now() }));
+    window.setTimeout(() => {
+      setRecentlySentById((current) => {
+        const next = { ...current };
+        delete next[rowId];
+        return next;
+      });
+    }, 2500);
+  }, []);
 
   const loadRows = useCallback(async () => {
     setLoading(true);
@@ -568,6 +593,7 @@ export default function ContactInvitationManager({
       setStatus(`✅ Invitation email ${resend ? "resent" : "sent"} to ${row.contact_email}.`);
     }
 
+    markRecentlySent(row.id);
     await loadRows();
   }
 
@@ -946,7 +972,25 @@ export default function ContactInvitationManager({
       </div>
       ) : null}
 
-      {status ? <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div> : null}
+      {status ? (
+        <div style={statusAction ? planLimitStatusStyle : statusMessageStyle}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Icon name={status.startsWith("✅") ? "check_circle" : statusAction ? "error" : "info"} size={16} />
+            <span>{status}</span>
+          </div>
+          {statusAction ? (
+            <button
+              type="button"
+              style={planLimitCtaStyle}
+              title={statusAction.detail}
+              onClick={() => router.push(statusAction.href)}
+            >
+              <Icon name="open_in_new" size={16} />
+              {statusAction.label}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       <div style={sectionBlockStyle}>
         <div style={sectionHeaderStyle}>
@@ -994,7 +1038,7 @@ export default function ContactInvitationManager({
                       <td style={tdStyle} data-label="Status">
                         <div style={{ display: "grid", gap: 6 }}>
                           {isDashboardMode ? (
-                            canSendInvite(row) ? (
+                            canSendInvite(row) && !isRecentlySent(row.id) ? (
                               <button
                                 type="button"
                                 style={dashboardStatusActionStyle}
@@ -1006,12 +1050,12 @@ export default function ContactInvitationManager({
                               </button>
                             ) : (
                               <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                                <StatusIcon {...getInvitationStatusIcon(row)} />
-                                <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>{getDashboardInvitationStatusLabel(row)}</span>
+                                <StatusIcon {...getInvitationStatusIcon(row, isRecentlySent(row.id))} />
+                                <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>{getDashboardInvitationStatusLabel(row, isRecentlySent(row.id))}</span>
                               </div>
                             )
                           ) : (
-                            <InvitationStatusBadge invitationStatus={row.invitation_status} activationStatus={row.activation_status} sentAt={row.sent_at} />
+                            <InvitationStatusBadge invitationStatus={row.invitation_status} activationStatus={row.activation_status} sentAt={row.sent_at} transientStatus={isRecentlySent(row.id) ? "sent" : null} />
                           )}
                         </div>
                       </td>
@@ -1068,12 +1112,24 @@ export default function ContactInvitationManager({
                       <RoleBadge role={row.assigned_role} />
                     </div>
                     {isDashboardMode ? (
-                      <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                        <StatusIcon {...getInvitationStatusIcon(row)} />
-                        <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>{getDashboardInvitationStatusLabel(row)}</span>
-                      </div>
+                      canSendInvite(row) && !isRecentlySent(row.id) ? (
+                        <button
+                          type="button"
+                          style={dashboardStatusActionStyle}
+                          title={`Send email invitation to ${row.contact_email}`}
+                          onClick={() => void sendInvite(row, false)}
+                        >
+                          <StatusIcon icon="send" tone="neutral" label={`Send email invitation to ${row.contact_email}`} />
+                          <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>Send email</span>
+                        </button>
+                      ) : (
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                          <StatusIcon {...getInvitationStatusIcon(row, isRecentlySent(row.id))} />
+                          <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>{getDashboardInvitationStatusLabel(row, isRecentlySent(row.id))}</span>
+                        </div>
+                      )
                     ) : (
-                      <InvitationStatusBadge invitationStatus={row.invitation_status} activationStatus={row.activation_status} sentAt={row.sent_at} />
+                      <InvitationStatusBadge invitationStatus={row.invitation_status} activationStatus={row.activation_status} sentAt={row.sent_at} transientStatus={isRecentlySent(row.id) ? "sent" : null} />
                     )}
                   </div>
 
@@ -1148,7 +1204,8 @@ function canSendInvite(row: InvitationRow) {
   return !String(row.sent_at ?? "").trim() && row.invitation_status !== "revoked" && row.activation_status !== "active" && row.activation_status !== "verified";
 }
 
-function getInvitationStatusIcon(row: InvitationRow) {
+function getInvitationStatusIcon(row: InvitationRow, recentlySent = false) {
+  if (recentlySent) return { icon: "mark_email_read", tone: "neutral" as const, label: "Sent" };
   const state = resolveInvitationBadgeState(row.invitation_status, row.activation_status, row.sent_at);
   if (state.tone === "success") return { icon: "verified", tone: "success" as const, label: state.label };
   if (state.tone === "danger") return { icon: "cancel", tone: "danger" as const, label: state.label };
@@ -1169,7 +1226,8 @@ function loadPermissionsOverride(row: InvitationRow) {
   return normalizeContactPermissionsOverride(row.permissions_override);
 }
 
-function getDashboardInvitationStatusLabel(row: InvitationRow) {
+function getDashboardInvitationStatusLabel(row: InvitationRow, recentlySent = false) {
+  if (recentlySent) return "Sent";
   const label = resolveInvitationBadgeState(row.invitation_status, row.activation_status, row.sent_at).label;
   return label === "Ready to send" ? "Send email" : label;
 }
@@ -1626,6 +1684,40 @@ const dashboardStatusActionStyle: CSSProperties = {
   color: "#0f172a",
   padding: "6px 10px",
   cursor: "pointer",
+};
+const statusMessageStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  color: "#475569",
+  fontSize: 13,
+  flexWrap: "wrap",
+};
+const planLimitStatusStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 10,
+  flexWrap: "wrap",
+  color: "#991b1b",
+  background: "#fef2f2",
+  border: "1px solid #fecaca",
+  borderRadius: 12,
+  padding: "10px 12px",
+  fontSize: 13,
+};
+const planLimitCtaStyle: CSSProperties = {
+  border: "1px solid #b91c1c",
+  background: "#fff",
+  color: "#991b1b",
+  borderRadius: 999,
+  padding: "7px 10px",
+  fontSize: 12,
+  fontWeight: 700,
+  cursor: "pointer",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
 };
 const thStyle: CSSProperties = { padding: "8px 6px", fontSize: 12, color: "#64748b", fontWeight: 600 };
 const tdStyle: CSSProperties = { padding: "10px 6px", verticalAlign: "top" };

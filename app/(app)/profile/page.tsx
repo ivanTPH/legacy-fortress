@@ -832,6 +832,7 @@ export default function ProfilePage() {
       ) : null}
 
       <div id="account-settings">
+      <div id="accessibility-settings">
       <SettingsCard
         title="Accessibility and guided help"
         description="Set the reading and guidance preferences that make the workspace easier to use across dashboard, support, contacts, and records."
@@ -916,10 +917,12 @@ export default function ProfilePage() {
           </div>
         ) : null}
       </SettingsCard>
+      </div>
 
       <SettingsCard title="Account settings" description="Security, billing, terms, communications, and reminders now stay linked from Profile so account controls have one clear home.">
         <div className="lf-content-grid">
           {[
+            { href: "/profile#accessibility-settings", label: "Accessibility", desc: "Text size, contrast, spacing, read aloud, and guided help preferences." },
             { href: "/account/security", label: "Security", desc: "Password, recovery, and mobile verification controls." },
             { href: "/account/billing", label: "Billing and Account", desc: "Plan status, limits, and subscription readiness." },
             { href: "/account/my-vault", label: "My Vault", desc: "Choose which category groups and subsections stay visible across your workspace." },

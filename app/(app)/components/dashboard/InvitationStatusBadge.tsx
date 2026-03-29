@@ -5,12 +5,16 @@ export default function InvitationStatusBadge({
   invitationStatus,
   activationStatus,
   sentAt,
+  transientStatus,
 }: {
   invitationStatus: InvitationStatus;
   activationStatus: AccessActivationStatus;
   sentAt?: string | null;
+  transientStatus?: "sent" | null;
 }) {
-  const state = resolveInvitationBadgeState(invitationStatus, activationStatus, sentAt);
+  const state = transientStatus === "sent"
+    ? { label: "Sent", tone: "neutral" as const }
+    : resolveInvitationBadgeState(invitationStatus, activationStatus, sentAt);
   const tone = getTone(state);
   return (
     <span

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import Icon from "../ui/Icon";
 import InfoTip from "../ui/InfoTip";
 import { SettingsCard, SettingsPageShell, StatusNote, ghostBtn, gridStyle, inputStyle, primaryBtn, textAreaStyle } from "../../app/(app)/components/settings/SettingsPrimitives";
@@ -11,6 +12,13 @@ import { useAccessibilityPreferences } from "../accessibility/AccessibilityPrefe
 type SupportMessage = {
   role: "assistant" | "user";
   text: string;
+};
+
+type WizardFlow = {
+  id: string;
+  label: string;
+  route: string;
+  steps: string[];
 };
 
 const HELP_TOPICS = [
@@ -41,7 +49,51 @@ const HELP_TOPICS = [
   },
 ];
 
+const HELP_WIZARD_FLOWS: WizardFlow[] = [
+  {
+    id: "documents",
+    label: "Add documents",
+    route: "/legal",
+    steps: [
+      "Open the category where the document belongs.",
+      "Create or open the record first so the attachment has the right parent context.",
+      "Upload the supporting file in the shared documents area and confirm the preview.",
+    ],
+  },
+  {
+    id: "invites",
+    label: "Invite people",
+    route: "/contacts",
+    steps: [
+      "Open Contacts and select the person you want to manage.",
+      "Choose the categories they can review and then refine exact record permissions where needed.",
+      "Send the invite email and watch the queue for Sent, Pending, or Verified state.",
+    ],
+  },
+  {
+    id: "permissions",
+    label: "Change permissions",
+    route: "/contacts",
+    steps: [
+      "Open the selected contact in Contacts.",
+      "Start with the category access that matches their role.",
+      "Switch individual records from View to Edit only where that access is genuinely needed.",
+    ],
+  },
+  {
+    id: "vault",
+    label: "Use My Vault",
+    route: "/account/my-vault",
+    steps: [
+      "Open My Vault from your account settings.",
+      "Hide any groups or subsections you do not want across the workspace.",
+      "Save and confirm the dashboard, nav, and contact access views now match those choices.",
+    ],
+  },
+];
+
 export default function SupportWorkspace() {
+  const router = useRouter();
   const { preferences } = useAccessibilityPreferences();
   const [messages, setMessages] = useState<SupportMessage[]>([
     {
@@ -55,10 +107,20 @@ export default function SupportWorkspace() {
   const [requestBody, setRequestBody] = useState("");
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
+  const [activeWizardId, setActiveWizardId] = useState("");
+  const [activeWizardStep, setActiveWizardStep] = useState(0);
 
+  const speechSupported = useMemo(
+    () => typeof window !== "undefined" && "speechSynthesis" in window && "SpeechSynthesisUtterance" in window,
+    [],
+  );
   const readAloudAvailable = useMemo(
-    () => typeof window !== "undefined" && "speechSynthesis" in window && preferences.readAloudEnabled,
-    [preferences.readAloudEnabled],
+    () => speechSupported && preferences.readAloudEnabled,
+    [preferences.readAloudEnabled, speechSupported],
+  );
+  const activeWizard = useMemo(
+    () => HELP_WIZARD_FLOWS.find((flow) => flow.id === activeWizardId) ?? null,
+    [activeWizardId],
   );
 
   useEffect(() => {
@@ -86,6 +148,25 @@ export default function SupportWorkspace() {
     if (!latestAssistant) return;
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(new SpeechSynthesisUtterance(latestAssistant.text));
+  }
+
+  function startWizard(flowId: string) {
+    const flow = HELP_WIZARD_FLOWS.find((item) => item.id === flowId);
+    if (!flow) return;
+    setActiveWizardId(flow.id);
+    setActiveWizardStep(0);
+    setMessages((current) => [
+      ...current,
+      { role: "user", text: `Start help wizard: ${flow.label}` },
+      { role: "assistant", text: `${flow.steps[0]} Use Next to continue or open the related page directly.` },
+    ]);
+  }
+
+  function moveWizard(delta: 1 | -1) {
+    if (!activeWizard) return;
+    const nextStep = Math.min(Math.max(activeWizardStep + delta, 0), activeWizard.steps.length - 1);
+    setActiveWizardStep(nextStep);
+    setMessages((current) => [...current, { role: "assistant", text: activeWizard.steps[nextStep] }]);
   }
 
   async function submitSupportRequest() {
@@ -139,7 +220,44 @@ export default function SupportWorkspace() {
         {preferences.helpWizardEnabled ? (
           <div style={wizardNoteStyle}>
             <Icon name="tips_and_updates" size={16} />
-            Guided help is enabled, so suggested prompts stay visible to make common tasks easier to complete.
+            Guided help is enabled. Start a step-by-step help flow below whenever you want a clearer walkthrough.
+          </div>
+        ) : null}
+        {preferences.helpWizardEnabled ? (
+          <div style={{ display: "grid", gap: 10 }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {HELP_WIZARD_FLOWS.map((flow) => (
+                <button key={flow.id} type="button" style={ghostBtn} onClick={() => startWizard(flow.id)}>
+                  <Icon name="tips_and_updates" size={16} />
+                  {flow.label}
+                </button>
+              ))}
+            </div>
+            {activeWizard ? (
+              <div style={wizardPanelStyle} className="lf-support-card">
+                <div style={{ display: "grid", gap: 4 }}>
+                  <strong>{activeWizard.label}</strong>
+                  <span style={{ color: "#64748b", fontSize: 13 }}>
+                    Step {activeWizardStep + 1} of {activeWizard.steps.length}
+                  </span>
+                  <span>{activeWizard.steps[activeWizardStep]}</span>
+                </div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button type="button" style={ghostBtn} disabled={activeWizardStep === 0} onClick={() => moveWizard(-1)}>
+                    <Icon name="arrow_back" size={16} />
+                    Back
+                  </button>
+                  <button type="button" style={ghostBtn} disabled={activeWizardStep >= activeWizard.steps.length - 1} onClick={() => moveWizard(1)}>
+                    <Icon name="arrow_forward" size={16} />
+                    Next
+                  </button>
+                  <button type="button" style={primaryBtn} onClick={() => router.push(activeWizard.route)}>
+                    <Icon name="open_in_new" size={16} />
+                    Open related page
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
         <div style={chatPanelStyle} className="lf-support-card">
@@ -149,13 +267,15 @@ export default function SupportWorkspace() {
             </div>
           ))}
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {HELP_TOPICS.map((topic) => (
-            <button key={topic.id} type="button" style={ghostBtn} onClick={() => askQuestion(topic.id)}>
-              {topic.label}
-            </button>
-          ))}
-        </div>
+        {preferences.helpWizardEnabled ? (
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {HELP_TOPICS.map((topic) => (
+              <button key={topic.id} type="button" style={ghostBtn} onClick={() => askQuestion(topic.id)}>
+                {topic.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
           <input
             value={prompt}
@@ -173,6 +293,11 @@ export default function SupportWorkspace() {
               <Icon name="volume_up" size={16} />
               Read aloud
             </button>
+          ) : null}
+          {preferences.readAloudEnabled && !speechSupported ? (
+            <div style={{ color: "#92400e", fontSize: 12 }}>
+              Read aloud is unavailable in this browser, so the control stays hidden here.
+            </div>
           ) : null}
         </div>
       </SettingsCard>
@@ -259,6 +384,15 @@ const userMessageStyle = {
   background: "#111827",
   padding: "10px 12px",
   color: "#ffffff",
+} as const;
+
+const wizardPanelStyle = {
+  border: "1px solid #dbe3eb",
+  borderRadius: 16,
+  background: "#ffffff",
+  padding: 14,
+  display: "grid",
+  gap: 12,
 } as const;
 
 const wizardNoteStyle = {

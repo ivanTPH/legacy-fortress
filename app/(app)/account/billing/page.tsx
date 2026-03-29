@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Field,
   SettingsCard,
@@ -53,6 +53,7 @@ const EMPTY: BillingForm = {
 
 export default function BillingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
@@ -184,9 +185,14 @@ export default function BillingPage() {
   };
 
   return (
-    <SettingsPageShell title="Billing and Account" subtitle="Review monthly charges and maintain payment metadata safely.">
-      <SettingsCard title="Plan and billing overview" description="Review the current owner plan, light subscription metadata, and future billing readiness without exposing provider secrets in the client.">
+    <SettingsPageShell title="Subscription and billing" subtitle="Review owner plan status, subscription readiness, and billing controls in one place.">
+      <SettingsCard title="Subscription overview" description="Review the current owner plan, live status labels, and the secure subscription-management entry point without exposing provider secrets in the client.">
         {loading ? <div style={{ color: "#6b7280" }}>Loading...</div> : null}
+        {searchParams.get("reason") === "plan-limit" ? (
+          <div style={{ marginBottom: 14, padding: 12, border: "1px solid #fecaca", borderRadius: 14, background: "#fff1f2", color: "#991b1b", fontSize: 13 }}>
+            Your current plan limit was reached. Review this subscription panel to upgrade or manage billing before sending more invites or saving additional records.
+          </div>
+        ) : null}
 
         <div style={{ display: "grid", gap: 10, marginBottom: 14, padding: 14, border: "1px solid #e5e7eb", borderRadius: 14, background: "#f8fafc" }}>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -207,7 +213,7 @@ export default function BillingPage() {
             })}
           </div>
           <div style={{ color: "#64748b", fontSize: 13 }}>
-            Linked invitees stay view-only and separate from your owner subscription. Payment collection can be connected later through the secure billing portal hook.
+            Linked invitees stay separate from your owner subscription. Use the secure subscription controls below to upgrade or manage billing when entitlements change.
           </div>
         </div>
 
@@ -265,7 +271,7 @@ export default function BillingPage() {
             {saving ? "Saving..." : "Save billing settings"}
           </button>
           <button type="button" style={inputStyle} onClick={() => void openBillingPortal()}>
-            Open secure billing portal
+            Upgrade plan / Manage subscription
           </button>
           <StatusNote message={status} />
         </div>
