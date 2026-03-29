@@ -122,6 +122,10 @@ export default function ContactInvitationManager({
     const readyToSend = rows.filter((row) => resolveInvitationBadgeState(row.invitation_status, row.activation_status, row.sent_at).label === "Ready to send").length;
     return { total: rows.length, invited, accepted, readyToSend };
   }, [rows]);
+  const currentEditingRow = useMemo(
+    () => (editingId ? rows.find((row) => row.id === editingId) ?? null : null),
+    [editingId, rows],
+  );
 
   const loadRows = useCallback(async () => {
     setLoading(true);
@@ -859,6 +863,21 @@ export default function ContactInvitationManager({
               }}
             >
               Replace contact
+            </button>
+          ) : null}
+          {editingId && currentEditingRow && canSendInvite(currentEditingRow) ? (
+            <button type="button" style={ghostBtnStyle} disabled={saving} onClick={() => void sendInvite(currentEditingRow, false)}>
+              Send invite
+            </button>
+          ) : null}
+          {editingId && currentEditingRow && canResendInvite(currentEditingRow) ? (
+            <button type="button" style={ghostBtnStyle} disabled={saving} onClick={() => void sendInvite(currentEditingRow, true)}>
+              Resend invite
+            </button>
+          ) : null}
+          {editingId && currentEditingRow ? (
+            <button type="button" style={dangerBtnStyle} disabled={saving} onClick={() => void remove(currentEditingRow)}>
+              Delete contact
             </button>
           ) : null}
           {editingId ? (
