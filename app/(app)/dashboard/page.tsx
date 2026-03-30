@@ -494,20 +494,6 @@ const legalSummary = useMemo(() => {
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
-      <div
-        style={{
-          border: "1px solid #f59e0b",
-          borderRadius: 12,
-          background: "#fffbeb",
-          color: "#92400e",
-          fontSize: 13,
-          fontWeight: 800,
-          letterSpacing: "0.02em",
-          padding: "10px 12px",
-        }}
-      >
-        DASHBOARD BUILD CHECK - ACTION CENTRE V3
-      </div>
       {status ? <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div> : null}
       {loading ? <div style={{ color: "#6b7280" }}>Loading dashboard summary...</div> : null}
       {searchQuery ? (

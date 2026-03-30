@@ -14,9 +14,20 @@ type ActionCentreSection = {
   key: "owner" | "others" | "clear";
   title: string;
   count: number;
-  summaries: string[];
-  items: BlockingItem[];
+  summary: string;
+  rows: ActionCentreRow[];
   tone: "alert" | "muted" | "clear";
+  priority: number;
+  icon: string;
+};
+
+type ActionCentreRow = {
+  key: string;
+  stageName: string;
+  blockerLabel: string;
+  actionKey: string;
+  requiredRole: BlockingItem["requiredRole"];
+  totalItems: number;
 };
 
 export default function ActionQueuePanel({ items, onAction }: ActionQueuePanelProps) {
@@ -42,7 +53,7 @@ export default function ActionQueuePanel({ items, onAction }: ActionQueuePanelPr
           </span>
         </div>
         <div style={{ color: "#64748b", fontSize: 13 }}>
-          Review the next actions, what is waiting on others, and whether the record is fully up to date.
+          A compact view of what needs your attention, what is waiting on others, and whether everything is up to date.
         </div>
       </div>
 
@@ -57,10 +68,9 @@ export default function ActionQueuePanel({ items, onAction }: ActionQueuePanelPr
           </div>
         </section>
       ) : (
-        <div style={{ display: "grid", gap: 10 }}>
+        <div style={{ display: "grid", gap: 8 }}>
           {sections.map((section) => {
             const isOpen = section.key === openSectionKey;
-            const summaryList = section.summaries.slice(0, 3);
             return (
               <section key={section.key} style={sectionCardStyle(section.tone)} aria-label={section.title}>
                 <button
@@ -69,52 +79,45 @@ export default function ActionQueuePanel({ items, onAction }: ActionQueuePanelPr
                   onClick={() => setOpenSectionKey(section.key)}
                   aria-expanded={isOpen}
                 >
-                  <div style={{ display: "grid", gap: 5, textAlign: "left" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                      <span style={sectionPillStyle(section.tone)}>{section.title}</span>
-                      <span style={{ color: "#64748b", fontSize: 12 }}>
-                        {section.count} item{section.count === 1 ? "" : "s"}
+                  <div style={{ display: "grid", gap: 4, textAlign: "left", minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", minWidth: 0 }}>
+                      <span style={sectionIconStyle(section.tone)} aria-hidden>
+                        <Icon name={section.icon} size={15} />
+                      </span>
+                      <span style={sectionTitleStyle}>{section.title}</span>
+                      <span style={sectionPillStyle(section.tone)}>
+                        {section.count}
                       </span>
                     </div>
-                    <div style={{ display: "grid", gap: 2 }}>
-                      {summaryList.length ? summaryList.map((summary) => (
-                        <div key={summary} style={{ color: "#475569", fontSize: 13 }}>
-                          {summary}
-                        </div>
-                      )) : (
-                        <div style={{ color: "#64748b", fontSize: 13 }}>
-                          {section.key === "clear" ? "No active blockers." : "No items in this section."}
-                        </div>
-                      )}
+                    <div style={sectionSummaryStyle}>
+                      {section.summary}
                     </div>
                   </div>
                   <span style={accordionIconStyle(isOpen)} aria-hidden>
-                    <Icon name={isOpen ? "expand_less" : "expand_more"} size={18} />
+                    <Icon name={isOpen ? "expand_less" : "expand_more"} size={16} />
                   </span>
                 </button>
-                {isOpen && section.items.length ? (
-                  <div style={{ display: "grid", gap: 8 }}>
-                    {section.items.map((item) => (
+                {isOpen && section.rows.length ? (
+                  <div style={{ display: "grid", gap: 6 }}>
+                    {section.rows.map((item) => (
                       <button
                         key={item.actionKey}
                         type="button"
-                        style={itemButtonStyle}
+                        style={itemRowStyle}
                         onClick={() => onAction(item.actionKey)}
                         aria-label={`${item.stageName}. ${item.blockerLabel}. Required role ${getWorkflowRequiredRoleLabel(item.requiredRole)}.`}
                         title={`Open ${item.stageName}`}
                       >
-                        <div style={{ display: "grid", gap: 3, textAlign: "left" }}>
+                        <div style={{ display: "grid", gap: 2, textAlign: "left", minWidth: 0 }}>
                           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-                            <span style={metaLabelStyle}>Stage</span>
-                            <span style={metaValueStyle}>{item.stageName}</span>
+                            <span style={stageChipStyle}>{item.stageName}</span>
+                            {item.totalItems > 1 ? (
+                              <span style={rowCountStyle}>{item.totalItems} grouped</span>
+                            ) : null}
                           </div>
-                          <div style={{ color: "#0f172a", fontSize: 14, fontWeight: 700 }}>{item.blockerLabel}</div>
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-                            <span style={metaLabelStyle}>Required role</span>
-                            <span style={{ color: "#475569", fontSize: 12, fontWeight: 700 }}>{getWorkflowRequiredRoleLabel(item.requiredRole)}</span>
-                          </div>
+                          <div style={rowLabelStyle}>{item.blockerLabel}</div>
                         </div>
-                        <span style={actionIconStyle} aria-hidden>
+                        <span style={rowActionIconStyle} aria-hidden>
                           <Icon name="open_in_new" size={16} />
                         </span>
                       </button>
@@ -133,85 +136,124 @@ export default function ActionQueuePanel({ items, onAction }: ActionQueuePanelPr
 function buildActionCentreSections(items: BlockingItem[]): ActionCentreSection[] {
   const ownerItems = items.filter((item) => item.isBlocking && item.requiredRole === "owner");
   const otherItems = items.filter((item) => item.isBlocking && item.requiredRole !== "owner");
-  return [
+  if (!ownerItems.length && !otherItems.length) {
+    const clearSections: ActionCentreSection[] = [
+      {
+        key: "clear",
+        title: "All clear",
+        count: 0,
+        summary: "Everything currently looks up to date.",
+        rows: [],
+        tone: "clear",
+        priority: Number.POSITIVE_INFINITY,
+        icon: "verified",
+      },
+    ];
+    return clearSections;
+  }
+
+  const sections: ActionCentreSection[] = [
     {
       key: "owner",
-      title: "Action required (Owner)",
+      title: "Things to do",
       count: ownerItems.length,
-      summaries: summarizeItems(ownerItems),
-      items: ownerItems,
+      summary: buildSectionSummary(ownerItems, "No owner actions are blocking right now."),
+      rows: buildActionRows(ownerItems),
       tone: "alert",
+      priority: getSectionPriority(ownerItems),
+      icon: "assignment_late",
     },
     {
       key: "others",
-      title: "Waiting on others",
+      title: "Invite status",
       count: otherItems.length,
-      summaries: summarizeItems(otherItems),
-      items: otherItems,
+      summary: buildSectionSummary(otherItems, "No pending invites or external actions are waiting."),
+      rows: buildActionRows(otherItems),
       tone: "muted",
-    },
-    {
-      key: "clear",
-      title: "All clear",
-      count: ownerItems.length + otherItems.length === 0 ? 1 : 0,
-      summaries: ownerItems.length + otherItems.length === 0 ? ["Everything currently looks up to date."] : ["No additional cleared items to review."],
-      items: [],
-      tone: "clear",
+      priority: getSectionPriority(otherItems),
+      icon: "mail",
     },
   ];
+
+  return sections.sort((left, right) => left.priority - right.priority);
 }
 
-function summarizeItems(items: BlockingItem[]) {
-  if (!items.length) return [];
+function buildSectionSummary(items: BlockingItem[], fallback: string) {
+  const rows = buildActionRows(items);
+  if (!rows.length) return fallback;
+  const primary = rows[0];
+  if (rows.length === 1) return primary.blockerLabel;
+  return `${primary.blockerLabel} +${rows.length - 1} more`;
+}
 
+function buildActionRows(items: BlockingItem[]): ActionCentreRow[] {
+  if (!items.length) return [];
   const pendingInvitationItems = items.filter(
     (item) => item.stageName === "Contacts" && /still needs to accept the invitation\.$/i.test(item.blockerLabel),
   );
   const readyInviteItems = items.filter(
     (item) => item.stageName === "Contacts" && /is ready for an invite email\.$/i.test(item.blockerLabel),
   );
-  const summaries: string[] = [];
   const consumed = new Set<string>();
+  const rows: ActionCentreRow[] = [];
 
   if (pendingInvitationItems.length > 1) {
-    summaries.push(`${pendingInvitationItems.length} contacts still need to accept invitations.`);
+    rows.push({
+      key: "contacts-pending-group",
+      stageName: "Contacts",
+      blockerLabel: `${pendingInvitationItems.length} contacts still need to accept invitations.`,
+      actionKey: pendingInvitationItems[0].actionKey,
+      requiredRole: pendingInvitationItems[0].requiredRole,
+      totalItems: pendingInvitationItems.length,
+    });
     pendingInvitationItems.forEach((item) => consumed.add(item.actionKey));
   }
 
   if (readyInviteItems.length > 1) {
-    summaries.push(`${readyInviteItems.length} contacts are ready for invite emails.`);
+    rows.push({
+      key: "contacts-ready-group",
+      stageName: "Contacts",
+      blockerLabel: `${readyInviteItems.length} contacts are ready for invite emails.`,
+      actionKey: readyInviteItems[0].actionKey,
+      requiredRole: readyInviteItems[0].requiredRole,
+      totalItems: readyInviteItems.length,
+    });
     readyInviteItems.forEach((item) => consumed.add(item.actionKey));
   }
 
   for (const item of items) {
     if (consumed.has(item.actionKey)) continue;
-    summaries.push(item.blockerLabel);
+    rows.push({
+      key: item.actionKey,
+      stageName: item.stageName,
+      blockerLabel: item.blockerLabel,
+      actionKey: item.actionKey,
+      requiredRole: item.requiredRole,
+      totalItems: 1,
+    });
   }
 
-  return summaries;
+  return rows;
+}
+
+function getSectionPriority(items: BlockingItem[]) {
+  if (!items.length) return Number.POSITIVE_INFINITY;
+  return Math.min(...items.map((item) => item.priority));
 }
 
 const panelStyle = {
   border: "1px solid #e2e8f0",
   borderRadius: 16,
   background: "#fff",
-  padding: 16,
-  display: "grid",
-  gap: 12,
-} satisfies CSSProperties;
-
-const groupStyle = {
-  border: "1px solid #eef2f7",
-  borderRadius: 14,
-  padding: 12,
+  padding: 14,
   display: "grid",
   gap: 10,
 } satisfies CSSProperties;
 
 const iconWrapStyle = {
-  width: 28,
-  height: 28,
-  borderRadius: 10,
+  width: 26,
+  height: 26,
+  borderRadius: 9,
   background: "#f8fafc",
   border: "1px solid #e2e8f0",
   color: "#0f172a",
@@ -225,12 +267,12 @@ const activeBadgeStyle = {
   display: "inline-flex",
   alignItems: "center",
   borderRadius: 999,
-  border: "1px solid #fecaca",
-  background: "#fff1f2",
+  border: "1px solid #fed7aa",
+  background: "#fff7ed",
   color: "#b91c1c",
-  fontSize: 12,
+  fontSize: 11,
   fontWeight: 700,
-  padding: "4px 10px",
+  padding: "3px 8px",
 } satisfies CSSProperties;
 
 const clearBadgeStyle = {
@@ -245,9 +287,9 @@ const clearStateStyle = {
   borderRadius: 14,
   background: "#f0fdf4",
   color: "#166534",
-  padding: 14,
+  padding: 12,
   display: "grid",
-  gap: 6,
+  gap: 4,
 } satisfies CSSProperties;
 
 const sectionHeaderButtonStyle = {
@@ -256,7 +298,7 @@ const sectionHeaderButtonStyle = {
   padding: 0,
   display: "grid",
   gridTemplateColumns: "1fr auto",
-  gap: 12,
+  gap: 10,
   alignItems: "center",
   cursor: "pointer",
 } satisfies CSSProperties;
@@ -265,30 +307,30 @@ function sectionCardStyle(tone: ActionCentreSection["tone"]): CSSProperties {
   if (tone === "clear") {
     return {
       border: "1px solid #bbf7d0",
-      borderRadius: 14,
-      padding: 12,
+      borderRadius: 12,
+      padding: 10,
       display: "grid",
-      gap: 10,
+      gap: 8,
       background: "#f0fdf4",
     };
   }
   if (tone === "alert") {
     return {
-      border: "1px solid #fed7aa",
-      borderRadius: 14,
-      padding: 12,
+      border: "1px solid #fde7c7",
+      borderRadius: 12,
+      padding: 10,
       display: "grid",
-      gap: 10,
-      background: "#fffaf0",
+      gap: 8,
+      background: "#fffdf8",
     };
   }
   return {
-    border: "1px solid #e2e8f0",
-    borderRadius: 14,
-    padding: 12,
+    border: "1px solid #e5e7eb",
+    borderRadius: 12,
+    padding: 10,
     display: "grid",
-    gap: 10,
-    background: "#f8fafc",
+    gap: 8,
+    background: "#fbfdff",
   };
 }
 
@@ -302,7 +344,7 @@ function sectionPillStyle(tone: ActionCentreSection["tone"]): CSSProperties {
   if (tone === "alert") {
     return {
       ...activeBadgeStyle,
-      padding: "4px 10px",
+      padding: "2px 7px",
     };
   }
   return {
@@ -310,26 +352,26 @@ function sectionPillStyle(tone: ActionCentreSection["tone"]): CSSProperties {
     border: "1px solid #dbeafe",
     background: "#eff6ff",
     color: "#1d4ed8",
-    padding: "4px 10px",
+    padding: "2px 7px",
   };
 }
 
-const itemButtonStyle = {
-  border: "1px solid #e2e8f0",
-  borderRadius: 12,
+const itemRowStyle = {
+  border: "1px solid #eef2f7",
+  borderRadius: 10,
   background: "#fff",
-  padding: 12,
+  padding: "8px 10px",
   display: "grid",
   gridTemplateColumns: "1fr auto",
-  gap: 12,
+  gap: 10,
   alignItems: "center",
   cursor: "pointer",
 } satisfies CSSProperties;
 
 function accordionIconStyle(isOpen: boolean): CSSProperties {
   return {
-    width: 32,
-    height: 32,
+    width: 28,
+    height: 28,
     borderRadius: 999,
     border: "1px solid #e2e8f0",
     background: "#fff",
@@ -337,27 +379,90 @@ function accordionIconStyle(isOpen: boolean): CSSProperties {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    transform: isOpen ? "rotate(0deg)" : "rotate(0deg)",
   };
 }
 
-const metaLabelStyle = {
+const sectionTitleStyle = {
+  color: "#0f172a",
+  fontSize: 13,
+  fontWeight: 700,
+} satisfies CSSProperties;
+
+const sectionSummaryStyle = {
   color: "#64748b",
+  fontSize: 12,
+  lineHeight: 1.4,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+} satisfies CSSProperties;
+
+function sectionIconStyle(tone: ActionCentreSection["tone"]): CSSProperties {
+  if (tone === "alert") {
+    return {
+      width: 22,
+      height: 22,
+      borderRadius: 999,
+      background: "#fff7ed",
+      color: "#c2410c",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+    };
+  }
+  if (tone === "muted") {
+    return {
+      width: 22,
+      height: 22,
+      borderRadius: 999,
+      background: "#eff6ff",
+      color: "#1d4ed8",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+    };
+  }
+  return {
+    width: 22,
+    height: 22,
+    borderRadius: 999,
+    background: "#f0fdf4",
+    color: "#166534",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  };
+}
+
+const stageChipStyle = {
+  color: "#475569",
+  background: "#f8fafc",
+  border: "1px solid #e2e8f0",
+  borderRadius: 999,
   fontSize: 11,
   fontWeight: 700,
-  letterSpacing: "0.04em",
-  textTransform: "uppercase",
+  padding: "2px 7px",
 } satisfies CSSProperties;
 
-const metaValueStyle = {
+const rowCountStyle = {
+  color: "#64748b",
+  fontSize: 11,
+  fontWeight: 600,
+} satisfies CSSProperties;
+
+const rowLabelStyle = {
   color: "#0f172a",
-  fontSize: 12,
-  fontWeight: 700,
+  fontSize: 13,
+  fontWeight: 600,
+  lineHeight: 1.35,
 } satisfies CSSProperties;
 
-const actionIconStyle = {
-  width: 32,
-  height: 32,
+const rowActionIconStyle = {
+  width: 28,
+  height: 28,
   borderRadius: 999,
   border: "1px solid #e2e8f0",
   background: "#f8fafc",
