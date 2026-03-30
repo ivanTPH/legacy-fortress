@@ -13,11 +13,10 @@ test("dashboard overview cards use compact shared summary cards with icon-only r
   assert.match(dashboardPage, /financialSummary\.valueText/);
   assert.match(dashboardPage, /propertySummary\.valueText/);
   assert.match(dashboardPage, /businessSummary\.valueText/);
-  assert.match(dashboardPage, /<ContactInvitationManager mode="dashboard" \/>/);
-  assert.match(dashboardPage, /<ActionQueuePanel groups=\{actionQueueGroups\} onAction=\{handleAction\} \/>/);
+  assert.match(dashboardPage, /<ActionQueuePanel items=\{blockingState\} onAction=\{handleAction\} \/>/);
   assert.match(dashboardPage, /handleAction\(actionKey: string\)/);
-  assert.match(dashboardPage, /buildActionQueueGroups\(blockingState\)/);
   assert.match(dashboardPage, /deriveBlockingState\(/);
+  assert.match(dashboardPage, /DASHBOARD BUILD CHECK - ACTION CENTRE V3/);
   assert.match(dashboardPage, /inlineSummary/);
   assert.match(dashboardPage, /hideItems/);
   assert.match(dashboardPage, /actionIcon="open_in_new"/);
@@ -25,10 +24,17 @@ test("dashboard overview cards use compact shared summary cards with icon-only r
   assert.match(summaryCard, /actionIcon = "open_in_new"/);
   assert.match(summaryCard, /<span style=\{valueStyle\}>/);
   assert.match(summaryCard, /<span style=\{detailStyle\}>/);
-  assert.match(actionQueue, /Action Queue/);
+  assert.match(actionQueue, /Action Centre/);
+  assert.match(actionQueue, /Action required \(Owner\)/);
+  assert.match(actionQueue, /Waiting on others/);
+  assert.match(actionQueue, /All up to date/);
+  assert.match(actionQueue, /notifications_active/);
+  assert.match(actionQueue, /contacts still need to accept invitations\./);
+  assert.match(actionQueue, /contacts are ready for invite emails\./);
   assert.match(actionQueue, /Required role/);
   assert.match(actionQueue, /Stage/);
   assert.match(actionQueue, /onAction\(item.actionKey\)/);
+  assert.doesNotMatch(dashboardPage, /ContactInvitationManager mode="dashboard"/);
 });
 
 test("contacts keeps the fuller invitation management view while dashboard stays compact", () => {

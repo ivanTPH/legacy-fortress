@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardAssetSummaryCard from "../components/dashboard/DashboardAssetSummaryCard";
-import ContactInvitationManager from "../components/dashboard/ContactInvitationManager";
 import ActionQueuePanel from "../components/dashboard/ActionQueuePanel";
 import Icon from "../../../components/ui/Icon";
 import { formatCurrency } from "../../../lib/currency";
@@ -46,7 +45,6 @@ import { useViewerAccess } from "../../../components/access/ViewerAccessContext"
 import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
 import { isVaultCategoryEnabled } from "../../../lib/vaultPreferences";
 import {
-  buildActionQueueGroups,
   deriveBlockingState,
   resolveWorkflowActionHref,
   type BlockingUserContext,
@@ -490,14 +488,26 @@ const legalSummary = useMemo(() => {
       taskRecordCount,
     ],
   );
-  const actionQueueGroups = useMemo(() => buildActionQueueGroups(blockingState), [blockingState]);
-
   function handleAction(actionKey: string) {
     router.push(resolveWorkflowActionHref(actionKey));
   }
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
+      <div
+        style={{
+          border: "1px solid #f59e0b",
+          borderRadius: 12,
+          background: "#fffbeb",
+          color: "#92400e",
+          fontSize: 13,
+          fontWeight: 800,
+          letterSpacing: "0.02em",
+          padding: "10px 12px",
+        }}
+      >
+        DASHBOARD BUILD CHECK - ACTION CENTRE V3
+      </div>
       {status ? <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div> : null}
       {loading ? <div style={{ color: "#6b7280" }}>Loading dashboard summary...</div> : null}
       {searchQuery ? (
@@ -563,9 +573,6 @@ const legalSummary = useMemo(() => {
           </div>
         </section>
       ) : null}
-
-      <ActionQueuePanel groups={actionQueueGroups} onAction={handleAction} />
-
       <section
         style={{
           border: "1px solid #e2e8f0",
@@ -691,7 +698,7 @@ const legalSummary = useMemo(() => {
         )}
       </section>
 
-      {!viewer.readOnly ? <ContactInvitationManager mode="dashboard" /> : null}
+      <ActionQueuePanel items={blockingState} onAction={handleAction} />
     </div>
   );
 }
