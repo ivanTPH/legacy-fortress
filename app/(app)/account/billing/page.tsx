@@ -197,7 +197,7 @@ export default function BillingPage() {
         <div style={{ display: "grid", gap: 10, marginBottom: 14, padding: 14, border: "1px solid #e5e7eb", borderRadius: 14, background: "#f8fafc" }}>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             <span style={{ ...primaryBtn, cursor: "default" }}>{getOwnerPlanLabel(form.account_plan)}</span>
-            <span style={{ ...inputStyle, cursor: "default", width: "auto", paddingInline: 12 }}>{form.plan_status.replace(/_/g, " ")}</span>
+            <span style={{ ...inputStyle, cursor: "default", width: "auto", paddingInline: 12 }}>{formatPlanStatusLabel(form.plan_status)}</span>
           </div>
           <div style={{ color: "#475569", fontSize: 14 }}>
             {getOwnerPlanSupportMessage({
@@ -278,4 +278,10 @@ export default function BillingPage() {
       </SettingsCard>
     </SettingsPageShell>
   );
+}
+
+function formatPlanStatusLabel(status: OwnerPlanStatus) {
+  return String(status)
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AdminUserRow } from "./access";
 import { MASTER_ADMIN_EMAIL, normalizeAdminEmail } from "./access";
+import { buildVerificationActionKey, deriveBlockingState } from "../workflow/blockingModel";
 
 type AnySupabaseClient = SupabaseClient;
 
@@ -369,7 +370,7 @@ export async function loadVerificationQueue(client: AnySupabaseClient) {
   }
   const profileMap = new Map((((profilesRes.data ?? []) as UserProfileRow[])).map((row) => [row.user_id, row.display_name ?? "Secure Account"]));
 
-  return verificationRows.map((row) => {
+  const queue = verificationRows.map((row) => {
     const role = roleMap.get(row.role_assignment_id);
     const invitation = role ? invitationMap.get(role.invitation_id) : null;
     const contact = invitation?.contact_id ? contactMap.get(invitation.contact_id) : null;
@@ -388,6 +389,41 @@ export async function loadVerificationQueue(client: AnySupabaseClient) {
       contactEmail: contact?.email ?? invitation?.contact_email ?? "",
       evidencePath: row.evidence_document_path,
     } satisfies AdminVerificationItem;
+  });
+
+  const blockingItems = deriveBlockingState(
+    {
+      profile: {
+        hasProfile: true,
+        hasAddress: true,
+        hasContact: true,
+      },
+    },
+    {
+      personal: { total: 1 },
+      financial: { total: 1 },
+      legal: { total: 1 },
+      property: { total: 1 },
+      business: { total: 1 },
+      digital: { total: 1 },
+      verificationRequests: verificationRows.map((row) => ({
+        id: row.id,
+        requestType: row.request_type,
+        requestStatus: row.request_status,
+        contactName:
+          contactMap.get(String(invitationMap.get(roleMap.get(row.role_assignment_id)?.invitation_id ?? "")?.contact_id ?? ""))?.full_name
+          ?? invitationMap.get(roleMap.get(row.role_assignment_id)?.invitation_id ?? "")?.contact_name
+          ?? "Unknown contact",
+      })),
+    },
+  );
+  const priorityByActionKey = new Map(blockingItems.map((item) => [item.actionKey, item.priority]));
+
+  return queue.sort((left, right) => {
+    const leftPriority = priorityByActionKey.get(buildVerificationActionKey(left.id)) ?? Number.MAX_SAFE_INTEGER;
+    const rightPriority = priorityByActionKey.get(buildVerificationActionKey(right.id)) ?? Number.MAX_SAFE_INTEGER;
+    if (leftPriority !== rightPriority) return leftPriority - rightPriority;
+    return left.submittedAt.localeCompare(right.submittedAt);
   });
 }
 

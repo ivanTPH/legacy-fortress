@@ -1,4 +1,5 @@
 import type { SectionKey } from "../access-control/roles";
+import { evaluateCompletionCount, getWorkflowStageConfig } from "../workflow/blockingModel";
 
 export type CompletionState = "not_started" | "in_progress" | "complete";
 
@@ -21,13 +22,6 @@ export type CompletionItem = {
   missingItems: number;
 };
 
-function calcByCount(count: number, targetCompleteCount = 1): { status: CompletionState; percent: number; missingItems: number } {
-  if (count <= 0) return { status: "not_started", percent: 0, missingItems: targetCompleteCount };
-  if (count >= targetCompleteCount) return { status: "complete", percent: 100, missingItems: 0 };
-  const percent = Math.max(1, Math.round((count / targetCompleteCount) * 100));
-  return { status: "in_progress", percent, missingItems: targetCompleteCount - count };
-}
-
 export function buildCompletionChecklist(input: CompletionInput): CompletionItem[] {
   const profileScore = Number(input.profile.hasProfile) + Number(input.profile.hasAddress) + Number(input.profile.hasContact);
   const profileStatus =
@@ -36,47 +30,47 @@ export function buildCompletionChecklist(input: CompletionInput): CompletionItem
   return [
     {
       section: "profile",
-      label: "Profile",
-      href: "/profile",
+      label: getWorkflowStageConfig("profile").label,
+      href: getWorkflowStageConfig("profile").href,
       status: profileStatus,
       percent: Math.round((profileScore / 3) * 100),
       missingItems: 3 - profileScore,
     },
     {
       section: "personal",
-      label: "Personal",
-      href: "/vault/personal",
-      ...calcByCount(input.personal.total),
+      label: getWorkflowStageConfig("personal").label,
+      href: getWorkflowStageConfig("personal").href,
+      ...evaluateCompletionCount(input.personal.total),
     },
     {
       section: "financial",
-      label: "Financial",
-      href: "/vault/financial",
-      ...calcByCount(input.financial.total),
+      label: getWorkflowStageConfig("financial").label,
+      href: getWorkflowStageConfig("financial").href,
+      ...evaluateCompletionCount(input.financial.total),
     },
     {
       section: "legal",
-      label: "Legal",
-      href: "/vault/legal",
-      ...calcByCount(input.legal.total),
+      label: getWorkflowStageConfig("legal").label,
+      href: getWorkflowStageConfig("legal").href,
+      ...evaluateCompletionCount(input.legal.total),
     },
     {
       section: "property",
-      label: "Property",
-      href: "/vault/property",
-      ...calcByCount(input.property.total),
+      label: getWorkflowStageConfig("property").label,
+      href: getWorkflowStageConfig("property").href,
+      ...evaluateCompletionCount(input.property.total),
     },
     {
       section: "business",
-      label: "Business",
-      href: "/vault/business",
-      ...calcByCount(input.business.total),
+      label: getWorkflowStageConfig("business").label,
+      href: getWorkflowStageConfig("business").href,
+      ...evaluateCompletionCount(input.business.total),
     },
     {
       section: "digital",
-      label: "Digital",
-      href: "/vault/digital",
-      ...calcByCount(input.digital.total),
+      label: getWorkflowStageConfig("digital").label,
+      href: getWorkflowStageConfig("digital").href,
+      ...evaluateCompletionCount(input.digital.total),
     },
   ];
 }

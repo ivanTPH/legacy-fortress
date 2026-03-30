@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardAssetSummaryCard from "../components/dashboard/DashboardAssetSummaryCard";
 import ContactInvitationManager from "../components/dashboard/ContactInvitationManager";
+import ActionQueuePanel from "../components/dashboard/ActionQueuePanel";
 import Icon from "../../../components/ui/Icon";
 import { formatCurrency } from "../../../lib/currency";
 import {
@@ -20,7 +21,11 @@ import { waitForActiveUser } from "../../../lib/auth/session";
 import { supabase } from "../../../lib/supabaseClient";
 import { isMissingColumnError, isMissingRelationError } from "../../../lib/supabaseErrors";
 import { fetchCanonicalAssets } from "../../../lib/assets/fetchCanonicalAssets";
-import { loadCanonicalContactsForOwner } from "../../../lib/contacts/canonicalContacts";
+import {
+  loadCanonicalContactsForOwner,
+  type CanonicalContactInviteStatus,
+  type CanonicalContactVerificationStatus,
+} from "../../../lib/contacts/canonicalContacts";
 import { buildDashboardDiscoveryResults } from "../../../lib/records/discovery";
 import {
   notifyCanonicalAssetMutation,
@@ -40,6 +45,12 @@ import {
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
 import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
 import { isVaultCategoryEnabled } from "../../../lib/vaultPreferences";
+import {
+  buildActionQueueGroups,
+  deriveBlockingState,
+  resolveWorkflowActionHref,
+  type BlockingUserContext,
+} from "../../../lib/workflow/blockingModel";
 
 type AssetRow = {
   id: string;
@@ -111,12 +122,20 @@ type ContactDiscoveryRow = {
   phone?: string | null;
   contact_role?: string | null;
   relationship?: string | null;
+  invite_status?: CanonicalContactInviteStatus | null;
+  verification_status?: CanonicalContactVerificationStatus | null;
   linked_context?: Array<{
     label?: string | null;
     role?: string | null;
     section_key?: string | null;
     category_key?: string | null;
   }> | null;
+};
+
+type ProfileReadinessRow = {
+  hasProfile: boolean;
+  hasAddress: boolean;
+  hasContact: boolean;
 };
 
 export default function DashboardPage() {
@@ -140,6 +159,11 @@ export default function DashboardPage() {
   const [attachmentRows, setAttachmentRows] = useState<AttachmentRow[]>([]);
   const [contactRows, setContactRows] = useState<ContactDiscoveryRow[]>([]);
   const [sectionEntryRows, setSectionEntryRows] = useState<SectionEntrySearchRow[]>([]);
+  const [profileReadiness, setProfileReadiness] = useState<ProfileReadinessRow>({
+    hasProfile: false,
+    hasAddress: false,
+    hasContact: false,
+  });
 
   const viewerRole: CollaboratorRole = viewer.viewerRole;
   const viewerActivation: AccessActivationStatus = viewer.activationStatus;
@@ -201,11 +225,12 @@ export default function DashboardPage() {
         }
         const targetOwnerUserId = viewer.targetOwnerUserId || user.id;
         const wallet = await resolveWalletContextForRead(supabase, targetOwnerUserId);
-        const [assetsRes, documentsRes, contactsRes, sectionEntriesRes] = await Promise.all([
+        const [assetsRes, documentsRes, contactsRes, sectionEntriesRes, profileReadinessRes] = await Promise.all([
           fetchCanonicalAssets(supabase, { userId: targetOwnerUserId, walletId: wallet.walletId }),
           fetchDocuments(targetOwnerUserId, wallet.walletId),
           loadCanonicalContactsForOwner(supabase, targetOwnerUserId),
           fetchSectionEntries(targetOwnerUserId),
+          fetchProfileReadiness(targetOwnerUserId),
         ]);
         if (!mounted) return;
 
@@ -268,6 +293,7 @@ export default function DashboardPage() {
         );
         setContactRows(viewer.mode === "linked" ? [] : ((contactsRes ?? []) as ContactDiscoveryRow[]));
         setSectionEntryRows(scopedSectionEntries.filter((row) => allowedRecordIds.has(String(row.id)) || allowedRecordIds.size === 0));
+        setProfileReadiness(profileReadinessRes);
 
       } catch (error) {
         if (!mounted) return;
@@ -430,6 +456,45 @@ const legalSummary = useMemo(() => {
       }),
     [assetRows, attachmentRows, contactRows, documentRows, searchQuery, sectionEntryRows],
   );
+  const blockingState = useMemo(
+    () =>
+      deriveBlockingState(
+        {
+          profile: profileReadiness,
+        } satisfies BlockingUserContext,
+        {
+          personal: { total: taskRecordCount },
+          financial: { total: financeRecordCount },
+          legal: { total: legalRecordCount },
+          property: { total: propertyRecordCount },
+          business: { total: businessRecordCount },
+          digital: { total: digitalRecordCount },
+          contacts: contactRows.map((contact) => ({
+            id: contact.id,
+            fullName: contact.full_name ?? null,
+            email: contact.email ?? null,
+            inviteStatus: contact.invite_status ?? null,
+            verificationStatus: contact.verification_status ?? null,
+          })),
+        },
+      ),
+    [
+      assetRows,
+      businessRecordCount,
+      contactRows,
+      digitalRecordCount,
+      financeRecordCount,
+      legalRecordCount,
+      profileReadiness,
+      propertyRecordCount,
+      taskRecordCount,
+    ],
+  );
+  const actionQueueGroups = useMemo(() => buildActionQueueGroups(blockingState), [blockingState]);
+
+  function handleAction(actionKey: string) {
+    router.push(resolveWorkflowActionHref(actionKey));
+  }
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
@@ -498,6 +563,8 @@ const legalSummary = useMemo(() => {
           </div>
         </section>
       ) : null}
+
+      <ActionQueuePanel groups={actionQueueGroups} onAction={handleAction} />
 
       <section
         style={{
@@ -627,6 +694,51 @@ const legalSummary = useMemo(() => {
       {!viewer.readOnly ? <ContactInvitationManager mode="dashboard" /> : null}
     </div>
   );
+}
+
+async function fetchProfileReadiness(userId: string): Promise<ProfileReadinessRow> {
+  const [profileRes, contactRes, addressRes] = await Promise.all([
+    supabase
+      .from("user_profiles")
+      .select("first_name,last_name,display_name")
+      .eq("user_id", userId)
+      .maybeSingle(),
+    supabase
+      .from("contact_details")
+      .select("secondary_email,telephone,mobile_number")
+      .eq("user_id", userId)
+      .maybeSingle(),
+    supabase
+      .from("addresses")
+      .select("house_name_or_number,street_name,town,city,country,post_code")
+      .eq("user_id", userId)
+      .maybeSingle(),
+  ]);
+
+  const profile = ((profileRes.data ?? {}) as Record<string, unknown>);
+  const contact = ((contactRes.data ?? {}) as Record<string, unknown>);
+  const address = ((addressRes.data ?? {}) as Record<string, unknown>);
+
+  return {
+    hasProfile: Boolean(
+      String(profile.first_name ?? "").trim() ||
+      String(profile.last_name ?? "").trim() ||
+      String(profile.display_name ?? "").trim(),
+    ),
+    hasContact: Boolean(
+      String(contact.secondary_email ?? "").trim() ||
+      String(contact.telephone ?? "").trim() ||
+      String(contact.mobile_number ?? "").trim(),
+    ),
+    hasAddress: Boolean(
+      String(address.house_name_or_number ?? "").trim() ||
+      String(address.street_name ?? "").trim() ||
+      String(address.town ?? "").trim() ||
+      String(address.city ?? "").trim() ||
+      String(address.country ?? "").trim() ||
+      String(address.post_code ?? "").trim(),
+    ),
+  };
 }
 
 async function fetchDocuments(userId: string, walletId: string | null) {
