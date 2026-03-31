@@ -43,7 +43,7 @@ import {
 } from "../../../lib/devSmoke";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
 import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
-import { isVaultCategoryEnabled } from "../../../lib/vaultPreferences";
+import { isVaultCategoryEnabled, isVaultSubsectionEnabled } from "../../../lib/vaultPreferences";
 import {
   deriveBlockingState,
   resolveWorkflowActionHref,
@@ -170,12 +170,14 @@ export default function DashboardPage() {
   const canViewProperty = canViewPath("/property", viewer);
   const canViewBusiness = canViewPath("/business", viewer);
   const canViewDigital = canViewPath("/vault/digital", viewer);
+  const canViewPossessions = canViewPath("/vault/personal", viewer);
   const canViewTasks = canViewPath("/personal/tasks", viewer);
   const showFinancialCard = canViewFinancial && isVaultCategoryEnabled(preferences, "finances");
   const showLegalCard = canViewLegal && isVaultCategoryEnabled(preferences, "legal");
   const showPropertyCard = canViewProperty && isVaultCategoryEnabled(preferences, "property");
   const showBusinessCard = canViewBusiness && isVaultCategoryEnabled(preferences, "business");
   const showDigitalCard = canViewDigital && isVaultCategoryEnabled(preferences, "digital");
+  const showPossessionsCard = canViewPossessions && isVaultSubsectionEnabled(preferences, "personal_possessions");
   const showTaskCard = canViewTasks && isVaultCategoryEnabled(preferences, "tasks");
   const legalDocuments = useMemo(() => getLegalDocuments(documentRows), [documentRows]);
   const legalAssets = useMemo(
@@ -186,6 +188,17 @@ export default function DashboardPage() {
   const propertyRecordCount = useMemo(() => getAssetsForBucket(assetRows, "property").length, [assetRows]);
   const businessRecordCount = useMemo(() => getAssetsForBucket(assetRows, "business").length, [assetRows]);
   const digitalRecordCount = useMemo(() => getAssetsForBucket(assetRows, "digital").length, [assetRows]);
+  const possessionsRows = useMemo(
+    () =>
+      assetRows.filter((row) => {
+        const sectionKey = String(row.section_key ?? "").trim().toLowerCase();
+        const categoryKey = String(row.category_key ?? "").trim().toLowerCase();
+        if (row.deleted_at != null || row.archived_at != null || row.status === "archived") return false;
+        return sectionKey === "personal" && categoryKey !== "executors" && categoryKey !== "beneficiaries" && categoryKey !== "tasks";
+      }),
+    [assetRows],
+  );
+  const possessionsRecordCount = possessionsRows.length;
   const taskRecordCount = useMemo(() => getAssetsForBucket(assetRows, "tasks").length, [assetRows]);
   const legalRecordCount = legalAssets.length + legalDocuments.length;
 
@@ -396,6 +409,19 @@ const legalSummary = useMemo(() => {
     });
   }, [assetRows, createdAssetId]);
 
+  const possessionsSummary = useMemo(() => {
+    return buildBucketSummary(possessionsRows, {
+      createdId: createdAssetId,
+      detailLabel: "possession record(s)",
+      itemBuilder: (row) => ({
+        id: row.id,
+        label: row.title || "Possession",
+        href: "/vault/personal",
+        meta: String((row.metadata_json ?? row.metadata ?? {})["category"] ?? "Personal"),
+      }),
+    });
+  }, [createdAssetId, possessionsRows]);
+
   const taskSummary = useMemo(() => {
     return buildBucketSummary(getAssetsForBucket(assetRows, "tasks"), {
       createdId: createdAssetId,
@@ -494,6 +520,19 @@ const legalSummary = useMemo(() => {
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
+      <div
+        style={{
+          borderRadius: 10,
+          padding: "10px 12px",
+          background: "#dbeafe",
+          color: "#1d4ed8",
+          fontSize: 13,
+          fontWeight: 800,
+          letterSpacing: 0.2,
+        }}
+      >
+        DASHBOARD BUILD CHECK - ARROW DRAWER V2
+      </div>
       {status ? <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div> : null}
       {loading ? <div style={{ color: "#6b7280" }}>Loading dashboard summary...</div> : null}
       {searchQuery ? (
@@ -580,7 +619,7 @@ const legalSummary = useMemo(() => {
           Open the main areas of your estate record from one simplified overview.
         </div>
         </div>
-        {showFinancialCard || showLegalCard || showPropertyCard || showBusinessCard || showDigitalCard || showTaskCard ? (
+        {showFinancialCard || showLegalCard || showPropertyCard || showBusinessCard || showDigitalCard || showPossessionsCard || showTaskCard ? (
         <div className="lf-content-grid">
           {showFinancialCard ? (
             <DashboardAssetSummaryCard
@@ -658,6 +697,21 @@ const legalSummary = useMemo(() => {
               inlineSummary
               hideItems
               actionLabel="Open digital records"
+              actionIcon="open_in_new"
+            />
+          ) : null}
+
+          {showPossessionsCard ? (
+            <DashboardAssetSummaryCard
+              icon={<Icon name="inventory_2" size={13} />}
+              title="Possessions"
+              href="/vault/personal"
+              addedAt={possessionsSummary.addedAt}
+              value={String(possessionsRecordCount)}
+              detail={`possession record${possessionsRecordCount === 1 ? "" : "s"}`}
+              inlineSummary
+              hideItems
+              actionLabel="Open possessions"
               actionIcon="open_in_new"
             />
           ) : null}
@@ -924,7 +978,7 @@ const DASHBOARD_SEARCH_LINKS = [
     id: "legal-identity",
     label: "Identity documents",
     description: "Review legal identity documents and linked contacts.",
-    href: "/legal/identity-documents",
+    href: "/identity-documents",
     icon: "badge",
     keywords: ["passport", "driving licence", "identity"],
   },
@@ -1040,11 +1094,11 @@ function getDiscoveryAttachmentHref(sectionKey: string | null | undefined, categ
 
 function getLegalWorkspaceHref(categoryKey: string, parentLabel?: string | null) {
   const normalizedCategory = String(categoryKey ?? "").trim();
-  if (normalizedCategory === "identity-documents") return "/legal/identity-documents";
+  if (normalizedCategory === "identity-documents") return "/identity-documents";
   if (normalizedCategory === "power-of-attorney") return "/legal/power-of-attorney";
   if (normalizedCategory === "wills") return "/legal/wills";
-  if (normalizedCategory === "death-certificate") return "/legal/death-certificate";
-  if ((parentLabel ?? "").toLowerCase().includes("identity")) return "/legal/identity-documents";
+  if (normalizedCategory === "death-certificate") return "/access-requests";
+  if ((parentLabel ?? "").toLowerCase().includes("identity")) return "/identity-documents";
   return "/legal";
 }
 

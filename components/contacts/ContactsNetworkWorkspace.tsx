@@ -47,6 +47,14 @@ type ContactRow = {
   updated_at: string;
 };
 
+type LinkedDocumentPreview = {
+  contactId: string;
+  title: string;
+  categoryLabel: string;
+  href: string;
+  sourceText: string;
+};
+
 const GROUPS = [
   { key: "executors", label: "Executors", description: "People expected to help administer the estate, trustee duties, or formal authority roles." },
   { key: "family", label: "Family", description: "Family or emergency contacts someone should be able to find first." },
@@ -66,6 +74,7 @@ export default function ContactsNetworkWorkspace() {
   const [confirmingValidationKey, setConfirmingValidationKey] = useState("");
   const [associationAlerts, setAssociationAlerts] = useState<string[]>([]);
   const [openGroupKey, setOpenGroupKey] = useState<string | null>(null);
+  const [documentPreview, setDocumentPreview] = useState<LinkedDocumentPreview | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -309,8 +318,23 @@ export default function ContactsNetworkWorkspace() {
       || null;
 
     if (!preferredOpenGroup) return;
-    setOpenGroupKey((current) => (selectedGroup || selectedContactId ? preferredOpenGroup : current ?? preferredOpenGroup));
+    if (selectedGroup || selectedContactId) {
+      setOpenGroupKey(preferredOpenGroup);
+    }
   }, [contacts, groupedContacts, selectedContactId, selectedGroup]);
+
+  useEffect(() => {
+    if (!documentPreview) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setDocumentPreview(null);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [documentPreview]);
 
   async function confirmLinkedRecord(contact: ContactRow, context: ContactRow["linked_context"][number]) {
     if (viewer.readOnly) return;
@@ -362,9 +386,39 @@ export default function ContactsNetworkWorkspace() {
     setOpenGroupKey((current) => (current === groupKey ? null : groupKey));
   }
 
+  function openLinkedDocument(contact: ContactRow, context: ContactRow["linked_context"][number]) {
+    const href = buildLinkedContactRecordHref({
+      source_kind: context.source_kind === "asset" || context.source_kind === "invitation" ? context.source_kind : "record",
+      source_id: String(context.source_id ?? ""),
+      section_key: context.section_key ?? null,
+      category_key: context.category_key ?? null,
+      label: context.label ?? null,
+      role: context.role ?? null,
+    });
+
+    if (!href) return;
+
+    const validationKey = buildContactLinkValidationKey({
+      source_kind: context.source_kind === "asset" || context.source_kind === "invitation" ? context.source_kind : "record",
+      source_id: String(context.source_id ?? ""),
+    });
+
+    setDocumentPreview({
+      contactId: contact.id,
+      title: context.label || formatContextLabel(context),
+      categoryLabel: describeLinkedDocumentContext(context),
+      href,
+      sourceText: [
+        validationSourceText[validationKey],
+        context.label,
+        context.role,
+      ].filter(Boolean).join(" "),
+    });
+  }
+
   return (
     <section style={{ display: "grid", gap: 14 }}>
-      <div style={buildCheckMarkerStyle}>CONTACTS BUILD CHECK - GROUPED WORKFLOW V1</div>
+      <div style={buildCheckMarkerStyle}>CONTACTS BUILD CHECK - DOCUMENT DRAWER V2</div>
       <div style={{ display: "grid", gap: 6 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
@@ -450,137 +504,180 @@ export default function ContactsNetworkWorkspace() {
                     {rows.map((contact) => {
                       const inviteState = getInviteState(contact);
                       const associationState = getAssociationState(contact, validationSourceText);
+                      const linkedContexts = (contact.linked_context ?? []).slice(0, 4);
+                      const hasLinkedDocuments = linkedContexts.length > 0;
+                      const isSelected = contact.id === selectedContactId;
 
                       return (
-                        <div
-                          key={contact.id}
-                          style={contact.id === selectedContactId ? selectedContactRowStyle : contactRowStyle}
-                          className="lf-contact-row"
-                          data-contact-id={contact.id}
-                        >
-                          <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
-                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                              <Link href={buildContactsWorkspaceHref(contact.id)} style={contactTitleLinkStyle}>
-                                {contact.full_name || "Unnamed contact"}
-                              </Link>
-                              <StatusPill {...inviteState} />
-                              <StatusPill {...associationState} />
-                            </div>
-                            <div style={{ color: "#475569", fontSize: 13 }}>
-                              {formatContactRoleLine(contact)}
-                            </div>
-                            <div style={{ color: "#64748b", fontSize: 12 }}>
-                              {formatContactSupportLine(contact)}
-                            </div>
-                            {(contact.linked_context ?? []).length ? (
-                              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-                                {(contact.linked_context ?? []).slice(0, 3).map((context, index) => {
-                                  const href = buildLinkedContactRecordHref({
-                                    source_kind: context.source_kind === "asset" || context.source_kind === "invitation" ? context.source_kind : "record",
-                                    source_id: String(context.source_id ?? ""),
-                                    section_key: context.section_key ?? null,
-                                    category_key: context.category_key ?? null,
-                                    label: context.label ?? null,
-                                    role: context.role ?? null,
-                                  });
-                                  const label = context.label || formatContextLabel(context);
-
-                                  return href ? (
-                                    <Link key={`${contact.id}-${index}`} href={href} style={contextLinkStyle} title={`Open ${label}`}>
-                                      {label}
-                                    </Link>
-                                  ) : (
-                                    <span key={`${contact.id}-${index}`} style={contextPillStyle}>{label}</span>
-                                  );
-                                })}
-                                {(contact.linked_context?.length ?? 0) > 3 ? (
-                                  <span style={moreLinksStyle}>+{(contact.linked_context?.length ?? 0) - 3} more</span>
-                                ) : null}
+                        <div key={contact.id} style={isSelected ? selectedContactStackStyle : undefined}>
+                          <div
+                            style={isSelected ? selectedContactRowStyle : contactRowStyle}
+                            className="lf-contact-row"
+                            data-contact-id={contact.id}
+                          >
+                            <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
+                              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                                <Link href={buildContactsWorkspaceHref(contact.id)} style={contactTitleLinkStyle}>
+                                  {contact.full_name || "Unnamed contact"}
+                                </Link>
+                                <StatusPill {...inviteState} />
+                                <StatusPill {...associationState} />
                               </div>
-                            ) : null}
-                          </div>
+                              <div style={{ color: "#475569", fontSize: 13 }}>
+                                {formatContactRoleLine(contact)}
+                              </div>
+                              <div style={{ color: "#64748b", fontSize: 12 }}>
+                                {formatContactSupportLine(contact)}
+                              </div>
+                              {hasLinkedDocuments ? (
+                                <div style={linkedDocumentWrapStyle}>
+                                  {linkedContexts.map((context, index) => {
+                                    const label = context.label || formatContextLabel(context);
+                                    return (
+                                      <button
+                                        key={`${contact.id}-${index}`}
+                                        type="button"
+                                        style={linkedDocumentIconButtonStyle}
+                                        title={`View document: ${label}`}
+                                        aria-label={`View document: ${label}`}
+                                        onClick={() => openLinkedDocument(contact, context)}
+                                      >
+                                        <Icon name={getLinkedDocumentIcon(context)} size={14} />
+                                        <span style={linkedDocumentIconLabelStyle}>{describeLinkedDocumentContext(context)}</span>
+                                      </button>
+                                    );
+                                  })}
+                                  {(contact.linked_context?.length ?? 0) > 4 ? (
+                                    <span style={moreLinksStyle}>+{(contact.linked_context?.length ?? 0) - 4} more</span>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                            </div>
 
-                          <div style={rowMetaStyle}>
-                            <div style={rowMetaItemStyle}>
-                              <span style={rowMetaLabelStyle}>Next action</span>
-                              <span style={rowMetaValueStyle}>{getPrimaryActionLabel(contact)}</span>
+                            <div style={rowMetaStyle}>
+                              <div style={rowMetaItemStyle}>
+                                <span style={rowMetaLabelStyle}>Primary action</span>
+                                <span style={rowMetaValueStyle}>{getPrimaryActionLabel(contact)}</span>
+                              </div>
+                            </div>
+
+                            <div style={rowActionsStyle}>
+                              <button
+                                type="button"
+                                style={rowPrimaryActionStyle}
+                                title={`${getPrimaryActionLabel(contact)} for ${contact.full_name || "contact"}`}
+                                onClick={() => openContact(contact.id, group.key)}
+                              >
+                                <Icon name={getPrimaryActionIcon(contact)} size={16} />
+                                {getPrimaryActionLabel(contact)}
+                              </button>
+                              <IconButton
+                                icon="visibility"
+                                label={`View linked document for ${contact.full_name || "contact"}`}
+                                onClick={() => {
+                                  const firstContext = (contact.linked_context ?? [])[0];
+                                  if (firstContext) openLinkedDocument(contact, firstContext);
+                                }}
+                                disabled={(contact.linked_context?.length ?? 0) === 0}
+                              />
+                              <IconButton
+                                icon="edit"
+                                label={`Edit ${contact.full_name || "contact"}`}
+                                onClick={() => openContact(contact.id, group.key)}
+                              />
+                              {(contact.linked_context ?? []).map((context, index) => {
+                                const validationKey = buildContactLinkValidationKey({
+                                  source_kind: context.source_kind === "asset" || context.source_kind === "invitation" ? context.source_kind : "record",
+                                  source_id: String(context.source_id ?? ""),
+                                });
+                                const manuallyConfirmed = contact.validation_overrides?.[validationKey]?.manually_confirmed === true;
+                                const validation = (context.source_kind === "asset" || context.source_kind === "record")
+                                  ? evaluateContactLinkValidation({
+                                      contactName: contact.full_name,
+                                      sourceText: [
+                                        validationSourceText[validationKey],
+                                        context.label,
+                                        context.role,
+                                      ].filter(Boolean).join(" "),
+                                      manuallyConfirmed,
+                                    })
+                                  : null;
+
+                                return validation?.state === "warning" && selectedContactId === contact.id && !viewer.readOnly ? (
+                                  <IconButton
+                                    key={`${contact.id}-${index}-confirm`}
+                                    icon="verified"
+                                    label={`Confirm ${context.label || formatContextLabel(context)} is the correct record for ${contact.full_name}`}
+                                    onClick={() => void confirmLinkedRecord(contact, context)}
+                                    disabled={confirmingValidationKey === validationKey}
+                                  />
+                                ) : null;
+                              })}
+                              {isSelected ? (
+                                <IconButton
+                                  icon="close"
+                                  label={`Cancel ${contact.full_name || "contact"} selection`}
+                                  onClick={() => router.replace(selectedGroup ? `/contacts?group=${selectedGroup}` : "/contacts")}
+                                />
+                              ) : null}
                             </div>
                           </div>
-
-                          <div style={rowActionsStyle}>
-                            <button
-                              type="button"
-                              style={rowPrimaryActionStyle}
-                              title={`${getPrimaryActionLabel(contact)} for ${contact.full_name || "contact"}`}
-                              onClick={() => openContact(contact.id, group.key)}
-                            >
-                              <Icon name={getPrimaryActionIcon(contact)} size={16} />
-                              {getPrimaryActionLabel(contact)}
-                            </button>
-                            <IconButton
-                              icon="edit"
-                              label={`Edit ${contact.full_name || "contact"}`}
-                              onClick={() => openContact(contact.id, group.key)}
-                            />
-                            {(contact.linked_context ?? []).map((context, index) => {
-                              const validationKey = buildContactLinkValidationKey({
-                                source_kind: context.source_kind === "asset" || context.source_kind === "invitation" ? context.source_kind : "record",
-                                source_id: String(context.source_id ?? ""),
-                              });
-                              const manuallyConfirmed = contact.validation_overrides?.[validationKey]?.manually_confirmed === true;
-                              const validation = (context.source_kind === "asset" || context.source_kind === "record")
-                                ? evaluateContactLinkValidation({
-                                    contactName: contact.full_name,
-                                    sourceText: [
-                                      validationSourceText[validationKey],
-                                      context.label,
-                                      context.role,
-                                    ].filter(Boolean).join(" "),
-                                    manuallyConfirmed,
-                                  })
-                                : null;
-
-                              return validation?.state === "warning" && selectedContactId === contact.id && !viewer.readOnly ? (
-                                <IconButton
-                                  key={`${contact.id}-${index}-confirm`}
-                                  icon="verified"
-                                  label={`Confirm ${context.label || formatContextLabel(context)} is the correct record for ${contact.full_name}`}
-                                  onClick={() => void confirmLinkedRecord(contact, context)}
-                                  disabled={confirmingValidationKey === validationKey}
-                                />
-                              ) : null;
-                            })}
-                            {contact.id === selectedContactId ? (
-                              <IconButton
-                                icon="close"
-                                label={`Cancel ${contact.full_name || "contact"} selection`}
-                                onClick={() => router.replace(selectedGroup ? `/contacts?group=${selectedGroup}` : "/contacts")}
+                          {!viewer.readOnly && isSelected ? (
+                            <section style={selectedAdminStyle} aria-label={`Manage selected contact: ${contact.full_name || "contact"}`}>
+                              <div style={{ display: "grid", gap: 3 }}>
+                                <div style={{ fontSize: 16, fontWeight: 700 }}>Manage selected contact</div>
+                                <div style={{ color: "#64748b", fontSize: 13 }}>
+                                  Edit, replace, resend, remove, cancel, update permissions, and confirm linked-record associations right here beside the selected row.
+                                </div>
+                              </div>
+                              <ContactInvitationManager
+                                mode="full"
+                                selectedContactId={selectedContactId}
+                                selectedContactProfile={selectedContact}
                               />
-                            ) : null}
-                          </div>
+                            </section>
+                          ) : null}
                         </div>
                       );
                     })}
-                    {!viewer.readOnly && selectedContactId && rows.some((contact) => contact.id === selectedContactId) ? (
-                      <section style={selectedAdminStyle}>
-                        <div style={{ display: "grid", gap: 3 }}>
-                          <div style={{ fontSize: 16, fontWeight: 700 }}>Manage selected contact</div>
-                          <div style={{ color: "#64748b", fontSize: 13 }}>
-                            Edit, replace, resend, remove, cancel, update permissions, and confirm linked-record associations here without leaving this role group.
-                          </div>
-                        </div>
-                        <ContactInvitationManager
-                          mode="full"
-                          selectedContactId={selectedContactId}
-                          selectedContactProfile={selectedContact}
-                        />
-                      </section>
-                    ) : null}
                   </div>
                 )}
               </section>
             );
           })}
+        </div>
+      ) : null}
+      {documentPreview ? (
+        <div
+          style={overlayStyle}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${documentPreview.title} preview`}
+          onClick={() => setDocumentPreview(null)}
+        >
+          <section style={documentDialogStyle} onClick={(event) => event.stopPropagation()}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+              <div style={{ display: "grid", gap: 4 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={documentIconWrapStyle}>
+                    <Icon name={getLinkedDocumentCategoryIcon(documentPreview.categoryLabel)} size={16} />
+                  </span>
+                  <strong style={{ fontSize: 18 }}>{documentPreview.title}</strong>
+                </div>
+                <div style={{ color: "#64748b", fontSize: 13 }}>{documentPreview.categoryLabel}</div>
+              </div>
+              <IconButton icon="close" label="Close document preview" onClick={() => setDocumentPreview(null)} />
+            </div>
+            <div style={documentPreviewBodyStyle}>
+              <div style={{ color: "#475569", fontSize: 14 }}>
+                {documentPreview.sourceText || "This linked document is available through the selected contact association."}
+              </div>
+              <Link href={documentPreview.href} style={documentOpenLinkStyle}>
+                <Icon name="open_in_new" size={16} />
+                Open full record
+              </Link>
+            </div>
+          </section>
         </div>
       ) : null}
     </section>
@@ -589,6 +686,54 @@ export default function ContactsNetworkWorkspace() {
 
 function formatContextLabel(context: ContactRow["linked_context"][number]) {
   return [context.section_key, context.category_key, context.role].filter(Boolean).join(" · ") || "Linked context";
+}
+
+function describeLinkedDocumentContext(context: ContactRow["linked_context"][number]) {
+  const categoryKey = String(context.category_key ?? "").trim().toLowerCase();
+  const sectionKey = String(context.section_key ?? "").trim().toLowerCase();
+
+  if (categoryKey === "identity-documents") return "Identity";
+  if (categoryKey === "power-of-attorney") return "Power of attorney";
+  if (categoryKey === "trusts") return "Trust";
+  if (categoryKey === "wills") return "Will";
+  if (sectionKey === "finances") return "Finance";
+  if (sectionKey === "property") return "Property";
+  if (sectionKey === "business") return "Business";
+  if (sectionKey === "cars_transport") return "Vehicle";
+  if (sectionKey === "personal") return "Personal";
+  if (sectionKey === "legal") return "Legal";
+  return "Document";
+}
+
+function getLinkedDocumentIcon(context: ContactRow["linked_context"][number]) {
+  const categoryKey = String(context.category_key ?? "").trim().toLowerCase();
+  const sectionKey = String(context.section_key ?? "").trim().toLowerCase();
+
+  if (categoryKey === "identity-documents") return "badge";
+  if (categoryKey === "power-of-attorney") return "gavel";
+  if (categoryKey === "trusts") return "description";
+  if (categoryKey === "wills") return "article";
+  if (sectionKey === "finances") return "account_balance";
+  if (sectionKey === "property") return "home";
+  if (sectionKey === "business") return "storefront";
+  if (sectionKey === "cars_transport") return "directions_car";
+  if (sectionKey === "personal") return "folder_shared";
+  return "description";
+}
+
+function getLinkedDocumentCategoryIcon(categoryLabel: string) {
+  const normalized = String(categoryLabel ?? "").trim().toLowerCase();
+
+  if (normalized.includes("identity")) return "badge";
+  if (normalized.includes("power of attorney")) return "gavel";
+  if (normalized.includes("trust")) return "description";
+  if (normalized.includes("will")) return "article";
+  if (normalized.includes("finance")) return "account_balance";
+  if (normalized.includes("property")) return "home";
+  if (normalized.includes("business")) return "storefront";
+  if (normalized.includes("vehicle")) return "directions_car";
+  if (normalized.includes("personal")) return "folder_shared";
+  return "description";
 }
 
 function summarizeGroupRows(rows: ContactRow[], validationSourceText: Record<string, string>) {
@@ -769,6 +914,11 @@ const selectedContactRowStyle: CSSProperties = {
   boxShadow: "0 0 0 2px rgba(37, 99, 235, 0.12)",
 };
 
+const selectedContactStackStyle: CSSProperties = {
+  display: "grid",
+  gap: 0,
+};
+
 const neutralPillStyle: CSSProperties = {
   borderRadius: 999,
   padding: "4px 8px",
@@ -793,20 +943,6 @@ const dangerPillStyle: CSSProperties = {
   ...neutralPillStyle,
   background: "#fee2e2",
   color: "#991b1b",
-};
-
-const contextPillStyle: CSSProperties = {
-  borderRadius: 999,
-  padding: "4px 8px",
-  fontSize: 11,
-  background: "#eff6ff",
-  color: "#1d4ed8",
-};
-
-const contextLinkStyle: CSSProperties = {
-  ...contextPillStyle,
-  textDecoration: "none",
-  fontWeight: 600,
 };
 
 const moreLinksStyle: CSSProperties = {
@@ -877,10 +1013,94 @@ const rowPrimaryActionStyle: CSSProperties = {
 };
 
 const selectedAdminStyle: CSSProperties = {
-  borderTop: "1px solid #e2e8f0",
-  paddingTop: 12,
+  border: "1px solid #bfdbfe",
+  borderTop: "none",
+  borderRadius: "0 0 14px 14px",
+  background: "#f8fbff",
+  padding: 12,
   display: "grid",
   gap: 12,
+  marginTop: -2,
+  marginInline: 10,
+};
+
+const linkedDocumentWrapStyle: CSSProperties = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 6,
+  alignItems: "center",
+};
+
+const linkedDocumentIconButtonStyle: CSSProperties = {
+  border: "1px solid #cbd5e1",
+  background: "#fff",
+  color: "#0f172a",
+  borderRadius: 999,
+  padding: "4px 8px",
+  fontSize: 11,
+  fontWeight: 700,
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  cursor: "pointer",
+};
+
+const linkedDocumentIconLabelStyle: CSSProperties = {
+  lineHeight: 1,
+};
+
+const overlayStyle: CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(15, 23, 42, 0.45)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 20,
+  zIndex: 90,
+};
+
+const documentDialogStyle: CSSProperties = {
+  width: "min(640px, 100%)",
+  maxHeight: "min(80vh, 720px)",
+  overflow: "auto",
+  borderRadius: 18,
+  background: "#fff",
+  border: "1px solid #dbeafe",
+  boxShadow: "0 20px 40px rgba(15, 23, 42, 0.18)",
+  padding: 18,
+  display: "grid",
+  gap: 14,
+};
+
+const documentIconWrapStyle: CSSProperties = {
+  width: 30,
+  height: 30,
+  borderRadius: 10,
+  background: "#eff6ff",
+  color: "#1d4ed8",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
+};
+
+const documentPreviewBodyStyle: CSSProperties = {
+  display: "grid",
+  gap: 14,
+};
+
+const documentOpenLinkStyle: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  width: "fit-content",
+  borderRadius: 999,
+  border: "1px solid #cbd5e1",
+  padding: "8px 12px",
+  textDecoration: "none",
+  color: "#0f172a",
+  fontWeight: 700,
 };
 
 const buildCheckMarkerStyle: CSSProperties = {

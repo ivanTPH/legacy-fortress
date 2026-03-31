@@ -20,6 +20,15 @@ test("contacts uses grouped collapsible sections as the primary workflow", () =>
   assert.match(contactsWorkspace, /Missing association/);
   assert.match(contactsWorkspace, /Manage selected contact/);
   assert.match(contactsWorkspace, /<ContactInvitationManager[\s\S]*mode="full"[\s\S]*selectedContactId=\{selectedContactId\}/);
+  assert.match(contactsWorkspace, /selectedContactStackStyle/);
+  assert.match(contactsWorkspace, /linkedDocumentIconButtonStyle/);
+  assert.match(contactsWorkspace, /View linked document for/);
+  assert.match(contactsWorkspace, /role="dialog"/);
+  assert.match(contactsWorkspace, /Close document preview/);
+  assert.match(contactsWorkspace, /Open full record/);
+  assert.match(contactsWorkspace, /describeLinkedDocumentContext/);
+  assert.match(contactsWorkspace, /getLinkedDocumentIcon/);
+  assert.match(contactsWorkspace, /setDocumentPreview\(null\)/);
   assert.match(contactsWorkspace, /getPrimaryActionLabel/);
   assert.match(contactsWorkspace, /Action required|Missing association/);
   assert.match(contactsWorkspace, /Confirm .* is the correct record/);

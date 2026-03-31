@@ -34,7 +34,8 @@ test("dashboard overview cards use compact shared summary cards with icon-only r
   assert.match(actionQueue, /stageChipStyle/);
   assert.match(actionQueue, /buildSectionSummary/);
   assert.match(actionQueue, /aria-expanded=\{isOpen\}/);
-  assert.match(actionQueue, /setOpenSectionKey\(section.key\)/);
+  assert.match(actionQueue, /useState<ActionCentreSection\["key"\] \| null>\(null\)/);
+  assert.match(actionQueue, /setOpenSectionKey\(\(current\) => \(current === section\.key \? null : section\.key\)\)/);
   assert.match(actionQueue, /onAction\(item.actionKey\)/);
   assert.doesNotMatch(dashboardPage, /ContactInvitationManager mode="dashboard"/);
 });

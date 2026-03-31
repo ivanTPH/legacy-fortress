@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import Icon from "../../../../components/ui/Icon";
 import type { BlockingItem } from "../../../../lib/workflow/blockingModel";
 import { getWorkflowRequiredRoleLabel } from "../../../../lib/workflow/blockingModel";
@@ -33,12 +33,7 @@ type ActionCentreRow = {
 export default function ActionQueuePanel({ items, onAction }: ActionQueuePanelProps) {
   const sections = useMemo(() => buildActionCentreSections(items), [items]);
   const activeBlockerCount = items.filter((item) => item.isBlocking).length;
-  const firstOpenKey = sections.find((section) => section.count > 0)?.key ?? "clear";
-  const [openSectionKey, setOpenSectionKey] = useState<ActionCentreSection["key"]>(firstOpenKey);
-
-  useEffect(() => {
-    setOpenSectionKey(firstOpenKey);
-  }, [firstOpenKey]);
+  const [openSectionKey, setOpenSectionKey] = useState<ActionCentreSection["key"] | null>(null);
 
   return (
     <section style={panelStyle} aria-label="Action centre">
@@ -76,7 +71,7 @@ export default function ActionQueuePanel({ items, onAction }: ActionQueuePanelPr
                 <button
                   type="button"
                   style={sectionHeaderButtonStyle}
-                  onClick={() => setOpenSectionKey(section.key)}
+                  onClick={() => setOpenSectionKey((current) => (current === section.key ? null : section.key))}
                   aria-expanded={isOpen}
                 >
                   <div style={{ display: "grid", gap: 4, textAlign: "left", minWidth: 0 }}>
@@ -94,7 +89,7 @@ export default function ActionQueuePanel({ items, onAction }: ActionQueuePanelPr
                     </div>
                   </div>
                   <span style={accordionIconStyle(isOpen)} aria-hidden>
-                    <Icon name={isOpen ? "expand_less" : "expand_more"} size={16} />
+                    <Icon name={isOpen ? "expand_more" : "chevron_right"} size={16} />
                   </span>
                 </button>
                 {isOpen && section.rows.length ? (
