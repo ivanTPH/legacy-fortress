@@ -12,7 +12,7 @@ import {
   type CanonicalContactSourceType,
   type CanonicalContactVerificationStatus,
 } from "../../lib/contacts/canonicalContacts";
-import { resolveContactGroupKey } from "../../lib/contacts/contactGrouping";
+import { normalizeContactGroupKey, resolveContactGroupKey } from "../../lib/contacts/contactGrouping";
 import { buildContactLinkValidationKey, evaluateContactLinkValidation, flattenSearchableValue } from "../../lib/contacts/contactLinkValidation";
 import { buildContactsWorkspaceHref, buildLinkedContactRecordHref } from "../../lib/contacts/contactRouting";
 import {
@@ -325,7 +325,7 @@ export default function ContactsNetworkWorkspace() {
   }, [contacts]);
 
   const selectedContactId = String(searchParams.get("contact") ?? "").trim();
-  const selectedGroup = String(searchParams.get("group") ?? "").trim();
+  const selectedGroup = normalizeContactGroupKey(searchParams.get("group"));
   const selectedContact = useMemo(() => {
     const match = contacts.find((item) => item.id === selectedContactId);
     if (!match) return null;

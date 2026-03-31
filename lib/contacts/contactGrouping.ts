@@ -1,4 +1,15 @@
-export type ContactGroupKey = "next_of_kin" | "executors" | "trustees" | "advisors" | "key_contacts";
+export type ContactGroupKey = "executors" | "family" | "advisors" | "beneficiaries" | "trusted_contacts";
+
+export function normalizeContactGroupKey(value: unknown): ContactGroupKey | null {
+  const normalized = String(value ?? "").trim().toLowerCase().replace(/[_\s]+/g, "-");
+  if (!normalized) return null;
+  if (normalized === "executors" || normalized === "executor") return "executors";
+  if (normalized === "family" || normalized === "next-of-kin" || normalized === "next-of-kin-contacts") return "family";
+  if (normalized === "advisors" || normalized === "advisor" || normalized === "advisers" || normalized === "adviser") return "advisors";
+  if (normalized === "beneficiaries" || normalized === "beneficiary") return "beneficiaries";
+  if (normalized === "trusted-contacts" || normalized === "trusted-contact" || normalized === "trusted") return "trusted_contacts";
+  return null;
+}
 
 type ContactContextLike = {
   role?: string | null;
@@ -22,7 +33,7 @@ export function resolveContactGroupKey(contact: ContactLike): ContactGroupKey {
   const combined = `${directRole} ${contextTerms}`.trim();
 
   if (hasExecutorSignal(combined)) return "executors";
-  if (combined.includes("trustee")) return "trustees";
+  if (hasBeneficiarySignal(combined)) return "beneficiaries";
   if (hasAdvisorSignal(combined)) return "advisors";
   if (
     contact.source_type === "next_of_kin"
@@ -33,9 +44,9 @@ export function resolveContactGroupKey(contact: ContactLike): ContactGroupKey {
     || combined.includes("parent")
     || combined.includes("sibling")
   ) {
-    return "next_of_kin";
+    return "family";
   }
-  return "key_contacts";
+  return "trusted_contacts";
 }
 
 function hasExecutorSignal(value: string) {
@@ -58,6 +69,14 @@ function hasAdvisorSignal(value: string) {
     || value.includes("financial advisor")
     || value.includes("financial adviser")
     || value.includes("professional")
+  );
+}
+
+function hasBeneficiarySignal(value: string) {
+  return (
+    value.includes("beneficiary")
+    || value.includes("heir")
+    || value.includes("inherit")
   );
 }
 
