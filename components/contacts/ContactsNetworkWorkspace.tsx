@@ -29,7 +29,6 @@ import { getStoredFileSignedUrl } from "../../lib/assets/documentLinks";
 import ContactInvitationManager from "../../app/(app)/components/dashboard/ContactInvitationManager";
 import { useViewerAccess } from "../access/ViewerAccessContext";
 import Icon from "../ui/Icon";
-import { IconButton } from "../ui/IconButton";
 import InfoTip from "../ui/InfoTip";
 import DocumentPreviewDialog, { type DocumentPreviewDialogItem } from "../documents/DocumentPreviewDialog";
 
@@ -627,13 +626,6 @@ export default function ContactsNetworkWorkspace() {
                               ) : null}
                             </div>
 
-                            <div style={rowMetaStyle}>
-                              <div style={rowMetaItemStyle}>
-                                <span style={rowMetaLabelStyle}>Primary action</span>
-                                <span style={rowMetaValueStyle}>{getPrimaryActionLabel(contact)}</span>
-                              </div>
-                            </div>
-
                             <div style={rowActionsStyle}>
                               <button
                                 type="button"
@@ -644,20 +636,29 @@ export default function ContactsNetworkWorkspace() {
                                 <Icon name={getPrimaryActionIcon(contact)} size={16} />
                                 {getPrimaryActionLabel(contact)}
                               </button>
-                              <IconButton
-                                icon="visibility"
-                                label={`View linked document for ${contact.full_name || "contact"}`}
-                                onClick={() => {
-                                  const firstContext = previewableContexts[0];
-                                  if (firstContext) void openLinkedDocument(contact, firstContext);
-                                }}
-                                disabled={!hasLinkedDocuments}
-                              />
-                              <IconButton
-                                icon="edit"
-                                label={`Edit ${contact.full_name || "contact"}`}
+                              {hasLinkedDocuments ? (
+                                <button
+                                  type="button"
+                                  style={rowSecondaryActionStyle}
+                                  title={`Review linked documents for ${contact.full_name || "contact"}`}
+                                  onClick={() => {
+                                    const firstContext = previewableContexts[0];
+                                    if (firstContext) void openLinkedDocument(contact, firstContext);
+                                  }}
+                                >
+                                  <Icon name="visibility" size={16} />
+                                  Review documents
+                                </button>
+                              ) : null}
+                              <button
+                                type="button"
+                                style={rowSecondaryActionStyle}
+                                title={`Manage ${contact.full_name || "contact"}`}
                                 onClick={() => openContact(contact.id, group.key)}
-                              />
+                              >
+                                <Icon name="edit" size={16} />
+                                Manage
+                              </button>
                               {(contact.linked_context ?? []).map((context, index) => {
                                 const validationKey = buildContactLinkValidationKey({
                                   source_kind: context.source_kind === "asset" || context.source_kind === "invitation" ? context.source_kind : "record",
@@ -677,21 +678,29 @@ export default function ContactsNetworkWorkspace() {
                                   : null;
 
                                 return validation?.state === "warning" && selectedContactId === contact.id && !viewer.readOnly ? (
-                                  <IconButton
+                                  <button
                                     key={`${contact.id}-${index}-confirm`}
-                                    icon="verified"
-                                    label={`Confirm ${context.label || formatContextLabel(context)} is the correct record for ${contact.full_name}`}
+                                    type="button"
+                                    style={rowTertiaryActionStyle}
+                                    title={`Confirm ${context.label || formatContextLabel(context)} is the correct record for ${contact.full_name}`}
                                     onClick={() => void confirmLinkedRecord(contact, context)}
                                     disabled={confirmingValidationKey === validationKey}
-                                  />
+                                  >
+                                    <Icon name="verified" size={16} />
+                                    Confirm link
+                                  </button>
                                 ) : null;
                               })}
                               {isSelected ? (
-                                <IconButton
-                                  icon="close"
-                                  label={`Cancel ${contact.full_name || "contact"} selection`}
+                                <button
+                                  type="button"
+                                  style={rowTertiaryActionStyle}
+                                  title={`Cancel ${contact.full_name || "contact"} selection`}
                                   onClick={() => router.replace(selectedGroup ? `/contacts?group=${selectedGroup}` : "/contacts")}
-                                />
+                                >
+                                  <Icon name="close" size={16} />
+                                  Cancel
+                                </button>
                               ) : null}
                             </div>
                           </div>
@@ -700,8 +709,22 @@ export default function ContactsNetworkWorkspace() {
                               <div style={{ display: "grid", gap: 3 }}>
                                 <div style={{ fontSize: 16, fontWeight: 700 }}>Manage selected contact</div>
                                 <div style={{ color: "#64748b", fontSize: 13 }}>
-                                  Edit, replace, resend, remove, cancel, update permissions, and confirm linked-record associations right here beside the selected row.
+                                  Edit, replace, resend, remove, review linked documents, update permissions, and confirm linked-record associations right here beside the selected row.
                                 </div>
+                              </div>
+                              <div style={selectedActionSummaryStyle}>
+                                <span style={selectedActionChipStyle}>
+                                  <Icon name={getPrimaryActionIcon(contact)} size={14} />
+                                  {getPrimaryActionLabel(contact)}
+                                </span>
+                                <span style={selectedActionChipStyle}>
+                                  <Icon name="info" size={14} />
+                                  {getInviteState(contact).label}
+                                </span>
+                                <span style={selectedActionChipStyle}>
+                                  <Icon name={getAssociationState(contact, validationSourceText).tone === "warning" ? "warning" : "verified"} size={14} />
+                                  {getAssociationState(contact, validationSourceText).label}
+                                </span>
                               </div>
                               <ContactInvitationManager
                                 mode="full"
@@ -1043,6 +1066,19 @@ const rowPrimaryActionStyle: CSSProperties = {
   gap: 6,
 };
 
+const rowSecondaryActionStyle: CSSProperties = {
+  ...rowPrimaryActionStyle,
+  background: "#f8fafc",
+  fontWeight: 600,
+};
+
+const rowTertiaryActionStyle: CSSProperties = {
+  ...rowPrimaryActionStyle,
+  background: "transparent",
+  borderStyle: "dashed",
+  fontWeight: 600,
+};
+
 const selectedAdminStyle: CSSProperties = {
   border: "1px solid #bfdbfe",
   borderTop: "none",
@@ -1053,6 +1089,26 @@ const selectedAdminStyle: CSSProperties = {
   gap: 12,
   marginTop: -2,
   marginInline: 10,
+};
+
+const selectedActionSummaryStyle: CSSProperties = {
+  display: "flex",
+  gap: 8,
+  flexWrap: "wrap",
+  alignItems: "center",
+};
+
+const selectedActionChipStyle: CSSProperties = {
+  borderRadius: 999,
+  border: "1px solid #dbeafe",
+  background: "#fff",
+  color: "#0f172a",
+  padding: "5px 9px",
+  fontSize: 12,
+  fontWeight: 600,
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
 };
 
 const linkedDocumentWrapStyle: CSSProperties = {

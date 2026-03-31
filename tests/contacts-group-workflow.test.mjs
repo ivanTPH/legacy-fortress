@@ -7,6 +7,7 @@ const root = process.cwd();
 
 test("contacts uses grouped collapsible sections as the primary workflow", () => {
   const contactsWorkspace = fs.readFileSync(path.join(root, "components/contacts/ContactsNetworkWorkspace.tsx"), "utf8");
+  const invitationManager = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/ContactInvitationManager.tsx"), "utf8");
 
   assert.match(contactsWorkspace, /Executors/);
   assert.match(contactsWorkspace, /Family/);
@@ -22,7 +23,8 @@ test("contacts uses grouped collapsible sections as the primary workflow", () =>
   assert.match(contactsWorkspace, /<ContactInvitationManager[\s\S]*mode="full"[\s\S]*selectedContactId=\{selectedContactId\}/);
   assert.match(contactsWorkspace, /selectedContactStackStyle/);
   assert.match(contactsWorkspace, /linkedDocumentIconButtonStyle/);
-  assert.match(contactsWorkspace, /View linked document for/);
+  assert.match(contactsWorkspace, /Review documents/);
+  assert.match(contactsWorkspace, /Manage/);
   assert.match(contactsWorkspace, /<DocumentPreviewDialog/);
   assert.match(contactsWorkspace, /No previewable document is currently linked/);
   assert.match(contactsWorkspace, /Unavailable/);
@@ -41,4 +43,7 @@ test("contacts uses grouped collapsible sections as the primary workflow", () =>
   assert.doesNotMatch(contactsWorkspace, /Invitation access review/);
   assert.doesNotMatch(contactsWorkspace, /Edit contact/);
   assert.doesNotMatch(contactsWorkspace, /Selected contact admin/);
+  assert.match(invitationManager, /const showInvitationQueue = isDashboardMode;/);
+  assert.match(invitationManager, /Resend invite/);
+  assert.match(invitationManager, /Remove/);
 });

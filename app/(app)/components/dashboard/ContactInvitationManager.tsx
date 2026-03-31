@@ -115,6 +115,7 @@ export default function ContactInvitationManager({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftContactId, setDraftContactId] = useState<string | null>(null);
   const isDashboardMode = mode === "dashboard";
+  const showInvitationQueue = isDashboardMode;
 
   const roleOptions = useMemo(
     () =>
@@ -879,12 +880,12 @@ export default function ContactInvitationManager({
           <button
             type="button"
             style={primaryBtnStyle}
-            title={editingId ? "Save contact changes" : draftContactId ? "Save this contact access setup" : "Add this contact"}
+            title={editingId ? "Save contact changes" : draftContactId ? "Save this contact setup" : "Add this contact"}
             disabled={saving}
             onClick={() => void saveContact()}
           >
             <Icon name={editingId ? "save" : "person_add"} size={16} />
-            {saving ? "Saving..." : editingId ? "Save" : draftContactId ? "Add" : "Add"}
+            {saving ? "Saving..." : editingId ? "Save" : "Add contact"}
           </button>
           {!editingId && draftContactId && email.trim() ? (
             <button type="button" style={ghostBtnStyle} title="Save this contact and send the invite email" disabled={saving} onClick={() => void saveContact({ sendAfterSave: true })}>
@@ -893,9 +894,9 @@ export default function ContactInvitationManager({
             </button>
           ) : null}
           {!editingId && draftContactId ? (
-            <button type="button" style={dangerBtnStyle} title="Delete this contact and any linked invite access" disabled={saving} onClick={() => void removeSelectedDraftContact()}>
+            <button type="button" style={dangerBtnStyle} title="Remove this contact and any linked invite access" disabled={saving} onClick={() => void removeSelectedDraftContact()}>
               <Icon name="delete" size={16} />
-              Delete
+              Remove
             </button>
           ) : null}
           {(editingId || draftContactId) ? (
@@ -925,13 +926,13 @@ export default function ContactInvitationManager({
           {editingId && currentEditingRow && canResendInvite(currentEditingRow) ? (
             <button type="button" style={ghostBtnStyle} title={`Send invite again to ${currentEditingRow.contact_email}`} disabled={saving} onClick={() => void sendInvite(currentEditingRow, true)}>
               <Icon name="forward_to_inbox" size={16} />
-              Send invite again
+              Resend invite
             </button>
           ) : null}
           {editingId && currentEditingRow ? (
-            <button type="button" style={dangerBtnStyle} title={`Delete ${currentEditingRow.contact_name || currentEditingRow.contact_email}`} disabled={saving} onClick={() => void remove(currentEditingRow)}>
+            <button type="button" style={dangerBtnStyle} title={`Remove ${currentEditingRow.contact_name || currentEditingRow.contact_email}`} disabled={saving} onClick={() => void remove(currentEditingRow)}>
               <Icon name="delete" size={16} />
-              Delete
+              Remove
             </button>
           ) : null}
           {editingId ? (
@@ -981,6 +982,7 @@ export default function ContactInvitationManager({
         </div>
       ) : null}
 
+      {showInvitationQueue ? (
       <div style={sectionBlockStyle}>
         <div style={sectionHeaderStyle}>
           <div>
@@ -1163,6 +1165,7 @@ export default function ContactInvitationManager({
           </>
         )}
       </div>
+      ) : null}
     </section>
   );
 }
