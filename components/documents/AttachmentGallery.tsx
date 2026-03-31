@@ -3,6 +3,7 @@
 import { useMemo, useState, type CSSProperties } from "react";
 import Icon from "../ui/Icon";
 import { IconButton } from "../ui/IconButton";
+import DocumentPreviewDialog from "./DocumentPreviewDialog";
 
 export type AttachmentGalleryItem = {
   id: string;
@@ -185,34 +186,18 @@ export default function AttachmentGallery<T extends AttachmentGalleryItem>({
       {previewError ? <div style={{ color: "#b91c1c", fontSize: 13 }}>{previewError}</div> : null}
 
       {preview ? (
-        <div style={overlayStyle} role="dialog" aria-modal="true" aria-label={`${preview.item.fileName} preview`}>
-          <div style={dialogStyle}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 700, wordBreak: "break-word" }}>{preview.item.fileName || "Attachment preview"}</div>
-                <div style={{ color: "#64748b", fontSize: 12 }}>{formatMime(preview.item.mimeType)}</div>
-              </div>
-              <IconButton icon="close" label="Close preview" onClick={() => setPreview(null)} />
-            </div>
-            <div style={viewerStyle}>
-              {isImageMime(preview.item.mimeType) ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={preview.url} alt={preview.item.fileName || "Attachment preview"} style={viewerImageStyle} />
-              ) : isIframePreviewMime(preview.item.mimeType) ? (
-                <iframe title={preview.item.fileName || "Attachment preview"} src={preview.url} style={viewerFrameStyle} />
-              ) : (
-                <div style={{ display: "grid", gap: 10, justifyItems: "start" }}>
-                  <div style={{ color: "#475569", fontSize: 14 }}>
-                    This file cannot be previewed safely in the app yet. Download it to inspect it locally.
-                  </div>
-                  {onDownload ? (
-                    <IconButton icon="download" label={`Download ${preview.item.fileName || "this file"}`} onClick={() => onDownload(preview.item)} />
-                  ) : null}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <DocumentPreviewDialog
+          item={{
+            fileName: preview.item.fileName || "Attachment preview",
+            mimeType: preview.item.mimeType,
+            previewUrl: preview.url,
+            metaLabel: formatMime(preview.item.mimeType),
+            helperText: !isImageMime(preview.item.mimeType) && !isIframePreviewMime(preview.item.mimeType)
+              ? "This file cannot be previewed safely in the app yet. Download it to inspect it locally."
+              : undefined,
+          }}
+          onClose={() => setPreview(null)}
+        />
       ) : null}
     </div>
   );
@@ -315,51 +300,4 @@ const summaryFileBadgeStyle: CSSProperties = {
   border: "1px solid #e2e8f0",
   color: "#334155",
   flexShrink: 0,
-};
-
-const overlayStyle: CSSProperties = {
-  position: "fixed",
-  inset: 0,
-  background: "rgba(15, 23, 42, 0.72)",
-  display: "grid",
-  placeItems: "center",
-  padding: 20,
-  zIndex: 1000,
-};
-
-const dialogStyle: CSSProperties = {
-  width: "min(980px, 100%)",
-  maxHeight: "90vh",
-  overflow: "auto",
-  background: "#fff",
-  borderRadius: 18,
-  padding: 16,
-  display: "grid",
-  gap: 14,
-  boxShadow: "0 30px 80px rgba(15, 23, 42, 0.24)",
-};
-
-const viewerStyle: CSSProperties = {
-  minHeight: 320,
-  border: "1px solid #e2e8f0",
-  borderRadius: 14,
-  background: "#f8fafc",
-  padding: 12,
-  display: "grid",
-  placeItems: "center",
-};
-
-const viewerImageStyle: CSSProperties = {
-  maxWidth: "100%",
-  maxHeight: "72vh",
-  borderRadius: 10,
-  objectFit: "contain",
-};
-
-const viewerFrameStyle: CSSProperties = {
-  width: "100%",
-  minHeight: "72vh",
-  border: "none",
-  borderRadius: 10,
-  background: "#fff",
 };

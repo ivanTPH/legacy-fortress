@@ -23,9 +23,12 @@ test("contacts uses grouped collapsible sections as the primary workflow", () =>
   assert.match(contactsWorkspace, /selectedContactStackStyle/);
   assert.match(contactsWorkspace, /linkedDocumentIconButtonStyle/);
   assert.match(contactsWorkspace, /View linked document for/);
-  assert.match(contactsWorkspace, /role="dialog"/);
-  assert.match(contactsWorkspace, /Close document preview/);
-  assert.match(contactsWorkspace, /Open full record/);
+  assert.match(contactsWorkspace, /<DocumentPreviewDialog/);
+  assert.match(contactsWorkspace, /No previewable document is currently linked/);
+  assert.match(contactsWorkspace, /Unavailable/);
+  assert.match(contactsWorkspace, /getPreviewableTargetsForContext/);
+  assert.match(contactsWorkspace, /getStoredFileSignedUrl/);
+  assert.match(contactsWorkspace, /relatedLabel: relatedHref \? "Open full record" : undefined/);
   assert.match(contactsWorkspace, /describeLinkedDocumentContext/);
   assert.match(contactsWorkspace, /getLinkedDocumentIcon/);
   assert.match(contactsWorkspace, /setDocumentPreview\(null\)/);

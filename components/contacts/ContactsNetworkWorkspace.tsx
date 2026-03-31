@@ -15,15 +15,23 @@ import {
 import { resolveContactGroupKey } from "../../lib/contacts/contactGrouping";
 import { buildContactLinkValidationKey, evaluateContactLinkValidation, flattenSearchableValue } from "../../lib/contacts/contactLinkValidation";
 import { buildContactsWorkspaceHref, buildLinkedContactRecordHref } from "../../lib/contacts/contactRouting";
+import {
+  buildLinkedDocumentLookupKey,
+  groupLinkedDocumentSources,
+  resolveLinkedPreviewTargets,
+  type LinkedDocumentSourceItem,
+} from "../../lib/contacts/linkedDocumentPreview";
 import { resolveContactStatusBadge } from "../../lib/contacts/contactStatus";
 import { fetchCanonicalAssets } from "../../lib/assets/fetchCanonicalAssets";
 import { resolveWalletContextForRead } from "../../lib/canonicalPersistence";
 import { getLegalLinkedContactDefinition, resolveLegalCategoryForAsset } from "../../lib/legalCategories";
+import { getStoredFileSignedUrl } from "../../lib/assets/documentLinks";
 import ContactInvitationManager from "../../app/(app)/components/dashboard/ContactInvitationManager";
 import { useViewerAccess } from "../access/ViewerAccessContext";
 import Icon from "../ui/Icon";
 import { IconButton } from "../ui/IconButton";
 import InfoTip from "../ui/InfoTip";
+import DocumentPreviewDialog, { type DocumentPreviewDialogItem } from "../documents/DocumentPreviewDialog";
 
 type ContactRow = {
   id: string;
@@ -49,10 +57,7 @@ type ContactRow = {
 
 type LinkedDocumentPreview = {
   contactId: string;
-  title: string;
-  categoryLabel: string;
-  href: string;
-  sourceText: string;
+  item: DocumentPreviewDialogItem;
 };
 
 const GROUPS = [
@@ -75,6 +80,8 @@ export default function ContactsNetworkWorkspace() {
   const [associationAlerts, setAssociationAlerts] = useState<string[]>([]);
   const [openGroupKey, setOpenGroupKey] = useState<string | null>(null);
   const [documentPreview, setDocumentPreview] = useState<LinkedDocumentPreview | null>(null);
+  const [previewTargetsByContextKey, setPreviewTargetsByContextKey] = useState<Map<string, LinkedDocumentSourceItem[]>>(new Map());
+  const [openingDocumentKey, setOpeningDocumentKey] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -136,25 +143,38 @@ export default function ContactsNetworkWorkspace() {
           ? supabase.from("assets").select("id,title,summary,metadata_json").eq("owner_user_id", ownerUserId).in("id", assetIds)
           : Promise.resolve({ data: [], error: null }),
         assetIds.length
-          ? supabase.from("documents").select("asset_id,file_name,document_kind").eq("owner_user_id", ownerUserId).in("asset_id", assetIds).is("deleted_at", null)
+          ? supabase.from("documents").select("id,asset_id,file_name,document_kind,mime_type,storage_bucket,storage_path,created_at").eq("owner_user_id", ownerUserId).in("asset_id", assetIds).is("deleted_at", null)
           : Promise.resolve({ data: [], error: null }),
         recordIds.length
           ? supabase.from("records").select("id,title,summary,metadata").eq("owner_user_id", ownerUserId).in("id", recordIds)
           : Promise.resolve({ data: [], error: null }),
         recordIds.length
-          ? supabase.from("attachments").select("record_id,file_name").eq("owner_user_id", ownerUserId).in("record_id", recordIds)
+          ? supabase.from("attachments").select("id,record_id,file_name,mime_type,storage_bucket,storage_path,created_at").eq("owner_user_id", ownerUserId).in("record_id", recordIds)
           : Promise.resolve({ data: [], error: null }),
       ]);
 
       if (cancelled) return;
 
       const documentsByAssetId = new Map<string, string[]>();
+      const previewSources: LinkedDocumentSourceItem[] = [];
       for (const row of ((documentRows.data ?? []) as Array<Record<string, unknown>>)) {
         const assetId = String(row.asset_id ?? "").trim();
         if (!assetId) continue;
         const items = documentsByAssetId.get(assetId) ?? [];
         items.push([row.file_name, row.document_kind].filter(Boolean).join(" "));
         documentsByAssetId.set(assetId, items);
+        if (String(row.storage_bucket ?? "").trim() && String(row.storage_path ?? "").trim()) {
+          previewSources.push({
+            id: String(row.id ?? ""),
+            sourceKind: "asset",
+            sourceId: assetId,
+            fileName: String(row.file_name ?? "").trim(),
+            mimeType: String(row.mime_type ?? "application/octet-stream").trim(),
+            storageBucket: String(row.storage_bucket ?? "").trim(),
+            storagePath: String(row.storage_path ?? "").trim(),
+            createdAt: String(row.created_at ?? ""),
+          });
+        }
       }
 
       const attachmentsByRecordId = new Map<string, string[]>();
@@ -164,6 +184,18 @@ export default function ContactsNetworkWorkspace() {
         const items = attachmentsByRecordId.get(recordId) ?? [];
         items.push(String(row.file_name ?? "").trim());
         attachmentsByRecordId.set(recordId, items);
+        if (String(row.storage_bucket ?? "").trim() && String(row.storage_path ?? "").trim()) {
+          previewSources.push({
+            id: String(row.id ?? ""),
+            sourceKind: "record",
+            sourceId: recordId,
+            fileName: String(row.file_name ?? "").trim(),
+            mimeType: String(row.mime_type ?? "application/octet-stream").trim(),
+            storageBucket: String(row.storage_bucket ?? "").trim(),
+            storagePath: String(row.storage_path ?? "").trim(),
+            createdAt: String(row.created_at ?? ""),
+          });
+        }
       }
 
       for (const row of ((assetRows.data ?? []) as Array<Record<string, unknown>>)) {
@@ -193,6 +225,7 @@ export default function ContactsNetworkWorkspace() {
       }
 
       setValidationSourceText(nextEvidence);
+      setPreviewTargetsByContextKey(groupLinkedDocumentSources(previewSources));
     }
 
     void loadValidationEvidence();
@@ -386,8 +419,18 @@ export default function ContactsNetworkWorkspace() {
     setOpenGroupKey((current) => (current === groupKey ? null : groupKey));
   }
 
-  function openLinkedDocument(contact: ContactRow, context: ContactRow["linked_context"][number]) {
-    const href = buildLinkedContactRecordHref({
+  function getPreviewableTargetsForContext(context: ContactRow["linked_context"][number]) {
+    return resolveLinkedPreviewTargets(context, previewTargetsByContextKey);
+  }
+
+  async function openLinkedDocument(contact: ContactRow, context: ContactRow["linked_context"][number]) {
+    const previewTarget = getPreviewableTargetsForContext(context)[0];
+    if (!previewTarget) {
+      setStatus(`No previewable document is currently linked for ${context.label || formatContextLabel(context)}.`);
+      return;
+    }
+
+    const relatedHref = buildLinkedContactRecordHref({
       source_kind: context.source_kind === "asset" || context.source_kind === "invitation" ? context.source_kind : "record",
       source_id: String(context.source_id ?? ""),
       section_key: context.section_key ?? null,
@@ -396,7 +439,18 @@ export default function ContactsNetworkWorkspace() {
       role: context.role ?? null,
     });
 
-    if (!href) return;
+    setOpeningDocumentKey(previewTarget.id);
+    const signedUrl = await getStoredFileSignedUrl(supabase, {
+      storageBucket: previewTarget.storageBucket,
+      storagePath: previewTarget.storagePath,
+      expiresInSeconds: 900,
+    });
+    setOpeningDocumentKey("");
+
+    if (!signedUrl) {
+      setStatus(`Could not open ${previewTarget.fileName || "this linked document"} right now.`);
+      return;
+    }
 
     const validationKey = buildContactLinkValidationKey({
       source_kind: context.source_kind === "asset" || context.source_kind === "invitation" ? context.source_kind : "record",
@@ -405,14 +459,19 @@ export default function ContactsNetworkWorkspace() {
 
     setDocumentPreview({
       contactId: contact.id,
-      title: context.label || formatContextLabel(context),
-      categoryLabel: describeLinkedDocumentContext(context),
-      href,
-      sourceText: [
-        validationSourceText[validationKey],
-        context.label,
-        context.role,
-      ].filter(Boolean).join(" "),
+      item: {
+        fileName: previewTarget.fileName || context.label || formatContextLabel(context),
+        mimeType: previewTarget.mimeType,
+        previewUrl: signedUrl,
+        metaLabel: describeLinkedDocumentContext(context),
+        helperText: [
+          validationSourceText[validationKey],
+          context.label,
+          context.role,
+        ].filter(Boolean).join(" "),
+        relatedHref: relatedHref || undefined,
+        relatedLabel: relatedHref ? "Open full record" : undefined,
+      },
     });
   }
 
@@ -505,7 +564,9 @@ export default function ContactsNetworkWorkspace() {
                       const inviteState = getInviteState(contact);
                       const associationState = getAssociationState(contact, validationSourceText);
                       const linkedContexts = (contact.linked_context ?? []).slice(0, 4);
-                      const hasLinkedDocuments = linkedContexts.length > 0;
+                      const previewableContexts = linkedContexts.filter((context) => getPreviewableTargetsForContext(context).length > 0);
+                      const unresolvedContexts = linkedContexts.filter((context) => getPreviewableTargetsForContext(context).length === 0);
+                      const hasLinkedDocuments = previewableContexts.length > 0;
                       const isSelected = contact.id === selectedContactId;
 
                       return (
@@ -529,10 +590,11 @@ export default function ContactsNetworkWorkspace() {
                               <div style={{ color: "#64748b", fontSize: 12 }}>
                                 {formatContactSupportLine(contact)}
                               </div>
-                              {hasLinkedDocuments ? (
+                              {linkedContexts.length ? (
                                 <div style={linkedDocumentWrapStyle}>
-                                  {linkedContexts.map((context, index) => {
+                                  {previewableContexts.map((context, index) => {
                                     const label = context.label || formatContextLabel(context);
+                                    const previewTarget = getPreviewableTargetsForContext(context)[0];
                                     return (
                                       <button
                                         key={`${contact.id}-${index}`}
@@ -540,13 +602,25 @@ export default function ContactsNetworkWorkspace() {
                                         style={linkedDocumentIconButtonStyle}
                                         title={`View document: ${label}`}
                                         aria-label={`View document: ${label}`}
-                                        onClick={() => openLinkedDocument(contact, context)}
+                                        onClick={() => void openLinkedDocument(contact, context)}
+                                        disabled={!previewTarget || openingDocumentKey === previewTarget.id}
                                       >
                                         <Icon name={getLinkedDocumentIcon(context)} size={14} />
                                         <span style={linkedDocumentIconLabelStyle}>{describeLinkedDocumentContext(context)}</span>
                                       </button>
                                     );
                                   })}
+                                  {unresolvedContexts.map((context, index) => (
+                                    <span
+                                      key={`${contact.id}-unresolved-${index}`}
+                                      style={unavailableLinkedDocumentStyle}
+                                      title={`No previewable document is available yet for ${context.label || formatContextLabel(context)}`}
+                                      aria-label={`Document unavailable for ${context.label || formatContextLabel(context)}`}
+                                    >
+                                      <Icon name="link_off" size={14} />
+                                      <span style={linkedDocumentIconLabelStyle}>Unavailable</span>
+                                    </span>
+                                  ))}
                                   {(contact.linked_context?.length ?? 0) > 4 ? (
                                     <span style={moreLinksStyle}>+{(contact.linked_context?.length ?? 0) - 4} more</span>
                                   ) : null}
@@ -575,10 +649,10 @@ export default function ContactsNetworkWorkspace() {
                                 icon="visibility"
                                 label={`View linked document for ${contact.full_name || "contact"}`}
                                 onClick={() => {
-                                  const firstContext = (contact.linked_context ?? [])[0];
-                                  if (firstContext) openLinkedDocument(contact, firstContext);
+                                  const firstContext = previewableContexts[0];
+                                  if (firstContext) void openLinkedDocument(contact, firstContext);
                                 }}
-                                disabled={(contact.linked_context?.length ?? 0) === 0}
+                                disabled={!hasLinkedDocuments}
                               />
                               <IconButton
                                 icon="edit"
@@ -648,37 +722,10 @@ export default function ContactsNetworkWorkspace() {
         </div>
       ) : null}
       {documentPreview ? (
-        <div
-          style={overlayStyle}
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${documentPreview.title} preview`}
-          onClick={() => setDocumentPreview(null)}
-        >
-          <section style={documentDialogStyle} onClick={(event) => event.stopPropagation()}>
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-              <div style={{ display: "grid", gap: 4 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={documentIconWrapStyle}>
-                    <Icon name={getLinkedDocumentCategoryIcon(documentPreview.categoryLabel)} size={16} />
-                  </span>
-                  <strong style={{ fontSize: 18 }}>{documentPreview.title}</strong>
-                </div>
-                <div style={{ color: "#64748b", fontSize: 13 }}>{documentPreview.categoryLabel}</div>
-              </div>
-              <IconButton icon="close" label="Close document preview" onClick={() => setDocumentPreview(null)} />
-            </div>
-            <div style={documentPreviewBodyStyle}>
-              <div style={{ color: "#475569", fontSize: 14 }}>
-                {documentPreview.sourceText || "This linked document is available through the selected contact association."}
-              </div>
-              <Link href={documentPreview.href} style={documentOpenLinkStyle}>
-                <Icon name="open_in_new" size={16} />
-                Open full record
-              </Link>
-            </div>
-          </section>
-        </div>
+        <DocumentPreviewDialog
+          item={documentPreview.item}
+          onClose={() => setDocumentPreview(null)}
+        />
       ) : null}
     </section>
   );
@@ -718,21 +765,6 @@ function getLinkedDocumentIcon(context: ContactRow["linked_context"][number]) {
   if (sectionKey === "business") return "storefront";
   if (sectionKey === "cars_transport") return "directions_car";
   if (sectionKey === "personal") return "folder_shared";
-  return "description";
-}
-
-function getLinkedDocumentCategoryIcon(categoryLabel: string) {
-  const normalized = String(categoryLabel ?? "").trim().toLowerCase();
-
-  if (normalized.includes("identity")) return "badge";
-  if (normalized.includes("power of attorney")) return "gavel";
-  if (normalized.includes("trust")) return "description";
-  if (normalized.includes("will")) return "article";
-  if (normalized.includes("finance")) return "account_balance";
-  if (normalized.includes("property")) return "home";
-  if (normalized.includes("business")) return "storefront";
-  if (normalized.includes("vehicle")) return "directions_car";
-  if (normalized.includes("personal")) return "folder_shared";
   return "description";
 }
 
@@ -1045,62 +1077,16 @@ const linkedDocumentIconButtonStyle: CSSProperties = {
   cursor: "pointer",
 };
 
+const unavailableLinkedDocumentStyle: CSSProperties = {
+  ...linkedDocumentIconButtonStyle,
+  background: "#f8fafc",
+  color: "#94a3b8",
+  cursor: "not-allowed",
+  borderStyle: "dashed",
+};
+
 const linkedDocumentIconLabelStyle: CSSProperties = {
   lineHeight: 1,
-};
-
-const overlayStyle: CSSProperties = {
-  position: "fixed",
-  inset: 0,
-  background: "rgba(15, 23, 42, 0.45)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: 20,
-  zIndex: 90,
-};
-
-const documentDialogStyle: CSSProperties = {
-  width: "min(640px, 100%)",
-  maxHeight: "min(80vh, 720px)",
-  overflow: "auto",
-  borderRadius: 18,
-  background: "#fff",
-  border: "1px solid #dbeafe",
-  boxShadow: "0 20px 40px rgba(15, 23, 42, 0.18)",
-  padding: 18,
-  display: "grid",
-  gap: 14,
-};
-
-const documentIconWrapStyle: CSSProperties = {
-  width: 30,
-  height: 30,
-  borderRadius: 10,
-  background: "#eff6ff",
-  color: "#1d4ed8",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  flexShrink: 0,
-};
-
-const documentPreviewBodyStyle: CSSProperties = {
-  display: "grid",
-  gap: 14,
-};
-
-const documentOpenLinkStyle: CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 8,
-  width: "fit-content",
-  borderRadius: 999,
-  border: "1px solid #cbd5e1",
-  padding: "8px 12px",
-  textDecoration: "none",
-  color: "#0f172a",
-  fontWeight: 700,
 };
 
 const buildCheckMarkerStyle: CSSProperties = {
