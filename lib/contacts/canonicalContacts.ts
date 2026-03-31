@@ -111,9 +111,104 @@ export type SyncCanonicalContactInput = {
   link?: ContactSyncLink | null;
 };
 
+export type CanonicalContactProjectionPayloads = {
+  invitation: {
+    owner_user_id: string;
+    contact_id: string | null;
+    contact_name: string;
+    contact_email: string | null;
+    assigned_role: string | null;
+    invitation_status: string;
+    invited_at: string;
+    sent_at: string | null;
+    updated_at: string;
+  };
+  roleAssignment: {
+    owner_user_id: string;
+    assigned_role: string | null;
+    activation_status: string;
+    permissions_override?: Record<string, unknown> | null;
+    updated_at: string;
+  };
+  recordContact: {
+    record_id: string;
+    owner_user_id: string;
+    contact_id: string;
+    contact_name: string;
+    contact_email: string | null;
+    contact_role: string | null;
+    notes: string | null;
+  };
+};
+
 type ContactLinkRow = {
   contact_id: string;
 };
+
+export function buildCanonicalInvitationProjectionPayload({
+  ownerUserId,
+  contact,
+  assignedRole,
+  invitationStatus,
+  invitedAt,
+  sentAt,
+  updatedAt,
+  permissionsOverride = null,
+  activationStatus = "invited",
+}: {
+  ownerUserId: string;
+  contact: Pick<CanonicalContactRow, "full_name" | "email" | "relationship" | "contact_role"> & { id?: string | null };
+  assignedRole: string | null;
+  invitationStatus: string;
+  invitedAt: string;
+  sentAt?: string | null;
+  updatedAt: string;
+  permissionsOverride?: Record<string, unknown> | null;
+  activationStatus?: string;
+}) {
+  return {
+    invitation: {
+      owner_user_id: ownerUserId,
+      contact_id: String(contact.id ?? "").trim() || null,
+      contact_name: contact.full_name,
+      contact_email: contact.email ? contact.email.toLowerCase() : null,
+      assigned_role: assignedRole,
+      invitation_status: invitationStatus,
+      invited_at: invitedAt,
+      sent_at: sentAt ?? null,
+      updated_at: updatedAt,
+    },
+    roleAssignment: {
+      owner_user_id: ownerUserId,
+      assigned_role: assignedRole,
+      activation_status: activationStatus,
+      permissions_override: permissionsOverride,
+      updated_at: updatedAt,
+    },
+  };
+}
+
+export function buildCanonicalRecordContactProjectionPayload({
+  ownerUserId,
+  recordId,
+  contact,
+  notes,
+}: {
+  ownerUserId: string;
+  recordId: string;
+  contact: Pick<CanonicalContactRow, "full_name" | "email" | "relationship" | "contact_role"> & { id: string };
+  notes?: string | null;
+}) {
+  return {
+    record_id: recordId,
+    owner_user_id: ownerUserId,
+    contact_id: contact.id,
+    contact_name: contact.full_name,
+    contact_email: contact.email ? contact.email.toLowerCase() : null,
+    contact_role: contact.relationship ?? contact.contact_role,
+    notes: notes?.trim() || null,
+  };
+}
 
 export async function syncCanonicalContact(
   client: AnySupabaseClient,
@@ -320,6 +415,119 @@ export async function deleteCanonicalContact(
   if (invitationDeleteRes.error) throw new Error(invitationDeleteRes.error.message);
   if (recordContactsRes.error) throw new Error(recordContactsRes.error.message);
   if (deleteRes.error) throw new Error(deleteRes.error.message);
+}
+
+export async function upsertCanonicalContactInvitationProjection(
+  client: AnySupabaseClient,
+  {
+    ownerUserId,
+    invitationId,
+    contact,
+    assignedRole,
+    invitationStatus,
+    invitedAt,
+    sentAt = null,
+    updatedAt,
+    permissionsOverride = null,
+    activationStatus = "invited",
+  }: {
+    ownerUserId: string;
+    invitationId?: string | null;
+    contact: Pick<CanonicalContactRow, "id" | "full_name" | "email" | "relationship" | "contact_role">;
+    assignedRole: string | null;
+    invitationStatus: string;
+    invitedAt: string;
+    sentAt?: string | null;
+    updatedAt: string;
+    permissionsOverride?: Record<string, unknown> | null;
+    activationStatus?: string;
+  },
+) {
+  const projection = buildCanonicalInvitationProjectionPayload({
+    ownerUserId,
+    contact,
+    assignedRole,
+    invitationStatus,
+    invitedAt,
+    sentAt,
+    updatedAt,
+    permissionsOverride,
+    activationStatus,
+  });
+
+  if (invitationId) {
+    const updateRes = await client
+      .from("contact_invitations")
+      .update(projection.invitation)
+      .eq("id", invitationId)
+      .eq("owner_user_id", ownerUserId);
+    if (updateRes.error) throw new Error(updateRes.error.message);
+
+    const assignRes = await client
+      .from("role_assignments")
+      .upsert(
+        {
+          invitation_id: invitationId,
+          ...projection.roleAssignment,
+        },
+        { onConflict: "invitation_id" },
+      );
+    if (assignRes.error) throw new Error(assignRes.error.message);
+
+    return { id: invitationId };
+  }
+
+  const insertRes = await client
+    .from("contact_invitations")
+    .insert(projection.invitation)
+    .select("id")
+    .single();
+  if (insertRes.error || !insertRes.data) {
+    throw new Error(insertRes.error?.message || "Could not create invitation projection.");
+  }
+
+  const nextInvitationId = String((insertRes.data as Record<string, unknown>).id ?? "").trim();
+  const assignRes = await client.from("role_assignments").insert({
+    invitation_id: nextInvitationId,
+    ...projection.roleAssignment,
+  });
+  if (assignRes.error) throw new Error(assignRes.error.message);
+
+  return { id: nextInvitationId };
+}
+
+export async function replaceCanonicalRecordContactProjection(
+  client: AnySupabaseClient,
+  {
+    ownerUserId,
+    recordId,
+    contact,
+    notes = null,
+  }: {
+    ownerUserId: string;
+    recordId: string;
+    contact?: Pick<CanonicalContactRow, "id" | "full_name" | "email" | "relationship" | "contact_role"> | null;
+    notes?: string | null;
+  },
+) {
+  const deleteRes = await client
+    .from("record_contacts")
+    .delete()
+    .eq("record_id", recordId)
+    .eq("owner_user_id", ownerUserId);
+  if (deleteRes.error) throw new Error(deleteRes.error.message);
+
+  if (!contact) return;
+
+  const insertRes = await client
+    .from("record_contacts")
+    .insert(buildCanonicalRecordContactProjectionPayload({
+      ownerUserId,
+      recordId,
+      contact,
+      notes,
+    }));
+  if (insertRes.error) throw new Error(insertRes.error.message);
 }
 
 export function mapInvitationStatusToCanonicalInviteStatus(status: string): CanonicalContactInviteStatus {

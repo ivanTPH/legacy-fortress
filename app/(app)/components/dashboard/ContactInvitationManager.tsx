@@ -17,10 +17,12 @@ import { getSafeUserData } from "../../../../lib/auth/requireActiveUser";
 import InvitationStatusBadge from "./InvitationStatusBadge";
 import RoleBadge from "./RoleBadge";
 import {
+  buildCanonicalInvitationProjectionPayload,
   deleteCanonicalContact,
   loadCanonicalContactsByIds,
   mapActivationStatusToVerificationStatus,
   syncCanonicalContact,
+  upsertCanonicalContactInvitationProjection,
   type CanonicalContactRow,
 } from "../../../../lib/contacts/canonicalContacts";
 import { buildContactsWorkspaceHref, buildLinkedContactRecordHref } from "../../../../lib/contacts/contactRouting";
@@ -345,28 +347,18 @@ export default function ContactInvitationManager({
       });
 
       if (editingId) {
-        const updateRes = await supabase
-          .from("contact_invitations")
-          .update({ contact_id: canonicalContact.id, contact_name: nameTrim, contact_email: emailTrim, assigned_role: role, updated_at: now })
-          .eq("id", editingId)
-          .eq("owner_user_id", userId);
-
-        if (updateRes.error) throw updateRes.error;
-
-        const assignRes = await supabase
-          .from("role_assignments")
-          .upsert(
-            {
-              owner_user_id: userId,
-              invitation_id: editingId,
-              assigned_role: role,
-              permissions_override: permissionsOverride,
-              updated_at: now,
-            },
-            { onConflict: "invitation_id" },
-          );
-
-        if (assignRes.error) throw assignRes.error;
+        await upsertCanonicalContactInvitationProjection(supabase, {
+          ownerUserId: userId,
+          invitationId: editingId,
+          contact: canonicalContact,
+          assignedRole: role,
+          invitationStatus: currentEditingRow?.invitation_status ?? "pending",
+          invitedAt: currentEditingRow?.invited_at ?? now,
+          sentAt: currentEditingRow?.sent_at ?? null,
+          updatedAt: now,
+          permissionsOverride,
+          activationStatus: currentEditingRow?.activation_status ?? "invited",
+        });
 
         await syncCanonicalContact(supabase, {
           ownerUserId: userId,
@@ -387,33 +379,16 @@ export default function ContactInvitationManager({
           },
         });
       } else {
-        const insertRes = await supabase
-          .from("contact_invitations")
-          .insert({
-            owner_user_id: userId,
-            contact_id: canonicalContact.id,
-            contact_name: nameTrim,
-            contact_email: emailTrim,
-            assigned_role: role,
-            invitation_status: "pending",
-            invited_at: now,
-            updated_at: now,
-          })
-          .select("id")
-          .single();
-
-        if (insertRes.error || !insertRes.data) throw insertRes.error;
-
-        const assignRes = await supabase.from("role_assignments").insert({
-          owner_user_id: userId,
-          invitation_id: insertRes.data.id,
-          assigned_role: role,
-          activation_status: "invited",
-          permissions_override: permissionsOverride,
-          updated_at: now,
+        const insertRes = await upsertCanonicalContactInvitationProjection(supabase, {
+          ownerUserId: userId,
+          contact: canonicalContact,
+          assignedRole: role,
+          invitationStatus: "pending",
+          invitedAt: now,
+          updatedAt: now,
+          permissionsOverride,
+          activationStatus: "invited",
         });
-
-        if (assignRes.error) throw assignRes.error;
 
         await syncCanonicalContact(supabase, {
           ownerUserId: userId,
@@ -426,7 +401,7 @@ export default function ContactInvitationManager({
           verificationStatus: "not_verified",
           link: {
             sourceKind: "invitation",
-            sourceId: insertRes.data.id,
+            sourceId: insertRes.id,
             sectionKey: "dashboard",
             categoryKey: "contacts",
             label: "Contact invitation",
@@ -436,7 +411,7 @@ export default function ContactInvitationManager({
 
         if (sendAfterSave) {
           await sendInvite({
-            id: String(insertRes.data.id),
+            id: String(insertRes.id),
             contact_id: canonicalContact.id,
             contact_name: nameTrim,
             contact_email: emailTrim,
@@ -538,11 +513,25 @@ export default function ContactInvitationManager({
     const { error } = await supabase
       .from("contact_invitations")
       .update({
+        ...buildCanonicalInvitationProjectionPayload({
+          ownerUserId: userData.user.id,
+          contact: {
+            id: row.contact_id || "",
+            full_name: row.contact_name,
+            email: row.contact_email,
+            relationship: null,
+            contact_role: row.assigned_role,
+          },
+          assignedRole: row.assigned_role,
+          invitationStatus: "pending",
+          invitedAt: row.invited_at || now,
+          sentAt: now,
+          updatedAt: now,
+          permissionsOverride: row.permissions_override ?? null,
+          activationStatus: row.activation_status,
+        }).invitation,
         invite_token_hash: tokenHash,
-        invitation_status: "pending",
-        sent_at: now,
         last_sent_at: now,
-        updated_at: now,
       })
       .eq("id", row.id)
       .eq("owner_user_id", userData.user.id);

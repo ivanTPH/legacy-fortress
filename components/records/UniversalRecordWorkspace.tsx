@@ -85,6 +85,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { validateUploadFile } from "../../lib/validation/upload";
 import {
   loadCanonicalContactsByIds,
+  replaceCanonicalRecordContactProjection,
   syncCanonicalContact,
   unlinkCanonicalContactSource,
   type CanonicalContactContext,
@@ -1782,12 +1783,16 @@ export default function UniversalRecordWorkspace({
           })),
           recordId,
         );
-        await supabase.from("record_contacts").delete().eq("record_id", recordId).eq("owner_user_id", user.id);
         try {
           await unlinkCanonicalContactSource(supabase, {
             ownerUserId: user.id,
             sourceKind: "record",
             sourceId: recordId,
+          });
+          await replaceCanonicalRecordContactProjection(supabase, {
+            ownerUserId: user.id,
+            recordId,
+            contact: null,
           });
         } catch (error) {
           const message = error instanceof Error ? error.message : "Unknown error";
@@ -1813,19 +1818,12 @@ export default function UniversalRecordWorkspace({
                 role: isTrustedContacts ? form.contact_role.trim() || null : resolvedLegacyContactRole,
               },
             });
-
-            const contactResult = await supabase.from("record_contacts").insert({
-              record_id: recordId,
-              owner_user_id: user.id,
-              contact_id: canonicalContact.id,
-              contact_name: canonicalContact.full_name,
-              contact_email: canonicalContact.email,
-              contact_role: canonicalContact.relationship ?? canonicalContact.contact_role,
+            await replaceCanonicalRecordContactProjection(supabase, {
+              ownerUserId: user.id,
+              recordId,
+              contact: canonicalContact,
               notes: form.notes.trim() || null,
             });
-            if (contactResult.error) {
-              setStatus(`Saved record, but contact failed: ${contactResult.error.message}`);
-            }
           } catch (error) {
             const message = error instanceof Error ? error.message : "Unknown error";
             setStatus(`Saved record, but contact failed: ${message}`);
