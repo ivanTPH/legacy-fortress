@@ -19,7 +19,7 @@ import RoleBadge from "./RoleBadge";
 import {
   buildCanonicalInvitationProjectionPayload,
   deleteCanonicalContact,
-  loadCanonicalContactsByIds,
+  loadCanonicalContactInvitationsForOwner,
   mapActivationStatusToVerificationStatus,
   syncCanonicalContact,
   upsertCanonicalContactInvitationProjection,
@@ -48,13 +48,6 @@ type InvitationRow = {
   sent_at: string | null;
   permissions_override?: Record<string, unknown> | null;
   linked_context: CanonicalContactRow["linked_context"];
-};
-
-type RoleAssignmentRow = {
-  invitation_id: string;
-  assigned_role: CollaboratorRole;
-  activation_status: AccessActivationStatus;
-  permissions_override?: Record<string, unknown> | null;
 };
 
 type ScopeItem = {
@@ -174,16 +167,8 @@ export default function ContactInvitationManager({
 
     const userId = userData.user.id;
 
-    const [invRes, roleRes, assetsRes, recordsRes] = await Promise.all([
-      supabase
-        .from("contact_invitations")
-        .select("id,contact_id,contact_name,contact_email,assigned_role,invitation_status,invited_at,sent_at")
-        .eq("owner_user_id", userId)
-        .order("invited_at", { ascending: false }),
-      supabase
-        .from("role_assignments")
-        .select("invitation_id,assigned_role,activation_status,permissions_override")
-        .eq("owner_user_id", userId),
+    const [invitationRows, assetsRes, recordsRes] = await Promise.all([
+      loadCanonicalContactInvitationsForOwner(supabase, userId),
       supabase
         .from("assets")
         .select("id,section_key,category_key,title,provider_name")
@@ -196,61 +181,7 @@ export default function ContactInvitationManager({
         .eq("user_id", userId),
     ]);
 
-    if (invRes.error) {
-      setStatus(`⚠️ Could not load invitations: ${invRes.error.message}`);
-      setRows([]);
-      setLoading(false);
-      return;
-    }
-
-    const roleMap = new Map<string, RoleAssignmentRow>();
-    for (const row of ((roleRes.data ?? []) as RoleAssignmentRow[])) {
-      roleMap.set(row.invitation_id, row);
-    }
-
-    const contactIds = ((invRes.data ?? []) as Array<{ contact_id: string | null }>)
-      .map((row) => String(row.contact_id ?? "").trim())
-      .filter(Boolean);
-    let canonicalContacts: CanonicalContactRow[] = [];
-    if (contactIds.length > 0) {
-      try {
-        canonicalContacts = await loadCanonicalContactsByIds(supabase, userId, contactIds);
-      } catch (error) {
-        setStatus(
-          `⚠️ Invitations loaded, but shared contacts could not be resolved: ${error instanceof Error ? error.message : "Unknown error"}`,
-        );
-      }
-    }
-    const canonicalById = new Map(canonicalContacts.map((row) => [row.id, row]));
-
-    const mapped = ((invRes.data ?? []) as Array<{
-      id: string;
-      contact_id: string | null;
-      contact_name: string | null;
-      contact_email: string | null;
-      assigned_role: CollaboratorRole | null;
-      invitation_status: InvitationStatus | null;
-      invited_at: string;
-      sent_at: string | null;
-    }>).map((row) => {
-      const assignment = roleMap.get(row.id);
-      const canonical = row.contact_id ? canonicalById.get(row.contact_id) : null;
-      return {
-        id: row.id,
-        contact_id: row.contact_id ?? canonical?.id ?? null,
-        contact_name: canonical?.full_name ?? row.contact_name ?? "",
-        contact_email: canonical?.email ?? row.contact_email ?? "",
-        assigned_role: assignment?.assigned_role ?? row.assigned_role ?? "professional_advisor",
-        invitation_status: row.invitation_status ?? "pending",
-        activation_status: assignment?.activation_status ?? "invited",
-        invited_at: row.invited_at,
-        sent_at: row.sent_at,
-        permissions_override: assignment?.permissions_override ?? null,
-        linked_context: canonical?.linked_context ?? [],
-      };
-    });
-
-    setRows(mapped);
+    setRows(invitationRows as InvitationRow[]);
     setScopeItems([
       ...(((assetsRes.data ?? []) as Array<Record<string, unknown>>)
         .map((row) => mapScopeAssetRow(row))

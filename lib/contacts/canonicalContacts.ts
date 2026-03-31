@@ -88,6 +88,20 @@ export type CanonicalContactActivationRow = {
   updated_at: string;
 };
 
+export type CanonicalContactInviteProjectionRow = {
+  id: string;
+  contact_id: string | null;
+  contact_name: string;
+  contact_email: string;
+  assigned_role: string;
+  invitation_status: string;
+  activation_status: string;
+  invited_at: string;
+  sent_at: string | null;
+  permissions_override?: Record<string, unknown> | null;
+  linked_context: CanonicalContactContext[];
+};
+
 type ContactSyncLink = {
   sourceKind: "record" | "asset" | "invitation";
   sourceId: string;
@@ -349,6 +363,58 @@ export async function loadCanonicalContactsForOwner(
   return hydrateCanonicalContacts(contacts, await loadCanonicalContactSupport(client, ownerUserId, contacts.map((row) => row.id)));
 }
 
+export async function loadCanonicalContactInvitationsForOwner(
+  client: AnySupabaseClient,
+  ownerUserId: string,
+): Promise<CanonicalContactInviteProjectionRow[]> {
+  const [invRes, roleRes] = await Promise.all([
+    client
+      .from("contact_invitations")
+      .select("id,contact_id,contact_name,contact_email,assigned_role,invitation_status,invited_at,sent_at")
+      .eq("owner_user_id", ownerUserId)
+      .order("invited_at", { ascending: false }),
+    client
+      .from("role_assignments")
+      .select("invitation_id,assigned_role,activation_status,permissions_override")
+      .eq("owner_user_id", ownerUserId),
+  ]);
+
+  if (invRes.error) throw new Error(invRes.error.message);
+  if (roleRes.error) throw new Error(roleRes.error.message);
+
+  const roleMap = new Map<string, Record<string, unknown>>();
+  for (const row of ((roleRes.data ?? []) as Array<Record<string, unknown>>)) {
+    roleMap.set(String(row.invitation_id ?? ""), row);
+  }
+
+  const contactIds = ((invRes.data ?? []) as Array<{ contact_id: string | null }>)
+    .map((row) => String(row.contact_id ?? "").trim())
+    .filter(Boolean);
+  const canonicalContacts = contactIds.length ? await loadCanonicalContactsByIds(client, ownerUserId, contactIds) : [];
+  const canonicalById = new Map(canonicalContacts.map((row) => [row.id, row]));
+
+  return ((invRes.data ?? []) as Array<Record<string, unknown>>).map((row) => {
+    const id = String(row.id ?? "");
+    const contactId = String(row.contact_id ?? "").trim() || null;
+    const assignment = roleMap.get(id);
+    const canonical = contactId ? canonicalById.get(contactId) : null;
+
+    return {
+      id,
+      contact_id: contactId ?? canonical?.id ?? null,
+      contact_name: canonical?.full_name ?? String(row.contact_name ?? ""),
+      contact_email: canonical?.email ?? String(row.contact_email ?? ""),
+      assigned_role: String(assignment?.assigned_role ?? row.assigned_role ?? "professional_advisor"),
+      invitation_status: String(row.invitation_status ?? "pending"),
+      activation_status: String(assignment?.activation_status ?? "invited"),
+      invited_at: String(row.invited_at ?? ""),
+      sent_at: row.sent_at ? String(row.sent_at) : null,
+      permissions_override: (assignment?.permissions_override as Record<string, unknown> | null | undefined) ?? null,
+      linked_context: canonical?.linked_context ?? [],
+    };
+  });
+}
+
 export async function deleteCanonicalContact(
   client: AnySupabaseClient,
   {
@@ -528,6 +594,51 @@ export async function replaceCanonicalRecordContactProjection(
       notes,
     }));
   if (insertRes.error) throw new Error(insertRes.error.message);
+}
+
+export async function hydrateProjectionRowsWithCanonicalContacts<
+  T extends {
+    contact_id: string | null;
+    contact_name: string;
+    contact_email: string | null;
+    contact_phone?: string | null;
+    contact_role?: string | null;
+    relationship?: string | null;
+    invite_status?: string | null;
+    verification_status?: string | null;
+    linked_context?: CanonicalContactContext[];
+  },
+>(
+  client: AnySupabaseClient,
+  ownerUserId: string,
+  rows: T[],
+): Promise<T[]> {
+  const contactIds = rows.map((row) => String(row.contact_id ?? "").trim()).filter(Boolean);
+  if (contactIds.length === 0) return rows;
+
+  let canonicalContacts: CanonicalContactRow[] = [];
+  try {
+    canonicalContacts = await loadCanonicalContactsByIds(client, ownerUserId, contactIds);
+  } catch {
+    return rows;
+  }
+
+  const canonicalById = new Map(canonicalContacts.map((row) => [row.id, row]));
+  return rows.map((row) => {
+    const canonical = row.contact_id ? canonicalById.get(row.contact_id) : null;
+    if (!canonical) return row;
+    return {
+      ...row,
+      contact_name: canonical.full_name || row.contact_name,
+      contact_email: canonical.email ?? row.contact_email,
+      contact_phone: canonical.phone ?? row.contact_phone ?? null,
+      contact_role: canonical.contact_role ?? row.contact_role ?? null,
+      relationship: canonical.relationship ?? row.relationship ?? row.contact_role ?? null,
+      invite_status: canonical.invite_status ?? row.invite_status ?? null,
+      verification_status: canonical.verification_status ?? row.verification_status ?? null,
+      linked_context: canonical.linked_context ?? row.linked_context ?? [],
+    };
+  });
 }
 
 export function mapInvitationStatusToCanonicalInviteStatus(status: string): CanonicalContactInviteStatus {

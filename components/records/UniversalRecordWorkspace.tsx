@@ -84,12 +84,11 @@ import { summarizeScopedAssetRows } from "../../lib/dashboard/summary";
 import { supabase } from "../../lib/supabaseClient";
 import { validateUploadFile } from "../../lib/validation/upload";
 import {
-  loadCanonicalContactsByIds,
+  hydrateProjectionRowsWithCanonicalContacts,
   replaceCanonicalRecordContactProjection,
   syncCanonicalContact,
   unlinkCanonicalContactSource,
   type CanonicalContactContext,
-  type CanonicalContactRow,
 } from "../../lib/contacts/canonicalContacts";
 import {
   resolveLatestSavedContactIdentityReference,
@@ -5450,7 +5449,7 @@ async function loadWorkspaceContacts({
 
     return {
       ok: true,
-      rows: await mergeRecordContactsWithCanonicalContacts(userId, linkRows),
+      rows: await hydrateProjectionRowsWithCanonicalContacts(supabase, userId, linkRows),
     };
   }
 
@@ -5481,37 +5480,8 @@ async function loadWorkspaceContacts({
 
   return {
     ok: true,
-    rows: await mergeRecordContactsWithCanonicalContacts(userId, baseRows),
+    rows: await hydrateProjectionRowsWithCanonicalContacts(supabase, userId, baseRows),
   };
-}
-
-async function mergeRecordContactsWithCanonicalContacts(userId: string, rows: RecordContact[]) {
-  const contactIds = rows.map((row) => String(row.contact_id ?? "").trim()).filter(Boolean);
-  if (contactIds.length === 0) return rows;
-
-  let canonicalContacts: CanonicalContactRow[] = [];
-  try {
-    canonicalContacts = await loadCanonicalContactsByIds(supabase, userId, contactIds);
-  } catch {
-    return rows;
-  }
-
-  const canonicalById = new Map(canonicalContacts.map((row) => [row.id, row]));
-  return rows.map((row) => {
-    const canonical = row.contact_id ? canonicalById.get(row.contact_id) : null;
-    if (!canonical) return row;
-    return {
-      ...row,
-      contact_name: canonical.full_name || row.contact_name,
-      contact_email: canonical.email ?? row.contact_email,
-      contact_phone: canonical.phone ?? row.contact_phone,
-      contact_role: canonical.contact_role ?? row.contact_role,
-      relationship: canonical.relationship ?? row.relationship ?? row.contact_role,
-      invite_status: canonical.invite_status ?? row.invite_status,
-      verification_status: canonical.verification_status ?? row.verification_status,
-      linked_context: canonical.linked_context ?? row.linked_context,
-    };
-  });
 }
 
 function toMajorUnits(valueMinor: number | null) {
