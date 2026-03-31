@@ -502,7 +502,6 @@ export default function ContactsNetworkWorkspace() {
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Link href="/personal" style={linkPillStyle}>Review personal records</Link>
-          <Link href="/contacts?group=executors" style={linkPillStyle}>Review executors</Link>
         </div>
       </section>
 

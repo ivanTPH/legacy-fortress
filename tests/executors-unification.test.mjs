@@ -30,4 +30,5 @@ test("contacts grouped workflow preserves executor group state when selecting a 
   assert.match(contactsWorkspace, /const GROUPS = \[/);
   assert.match(contactsWorkspace, /key: "executors"/);
   assert.match(contactsWorkspace, /setOpenGroupKey\(\(current\) => \(current === groupKey \? null : groupKey\)\)/);
+  assert.doesNotMatch(contactsWorkspace, /Review executors/);
 });
