@@ -480,10 +480,10 @@ export default function ProfilePage() {
             <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
               <div
                 style={{
-                  width: 66,
-                  height: 66,
+                  width: 72,
+                  height: 72,
                   borderRadius: 12,
-                  border: "1px solid #e5e7eb",
+                  border: "1px solid #e8e1dc",
                   overflow: "hidden",
                   background: "#f8fafc",
                   display: "grid",
@@ -533,7 +533,7 @@ export default function ProfilePage() {
                     setEditorOpen(true);
                   }}
                 >
-                  <Icon name="edit" size={16} />
+                  <Icon name="edit" size={18} />
                   Edit profile
                 </button>
               ) : (
@@ -553,10 +553,12 @@ export default function ProfilePage() {
         <section ref={editorPanelRef}>
         {loading ? <div style={{ color: "#6b7280" }}>Loading...</div> : null}
 
-        <div style={{ display: "grid", gap: 12, padding: 14, border: "1px solid #e5e7eb", borderRadius: 14, background: "#fcfcfd" }}>
+        <div style={{ display: "grid", gap: 16, padding: 18, border: "1px solid #e8e1dc", borderRadius: 12, background: "#fffefd" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700 }}>
-              <Icon name="account_box" size={18} />
+              <span style={profileIconWrapStyle}>
+                <Icon name="account_box" size={22} />
+              </span>
               Profile photo
             </div>
             <div style={{ color: "#64748b", fontSize: 13 }}>
@@ -567,10 +569,10 @@ export default function ProfilePage() {
         <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
           <div
             style={{
-              width: 96,
-              height: 96,
-              borderRadius: 18,
-              border: "1px solid #e5e7eb",
+              width: 104,
+              height: 104,
+              borderRadius: 16,
+              border: "1px solid #e8e1dc",
               overflow: "hidden",
               background: "#f8fafc",
               display: "grid",
@@ -620,7 +622,7 @@ export default function ProfilePage() {
                       cursor: avatarUploading || saving ? "not-allowed" : "pointer",
                     }}
                   />
-                  <Icon name={hasSavedAvatar ? "photo_camera" : "add_a_photo"} size={16} />
+                  <Icon name={hasSavedAvatar ? "photo_camera" : "add_a_photo"} size={18} />
                   {hasSavedAvatar ? "Change photo" : "Add photo"}
                 </label>
                 {hasRecentPhotoSuccess ? (
@@ -634,7 +636,7 @@ export default function ProfilePage() {
                 </div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                   <button type="button" disabled={!canSave} style={primaryBtn} onClick={() => void save()}>
-                    <Icon name="save" size={16} />
+                    <Icon name="save" size={18} />
                     {saving ? "Saving..." : "Save photo"}
                   </button>
                   <button
@@ -646,7 +648,7 @@ export default function ProfilePage() {
                     }}
                     disabled={saving || avatarUploading}
                   >
-                    <Icon name="close" size={16} />
+                    <Icon name="close" size={18} />
                     Cancel
                   </button>
                 </div>
@@ -769,7 +771,7 @@ export default function ProfilePage() {
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
           <button type="button" disabled={!canSave} style={primaryBtn} onClick={() => void save()}>
-            <Icon name="save" size={16} />
+            <Icon name="save" size={18} />
             {saving ? "Saving..." : "Save profile"}
           </button>
           <button
@@ -782,11 +784,11 @@ export default function ProfilePage() {
             }}
             disabled={saving || avatarUploading}
           >
-            <Icon name="close" size={16} />
+            <Icon name="close" size={18} />
             Close editor
           </button>
           <button type="button" style={ghostBtn} onClick={() => void sendPasswordReset()}>
-            <Icon name="lock_reset" size={16} />
+            <Icon name="lock_reset" size={18} />
             Send password reset
           </button>
         </div>
@@ -853,12 +855,25 @@ const readyPillStyle = {
 };
 
 const accountLinkCardStyle = {
-  border: "1px solid #e5e7eb",
+  border: "1px solid #e8e1dc",
   borderRadius: 12,
-  padding: 12,
+  padding: 16,
   background: "#fff",
   textDecoration: "none",
   color: "#111827",
   display: "grid",
   gap: 6,
+} as const;
+
+const profileIconWrapStyle = {
+  width: 40,
+  height: 40,
+  borderRadius: 12,
+  border: "1px solid #eadfd8",
+  background: "#f7f3f0",
+  color: "#3a2118",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
 } as const;

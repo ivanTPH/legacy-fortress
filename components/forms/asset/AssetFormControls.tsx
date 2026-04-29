@@ -42,7 +42,11 @@ export function FormField({ fieldId, label, iconName, required = false, error, h
   return (
     <div style={fieldWrapStyle}>
       <label htmlFor={resolvedFieldId} style={labelStyle}>
-        {iconName ? <Icon name={iconName} size={16} style={{ color: "#475569" }} /> : null}
+        {iconName ? (
+          <span style={labelIconStyle}>
+            <Icon name={iconName} size={18} />
+          </span>
+        ) : null}
         {label}
         {required ? " *" : ""}
       </label>
@@ -275,8 +279,8 @@ export function FileDropzone({
       onDrop={handleDrop}
       style={{
         ...dropzoneStyle,
-        borderColor: isDragging ? "#0f172a" : "#cbd5e1",
-        background: isDragging ? "#f8fafc" : "#fff",
+        borderColor: isDragging ? "#3a2118" : "#d8d2cc",
+        background: isDragging ? "#f7f3f0" : "#fffefd",
         cursor: disabled ? "default" : "pointer",
         opacity: disabled ? 0.7 : 1,
       }}
@@ -297,7 +301,9 @@ export function FileDropzone({
       />
       <div style={{ display: "grid", gap: 6 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <Icon name="upload_file" size={18} />
+          <span style={labelIconStyle}>
+            <Icon name="upload_file" size={18} />
+          </span>
           <strong style={{ fontSize: 13 }}>{label}</strong>
         </div>
         <div style={{ color: "#64748b", fontSize: 12 }}>Drag and drop or click to choose a file</div>
@@ -360,11 +366,25 @@ export const labelStyle: CSSProperties = {
 
 export const inputStyle: CSSProperties = {
   width: "100%",
-  border: "1px solid #cbd5e1",
+  border: "1px solid #d8d2cc",
   borderRadius: 10,
-  padding: "10px 12px",
+  padding: "11px 12px",
   fontSize: 14,
   outline: "none",
+  background: "#fffefd",
+};
+
+const labelIconStyle: CSSProperties = {
+  width: 30,
+  height: 30,
+  borderRadius: 9,
+  border: "1px solid #eadfd8",
+  background: "#f7f3f0",
+  color: "#3a2118",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
 };
 
 const toggleStyle: CSSProperties = {
@@ -391,9 +411,9 @@ const filePlaceholderStyle: CSSProperties = {
 };
 
 const dropzoneStyle: CSSProperties = {
-  border: "1px dashed #cbd5e1",
+  border: "1px dashed #d8d2cc",
   borderRadius: 12,
-  padding: 12,
+  padding: 16,
   outline: "none",
 };
 
@@ -404,26 +424,26 @@ const filePreviewStyle: CSSProperties = {
   gap: 10,
   flexWrap: "wrap",
   alignItems: "center",
-  border: "1px solid #e2e8f0",
+  border: "1px solid #e8e1dc",
   borderRadius: 10,
-  padding: "8px 10px",
-  background: "#f8fafc",
+  padding: "10px 12px",
+  background: "#fff",
 };
 
 const previewImageStyle: CSSProperties = {
-  width: 28,
-  height: 28,
+  width: 36,
+  height: 36,
   objectFit: "cover",
   borderRadius: 6,
-  border: "1px solid #cbd5e1",
+  border: "1px solid #d8d2cc",
 };
 
 const clearButtonStyle: CSSProperties = {
-  border: "1px solid #cbd5e1",
-  background: "#fff",
+  border: "1px solid #e3ded9",
+  background: "#fffefd",
   color: "#0f172a",
   borderRadius: 8,
-  padding: "4px 8px",
+  padding: "7px 10px",
   display: "inline-flex",
   alignItems: "center",
   gap: 4,

@@ -40,7 +40,7 @@ export default function ActionQueuePanel({ items, onAction }: ActionQueuePanelPr
       <div style={{ display: "grid", gap: 4 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={iconWrapStyle}>
-            <Icon name={activeBlockerCount > 0 ? "notifications_active" : "verified"} size={16} />
+            <Icon name={activeBlockerCount > 0 ? "notifications_active" : "verified"} size={21} />
           </div>
           <h2 style={{ margin: 0, fontSize: 18 }}>Action Centre</h2>
           <span style={activeBlockerCount > 0 ? activeBadgeStyle : clearBadgeStyle}>
@@ -55,7 +55,7 @@ export default function ActionQueuePanel({ items, onAction }: ActionQueuePanelPr
       {activeBlockerCount === 0 ? (
         <section style={clearStateStyle}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Icon name="verified" size={18} />
+            <Icon name="verified" size={22} />
             <strong>All up to date</strong>
           </div>
           <div style={{ color: "#166534", fontSize: 13 }}>
@@ -77,7 +77,7 @@ export default function ActionQueuePanel({ items, onAction }: ActionQueuePanelPr
                   <div style={{ display: "grid", gap: 4, textAlign: "left", minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", minWidth: 0 }}>
                       <span style={sectionIconStyle(section.tone)} aria-hidden>
-                        <Icon name={section.icon} size={15} />
+                        <Icon name={section.icon} size={20} />
                       </span>
                       <span style={sectionTitleStyle}>{section.title}</span>
                       <span style={sectionPillStyle(section.tone)}>
@@ -238,17 +238,17 @@ function getSectionPriority(items: BlockingItem[]) {
 
 const panelStyle = {
   border: "1px solid #e8e1dc",
-  borderRadius: 16,
+  borderRadius: 12,
   background: "#fff",
-  padding: 14,
+  padding: 22,
   display: "grid",
-  gap: 10,
+  gap: 14,
 } satisfies CSSProperties;
 
 const iconWrapStyle = {
-  width: 26,
-  height: 26,
-  borderRadius: 9,
+  width: 40,
+  height: 40,
+  borderRadius: 12,
   background: "#f7f3f0",
   border: "1px solid #eadfd8",
   color: "#3a2118",
@@ -303,7 +303,7 @@ function sectionCardStyle(tone: ActionCentreSection["tone"]): CSSProperties {
     return {
       border: "1px solid #bbf7d0",
       borderRadius: 12,
-      padding: 10,
+      padding: 14,
       display: "grid",
       gap: 8,
       background: "#f0fdf4",
@@ -313,7 +313,7 @@ function sectionCardStyle(tone: ActionCentreSection["tone"]): CSSProperties {
     return {
       border: "1px solid #eadfd8",
       borderRadius: 12,
-      padding: 10,
+      padding: 14,
       display: "grid",
       gap: 8,
       background: "#fffefd",
@@ -322,7 +322,7 @@ function sectionCardStyle(tone: ActionCentreSection["tone"]): CSSProperties {
   return {
     border: "1px solid #e8e1dc",
     borderRadius: 12,
-    padding: 10,
+    padding: 14,
     display: "grid",
     gap: 8,
     background: "#fffefd",
@@ -355,7 +355,7 @@ const itemRowStyle = {
   border: "1px solid #eee8e3",
   borderRadius: 10,
   background: "#fff",
-  padding: "8px 10px",
+  padding: "11px 12px",
   display: "grid",
   gridTemplateColumns: "1fr auto",
   gap: 10,
@@ -365,9 +365,9 @@ const itemRowStyle = {
 
 function accordionIconStyle(isOpen: boolean): CSSProperties {
   return {
-    width: 28,
-    height: 28,
-    borderRadius: 999,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     border: "1px solid #e2e8f0",
     background: "#fff",
     color: "#0f172a",
@@ -396,9 +396,9 @@ const sectionSummaryStyle = {
 function sectionIconStyle(tone: ActionCentreSection["tone"]): CSSProperties {
   if (tone === "alert") {
     return {
-      width: 22,
-      height: 22,
-      borderRadius: 999,
+      width: 34,
+      height: 34,
+      borderRadius: 10,
       background: "#f7f3f0",
       color: "#5d2d1f",
       display: "inline-flex",
@@ -409,9 +409,9 @@ function sectionIconStyle(tone: ActionCentreSection["tone"]): CSSProperties {
   }
   if (tone === "muted") {
     return {
-      width: 22,
-      height: 22,
-      borderRadius: 999,
+      width: 34,
+      height: 34,
+      borderRadius: 10,
       background: "#f8f6f4",
       color: "#5f5852",
       display: "inline-flex",
@@ -421,9 +421,9 @@ function sectionIconStyle(tone: ActionCentreSection["tone"]): CSSProperties {
     };
   }
   return {
-    width: 22,
-    height: 22,
-    borderRadius: 999,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     background: "#f0fdf4",
     color: "#166534",
     display: "inline-flex",
@@ -457,9 +457,9 @@ const rowLabelStyle = {
 } satisfies CSSProperties;
 
 const rowActionIconStyle = {
-  width: 28,
-  height: 28,
-  borderRadius: 999,
+  width: 36,
+  height: 36,
+  borderRadius: 10,
   border: "1px solid #e2e8f0",
   background: "#f8fafc",
   color: "#0f172a",

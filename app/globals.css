@@ -174,25 +174,28 @@ textarea {
 }
 
 .lf-icon-btn {
-  width: 32px;
-  height: 32px;
-  border: 1px solid #d1d5db;
+  min-width: 40px;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #e3ded9;
   border-radius: 10px;
-  background: #fff;
-  color: #111827;
+  background: #fffefd;
+  color: var(--lf-bronze);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(33, 17, 13, 0.035);
 }
 
 .lf-icon-btn:hover {
-  background: #f8fafc;
-  border-color: #94a3b8;
+  background: #f7f3f0;
+  border-color: #d3c5bc;
 }
 
 .lf-icon-btn:focus-visible {
-  outline: 2px solid rgba(37, 99, 235, 0.35);
+  outline: 2px solid rgba(58, 33, 24, 0.32);
   outline-offset: 2px;
 }
 
@@ -204,7 +207,7 @@ textarea {
 .lf-icon-btn-danger {
   color: #991b1b;
   border-color: #fecaca;
-  background: #fff1f2;
+  background: #fff5f5;
 }
 
 .lf-icon-btn-danger:hover {
@@ -213,9 +216,9 @@ textarea {
 }
 
 .lf-status-icon {
-  width: 24px;
-  height: 24px;
-  border-radius: 999px;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
   border: 1px solid;
   display: inline-flex;
   align-items: center;
@@ -776,7 +779,7 @@ textarea {
 .lf-nav-item {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   border-radius: 8px;
   padding: 10px 11px;
   text-decoration: none;
@@ -812,8 +815,11 @@ textarea {
 }
 
 .lf-nav-icon {
-  width: 16px;
-  height: 16px;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  border: 1px solid #e8e1dc;
+  background: #fffefd;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -823,8 +829,20 @@ textarea {
 }
 
 .lf-nav-icon svg {
-  width: 15px;
-  height: 15px;
+  width: 18px;
+  height: 18px;
+}
+
+.lf-nav-item:hover .lf-nav-icon,
+.lf-nav-item.is-open:not(.is-active) .lf-nav-icon {
+  background: #f7f3f0;
+  border-color: #e0d4cc;
+}
+
+.lf-nav-item.is-active .lf-nav-icon {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
 }
 
 .lf-sidebar-foot {
@@ -1108,7 +1126,7 @@ textarea {
 }
 
 .lf-main-content {
-  padding: 20px;
+  padding: 32px;
   max-width: 1180px;
   width: 100%;
   margin: 0 auto;
@@ -1120,7 +1138,7 @@ textarea {
 }
 
 .lf-main-content section {
-  box-shadow: var(--lf-shadow-sm);
+  box-shadow: none;
 }
 
 .lf-mobile-backdrop,
@@ -1192,7 +1210,7 @@ textarea {
 
 .lf-content-grid {
   display: grid;
-  gap: 12px;
+  gap: 18px;
   grid-template-columns: minmax(0, 1fr);
 }
 

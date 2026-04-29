@@ -19,7 +19,7 @@ export default function PersonalOverviewPage() {
   const visibleItems = items.filter((item) => isVaultSubsectionEnabled(preferences, item.preferenceKey));
 
   return (
-    <section style={{ display: "grid", gap: 14 }}>
+    <section style={{ display: "grid", gap: 24 }}>
       <div style={{ display: "grid", gap: 6 }}>
         <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
           Keep the personal records that make day-to-day life easier to understand, review, and hand over when needed.
@@ -44,9 +44,11 @@ export default function PersonalOverviewPage() {
       <div className="lf-content-grid">
         {visibleItems.map((item) => (
           <Link key={item.href} href={item.href} style={cardStyle}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontWeight: 700 }}>
-              <Icon name={item.icon} size={18} />
-              {item.label}
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 12, fontWeight: 800 }}>
+              <span style={iconWrapStyle}>
+                <Icon name={item.icon} size={22} />
+              </span>
+              <span>{item.label}</span>
             </div>
             <div style={{ color: "#64748b", fontSize: 13 }}>{item.desc}</div>
           </Link>
@@ -62,10 +64,10 @@ export default function PersonalOverviewPage() {
 }
 
 const introPanelStyle: CSSProperties = {
-  border: "1px solid #e2e8f0",
-  borderRadius: 16,
+  border: "1px solid #e8e1dc",
+  borderRadius: 12,
   background: "#fff",
-  padding: 14,
+  padding: 22,
   display: "flex",
   justifyContent: "space-between",
   gap: 12,
@@ -74,14 +76,28 @@ const introPanelStyle: CSSProperties = {
 };
 
 const cardStyle: CSSProperties = {
-  border: "1px solid #e5e7eb",
-  borderRadius: 14,
-  padding: 14,
+  border: "1px solid #e8e1dc",
+  borderRadius: 12,
+  padding: 22,
   background: "#fff",
   textDecoration: "none",
   color: "#111827",
   display: "grid",
-  gap: 8,
+  gap: 12,
+  boxShadow: "0 1px 2px rgba(33, 17, 13, 0.025)",
+};
+
+const iconWrapStyle: CSSProperties = {
+  width: 40,
+  height: 40,
+  borderRadius: 12,
+  border: "1px solid #eadfd8",
+  background: "#f7f3f0",
+  color: "#3a2118",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
 };
 
 const secondaryLinkStyle: CSSProperties = {

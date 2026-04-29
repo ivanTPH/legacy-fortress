@@ -610,7 +610,7 @@ const legalSummary = useMemo(() => {
         <div className="lf-content-grid">
           {showFinancialCard ? (
             <DashboardAssetSummaryCard
-              icon={<Icon name="account_balance" size={13} />}
+              icon={<Icon name="account_balance" size={22} />}
               title="All finances"
               href="/finances"
               addedAt={financialSummary.addedAt}
@@ -626,7 +626,7 @@ const legalSummary = useMemo(() => {
 
           {showLegalCard ? (
             <DashboardAssetSummaryCard
-              icon={<Icon name="description" size={13} />}
+              icon={<Icon name="description" size={22} />}
               title="Legal"
               href="/legal"
               addedAt={legalSummary.addedAt}
@@ -642,7 +642,7 @@ const legalSummary = useMemo(() => {
 
           {showPropertyCard ? (
             <DashboardAssetSummaryCard
-              icon={<Icon name="home" size={13} />}
+              icon={<Icon name="home" size={22} />}
               title="Property"
               href="/property"
               addedAt={propertySummary.addedAt}
@@ -658,7 +658,7 @@ const legalSummary = useMemo(() => {
 
           {showBusinessCard ? (
             <DashboardAssetSummaryCard
-              icon={<Icon name="business_center" size={13} />}
+              icon={<Icon name="business_center" size={22} />}
               title="Business"
               href="/business"
               addedAt={businessSummary.addedAt}
@@ -674,7 +674,7 @@ const legalSummary = useMemo(() => {
 
           {showDigitalCard ? (
             <DashboardAssetSummaryCard
-              icon={<Icon name="devices" size={13} />}
+              icon={<Icon name="devices" size={22} />}
               title="Digital"
               href="/vault/digital"
               addedAt={digitalSummary.addedAt}
@@ -690,7 +690,7 @@ const legalSummary = useMemo(() => {
 
           {showPossessionsCard ? (
             <DashboardAssetSummaryCard
-              icon={<Icon name="inventory_2" size={13} />}
+              icon={<Icon name="inventory_2" size={22} />}
               title="Possessions"
               href="/vault/personal"
               addedAt={possessionsSummary.addedAt}
@@ -705,7 +705,7 @@ const legalSummary = useMemo(() => {
 
           {showTaskCard ? (
             <DashboardAssetSummaryCard
-              icon={<Icon name="task" size={13} />}
+              icon={<Icon name="task" size={22} />}
               title="Tasks"
               href="/personal/tasks"
               addedAt={taskSummary.addedAt}

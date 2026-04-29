@@ -19,7 +19,7 @@ export function IconButton({ icon, label, danger = false, style, ...props }: Ico
       style={style}
       {...props}
     >
-      <Icon name={icon} size={18} />
+      <Icon name={icon} size={21} />
     </button>
   );
 }
@@ -61,7 +61,7 @@ export function StatusIcon({
       style={statusToneStyle[tone]}
       className="lf-status-icon"
     >
-      <Icon name={icon} size={16} />
+      <Icon name={icon} size={18} />
     </span>
   );
 }

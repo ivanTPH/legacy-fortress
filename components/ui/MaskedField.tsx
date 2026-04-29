@@ -67,8 +67,9 @@ export function maskAllButLast(value: string, preserveLast = 4) {
 const wrapStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
-  gap: 8,
-  rowGap: 6,
+  gap: 10,
+  rowGap: 8,
+  flexWrap: "wrap",
 };
 
 const valueStyle: CSSProperties = {
@@ -76,8 +77,8 @@ const valueStyle: CSSProperties = {
 };
 
 const iconBtnStyle: CSSProperties = {
-  width: 28,
-  height: 28,
-  borderRadius: 6,
+  width: 36,
+  height: 36,
+  borderRadius: 10,
   marginInlineStart: 2,
 };

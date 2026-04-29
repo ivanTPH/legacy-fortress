@@ -994,7 +994,14 @@ export default function UniversalRecordWorkspace({
     setPendingDocumentFile(null);
     setAssetReviewConfirmed(false);
     resetBankSubmitTrace();
+    showFormSection();
+  }
+
+  function showFormSection() {
     setFormVisible(true);
+    requestAnimationFrame(() => {
+      formSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   function startEdit(row: UniversalRecordRow) {
@@ -1236,10 +1243,7 @@ export default function UniversalRecordWorkspace({
     setPendingDocumentFile(null);
     setAssetReviewConfirmed(false);
     resetBankSubmitTrace();
-    setFormVisible(true);
-    requestAnimationFrame(() => {
-      formSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
+    showFormSection();
   }
 
   function cancelForm() {
@@ -2262,20 +2266,18 @@ export default function UniversalRecordWorkspace({
 
     const previewUrl = photoPreviews[row.id];
     const thumbFailed = failedThumbs[row.id] === true;
-    const leadingVisualWidth = previewUrl && !thumbFailed ? 40 : 32;
-
     return (
       <article key={row.id} style={selectedWorkspaceRecordId === row.id ? selectedRecordCardStyle : recordCardStyle} className="lf-record-card" data-record-id={row.id}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 16, alignItems: "flex-start" }}>
+          <div style={{ display: "flex", gap: 14, alignItems: "flex-start", minWidth: 0 }}>
             {previewUrl && !thumbFailed ? (
               <div style={thumbWrapStyle}>
                 <img
                   src={previewUrl}
                   alt={row.title ? `${row.title} photo` : "Possession photo"}
-                  width={38}
-                  height={38}
-                  style={{ objectFit: "cover", width: 38, height: 38 }}
+                  width={44}
+                  height={44}
+                  style={{ objectFit: "cover", width: "100%", height: "100%" }}
                   onError={() => {
                     setFailedThumbs((prev) => ({ ...prev, [row.id]: true }));
                   }}
@@ -2288,8 +2290,8 @@ export default function UniversalRecordWorkspace({
                 categoryKey={isPossessions ? categoryKeyFromRow : isFinanceSection ? categoryKey : undefined}
               />
             )}
-            <div style={{ display: "grid", gap: 4 }}>
-              <div style={{ fontWeight: 700 }}>
+            <div style={{ display: "grid", gap: 5, minWidth: 0 }}>
+              <div style={{ fontWeight: 800, color: "#111827", lineHeight: 1.25 }}>
                 {isBankCategory ? bankProviderName : row.title || "Untitled record"}
               </div>
               {isTrustedContacts ? (
@@ -2480,7 +2482,7 @@ export default function UniversalRecordWorkspace({
           </span>
         </div>
 
-        <div style={{ ...recordActionsStyle, marginLeft: leadingVisualWidth + 10 }} className="lf-record-card-actions">
+        <div style={recordActionsStyle} className="lf-record-card-actions">
           {canEditWorkspaceRow(row.id) ? <ActionIconButton action="edit" label="Edit record" onClick={() => startEdit(row)} /> : null}
           {isPossessions || usesCanonicalAssets ? (
             <ActionIconButton
@@ -2925,7 +2927,7 @@ export default function UniversalRecordWorkspace({
       ) : null}
 
       {!loading && hasAnyRecords ? (
-      <section style={cardStyle} ref={formSectionRef}>
+      <section style={cardStyle}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           <h2 style={{ margin: 0, fontSize: 17 }}>Existing records</h2>
           {canCreateRecords ? <button type="button" style={primaryBtn} onClick={startCreate}>
@@ -3011,7 +3013,7 @@ export default function UniversalRecordWorkspace({
         </section>
       ) : null}
 
-      <section style={cardStyle}>
+      <section style={cardStyle} ref={formSectionRef}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
           <h2 style={{ margin: 0, fontSize: 17 }}>
             {editingId
@@ -4992,9 +4994,9 @@ function ProviderBadge({
         <img
           src={providerLogoSrc}
           alt={provider?.display_name ?? "Bank logo"}
-          width={24}
-          height={24}
-          style={{ objectFit: "contain", width: "100%", height: "100%", maxWidth: 24, maxHeight: 24, display: "block" }}
+          width={30}
+          height={30}
+          style={{ objectFit: "contain", width: "100%", height: "100%", maxWidth: 30, maxHeight: 30, display: "block" }}
           onError={() => {
             setFailedLogoSrc(providerLogoSrc);
           }}
@@ -5007,7 +5009,7 @@ function ProviderBadge({
   if (categoryIcon) {
     return (
       <div style={categoryBadgeStyle} aria-label={categoryKey}>
-        <Icon name={categoryIcon} size={17} />
+        <Icon name={categoryIcon} size={22} />
       </div>
     );
   }
@@ -5024,7 +5026,7 @@ function ProviderBadge({
   const text = provider?.icon_text || getProviderInitials(fallbackLabel);
   return (
     <div style={badgeStyle} aria-label={provider?.display_name || fallbackLabel}>
-      {iconName ? <Icon name={iconName} size={17} /> : text}
+      {iconName ? <Icon name={iconName} size={22} /> : text}
     </div>
   );
 }
@@ -5517,12 +5519,13 @@ function formatDate(value: string) {
 }
 
 const cardStyle: CSSProperties = {
-  border: "1px solid #e5e7eb",
-  borderRadius: 16,
+  border: "1px solid #e8e1dc",
+  borderRadius: 12,
   background: "#fff",
-  padding: 14,
+  padding: 22,
   display: "grid",
-  gap: 12,
+  gap: 18,
+  boxShadow: "0 1px 2px rgba(33, 17, 13, 0.025)",
 };
 
 const linkedPanelChipStyle: CSSProperties = {
@@ -5541,24 +5544,27 @@ const linkedPanelChipStyle: CSSProperties = {
 };
 
 const recordCardStyle: CSSProperties = {
-  border: "1px solid #e2e8f0",
+  border: "1px solid #e8e1dc",
   borderRadius: 12,
   background: "#fff",
-  padding: 12,
+  padding: 20,
   display: "grid",
-  gap: 10,
+  gap: 16,
+  boxShadow: "0 1px 2px rgba(33, 17, 13, 0.025)",
 };
 
 const selectedRecordCardStyle: CSSProperties = {
   ...recordCardStyle,
-  borderColor: "#2563eb",
-  boxShadow: "0 0 0 2px rgba(37, 99, 235, 0.12)",
+  borderColor: "#3a2118",
+  boxShadow: "0 0 0 2px rgba(58, 33, 24, 0.1)",
 };
 
 const recordActionsStyle: CSSProperties = {
   display: "flex",
   flexWrap: "wrap",
-  gap: 8,
+  gap: 10,
+  justifyContent: "flex-end",
+  alignItems: "center",
 };
 
 const detailsPanelStyle: CSSProperties = {
@@ -5572,41 +5578,42 @@ const detailsPanelStyle: CSSProperties = {
 
 const activePillStyle: CSSProperties = {
   borderRadius: 999,
-  background: "#d1fae5",
-  color: "#065f46",
+  border: "1px solid #cfe8dc",
+  background: "#f0f8f4",
+  color: "#166534",
   fontSize: 12,
   fontWeight: 700,
-  padding: "4px 8px",
+  padding: "5px 10px",
+  whiteSpace: "nowrap",
 };
 
 const archivedPillStyle: CSSProperties = {
+  ...activePillStyle,
   borderRadius: 999,
+  border: "1px solid #d9dde3",
   background: "#e2e8f0",
   color: "#475569",
-  fontSize: 12,
-  fontWeight: 700,
-  padding: "4px 8px",
 };
 
 const logoWrapStyle: CSSProperties = {
-  width: 32,
-  height: 32,
-  borderRadius: 8,
-  border: "1px solid #e2e8f0",
+  width: 44,
+  height: 44,
+  borderRadius: 12,
+  border: "1px solid #e8e1dc",
   background: "#fff",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
   overflow: "hidden",
   flexShrink: 0,
-  padding: 3,
+  padding: 5,
 };
 
 const thumbWrapStyle: CSSProperties = {
-  width: 40,
-  height: 40,
-  borderRadius: 8,
-  border: "1px solid #e2e8f0",
+  width: 48,
+  height: 48,
+  borderRadius: 12,
+  border: "1px solid #e8e1dc",
   overflow: "hidden",
   background: "#fff",
   display: "inline-flex",
@@ -5615,29 +5622,30 @@ const thumbWrapStyle: CSSProperties = {
 };
 
 const categoryBadgeStyle: CSSProperties = {
-  width: 32,
-  height: 32,
-  borderRadius: 8,
-  border: "1px solid #dbeafe",
-  background: "#eff6ff",
+  width: 44,
+  height: 44,
+  borderRadius: 12,
+  border: "1px solid #eadfd8",
+  background: "#f7f3f0",
+  color: "#3a2118",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  fontSize: 16,
+  fontSize: 18,
 };
 
 const badgeStyle: CSSProperties = {
-  width: 32,
-  height: 32,
-  borderRadius: 8,
-  border: "1px solid #cbd5e1",
-  background: "#f8fafc",
+  width: 44,
+  height: 44,
+  borderRadius: 12,
+  border: "1px solid #eadfd8",
+  background: "#f7f3f0",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: 700,
-  color: "#0f172a",
+  color: "#3a2118",
   textTransform: "uppercase",
 };
 
@@ -5684,11 +5692,12 @@ const labelStyle: CSSProperties = {
 };
 
 const inputStyle: CSSProperties = {
-  border: "1px solid #d1d5db",
+  border: "1px solid #d8d2cc",
   borderRadius: 10,
-  padding: "9px 10px",
+  padding: "11px 12px",
   fontSize: 14,
   width: "100%",
+  background: "#fffefd",
 };
 
 const textAreaStyle: CSSProperties = {
@@ -5712,11 +5721,11 @@ const primaryBtn: CSSProperties = {
 };
 
 const ghostBtn: CSSProperties = {
-  border: "1px solid #d1d5db",
-  background: "#fff",
+  border: "1px solid #e3ded9",
+  background: "#fffefd",
   color: "#111827",
   borderRadius: 10,
-  padding: "8px 12px",
+  padding: "10px 13px",
   fontSize: 13,
   fontWeight: 600,
   cursor: "pointer",
