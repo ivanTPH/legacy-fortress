@@ -520,19 +520,6 @@ const legalSummary = useMemo(() => {
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
-      <div
-        style={{
-          borderRadius: 10,
-          padding: "10px 12px",
-          background: "#dbeafe",
-          color: "#1d4ed8",
-          fontSize: 13,
-          fontWeight: 800,
-          letterSpacing: 0.2,
-        }}
-      >
-        DASHBOARD BUILD CHECK - ARROW DRAWER V2
-      </div>
       {status ? <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div> : null}
       {loading ? <div style={{ color: "#6b7280" }}>Loading dashboard summary...</div> : null}
       {searchQuery ? (
@@ -600,10 +587,10 @@ const legalSummary = useMemo(() => {
       ) : null}
       <section
         style={{
-          border: "1px solid #e2e8f0",
+          border: "1px solid #e8e1dc",
           borderRadius: 16,
           background: "#fff",
-          padding: 16,
+          padding: 18,
           display: "grid",
           gap: 12,
         }}
@@ -616,7 +603,7 @@ const legalSummary = useMemo(() => {
             <h2 style={{ margin: 0, fontSize: 18 }}>Overview</h2>
           </div>
         <div style={{ color: "#64748b", fontSize: 13 }}>
-          Open the main areas of your estate record from one simplified overview.
+          Review the main areas of your secure legacy vault.
         </div>
         </div>
         {showFinancialCard || showLegalCard || showPropertyCard || showBusinessCard || showDigitalCard || showPossessionsCard || showTaskCard ? (
@@ -906,9 +893,9 @@ const overviewIconStyle = {
   width: 28,
   height: 28,
   borderRadius: 10,
-  background: "#f1f5f9",
-  border: "1px solid #e2e8f0",
-  color: "#0f172a",
+  background: "#f7f3f0",
+  border: "1px solid #eadfd8",
+  color: "#3a2118",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -916,26 +903,26 @@ const overviewIconStyle = {
 } satisfies React.CSSProperties;
 
 const searchResultsPanelStyle = {
-  border: "1px solid #dbeafe",
+  border: "1px solid #e5e0dc",
   borderRadius: 16,
-  background: "#f8fbff",
+  background: "#fffefd",
   padding: 16,
   display: "grid",
   gap: 12,
 } satisfies CSSProperties;
 
 const searchEmptyStateStyle = {
-  border: "1px dashed #cbd5e1",
+  border: "1px dashed #d8d1cc",
   borderRadius: 14,
   padding: 14,
-  color: "#64748b",
-  background: "#fff",
+  color: "#6f645d",
+  background: "#fffefd",
 } satisfies CSSProperties;
 
 const searchResultStyle = {
   textDecoration: "none",
   color: "#0f172a",
-  border: "1px solid #e2e8f0",
+  border: "1px solid #e8e1dc",
   borderRadius: 14,
   background: "#fff",
   padding: 12,
@@ -948,12 +935,12 @@ const searchResultIconStyle = {
   width: 32,
   height: 32,
   borderRadius: 10,
-  background: "#eff6ff",
-  border: "1px solid #dbeafe",
+  background: "#f7f3f0",
+  border: "1px solid #eadfd8",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  color: "#1d4ed8",
+  color: "#3a2118",
   flexShrink: 0,
 } satisfies CSSProperties;
 

@@ -1,19 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --lf-bg: #f4f5f7;
+  --lf-bg: #fbfaf8;
   --lf-surface: #ffffff;
-  --lf-surface-muted: #f8fafc;
-  --lf-border: #e4e7ec;
+  --lf-surface-muted: #f8f6f4;
+  --lf-border: #e5e0dc;
   --lf-text: #111827;
-  --lf-text-soft: #6b7280;
-  --lf-primary: #101318;
-  --lf-primary-strong: #0a0c10;
-  --lf-accent: #f39f50;
+  --lf-text-soft: #6f6a65;
+  --lf-primary: #15110f;
+  --lf-primary-strong: #0d0b0a;
+  --lf-accent: #4a2418;
+  --lf-bronze: #3a2118;
+  --lf-bronze-strong: #21110d;
   --lf-radius-xl: 20px;
   --lf-radius-lg: 14px;
-  --lf-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
-  --lf-shadow-md: 0 14px 32px rgba(16, 24, 40, 0.08);
+  --lf-shadow-sm: 0 1px 2px rgba(33, 17, 13, 0.035);
+  --lf-shadow-md: 0 14px 32px rgba(33, 17, 13, 0.07);
 }
 
 .lf-shell[data-lf-text-size="large"] {
@@ -137,7 +139,7 @@ body {
 }
 
 body {
-  background: radial-gradient(circle at top right, #ffffff 0%, var(--lf-bg) 55%);
+  background: var(--lf-bg);
   color: var(--lf-text);
   font-family: var(--font-geist-sans), "Avenir Next", "Segoe UI", sans-serif;
   overflow-x: clip;
@@ -231,28 +233,32 @@ textarea {
 .lf-entry-shell {
   min-height: 100dvh;
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(420px, 540px);
+  grid-template-columns: minmax(0, 0.98fr) minmax(420px, 540px);
   background:
-    radial-gradient(circle at top left, rgba(209, 250, 229, 0.85), transparent 34%),
-    linear-gradient(180deg, #eef4f7 0%, #f8fbfc 100%);
+    linear-gradient(90deg, #11161a 0%, #15100e 48%, #fbfaf8 48%, #fbfaf8 100%);
 }
 
 .lf-entry-art {
   position: relative;
   overflow: hidden;
-  padding: 40px 44px;
+  padding: 42px 44px;
   display: grid;
-  gap: 28px;
-  background: linear-gradient(155deg, #f8fbfd 0%, #edf4f7 42%, #e2edf1 100%);
-  color: #0f172a;
+  grid-template-rows: auto 1fr auto;
+  gap: 24px;
+  background:
+    radial-gradient(circle at 22% 72%, rgba(244, 159, 80, 0.5), transparent 34%),
+    radial-gradient(circle at 70% 20%, rgba(255, 255, 255, 0.18), transparent 30%),
+    linear-gradient(145deg, #0f1418 0%, #17110f 58%, #2f160f 100%);
+  color: #fff;
 }
 
 .lf-entry-copy {
   position: relative;
   z-index: 1;
   display: grid;
-  gap: 14px;
-  max-width: 620px;
+  align-self: center;
+  gap: 12px;
+  max-width: 460px;
 }
 
 .lf-entry-eyebrow {
@@ -261,30 +267,56 @@ textarea {
   align-items: center;
   gap: 8px;
   border-radius: 999px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
   padding: 8px 12px;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #0f766e;
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .lf-entry-copy h1 {
   margin: 0;
-  font-size: clamp(2.5rem, 5vw, 4.3rem);
-  line-height: 0.98;
-  letter-spacing: -0.04em;
-  max-width: 10ch;
+  font-size: clamp(2rem, 4vw, 3.1rem);
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+  max-width: 12ch;
 }
 
 .lf-entry-copy p {
   margin: 0;
   max-width: 560px;
-  font-size: 17px;
+  font-size: 15px;
   line-height: 1.6;
-  color: #334155;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.lf-entry-brand-note {
+  position: relative;
+  z-index: 1;
+  width: min(280px, 100%);
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.84);
+  padding: 20px;
+  display: grid;
+  gap: 10px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(12px);
+}
+
+.lf-entry-brand-note strong {
+  color: #ffffff;
+  font-size: 18px;
+}
+
+.lf-entry-brand-note p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
 }
 
 .lf-entry-trust-grid {
@@ -297,7 +329,7 @@ textarea {
 
 .lf-entry-trust-card {
   border: 1px solid rgba(148, 163, 184, 0.24);
-  border-radius: 20px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.78);
   backdrop-filter: blur(10px);
   padding: 16px;
@@ -410,19 +442,19 @@ textarea {
 .lf-entry-panel-wrap {
   display: grid;
   place-items: center;
-  padding: 28px;
+  padding: 40px 28px;
 }
 
 .lf-entry-panel {
   width: 100%;
-  max-width: 460px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 28px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.08);
-  padding: 28px;
+  max-width: 532px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
   display: grid;
-  gap: 16px;
+  gap: 18px;
 }
 
 .lf-entry-panel-top {
@@ -437,14 +469,14 @@ textarea {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #0f766e;
+  color: #6f645d;
 }
 
 .lf-entry-panel h2 {
   margin: 8px 0 0;
   font-size: 30px;
   line-height: 1.02;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.01em;
 }
 
 .lf-entry-demo-link {
@@ -469,8 +501,8 @@ textarea {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   padding: 6px;
-  border-radius: 16px;
-  background: #f1f5f9;
+  border-radius: 14px;
+  background: #f3f0ed;
 }
 
 .lf-entry-tab {
@@ -485,8 +517,8 @@ textarea {
 
 .lf-entry-tab.active {
   background: #fff;
-  color: #0f172a;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  color: #15110f;
+  box-shadow: 0 1px 2px rgba(33, 17, 13, 0.08);
 }
 
 .lf-entry-footnote {
@@ -679,7 +711,7 @@ textarea {
 }
 
 .lf-sidebar {
-  border-right: 1px solid #dde3eb;
+  border-right: 1px solid #e5e0dc;
   background: #ffffff;
   padding: 20px 16px 16px;
   display: grid;
@@ -701,11 +733,12 @@ textarea {
 .lf-brand-title {
   font-size: 15px;
   font-weight: 700;
+  color: #15110f;
 }
 
 .lf-brand-subtitle {
   font-size: 12px;
-  color: var(--lf-text-soft);
+  color: #81766f;
 }
 
 .lf-search-wrap {
@@ -718,21 +751,22 @@ textarea {
   left: 10px;
   top: 50%;
   transform: translateY(-50%);
-  color: #98a2b3;
+  color: #9a918b;
 }
 
 .lf-search {
   width: 100%;
   border-radius: 14px;
   border: 1px solid var(--lf-border);
-  background: #fbfcfe;
+  background: #fffefd;
   padding: 11px 12px 11px 32px;
   font-size: 13px;
+  color: #15110f;
 }
 
 .lf-nav {
   display: grid;
-  gap: 6px;
+  gap: 5px;
   align-content: start;
   min-height: 0;
   overflow: auto;
@@ -743,18 +777,18 @@ textarea {
   display: flex;
   align-items: center;
   gap: 9px;
-  border-radius: 14px;
-  padding: 9px 11px;
+  border-radius: 8px;
+  padding: 10px 11px;
   text-decoration: none;
-  color: #667085;
+  color: #4f5968;
   font-size: 14px;
   border: 1px solid transparent;
   font-weight: 500;
 }
 
 .lf-nav-item:hover {
-  background: #f7f8fa;
-  color: #111827;
+  background: #faf8f6;
+  color: #15110f;
 }
 
 .lf-nav-item:focus-visible,
@@ -766,14 +800,15 @@ textarea {
 }
 
 .lf-nav-item.is-active {
-  background: #f3f4f6;
-  color: #111827;
-  border-color: #e4e7ec;
+  background: linear-gradient(180deg, var(--lf-bronze) 0%, var(--lf-bronze-strong) 100%);
+  color: #ffffff;
+  border-color: #2b1812;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 8px 18px rgba(33, 17, 13, 0.16);
 }
 
 .lf-nav-item.is-open:not(.is-active) {
-  background: #f8fafc;
-  color: #111827;
+  background: #faf8f6;
+  color: #15110f;
 }
 
 .lf-nav-icon {
@@ -807,23 +842,23 @@ textarea {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid transparent;
   padding: 7px 9px;
   font-size: 12px;
-  color: #4b5563;
+  color: #4f5968;
   text-decoration: none;
 }
 
 .lf-account-link:hover {
-  background: #f8fafc;
-  color: #111827;
+  background: #faf8f6;
+  color: #15110f;
 }
 
 .lf-account-link.is-active {
-  border-color: #d8dde6;
-  background: #f3f4f6;
-  color: #111827;
+  border-color: #2b1812;
+  background: linear-gradient(180deg, var(--lf-bronze) 0%, var(--lf-bronze-strong) 100%);
+  color: #ffffff;
 }
 
 .lf-nav-chevron {
@@ -837,9 +872,9 @@ textarea {
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid #d9e0ea;
+  border: 1px solid #e5e0dc;
   background: #fff;
-  color: #344054;
+  color: #3c3936;
   padding: 9px 11px;
   border-radius: 12px;
   cursor: pointer;
@@ -848,8 +883,8 @@ textarea {
 
 .lf-user-card {
   margin-top: 2px;
-  border: 1px solid #d9e0ea;
-  border-radius: 16px;
+  border: 1px solid #e5e0dc;
+  border-radius: 12px;
   background: #fff;
   padding: 13px;
   display: grid;
@@ -860,8 +895,8 @@ textarea {
 .lf-user-avatar {
   width: 34px;
   height: 34px;
-  border-radius: 10px;
-  background: #111827;
+  border-radius: 999px;
+  background: var(--lf-bronze);
   color: #fff;
   display: grid;
   place-items: center;
@@ -882,10 +917,10 @@ textarea {
 }
 
 .lf-signout {
-  border: 1px solid #d7dde6;
-  border-radius: 12px;
+  border: 1px solid #e5e0dc;
+  border-radius: 8px;
   padding: 8px 10px;
-  background: #f9fafb;
+  background: #fffefd;
   cursor: pointer;
   font-size: 13px;
 }
@@ -912,8 +947,8 @@ textarea {
 .lf-topbar {
   border-bottom: 1px solid var(--lf-border);
   padding: 18px 22px;
-  background: rgba(255, 255, 255, 0.86);
-  backdrop-filter: blur(6px);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(4px);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -929,9 +964,9 @@ textarea {
 
 .lf-topbar-title {
   margin: 0;
-  font-size: 28px;
+  font-size: 26px;
   line-height: 1.05;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   color: #111827;
 }
 
@@ -962,9 +997,9 @@ textarea {
   width: 30px;
   height: 30px;
   border-radius: 999px;
-  border: 1px solid #dbe3ec;
-  background: rgba(248, 250, 252, 0.92);
-  color: #667085;
+  border: 1px solid #e5e0dc;
+  background: #fffefd;
+  color: #6f645d;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -974,9 +1009,9 @@ textarea {
 .lf-topbar-user {
   text-decoration: none;
   color: #0f172a;
-  border: 1px solid #dde4ee;
+  border: 1px solid #e5e0dc;
   background: rgba(255, 255, 255, 0.96);
-  border-radius: 16px;
+  border-radius: 14px;
   padding: 8px 10px;
   display: flex;
   align-items: center;

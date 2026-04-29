@@ -171,13 +171,13 @@ const cardStyle: CSSProperties = {
   alignContent: "start",
   gap: 8,
   height: "100%",
-  border: "1px solid #e5e7eb",
-  borderRadius: 16,
-  padding: 14,
+  border: "1px solid #e8e1dc",
+  borderRadius: 14,
+  padding: 16,
   background: "#fff",
   textDecoration: "none",
   color: "#111827",
-  boxShadow: "0 1px 2px rgba(16,24,40,0.06)",
+  boxShadow: "0 1px 2px rgba(33,17,13,0.035)",
 };
 
 const summaryLinkStyle: CSSProperties = {
@@ -200,7 +200,7 @@ const iconStyle: CSSProperties = {
   width: 24,
   height: 24,
   borderRadius: 8,
-  background: "#111827",
+  background: "linear-gradient(180deg, #3a2118 0%, #21110d 100%)",
   color: "#fff",
   display: "inline-grid",
   placeItems: "center",
@@ -223,7 +223,7 @@ const footerStyle: CSSProperties = {
 };
 
 const valueStyle: CSSProperties = {
-  fontSize: 20,
+  fontSize: 22,
   fontWeight: 800,
   lineHeight: 1.2,
 };
@@ -245,7 +245,7 @@ const itemLinkStyle: CSSProperties = {
   justifyContent: "space-between",
   alignItems: "center",
   gap: 8,
-  border: "1px solid #eef2f7",
+  border: "1px solid #eee8e3",
   borderRadius: 10,
   padding: "6px 8px",
   textDecoration: "none",
@@ -254,8 +254,8 @@ const itemLinkStyle: CSSProperties = {
 };
 
 const overviewWrapStyle: CSSProperties = {
-  border: "1px solid #eef2f7",
+  border: "1px solid #eee8e3",
   borderRadius: 12,
-  background: "#f8fafc",
+  background: "#fffefd",
   padding: 10,
 };

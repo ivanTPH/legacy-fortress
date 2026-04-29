@@ -664,7 +664,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   );
   const normalizedPathname = normalizePath(pathname);
   const topbarTitle = normalizedPathname === "/dashboard"
-    ? "Dashboard - Review your estate records"
+    ? "Dashboard"
     : currentNode?.label ?? "Dashboard";
   const topbarBreadcrumbs = normalizedPathname === "/dashboard" ? [] : breadcrumbs.slice(0, -1);
 
@@ -708,7 +708,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <BrandMark size={32} priority />
             <div>
               <div className="lf-brand-title">Legacy Fortress</div>
-              <div className="lf-brand-subtitle">Estate Command Center</div>
+              <div className="lf-brand-subtitle">Your secure legacy vault</div>
             </div>
           </div>
 
@@ -895,7 +895,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <BrandMark size={32} priority />
                 <div>
                   <div className="lf-brand-title">Legacy Fortress</div>
-                  <div className="lf-brand-subtitle">Estate Command Center</div>
+                  <div className="lf-brand-subtitle">Your secure legacy vault</div>
                 </div>
               </div>
 

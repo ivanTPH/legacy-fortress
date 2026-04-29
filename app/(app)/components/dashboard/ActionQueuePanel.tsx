@@ -237,7 +237,7 @@ function getSectionPriority(items: BlockingItem[]) {
 }
 
 const panelStyle = {
-  border: "1px solid #e2e8f0",
+  border: "1px solid #e8e1dc",
   borderRadius: 16,
   background: "#fff",
   padding: 14,
@@ -249,9 +249,9 @@ const iconWrapStyle = {
   width: 26,
   height: 26,
   borderRadius: 9,
-  background: "#f8fafc",
-  border: "1px solid #e2e8f0",
-  color: "#0f172a",
+  background: "#f7f3f0",
+  border: "1px solid #eadfd8",
+  color: "#3a2118",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -262,9 +262,9 @@ const activeBadgeStyle = {
   display: "inline-flex",
   alignItems: "center",
   borderRadius: 999,
-  border: "1px solid #fed7aa",
-  background: "#fff7ed",
-  color: "#b91c1c",
+  border: "1px solid #eadfd8",
+  background: "#fffefd",
+  color: "#5d2d1f",
   fontSize: 11,
   fontWeight: 700,
   padding: "3px 8px",
@@ -311,21 +311,21 @@ function sectionCardStyle(tone: ActionCentreSection["tone"]): CSSProperties {
   }
   if (tone === "alert") {
     return {
-      border: "1px solid #fde7c7",
+      border: "1px solid #eadfd8",
       borderRadius: 12,
       padding: 10,
       display: "grid",
       gap: 8,
-      background: "#fffdf8",
+      background: "#fffefd",
     };
   }
   return {
-    border: "1px solid #e5e7eb",
+    border: "1px solid #e8e1dc",
     borderRadius: 12,
     padding: 10,
     display: "grid",
     gap: 8,
-    background: "#fbfdff",
+    background: "#fffefd",
   };
 }
 
@@ -344,15 +344,15 @@ function sectionPillStyle(tone: ActionCentreSection["tone"]): CSSProperties {
   }
   return {
     ...activeBadgeStyle,
-    border: "1px solid #dbeafe",
-    background: "#eff6ff",
-    color: "#1d4ed8",
+    border: "1px solid #e8e1dc",
+    background: "#f8f6f4",
+    color: "#5f5852",
     padding: "2px 7px",
   };
 }
 
 const itemRowStyle = {
-  border: "1px solid #eef2f7",
+  border: "1px solid #eee8e3",
   borderRadius: 10,
   background: "#fff",
   padding: "8px 10px",
@@ -374,6 +374,7 @@ function accordionIconStyle(isOpen: boolean): CSSProperties {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
+    transform: isOpen ? "rotate(0deg)" : "none",
   };
 }
 
@@ -398,8 +399,8 @@ function sectionIconStyle(tone: ActionCentreSection["tone"]): CSSProperties {
       width: 22,
       height: 22,
       borderRadius: 999,
-      background: "#fff7ed",
-      color: "#c2410c",
+      background: "#f7f3f0",
+      color: "#5d2d1f",
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
@@ -411,8 +412,8 @@ function sectionIconStyle(tone: ActionCentreSection["tone"]): CSSProperties {
       width: 22,
       height: 22,
       borderRadius: 999,
-      background: "#eff6ff",
-      color: "#1d4ed8",
+      background: "#f8f6f4",
+      color: "#5f5852",
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
