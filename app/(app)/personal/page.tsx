@@ -43,7 +43,7 @@ export default function PersonalOverviewPage() {
       {visibleItems.length ? (
       <div className="lf-content-grid">
         {visibleItems.map((item) => (
-          <Link key={item.href} href={item.href} style={cardStyle}>
+          <Link key={item.href} href={item.href} className="lf-personal-overview-card" style={cardStyle}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 12, fontWeight: 800 }}>
               <span style={iconWrapStyle}>
                 <Icon name={item.icon} size={22} />

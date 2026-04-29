@@ -11,7 +11,7 @@ export function SettingsPageShell({ title, subtitle, children }: { title: string
 
 export function SettingsCard({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   return (
-    <section style={cardStyle}>
+    <section className="lf-settings-card" style={cardStyle}>
       <div style={{ display: "grid", gap: 4 }}>
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>{title}</h2>
         {description ? <p style={{ margin: 0, color: "#6b7280", fontSize: 14 }}>{description}</p> : null}

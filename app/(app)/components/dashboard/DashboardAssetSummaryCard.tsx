@@ -64,7 +64,7 @@ export default function DashboardAssetSummaryCard({
 
   return (
     <div
-      className={className}
+      className={`lf-dashboard-summary-card ${className}`.trim()}
       style={cardStyle}
       role="link"
       tabIndex={0}
