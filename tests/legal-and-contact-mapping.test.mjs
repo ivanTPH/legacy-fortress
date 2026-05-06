@@ -60,7 +60,7 @@ test("contacts prefer executor grouping over family-like context text", () => {
   assert.equal(resolveContactGroupKey(executorContact), "executors");
 });
 
-test("next of kin stays grouped as next of kin when no stronger role exists", () => {
+test("family contacts stay grouped as family when no stronger role exists", () => {
   const nextOfKinContact = {
     id: "2",
     full_name: "Sarah Smith",
@@ -75,7 +75,7 @@ test("next of kin stays grouped as next of kin when no stronger role exists", ()
     updated_at: new Date().toISOString(),
   };
 
-  assert.equal(resolveContactGroupKey(nextOfKinContact), "next_of_kin");
+  assert.equal(resolveContactGroupKey(nextOfKinContact), "family");
 });
 
 test("legal linked contacts share category-specific default roles", () => {

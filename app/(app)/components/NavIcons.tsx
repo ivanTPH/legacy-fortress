@@ -52,6 +52,14 @@ export function TrustIcon({ size = 18 }: IconProps) {
   return <NavIcon name="history_edu" size={size} />;
 }
 
+export function IdentityIcon({ size = 18 }: IconProps) {
+  return <NavIcon name="badge" size={size} />;
+}
+
+export function AccessRequestsIcon({ size = 18 }: IconProps) {
+  return <NavIcon name="fact_check" size={size} />;
+}
+
 export function HelpIcon({ size = 18 }: IconProps) {
   return <NavIcon name="headphones" size={size} />;
 }

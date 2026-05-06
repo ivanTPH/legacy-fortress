@@ -19,7 +19,7 @@ export default async function AdminCaseDetailPage({ params }: AdminCaseDetailPag
       <section style={caseHeaderStyle}>
         <div style={{ display: "grid", gap: 6 }}>
           <AdminStatusBadge status={item.status} />
-          <div style={{ color: "#64748b", fontSize: 13 }}>Assigned reviewer: <strong>{item.assignedAdmin}</strong></div>
+          <div style={{ color: "var(--lf-text-soft)", fontSize: 13 }}>Assigned reviewer: <strong>{item.assignedAdmin}</strong></div>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button type="button" disabled style={disabledButtonStyle}>Approve</button>
@@ -32,9 +32,9 @@ export default async function AdminCaseDetailPage({ params }: AdminCaseDetailPag
         <section style={panelStyle}>
           <h2 style={h2Style}>Evidence preview</h2>
           <div style={documentPreviewStyle}>
-            <div style={{ fontSize: 12, fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>Death certificate</div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: "#334155" }}>Certificate placeholder</div>
-            <div style={{ color: "#64748b", fontSize: 13 }}>Submitted 30 Apr 2026 · PDF · mocked preview</div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: "var(--lf-text-soft)", textTransform: "uppercase" }}>Death certificate</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: "var(--lf-text)" }}>Certificate placeholder</div>
+            <div style={{ color: "var(--lf-text-soft)", fontSize: 13 }}>Submitted 30 Apr 2026 · PDF · mocked preview</div>
           </div>
           <div style={infoListStyle}>
             <Info label="Vault owner" value={item.userName} />
@@ -56,7 +56,7 @@ export default async function AdminCaseDetailPage({ params }: AdminCaseDetailPag
           </div>
           <section style={decisionPanelStyle}>
             <strong>Decision panel</strong>
-            <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}>
+            <p style={{ margin: 0, color: "var(--lf-text-soft)", fontSize: 13 }}>
               Actions are disabled in this prototype. Future implementation should require decision notes, role checks, and audit logging before any unlock.
             </p>
             <textarea disabled value="Reviewer notes will appear here." style={textareaStyle} readOnly />
@@ -70,7 +70,7 @@ export default async function AdminCaseDetailPage({ params }: AdminCaseDetailPag
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <span style={{ display: "block", color: "#64748b", fontSize: 12, fontWeight: 800 }}>{label}</span>
+      <span style={{ display: "block", color: "var(--lf-text-soft)", fontSize: 12, fontWeight: 800 }}>{label}</span>
       <strong>{value}</strong>
     </div>
   );
@@ -78,8 +78,8 @@ function Info({ label, value }: { label: string; value: string }) {
 
 const caseHeaderStyle: CSSProperties = {
   background: "#fff",
-  border: "1px solid #e5e7eb",
-  borderRadius: 10,
+  border: "1px solid var(--lf-border)",
+  borderRadius: 8,
   padding: 16,
   display: "flex",
   alignItems: "center",
@@ -95,8 +95,8 @@ const detailGridStyle: CSSProperties = {
 
 const panelStyle: CSSProperties = {
   background: "#fff",
-  border: "1px solid #e5e7eb",
-  borderRadius: 10,
+  border: "1px solid var(--lf-border)",
+  borderRadius: 8,
   padding: 16,
   display: "grid",
   gap: 14,
@@ -109,9 +109,9 @@ const h2Style: CSSProperties = {
 
 const documentPreviewStyle: CSSProperties = {
   minHeight: 300,
-  border: "1px dashed #cbd5e1",
-  borderRadius: 10,
-  background: "#f8fafc",
+  border: "1px dashed var(--lf-border)",
+  borderRadius: 8,
+  background: "var(--lf-surface-muted)",
   display: "grid",
   placeContent: "center",
   textAlign: "center",
@@ -125,10 +125,10 @@ const infoListStyle: CSSProperties = {
 };
 
 const disabledButtonStyle: CSSProperties = {
-  border: "1px solid #d1d5db",
+  border: "1px solid var(--lf-border)",
   borderRadius: 8,
-  background: "#f3f4f6",
-  color: "#6b7280",
+  background: "var(--lf-surface-muted)",
+  color: "var(--lf-text-soft)",
   padding: "9px 12px",
   fontWeight: 800,
 };
@@ -137,7 +137,7 @@ const checkRowStyle: CSSProperties = {
   display: "flex",
   gap: 10,
   alignItems: "center",
-  border: "1px solid #f1f5f9",
+  border: "1px solid #f1ece8",
   borderRadius: 8,
   padding: 10,
 };
@@ -146,7 +146,7 @@ const checkMarkStyle: CSSProperties = {
   width: 24,
   height: 24,
   borderRadius: 999,
-  background: "#f1f5f9",
+  background: "#f1ece8",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -154,8 +154,8 @@ const checkMarkStyle: CSSProperties = {
 };
 
 const decisionPanelStyle: CSSProperties = {
-  border: "1px solid #e5e7eb",
-  borderRadius: 10,
+  border: "1px solid var(--lf-border)",
+  borderRadius: 8,
   padding: 12,
   display: "grid",
   gap: 8,
@@ -165,9 +165,9 @@ const decisionPanelStyle: CSSProperties = {
 const textareaStyle: CSSProperties = {
   width: "100%",
   minHeight: 90,
-  border: "1px solid #d1d5db",
+  border: "1px solid var(--lf-border)",
   borderRadius: 8,
   padding: 10,
-  color: "#64748b",
+  color: "var(--lf-text-soft)",
   resize: "vertical",
 };

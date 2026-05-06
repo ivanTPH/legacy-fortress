@@ -133,6 +133,7 @@ export function normalizeCanonicalBankMetadata(
     bank_contact_phone: readString(metadata["bank_contact_phone"]) || null,
     bank_contact_email: readString(metadata["bank_contact_email"]) || null,
     online_banking_url: readString(metadata["online_banking_url"]) || null,
+    dashboard_quick_record: metadata["dashboard_quick_record"] === true ? true : null,
   };
 }
 

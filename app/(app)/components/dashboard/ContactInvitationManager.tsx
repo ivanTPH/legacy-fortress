@@ -17,7 +17,6 @@ import { getSafeUserData } from "../../../../lib/auth/requireActiveUser";
 import InvitationStatusBadge from "./InvitationStatusBadge";
 import RoleBadge from "./RoleBadge";
 import {
-  buildCanonicalInvitationProjectionPayload,
   deleteCanonicalContact,
   loadCanonicalContactInvitationsForOwner,
   mapActivationStatusToVerificationStatus,
@@ -26,9 +25,8 @@ import {
   type CanonicalContactRow,
 } from "../../../../lib/contacts/canonicalContacts";
 import { buildContactsWorkspaceHref, buildLinkedContactRecordHref } from "../../../../lib/contacts/contactRouting";
-import { buildInvitationEmailDraft } from "../../../../lib/contacts/invitations";
+import { sendContactInvite } from "../../../../lib/contacts/sendContactInvite";
 import { resolveInvitationBadgeState, type InvitationStatus } from "../../../../lib/contacts/invitationStatus";
-import { assertOwnerCanSendInvitation, ensureOwnerPlanProfile } from "../../../../lib/accountPlan";
 import { useVaultPreferences } from "../../../../components/vault/VaultPreferencesContext";
 import { getVaultSubsectionsForGroup, isVaultCategoryEnabled, isVaultSubsectionEnabled, type VaultCategoryGroupKey } from "../../../../lib/vaultPreferences";
 import {
@@ -386,136 +384,33 @@ export default function ContactInvitationManager({
       router.replace("/sign-in");
       return;
     }
-    if (!resend) {
-      const ownerPlan = await ensureOwnerPlanProfile(supabase, userData.user.id);
-      const inviteCountRes = await supabase
-        .from("contact_invitations")
-        .select("id", { count: "exact", head: true })
-        .eq("owner_user_id", userData.user.id)
-        .neq("invitation_status", "revoked");
-      if (inviteCountRes.error) {
-        setStatus(`❌ Could not check invitation allowance: ${inviteCountRes.error.message}`);
-        return;
-      }
-      try {
-        assertOwnerCanSendInvitation(ownerPlan, Number(inviteCountRes.count ?? 0));
-      } catch (error) {
-        setStatus(`❌ ${error instanceof Error ? error.message : "Invitation limit reached."}`);
-        return;
-      }
-    }
 
-    const token = crypto.randomUUID().replace(/-/g, "");
-    const tokenHash = await sha256(token);
-    const now = new Date().toISOString();
-    const { data: ownerProfile } = await supabase
-      .from("user_profiles")
-      .select("display_name")
-      .eq("user_id", userData.user.id)
-      .maybeSingle();
-    const emailDraft = buildInvitationEmailDraft({
-      invitationId: row.id,
-      token,
-      assignedRole: row.assigned_role,
-      accountHolderName: String(ownerProfile?.display_name ?? "").trim() || userData.user.email?.split("@")[0] || "the account holder",
-    });
-    const deliveryResult = await supabase.auth.signInWithOtp({
-      email: row.contact_email,
-      options: {
-        shouldCreateUser: true,
-        emailRedirectTo:
-          typeof window !== "undefined"
-            ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(emailDraft.acceptPath)}`
-            : undefined,
-        data: {
-          invitation_id: row.id,
-          invitation_role: row.assigned_role,
-          account_holder_name:
-            String(ownerProfile?.display_name ?? "").trim() || userData.user.email?.split("@")[0] || "the account holder",
-          linked_access: "view_only",
-        },
-      },
-    });
-
-    if (deliveryResult.error) {
-      setStatus(`❌ Could not ${resend ? "resend" : "send"} invitation email: ${deliveryResult.error.message}`);
-      return;
-    }
-
-    const { error } = await supabase
-      .from("contact_invitations")
-      .update({
-        ...buildCanonicalInvitationProjectionPayload({
-          ownerUserId: userData.user.id,
-          contact: {
-            id: row.contact_id || "",
-            full_name: row.contact_name,
-            email: row.contact_email,
-            relationship: null,
-            contact_role: row.assigned_role,
-          },
-          assignedRole: row.assigned_role,
-          invitationStatus: "pending",
-          invitedAt: row.invited_at || now,
-          sentAt: now,
-          updatedAt: now,
-          permissionsOverride: row.permissions_override ?? null,
-          activationStatus: row.activation_status,
-        }).invitation,
-        invite_token_hash: tokenHash,
-        last_sent_at: now,
-      })
-      .eq("id", row.id)
-      .eq("owner_user_id", userData.user.id);
-
-    if (error) {
-      setStatus(`❌ Could not ${resend ? "resend" : "send"} invitation: ${error.message}`);
-      return;
-    }
-
-    if (row.contact_id) {
-      await syncCanonicalContact(supabase, {
+    try {
+      const result = await sendContactInvite(supabase, {
         ownerUserId: userData.user.id,
-        existingContactId: row.contact_id,
-        fullName: row.contact_name,
-        email: row.contact_email,
-        contactRole: row.assigned_role,
-        sourceType: "invitation",
-        inviteStatus: "invite_sent",
-        verificationStatus: mapActivationStatusToVerificationStatus(row.activation_status),
-        link: {
-          sourceKind: "invitation",
-          sourceId: row.id,
-          sectionKey: "dashboard",
-          categoryKey: "contacts",
-          label: "Contact invitation",
-          role: row.assigned_role,
-        },
+        ownerEmail: userData.user.email ?? null,
+        contactId: row.contact_id,
+        contactName: row.contact_name,
+        contactEmail: row.contact_email,
+        assignedRole: row.assigned_role,
+        invitationId: row.id,
+        invitedAt: row.invited_at,
+        activationStatus: row.activation_status,
+        permissionsOverride: row.permissions_override ?? null,
+        resend,
+        origin: typeof window !== "undefined" ? window.location.origin : null,
       });
+
+      if (result.eventWarning) {
+        setStatus(`⚠️ Invitation email sent, but event log failed: ${result.eventWarning}`);
+      } else {
+        setStatus(`✅ Invitation email ${resend ? "resent" : "sent"} to ${row.contact_email}.`);
+      }
+      markRecentlySent(row.id);
+      await loadRows();
+    } catch (error) {
+      setStatus(`❌ Could not ${resend ? "resend" : "send"} invitation: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
-
-    const { error: eventError } = await supabase.from("invitation_events").insert({
-      owner_user_id: userData.user.id,
-      invitation_id: row.id,
-      event_type: resend ? "resent" : "sent",
-      payload: {
-        contact_email: row.contact_email,
-        token_hint: token.slice(-6),
-        subject: emailDraft.subject,
-        preview: emailDraft.preview,
-        body_text: emailDraft.bodyText,
-        accept_path: emailDraft.acceptPath,
-      },
-    });
-
-    if (eventError) {
-      setStatus(`⚠️ Invitation email sent, but event log failed: ${eventError.message}`);
-    } else {
-      setStatus(`✅ Invitation email ${resend ? "resent" : "sent"} to ${row.contact_email}.`);
-    }
-
-    markRecentlySent(row.id);
-    await loadRows();
   }
 
   function startEdit(row: InvitationRow) {
@@ -920,7 +815,7 @@ export default function ContactInvitationManager({
             <h3 style={sectionTitleStyle}>Invitation queue</h3>
             <p style={sectionIntroStyle}>
               {isDashboardMode
-                ? "Review invitation state here, send or resend from the queue, then open Contacts for contact edits and detailed access management."
+                ? "Review invitation state here, send or resend invites, then open Contacts for contact edits and detailed access management."
                 : "Review access roles, invitation state, and the latest action for each contact."}
             </p>
           </div>
@@ -964,11 +859,11 @@ export default function ContactInvitationManager({
                               <button
                                 type="button"
                                 style={dashboardStatusActionStyle}
-                                title={`Send email invitation to ${row.contact_email}`}
+                                title={`Send invite to ${row.contact_email}`}
                                 onClick={() => void sendInvite(row, false)}
                               >
-                                <StatusIcon icon="send" tone="neutral" label={`Send email invitation to ${row.contact_email}`} />
-                                <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>Send email</span>
+                                <StatusIcon icon="send" tone="neutral" label={`Send invite to ${row.contact_email}`} />
+                                <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>Send invite</span>
                               </button>
                             ) : (
                               <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
@@ -1038,11 +933,11 @@ export default function ContactInvitationManager({
                         <button
                           type="button"
                           style={dashboardStatusActionStyle}
-                          title={`Send email invitation to ${row.contact_email}`}
+                          title={`Send invite to ${row.contact_email}`}
                           onClick={() => void sendInvite(row, false)}
                         >
-                          <StatusIcon icon="send" tone="neutral" label={`Send email invitation to ${row.contact_email}`} />
-                          <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>Send email</span>
+                          <StatusIcon icon="send" tone="neutral" label={`Send invite to ${row.contact_email}`} />
+                          <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>Send invite</span>
                         </button>
                       ) : (
                         <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
@@ -1101,12 +996,6 @@ export default function ContactInvitationManager({
   );
 }
 
-async function sha256(input: string) {
-  const bytes = new TextEncoder().encode(input);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", bytes);
-  return [...new Uint8Array(hashBuffer)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
 function formatShortDate(input: string) {
   try {
     return new Intl.DateTimeFormat("en-GB", {
@@ -1152,7 +1041,7 @@ function loadPermissionsOverride(row: InvitationRow) {
 function getDashboardInvitationStatusLabel(row: InvitationRow, recentlySent = false) {
   if (recentlySent) return "Sent";
   const label = resolveInvitationBadgeState(row.invitation_status, row.activation_status, row.sent_at).label;
-  return label === "Ready to send" ? "Send email" : label;
+  return label === "Ready to send" ? "Send invite" : label;
 }
 
 function getVisibleAccessScopeOptions(

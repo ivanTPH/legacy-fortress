@@ -39,6 +39,7 @@ test("bank create normalization writes canonical metadata keys without legacy du
     bank_contact_phone: null,
     bank_contact_email: null,
     online_banking_url: null,
+    dashboard_quick_record: null,
   });
 
   assert.equal("institution_name" in normalized, false);

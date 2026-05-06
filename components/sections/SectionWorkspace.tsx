@@ -78,7 +78,7 @@ export default function SectionWorkspace({
   showPageHeading = false,
   addLabel = "Add record",
   uploadsRequireCanonicalParent = false,
-  uploadBlockedMessage = "Uploads are blocked until a canonical parent asset can be selected.",
+  uploadBlockedMessage = "Choose a saved record before uploading so the file is attached to the right item.",
   extraFields = [],
 }: SectionWorkspaceProps) {
   const router = useRouter();
@@ -191,11 +191,11 @@ export default function SectionWorkspace({
 
   async function save() {
     if (!editingId && !canCreateRecords) {
-      setStatus("This linked account cannot create new records.");
+      setStatus("This shared view is read-only. The vault owner controls who can add records.");
       return;
     }
     if (editingId && !canEditRow(editingId)) {
-      setStatus("This linked account is view-only.");
+      setStatus("This shared view is read-only. The vault owner controls changes.");
       return;
     }
     if (tableUnavailable) {
@@ -241,7 +241,7 @@ export default function SectionWorkspace({
       return;
     }
 
-    setStatus("✅ Saved");
+    setStatus(editingId ? "Changes saved securely." : "Record added securely.");
     setForm(EMPTY_FORM);
     setExtraFieldValues({});
     setEditingId(null);
@@ -252,7 +252,7 @@ export default function SectionWorkspace({
 
   async function remove(id: string) {
     if (viewer.mode === "linked") {
-      setStatus("This linked account is view-only.");
+      setStatus("This shared view is read-only. The vault owner controls changes.");
       return;
     }
     if (tableUnavailable) return;
@@ -279,7 +279,7 @@ export default function SectionWorkspace({
       return;
     }
 
-    setStatus("✅ Deleted");
+    setStatus("Record deleted.");
     setRows((prev) => prev.filter((row) => row.id !== id));
     if (editingId === id) {
       setEditingId(null);
@@ -291,7 +291,7 @@ export default function SectionWorkspace({
 
   function startEdit(row: SectionEntry) {
     if (!canEditRow(row.id)) {
-      setStatus("This linked account is view-only.");
+      setStatus("This shared view is read-only. The vault owner controls changes.");
       return;
     }
     setEditingId(row.id);
@@ -307,7 +307,7 @@ export default function SectionWorkspace({
 
   async function uploadLegacyAttachment(rowId: string, file: File) {
     if (!canEditRow(rowId)) {
-      setStatus("This linked account is view-only.");
+      setStatus("This shared view is read-only. The vault owner controls changes.");
       return;
     }
     if (tableUnavailable) {
@@ -375,7 +375,7 @@ export default function SectionWorkspace({
       return;
     }
 
-    setStatus("✅ File uploaded");
+    setStatus("File uploaded securely.");
     await reload();
   }
 
@@ -448,7 +448,7 @@ export default function SectionWorkspace({
 
   async function removeAttachment(rowId: string, item: SectionAttachment) {
     if (!canEditRow(rowId)) {
-      setStatus("This linked account is view-only.");
+      setStatus("This shared view is read-only. The vault owner controls changes.");
       return;
     }
     const user = await requireUser(router);
@@ -546,7 +546,11 @@ export default function SectionWorkspace({
         <h2 style={{ margin: 0, fontSize: 17 }}>Saved records</h2>
         {loading ? <div style={{ color: "#64748b" }}>Loading records...</div> : null}
         {!loading && tableUnavailable ? <div style={{ color: "#64748b" }}>Section table unavailable. Run latest migrations and refresh.</div> : null}
-        {!loading && !tableUnavailable && rows.length === 0 ? <div style={{ color: "#64748b" }}>No records yet.</div> : null}
+        {!loading && !tableUnavailable && rows.length === 0 ? (
+          <div style={{ color: "#64748b", fontSize: 13, lineHeight: 1.45 }}>
+            No saved records yet. Use this section to keep your details together in your vault, then start with <strong>{addLabel.toLowerCase()}</strong>.
+          </div>
+        ) : null}
         {!loading && !tableUnavailable ? (
           <div style={{ display: "grid", gap: 10 }}>
             {rows.map((row) => (

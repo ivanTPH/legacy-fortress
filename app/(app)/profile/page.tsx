@@ -179,7 +179,7 @@ export default function ProfilePage() {
   const hasPendingProfileMediaChange = Boolean(pendingAvatarFile || avatarPathToDelete);
   const hasSavedAvatar = Boolean(form.avatar_path && !avatarPathToDelete);
   const hasStagedAvatarSelection = Boolean(pendingAvatarFile);
-  const hasRecentPhotoSuccess = status.startsWith("✅") && /profile picture|photo|Profile saved/i.test(status);
+  const hasRecentPhotoSuccess = /profile picture|photo|profile saved/i.test(status);
   const summaryName = [form.first_name, form.last_name].filter(Boolean).join(" ").trim() || form.display_name || "No name saved";
   const profileReadiness = useMemo(() => {
     const identityReady = Boolean(summaryName && summaryName !== "No name saved" && form.primary_email);
@@ -261,7 +261,7 @@ export default function ProfilePage() {
 
   async function save() {
     if (viewer.readOnly) {
-      setStatus("This profile is view-only in linked access mode.");
+      setStatus("This shared profile is read-only. The vault owner controls changes.");
       return;
     }
     setSaving(true);
@@ -402,7 +402,7 @@ export default function ProfilePage() {
         );
       }
       appendProfileAvatarTrace("[sidebar-refresh] event_dispatched=yes");
-      setStatus(uploadedAvatarPath ? "✅ Photo updated" : avatarPathToDelete ? "✅ Photo removed" : `✅ ${saveResult.status}`);
+      setStatus(uploadedAvatarPath ? "Photo updated securely." : avatarPathToDelete ? "Photo removed." : "Changes saved securely.");
     } catch (error) {
       appendProfileAvatarTrace(
         `[save:error] message=${error instanceof Error ? error.message : String(error)}`,
@@ -440,7 +440,7 @@ export default function ProfilePage() {
     setEditorOpen(true);
     appendProfileAvatarTrace(`[file-select] yes name=${file.name} type=${file.type || "unknown"} size=${file.size}`);
     setStatus("");
-    setStatus("✅ Profile picture ready. Confirm and save profile to persist.");
+    setStatus("Profile picture ready. Save your profile to keep it in your vault.");
   }
 
   function removeAvatar() {
@@ -448,7 +448,7 @@ export default function ProfilePage() {
     clearStagedAvatarFile();
     setAvatarPathToDelete(form.avatar_path || avatarPathToDelete);
     setEditorOpen(true);
-    setStatus("✅ Profile picture removal staged. Confirm and save profile to persist.");
+    setStatus("Profile picture removal ready. Save your profile to update your vault.");
   }
 
   const sendPasswordReset = async () => {
@@ -463,13 +463,13 @@ export default function ProfilePage() {
 
     const redirectTo = "https://legacy-fortress-web.vercel.app/reset-password";
     const { error } = await supabase.auth.resetPasswordForEmail(form.primary_email, { redirectTo });
-    setStatus(error ? `❌ Password reset failed: ${error.message}` : "✅ Password reset email sent");
+    setStatus(error ? `Password reset failed: ${error.message}` : "Password reset email sent.");
   };
 
   return (
     <SettingsPageShell
       title="Profile"
-      subtitle="Keep the identity, contact, and address details an executor, family member, or advisor would expect to find first."
+      subtitle="Keep your identity, contact, and address details clear for trusted people who may need them."
     >
       {!editorOpen ? (
       <SettingsCard title="Saved profile summary" description="These are the core details someone would rely on first to confirm identity, make contact, and trust the record.">
@@ -527,18 +527,19 @@ export default function ProfilePage() {
               {!viewer.readOnly ? (
                 <button
                   type="button"
-                  style={ghostBtn}
+                  style={profileReadiness.completed === 3 ? ghostBtn : primaryBtn}
                   onClick={() => {
                     appendProfileAvatarTrace("[edit-open] yes");
                     setEditorOpen(true);
                   }}
+                  title={profileReadiness.completed === 3 ? "Edit profile details" : "Add remaining profile details"}
                 >
                   <Icon name="edit" size={18} />
-                  Edit profile
+                  {profileReadiness.completed === 3 ? "Edit profile" : "Add remaining details"}
                 </button>
               ) : (
                 <span style={{ color: "#475569", fontSize: 13 }}>
-                  View-only access. Profile changes stay with the account holder.
+                  Read-only access. The vault owner controls profile changes.
                 </span>
               )}
               <StatusNote message={status} />
@@ -737,12 +738,12 @@ export default function ProfilePage() {
       ) : null}
 
       {editorOpen ? (
-      <SettingsCard title="Sensitive identity" description="National Insurance details stay masked in the interface and encrypted at rest.">
+      <SettingsCard title="Sensitive identity" description="National Insurance details stay protected and only reveal when you choose.">
         <div style={gridStyle}>
           <FormField label="Current NI number" iconName="shield_lock">
             <TextInput value={maskedNi} onChange={() => undefined} disabled />
           </FormField>
-          <FormField label="Update NI number" iconName="badge" helpText="Saved through the encrypted identity RPC only.">
+          <FormField label="Update NI number" iconName="badge" helpText="Only visible to you unless you choose to share access.">
             <TextInput value={form.ni_input} onChange={(value) => setForm({ ...form, ni_input: value.toUpperCase() })} disabled={saving} placeholder="QQ 12 34 56 C" />
           </FormField>
         </div>

@@ -601,7 +601,7 @@ const CATEGORY_FORM_CONFIGS: AssetCategoryFormConfig[] = [
     fields: [
       field({ ...SHARED_TITLE, label: "Task title", iconName: "task", placeholder: "e.g. Contact bank about closure" }),
       field({ key: "description", label: "Description", iconName: "description", inputType: "textarea", required: false, placeholder: "What needs to be done?" }),
-      field({ key: "related_asset_id", label: "Related asset / record", iconName: "link", inputType: "select", required: true, options: [] }),
+      field({ key: "related_asset_id", label: "Related asset / record", iconName: "link", inputType: "select", required: false, options: [], helpText: "Optional. Link this task to a record if it helps." }),
       field({ key: "assigned_executor_asset_id", label: "Assigned executor / trusted contact", iconName: "supervisor_account", inputType: "select", required: false, options: [] }),
       field({ key: "assigned_beneficiary_asset_id", label: "Assigned beneficiary", iconName: "volunteer_activism", inputType: "select", required: false, options: [] }),
       field({ key: "priority", label: "Priority", iconName: "priority_high", inputType: "select", required: true, options: TASK_PRIORITY_OPTIONS, supportsOther: true, otherKey: "priority_other" }),

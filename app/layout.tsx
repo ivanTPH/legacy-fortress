@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import TestPersonaBanner from "../components/internal/TestPersonaBanner";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -29,6 +30,7 @@ export default function RootLayout({
 </head>
       <body className="antialiased">
         {children}
+        <TestPersonaBanner />
       </body>
     </html>
   );

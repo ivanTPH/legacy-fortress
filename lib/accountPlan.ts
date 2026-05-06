@@ -190,7 +190,7 @@ export function assertOwnerCanCreateRecord(plan: OwnerPlanProfile, currentRecord
 export function assertOwnerCanSendInvitation(plan: OwnerPlanProfile, currentInvitationCount: number) {
   if (plan.accountPlan === "premium") return;
   const limit = plan.invitationLimit ?? STARTER_INVITATION_LIMIT;
-  if (currentInvitationCount > limit) {
+  if (currentInvitationCount >= limit) {
     throw new PlanLimitError("invitation_limit", limit);
   }
 }

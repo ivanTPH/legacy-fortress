@@ -140,7 +140,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
 
   async function handleUpload() {
     if (!canEditAssetForViewer(selectedAssetId, viewer)) {
-      setFormError("This linked account is view-only.");
+      setFormError("This shared view is read-only. The vault owner controls changes.");
       return;
     }
     setFormError("");
@@ -148,11 +148,11 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
     if (!user) return;
 
     if (!selectedAssetId) {
-      setFormError("Select an asset before linking a document.");
+      setFormError("Choose the saved record this document belongs to.");
       return;
     }
     if (!pendingFile) {
-      setFormError("Choose a file before linking a document.");
+      setFormError("Choose a file to upload to your vault.");
       return;
     }
     if (!reviewConfirmed) {
@@ -181,7 +181,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
 
     if (!resolvedContext) {
       setSaving(false);
-      setFormError("Document link blocked because the selected asset context could not be resolved.");
+      setFormError("Upload paused: choose a saved record first so the file is stored with the right item.");
       return;
     }
 
@@ -199,7 +199,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
 
     setPendingFile(null);
     setReviewConfirmed(false);
-    setStatus(`Document linked to ${asset?.parentLabel ?? "the selected asset"}.`);
+    setStatus(`Document uploaded securely to ${asset?.parentLabel ?? "the selected record"}.`);
     await reloadDocuments();
   }
 
@@ -285,7 +285,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
 
   async function removeDocument(item: CanonicalDocumentWorkspaceItem) {
     if (!canEditAssetForViewer(item.assetId, viewer)) {
-      setStatus("This linked account is view-only.");
+      setStatus("This shared view is read-only. The vault owner controls changes.");
       return;
     }
     const confirmed = window.confirm(`Remove "${item.fileName}" from ${item.parentLabel}?`);
@@ -324,7 +324,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
         ) : null}
         <p style={{ margin: 0, color: "#64748b" }}>{subtitle}</p>
         <div style={{ color: "#64748b", fontSize: 13 }}>
-          Documents are always linked through the canonical chain: organisation to wallet to asset to document.
+          Files stay attached to the right record in your vault so trusted people can understand them when needed.
         </div>
         {viewer.mode === "linked" ? (
           <div style={linkedPanelChipStyle}>
@@ -351,8 +351,8 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
             label="Parent asset"
             iconName="account_tree"
             required
-            error={!selectedAssetId && formError ? "A canonical parent asset is required." : undefined}
-            helpText="Files cannot be saved here without a linked asset."
+            error={!selectedAssetId && formError ? "Choose a saved record before uploading." : undefined}
+            helpText="This keeps each document connected to the right item in your vault."
           >
             <SelectInput
               value={selectedAssetId}
@@ -520,7 +520,7 @@ function getAssetWorkspaceHref(sectionKey: string, categoryKey: string) {
   if (sectionKey === "digital") return "/vault/digital";
   if (sectionKey === "personal" && categoryKey === "beneficiaries") return "/personal/beneficiaries";
   if (sectionKey === "personal" && categoryKey === "tasks") return "/personal/tasks";
-  if (sectionKey === "personal" && categoryKey === "executors") return "/trust";
+  if (sectionKey === "personal" && categoryKey === "executors") return "/contacts?group=executors";
   if (sectionKey === "personal" && categoryKey === "wishes") return "/personal/wishes";
   return "/dashboard";
 }

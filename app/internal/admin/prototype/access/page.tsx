@@ -56,16 +56,16 @@ function Td({ children }: { children: ReactNode }) {
 
 const panelStyle: CSSProperties = {
   background: "#fff",
-  border: "1px solid #e5e7eb",
-  borderRadius: 10,
+  border: "1px solid var(--lf-border)",
+  borderRadius: 8,
   overflow: "hidden",
 };
 
 const noticeStyle: CSSProperties = {
   padding: 12,
-  borderBottom: "1px solid #e5e7eb",
-  color: "#475569",
-  background: "#f8fafc",
+  borderBottom: "1px solid var(--lf-border)",
+  color: "var(--lf-text-soft)",
+  background: "var(--lf-surface-muted)",
   fontSize: 13,
 };
 
@@ -78,22 +78,22 @@ const tableStyle: CSSProperties = {
 const thStyle: CSSProperties = {
   textAlign: "left",
   padding: "11px 12px",
-  borderBottom: "1px solid #e5e7eb",
-  color: "#64748b",
+  borderBottom: "1px solid var(--lf-border)",
+  color: "var(--lf-text-soft)",
   fontSize: 12,
   textTransform: "uppercase",
 };
 
 const tdStyle: CSSProperties = {
   padding: "12px",
-  borderBottom: "1px solid #f1f5f9",
+  borderBottom: "1px solid #f1ece8",
 };
 
 const disabledButtonStyle: CSSProperties = {
-  border: "1px solid #d1d5db",
+  border: "1px solid var(--lf-border)",
   borderRadius: 8,
-  background: "#f3f4f6",
-  color: "#6b7280",
+  background: "var(--lf-surface-muted)",
+  color: "var(--lf-text-soft)",
   padding: "7px 10px",
   fontWeight: 800,
 };

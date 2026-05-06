@@ -25,8 +25,8 @@ test("starter plan gates record and invitation volume while premium stays open",
     invitation_limit: 1,
   });
   assert.throws(() => plan.assertOwnerCanCreateRecord(starter, 2), /Starter plan limit reached/);
-  assert.doesNotThrow(() => plan.assertOwnerCanSendInvitation(starter, 1));
-  assert.throws(() => plan.assertOwnerCanSendInvitation(starter, 2), /Starter plan limit reached/);
+  assert.doesNotThrow(() => plan.assertOwnerCanSendInvitation(starter, 0));
+  assert.throws(() => plan.assertOwnerCanSendInvitation(starter, 1), /Starter plan limit reached/);
 
   const premium = plan.normalizeOwnerPlanProfile("user-3", {
     account_plan: "premium",

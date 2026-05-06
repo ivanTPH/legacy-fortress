@@ -64,8 +64,8 @@ export default function InternalAdminPage() {
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
     <section style={metricCardStyle}>
-      <div style={{ color: "#64748b", fontSize: 12, fontWeight: 800, textTransform: "uppercase" }}>{label}</div>
-      <div style={{ color: "#0f172a", fontSize: 28, fontWeight: 800 }}>{value}</div>
+      <div style={{ color: "var(--lf-text-soft)", fontSize: 12, fontWeight: 800, textTransform: "uppercase" }}>{label}</div>
+      <div style={{ color: "var(--lf-text)", fontSize: 28, fontWeight: 800 }}>{value}</div>
     </section>
   );
 }
@@ -78,8 +78,8 @@ const metricsGridStyle: CSSProperties = {
 
 const metricCardStyle: CSSProperties = {
   background: "#fff",
-  border: "1px solid #e5e7eb",
-  borderRadius: 10,
+  border: "1px solid var(--lf-border)",
+  borderRadius: 8,
   padding: 16,
   display: "grid",
   gap: 6,
@@ -93,8 +93,8 @@ const twoColumnStyle: CSSProperties = {
 
 const panelStyle: CSSProperties = {
   background: "#fff",
-  border: "1px solid #e5e7eb",
-  borderRadius: 10,
+  border: "1px solid var(--lf-border)",
+  borderRadius: 8,
   padding: 16,
   display: "grid",
   gap: 12,
@@ -114,8 +114,8 @@ const h2Style: CSSProperties = {
 
 const rowLinkStyle: CSSProperties = {
   textDecoration: "none",
-  color: "#0f172a",
-  border: "1px solid #f1f5f9",
+  color: "var(--lf-text)",
+  border: "1px solid #f1ece8",
   borderRadius: 8,
   padding: 12,
   display: "flex",
@@ -131,13 +131,13 @@ const auditMiniRowStyle: CSSProperties = {
 const mutedBlockStyle: CSSProperties = {
   display: "block",
   marginTop: 3,
-  color: "#64748b",
+  color: "var(--lf-text-soft)",
   fontSize: 13,
   fontWeight: 500,
 };
 
 const textLinkStyle: CSSProperties = {
-  color: "#334155",
+  color: "var(--lf-text)",
   fontSize: 13,
   fontWeight: 800,
   textDecoration: "none",

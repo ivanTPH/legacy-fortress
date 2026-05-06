@@ -26,3 +26,18 @@ test("billing overview formats plan status labels for display text", () => {
   assert.match(billingPage, /replace\(\/_\/g, " "\)/);
   assert.match(billingPage, /replace\(\/\\b\\w\/g/);
 });
+
+test("billing panel exposes safe test subscription state for plan-limit redirects", () => {
+  const billingPage = fs.readFileSync(path.join(root, "app/(app)/account/billing/page.tsx"), "utf8");
+  const dashboardPage = fs.readFileSync(path.join(root, "app/(app)/dashboard/page.tsx"), "utf8");
+  const portalRoute = fs.readFileSync(path.join(root, "app/api/billing/portal/route.ts"), "utf8");
+
+  assert.match(billingPage, /reason === "plan-limit" \|\| reason === "invite-status"/);
+  assert.match(billingPage, /Test subscription state/);
+  assert.match(billingPage, /Safe test\/admin controls/);
+  assert.match(billingPage, /They do not process payments or expose payment provider data/);
+  assert.match(dashboardPage, /isPlanLimitStatus\(status\)/);
+  assert.match(dashboardPage, /\/account\/billing\?reason=plan-limit/);
+  assert.match(portalRoute, /STRIPE_SECRET_KEY/);
+  assert.match(portalRoute, /Billing portal is not configured/);
+});

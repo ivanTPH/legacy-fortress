@@ -18,6 +18,175 @@
   --lf-shadow-md: 0 14px 32px rgba(33, 17, 13, 0.07);
 }
 
+.lf-test-persona-banner {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--lf-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 48px rgba(31, 23, 18, 0.14);
+  color: var(--lf-text);
+  font-size: 13px;
+  backdrop-filter: blur(10px);
+}
+
+.lf-test-persona-banner > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.lf-test-persona-banner strong {
+  white-space: nowrap;
+}
+
+.lf-test-persona-banner span {
+  color: var(--lf-text-soft);
+}
+
+.lf-test-persona-banner a,
+.lf-test-persona-banner button {
+  min-height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--lf-border);
+  background: var(--lf-surface);
+  color: var(--lf-text);
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  font: inherit;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.lf-test-persona-banner a:hover,
+.lf-test-persona-banner button:hover,
+.lf-test-persona-banner a:focus-visible,
+.lf-test-persona-banner button:focus-visible {
+  border-color: var(--lf-bronze);
+  outline: 3px solid rgba(126, 92, 61, 0.2);
+  outline-offset: 2px;
+}
+
+@media (max-width: 720px) {
+  .lf-test-persona-banner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .lf-test-persona-banner > div {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 860px) {
+  .lf-admin-prototype-shell {
+    grid-template-columns: 1fr !important;
+  }
+
+  .lf-admin-prototype-sidebar {
+    position: static;
+    overflow: auto;
+  }
+
+  .lf-admin-prototype-content {
+    padding: 16px !important;
+  }
+
+  .lf-admin-prototype-topbar,
+  .lf-admin-prototype-page-header {
+    align-items: stretch !important;
+    flex-direction: column;
+  }
+}
+
+.lf-admin-prototype-shell {
+  background: var(--lf-bg);
+}
+
+.lf-admin-prototype-sidebar a {
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.lf-admin-prototype-sidebar a:hover {
+  background: #faf8f6 !important;
+  color: #15110f !important;
+}
+
+.lf-admin-prototype-sidebar a[aria-current="page"]:hover {
+  background: linear-gradient(180deg, var(--lf-bronze) 0%, var(--lf-bronze-strong) 100%) !important;
+  color: #ffffff !important;
+}
+
+.lf-admin-prototype-content section {
+  box-shadow: none;
+}
+
+.lf-admin-prototype-content table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.lf-admin-prototype-content tbody tr {
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.lf-admin-prototype-content tbody tr:hover {
+  background: #fbfaf8;
+}
+
+.lf-admin-prototype-content input,
+.lf-admin-prototype-content select,
+.lf-admin-prototype-content textarea {
+  border-color: var(--lf-border) !important;
+  background: #fffefd !important;
+  color: var(--lf-text);
+}
+
+.lf-admin-prototype-content input:focus,
+.lf-admin-prototype-content select:focus,
+.lf-admin-prototype-content textarea:focus {
+  outline: 2px solid rgba(58, 33, 24, 0.14);
+  outline-offset: 1px;
+  border-color: var(--lf-bronze) !important;
+}
+
+.lf-admin-prototype-content button {
+  min-height: 36px;
+  border-radius: 8px !important;
+}
+
+.lf-admin-prototype-content button:disabled {
+  background: var(--lf-surface-muted) !important;
+  color: var(--lf-text-soft) !important;
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.lf-admin-prototype-content a:focus-visible,
+.lf-admin-prototype-sidebar a:focus-visible,
+.lf-admin-prototype-content button:focus-visible {
+  outline: 2px solid #111827;
+  outline-offset: 2px;
+}
+
 .lf-shell[data-lf-text-size="large"] {
   font-size: 1.06rem;
 }
@@ -1162,7 +1331,9 @@ textarea {
 .lf-record-card,
 .lf-dashboard-summary-card,
 .lf-settings-card,
-.lf-personal-overview-card {
+.lf-personal-overview-card,
+.lf-attachment-card,
+.lf-file-dropzone {
   transition:
     border-color 160ms ease,
     background-color 160ms ease,
@@ -1172,7 +1343,9 @@ textarea {
 
 .lf-record-card:hover,
 .lf-dashboard-summary-card:hover,
-.lf-personal-overview-card:hover {
+.lf-personal-overview-card:hover,
+.lf-attachment-card:hover,
+.lf-file-dropzone:hover {
   border-color: #d8ccc4 !important;
   box-shadow: 0 6px 18px rgba(33, 17, 13, 0.055) !important;
   transform: translateY(-1px);
@@ -1182,7 +1355,9 @@ textarea {
 .lf-record-card:focus-within,
 .lf-dashboard-summary-card:focus-within,
 .lf-dashboard-summary-card:focus-visible,
-.lf-personal-overview-card:focus-visible {
+.lf-personal-overview-card:focus-visible,
+.lf-attachment-card:focus-within,
+.lf-file-dropzone:focus-visible {
   border-color: #3a2118 !important;
   box-shadow: 0 0 0 2px rgba(58, 33, 24, 0.12) !important;
 }

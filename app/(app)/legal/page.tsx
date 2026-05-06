@@ -107,13 +107,20 @@ export default function LegalOverviewPage() {
     return byType;
   }, [rows]);
 
-  const visibleCategories = useMemo(() => LEGAL_CATEGORIES.filter((category) => isVaultSubsectionEnabled(preferences, mapLegalSlugToPreferenceKey(category.slug))), [preferences]);
+  const visibleCategories = useMemo(
+    () => LEGAL_CATEGORIES.filter(
+      (category) =>
+        ["wills", "trusts", "power-of-attorney", "other-legal-documents"].includes(category.slug)
+        && isVaultSubsectionEnabled(preferences, mapLegalSlugToPreferenceKey(category.slug)),
+    ),
+    [preferences],
+  );
 
   return (
     <section style={{ display: "grid", gap: 14 }}>
       <div style={{ display: "grid", gap: 6 }}>
         <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
-          Review the core documents an executor would expect to find, from wills and powers of attorney to supporting certificates.
+          Review the core legal records someone should be able to find quickly, from wills and trusts to powers of attorney and other legal paperwork.
         </p>
       </div>
 
@@ -134,6 +141,13 @@ export default function LegalOverviewPage() {
             </Link>
           );
         })}
+        {isVaultSubsectionEnabled(preferences, "personal_wishes") ? (
+          <Link href="/personal/wishes" style={cardStyle}>
+            <div style={{ fontWeight: 700 }}>Personal Wishes</div>
+            <div style={{ color: "#6b7280", fontSize: 13 }}>Keep personal guidance, wishes, and instructions available from the legal review flow.</div>
+            <div style={{ color: "#334155", fontSize: 13 }}>Open the personal wishes workspace</div>
+          </Link>
+        ) : null}
       </div>
       ) : (
         <div style={{ color: "#64748b", fontSize: 13 }}>
@@ -153,13 +167,9 @@ function mapLegalSlugToPreferenceKey(slug: string): VaultSubsectionKey {
     case "power-of-attorney":
       return "legal_power_of_attorney";
     case "funeral-wishes":
-      return "legal_funeral_wishes";
     case "marriage-divorce-documents":
-      return "legal_marriage_divorce_documents";
     case "identity-documents":
-      return "legal_identity_documents";
-    case "death-certificate":
-      return "legal_death_certificate";
+      return "legal_other_legal_documents";
     default:
       return "legal_other_legal_documents";
   }

@@ -57,21 +57,21 @@ export default function AdminVerificationsPage() {
 
 const workflowStyle: CSSProperties = {
   background: "#fff",
-  border: "1px solid #e5e7eb",
-  borderRadius: 10,
+  border: "1px solid var(--lf-border)",
+  borderRadius: 8,
   padding: 14,
   display: "flex",
   flexWrap: "wrap",
   gap: 10,
-  color: "#475569",
+  color: "var(--lf-text-soft)",
   fontSize: 13,
   fontWeight: 800,
 };
 
 const panelStyle: CSSProperties = {
   background: "#fff",
-  border: "1px solid #e5e7eb",
-  borderRadius: 10,
+  border: "1px solid var(--lf-border)",
+  borderRadius: 8,
   padding: 16,
   display: "grid",
   gap: 12,
@@ -91,8 +91,8 @@ const h2Style: CSSProperties = {
 
 const countStyle: CSSProperties = {
   borderRadius: 999,
-  background: "#f1f5f9",
-  color: "#475569",
+  background: "#f1ece8",
+  color: "var(--lf-text-soft)",
   padding: "4px 9px",
   fontSize: 12,
   fontWeight: 800,
@@ -100,8 +100,8 @@ const countStyle: CSSProperties = {
 
 const queueCardStyle: CSSProperties = {
   textDecoration: "none",
-  color: "#0f172a",
-  border: "1px solid #f1f5f9",
+  color: "var(--lf-text)",
+  border: "1px solid #f1ece8",
   borderRadius: 8,
   padding: 12,
   display: "flex",
@@ -112,13 +112,13 @@ const queueCardStyle: CSSProperties = {
 
 const mutedBlockStyle: CSSProperties = {
   display: "block",
-  color: "#64748b",
+  color: "var(--lf-text-soft)",
   fontSize: 13,
   fontWeight: 500,
   marginTop: 3,
 };
 
 const emptyStyle: CSSProperties = {
-  color: "#64748b",
+  color: "var(--lf-text-soft)",
   fontSize: 13,
 };

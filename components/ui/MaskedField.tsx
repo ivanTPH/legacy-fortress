@@ -33,13 +33,13 @@ export default function MaskedField({
         <>
           <IconButton
             icon={revealed ? "visibility" : "visibility_off"}
-            label={revealed ? "Hide value" : "Reveal value"}
+            label={revealed ? "Hide protected information" : "Reveal protected information"}
             onClick={() => setRevealed((prev) => !prev)}
             style={iconBtnStyle}
           />
           <IconButton
             icon={copied ? "check" : "content_copy"}
-            label={copied ? "Copied" : "Copy value"}
+            label={copied ? "Details copied" : "Copy details"}
             onClick={async () => {
               try {
                 await navigator.clipboard.writeText(cleanValue);

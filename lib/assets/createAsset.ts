@@ -580,6 +580,7 @@ function validateUpdateAssetInput(input: UpdateAssetInput) {
 }
 
 function validateBankAssetMetadata(metadata: Record<string, unknown>) {
+  const isDashboardQuickRecord = metadata["dashboard_quick_record"] === true;
   const providerName = String(metadata["provider_name"] ?? metadata["institution_name"] ?? "").trim();
   const accountType = String(metadata["account_type"] ?? "").trim();
   const accountHolder = String(metadata["account_holder"] ?? metadata["account_holder_name"] ?? "").trim();
@@ -589,8 +590,8 @@ function validateBankAssetMetadata(metadata: Record<string, unknown>) {
 
   if (!providerName) throw new Error("Provider Name is required.");
   if (!accountType) throw new Error("Account Type is required.");
-  if (!accountHolder) throw new Error("Account Holder is required.");
-  if (!accountNumber) throw new Error("Account Number is required.");
+  if (!isDashboardQuickRecord && !accountHolder) throw new Error("Account Holder is required.");
+  if (!isDashboardQuickRecord && !accountNumber) throw new Error("Account Number is required.");
   if (!country) throw new Error("Country is required.");
   if (!currency) throw new Error("Currency is required.");
 }
@@ -665,12 +666,10 @@ function validateExecutorAssetMetadata(metadata: Record<string, unknown>) {
 
 function validateTaskAssetMetadata(metadata: Record<string, unknown>) {
   const title = String(metadata["task_title"] ?? metadata["title"] ?? "").trim();
-  const relatedAssetId = String(metadata["related_asset_id"] ?? "").trim();
   const priority = String(metadata["priority"] ?? "").trim();
   const taskStatus = String(metadata["task_status"] ?? "").trim();
 
   if (!title) throw new Error("Task Title is required.");
-  if (!relatedAssetId) throw new Error("Related Asset / Record is required.");
   if (!priority) throw new Error("Priority is required.");
   if (!taskStatus) throw new Error("Status is required.");
 }

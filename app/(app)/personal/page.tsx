@@ -17,22 +17,26 @@ const items = [
 export default function PersonalOverviewPage() {
   const { preferences } = useVaultPreferences();
   const visibleItems = items.filter((item) => isVaultSubsectionEnabled(preferences, item.preferenceKey));
+  const recommendedItem = visibleItems[0] ?? null;
 
   return (
     <section style={{ display: "grid", gap: 24 }}>
       <div style={{ display: "grid", gap: 6 }}>
         <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
-          Keep the personal records that make day-to-day life easier to understand, review, and hand over when needed.
+          Store and manage your personal accounts, subscriptions, wishes, and digital access in one trusted place.
         </p>
         <p style={{ margin: "6px 0 0", color: "#64748b", fontSize: 13 }}>
           This area focuses on possessions, subscriptions, social accounts, wishes, and follow-up work. Contacts, next of kin, executors, and advisers now live in the shared contacts network.
         </p>
+        <div style={progressCueStyle}>
+          {visibleItems.length} of {items.length} personal areas visible
+        </div>
       </div>
       <section style={introPanelStyle}>
         <div style={{ display: "grid", gap: 4 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a" }}>Contacts and access are managed separately</div>
           <div style={{ color: "#64748b", fontSize: 13 }}>
-            Review next of kin, executors, trustees, advisers, and invitation status from the dedicated contacts network so roles stay clear and consistent.
+            Review next of kin, executors, trustees, advisers, and invitation status from the dedicated contacts network so roles stay clear and you control access.
           </div>
         </div>
         <Link href="/contacts" style={secondaryLinkStyle}>
@@ -40,6 +44,19 @@ export default function PersonalOverviewPage() {
           Open contacts
         </Link>
       </section>
+      {recommendedItem ? (
+        <Link href={recommendedItem.href} style={recommendedActionStyle}>
+          <span style={recommendedIconStyle}>
+            <Icon name={recommendedItem.icon} size={18} />
+          </span>
+          <span style={{ display: "grid", gap: 3 }}>
+            <span style={{ color: "#1f1712", fontWeight: 800 }}>Recommended next step: {recommendedItem.label}</span>
+            <span style={{ color: "#64748b", fontSize: 13 }}>
+              Add one personal record to make your vault easier for trusted people to understand later.
+            </span>
+          </span>
+        </Link>
+      ) : null}
       {visibleItems.length ? (
       <div className="lf-content-grid">
         {visibleItems.map((item) => (
@@ -100,6 +117,12 @@ const iconWrapStyle: CSSProperties = {
   flexShrink: 0,
 };
 
+const progressCueStyle: CSSProperties = {
+  color: "#64748b",
+  fontSize: 12,
+  fontWeight: 600,
+};
+
 const secondaryLinkStyle: CSSProperties = {
   border: "1px solid #cbd5e1",
   borderRadius: 999,
@@ -111,4 +134,28 @@ const secondaryLinkStyle: CSSProperties = {
   gap: 8,
   fontSize: 13,
   fontWeight: 600,
+};
+
+const recommendedActionStyle: CSSProperties = {
+  textDecoration: "none",
+  border: "1px solid #e3d9d1",
+  borderRadius: 14,
+  background: "#fffefd",
+  padding: 14,
+  display: "flex",
+  alignItems: "center",
+  gap: 12,
+  color: "#0f172a",
+};
+
+const recommendedIconStyle: CSSProperties = {
+  width: 34,
+  height: 34,
+  borderRadius: 11,
+  background: "#2b201b",
+  color: "#fff",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
 };

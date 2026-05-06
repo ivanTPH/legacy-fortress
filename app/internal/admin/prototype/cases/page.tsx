@@ -76,8 +76,8 @@ function Td({ children }: { children: ReactNode }) {
 
 const toolbarStyle: CSSProperties = {
   background: "#fff",
-  border: "1px solid #e5e7eb",
-  borderRadius: 10,
+  border: "1px solid var(--lf-border)",
+  borderRadius: 8,
   padding: 12,
   display: "flex",
   flexWrap: "wrap",
@@ -87,13 +87,13 @@ const toolbarStyle: CSSProperties = {
 const inputStyle: CSSProperties = {
   minWidth: 260,
   flex: 1,
-  border: "1px solid #d1d5db",
+  border: "1px solid var(--lf-border)",
   borderRadius: 8,
   padding: "9px 11px",
 };
 
 const selectStyle: CSSProperties = {
-  border: "1px solid #d1d5db",
+  border: "1px solid var(--lf-border)",
   borderRadius: 8,
   padding: "9px 11px",
   background: "#fff",
@@ -101,8 +101,8 @@ const selectStyle: CSSProperties = {
 
 const panelStyle: CSSProperties = {
   background: "#fff",
-  border: "1px solid #e5e7eb",
-  borderRadius: 10,
+  border: "1px solid var(--lf-border)",
+  borderRadius: 8,
   overflow: "hidden",
 };
 
@@ -111,8 +111,8 @@ const statusGroupStyle: CSSProperties = {
   gap: 10,
   flexWrap: "wrap",
   padding: 12,
-  borderBottom: "1px solid #e5e7eb",
-  color: "#475569",
+  borderBottom: "1px solid var(--lf-border)",
+  color: "var(--lf-text-soft)",
   fontSize: 13,
   fontWeight: 700,
 };
@@ -126,34 +126,34 @@ const tableStyle: CSSProperties = {
 const thStyle: CSSProperties = {
   textAlign: "left",
   padding: "11px 12px",
-  borderBottom: "1px solid #e5e7eb",
-  color: "#64748b",
+  borderBottom: "1px solid var(--lf-border)",
+  color: "var(--lf-text-soft)",
   fontSize: 12,
   textTransform: "uppercase",
 };
 
 const tdStyle: CSSProperties = {
   padding: "12px",
-  borderBottom: "1px solid #f1f5f9",
+  borderBottom: "1px solid #f1ece8",
   verticalAlign: "top",
 };
 
 const userLinkStyle: CSSProperties = {
-  color: "#0f172a",
+  color: "var(--lf-text)",
   fontWeight: 800,
   textDecoration: "none",
 };
 
 const mutedBlockStyle: CSSProperties = {
   display: "block",
-  color: "#64748b",
+  color: "var(--lf-text-soft)",
   fontSize: 12,
   fontWeight: 500,
   marginTop: 2,
 };
 
 const actionLinkStyle: CSSProperties = {
-  color: "#1f2937",
+  color: "var(--lf-text)",
   fontWeight: 800,
   textDecoration: "none",
 };

@@ -17,7 +17,7 @@ export default function PropertyOverviewPage() {
   return (
     <section style={{ display: "grid", gap: 14 }}>
       <div style={{ display: "grid", gap: 6 }}>
-        <p style={{ margin: "6px 0 0", color: "#6b7280" }}>Manage records and supporting property documentation.</p>
+        <p style={{ margin: "6px 0 0", color: "#6b7280" }}>Record your properties, deeds, valuations, and supporting documents for your estate.</p>
       </div>
       {visibleItems.length ? (
       <div className="lf-content-grid">

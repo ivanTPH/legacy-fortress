@@ -60,17 +60,17 @@ export default async function AdminUserDetailPage({ params }: AdminUserDetailPag
 function Info({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div style={infoStyle}>
-      <span style={{ color: "#64748b", fontSize: 12, fontWeight: 800, textTransform: "uppercase" }}>{label}</span>
-      <span style={{ color: "#0f172a", fontWeight: 700 }}>{value}</span>
+      <span style={{ color: "var(--lf-text-soft)", fontSize: 12, fontWeight: 800, textTransform: "uppercase" }}>{label}</span>
+      <span style={{ color: "var(--lf-text)", fontWeight: 700 }}>{value}</span>
     </div>
   );
 }
 
 const readOnlyBannerStyle: CSSProperties = {
-  border: "1px solid #bfdbfe",
-  background: "#eff6ff",
-  color: "#1e3a8a",
-  borderRadius: 10,
+  border: "1px solid var(--lf-border)",
+  background: "var(--lf-surface-muted)",
+  color: "var(--lf-bronze)",
+  borderRadius: 8,
   padding: 14,
   display: "flex",
   gap: 10,
@@ -86,8 +86,8 @@ const gridStyle: CSSProperties = {
 
 const panelStyle: CSSProperties = {
   background: "#fff",
-  border: "1px solid #e5e7eb",
-  borderRadius: 10,
+  border: "1px solid var(--lf-border)",
+  borderRadius: 8,
   padding: 16,
   display: "grid",
   gap: 12,
@@ -101,12 +101,12 @@ const h2Style: CSSProperties = {
 const infoStyle: CSSProperties = {
   display: "grid",
   gap: 4,
-  borderBottom: "1px solid #f1f5f9",
+  borderBottom: "1px solid #f1ece8",
   paddingBottom: 10,
 };
 
 const auditRowStyle: CSSProperties = {
-  border: "1px solid #f1f5f9",
+  border: "1px solid #f1ece8",
   borderRadius: 8,
   padding: 12,
   display: "flex",
@@ -117,7 +117,7 @@ const auditRowStyle: CSSProperties = {
 
 const mutedBlockStyle: CSSProperties = {
   display: "block",
-  color: "#64748b",
+  color: "var(--lf-text-soft)",
   fontSize: 13,
   fontWeight: 500,
   marginTop: 3,

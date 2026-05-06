@@ -262,6 +262,7 @@ export function FileDropzone({
 
   return (
     <div
+      className="lf-file-dropzone"
       role="button"
       tabIndex={disabled ? -1 : 0}
       onClick={() => inputRef.current?.click()}
@@ -306,7 +307,9 @@ export function FileDropzone({
           </span>
           <strong style={{ fontSize: 13 }}>{label}</strong>
         </div>
-        <div style={{ color: "#64748b", fontSize: 12 }}>Drag and drop or click to choose a file</div>
+        <div style={{ color: "#64748b", fontSize: 12 }}>
+          Upload supporting documents to your vault. PDF, PNG, and JPG files are supported.
+        </div>
         {file ? (
           <div style={filePreviewStyle}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -328,6 +331,8 @@ export function FileDropzone({
                     onClear();
                   }}
                   style={clearButtonStyle}
+                  aria-label={`Clear ${file.name}`}
+                  title={`Clear ${file.name}`}
                 >
                   <Icon name="close" size={16} />
                   Clear
@@ -348,7 +353,7 @@ export function ValidationText({ error, helpText }: { error?: string; helpText?:
   if (helpText) {
     return <span style={{ color: "#64748b", fontSize: 12 }}>{helpText}</span>;
   }
-  return <span style={{ color: "#94a3b8", fontSize: 12 }}>Required fields are marked *</span>;
+  return <span style={{ color: "#94a3b8", fontSize: 12 }}>Optional unless marked *</span>;
 }
 
 export const fieldWrapStyle: CSSProperties = {

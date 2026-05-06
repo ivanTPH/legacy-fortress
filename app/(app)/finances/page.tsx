@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import DashboardAssetSummaryCard from "../components/dashboard/DashboardAssetSummaryCard";
 import Icon from "../../../components/ui/Icon";
@@ -31,7 +32,7 @@ type FinanceSectionCard = {
 };
 
 const FINANCE_SECTION_CARDS: FinanceSectionCard[] = [
-  { key: "bank", preferenceKey: "finances_bank", title: "Bank", href: "/finances/bank", description: "Current and savings accounts with provider logos.", icon: "account_balance" },
+  { key: "bank", preferenceKey: "finances_bank", title: "Bank", href: "/finances/bank", description: "Current and savings accounts.", icon: "account_balance" },
   { key: "investments", preferenceKey: "finances_investments", title: "Investments", href: "/finances/investments", description: "Record portfolios, funds, and investment platforms.", icon: "trending_up" },
   { key: "pensions", preferenceKey: "finances_pensions", title: "Pensions", href: "/finances/pensions", description: "Track pension providers, values, and notes.", icon: "savings" },
   { key: "insurance", preferenceKey: "finances_insurance", title: "Insurance", href: "/finances/insurance", description: "Capture life and protection policy references.", icon: "health_and_safety" },
@@ -120,17 +121,48 @@ export default function FinancesOverviewPage() {
     })).filter((section) => isVaultSubsectionEnabled(preferences, section.preferenceKey)),
     [assetRows, currency, preferences],
   );
+  const bankRecordCount = useMemo(
+    () => assetRows.filter((row) => String(row.category_key ?? "").trim() === "bank").length,
+    [assetRows],
+  );
+  const recommendedFinanceAction = bankRecordCount === 0
+    ? {
+        href: "/finances/bank",
+        label: "Add your first account",
+        description: "Start with a bank account so your financial picture has a clear foundation.",
+      }
+    : assetRows.length === 0
+      ? {
+          href: summaries[0]?.href ?? "/finances/bank",
+          label: "Add your first finance record",
+          description: "Choose one financial area and add what you know now.",
+        }
+      : null;
 
   return (
     <section style={{ display: "grid", gap: 14 }}>
       <div style={{ display: "grid", gap: 6 }}>
         <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
-          Review each finance category at a glance, then open the category page to add, edit, or archive records.
+          Record your bank accounts, savings, pensions, and policies so your estate has a clear financial picture.
         </p>
+        <div style={progressCueStyle}>
+          {assetRows.length} finance record{assetRows.length === 1 ? "" : "s"} saved across {summaries.length} visible area{summaries.length === 1 ? "" : "s"}
+        </div>
       </div>
 
       {status ? <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div> : null}
       {loading ? <div style={{ color: "#6b7280" }}>Loading finance summary...</div> : null}
+      {!loading && recommendedFinanceAction ? (
+        <Link href={recommendedFinanceAction.href} style={recommendedActionStyle}>
+          <span style={recommendedIconStyle}>
+            <Icon name="arrow_forward" size={17} />
+          </span>
+          <span style={{ display: "grid", gap: 3 }}>
+            <span style={{ color: "#1f1712", fontWeight: 800 }}>{recommendedFinanceAction.label}</span>
+            <span style={{ color: "#64748b", fontSize: 13 }}>{recommendedFinanceAction.description}</span>
+          </span>
+        </Link>
+      ) : null}
 
       {summaries.length ? (
       <div className="lf-content-grid">
@@ -158,3 +190,33 @@ export default function FinancesOverviewPage() {
     </section>
   );
 }
+
+const progressCueStyle = {
+  color: "#64748b",
+  fontSize: 12,
+  fontWeight: 600,
+} as const;
+
+const recommendedActionStyle = {
+  textDecoration: "none",
+  border: "1px solid #e3d9d1",
+  borderRadius: 14,
+  background: "#fffefd",
+  padding: 14,
+  display: "flex",
+  alignItems: "center",
+  gap: 12,
+  color: "#0f172a",
+} as const;
+
+const recommendedIconStyle = {
+  width: 34,
+  height: 34,
+  borderRadius: 11,
+  background: "#2b201b",
+  color: "#fff",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
+} as const;

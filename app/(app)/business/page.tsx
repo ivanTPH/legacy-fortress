@@ -16,7 +16,7 @@ export default function BusinessOverviewPage() {
     <section style={{ display: "grid", gap: 14 }}>
       <div style={{ display: "grid", gap: 6 }}>
         <p style={{ margin: 0, color: "#6b7280" }}>
-          Review business interests first, then open employment records as a related business and workplace sub-category.
+          Keep your business interests, workplace records, and supporting documents clear for future review.
         </p>
         {showEmployment ? <Link href="/employment" style={employmentCardStyle}>
           <div style={{ fontWeight: 700 }}>Employment</div>

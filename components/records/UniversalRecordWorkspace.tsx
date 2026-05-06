@@ -667,7 +667,32 @@ export default function UniversalRecordWorkspace({
   const isSocialMedia = sectionKey === "personal" && categoryKey === "social-media";
   const isCanonicalProperty = canonicalCategorySlug === "property";
   const isIdentityDocuments = sectionKey === "legal" && categoryKey === "identity-documents";
+  const isNarrativeDocumentWorkspace =
+    !usesCanonicalAssets &&
+    !isIdentityDocuments &&
+    !isTrustedContacts &&
+    (sectionKey === "legal" || (sectionKey === "personal" && categoryKey === "wishes"));
   const legalLinkedContactDefinition = sectionKey === "legal" ? getLegalLinkedContactDefinition(categoryKey) : null;
+  const narrativeTitleLabel =
+    sectionKey === "personal" && categoryKey === "wishes"
+      ? "Expression of wishes title"
+      : categoryKey === "wills"
+        ? "Will or document name"
+        : categoryKey === "funeral-wishes"
+          ? "Funeral wishes title"
+          : "Document name";
+  const narrativeTypeLabel =
+    sectionKey === "personal" && categoryKey === "wishes"
+      ? "Instruction type"
+      : "Document or note type";
+  const narrativeSummaryLabel =
+    sectionKey === "personal" && categoryKey === "wishes"
+      ? "Optional beneficiaries or people mentioned"
+      : "Short description";
+  const narrativeNotesLabel =
+    sectionKey === "personal" && categoryKey === "wishes"
+      ? "Narrative instructions"
+      : "Notes or instructions";
   const defaultLegalContactRole = legalLinkedContactDefinition?.defaultRole ?? "";
   const usesStructuredWorkspaceForm = isFinanceSection || usesCanonicalAssets || isIdentityDocuments || isSocialMedia;
   const canCreateRecords = viewer.mode !== "linked";
@@ -855,7 +880,7 @@ export default function UniversalRecordWorkspace({
         error: null,
       });
       if (recordsResult.warning) {
-        setStatus(`Loaded records, but some encrypted fields could not be hydrated: ${recordsResult.warning}`);
+        setStatus(`Your records loaded, but some protected details could not be shown: ${recordsResult.warning}`);
       }
       setRecords(nextRecords);
       if (catalogResult.data && !catalogResult.error) {
@@ -951,6 +976,9 @@ export default function UniversalRecordWorkspace({
   const archivedRecords = filteredRecords.filter((row) => row.status === "archived");
   const hasAnyRecords = records.length > 0;
   const hasDiscoveryFilters = Boolean(search.trim()) || recordStatusFilter !== "all" || (isPossessions && categoryFilter !== "all");
+  const recordProgressText = hasAnyRecords
+    ? `${activeRecords.length} active record${activeRecords.length === 1 ? "" : "s"} saved`
+    : "0 records saved";
 
   useEffect(() => {
     let cancelled = false;
@@ -1258,11 +1286,11 @@ export default function UniversalRecordWorkspace({
   async function saveRecord() {
     if (saving) return;
     if (!editingId && !canCreateRecords) {
-      setStatus("This linked account cannot create new records.");
+      setStatus("This shared view is read-only. The vault owner controls who can add records.");
       return;
     }
     if (editingId && !canEditWorkspaceRow(editingId)) {
-      setStatus("This linked account is view-only.");
+      setStatus("This shared view is read-only. The vault owner controls changes.");
       return;
     }
     setSaving(true);
@@ -1483,11 +1511,6 @@ export default function UniversalRecordWorkspace({
         setSaving(false);
         return;
       }
-      if (!String(taskMetadata.related_asset_id ?? "").trim()) {
-        setStatus("Related Asset / Record is required.");
-        setSaving(false);
-        return;
-      }
       if (!String(taskMetadata.priority ?? "").trim()) {
         setStatus("Priority is required.");
         setSaving(false);
@@ -1524,6 +1547,13 @@ export default function UniversalRecordWorkspace({
         error: message,
         assetInsertReached: false,
       });
+      setSaving(false);
+      return;
+    }
+    if (isNarrativeDocumentWorkspace && !String(form.notes ?? "").trim() && !pendingDocumentFile && !editingId) {
+      const message = "Add a short note or upload a document before saving this record.";
+      setSubmitError(message);
+      setStatus(message);
       setSaving(false);
       return;
     }
@@ -1662,8 +1692,8 @@ export default function UniversalRecordWorkspace({
         : legalLinkedContactDefinition
         ? [resolvedLegacyContactRole, form.contact_name.trim() || form.contact_email.trim()].filter(Boolean).join(" · ") || null
         : form.summary.trim() || null,
-      value_minor: isTrustedContacts ? null : usesCanonicalAssets ? toMinorUnits(canonicalAssetDraft?.valueMajor ?? "0") : isFinanceSection ? toMinorUnits(financeDraft.valueMajor) : toMinorUnits(form.value_major),
-      currency_code: canonicalCurrencyCode,
+      value_minor: isTrustedContacts || isNarrativeDocumentWorkspace ? null : usesCanonicalAssets ? toMinorUnits(canonicalAssetDraft?.valueMajor ?? "0") : isFinanceSection ? toMinorUnits(financeDraft.valueMajor) : toMinorUnits(form.value_major),
+      currency_code: isTrustedContacts || isNarrativeDocumentWorkspace ? null : canonicalCurrencyCode,
       metadata: normalizedMetadata,
       updated_at: new Date().toISOString(),
     };
@@ -1859,7 +1889,8 @@ export default function UniversalRecordWorkspace({
       }
     }
 
-    setStatus(uploadWarning ? `Saved successfully. ${uploadWarning}` : "Saved successfully.");
+    const savedMessage = editingId ? "Changes saved securely." : "Record added securely.";
+    setStatus(uploadWarning ? `${savedMessage} ${uploadWarning}` : savedMessage);
     pushBankSubmitTrace(`reload started: asset_id="${recordId ?? ""}"`);
     mergeDevBankContextTrace({
       source: "UniversalRecordWorkspace.saveRecord",
@@ -1901,7 +1932,7 @@ export default function UniversalRecordWorkspace({
 
   async function archiveRecord(recordId: string) {
     if (viewer.mode === "linked") {
-      setStatus("This linked account is view-only.");
+      setStatus("This shared view is read-only. The vault owner controls changes.");
       return;
     }
     setArchivingFor(recordId);
@@ -1928,7 +1959,7 @@ export default function UniversalRecordWorkspace({
       setStatus(`Archive failed: ${result.error.message}`);
       return;
     }
-    setStatus("Record archived.");
+    setStatus("Record archived. You can still find it here if needed.");
     await reloadWorkspace(router, sectionKey, categoryKey, setRecords, setAttachments, setContacts, setStatus, {
       targetOwnerUserId: viewer.targetOwnerUserId,
       forceCanonicalRead,
@@ -1939,7 +1970,7 @@ export default function UniversalRecordWorkspace({
 
   async function deleteRecord(recordId: string) {
     if (viewer.mode === "linked") {
-      setStatus("This linked account is view-only.");
+      setStatus("This shared view is read-only. The vault owner controls changes.");
       return;
     }
     const confirmed = window.confirm("Delete this record permanently?");
@@ -1997,7 +2028,7 @@ export default function UniversalRecordWorkspace({
 
   async function uploadAttachment(recordId: string, file: File, kind: "document" | "photo") {
     if (!canEditWorkspaceRow(recordId)) {
-      setStatus("This linked account is view-only.");
+      setStatus("This shared view is read-only. The vault owner controls changes.");
       return;
     }
     const validation = validateUploadFile(file, {
@@ -2021,7 +2052,7 @@ export default function UniversalRecordWorkspace({
     });
     if (!assetContext) {
       setUploadingFor(null);
-      setStatus("Upload blocked: the selected asset context could not be resolved.");
+      setStatus("Upload paused: choose a saved record first so the file is stored with the right item.");
       return;
     }
 
@@ -2038,7 +2069,7 @@ export default function UniversalRecordWorkspace({
       return;
     }
 
-    setStatus(kind === "photo" ? `Photo uploaded to ${parentLabel}.` : `Attachment uploaded to ${parentLabel}.`);
+    setStatus(kind === "photo" ? `Photo uploaded securely to ${parentLabel}.` : `Document uploaded securely to ${parentLabel}.`);
     await reloadWorkspace(router, sectionKey, categoryKey, setRecords, setAttachments, setContacts, setStatus, {
       targetOwnerUserId: viewer.targetOwnerUserId,
       forceCanonicalRead,
@@ -2049,7 +2080,7 @@ export default function UniversalRecordWorkspace({
 
   async function removeAttachment(item: RecordAttachment) {
     if (!canEditWorkspaceRow(item.record_id)) {
-      setStatus("This linked account is view-only.");
+      setStatus("This shared view is read-only. The vault owner controls changes.");
       return;
     }
     const confirmed = window.confirm(`Remove "${item.file_name}" from this record?`);
@@ -2291,7 +2322,7 @@ export default function UniversalRecordWorkspace({
               />
             )}
             <div style={{ display: "grid", gap: 5, minWidth: 0 }}>
-              <div style={{ fontWeight: 800, color: "#111827", lineHeight: 1.25 }}>
+              <div style={{ fontWeight: 800, color: "#111827", lineHeight: 1.25, fontSize: 15 }}>
                 {isBankCategory ? bankProviderName : row.title || "Untitled record"}
               </div>
               {isTrustedContacts ? (
@@ -2457,8 +2488,12 @@ export default function UniversalRecordWorkspace({
                   </div>
                   <div style={{ color: "#94a3b8", fontSize: 12 }}>
                     {categoryLabel ? `${categoryLabel} · ` : ""}
-                    {formatCurrency(toMajorUnits(row.value_minor), (row.currency_code ?? "GBP").toUpperCase())}
-                    {" · "}
+                    {isNarrativeDocumentWorkspace ? null : (
+                      <>
+                        {formatCurrency(toMajorUnits(row.value_minor), (row.currency_code ?? "GBP").toUpperCase())}
+                        {" · "}
+                      </>
+                    )}
                     Updated {formatDate(row.updated_at)}
                   </div>
                   {primaryContact && legalLinkedContactDefinition ? (
@@ -2507,6 +2542,7 @@ export default function UniversalRecordWorkspace({
                   {uploadingFor === row.id ? "Uploading..." : "Upload document"}
                   <input
                     type="file"
+                    multiple
                     accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
                     style={{ display: "none" }}
                     onChange={(event) => {
@@ -2929,8 +2965,11 @@ export default function UniversalRecordWorkspace({
       {!loading && hasAnyRecords ? (
       <section style={cardStyle}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          <h2 style={{ margin: 0, fontSize: 17 }}>Existing records</h2>
-          {canCreateRecords ? <button type="button" style={primaryBtn} onClick={startCreate}>
+          <div style={{ display: "grid", gap: 4 }}>
+            <h2 style={{ margin: 0, fontSize: 17 }}>Existing records</h2>
+            <div style={progressCueStyle}>{recordProgressText}</div>
+          </div>
+          {canCreateRecords ? <button type="button" style={primaryBtn} onClick={startCreate} title={`Recommended next action: ${addLabel}`}>
             {addLabel}
           </button> : null}
         </div>
@@ -2998,8 +3037,18 @@ export default function UniversalRecordWorkspace({
 
         {loading ? <div style={{ color: "#64748b" }}>Loading records...</div> : null}
         {!loading && filteredRecords.length === 0 ? (
-          <div style={{ color: "#64748b" }}>
-            {hasDiscoveryFilters ? "No records match the current search or filters." : "No records yet."}
+          <div style={emptyStateStyle}>
+            <div style={{ fontWeight: 700, color: "#334155" }}>
+              {hasDiscoveryFilters ? "No matching records" : "Nothing saved here yet"}
+            </div>
+            <div>
+              {hasDiscoveryFilters
+                ? "Try adjusting the search or filters to see more of this section."
+                : `Use this section to keep these details and supporting files in your secure vault.`}
+            </div>
+            {!hasDiscoveryFilters && canCreateRecords ? (
+              <div style={{ color: "#334155" }}>Start with {addLabel.toLowerCase()} when you are ready.</div>
+            ) : null}
           </div>
         ) : null}
         {!loading && activeRecords.length > 0 ? <div style={{ display: "grid", gap: 10 }}>{activeRecords.map(renderRow)}</div> : null}
@@ -3038,15 +3087,20 @@ export default function UniversalRecordWorkspace({
           </h2>
           {formVisible ? <button type="button" style={ghostBtn} onClick={cancelForm}>Cancel</button> : null}
         </div>
+        {formVisible ? (
+          <div style={formConfidenceStyle}>
+            Securely stored in your vault. You can update this anytime.
+          </div>
+        ) : null}
 
         {!formVisible ? (
           <div style={{ display: "grid", gap: 10 }}>
             <div style={{ color: "#64748b", fontSize: 13 }}>
-              Click <strong>{addLabel}</strong> to create a new record.
+              Add a record when you are ready. It stays in your vault, and you control who can access it.
             </div>
             {!hasAnyRecords ? (
               <div>
-                {canCreateRecords ? <button type="button" style={primaryBtn} onClick={startCreate}>
+                {canCreateRecords ? <button type="button" style={primaryBtn} onClick={startCreate} title={`Recommended next action: ${addLabel}`}>
                   {addLabel}
                 </button> : null}
               </div>
@@ -3064,8 +3118,19 @@ export default function UniversalRecordWorkspace({
           />
         ) : (
         <div className="lf-content-grid">
+          {isNarrativeDocumentWorkspace ? (
+            <div style={documentInputModeStyle}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontWeight: 700 }}>
+                <Icon name="description" size={18} />
+                Add details or upload a document
+              </span>
+              <span>
+                For wishes, legal documents, and notes, a written narrative or supporting upload is enough. Monetary values are not required here.
+              </span>
+            </div>
+          ) : null}
           <label style={fieldStyle}>
-            <span style={labelStyle}>{isTrustedContacts ? "Full name" : "Item title"}</span>
+            <span style={labelStyle}>{isTrustedContacts ? "Full name" : isNarrativeDocumentWorkspace ? narrativeTitleLabel : "Item title"}</span>
             <input style={inputStyle} value={form.title} onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))} />
           </label>
           {isPossessions ? (
@@ -3085,7 +3150,7 @@ export default function UniversalRecordWorkspace({
             </label>
           ) : (
             <label style={fieldStyle}>
-              <span style={labelStyle}>{isTrustedContacts ? "Mobile phone" : "Provider or service"}</span>
+              <span style={labelStyle}>{isTrustedContacts ? "Mobile phone" : isNarrativeDocumentWorkspace ? narrativeTypeLabel : "Provider or service"}</span>
               <input style={inputStyle} value={form.provider_name} onChange={(event) => setForm((prev) => ({ ...prev, provider_name: event.target.value }))} />
             </label>
           )}
@@ -3103,7 +3168,7 @@ export default function UniversalRecordWorkspace({
             </label>
           ) : (
             <label style={fieldStyle}>
-              <span style={labelStyle}>{isTrustedContacts ? "Relationship" : "Summary"}</span>
+              <span style={labelStyle}>{isTrustedContacts ? "Relationship" : isNarrativeDocumentWorkspace ? narrativeSummaryLabel : "Summary"}</span>
               <input
                 style={inputStyle}
                 value={isTrustedContacts ? form.contact_role : form.summary}
@@ -3147,13 +3212,13 @@ export default function UniversalRecordWorkspace({
               <input style={inputStyle} value={form.contact_label} onChange={(event) => setForm((prev) => ({ ...prev, contact_label: event.target.value }))} />
             </label>
           ) : null}
-          {!isTrustedContacts ? (
+          {!isTrustedContacts && !isNarrativeDocumentWorkspace ? (
           <label style={fieldStyle}>
             <span style={labelStyle}>Estimated value</span>
             <input type="number" step="0.01" style={inputStyle} value={form.value_major} onChange={(event) => setForm((prev) => ({ ...prev, value_major: event.target.value }))} />
           </label>
           ) : null}
-          {!isTrustedContacts ? (
+          {!isTrustedContacts && !isNarrativeDocumentWorkspace ? (
           <label style={fieldStyle}>
             <span style={labelStyle}>Currency</span>
             <input style={inputStyle} value={form.currency_code} onChange={(event) => setForm((prev) => ({ ...prev, currency_code: event.target.value.toUpperCase() }))} maxLength={3} />
@@ -3184,7 +3249,7 @@ export default function UniversalRecordWorkspace({
             </label>
           ) : null}
           <label style={fieldStyle}>
-            <span style={labelStyle}>Notes</span>
+            <span style={labelStyle}>{isNarrativeDocumentWorkspace ? narrativeNotesLabel : "Notes"}</span>
             <textarea style={textAreaStyle} value={form.notes} onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))} />
           </label>
           {!isTrustedContacts ? (
@@ -3374,7 +3439,7 @@ export default function UniversalRecordWorkspace({
               </label>
             ) : null}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {(isPossessions || isFinanceSection) && !editingId ? (
+            {(isPossessions || isFinanceSection || isNarrativeDocumentWorkspace) && !editingId ? (
               <>
                 {!usesCanonicalAssets ? <label style={ghostBtn}>
                   {pendingPhotoFile ? `Picture selected: ${pendingPhotoFile.name}` : "Add picture"}
@@ -3422,7 +3487,7 @@ export default function UniversalRecordWorkspace({
                 </label> : null}
               </>
             ) : null}
-            {(!editingId ? canCreateRecords : canEditWorkspaceRow(editingId)) ? <button type="button" style={primaryBtn} disabled={saving} onClick={() => void saveRecord()}>
+            {(!editingId ? canCreateRecords : canEditWorkspaceRow(editingId)) ? <button type="button" style={primaryBtn} disabled={saving} onClick={() => void saveRecord()} title={editingId ? "Save changes to this record" : "Save this new record"}>
               <Icon name="save" size={16} style={{ marginRight: 6, verticalAlign: "text-bottom" }} />
               {saving ? "Saving..." : editingId ? "Save changes" : saveLabel}
             </button> : null}
@@ -3443,11 +3508,12 @@ export default function UniversalRecordWorkspace({
                   Upload document to {form.title.trim() || form.bank_name.trim() || "this asset"}
                   <input
                     type="file"
+                    multiple
                     accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
                     style={{ display: "none" }}
                     onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      if (file) void uploadAttachment(editingId, file, "document");
+                      const files = Array.from(event.target.files ?? []);
+                      files.forEach((file) => void uploadAttachment(editingId, file, "document"));
                       event.currentTarget.value = "";
                     }}
                   />
@@ -3457,11 +3523,12 @@ export default function UniversalRecordWorkspace({
                   Add photo to {form.title.trim() || form.bank_name.trim() || "this asset"}
                   <input
                     type="file"
+                    multiple
                     accept=".jpg,.jpeg,.png,image/jpeg,image/png"
                     style={{ display: "none" }}
                     onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      if (file) void uploadAttachment(editingId, file, "photo");
+                      const files = Array.from(event.target.files ?? []);
+                      files.forEach((file) => void uploadAttachment(editingId, file, "photo"));
                       event.currentTarget.value = "";
                     }}
                   />
@@ -5357,7 +5424,7 @@ async function reloadWorkspace(
         : filterRecordIdsForViewer(recordsResult.rows, viewer))
     : recordsResult.rows;
   if (recordsResult.warning) {
-    setStatus(`Records refreshed, but some encrypted fields could not be hydrated: ${recordsResult.warning}`);
+    setStatus(`Your records refreshed, but some protected details could not be shown: ${recordsResult.warning}`);
   }
   setRecords(nextRecords);
   const ids = nextRecords.map((item) => item.id);
@@ -5568,9 +5635,9 @@ const recordActionsStyle: CSSProperties = {
 };
 
 const detailsPanelStyle: CSSProperties = {
-  border: "1px solid #e2e8f0",
+  border: "1px solid #eee8e3",
   borderRadius: 10,
-  background: "#f8fafc",
+  background: "#fffefd",
   padding: 10,
   display: "grid",
   gap: 10,
@@ -5585,6 +5652,43 @@ const activePillStyle: CSSProperties = {
   fontWeight: 700,
   padding: "5px 10px",
   whiteSpace: "nowrap",
+};
+
+const emptyStateStyle: CSSProperties = {
+  border: "1px solid #eee8e3",
+  borderRadius: 12,
+  background: "#fffefd",
+  color: "#64748b",
+  padding: 16,
+  display: "grid",
+  gap: 6,
+  fontSize: 13,
+  lineHeight: 1.45,
+};
+
+const formConfidenceStyle: CSSProperties = {
+  color: "#64748b",
+  fontSize: 13,
+  lineHeight: 1.45,
+};
+
+const documentInputModeStyle: CSSProperties = {
+  gridColumn: "1 / -1",
+  border: "1px solid #eadfd8",
+  borderRadius: 12,
+  background: "#fffefd",
+  color: "#5f4b3f",
+  padding: 12,
+  display: "grid",
+  gap: 5,
+  fontSize: 13,
+  lineHeight: 1.45,
+};
+
+const progressCueStyle: CSSProperties = {
+  color: "#64748b",
+  fontSize: 12,
+  fontWeight: 600,
 };
 
 const archivedPillStyle: CSSProperties = {
@@ -5659,7 +5763,7 @@ const maskedRowStyle: CSSProperties = {
 };
 
 const recordUpdateStampStyle: CSSProperties = {
-  color: "#94a3b8",
+  color: "#9a918b",
   fontSize: 12,
 };
 

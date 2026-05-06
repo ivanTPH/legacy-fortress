@@ -19,7 +19,7 @@ test("linked contact record routing builds exact workspace deep links", () => {
     category_key: "identity-documents",
     label: "Passport",
     role: "holder",
-  }), "/legal/identity-documents?asset=asset-123");
+  }), "/identity-documents?asset=asset-123");
 
   assert.equal(buildLinkedContactRecordHref({
     source_kind: "record",
@@ -37,7 +37,7 @@ test("linked contact record routing builds exact workspace deep links", () => {
     category_key: "executors",
     label: "Executor",
     role: "executor",
-  }), "/trust?asset=asset-456");
+  }), "/contacts?group=executors&asset=asset-456");
 });
 
 test("contacts resolves as a single top-level navigation destination", () => {

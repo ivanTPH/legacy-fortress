@@ -14,21 +14,28 @@ export function buildLinkedContactRecordHref(context: CanonicalContactContext) {
   const pathname = resolveLinkedContactRecordPath(context);
   if (!pathname) return "";
 
+  const [basePath, existingQuery = ""] = pathname.split("?");
   const params = new URLSearchParams();
+  if (existingQuery) {
+    for (const [key, value] of new URLSearchParams(existingQuery).entries()) {
+      params.set(key, value);
+    }
+  }
   if (context.source_kind === "asset") params.set("asset", context.source_id);
   if (context.source_kind === "record") params.set("record", context.source_id);
 
-  return params.size ? `${pathname}?${params.toString()}` : pathname;
+  return params.size ? `${basePath}?${params.toString()}` : basePath;
 }
 
 function resolveLinkedContactRecordPath(context: CanonicalContactContext) {
   const sectionKey = String(context.section_key ?? "").trim().toLowerCase();
   const categoryKey = String(context.category_key ?? "").trim().toLowerCase();
 
+  if (sectionKey === "legal" && categoryKey === "identity-documents") return "/identity-documents";
   if (sectionKey === "legal" && categoryKey) return `/legal/${categoryKey}`;
   if (sectionKey === "finances" && categoryKey) return `/finances/${categoryKey}`;
   if (sectionKey === "personal" && categoryKey === "beneficiaries") return "/personal/beneficiaries";
-  if (sectionKey === "personal" && categoryKey === "executors") return "/trust";
+  if (sectionKey === "personal" && categoryKey === "executors") return "/contacts?group=executors";
   if (sectionKey === "personal" && categoryKey === "tasks") return "/personal/tasks";
   if (sectionKey === "personal" && categoryKey === "subscriptions") return "/personal/subscriptions";
   if (sectionKey === "personal" && categoryKey === "social-media") return "/personal/social-media";

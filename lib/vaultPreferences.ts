@@ -228,6 +228,7 @@ export function resolveVaultCategoryForPath(pathname: string): VaultCategoryGrou
   const value = pathname.trim().toLowerCase();
   if (!value) return null;
   if (value.startsWith("/legal")) return "legal";
+  if (value.startsWith("/identity-documents")) return "legal";
   if (value.startsWith("/finances")) return "finances";
   if (value.startsWith("/vault/digital")) return "digital";
   if (value.startsWith("/personal/tasks")) return "tasks";
@@ -235,7 +236,6 @@ export function resolveVaultCategoryForPath(pathname: string): VaultCategoryGrou
   if (value.startsWith("/property") || value.startsWith("/vault/property")) return "property";
   if (value.startsWith("/business") || value.startsWith("/employment") || value.startsWith("/vault/business")) return "business";
   if (value.startsWith("/cars-transport")) return "cars_transport";
-  if (value.startsWith("/trust")) return "executors";
   return null;
 }
 
@@ -248,6 +248,7 @@ export function resolveVaultSubsectionForPath(pathname: string): VaultSubsection
   if (value.startsWith("/legal/funeral-wishes")) return "legal_funeral_wishes";
   if (value.startsWith("/legal/marriage-divorce-documents")) return "legal_marriage_divorce_documents";
   if (value.startsWith("/legal/identity-documents")) return "legal_identity_documents";
+  if (value.startsWith("/identity-documents")) return "legal_identity_documents";
   if (value.startsWith("/legal/other-legal-documents")) return "legal_other_legal_documents";
   if (value.startsWith("/legal/death-certificate")) return "legal_death_certificate";
   if (value.startsWith("/finances/bank")) return "finances_bank";
