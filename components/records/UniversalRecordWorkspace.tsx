@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -84,12 +85,12 @@ import { summarizeScopedAssetRows } from "../../lib/dashboard/summary";
 import { supabase } from "../../lib/supabaseClient";
 import { validateUploadFile } from "../../lib/validation/upload";
 import {
-  hydrateProjectionRowsWithCanonicalContacts,
-  replaceCanonicalRecordContactProjection,
-  syncCanonicalContact,
-  unlinkCanonicalContactSource,
+  hydratePeopleProjectionRows,
+  replacePeopleRecordContactProjection,
+  savePeopleContact,
+  unlinkPeopleContactSource,
   type CanonicalContactContext,
-} from "../../lib/contacts/canonicalContacts";
+} from "../../lib/contacts/contactRepository";
 import {
   resolveLatestSavedContactIdentityReference,
   resolveSavedCanonicalContactIdForSource,
@@ -945,7 +946,7 @@ export default function UniversalRecordWorkspace({
     return () => {
       mounted = false;
     };
-  }, [categoryKey, forceCanonicalRead, isCanonicalTask, recordFilter, router, sectionKey, usesCanonicalAssetReadPath, viewer.targetOwnerUserId]);
+  }, [categoryKey, forceCanonicalRead, isCanonicalTask, recordFilter, router, sectionKey, usesCanonicalAssetReadPath, viewer]);
 
   const totals = useMemo(() => {
     const summary = summarizeScopedAssetRows(records);
@@ -1730,7 +1731,7 @@ export default function UniversalRecordWorkspace({
         recordId = assetResult.id;
         if (isCanonicalExecutor && recordId) {
           const executorContactMetadata = normalizedMetadata as Record<string, unknown>;
-          await syncCanonicalContact(supabase, {
+          await savePeopleContact(supabase, {
             ownerUserId: user.id,
             fullName: String(payload.title ?? "").trim() || "Contact",
             email: form.executor_contact_email.trim() || null,
@@ -1817,12 +1818,12 @@ export default function UniversalRecordWorkspace({
           recordId,
         );
         try {
-          await unlinkCanonicalContactSource(supabase, {
+          await unlinkPeopleContactSource(supabase, {
             ownerUserId: user.id,
             sourceKind: "record",
             sourceId: recordId,
           });
-          await replaceCanonicalRecordContactProjection(supabase, {
+          await replacePeopleRecordContactProjection(supabase, {
             ownerUserId: user.id,
             recordId,
             contact: null,
@@ -1833,7 +1834,7 @@ export default function UniversalRecordWorkspace({
         }
         if (hasContact) {
           try {
-            const canonicalContact = await syncCanonicalContact(supabase, {
+            const canonicalContact = await savePeopleContact(supabase, {
               ownerUserId: user.id,
               existingContactId: existingCanonicalContactId,
               fullName: isTrustedContacts ? form.title.trim() || "Contact" : form.contact_name.trim() || "Contact",
@@ -1851,7 +1852,7 @@ export default function UniversalRecordWorkspace({
                 role: isTrustedContacts ? form.contact_role.trim() || null : resolvedLegacyContactRole,
               },
             });
-            await replaceCanonicalRecordContactProjection(supabase, {
+            await replacePeopleRecordContactProjection(supabase, {
               ownerUserId: user.id,
               recordId,
               contact: canonicalContact,
@@ -1998,14 +1999,14 @@ export default function UniversalRecordWorkspace({
     }
     try {
       if (usesCanonicalAssets && isCanonicalExecutor) {
-        await unlinkCanonicalContactSource(supabase, {
+        await unlinkPeopleContactSource(supabase, {
           ownerUserId: user.id,
           sourceKind: "asset",
           sourceId: recordId,
         });
       }
       if (!usesCanonicalAssets && (isTrustedContacts || contacts.some((item) => item.record_id === recordId))) {
-        await unlinkCanonicalContactSource(supabase, {
+        await unlinkPeopleContactSource(supabase, {
           ownerUserId: user.id,
           sourceKind: "record",
           sourceId: recordId,
@@ -2303,11 +2304,12 @@ export default function UniversalRecordWorkspace({
           <div style={{ display: "flex", gap: 14, alignItems: "flex-start", minWidth: 0 }}>
             {previewUrl && !thumbFailed ? (
               <div style={thumbWrapStyle}>
-                <img
+                <Image
                   src={previewUrl}
                   alt={row.title ? `${row.title} photo` : "Possession photo"}
                   width={44}
                   height={44}
+                  unoptimized
                   style={{ objectFit: "cover", width: "100%", height: "100%" }}
                   onError={() => {
                     setFailedThumbs((prev) => ({ ...prev, [row.id]: true }));
@@ -5058,11 +5060,12 @@ function ProviderBadge({
   if (providerLogoSrc && failedLogoSrc !== providerLogoSrc) {
     return (
       <div style={logoWrapStyle} aria-label={provider?.display_name ?? "Bank logo"}>
-        <img
+        <Image
           src={providerLogoSrc}
           alt={provider?.display_name ?? "Bank logo"}
           width={30}
           height={30}
+          unoptimized
           style={{ objectFit: "contain", width: "100%", height: "100%", maxWidth: 30, maxHeight: 30, display: "block" }}
           onError={() => {
             setFailedLogoSrc(providerLogoSrc);
@@ -5518,7 +5521,7 @@ async function loadWorkspaceContacts({
 
     return {
       ok: true,
-      rows: await hydrateProjectionRowsWithCanonicalContacts(supabase, userId, linkRows),
+      rows: await hydratePeopleProjectionRows(supabase, userId, linkRows),
     };
   }
 
@@ -5549,7 +5552,7 @@ async function loadWorkspaceContacts({
 
   return {
     ok: true,
-    rows: await hydrateProjectionRowsWithCanonicalContacts(supabase, userId, baseRows),
+    rows: await hydratePeopleProjectionRows(supabase, userId, baseRows),
   };
 }
 
@@ -5838,30 +5841,9 @@ const ghostBtn: CSSProperties = {
   gap: 6,
 };
 
-const miniGhostBtn: CSSProperties = {
-  ...ghostBtn,
-  padding: "4px 8px",
-  fontSize: 12,
-};
-
 const dangerBtn: CSSProperties = {
   ...ghostBtn,
   borderColor: "#fecaca",
   color: "#991b1b",
   background: "#fff1f2",
-};
-
-const inlineLinkBtn: CSSProperties = {
-  border: "none",
-  padding: 0,
-  margin: 0,
-  background: "transparent",
-  textAlign: "left",
-  color: "#1d4ed8",
-  cursor: "pointer",
-  fontSize: 13,
-  textDecoration: "underline",
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 4,
 };

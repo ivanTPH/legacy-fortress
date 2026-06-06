@@ -2,16 +2,18 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import BrandMark from "../../app/(app)/components/BrandMark";
+import WorkspaceSwitcher from "../navigation/WorkspaceSwitcher";
 import Icon from "../ui/Icon";
 import SignInForm from "./SignInForm";
-import SignUpForm from "./SignUpForm";
-import { bootstrapAuthenticatedUser } from "../../lib/auth/bootstrap";
-import { waitForActiveUser } from "../../lib/auth/session";
-import { supabase } from "../../lib/supabaseClient";
 
 type AuthMode = "sign-in" | "sign-up";
+
+const SignUpForm = dynamic(() => import("./SignUpForm"), {
+  loading: () => <div className="lf-muted-note">Loading account setup...</div>,
+});
 
 export default function PublicAuthEntry({
   initialMode = "sign-in",
@@ -33,14 +35,40 @@ export default function PublicAuthEntry({
     let mounted = true;
     async function guard() {
       try {
+        const [
+          { supabase },
+          { waitForActiveUser },
+          { bootstrapAuthenticatedUser },
+          { getMasterAdminRolesForEmail, mergePlatformRoles },
+          { extractPlatformRolesFromMetadata },
+          { resolvePermissionedAdminDestination },
+        ] = await Promise.all([
+          import("../../lib/supabaseClient"),
+          import("../../lib/auth/session"),
+          import("../../lib/auth/bootstrap"),
+          import("../../lib/auth/adminRoles"),
+          import("../../lib/auth/platformRoles"),
+          import("../../lib/auth/adminDestination"),
+        ]);
         const { data: sessionData } = await supabase.auth.getSession();
         const sessionUser = sessionData.session?.user ?? (await waitForActiveUser(supabase, { attempts: 3, delayMs: 120 }));
         if (!mounted || !sessionUser) return;
+        const roles = mergePlatformRoles(
+          extractPlatformRolesFromMetadata(sessionUser.app_metadata),
+          extractPlatformRolesFromMetadata(sessionUser.user_metadata),
+          getMasterAdminRolesForEmail(sessionUser.email),
+        );
         const bootstrap = await bootstrapAuthenticatedUser(supabase, {
           userId: sessionUser.id,
           nextPath,
+          roles,
         });
-        router.replace(bootstrap.destination);
+        const destination = await resolvePermissionedAdminDestination(supabase, {
+          nextPath,
+          fallbackDestination: bootstrap.destination,
+          roles,
+        });
+        router.replace(destination);
       } catch {
         if (!mounted) return;
       }
@@ -82,14 +110,14 @@ export default function PublicAuthEntry({
           <div className="lf-entry-panel-top">
             <div>
               <div className="lf-entry-panel-kicker">Secure access</div>
-              <h2>{activeMode === "sign-in" ? "Welcome back" : "Create your account"}</h2>
+              <h2>{activeMode === "sign-in" ? "Sign in" : "Create account"}</h2>
             </div>
             <Link href="/demo" className="lf-entry-demo-link">Demo</Link>
           </div>
 
           <p className="lf-entry-panel-subtext">
             {activeMode === "sign-in"
-              ? "Open your workspace without leaving this page."
+              ? "Sign in to your authorised workspace. Operational dashboards are opened only when account permissions allow them."
               : "Start here and continue straight into your guided setup."}
           </p>
 
@@ -131,8 +159,15 @@ export default function PublicAuthEntry({
           <div className="lf-entry-footnote">
             <span><Icon name="lock" size={14} /> Private workspace</span>
             <span><Icon name="description" size={14} /> Guided setup after sign-up</span>
-            <span><Icon name="support_agent" size={14} /> Existing routes stay supported</span>
+            <span><Icon name="admin_panel_settings" size={14} /> Admin access is role controlled</span>
           </div>
+
+          <WorkspaceSwitcher
+            currentPathname="/sign-in"
+            compact
+            showDetails
+            governanceContext="/sign-in unified login entry"
+          />
         </div>
       </section>
     </main>

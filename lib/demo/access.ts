@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { getRoleLabel } from "../access-control/viewerAccess";
 import type { CollaboratorRole } from "../access-control/roles";
-import { syncCanonicalContact } from "../contacts/canonicalContacts";
+import { savePeopleContact } from "../contacts/contactRepository";
 import { createSupabaseAdminClient, getSupabaseAdminConfigIssue } from "../supabaseAdmin";
 import {
   DEMO_ACCOUNT_HOLDER_NAME,
@@ -58,7 +58,7 @@ export async function prepareDemoSession({
     throw new Error("Demo access is unavailable in this environment.");
   }
 
-  const summary = (await loadPreparedDemoEnvironment(client)) ?? await ensureDemoEnvironment(client);
+  const summary = await ensureDemoEnvironment(client);
   const redirectTo = new URL("/auth/callback?next=/dashboard", resolveDemoRedirectOrigin(origin)).toString();
   const linkRes = await client.auth.admin.generateLink({
     type: "magiclink",
@@ -100,9 +100,10 @@ export async function ensureDemoEnvironment(adminClient: AnySupabaseClient): Pro
   if (seededAssetCount < 4) {
     throw new Error("Demo environment is not prepared yet. Run scripts/setup-demo-review-access.mjs first.");
   }
+  const viewerScope = await loadDemoViewerScope(adminClient, owner.id);
 
   const invitationId = await ensureDemoInvitation(adminClient, owner.id);
-  const contact = await syncCanonicalContact(adminClient, {
+  const contact = await savePeopleContact(adminClient, {
     ownerUserId: owner.id,
     fullName: DEMO_REVIEWER_NAME,
     email: DEMO_REVIEWER_EMAIL,
@@ -175,6 +176,9 @@ export async function ensureDemoEnvironment(adminClient: AnySupabaseClient): Pro
       demo: true,
       read_only: true,
       environment: DEMO_ENVIRONMENT_KEY,
+      allowed_sections: viewerScope.sectionKeys,
+      asset_ids: viewerScope.assetIds,
+      record_ids: viewerScope.recordIds,
     },
     updated_at: new Date().toISOString(),
   };
@@ -201,64 +205,6 @@ export async function ensureDemoEnvironment(adminClient: AnySupabaseClient): Pro
     reviewerUserId: reviewer.id,
     contactId: contact.id,
     grantId: String(grantWrite.data.id),
-    seededAssetCount,
-    reviewerRole: DEMO_REVIEWER_ROLE,
-  };
-}
-
-async function loadPreparedDemoEnvironment(adminClient: AnySupabaseClient): Promise<DemoEnvironmentSummary | null> {
-  const demoContact = await adminClient
-    .from("contacts")
-    .select("id,owner_user_id,linked_user_id,contact_role")
-    .eq("email", DEMO_REVIEWER_EMAIL)
-    .eq("relationship", "demo reviewer")
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (demoContact.error) {
-    throw new Error(demoContact.error.message);
-  }
-  if (!demoContact.data?.id || !demoContact.data.owner_user_id || !demoContact.data.linked_user_id) {
-    return null;
-  }
-
-  const [grantRes, assetCountRes] = await Promise.all([
-    adminClient
-      .from("account_access_grants")
-      .select("id,assigned_role,activation_status")
-      .eq("owner_user_id", demoContact.data.owner_user_id)
-      .eq("linked_user_id", demoContact.data.linked_user_id)
-      .eq("assigned_role", DEMO_REVIEWER_ROLE)
-      .eq("activation_status", "active")
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    adminClient
-      .from("assets")
-      .select("id", { count: "exact", head: true })
-      .eq("owner_user_id", demoContact.data.owner_user_id),
-  ]);
-
-  if (grantRes.error) {
-    throw new Error(grantRes.error.message);
-  }
-  if (assetCountRes.error) {
-    throw new Error(assetCountRes.error.message);
-  }
-
-  const seededAssetCount = Number(assetCountRes.count ?? 0);
-  const profileReady = await hasDemoOwnerProfileSurface(adminClient, String(demoContact.data.owner_user_id));
-  if (!grantRes.data?.id || seededAssetCount < 4 || !profileReady) {
-    return null;
-  }
-
-  await assertDemoReviewerIsNotAdmin(adminClient, String(demoContact.data.linked_user_id));
-
-  return {
-    ownerUserId: String(demoContact.data.owner_user_id),
-    reviewerUserId: String(demoContact.data.linked_user_id),
-    contactId: String(demoContact.data.id),
-    grantId: String(grantRes.data.id),
     seededAssetCount,
     reviewerRole: DEMO_REVIEWER_ROLE,
   };
@@ -368,33 +314,48 @@ async function loadDemoSeedHealth(adminClient: AnySupabaseClient, ownerUserId: s
   return Number(assetCountRes.count ?? 0);
 }
 
-async function hasDemoOwnerProfileSurface(adminClient: AnySupabaseClient, ownerUserId: string) {
-  const [contactRes, addressRes] = await Promise.all([
+async function loadDemoViewerScope(adminClient: AnySupabaseClient, ownerUserId: string) {
+  const [assetsRes, recordsRes] = await Promise.all([
     adminClient
-      .from("contact_details")
-      .select("secondary_email,telephone,mobile_number")
-      .eq("user_id", ownerUserId)
-      .maybeSingle(),
+      .from("assets")
+      .select("id,section_key")
+      .eq("owner_user_id", ownerUserId),
     adminClient
-      .from("addresses")
-      .select("house_name_or_number,street_name,city,post_code")
-      .eq("user_id", ownerUserId)
-      .maybeSingle(),
+      .from("records")
+      .select("id,section_key")
+      .eq("owner_user_id", ownerUserId),
   ]);
 
-  const contactReady = !contactRes.error && Boolean(
-    String(contactRes.data?.secondary_email ?? "").trim()
-    || String(contactRes.data?.telephone ?? "").trim()
-    || String(contactRes.data?.mobile_number ?? "").trim(),
-  );
-  const addressReady = !addressRes.error && Boolean(
-    String(addressRes.data?.house_name_or_number ?? "").trim()
-    || String(addressRes.data?.street_name ?? "").trim()
-    || String(addressRes.data?.city ?? "").trim()
-    || String(addressRes.data?.post_code ?? "").trim(),
-  );
+  if (assetsRes.error) {
+    throw new Error(assetsRes.error.message);
+  }
+  if (recordsRes.error) {
+    throw new Error(recordsRes.error.message);
+  }
 
-  return contactReady && addressReady;
+  const scopedRows = [...(assetsRes.data ?? []), ...(recordsRes.data ?? [])] as Array<{
+    id?: string | null;
+    section_key?: string | null;
+  }>;
+  const sectionKeys = Array.from(new Set([
+    "profile",
+    ...scopedRows
+      .map((row) => normalizeDemoSectionKey(row.section_key))
+      .filter(Boolean),
+  ]));
+
+  return {
+    sectionKeys,
+    assetIds: (assetsRes.data ?? []).map((row) => String(row.id ?? "").trim()).filter(Boolean),
+    recordIds: (recordsRes.data ?? []).map((row) => String(row.id ?? "").trim()).filter(Boolean),
+  };
+}
+
+function normalizeDemoSectionKey(value: unknown) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (!normalized) return "";
+  if (normalized === "finances") return "financial";
+  return normalized;
 }
 
 async function ensureDemoOwnerProfileSurface(adminClient: AnySupabaseClient, ownerUserId: string) {

@@ -1,21 +1,9 @@
 import AdminPrototypeShell from "@/components/admin/prototype/AdminPrototypeShell";
-import { organisationClients } from "@/components/admin/prototype/mockData";
-import {
-  buildClientInsights,
-  buildReportMetrics,
-  getConsentBlockedCount,
-} from "@/components/admin/prototype/reportInsights";
+import { getCampaignPrototypeData } from "@/components/admin/prototype/prototypeDataService";
 import type { CSSProperties, ReactNode } from "react";
 
 export default function CampaignsPrototypePage() {
-  const eligibleClients = organisationClients.filter((client) => client.consent.adviserInsights && client.consent.marketing);
-  const excludedByConsent = organisationClients.length - eligibleClients.length;
-  const eligibleInsights = buildClientInsights(eligibleClients);
-  const eligibleMetrics = buildReportMetrics(eligibleClients, eligibleInsights, getConsentBlockedCount(eligibleClients));
-  const reviewDueAudience = eligibleInsights.filter((insight) => insight.insightType === "review_due").length;
-  const willUpdateAudience = eligibleInsights.filter((insight) => insight.insightType === "will_outdated").length;
-  const executorMissingAudience = eligibleInsights.filter((insight) => insight.insightType === "missing_executor").length;
-  const incompleteVaultAudience = eligibleInsights.filter((insight) => insight.insightType === "incomplete_vault").length;
+  const data = getCampaignPrototypeData();
 
   return (
     <AdminPrototypeShell
@@ -27,26 +15,26 @@ export default function CampaignsPrototypePage() {
       </section>
 
       <section style={metricsGridStyle} aria-label="Campaign consent metrics">
-        <Metric label="Eligible audience" value={String(eligibleClients.length)} detail="Adviser insight and marketing consent both present" />
-        <Metric label="Excluded by consent" value={String(excludedByConsent)} detail="Missing adviser insight or marketing consent" />
-        <Metric label="Review due audience" value={String(reviewDueAudience)} detail="Eligible clients only" />
-        <Metric label="Will update audience" value={String(willUpdateAudience)} detail="Eligible clients only" />
-        <Metric label="Executor missing audience" value={String(executorMissingAudience)} detail="Eligible clients only" />
-        <Metric label="Incomplete vault audience" value={String(incompleteVaultAudience)} detail="Eligible clients only" />
+        <Metric label="Eligible audience" value={String(data.eligibleClients.length)} detail="Adviser insight and marketing consent both present" />
+        <Metric label="Excluded by consent" value={String(data.excludedByConsent)} detail="Missing adviser insight or marketing consent" />
+        <Metric label="Review due audience" value={String(data.audience.reviewDue)} detail="Eligible clients only" />
+        <Metric label="Will update audience" value={String(data.audience.willUpdate)} detail="Eligible clients only" />
+        <Metric label="Executor missing audience" value={String(data.audience.executorMissing)} detail="Eligible clients only" />
+        <Metric label="Incomplete vault audience" value={String(data.audience.incompleteVault)} detail="Eligible clients only" />
       </section>
 
       <section style={panelGridStyle}>
         <Panel title="Campaign opportunities">
-          <AudienceRow label="Annual estate review" count={reviewDueAudience} detail="Filtered to eligible, consented clients only." />
-          <AudienceRow label="Will update reminder" count={willUpdateAudience} detail="Uses will age bands and review signals only." />
-          <AudienceRow label="Executor missing reminder" count={executorMissingAudience} detail="No executor details are exposed in this shell." />
-          <AudienceRow label="Incomplete vault nudge" count={incompleteVaultAudience} detail="Uses completion band signals only." />
+          <AudienceRow label="Annual estate review" count={data.audience.reviewDue} detail="Filtered to eligible, consented clients only." />
+          <AudienceRow label="Will update reminder" count={data.audience.willUpdate} detail="Uses will age bands and review signals only." />
+          <AudienceRow label="Executor missing reminder" count={data.audience.executorMissing} detail="No executor details are exposed in this shell." />
+          <AudienceRow label="Incomplete vault nudge" count={data.audience.incompleteVault} detail="Uses completion band signals only." />
         </Panel>
 
         <Panel title="Consent readiness">
-          <Info label="Campaign-ready clients" value={String(eligibleClients.length)} />
-          <Info label="Missing consent" value={String(excludedByConsent)} />
-          <Info label="Marketing permission" value={String(eligibleMetrics.marketingPermission)} />
+          <Info label="Campaign-ready clients" value={String(data.eligibleClients.length)} />
+          <Info label="Missing consent" value={String(data.excludedByConsent)} />
+          <Info label="Marketing permission" value={String(data.eligibleMetrics.marketingPermission)} />
           <p style={helperTextStyle}>
             Campaign audience counts require consent.adviserInsights === true and consent.marketing === true. If either is missing, the client is excluded.
           </p>
@@ -91,19 +79,19 @@ export default function CampaignsPrototypePage() {
         </section>
 
         <div style={buttonRowStyle}>
-          <DisabledAction label="Create campaign" />
-          <DisabledAction label="Export audience" />
-          <DisabledAction label="Send message" />
-          <DisabledAction label="Schedule campaign" />
+          <DisabledAction label="Create campaign" reason={data.disabledReason} />
+          <DisabledAction label="Export audience" reason={data.disabledReason} />
+          <DisabledAction label="Send message" reason={data.disabledReason} />
+          <DisabledAction label="Schedule campaign" reason={data.disabledReason} />
         </div>
       </section>
 
       <section style={panelStyle}>
         <h2 style={h2Style}>Audit preview</h2>
         <div style={auditGridStyle}>
-          <AuditItem action="Audience filter viewed" actor="Enterprise admin" result="Static preview only" />
-          <AuditItem action="Campaign draft opened" actor="Enterprise admin" result="No draft persisted" />
-          <AuditItem action="Consent check reviewed" actor="System preview" result="No real audit event written" />
+          {data.auditPreviewEvents.map((event) => (
+            <AuditItem key={event.id} action={event.action} actor={event.actor.displayName} result={event.result.replace(/_/g, " ")} />
+          ))}
         </div>
       </section>
     </AdminPrototypeShell>
@@ -159,10 +147,10 @@ function ChecklistItem({ complete, label }: { complete: boolean; label: string }
   );
 }
 
-function DisabledAction({ label }: { label: string }) {
+function DisabledAction({ label, reason }: { label: string; reason: string }) {
   return (
-    <button type="button" disabled style={disabledButtonStyle} title="Disabled — requires consent enforcement and outreach approval">
-      {label} — Disabled — requires consent enforcement and outreach approval
+    <button type="button" disabled style={disabledButtonStyle} title={reason}>
+      {label} — {reason}
     </button>
   );
 }

@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { createClient } from "@supabase/supabase-js";
 import BrandMark from "../(app)/components/BrandMark";
-import { publicEnv } from "../../lib/env";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -20,7 +18,12 @@ export default function ForgotPasswordPage() {
 
     setSending(true);
     setIsSuccess(false);
-    const redirectTo = "https://legacy-fortress-web.vercel.app/reset-password";
+    const [{ createClient }, { getBrowserAuthRedirect }, { publicEnv }] = await Promise.all([
+      import("@supabase/supabase-js"),
+      import("../../lib/auth/redirects"),
+      import("../../lib/env"),
+    ]);
+    const redirectTo = getBrowserAuthRedirect("/reset-password");
     const recoveryClient = createClient(publicEnv.NEXT_PUBLIC_SUPABASE_URL, publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
       auth: {
         flowType: "implicit",
@@ -31,7 +34,7 @@ export default function ForgotPasswordPage() {
     const { error } = await recoveryClient.auth.resetPasswordForEmail(email.trim(), { redirectTo });
     setSending(false);
     if (error) {
-      setStatus(`Reset request failed: ${error.message}`);
+      setStatus(`Reset request failed: ${error.message}. Check the email address and try again, or contact support if the account should exist.`);
       return;
     }
 
@@ -71,7 +74,7 @@ export default function ForgotPasswordPage() {
 
           {status ? <div className="lf-muted-note">{status}</div> : null}
           <p className="lf-muted-note">
-            Back to <Link className="lf-inline-link" href="/signin">Sign in</Link>
+            Back to <Link className="lf-inline-link" href="/sign-in">Sign in</Link>
           </p>
         </div>
       </section>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import ConfigDrivenAssetFields from "../../../../components/forms/asset/ConfigDrivenAssetFields";
 import {
   buildInitialAssetFormValues,
@@ -36,33 +36,52 @@ export default function AssetCreateModal({
   onSubmit,
 }: AssetCreateModalProps) {
   const config = useMemo(() => getAssetCategoryFormConfig(categorySlug), [categorySlug]);
-  const [values, setValues] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    if (!config) {
-      setValues({});
-      return;
-    }
-    setValues(buildInitialAssetFormValues(config));
-  }, [config, open]);
-
-  const errors = useMemo(() => {
-    if (!config) return {};
-    return validateAssetFormValues(config, values);
-  }, [config, values]);
 
   if (!open) return null;
   if (!config) return null;
-  const activeConfig = config;
+
+  return (
+    <AssetCreateModalContent
+      key={config.categorySlug}
+      config={config}
+      categoryLabel={categoryLabel}
+      saving={saving}
+      error={error}
+      success={success}
+      onClose={onClose}
+      onSubmit={onSubmit}
+    />
+  );
+}
+
+function AssetCreateModalContent({
+  config,
+  categoryLabel,
+  saving,
+  error,
+  success,
+  onClose,
+  onSubmit,
+}: {
+  config: AssetCategoryFormConfig;
+  categoryLabel: string;
+  saving: boolean;
+  error: string;
+  success: string;
+  onClose: () => void;
+  onSubmit: (input: AssetQuickCreateInput) => Promise<boolean>;
+}) {
+  const [values, setValues] = useState<Record<string, string>>(() => buildInitialAssetFormValues(config));
+  const errors = useMemo(() => validateAssetFormValues(config, values), [config, values]);
 
   async function submit() {
     const hasErrors = Object.values(errors).some(Boolean);
     if (hasErrors) return;
 
-    const ok = await onSubmit({ values, config: activeConfig });
+    const ok = await onSubmit({ values, config });
     if (!ok) return;
 
-    setValues(buildInitialAssetFormValues(activeConfig));
+    setValues(buildInitialAssetFormValues(config));
   }
 
   return (
@@ -96,7 +115,7 @@ export default function AssetCreateModal({
         <h2 style={{ margin: 0, fontSize: 18 }}>Create {categoryLabel}</h2>
 
         <ConfigDrivenAssetFields
-          config={activeConfig}
+          config={config}
           values={values}
           errors={errors}
           disabled={saving}

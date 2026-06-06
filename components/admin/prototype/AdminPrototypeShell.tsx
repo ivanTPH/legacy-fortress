@@ -1,11 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import Icon from "../../ui/Icon";
+import { PlatformRestrictedState } from "../../ui/PlatformPrimitives";
+import WorkspaceSwitcher from "../../navigation/WorkspaceSwitcher";
 import AdminStatusBadge from "./AdminStatusBadge";
+import { waitForActiveUser } from "../../../lib/auth/session";
+import { canRoleAccessPath } from "../../../lib/accessModel";
+import { getMasterAdminRolesForEmail, mergePlatformRoles } from "../../../lib/auth/adminRoles";
+import { extractPlatformRolesFromMetadata } from "../../../lib/auth/platformRoles";
+import { supabase } from "../../../lib/supabaseClient";
 import {
+  buildPrototypePreviewHref,
   getAdminPrototypeRoleForTestPersona,
   isTestPersonaAccessEnabled,
   TEST_PERSONA_STORAGE_KEY,
@@ -28,6 +36,7 @@ type AdminPrototypeNavItem = {
   icon: string;
   capability?: AdminPrototypeCapability;
   exact?: boolean;
+  visible?: (user: { role: AdminPrototypeRole; capabilities: AdminPrototypeCapability[] }) => boolean;
 };
 
 type AdminPrototypeNavSection = {
@@ -43,7 +52,6 @@ const navItems: AdminPrototypeNavSection[] = [
     items: [
       { href: "/internal/admin/prototype/cases", label: "Cases", icon: "folder_managed" },
       { href: "/internal/admin/prototype/verifications", label: "Verifications", icon: "verified_user" },
-      { href: "/internal/admin/prototype/users", label: "Users", icon: "group" },
       { href: "/internal/admin/prototype/access", label: "Access", icon: "admin_panel_settings" },
       { href: "/internal/admin/prototype/audit", label: "Audit", icon: "history" },
     ],
@@ -52,7 +60,8 @@ const navItems: AdminPrototypeNavSection[] = [
     label: "Enterprise & Licensing",
     capability: "enterprise" as const,
     items: [
-      { href: "/internal/admin/prototype/enterprise", label: "Enterprise dashboard", icon: "space_dashboard", exact: true },
+      { href: "/internal/admin/prototype/enterprise", label: "Overview", icon: "space_dashboard", exact: true },
+      { href: "/internal/admin/prototype/users", label: "Users & Permissions", icon: "manage_accounts", visible: canViewUsersAndPermissions },
       { href: "/internal/admin/prototype/organisations", label: "Organisations", icon: "corporate_fare" },
       { href: "/internal/admin/prototype/licences", label: "Licences", icon: "license" },
       { href: "/internal/admin/prototype/reports", label: "Reports", icon: "bar_chart", exact: true },
@@ -64,25 +73,87 @@ const navItems: AdminPrototypeNavSection[] = [
 
 export default function AdminPrototypeShell({ title, description, children }: AdminPrototypeShellProps) {
   const pathname = usePathname();
-  const [roleParam, setRoleParam] = useState<string | null>(null);
+  const router = useRouter();
+  const [roleParam] = useState<string | null>(() => getInitialRoleParam());
+  const [permissionState, setPermissionState] = useState<"checking" | "allowed" | "denied">("checking");
+  const [permissionMessage, setPermissionMessage] = useState("");
+
   useEffect(() => {
-    const explicitRole = new URLSearchParams(window.location.search).get("role");
-    if (explicitRole) {
-      setRoleParam(explicitRole);
-      return;
+    let mounted = true;
+
+    async function verifyAdminPermission() {
+      const user = await waitForActiveUser(supabase, { attempts: 4, delayMs: 120 });
+      if (!mounted) return;
+      if (!user) {
+        const currentSearch = typeof window === "undefined" ? "" : window.location.search;
+        const requestedPath = `${pathname}${currentSearch}`;
+        router.replace(`/sign-in?next=${encodeURIComponent(requestedPath)}`);
+        return;
+      }
+
+      const userRoles = mergePlatformRoles(
+        extractPlatformRolesFromMetadata(user.app_metadata),
+        extractPlatformRolesFromMetadata(user.user_metadata),
+        getMasterAdminRolesForEmail(user.email),
+      );
+      if (canRoleAccessPath(userRoles, pathname)) {
+        setPermissionState("allowed");
+        return;
+      }
+
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token ?? "";
+      const response = await fetch("/api/internal/admin/session", {
+        headers: token ? { authorization: `Bearer ${token}` } : {},
+      });
+      const payload = (await response.json().catch(() => ({}))) as { ok?: boolean; message?: string };
+      if (!mounted) return;
+      if (!response.ok || !payload.ok) {
+        setPermissionState("denied");
+        setPermissionMessage(payload.message || "Admin access is restricted.");
+        return;
+      }
+      setPermissionState("allowed");
     }
 
-    if (isTestPersonaAccessEnabled()) {
-      setRoleParam(getAdminPrototypeRoleForTestPersona(window.localStorage.getItem(TEST_PERSONA_STORAGE_KEY)));
-    }
-  }, []);
+    void verifyAdminPermission();
+    return () => {
+      mounted = false;
+    };
+  }, [pathname, router]);
+
   const mockAdmin = resolveMockAdmin(roleParam);
   const requiredCapability = getRequiredCapabilityForPath(pathname);
-  const hasAccess = !requiredCapability || hasCapability(mockAdmin, requiredCapability);
+  const requiresUsersAndPermissions = pathname.startsWith("/internal/admin/prototype/users");
+  const hasAccess = requiresUsersAndPermissions
+    ? canViewUsersAndPermissions(mockAdmin)
+    : !requiredCapability || hasCapability(mockAdmin, requiredCapability);
   const context = getAdminPrototypeContext(pathname);
   const prototypeLabel = context.mode === "enterprise"
     ? "Enterprise prototype — static mock data"
     : "Admin prototype — static mock data";
+
+  if (permissionState === "checking") {
+    return (
+      <main className="lf-admin-prototype-shell" style={restrictedShellStyle}>
+        <section style={restrictedPanelStyle}>Checking admin permissions...</section>
+      </main>
+    );
+  }
+
+  if (permissionState === "denied") {
+    return (
+      <main className="lf-admin-prototype-shell" style={restrictedShellStyle}>
+        <section style={restrictedPanelStyle}>
+          <h1 style={{ margin: 0, fontSize: 24 }}>Access denied</h1>
+          <p style={{ margin: 0, color: "var(--lf-text-soft)", lineHeight: 1.5 }}>
+            {permissionMessage || "This dashboard is controlled by owner-granted admin permissions."}
+          </p>
+          <Link href="/dashboard" style={primaryCtaStyle}>Return to dashboard</Link>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className="lf-admin-prototype-shell" style={shellStyle}>
@@ -94,7 +165,7 @@ export default function AdminPrototypeShell({ title, description, children }: Ad
             <span style={brandSubStyle}>Operations prototype</span>
           </span>
         </Link>
-        <nav style={{ display: "grid", gap: 16 }} aria-label="Admin prototype navigation">
+        <nav style={{ display: "grid", gap: 18 }} aria-label="Admin prototype navigation">
           {navItems
             .filter((section) => hasCapability(mockAdmin, section.capability))
             .map((section, index) => (
@@ -102,7 +173,7 @@ export default function AdminPrototypeShell({ title, description, children }: Ad
                 <div style={navSectionLabelStyle}>{section.label}</div>
                 <div style={{ display: "grid", gap: 4 }}>
                   {section.items
-                    .filter((item) => !item.capability || hasCapability(mockAdmin, item.capability))
+                    .filter((item) => (!item.capability || hasCapability(mockAdmin, item.capability)) && (!item.visible || item.visible(mockAdmin)))
                     .map((item) => {
                       const active = item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
                       return (
@@ -115,7 +186,7 @@ export default function AdminPrototypeShell({ title, description, children }: Ad
                           <span style={navIconStyle(active)} aria-hidden="true">
                             <Icon name={item.icon} size={18} />
                           </span>
-                          {item.label}
+                          <span className="lf-admin-nav-label">{item.label}</span>
                         </Link>
                       );
                     })}
@@ -137,9 +208,14 @@ export default function AdminPrototypeShell({ title, description, children }: Ad
             <Icon name="search" size={18} />
             <input aria-label="Search admin prototype" placeholder={context.searchPlaceholder} style={searchStyle} />
           </label>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={roleBadgeStyle}>{formatRoleLabel(mockAdmin.role)}</span>
-            <span style={{ color: "var(--lf-text)", fontSize: 13, fontWeight: 700 }}>{mockAdmin.name}</span>
+          <div style={topbarActionsStyle}>
+            <WorkspaceSwitcher
+              compact
+              adminRole={mockAdmin.role}
+              currentPathname={pathname}
+              governanceContext={`${context.label} · prototype route guard · ${hasAccess ? "allowed" : "restricted"}`}
+            />
+            <span className="lf-admin-user-name" style={{ color: "var(--lf-text)", fontSize: 13, fontWeight: 700 }}>{mockAdmin.name}</span>
           </div>
         </header>
         <section className="lf-admin-prototype-page-header" style={pageHeaderStyle}>
@@ -150,7 +226,11 @@ export default function AdminPrototypeShell({ title, description, children }: Ad
           </div>
           <AdminStatusBadge status={prototypeLabel === "Enterprise prototype — static mock data" ? "Static mock data" : "Static mock data"} />
         </section>
-        {hasAccess ? children : <AccessRestricted requiredCapability={requiredCapability} role={mockAdmin.role} />}
+        <details className="lf-prototype-session-details">
+          <summary>Prototype session</summary>
+          <span>{formatRoleLabel(mockAdmin.role)} · {mockAdmin.name} · {hasAccess ? "allowed" : "restricted"} · exports and production bypasses disabled</span>
+        </details>
+        {hasAccess ? children : <AccessRestricted requiredCapability={requiredCapability} role={mockAdmin.role} usersAndPermissions={requiresUsersAndPermissions} />}
       </section>
     </main>
   );
@@ -163,6 +243,18 @@ function resolveMockAdmin(roleParam: string | null) {
 
 function hasCapability(user: { capabilities: AdminPrototypeCapability[] }, capability: AdminPrototypeCapability) {
   return user.capabilities.includes(capability);
+}
+
+function getInitialRoleParam() {
+  if (typeof window === "undefined") return null;
+  const explicitRole = new URLSearchParams(window.location.search).get("role");
+  if (explicitRole) return explicitRole;
+  if (!isTestPersonaAccessEnabled()) return null;
+  return getAdminPrototypeRoleForTestPersona(window.localStorage.getItem(TEST_PERSONA_STORAGE_KEY));
+}
+
+function canViewUsersAndPermissions(user: { role: AdminPrototypeRole; capabilities: AdminPrototypeCapability[] }) {
+  return user.role === "super_admin" && hasCapability(user, "probate_review");
 }
 
 function isEnterprisePath(pathname: string) {
@@ -212,7 +304,7 @@ function getRequiredCapabilityForPath(pathname: string): AdminPrototypeCapabilit
 }
 
 function withRoleParam(href: string, role: AdminPrototypeRole) {
-  return `${href}?role=${role}`;
+  return buildPrototypePreviewHref(href, role);
 }
 
 function formatRoleLabel(role: AdminPrototypeRole) {
@@ -222,28 +314,58 @@ function formatRoleLabel(role: AdminPrototypeRole) {
 function AccessRestricted({
   requiredCapability,
   role,
+  usersAndPermissions = false,
 }: {
   requiredCapability: AdminPrototypeCapability | null;
   role: AdminPrototypeRole;
+  usersAndPermissions?: boolean;
 }) {
   return (
-    <section style={restrictedStyle} role="status" aria-live="polite">
-      <AdminStatusBadge status="Restricted" />
-      <strong>Access restricted</strong>
-      <span>
-        This static prototype page requires {requiredCapability ? requiredCapability.replace(/_/g, " ") : "additional"} permission.
-        Current mock role: {formatRoleLabel(role)}.
-      </span>
-      <span>No live operations, user vault data, or enterprise records are exposed.</span>
-    </section>
+    <PlatformRestrictedState
+      title="Access restricted"
+      detail={`This static prototype page requires ${usersAndPermissions ? "super admin Users & Permissions" : requiredCapability ? requiredCapability.replace(/_/g, " ") : "additional"} permission. Current mock role: ${formatRoleLabel(role)}.`}
+      meta="No live operations, user vault data, or enterprise records are exposed."
+    />
   );
 }
+
+const restrictedShellStyle: CSSProperties = {
+  minHeight: "100vh",
+  background: "var(--lf-bg)",
+  color: "var(--lf-text)",
+  display: "grid",
+  placeItems: "center",
+  padding: 24,
+};
+
+const restrictedPanelStyle: CSSProperties = {
+  width: "min(100%, 560px)",
+  background: "var(--lf-surface)",
+  border: "1px solid var(--lf-border)",
+  borderRadius: 8,
+  padding: 24,
+  display: "grid",
+  gap: 12,
+  boxShadow: "0 16px 36px rgba(31, 23, 18, 0.08)",
+};
+
+const primaryCtaStyle: CSSProperties = {
+  width: "fit-content",
+  border: "1px solid #15110f",
+  borderRadius: 8,
+  background: "#15110f",
+  color: "#fff",
+  padding: "10px 14px",
+  textDecoration: "none",
+  fontSize: 13,
+  fontWeight: 800,
+};
 
 const shellStyle: CSSProperties = {
   minHeight: "100vh",
   background: "var(--lf-bg)",
   display: "grid",
-  gridTemplateColumns: "286px minmax(0, 1fr)",
+  gridTemplateColumns: "var(--lf-shell-sidebar-width) minmax(0, 1fr)",
   color: "var(--lf-text)",
 };
 
@@ -251,10 +373,14 @@ const sidebarStyle: CSSProperties = {
   background: "var(--lf-surface)",
   color: "var(--lf-text)",
   borderRight: "1px solid var(--lf-border)",
-  padding: "20px 16px 16px",
+  padding: "22px 18px 18px",
   display: "grid",
   alignContent: "start",
-  gap: 14,
+  gap: 18,
+  position: "sticky",
+  top: 0,
+  height: "100dvh",
+  overflow: "hidden",
 };
 
 const brandStyle: CSSProperties = {
@@ -289,9 +415,9 @@ const brandSubStyle: CSSProperties = {
 function navSectionStyle(divided: boolean): CSSProperties {
   return {
     display: "grid",
-    gap: 7,
+    gap: 8,
     borderTop: divided ? "1px solid var(--lf-border)" : "none",
-    paddingTop: divided ? 16 : 0,
+    paddingTop: divided ? 18 : 0,
   };
 }
 
@@ -307,17 +433,19 @@ const navSectionLabelStyle: CSSProperties = {
 function navItemStyle(active: boolean): CSSProperties {
   return {
     color: active ? "#fff" : "#364152",
-    background: active ? "linear-gradient(180deg, var(--lf-bronze) 0%, var(--lf-bronze-strong) 100%)" : "transparent",
+    background: active ? "linear-gradient(180deg, var(--lf-bronze) 0%, var(--lf-bronze-strong) 100%)" : "#fffefd",
     border: active ? "1px solid #2b1812" : "1px solid transparent",
-    boxShadow: active ? "inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 8px 18px rgba(33, 17, 13, 0.16)" : "none",
+    boxShadow: active ? "inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 8px 18px rgba(33, 17, 13, 0.13)" : "none",
     borderRadius: 8,
-    padding: "10px 11px",
+    padding: "8px 10px",
     textDecoration: "none",
     fontSize: 14,
-    fontWeight: active ? 700 : 500,
+    fontWeight: active ? 750 : 600,
     display: "flex",
     alignItems: "center",
-    gap: 12,
+    gap: 11,
+    minHeight: 46,
+    transition: "background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease",
   };
 }
 
@@ -342,14 +470,16 @@ const contentStyle: CSSProperties = {
   alignContent: "start",
   gap: 18,
   padding: 32,
+  width: "100%",
+  maxWidth: "calc(var(--lf-shell-content-max-width) + 64px)",
+  margin: "0 auto",
 };
 
 const topbarStyle: CSSProperties = {
-  minHeight: 58,
+  minHeight: "var(--lf-shell-header-min-height)",
   background: "var(--lf-surface)",
-  border: "1px solid var(--lf-border)",
-  borderRadius: 8,
-  padding: "8px 14px",
+  borderBottom: "1px solid var(--lf-border)",
+  padding: "18px 22px",
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
@@ -397,14 +527,12 @@ const searchStyle: CSSProperties = {
   fontSize: 14,
 };
 
-const roleBadgeStyle: CSSProperties = {
-  border: "1px solid var(--lf-border)",
-  borderRadius: 999,
-  padding: "5px 10px",
-  color: "var(--lf-text)",
-  background: "var(--lf-surface-muted)",
-  fontSize: 12,
-  fontWeight: 800,
+const topbarActionsStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "flex-end",
+  gap: 8,
+  flexWrap: "wrap",
 };
 
 const pageHeaderStyle: CSSProperties = {
@@ -412,15 +540,4 @@ const pageHeaderStyle: CSSProperties = {
   justifyContent: "space-between",
   gap: 16,
   alignItems: "start",
-};
-
-const restrictedStyle: CSSProperties = {
-  background: "#fff",
-  border: "1px solid #e1d5cd",
-  borderRadius: 8,
-  color: "var(--lf-bronze)",
-  padding: 18,
-  display: "grid",
-  gap: 8,
-  fontSize: 14,
 };

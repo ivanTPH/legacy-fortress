@@ -1,7 +1,7 @@
 "use client";
 
-import PublicAuthEntry from "../../components/auth/PublicAuthEntry";
+import PublicSignUpEntry from "../../components/auth/PublicSignUpEntry";
 
 export default function SignUpPageClient() {
-  return <PublicAuthEntry initialMode="sign-up" />;
+  return <PublicSignUpEntry />;
 }

@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Material Symbols Outlined";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("/fonts/material-symbols-outlined.ttf") format("truetype");
+}
+
 :root {
   --lf-bg: #fbfaf8;
   --lf-surface: #ffffff;
@@ -16,6 +24,9 @@
   --lf-radius-lg: 14px;
   --lf-shadow-sm: 0 1px 2px rgba(33, 17, 13, 0.035);
   --lf-shadow-md: 0 14px 32px rgba(33, 17, 13, 0.07);
+  --lf-shell-sidebar-width: 286px;
+  --lf-shell-header-min-height: 76px;
+  --lf-shell-content-max-width: 1180px;
 }
 
 .lf-test-persona-banner {
@@ -97,17 +108,110 @@
 
   .lf-admin-prototype-sidebar {
     position: static;
-    overflow: auto;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 12px !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--lf-border);
+    display: grid !important;
+    gap: 10px !important;
+    max-width: 100vw;
+  }
+
+  .lf-admin-prototype-sidebar nav {
+    display: flex !important;
+    gap: 10px !important;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding: 2px 0 8px;
+    scroll-snap-type: x proximity;
+  }
+
+  .lf-admin-prototype-sidebar nav > section {
+    min-width: min(74vw, 280px);
+    scroll-snap-align: start;
+    border-top: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  .lf-admin-prototype-sidebar a {
+    min-width: 0;
+    white-space: nowrap;
   }
 
   .lf-admin-prototype-content {
     padding: 16px !important;
+    max-width: 100vw !important;
   }
 
   .lf-admin-prototype-topbar,
   .lf-admin-prototype-page-header {
     align-items: stretch !important;
     flex-direction: column;
+  }
+
+  .lf-enterprise-command-centre {
+    grid-template-columns: 1fr !important;
+  }
+
+  .lf-admin-prototype-topbar label,
+  .lf-admin-prototype-topbar .lf-workspace-switcher,
+  .lf-admin-prototype-topbar > div {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .lf-role-console-grid,
+  .lf-role-console-role-grid,
+  .lf-role-console-permissions {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 1180px) {
+  .lf-enterprise-command-centre {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (min-width: 861px) and (max-width: 1180px) {
+  .lf-admin-prototype-shell {
+    grid-template-columns: 88px minmax(0, 1fr) !important;
+  }
+
+  .lf-admin-prototype-sidebar {
+    padding: 18px 12px !important;
+  }
+
+  .lf-admin-prototype-sidebar nav {
+    gap: 14px !important;
+  }
+
+  .lf-admin-prototype-sidebar a {
+    justify-content: center !important;
+    padding: 8px !important;
+  }
+
+  .lf-admin-prototype-sidebar .lf-admin-nav-label,
+  .lf-admin-prototype-sidebar strong,
+  .lf-admin-prototype-sidebar strong + span,
+  .lf-admin-prototype-sidebar [style*="text-transform"] {
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    height: 1px;
+    overflow: hidden;
+    position: absolute;
+    white-space: nowrap;
+    width: 1px;
+  }
+
+  .lf-admin-prototype-content {
+    padding: 24px !important;
+  }
+
+  .lf-admin-user-name {
+    display: none !important;
   }
 }
 
@@ -123,9 +227,24 @@
     box-shadow 140ms ease;
 }
 
+.lf-admin-prototype-content a {
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
 .lf-admin-prototype-sidebar a:hover {
-  background: #faf8f6 !important;
+  background: #f8f5f2 !important;
   color: #15110f !important;
+  border-color: #eadfd8 !important;
+}
+
+.lf-admin-prototype-content a:hover {
+  background: #f8f5f2 !important;
+  border-color: #d8cec3 !important;
 }
 
 .lf-admin-prototype-sidebar a[aria-current="page"]:hover {
@@ -140,6 +259,25 @@
 .lf-admin-prototype-content table {
   width: 100%;
   border-collapse: collapse;
+}
+
+.lf-platform-table-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #d8cec3 transparent;
+}
+
+.lf-platform-table-scroll:focus-visible {
+  outline: 2px solid #111827;
+  outline-offset: 2px;
+}
+
+.lf-platform-table-scroll table {
+  min-width: 680px;
+}
+
+.lf-admin-prototype-content td,
+.lf-admin-prototype-content th {
+  vertical-align: top;
 }
 
 .lf-admin-prototype-content tbody tr {
@@ -173,11 +311,190 @@
   border-radius: 8px !important;
 }
 
+.lf-admin-prototype-content input:not([type="checkbox"]):not([type="radio"]),
+.lf-admin-prototype-content select,
+.lf-admin-prototype-content textarea {
+  min-height: 40px;
+}
+
+.lf-prototype-session-details summary {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.lf-role-console-person-row input[type="checkbox"] {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  justify-self: start;
+}
+
+.lf-admin-prototype-content input[type="checkbox"],
+.lf-admin-prototype-content input[type="radio"] {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  flex: 0 0 auto;
+}
+
+.lf-admin-prototype-content label:has(input[type="checkbox"]),
+.lf-admin-prototype-content label:has(input[type="radio"]) {
+  min-height: 44px;
+  align-items: center;
+}
+
+.lf-role-console-person-row a {
+  min-height: 40px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border: 1px solid var(--lf-border);
+  border-radius: 8px;
+  background: #fff;
+}
+
 .lf-admin-prototype-content button:disabled {
   background: var(--lf-surface-muted) !important;
   color: var(--lf-text-soft) !important;
   cursor: not-allowed;
   opacity: 0.72;
+}
+
+@media (max-width: 640px) {
+  .lf-admin-prototype-content {
+    gap: 14px !important;
+    padding: 12px !important;
+  }
+
+  .lf-admin-prototype-sidebar {
+    position: sticky !important;
+    top: 0;
+    z-index: 28;
+    background: rgba(255, 255, 255, 0.98) !important;
+  }
+
+  .lf-admin-prototype-sidebar > a {
+    gap: 8px !important;
+  }
+
+  .lf-admin-prototype-sidebar > a strong,
+  .lf-admin-prototype-sidebar > a span span {
+    font-size: 12px !important;
+  }
+
+  .lf-admin-prototype-sidebar nav > section {
+    min-width: min(82vw, 260px);
+  }
+
+  .lf-admin-prototype-sidebar a {
+    min-height: 44px !important;
+  }
+
+  .lf-admin-prototype-page-header h1 {
+    font-size: 22px !important;
+  }
+
+  .lf-admin-prototype-page-header p,
+  .lf-admin-prototype-topbar input {
+    font-size: 13px !important;
+  }
+
+  .lf-platform-section,
+  .lf-platform-stat-card,
+  .lf-platform-info-tile,
+  .lf-platform-restricted-state,
+  .lf-platform-empty-state,
+  .lf-role-console {
+    padding: 12px !important;
+  }
+
+  .lf-platform-action-row {
+    align-items: stretch !important;
+    flex-direction: column !important;
+  }
+
+  .lf-platform-action-meta,
+  .lf-platform-section-action,
+  .lf-platform-section-action > *,
+  .lf-platform-action-row a,
+  .lf-platform-action-row button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .lf-role-console-header,
+  .lf-role-console-person-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .lf-role-console-header {
+    align-items: stretch !important;
+  }
+
+  .lf-role-console-person-row {
+    justify-items: stretch !important;
+  }
+
+  .lf-role-console-person-row > input {
+    justify-self: start;
+  }
+
+  .lf-role-console-person-row > span:last-child {
+    justify-items: start !important;
+  }
+
+  .lf-role-console select,
+  .lf-role-console input:not([type="checkbox"]):not([type="radio"]),
+  .lf-admin-prototype-content input:not([type="checkbox"]):not([type="radio"]),
+  .lf-admin-prototype-content select,
+  .lf-admin-prototype-content textarea {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 44px !important;
+  }
+
+  .lf-admin-prototype-content button,
+  .lf-prototype-session-details summary,
+  .lf-role-console-person-row a {
+    min-height: 44px !important;
+  }
+
+  .lf-role-console-person-row a {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
+    border: 1px solid var(--lf-border);
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  .lf-platform-table-scroll {
+    margin-inline: -2px;
+    padding-bottom: 2px;
+    border: 1px solid var(--lf-border);
+    background:
+      linear-gradient(90deg, rgba(255,255,255,1), rgba(255,255,255,0)),
+      linear-gradient(270deg, rgba(255,255,255,1), rgba(255,255,255,0));
+    background-position: left center, right center;
+    background-repeat: no-repeat;
+    background-size: 18px 100%, 18px 100%;
+  }
+
+  .lf-admin-prototype-content table {
+    font-size: 12px;
+    min-width: 760px;
+  }
+
+  .lf-admin-prototype-content td,
+  .lf-admin-prototype-content th {
+    padding: 10px 9px !important;
+  }
 }
 
 .lf-admin-prototype-content a:focus-visible,
@@ -305,13 +622,16 @@ html,
 body {
   margin: 0;
   padding: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
   background: var(--lf-bg);
   color: var(--lf-text);
   font-family: var(--font-geist-sans), "Avenir Next", "Segoe UI", sans-serif;
-  overflow-x: clip;
+  overflow-x: hidden;
 }
 
 a {
@@ -340,6 +660,10 @@ textarea {
   direction: ltr;
   font-feature-settings: "liga";
   -webkit-font-smoothing: antialiased;
+}
+
+.lf-panel-help {
+  margin-left: auto;
 }
 
 .lf-icon-btn {
@@ -879,7 +1203,7 @@ textarea {
 .lf-shell {
   min-height: 100dvh;
   display: grid;
-  grid-template-columns: 286px 1fr;
+  grid-template-columns: var(--lf-shell-sidebar-width) 1fr;
   background: var(--lf-bg);
   overflow-x: clip;
 }
@@ -888,16 +1212,16 @@ textarea {
   position: relative;
   --lf-flyout-width: 290px;
   --lf-flyout-overlap: 12px;
-  --lf-sidebar-width: 286px;
+  --lf-sidebar-width: var(--lf-shell-sidebar-width);
 }
 
 .lf-sidebar {
   border-right: 1px solid #e5e0dc;
   background: #ffffff;
-  padding: 20px 16px 16px;
+  padding: 22px 18px 18px;
   display: grid;
   grid-template-rows: auto auto 1fr auto;
-  gap: 14px;
+  gap: 18px;
   position: sticky;
   top: 0;
   height: 100dvh;
@@ -947,7 +1271,7 @@ textarea {
 
 .lf-nav {
   display: grid;
-  gap: 7px;
+  gap: 6px;
   align-content: start;
   min-height: 0;
   overflow: auto;
@@ -959,12 +1283,13 @@ textarea {
   align-items: center;
   gap: 12px;
   border-radius: 8px;
-  padding: 10px 11px;
+  min-height: 46px;
+  padding: 8px 10px;
   text-decoration: none;
   color: #364152;
   font-size: 14px;
   border: 1px solid transparent;
-  font-weight: 500;
+  font-weight: 600;
   transition:
     background-color 140ms ease,
     border-color 140ms ease,
@@ -973,7 +1298,7 @@ textarea {
 }
 
 .lf-nav-item:hover {
-  background: #faf8f6;
+  background: #f8f5f2;
   color: #15110f;
 }
 
@@ -1040,7 +1365,9 @@ textarea {
 
 .lf-account-nav {
   display: grid;
-  gap: 4px;
+  gap: 5px;
+  border-top: 1px solid var(--lf-border);
+  padding-top: 10px;
 }
 
 .lf-account-link {
@@ -1098,15 +1425,37 @@ textarea {
 }
 
 .lf-user-avatar {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: 999px;
   background: var(--lf-bronze);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   color: #fff;
   display: grid;
   place-items: center;
   font-size: 13px;
   font-weight: 700;
+  overflow: hidden;
+  position: relative;
+}
+
+.lf-user-avatar[data-avatar-ready="true"] .lf-topbar-user-avatar-fallback {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.96);
+  background: rgba(255, 255, 255, 0.9);
+  color: #111827;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 7px;
+  line-height: 1;
 }
 
 .lf-user-name {
@@ -1152,12 +1501,16 @@ textarea {
 .lf-topbar {
   border-bottom: 1px solid var(--lf-border);
   padding: 18px 22px;
+  min-height: var(--lf-shell-header-min-height);
   background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(4px);
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
+  position: relative;
+  z-index: 40;
+  overflow: visible;
 }
 
 .lf-topbar-kicker {
@@ -1196,6 +1549,8 @@ textarea {
   justify-content: flex-end;
   gap: 10px;
   min-width: 0;
+  max-width: 100%;
+  justify-self: end;
 }
 
 .lf-topbar-security {
@@ -1216,20 +1571,23 @@ textarea {
   color: #0f172a;
   border: 1px solid #e5e0dc;
   background: rgba(255, 255, 255, 0.96);
-  border-radius: 14px;
-  padding: 8px 10px;
+  border-radius: 12px;
+  padding: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-width: 0;
-  max-width: min(320px, 42vw);
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
+  max-width: 46px;
+  flex: 0 0 46px;
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+  overflow: visible;
 }
 
-.lf-topbar-user-avatar,
-.lf-topbar-user-avatar-img {
-  width: 36px;
-  height: 36px;
+.lf-topbar-user-avatar {
+  width: 40px;
+  height: 40px;
   border-radius: 999px;
   flex-shrink: 0;
 }
@@ -1237,22 +1595,38 @@ textarea {
 .lf-topbar-user-avatar {
   border: 1px solid #d1d5db;
   background: #f8fafc;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  position: relative;
   font-size: 13px;
   font-weight: 700;
   color: #334155;
 }
 
-.lf-topbar-user-avatar-img {
-  object-fit: cover;
+.lf-topbar-user-avatar[data-avatar-ready="true"] .lf-topbar-user-avatar-fallback {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.96);
+  background: rgba(255, 255, 255, 0.9);
+  color: #111827;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 7px;
+  line-height: 1;
 }
 
 .lf-topbar-user-copy {
-  min-width: 0;
-  display: grid;
-  gap: 2px;
+  display: none;
 }
 
 .lf-topbar-user-name {
@@ -1314,7 +1688,7 @@ textarea {
 
 .lf-main-content {
   padding: 32px;
-  max-width: 1180px;
+  max-width: var(--lf-shell-content-max-width);
   width: 100%;
   margin: 0 auto;
 }
@@ -1564,6 +1938,9 @@ textarea {
 
   .lf-shell {
     grid-template-columns: 1fr;
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
   }
 
   .lf-content-wrap,
@@ -1571,6 +1948,7 @@ textarea {
   .lf-main-content {
     width: 100%;
     max-width: 100%;
+    min-width: 0;
   }
 
   .lf-sidebar {
@@ -1582,6 +1960,7 @@ textarea {
     position: sticky;
     top: 0;
     z-index: 30;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
   }
 
   .lf-topbar-pill {
@@ -1589,8 +1968,14 @@ textarea {
   }
 
   .lf-topbar-actions {
+    width: auto;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+  }
+
+  .lf-topbar-actions .lf-workspace-switcher {
+    order: 3;
     width: 100%;
-    justify-content: space-between;
   }
 
   .lf-topbar-user {
@@ -1707,12 +2092,444 @@ textarea {
     font-size: 26px;
   }
 
+  .lf-entry-demo-link,
+  .lf-inline-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
   .lf-topbar-title {
-    font-size: 20px;
+    font-size: 21px;
+    line-height: 1.1;
+  }
+
+  .lf-topbar {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    gap: 10px;
+    min-height: 64px;
+    padding: 9px 12px;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  .lf-topbar-main {
+    min-width: 0;
+    gap: 0;
+  }
+
+  .lf-breadcrumbs {
+    display: none !important;
+  }
+
+  .lf-topbar-title,
+  .lf-breadcrumbs,
+  .lf-crumb-wrap {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .lf-topbar-title {
+    overflow-wrap: anywhere;
+  }
+
+  .lf-topbar-actions {
+    display: flex;
+    width: auto;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    gap: 0;
+    min-width: 0;
+  }
+
+  .lf-topbar-actions .lf-workspace-switcher,
+  .lf-topbar-security {
+    display: none !important;
+  }
+
+  .lf-topbar-user {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    max-width: 44px;
+    min-width: 44px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 12px;
+    box-shadow: none;
+  }
+
+  .lf-topbar-user-avatar {
+    width: 38px;
+    height: 38px;
+  }
+
+  .lf-topbar-user-copy {
+    display: none;
+  }
+
+  .lf-mobile-drawer .lf-workspace-switcher {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .lf-mobile-drawer .lf-workspace-current {
+    min-height: 54px;
+    padding: 8px;
+  }
+
+  .lf-mobile-drawer .lf-workspace-links {
+    position: static;
+    width: 100%;
+    max-height: none;
+    margin-top: 8px;
+    box-shadow: none;
+    border-radius: 10px;
+  }
+
+  .lf-mobile-drawer .lf-workspace-route-meta {
+    display: none;
   }
 
   .lf-main-content {
     padding: 12px 10px 18px;
+  }
+
+  .lf-content-wrap,
+  .lf-main-content,
+  .lf-main-content > *,
+  .lf-main-content > div,
+  .lf-main-content > main,
+  .lf-dashboard-shell,
+  .lf-dashboard-overview-panel,
+  .lf-dashboard-readiness-summary,
+  .lf-dashboard-review-panel,
+  .lf-action-centre,
+  .lf-contact-card,
+  .lf-support-card,
+  .lf-dashboard-card {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  .lf-main-content section,
+  .lf-main-content article {
+    min-width: 0;
+  }
+
+  .lf-panel-help {
+    margin-left: auto;
+  }
+
+  .lf-main-content form,
+  .lf-main-content label,
+  .lf-main-content input:not([type="checkbox"]):not([type="radio"]),
+  .lf-main-content select,
+  .lf-main-content textarea,
+  .lf-main-content button {
+    max-width: 100%;
+  }
+
+  .lf-main-content input:not([type="checkbox"]):not([type="radio"]),
+  .lf-main-content select,
+  .lf-main-content textarea {
+    min-width: 0 !important;
+    min-height: 44px !important;
+  }
+
+  .lf-main-content button,
+  .lf-main-content summary {
+    min-height: 44px !important;
+  }
+
+  .lf-main-content a[href] {
+    overflow-wrap: anywhere;
+  }
+
+  .lf-info-tip-tooltip {
+    left: auto !important;
+    right: 0 !important;
+    width: min(280px, calc(100vw - 32px)) !important;
+    max-width: calc(100vw - 32px) !important;
+    overflow-wrap: anywhere;
+  }
+
+  .lf-main-content table {
+    max-width: 100%;
+  }
+
+  .lf-content-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .lf-dashboard-overview-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .lf-dashboard-shell {
+    gap: 12px !important;
+  }
+
+  .lf-dashboard-overview-heading {
+    gap: 6px !important;
+  }
+
+  .lf-dashboard-overview-title-row h2 {
+    font-size: 17px !important;
+  }
+
+  .lf-dashboard-overview-copy {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: clip;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow-wrap: anywhere;
+    line-height: 1.35 !important;
+  }
+
+  .lf-dashboard-summary-card {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto auto auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    padding: 10px !important;
+    gap: 7px !important;
+    border-radius: 12px !important;
+    overflow: hidden;
+    align-items: center !important;
+    min-height: 132px !important;
+    box-shadow: none !important;
+  }
+
+  .lf-dashboard-summary-card > div:first-child,
+  .lf-dashboard-summary-main {
+    min-width: 0;
+    display: grid !important;
+    gap: 8px !important;
+  }
+
+  .lf-dashboard-summary-card > * {
+    min-width: 0;
+  }
+
+  .lf-dashboard-summary-header {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 40px;
+    gap: 6px !important;
+    align-items: start !important;
+    min-height: 0 !important;
+  }
+
+  .lf-dashboard-summary-title-wrap {
+    min-width: 0;
+    display: grid !important;
+    grid-template-columns: 34px minmax(0, 1fr);
+    align-items: start !important;
+    gap: 7px !important;
+  }
+
+  .lf-dashboard-summary-icon {
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 9px !important;
+  }
+
+  .lf-dashboard-summary-icon .material-symbols-outlined {
+    font-size: 18px !important;
+  }
+
+  .lf-dashboard-summary-title {
+    font-size: 13px !important;
+    line-height: 1.2 !important;
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .lf-dashboard-summary-header .lf-icon-btn {
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    border-radius: 10px !important;
+    box-shadow: none !important;
+  }
+
+  .lf-dashboard-summary-header .lf-icon-btn .material-symbols-outlined {
+    font-size: 19px !important;
+  }
+
+  .lf-dashboard-summary-count {
+    font-size: 14px !important;
+    display: inline-flex !important;
+    align-items: baseline !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+    padding-left: 0;
+  }
+
+  .lf-dashboard-summary-value {
+    font-size: 22px !important;
+    line-height: 1 !important;
+    flex-shrink: 0;
+  }
+
+  .lf-dashboard-summary-detail {
+    min-width: 0;
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+    white-space: normal;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .lf-dashboard-summary-footer,
+  .lf-dashboard-summary-card > div:last-child {
+    min-width: 0;
+    border-top: 0 !important;
+    padding-top: 0 !important;
+    display: block !important;
+    padding-left: 0;
+  }
+
+  .lf-dashboard-summary-date-row,
+  .lf-dashboard-summary-card > div:last-child > div:last-child {
+    justify-content: flex-start !important;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .lf-dashboard-summary-date,
+  .lf-dashboard-summary-card > div:last-child > div:last-child span {
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    text-align: left;
+    font-size: 12px !important;
+  }
+
+  .lf-dashboard-overview-grid .lf-dashboard-summary-card {
+    min-height: 128px !important;
+  }
+
+  .lf-dashboard-overview-panel,
+  .lf-dashboard-readiness-summary,
+  .lf-dashboard-review-panel,
+  .lf-action-centre {
+    border-radius: 14px !important;
+    padding: 14px !important;
+  }
+
+  .lf-action-centre {
+    gap: 10px !important;
+  }
+
+  .lf-action-centre-header {
+    align-items: center !important;
+  }
+
+  .lf-action-centre-intro {
+    display: none !important;
+  }
+
+  .lf-action-centre-section {
+    border-radius: 12px !important;
+  }
+
+  .lf-action-centre-section-button {
+    align-items: flex-start !important;
+    padding: 10px !important;
+  }
+
+  .lf-action-centre-section-title-row {
+    gap: 6px !important;
+  }
+
+  .lf-action-centre-section-summary {
+    overflow: hidden !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+  }
+
+  .lf-action-centre-row {
+    padding: 10px !important;
+  }
+
+  .lf-action-centre-row-badges {
+    justify-content: flex-start !important;
+  }
+
+  .lf-action-centre-row-actions {
+    display: grid !important;
+    grid-template-columns: 1fr;
+    gap: 8px !important;
+  }
+
+  .lf-action-centre-row-actions > button,
+  .lf-action-centre-row-actions > a {
+    width: 100% !important;
+    min-height: 44px !important;
+    justify-content: center !important;
+  }
+
+  .lf-dashboard-readiness-card {
+    grid-template-columns: auto minmax(0, 1fr) auto !important;
+    gap: 10px !important;
+    padding: 12px !important;
+    min-height: 0 !important;
+  }
+
+  .lf-dashboard-readiness-task-list {
+    gap: 7px !important;
+  }
+
+  .lf-dashboard-readiness-task {
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    gap: 8px !important;
+    padding: 10px !important;
+  }
+
+  .lf-dashboard-readiness-task > span:last-child {
+    grid-column: 2;
+    width: fit-content;
+  }
+
+  .lf-attachment-card-main {
+    gap: 10px !important;
+  }
+
+  .lf-attachment-actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px !important;
+  }
+
+  .lf-attachment-action {
+    width: 100% !important;
+    min-height: 44px !important;
+    padding: 0 10px !important;
+  }
+
+  .lf-platform-table-scroll {
+    margin-inline: -2px;
+    padding-bottom: 6px;
   }
 
   .lf-auth-art {
@@ -1749,6 +2566,12 @@ textarea {
     align-items: flex-start !important;
   }
 
+  .lf-dashboard-profile-overview > *,
+  .lf-dashboard-item-link > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
   .lf-contact-card {
     padding: 10px !important;
   }
@@ -1768,6 +2591,12 @@ textarea {
   .lf-record-card-actions > * {
     flex: 1 1 140px;
     justify-content: center;
+  }
+
+  .lf-link-btn,
+  .lf-primary-btn {
+    justify-content: center;
+    min-height: 44px;
   }
 
   .lf-contact-invitations-table {
@@ -1820,5 +2649,725 @@ textarea {
     letter-spacing: 0.02em;
     text-transform: uppercase;
     color: #64748b;
+  }
+
+  .lf-access-owner-actions {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  .lf-access-owner-actions a {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .lf-attachment-card-main {
+    flex-direction: column !important;
+  }
+
+  .lf-attachment-actions {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.lf-workspace-switcher {
+  position: relative;
+  border: 1px solid var(--lf-border);
+  border-radius: 10px;
+  background: var(--lf-surface);
+  padding: 0;
+  display: inline-block;
+  box-shadow: 0 8px 22px rgba(31, 23, 18, 0.04);
+  width: min(100%, 300px);
+  flex: 0 0 auto;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    background-color 140ms ease;
+}
+
+.lf-workspace-switcher:hover,
+.lf-workspace-switcher:focus-within {
+  border-color: #d8cec3;
+  box-shadow: 0 10px 28px rgba(31, 23, 18, 0.07);
+}
+
+.lf-workspace-switcher.compact {
+  box-shadow: none;
+}
+
+.lf-workspace-menu {
+  position: relative;
+}
+
+.lf-workspace-current {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 6px 8px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.lf-workspace-current::-webkit-details-marker {
+  display: none;
+}
+
+.lf-workspace-current:focus-visible {
+  outline: 2px solid rgba(58, 33, 24, 0.32);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+
+.lf-workspace-current-copy {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+  flex: 1;
+}
+
+.lf-workspace-current strong {
+  display: block;
+  color: var(--lf-text);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lf-workspace-label {
+  color: var(--lf-text-soft);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.lf-workspace-icon {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--lf-border);
+  border-radius: 10px;
+  display: inline-grid;
+  place-items: center;
+  background: var(--lf-surface-muted);
+  color: var(--lf-text);
+  flex: 0 0 auto;
+}
+
+.lf-workspace-links {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 60;
+  width: min(390px, calc(100vw - 32px));
+  max-height: min(460px, calc(100vh - 120px));
+  overflow: auto;
+  border: 1px solid var(--lf-border);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 20px 48px rgba(31, 23, 18, 0.14);
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+  transform-origin: top right;
+  animation: lf-workspace-menu-in 120ms ease;
+}
+
+.lf-workspace-menu-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 9px 6px;
+  color: var(--lf-text);
+}
+
+.lf-workspace-menu-heading span {
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.lf-workspace-menu-heading small {
+  color: var(--lf-text-soft);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.lf-workspace-links a {
+  position: relative;
+  min-height: 54px;
+  border: 1px solid var(--lf-border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--lf-text);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 800;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.lf-workspace-links a strong,
+.lf-workspace-links a small {
+  display: block;
+}
+
+.lf-workspace-links a small {
+  margin-top: 2px;
+  color: var(--lf-text-soft);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.lf-workspace-route-meta {
+  border: 1px solid #e7ddd4;
+  border-radius: 999px;
+  background: #fbf7f2;
+  color: #6b5a4c;
+  padding: 4px 7px;
+  font-size: 10px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.lf-workspace-links a:hover,
+.lf-workspace-links a:focus-visible,
+.lf-workspace-links a.is-active {
+  border-color: var(--lf-bronze-strong);
+  background: #fbf7f2;
+  color: var(--lf-bronze-strong);
+}
+
+.lf-workspace-links a.is-active::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--lf-bronze-strong);
+}
+
+.lf-workspace-links a.is-active .lf-workspace-route-meta {
+  border-color: var(--lf-bronze-strong);
+  background: #fff;
+  color: var(--lf-bronze-strong);
+}
+
+.lf-workspace-links a:focus-visible {
+  outline: 2px solid rgba(58, 33, 24, 0.32);
+  outline-offset: 2px;
+}
+
+.lf-workspace-details {
+  border-top: 1px solid var(--lf-border);
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 10px;
+  background: var(--lf-surface-muted);
+  box-shadow: none;
+}
+
+.lf-workspace-details summary {
+  cursor: pointer;
+  color: var(--lf-text);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.lf-workspace-details dl {
+  margin: 10px 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px;
+}
+
+.lf-workspace-details dl > div {
+  border: 1px solid var(--lf-border);
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--lf-surface-muted);
+}
+
+.lf-workspace-details dt {
+  color: var(--lf-text-soft);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.lf-workspace-details dd {
+  margin: 3px 0 0;
+  color: var(--lf-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.lf-workspace-details > a {
+  margin-top: 10px;
+  width: fit-content;
+  min-height: 34px;
+  border: 1px solid var(--lf-border);
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  color: var(--lf-text);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+@media (max-width: 760px) {
+  .lf-workspace-switcher {
+    width: 100%;
+  }
+
+  .lf-workspace-links {
+    left: 0;
+    right: auto;
+  }
+}
+
+@keyframes lf-workspace-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.lf-prototype-session-details {
+  border: 1px solid var(--lf-border);
+  border-radius: 10px;
+  background: rgba(248, 246, 244, 0.7);
+  color: var(--lf-text-soft);
+  padding: 8px 10px;
+  font-size: 12px;
+  box-shadow: none;
+}
+
+.lf-prototype-session-details summary {
+  cursor: pointer;
+  color: var(--lf-text);
+  font-weight: 800;
+}
+
+.lf-prototype-session-details span {
+  display: block;
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+/* Phone-first rescue pass for dense authenticated and prototype screens. */
+@media (max-width: 760px) {
+  html,
+  body,
+  #__next {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .lf-entry-shell,
+  .lf-auth {
+    min-height: 100dvh;
+    width: 100%;
+    max-width: 100vw;
+    grid-template-columns: minmax(0, 1fr) !important;
+    background: #fbfaf8 !important;
+    overflow-x: hidden;
+  }
+
+  .lf-entry-art {
+    min-height: 0 !important;
+    grid-template-rows: auto !important;
+    padding: max(18px, env(safe-area-inset-top)) 16px 8px !important;
+    background: #fbfaf8 !important;
+    color: var(--lf-text) !important;
+    overflow: visible !important;
+  }
+
+  .lf-entry-art::before,
+  .lf-entry-art::after,
+  .lf-entry-copy,
+  .lf-entry-brand-note {
+    display: none !important;
+  }
+
+  .lf-entry-art .lf-auth-brand-card {
+    width: 100% !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: var(--lf-text) !important;
+    padding: 0 !important;
+    backdrop-filter: none !important;
+  }
+
+  .lf-entry-art .lf-auth-brand-title {
+    color: var(--lf-text) !important;
+    font-size: 17px !important;
+    line-height: 1.2 !important;
+  }
+
+  .lf-entry-art .lf-auth-brand-sub {
+    color: var(--lf-text-soft) !important;
+  }
+
+  .lf-entry-panel-wrap {
+    display: block !important;
+    padding: 10px 16px calc(18px + env(safe-area-inset-bottom)) !important;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .lf-entry-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    border: 1px solid var(--lf-border) !important;
+    border-radius: 18px !important;
+    background: #fff !important;
+    padding: 16px !important;
+    gap: 14px !important;
+    box-shadow: 0 12px 28px rgba(31, 23, 18, 0.08) !important;
+  }
+
+  .lf-entry-panel-top {
+    align-items: center !important;
+  }
+
+  .lf-entry-panel h2 {
+    margin-top: 4px !important;
+    font-size: 24px !important;
+    line-height: 1.12 !important;
+  }
+
+  .lf-entry-panel-subtext {
+    font-size: 14px !important;
+    line-height: 1.45 !important;
+  }
+
+  .lf-entry-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 4px !important;
+    padding: 4px !important;
+    border-radius: 12px !important;
+  }
+
+  .lf-entry-tab {
+    min-width: 0 !important;
+    min-height: 44px !important;
+    padding: 8px 6px !important;
+    border-radius: 10px !important;
+    font-size: 14px !important;
+    white-space: normal !important;
+  }
+
+  .lf-entry-footnote {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 7px !important;
+  }
+
+  .lf-entry-panel .lf-workspace-switcher {
+    display: none !important;
+  }
+
+  .lf-shell,
+  .lf-content-wrap,
+  .lf-main-content,
+  .lf-main-content > *,
+  .lf-dashboard-shell {
+    width: 100% !important;
+    max-width: 100vw !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+  }
+
+  .lf-main-content {
+    padding: 12px !important;
+  }
+
+  .lf-topbar {
+    grid-template-columns: 44px minmax(0, 1fr) 44px !important;
+    min-height: 62px !important;
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+  }
+
+  .lf-topbar-title {
+    font-size: 20px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .lf-content-grid,
+  .lf-dashboard-shell [style*="repeat(auto-fit"],
+  .lf-dashboard-shell [style*="minmax(250px"],
+  .lf-dashboard-shell [style*="minmax(220px"],
+  .lf-dashboard-shell [style*="minmax(210px"],
+  .lf-dashboard-shell [style*="minmax(190px"] {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 10px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .lf-dashboard-overview-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .lf-dashboard-overview-panel {
+    padding: 14px !important;
+    border-radius: 14px !important;
+  }
+
+  .lf-dashboard-overview-title-row {
+    align-items: flex-start !important;
+  }
+
+  .lf-dashboard-summary-card {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto auto !important;
+    min-height: 0 !important;
+    padding: 10px !important;
+    gap: 7px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .lf-dashboard-summary-main {
+    display: grid !important;
+    gap: 8px !important;
+    min-width: 0 !important;
+  }
+
+  .lf-dashboard-summary-card > div:first-child {
+    display: grid !important;
+  }
+
+  .lf-dashboard-summary-header {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 40px !important;
+    gap: 6px !important;
+    grid-column: auto !important;
+  }
+
+  .lf-dashboard-summary-title-wrap {
+    display: grid !important;
+    grid-template-columns: 34px minmax(0, 1fr) !important;
+    gap: 7px !important;
+  }
+
+  .lf-dashboard-summary-icon {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  .lf-dashboard-summary-title {
+    white-space: normal !important;
+    overflow: hidden !important;
+    text-overflow: clip !important;
+    font-size: 13px !important;
+    line-height: 1.2 !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .lf-dashboard-summary-count {
+    padding-left: 0 !important;
+  }
+
+  .lf-dashboard-summary-footer,
+  .lf-dashboard-summary-card > div:last-child {
+    padding-left: 0 !important;
+    display: grid !important;
+    gap: 8px !important;
+    min-width: 0 !important;
+  }
+
+  .lf-dashboard-summary-detail {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+  }
+
+  .lf-action-centre-intro {
+    display: none !important;
+  }
+
+  .lf-action-centre-section-summary {
+    overflow: hidden !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+  }
+
+  .lf-action-centre-section-button,
+  .lf-action-centre-row {
+    padding: 10px !important;
+  }
+
+  .lf-dashboard-readiness-card {
+    padding: 12px !important;
+    min-height: 0 !important;
+  }
+
+  .lf-admin-prototype-shell {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+
+  .lf-admin-prototype-sidebar {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 28 !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    height: auto !important;
+    padding: 14px 12px !important;
+    overflow: visible !important;
+    background: rgba(255, 255, 255, 0.98) !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--lf-border) !important;
+  }
+
+  .lf-admin-prototype-sidebar nav {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px !important;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  .lf-admin-prototype-sidebar nav > section {
+    min-width: 0 !important;
+    width: 100% !important;
+    border-top: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  .lf-admin-prototype-sidebar nav > section > div:last-child {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .lf-admin-prototype-sidebar a {
+    min-width: 0 !important;
+    width: 100% !important;
+    white-space: normal !important;
+    padding: 8px !important;
+    gap: 8px !important;
+  }
+
+  .lf-admin-prototype-sidebar .lf-admin-nav-label {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font-size: 12px !important;
+    line-height: 1.15 !important;
+  }
+
+  .lf-admin-prototype-content {
+    width: 100% !important;
+    max-width: 100vw !important;
+    min-width: 0 !important;
+    padding: 14px 12px 20px !important;
+    overflow-x: hidden !important;
+  }
+
+  .lf-admin-prototype-topbar {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    padding: 14px !important;
+  }
+
+  .lf-admin-prototype-topbar > *,
+  .lf-admin-prototype-page-header > *,
+  .lf-admin-prototype-content section,
+  .lf-admin-prototype-content article,
+  .lf-admin-prototype-content form,
+  .lf-admin-prototype-content label {
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .lf-admin-prototype-page-header {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px !important;
+  }
+
+  .lf-admin-prototype-page-header h1 {
+    font-size: 26px !important;
+    line-height: 1.12 !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  .lf-admin-prototype-page-header p,
+  .lf-admin-prototype-topbar span {
+    overflow-wrap: anywhere !important;
+  }
+
+  .lf-admin-prototype-content [style*="grid-template-columns"],
+  .lf-enterprise-command-centre {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+@media (max-width: 374px) {
+  .lf-dashboard-overview-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .lf-dashboard-overview-grid .lf-dashboard-summary-card {
+    min-height: 104px !important;
+  }
+
+  .lf-dashboard-overview-grid .lf-dashboard-summary-title {
+    -webkit-line-clamp: 1;
+  }
+
+  .lf-admin-prototype-sidebar nav > section > div:last-child {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .lf-entry-panel-wrap,
+  .lf-main-content,
+  .lf-admin-prototype-content {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
   }
 }

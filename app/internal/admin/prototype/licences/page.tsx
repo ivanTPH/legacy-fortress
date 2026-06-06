@@ -1,15 +1,14 @@
 import Link from "next/link";
 import AdminPrototypeShell from "@/components/admin/prototype/AdminPrototypeShell";
 import AdminStatusBadge from "@/components/admin/prototype/AdminStatusBadge";
+import { PlatformNotice, PlatformTableScroll } from "@/components/ui/PlatformPrimitives";
 import {
-  getLicenceSeatMetrics,
-  licencePlans,
-  organisations,
   type BillingStatus,
   type LicencePlan,
   type LicencePlanTier,
   type LicenceStatus,
 } from "@/components/admin/prototype/mockData";
+import { getLicenceManagementData } from "@/components/admin/prototype/prototypeDataService";
 import type { CSSProperties, ReactNode } from "react";
 
 type LicenceManagementPageProps = {
@@ -21,27 +20,18 @@ export default async function LicenceManagementPage({ searchParams }: LicenceMan
   const orgId = typeof resolvedSearchParams.orgId === "string" ? resolvedSearchParams.orgId : null;
   const roleParam = typeof resolvedSearchParams.role === "string" ? resolvedSearchParams.role : null;
   const canViewLicenceDetails = !roleParam || roleParam === "licensing_admin" || roleParam === "super_admin";
-  const selectedOrganisation = orgId ? organisations.find((org) => org.id === orgId) ?? null : null;
-  const scopedPlans = orgId && !selectedOrganisation
-    ? []
-    : selectedOrganisation
-    ? licencePlans.filter((plan) => plan.organisationId === selectedOrganisation.id)
-    : licencePlans;
-  const metrics = getLicenceSeatMetrics();
-  const plansByTier = countPlansByTier(licencePlans);
-  const expiringRenewals = licencePlans.filter((plan) => isRenewalWarning(plan));
-  const seatWarnings = licencePlans.filter((plan) => plan.includedSeats > 0 && plan.usedSeats / plan.includedSeats >= 0.75);
+  const data = getLicenceManagementData(orgId);
 
   return (
     <AdminPrototypeShell
       title="Licence management"
       description="Static licensing dashboard for organisation plans, seat usage, renewals, and disabled commercial actions."
     >
-      <section style={noticeStyle}>
+      <PlatformNotice icon="credit_card">
         Enterprise prototype — static mock data. Prototype only — billing not connected. No payment provider, invoices, exports, licence changes, or payment actions are enabled.
-      </section>
+      </PlatformNotice>
 
-      {orgId && !selectedOrganisation ? (
+      {orgId && !data.selectedOrganisation ? (
         <section style={warningStyle}>
           <strong>Organisation filter not found</strong>
           <span>The requested organisation ID is not in the static prototype dataset.</span>
@@ -49,19 +39,19 @@ export default async function LicenceManagementPage({ searchParams }: LicenceMan
         </section>
       ) : null}
 
-      {selectedOrganisation ? (
+      {data.selectedOrganisation ? (
         <section style={filterStyle}>
-          <strong>Organisation: {selectedOrganisation.name}</strong>
+          <strong>Organisation: {data.selectedOrganisation.name}</strong>
           <Link href="/internal/admin/prototype/licences" style={subtleLinkStyle}>Clear organisation filter</Link>
         </section>
       ) : null}
 
       <section style={metricsGridStyle} aria-label="Licence summary cards">
-        <Metric label="Licensed organisations" value={String(licencePlans.length)} detail="Static organisation licences" />
-        <Metric label="Active licences" value={String(metrics.activeLicences)} detail={`${metrics.suspendedOrExpiredLicences} expired or suspended`} />
-        <Metric label="Seats used" value={`${metrics.usedSeats}/${metrics.includedSeats}`} detail={`${metrics.seatsAvailable} seats available`} />
-        <Metric label="Client limit usage" value={`${metrics.usedSeats}/${metrics.clientLimit}`} detail={`${metrics.clientsUnderLimit} client capacity remaining`} />
-        <Metric label="Renewal warnings" value={String(metrics.renewalsDueSoon)} detail="Renewal due or review state" />
+        <Metric label="Licensed organisations" value={String(data.totalLicencePlans)} detail="Static organisation licences" />
+        <Metric label="Active licences" value={String(data.metrics.activeLicences)} detail={`${data.metrics.suspendedOrExpiredLicences} expired or suspended`} />
+        <Metric label="Seats used" value={`${data.metrics.usedSeats}/${data.metrics.includedSeats}`} detail={`${data.metrics.seatsAvailable} seats available`} />
+        <Metric label="Client limit usage" value={`${data.metrics.usedSeats}/${data.metrics.clientLimit}`} detail={`${data.metrics.clientsUnderLimit} client capacity remaining`} />
+        <Metric label="Renewal warnings" value={String(data.metrics.renewalsDueSoon)} detail="Renewal due or review state" />
         <Metric label="Billing connection" value="Disabled" detail="Prototype only — billing not connected" />
       </section>
 
@@ -69,17 +59,22 @@ export default async function LicenceManagementPage({ searchParams }: LicenceMan
         <section style={panelStyle}>
           <PanelHeading title="Organisations by licence tier" />
           <div style={tierGridStyle}>
-            <TierCard tier="Starter" count={plansByTier.Starter} />
-            <TierCard tier="Professional" count={plansByTier.Professional} />
-            <TierCard tier="Enterprise" count={plansByTier.Enterprise} />
+            <TierCard tier="Starter" count={data.plansByTier.Starter} />
+            <TierCard tier="Professional" count={data.plansByTier.Professional} />
+            <TierCard tier="Enterprise" count={data.plansByTier.Enterprise} />
           </div>
         </section>
 
         <section style={panelStyle}>
           <PanelHeading title="Expiring renewals" />
           <div style={miniListStyle}>
-            {expiringRenewals.length ? expiringRenewals.map((plan) => (
-              <PlanMiniRow key={plan.planId} plan={plan} detail={`${plan.renewalDate} · ${plan.billingStatus}`} />
+            {data.expiringRenewals.length ? data.expiringRenewals.map((plan) => (
+              <PlanMiniRow
+                key={plan.planId}
+                plan={plan}
+                organisationName={data.organisations.find((item) => item.id === plan.organisationId)?.name ?? plan.organisationId}
+                detail={`${plan.renewalDate} · ${plan.billingStatus}`}
+              />
             )) : <EmptyNote>No renewal warnings in the current mock data.</EmptyNote>}
           </div>
         </section>
@@ -87,8 +82,13 @@ export default async function LicenceManagementPage({ searchParams }: LicenceMan
         <section style={panelStyle}>
           <PanelHeading title="Seat usage warnings" />
           <div style={miniListStyle}>
-            {seatWarnings.map((plan) => (
-              <PlanMiniRow key={plan.planId} plan={plan} detail={`${plan.usedSeats}/${plan.includedSeats} seats used`} />
+            {data.seatWarnings.map((plan) => (
+              <PlanMiniRow
+                key={plan.planId}
+                plan={plan}
+                organisationName={data.organisations.find((item) => item.id === plan.organisationId)?.name ?? plan.organisationId}
+                detail={`${plan.usedSeats}/${plan.includedSeats} seats used`}
+              />
             ))}
           </div>
         </section>
@@ -100,7 +100,7 @@ export default async function LicenceManagementPage({ searchParams }: LicenceMan
           Prototype only — billing not connected. Commercial admins can review summary information; licence changes, billing, renewal, invoice, upgrade, and downgrade actions are static and disabled.
         </div>
         {canViewLicenceDetails ? (
-          <div style={{ overflow: "auto" }}>
+          <PlatformTableScroll label="Plan and seat management table">
             <table style={tableStyle}>
               <thead>
                 <tr>
@@ -116,8 +116,8 @@ export default async function LicenceManagementPage({ searchParams }: LicenceMan
                 </tr>
               </thead>
               <tbody>
-                {scopedPlans.map((plan) => {
-                  const org = organisations.find((item) => item.id === plan.organisationId);
+                {data.scopedPlans.map((plan) => {
+                  const org = data.organisations.find((item) => item.id === plan.organisationId);
                   return (
                     <tr key={plan.planId}>
                       <Td>
@@ -148,7 +148,7 @@ export default async function LicenceManagementPage({ searchParams }: LicenceMan
                 })}
               </tbody>
             </table>
-          </div>
+          </PlatformTableScroll>
         ) : (
           <section style={warningStyle}>
             <strong>Licence details restricted</strong>
@@ -160,7 +160,7 @@ export default async function LicenceManagementPage({ searchParams }: LicenceMan
       <section style={panelStyle}>
         <PanelHeading title="Feature availability" />
         <div style={featureGridStyle}>
-          {scopedPlans.map((plan) => (
+          {data.scopedPlans.map((plan) => (
             <section key={plan.planId} style={featureCardStyle}>
               <strong>{plan.planName}</strong>
               <span style={mutedBlockStyle}>{plan.planTier} · {plan.licenceStatus}</span>
@@ -175,20 +175,6 @@ export default async function LicenceManagementPage({ searchParams }: LicenceMan
       </section>
     </AdminPrototypeShell>
   );
-}
-
-function countPlansByTier(plans: LicencePlan[]): Record<LicencePlanTier, number> {
-  return plans.reduce<Record<LicencePlanTier, number>>(
-    (acc, plan) => {
-      acc[plan.planTier] += 1;
-      return acc;
-    },
-    { Starter: 0, Professional: 0, Enterprise: 0 },
-  );
-}
-
-function isRenewalWarning(plan: LicencePlan) {
-  return plan.billingStatus === "Renewal due" || plan.licenceStatus === "Review" || plan.licenceStatus === "Pending";
 }
 
 function billingStatusToBadge(status: BillingStatus) {
@@ -234,12 +220,11 @@ function TierCard({ tier, count }: { tier: LicencePlanTier; count: number }) {
   );
 }
 
-function PlanMiniRow({ plan, detail }: { plan: LicencePlan; detail: string }) {
-  const org = organisations.find((item) => item.id === plan.organisationId);
+function PlanMiniRow({ plan, detail, organisationName }: { plan: LicencePlan; detail: string; organisationName: string }) {
   return (
     <div style={miniRowStyle}>
       <span>
-        <strong>{org?.name ?? plan.organisationId}</strong>
+        <strong>{organisationName}</strong>
         <span style={mutedBlockStyle}>{detail}</span>
       </span>
       <AdminStatusBadge status={licenceStatusToBadge(plan.licenceStatus)} />
@@ -270,16 +255,6 @@ function Th({ children }: { children: ReactNode }) {
 function Td({ children }: { children: ReactNode }) {
   return <td style={tdStyle}>{children}</td>;
 }
-
-const noticeStyle: CSSProperties = {
-  border: "1px solid var(--lf-border)",
-  background: "var(--lf-surface-muted)",
-  color: "var(--lf-bronze)",
-  borderRadius: 8,
-  padding: 12,
-  fontSize: 13,
-  fontWeight: 700,
-};
 
 const filterStyle: CSSProperties = {
   border: "1px solid var(--lf-border)",

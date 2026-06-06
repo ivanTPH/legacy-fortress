@@ -36,7 +36,7 @@ export default async function OrganisationDetailPage({ params }: OrganisationDet
         </section>
         <section style={notFoundStyle}>
           <strong>Organisation not found</strong>
-          <span>The organisation ID "{orgId}" is not available in this static prototype.</span>
+          <span>The organisation ID {orgId} is not available in this static prototype.</span>
           <Link href="/internal/admin/prototype/organisations" style={ctaStyle}>Back to organisations</Link>
         </section>
       </AdminPrototypeShell>
@@ -80,6 +80,8 @@ export default async function OrganisationDetailPage({ params }: OrganisationDet
         <InfoCard label="Billing" value={licencePlan?.billingStatus ?? "Not connected"} />
         <InfoCard label="Active clients" value={String(org.activeClients)} />
         <InfoCard label="Pending invites" value={String(org.pendingInvitations)} />
+        <InfoCard label="Health" value={org.healthState} detail={org.consentReadiness} />
+        <InfoCard label="Rollout" value={org.onboardingState} detail={org.rolloutNote} />
       </section>
 
       <section style={twoColumnStyle}>
@@ -94,6 +96,8 @@ export default async function OrganisationDetailPage({ params }: OrganisationDet
             <Info label="Billing status" value={licencePlan?.billingStatus ?? "Not connected"} />
             <Info label="Licence status" value={licencePlan?.licenceStatus ?? org.status} />
             <Info label="Renewal warning" value={renewalWarning ? "Review required" : "No immediate warning"} />
+            <Info label="Operational health" value={org.healthState} />
+            <Info label="Rollout state" value={org.onboardingState} />
           </div>
           {licencePlan ? (
             <div style={tagRowStyle}>
@@ -116,7 +120,7 @@ export default async function OrganisationDetailPage({ params }: OrganisationDet
             <Info label="Missing or restricted consent" value={`${missingConsentClients} clients`} />
           </div>
           <section style={warningStyle}>
-            Reports exclude clients without adviser insight consent. Outreach also requires marketing consent, firm approval, and audit logging.
+            Reports exclude clients without adviser insight consent. Outreach also requires marketing consent, firm approval, and audit logging. Current rollout note: {org.rolloutNote}
           </section>
         </section>
       </section>

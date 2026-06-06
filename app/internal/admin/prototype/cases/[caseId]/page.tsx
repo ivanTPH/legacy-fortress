@@ -22,9 +22,9 @@ export default async function AdminCaseDetailPage({ params }: AdminCaseDetailPag
           <div style={{ color: "var(--lf-text-soft)", fontSize: 13 }}>Assigned reviewer: <strong>{item.assignedAdmin}</strong></div>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button type="button" disabled style={disabledButtonStyle}>Approve</button>
+          <button type="button" disabled style={disabledButtonStyle}>Validate certificate</button>
+          <button type="button" disabled style={disabledButtonStyle}>Confirm limited unlock</button>
           <button type="button" disabled style={disabledButtonStyle}>Reject</button>
-          <button type="button" disabled style={disabledButtonStyle}>Escalate</button>
         </div>
       </section>
 
@@ -57,11 +57,21 @@ export default async function AdminCaseDetailPage({ params }: AdminCaseDetailPag
           <section style={decisionPanelStyle}>
             <strong>Decision panel</strong>
             <p style={{ margin: 0, color: "var(--lf-text-soft)", fontSize: 13 }}>
-              Actions are disabled in this prototype. Future implementation should require decision notes, role checks, and audit logging before any unlock.
+              Actions are disabled in this prototype. Future implementation should require death-certificate validation, relationship confirmation, decision notes, role checks, and audit logging before any unlock.
             </p>
             <textarea disabled value="Reviewer notes will appear here." style={textareaStyle} readOnly />
           </section>
         </section>
+      </section>
+
+      <section style={unlockPanelStyle}>
+        <h2 style={h2Style}>Limited vault unlock model</h2>
+        <div style={unlockGridStyle}>
+          <Info label="Access granted" value="Read-only executor/probate sections only" />
+          <Info label="Access not granted" value="No owner settings, billing, account editing, contacts editing, or unrestricted vault edits" />
+          <Info label="Required evidence" value="Death certificate, requester identity, relationship, owner match, reviewer confirmation" />
+          <Info label="Audit requirement" value="Every allow, reject, and unlock event must be written before access changes" />
+        </div>
       </section>
     </AdminPrototypeShell>
   );
@@ -160,6 +170,21 @@ const decisionPanelStyle: CSSProperties = {
   display: "grid",
   gap: 8,
   background: "#fafafa",
+};
+
+const unlockPanelStyle: CSSProperties = {
+  background: "#fff",
+  border: "1px solid var(--lf-border)",
+  borderRadius: 8,
+  padding: 16,
+  display: "grid",
+  gap: 12,
+};
+
+const unlockGridStyle: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+  gap: 10,
 };
 
 const textareaStyle: CSSProperties = {

@@ -15,7 +15,7 @@ import {
 } from "../../lib/assets/documentLinks";
 import { supabase } from "../../lib/supabaseClient";
 import { validateUploadFile } from "../../lib/validation/upload";
-import { FileDropzone, FormField, SelectInput, TextInput } from "../forms/asset/AssetFormControls";
+import { ExtractionConfirmationPanel, FileDropzone, FormField, SelectInput, TextInput } from "../forms/asset/AssetFormControls";
 import AttachmentGallery from "./AttachmentGallery";
 import {
   filterDiscoveryDocuments,
@@ -87,7 +87,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
     return () => {
       mounted = false;
     };
-  }, [router, sectionFilter, viewer.targetOwnerUserId]);
+  }, [router, sectionFilter, viewer]);
 
   const assetOptions = useMemo(
     () =>
@@ -397,6 +397,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
                 : ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
             }
             file={pendingFile}
+            helperText={selectedKind === "photo" ? "Drop a photo here or choose one from your device. JPG and PNG are supported up to 15MB." : "Drop a document here or choose one from your device. PDF, JPG, and PNG are supported up to 15MB."}
             onFileSelect={(file) => {
               setPendingFile(file);
               setFormError("");
@@ -409,19 +410,24 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
           />
         </FormField>
 
-        <label style={confirmWrapStyle}>
-          <input
-            type="checkbox"
-            checked={reviewConfirmed}
-            onChange={(event) => {
-              setReviewConfirmed(event.target.checked);
-              setFormError("");
-            }}
-            disabled={saving}
-          />
-          I confirm this file, its extracted details, and the selected parent asset are correct before linking.
-        </label>
-        {formError ? <div style={{ color: "#b91c1c", fontSize: 12 }}>{formError}</div> : null}
+        <ExtractionConfirmationPanel
+          status={pendingFile ? "ready" : "idle"}
+          message={pendingFile ? "Check the selected file and parent asset before saving. Any extracted details remain editable before they become part of your vault." : "Choose a file first. If details can be read from it, you will still confirm them before saving."}
+        >
+          <label style={confirmWrapStyle}>
+            <input
+              type="checkbox"
+              checked={reviewConfirmed}
+              onChange={(event) => {
+                setReviewConfirmed(event.target.checked);
+                setFormError("");
+              }}
+              disabled={saving || !pendingFile}
+            />
+            I confirm this file and the selected parent asset are correct before linking.
+          </label>
+          {formError ? <div role="alert" style={{ color: "#b91c1c", fontSize: 12, fontWeight: 700 }}>{formError}</div> : null}
+        </ExtractionConfirmationPanel>
 
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button type="button" style={primaryBtnStyle} onClick={() => void handleUpload()} disabled={saving || loading || assets.length === 0}>
@@ -503,14 +509,6 @@ async function requireUser(router: ReturnType<typeof useRouter>) {
     return null;
   }
   return user;
-}
-
-function formatDate(value: string) {
-  try {
-    return new Date(value).toLocaleString();
-  } catch {
-    return value;
-  }
 }
 
 function getAssetWorkspaceHref(sectionKey: string, categoryKey: string) {

@@ -2,6 +2,7 @@ import Link from "next/link";
 import AdminPrototypeShell from "@/components/admin/prototype/AdminPrototypeShell";
 import AdminStatusBadge from "@/components/admin/prototype/AdminStatusBadge";
 import { organisations } from "@/components/admin/prototype/mockData";
+import { PlatformChip, PlatformTableScroll, platformChipRowStyle } from "@/components/ui/PlatformPrimitives";
 import type { CSSProperties, ReactNode } from "react";
 
 export default function OrganisationPrototypePage() {
@@ -12,6 +13,13 @@ export default function OrganisationPrototypePage() {
     >
       <section style={noticeStyle}>
         Static prototype — mock data. Sensitive fields are shown as bands only. Only clients linked to an organisation would be visible.
+      </section>
+
+      <section style={platformChipRowStyle} aria-label="Organisation operational states">
+        <PlatformChip>Healthy: {organisations.filter((org) => org.healthState === "Healthy").length}</PlatformChip>
+        <PlatformChip>Watch: {organisations.filter((org) => org.healthState === "Watch").length}</PlatformChip>
+        <PlatformChip>At risk: {organisations.filter((org) => org.healthState === "At risk").length}</PlatformChip>
+        <PlatformChip>Needs setup: {organisations.filter((org) => org.onboardingState === "Needs setup").length}</PlatformChip>
       </section>
 
       <section style={toolbarStyle}>
@@ -32,39 +40,45 @@ export default function OrganisationPrototypePage() {
       </section>
 
       <section style={panelStyle}>
-        <table style={tableStyle}>
-          <thead>
-            <tr>
-              <Th>Organisation</Th>
-              <Th>Licence</Th>
-              <Th>Seats</Th>
-              <Th>Active clients</Th>
-              <Th>Pending invites</Th>
-              <Th>Renewal</Th>
-              <Th>Owner</Th>
-              <Th>Status</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {organisations.map((org) => (
-              <tr key={org.id}>
-                <Td>
-                  <Link href={`/internal/admin/prototype/organisations/${org.id}`} style={linkStyle}>
-                    {org.name}
-                    <span style={mutedBlockStyle}>{org.type} · {org.id}</span>
-                  </Link>
-                </Td>
-                <Td>{org.licenceType}</Td>
-                <Td>{org.activeClients}/{org.clientSeats}</Td>
-                <Td>{org.activeClients}</Td>
-                <Td>{org.pendingInvitations}</Td>
-                <Td>{org.renewalDate}</Td>
-                <Td>{org.accountOwner}</Td>
-                <Td><AdminStatusBadge status={org.status === "Review" ? "Pending" : org.status} /></Td>
+        <PlatformTableScroll label="Organisation management table">
+          <table style={tableStyle}>
+            <thead>
+              <tr>
+                <Th>Organisation</Th>
+                <Th>Licence</Th>
+                <Th>Seats</Th>
+                <Th>Health</Th>
+                <Th>Rollout</Th>
+                <Th>Consent</Th>
+                <Th>Pending invites</Th>
+                <Th>Renewal</Th>
+                <Th>Owner</Th>
+                <Th>Status</Th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {organisations.map((org) => (
+                <tr key={org.id}>
+                  <Td>
+                    <Link href={`/internal/admin/prototype/organisations/${org.id}`} style={linkStyle}>
+                      {org.name}
+                      <span style={mutedBlockStyle}>{org.type} · {org.id}</span>
+                    </Link>
+                  </Td>
+                  <Td>{org.licenceType}</Td>
+                  <Td>{org.activeClients}/{org.clientSeats}</Td>
+                  <Td>{org.healthState}</Td>
+                  <Td>{org.onboardingState}<span style={mutedBlockStyle}>{org.rolloutNote}</span></Td>
+                  <Td>{org.consentReadiness}</Td>
+                  <Td>{org.pendingInvitations}</Td>
+                  <Td>{org.renewalDate}</Td>
+                  <Td>{org.accountOwner}</Td>
+                  <Td><AdminStatusBadge status={org.status === "Review" ? "Pending" : org.status} /></Td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </PlatformTableScroll>
       </section>
     </AdminPrototypeShell>
   );

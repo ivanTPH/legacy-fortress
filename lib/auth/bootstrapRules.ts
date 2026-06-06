@@ -1,4 +1,6 @@
-import { toSafeInternalPath } from "./session";
+import { toSafeInternalPath } from "./session.ts";
+import { canRoleAccessPath } from "../accessModel.ts";
+import type { PlatformRole } from "./platformRoles.ts";
 
 export function resolveBootstrapDestination({
   nextPath,
@@ -6,17 +8,21 @@ export function resolveBootstrapDestination({
   canBypassOnboarding,
   onboardingCompleted,
   termsAccepted,
+  roles = [],
 }: {
   nextPath?: string | null;
   completedDestination?: string;
   canBypassOnboarding: boolean;
   onboardingCompleted: boolean;
   termsAccepted: boolean;
+  roles?: PlatformRole[];
 }) {
+  const destination = resolveAuthorizedDestination(nextPath, completedDestination, roles);
+
   if (canBypassOnboarding) {
     return {
       onboardingComplete: true,
-      destination: toSafeInternalPath(nextPath, completedDestination),
+      destination,
     };
   }
   if (!onboardingCompleted) {
@@ -33,6 +39,16 @@ export function resolveBootstrapDestination({
   }
   return {
     onboardingComplete: true,
-    destination: toSafeInternalPath(nextPath, completedDestination),
+    destination,
   };
+}
+
+function resolveAuthorizedDestination(
+  nextPath: string | null | undefined,
+  completedDestination: string,
+  roles: readonly PlatformRole[],
+) {
+  const destination = toSafeInternalPath(nextPath, completedDestination);
+  if (!destination.startsWith("/internal/admin")) return destination;
+  return canRoleAccessPath(roles, destination) ? destination : completedDestination;
 }

@@ -43,6 +43,7 @@ export default function InvitationAcceptPageClient() {
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
   const [status, setStatus] = useState("");
+  const [linkProblem, setLinkProblem] = useState<"none" | "incomplete" | "invalid">("none");
   const [summary, setSummary] = useState<InvitationSummary | null>(null);
   const [sessionUserId, setSessionUserId] = useState("");
 
@@ -63,7 +64,8 @@ export default function InvitationAcceptPageClient() {
 
       if (!invitationId || !token) {
         if (!mounted) return;
-        setStatus("Invitation link is incomplete.");
+        setLinkProblem("incomplete");
+        setStatus("This invitation link is missing part of its secure token.");
         setLoading(false);
         return;
       }
@@ -79,9 +81,11 @@ export default function InvitationAcceptPageClient() {
       if (!mounted) return;
 
       if (summaryRes.error || !(summaryRes.data?.[0])) {
-        setStatus(summaryRes.error?.message || "This invitation link is invalid or has expired.");
+        setLinkProblem("invalid");
+        setStatus(getInvitationValidationMessage(summaryRes.error));
         setSummary(null);
       } else {
+        setLinkProblem("none");
         setSummary(summaryRes.data[0] as InvitationSummary);
       }
 
@@ -97,7 +101,8 @@ export default function InvitationAcceptPageClient() {
 
   async function acceptInvitation() {
     if (!invitationId || !token) {
-      setStatus("Invitation link is incomplete.");
+      setLinkProblem("incomplete");
+      setStatus("This invitation link is missing part of its secure token.");
       return;
     }
 
@@ -117,16 +122,18 @@ export default function InvitationAcceptPageClient() {
       });
 
       if (acceptRes.error || !(acceptRes.data?.[0])) {
-        setStatus(acceptRes.error?.message || "Could not accept this invitation.");
+        setLinkProblem("invalid");
+        setStatus(getInvitationValidationMessage(acceptRes.error));
         return;
       }
 
       const result = acceptRes.data[0] as AcceptResult;
+      setLinkProblem("none");
       setStoredLinkedGrantId(result.grant_id);
       setStatus(`Access accepted. Redirecting you to ${result.account_holder_name}'s records...`);
       router.replace("/dashboard");
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Could not accept this invitation.");
+      setStatus(getInvitationValidationMessage(error));
     } finally {
       setAccepting(false);
     }
@@ -159,6 +166,31 @@ export default function InvitationAcceptPageClient() {
           </p>
 
           {loading ? <div className="lf-muted-note">Checking invitation...</div> : null}
+
+          {!loading && linkProblem !== "none" ? (
+            <section style={recoveryPanelStyle} aria-label="Invitation recovery options">
+              <div style={{ display: "grid", gap: 4 }}>
+                <strong>{linkProblem === "incomplete" ? "The invitation link is incomplete." : "This invitation cannot be opened."}</strong>
+                <span>
+                  Ask the account holder to resend the invitation from Contacts. If this was a temporary smoke-test invitation, it may have been removed automatically after the test completed.
+                </span>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <Link className="lf-primary-btn" href="/sign-in">
+                  <Icon name="login" size={16} />
+                  Go to sign in
+                </Link>
+                <Link className="lf-link-btn" href="/sign-up">
+                  <Icon name="person_add" size={16} />
+                  Create account
+                </Link>
+                <Link className="lf-link-btn" href="/support">
+                  <Icon name="support_agent" size={16} />
+                  Contact support
+                </Link>
+              </div>
+            </section>
+          ) : null}
 
           {!loading && summary ? (
             <section style={{ display: "grid", gap: 12 }}>
@@ -221,3 +253,26 @@ const invitePanelStyle = {
   display: "grid",
   gap: 6,
 } as const;
+
+const recoveryPanelStyle = {
+  border: "1px solid #fed7aa",
+  background: "#fff7ed",
+  color: "#7c2d12",
+  borderRadius: 12,
+  padding: 12,
+  display: "grid",
+  gap: 12,
+  fontSize: 13,
+  lineHeight: 1.5,
+} as const;
+
+function getInvitationValidationMessage(error: unknown) {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  if (message.includes("expired") || message.includes("invalid") || message.includes("token")) {
+    return "This invitation link is invalid or has expired. Ask the account holder to resend the invitation from Contacts.";
+  }
+  if (message.includes("permission") || message.includes("not authorized")) {
+    return "This invitation could not be opened with the current account. Sign in with the invited email address or ask the account holder to resend it.";
+  }
+  return "This invitation could not be opened. Ask the account holder to resend it from Contacts.";
+}

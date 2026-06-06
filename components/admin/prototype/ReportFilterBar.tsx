@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import Icon from "../../ui/Icon";
 import { reportFilterDefinitions, type ReportFilters } from "./reportInsights";
@@ -25,6 +26,11 @@ export default function ReportFilterBar({
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [runStatus, setRunStatus] = useState("Report has not been run in this view yet.");
+  const runLabel = useMemo(() => {
+    if (!activeChips.length) return "all safe prototype records";
+    return activeChips.map((chip) => chip.label).join(", ");
+  }, [activeChips]);
 
   function updateFilter(key: keyof ReportFilters, value: string) {
     const next = new URLSearchParams(searchParams.toString());
@@ -34,6 +40,11 @@ export default function ReportFilterBar({
       next.delete(key);
     }
     router.replace(`${pathname}${next.toString() ? `?${next.toString()}` : ""}`, { scroll: false });
+    setRunStatus("Filters changed. Run report to refresh the visible result summary.");
+  }
+
+  function runReport() {
+    setRunStatus(`Report run for ${runLabel}. Results below now reflect the selected safe filters.`);
   }
 
   return (
@@ -46,7 +57,12 @@ export default function ReportFilterBar({
           </h2>
           <p style={helperTextStyle}>Combine filters to narrow the prototype report. Values remain banded and mock-only.</p>
         </div>
-        {activeChips.length ? <Link href={clearHref} style={clearLinkStyle}>Clear all</Link> : null}
+        <div style={headerActionsStyle}>
+          <button type="button" style={runButtonStyle} onClick={runReport}>
+            Run report
+          </button>
+          {activeChips.length ? <Link href={clearHref} style={clearLinkStyle}>Clear all</Link> : null}
+        </div>
       </div>
 
       <div style={controlsGridStyle}>
@@ -93,6 +109,11 @@ export default function ReportFilterBar({
       ) : (
         <p style={emptyFilterTextStyle}>No filters applied. Showing all safe prototype records in scope.</p>
       )}
+
+      <div style={runStatusStyle} role="status" aria-live="polite">
+        <strong>Run state</strong>
+        <span>{runStatus}</span>
+      </div>
     </section>
   );
 }
@@ -111,6 +132,14 @@ const filterHeaderStyle: CSSProperties = {
   justifyContent: "space-between",
   gap: 12,
   alignItems: "start",
+  flexWrap: "wrap",
+};
+
+const headerActionsStyle: CSSProperties = {
+  display: "flex",
+  gap: 8,
+  alignItems: "center",
+  flexWrap: "wrap",
 };
 
 const h2Style: CSSProperties = {
@@ -187,8 +216,30 @@ const clearLinkStyle: CSSProperties = {
   fontSize: 13,
 };
 
+const runButtonStyle: CSSProperties = {
+  border: "1px solid var(--lf-bronze-strong)",
+  borderRadius: 8,
+  background: "var(--lf-bronze-strong)",
+  color: "#fff",
+  padding: "8px 11px",
+  fontSize: 13,
+  fontWeight: 850,
+  cursor: "pointer",
+};
+
 const emptyFilterTextStyle: CSSProperties = {
   margin: 0,
   color: "var(--lf-text-soft)",
+  fontSize: 13,
+};
+
+const runStatusStyle: CSSProperties = {
+  border: "1px solid #e7ddd4",
+  borderRadius: 8,
+  background: "#fffefd",
+  color: "var(--lf-text)",
+  padding: "9px 10px",
+  display: "grid",
+  gap: 3,
   fontSize: 13,
 };

@@ -23,6 +23,7 @@ import {
 } from "../../../components/forms/asset/AssetFormControls";
 import Icon from "../../../components/ui/Icon";
 import { waitForActiveUser } from "../../../lib/auth/session";
+import { getBrowserAuthRedirect } from "../../../lib/auth/redirects";
 import { supabase } from "../../../lib/supabaseClient";
 import { validateUploadFile } from "../../../lib/validation/upload";
 import {
@@ -245,10 +246,6 @@ export default function ProfilePage() {
     setSupport(savedSupport);
   }
 
-  function triggerAvatarPicker() {
-    avatarInputRef.current?.click();
-  }
-
   function onAvatarInputChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
     if (!file) {
@@ -443,14 +440,6 @@ export default function ProfilePage() {
     setStatus("Profile picture ready. Save your profile to keep it in your vault.");
   }
 
-  function removeAvatar() {
-    if (!form.avatar_path && !pendingAvatarFile) return;
-    clearStagedAvatarFile();
-    setAvatarPathToDelete(form.avatar_path || avatarPathToDelete);
-    setEditorOpen(true);
-    setStatus("Profile picture removal ready. Save your profile to update your vault.");
-  }
-
   const sendPasswordReset = async () => {
     if (viewer.readOnly) {
       setStatus("Password reset is only available in your own account.");
@@ -461,7 +450,7 @@ export default function ProfilePage() {
       return;
     }
 
-    const redirectTo = "https://legacy-fortress-web.vercel.app/reset-password";
+    const redirectTo = getBrowserAuthRedirect("/reset-password");
     const { error } = await supabase.auth.resetPasswordForEmail(form.primary_email, { redirectTo });
     setStatus(error ? `Password reset failed: ${error.message}` : "Password reset email sent.");
   };

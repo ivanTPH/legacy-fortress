@@ -1,7 +1,8 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { memo, useCallback, useMemo, useState, type CSSProperties } from "react";
 import Icon from "../../../../components/ui/Icon";
+import InfoTip from "../../../../components/ui/InfoTip";
 import type { BlockingItem } from "../../../../lib/workflow/blockingModel";
 import { getWorkflowRequiredRoleLabel } from "../../../../lib/workflow/blockingModel";
 
@@ -83,20 +84,20 @@ function ActionQueuePanel({ items, onAction, context }: ActionQueuePanelProps) {
     .reduce((sum, section) => sum + section.count, 0);
   const visibleRowCount = sections.reduce((sum, section) => sum + section.count, 0);
   const initialOpenSectionKey = sections.find((section) => section.rows.some((row) => row.priorityLevel === "Critical"))?.key ?? null;
-  const [openSectionKey, setOpenSectionKey] = useState<ActionCentreSection["key"] | null>(null);
+  const [openSectionKey, setOpenSectionKey] = useState<ActionCentreSection["key"] | null | undefined>(undefined);
+  const effectiveOpenSectionKey = openSectionKey === undefined ? initialOpenSectionKey : openSectionKey;
 
   const toggleSection = useCallback((sectionKey: ActionCentreSection["key"]) => {
-    setOpenSectionKey((current) => (current === sectionKey ? null : sectionKey));
-  }, []);
-
-  useEffect(() => {
-    setOpenSectionKey((current) => current ?? initialOpenSectionKey);
+    setOpenSectionKey((current) => {
+      const currentSectionKey = current === undefined ? initialOpenSectionKey : current;
+      return currentSectionKey === sectionKey ? null : sectionKey;
+    });
   }, [initialOpenSectionKey]);
 
   return (
-    <section style={panelStyle} aria-label="Action centre">
+    <section className="lf-action-centre" style={panelStyle} aria-label="Action centre">
       <div style={{ display: "grid", gap: 4 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="lf-action-centre-header" style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
           <div style={iconWrapStyle}>
             <Icon name={activeBlockerCount > 0 ? "notifications_active" : "verified"} size={21} />
           </div>
@@ -104,8 +105,15 @@ function ActionQueuePanel({ items, onAction, context }: ActionQueuePanelProps) {
           <span style={activeBlockerCount > 0 ? activeBadgeStyle : clearBadgeStyle}>
             {activeBlockerCount > 0 ? `${activeBlockerCount} active` : "All clear"}
           </span>
+          <InfoTip
+            className="lf-panel-help"
+            label="Explain Action Centre"
+            title="Action Centre"
+            tone="warning"
+            message="Actions are grouped prompts from your vault data. Completing them can make records easier for trusted people to understand."
+          />
         </div>
-        <div style={{ color: "#64748b", fontSize: 13 }}>
+        <div className="lf-action-centre-intro" style={{ color: "#64748b", fontSize: 13 }}>
           See the next actions that make your vault easier for trusted people to understand and use. Things to do,
           reminders, and user-created tasks live here instead of the dashboard overview.
         </div>
@@ -122,12 +130,13 @@ function ActionQueuePanel({ items, onAction, context }: ActionQueuePanelProps) {
           </div>
         </section>
       ) : (
-        <div style={{ display: "grid", gap: 8 }}>
+        <div className="lf-action-centre-sections" style={{ display: "grid", gap: 8 }}>
           {sections.map((section) => {
-            const isOpen = section.key === openSectionKey;
+            const isOpen = section.key === effectiveOpenSectionKey;
             return (
-              <section key={section.key} style={sectionCardStyle(section.tone)} aria-label={section.title}>
+              <section key={section.key} className="lf-action-centre-section" style={sectionCardStyle(section.tone)} aria-label={section.title}>
                 <button
+                  className="lf-action-centre-section-button"
                   type="button"
                   style={sectionHeaderButtonStyle}
                   onClick={() => toggleSection(section.key)}
@@ -135,7 +144,7 @@ function ActionQueuePanel({ items, onAction, context }: ActionQueuePanelProps) {
                   title={`${isOpen ? "Collapse" : "Expand"} ${section.title}`}
                 >
                   <div style={{ display: "grid", gap: 4, textAlign: "left", minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", minWidth: 0 }}>
+                    <div className="lf-action-centre-section-title-row" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", minWidth: 0 }}>
                       <span style={sectionIconStyle(section.tone)} aria-hidden>
                         <Icon name={section.icon} size={20} />
                       </span>
@@ -144,12 +153,12 @@ function ActionQueuePanel({ items, onAction, context }: ActionQueuePanelProps) {
                         {section.count}
                       </span>
                       {section.rows.length ? (
-                        <span style={priorityPillStyle(section.priorityLevel)}>
+                        <span className="lf-action-centre-priority-pill" style={priorityPillStyle(section.priorityLevel)}>
                           {section.priorityLevel} priority
                         </span>
                       ) : null}
                     </div>
-                    <div style={sectionSummaryStyle}>
+                    <div className="lf-action-centre-section-summary" style={sectionSummaryStyle}>
                       {section.summary}
                     </div>
                   </div>
@@ -162,14 +171,15 @@ function ActionQueuePanel({ items, onAction, context }: ActionQueuePanelProps) {
                     {section.rows.map((item) => (
                       <article
                         key={item.actionKey}
+                        className="lf-action-centre-row"
                         style={itemRowStyle}
                         aria-label={`${item.title}. ${item.whyItMatters}. Status ${item.status}. Required role ${getWorkflowRequiredRoleLabel(item.requiredRole)}.`}
                       >
                         <div style={{ display: "grid", gap: 8, textAlign: "left", minWidth: 0 }}>
                           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", justifyContent: "space-between" }}>
                             <strong style={rowTitleStyle}>{item.title}</strong>
-                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                              <span style={priorityPillStyle(item.priorityLevel)}>{item.priorityLevel}</span>
+                            <div className="lf-action-centre-row-badges" style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                              <span className="lf-action-centre-priority-pill" style={priorityPillStyle(item.priorityLevel)}>{item.priorityLevel}</span>
                               <span style={statusPillStyle(item.status)}>{item.status}</span>
                             </div>
                           </div>
@@ -181,7 +191,7 @@ function ActionQueuePanel({ items, onAction, context }: ActionQueuePanelProps) {
                           </div>
                           <div style={rowLabelStyle}>{item.blockerLabel}</div>
                           <div style={rowReasonStyle}>{item.whyItMatters}</div>
-                          <div style={rowActionsStyle}>
+                          <div className="lf-action-centre-row-actions" style={rowActionsStyle}>
                             <button
                               type="button"
                               style={primaryActionStyle}

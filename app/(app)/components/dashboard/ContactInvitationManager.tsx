@@ -17,13 +17,14 @@ import { getSafeUserData } from "../../../../lib/auth/requireActiveUser";
 import InvitationStatusBadge from "./InvitationStatusBadge";
 import RoleBadge from "./RoleBadge";
 import {
-  deleteCanonicalContact,
-  loadCanonicalContactInvitationsForOwner,
+  loadPeopleScopeResourcesForOwner,
+  loadPeopleInvitationsForOwner,
   mapActivationStatusToVerificationStatus,
-  syncCanonicalContact,
-  upsertCanonicalContactInvitationProjection,
+  removePeopleContact,
+  savePeopleContact,
+  savePeopleInvitationProjection,
   type CanonicalContactRow,
-} from "../../../../lib/contacts/canonicalContacts";
+} from "../../../../lib/contacts/contactRepository";
 import { buildContactsWorkspaceHref, buildLinkedContactRecordHref } from "../../../../lib/contacts/contactRouting";
 import { sendContactInvite } from "../../../../lib/contacts/sendContactInvite";
 import { resolveInvitationBadgeState, type InvitationStatus } from "../../../../lib/contacts/invitationStatus";
@@ -75,14 +76,20 @@ const ACCESS_SCOPE_OPTIONS: Array<{ key: SectionKey; label: string }> = [
   { key: "profile", label: "Profile" },
 ];
 
+const DEFAULT_INITIAL_ALLOWED_SECTIONS: SectionKey[] = [];
+
 export default function ContactInvitationManager({
   mode = "full",
   selectedContactId = "",
   selectedContactProfile = null,
+  initialRole,
+  initialAllowedSections = DEFAULT_INITIAL_ALLOWED_SECTIONS,
 }: {
   mode?: "full" | "dashboard";
   selectedContactId?: string;
   selectedContactProfile?: Pick<CanonicalContactRow, "id" | "full_name" | "email" | "contact_role" | "linked_context"> | null;
+  initialRole?: CollaboratorRole;
+  initialAllowedSections?: SectionKey[];
 }) {
   const router = useRouter();
   const { preferences } = useVaultPreferences();
@@ -165,29 +172,13 @@ export default function ContactInvitationManager({
 
     const userId = userData.user.id;
 
-    const [invitationRows, assetsRes, recordsRes] = await Promise.all([
-      loadCanonicalContactInvitationsForOwner(supabase, userId),
-      supabase
-        .from("assets")
-        .select("id,section_key,category_key,title,provider_name")
-        .eq("owner_user_id", userId)
-        .is("deleted_at", null)
-        .is("archived_at", null),
-      supabase
-        .from("section_entries")
-        .select("id,section_key,category_key,title,summary")
-        .eq("user_id", userId),
+    const [invitationRows, scopeResources] = await Promise.all([
+      loadPeopleInvitationsForOwner(supabase, userId),
+      loadPeopleScopeResourcesForOwner(supabase, userId),
     ]);
 
     setRows(invitationRows as InvitationRow[]);
-    setScopeItems([
-      ...(((assetsRes.data ?? []) as Array<Record<string, unknown>>)
-        .map((row) => mapScopeAssetRow(row))
-        .filter((row): row is ScopeItem => Boolean(row))),
-      ...(((recordsRes.data ?? []) as Array<Record<string, unknown>>)
-        .map((row) => mapScopeRecordRow(row))
-        .filter((row): row is ScopeItem => Boolean(row))),
-    ]);
+    setScopeItems(scopeResources.map((row) => mapScopeSourceRow(row)).filter((row): row is ScopeItem => Boolean(row)));
     setLoading(false);
   }, [router]);
 
@@ -198,7 +189,13 @@ export default function ContactInvitationManager({
   useEffect(() => {
     if (isDashboardMode) return;
     const normalizedContactId = String(selectedContactId ?? "").trim();
-    if (!normalizedContactId) return;
+    if (!normalizedContactId) {
+      const nextRole = initialRole ?? "professional_advisor";
+      const allowedByRole = new Set(ROLE_RULES[nextRole].allowedSections);
+      setRole(nextRole);
+      setAllowedSections(initialAllowedSections.filter((section) => allowedByRole.has(section)));
+      return;
+    }
     const selectedRow = rows.find((row) => row.contact_id === normalizedContactId);
     if (selectedRow) {
       startEdit(selectedRow);
@@ -216,7 +213,7 @@ export default function ContactInvitationManager({
     setAllowedRecordIds([]);
     setEditableAssetIds([]);
     setEditableRecordIds([]);
-  }, [isDashboardMode, rows, selectedContactId, selectedContactProfile]);
+  }, [initialAllowedSections, initialRole, isDashboardMode, rows, selectedContactId, selectedContactProfile]);
 
   useEffect(() => {
     setAllowedSections((current) => current.filter((section) => ROLE_RULES[role].allowedSections.includes(section)));
@@ -265,7 +262,7 @@ export default function ContactInvitationManager({
       const currentVerificationStatus = currentEditingRow
         ? mapActivationStatusToVerificationStatus(currentEditingRow.activation_status)
         : "not_verified";
-      const canonicalContact = await syncCanonicalContact(supabase, {
+      const canonicalContact = await savePeopleContact(supabase, {
         ownerUserId: userId,
         existingContactId: currentEditingRow?.contact_id ?? draftContactId ?? null,
         fullName: nameTrim,
@@ -277,7 +274,7 @@ export default function ContactInvitationManager({
       });
 
       if (editingId) {
-        await upsertCanonicalContactInvitationProjection(supabase, {
+        await savePeopleInvitationProjection(supabase, {
           ownerUserId: userId,
           invitationId: editingId,
           contact: canonicalContact,
@@ -290,7 +287,7 @@ export default function ContactInvitationManager({
           activationStatus: currentEditingRow?.activation_status ?? "invited",
         });
 
-        await syncCanonicalContact(supabase, {
+        await savePeopleContact(supabase, {
           ownerUserId: userId,
           existingContactId: canonicalContact.id,
           fullName: nameTrim,
@@ -309,7 +306,7 @@ export default function ContactInvitationManager({
           },
         });
       } else {
-        const insertRes = await upsertCanonicalContactInvitationProjection(supabase, {
+        const insertRes = await savePeopleInvitationProjection(supabase, {
           ownerUserId: userId,
           contact: canonicalContact,
           assignedRole: role,
@@ -320,7 +317,7 @@ export default function ContactInvitationManager({
           activationStatus: "invited",
         });
 
-        await syncCanonicalContact(supabase, {
+        await savePeopleContact(supabase, {
           ownerUserId: userId,
           existingContactId: canonicalContact.id,
           fullName: nameTrim,
@@ -441,7 +438,7 @@ export default function ContactInvitationManager({
       }
 
       if (row.contact_id) {
-        await deleteCanonicalContact(supabase, {
+        await removePeopleContact(supabase, {
           ownerUserId: userData.user.id,
           contactId: row.contact_id,
         });
@@ -482,7 +479,7 @@ export default function ContactInvitationManager({
         return;
       }
 
-      await deleteCanonicalContact(supabase, {
+      await removePeopleContact(supabase, {
         ownerUserId: userData.user.id,
         contactId: draftContactId,
       });
@@ -607,6 +604,19 @@ export default function ContactInvitationManager({
             <div style={{ color: "#64748b", fontSize: 12 }}>
               Choose the visible categories this contact can review. Records beneath each selected category start as view only, then you can allow editing record by record.
             </div>
+            <button
+              type="button"
+              style={walletAllButtonStyle}
+              onClick={() => {
+                const visibleSections = getVisibleAccessScopeOptions(preferences, role).map((option) => option.key);
+                const allSelected = visibleSections.every((section) => allowedSections.includes(section));
+                setAllowedSections(allSelected ? [] : visibleSections);
+              }}
+              title="Toggle every visible wallet category for this contact"
+            >
+              <Icon name="account_balance_wallet" size={16} />
+              My wallet - all
+            </button>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {getVisibleAccessScopeOptions(preferences, role)
                 .map((option) => {
@@ -1190,32 +1200,19 @@ function toggleScopedEditPermission(
   );
 }
 
-function mapScopeAssetRow(row: Record<string, unknown>): ScopeItem | null {
+function mapScopeSourceRow(row: Record<string, unknown>): ScopeItem | null {
   const sectionKey = normalizeSectionKey(row.section_key);
   const sourceId = String(row.id ?? "").trim();
   if (!sectionKey || !sourceId) return null;
+  const sourceKind = row.source_kind === "asset" ? "asset" : "record";
+  const fallbackLabel = sourceKind === "asset" ? row.provider_name : row.summary;
   return {
-    sourceKind: "asset",
+    sourceKind,
     sourceId,
     sectionKey,
     categoryKey: String(row.category_key ?? "").trim() || null,
-    label: String(row.title ?? row.provider_name ?? "Untitled record").trim() || "Untitled record",
-    meta: [String(row.category_key ?? "").trim(), "Canonical record"].filter(Boolean).join(" · "),
-    role: null,
-  };
-}
-
-function mapScopeRecordRow(row: Record<string, unknown>): ScopeItem | null {
-  const sectionKey = normalizeSectionKey(row.section_key);
-  const sourceId = String(row.id ?? "").trim();
-  if (!sectionKey || !sourceId) return null;
-  return {
-    sourceKind: "record",
-    sourceId,
-    sectionKey,
-    categoryKey: String(row.category_key ?? "").trim() || null,
-    label: String(row.title ?? row.summary ?? "Untitled record").trim() || "Untitled record",
-    meta: [String(row.category_key ?? "").trim(), "Workspace record"].filter(Boolean).join(" · "),
+    label: String(row.title ?? fallbackLabel ?? "Untitled record").trim() || "Untitled record",
+    meta: [String(row.category_key ?? "").trim(), sourceKind === "asset" ? "Canonical record" : "Workspace record"].filter(Boolean).join(" · "),
     role: null,
   };
 }
@@ -1226,19 +1223,6 @@ function normalizeSectionKey(value: unknown): SectionKey | null {
     return normalized as SectionKey;
   }
   return null;
-}
-
-function getScopedLinkOptions(contexts: CanonicalContactRow["linked_context"]) {
-  return contexts
-    .filter((context) => context.source_kind === "asset" || context.source_kind === "record")
-    .map((context) => ({
-      sourceKind: context.source_kind,
-      sourceId: context.source_id,
-      sectionKey: context.section_key ?? null,
-      categoryKey: context.category_key ?? null,
-      role: context.role ?? null,
-      label: context.label || [context.section_key, context.category_key, context.role].filter(Boolean).join(" · ") || "Linked record",
-    }));
 }
 
 function normalizeCollaboratorRole(value: string | null | undefined): CollaboratorRole {
@@ -1314,11 +1298,6 @@ const contactsLinkStyle: CSSProperties = {
   background: "#fff",
 };
 
-const mutedDashStyle: CSSProperties = {
-  color: "#94a3b8",
-  fontSize: 16,
-};
-
 const sectionIconStyle: CSSProperties = {
   width: 28,
   height: 28,
@@ -1377,6 +1356,20 @@ const scopeChipStyle: CSSProperties = {
   background: "#fff",
   fontSize: 13,
   color: "#0f172a",
+};
+const walletAllButtonStyle: CSSProperties = {
+  border: "1px solid #0f172a",
+  background: "#0f172a",
+  color: "#fff",
+  borderRadius: 999,
+  padding: "8px 11px",
+  fontSize: 13,
+  fontWeight: 700,
+  cursor: "pointer",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 7,
+  width: "fit-content",
 };
 const inputStyle: CSSProperties = {
   width: "100%",

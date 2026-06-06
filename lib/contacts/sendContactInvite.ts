@@ -3,10 +3,12 @@ import type { AccessActivationStatus, CollaboratorRole } from "../access-control
 import { assertOwnerCanSendInvitation, ensureOwnerPlanProfile } from "../accountPlan";
 import {
   buildCanonicalInvitationProjectionPayload,
-  mapActivationStatusToVerificationStatus,
-  syncCanonicalContact,
-  upsertCanonicalContactInvitationProjection,
 } from "./canonicalContacts";
+import {
+  mapActivationStatusToVerificationStatus,
+  savePeopleContact,
+  savePeopleInvitationProjection,
+} from "./contactRepository";
 import { buildInvitationEmailDraft } from "./invitations";
 
 type AnySupabaseClient = SupabaseClient;
@@ -125,7 +127,7 @@ export async function sendContactInvite(
   }
 
   if (input.contactId) {
-    await syncCanonicalContact(client, {
+    await savePeopleContact(client, {
       ownerUserId: input.ownerUserId,
       existingContactId: input.contactId,
       fullName: input.contactName || contactEmail,
@@ -193,7 +195,7 @@ async function resolveContactInvitationId(
     if (existingId) return existingId;
   }
 
-  const insertRes = await upsertCanonicalContactInvitationProjection(client, {
+  const insertRes = await savePeopleInvitationProjection(client, {
     ownerUserId: input.ownerUserId,
     contact: {
       id: contactId,

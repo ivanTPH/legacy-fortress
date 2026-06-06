@@ -1,5 +1,5 @@
-import { getRoleLabel, buildInvitationAcceptPath } from "../access-control/viewerAccess";
-import type { CollaboratorRole } from "../access-control/roles";
+import { getRoleLabel, buildInvitationAcceptPath } from "../access-control/viewerAccess.ts";
+import type { CollaboratorRole } from "../access-control/roles.ts";
 
 export type InvitationEmailDraft = {
   subject: string;

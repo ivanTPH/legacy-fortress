@@ -1,3 +1,5 @@
+import type { PlatformRole } from "../../../lib/auth/platformRoles.ts";
+
 export type AdminCaseStatus = "Active" | "Pending" | "Under Review" | "Deceased" | "Access Unlock Pending" | "Rejected" | "Closed";
 
 export type AdminCase = {
@@ -10,6 +12,9 @@ export type AdminCase = {
   assignedAdmin: string;
   priority: "Normal" | "High" | "Urgent";
   submittedBy: string;
+  lifecycleStage: "Evidence submitted" | "Triage" | "Manual review" | "Decision recorded" | "Access unlock" | "Closed";
+  executorStatus: "Not contacted" | "Invited" | "Verified" | "Restricted";
+  nextAction: string;
 };
 
 export type AuditEvent = {
@@ -19,7 +24,8 @@ export type AuditEvent = {
   role: "Admin" | "Reviewer" | "Support" | "System";
   action: string;
   target: string;
-  result: "Success" | "Pending" | "Rejected";
+  result: "Success" | "Pending" | "Rejected" | "Blocked";
+  governance?: "Consent checked" | "Restricted action" | "Manual review" | "Prototype only";
 };
 
 export type AdminUser = {
@@ -39,12 +45,10 @@ export type LicencePlanTier = "Starter" | "Professional" | "Enterprise";
 export type BillingStatus = "Current" | "Trial" | "Renewal due" | "Past due" | "Not connected";
 export type LicenceStatus = "Active" | "Pending" | "Suspended" | "Expired" | "Review";
 
-export type AdminPrototypeRole =
-  | "probate_admin"
-  | "verification_reviewer"
-  | "enterprise_admin"
-  | "licensing_admin"
-  | "super_admin";
+export type AdminPrototypeRole = Extract<
+  PlatformRole,
+  "probate_admin" | "verification_reviewer" | "enterprise_admin" | "licensing_admin" | "super_admin"
+>;
 
 export type AdminPrototypeCapability =
   | "probate_review"
@@ -74,6 +78,10 @@ export type Organisation = {
   status: OrganisationStatus;
   billingContact: string;
   feePlaceholder: string;
+  onboardingState: "Ready" | "In rollout" | "Needs setup" | "Restricted";
+  healthState: "Healthy" | "Watch" | "At risk" | "Restricted";
+  consentReadiness: "Ready" | "Partial" | "Blocked";
+  rolloutNote: string;
 };
 
 export type LicencePlan = {
@@ -137,6 +145,9 @@ export const adminCases: AdminCase[] = [
     assignedAdmin: "Sarah Ahmed",
     priority: "Urgent",
     submittedBy: "Thomas Ellis",
+    lifecycleStage: "Manual review",
+    executorStatus: "Verified",
+    nextAction: "Confirm evidence match and record reviewer decision",
   },
   {
     id: "CASE-1839",
@@ -148,6 +159,9 @@ export const adminCases: AdminCase[] = [
     assignedAdmin: "Unassigned",
     priority: "High",
     submittedBy: "Helen Haines",
+    lifecycleStage: "Triage",
+    executorStatus: "Invited",
+    nextAction: "Assign reviewer and request missing certificate detail",
   },
   {
     id: "CASE-1827",
@@ -159,6 +173,9 @@ export const adminCases: AdminCase[] = [
     assignedAdmin: "Daniel Price",
     priority: "High",
     submittedBy: "Anika Shah",
+    lifecycleStage: "Access unlock",
+    executorStatus: "Verified",
+    nextAction: "Prepare controlled access unlock after final audit check",
   },
   {
     id: "CASE-1811",
@@ -170,6 +187,9 @@ export const adminCases: AdminCase[] = [
     assignedAdmin: "Maya Lewis",
     priority: "Normal",
     submittedBy: "William Turner",
+    lifecycleStage: "Evidence submitted",
+    executorStatus: "Not contacted",
+    nextAction: "Check support request scope before routing",
   },
   {
     id: "CASE-1803",
@@ -181,6 +201,9 @@ export const adminCases: AdminCase[] = [
     assignedAdmin: "Sarah Ahmed",
     priority: "Normal",
     submittedBy: "Sean O'Connor",
+    lifecycleStage: "Closed",
+    executorStatus: "Restricted",
+    nextAction: "No action. Evidence rejected and access remains restricted",
   },
 ];
 
@@ -235,6 +258,10 @@ export const organisations: Organisation[] = [
     status: "Active",
     billingContact: "finance@northbridge.example",
     feePlaceholder: "Commercial terms agreed offline",
+    onboardingState: "Ready",
+    healthState: "Healthy",
+    consentReadiness: "Ready",
+    rolloutNote: "Adviser seats active; portfolio reporting available for consented clients.",
   },
   {
     id: "ORG-1002",
@@ -250,6 +277,10 @@ export const organisations: Organisation[] = [
     status: "Active",
     billingContact: "accounts@harrington.example",
     feePlaceholder: "Placeholder annual licence",
+    onboardingState: "Ready",
+    healthState: "Watch",
+    consentReadiness: "Partial",
+    rolloutNote: "Probate workflow preview live; consent refresh needed for several client records.",
   },
   {
     id: "ORG-1003",
@@ -265,6 +296,10 @@ export const organisations: Organisation[] = [
     status: "Review",
     billingContact: "billing@ledgerhouse.example",
     feePlaceholder: "Pilot pricing pending",
+    onboardingState: "Needs setup",
+    healthState: "At risk",
+    consentReadiness: "Blocked",
+    rolloutNote: "Renewal and consent setup need attention before wider rollout.",
   },
   {
     id: "ORG-1004",
@@ -280,6 +315,10 @@ export const organisations: Organisation[] = [
     status: "Pending",
     billingContact: "partnerships@whitestone.example",
     feePlaceholder: "Enterprise licence placeholder",
+    onboardingState: "In rollout",
+    healthState: "Watch",
+    consentReadiness: "Partial",
+    rolloutNote: "Pilot rollout in progress; campaign and export features remain disabled.",
   },
 ];
 
@@ -565,6 +604,7 @@ export const auditEvents: AuditEvent[] = [
     action: "Viewed death certificate",
     target: "CASE-1842",
     result: "Success",
+    governance: "Manual review",
   },
   {
     id: "AUD-9000",
@@ -574,6 +614,7 @@ export const auditEvents: AuditEvent[] = [
     action: "Queued verification case",
     target: "CASE-1842",
     result: "Success",
+    governance: "Prototype only",
   },
   {
     id: "AUD-8994",
@@ -583,6 +624,7 @@ export const auditEvents: AuditEvent[] = [
     action: "Approved verification",
     target: "CASE-1827",
     result: "Success",
+    governance: "Consent checked",
   },
   {
     id: "AUD-8988",
@@ -592,6 +634,7 @@ export const auditEvents: AuditEvent[] = [
     action: "Viewed user summary",
     target: "USR-448",
     result: "Success",
+    governance: "Manual review",
   },
   {
     id: "AUD-8975",
@@ -601,6 +644,17 @@ export const auditEvents: AuditEvent[] = [
     action: "Rejected verification evidence",
     target: "CASE-1803",
     result: "Rejected",
+    governance: "Restricted action",
+  },
+  {
+    id: "AUD-8971",
+    timestamp: "26 Apr 2026, 12:10",
+    actor: "System",
+    role: "System",
+    action: "Blocked export attempt",
+    target: "Enterprise reports",
+    result: "Blocked",
+    governance: "Restricted action",
   },
 ];
 

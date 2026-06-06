@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Icon from "../../components/ui/Icon";
@@ -16,6 +16,19 @@ import {
   type VaultPreferences,
   type VaultSubsectionKey,
 } from "../../lib/vaultPreferences";
+import {
+  PlatformInfoTile,
+  PlatformNotice,
+  PlatformSection,
+  platformInfoGridStyle,
+} from "../../components/ui/PlatformPrimitives";
+
+const onboardingMilestones = [
+  { label: "Account", value: "Prepared" },
+  { label: "Vault focus", value: "Choose now" },
+  { label: "Preferences", value: "Confirm" },
+  { label: "Next step", value: "Profile" },
+];
 
 export default function OnboardingPageClient() {
   const router = useRouter();
@@ -140,38 +153,21 @@ export default function OnboardingPageClient() {
             Your secure account structure is prepared in the background before you continue.
           </div>
 
-          <section
-            style={{
-              border: "1px solid #dbe3eb",
-              borderRadius: 14,
-              background: "#f8fafc",
-              padding: 14,
-              display: "grid",
-              gap: 10,
-            }}
+          <PlatformSection
+            title="Set up your vault in stages"
+            detail="Start with the categories that matter now. Your dashboard will keep the rest visible inside Action Centre."
+            icon="checklist"
+            emphasis="primary"
           >
-            <div style={{ fontWeight: 700 }}>A strong start looks like this</div>
-            <div style={{ color: "#475569", fontSize: 14 }}>
-              Most owners begin by confirming identity details, adding finances, saving legal records, naming trusted contacts, and capturing the follow-up tasks their family should not have to guess.
+            <div style={platformInfoGridStyle}>
+              {onboardingMilestones.map((item) => (
+                <PlatformInfoTile key={item.label} label={item.label} value={item.value} />
+              ))}
             </div>
-            <ul style={{ margin: 0, paddingLeft: 18, color: "#334155", display: "grid", gap: 6 }}>
-              <li>Profile: confirm who you are and how someone should reach you.</li>
-              {(vaultPreferences?.groups.finances ?? true) ? <li>Finances: add {[
-                vaultPreferences?.subsections.finances_bank ? "bank accounts" : null,
-                vaultPreferences?.subsections.finances_pensions ? "pensions" : null,
-                vaultPreferences?.subsections.finances_insurance ? "insurance" : null,
-                vaultPreferences?.subsections.finances_investments ? "investments" : null,
-                vaultPreferences?.subsections.finances_debts ? "debts" : null,
-              ].filter(Boolean).join(", ") || "your financial records"} and supporting statements.</li> : null}
-              {(vaultPreferences?.groups.legal ?? true) ? <li>Legal: save {[
-                vaultPreferences?.subsections.legal_wills ? "wills" : null,
-                vaultPreferences?.subsections.legal_power_of_attorney ? "powers of attorney" : null,
-                vaultPreferences?.subsections.legal_identity_documents ? "identity documents" : null,
-              ].filter(Boolean).join(", ") || "important legal documents"} in one place.</li> : null}
-              <li>Contacts: record executors, next of kin, trustees, and advisors clearly.</li>
-              {(vaultPreferences?.groups.tasks ?? true) ? <li>Tasks &amp; Follow-up: capture what still needs attention so progress feels visible.</li> : null}
-            </ul>
-          </section>
+            <PlatformNotice icon="verified_user">
+              Tasks and reminders stay inside Action Centre, so the dashboard remains a calm summary once setup is complete.
+            </PlatformNotice>
+          </PlatformSection>
 
           {vaultPreferences ? (
             <section
@@ -194,14 +190,7 @@ export default function OnboardingPageClient() {
                 {VAULT_CATEGORY_DEFINITIONS.map((category) => (
                   <label
                     key={category.key}
-                    style={{
-                      border: "1px solid #e5e7eb",
-                      borderRadius: 12,
-                      padding: 12,
-                      background: "#f8fafc",
-                      display: "grid",
-                      gap: 6,
-                    }}
+                    style={categoryCardStyle}
                   >
                     <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <input
@@ -278,3 +267,13 @@ export default function OnboardingPageClient() {
     </main>
   );
 }
+
+const categoryCardStyle: CSSProperties = {
+  border: "1px solid var(--lf-border)",
+  borderRadius: 8,
+  padding: 12,
+  background: "#fff",
+  display: "grid",
+  gap: 6,
+  boxShadow: "0 1px 2px rgba(33,17,13,0.018)",
+};

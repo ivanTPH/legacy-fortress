@@ -26,7 +26,179 @@ export type CanonicalContactSourceType =
   | "trusted_contact"
   | "invitation"
   | "record_contact"
+  | "probate_contact"
+  | "enterprise_contact"
   | "manual";
+
+export type CanonicalContactRole =
+  | "executor"
+  | "next_of_kin"
+  | "trusted_contact"
+  | "adviser"
+  | "beneficiary"
+  | "probate_contact"
+  | "enterprise_contact"
+  | "organisation_owner"
+  | "organisation_user"
+  | "client_contact"
+  | "admin_user"
+  | "support_contact";
+
+export type CanonicalContactPermissionScope =
+  | "consumer_record"
+  | "executor_access"
+  | "probate_operations"
+  | "enterprise_reporting"
+  | "organisation_admin"
+  | "support";
+
+export const CANONICAL_CONTACT_INVITE_STATUSES: CanonicalContactInviteStatus[] = [
+  "not_invited",
+  "invite_sent",
+  "accepted",
+  "rejected",
+  "revoked",
+];
+
+export const CANONICAL_CONTACT_VERIFICATION_STATUSES: CanonicalContactVerificationStatus[] = [
+  "not_verified",
+  "invited",
+  "accepted",
+  "pending_verification",
+  "verification_submitted",
+  "verified",
+  "active",
+  "rejected",
+  "revoked",
+];
+
+export const CANONICAL_CONTACT_SOURCE_TYPES: CanonicalContactSourceType[] = [
+  "next_of_kin",
+  "executor_asset",
+  "trusted_contact",
+  "invitation",
+  "record_contact",
+  "probate_contact",
+  "enterprise_contact",
+  "manual",
+];
+
+export const CANONICAL_CONTACT_ENTITY_FIELDS = [
+  "id",
+  "full_name",
+  "email",
+  "phone",
+  "contact_role",
+  "relationship",
+  "linked_context",
+  "invite_status",
+  "verification_status",
+  "source_type",
+  "created_at",
+  "updated_at",
+  "permission_scope",
+] as const;
+
+export type CanonicalContactEntityField = (typeof CANONICAL_CONTACT_ENTITY_FIELDS)[number];
+
+export type CanonicalContactRelationshipPattern = {
+  key: string;
+  contactRole: string;
+  relationshipHint: string;
+  linkedContext: CanonicalContactContext["source_kind"][];
+  sourceTypes: CanonicalContactSourceType[];
+};
+
+export const CANONICAL_CONTACT_RELATIONSHIP_PATTERNS: CanonicalContactRelationshipPattern[] = [
+  {
+    key: "executor",
+    contactRole: "executor",
+    relationshipHint: "Executor or reserve executor linked to legal readiness and invitation status.",
+    linkedContext: ["asset", "invitation"],
+    sourceTypes: ["executor_asset", "invitation"],
+  },
+  {
+    key: "next_of_kin",
+    contactRole: "next_of_kin",
+    relationshipHint: "Family or emergency relationship linked to personal/contact records.",
+    linkedContext: ["record"],
+    sourceTypes: ["next_of_kin", "record_contact"],
+  },
+  {
+    key: "adviser",
+    contactRole: "adviser",
+    relationshipHint: "Professional adviser linked to records and consent-aware future access.",
+    linkedContext: ["record", "asset"],
+    sourceTypes: ["record_contact", "manual"],
+  },
+  {
+    key: "trusted_contact",
+    contactRole: "trusted_contact",
+    relationshipHint: "Trusted contact or viewer with explicit invitation and verification state.",
+    linkedContext: ["invitation", "record"],
+    sourceTypes: ["trusted_contact", "invitation"],
+  },
+  {
+    key: "probate_contact",
+    contactRole: "probate_contact",
+    relationshipHint: "Operational probate contact linked to a case without granting consumer visibility.",
+    linkedContext: ["invitation", "record"],
+    sourceTypes: ["probate_contact"],
+  },
+  {
+    key: "enterprise_contact",
+    contactRole: "enterprise_contact",
+    relationshipHint: "Organisation or enterprise contact linked to licensing/reporting context only.",
+    linkedContext: ["record"],
+    sourceTypes: ["enterprise_contact"],
+  },
+];
+
+export type ContactPersistenceSurface = {
+  surface: string;
+  currentPattern: "canonical" | "compatibility" | "redirect" | "legacy";
+  canonicalTarget: "contacts" | "contact_links" | "contact_invitations" | "assets" | "none";
+  migrationRisk: "low" | "medium" | "high";
+  note: string;
+};
+
+export const CONTACT_PERSISTENCE_SURFACES: ContactPersistenceSurface[] = [
+  {
+    surface: "/contacts",
+    currentPattern: "canonical",
+    canonicalTarget: "contacts",
+    migrationRisk: "low",
+    note: "Primary grouped contacts workspace and selected-contact management surface.",
+  },
+  {
+    surface: "/personal/contacts and legacy people routes",
+    currentPattern: "redirect",
+    canonicalTarget: "contacts",
+    migrationRisk: "low",
+    note: "Routes preserve old entry points while directing users to the grouped contacts workspace.",
+  },
+  {
+    surface: "executor and trusted-contact invitations",
+    currentPattern: "compatibility",
+    canonicalTarget: "contact_invitations",
+    migrationRisk: "medium",
+    note: "Compatibility projections still support existing invitation and role-assignment flows.",
+  },
+  {
+    surface: "record-linked contacts",
+    currentPattern: "compatibility",
+    canonicalTarget: "contact_links",
+    migrationRisk: "medium",
+    note: "Record contacts should project into contact links instead of creating separate people records.",
+  },
+  {
+    surface: "legacy section_entries contacts",
+    currentPattern: "legacy",
+    canonicalTarget: "contacts",
+    migrationRisk: "high",
+    note: "Do not extend this surface; keep compatibility reads until a safe migration/backfill exists.",
+  },
+];
 
 export type CanonicalContactContext = {
   source_kind: "record" | "asset" | "invitation";
@@ -50,10 +222,28 @@ export type CanonicalContactRow = {
   invite_status: CanonicalContactInviteStatus;
   verification_status: CanonicalContactVerificationStatus;
   source_type: CanonicalContactSourceType;
+  permission_scope?: CanonicalContactPermissionScope[];
   validation_overrides: Record<string, { manually_confirmed?: boolean; updated_at?: string }>;
   created_at: string;
   updated_at: string;
 };
+
+export type CanonicalSharedContactEntity = Pick<
+  CanonicalContactRow,
+  | "id"
+  | "full_name"
+  | "email"
+  | "phone"
+  | "contact_role"
+  | "relationship"
+  | "linked_context"
+  | "invite_status"
+  | "verification_status"
+  | "source_type"
+  | "created_at"
+  | "updated_at"
+  | "permission_scope"
+>;
 
 export type CanonicalContactLinkRow = {
   id: string;
@@ -101,6 +291,56 @@ export type CanonicalContactInviteProjectionRow = {
   permissions_override?: Record<string, unknown> | null;
   linked_context: CanonicalContactContext[];
 };
+
+export function isCanonicalContactEntityField(value: string): value is CanonicalContactEntityField {
+  return (CANONICAL_CONTACT_ENTITY_FIELDS as readonly string[]).includes(value);
+}
+
+export function buildCanonicalContactArchitectureSnapshot() {
+  return {
+    fields: CANONICAL_CONTACT_ENTITY_FIELDS,
+    inviteStatuses: CANONICAL_CONTACT_INVITE_STATUSES,
+    verificationStatuses: CANONICAL_CONTACT_VERIFICATION_STATUSES,
+    sourceTypes: CANONICAL_CONTACT_SOURCE_TYPES,
+    relationshipPatterns: CANONICAL_CONTACT_RELATIONSHIP_PATTERNS,
+    persistenceSurfaces: CONTACT_PERSISTENCE_SURFACES,
+    migrationRule: "Reuse contacts, contact_links, contact_invitations, and permission_scope before extending legacy section_entries.",
+  };
+}
+
+export function buildCanonicalSharedContactEntity(contact: CanonicalContactRow): CanonicalSharedContactEntity {
+  return {
+    id: contact.id,
+    full_name: contact.full_name,
+    email: contact.email,
+    phone: contact.phone,
+    contact_role: contact.contact_role,
+    relationship: contact.relationship,
+    linked_context: contact.linked_context,
+    invite_status: contact.invite_status,
+    verification_status: contact.verification_status,
+    source_type: contact.source_type,
+    created_at: contact.created_at,
+    updated_at: contact.updated_at,
+    permission_scope: contact.permission_scope ?? inferCanonicalContactPermissionScope(contact),
+  };
+}
+
+export function inferCanonicalContactPermissionScope(contact: Pick<CanonicalContactRow, "contact_role" | "source_type" | "linked_context">): CanonicalContactPermissionScope[] {
+  const terms = [
+    contact.contact_role,
+    contact.source_type,
+    ...(contact.linked_context ?? []).flatMap((context) => [context.role, context.label, context.section_key, context.category_key]),
+  ].map((value) => normalizeText(value));
+  const scopes = new Set<CanonicalContactPermissionScope>();
+  if (terms.some((term) => term.includes("executor"))) scopes.add("executor_access");
+  if (terms.some((term) => term.includes("probate"))) scopes.add("probate_operations");
+  if (terms.some((term) => term.includes("enterprise") || term.includes("organisation"))) scopes.add("enterprise_reporting");
+  if (terms.some((term) => term.includes("support"))) scopes.add("support");
+  if (terms.some((term) => term.includes("owner") || term.includes("admin"))) scopes.add("organisation_admin");
+  if (scopes.size === 0) scopes.add("consumer_record");
+  return [...scopes];
+}
 
 type ContactSyncLink = {
   sourceKind: "record" | "asset" | "invitation";
@@ -1149,6 +1389,7 @@ function normalizeCanonicalContactRow(row: Record<string, unknown>): CanonicalCo
     invite_status: mapStoredInviteStatus(row.invite_status),
     verification_status: mapStoredVerificationStatus(row.verification_status),
     source_type: mapStoredSourceType(row.source_type),
+    permission_scope: readPermissionScope(row.permission_scope),
     validation_overrides: readValidationOverrides(row.validation_overrides),
     created_at: String(row.created_at ?? ""),
     updated_at: String(row.updated_at ?? ""),
@@ -1181,49 +1422,36 @@ function readLinkedContexts(value: unknown): CanonicalContactContext[] {
 
 function mapStoredInviteStatus(value: unknown): CanonicalContactInviteStatus {
   const normalized = normalizeText(value);
-  if (
-    normalized === "not_invited"
-    || normalized === "invite_sent"
-    || normalized === "accepted"
-    || normalized === "rejected"
-    || normalized === "revoked"
-  ) {
-    return normalized;
-  }
+  if ((CANONICAL_CONTACT_INVITE_STATUSES as string[]).includes(normalized)) return normalized as CanonicalContactInviteStatus;
   return "not_invited";
 }
 
 function mapStoredVerificationStatus(value: unknown): CanonicalContactVerificationStatus {
   const normalized = normalizeText(value);
-  if (
-    normalized === "not_verified"
-    || normalized === "invited"
-    || normalized === "accepted"
-    || normalized === "pending_verification"
-    || normalized === "verification_submitted"
-    || normalized === "verified"
-    || normalized === "active"
-    || normalized === "rejected"
-    || normalized === "revoked"
-  ) {
-    return normalized;
-  }
+  if ((CANONICAL_CONTACT_VERIFICATION_STATUSES as string[]).includes(normalized)) return normalized as CanonicalContactVerificationStatus;
   return "not_verified";
 }
 
 function mapStoredSourceType(value: unknown): CanonicalContactSourceType {
   const normalized = normalizeText(value);
-  if (
-    normalized === "next_of_kin"
-    || normalized === "executor_asset"
-    || normalized === "trusted_contact"
-    || normalized === "invitation"
-    || normalized === "record_contact"
-    || normalized === "manual"
-  ) {
-    return normalized;
-  }
+  if ((CANONICAL_CONTACT_SOURCE_TYPES as string[]).includes(normalized)) return normalized as CanonicalContactSourceType;
   return "manual";
+}
+
+function readPermissionScope(value: unknown): CanonicalContactPermissionScope[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const allowed: CanonicalContactPermissionScope[] = [
+    "consumer_record",
+    "executor_access",
+    "probate_operations",
+    "enterprise_reporting",
+    "organisation_admin",
+    "support",
+  ];
+  const scopes = value
+    .map((item) => normalizeText(item))
+    .filter((item): item is CanonicalContactPermissionScope => (allowed as string[]).includes(item));
+  return scopes.length ? [...new Set(scopes)] : undefined;
 }
 
 function readValidationOverrides(value: unknown) {

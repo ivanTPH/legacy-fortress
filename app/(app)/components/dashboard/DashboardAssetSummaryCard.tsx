@@ -72,15 +72,16 @@ export default function DashboardAssetSummaryCard({
       onKeyDown={onCardKeyDown}
       aria-label={`${title} summary`}
     >
-      <div style={summaryLinkStyle}>
-        <div style={headerStyle}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-            <span style={iconStyle}>{icon}</span>
-            <span style={titleStyle}>{title}</span>
+      <div className="lf-dashboard-summary-main" style={summaryLinkStyle}>
+        <div className="lf-dashboard-summary-header" style={headerStyle}>
+          <div className="lf-dashboard-summary-title-wrap" style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+            <span className="lf-dashboard-summary-icon" style={iconStyle}>{icon}</span>
+            <span className="lf-dashboard-summary-title" style={titleStyle}>{title}</span>
           </div>
           <IconButton
             icon={actionIcon}
             label={actionLabel ?? `Open ${title}`}
+            style={{ width: 40, height: 40 }}
             onPointerDown={(event) => {
               event.preventDefault();
               event.stopPropagation();
@@ -93,20 +94,20 @@ export default function DashboardAssetSummaryCard({
           />
         </div>
         {inlineSummary ? (
-          <div style={inlineSummaryStyle}>
-            <span style={valueStyle}>{obscured ? "Restricted" : value}</span>
-            <span style={detailStyle}>{obscured ? "Detail hidden for this role" : detail}</span>
+          <div className="lf-dashboard-summary-count" style={inlineSummaryStyle}>
+            <span className="lf-dashboard-summary-value" style={valueStyle}>{obscured ? "Restricted" : value}</span>
+            <span className="lf-dashboard-summary-detail" style={detailStyle}>{obscured ? "Detail hidden for this role" : detail}</span>
           </div>
         ) : (
           <>
-            <div style={valueStyle}>{obscured ? "Restricted" : value}</div>
-            <div style={detailStyle}>{obscured ? "Detail hidden for this role" : detail}</div>
+            <div className="lf-dashboard-summary-value" style={valueStyle}>{obscured ? "Restricted" : value}</div>
+            <div className="lf-dashboard-summary-detail" style={detailStyle}>{obscured ? "Detail hidden for this role" : detail}</div>
           </>
         )}
         {overview ? <div style={overviewWrapStyle}>{overview}</div> : null}
       </div>
 
-      <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: 8, display: "grid", gap: 6 }}>
+      <div className="lf-dashboard-summary-footer" style={{ borderTop: "1px solid #f1f5f9", paddingTop: 8, display: "grid", gap: 6 }}>
         {!hideItems && items.length ? (
           items.slice(0, 4).map((item) => (
             <Link key={item.id} href={item.href} style={itemLinkStyle} className="lf-dashboard-item-link">
@@ -144,8 +145,8 @@ export default function DashboardAssetSummaryCard({
             </span>
           </Link>
         ) : null}
-        <div style={footerStyle}>
-          <span style={dateStyle}>{formatDateStamp(addedAt)}</span>
+        <div className="lf-dashboard-summary-date-row" style={footerStyle}>
+          <span className="lf-dashboard-summary-date" style={dateStyle}>{formatDateStamp(addedAt)}</span>
         </div>
       </div>
     </div>

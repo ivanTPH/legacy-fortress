@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
   cloneElement,
   isValidElement,
@@ -48,11 +49,19 @@ export function FormField({ fieldId, label, iconName, required = false, error, h
           </span>
         ) : null}
         {label}
-        {required ? " *" : ""}
+        {required ? <RequiredIndicator /> : null}
       </label>
       {resolvedChildren}
       <ValidationText error={error} helpText={helpText} />
     </div>
+  );
+}
+
+export function RequiredIndicator() {
+  return (
+    <span style={requiredPillStyle} aria-label="Required">
+      Required
+    </span>
   );
 }
 
@@ -174,6 +183,56 @@ export function SelectInput({
   );
 }
 
+export function OtherSelectInput({
+  fieldId,
+  label,
+  value,
+  otherValue,
+  options,
+  onChange,
+  onOtherChange,
+  required = false,
+  disabled,
+  placeholder,
+  error,
+  otherError,
+  helpText,
+}: {
+  fieldId: string;
+  label: string;
+  value: string;
+  otherValue: string;
+  options: AssetFieldOption[];
+  onChange: (value: string) => void;
+  onOtherChange: (value: string) => void;
+  required?: boolean;
+  disabled?: boolean;
+  placeholder?: string;
+  error?: string;
+  otherError?: string;
+  helpText?: string;
+}) {
+  return (
+    <div style={{ display: "grid", gap: 8 }}>
+      <FormField fieldId={fieldId} label={label} required={required} error={error} helpText={helpText ?? "Choose the closest option. Select Other only when none fit."}>
+        <SelectInput id={fieldId} ariaLabel={label} value={value} onChange={onChange} options={options} disabled={disabled} placeholder={placeholder} />
+      </FormField>
+      {value === "__other" ? (
+        <FormField fieldId={`${fieldId}-other`} label={`${label} details`} required error={otherError} helpText="Add the custom value you want saved.">
+          <TextInput
+            id={`${fieldId}-other`}
+            ariaLabel={`${label} details`}
+            value={otherValue}
+            onChange={onOtherChange}
+            placeholder={`Enter ${label.toLowerCase()}`}
+            disabled={disabled}
+          />
+        </FormField>
+      ) : null}
+    </div>
+  );
+}
+
 export function DateInput({
   id,
   ariaLabel,
@@ -211,6 +270,67 @@ export function ToggleInput({
   );
 }
 
+export function SegmentedControl({
+  value,
+  onChange,
+  options,
+  disabled,
+  ariaLabel,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: AssetFieldOption[];
+  disabled?: boolean;
+  ariaLabel?: string;
+}) {
+  return (
+    <div role="group" aria-label={ariaLabel} style={segmentedWrapStyle}>
+      {options.map((option) => {
+        const active = value === option.value;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            disabled={disabled}
+            aria-pressed={active}
+            style={active ? segmentedActiveStyle : segmentedButtonStyle}
+            onClick={() => onChange(option.value)}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function ExtractionConfirmationPanel({
+  status,
+  message,
+  children,
+}: {
+  status: "idle" | "extracting" | "ready" | "failed";
+  message: string;
+  children?: ReactNode;
+}) {
+  const icon = status === "ready" ? "task_alt" : status === "failed" ? "error" : status === "extracting" ? "hourglass_empty" : "document_scanner";
+  return (
+    <section style={extractionPanelStyle(status)} aria-live="polite">
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <span style={labelIconStyle}>
+          <Icon name={icon} size={18} />
+        </span>
+        <strong>{status === "ready" ? "Review extracted details" : "Assisted extraction"}</strong>
+      </div>
+      <p style={{ margin: 0, color: "#64748b", fontSize: 13, lineHeight: 1.45 }}>{message}</p>
+      {children ? <div style={{ display: "grid", gap: 10 }}>{children}</div> : null}
+      <div style={{ color: "#64748b", fontSize: 12 }}>
+        Extracted values are a starting point only. Please confirm or edit them before saving.
+      </div>
+    </section>
+  );
+}
+
 export function FileUploadPlaceholder() {
   return (
     <div style={filePlaceholderStyle}>
@@ -227,6 +347,7 @@ export function FileDropzone({
   file,
   onFileSelect,
   onClear,
+  helperText,
   disabled = false,
 }: {
   id?: string;
@@ -236,6 +357,7 @@ export function FileDropzone({
   file: File | null;
   onFileSelect: (file: File) => void;
   onClear?: () => void;
+  helperText?: string;
   disabled?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -308,13 +430,13 @@ export function FileDropzone({
           <strong style={{ fontSize: 13 }}>{label}</strong>
         </div>
         <div style={{ color: "#64748b", fontSize: 12 }}>
-          Upload supporting documents to your vault. PDF, PNG, and JPG files are supported.
+          {helperText ?? "Drop a file here or choose one from your device. PDF, PNG, JPG, DOCX, XLSX, and ICS files can be stored where supported."}
         </div>
         {file ? (
           <div style={filePreviewStyle}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {previewUrl ? (
-                <img src={previewUrl} alt={file.name} style={previewImageStyle} />
+                <Image src={previewUrl} alt={file.name} width={36} height={36} unoptimized style={previewImageStyle} />
               ) : (
                 <Icon name="description" size={16} />
               )}
@@ -348,7 +470,7 @@ export function FileDropzone({
 
 export function ValidationText({ error, helpText }: { error?: string; helpText?: string }) {
   if (error) {
-    return <span style={{ color: "#b91c1c", fontSize: 12 }}>{error}</span>;
+    return <span role="alert" style={{ color: "#b91c1c", fontSize: 12, fontWeight: 700 }}>{error}</span>;
   }
   if (helpText) {
     return <span style={{ color: "#64748b", fontSize: 12 }}>{helpText}</span>;
@@ -379,6 +501,16 @@ export const inputStyle: CSSProperties = {
   background: "#fffefd",
 };
 
+const requiredPillStyle: CSSProperties = {
+  border: "1px solid #eadfd8",
+  borderRadius: 999,
+  background: "#fffefd",
+  color: "#6b4b35",
+  padding: "2px 6px",
+  fontSize: 10,
+  fontWeight: 800,
+};
+
 const labelIconStyle: CSSProperties = {
   width: 30,
   height: 30,
@@ -407,6 +539,31 @@ const toggleActiveStyle: CSSProperties = {
   color: "#fff",
 };
 
+const segmentedWrapStyle: CSSProperties = {
+  display: "inline-flex",
+  flexWrap: "wrap",
+  gap: 6,
+};
+
+const segmentedButtonStyle: CSSProperties = {
+  border: "1px solid #d8d2cc",
+  borderRadius: 999,
+  background: "#fff",
+  color: "#334155",
+  minHeight: 36,
+  padding: "0 12px",
+  fontSize: 13,
+  fontWeight: 700,
+  cursor: "pointer",
+};
+
+const segmentedActiveStyle: CSSProperties = {
+  ...segmentedButtonStyle,
+  background: "#2b201b",
+  borderColor: "#2b201b",
+  color: "#fff",
+};
+
 const filePlaceholderStyle: CSSProperties = {
   border: "1px dashed #cbd5e1",
   borderRadius: 10,
@@ -420,7 +577,24 @@ const dropzoneStyle: CSSProperties = {
   borderRadius: 12,
   padding: 16,
   outline: "none",
+  transition: "background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease",
 };
+
+function extractionPanelStyle(status: "idle" | "extracting" | "ready" | "failed"): CSSProperties {
+  const tone = status === "ready"
+    ? { border: "#d8eadc", background: "#f7fbf7" }
+    : status === "failed"
+      ? { border: "#f0c7c7", background: "#fff7f7" }
+      : { border: "#e8e1dc", background: "#fffefd" };
+  return {
+    border: `1px solid ${tone.border}`,
+    borderRadius: 12,
+    background: tone.background,
+    padding: 14,
+    display: "grid",
+    gap: 10,
+  };
+}
 
 const filePreviewStyle: CSSProperties = {
   marginTop: 4,

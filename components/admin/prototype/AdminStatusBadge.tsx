@@ -8,6 +8,7 @@ type AdminStatusBadgeProps = {
     | "Success"
     | "Pending"
     | "Rejected"
+    | "Blocked"
     | "High"
     | "Urgent"
     | "Normal"
@@ -34,7 +35,7 @@ function badgeStyle(status: AdminStatusBadgeProps["status"]): CSSProperties {
   const tone =
     status === "Under Review" || status === "Pending" || status === "Access Unlock Pending" || status === "High" || status === "Review" || status === "Review due"
       ? { background: "#fff7ed", color: "var(--lf-bronze)", border: "#e1d5cd" }
-      : status === "Deceased" || status === "Rejected" || status === "Urgent" || status === "Suspended" || status === "Restricted" || status === "Consent required"
+      : status === "Deceased" || status === "Rejected" || status === "Blocked" || status === "Urgent" || status === "Suspended" || status === "Restricted" || status === "Consent required"
         ? { background: "#fef2f2", color: "#991b1b", border: "#fecaca" }
         : status === "Active" || status === "Success" || status === "Consent allowed"
           ? { background: "#f0fdf4", color: "#166534", border: "#bbf7d0" }
@@ -60,7 +61,7 @@ function badgeStyle(status: AdminStatusBadgeProps["status"]): CSSProperties {
 
 function statusIcon(status: AdminStatusBadgeProps["status"]) {
   if (status === "Active" || status === "Success" || status === "Consent allowed") return "check_circle";
-  if (status === "Rejected" || status === "Restricted" || status === "Consent required" || status === "Suspended") return "block";
+  if (status === "Rejected" || status === "Blocked" || status === "Restricted" || status === "Consent required" || status === "Suspended") return "block";
   if (status === "Urgent" || status === "High" || status === "Review due") return "priority_high";
   if (status === "Pending" || status === "Under Review" || status === "Review" || status === "Access Unlock Pending") return "pending";
   if (status === "Static mock data") return "science";

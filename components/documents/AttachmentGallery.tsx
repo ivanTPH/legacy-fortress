@@ -111,7 +111,7 @@ export default function AttachmentGallery<T extends AttachmentGalleryItem>({
   }
 
   return (
-    <div style={{ display: "grid", gap: 10 }}>
+    <div className="lf-attachment-gallery" style={{ display: "grid", gap: 10 }}>
       {sortedItems.length === 0 ? (
         <div style={emptyStateStyle}>{emptyText}</div>
       ) : (
@@ -121,7 +121,7 @@ export default function AttachmentGallery<T extends AttachmentGalleryItem>({
             const fileKind = getFileTypeLabel(item.mimeType, item.fileName);
             return (
               <article key={getAttachmentItemKey(item, index)} className="lf-attachment-card" style={cardStyle}>
-                <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <div className="lf-attachment-card-main" style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
                   <AttachmentVisual item={item} size="large" />
                   <div style={{ display: "grid", gap: 4, minWidth: 0, flex: 1 }}>
                     <div style={{ fontWeight: 700, wordBreak: "break-word" }}>{item.fileName || "Untitled file"}</div>
@@ -133,7 +133,7 @@ export default function AttachmentGallery<T extends AttachmentGalleryItem>({
                     {item.metaLabel ? <div style={{ color: "#475569", fontSize: 12 }}>{item.metaLabel}</div> : null}
                   </div>
                 </div>
-                <div style={actionRowStyle}>
+                <div className="lf-attachment-actions" style={actionRowStyle}>
                   <AttachmentActionButton
                     icon="visibility"
                     label="View"
@@ -250,6 +250,7 @@ function AttachmentActionButton({
 }) {
   return (
     <button
+      className={danger ? "lf-attachment-action is-danger" : "lf-attachment-action"}
       type="button"
       aria-label={ariaLabel}
       title={ariaLabel}

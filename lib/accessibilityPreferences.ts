@@ -11,6 +11,7 @@ export type AccessibilityPreferences = {
   textSize: AccessibilityTextSize;
   contrastMode: AccessibilityContrast;
   spacingMode: AccessibilitySpacing;
+  contextualHelpEnabled: boolean;
   helpWizardEnabled: boolean;
   readAloudEnabled: boolean;
 };
@@ -23,6 +24,7 @@ export function getDefaultAccessibilityPreferences(): AccessibilityPreferences {
     textSize: "default",
     contrastMode: "default",
     spacingMode: "default",
+    contextualHelpEnabled: true,
     helpWizardEnabled: false,
     readAloudEnabled: false,
   };
@@ -37,6 +39,7 @@ export function normalizeAccessibilityPreferences(input: unknown): Accessibility
     textSize: record.textSize === "large" || record.textSize === "xlarge" ? record.textSize : defaults.textSize,
     contrastMode: record.contrastMode === "high" ? "high" : defaults.contrastMode,
     spacingMode: record.spacingMode === "comfortable" ? "comfortable" : defaults.spacingMode,
+    contextualHelpEnabled: record.contextualHelpEnabled === false ? false : defaults.contextualHelpEnabled,
     helpWizardEnabled: record.helpWizardEnabled === true,
     readAloudEnabled: record.readAloudEnabled === true,
   };

@@ -1,6 +1,7 @@
 import AdminPrototypeShell from "@/components/admin/prototype/AdminPrototypeShell";
 import AdminStatusBadge from "@/components/admin/prototype/AdminStatusBadge";
 import { auditEvents } from "@/components/admin/prototype/mockData";
+import { PlatformNotice, PlatformTableScroll } from "@/components/ui/PlatformPrimitives";
 import type { CSSProperties, ReactNode } from "react";
 
 export default function AdminAuditPage() {
@@ -9,6 +10,10 @@ export default function AdminAuditPage() {
       title="Audit log"
       description="Static action history showing actor, role, timestamp, target, and result for administrative review."
     >
+      <PlatformNotice icon="history">
+        Audit visibility is a prototype preview. Blocked exports, manual reviews, and consent checks are shown for operational realism, but no persistent compliance log is written yet.
+      </PlatformNotice>
+
       <section style={toolbarStyle}>
         <input aria-label="Search audit log" placeholder="Search actor, target, or action" style={inputStyle} />
         <select aria-label="Filter actor role" style={selectStyle} defaultValue="all">
@@ -23,35 +28,40 @@ export default function AdminAuditPage() {
           <option>Success</option>
           <option>Pending</option>
           <option>Rejected</option>
+          <option>Blocked</option>
         </select>
       </section>
 
       <section style={panelStyle}>
-        <table style={tableStyle}>
-          <thead>
-            <tr>
-              <Th>Timestamp</Th>
-              <Th>Actor</Th>
-              <Th>Action</Th>
-              <Th>Target</Th>
-              <Th>Result</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {auditEvents.map((item) => (
-              <tr key={item.id}>
-                <Td>{item.timestamp}</Td>
-                <Td>
-                  <strong>{item.actor}</strong>
-                  <span style={mutedBlockStyle}>{item.role}</span>
-                </Td>
-                <Td>{item.action}</Td>
-                <Td>{item.target}</Td>
-                <Td><AdminStatusBadge status={item.result} /></Td>
+        <PlatformTableScroll label="Audit log table">
+          <table style={tableStyle}>
+            <thead>
+              <tr>
+                <Th>Timestamp</Th>
+                <Th>Actor</Th>
+                <Th>Action</Th>
+                <Th>Target</Th>
+                <Th>Governance</Th>
+                <Th>Result</Th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {auditEvents.map((item) => (
+                <tr key={item.id}>
+                  <Td>{item.timestamp}</Td>
+                  <Td>
+                    <strong>{item.actor}</strong>
+                    <span style={mutedBlockStyle}>{item.role}</span>
+                  </Td>
+                  <Td>{item.action}</Td>
+                  <Td>{item.target}</Td>
+                  <Td>{item.governance ?? "Manual review"}</Td>
+                  <Td><AdminStatusBadge status={item.result} /></Td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </PlatformTableScroll>
       </section>
     </AdminPrototypeShell>
   );

@@ -5,7 +5,7 @@ import {
   type AccessActivationStatus,
   type CollaboratorRole,
   type SectionKey,
-} from "./roles";
+} from "./roles.ts";
 
 type AnySupabaseClient = SupabaseClient;
 

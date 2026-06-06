@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import DashboardAssetSummaryCard from "../components/dashboard/DashboardAssetSummaryCard";
 import ActionQueuePanel, { type ActionCentreContext, type ActionCentreTask } from "../components/dashboard/ActionQueuePanel";
 import Icon from "../../../components/ui/Icon";
+import InfoTip from "../../../components/ui/InfoTip";
 import AttachmentGallery, { type AttachmentGalleryItem } from "../../../components/documents/AttachmentGallery";
 import { FormField, NumberInput, TextInput } from "../../../components/forms/asset/AssetFormControls";
 import { formatCurrency } from "../../../lib/currency";
@@ -26,16 +27,15 @@ import { getStoredFileSignedUrl, isPrintableDocumentMimeType } from "../../../li
 import { createAsset } from "../../../lib/assets/createAsset";
 import {
   loadCanonicalContactsForOwner,
-  syncCanonicalContact,
   type CanonicalContactInviteStatus,
   type CanonicalContactVerificationStatus,
 } from "../../../lib/contacts/canonicalContacts";
+import { savePeopleContact } from "../../../lib/contacts/contactRepository";
 import { getPlanLimitRedirectHref } from "../../../lib/accountPlan";
 import { sendContactInvite } from "../../../lib/contacts/sendContactInvite";
 import { loadProfileWorkspace, saveProfileWorkspace } from "../../../lib/profile/workspace";
 import { buildDashboardDiscoveryResults } from "../../../lib/records/discovery";
 import {
-  notifyCanonicalAssetMutation,
   shouldRefreshDashboardForAssetMutation,
   subscribeToCanonicalAssetMutation,
 } from "../../../lib/assets/liveSync";
@@ -115,16 +115,6 @@ type SectionEntrySearchRow = {
   title?: string | null;
   section_key?: string | null;
   category_key?: string | null;
-};
-
-type ReminderRow = {
-  id: string;
-  status?: string | null;
-  due_at?: string | null;
-  remind_at?: string | null;
-  scheduled_for?: string | null;
-  owner_user_id?: string | null;
-  user_id?: string | null;
 };
 
 type ContactDiscoveryRow = {
@@ -616,7 +606,7 @@ export default function DashboardPage() {
     return () => {
       mounted = false;
     };
-  }, [devSmokeMode, devSmokeVariant, router, refreshToken, viewer.accountHolderName, viewer.mode, viewer.targetOwnerUserId]);
+  }, [devSmokeMode, devSmokeVariant, refreshToken, router, viewer]);
 
   useEffect(() => {
     if (searchParams.get("created") !== "1") return;
@@ -833,14 +823,40 @@ const legalSummary = useMemo(() => {
     loading,
     viewerMode: viewer.mode,
   });
-  const handleSetupStepAction = useCallback((step: DashboardSetupStep) => {
-    const panel = buildReviewPanelFromSetupStep(step);
-    if (panel && !step.completed) {
-      setReviewPanel(panel);
+  const requiredReadinessTasks = dashboardState.legalReadiness.items.filter((item) => !item.complete);
+
+  const markDashboardTaskComplete = useCallback(async (taskId: string) => {
+    const task = assetRows.find((row) => row.id === taskId && String(row.category_key ?? "") === "tasks");
+    if (!task) {
+      setStatus("⚠️ Could not find that task.");
       return;
     }
-    router.push(step.href);
-  }, [router]);
+
+    try {
+      const metadata = { ...(task.metadata_json ?? task.metadata ?? {}) };
+      metadata["task_status"] = "completed";
+      metadata["completion_date"] = new Date().toISOString().slice(0, 10);
+      const updateRes = await supabase
+        .from("assets")
+        .update({ metadata_json: metadata, updated_at: new Date().toISOString() })
+        .eq("id", taskId);
+      if (updateRes.error) {
+        setStatus(`⚠️ Could not complete task: ${updateRes.error.message}`);
+        return;
+      }
+      setAssetRows((current) =>
+        current.map((row) =>
+          row.id === taskId
+            ? { ...row, metadata_json: metadata, metadata, updated_at: new Date().toISOString() }
+            : row,
+        ),
+      );
+      setStatus("✅ Task marked complete.");
+    } catch (error) {
+      setStatus(`⚠️ Could not complete task: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
+  }, [assetRows]);
+
   const handleAction = useCallback((actionKey: string) => {
     if (actionKey.startsWith("task:complete:")) {
       void markDashboardTaskComplete(actionKey.replace("task:complete:", ""));
@@ -896,39 +912,7 @@ const legalSummary = useMemo(() => {
       return;
     }
     setReviewPanel(buildReviewPanelFromAction(item.actionKey, item.stageName, item.blockerLabel));
-  }, [dashboardState.actions.items, router]);
-
-  async function markDashboardTaskComplete(taskId: string) {
-    const task = assetRows.find((row) => row.id === taskId && String(row.category_key ?? "") === "tasks");
-    if (!task) {
-      setStatus("⚠️ Could not find that task.");
-      return;
-    }
-
-    try {
-      const metadata = { ...(task.metadata_json ?? task.metadata ?? {}) };
-      metadata["task_status"] = "completed";
-      metadata["completion_date"] = new Date().toISOString().slice(0, 10);
-      const updateRes = await supabase
-        .from("assets")
-        .update({ metadata_json: metadata, updated_at: new Date().toISOString() })
-        .eq("id", taskId);
-      if (updateRes.error) {
-        setStatus(`⚠️ Could not complete task: ${updateRes.error.message}`);
-        return;
-      }
-      setAssetRows((current) =>
-        current.map((row) =>
-          row.id === taskId
-            ? { ...row, metadata_json: metadata, metadata, updated_at: new Date().toISOString() }
-            : row,
-        ),
-      );
-      setStatus("✅ Task marked complete.");
-    } catch (error) {
-      setStatus(`⚠️ Could not complete task: ${error instanceof Error ? error.message : "Unknown error"}`);
-    }
-  }
+  }, [dashboardState.actions.items, markDashboardTaskComplete, router]);
 
   async function handleDashboardInviteAction(contact: ContactDiscoveryRow, invite: ContactInviteDisplay) {
     if (invite.action === "disabled" || invite.action === "status") {
@@ -1080,7 +1064,7 @@ const legalSummary = useMemo(() => {
       }
 
       if (kind === "executor") {
-        await syncCanonicalContact(supabase, {
+        await savePeopleContact(supabase, {
           ownerUserId: user.id,
           fullName: name,
           email: email || null,
@@ -1092,7 +1076,7 @@ const legalSummary = useMemo(() => {
           verificationStatus: "not_verified",
         });
       } else {
-        await syncCanonicalContact(supabase, {
+        await savePeopleContact(supabase, {
           ownerUserId: user.id,
           fullName: name,
           email: email || null,
@@ -1447,7 +1431,7 @@ const legalSummary = useMemo(() => {
   }
 
   return (
-    <div style={{ display: "grid", gap: 14 }}>
+    <div className="lf-dashboard-shell" style={{ display: "grid", gap: 14 }}>
       {status ? (
         isPlanLimitStatus(status) ? (
           <button
@@ -1529,6 +1513,7 @@ const legalSummary = useMemo(() => {
         </section>
       ) : null}
       <section
+        className="lf-dashboard-overview-panel"
         style={{
           border: "1px solid #e8e1dc",
           borderRadius: 16,
@@ -1538,19 +1523,25 @@ const legalSummary = useMemo(() => {
           gap: 12,
         }}
       >
-        <div style={{ display: "grid", gap: 4 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="lf-dashboard-overview-heading" style={{ display: "grid", gap: 4 }}>
+          <div className="lf-dashboard-overview-title-row" style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
             <div style={overviewIconStyle}>
               <Icon name="dashboard" size={16} />
             </div>
             <h2 style={{ margin: 0, fontSize: 18 }}>Overview</h2>
+            <InfoTip
+              className="lf-panel-help"
+              label="Explain dashboard overview"
+              title="Dashboard overview"
+              message="These cards summarise the main areas of your vault. Open a card to review or add records in that section."
+            />
           </div>
-        <div style={{ color: "#64748b", fontSize: 13 }}>
+        <div className="lf-dashboard-overview-copy" style={{ color: "#64748b", fontSize: 13 }}>
           Review the main areas of your secure legacy vault.
         </div>
         </div>
         {showFinancialCard || showLegalCard || showPropertyCard || showBusinessCard || showDigitalCard || showPossessionsCard ? (
-        <div className="lf-content-grid">
+        <div className="lf-content-grid lf-dashboard-overview-grid">
           {showFinancialCard ? (
             <DashboardAssetSummaryCard
               icon={<Icon name="account_balance" size={22} />}
@@ -1655,36 +1646,48 @@ const legalSummary = useMemo(() => {
       </section>
 
       <ActionQueuePanel items={dashboardState.actions.items} context={dashboardState.actions.context} onAction={handleAction} />
-      <section style={readinessPanelStyle} aria-label="Estate readiness summary">
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+      <section className="lf-dashboard-readiness-summary" style={readinessPanelStyle} aria-label="Estate readiness summary">
+        <div className="lf-dashboard-readiness-heading" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", width: "100%" }}>
           <div style={overviewIconStyle}>
             <Icon name="verified_user" size={16} />
           </div>
           <h2 style={{ margin: 0, fontSize: 18 }}>Estate Readiness</h2>
           <span style={readinessStatusBadgeStyle(dashboardState.legalReadiness.statusLevel)}>{dashboardState.legalReadiness.statusLevel}</span>
           <span style={setupProgressPillStyle}>{dashboardState.legalReadiness.statusSummary}</span>
+          <InfoTip
+            className="lf-panel-help"
+            label="Explain estate readiness"
+            title="Estate readiness"
+            tone="security"
+            message="This is a practical checklist for executors and trusted people. It highlights missing records, contacts, and documents without giving legal advice."
+          />
         </div>
         <button
+          className="lf-dashboard-readiness-card"
           type="button"
           style={readinessSummaryCardStyle(dashboardState.legalReadiness.statusLevel)}
-          onClick={() =>
-            setReviewPanel(
-              dashboardState.legalReadiness.nextAction
-                ? buildReviewPanelFromReadinessItem(dashboardState.legalReadiness.nextAction)
-                : {
-                    key: "readiness-review",
-                    title: "Review estate readiness",
-                    description: dashboardState.legalReadiness.explanation,
-                    href: "/legal",
-                    ctaLabel: "Open Legal",
-                    icon: "verified_user",
-                    helperText: "The full readiness checklist opens here as a focused dashboard panel when you need it.",
-                    tone: dashboardState.legalReadiness.statusLevel === "Ready" ? "success" : "default",
-                    readinessKey: "reviewDetails",
-                  },
-            )
+          onClick={() => {
+            if (dashboardState.legalReadiness.nextAction) {
+              router.push(dashboardState.legalReadiness.nextAction.href);
+              return;
+            }
+            setReviewPanel({
+              key: "readiness-review",
+              title: "Review estate readiness",
+              description: dashboardState.legalReadiness.explanation,
+              href: "/legal",
+              ctaLabel: "Open Legal",
+              icon: "verified_user",
+              helperText: "The full readiness checklist opens here as a focused dashboard panel when you need it.",
+              tone: dashboardState.legalReadiness.statusLevel === "Ready" ? "success" : "default",
+              readinessKey: "reviewDetails",
+            });
+          }}
+          aria-label={
+            dashboardState.legalReadiness.nextAction
+              ? `Open required readiness task: ${dashboardState.legalReadiness.nextAction.nextAction}`
+              : "Open estate readiness review panel"
           }
-          aria-label="Open estate readiness review panel"
         >
           <span style={commandIconStyle(dashboardState.legalReadiness.statusLevel === "Ready" ? "success" : "warning")}>
             <Icon name={dashboardState.legalReadiness.statusLevel === "Ready" ? "task_alt" : "assignment_late"} size={18} />
@@ -1701,9 +1704,33 @@ const legalSummary = useMemo(() => {
           </span>
           <Icon name="arrow_forward" size={16} />
         </button>
+        {requiredReadinessTasks.length ? (
+          <div className="lf-dashboard-readiness-task-list" style={readinessTaskListStyle} aria-label="Required estate readiness tasks">
+            <div style={{ color: "#64748b", fontSize: 12, fontWeight: 800, textTransform: "uppercase" }}>Required tasks</div>
+            {requiredReadinessTasks.slice(0, 4).map((item) => (
+              <button
+                key={item.key}
+                className="lf-dashboard-readiness-task"
+                type="button"
+                style={readinessTaskButtonStyle}
+                onClick={() => router.push(item.href)}
+                aria-label={`Open task: ${item.nextAction}`}
+              >
+                <span style={readinessItemIconStyle(false)}>
+                  <Icon name={item.key === "reviewDetails" ? "event_repeat" : "assignment_late"} size={15} />
+                </span>
+                <span style={{ display: "grid", gap: 2, minWidth: 0, textAlign: "left" }}>
+                  <strong style={{ color: "#1f1712", fontSize: 13 }}>{item.label}</strong>
+                  <span style={{ color: "#64748b", fontSize: 12 }}>{item.nextAction}</span>
+                </span>
+                <span style={statusBadgeStyle("warning", "button")}>Open task</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
       </section>
       {reviewPanel ? (
-        <section style={reviewPanelStyle(reviewPanel.tone)} aria-live="polite" aria-label="Dashboard review panel">
+        <section className="lf-dashboard-review-panel" style={reviewPanelStyle(reviewPanel.tone)} aria-live="polite" aria-label="Dashboard review panel">
           <div style={commandCardHeaderStyle}>
             <span style={commandIconStyle(reviewPanel.tone)}>
               <Icon name={reviewPanel.icon} size={18} />
@@ -2046,7 +2073,9 @@ function useDashboardState(input: DashboardStateInput): DashboardState {
     input.loading,
     input.possessionsRecordCount,
     input.profileReadiness,
+    input.tasks,
     input.viewerMode,
+    input.willRecordCount,
     inviteStatusCounts,
     legalReadiness,
     normalizedContactRows,
@@ -2128,13 +2157,6 @@ function buildDashboardContactActions(invite: ContactInviteDisplay): DashboardCo
     return [{ key: "review_billing", label: "Review billing", kind: invite.action, href: invite.href, primary: true }];
   }
   return [{ key: "review_contact", label: invite.ctaLabel || "Review contact", kind: invite.action, href: invite.href, primary: true }];
-}
-
-function formatDashboardContactRole(role: DashboardContactRole) {
-  if (role === "executor") return "Executor";
-  if (role === "next_of_kin") return "Next of kin";
-  if (role === "adviser") return "Adviser";
-  return "Trusted contact";
 }
 
 function formatDashboardContactStatus(status: DashboardContactStatus) {
@@ -2477,78 +2499,6 @@ function buildReviewPanelFromAction(actionKey: string, stageName: string, blocke
     icon: "assignment",
     helperText: "Review the context here, then continue only if it looks right.",
     tone: "default",
-  };
-}
-
-function buildReviewPanelFromSetupStep(step: DashboardSetupStep | null): DashboardReviewPanel | null {
-  if (!step) return null;
-  if (step.key === "profile") {
-    return {
-      key: "setup-profile",
-      title: "Complete your profile",
-      description: "Add the basic details trusted people may need to identify and contact you.",
-      href: "/profile",
-      ctaLabel: "Open Profile",
-      icon: "account_circle",
-      helperText: "Save the essentials here, then use Profile later for the full record.",
-      tone: "default",
-    };
-  }
-  if (step.key === "bank") {
-    return {
-      key: "setup-bank",
-      title: "Add a financial record",
-      description: "Add a simple financial record now so your vault starts to show the right estate context.",
-      href: "/finances/bank",
-      ctaLabel: "Open Bank Accounts",
-      icon: "account_balance",
-      helperText: "This only saves a basic name and value. Add full account details from Finances when ready.",
-      tone: "default",
-    };
-  }
-  if (step.key === "contact") {
-    return {
-      key: "setup-next-of-kin",
-      title: "Add next of kin",
-      description: "Add one trusted person so family and access decisions are easier to review later.",
-      href: "/contacts",
-      ctaLabel: "Open Contacts",
-      icon: "contacts",
-      helperText: "This creates a basic contact. You can manage roles, invitations, and permissions from Contacts.",
-      tone: "default",
-    };
-  }
-  return null;
-}
-
-function buildReviewPanelFromReadinessItem(item: ExecutorLegalReadinessItem | null): DashboardReviewPanel {
-  if (!item) {
-    return {
-      key: "legal-readiness-review",
-      title: "Review estate readiness",
-      description: "Review executor, will, document, contact, and identity readiness from the dashboard.",
-      href: "/legal",
-      ctaLabel: "Open Legal",
-      icon: "fact_check",
-      helperText: "This review is based on saved vault data and is not legal advice.",
-      tone: "default",
-      readinessKey: "reviewDetails",
-    };
-  }
-
-  const documentKeys: ExecutorLegalReadinessItemKey[] = ["willPresent", "willUploaded", "keyDocumentsPresent", "identityVerified"];
-  return {
-    key: `legal-readiness-${item.key}`,
-    title: item.label,
-    description: item.whyItMatters,
-    href: item.href,
-    ctaLabel: item.nextAction,
-    icon: item.complete ? "check_circle" : documentKeys.includes(item.key) ? "upload_file" : "verified_user",
-    helperText: item.complete
-      ? "Saved vault data currently satisfies this check. Review it here before opening the full page."
-      : "Complete this from the dashboard where it is simple. Full workflows stay on their dedicated page.",
-    tone: item.complete ? "success" : "warning",
-    readinessKey: item.key,
   };
 }
 
@@ -3476,27 +3426,6 @@ const overviewIconStyle = {
   flexShrink: 0,
 } satisfies CSSProperties;
 
-const setupPanelStyle = {
-  border: "1px solid #e8e1dc",
-  borderRadius: 16,
-  background: "#fffefd",
-  padding: 18,
-  display: "grid",
-  gap: 14,
-} satisfies CSSProperties;
-
-const setupIconStyle = {
-  width: 34,
-  height: 34,
-  borderRadius: 11,
-  background: "#2b201b",
-  color: "#fff",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  flexShrink: 0,
-} satisfies CSSProperties;
-
 const setupProgressPillStyle = {
   border: "1px solid #e7ded7",
   borderRadius: 999,
@@ -3506,90 +3435,6 @@ const setupProgressPillStyle = {
   fontSize: 12,
   fontWeight: 750,
   whiteSpace: "nowrap",
-} satisfies CSSProperties;
-
-const nextStepStyle = {
-  textDecoration: "none",
-  border: "1px solid #d7cabe",
-  borderRadius: 14,
-  background: "#fff",
-  color: "#1f1712",
-  padding: 14,
-  width: "100%",
-  display: "grid",
-  gridTemplateColumns: "auto minmax(0, 1fr) auto",
-  alignItems: "center",
-  gap: 12,
-  boxShadow: "0 10px 22px rgba(47, 35, 28, 0.06)",
-  textAlign: "left",
-  font: "inherit",
-  cursor: "pointer",
-} satisfies CSSProperties;
-
-const nextStepIconStyle = {
-  width: 38,
-  height: 38,
-  borderRadius: 12,
-  background: "#f1ebe6",
-  color: "#3a2118",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  flexShrink: 0,
-} satisfies CSSProperties;
-
-const setupStepsGridStyle = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
-  gap: 10,
-} satisfies CSSProperties;
-
-function setupStepStyle(completed: boolean): CSSProperties {
-  return {
-    textDecoration: "none",
-    border: completed ? "1px solid #d7eadb" : "1px solid #e8e1dc",
-    borderRadius: 12,
-    background: completed ? "#f7fbf7" : "#fff",
-    padding: 12,
-    color: "#0f172a",
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    minHeight: 64,
-    textAlign: "left",
-    font: "inherit",
-    cursor: "pointer",
-  };
-}
-
-function setupStepIconStyle(completed: boolean): CSSProperties {
-  return {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    background: completed ? "#e7f4ea" : "#f7f3f0",
-    color: completed ? "#166534" : "#3a2118",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  };
-}
-
-const setupFootnoteStyle = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: 10,
-  flexWrap: "wrap",
-  color: "#64748b",
-  fontSize: 12,
-} satisfies CSSProperties;
-
-const setupBillingLinkStyle = {
-  color: "#3a2118",
-  fontWeight: 750,
-  textDecoration: "none",
 } satisfies CSSProperties;
 
 const planLimitStatusButtonStyle = {
@@ -3605,31 +3450,6 @@ const planLimitStatusButtonStyle = {
   fontSize: 13,
   textAlign: "left",
   cursor: "pointer",
-} satisfies CSSProperties;
-
-const commandPanelStyle = {
-  border: "1px solid #e8e1dc",
-  borderRadius: 16,
-  background: "#fffefd",
-  padding: 18,
-  display: "grid",
-  gap: 14,
-} satisfies CSSProperties;
-
-const commandGridStyle = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-  gap: 12,
-} satisfies CSSProperties;
-
-const commandCardStyle = {
-  border: "1px solid #ece5df",
-  borderRadius: 14,
-  background: "#fff",
-  padding: 14,
-  display: "grid",
-  gap: 12,
-  alignContent: "start",
 } satisfies CSSProperties;
 
 const commandCardHeaderStyle = {
@@ -3743,32 +3563,6 @@ const ghostCommandButtonStyle = {
   cursor: "pointer",
 } satisfies CSSProperties;
 
-const secondaryCommandLinkStyle = {
-  textDecoration: "none",
-  border: "1px solid #ded6cf",
-  borderRadius: 10,
-  background: "#fff",
-  color: "#3a2118",
-  minHeight: 38,
-  padding: "0 12px",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 8,
-  fontSize: 13,
-  fontWeight: 750,
-  width: "fit-content",
-  fontFamily: "inherit",
-  cursor: "pointer",
-} satisfies CSSProperties;
-
-const primarySmallLinkStyle = {
-  ...secondaryCommandLinkStyle,
-  border: "1px solid #2b201b",
-  background: "#2b201b",
-  color: "#fff",
-} satisfies CSSProperties;
-
 const miniStatusRowStyle = {
   display: "grid",
   gridTemplateColumns: "minmax(0, 1fr) auto",
@@ -3877,8 +3671,31 @@ function readinessSummaryCardStyle(statusLevel: ExecutorLegalReadinessStatusLeve
     gridTemplateColumns: "auto minmax(0, 1fr) auto",
     alignItems: "center",
     gap: 12,
+    cursor: "pointer",
+    textAlign: "left",
+    font: "inherit",
   };
 }
+
+const readinessTaskListStyle = {
+  display: "grid",
+  gap: 8,
+} satisfies CSSProperties;
+
+const readinessTaskButtonStyle = {
+  border: "1px solid #ece5df",
+  borderRadius: 12,
+  background: "#fff",
+  padding: 10,
+  color: "#1f1712",
+  display: "grid",
+  gridTemplateColumns: "auto minmax(0, 1fr) auto",
+  alignItems: "center",
+  gap: 10,
+  cursor: "pointer",
+  textAlign: "left",
+  font: "inherit",
+} satisfies CSSProperties;
 
 const readinessSnapshotGridStyle = {
   display: "grid",
@@ -3893,17 +3710,6 @@ const readinessSnapshotStyle = {
   padding: 12,
   display: "grid",
   gap: 4,
-} satisfies CSSProperties;
-
-const executorReadinessCardStyle = {
-  border: "1px solid #ece5df",
-  borderRadius: 14,
-  background: "#fff",
-  padding: 14,
-  display: "grid",
-  gridTemplateColumns: "auto minmax(0, 1fr) auto",
-  alignItems: "center",
-  gap: 12,
 } satisfies CSSProperties;
 
 const readinessActionPanelStyle = {
@@ -3978,116 +3784,6 @@ function readinessItemIconStyle(complete: boolean): CSSProperties {
     flexShrink: 0,
   };
 }
-
-const recentDocumentsPanelStyle = {
-  ...completenessPanelStyle,
-  background: "#fffefd",
-} satisfies CSSProperties;
-
-function documentCoverageCardStyle(severity: DashboardDocumentSignalSeverity): CSSProperties {
-  const palette = severity === "clear"
-    ? { border: "#bbf7d0", background: "#f7fbf7" }
-    : severity === "high"
-      ? { border: "#fed7aa", background: "#fffaf4" }
-      : { border: "#e8e1dc", background: "#fff" };
-  return {
-    border: `1px solid ${palette.border}`,
-    borderRadius: 14,
-    background: palette.background,
-    padding: 14,
-    display: "grid",
-    gap: 12,
-  };
-}
-
-function documentCoverageIconStyle(severity: DashboardDocumentSignalSeverity): CSSProperties {
-  const tone = severity === "clear" ? "success" : severity === "high" ? "warning" : "default";
-  return commandIconStyle(tone);
-}
-
-const documentCategoryGridStyle = {
-  display: "flex",
-  gap: 8,
-  flexWrap: "wrap",
-} satisfies CSSProperties;
-
-function documentCategoryPillStyle(found: boolean): CSSProperties {
-  return {
-    border: found ? "1px solid #bbf7d0" : "1px solid #e8e1dc",
-    borderRadius: 999,
-    background: found ? "#f0fdf4" : "#fff",
-    color: found ? "#166534" : "#64748b",
-    padding: "5px 9px",
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 5,
-    fontSize: 12,
-    fontWeight: 750,
-  };
-}
-
-const completenessGridStyle = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-  gap: 12,
-} satisfies CSSProperties;
-
-function completenessCardStyle(status: VaultCompletenessStatus): CSSProperties {
-  const border = status === "Complete" ? "#d7eadb" : status === "Not added yet" ? "#fed7aa" : "#ece5df";
-  return {
-    border: `1px solid ${border}`,
-    borderRadius: 14,
-    background: "#fffefd",
-    padding: 14,
-    display: "grid",
-    gap: 10,
-  };
-}
-
-const completenessHeaderButtonStyle = {
-  border: "none",
-  background: "transparent",
-  padding: 0,
-  display: "grid",
-  gridTemplateColumns: "auto minmax(0, 1fr) auto",
-  alignItems: "center",
-  gap: 10,
-  textAlign: "left",
-  cursor: "pointer",
-} satisfies CSSProperties;
-
-function completenessStatusStyle(status: VaultCompletenessStatus): CSSProperties {
-  const palette = status === "Complete"
-    ? { border: "#bbf7d0", background: "#f0fdf4", color: "#166534" }
-    : status === "Not added yet"
-      ? { border: "#fed7aa", background: "#fff7ed", color: "#9a3412" }
-      : { border: "#e8e1dc", background: "#f8f6f4", color: "#5f5852" };
-  return {
-    border: `1px solid ${palette.border}`,
-    background: palette.background,
-    color: palette.color,
-    borderRadius: 999,
-    padding: "4px 8px",
-    fontSize: 11,
-    fontWeight: 800,
-  };
-}
-
-const reviewDueStyle = {
-  border: "1px solid #e8e1dc",
-  borderRadius: 999,
-  background: "#fff",
-  color: "#5f5852",
-  padding: "4px 8px",
-  fontSize: 11,
-  fontWeight: 750,
-} satisfies CSSProperties;
-
-const missingListStyle = {
-  color: "#64748b",
-  fontSize: 12,
-  lineHeight: 1.4,
-} satisfies CSSProperties;
 
 const searchResultsPanelStyle = {
   border: "1px solid #e5e0dc",
@@ -4271,7 +3967,7 @@ function getLegalWorkspaceHref(categoryKey: string, parentLabel?: string | null)
   if (normalizedCategory === "identity-documents") return "/identity-documents";
   if (normalizedCategory === "power-of-attorney") return "/legal/power-of-attorney";
   if (normalizedCategory === "wills") return "/legal/wills";
-  if (normalizedCategory === "death-certificate") return "/access-requests";
+  if (normalizedCategory === "death-certificate") return "/legal/death-certificate";
   if ((parentLabel ?? "").toLowerCase().includes("identity")) return "/identity-documents";
   return "/legal";
 }

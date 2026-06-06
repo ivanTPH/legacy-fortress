@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Icon from "../ui/Icon";
-import { supabase } from "../../lib/supabaseClient";
 
 type OAuthButtonsProps = {
   nextPath?: string;
@@ -14,6 +13,7 @@ export default function OAuthButtons({ nextPath = "/onboarding" }: OAuthButtonsP
   async function oauth(provider: "google" | "apple") {
     setStatus("Redirecting...");
     const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}` : undefined;
+    const { supabase } = await import("../../lib/supabaseClient");
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider,

@@ -7,6 +7,7 @@ import {
   FileUploadPlaceholder,
   FormField,
   NumberInput,
+  OtherSelectInput,
   SelectInput,
   TextAreaInput,
   TextInput,
@@ -37,9 +38,29 @@ export default function ConfigDrivenAssetFields({
           return null;
         }
         const value = values[field.key] ?? "";
-        const showOther = field.supportsOther && value === "__other" && field.otherKey;
         const fieldId = `${fieldIdPrefix}-${config.categorySlug}-${field.key}`;
-        const otherFieldId = field.otherKey ? `${fieldId}-other` : undefined;
+
+        if (field.inputType === "select" && field.supportsOther && field.otherKey) {
+          const otherKey = field.otherKey;
+          return (
+            <OtherSelectInput
+              key={field.key}
+              fieldId={fieldId}
+              label={field.label}
+              value={value}
+              otherValue={values[otherKey] ?? ""}
+              onChange={(next) => onChange(field.key, next)}
+              onOtherChange={(next) => onChange(otherKey, next)}
+              options={field.options ?? []}
+              placeholder={field.placeholder}
+              required={field.required}
+              disabled={disabled}
+              error={errors[field.key]}
+              otherError={errors[otherKey]}
+              helpText={field.helpText}
+            />
+          );
+        }
 
         return (
           <div key={field.key} style={{ display: "grid", gap: 6 }}>
@@ -78,27 +99,6 @@ export default function ConfigDrivenAssetFields({
 
               {field.inputType === "file" ? <FileUploadPlaceholder /> : null}
             </FormField>
-
-            {showOther ? (
-              <FormField
-                fieldId={otherFieldId}
-                label={`${field.label} (Other)`}
-                required
-                error={field.otherKey ? errors[field.otherKey] : undefined}
-                helpText="Provide a custom value"
-              >
-                <TextInput
-                  id={otherFieldId}
-                  ariaLabel={`${field.label} (Other)`}
-                  value={field.otherKey ? (values[field.otherKey] ?? "") : ""}
-                  onChange={(next) => {
-                    if (field.otherKey) onChange(field.otherKey, next);
-                  }}
-                  placeholder={`Enter ${field.label.toLowerCase()}`}
-                  disabled={disabled}
-                />
-              </FormField>
-            ) : null}
           </div>
         );
       })}

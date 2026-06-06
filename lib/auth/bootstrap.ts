@@ -5,6 +5,7 @@ import { toSafeInternalPath } from "./session";
 import { hasLinkedAccountAccess } from "../access-control/viewerAccess";
 import { resolveBootstrapDestination } from "./bootstrapRules";
 import { ensureOwnerPlanProfile } from "../accountPlan";
+import { getDefaultLandingForRoles, type PlatformRole } from "./platformRoles";
 
 type AnySupabaseClient = SupabaseClient;
 
@@ -20,10 +21,12 @@ export async function bootstrapAuthenticatedUser(
     userId,
     nextPath,
     completedDestination = "/dashboard",
+    roles = [],
   }: {
     userId: string;
     nextPath?: string | null;
     completedDestination?: string;
+    roles?: PlatformRole[];
   },
 ): Promise<AuthBootstrapResult> {
   const wallet = await ensureWalletContext(client, userId);
@@ -36,10 +39,11 @@ export async function bootstrapAuthenticatedUser(
   const terms = canBypassOnboarding ? null : await getTermsAcceptanceState(client, userId);
   const access = resolveBootstrapDestination({
     nextPath,
-    completedDestination,
+    completedDestination: roles.length > 0 ? getDefaultLandingForRoles(roles) : completedDestination,
     canBypassOnboarding,
     onboardingCompleted: onboarding.is_completed,
     termsAccepted: Boolean(terms?.accepted),
+    roles,
   });
 
   return {

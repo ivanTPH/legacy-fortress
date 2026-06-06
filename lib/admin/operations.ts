@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { AdminUserRow } from "./access";
-import { MASTER_ADMIN_EMAIL, normalizeAdminEmail } from "./access";
-import { buildVerificationActionKey, deriveBlockingState } from "../workflow/blockingModel";
+import type { AdminUserRow } from "./access.ts";
+import { MASTER_ADMIN_EMAIL, normalizeAdminEmail } from "./access.ts";
+import { buildVerificationActionKey, deriveBlockingState } from "../workflow/blockingModel.ts";
 
 type AnySupabaseClient = SupabaseClient;
 

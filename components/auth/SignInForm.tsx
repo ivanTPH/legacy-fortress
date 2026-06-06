@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useState, type CSSProperties, type FormEvent } from "react";
 import Icon from "../ui/Icon";
-import OAuthButtons from "./OAuthButtons";
-import { bootstrapAuthenticatedUser } from "../../lib/auth/bootstrap";
-import { waitForActiveUser } from "../../lib/auth/session";
-import { supabase } from "../../lib/supabaseClient";
+
+const OAuthButtons = dynamic(() => import("./OAuthButtons"), {
+  loading: () => <div className="lf-muted-note">Loading sign-in providers...</div>,
+});
 
 function toSignInErrorMessage(raw: string) {
   const message = raw.toLowerCase();
@@ -42,6 +43,21 @@ export default function SignInForm({
     setSigningIn(true);
 
     try {
+      const [
+        { supabase },
+        { waitForActiveUser },
+        { bootstrapAuthenticatedUser },
+        { getMasterAdminRolesForEmail, mergePlatformRoles },
+        { extractPlatformRolesFromMetadata },
+        { resolvePermissionedAdminDestination },
+      ] = await Promise.all([
+        import("../../lib/supabaseClient"),
+        import("../../lib/auth/session"),
+        import("../../lib/auth/bootstrap"),
+        import("../../lib/auth/adminRoles"),
+        import("../../lib/auth/platformRoles"),
+        import("../../lib/auth/adminDestination"),
+      ]);
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         setStatus(`Sign in failed: ${toSignInErrorMessage(error.message)}`);
@@ -58,11 +74,22 @@ export default function SignInForm({
         return;
       }
 
+      const roles = mergePlatformRoles(
+        extractPlatformRolesFromMetadata(confirmedUser.app_metadata),
+        extractPlatformRolesFromMetadata(confirmedUser.user_metadata),
+        getMasterAdminRolesForEmail(confirmedUser.email),
+      );
       const bootstrap = await bootstrapAuthenticatedUser(supabase, {
         userId: confirmedUser.id,
         nextPath: nextPath ?? undefined,
+        roles,
       });
-      router.replace(bootstrap.destination);
+      const destination = await resolvePermissionedAdminDestination(supabase, {
+        nextPath,
+        fallbackDestination: bootstrap.destination,
+        roles,
+      });
+      router.replace(destination);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
       setStatus(`Sign in failed: ${message}`);
@@ -147,6 +174,8 @@ const passwordToggleStyle = {
   right: 10,
   top: "50%",
   transform: "translateY(-50%)",
+  width: 40,
+  height: 40,
   border: "none",
   background: "transparent",
   color: "#475569",

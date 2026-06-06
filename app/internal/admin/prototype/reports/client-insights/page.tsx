@@ -1,16 +1,20 @@
 import Link from "next/link";
 import AdminPrototypeShell from "@/components/admin/prototype/AdminPrototypeShell";
 import ReportFilterBar from "@/components/admin/prototype/ReportFilterBar";
-import { findOrganisation, organisationClients, organisations } from "@/components/admin/prototype/mockData";
 import {
-  buildClientInsights,
-  buildClientOpportunityScores,
+  PlatformChip,
+  PlatformInfoTile,
+  PlatformNotice,
+  PlatformSection,
+  PlatformTableScroll,
+  platformChipRowStyle,
+  platformInfoGridStyle,
+} from "@/components/ui/PlatformPrimitives";
+import { getReportPrototypeData } from "@/components/admin/prototype/prototypeDataService";
+import {
   buildReportMetrics,
-  filterOrganisationClients,
-  getActiveFilterChips,
   getClientInsightSummary,
   getClientOpportunityScore,
-  getConsentBlockedCount,
   type ClientInsightSeverity,
   type ClientOpportunityScore,
   type ReportFilters,
@@ -25,48 +29,56 @@ export default async function ClientInsightsReportPage({ searchParams }: ClientI
   const resolvedSearchParams = await searchParams;
   const filters = getReportFilters(resolvedSearchParams);
   const orgId = filters.orgId;
-  const org = orgId ? findOrganisation(orgId) : null;
-  const invalidOrgFilter = Boolean(orgId && !org);
-  const organisationScopedClients = org
-    ? organisationClients.filter((client) => client.organisationId === org.id)
-    : orgId
-      ? []
-      : organisationClients;
-  const filteredClients = invalidOrgFilter ? [] : filterOrganisationClients(organisationScopedClients, filters);
-  const clientsInScope = filteredClients;
-  const consentBlocked = getConsentBlockedCount(filteredClients);
-  const insights = buildClientInsights(filteredClients);
-  const opportunityScores = buildClientOpportunityScores(filteredClients);
-  const allowedInsights = insights.filter((insight) => insight.insightType !== "consent_missing");
-  const reportMetrics = buildReportMetrics(clientsInScope, insights, consentBlocked);
-  const insightCards = buildInsightCards(reportMetrics);
-  const activeChips = getActiveFilterChips(filters, org?.name);
+  const data = getReportPrototypeData(filters, "client_insights");
+  const allowedInsights = data.insights.filter((insight) => insight.insightType !== "consent_missing");
+  const insightCards = buildInsightCards(data.reportMetrics);
 
   return (
     <AdminPrototypeShell
-      title={org ? `${org.name} client insights` : "Client insights"}
-      description={org
+      title={data.selectedOrganisation ? `${data.selectedOrganisation.name} client insights` : "Client insights"}
+      description={data.selectedOrganisation
         ? "Static organisation-scoped client insight prototype using safe bands, review signals, and consent indicators."
         : "Static report prototype for portfolio review signals, consent-aware outreach opportunities, and licence-holder reporting."}
     >
-      <section style={noticeStyle}>
+      <PlatformNotice icon="lock">
         Client insights and outreach depend on explicit client consent. Some records are restricted. Static prototype — mock data; marketing readiness also requires marketing consent.
-      </section>
+      </PlatformNotice>
 
-      {invalidOrgFilter ? (
+      <PlatformSection
+        title="Insight hierarchy"
+        detail="Client rows are scoped by organisation and filters, then consent gates are applied before opportunity scoring or insight details are shown."
+        icon="account_tree"
+      >
+        <div style={platformChipRowStyle}>
+          <PlatformChip>Consent first</PlatformChip>
+          <PlatformChip>Banded values only</PlatformChip>
+          <PlatformChip>Safe next step</PlatformChip>
+          <PlatformChip>Exports disabled</PlatformChip>
+        </div>
+        <div style={signalGridStyle} aria-label="Client insight operational timeline">
+          {data.operationalTimeline.slice(0, 3).map((event) => (
+            <section key={event.id} style={restrictedCardStyle}>
+              <strong>{event.label}</strong>
+              <span style={mutedTextStyle}>{event.detail} · {event.time}</span>
+            </section>
+          ))}
+        </div>
+      </PlatformSection>
+
+      {data.invalidOrganisationFilter ? (
         <section style={invalidFilterStyle}>
           <strong>Invalid organisation filter</strong>
-          <span>The organisation ID "{orgId}" is not available in the static prototype dataset.</span>
+          <span>The organisation ID {orgId} is not available in the static prototype dataset.</span>
           <Link href="/internal/admin/prototype/organisations" style={textLinkStyle}>Back to organisations</Link>
         </section>
       ) : null}
 
-      {!invalidOrgFilter ? (
+      {!data.invalidOrganisationFilter ? (
         <ReportFilterBar
           filters={filters}
-          organisations={organisations}
-          lockedOrganisationName={org?.name}
-          activeChips={activeChips}
+          organisations={data.organisations}
+          lockedOrganisationName={data.selectedOrganisation?.name}
+          activeChips={data.activeChips}
           clearHref="/internal/admin/prototype/reports/client-insights"
         />
       ) : null}
@@ -85,9 +97,9 @@ export default async function ClientInsightsReportPage({ searchParams }: ClientI
         <section style={panelStyle}>
           <h2 style={h2Style}>Review opportunity</h2>
           <Info label="Target segment" value="Current filtered clients with outdated wills and marketing allowed" />
-          <Info label="Matching clients" value={`${reportMetrics.reviewOpportunities} mock clients`} />
+          <Info label="Matching clients" value={`${data.reportMetrics.reviewOpportunities} mock clients`} />
           <Info label="Allowed contact channel" value="Email or phone, based on communication preference" />
-          <Info label="Consent blocked" value={`${reportMetrics.consentBlocked} filtered client(s) restricted`} />
+          <Info label="Consent blocked" value={`${data.reportMetrics.consentBlocked} filtered client(s) restricted`} />
           <Info label="Compliance note" value="Campaigns require adviser insight consent, marketing consent, firm approval, and audit logging before enablement." />
           <button type="button" disabled style={disabledButtonStyle}>Contact clients — Disabled — requires consent enforcement and outreach approval</button>
           <button type="button" disabled style={disabledButtonStyle}>Run campaign — Disabled — requires consent enforcement and outreach approval</button>
@@ -95,7 +107,7 @@ export default async function ClientInsightsReportPage({ searchParams }: ClientI
 
         <section style={panelStyle}>
           <h2 style={h2Style}>Filtered client portfolio</h2>
-          <div style={{ overflow: "auto" }}>
+          <PlatformTableScroll label="Filtered client portfolio table">
             <table style={tableStyle}>
               <thead>
                 <tr>
@@ -115,9 +127,9 @@ export default async function ClientInsightsReportPage({ searchParams }: ClientI
                 </tr>
               </thead>
               <tbody>
-                {clientsInScope.length ? (
-                  clientsInScope.map((client) => {
-                    const opportunity = getClientOpportunityScore(client, opportunityScores);
+                {data.filteredClients.length ? (
+                  data.filteredClients.map((client) => {
+                    const opportunity = getClientOpportunityScore(client, data.opportunityScores);
                     return (
                       <tr key={client.id}>
                         <Td><strong>{client.clientName}</strong></Td>
@@ -132,7 +144,7 @@ export default async function ClientInsightsReportPage({ searchParams }: ClientI
                         <Td><span style={opportunityBadgeStyle(opportunity.scoreLevel)}>{opportunity.scoreLevel}</span></Td>
                         <Td>{opportunity.outreachReady ? "Ready" : "Not ready"}</Td>
                         <Td>{opportunity.blockers.join(", ") || "None"}</Td>
-                        <Td>{getClientInsightSummary(client, insights)}</Td>
+                        <Td>{getClientInsightSummary(client, data.insights)}</Td>
                       </tr>
                     );
                   })
@@ -143,7 +155,7 @@ export default async function ClientInsightsReportPage({ searchParams }: ClientI
                 )}
               </tbody>
             </table>
-          </div>
+          </PlatformTableScroll>
         </section>
       </section>
 
@@ -153,18 +165,45 @@ export default async function ClientInsightsReportPage({ searchParams }: ClientI
           Static side-panel content for a future client drill-in. It shows opportunity level, reasons, blockers, and a safe next step without legal advice or sensitive vault detail.
         </p>
         <div style={opportunityMetricsGridStyle}>
-          <Info label="High opportunity clients" value={String(reportMetrics.highOpportunity)} />
-          <Info label="Medium opportunity clients" value={String(reportMetrics.mediumOpportunity)} />
-          <Info label="Blocked by consent" value={String(reportMetrics.blockedOpportunity)} />
-          <Info label="Outreach-ready clients" value={String(reportMetrics.outreachReady)} />
-          <Info label="Review due count" value={String(reportMetrics.reviewDue)} />
+          <Info label="High opportunity clients" value={String(data.reportMetrics.highOpportunity)} />
+          <Info label="Medium opportunity clients" value={String(data.reportMetrics.mediumOpportunity)} />
+          <Info label="Blocked by consent" value={String(data.reportMetrics.blockedOpportunity)} />
+          <Info label="Outreach-ready clients" value={String(data.reportMetrics.outreachReady)} />
+          <Info label="Review due count" value={String(data.reportMetrics.reviewDue)} />
         </div>
         <div style={signalGridStyle}>
-          {opportunityScores.slice(0, 8).map((score) => (
+          {data.opportunityScores.slice(0, 8).map((score) => (
             <OpportunityCard key={score.clientId} score={score} />
           ))}
         </div>
       </section>
+
+      <PlatformSection
+        title="Consent, export, and audit controls"
+        detail="Shared compliance guardrails for insight details, outreach readiness, exports, and future audit persistence."
+        icon="shield"
+      >
+        <div style={platformInfoGridStyle}>
+          <PlatformInfoTile label="Insight allowed" value={String(data.governance.adviserInsightAllowed)} tone="success" />
+          <PlatformInfoTile label="Insight restricted" value={String(data.governance.adviserInsightRestricted)} tone={data.governance.adviserInsightRestricted ? "warning" : "success"} />
+          <PlatformInfoTile label="Marketing allowed" value={String(data.governance.marketingAllowed)} />
+          <PlatformInfoTile label="Exports" value="Disabled" tone="warning" />
+        </div>
+        <p style={helperTextStyle}>{data.governance.exportReason}</p>
+        <div style={platformChipRowStyle} aria-label="Client insight governance safeguards">
+          {data.governance.safeguards.map((item) => (
+            <PlatformChip key={item}>{item}</PlatformChip>
+          ))}
+        </div>
+        <div style={signalGridStyle} aria-label="Audit preview">
+          {data.auditPreviewEvents.map((event) => (
+            <section key={event.id} style={restrictedCardStyle}>
+              <strong>{event.action}</strong>
+              <span style={mutedTextStyle}>{event.actor.displayName} · {event.result.replace(/_/g, " ")}</span>
+            </section>
+          ))}
+        </div>
+      </PlatformSection>
 
       <section style={panelStyle}>
         <h2 style={h2Style}>Consent restrictions</h2>
@@ -172,8 +211,8 @@ export default async function ClientInsightsReportPage({ searchParams }: ClientI
           Client has not granted adviser insight access means insight details are hidden. The client can remain in summary reports as a restricted row.
         </p>
         <div style={signalGridStyle}>
-          {clientsInScope.filter((client) => !client.consent.adviserInsights).length ? (
-            clientsInScope.filter((client) => !client.consent.adviserInsights).map((client) => (
+          {data.filteredClients.filter((client) => !client.consent.adviserInsights).length ? (
+            data.filteredClients.filter((client) => !client.consent.adviserInsights).map((client) => (
               <section key={`restricted-${client.id}`} style={restrictedCardStyle}>
                 <strong>{client.clientName}</strong>
                 <span style={mutedTextStyle}>Client has not granted adviser insight access</span>
@@ -277,16 +316,6 @@ function Th({ children }: { children: ReactNode }) {
 function Td({ children }: { children: ReactNode }) {
   return <td style={tdStyle}>{children}</td>;
 }
-
-const noticeStyle: CSSProperties = {
-  border: "1px solid var(--lf-border)",
-  background: "var(--lf-surface-muted)",
-  color: "var(--lf-bronze)",
-  borderRadius: 8,
-  padding: 12,
-  fontSize: 13,
-  fontWeight: 700,
-};
 
 const metricsGridStyle: CSSProperties = {
   display: "grid",

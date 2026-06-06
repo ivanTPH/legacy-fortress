@@ -56,6 +56,7 @@ export default function AccessibilitySettingsCard() {
         <strong style={{ fontSize: 14 }}>Personal accessibility preferences</strong>
         <InfoTip
           label="Explain accessibility preferences"
+          alwaysVisible
           message="Choose larger text, stronger contrast, roomier spacing, read-aloud support, and a guided help mode. These settings apply across the signed-in workspace."
         />
       </div>
@@ -96,6 +97,17 @@ export default function AccessibilitySettingsCard() {
         </FormField>
       </div>
       <div style={{ display: "grid", gap: 10 }}>
+        <label style={preferenceToggleStyle}>
+          <input
+            type="checkbox"
+            checked={draft.contextualHelpEnabled}
+            onChange={(event) => setDraft((current) => ({ ...current, contextualHelpEnabled: event.target.checked }))}
+          />
+          <span>
+            <strong>Contextual help icons</strong>
+            <span style={preferenceHelpStyle}>Show small explanation icons beside headings and complex sections. Turn this off for a quieter workspace.</span>
+          </span>
+        </label>
         <label style={preferenceToggleStyle}>
           <input
             type="checkbox"

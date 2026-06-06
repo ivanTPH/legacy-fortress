@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import WorkspaceSwitcher from "../../../components/navigation/WorkspaceSwitcher";
 import {
   isTestPersonaAccessEnabled,
   TEST_PERSONAS,
@@ -47,6 +48,14 @@ export default function TestLoginPage() {
         </section>
       ) : null}
 
+      <div style={{ marginBottom: 24 }}>
+        <WorkspaceSwitcher
+          currentPathname="/internal/test-login"
+          showDetails
+          governanceContext="/internal/test-login prototype launcher"
+        />
+      </div>
+
       <section style={gridStyle} aria-label="Mock personas">
         {TEST_PERSONAS.map((persona) => (
           <article key={persona.id} style={cardStyle}>
@@ -55,6 +64,7 @@ export default function TestLoginPage() {
               <span style={roleStyle}>{persona.roleSummary}</span>
             </div>
             <h2 style={cardTitleStyle}>{persona.label}</h2>
+            <p style={roleSummaryStyle}>Assigned roles: {persona.roles.join(", ")}</p>
             <p style={cardTextStyle}>{persona.description}</p>
 
             <div style={listWrapStyle}>
@@ -200,6 +210,13 @@ const cardTextStyle = {
   margin: 0,
   color: "var(--lf-text-soft)",
   lineHeight: 1.5,
+} as const;
+
+const roleSummaryStyle = {
+  margin: 0,
+  color: "var(--lf-text)",
+  fontSize: 13,
+  fontWeight: 800,
 } as const;
 
 const listWrapStyle = {

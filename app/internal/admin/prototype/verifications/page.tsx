@@ -1,93 +1,87 @@
 import Link from "next/link";
 import AdminPrototypeShell from "@/components/admin/prototype/AdminPrototypeShell";
 import AdminStatusBadge from "@/components/admin/prototype/AdminStatusBadge";
-import { adminCases } from "@/components/admin/prototype/mockData";
+import { getVerificationQueueData } from "@/components/admin/prototype/prototypeDataService";
+import {
+  PlatformActionRow,
+  PlatformChip,
+  PlatformEmptyState,
+  PlatformNotice,
+  PlatformSection,
+  platformChipRowStyle,
+} from "@/components/ui/PlatformPrimitives";
 import type { CSSProperties } from "react";
 
 export default function AdminVerificationsPage() {
-  const groups = [
-    { title: "Pending evidence review", rows: adminCases.filter((item) => item.status === "Pending") },
-    { title: "Under review", rows: adminCases.filter((item) => item.status === "Under Review") },
-    { title: "Approved, unlock pending", rows: adminCases.filter((item) => item.status === "Access Unlock Pending") },
-  ];
+  const queue = getVerificationQueueData();
 
   return (
     <AdminPrototypeShell
       title="Verification queue"
       description="Static workflow view for death certificate review, evidence checks, and access unlock readiness."
     >
-      <section style={workflowStyle}>
-        <span>Executor submits certificate</span>
-        <span>→</span>
-        <span>Reviewer checks evidence</span>
-        <span>→</span>
-        <span>Approve / reject</span>
-        <span>→</span>
-        <span>Access unlock queued</span>
+      <PlatformNotice icon="verified_user">
+        Manual verification only. This prototype shows review flow and queue state without automated legal decisions or access unlocks.
+      </PlatformNotice>
+
+      <section style={platformChipRowStyle} aria-label="Verification workflow">
+        {queue.workflowSteps.map((step) => (
+          <PlatformChip key={step}>{step}</PlatformChip>
+        ))}
+      </section>
+
+      <section style={platformChipRowStyle} aria-label="Verification lifecycle counts">
+        {Object.entries(queue.lifecycleCounts).map(([stage, count]) => (
+          <PlatformChip key={stage}>{stage}: {count}</PlatformChip>
+        ))}
       </section>
 
       <section style={{ display: "grid", gap: 14 }}>
-        {groups.map((group) => (
-          <section key={group.title} style={panelStyle}>
-            <div style={panelHeaderStyle}>
-              <h2 style={h2Style}>{group.title}</h2>
-              <span style={countStyle}>{group.rows.length}</span>
-            </div>
+        {queue.groups.map((group) => (
+          <PlatformSection
+            key={group.title}
+            title={group.title}
+            detail={group.detail}
+            icon={group.icon}
+            action={<span style={countStyle}>{group.rows.length}</span>}
+          >
             {group.rows.length ? (
               <div style={{ display: "grid", gap: 8 }}>
                 {group.rows.map((item) => (
                   <Link key={item.id} href={`/internal/admin/prototype/cases/${item.id}`} style={queueCardStyle}>
-                    <span>
-                      <strong>{item.userName}</strong>
-                      <span style={mutedBlockStyle}>{item.caseType} · submitted by {item.submittedBy}</span>
-                    </span>
-                    <AdminStatusBadge status={item.status} />
+                    <PlatformActionRow
+                      title={item.userName}
+                      detail={`${item.lifecycleStage} · ${item.executorStatus} · ${item.nextAction}`}
+                      status={<AdminStatusBadge status={item.status} />}
+                    />
                   </Link>
                 ))}
               </div>
             ) : (
-              <div style={emptyStyle}>No cases in this group.</div>
+              <PlatformEmptyState title="No cases in this group" detail="New verification work will appear here when the mock case status matches this stage." icon="task_alt" />
             )}
-          </section>
+          </PlatformSection>
         ))}
       </section>
+
+      <PlatformSection
+        title="Executor workflow realism"
+        detail="Static lifecycle events show how executor requests move from evidence submission through manual review to controlled unlock readiness."
+        icon="history"
+      >
+        <div style={timelineGridStyle}>
+          {queue.operationalTimeline.map((event) => (
+            <section key={event.id} style={timelineCardStyle}>
+              <strong>{event.label}</strong>
+              <span style={timelineDetailStyle}>{event.detail}</span>
+              <span style={timelineDetailStyle}>{event.time}</span>
+            </section>
+          ))}
+        </div>
+      </PlatformSection>
     </AdminPrototypeShell>
   );
 }
-
-const workflowStyle: CSSProperties = {
-  background: "#fff",
-  border: "1px solid var(--lf-border)",
-  borderRadius: 8,
-  padding: 14,
-  display: "flex",
-  flexWrap: "wrap",
-  gap: 10,
-  color: "var(--lf-text-soft)",
-  fontSize: 13,
-  fontWeight: 800,
-};
-
-const panelStyle: CSSProperties = {
-  background: "#fff",
-  border: "1px solid var(--lf-border)",
-  borderRadius: 8,
-  padding: 16,
-  display: "grid",
-  gap: 12,
-};
-
-const panelHeaderStyle: CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  gap: 12,
-};
-
-const h2Style: CSSProperties = {
-  margin: 0,
-  fontSize: 17,
-};
 
 const countStyle: CSSProperties = {
   borderRadius: 999,
@@ -101,24 +95,24 @@ const countStyle: CSSProperties = {
 const queueCardStyle: CSSProperties = {
   textDecoration: "none",
   color: "var(--lf-text)",
+};
+
+const timelineGridStyle: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
+  gap: 10,
+};
+
+const timelineCardStyle: CSSProperties = {
   border: "1px solid #f1ece8",
   borderRadius: 8,
   padding: 12,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: 12,
+  display: "grid",
+  gap: 5,
 };
 
-const mutedBlockStyle: CSSProperties = {
-  display: "block",
+const timelineDetailStyle: CSSProperties = {
   color: "var(--lf-text-soft)",
   fontSize: 13,
-  fontWeight: 500,
-  marginTop: 3,
-};
-
-const emptyStyle: CSSProperties = {
-  color: "var(--lf-text-soft)",
-  fontSize: 13,
+  lineHeight: 1.4,
 };

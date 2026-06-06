@@ -16,7 +16,6 @@ import { normalizeContactGroupKey, resolveContactGroupKey } from "../../lib/cont
 import { buildContactLinkValidationKey, evaluateContactLinkValidation, flattenSearchableValue } from "../../lib/contacts/contactLinkValidation";
 import { buildContactsWorkspaceHref, buildLinkedContactRecordHref } from "../../lib/contacts/contactRouting";
 import {
-  buildLinkedDocumentLookupKey,
   groupLinkedDocumentSources,
   resolveLinkedPreviewTargets,
   type LinkedDocumentSourceItem,
@@ -31,6 +30,7 @@ import { useViewerAccess } from "../access/ViewerAccessContext";
 import Icon from "../ui/Icon";
 import InfoTip from "../ui/InfoTip";
 import DocumentPreviewDialog, { type DocumentPreviewDialogItem } from "../documents/DocumentPreviewDialog";
+import { type CollaboratorRole, type SectionKey } from "../../lib/access-control/roles";
 
 type ContactRow = {
   id: string;
@@ -78,6 +78,7 @@ export default function ContactsNetworkWorkspace() {
   const [confirmingValidationKey, setConfirmingValidationKey] = useState("");
   const [associationAlerts, setAssociationAlerts] = useState<string[]>([]);
   const [openGroupKey, setOpenGroupKey] = useState<string | null>(null);
+  const [addContactGroupKey, setAddContactGroupKey] = useState<string | null>(null);
   const [documentPreview, setDocumentPreview] = useState<LinkedDocumentPreview | null>(null);
   const [previewTargetsByContextKey, setPreviewTargetsByContextKey] = useState<Map<string, LinkedDocumentSourceItem[]>>(new Map());
   const [openingDocumentKey, setOpeningDocumentKey] = useState("");
@@ -341,19 +342,15 @@ export default function ContactsNetworkWorkspace() {
     };
   }, [contacts, selectedContactId]);
 
-  useEffect(() => {
-    const preferredOpenGroup =
-      selectedGroup
-      || (selectedContactId ? resolveContactGroupKey(contacts.find((item) => item.id === selectedContactId) ?? {}) : "")
-      || GROUPS.find((group) => (groupedContacts.get(group.key)?.length ?? 0) > 0)?.key
-      || GROUPS[0]?.key
-      || null;
-
-    if (!preferredOpenGroup) return;
-    if (selectedGroup || selectedContactId) {
-      setOpenGroupKey(preferredOpenGroup);
-    }
-  }, [contacts, groupedContacts, selectedContactId, selectedGroup]);
+  const preferredOpenGroup =
+    selectedGroup
+    || (selectedContactId ? resolveContactGroupKey(contacts.find((item) => item.id === selectedContactId) ?? {}) : "")
+    || GROUPS.find((group) => (groupedContacts.get(group.key)?.length ?? 0) > 0)?.key
+    || GROUPS[0]?.key
+    || null;
+  const effectiveOpenGroupKey = selectedGroup || selectedContactId
+    ? preferredOpenGroup
+    : openGroupKey ?? preferredOpenGroup;
 
   useEffect(() => {
     if (!documentPreview) return;
@@ -416,6 +413,12 @@ export default function ContactsNetworkWorkspace() {
 
   function toggleGroup(groupKey: string) {
     setOpenGroupKey((current) => (current === groupKey ? null : groupKey));
+  }
+
+  function startAddContact(groupKey = "trusted_contacts") {
+    setAddContactGroupKey(groupKey);
+    setOpenGroupKey(groupKey);
+    router.replace(groupKey ? `/contacts?group=${groupKey}` : "/contacts");
   }
 
   function getPreviewableTargetsForContext(context: ContactRow["linked_context"][number]) {
@@ -500,9 +503,42 @@ export default function ContactsNetworkWorkspace() {
           <Metric label="Linked roles" value={String(completeness.linkedContextCount)} />
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {!viewer.readOnly ? (
+            <button
+              type="button"
+              style={primaryMenuActionStyle}
+              onClick={() => startAddContact(selectedGroup || openGroupKey || "trusted_contacts")}
+              title="Add a contact and choose their wallet access"
+            >
+              <Icon name="person_add" size={16} />
+              Add contact
+            </button>
+          ) : null}
           <Link href="/personal" style={linkPillStyle}>Review personal records</Link>
         </div>
       </section>
+
+      {!viewer.readOnly && addContactGroupKey ? (
+        <section style={addContactPanelStyle} aria-label="Add contact and permissions">
+          <div style={{ display: "grid", gap: 4 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+              <h2 style={{ margin: 0, fontSize: 18 }}>Add contact</h2>
+              <button type="button" style={rowTertiaryActionStyle} onClick={() => setAddContactGroupKey(null)}>
+                <Icon name="close" size={16} />
+                Cancel
+              </button>
+            </div>
+            <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}>
+              The role preset comes from the selected contact group. You can still change the role, tick categories, use My wallet - all, and set view/edit permissions before sending the invite.
+            </p>
+          </div>
+          <ContactInvitationManager
+            mode="full"
+            initialRole={getAddContactPreset(addContactGroupKey).role}
+            initialAllowedSections={getAddContactPreset(addContactGroupKey).sections}
+          />
+        </section>
+      ) : null}
 
       {associationAlerts.length ? (
         <section style={alertPanelStyle}>
@@ -528,7 +564,7 @@ export default function ContactsNetworkWorkspace() {
         <div style={{ display: "grid", gap: 12 }}>
           {GROUPS.map((group) => {
             const rows = groupedContacts.get(group.key) ?? [];
-            const isOpen = openGroupKey === group.key;
+            const isOpen = effectiveOpenGroupKey === group.key;
             const groupSummary = summarizeGroupRows(rows, validationSourceText);
 
             return (
@@ -555,7 +591,15 @@ export default function ContactsNetworkWorkspace() {
                 </button>
 
                 {!isOpen ? null : rows.length === 0 ? (
-                  <div style={{ color: "#64748b", fontSize: 13 }}>No contacts in this group yet.</div>
+                  <div style={emptyGroupStyle}>
+                    <div style={{ color: "#64748b", fontSize: 13 }}>No contacts in this group yet.</div>
+                    {!viewer.readOnly ? (
+                      <button type="button" style={rowSecondaryActionStyle} onClick={() => startAddContact(group.key)}>
+                        <Icon name="person_add" size={16} />
+                        Add {group.label.toLowerCase().replace(/s$/, "")}
+                      </button>
+                    ) : null}
+                  </div>
                 ) : (
                   <div style={{ display: "grid", gap: 6 }}>
                     {rows.map((contact) => {
@@ -882,6 +926,19 @@ function getPrimaryActionIcon(contact: ContactRow) {
   return "edit";
 }
 
+function getAddContactPreset(groupKey: string): { role: CollaboratorRole; sections: SectionKey[] } {
+  if (groupKey === "executors") {
+    return { role: "executor", sections: ["profile", "personal", "financial", "legal", "property", "business", "digital"] };
+  }
+  if (groupKey === "advisors") {
+    return { role: "professional_advisor", sections: ["financial", "legal", "property", "business"] };
+  }
+  if (groupKey === "beneficiaries" || groupKey === "family") {
+    return { role: "friend_or_family", sections: ["profile", "personal", "legal"] };
+  }
+  return { role: "friend_or_family", sections: ["profile", "personal"] };
+}
+
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ display: "grid", gap: 2 }}>
@@ -920,6 +977,42 @@ const alertPanelStyle: CSSProperties = {
   padding: 14,
   display: "grid",
   gap: 10,
+};
+
+const addContactPanelStyle: CSSProperties = {
+  border: "1px solid #bfdbfe",
+  borderRadius: 16,
+  background: "#f8fbff",
+  padding: 14,
+  display: "grid",
+  gap: 12,
+};
+
+const primaryMenuActionStyle: CSSProperties = {
+  border: "1px solid #111827",
+  borderRadius: 999,
+  background: "#111827",
+  color: "#fff",
+  padding: "10px 14px",
+  minHeight: 44,
+  fontSize: 13,
+  fontWeight: 700,
+  cursor: "pointer",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 7,
+};
+
+const emptyGroupStyle: CSSProperties = {
+  border: "1px dashed #cbd5e1",
+  borderRadius: 12,
+  background: "#f8fafc",
+  padding: 12,
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 10,
+  alignItems: "center",
+  flexWrap: "wrap",
 };
 
 const groupHeaderButtonStyle: CSSProperties = {
@@ -1008,40 +1101,19 @@ const moreLinksStyle: CSSProperties = {
 const linkPillStyle: CSSProperties = {
   border: "1px solid #cbd5e1",
   borderRadius: 999,
-  padding: "7px 10px",
+  padding: "10px 14px",
+  minHeight: 44,
   textDecoration: "none",
   color: "#0f172a",
   fontSize: 13,
+  display: "inline-flex",
+  alignItems: "center",
 };
 
 const contactTitleLinkStyle: CSSProperties = {
   fontWeight: 700,
   color: "#0f172a",
   textDecoration: "none",
-};
-
-const rowMetaStyle: CSSProperties = {
-  display: "grid",
-  gap: 4,
-  justifyItems: "start",
-};
-
-const rowMetaItemStyle: CSSProperties = {
-  display: "grid",
-  gap: 2,
-};
-
-const rowMetaLabelStyle: CSSProperties = {
-  fontSize: 11,
-  color: "#64748b",
-  fontWeight: 600,
-  textTransform: "uppercase",
-};
-
-const rowMetaValueStyle: CSSProperties = {
-  fontSize: 13,
-  color: "#0f172a",
-  fontWeight: 600,
 };
 
 const rowActionsStyle: CSSProperties = {

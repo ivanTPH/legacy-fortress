@@ -19,12 +19,13 @@ import { bootstrapAuthenticatedUser } from "../../lib/auth/bootstrap";
 import { waitForActiveUser } from "../../lib/auth/session";
 import { appendDevBankRequestTrace, isDevBankTraceEnabled } from "../../lib/devSmoke";
 import { appendProfileAvatarTrace, maskAvatarUrl } from "../../lib/profile/avatarTrace";
-import { loadProfileIdentityChip } from "../../lib/profile/workspace";
+import { loadProfileIdentityChip, resolveProfileIdentityDisplayName } from "../../lib/profile/workspace";
 import { buildDashboardSearchHref } from "../../lib/records/discovery";
 import { supabase } from "../../lib/supabaseClient";
 import { ViewerAccessProvider } from "../../components/access/ViewerAccessContext";
 import { VaultPreferencesProvider } from "../../components/vault/VaultPreferencesContext";
 import { AccessibilityPreferencesProvider } from "../../components/accessibility/AccessibilityPreferencesContext";
+import WorkspaceSwitcher from "../../components/navigation/WorkspaceSwitcher";
 import { DEMO_EXPERIENCE_LABEL, DEMO_EXPERIENCE_SUBLABEL, isDemoSessionUser } from "../../lib/demo/config";
 import {
   canViewPath,
@@ -46,6 +47,17 @@ import {
   getDefaultAccessibilityPreferences,
   loadAccessibilityPreferences,
 } from "../../lib/accessibilityPreferences";
+import {
+  normalizePlatformRole,
+} from "../../lib/auth/platformRoles";
+import {
+  getTestPersona,
+  isTestPersonaAccessEnabled,
+  TEST_PERSONA_QUERY_PARAM,
+  TEST_PERSONA_STORAGE_KEY,
+} from "../../lib/testPersonas";
+
+const PROFILE_AVATAR_CACHE_KEY = "lf:profile-avatar:last-good";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -55,32 +67,88 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [displayName, setDisplayName] = useState("Secure Account");
   const [telephone, setTelephone] = useState("");
   const [initials, setInitials] = useState("LF");
-  const [avatarUrl, setAvatarUrl] = useState("");
-  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
-  const [avatarRetryKey, setAvatarRetryKey] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState(() => readCachedProfileAvatarUrl());
+  const [confirmedAvatarUrl, setConfirmedAvatarUrl] = useState("");
   const [authState, setAuthState] = useState<"checking" | "ready" | "none">("checking");
   const [isDemoExperience, setIsDemoExperience] = useState(false);
   const [viewerAccess, setViewerAccess] = useState<ViewerAccessState | null>(null);
   const [vaultPreferences, setVaultPreferences] = useState(getDefaultVaultPreferences);
   const [accessibilityPreferences, setAccessibilityPreferences] = useState(getDefaultAccessibilityPreferences);
-  const [shellSearch, setShellSearch] = useState("");
-  const devSmokeMode = useMemo(
-    () =>
-      typeof window !== "undefined"
-      && process.env.NODE_ENV === "development"
-      && new URLSearchParams(window.location.search).get("lf_dev_smoke") === "1",
-    [],
-  );
-  const effectiveAuthState = devSmokeMode ? "ready" : authState;
+  const [shellSearchState, setShellSearchState] = useState(() => ({
+    pathname,
+    value: readShellSearchFromLocation(pathname),
+  }));
+  const [devSmokeMode] = useState(() => {
+    if (typeof window === "undefined" || process.env.NODE_ENV !== "development") return false;
+    return new URLSearchParams(window.location.search).get("lf_dev_smoke") === "1";
+  });
+  const [prototypePreviewMode, setPrototypePreviewMode] = useState(false);
+  const effectiveAuthState = devSmokeMode || prototypePreviewMode ? "ready" : authState;
   const effectiveEmail = devSmokeMode ? "smoke-user@legacy-fortress.local" : email;
   const effectiveDisplayName = devSmokeMode ? "Smoke User" : displayName;
   const effectiveTelephone = devSmokeMode ? "0207 000 0000" : telephone;
   const effectiveInitials = devSmokeMode ? "SU" : initials;
   const effectiveAvatarUrl = devSmokeMode ? "" : avatarUrl;
-  const renderedAvatarUrl = effectiveAvatarUrl && !avatarLoadFailed ? effectiveAvatarUrl : "";
+  const renderedAvatarUrl = !devSmokeMode && effectiveAvatarUrl && confirmedAvatarUrl === effectiveAvatarUrl ? confirmedAvatarUrl : "";
+  const shellSearch = shellSearchState.pathname === pathname ? shellSearchState.value : readShellSearchFromLocation(pathname);
+  const setFreshAvatarUrl = useCallback((value: string) => {
+    const next = String(value ?? "").trim();
+    if (!next) {
+      appendProfileAvatarTrace("[sidebar-avatar:set] ignored_empty_value=yes");
+      return;
+    }
+    cacheProfileAvatarUrl(next);
+    setAvatarUrl(next);
+  }, []);
 
   const [menuState, dispatchMenu] = useReducer(menuReducer, initialMenuState);
   const navWrapRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!effectiveAvatarUrl) {
+      return;
+    }
+
+    let cancelled = false;
+    const image = new Image();
+    image.onload = () => {
+      if (cancelled) return;
+      setConfirmedAvatarUrl(effectiveAvatarUrl);
+      appendProfileAvatarTrace("[sidebar-avatar:preload] result=loaded");
+    };
+    image.onerror = () => {
+      if (cancelled) return;
+      setConfirmedAvatarUrl("");
+      appendProfileAvatarTrace("[sidebar-avatar:preload] result=failed");
+    };
+    image.src = effectiveAvatarUrl;
+
+    return () => {
+      cancelled = true;
+    };
+  }, [effectiveAvatarUrl]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !isTestPersonaAccessEnabled()) return;
+
+    function refreshPrototypeContext() {
+      const url = new URL(window.location.href);
+      const queryRole = normalizePlatformRole(url.searchParams.get("role"));
+      const adminFlag = url.searchParams.get("admin") === "true";
+      const prototypeFlag = url.searchParams.get("prototype") === "true";
+      const persona = getTestPersona(url.searchParams.get(TEST_PERSONA_QUERY_PARAM))
+        ?? getTestPersona(window.localStorage.getItem(TEST_PERSONA_STORAGE_KEY));
+      setPrototypePreviewMode(Boolean(persona || (queryRole && adminFlag && prototypeFlag)));
+    }
+
+    refreshPrototypeContext();
+    window.addEventListener("storage", refreshPrototypeContext);
+    window.addEventListener("lf-test-persona-change", refreshPrototypeContext);
+    return () => {
+      window.removeEventListener("storage", refreshPrototypeContext);
+      window.removeEventListener("lf-test-persona-change", refreshPrototypeContext);
+    };
+  }, []);
 
   const baseTopLevelItems = mainNavigation.filter((item) => item.isEnabled !== false);
   const baseAccountItems = accountNavigation.filter((item) => item.isEnabled !== false);
@@ -260,7 +328,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           appMetadata: user.app_metadata,
         }),
       );
-      await hydrateUserChip(userId, nextEmail, mounted, setDisplayName, setTelephone, setInitials, setAvatarUrl);
+      await hydrateUserChip(userId, nextEmail, mounted, setDisplayName, setTelephone, setInitials, setFreshAvatarUrl);
       if (!mounted) return;
       try {
         const nextViewer = await loadViewerAccessState(supabase, userId, {
@@ -354,16 +422,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       mounted = false;
       sub.subscription.unsubscribe();
     };
-  }, [devSmokeMode, router]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const nextValue =
-      pathname === "/dashboard"
-        ? new URLSearchParams(window.location.search).get("search") ?? ""
-        : "";
-    setShellSearch(nextValue);
-  }, [pathname]);
+  }, [devSmokeMode, router, setFreshAvatarUrl]);
 
   useEffect(() => {
     if (effectiveAuthState === "none" && !devSmokeMode) {
@@ -374,7 +433,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
     if (devSmokeMode) {
-      setVaultPreferences(getDefaultVaultPreferences());
       return () => {
         mounted = false;
       };
@@ -408,7 +466,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
     if (devSmokeMode) {
-      setAccessibilityPreferences(getDefaultAccessibilityPreferences());
       return () => {
         mounted = false;
       };
@@ -453,7 +510,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       if (!user) return;
       const nextEmail = user.email ?? "";
       setEmail(nextEmail);
-      await hydrateUserChip(user.id, nextEmail, true, setDisplayName, setTelephone, setInitials, setAvatarUrl);
+      await hydrateUserChip(user.id, nextEmail, true, setDisplayName, setTelephone, setInitials, setFreshAvatarUrl);
     }
 
     const onProfileUpdated = (event: Event) => {
@@ -463,7 +520,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         setInitials(makeInitials(detail.displayName));
       }
       if (typeof detail?.avatarUrl === "string") {
-        setAvatarUrl(detail.avatarUrl);
+        setFreshAvatarUrl(detail.avatarUrl);
       }
       void refreshUserChip();
     };
@@ -472,12 +529,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => {
       window.removeEventListener("lf-profile-updated", onProfileUpdated);
     };
-  }, [devSmokeMode]);
-
-  useEffect(() => {
-    setAvatarLoadFailed(false);
-    setAvatarRetryKey("");
-  }, [effectiveAvatarUrl]);
+  }, [devSmokeMode, setFreshAvatarUrl]);
 
   useEffect(() => {
     appendProfileAvatarTrace(
@@ -690,6 +742,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       data-lf-text-size={accessibilityPreferences.textSize}
       data-lf-contrast={accessibilityPreferences.contrastMode}
       data-lf-spacing={accessibilityPreferences.spacingMode}
+      data-lf-contextual-help={accessibilityPreferences.contextualHelpEnabled ? "true" : "false"}
       data-lf-help-wizard={accessibilityPreferences.helpWizardEnabled ? "true" : "false"}
       data-lf-read-aloud={accessibilityPreferences.readAloudEnabled ? "true" : "false"}
     >
@@ -732,7 +785,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               placeholder="Search records"
               aria-label="Search records"
               value={shellSearch}
-              onChange={(event) => setShellSearch(event.target.value)}
+              onChange={(event) => setShellSearchState({ pathname, value: event.target.value })}
             />
           </form>
 
@@ -839,6 +892,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="lf-topbar-actions">
+            <WorkspaceSwitcher
+              currentPathname={pathname}
+              compact
+              governanceContext="Personal Vault · role-aware workspace switch"
+            />
             <div
               className="lf-topbar-security"
               aria-label={
@@ -855,25 +913,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <Icon name={resolvedViewerAccess.mode === "linked" ? "visibility_lock" : "verified_user"} size={16} />
             </div>
             <Link href="/profile" className="lf-topbar-user" aria-label="Edit account details">
-              {renderedAvatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={renderedAvatarUrl}
-                  alt={`${effectiveDisplayName} picture`}
-                  className="lf-topbar-user-avatar-img"
-                  onError={() => {
-                    appendProfileAvatarTrace(`[sidebar-image:error] url=${maskAvatarUrl(renderedAvatarUrl)}`);
-                    if (avatarRetryKey !== renderedAvatarUrl) {
-                      setAvatarRetryKey(renderedAvatarUrl);
-                      void refreshSidebarAvatar(setDisplayName, setTelephone, setInitials, setAvatarUrl, setAvatarLoadFailed, effectiveEmail);
-                      return;
-                    }
-                    setAvatarLoadFailed(true);
-                  }}
-                />
-              ) : (
-                <div className="lf-topbar-user-avatar">{effectiveInitials}</div>
-              )}
+              <span
+                className="lf-topbar-user-avatar"
+                aria-label={`${effectiveDisplayName} picture`}
+                role="img"
+                data-avatar-ready={renderedAvatarUrl ? "true" : "false"}
+                style={renderedAvatarUrl ? { backgroundImage: `url("${cssEscapeUrl(renderedAvatarUrl)}")` } : undefined}
+              >
+                <span className="lf-topbar-user-avatar-fallback">{effectiveInitials || "LF"}</span>
+              </span>
               <div className="lf-topbar-user-copy">
                 <div className="lf-topbar-user-name">{effectiveDisplayName}</div>
                 <div className="lf-topbar-user-meta">{effectiveTelephone || "Add a phone number"}</div>
@@ -898,6 +946,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   <div className="lf-brand-subtitle">Your secure legacy vault</div>
                 </div>
               </div>
+
+              <WorkspaceSwitcher
+                currentPathname={pathname}
+                compact
+                alwaysShow
+                governanceContext="Mobile navigation · role-aware workspace switch"
+              />
 
               <MobileNavTree
                 items={topLevelItems}
@@ -928,25 +983,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
               <div className="lf-sidebar-foot">
                 <div className="lf-user-card">
-                  {renderedAvatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={renderedAvatarUrl}
-                      alt={`${effectiveDisplayName} picture`}
-                      style={{ width: 36, height: 36, borderRadius: "999px", objectFit: "cover" }}
-                      onError={() => {
-                        appendProfileAvatarTrace(`[sidebar-image:error] url=${maskAvatarUrl(renderedAvatarUrl)}`);
-                        if (avatarRetryKey !== renderedAvatarUrl) {
-                          setAvatarRetryKey(renderedAvatarUrl);
-                          void refreshSidebarAvatar(setDisplayName, setTelephone, setInitials, setAvatarUrl, setAvatarLoadFailed, effectiveEmail);
-                          return;
-                        }
-                        setAvatarLoadFailed(true);
-                      }}
-                    />
-                  ) : (
-                    <div className="lf-user-avatar">{effectiveInitials}</div>
-                  )}
+                  <span
+                    className="lf-user-avatar"
+                    aria-label={`${effectiveDisplayName} picture`}
+                    role="img"
+                    data-avatar-ready={renderedAvatarUrl ? "true" : "false"}
+                    style={renderedAvatarUrl ? { backgroundImage: `url("${cssEscapeUrl(renderedAvatarUrl)}")` } : undefined}
+                  >
+                    <span className="lf-topbar-user-avatar-fallback">{effectiveInitials || "LF"}</span>
+                  </span>
                   <div>
                     <div className="lf-user-name">{effectiveDisplayName}</div>
                     <div className="lf-user-email">{effectiveEmail || "Signed in"}</div>
@@ -1044,7 +1089,15 @@ async function hydrateUserChip(
   setInitials: (value: string) => void,
   setAvatarUrl: (value: string) => void,
 ) {
-  const profile = await loadProfileIdentityChip(supabase, { userId, email });
+  const serverProfile = await loadServerProfileIdentityChip(email);
+  const fallbackProfile = !serverProfile?.avatarUrl
+    ? await loadProfileIdentityChip(supabase, { userId, email }).catch(() => null)
+    : null;
+  const profile = {
+    displayName: serverProfile?.displayName || fallbackProfile?.displayName || resolveProfileIdentityDisplayName("", email),
+    avatarUrl: serverProfile?.avatarUrl || fallbackProfile?.avatarUrl || "",
+    telephone: serverProfile?.telephone || fallbackProfile?.telephone || "",
+  };
   if (!mounted) return;
   appendProfileAvatarTrace(
     `[preview-url] source=sidebar resolved=${profile.avatarUrl ? "yes" : "no"} reason=${profile.avatarUrl ? "signed-url-created" : "signed-url-missing"} url=${maskAvatarUrl(profile.avatarUrl)}`,
@@ -1055,24 +1108,106 @@ async function hydrateUserChip(
   setDisplayName(profile.displayName);
   setTelephone(profile.telephone);
   setInitials(makeInitials(profile.displayName));
-  setAvatarUrl(profile.avatarUrl);
-}
-
-async function refreshSidebarAvatar(
-  setDisplayName: (value: string) => void,
-  setTelephone: (value: string) => void,
-  setInitials: (value: string) => void,
-  setAvatarUrl: (value: string) => void,
-  setAvatarLoadFailed: (value: boolean) => void,
-  email: string,
-) {
-  const user = await waitForActiveUser(supabase, { attempts: 2, delayMs: 80 });
-  if (!user) {
-    setAvatarLoadFailed(true);
+  const stableAvatarUrl = await loadServerProfileAvatarDataUrl();
+  if (stableAvatarUrl) {
+    appendProfileAvatarTrace("[sidebar-hydrate] stable_avatar_url=resolved");
+    setAvatarUrl(stableAvatarUrl);
     return;
   }
-  await hydrateUserChip(user.id, email || (user.email ?? ""), true, setDisplayName, setTelephone, setInitials, setAvatarUrl);
-  setAvatarLoadFailed(false);
+
+  if (profile.avatarUrl) {
+    appendProfileAvatarTrace("[sidebar-hydrate] signed_avatar_url=ignored_for_header_stability");
+  }
+
+  appendProfileAvatarTrace("[sidebar-hydrate] avatar_preserved=empty_lookup");
+}
+
+function readShellSearchFromLocation(pathname: string) {
+  if (typeof window === "undefined" || normalizePath(pathname) !== "/dashboard") return "";
+  return new URLSearchParams(window.location.search).get("search") ?? "";
+}
+
+function readCachedProfileAvatarUrl() {
+  if (typeof window === "undefined") return "";
+  try {
+    return window.sessionStorage.getItem(PROFILE_AVATAR_CACHE_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function cacheProfileAvatarUrl(value: string) {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(PROFILE_AVATAR_CACHE_KEY, value);
+  } catch {
+    // Session storage can reject large data URLs. The in-memory state still holds the avatar.
+  }
+}
+
+function cssEscapeUrl(value: string) {
+  return value.replace(/["\\\n\r\f]/g, "");
+}
+
+async function loadServerProfileIdentityChip(email: string) {
+  try {
+    const session = await supabase.auth.getSession();
+    const token = session.data.session?.access_token ?? "";
+    if (!token) return null;
+
+    const response = await fetch("/api/profile/identity-chip", {
+      cache: "no-store",
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json().catch(() => null)) as {
+      ok?: boolean;
+      displayName?: string;
+      avatarUrl?: string;
+      telephone?: string;
+    } | null;
+    if (!payload?.ok) return null;
+
+    return {
+      displayName: payload.displayName?.trim() || resolveProfileIdentityDisplayName("", email),
+      avatarUrl: payload.avatarUrl ?? "",
+      telephone: payload.telephone ?? "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function loadServerProfileAvatarDataUrl() {
+  try {
+    const session = await supabase.auth.getSession();
+    const token = session.data.session?.access_token ?? "";
+    if (!token) return "";
+
+    const response = await fetch("/api/profile/avatar", {
+      cache: "no-store",
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) return "";
+    const blob = await response.blob();
+    if (!blob.size) return "";
+    return await blobToDataUrl(blob);
+  } catch {
+    return "";
+  }
+}
+
+function blobToDataUrl(blob: Blob) {
+  return new Promise<string>((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+    reader.onerror = () => resolve("");
+    reader.readAsDataURL(blob);
+  });
 }
 
 function toFriendlyPathLabel(segment: string) {

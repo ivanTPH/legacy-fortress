@@ -1,9 +1,10 @@
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
-import { createSupabaseAdminClient, getSupabaseAdminConfigIssue } from "../supabaseAdmin";
+import { createSupabaseAdminClient, getSupabaseAdminConfigIssue } from "../supabaseAdmin.ts";
+import { MASTER_ADMIN_EMAIL, normalizeAdminEmail } from "../auth/adminRoles.ts";
+
+export { MASTER_ADMIN_EMAIL, normalizeAdminEmail };
 
 type AnySupabaseClient = SupabaseClient;
-
-export const MASTER_ADMIN_EMAIL = "ivanyardley@me.com";
 
 export type AdminUserRow = {
   id: string;
@@ -25,10 +26,6 @@ export type AdminAccessState = {
 };
 
 const ADMIN_SELECT = "id,email_normalized,user_id,display_name,status,is_master,granted_by_user_id,created_at,updated_at";
-
-export function normalizeAdminEmail(email: string | null | undefined) {
-  return String(email ?? "").trim().toLowerCase();
-}
 
 export function isMasterAdminEmail(email: string | null | undefined) {
   return normalizeAdminEmail(email) === MASTER_ADMIN_EMAIL;
@@ -138,7 +135,7 @@ export async function requireAdminAccess(request: Request): Promise<
   }
 
   const emailNormalized = normalizeAdminEmail(requestUser.user.email);
-  let rowRes = await adminClient
+  const rowRes = await adminClient
     .from("admin_users")
     .select(ADMIN_SELECT)
     .eq("email_normalized", emailNormalized)
@@ -189,4 +186,3 @@ export async function requireAdminAccess(request: Request): Promise<
     adminClient,
   };
 }
-

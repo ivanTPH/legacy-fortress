@@ -143,7 +143,10 @@ export default function AdminOpsWorkspace() {
   }, [authFetch, router]);
 
   useEffect(() => {
-    void loadAll();
+    const timer = window.setTimeout(() => {
+      void loadAll();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [loadAll]);
 
   async function runLookup() {

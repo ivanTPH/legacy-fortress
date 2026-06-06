@@ -1,144 +1,76 @@
 import Link from "next/link";
 import AdminPrototypeShell from "@/components/admin/prototype/AdminPrototypeShell";
 import AdminStatusBadge from "@/components/admin/prototype/AdminStatusBadge";
-import { adminCases, adminUsers, auditEvents } from "@/components/admin/prototype/mockData";
+import { getAdminOverviewData } from "@/components/admin/prototype/prototypeDataService";
+import {
+  PlatformActionRow,
+  PlatformSection,
+  PlatformStatCard,
+  platformCtaStyle,
+  platformKpiGridStyle,
+  platformSplitGridStyle,
+} from "@/components/ui/PlatformPrimitives";
 import type { CSSProperties } from "react";
 
 export default function InternalAdminPage() {
-  const awaitingReview = adminCases.filter((item) => item.status === "Pending" || item.status === "Under Review").length;
-  const unlockPending = adminCases.filter((item) => item.status === "Access Unlock Pending").length;
+  const data = getAdminOverviewData();
 
   return (
     <AdminPrototypeShell
       title="Admin overview"
       description="Static operations prototype for case management, verification review, access control, and audit visibility."
     >
-      <section style={metricsGridStyle}>
-        <MetricCard label="Open cases" value={String(adminCases.filter((item) => item.status !== "Closed").length)} />
-        <MetricCard label="Awaiting review" value={String(awaitingReview)} />
-        <MetricCard label="Unlock pending" value={String(unlockPending)} />
-        <MetricCard label="Users in review" value={String(adminUsers.filter((item) => item.vaultStatus !== "Active").length)} />
+      <section style={platformKpiGridStyle} aria-label="Probate operations summary">
+        <PlatformStatCard icon="folder_managed" label="Open cases" value={String(data.openCases)} detail="Not closed" />
+        <PlatformStatCard icon="verified_user" label="Awaiting review" value={String(data.awaitingReview)} detail="Pending or under review" tone={data.awaitingReview ? "warning" : "success"} />
+        <PlatformStatCard icon="lock_open" label="Unlock pending" value={String(data.unlockPending)} detail="Approved access queue" tone={data.unlockPending ? "warning" : "default"} />
+        <PlatformStatCard icon="group" label="Users in review" value={String(data.usersInReview)} detail="Non-active vault status" />
       </section>
 
-      <section style={twoColumnStyle}>
-        <section style={panelStyle}>
-          <div style={panelHeaderStyle}>
-            <h2 style={h2Style}>Priority cases</h2>
-            <Link href="/internal/admin/prototype/cases" style={textLinkStyle}>View all</Link>
-          </div>
+      <section style={platformSplitGridStyle}>
+        <PlatformSection
+          title="Priority cases"
+          detail="Cases that need operational attention first. Static prototype data only."
+          icon="assignment_late"
+          emphasis="primary"
+          action={<Link href="/internal/admin/prototype/cases" style={platformCtaStyle}>View all cases</Link>}
+        >
           <div style={{ display: "grid", gap: 8 }}>
-            {adminCases.slice(0, 3).map((item) => (
+            {data.priorityCases.map((item) => (
               <Link key={item.id} href={`/internal/admin/prototype/cases/${item.id}`} style={rowLinkStyle}>
-                <span>
-                  <strong>{item.userName}</strong>
-                  <span style={mutedBlockStyle}>{item.caseType}</span>
-                </span>
-                <AdminStatusBadge status={item.status} />
+                <PlatformActionRow
+                  title={item.userName}
+                  detail={item.caseType}
+                  status={<AdminStatusBadge status={item.status} />}
+                />
               </Link>
             ))}
           </div>
-        </section>
+        </PlatformSection>
 
-        <section style={panelStyle}>
-          <div style={panelHeaderStyle}>
-            <h2 style={h2Style}>Recent audit events</h2>
-            <Link href="/internal/admin/prototype/audit" style={textLinkStyle}>Open audit</Link>
-          </div>
+        <PlatformSection
+          title="Recent audit events"
+          detail="A compact view of operational activity. No live events are written from the prototype."
+          icon="history"
+          action={<Link href="/internal/admin/prototype/audit" style={platformCtaStyle}>Open audit</Link>}
+        >
           <div style={{ display: "grid", gap: 8 }}>
-            {auditEvents.slice(0, 3).map((item) => (
-              <div key={item.id} style={auditMiniRowStyle}>
-                <span>
-                  <strong>{item.action}</strong>
-                  <span style={mutedBlockStyle}>{item.actor} · {item.timestamp}</span>
-                </span>
-                <AdminStatusBadge status={item.result} />
-              </div>
+            {data.recentAuditEvents.map((item) => (
+              <PlatformActionRow
+                key={item.id}
+                title={item.action}
+                detail={`${item.actor} · ${item.timestamp}`}
+                status={<AdminStatusBadge status={item.result} />}
+              />
             ))}
           </div>
-        </section>
+        </PlatformSection>
       </section>
     </AdminPrototypeShell>
   );
 }
 
-function MetricCard({ label, value }: { label: string; value: string }) {
-  return (
-    <section style={metricCardStyle}>
-      <div style={{ color: "var(--lf-text-soft)", fontSize: 12, fontWeight: 800, textTransform: "uppercase" }}>{label}</div>
-      <div style={{ color: "var(--lf-text)", fontSize: 28, fontWeight: 800 }}>{value}</div>
-    </section>
-  );
-}
-
-const metricsGridStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-  gap: 12,
-};
-
-const metricCardStyle: CSSProperties = {
-  background: "#fff",
-  border: "1px solid var(--lf-border)",
-  borderRadius: 8,
-  padding: 16,
-  display: "grid",
-  gap: 6,
-};
-
-const twoColumnStyle: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-  gap: 14,
-};
-
-const panelStyle: CSSProperties = {
-  background: "#fff",
-  border: "1px solid var(--lf-border)",
-  borderRadius: 8,
-  padding: 16,
-  display: "grid",
-  gap: 12,
-};
-
-const panelHeaderStyle: CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  gap: 12,
-  alignItems: "center",
-};
-
-const h2Style: CSSProperties = {
-  margin: 0,
-  fontSize: 17,
-};
-
 const rowLinkStyle: CSSProperties = {
   textDecoration: "none",
   color: "var(--lf-text)",
-  border: "1px solid #f1ece8",
-  borderRadius: 8,
-  padding: 12,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: 12,
-};
-
-const auditMiniRowStyle: CSSProperties = {
-  ...rowLinkStyle,
-};
-
-const mutedBlockStyle: CSSProperties = {
-  display: "block",
-  marginTop: 3,
-  color: "var(--lf-text-soft)",
-  fontSize: 13,
-  fontWeight: 500,
-};
-
-const textLinkStyle: CSSProperties = {
-  color: "var(--lf-text)",
-  fontSize: 13,
-  fontWeight: 800,
-  textDecoration: "none",
 };

@@ -1,24 +1,40 @@
 import AdminPrototypeShell from "@/components/admin/prototype/AdminPrototypeShell";
 import AdminStatusBadge from "@/components/admin/prototype/AdminStatusBadge";
+import { PlatformNotice } from "@/components/ui/PlatformPrimitives";
 import type { CSSProperties, ReactNode } from "react";
 
 const accessRows = [
-  { name: "Thomas Ellis", role: "Executor", status: "Pending" as const, scope: "Verification review" },
-  { name: "Helen Haines", role: "Trusted contact", status: "Active" as const, scope: "Read-only shared sections" },
-  { name: "Anika Shah", role: "Executor", status: "Access Unlock Pending" as const, scope: "Approved post-verification access" },
-  { name: "Mark Bennett", role: "Advisor", status: "Rejected" as const, scope: "Revoked legal access" },
+  { name: "Thomas Ellis", role: "Executor", status: "Pending" as const, scope: "Death certificate submitted; identity and relationship still under review", decision: "Validate evidence" },
+  { name: "Helen Haines", role: "Trusted contact", status: "Active" as const, scope: "Owner-invited read-only sections; managed by account owner", decision: "Owner managed" },
+  { name: "Anika Shah", role: "Executor", status: "Access Unlock Pending" as const, scope: "Certificate verified; unlock requires final confirmation and audit event", decision: "Confirm unlock" },
+  { name: "Mark Bennett", role: "Advisor", status: "Rejected" as const, scope: "Legal/probate access rejected; no vault edit rights granted", decision: "Rejected" },
 ];
 
 export default function AdminAccessPage() {
   return (
     <AdminPrototypeShell
       title="Access control"
-      description="Static control panel showing who can access a vault, their role, and pending administrative decisions."
+      description="Static control panel separating owner-invited vault access from death-certificate probate unlock decisions."
     >
+      <section style={flowGridStyle} aria-label="Access governance flow">
+        <section style={flowCardStyle}>
+          <strong>1. Owner invitation</strong>
+          <span>The individual account owner invites executors, trusted contacts, family viewers, or sub-admins into their own vault.</span>
+        </section>
+        <section style={flowCardStyle}>
+          <strong>2. Death certificate submission</strong>
+          <span>Probate access starts only when evidence is submitted and attached to a review case.</span>
+        </section>
+        <section style={flowCardStyle}>
+          <strong>3. Validation and unlock</strong>
+          <span>Admins validate evidence, confirm relationship, then grant limited read-only executor access with audit capture.</span>
+        </section>
+      </section>
+
       <section style={panelStyle}>
-        <div style={noticeStyle}>
-          Actions are disabled in this prototype. Future access changes should require role checks, confirmation, reason capture, and audit logging.
-        </div>
+        <PlatformNotice icon="admin_panel_settings">
+          Admins can review and validate access requests, but they cannot directly edit an individual vault. Unlock decisions require certificate validation, confirmation, reason capture, and audit logging.
+        </PlatformNotice>
         <table style={tableStyle}>
           <thead>
             <tr>
@@ -26,7 +42,7 @@ export default function AdminAccessPage() {
               <Th>Role</Th>
               <Th>Status</Th>
               <Th>Scope</Th>
-              <Th>Action</Th>
+              <Th>Decision path</Th>
             </tr>
           </thead>
           <tbody>
@@ -36,7 +52,7 @@ export default function AdminAccessPage() {
                 <Td>{row.role}</Td>
                 <Td><AdminStatusBadge status={row.status} /></Td>
                 <Td>{row.scope}</Td>
-                <Td><button type="button" disabled style={disabledButtonStyle}>Review</button></Td>
+                <Td><button type="button" disabled style={disabledButtonStyle}>{row.decision}</button></Td>
               </tr>
             ))}
           </tbody>
@@ -61,12 +77,22 @@ const panelStyle: CSSProperties = {
   overflow: "hidden",
 };
 
-const noticeStyle: CSSProperties = {
+const flowGridStyle: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+  gap: 10,
+};
+
+const flowCardStyle: CSSProperties = {
+  background: "#fff",
+  border: "1px solid var(--lf-border)",
+  borderRadius: 8,
   padding: 12,
-  borderBottom: "1px solid var(--lf-border)",
-  color: "var(--lf-text-soft)",
-  background: "var(--lf-surface-muted)",
+  display: "grid",
+  gap: 6,
+  color: "var(--lf-text)",
   fontSize: 13,
+  lineHeight: 1.45,
 };
 
 const tableStyle: CSSProperties = {

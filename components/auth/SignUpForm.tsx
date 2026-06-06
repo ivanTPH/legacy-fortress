@@ -2,10 +2,12 @@
 
 import { useMemo, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import Icon from "../ui/Icon";
-import { bootstrapAuthenticatedUser } from "../../lib/auth/bootstrap";
-import { supabase } from "../../lib/supabaseClient";
-import OAuthButtons from "./OAuthButtons";
+
+const OAuthButtons = dynamic(() => import("./OAuthButtons"), {
+  loading: () => <div className="lf-muted-note">Loading sign-in providers...</div>,
+});
 
 export default function SignUpForm({
   nextPath = "/onboarding",
@@ -38,6 +40,10 @@ export default function SignUpForm({
     setStatus("Creating account...");
 
     try {
+      const [{ supabase }, { bootstrapAuthenticatedUser }] = await Promise.all([
+        import("../../lib/supabaseClient"),
+        import("../../lib/auth/bootstrap"),
+      ]);
       const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}` : undefined;
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -143,6 +149,8 @@ const passwordToggleStyle: CSSProperties = {
   right: 10,
   top: "50%",
   transform: "translateY(-50%)",
+  width: 40,
+  height: 40,
   border: "none",
   background: "transparent",
   color: "#475569",

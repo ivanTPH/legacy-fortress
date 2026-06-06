@@ -1,10 +1,10 @@
 import { Suspense } from "react";
-import PublicAuthEntry from "../components/auth/PublicAuthEntry";
+import PublicHomeEntry from "../components/auth/PublicHomeEntry";
 
 export default function LandingPage() {
   return (
     <Suspense fallback={null}>
-      <PublicAuthEntry initialMode="sign-in" />
+      <PublicHomeEntry />
     </Suspense>
   );
 }

@@ -1,3 +1,6 @@
+import { type PlatformRole } from "./auth/platformRoles.ts";
+import { getAvailableWorkspaces } from "./workspaces.ts";
+
 export type TestPersonaId =
   | "free-subscriber"
   | "paid-subscriber"
@@ -20,6 +23,7 @@ export type TestPersona = {
   restrictedAreas: string[];
   dashboardState: string[];
   previewHref: string;
+  roles: PlatformRole[];
 };
 
 export const TEST_PERSONA_STORAGE_KEY = "lf:test-persona";
@@ -41,6 +45,7 @@ export const TEST_PERSONAS: TestPersona[] = [
     restrictedAreas: ["Premium invite limits", "Enterprise dashboards", "Probate operations"],
     dashboardState: ["Upgrade prompts visible", "Plan-limited actions route to billing", "Consumer navigation only"],
     previewHref: "/dashboard?testPersona=free-subscriber",
+    roles: ["consumer_user"],
   },
   {
     id: "paid-subscriber",
@@ -52,6 +57,7 @@ export const TEST_PERSONAS: TestPersona[] = [
     restrictedAreas: ["Enterprise dashboards", "Probate operations"],
     dashboardState: ["Premium prompts reduced", "Invite limits shown as available", "Consumer navigation only"],
     previewHref: "/dashboard?testPersona=paid-subscriber",
+    roles: ["consumer_user"],
   },
   {
     id: "executor",
@@ -63,6 +69,7 @@ export const TEST_PERSONAS: TestPersona[] = [
     restrictedAreas: ["Owner settings", "Billing", "Admin and enterprise dashboards"],
     dashboardState: ["Read-only language", "No owner-only actions", "Access status clearly labelled"],
     previewHref: "/dashboard?testPersona=executor",
+    roles: ["executor"],
   },
   {
     id: "adviser",
@@ -74,6 +81,7 @@ export const TEST_PERSONAS: TestPersona[] = [
     restrictedAreas: ["Unconsented client insights", "Owner settings", "Probate operations"],
     dashboardState: ["Consent restrictions visible", "No sensitive values exposed", "Adviser actions clearly limited"],
     previewHref: "/dashboard?testPersona=adviser",
+    roles: ["adviser"],
   },
   {
     id: "partner-organisation-user",
@@ -84,7 +92,8 @@ export const TEST_PERSONAS: TestPersona[] = [
     capabilities: ["Enterprise dashboard", "Organisation portfolio summaries", "Consent-restricted reporting"],
     restrictedAreas: ["Probate operations", "Unrestricted exports", "Campaign sending"],
     dashboardState: ["Enterprise prototype routes available", "Campaign actions disabled", "Client values shown as bands"],
-    previewHref: "/internal/admin/prototype/enterprise?role=enterprise_admin",
+    previewHref: buildPrototypePreviewHref("/internal/admin/prototype/enterprise", "enterprise_admin"),
+    roles: ["enterprise_admin"],
   },
   {
     id: "commercial-admin",
@@ -95,7 +104,8 @@ export const TEST_PERSONAS: TestPersona[] = [
     capabilities: ["Enterprise dashboard", "Licences", "Reports", "Campaign shell"],
     restrictedAreas: ["Probate case operations unless separately granted", "Live payment actions", "Client exports"],
     dashboardState: ["Licensing navigation visible", "Static enterprise mock data", "Disabled campaign and export actions"],
-    previewHref: "/internal/admin/prototype/enterprise?role=licensing_admin",
+    previewHref: buildPrototypePreviewHref("/internal/admin/prototype/enterprise", "licensing_admin"),
+    roles: ["licensing_admin"],
   },
   {
     id: "probate-admin",
@@ -106,7 +116,8 @@ export const TEST_PERSONAS: TestPersona[] = [
     capabilities: ["Cases", "Verifications", "Users", "Access", "Audit"],
     restrictedAreas: ["Enterprise dashboard", "Licences", "Reports", "Campaigns"],
     dashboardState: ["Probate navigation visible", "Enterprise routes show restricted state", "No real operations enabled"],
-    previewHref: "/internal/admin/prototype/cases?role=probate_admin",
+    previewHref: buildPrototypePreviewHref("/internal/admin/prototype/cases", "probate_admin"),
+    roles: ["probate_admin"],
   },
   {
     id: "super-admin",
@@ -117,9 +128,19 @@ export const TEST_PERSONAS: TestPersona[] = [
     capabilities: ["Probate operations", "Enterprise dashboard", "Licences", "Reports", "Campaign shell"],
     restrictedAreas: ["Real backend actions", "Live exports", "Production auth bypasses"],
     dashboardState: ["Both prototype navigation groups visible", "Access gates still labelled", "Static mock data only"],
-    previewHref: "/internal/admin/prototype?role=super_admin",
+    previewHref: buildPrototypePreviewHref("/internal/admin/prototype/enterprise", "super_admin"),
+    roles: ["super_admin"],
   },
 ];
+
+export function buildPrototypePreviewHref(pathname: string, role: string) {
+  const params = new URLSearchParams({
+    role,
+    admin: "true",
+    prototype: "true",
+  });
+  return `${pathname}?${params.toString()}`;
+}
 
 export function getTestPersona(id: string | null | undefined) {
   if (!id) return null;
@@ -143,4 +164,22 @@ export function getAdminPrototypeRoleForTestPersona(id: string | null | undefine
     default:
       return null;
   }
+}
+
+export type PrototypeDashboardLink = {
+  id: "consumer" | "executor" | "enterprise_admin" | "probate_admin" | "super_admin";
+  label: string;
+  href: string;
+  enabled: boolean;
+  requiredRole: string;
+};
+
+export function getPrototypeDashboardLinks(roles: readonly PlatformRole[]): PrototypeDashboardLink[] {
+  return getAvailableWorkspaces(roles, { prototype: true, includeDisabled: true }).map((workspace) => ({
+    id: workspace.id === "application" ? "consumer" : workspace.id,
+    label: workspace.id === "application" ? "Consumer dashboard" : workspace.label,
+    href: workspace.href,
+    enabled: workspace.enabled,
+    requiredRole: workspace.requiredRole,
+  }));
 }

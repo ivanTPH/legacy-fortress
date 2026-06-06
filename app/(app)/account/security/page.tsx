@@ -12,6 +12,7 @@ import {
   primaryBtn,
 } from "../../components/settings/SettingsPrimitives";
 import { waitForActiveUser } from "../../../../lib/auth/session";
+import { getBrowserAuthRedirect } from "../../../../lib/auth/redirects";
 import { supabase } from "../../../../lib/supabaseClient";
 import { normalizePhone } from "../../../../lib/validation/profile";
 
@@ -134,7 +135,7 @@ export default function SecurityPage() {
       return;
     }
 
-    const redirectTo = "https://legacy-fortress-web.vercel.app/reset-password";
+    const redirectTo = getBrowserAuthRedirect("/reset-password");
     const { error } = await supabase.auth.resetPasswordForEmail(user.email, { redirectTo });
     setStatus(error ? `❌ Password reset failed: ${error.message}` : "✅ Password reset email sent.");
   };
