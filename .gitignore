@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+/test-results/
 
 # next.js
 /.next/
@@ -23,6 +24,15 @@
 # misc
 .DS_Store
 *.pem
+/.codex-*
+/0.115.0
+/Fetching
+/Unlinking
+/Upgrading
+/Design Files/
+/Legacy/
+/Legacy Fortress docs/
+/archive/
 
 # debug
 npm-debug.log*
