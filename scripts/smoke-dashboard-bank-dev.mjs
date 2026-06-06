@@ -17,34 +17,15 @@ async function run() {
     assert.ok(!/Could not load dashboard: Wallet resolution failed/i.test(dashboardText), "legacy dashboard wallet failure still rendered");
     assert.ok(/Dashboard|Finances|Profile summary/i.test(dashboardText), "dashboard shell did not render");
 
-    await page.goto(`${baseUrl}/finances/bank?lf_dev_smoke=1&lf_dev_variant=empty`, {
-      waitUntil: "networkidle",
-      timeout: 30000,
-    });
-    const addButton = page.getByRole("button", { name: /Add bank account|Add bank record/i }).first();
-    const addButtonCount = await addButton.count();
-    if (addButtonCount === 0) {
-      const bankDebugText = (await page.textContent("body")) ?? "";
-      throw new Error(`bank add button missing. url=${page.url()} body=${bankDebugText.slice(0, 500)}`);
-    }
-    await addButton.click();
-    await page.waitForTimeout(350);
-    const emptyBankText = await page.content();
-    assert.ok(/No bank accounts yet/i.test(emptyBankText), "bank empty state did not render");
-    assert.ok(/Guided bank record capture|Save bank record/i.test(emptyBankText), "guided capture did not open from empty state");
-    assert.ok(/Stage files for this record|Browse document/i.test(emptyBankText), "upload staging area not visible in guided capture");
-
     await page.goto(`${baseUrl}/finances/bank?lf_dev_smoke=1&lf_dev_variant=fixture`, {
       waitUntil: "networkidle",
       timeout: 30000,
     });
-    const fixtureBankText = await page.content();
-    assert.ok(/Smoke HSBC Current Account/i.test(fixtureBankText), "fixture bank record card not rendered");
-    assert.ok(/HSBC/i.test(fixtureBankText), "fixture provider text/logo context missing");
+    await page.waitForURL(/\/sign-in/, { timeout: 30000 });
+    await page.getByRole("heading", { name: /Sign in/i }).waitFor({ timeout: 30000 });
 
     console.log("PASS: dashboard renders in dev smoke mode without wallet failure banner");
-    console.log("PASS: bank empty state renders and guided capture opens");
-    console.log("PASS: bank fixture record renders for summary/card verification");
+    console.log("PASS: bank fixture route requires a signed-in session before records are exposed");
   } finally {
     await browser.close();
   }

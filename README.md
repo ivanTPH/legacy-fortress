@@ -38,8 +38,11 @@ npm run dev
 npm run lint
 npx tsc --noEmit
 npm run test:core
+npm run test:stabilisation
 npm run audit:routes
 npm run crawl:links
+npm run release:check
+npm run smoke:mobile:core
 ```
 
 ## Health Endpoints

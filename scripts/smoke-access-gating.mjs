@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -78,11 +77,11 @@ try {
   await page.getByText(/needs terms acceptance before you can continue/i).waitFor();
 
   await page.getByRole("button", { name: /accept terms and continue/i }).click();
-  await page.waitForURL(/\/app\/dashboard/, { timeout: 30000 });
+  await page.waitForURL(/\/(?:app\/)?dashboard/, { timeout: 30000 });
 
   await page.goto("/profile");
-  await page.getByRole("heading", { name: /^profile$/i }).waitFor();
-  await page.getByRole("button", { name: /edit profile/i }).click();
+  await page.getByText(/Saved profile summary/i).waitFor();
+  await page.getByRole("button", { name: /edit profile|add remaining details/i }).click();
   const uploadFixture = path.join(os.tmpdir(), `lf-profile-photo-${Date.now()}.png`);
   fs.writeFileSync(
     uploadFixture,

@@ -2,6 +2,7 @@
   "name": "legacy-fortress-web",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
@@ -12,13 +13,24 @@
     "crawl:links": "node scripts/link-crawler.mjs",
     "matrix:routes": "node scripts/generate-route-matrix.mjs",
     "test:navigation": "node --test tests/menu-key-actions.test.mjs tests/route-parity.test.mjs",
-    "test:core": "node --test tests/menu-key-actions.test.mjs tests/menu-state.test.mjs tests/route-parity.test.mjs tests/auth-and-schema-guards.test.mjs tests/recovery-flow.test.mjs",
+    "test:core": "node --test tests/menu-key-actions.test.mjs tests/menu-state.test.mjs tests/route-parity.test.mjs tests/auth-and-schema-guards.test.mjs tests/recovery-flow.test.mjs tests/invitation-recovery.test.mjs tests/plan-framework.test.mjs tests/production-smoke-script.test.mjs",
+    "test:stabilisation": "node --test tests/backend-foundations.test.mjs tests/platform-architecture-stabilisation.test.mjs tests/admin-role-api-routes.test.mjs tests/dashboard-ui-consistency.test.mjs tests/access-requests-owner-flow.test.mjs tests/workspace-switcher.test.mjs",
+    "release:check": "node scripts/release-gate.mjs",
     "test:e2e": "playwright test",
-    "smoke:local:dashboard-bank": "node scripts/smoke-dashboard-bank-dev.mjs"
+    "smoke:auth:reliability": "node scripts/smoke-auth-reliability.mjs",
+    "smoke:contacts:invitations": "node scripts/smoke-contacts-invitations.mjs",
+    "smoke:error:recovery": "node scripts/smoke-error-recovery.mjs",
+    "smoke:mobile:core": "node scripts/smoke-mobile-core.mjs",
+    "smoke:mobile:polish": "node scripts/smoke-mobile-polish.mjs",
+    "smoke:authenticated:ux": "node scripts/smoke-authenticated-ux.mjs",
+    "smoke:production:core": "node scripts/smoke-production-core.mjs",
+    "smoke:production:strict": "SMOKE_PERFORMANCE_BUDGET_STRICT=true node scripts/smoke-production-core.mjs",
+    "smoke:local:dashboard-bank": "node scripts/smoke-dashboard-bank-dev.mjs",
+    "smoke:owner:launch": "node scripts/smoke-owner-launch-uat.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.98.0",
-    "next": "16.1.6",
+    "next": "^16.2.6",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
@@ -34,5 +46,8 @@
     "pngjs": "^7.0.0",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "postcss": "^8.5.14"
   }
 }

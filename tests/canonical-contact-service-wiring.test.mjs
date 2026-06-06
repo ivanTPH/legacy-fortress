@@ -8,9 +8,10 @@ const root = process.cwd();
 test("invite handling loads and writes through canonical contact services", () => {
   const manager = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/ContactInvitationManager.tsx"), "utf8");
 
-  assert.match(manager, /loadCanonicalContactInvitationsForOwner/);
-  assert.match(manager, /upsertCanonicalContactInvitationProjection/);
-  assert.match(manager, /syncCanonicalContact/);
+  assert.match(manager, /contactRepository/);
+  assert.match(manager, /loadPeopleInvitationsForOwner/);
+  assert.match(manager, /savePeopleInvitationProjection/);
+  assert.match(manager, /savePeopleContact/);
 });
 
 test("personal and trust people handoff preserve shared contact identity in contacts", () => {
@@ -25,7 +26,18 @@ test("personal and trust people handoff preserve shared contact identity in cont
 test("record-linked people hydrate from canonical contacts instead of local merge logic", () => {
   const workspace = fs.readFileSync(path.join(root, "components/records/UniversalRecordWorkspace.tsx"), "utf8");
 
-  assert.match(workspace, /hydrateProjectionRowsWithCanonicalContacts/);
-  assert.match(workspace, /replaceCanonicalRecordContactProjection/);
+  assert.match(workspace, /contactRepository/);
+  assert.match(workspace, /hydratePeopleProjectionRows/);
+  assert.match(workspace, /replacePeopleRecordContactProjection/);
   assert.doesNotMatch(workspace, /async function mergeRecordContactsWithCanonicalContacts/);
+});
+
+test("people contact repository is the compatibility boundary for future contact work", () => {
+  const repository = fs.readFileSync(path.join(root, "lib/contacts/contactRepository.ts"), "utf8");
+
+  assert.match(repository, /PeopleContactEntity/);
+  assert.match(repository, /PeopleContactRelationshipType/);
+  assert.match(repository, /createPeopleContactRepository/);
+  assert.match(repository, /PEOPLE_CONTACT_MIGRATION_STRATEGY/);
+  assert.match(repository, /SectionWorkspace/);
 });

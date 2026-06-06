@@ -51,14 +51,14 @@ async function signIn(page, email, password) {
   await page.getByLabel(/email/i).fill(email);
   await page.getByLabel(/^password/i).fill(password);
   await page.getByRole("button", { name: /sign in/i }).click();
-  await page.waitForURL(/\/app\/dashboard|\/app\/onboarding|\/account\/terms/, { timeout: 30000 });
-  if (page.url().includes("/app/onboarding")) {
+  await page.waitForURL(/\/(?:app\/)?dashboard|\/(?:app\/)?onboarding|\/account\/terms/, { timeout: 30000 });
+  if (page.url().includes("/onboarding")) {
     const terms = page.getByLabel(/i accept the terms and conditions/i);
     if (await terms.count()) {
       await terms.check();
       await page.getByRole("button", { name: /continue into your secure record|go to dashboard/i }).click();
     }
-    await page.waitForURL(/\/profile|\/app\/dashboard|\/account\/terms/, { timeout: 30000 });
+    await page.waitForURL(/\/profile|\/(?:app\/)?dashboard|\/account\/terms/, { timeout: 30000 });
   }
   if (page.url().includes("/account/terms")) {
     const acceptButton = page.getByRole("button", { name: /accept terms and continue/i });
@@ -67,7 +67,7 @@ async function signIn(page, email, password) {
     } else {
       await page.getByRole("link", { name: /return to the dashboard/i }).click();
     }
-    await page.waitForURL(/\/app\/dashboard/, { timeout: 30000 });
+    await page.waitForURL(/\/(?:app\/)?dashboard/, { timeout: 30000 });
   }
 }
 

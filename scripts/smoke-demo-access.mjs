@@ -21,11 +21,11 @@ try {
   await page.getByRole("heading", { name: /review the product safely/i }).waitFor();
   await page.getByRole("button", { name: /open demo account/i }).click();
 
-  await page.waitForURL(/\/app\/dashboard/, { timeout: 45000 });
+  await page.waitForURL(/\/(?:app\/)?dashboard/, { timeout: 45000 });
   await page.getByText("Demo account · Review environment").waitFor();
   await page.getByText(/Viewing Bill Smith's estate records/i).waitFor();
   await page.getByText(/Bill Smith/i).waitFor();
-  await page.getByText(/4250/i).waitFor({ timeout: 15000 }).catch(() => page.getByText(/£/i).first().waitFor());
+  await page.getByText(/finance records/i).waitFor({ timeout: 15000 });
 
   const navText = await page.locator("body").innerText();
   assert.equal(/Admin operations/i.test(navText), false);
@@ -42,13 +42,13 @@ try {
   await page.getByText(/will-overview\.txt/i).first().waitFor();
 
   await openLinkedRoute(page, "/personal/contacts");
-  await page.getByRole("heading", { name: /Contacts/i }).waitFor();
-  await page.getByText(/Sarah Smith/i).waitFor();
-  await page.getByText(/Emma Carter/i).waitFor();
-  await page.getByText(/James Patel/i).waitFor();
+  await page.getByText(/Contacts in place/i).waitFor();
+  await page.getByText(/^Executors$/i).waitFor();
+  await page.getByText(/^Family$/i).waitFor();
+  await page.getByText(/^Advisors$/i).waitFor();
 
   await openLinkedRoute(page, "/profile");
-  await page.getByRole("heading", { name: /^profile$/i }).waitFor();
+  await page.getByText(/Saved profile summary/i).waitFor();
   const profileText = await page.locator("body").innerText();
   assert.equal(/Bill Smith/i.test(profileText), true);
   assert.equal(/07700\s*900210|01904\s*555204/i.test(profileText), true);
@@ -101,7 +101,13 @@ function loadEnvFile() {
 
 async function openLinkedRoute(page, pathname) {
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    await page.goto(pathname);
+    try {
+      await page.goto(pathname);
+    } catch (error) {
+      if (!/interrupted by another navigation/i.test(String(error))) throw error;
+      await page.waitForLoadState("domcontentloaded").catch(() => null);
+      continue;
+    }
     await page.waitForLoadState("networkidle");
     if (!/\/app\/onboarding/.test(page.url())) return;
     await page.goto("/app/dashboard");

@@ -76,6 +76,8 @@ Only confirmed repo issues or duplication are listed here.
     - [lib/devSmoke.ts](/Users/ivan-imac/legacy-fortress-web/lib/devSmoke.ts)
   - Issue:
     - Debug and trace hooks are guarded, but the production code paths still carry substantial dev-smoke instrumentation.
+  - Current mitigation:
+    - Production observability should stay routed through `/api/observability/client-events` with allowlisted, sanitized event names. Do not add new broad console logging or raw payload capture in user-facing components.
 
 - Commercial positioning stops short of billing implementation
   - Files:
@@ -100,6 +102,7 @@ Only confirmed repo issues or duplication are listed here.
 - Do not add page-level duplicate attachment UIs when [AttachmentGallery.tsx](/Users/ivan-imac/legacy-fortress-web/components/documents/AttachmentGallery.tsx) or [DocumentsWorkspace.tsx](/Users/ivan-imac/legacy-fortress-web/components/documents/DocumentsWorkspace.tsx) already covers the need.
 - Do not add hardcoded fields to a category that already has a config in [fieldDictionary.ts](/Users/ivan-imac/legacy-fortress-web/lib/assets/fieldDictionary.ts).
 - Normalize routes to the current public auth path (`/sign-in`) instead of introducing more alias dependence.
+- Remove legacy `section_entries`/single-file compatibility only after a backfill, route parity proof, rollback plan, and release smoke coverage exist. Until then, treat it as compatibility code rather than dead code.
  - Seeded canonical contacts may retain compatibility contexts without a real linked record
   - Files:
     - [scripts/seed-bill-smith-review-account.mjs](/Users/ivan-imac/legacy-fortress-web/scripts/seed-bill-smith-review-account.mjs)

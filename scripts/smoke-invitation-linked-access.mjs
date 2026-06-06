@@ -129,14 +129,14 @@ try {
   await recipientSubmit.waitFor({ state: "visible", timeout: 10000 });
   await waitForEnabled(recipientSubmit, 10000);
   await recipientSubmit.click();
-  await recipientPage.waitForURL(/\/invite\/accept|\/app\/dashboard/, { timeout: 30000 });
+  await recipientPage.waitForURL(/\/invite\/accept|\/(?:app\/)?dashboard/, { timeout: 30000 });
   if (!recipientPage.url().includes("/invite/accept")) {
     await recipientPage.goto(acceptPath);
   }
   logStep("recipient signed in");
   await recipientPage.getByRole("button", { name: /accept and continue/i }).click();
   try {
-    await recipientPage.waitForURL(/\/app\/dashboard/, { timeout: 30000 });
+    await recipientPage.waitForURL(/\/(?:app\/)?dashboard/, { timeout: 30000 });
   } catch (error) {
     const acceptStatus = await readAlertText(recipientPage);
     const bodyText = await recipientPage.locator("body").innerText();
@@ -193,14 +193,14 @@ async function signInThroughApp(page, email, password) {
   await submit.waitFor({ state: "visible", timeout: 10000 });
   await waitForEnabled(submit, 10000);
   await submit.click();
-  await page.waitForURL(/\/app\/dashboard|\/app\/onboarding|\/account\/terms/, { timeout: 30000 });
+  await page.waitForURL(/\/(?:app\/)?dashboard|\/(?:app\/)?onboarding|\/account\/terms/, { timeout: 30000 });
   if (page.url().includes("/onboarding")) {
     const terms = page.getByLabel(/i accept the terms and conditions/i);
     if (await terms.count()) {
       await terms.check();
       await page.getByRole("button", { name: /continue into your secure record|go to dashboard/i }).click();
     }
-    await page.waitForURL(/\/profile|\/app\/dashboard|\/account\/terms/, { timeout: 30000 });
+    await page.waitForURL(/\/profile|\/(?:app\/)?dashboard|\/account\/terms/, { timeout: 30000 });
   }
   if (page.url().includes("/account/terms")) {
     const acceptButton = page.getByRole("button", { name: /accept terms and continue/i });
@@ -209,7 +209,7 @@ async function signInThroughApp(page, email, password) {
     } else {
       await page.getByRole("link", { name: /return to the dashboard/i }).click();
     }
-    await page.waitForURL(/\/app\/dashboard/, { timeout: 30000 });
+    await page.waitForURL(/\/(?:app\/)?dashboard/, { timeout: 30000 });
   }
 }
 
@@ -518,9 +518,6 @@ function loadEnvFile() {
   }
 }
 
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
 
 function logStep(message) {
   console.log(`[smoke] ${message}`);

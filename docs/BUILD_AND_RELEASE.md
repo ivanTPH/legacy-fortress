@@ -40,7 +40,14 @@ npm run crawl:links
 npm run matrix:routes
 npm run test:navigation
 npm run test:core
+npm run test:stabilisation
+npm run release:check
 npm run test:e2e
+npm run smoke:mobile:core
+npm run smoke:mobile:polish
+npm run smoke:authenticated:ux
+npm run smoke:production:core
+npm run smoke:production:strict
 npm run smoke:local:dashboard-bank
 ```
 
@@ -86,12 +93,39 @@ Current CI runs:
 
 ```bash
 npm ci
-npm run lint
-npx tsc --noEmit
-npm run test:core
-npm run audit:routes
-npm run crawl:links
+npm run release:check -- --ci
 ```
+
+`release:check` runs the dependency audit, lint, TypeScript, core tests, stabilisation tests, route audit, link crawl, and production build. Local runs also validate `.env.local` when it is present; CI skips local env validation because Vercel/Supabase secrets are environment-specific.
+
+For mobile regression checks, run `npm run smoke:mobile:core` or `npm run smoke:mobile:polish` against a local server, or set `BASE_URL=https://legacy-fortress.vercel.app` to verify the live demo dashboard, bank, contacts, and auth recovery routes on an iPhone 13 viewport.
+
+For a production-safe authenticated journey, run:
+
+```bash
+BASE_URL=https://legacy-fortress.vercel.app npm run smoke:authenticated:ux
+```
+
+That smoke uses the seeded demo session, checks protected dashboard navigation, verifies the topbar/sidebar avatar surface remains stable after hydration and route changes, checks authenticated mobile overflow, and fails if Material Symbols ligature text leaks into the UI.
+
+For strict performance gating, run:
+
+```bash
+BASE_URL=https://legacy-fortress.vercel.app npm run smoke:production:strict
+```
+
+Use the strict command when promoting a release candidate. The softer `smoke:production:core` command remains useful for live monitoring because it reports route timing warnings without blocking investigation.
+
+## Observability
+
+The app has a lightweight client event endpoint at `/api/observability/client-events`. It accepts only allowlisted, non-sensitive events such as auth callback outcomes, strips email/token/password/secret/phone-like fields, and uses `Cache-Control: no-store`.
+
+Current client events are deliberately narrow:
+
+- `auth.callback.*` for verification, exchange, missing-session, redirect, and recovery outcomes.
+- `profile.avatar.*` and `shell.navigation.*` are reserved for targeted UI stability checks.
+
+This is not a replacement for a full monitoring provider, but it gives production logs enough shape to diagnose auth-link and hydration failures without exposing private user data.
 
 ## Supabase local config
 

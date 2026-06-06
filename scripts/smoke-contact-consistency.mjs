@@ -38,10 +38,8 @@ const contactEmail = `contact-smoke-${uniqueTag}@example.test`;
 const browser = await chromium.launch({ headless: true });
 
 try {
-  let provisionedOwnerId = "";
   if (adminClient && OWNER_EMAIL !== DEFAULT_OWNER_EMAIL) {
     const provisionedOwner = await ensureOwnerUserExists(adminClient, OWNER_EMAIL, OWNER_PASSWORD);
-    provisionedOwnerId = provisionedOwner.id;
     await ensureOwnerBootstrapState(adminClient, provisionedOwner.id);
   }
 

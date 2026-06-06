@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 
 import { toSafeInternalPath } from "../lib/auth/session.ts";
 import { isMissingRelationError, isMissingColumnError } from "../lib/supabaseErrors.ts";
@@ -41,4 +43,23 @@ test("isMissingColumnError detects missing column schema-cache drift", () => {
     isMissingColumnError({ message: "invalid input syntax for type uuid" }, "avatar_path"),
     false,
   );
+});
+
+test("Supabase auth config uses the live production origin for email redirects", () => {
+  const config = fs.readFileSync(path.join(process.cwd(), "supabase/config.toml"), "utf8");
+  assert.match(config, /site_url = "https:\/\/legacy-fortress\.vercel\.app"/);
+  assert.match(config, /"https:\/\/legacy-fortress\.vercel\.app\/auth\/callback"/);
+  assert.match(config, /"https:\/\/legacy-fortress\.vercel\.app\/reset-password"/);
+  assert.match(config, /"https:\/\/legacy-fortress\.vercel\.app\/sign-in"/);
+  assert.doesNotMatch(config, /site_url = "https:\/\/legacy-fortress-web\.vercel\.app"/);
+});
+
+test("auth callback supports direct Supabase email token verification links", () => {
+  const callback = fs.readFileSync(path.join(process.cwd(), "app/auth/callback/page.tsx"), "utf8");
+  assert.match(callback, /token_hash/);
+  assert.match(callback, /verifyOtp/);
+  assert.match(callback, /type: otpType/);
+  assert.match(callback, /auth\.callback\.verify_otp\.success/);
+  assert.match(callback, /No active session found after authentication/);
+  assert.match(callback, /Go to sign in/);
 });

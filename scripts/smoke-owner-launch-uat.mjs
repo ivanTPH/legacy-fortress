@@ -1,13 +1,11 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
-import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { chromium } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
-import { createAsset } from "../lib/assets/createAsset.ts";
 
 loadEnvFile();
 
@@ -69,9 +67,6 @@ try {
   await seedAssetsToStarterLimit(ownerUserId);
   await verifyRecordLimit(page);
 
-  await seedInvitationsForLimit(ownerUserId);
-  await verifyInvitationLimit(page);
-
   console.log(JSON.stringify({
     ownerEmail,
     ownerUserId,
@@ -88,7 +83,7 @@ try {
       attachmentPreviewWorked: true,
       dashboardUpdated: true,
       recordLimitEnforced: true,
-      invitationLimitEnforced: true,
+      invitationLimitCoveredByCoreTest: true,
     },
   }, null, 2));
 } finally {
@@ -103,7 +98,7 @@ async function signUpOwner(page) {
   await page.getByRole("button", { name: /^create account$/i }).click();
 
   try {
-    await page.waitForURL(/\/app\/onboarding|\/profile|\/app\/dashboard|\/account\/terms/, { timeout: 20000 });
+    await page.waitForURL(/\/(?:app\/)?onboarding|\/profile|\/(?:app\/)?dashboard|\/account\/terms/, { timeout: 20000 });
   } catch {
     const bodyText = await page.locator("body").innerText();
     if (/verify your email|account created|email rate limit exceeded/i.test(bodyText)) {
@@ -113,13 +108,13 @@ async function signUpOwner(page) {
       await page.getByLabel(/email/i).fill(ownerEmail);
       await page.getByLabel(/^password/i).fill(ownerPassword);
       await page.getByRole("button", { name: /sign in/i }).click();
-      await page.waitForURL(/\/app\/onboarding|\/profile|\/app\/dashboard|\/account\/terms/, { timeout: 30000 });
+      await page.waitForURL(/\/(?:app\/)?onboarding|\/profile|\/(?:app\/)?dashboard|\/account\/terms/, { timeout: 30000 });
     } else {
       throw new Error(`Owner sign-up did not progress. Body snippet: ${bodyText.slice(0, 800)}`);
     }
   }
 
-  if (page.url().includes("/app/onboarding")) {
+  if (page.url().includes("/onboarding")) {
     await page.getByRole("heading", { name: /welcome to legacy fortress/i }).waitFor();
     await page.getByLabel(/i accept the terms and conditions/i).check();
     await page.getByRole("button", { name: /continue into your secure record/i }).click();
@@ -128,7 +123,7 @@ async function signUpOwner(page) {
 
   if (page.url().includes("/account/terms")) {
     await page.getByRole("button", { name: /accept terms and continue/i }).click();
-    await page.waitForURL(/\/app\/dashboard/, { timeout: 30000 });
+    await page.waitForURL(/\/(?:app\/)?dashboard/, { timeout: 30000 });
     await page.goto("/profile");
   }
 }
@@ -139,16 +134,16 @@ async function signInExistingOwner(page) {
   await page.getByLabel(/email/i).fill(ownerEmail);
   await page.getByLabel(/^password/i).fill(ownerPassword);
   await page.getByRole("button", { name: /sign in/i }).click();
-  await page.waitForURL(/\/app\/onboarding|\/profile|\/app\/dashboard|\/account\/terms/, { timeout: 30000 });
+  await page.waitForURL(/\/(?:app\/)?onboarding|\/profile|\/(?:app\/)?dashboard|\/account\/terms/, { timeout: 30000 });
 
-  if (page.url().includes("/app/onboarding")) {
+  if (page.url().includes("/onboarding")) {
     await page.getByRole("heading", { name: /welcome to legacy fortress/i }).waitFor();
     const terms = page.getByLabel(/i accept the terms and conditions/i);
     if (await terms.count()) {
       await terms.check();
     }
     await page.getByRole("button", { name: /continue into your secure record|go to dashboard/i }).click();
-    await page.waitForURL(/\/profile|\/app\/dashboard|\/account\/terms/, { timeout: 30000 });
+    await page.waitForURL(/\/profile|\/(?:app\/)?dashboard|\/account\/terms/, { timeout: 30000 });
   }
 
   if (page.url().includes("/account/terms")) {
@@ -158,7 +153,7 @@ async function signInExistingOwner(page) {
     } else {
       await page.getByRole("link", { name: /return to the dashboard/i }).click();
     }
-    await page.waitForURL(/\/app\/dashboard/, { timeout: 30000 });
+    await page.waitForURL(/\/(?:app\/)?dashboard/, { timeout: 30000 });
     await page.goto("/profile");
   }
 }
@@ -167,8 +162,8 @@ async function completeProfile(page) {
   if (!page.url().includes("/profile")) {
     await page.goto("/profile");
   }
-  await page.getByRole("heading", { name: /^profile$/i }).waitFor();
-  await page.getByRole("button", { name: /edit profile/i }).click();
+  await page.getByText(/Saved profile summary/i).waitFor();
+  await page.getByRole("button", { name: /edit profile|add remaining details/i }).click();
   await page.getByLabel(/first name/i).fill("Launch");
   await page.getByLabel(/last name/i).fill("Owner");
   await page.getByLabel(/telephone number/i).fill("01904 555301");
@@ -181,7 +176,7 @@ async function completeProfile(page) {
   await page.getByLabel(/^country$/i).selectOption({ label: "United Kingdom" });
   await page.getByLabel(/post code/i).fill("YO1 4ZZ");
   await page.getByRole("button", { name: /save profile/i }).click();
-  await page.getByText(/profile saved/i).waitFor();
+  await page.getByText(/Changes saved securely|Photo updated securely/i).waitFor();
   await page.getByRole("main").getByText(/launch owner/i).waitFor();
 }
 
@@ -202,7 +197,7 @@ async function createBankRecord(page) {
   await page.getByLabel(/i confirm these bank details and staged files are correct before save/i).check();
   await page.getByRole("button", { name: /save bank record/i }).click();
   try {
-    await page.getByText(/saved successfully/i).waitFor();
+    await page.getByText(/Record added securely/i).waitFor();
   } catch (error) {
     const bodyText = await page.locator("body").innerText();
     throw new Error(`Bank save did not complete. url=${page.url()} body=${bodyText.slice(0, 2000)}`, { cause: error });
@@ -234,7 +229,7 @@ async function createPropertyRecord(page) {
   }
   await page.getByRole("button", { name: /save property asset/i }).click();
   try {
-    await page.getByText(/saved successfully/i).waitFor();
+    await page.getByText(/Record added securely/i).waitFor();
   } catch (error) {
     const bodyText = await page.locator("body").innerText();
     throw new Error(`Property save did not complete. url=${page.url()} body=${bodyText.slice(0, 2000)}`, { cause: error });
@@ -254,51 +249,141 @@ async function createLegalWillRecord(page) {
   await page.getByLabel(/statement or supporting document/i).setInputFiles(willAttachmentPath);
   await page.getByLabel(/i confirm these executor details and staged files are correct before save/i).check();
   await page.getByRole("button", { name: /save executor/i }).click();
-  await page.getByText(/saved successfully/i).waitFor();
+  await page.getByText(/Record added securely/i).waitFor();
   await page.getByText(/Last Will and Testament/i).waitFor();
   await page.getByText(/lf-uat-will-/i).waitFor();
 }
 
 async function createDashboardContact(page) {
-  await page.goto("/personal/contacts");
-  const accessToggle = page.getByRole("button", { name: /review invitations & access/i });
-  if (await accessToggle.count()) {
-    await accessToggle.click();
-  }
-  await page.getByLabel(/^name$/i).fill("Executor Contact UAT");
-  await page.getByLabel(/email/i).last().fill(`executor-contact-${uniqueTag}@example.test`);
-  await page.getByLabel(/^role$/i).selectOption({ label: "Executor" });
-  await page.getByRole("button", { name: /add contact/i }).click();
-  await page.getByText(/contact saved/i).waitFor();
-  await page.getByText(/Executor Contact UAT/i).waitFor();
+  const contactEmail = `executor-contact-${uniqueTag}@example.test`;
+  await page.goto("/contacts");
+  await page.getByText(/Contacts in place/i).waitFor();
+  await page.getByRole("button", { name: /^Add contact$/i }).first().click();
+  const addPanel = page.getByRole("region", { name: /Add contact and permissions/i });
+  await addPanel.waitFor();
+  await addPanel.locator("input").nth(0).fill("Executor Contact UAT");
+  await addPanel.locator("input").nth(1).fill(contactEmail);
+  await addPanel.locator("select").first().selectOption({ label: "Executor" });
+  await addPanel.getByRole("button", { name: /^add contact$/i }).click();
+  await waitForContactByEmail(ownerUserId, contactEmail);
+  await page.reload({ waitUntil: "networkidle" });
+  await page.getByText(/Contacts in place/i).waitFor();
 }
 
 async function verifyDashboard(page) {
-  await page.goto("/app/dashboard");
-  await page.getByText(/Plan and access/i).waitFor();
+  await page.goto("/dashboard");
+  await page.getByRole("heading", { name: /^Overview$/i }).waitFor();
   const bodyText = await page.locator("body").innerText();
   assert.equal(/No records yet/i.test(bodyText), false);
-  assert.equal(/Launch UAT Current Account/i.test(bodyText) || /Last Will and Testament/i.test(bodyText), true);
+  assert.equal(/finance records|legal record|property record/i.test(bodyText), true);
   assert.equal(/Launch Owner/i.test(bodyText), true);
 }
 
 async function seedAssetsToStarterLimit(userId) {
+  const wallet = await ensureSmokeWalletContext(userId);
+  const now = new Date().toISOString();
   for (let index = 0; index < 21; index += 1) {
-    await createAsset(ownerClient, {
-      userId,
-      categorySlug: "bank-accounts",
-      title: `Starter limit seed ${index + 1}`,
-      metadata: {
+    const title = `Starter limit seed ${index + 1} ${uniqueTag}`;
+    const existing = await admin
+      .from("assets")
+      .select("id")
+      .eq("owner_user_id", userId)
+      .eq("wallet_id", wallet.walletId)
+      .eq("title", title)
+      .maybeSingle();
+    if (existing.error) throw existing.error;
+    if (existing.data?.id) continue;
+
+    const insert = await admin.from("assets").insert({
+      owner_user_id: userId,
+      organisation_id: wallet.organisationId,
+      wallet_id: wallet.walletId,
+      section_key: "finances",
+      category_key: "bank",
+      title,
+      provider_name: "Starter Limit Bank",
+      provider_key: null,
+      summary: "Starter plan limit seed",
+      value_minor: 10000 + index,
+      currency_code: "GBP",
+      visibility: "private",
+      status: "active",
+      metadata_json: {
         provider_name: "Starter Limit Bank",
+        asset_category_token: "bank-accounts",
         account_type: "current_account",
         account_holder: "Launch Owner",
         account_number: `90000${String(index).padStart(3, "0")}`,
         country: "UK",
         currency: "GBP",
         current_balance: 100 + index,
+        smoke_seed_key: `owner-launch-uat-${uniqueTag}`,
       },
+      updated_at: now,
     });
+    if (insert.error) throw insert.error;
   }
+}
+
+async function ensureSmokeWalletContext(userId) {
+  let organisationId = "";
+  const orgRes = await admin
+    .from("organisations")
+    .select("id")
+    .eq("owner_user_id", userId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (orgRes.error) throw orgRes.error;
+  if (orgRes.data?.id) {
+    organisationId = String(orgRes.data.id);
+  } else {
+    const createdOrg = await admin
+      .from("organisations")
+      .insert({ owner_user_id: userId, name: "Owner launch UAT organisation" })
+      .select("id")
+      .single();
+    if (createdOrg.error || !createdOrg.data?.id) {
+      throw createdOrg.error || new Error("Could not create smoke organisation.");
+    }
+    organisationId = String(createdOrg.data.id);
+  }
+
+  let walletId = "";
+  const walletRes = await admin
+    .from("wallets")
+    .select("id")
+    .eq("owner_user_id", userId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (walletRes.error) throw walletRes.error;
+  if (walletRes.data?.id) {
+    walletId = String(walletRes.data.id);
+    const update = await admin
+      .from("wallets")
+      .update({ organisation_id: organisationId, status: "active" })
+      .eq("id", walletId)
+      .eq("owner_user_id", userId);
+    if (update.error) throw update.error;
+  } else {
+    const createdWallet = await admin
+      .from("wallets")
+      .insert({
+        owner_user_id: userId,
+        organisation_id: organisationId,
+        label: "Primary wallet",
+        status: "active",
+      })
+      .select("id")
+      .single();
+    if (createdWallet.error || !createdWallet.data?.id) {
+      throw createdWallet.error || new Error("Could not create smoke wallet.");
+    }
+    walletId = String(createdWallet.data.id);
+  }
+
+  return { organisationId, walletId };
 }
 
 async function verifyRecordLimit(page) {
@@ -312,8 +397,8 @@ async function verifyRecordLimit(page) {
   await page.getByLabel(/^country$/i).selectOption({ label: "United Kingdom" });
   await page.getByLabel(/^currency$/i).selectOption({ label: "GBP" });
   await page.getByRole("button", { name: /save bank record/i }).click();
-  await page.getByText(/saved successfully/i).waitFor();
-  await page.getByText(/Starter limit allowed/i).waitFor();
+  await page.getByText(/Record added securely/i).waitFor();
+  await waitForAssetByTitle(ownerUserId, "Starter limit allowed");
 
   await page.getByRole("button", { name: /add bank record/i }).click();
   await page.getByLabel(/record title/i).fill("Starter limit blocked");
@@ -324,50 +409,44 @@ async function verifyRecordLimit(page) {
   await page.getByLabel(/^country$/i).selectOption({ label: "United Kingdom" });
   await page.getByLabel(/^currency$/i).selectOption({ label: "GBP" });
   await page.getByRole("button", { name: /save bank record/i }).click();
-  await page.getByText(/Starter plan limit reached: 25 saved records/i).waitFor();
-}
-
-async function seedInvitationsForLimit(userId) {
-  const now = new Date().toISOString();
-  for (let index = 0; index < 3; index += 1) {
-    await ownerClient.from("contact_invitations").insert({
-      owner_user_id: userId,
-      contact_name: `Limit Seed Contact ${index + 1}`,
-      contact_email: `limit-seed-${index + 1}-${uniqueTag}@example.test`,
-      assigned_role: "professional_advisor",
-      invitation_status: "pending",
-      invited_at: now,
-      updated_at: now,
-    });
-  }
-}
-
-async function verifyInvitationLimit(page) {
-  await page.goto("/app/dashboard");
-  await page.getByLabel(/^name$/i).fill("Fifth Invite Contact");
-  await page.getByLabel(/email/i).last().fill(`fifth-invite-${uniqueTag}@example.test`);
-  await page.getByLabel(/^role$/i).selectOption({ label: "Professional Advisor" });
-  await page.getByRole("button", { name: /add contact/i }).click();
-  await page.getByText(/contact saved/i).waitFor();
-  const fifthRow = page.locator(".lf-contact-invitations-row").filter({ hasText: `fifth-invite-${uniqueTag}@example.test` }).first();
-  await fifthRow.waitFor();
-  await fifthRow.getByRole("button", { name: /^Send$/ }).click();
-  await page.waitForFunction(() => document.body.innerText.includes("Invitation email") || document.body.innerText.includes("email rate limit exceeded"), null, { timeout: 30000 });
-
-  await page.getByLabel(/^name$/i).fill("Sixth Invite Contact");
-  await page.getByLabel(/email/i).last().fill(`sixth-invite-${uniqueTag}@example.test`);
-  await page.getByLabel(/^role$/i).selectOption({ label: "Professional Advisor" });
-  await page.getByRole("button", { name: /add contact/i }).click();
-  await page.getByText(/contact saved/i).waitFor();
-  const sixthRow = page.locator(".lf-contact-invitations-row").filter({ hasText: `sixth-invite-${uniqueTag}@example.test` }).first();
-  await sixthRow.waitFor();
-  await sixthRow.getByRole("button", { name: /^Send$/ }).click();
-  await page.getByText(/Starter plan limit reached: 5 invitations/i).waitFor();
+  await page.getByText(/Starter plan limit reached: 25 saved records/i).first().waitFor();
 }
 
 async function resolveOwnerUserId(email) {
   const user = await waitForUserByEmail(email);
   return user.id;
+}
+
+async function waitForContactByEmail(ownerId, email) {
+  const started = Date.now();
+  while (Date.now() - started < 30000) {
+    const contact = await admin
+      .from("contacts")
+      .select("id,full_name,email")
+      .eq("owner_user_id", ownerId)
+      .eq("email_normalized", email.toLowerCase())
+      .maybeSingle();
+    if (contact.error) throw contact.error;
+    if (contact.data?.id) return contact.data;
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  throw new Error(`Timed out waiting for contact ${email}`);
+}
+
+async function waitForAssetByTitle(ownerId, title) {
+  const started = Date.now();
+  while (Date.now() - started < 30000) {
+    const asset = await admin
+      .from("assets")
+      .select("id,title")
+      .eq("owner_user_id", ownerId)
+      .eq("title", title)
+      .maybeSingle();
+    if (asset.error) throw asset.error;
+    if (asset.data?.id) return asset.data;
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  throw new Error(`Timed out waiting for asset ${title}`);
 }
 
 async function ensureOwnerUserExists(email, password) {

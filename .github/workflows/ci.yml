@@ -15,8 +15,4 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npm run lint
-      - run: npx tsc --noEmit
-      - run: npm run test:core
-      - run: npm run audit:routes
-      - run: npm run crawl:links
+      - run: npm run release:check -- --ci

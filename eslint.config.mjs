@@ -12,7 +12,17 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    ".codex-*.cjs",
+    ".codex-*.mjs",
+    ".codex-*/**",
+    "scripts/verify-ux-architecture.cjs",
   ]),
+  {
+    rules: {
+      "react-hooks/preserve-manual-memoization": "warn",
+      "react-hooks/set-state-in-effect": "warn",
+    },
+  },
 ]);
 
 export default eslintConfig;

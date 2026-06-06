@@ -10,6 +10,12 @@ import {
   resolveCanonicalContactDisplaySourceType,
   shouldCanonicalContactIncomingSourceOwnFields,
 } from "../lib/contacts/canonicalContacts.ts";
+import {
+  buildPeopleContactEntity,
+  getCanonicalPeopleRelationshipType,
+  PEOPLE_CONTACT_MIGRATION_STRATEGY,
+  PEOPLE_CONTACT_REPOSITORY_CONTRACT,
+} from "../lib/contacts/contactRepository.ts";
 
 test("invitation status maps into canonical contact invite status without leaking legacy values", () => {
   assert.equal(mapInvitationStatusToCanonicalInviteStatus("pending"), "invite_sent");
@@ -177,4 +183,87 @@ test("display role and source type prefer authoritative executor links over invi
 
   assert.equal(displayRole, "executor");
   assert.equal(sourceType, "executor_asset");
+});
+
+test("people contact entity preserves executor relationship, verification, invite, and permission state", () => {
+  const contact = {
+    id: "contact-executor",
+    owner_user_id: "owner-1",
+    full_name: "Emma Carter",
+    email: "emma@example.test",
+    email_normalized: "emma@example.test",
+    phone: "0207 000 1000",
+    contact_role: "executor",
+    relationship: "sister",
+    linked_context: [
+      {
+        source_kind: "asset",
+        source_id: "asset-will",
+        section_key: "legal",
+        category_key: "executors",
+        label: "Executor",
+        role: "executor",
+      },
+    ],
+    invite_status: "invite_sent",
+    verification_status: "invited",
+    source_type: "executor_asset",
+    permission_scope: ["executor_access"],
+    validation_overrides: {},
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  const entity = buildPeopleContactEntity(contact);
+
+  assert.equal(entity.relationship_type, "executor");
+  assert.equal(entity.invitation_state, "invite_sent");
+  assert.equal(entity.verification_state, "invited");
+  assert.deepEqual(entity.permission_scope, ["executor_access"]);
+});
+
+test("people relationship vocabulary covers trusted contacts, next of kin, invitees, and linked users", () => {
+  assert.equal(
+    getCanonicalPeopleRelationshipType({
+      contact_role: "next_of_kin",
+      relationship: "sister",
+      source_type: "next_of_kin",
+      linked_context: [],
+    }),
+    "next_of_kin",
+  );
+  assert.equal(
+    getCanonicalPeopleRelationshipType({
+      contact_role: "trusted_contact",
+      relationship: "friend",
+      source_type: "invitation",
+      linked_context: [{ source_kind: "invitation", source_id: "invite-1", role: "trusted_contact" }],
+    }),
+    "trusted_contact",
+  );
+  assert.equal(
+    getCanonicalPeopleRelationshipType({
+      contact_role: "professional_advisor",
+      relationship: null,
+      source_type: "invitation",
+      linked_context: [{ source_kind: "invitation", source_id: "invite-2", role: "professional_advisor" }],
+    }),
+    "invitee",
+  );
+  assert.equal(
+    getCanonicalPeopleRelationshipType({
+      contact_role: "solicitor",
+      relationship: null,
+      source_type: "record_contact",
+      linked_context: [{ source_kind: "record", source_id: "record-1", role: "solicitor" }],
+    }),
+    "linked_user",
+  );
+});
+
+test("people migration strategy keeps legacy compatibility without expanding section_entries", () => {
+  assert.equal(PEOPLE_CONTACT_REPOSITORY_CONTRACT.migrationState, "compatibility_preserved");
+  assert.ok(PEOPLE_CONTACT_REPOSITORY_CONTRACT.compatibilityTables.includes("section_entries"));
+  assert.match(PEOPLE_CONTACT_MIGRATION_STRATEGY.compatibility.join(" "), /SectionWorkspace/);
+  assert.match(PEOPLE_CONTACT_MIGRATION_STRATEGY.compatibility.join(" "), /must not be expanded/);
 });

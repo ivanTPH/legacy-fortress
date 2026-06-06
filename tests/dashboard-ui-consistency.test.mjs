@@ -10,7 +10,7 @@ test("dashboard overview cards use compact shared summary cards with icon-only r
   const summaryCard = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/DashboardAssetSummaryCard.tsx"), "utf8");
   const actionQueue = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/ActionQueuePanel.tsx"), "utf8");
   const dashboardRender = dashboardPage.slice(
-    dashboardPage.indexOf('return (\n    <div style={{ display: "grid", gap: 14 }}>'),
+    dashboardPage.indexOf('return (\n    <div className="lf-dashboard-shell" style={{ display: "grid", gap: 14 }}>'),
     dashboardPage.indexOf("function ReadinessSnapshot"),
   );
 
@@ -22,6 +22,15 @@ test("dashboard overview cards use compact shared summary cards with icon-only r
   assert.doesNotMatch(dashboardPage, /value=\{businessSummary\.valueText\}/);
   assert.match(dashboardPage, /function useDashboardState\(input: DashboardStateInput\): DashboardState/);
   assert.match(dashboardPage, /<ActionQueuePanel items=\{dashboardState\.actions\.items\} context=\{dashboardState\.actions\.context\} onAction=\{handleAction\} \/>/);
+  assert.match(dashboardPage, /className="lf-dashboard-shell"/);
+  assert.match(dashboardPage, /className="lf-dashboard-overview-panel"/);
+  assert.match(dashboardPage, /className="lf-content-grid lf-dashboard-overview-grid"/);
+  assert.match(dashboardPage, /className="lf-dashboard-readiness-summary"/);
+  assert.match(dashboardPage, /className="lf-dashboard-readiness-heading"/);
+  assert.match(dashboardPage, /className="lf-dashboard-readiness-card"/);
+  assert.match(dashboardPage, /className="lf-dashboard-readiness-task-list"/);
+  assert.match(dashboardPage, /className="lf-dashboard-readiness-task"/);
+  assert.match(dashboardPage, /className="lf-dashboard-review-panel"/);
   assert.match(dashboardPage, /function filterConsumerDashboardBlockers/);
   assert.match(dashboardPage, /requiredRole !== "admin"/);
   assert.match(dashboardPage, /!item\.href\.startsWith\("\/internal\/"\)/);
@@ -65,7 +74,14 @@ test("dashboard overview cards use compact shared summary cards with icon-only r
   assert.match(dashboardPage, /Review recommended/);
   assert.match(dashboardPage, /function renderReadinessActionPanel/);
   assert.match(dashboardPage, /readinessKey: "willUploaded"/);
-  assert.match(dashboardPage, /buildReviewPanelFromReadinessItem/);
+  assert.match(dashboardPage, /const requiredReadinessTasks = dashboardState\.legalReadiness\.items\.filter\(\(item\) => !item\.complete\)/);
+  assert.match(dashboardPage, /Required estate readiness tasks/);
+  assert.match(dashboardPage, /Required tasks/);
+  assert.match(dashboardPage, /Open task/);
+  assert.match(dashboardPage, /router\.push\(dashboardState\.legalReadiness\.nextAction\.href\)/);
+  assert.match(dashboardPage, /router\.push\(item\.href\)/);
+  assert.match(dashboardPage, /readinessTaskButtonStyle/);
+  assert.doesNotMatch(dashboardPage, /buildReviewPanelFromReadinessItem/);
   assert.match(dashboardPage, /Full contact management/);
   assert.match(dashboardPage, /Upload identity document/);
   assert.match(dashboardPage, /Upload financial\/property document/);
@@ -84,8 +100,8 @@ test("dashboard overview cards use compact shared summary cards with icon-only r
   assert.match(dashboardPage, /blockers: \{\s*items: blockingState\.filter/);
   assert.match(dashboardPage, /signals: DashboardInsightSignal\[\]/);
   assert.match(dashboardPage, /function buildDashboardInsightSignals/);
-  assert.match(dashboardPage, /const handleSetupStepAction = useCallback/);
-  assert.match(dashboardPage, /function buildReviewPanelFromSetupStep/);
+  assert.doesNotMatch(dashboardPage, /const handleSetupStepAction = useCallback/);
+  assert.doesNotMatch(dashboardPage, /function buildReviewPanelFromSetupStep/);
   assert.doesNotMatch(dashboardPage, /<a key=\{step\.key\} href=\{step\.href\}/);
   assert.doesNotMatch(dashboardPage, /href=\{dashboardState\.actions\.nextSetupStep\.href\}/);
   assert.match(dashboardPage, /type: "missing_executor"/);
@@ -101,9 +117,18 @@ test("dashboard overview cards use compact shared summary cards with icon-only r
   assert.match(dashboardPage, /actionIcon="open_in_new"/);
   assert.match(summaryCard, /<IconButton/);
   assert.match(summaryCard, /actionIcon = "open_in_new"/);
-  assert.match(summaryCard, /<span style=\{valueStyle\}>/);
-  assert.match(summaryCard, /<span style=\{detailStyle\}>/);
+  assert.match(summaryCard, /className="lf-dashboard-summary-value" style=\{valueStyle\}/);
+  assert.match(summaryCard, /className="lf-dashboard-summary-detail" style=\{detailStyle\}/);
   assert.match(actionQueue, /Action Centre/);
+  assert.match(actionQueue, /className="lf-action-centre"/);
+  assert.match(actionQueue, /className="lf-action-centre-header"/);
+  assert.match(actionQueue, /className="lf-action-centre-intro"/);
+  assert.match(actionQueue, /className="lf-action-centre-section"/);
+  assert.match(actionQueue, /className="lf-action-centre-section-title-row"/);
+  assert.match(actionQueue, /className="lf-action-centre-section-summary"/);
+  assert.match(actionQueue, /className="lf-action-centre-row"/);
+  assert.match(actionQueue, /className="lf-action-centre-row-badges"/);
+  assert.match(actionQueue, /className="lf-action-centre-row-actions"/);
   assert.match(actionQueue, /Critical actions/);
   assert.match(actionQueue, /Recommended actions/);
   assert.match(actionQueue, /Your tasks/);
@@ -143,7 +168,8 @@ test("dashboard overview cards use compact shared summary cards with icon-only r
   assert.match(actionQueue, /return "key-documents"/);
   assert.match(actionQueue, /priorityPillStyle/);
   assert.match(actionQueue, /aria-expanded=\{isOpen\}/);
-  assert.match(actionQueue, /useState<ActionCentreSection\["key"\] \| null>\(null\)/);
+  assert.match(actionQueue, /useState<ActionCentreSection\["key"\] \| null \| undefined>\(undefined\)/);
+  assert.match(actionQueue, /effectiveOpenSectionKey = openSectionKey === undefined \? initialOpenSectionKey : openSectionKey/);
   assert.match(actionQueue, /toggleSection\(section\.key\)/);
   assert.match(actionQueue, /onAction\(item.actionKey\)/);
   assert.doesNotMatch(actionQueue, /supportingLegalInfoPresent|powerOfAttorneyPresent/);
@@ -185,7 +211,45 @@ test("contacts keeps the fuller invitation management view while dashboard stays
 
 test("shared attachment gallery uses icon buttons with tooltips instead of ad hoc text action buttons", () => {
   const attachmentGallery = fs.readFileSync(path.join(root, "components/documents/AttachmentGallery.tsx"), "utf8");
+  const css = fs.readFileSync(path.join(root, "app/globals.css"), "utf8");
+  const actionQueue = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/ActionQueuePanel.tsx"), "utf8");
 
+  assert.match(attachmentGallery, /className="lf-attachment-gallery"/);
+  assert.match(attachmentGallery, /className="lf-attachment-card-main"/);
+  assert.match(attachmentGallery, /className="lf-attachment-actions"/);
+  assert.match(attachmentGallery, /className=\{danger \? "lf-attachment-action is-danger" : "lf-attachment-action"\}/);
+  assert.match(actionQueue, /className="lf-action-centre"/);
+  assert.match(actionQueue, /className="lf-action-centre-section"/);
+  assert.match(actionQueue, /className="lf-action-centre-row"/);
+  assert.match(actionQueue, /className="lf-action-centre-row-actions"/);
+  assert.match(css, /\.lf-topbar \{[\s\S]*display: grid;[\s\S]*grid-template-columns: minmax\(0, 1fr\) auto/);
+  assert.match(css, /\.lf-topbar-user \{[\s\S]*width: 44px;[\s\S]*height: 44px;[\s\S]*flex: 0 0 44px/);
+  assert.match(css, /\.lf-topbar-user-copy \{[\s\S]*display: none/);
+  assert.match(css, /max-width: 1100px\)[\s\S]*\.lf-topbar[\s\S]*grid-template-columns: 44px minmax\(0, 1fr\) auto/);
+  assert.match(css, /max-width: 700px\)[\s\S]*\.lf-topbar[\s\S]*grid-template-columns: 44px minmax\(0, 1fr\) 44px/);
+  assert.match(css, /max-width: 700px\)[\s\S]*\.lf-topbar-actions[\s\S]*display: flex/);
+  assert.match(css, /max-width: 700px\)[\s\S]*\.lf-topbar-actions \.lf-workspace-switcher,[\s\S]*\.lf-topbar-security[\s\S]*display: none !important/);
+  assert.match(css, /max-width: 700px\)[\s\S]*\.lf-topbar-user[\s\S]*width: 44px/);
+  assert.match(css, /max-width: 700px\)[\s\S]*\.lf-topbar-user-copy[\s\S]*display: none/);
+  assert.match(css, /max-width: 700px\)[\s\S]*\.lf-mobile-drawer \.lf-workspace-switcher[\s\S]*display: block/);
+  assert.match(css, /max-width: 700px\)[\s\S]*\.lf-dashboard-overview-grid[\s\S]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(css, /max-width: 374px\)[\s\S]*\.lf-dashboard-overview-grid[\s\S]*grid-template-columns: minmax\(0, 1fr\)/);
+  assert.match(css, /max-width: 700px\)[\s\S]*\.lf-action-centre-intro[\s\S]*display: none !important/);
+  assert.match(css, /max-width: 700px\)[\s\S]*\.lf-action-centre-section-summary[\s\S]*-webkit-line-clamp: 1/);
+  assert.match(css, /max-width: 700px\)[\s\S]*\.lf-content-grid[\s\S]*grid-template-columns: 1fr !important/);
+  assert.match(css, /max-width: 700px\)[\s\S]*\.lf-content-wrap,[\s\S]*\.lf-main-content,[\s\S]*\.lf-main-content > \*[\s\S]*min-width: 0/);
+  assert.match(css, /max-width: 700px\)[\s\S]*\.lf-topbar[\s\S]*overflow: hidden/);
+  assert.match(css, /max-width: 700px\)[\s\S]*\.lf-dashboard-summary-card[\s\S]*width: 100% !important/);
+  assert.match(css, /max-width: 700px\)[\s\S]*\.lf-dashboard-summary-card[\s\S]*grid-template-rows: auto auto !important/);
+  assert.match(css, /max-width: 700px\)[\s\S]*\.lf-dashboard-summary-card[\s\S]*max-width: 100% !important/);
+  assert.match(css, /max-width: 700px\)[\s\S]*\.lf-dashboard-summary-title[\s\S]*white-space: nowrap/);
+  assert.match(css, /max-width: 700px\)[\s\S]*\.lf-dashboard-summary-card > \*[\s\S]*min-width: 0/);
+  assert.match(css, /max-width: 700px\)[\s\S]*\.lf-main-content input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\),[\s\S]*\.lf-main-content select,[\s\S]*\.lf-main-content textarea[\s\S]*min-width: 0 !important/);
+  assert.match(css, /max-width: 700px\)[\s\S]*\.lf-link-btn,[\s\S]*\.lf-primary-btn[\s\S]*min-height: 44px/);
+  assert.match(css, /@media \(max-width: 700px\)[\s\S]*\.lf-action-centre-row-actions/);
+  assert.match(css, /\.lf-action-centre-row-actions > button,[\s\S]*min-height: 44px !important/);
+  assert.match(css, /\.lf-attachment-actions[\s\S]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(css, /@media \(max-width: 420px\)[\s\S]*\.lf-attachment-card-main[\s\S]*flex-direction: column !important/);
   assert.match(attachmentGallery, /function AttachmentVisual/);
   assert.match(attachmentGallery, /function AttachmentActionButton/);
   assert.match(attachmentGallery, /label="View"/);
@@ -217,6 +281,53 @@ test("shared attachment gallery uses icon buttons with tooltips instead of ad ho
   assert.doesNotMatch(attachmentGallery, /style=\{miniGhostBtn\}/);
 });
 
+test("dashboard profile chip signs the avatar through the authenticated server route", () => {
+  const layout = fs.readFileSync(path.join(root, "app/(app)/layout.tsx"), "utf8");
+  const route = fs.readFileSync(path.join(root, "app/api/profile/identity-chip/route.ts"), "utf8");
+  const avatarRoute = fs.readFileSync(path.join(root, "app/api/profile/avatar/route.ts"), "utf8");
+
+  assert.match(layout, /loadServerProfileIdentityChip\(email\)[\s\S]*loadProfileIdentityChip\(supabase, \{ userId, email \}\)/);
+  assert.match(layout, /const fallbackProfile = !serverProfile\?\.avatarUrl/);
+  assert.match(layout, /avatarUrl: serverProfile\?\.avatarUrl \|\| fallbackProfile\?\.avatarUrl \|\| ""/);
+  assert.match(layout, /const setFreshAvatarUrl = useCallback/);
+  assert.match(layout, /readCachedProfileAvatarUrl\(\)/);
+  assert.match(layout, /PROFILE_AVATAR_CACHE_KEY/);
+  assert.match(layout, /ignored_empty_value=yes/);
+  assert.match(layout, /cacheProfileAvatarUrl\(next\)/);
+  assert.match(layout, /hydrateUserChip\(userId, nextEmail, mounted, setDisplayName, setTelephone, setInitials, setFreshAvatarUrl\)/);
+  assert.doesNotMatch(layout, /failedAvatarUrl/);
+  assert.doesNotMatch(layout, /avatarRetryKey/);
+  assert.doesNotMatch(layout, /recoverSidebarAvatar/);
+  assert.doesNotMatch(layout, /setFailedAvatarUrl\(renderedAvatarUrl\)/);
+  assert.match(layout, /backgroundImage: `url\("\$\{cssEscapeUrl\(renderedAvatarUrl\)\}"\)`/);
+  assert.match(layout, /const \[confirmedAvatarUrl, setConfirmedAvatarUrl\] = useState\(""\)/);
+  assert.match(layout, /const image = new Image\(\)/);
+  assert.match(layout, /image\.onload = \(\) => \{/);
+  assert.match(layout, /setConfirmedAvatarUrl\(effectiveAvatarUrl\)/);
+  assert.match(layout, /image\.onerror = \(\) => \{/);
+  assert.match(layout, /data-avatar-ready=\{renderedAvatarUrl \? "true" : "false"\}/);
+  assert.match(layout, /className="lf-topbar-user-avatar-fallback"/);
+  assert.doesNotMatch(layout, /className="lf-topbar-user-avatar-img"/);
+  assert.match(layout, /function cssEscapeUrl\(value: string\)/);
+  assert.match(layout, /const stableAvatarUrl = await loadServerProfileAvatarDataUrl\(\)/);
+  assert.match(layout, /if \(stableAvatarUrl\) \{[\s\S]*setAvatarUrl\(stableAvatarUrl\);[\s\S]*return;[\s\S]*\}/);
+  assert.match(layout, /signed_avatar_url=ignored_for_header_stability/);
+  assert.match(layout, /avatar_preserved=empty_lookup/);
+  assert.match(layout, /fetch\("\/api\/profile\/avatar"/);
+  assert.match(layout, /blobToDataUrl\(blob\)/);
+  assert.match(layout, /reader\.readAsDataURL\(blob\)/);
+  assert.match(layout, /fetch\("\/api\/profile\/identity-chip"/);
+  assert.match(layout, /authorization: `Bearer \$\{token\}`/);
+  assert.match(route, /getRequestUser\(request\)/);
+  assert.match(route, /createSupabaseAdminClient\(\)/);
+  assert.match(route, /getProfileAvatarPreview\(admin, profile\.avatar_path\)/);
+  assert.match(route, /"Cache-Control": "no-store"/);
+  assert.match(avatarRoute, /getRequestUser\(request\)/);
+  assert.match(avatarRoute, /AVATAR_BUCKET_CANDIDATES/);
+  assert.match(avatarRoute, /admin\.storage\.from\(bucket\)\.download\(avatarPath\)/);
+  assert.match(avatarRoute, /"Content-Type": file\.data\.type \|\| "image\/jpeg"/);
+});
+
 test("document-oriented records avoid forced monetary structure and task linking is optional", () => {
   const workspace = fs.readFileSync(path.join(root, "components/records/UniversalRecordWorkspace.tsx"), "utf8");
   const fieldDictionary = fs.readFileSync(path.join(root, "lib/assets/fieldDictionary.ts"), "utf8");
@@ -235,4 +346,34 @@ test("document-oriented records avoid forced monetary structure and task linking
   assert.match(workspace, /multiple/);
   assert.match(fieldDictionary, /key: "related_asset_id"[\s\S]*required: false/);
   assert.doesNotMatch(createAsset, /Related Asset \/ Record is required/);
+});
+
+test("shared consumer workflow controls support structured capture and assisted upload confirmation", () => {
+  const controls = fs.readFileSync(path.join(root, "components/forms/asset/AssetFormControls.tsx"), "utf8");
+  const configFields = fs.readFileSync(path.join(root, "components/forms/asset/ConfigDrivenAssetFields.tsx"), "utf8");
+  const documentsWorkspace = fs.readFileSync(path.join(root, "components/documents/DocumentsWorkspace.tsx"), "utf8");
+  const onboarding = fs.readFileSync(path.join(root, "app/onboarding/OnboardingPageClient.tsx"), "utf8");
+
+  assert.match(controls, /export function RequiredIndicator/);
+  assert.match(controls, /aria-label="Required"/);
+  assert.match(controls, /export function OtherSelectInput/);
+  assert.match(controls, /Choose the closest option\. Select Other only when none fit\./);
+  assert.match(controls, /export function SegmentedControl/);
+  assert.match(controls, /role="group"/);
+  assert.match(controls, /export function ExtractionConfirmationPanel/);
+  assert.match(controls, /Extracted values are a starting point only/);
+  assert.match(controls, /helperText\?: string/);
+  assert.match(controls, /role="alert"/);
+  assert.match(configFields, /field\.inputType === "select" && field\.supportsOther && field\.otherKey/);
+  assert.match(configFields, /<OtherSelectInput/);
+  assert.match(configFields, /required=\{field\.required\}/);
+  assert.doesNotMatch(configFields, /showOther && false/);
+  assert.match(documentsWorkspace, /<ExtractionConfirmationPanel/);
+  assert.match(documentsWorkspace, /Any extracted details remain editable before they become part of your vault/);
+  assert.match(documentsWorkspace, /helperText=\{selectedKind === "photo"/);
+  assert.match(documentsWorkspace, /disabled=\{saving \|\| !pendingFile\}/);
+  assert.match(onboarding, /PlatformSection/);
+  assert.match(onboarding, /Set up your vault in stages/);
+  assert.match(onboarding, /Tasks and reminders stay inside Action Centre/);
+  assert.match(onboarding, /onboardingMilestones/);
 });

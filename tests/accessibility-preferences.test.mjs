@@ -11,6 +11,7 @@ test("accessibility preferences default safely", () => {
     textSize: "default",
     contrastMode: "default",
     spacingMode: "default",
+    contextualHelpEnabled: true,
     helpWizardEnabled: false,
     readAloudEnabled: false,
   });
@@ -22,6 +23,7 @@ test("accessibility preferences normalize supported values only", () => {
       textSize: "xlarge",
       contrastMode: "high",
       spacingMode: "comfortable",
+      contextualHelpEnabled: false,
       helpWizardEnabled: true,
       readAloudEnabled: true,
     }),
@@ -29,8 +31,15 @@ test("accessibility preferences normalize supported values only", () => {
       textSize: "xlarge",
       contrastMode: "high",
       spacingMode: "comfortable",
+      contextualHelpEnabled: false,
       helpWizardEnabled: true,
       readAloudEnabled: true,
     },
   );
+});
+
+test("contextual help remains enabled unless explicitly disabled", () => {
+  assert.equal(normalizeAccessibilityPreferences({}).contextualHelpEnabled, true);
+  assert.equal(normalizeAccessibilityPreferences({ contextualHelpEnabled: true }).contextualHelpEnabled, true);
+  assert.equal(normalizeAccessibilityPreferences({ contextualHelpEnabled: false }).contextualHelpEnabled, false);
 });
