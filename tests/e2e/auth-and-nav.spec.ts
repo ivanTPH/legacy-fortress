@@ -4,12 +4,16 @@ import { requireAuthFixture, signInAsSeedUser } from "./helpers/auth";
 test.describe("Auth and navigation regressions", () => {
   test("public auth pages load", async ({ page }) => {
     await page.goto("/sign-in");
+    await expect(page).toHaveURL(/\/sign-in/);
     await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible();
 
     await page.goto("/sign-up");
-    await expect(page.getByRole("heading", { name: /create account/i })).toBeVisible();
+    await expect(page).toHaveURL(/\/sign-up/);
+    await expect(page.getByRole("heading", { name: /set up access/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /create account/i })).toBeVisible();
 
     await page.goto("/forgot-password");
+    await expect(page).toHaveURL(/\/forgot-password/);
     await expect(page.getByRole("heading", { name: /forgot password/i })).toBeVisible();
   });
 
