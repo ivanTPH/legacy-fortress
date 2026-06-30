@@ -299,7 +299,8 @@ test("dashboard profile chip signs the avatar through the authenticated server r
   assert.doesNotMatch(layout, /avatarRetryKey/);
   assert.doesNotMatch(layout, /recoverSidebarAvatar/);
   assert.doesNotMatch(layout, /setFailedAvatarUrl\(renderedAvatarUrl\)/);
-  assert.match(layout, /backgroundImage: `url\("\$\{cssEscapeUrl\(renderedAvatarUrl\)\}"\)`/);
+  assert.match(layout, /className="lf-topbar-user-avatar-img"/);
+  assert.match(layout, /src=\{renderedAvatarUrl\}/);
   assert.match(layout, /const \[confirmedAvatarUrl, setConfirmedAvatarUrl\] = useState\(""\)/);
   assert.match(layout, /const image = new Image\(\)/);
   assert.match(layout, /image\.onload = \(\) => \{/);
@@ -307,8 +308,7 @@ test("dashboard profile chip signs the avatar through the authenticated server r
   assert.match(layout, /image\.onerror = \(\) => \{/);
   assert.match(layout, /data-avatar-ready=\{renderedAvatarUrl \? "true" : "false"\}/);
   assert.match(layout, /className="lf-topbar-user-avatar-fallback"/);
-  assert.doesNotMatch(layout, /className="lf-topbar-user-avatar-img"/);
-  assert.match(layout, /function cssEscapeUrl\(value: string\)/);
+  assert.doesNotMatch(layout, /backgroundImage: `url/);
   assert.match(layout, /const stableAvatarUrl = await loadServerProfileAvatarDataUrl\(\)/);
   assert.match(layout, /if \(stableAvatarUrl\) \{[\s\S]*setAvatarUrl\(stableAvatarUrl\);[\s\S]*return;[\s\S]*\}/);
   assert.match(layout, /signed_avatar_url=used_as_fallback/);

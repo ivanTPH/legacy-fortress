@@ -964,8 +964,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 aria-label={`Signed-in account picture for ${effectiveDisplayName}`}
                 role="img"
                 data-avatar-ready={renderedAvatarUrl ? "true" : "false"}
-                style={renderedAvatarUrl ? { backgroundImage: `url("${cssEscapeUrl(renderedAvatarUrl)}")` } : undefined}
               >
+                {renderedAvatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img className="lf-topbar-user-avatar-img" src={renderedAvatarUrl} alt="" aria-hidden="true" />
+                ) : null}
                 <span className="lf-topbar-user-avatar-fallback">{effectiveInitials || "LF"}</span>
               </span>
               <div className="lf-topbar-user-copy">
@@ -1036,8 +1039,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     aria-label={`Signed-in account picture for ${effectiveDisplayName}`}
                     role="img"
                     data-avatar-ready={renderedAvatarUrl ? "true" : "false"}
-                    style={renderedAvatarUrl ? { backgroundImage: `url("${cssEscapeUrl(renderedAvatarUrl)}")` } : undefined}
                   >
+                    {renderedAvatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img className="lf-topbar-user-avatar-img" src={renderedAvatarUrl} alt="" aria-hidden="true" />
+                    ) : null}
                     <span className="lf-topbar-user-avatar-fallback">{effectiveInitials || "LF"}</span>
                   </span>
                   <div>
@@ -1205,10 +1211,6 @@ function cacheProfileAvatarUrl(value: string) {
   } catch {
     // Session storage can reject large data URLs. The in-memory state still holds the avatar.
   }
-}
-
-function cssEscapeUrl(value: string) {
-  return value.replace(/["\\\n\r\f]/g, "");
 }
 
 async function loadServerProfileIdentityChip(email: string) {

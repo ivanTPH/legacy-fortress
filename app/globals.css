@@ -1595,9 +1595,6 @@ textarea {
 .lf-topbar-user-avatar {
   border: 1px solid #d1d5db;
   background: #f8fafc;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1606,6 +1603,15 @@ textarea {
   font-size: 13px;
   font-weight: 700;
   color: #334155;
+}
+
+.lf-topbar-user-avatar-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
 }
 
 .lf-topbar-user-avatar[data-avatar-ready="true"] .lf-topbar-user-avatar-fallback {
