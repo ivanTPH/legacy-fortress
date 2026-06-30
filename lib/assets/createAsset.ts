@@ -26,7 +26,8 @@ export type CanonicalAssetCategorySlug =
   | "beneficiaries"
   | "executors"
   | "tasks"
-  | "identity-documents";
+  | "identity-documents"
+  | "power-of-attorney";
 
 export type CreateAssetInput = {
   userId: string;
@@ -509,6 +510,8 @@ export async function updateAsset(client: AnySupabaseClient, input: UpdateAssetI
   const publicMetadata = stripSensitiveMetadata(metadata);
 
   const payload: Record<string, unknown> = {
+    section_key: sectionKey,
+    category_key: categoryKey,
     title: input.title.trim(),
     provider_name: String(normalizedMetadata["provider_name"] ?? normalizedMetadata["institution_name"] ?? "").trim() || null,
     provider_key: String(normalizedMetadata["provider_key"] ?? "").trim() || null,
@@ -533,11 +536,9 @@ export async function updateAsset(client: AnySupabaseClient, input: UpdateAssetI
     .eq("id", input.assetId)
     .eq("owner_user_id", input.userId)
     .eq("wallet_id", wallet.walletId)
-    .eq("section_key", sectionKey)
-    .eq("category_key", categoryKey)
     .is("deleted_at", null)
     .select("id")
-    .single();
+    .maybeSingle();
 
   if (updateRes.error) {
     throw new Error(updateRes.error.message);
@@ -545,7 +546,7 @@ export async function updateAsset(client: AnySupabaseClient, input: UpdateAssetI
 
   const updatedId = String(updateRes.data?.id ?? "").trim();
   if (!updatedId) {
-    throw new Error("Failed to update asset record.");
+    throw new Error("We could not save changes because this record was not editable from this view. Refresh the page and try again.");
   }
 
   await upsertSensitiveAssetPayload(client, {
@@ -694,6 +695,10 @@ function getCategorySlugCandidates(slug: string) {
     set.add("identity-document");
     set.add("identity_documents");
   }
+  if (slug === "power-of-attorney") {
+    set.add("power_of_attorney");
+    set.add("lpa");
+  }
   if (slug === "beneficiaries") set.add("beneficiary");
   if (slug === "executors") {
     set.add("executor");
@@ -721,6 +726,7 @@ function sectionKeyFromCategory(categorySlug: CanonicalAssetCategorySlug) {
   if (categorySlug === "property") return "property";
   if (categorySlug === "business-interests") return "business";
   if (categorySlug === "identity-documents") return "legal";
+  if (categorySlug === "power-of-attorney") return "legal";
   if (categorySlug === "beneficiaries") return "personal";
   if (categorySlug === "executors") return "personal";
   if (categorySlug === "tasks") return "personal";
@@ -732,6 +738,7 @@ function categoryKeyFromSlug(categorySlug: CanonicalAssetCategorySlug) {
   if (categorySlug === "business-interests") return "business";
   if (categorySlug === "digital-assets") return "digital";
   if (categorySlug === "identity-documents") return "identity-documents";
+  if (categorySlug === "power-of-attorney") return "power-of-attorney";
   if (categorySlug === "beneficiaries") return "beneficiaries";
   if (categorySlug === "executors") return "executors";
   if (categorySlug === "tasks") return "tasks";

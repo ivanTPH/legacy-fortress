@@ -667,6 +667,11 @@ export default function UniversalRecordWorkspace({
   const canonicalCategorySlug = resolveCanonicalCategorySlug(sectionKey, categoryKey);
   const usesCanonicalAssets = Boolean(canonicalCategorySlug);
   const usesCanonicalAssetReadPath = forceCanonicalRead || Boolean(managedAssetWorkspaceConfig?.readsCanonicalAssets) || usesCanonicalAssets;
+  const canonicalLegalDocumentCategorySlug =
+    !usesCanonicalAssets && usesCanonicalAssetReadPath && sectionKey === "legal"
+      ? resolveCanonicalLegalDocumentCategorySlug(categoryKey)
+      : null;
+  const writesCanonicalAsset = usesCanonicalAssets || Boolean(canonicalLegalDocumentCategorySlug);
   const isCanonicalBeneficiary = canonicalCategorySlug === "beneficiaries";
   const isCanonicalExecutor = canonicalCategorySlug === "executors";
   const isCanonicalTask = canonicalCategorySlug === "tasks";
@@ -705,7 +710,7 @@ export default function UniversalRecordWorkspace({
   const usesStructuredWorkspaceForm = isFinanceSection || usesCanonicalAssets || isIdentityDocuments || isSocialMedia;
   const canCreateRecords = viewer.mode !== "linked";
   const canEditWorkspaceRow = (recordId: string) =>
-    usesCanonicalAssets ? canEditAssetForViewer(recordId, viewer) : canEditRecordForViewer(recordId, viewer);
+    usesCanonicalAssets || canonicalLegalDocumentCategorySlug ? canEditAssetForViewer(recordId, viewer) : canEditRecordForViewer(recordId, viewer);
   const helpMessage = getWorkspaceHelpMessage(sectionKey, categoryKey);
   const selectedWorkspaceRecordId = String(
     searchParams.get(usesCanonicalAssetReadPath ? "asset" : "record")
@@ -1544,7 +1549,11 @@ export default function UniversalRecordWorkspace({
       }
     }
     if (!form.title.trim() && !(isFinanceSection && financeDraft.title) && !(usesCanonicalAssets && canonicalAssetDraft?.title)) {
-      const message = isTrustedContacts ? "Please enter the contact's full name before saving." : "Please enter an item title before saving.";
+      const message = isTrustedContacts
+        ? "Please enter the contact's full name before saving."
+        : isNarrativeDocumentWorkspace
+          ? `${narrativeTitleLabel} is required before saving.`
+          : "Please enter an item title before saving.";
       setSubmitError(message);
       setStatus(message);
       pushBankSubmitTrace("validation failed: title");
@@ -1711,12 +1720,29 @@ export default function UniversalRecordWorkspace({
 
     let recordId = editingId;
     try {
-      if (usesCanonicalAssets) {
+      if (writesCanonicalAsset) {
+        const assetCategorySlug = (canonicalCategorySlug ?? canonicalLegalDocumentCategorySlug) as CanonicalAssetCategorySlug;
+        const assetTitle = usesCanonicalAssets
+          ? String(payload.title ?? "").trim()
+          : form.title.trim();
+        const assetMetadata = usesCanonicalAssets
+          ? normalizedMetadata
+          : {
+              ...normalizedMetadata,
+              document_title: form.title.trim() || null,
+              document_type: form.provider_name.trim() || categoryKey,
+              provider_name: form.provider_name.trim() || null,
+              short_description: form.summary.trim() || null,
+              notes: form.notes.trim() || null,
+              contact_name: form.contact_name.trim() || null,
+              contact_email: form.contact_email.trim() || null,
+              contact_role: resolvedLegacyContactRole,
+            };
         const assetInput = {
           userId: user.id,
-          categorySlug: canonicalCategorySlug as CanonicalAssetCategorySlug,
-          title: String(payload.title ?? "").trim(),
-          metadata: normalizedMetadata,
+          categorySlug: assetCategorySlug,
+          title: assetTitle,
+          metadata: assetMetadata,
           visibility: "private" as const,
         };
         pushBankSubmitTrace(
@@ -1756,6 +1782,33 @@ export default function UniversalRecordWorkspace({
             },
           });
         }
+        if (canonicalLegalDocumentCategorySlug && recordId) {
+          const hasLegalContact = Boolean(form.contact_name.trim() || form.contact_email.trim() || form.contact_role.trim());
+          await unlinkPeopleContactSource(supabase, {
+            ownerUserId: user.id,
+            sourceKind: "asset",
+            sourceId: recordId,
+          }).catch(() => undefined);
+          if (hasLegalContact) {
+            await savePeopleContact(supabase, {
+              ownerUserId: user.id,
+              fullName: form.contact_name.trim() || "Linked contact",
+              email: form.contact_email.trim() || null,
+              phone: null,
+              contactRole: resolvedLegacyContactRole,
+              relationship: form.contact_role.trim() || null,
+              sourceType: "record_contact",
+              link: {
+                sourceKind: "asset",
+                sourceId: recordId,
+                sectionKey,
+                categoryKey,
+                label: legalLinkedContactDefinition?.contactNameLabel ?? "Record contact",
+                role: resolvedLegacyContactRole,
+              },
+            });
+          }
+        }
         pushBankSubmitTrace(`createAsset success: asset_id="${recordId}"`);
         mergeDevBankContextTrace({
           source: "UniversalRecordWorkspace.saveRecord",
@@ -1785,7 +1838,7 @@ export default function UniversalRecordWorkspace({
         recordId = insertResult.data.id;
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
+      const message = toPlainSaveError(error instanceof Error ? error.message : "Unknown error");
       setSubmitError(message);
       setStatus(`Save failed: ${message}`);
       const redirectHref = getPlanLimitRedirectHref(error);
@@ -1915,7 +1968,7 @@ export default function UniversalRecordWorkspace({
       recordFilter,
       viewer,
     });
-    if (recordId && usesCanonicalAssets) {
+    if (recordId && writesCanonicalAsset) {
       pushBankSubmitTrace(`sync notified: section="${sectionKey}" category="${categoryKey}" asset_id="${recordId}"`);
       notifyCanonicalAssetMutation({
         assetId: recordId,
@@ -1950,7 +2003,7 @@ export default function UniversalRecordWorkspace({
       setArchivingFor(null);
       return;
     }
-    const result = usesCanonicalAssets
+    const result = writesCanonicalAsset
       ? await supabase
           .from("assets")
           .update({ status: "archived", archived_at: new Date().toISOString(), updated_at: new Date().toISOString() })
@@ -1992,7 +2045,7 @@ export default function UniversalRecordWorkspace({
       await Promise.all(Object.entries(byBucket).map(([bucket, paths]) => supabase.storage.from(bucket).remove(paths)));
     }
 
-    const result = usesCanonicalAssets
+    const result = writesCanonicalAsset
       ? await supabase
           .from("assets")
           .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
@@ -2005,7 +2058,7 @@ export default function UniversalRecordWorkspace({
       return;
     }
     try {
-      if (usesCanonicalAssets && isCanonicalExecutor) {
+      if ((usesCanonicalAssets && isCanonicalExecutor) || canonicalLegalDocumentCategorySlug) {
         await unlinkPeopleContactSource(supabase, {
           ownerUserId: user.id,
           sourceKind: "asset",
@@ -3216,7 +3269,13 @@ export default function UniversalRecordWorkspace({
             </div>
           ) : null}
           <label style={fieldStyle}>
-            <span style={labelStyle}>{isTrustedContacts ? "Full name" : isNarrativeDocumentWorkspace ? narrativeTitleLabel : "Item title"}</span>
+            <span style={labelStyle}>
+              {isTrustedContacts
+                ? "Full name"
+                : isNarrativeDocumentWorkspace
+                  ? `${narrativeTitleLabel} (required)`
+                  : "Item title"}
+            </span>
             <input style={inputStyle} value={form.title} onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))} />
           </label>
           {isPossessions ? (
@@ -3335,7 +3394,13 @@ export default function UniversalRecordWorkspace({
             </label>
           ) : null}
           <label style={fieldStyle}>
-            <span style={labelStyle}>{isNarrativeDocumentWorkspace ? narrativeNotesLabel : "Notes"}</span>
+            <span style={labelStyle}>
+              {isNarrativeDocumentWorkspace && !editingId
+                ? `${narrativeNotesLabel} (required unless a document is uploaded)`
+                : isNarrativeDocumentWorkspace
+                  ? narrativeNotesLabel
+                  : "Notes"}
+            </span>
             <textarea style={textAreaStyle} value={form.notes} onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))} />
           </label>
           {!isTrustedContacts ? (
@@ -5125,6 +5190,19 @@ function resolveCanonicalCategorySlug(sectionKey: string, categoryKey: string) {
   if (sectionKey === "personal" && categoryKey === "tasks") return "tasks" as const;
   if (sectionKey === "legal" && categoryKey === "identity-documents") return "identity-documents" as const;
   return null;
+}
+
+function resolveCanonicalLegalDocumentCategorySlug(categoryKey: string): CanonicalAssetCategorySlug | null {
+  if (categoryKey === "power-of-attorney") return "power-of-attorney";
+  return null;
+}
+
+function toPlainSaveError(message: string) {
+  const normalized = message.trim();
+  if (/cannot coerce the result to a single json object/i.test(normalized) || /json object requested/i.test(normalized)) {
+    return "We could not save changes because this record was not editable from this view. Refresh the page and try again, then open the record from its original vault section if it still fails.";
+  }
+  return normalized || "We could not save this record. Check the required fields and try again.";
 }
 
 function ProviderBadge({

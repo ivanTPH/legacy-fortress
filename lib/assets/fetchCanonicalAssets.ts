@@ -97,6 +97,9 @@ function resolveDerivedAssetCategoryIdentity(row: CanonicalAssetQueryRow) {
   if (token === "identity-documents" || token === "identity-document" || token === "identity") {
     return { sectionKey: "legal", categoryKey: "identity-documents" };
   }
+  if (token === "power-of-attorney" || token === "power-of-attorney-document" || token === "lpa") {
+    return { sectionKey: "legal", categoryKey: "power-of-attorney" };
+  }
   if (token === "beneficiaries" || token === "beneficiary") {
     return { sectionKey: "personal", categoryKey: "beneficiaries" };
   }

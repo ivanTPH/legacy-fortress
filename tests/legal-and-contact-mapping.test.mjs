@@ -95,17 +95,26 @@ test("identity documents share the canonical legal asset read path", () => {
   assert.equal(usesCanonicalLegalAssetRead("wills"), false);
 });
 
-test("identity document writes use the same canonical legal asset category as reads", () => {
+test("canonical legal document writes use the same legal asset category as reads", () => {
   const workspace = fs.readFileSync(path.join(root, "components/records/UniversalRecordWorkspace.tsx"), "utf8");
   const createAsset = fs.readFileSync(path.join(root, "lib/assets/createAsset.ts"), "utf8");
   const fetchCanonicalAssets = fs.readFileSync(path.join(root, "lib/assets/fetchCanonicalAssets.ts"), "utf8");
 
   assert.match(workspace, /sectionKey === "legal" && categoryKey === "identity-documents"\) return "identity-documents"/);
+  assert.match(workspace, /categoryKey === "power-of-attorney"\) return "power-of-attorney"/);
+  assert.match(workspace, /toPlainSaveError/);
+  assert.match(workspace, /narrativeTitleLabel[\s\S]*required/);
+  assert.match(workspace, /required unless a document is uploaded/);
   assert.match(createAsset, /\| "identity-documents"/);
+  assert.match(createAsset, /\| "power-of-attorney"/);
   assert.match(createAsset, /categorySlug === "identity-documents"\) return "legal"/);
+  assert.match(createAsset, /categorySlug === "power-of-attorney"\) return "legal"/);
   assert.match(createAsset, /categorySlug === "identity-documents"\) return "identity-documents"/);
+  assert.match(createAsset, /categorySlug === "power-of-attorney"\) return "power-of-attorney"/);
   assert.match(fetchCanonicalAssets, /token === "identity-documents"/);
+  assert.match(fetchCanonicalAssets, /token === "power-of-attorney"/);
   assert.match(fetchCanonicalAssets, /sectionKey: "legal", categoryKey: "identity-documents"/);
+  assert.match(fetchCanonicalAssets, /sectionKey: "legal", categoryKey: "power-of-attorney"/);
 });
 
 test("identity documents are available through the shared field dictionary", () => {
