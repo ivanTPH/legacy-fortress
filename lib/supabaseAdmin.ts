@@ -4,12 +4,18 @@ export function getSupabaseAdminConfigIssue() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url) return "missing_url";
-  if (!key) return "missing_service_role_key";
-  const parts = key.split(".");
-  if (parts.length !== 3 || parts.some((part) => !String(part).trim())) {
+  const normalizedKey = String(key ?? "").trim();
+  if (!normalizedKey) return "missing_service_role_key";
+  if (!isSupportedServiceRoleKey(normalizedKey)) {
     return "malformed_service_role_key";
   }
   return null;
+}
+
+function isSupportedServiceRoleKey(key: string) {
+  if (key.startsWith("sb_secret_") && key.length > "sb_secret_".length) return true;
+  const parts = key.split(".");
+  return parts.length === 3 && parts.every((part) => Boolean(part.trim()));
 }
 
 export function createSupabaseAdminClient() {

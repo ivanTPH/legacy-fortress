@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import BrandMark from "./components/BrandMark";
@@ -16,7 +16,7 @@ import { trackClientEvent } from "../../lib/observability/clientEvents";
 import { getFlyoutMenuKeyAction, getTopMenuKeyAction } from "../../lib/navigation/menuKeyActions";
 import { initialMenuState, menuReducer, type MenuCloseReason } from "../../lib/navigation/menuState";
 import { bootstrapAuthenticatedUser } from "../../lib/auth/bootstrap";
-import { waitForActiveUser } from "../../lib/auth/session";
+import { buildProtectedSignInRedirect, isFinalSignedOutAuthEvent, waitForActiveUser } from "../../lib/auth/session";
 import { appendDevBankRequestTrace, isDevBankTraceEnabled } from "../../lib/devSmoke";
 import { appendProfileAvatarTrace, maskAvatarUrl } from "../../lib/profile/avatarTrace";
 import { loadProfileIdentityChip, resolveProfileIdentityDisplayName } from "../../lib/profile/workspace";
@@ -58,6 +58,7 @@ import {
 } from "../../lib/testPersonas";
 
 const PROFILE_AVATAR_CACHE_KEY = "lf:profile-avatar:last-good";
+type AuthState = "checking" | "ready" | "redirecting" | "none" | "error";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -69,7 +70,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [initials, setInitials] = useState("LF");
   const [avatarUrl, setAvatarUrl] = useState(() => readCachedProfileAvatarUrl());
   const [confirmedAvatarUrl, setConfirmedAvatarUrl] = useState("");
-  const [authState, setAuthState] = useState<"checking" | "ready" | "none">("checking");
+  const [authState, setAuthState] = useState<AuthState>("checking");
   const [isDemoExperience, setIsDemoExperience] = useState(false);
   const [viewerAccess, setViewerAccess] = useState<ViewerAccessState | null>(null);
   const [vaultPreferences, setVaultPreferences] = useState(getDefaultVaultPreferences);
@@ -370,36 +371,43 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
     async function guard() {
       if (!mounted) return;
-      const user = await waitForActiveUser(supabase, { attempts: 6, delayMs: 120 });
-      if (!user) {
-        setIsDemoExperience(false);
-        setAuthState("none");
-        return;
-      }
-
-      let bootstrapDestination = "/onboarding?required=1";
-      let onboardingCompleted = true;
       try {
-        const bootstrap = await bootstrapAuthenticatedUser(supabase, { userId: user.id });
-        bootstrapDestination = bootstrap.destination;
-        onboardingCompleted = bootstrap.onboardingComplete;
-      } catch {
-        onboardingCompleted = false;
-      }
-      if (!onboardingCompleted) {
+        const user = await waitForActiveUser(supabase, { attempts: 6, delayMs: 120 });
+        if (!mounted) return;
+        if (!user) {
+          setIsDemoExperience(false);
+          setAuthState("none");
+          return;
+        }
+
+        let bootstrapDestination = "/onboarding?required=1";
+        let onboardingCompleted = true;
         try {
-          onboardingCompleted = await hasLinkedAccountAccess(supabase, user.id);
+          const bootstrap = await bootstrapAuthenticatedUser(supabase, { userId: user.id });
+          bootstrapDestination = bootstrap.destination;
+          onboardingCompleted = bootstrap.onboardingComplete;
         } catch {
           onboardingCompleted = false;
         }
-      }
-      if (!mounted) return;
-      if (!onboardingCompleted) {
-        router.replace(bootstrapDestination);
-        return;
-      }
+        if (!onboardingCompleted) {
+          try {
+            onboardingCompleted = await hasLinkedAccountAccess(supabase, user.id);
+          } catch {
+            onboardingCompleted = false;
+          }
+        }
+        if (!mounted) return;
+        if (!onboardingCompleted) {
+          setAuthState("redirecting");
+          router.replace(bootstrapDestination);
+          return;
+        }
 
-      await hydrateAuthenticatedSession(user);
+        await hydrateAuthenticatedSession(user);
+      } catch {
+        if (!mounted) return;
+        setAuthState("error");
+      }
     }
 
     void guard();
@@ -407,9 +415,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
       if (!session) {
-        setViewerAccess(null);
-        setIsDemoExperience(false);
-        setAuthState("none");
+        if (event === "INITIAL_SESSION") {
+          return;
+        }
+        if (isFinalSignedOutAuthEvent(event)) {
+          setViewerAccess(null);
+          setIsDemoExperience(false);
+          setAuthState("none");
+          return;
+        }
+        void (async () => {
+          const confirmedUser = await waitForActiveUser(supabase, { attempts: 2, delayMs: 100 });
+          if (!mounted) return;
+          if (confirmedUser) {
+            await hydrateAuthenticatedSession(confirmedUser);
+            return;
+          }
+          if (!mounted) return;
+          setViewerAccess(null);
+          setIsDemoExperience(false);
+          setAuthState("none");
+        })();
         return;
       }
 
@@ -426,9 +452,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (effectiveAuthState === "none" && !devSmokeMode) {
-      router.replace("/sign-in");
+      const search = typeof window === "undefined" ? "" : window.location.search;
+      router.replace(buildProtectedSignInRedirect(pathname, search));
     }
-  }, [effectiveAuthState, devSmokeMode, router]);
+  }, [effectiveAuthState, devSmokeMode, pathname, router]);
 
   useEffect(() => {
     let mounted = true;
@@ -721,12 +748,31 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const topbarBreadcrumbs = normalizedPathname === "/dashboard" ? [] : breadcrumbs.slice(0, -1);
 
   if (effectiveAuthState !== "ready") {
+    const sessionTitle = effectiveAuthState === "error"
+      ? "Session needs attention"
+      : effectiveAuthState === "none"
+        ? "Redirecting to sign in"
+        : effectiveAuthState === "redirecting"
+          ? "Redirecting"
+          : "Checking session";
+    const sessionMessage = effectiveAuthState === "error"
+      ? "We could not validate your session. Please sign in again to continue."
+      : effectiveAuthState === "none"
+        ? "Taking you back to secure sign in..."
+        : effectiveAuthState === "redirecting"
+          ? "Taking you to the next required setup step..."
+          : "Validating your secure session...";
     return (
       <main className="lf-auth">
         <section className="lf-auth-form-side">
           <div className="lf-auth-card">
-            <h1>Checking session</h1>
-            <p className="lf-auth-subtext">Validating your secure session...</p>
+            <h1>{sessionTitle}</h1>
+            <p className="lf-auth-subtext">{sessionMessage}</p>
+            {effectiveAuthState === "error" ? (
+              <button className="lf-primary-btn" type="button" onClick={() => router.replace(buildProtectedSignInRedirect(pathname, typeof window === "undefined" ? "" : window.location.search))}>
+                Return to sign in
+              </button>
+            ) : null}
           </div>
         </section>
       </main>
@@ -915,7 +961,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <Link href="/profile" className="lf-topbar-user" aria-label="Edit account details">
               <span
                 className="lf-topbar-user-avatar"
-                aria-label={`${effectiveDisplayName} picture`}
+                aria-label={`Signed-in account picture for ${effectiveDisplayName}`}
                 role="img"
                 data-avatar-ready={renderedAvatarUrl ? "true" : "false"}
                 style={renderedAvatarUrl ? { backgroundImage: `url("${cssEscapeUrl(renderedAvatarUrl)}")` } : undefined}
@@ -924,7 +970,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </span>
               <div className="lf-topbar-user-copy">
                 <div className="lf-topbar-user-name">{effectiveDisplayName}</div>
-                <div className="lf-topbar-user-meta">{effectiveTelephone || "Add a phone number"}</div>
+                <div className="lf-topbar-user-meta">
+                  {resolvedViewerAccess.mode === "linked" ? "Signed-in reviewer account" : effectiveTelephone || "Add a phone number"}
+                </div>
               </div>
             </Link>
           </div>
@@ -985,7 +1033,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <div className="lf-user-card">
                   <span
                     className="lf-user-avatar"
-                    aria-label={`${effectiveDisplayName} picture`}
+                    aria-label={`Signed-in account picture for ${effectiveDisplayName}`}
                     role="img"
                     data-avatar-ready={renderedAvatarUrl ? "true" : "false"}
                     style={renderedAvatarUrl ? { backgroundImage: `url("${cssEscapeUrl(renderedAvatarUrl)}")` } : undefined}
@@ -1039,15 +1087,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 justifyContent: "space-between",
               }}
             >
-              <div style={{ display: "grid", gap: 4 }}>
-                <div style={{ fontWeight: 700 }}>
-                  Viewing {resolvedViewerAccess.accountHolderName}&apos;s estate records
-                </div>
-                <div style={{ color: "#475569", fontSize: 13 }}>
-                  You are signed in as {resolvedViewerAccess.linkedContactName || effectiveDisplayName} with {getRoleLabel(resolvedViewerAccess.viewerRole)} access. You can review shared records and documents, but changes stay with the account holder.
-                </div>
-                <div style={{ color: "#64748b", fontSize: 13 }}>
-                  This linked view does not replace your own account. If you want your own private estate record, you can start one separately at any time.
+              <div style={{ display: "flex", gap: 12, alignItems: "flex-start", flexWrap: "wrap", minWidth: 0 }}>
+                <span
+                  aria-label={`Estate owner initials for ${resolvedViewerAccess.accountHolderName}`}
+                  role="img"
+                  style={linkedOwnerAvatarStyle}
+                >
+                  {makeInitials(resolvedViewerAccess.accountHolderName)}
+                </span>
+                <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: "#475569", textTransform: "uppercase" }}>
+                    Estate owner context
+                  </div>
+                  <div style={{ fontWeight: 700 }}>
+                    Viewing {resolvedViewerAccess.accountHolderName}&apos;s estate records
+                  </div>
+                  <div style={{ color: "#475569", fontSize: 13 }}>
+                    Signed-in reviewer: {resolvedViewerAccess.linkedContactName || effectiveDisplayName} · Role: {getRoleLabel(resolvedViewerAccess.viewerRole)} · View-only unless the owner grants specific edit access.
+                  </div>
+                  <div style={{ color: "#64748b", fontSize: 13 }}>
+                    This linked view does not replace your own account. If you want your own private estate record, you can start one separately at any time.
+                  </div>
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -1225,3 +1285,18 @@ function toFriendlyPathLabel(segment: string) {
 
   return cleaned.replace(/-/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }
+
+const linkedOwnerAvatarStyle: CSSProperties = {
+  width: 42,
+  height: 42,
+  borderRadius: "50%",
+  border: "1px solid #cbd5e1",
+  background: "#e2e8f0",
+  color: "#0f172a",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: 13,
+  fontWeight: 800,
+  flexShrink: 0,
+};

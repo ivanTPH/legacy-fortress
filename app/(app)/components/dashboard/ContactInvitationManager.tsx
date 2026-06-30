@@ -23,6 +23,7 @@ import {
   removePeopleContact,
   savePeopleContact,
   savePeopleInvitationProjection,
+  updatePeopleContactProjectionCaches,
   type CanonicalContactRow,
 } from "../../../../lib/contacts/contactRepository";
 import { buildContactsWorkspaceHref, buildLinkedContactRecordHref } from "../../../../lib/contacts/contactRouting";
@@ -196,7 +197,7 @@ export default function ContactInvitationManager({
       setAllowedSections(initialAllowedSections.filter((section) => allowedByRole.has(section)));
       return;
     }
-    const selectedRow = rows.find((row) => row.contact_id === normalizedContactId);
+    const selectedRow = rows.find((row) => row.contact_id === normalizedContactId || row.id === normalizedContactId);
     if (selectedRow) {
       startEdit(selectedRow);
       return;
@@ -248,6 +249,15 @@ export default function ContactInvitationManager({
       const userId = userData.user.id;
       const now = new Date().toISOString();
       const currentEditingRow = editingId ? rows.find((row) => row.id === editingId) ?? null : null;
+      const existingDraftInvitation = !currentEditingRow && draftContactId
+        ? await loadExistingInvitationForContact(userId, {
+            contactId: draftContactId,
+            contactEmail: emailTrim,
+            assignedRole: role,
+          })
+        : null;
+      const managedInvitation = currentEditingRow ?? existingDraftInvitation;
+      const managedInvitationId = editingId ?? existingDraftInvitation?.id ?? null;
       const permissionsOverride = buildScopedPermissionPayload({
         allowedSections,
         ownerNotes,
@@ -256,15 +266,15 @@ export default function ContactInvitationManager({
         editableAssetIds,
         editableRecordIds,
       });
-      const currentInviteStatus = currentEditingRow
-        ? mapRowToCanonicalInviteStatus(currentEditingRow)
+      const currentInviteStatus = managedInvitation
+        ? mapRowToCanonicalInviteStatus(managedInvitation)
         : "not_invited";
-      const currentVerificationStatus = currentEditingRow
-        ? mapActivationStatusToVerificationStatus(currentEditingRow.activation_status)
+      const currentVerificationStatus = managedInvitation
+        ? mapActivationStatusToVerificationStatus(managedInvitation.activation_status)
         : "not_verified";
       const canonicalContact = await savePeopleContact(supabase, {
         ownerUserId: userId,
-        existingContactId: currentEditingRow?.contact_id ?? draftContactId ?? null,
+        existingContactId: managedInvitation?.contact_id ?? draftContactId ?? null,
         fullName: nameTrim,
         email: emailTrim,
         contactRole: role,
@@ -273,18 +283,18 @@ export default function ContactInvitationManager({
         verificationStatus: currentVerificationStatus,
       });
 
-      if (editingId) {
+      if (managedInvitationId) {
         await savePeopleInvitationProjection(supabase, {
           ownerUserId: userId,
-          invitationId: editingId,
+          invitationId: managedInvitationId,
           contact: canonicalContact,
           assignedRole: role,
-          invitationStatus: currentEditingRow?.invitation_status ?? "pending",
-          invitedAt: currentEditingRow?.invited_at ?? now,
-          sentAt: currentEditingRow?.sent_at ?? null,
+          invitationStatus: managedInvitation?.invitation_status ?? "pending",
+          invitedAt: managedInvitation?.invited_at ?? now,
+          sentAt: managedInvitation?.sent_at ?? null,
           updatedAt: now,
           permissionsOverride,
-          activationStatus: currentEditingRow?.activation_status ?? "invited",
+          activationStatus: managedInvitation?.activation_status ?? "invited",
         });
 
         await savePeopleContact(supabase, {
@@ -298,11 +308,20 @@ export default function ContactInvitationManager({
           verificationStatus: currentVerificationStatus,
           link: {
             sourceKind: "invitation",
-            sourceId: editingId,
+            sourceId: managedInvitationId,
             sectionKey: "dashboard",
             categoryKey: "contacts",
             label: "Contact invitation",
             role,
+          },
+        });
+        await updatePeopleContactProjectionCaches(supabase, {
+          ownerUserId: userId,
+          contact: {
+            ...canonicalContact,
+            full_name: nameTrim,
+            email: emailTrim,
+            contact_role: role,
           },
         });
       } else {
@@ -333,6 +352,15 @@ export default function ContactInvitationManager({
             categoryKey: "contacts",
             label: "Contact invitation",
             role,
+          },
+        });
+        await updatePeopleContactProjectionCaches(supabase, {
+          ownerUserId: userId,
+          contact: {
+            ...canonicalContact,
+            full_name: nameTrim,
+            email: emailTrim,
+            contact_role: role,
           },
         });
 
@@ -367,6 +395,7 @@ export default function ContactInvitationManager({
       setEditableRecordIds([]);
       setStatus("✅ Contact saved.");
       await loadRows();
+      notifyContactsUpdated();
     } catch (error) {
       setStatus(`❌ Save failed: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
@@ -405,6 +434,7 @@ export default function ContactInvitationManager({
       }
       markRecentlySent(row.id);
       await loadRows();
+      notifyContactsUpdated();
     } catch (error) {
       setStatus(`❌ Could not ${resend ? "resend" : "send"} invitation: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
@@ -462,6 +492,7 @@ export default function ContactInvitationManager({
         setAllowedRecordIds([]);
       }
       await loadRows();
+      notifyContactsUpdated();
     } catch (error) {
       setStatus(`❌ Could not delete contact: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
@@ -497,9 +528,70 @@ export default function ContactInvitationManager({
       setEditableRecordIds([]);
       router.push("/contacts");
       await loadRows();
+      notifyContactsUpdated();
     } catch (error) {
       setStatus(`❌ Could not delete contact: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
+  }
+
+  async function loadExistingInvitationForContact(
+    ownerUserId: string,
+    {
+      contactId,
+      contactEmail,
+      assignedRole,
+    }: {
+      contactId: string;
+      contactEmail: string;
+      assignedRole: CollaboratorRole;
+    },
+  ): Promise<InvitationRow | null> {
+    let invitationRes = await supabase
+      .from("contact_invitations")
+      .select("id,contact_id,contact_name,contact_email,assigned_role,invitation_status,invited_at,sent_at")
+      .eq("owner_user_id", ownerUserId)
+      .eq("contact_id", contactId)
+      .neq("invitation_status", "revoked")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!invitationRes.data && contactEmail) {
+      invitationRes = await supabase
+        .from("contact_invitations")
+        .select("id,contact_id,contact_name,contact_email,assigned_role,invitation_status,invited_at,sent_at")
+        .eq("owner_user_id", ownerUserId)
+        .eq("contact_email", contactEmail)
+        .eq("assigned_role", assignedRole)
+        .in("invitation_status", ["pending", "accepted"])
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+    }
+    if (invitationRes.error || !invitationRes.data) return null;
+
+    const row = invitationRes.data as Record<string, unknown>;
+    const roleRes = await supabase
+      .from("role_assignments")
+      .select("activation_status,permissions_override")
+      .eq("owner_user_id", ownerUserId)
+      .eq("invitation_id", String(row.id ?? ""))
+      .maybeSingle();
+    const assignment = (roleRes.data ?? {}) as Record<string, unknown>;
+
+    return {
+      id: String(row.id ?? ""),
+      contact_id: typeof row.contact_id === "string" ? row.contact_id : contactId,
+      contact_name: String(row.contact_name ?? name),
+      contact_email: String(row.contact_email ?? email),
+      assigned_role: normalizeCollaboratorRole(row.assigned_role),
+      invitation_status: normalizeInvitationStatus(row.invitation_status),
+      activation_status: normalizeActivationStatus(assignment.activation_status),
+      invited_at: String(row.invited_at ?? new Date().toISOString()),
+      sent_at: typeof row.sent_at === "string" ? row.sent_at : null,
+      permissions_override: (assignment.permissions_override as Record<string, unknown> | null | undefined)
+        ?? null,
+      linked_context: [],
+    };
   }
 
   return (
@@ -720,8 +812,8 @@ export default function ContactInvitationManager({
             disabled={saving}
             onClick={() => void saveContact()}
           >
-            <Icon name={editingId ? "save" : "person_add"} size={16} />
-            {saving ? "Saving..." : editingId ? "Save" : "Add contact"}
+            <Icon name={(editingId || draftContactId) ? "save" : "person_add"} size={16} />
+            {saving ? "Saving..." : (editingId || draftContactId) ? "Save" : "Add contact"}
           </button>
           {!editingId && draftContactId && email.trim() ? (
             <button type="button" style={ghostBtnStyle} title="Save this contact and send the invite email" disabled={saving} onClick={() => void saveContact({ sendAfterSave: true })}>
@@ -1026,6 +1118,11 @@ function canSendInvite(row: InvitationRow) {
   return !String(row.sent_at ?? "").trim() && row.invitation_status !== "revoked" && row.activation_status !== "active" && row.activation_status !== "verified";
 }
 
+function notifyContactsUpdated() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event("lf:contacts-updated"));
+}
+
 function getInvitationStatusIcon(row: InvitationRow, recentlySent = false) {
   if (recentlySent) return { icon: "mark_email_read", tone: "neutral" as const, label: "Sent" };
   const state = resolveInvitationBadgeState(row.invitation_status, row.activation_status, row.sent_at);
@@ -1225,12 +1322,34 @@ function normalizeSectionKey(value: unknown): SectionKey | null {
   return null;
 }
 
-function normalizeCollaboratorRole(value: string | null | undefined): CollaboratorRole {
+function normalizeCollaboratorRole(value: unknown): CollaboratorRole {
   const normalized = String(value ?? "").trim();
   if (normalized && normalized in ROLE_RULES && normalized !== "owner") {
     return normalized as CollaboratorRole;
   }
   return "professional_advisor";
+}
+
+function normalizeInvitationStatus(value: unknown): InvitationStatus {
+  const normalized = String(value ?? "").trim();
+  if (normalized === "accepted" || normalized === "rejected" || normalized === "revoked") return normalized;
+  return "pending";
+}
+
+function normalizeActivationStatus(value: unknown): AccessActivationStatus {
+  const normalized = String(value ?? "").trim();
+  if (
+    normalized === "accepted"
+    || normalized === "pending_verification"
+    || normalized === "verification_submitted"
+    || normalized === "verified"
+    || normalized === "active"
+    || normalized === "rejected"
+    || normalized === "revoked"
+  ) {
+    return normalized;
+  }
+  return "invited";
 }
 
 const panelStyle: CSSProperties = {

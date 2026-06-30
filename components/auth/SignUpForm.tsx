@@ -40,12 +40,23 @@ export default function SignUpForm({
     setStatus("Creating account...");
 
     try {
-      const [{ supabase }, { bootstrapAuthenticatedUser }] = await Promise.all([
+      const [{ createClient }, { publicEnv }, { supabase }, { bootstrapAuthenticatedUser }] = await Promise.all([
+        import("@supabase/supabase-js"),
+        import("../../lib/env"),
         import("../../lib/supabaseClient"),
         import("../../lib/auth/bootstrap"),
       ]);
       const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}` : undefined;
-      const { data, error } = await supabase.auth.signUp({
+      const authClient = isLocalSupabaseUrl(publicEnv.NEXT_PUBLIC_SUPABASE_URL)
+        ? createClient(publicEnv.NEXT_PUBLIC_SUPABASE_URL, publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+            auth: {
+              flowType: "implicit",
+              detectSessionInUrl: false,
+              persistSession: false,
+            },
+          })
+        : supabase;
+      const { data, error } = await authClient.auth.signUp({
         email,
         password,
         options: {
@@ -142,6 +153,15 @@ export default function SignUpForm({
       {status ? <div className="lf-muted-note">{status}</div> : null}
     </div>
   );
+}
+
+function isLocalSupabaseUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" && (url.hostname === "127.0.0.1" || url.hostname === "localhost");
+  } catch {
+    return false;
+  }
 }
 
 const passwordToggleStyle: CSSProperties = {

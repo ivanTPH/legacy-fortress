@@ -10,6 +10,17 @@ export function toSafeInternalPath(path: string | null | undefined, fallback: st
   return path;
 }
 
+export function buildProtectedSignInRedirect(pathname: string | null | undefined, search = "") {
+  const safePath = toSafeInternalPath(pathname, "/dashboard");
+  const safeSearch = search.startsWith("?") ? search : search ? `?${search}` : "";
+  const nextPath = `${safePath}${safeSearch}`;
+  return `/sign-in?next=${encodeURIComponent(nextPath)}`;
+}
+
+export function isFinalSignedOutAuthEvent(event: string) {
+  return event === "SIGNED_OUT";
+}
+
 export async function getActiveUser(client: AnySupabaseClient): Promise<User | null> {
   appendDevBankRequestTrace("[auth] getSession.start");
   const { data: sessionData, error: sessionError } = await client.auth.getSession();

@@ -7,7 +7,12 @@ import { trackClientEvent } from "../../lib/observability/clientEvents";
 import { supabase } from "../../lib/supabaseClient";
 import { isMissingRelationError, toSafeSupabaseMessage } from "../../lib/supabaseErrors";
 import { formatCurrency } from "../../lib/currency";
-import { sanitizeFileName, validateUploadFile } from "../../lib/validation/upload";
+import {
+  DOCUMENT_UPLOAD_ACCEPT,
+  DOCUMENT_UPLOAD_MIME_TYPES,
+  sanitizeFileName,
+  validateUploadFile,
+} from "../../lib/validation/upload";
 import AttachmentGallery, { AttachmentGallerySummary } from "../documents/AttachmentGallery";
 import { useViewerAccess } from "../access/ViewerAccessContext";
 import Icon from "../ui/Icon";
@@ -56,6 +61,7 @@ type SectionWorkspaceProps = {
   addLabel?: string;
   uploadsRequireCanonicalParent?: boolean;
   uploadBlockedMessage?: string;
+  detailsLabel?: string;
   extraFields?: Array<{
     key: string;
     label: string;
@@ -79,6 +85,7 @@ export default function SectionWorkspace({
   addLabel = "Add record",
   uploadsRequireCanonicalParent = false,
   uploadBlockedMessage = "Choose a saved record before uploading so the file is attached to the right item.",
+  detailsLabel = "Details",
   extraFields = [],
 }: SectionWorkspaceProps) {
   const router = useRouter();
@@ -88,6 +95,7 @@ export default function SectionWorkspace({
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
   const [rows, setRows] = useState<SectionEntry[]>([]);
+  const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -154,6 +162,22 @@ export default function SectionWorkspace({
     () => rows.reduce((sum, row) => sum + Number(row.estimated_value ?? 0), 0),
     [rows],
   );
+  const filteredRows = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return rows;
+    return rows.filter((row) =>
+      [
+        row.title,
+        row.summary,
+        row.details_text,
+        ...Object.values(row.extra_fields),
+        ...row.attachments.map((item) => item.file_name),
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(query),
+    );
+  }, [rows, search]);
 
   async function reload() {
     if (tableUnavailable) return;
@@ -315,11 +339,11 @@ export default function SectionWorkspace({
       return;
     }
     const validation = validateUploadFile(file, {
-      allowedMimeTypes: ["application/pdf", "image/jpeg", "image/png"],
+      allowedMimeTypes: DOCUMENT_UPLOAD_MIME_TYPES,
       maxBytes: 10 * 1024 * 1024,
     });
     if (!validation.ok) {
-      setStatus(`❌ ${validation.error}. Allowed: PDF, JPG, PNG up to 10MB.`);
+      setStatus(`❌ ${validation.error}. Allowed: PDF, DOCX, XLSX, CSV, JPG, PNG up to 10MB.`);
       return;
     }
 
@@ -491,6 +515,77 @@ export default function SectionWorkspace({
     await reload();
   }
 
+  async function replaceLegacyAttachment(rowId: string, item: SectionAttachment, file: File) {
+    if (!canEditRow(rowId)) {
+      setStatus("This shared view is read-only. The vault owner controls changes.");
+      return;
+    }
+    if (tableUnavailable) {
+      setStatus("Upload unavailable until section data tables are ready.");
+      return;
+    }
+    const validation = validateUploadFile(file, {
+      allowedMimeTypes: DOCUMENT_UPLOAD_MIME_TYPES,
+      maxBytes: 10 * 1024 * 1024,
+    });
+    if (!validation.ok) {
+      setStatus(`❌ ${validation.error}. Allowed: PDF, DOCX, XLSX, CSV, JPG, PNG up to 10MB.`);
+      return;
+    }
+
+    const user = await requireUser(router);
+    if (!user) return;
+    const row = rows.find((entry) => entry.id === rowId);
+    if (!row) return;
+
+    setUploadingFor(rowId);
+    setStatus("");
+    const filePath = `${user.id}/section/${sectionKey}/${categoryKey}/${Date.now()}-${sanitizeFileName(file.name)}`;
+    const upload = await supabase.storage.from("vault-docs").upload(filePath, file, { upsert: false });
+    if (upload.error) {
+      setUploadingFor(null);
+      setStatus(`❌ Upload failed: ${upload.error.message}`);
+      return;
+    }
+
+    await supabase.storage.from(item.storage_bucket).remove([item.storage_path]);
+
+    const nextAttachment: SectionAttachment = {
+      id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      storage_bucket: "vault-docs",
+      storage_path: filePath,
+      file_name: file.name,
+      mime_type: file.type || inferMimeTypeFromPath(file.name),
+      size_bytes: file.size,
+      created_at: new Date().toISOString(),
+    };
+    const nextAttachments = row.attachments.map((attachment) => attachment.id === item.id ? nextAttachment : attachment);
+    const nextFilePath = row.file_path === item.storage_path ? filePath : row.file_path || filePath;
+
+    const { error } = await supabase
+      .from("section_entries")
+      .update({
+        file_path: nextFilePath || null,
+        details: {
+          details_text: row.details_text,
+          extra_fields: row.extra_fields,
+          attachments: nextAttachments,
+        },
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", rowId)
+      .eq("user_id", user.id);
+
+    setUploadingFor(null);
+    if (error) {
+      setStatus(`❌ Could not replace attachment metadata: ${toSafeSupabaseMessage(error, "Unknown error")}`);
+      return;
+    }
+
+    setStatus(`Attachment replaced with ${file.name}.`);
+    await reload();
+  }
+
   return (
     <section style={{ display: "grid", gap: 14 }}>
       <div style={{ display: "grid", gap: 6 }}>
@@ -535,15 +630,29 @@ export default function SectionWorkspace({
                 />
               </label>
             ))}
-            <label style={fieldStyle}><span style={labelStyle}>Details</span><textarea style={textAreaStyle} value={form.details_text} onChange={(e) => setForm({ ...form, details_text: e.target.value })} /></label>
+            <label style={fieldStyle}><span style={labelStyle}>{detailsLabel}</span><textarea style={textAreaStyle} value={form.details_text} onChange={(e) => setForm({ ...form, details_text: e.target.value })} /></label>
           </div>
-          {(!editingId ? canCreateRecords : canEditRow(editingId)) ? <button style={primaryBtn} disabled={saving} onClick={() => void save()}>{saving ? "Saving..." : "Save record"}</button> : null}
+          {(!editingId ? canCreateRecords : canEditRow(editingId)) ? <button style={primaryBtn} disabled={saving} onClick={() => void save()}>{saving ? "Saving..." : editingId ? "Save changes" : "Save record"}</button> : null}
         </section>
       ) : null}
 
       {loading || tableUnavailable || rows.length > 0 ? (
       <section style={cardStyle}>
         <h2 style={{ margin: 0, fontSize: 17 }}>Saved records</h2>
+        {!loading && !tableUnavailable && rows.length > 0 ? (
+          <label style={fieldStyle}>
+            <span style={labelStyle}>
+              <Icon name="search" size={16} />
+              Search
+            </span>
+            <input
+              style={inputStyle}
+              placeholder="Search title, summary, details, or attachments..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </label>
+        ) : null}
         {loading ? <div style={{ color: "#64748b" }}>Loading records...</div> : null}
         {!loading && tableUnavailable ? <div style={{ color: "#64748b" }}>Section table unavailable. Run latest migrations and refresh.</div> : null}
         {!loading && !tableUnavailable && rows.length === 0 ? (
@@ -551,9 +660,14 @@ export default function SectionWorkspace({
             No saved records yet. Use this section to keep your details together in your vault, then start with <strong>{addLabel.toLowerCase()}</strong>.
           </div>
         ) : null}
+        {!loading && !tableUnavailable && rows.length > 0 && filteredRows.length === 0 ? (
+          <div style={{ color: "#64748b", fontSize: 13 }}>
+            No matching records. Try another title, detail, or attachment name.
+          </div>
+        ) : null}
         {!loading && !tableUnavailable ? (
           <div style={{ display: "grid", gap: 10 }}>
-            {rows.map((row) => (
+            {filteredRows.map((row) => (
               <article key={row.id} style={selectedEntryId === row.id ? selectedRowCardStyle : rowCardStyle} data-record-id={row.id}>
                 <div style={{ display: "grid", gap: 3 }}>
                   <div style={{ fontWeight: 700 }}>{row.title || "Untitled record"}</div>
@@ -587,8 +701,8 @@ export default function SectionWorkspace({
                   ) : null}
                 </div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  {canEditRow(row.id) ? <button style={ghostBtn} onClick={() => startEdit(row)}>Edit</button> : null}
-                  {viewer.mode !== "linked" ? <button style={dangerBtn} onClick={() => void remove(row.id)}>Delete</button> : null}
+                  {canEditRow(row.id) ? <button style={ghostBtn} onClick={() => startEdit(row)}>Edit record</button> : null}
+                  {viewer.mode !== "linked" ? <button style={dangerBtn} onClick={() => void remove(row.id)}>Delete record</button> : null}
                   {!directUploadsEnabled ? (
                     <button
                       type="button"
@@ -602,7 +716,7 @@ export default function SectionWorkspace({
                       {uploadingFor === row.id ? "Uploading..." : "Upload file"}
                       <input
                         type="file"
-                        accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                        accept={DOCUMENT_UPLOAD_ACCEPT}
                         style={{ display: "none" }}
                         onChange={(event) => {
                           const file = event.target.files?.[0];
@@ -625,6 +739,8 @@ export default function SectionWorkspace({
                   onResolvePreviewUrl={(entry) => resolveAttachmentUrl(entry.attachment)}
                   onDownload={(entry) => void downloadAttachment(entry.attachment)}
                   onPrint={(entry) => void printAttachment(entry.attachment)}
+                  onReplace={canEditRow(row.id) ? (entry, file) => void replaceLegacyAttachment(row.id, entry.attachment, file) : undefined}
+                  replaceAccept={DOCUMENT_UPLOAD_ACCEPT}
                   onRemove={canEditRow(row.id) ? (entry) => void removeAttachment(row.id, entry.attachment) : undefined}
                 />
               </article>
@@ -711,6 +827,11 @@ function inferMimeTypeFromPath(path: string) {
   if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
   if (lower.endsWith(".png")) return "image/png";
   if (lower.endsWith(".webp")) return "image/webp";
+  if (lower.endsWith(".doc")) return "application/msword";
+  if (lower.endsWith(".docx")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if (lower.endsWith(".xls")) return "application/vnd.ms-excel";
+  if (lower.endsWith(".xlsx")) return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  if (lower.endsWith(".csv")) return "text/csv";
   return "application/octet-stream";
 }
 

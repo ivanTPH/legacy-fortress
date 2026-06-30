@@ -10,7 +10,7 @@ export default function EmploymentPage() {
       title="Employment"
       subtitle="Capture employment records, benefits, death-in-service details, and associated files."
       addLabel="Add employment record"
+      detailsLabel="Employment details"
     />
   );
 }
-

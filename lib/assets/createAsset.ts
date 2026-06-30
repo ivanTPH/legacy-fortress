@@ -18,9 +18,19 @@ import { assertOwnerCanCreateRecord, ensureOwnerPlanProfile } from "../accountPl
 
 type AnySupabaseClient = SupabaseClient;
 
+export type CanonicalAssetCategorySlug =
+  | "bank-accounts"
+  | "property"
+  | "business-interests"
+  | "digital-assets"
+  | "beneficiaries"
+  | "executors"
+  | "tasks"
+  | "identity-documents";
+
 export type CreateAssetInput = {
   userId: string;
-  categorySlug: "bank-accounts" | "property" | "business-interests" | "digital-assets" | "beneficiaries" | "executors" | "tasks";
+  categorySlug: CanonicalAssetCategorySlug;
   title: string;
   metadata: Record<string, unknown>;
   visibility?: "private" | "shared";
@@ -45,7 +55,7 @@ export type CreateAssetResult = {
 export type UpdateAssetInput = {
   assetId: string;
   userId: string;
-  categorySlug: "bank-accounts" | "property" | "business-interests" | "digital-assets" | "beneficiaries" | "executors" | "tasks";
+  categorySlug: CanonicalAssetCategorySlug;
   title: string;
   metadata: Record<string, unknown>;
   visibility?: "private" | "shared";
@@ -679,6 +689,11 @@ function getCategorySlugCandidates(slug: string) {
   if (slug === "bank-accounts") set.add("bank");
   if (slug === "business-interests") set.add("business");
   if (slug === "digital-assets") set.add("digital");
+  if (slug === "identity-documents") {
+    set.add("identity");
+    set.add("identity-document");
+    set.add("identity_documents");
+  }
   if (slug === "beneficiaries") set.add("beneficiary");
   if (slug === "executors") {
     set.add("executor");
@@ -701,20 +716,22 @@ function normalizeCategoryToken(value: string) {
     .replace(/[^a-z0-9-]/g, "");
 }
 
-function sectionKeyFromCategory(categorySlug: CreateAssetInput["categorySlug"]) {
+function sectionKeyFromCategory(categorySlug: CanonicalAssetCategorySlug) {
   if (categorySlug === "bank-accounts") return "finances";
   if (categorySlug === "property") return "property";
   if (categorySlug === "business-interests") return "business";
+  if (categorySlug === "identity-documents") return "legal";
   if (categorySlug === "beneficiaries") return "personal";
   if (categorySlug === "executors") return "personal";
   if (categorySlug === "tasks") return "personal";
   return "digital";
 }
 
-function categoryKeyFromSlug(categorySlug: CreateAssetInput["categorySlug"]) {
+function categoryKeyFromSlug(categorySlug: CanonicalAssetCategorySlug) {
   if (categorySlug === "bank-accounts") return "bank";
   if (categorySlug === "business-interests") return "business";
   if (categorySlug === "digital-assets") return "digital";
+  if (categorySlug === "identity-documents") return "identity-documents";
   if (categorySlug === "beneficiaries") return "beneficiaries";
   if (categorySlug === "executors") return "executors";
   if (categorySlug === "tasks") return "tasks";

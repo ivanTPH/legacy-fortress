@@ -94,6 +94,9 @@ function resolveDerivedAssetCategoryIdentity(row: CanonicalAssetQueryRow) {
   if (token === "digital-assets" || token === "digital-asset" || token === "digital") {
     return { sectionKey: "digital", categoryKey: "digital" };
   }
+  if (token === "identity-documents" || token === "identity-document" || token === "identity") {
+    return { sectionKey: "legal", categoryKey: "identity-documents" };
+  }
   if (token === "beneficiaries" || token === "beneficiary") {
     return { sectionKey: "personal", categoryKey: "beneficiaries" };
   }

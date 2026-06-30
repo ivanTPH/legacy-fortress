@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const isProduction = process.env.NODE_ENV === "production";
+const localDevelopmentConnectSrc = isProduction ? [] : ["http://127.0.0.1:55421"];
 
 const contentSecurityPolicy = [
   "default-src 'self'",
@@ -13,7 +14,7 @@ const contentSecurityPolicy = [
   "manifest-src 'self'",
   "media-src 'self' blob:",
   "worker-src 'self' blob:",
-  "connect-src 'self' https:",
+  `connect-src 'self' https:${localDevelopmentConnectSrc.length ? ` ${localDevelopmentConnectSrc.join(" ")}` : ""}`,
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   "style-src 'self' 'unsafe-inline'",
   ...(isProduction ? ["upgrade-insecure-requests"] : []),

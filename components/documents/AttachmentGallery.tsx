@@ -63,10 +63,11 @@ type AttachmentGalleryProps<T extends AttachmentGalleryItem> = {
   onResolvePreviewUrl: (item: T) => Promise<string | null>;
   onDownload?: (item: T) => void;
   onPrint?: (item: T) => void;
-  onReplace?: (item: T) => void;
+  onReplace?: (item: T, file: File) => void;
   onRemove?: (item: T) => void;
   onOpenRelated?: (item: T) => void;
   openRelatedLabel?: string;
+  replaceAccept?: string;
 };
 
 type PreviewState<T extends AttachmentGalleryItem> = {
@@ -85,6 +86,7 @@ export default function AttachmentGallery<T extends AttachmentGalleryItem>({
   onRemove,
   onOpenRelated,
   openRelatedLabel = "Open related record",
+  replaceAccept,
 }: AttachmentGalleryProps<T>) {
   const [preview, setPreview] = useState<PreviewState<T> | null>(null);
   const [previewLoadingId, setPreviewLoadingId] = useState("");
@@ -153,7 +155,11 @@ export default function AttachmentGallery<T extends AttachmentGalleryItem>({
                     <AttachmentActionButton icon="print" label="Print" ariaLabel={`Print ${item.fileName || "this file"}`} onClick={() => onPrint(item)} />
                   ) : null}
                   {onReplace ? (
-                    <AttachmentActionButton icon="upload_file" label="Replace" ariaLabel={`Replace ${item.fileName || "this file"}`} onClick={() => onReplace(item)} />
+                    <AttachmentReplaceInput
+                      item={item}
+                      accept={replaceAccept}
+                      onReplace={onReplace}
+                    />
                   ) : null}
                   {onOpenRelated ? (
                     <AttachmentActionButton icon="open_in_new" label={openRelatedLabel} ariaLabel={openRelatedLabel} onClick={() => onOpenRelated(item)} />
@@ -185,6 +191,38 @@ export default function AttachmentGallery<T extends AttachmentGalleryItem>({
         />
       ) : null}
     </div>
+  );
+}
+
+function AttachmentReplaceInput<T extends AttachmentGalleryItem>({
+  item,
+  accept,
+  onReplace,
+}: {
+  item: T;
+  accept?: string;
+  onReplace: (item: T, file: File) => void;
+}) {
+  return (
+    <label
+      className="lf-attachment-action"
+      aria-label={`Replace ${item.fileName || "this file"}`}
+      title={`Replace ${item.fileName || "this file"}`}
+      style={actionButtonStyle}
+    >
+      <Icon name="upload_file" size={17} />
+      <span style={{ lineHeight: 1 }}>Replace</span>
+      <input
+        type="file"
+        accept={accept}
+        style={{ display: "none" }}
+        onChange={(event) => {
+          const file = event.currentTarget.files?.[0] ?? null;
+          if (file) onReplace(item, file);
+          event.currentTarget.value = "";
+        }}
+      />
+    </label>
   );
 }
 

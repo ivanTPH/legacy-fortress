@@ -14,7 +14,13 @@ import {
   type SupportedDocumentSectionKey,
 } from "../../lib/assets/documentLinks";
 import { supabase } from "../../lib/supabaseClient";
-import { validateUploadFile } from "../../lib/validation/upload";
+import {
+  DOCUMENT_UPLOAD_ACCEPT,
+  DOCUMENT_UPLOAD_MIME_TYPES,
+  IMAGE_UPLOAD_ACCEPT,
+  IMAGE_UPLOAD_MIME_TYPES,
+  validateUploadFile,
+} from "../../lib/validation/upload";
 import { ExtractionConfirmationPanel, FileDropzone, FormField, SelectInput, TextInput } from "../forms/asset/AssetFormControls";
 import AttachmentGallery from "./AttachmentGallery";
 import {
@@ -162,7 +168,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
 
     const validation = validateUploadFile(pendingFile, {
       allowedMimeTypes:
-        selectedKind === "photo" ? ["image/jpeg", "image/png"] : ["application/pdf", "image/jpeg", "image/png"],
+        selectedKind === "photo" ? IMAGE_UPLOAD_MIME_TYPES : DOCUMENT_UPLOAD_MIME_TYPES,
       maxBytes: 15 * 1024 * 1024,
     });
     if (!validation.ok) {
@@ -310,6 +316,57 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
     await reloadDocuments();
   }
 
+  async function replaceDocument(item: CanonicalDocumentWorkspaceItem, file: File) {
+    if (!canEditAssetForViewer(item.assetId, viewer)) {
+      setStatus("This shared view is read-only. The vault owner controls changes.");
+      return;
+    }
+    const kind = file.type.toLowerCase().startsWith("image/") ? "photo" : "document";
+    const validation = validateUploadFile(file, {
+      allowedMimeTypes: kind === "photo" ? IMAGE_UPLOAD_MIME_TYPES : DOCUMENT_UPLOAD_MIME_TYPES,
+      maxBytes: 15 * 1024 * 1024,
+    });
+    if (!validation.ok) {
+      setStatus(`${validation.error}. Allowed: PDF, DOCX, XLSX, CSV, JPG, PNG up to 15MB.`);
+      return;
+    }
+
+    const user = await requireUser(router);
+    if (!user) return;
+    const context = await resolveCanonicalAssetDocumentContext(supabase, {
+      assetId: item.assetId,
+      ownerUserId: user.id,
+    });
+    if (!context) {
+      setStatus("Replace paused: choose a saved record first so the file is stored with the right item.");
+      return;
+    }
+
+    setSaving(true);
+    const replacement = await createCanonicalAssetDocument(supabase, {
+      context,
+      file,
+      kind,
+    });
+    if (!replacement.ok) {
+      setSaving(false);
+      setStatus(replacement.error);
+      return;
+    }
+
+    await supabase.storage.from(item.storageBucket).remove([item.storagePath]);
+    const deleteResult = await supabase.from("documents").delete().eq("id", item.id).eq("owner_user_id", user.id);
+    setSaving(false);
+    if (deleteResult.error) {
+      setStatus(`Replacement uploaded, but old document delete failed: ${deleteResult.error.message}`);
+      await reloadDocuments();
+      return;
+    }
+
+    setStatus(`Document replaced with ${file.name}.`);
+    await reloadDocuments();
+  }
+
   return (
     <section style={{ display: "grid", gap: 16 }}>
       <div style={{ display: "grid", gap: 6 }}>
@@ -387,17 +444,17 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
           iconName="description"
           required
           error={!pendingFile && formError ? "Choose a file to upload." : undefined}
-          helpText={selectedKind === "photo" ? "Accepted formats: JPG, PNG up to 15MB." : "Accepted formats: PDF, JPG, PNG up to 15MB."}
-        >
-          <FileDropzone
-            label={pendingFile ? "Replace selected file" : "Drop a file here"}
-            accept={
-              selectedKind === "photo"
-                ? ".jpg,.jpeg,.png,image/jpeg,image/png"
-                : ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-            }
+          helpText={selectedKind === "photo" ? "Accepted formats: JPG, PNG up to 15MB." : "Accepted formats: PDF, DOCX, XLSX, CSV, JPG, PNG up to 15MB."}
+          >
+            <FileDropzone
+              label={pendingFile ? "Replace selected file" : "Drop a file here"}
+              accept={
+                selectedKind === "photo"
+                  ? IMAGE_UPLOAD_ACCEPT
+                  : DOCUMENT_UPLOAD_ACCEPT
+              }
             file={pendingFile}
-            helperText={selectedKind === "photo" ? "Drop a photo here or choose one from your device. JPG and PNG are supported up to 15MB." : "Drop a document here or choose one from your device. PDF, JPG, and PNG are supported up to 15MB."}
+            helperText={selectedKind === "photo" ? "Drop a photo here or choose one from your device. JPG and PNG are supported up to 15MB." : "Drop a document here or choose one from your device. PDF, DOCX, XLSX, CSV, JPG, and PNG are supported up to 15MB."}
             onFileSelect={(file) => {
               setPendingFile(file);
               setFormError("");
@@ -489,6 +546,8 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
             })}
             onDownload={(entry) => void downloadDocument(entry.document)}
             onPrint={(entry) => void printDocument(entry.document)}
+            onReplace={(entry, file) => void replaceDocument(entry.document, file)}
+            replaceAccept={DOCUMENT_UPLOAD_ACCEPT}
             onRemove={(entry) => {
               if (!canEditAssetForViewer(entry.document.assetId, viewer)) return;
               void removeDocument(entry.document);

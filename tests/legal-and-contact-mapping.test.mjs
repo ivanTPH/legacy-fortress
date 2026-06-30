@@ -1,5 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+
+const root = process.cwd();
 
 const {
   resolveLegalCategoryForAsset,
@@ -91,10 +95,32 @@ test("identity documents share the canonical legal asset read path", () => {
   assert.equal(usesCanonicalLegalAssetRead("wills"), false);
 });
 
+test("identity document writes use the same canonical legal asset category as reads", () => {
+  const workspace = fs.readFileSync(path.join(root, "components/records/UniversalRecordWorkspace.tsx"), "utf8");
+  const createAsset = fs.readFileSync(path.join(root, "lib/assets/createAsset.ts"), "utf8");
+  const fetchCanonicalAssets = fs.readFileSync(path.join(root, "lib/assets/fetchCanonicalAssets.ts"), "utf8");
+
+  assert.match(workspace, /sectionKey === "legal" && categoryKey === "identity-documents"\) return "identity-documents"/);
+  assert.match(createAsset, /\| "identity-documents"/);
+  assert.match(createAsset, /categorySlug === "identity-documents"\) return "legal"/);
+  assert.match(createAsset, /categorySlug === "identity-documents"\) return "identity-documents"/);
+  assert.match(fetchCanonicalAssets, /token === "identity-documents"/);
+  assert.match(fetchCanonicalAssets, /sectionKey: "legal", categoryKey: "identity-documents"/);
+});
+
 test("identity documents are available through the shared field dictionary", () => {
   const config = getAssetCategoryFormConfig("identity-documents");
   assert.ok(config);
   assert.equal(config?.fields.some((field) => field.key === "identity_document_type"), true);
   assert.equal(config?.fields.some((field) => field.key === "identity_document_number"), true);
   assert.equal(config?.fields.some((field) => field.key === "renewal_date"), true);
+});
+
+test("legal wills route uses the legal will record workspace instead of executor asset creation", () => {
+  const legalCategoryPage = fs.readFileSync(path.join(root, "app/(app)/legal/[category]/page.tsx"), "utf8");
+
+  assert.match(legalCategoryPage, /category\.slug === "wills"/);
+  assert.match(legalCategoryPage, /sectionKey="legal"/);
+  assert.match(legalCategoryPage, /categoryKey="wills"/);
+  assert.doesNotMatch(legalCategoryPage, /categoryKey="executors"/);
 });

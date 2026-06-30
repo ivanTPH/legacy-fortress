@@ -6,6 +6,9 @@ const {
   buildContactProjectionUpdates,
   buildEditableContactValues,
 } = await import("../lib/contacts/contactEditing.ts");
+const {
+  buildCanonicalContactProjectionCacheUpdates,
+} = await import("../lib/contacts/canonicalContacts.ts");
 
 test("contact edit input preserves canonical identity and invitation state", () => {
   const values = buildEditableContactValues({
@@ -57,4 +60,22 @@ test("contact projection updates keep invitation and record-contact rows aligned
     contact_email: "john@example.com",
     contact_role: "executor",
   });
+});
+
+test("canonical contact projection cache updates use canonical contact values as display truth", () => {
+  const updates = buildCanonicalContactProjectionCacheUpdates({
+    full_name: "Jane Canonical",
+    email: "Jane.Canonical@Example.com",
+    relationship: "sister",
+    contact_role: "executor",
+  });
+
+  assert.equal(updates.invitation.contact_name, "Jane Canonical");
+  assert.equal(updates.invitation.contact_email, "jane.canonical@example.com");
+  assert.equal(updates.invitation.assigned_role, "executor");
+  assert.equal(updates.recordContact.contact_name, "Jane Canonical");
+  assert.equal(updates.recordContact.contact_email, "jane.canonical@example.com");
+  assert.equal(updates.recordContact.contact_role, "sister");
+  assert.equal(updates.accountAccessGrant.relationship, "sister");
+  assert.equal(updates.accountAccessGrant.assigned_role, "executor");
 });

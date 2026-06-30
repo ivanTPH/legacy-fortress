@@ -62,6 +62,7 @@ import {
   readCanonicalPropertyAsset,
 } from "../../lib/assets/propertyAsset";
 import { createAsset, updateAsset } from "../../lib/assets/createAsset";
+import type { CanonicalAssetCategorySlug } from "../../lib/assets/createAsset";
 import { fetchCanonicalAssets } from "../../lib/assets/fetchCanonicalAssets";
 import { notifyCanonicalAssetMutation } from "../../lib/assets/liveSync";
 import {
@@ -83,7 +84,13 @@ import {
 } from "../../lib/records/discovery";
 import { summarizeScopedAssetRows } from "../../lib/dashboard/summary";
 import { supabase } from "../../lib/supabaseClient";
-import { validateUploadFile } from "../../lib/validation/upload";
+import {
+  DOCUMENT_UPLOAD_ACCEPT,
+  DOCUMENT_UPLOAD_MIME_TYPES,
+  IMAGE_UPLOAD_ACCEPT,
+  IMAGE_UPLOAD_MIME_TYPES,
+  validateUploadFile,
+} from "../../lib/validation/upload";
 import {
   hydratePeopleProjectionRows,
   replacePeopleRecordContactProjection,
@@ -1693,8 +1700,8 @@ export default function UniversalRecordWorkspace({
         : legalLinkedContactDefinition
         ? [resolvedLegacyContactRole, form.contact_name.trim() || form.contact_email.trim()].filter(Boolean).join(" · ") || null
         : form.summary.trim() || null,
-      value_minor: isTrustedContacts || isNarrativeDocumentWorkspace ? null : usesCanonicalAssets ? toMinorUnits(canonicalAssetDraft?.valueMajor ?? "0") : isFinanceSection ? toMinorUnits(financeDraft.valueMajor) : toMinorUnits(form.value_major),
-      currency_code: isTrustedContacts || isNarrativeDocumentWorkspace ? null : canonicalCurrencyCode,
+      value_minor: isTrustedContacts || isNarrativeDocumentWorkspace ? 0 : usesCanonicalAssets ? toMinorUnits(canonicalAssetDraft?.valueMajor ?? "0") : isFinanceSection ? toMinorUnits(financeDraft.valueMajor) : toMinorUnits(form.value_major),
+      currency_code: isTrustedContacts || isNarrativeDocumentWorkspace ? "GBP" : canonicalCurrencyCode,
       metadata: normalizedMetadata,
       updated_at: new Date().toISOString(),
     };
@@ -1707,7 +1714,7 @@ export default function UniversalRecordWorkspace({
       if (usesCanonicalAssets) {
         const assetInput = {
           userId: user.id,
-          categorySlug: canonicalCategorySlug as "bank-accounts" | "property" | "business-interests" | "digital-assets" | "beneficiaries" | "executors" | "tasks",
+          categorySlug: canonicalCategorySlug as CanonicalAssetCategorySlug,
           title: String(payload.title ?? "").trim(),
           metadata: normalizedMetadata,
           visibility: "private" as const,
@@ -2033,11 +2040,11 @@ export default function UniversalRecordWorkspace({
       return;
     }
     const validation = validateUploadFile(file, {
-      allowedMimeTypes: kind === "photo" ? ["image/jpeg", "image/png"] : ["application/pdf", "image/jpeg", "image/png"],
+      allowedMimeTypes: kind === "photo" ? IMAGE_UPLOAD_MIME_TYPES : DOCUMENT_UPLOAD_MIME_TYPES,
       maxBytes: 15 * 1024 * 1024,
     });
     if (!validation.ok) {
-      const allowed = kind === "photo" ? "JPG, PNG" : "PDF, JPG, PNG";
+      const allowed = kind === "photo" ? "JPG, PNG" : "PDF, DOCX, XLSX, CSV, JPG, PNG";
       setStatus(`${validation.error}. Allowed: ${allowed} up to 15MB.`);
       return;
     }
@@ -2112,6 +2119,78 @@ export default function UniversalRecordWorkspace({
       return;
     }
     setStatus("Attachment removed.");
+    await reloadWorkspace(router, sectionKey, categoryKey, setRecords, setAttachments, setContacts, setStatus, {
+      targetOwnerUserId: viewer.targetOwnerUserId,
+      forceCanonicalRead,
+      recordFilter,
+      viewer,
+    });
+  }
+
+  async function replaceAttachment(item: RecordAttachment, file: File) {
+    if (!canEditWorkspaceRow(item.record_id)) {
+      setStatus("This shared view is read-only. The vault owner controls changes.");
+      return;
+    }
+    const kind = file.type.toLowerCase().startsWith("image/") ? "photo" : "document";
+    const validation = validateUploadFile(file, {
+      allowedMimeTypes: kind === "photo" ? IMAGE_UPLOAD_MIME_TYPES : DOCUMENT_UPLOAD_MIME_TYPES,
+      maxBytes: 15 * 1024 * 1024,
+    });
+    if (!validation.ok) {
+      setStatus(`${validation.error}. Allowed: PDF, DOCX, XLSX, CSV, JPG, PNG up to 15MB.`);
+      return;
+    }
+
+    const user = await requireUser(router);
+    if (!user) return;
+    const assetContext = await resolveCanonicalAssetDocumentContext(supabase, {
+      assetId: item.record_id,
+      ownerUserId: user.id,
+    });
+    if (!assetContext) {
+      setStatus("Replace paused: choose a saved record first so the file is stored with the right item.");
+      return;
+    }
+
+    setUploadingFor(item.record_id);
+    const replacement = await createCanonicalAssetDocument(supabase, {
+      context: assetContext,
+      file,
+      kind,
+    });
+    if (!replacement.ok) {
+      setUploadingFor(null);
+      setStatus(replacement.error);
+      return;
+    }
+
+    await supabase.storage.from(item.storage_bucket).remove([item.storage_path]);
+    const deleteResult =
+      item.source_table === "documents"
+        ? await supabase
+            .from("documents")
+            .delete()
+            .eq("id", item.id)
+            .eq("owner_user_id", user.id)
+        : await supabase
+            .from("attachments")
+            .delete()
+            .eq("id", item.id)
+            .eq("owner_user_id", user.id);
+    setUploadingFor(null);
+    if (deleteResult.error) {
+      setStatus(`Replacement uploaded, but old attachment delete failed: ${deleteResult.error.message}`);
+      await reloadWorkspace(router, sectionKey, categoryKey, setRecords, setAttachments, setContacts, setStatus, {
+        targetOwnerUserId: viewer.targetOwnerUserId,
+        forceCanonicalRead,
+        recordFilter,
+        viewer,
+      });
+      return;
+    }
+
+    setStatus(`Attachment replaced with ${file.name}.`);
     await reloadWorkspace(router, sectionKey, categoryKey, setRecords, setAttachments, setContacts, setStatus, {
       targetOwnerUserId: viewer.targetOwnerUserId,
       forceCanonicalRead,
@@ -2228,6 +2307,7 @@ export default function UniversalRecordWorkspace({
     const provider =
       findProviderByKey(row.provider_key, catalog) ??
       detectProvider(providerInput, catalog);
+    const primaryRecordTitle = String(row.title ?? "").trim() || "Untitled record";
     const canonicalPropertyAsset =
       isCanonicalProperty
         ? readCanonicalPropertyAsset({
@@ -2319,13 +2399,13 @@ export default function UniversalRecordWorkspace({
             ) : (
               <ProviderBadge
                 provider={provider}
-                fallbackLabel={isBankCategory ? bankProviderName : row.provider_name ?? row.title ?? "Record"}
+                fallbackLabel={isBankCategory ? row.title ?? bankProviderName : row.provider_name ?? row.title ?? "Record"}
                 categoryKey={isPossessions ? categoryKeyFromRow : isFinanceSection ? categoryKey : undefined}
               />
             )}
             <div style={{ display: "grid", gap: 5, minWidth: 0 }}>
               <div style={{ fontWeight: 800, color: "#111827", lineHeight: 1.25, fontSize: 15 }}>
-                {isBankCategory ? bankProviderName : row.title || "Untitled record"}
+                {primaryRecordTitle}
               </div>
               {isTrustedContacts ? (
                 <>
@@ -2443,6 +2523,8 @@ export default function UniversalRecordWorkspace({
                 <>
                   {categoryKey === "bank" ? (
                     <div style={{ color: "#64748b", fontSize: 13 }}>
+                      {bankProviderName}
+                      {" · "}
                       {canonicalBankAsset?.account_type || "Account"}
                       {" · "}
                       {canonicalBankAsset?.account_holder || "Holder not set"}
@@ -2545,7 +2627,7 @@ export default function UniversalRecordWorkspace({
                   <input
                     type="file"
                     multiple
-                    accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                    accept={DOCUMENT_UPLOAD_ACCEPT}
                     style={{ display: "none" }}
                     onChange={(event) => {
                       const file = event.target.files?.[0];
@@ -2749,6 +2831,8 @@ export default function UniversalRecordWorkspace({
                   onResolvePreviewUrl={(entry) => getAttachmentSignedUrl(entry.attachment, 120)}
                   onDownload={(entry) => void downloadAttachment(entry.attachment)}
                   onPrint={(entry) => void printAttachment(entry.attachment)}
+                  onReplace={canEditWorkspaceRow(row.id) ? (entry, file) => void replaceAttachment(entry.attachment, file) : undefined}
+                  replaceAccept={DOCUMENT_UPLOAD_ACCEPT}
                   onRemove={canEditWorkspaceRow(row.id) ? (entry) => void removeAttachment(entry.attachment) : undefined}
                 />
               )}
@@ -2762,7 +2846,7 @@ export default function UniversalRecordWorkspace({
                     : `Upload document to ${canonicalBankAsset?.title ?? canonicalPropertyAsset?.title ?? canonicalBusinessAsset?.title ?? canonicalDigitalAsset?.title ?? row.title ?? "this asset"}`}
                   <input
                     type="file"
-                    accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                    accept={DOCUMENT_UPLOAD_ACCEPT}
                     style={{ display: "none" }}
                     onChange={(event) => {
                       const file = event.target.files?.[0];
@@ -2775,7 +2859,7 @@ export default function UniversalRecordWorkspace({
                   {uploadingFor === row.id ? "Uploading..." : "Add picture"}
                   <input
                     type="file"
-                    accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                    accept={IMAGE_UPLOAD_ACCEPT}
                     style={{ display: "none" }}
                     onChange={(event) => {
                       const file = event.target.files?.[0];
@@ -3300,15 +3384,15 @@ export default function UniversalRecordWorkspace({
                 <FormField label="Statement or supporting document" iconName="upload_file" helpText="This file will be attached to the asset after save.">
                   <FileDropzone
                     label={pendingDocumentFile ? "Replace document" : "Drop a document here"}
-                    accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                    accept={DOCUMENT_UPLOAD_ACCEPT}
                     file={pendingDocumentFile}
                     onFileSelect={(file) => {
                       const validation = validateUploadFile(file, {
-                        allowedMimeTypes: ["application/pdf", "image/jpeg", "image/png"],
+                        allowedMimeTypes: DOCUMENT_UPLOAD_MIME_TYPES,
                         maxBytes: 15 * 1024 * 1024,
                       });
                       if (!validation.ok) {
-                        setStatus(`${validation.error}. Allowed: PDF, JPG, PNG up to 15MB.`);
+                        setStatus(`${validation.error}. Allowed: PDF, DOCX, XLSX, CSV, JPG, PNG up to 15MB.`);
                         return;
                       }
                       setPendingDocumentFile(file);
@@ -3338,11 +3422,11 @@ export default function UniversalRecordWorkspace({
                 >
                   <FileDropzone
                     label={pendingPhotoFile ? "Replace image" : "Drop an image here"}
-                    accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                    accept={IMAGE_UPLOAD_ACCEPT}
                     file={pendingPhotoFile}
                     onFileSelect={(file) => {
                       const validation = validateUploadFile(file, {
-                        allowedMimeTypes: ["image/jpeg", "image/png"],
+                        allowedMimeTypes: IMAGE_UPLOAD_MIME_TYPES,
                         maxBytes: 15 * 1024 * 1024,
                       });
                       if (!validation.ok) {
@@ -3447,13 +3531,13 @@ export default function UniversalRecordWorkspace({
                   {pendingPhotoFile ? `Picture selected: ${pendingPhotoFile.name}` : "Add picture"}
                   <input
                     type="file"
-                    accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                    accept={IMAGE_UPLOAD_ACCEPT}
                     style={{ display: "none" }}
                     onChange={(event) => {
                       const file = event.target.files?.[0] ?? null;
                       if (!file) return;
                       const validation = validateUploadFile(file, {
-                        allowedMimeTypes: ["image/jpeg", "image/png"],
+                        allowedMimeTypes: IMAGE_UPLOAD_MIME_TYPES,
                         maxBytes: 15 * 1024 * 1024,
                       });
                       if (!validation.ok) {
@@ -3469,17 +3553,17 @@ export default function UniversalRecordWorkspace({
                   {pendingDocumentFile ? `Document selected: ${pendingDocumentFile.name}` : "Upload document"}
                   <input
                     type="file"
-                    accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                    accept={DOCUMENT_UPLOAD_ACCEPT}
                     style={{ display: "none" }}
                     onChange={(event) => {
                       const file = event.target.files?.[0] ?? null;
                       if (!file) return;
                       const validation = validateUploadFile(file, {
-                        allowedMimeTypes: ["application/pdf", "image/jpeg", "image/png"],
+                        allowedMimeTypes: DOCUMENT_UPLOAD_MIME_TYPES,
                         maxBytes: 15 * 1024 * 1024,
                       });
                       if (!validation.ok) {
-                        setStatus(`${validation.error}. Allowed: PDF, JPG, PNG up to 15MB.`);
+                        setStatus(`${validation.error}. Allowed: PDF, DOCX, XLSX, CSV, JPG, PNG up to 15MB.`);
                         return;
                       }
                       setPendingDocumentFile(file);
@@ -3511,7 +3595,7 @@ export default function UniversalRecordWorkspace({
                   <input
                     type="file"
                     multiple
-                    accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                    accept={DOCUMENT_UPLOAD_ACCEPT}
                     style={{ display: "none" }}
                     onChange={(event) => {
                       const files = Array.from(event.target.files ?? []);
@@ -3526,7 +3610,7 @@ export default function UniversalRecordWorkspace({
                   <input
                     type="file"
                     multiple
-                    accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                    accept={IMAGE_UPLOAD_ACCEPT}
                     style={{ display: "none" }}
                     onChange={(event) => {
                       const files = Array.from(event.target.files ?? []);
@@ -4795,7 +4879,7 @@ function getFinanceDraft(categoryKey: string, form: EditForm) {
 }
 
 function getCanonicalAssetDraft(
-  categorySlug: "bank-accounts" | "property" | "business-interests" | "digital-assets" | "beneficiaries" | "executors" | "tasks",
+  categorySlug: CanonicalAssetCategorySlug,
   form: EditForm,
   relationOptions?: {
     taskRelationOptions?: Array<{ value: string; label: string }>;
@@ -5039,6 +5123,7 @@ function resolveCanonicalCategorySlug(sectionKey: string, categoryKey: string) {
   if (sectionKey === "personal" && categoryKey === "beneficiaries") return "beneficiaries" as const;
   if (sectionKey === "personal" && categoryKey === "executors") return "executors" as const;
   if (sectionKey === "personal" && categoryKey === "tasks") return "tasks" as const;
+  if (sectionKey === "legal" && categoryKey === "identity-documents") return "identity-documents" as const;
   return null;
 }
 

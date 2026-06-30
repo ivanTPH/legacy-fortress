@@ -9,6 +9,7 @@ export default function ForgotPasswordPage() {
   const [status, setStatus] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
   const [sending, setSending] = useState(false);
+  const emailReady = Boolean(email.trim());
 
   async function sendReset() {
     if (!email.trim()) {
@@ -63,10 +64,20 @@ export default function ForgotPasswordPage() {
             <>
               <label className="lf-label">
                 <span>Email</span>
-                <input className="lf-input" value={email} onChange={(e) => setEmail(e.target.value)} type="email" />
+                <input
+                  className="lf-input"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  type="email"
+                  required
+                  aria-describedby="forgot-password-email-help"
+                />
               </label>
+              <p className="lf-muted-note" id="forgot-password-email-help" style={{ marginTop: -4 }}>
+                {emailReady ? "We will send the reset link to this email address." : "Enter your email address to enable the reset link button."}
+              </p>
 
-              <button className="lf-primary-btn" onClick={() => void sendReset()} disabled={sending || !email.trim()}>
+              <button className="lf-primary-btn" onClick={() => void sendReset()} disabled={sending || !emailReady}>
                 {sending ? "Sending..." : "Send reset link"}
               </button>
             </>

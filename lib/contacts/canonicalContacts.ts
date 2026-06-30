@@ -836,6 +836,69 @@ export async function replaceCanonicalRecordContactProjection(
   if (insertRes.error) throw new Error(insertRes.error.message);
 }
 
+export async function updateCanonicalContactProjectionCaches(
+  client: AnySupabaseClient,
+  {
+    ownerUserId,
+    contact,
+  }: {
+    ownerUserId: string;
+    contact: Pick<CanonicalContactRow, "id" | "full_name" | "email" | "relationship" | "contact_role">;
+  },
+) {
+  const updates = buildCanonicalContactProjectionCacheUpdates(contact);
+  const [invitationRes, recordContactRes, grantsRes] = await Promise.all([
+    client
+      .from("contact_invitations")
+      .update(updates.invitation)
+      .eq("owner_user_id", ownerUserId)
+      .eq("contact_id", contact.id),
+    client
+      .from("record_contacts")
+      .update(updates.recordContact)
+      .eq("owner_user_id", ownerUserId)
+      .eq("contact_id", contact.id),
+    client
+      .from("account_access_grants")
+      .update(updates.accountAccessGrant)
+      .eq("owner_user_id", ownerUserId)
+      .eq("contact_id", contact.id),
+  ]);
+
+  if (invitationRes.error) throw new Error(invitationRes.error.message);
+  if (recordContactRes.error) throw new Error(recordContactRes.error.message);
+  if (grantsRes.error) throw new Error(grantsRes.error.message);
+}
+
+export function buildCanonicalContactProjectionCacheUpdates(
+  contact: Pick<CanonicalContactRow, "full_name" | "email" | "relationship" | "contact_role">,
+) {
+  const fullName = normalizeText(contact.full_name) || "Contact";
+  const email = normalizeText(contact.email) || null;
+  const emailNormalized = email ? email.toLowerCase() : null;
+  const relationship = normalizeText(contact.relationship) || null;
+  const contactRole = normalizeText(contact.contact_role) || null;
+
+  return {
+    invitation: {
+      contact_name: fullName,
+      contact_email: emailNormalized,
+      ...(contactRole ? { assigned_role: contactRole } : {}),
+      updated_at: new Date().toISOString(),
+    },
+    recordContact: {
+      contact_name: fullName,
+      contact_email: emailNormalized,
+      contact_role: relationship || contactRole,
+    },
+    accountAccessGrant: {
+      relationship,
+      ...(contactRole ? { assigned_role: contactRole } : {}),
+      updated_at: new Date().toISOString(),
+    },
+  };
+}
+
 export async function hydrateProjectionRowsWithCanonicalContacts<
   T extends {
     contact_id: string | null;

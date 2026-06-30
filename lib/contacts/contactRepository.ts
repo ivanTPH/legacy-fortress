@@ -12,6 +12,7 @@ import {
   replaceCanonicalRecordContactProjection,
   syncCanonicalContact,
   unlinkCanonicalContactSource,
+  updateCanonicalContactProjectionCaches,
   upsertCanonicalContactInvitationProjection,
   type CanonicalContactContext,
   type CanonicalContactInviteProjectionRow,
@@ -92,6 +93,7 @@ export type PeopleContactRepository = {
   upsertInvitationProjection(input: SavePeopleInvitationProjectionInput): ReturnType<typeof upsertCanonicalContactInvitationProjection>;
   unlinkSource(input: UnlinkPeopleContactSourceInput): ReturnType<typeof unlinkCanonicalContactSource>;
   replaceRecordProjection(input: ReplacePeopleRecordProjectionInput): ReturnType<typeof replaceCanonicalRecordContactProjection>;
+  updateProjectionCaches(input: UpdatePeopleContactProjectionCachesInput): ReturnType<typeof updateCanonicalContactProjectionCaches>;
   hydrateProjectionRows<T extends PeopleProjectionHydratableRow>(ownerUserId: string, rows: T[]): Promise<T[]>;
   scopeResources(ownerUserId: string): Promise<PeopleScopeSourceRow[]>;
 };
@@ -99,6 +101,7 @@ export type PeopleContactRepository = {
 export type SavePeopleInvitationProjectionInput = Parameters<typeof upsertCanonicalContactInvitationProjection>[1];
 export type UnlinkPeopleContactSourceInput = Parameters<typeof unlinkCanonicalContactSource>[1];
 export type ReplacePeopleRecordProjectionInput = Parameters<typeof replaceCanonicalRecordContactProjection>[1];
+export type UpdatePeopleContactProjectionCachesInput = Parameters<typeof updateCanonicalContactProjectionCaches>[1];
 export type PeopleProjectionHydratableRow = Parameters<typeof hydrateProjectionRowsWithCanonicalContacts>[2][number];
 
 export const PEOPLE_CONTACT_REPOSITORY_CONTRACT = {
@@ -301,6 +304,10 @@ export function replacePeopleRecordContactProjection(client: AnySupabaseClient, 
   return replaceCanonicalRecordContactProjection(client, input);
 }
 
+export function updatePeopleContactProjectionCaches(client: AnySupabaseClient, input: UpdatePeopleContactProjectionCachesInput) {
+  return updateCanonicalContactProjectionCaches(client, input);
+}
+
 export function hydratePeopleProjectionRows<T extends PeopleProjectionHydratableRow>(
   client: AnySupabaseClient,
   ownerUserId: string,
@@ -368,6 +375,9 @@ export function createPeopleContactRepository(client: AnySupabaseClient): People
     },
     replaceRecordProjection(input) {
       return replacePeopleRecordContactProjection(client, input);
+    },
+    updateProjectionCaches(input) {
+      return updatePeopleContactProjectionCaches(client, input);
     },
     hydrateProjectionRows(ownerUserId, rows) {
       return hydratePeopleProjectionRows(client, ownerUserId, rows);

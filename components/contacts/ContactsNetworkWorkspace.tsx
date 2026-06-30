@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 import { waitForActiveUser } from "../../lib/auth/session";
 import {
   loadCanonicalContactsForOwner,
+  loadCanonicalContactInvitationsForOwner,
   type CanonicalContactContext,
   type CanonicalContactInviteStatus,
   type CanonicalContactSourceType,
@@ -74,6 +75,7 @@ export default function ContactsNetworkWorkspace() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState("");
   const [contacts, setContacts] = useState<ContactRow[]>([]);
+  const [search, setSearch] = useState("");
   const [validationSourceText, setValidationSourceText] = useState<Record<string, string>>({});
   const [confirmingValidationKey, setConfirmingValidationKey] = useState("");
   const [associationAlerts, setAssociationAlerts] = useState<string[]>([]);
@@ -83,10 +85,7 @@ export default function ContactsNetworkWorkspace() {
   const [previewTargetsByContextKey, setPreviewTargetsByContextKey] = useState<Map<string, LinkedDocumentSourceItem[]>>(new Map());
   const [openingDocumentKey, setOpeningDocumentKey] = useState("");
 
-  useEffect(() => {
-    let mounted = true;
-
-    async function load() {
+  const loadContacts = useCallback(async (isMounted: () => boolean = () => true) => {
       setLoading(true);
       setStatus("");
       const user = await waitForActiveUser(supabase, { attempts: 5, delayMs: 120 });
@@ -95,24 +94,41 @@ export default function ContactsNetworkWorkspace() {
         return;
       }
 
-      if (!mounted) return;
+      if (!isMounted()) return;
       try {
-        const loaded = await loadCanonicalContactsForOwner(supabase, viewer.targetOwnerUserId || user.id);
-        if (!mounted) return;
-        setContacts(loaded as ContactRow[]);
+        const ownerUserId = viewer.targetOwnerUserId || user.id;
+        const [loaded, invitations] = await Promise.all([
+          loadCanonicalContactsForOwner(supabase, ownerUserId),
+          loadCanonicalContactInvitationsForOwner(supabase, ownerUserId),
+        ]);
+        if (!isMounted()) return;
+        setContacts(mergeContactsWithInvitations(loaded as ContactRow[], invitations));
       } catch (error) {
-        if (!mounted) return;
+        if (!isMounted()) return;
         setStatus(`Could not load contacts network: ${error instanceof Error ? error.message : "Unknown error"}`);
         setContacts([]);
       }
       setLoading(false);
-    }
+  }, [router, viewer.targetOwnerUserId]);
 
-    void load();
+  useEffect(() => {
+    let mounted = true;
+
+    queueMicrotask(() => {
+      void loadContacts(() => mounted);
+    });
     return () => {
       mounted = false;
     };
-  }, [router, viewer.targetOwnerUserId]);
+  }, [loadContacts]);
+
+  useEffect(() => {
+    function handleContactsUpdated() {
+      void loadContacts();
+    }
+    window.addEventListener("lf:contacts-updated", handleContactsUpdated);
+    return () => window.removeEventListener("lf:contacts-updated", handleContactsUpdated);
+  }, [loadContacts]);
 
   useEffect(() => {
     let cancelled = false;
@@ -307,14 +323,16 @@ export default function ContactsNetworkWorkspace() {
   const groupedContacts = useMemo(() => {
     const map = new Map<string, ContactRow[]>();
     const seenContactIds = new Set<string>();
+    const query = search.trim().toLowerCase();
     for (const group of GROUPS) map.set(group.key, []);
     for (const contact of contacts) {
       if (seenContactIds.has(contact.id)) continue;
+      if (query && !buildContactSearchText(contact).includes(query)) continue;
       seenContactIds.add(contact.id);
       map.get(resolveContactGroupKey(contact))?.push(contact);
     }
     return map;
-  }, [contacts]);
+  }, [contacts, search]);
 
   const completeness = useMemo(() => {
     const total = contacts.length;
@@ -503,6 +521,18 @@ export default function ContactsNetworkWorkspace() {
           <Metric label="Linked roles" value={String(completeness.linkedContextCount)} />
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <label style={contactSearchFieldStyle}>
+            <span style={contactSearchLabelStyle}>
+              <Icon name="search" size={16} />
+              Search contacts
+            </span>
+            <input
+              style={contactSearchInputStyle}
+              placeholder="Search name, email, role, or linked record..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </label>
           {!viewer.readOnly ? (
             <button
               type="button"
@@ -799,6 +829,120 @@ export default function ContactsNetworkWorkspace() {
 
 function formatContextLabel(context: ContactRow["linked_context"][number]) {
   return [context.section_key, context.category_key, context.role].filter(Boolean).join(" · ") || "Linked context";
+}
+
+function buildContactSearchText(contact: ContactRow) {
+  return [
+    contact.full_name,
+    contact.email,
+    contact.phone,
+    contact.contact_role,
+    contact.relationship,
+    contact.source_type,
+    ...(contact.linked_context ?? []).flatMap((context) => [
+      context.label,
+      context.role,
+      context.section_key,
+      context.category_key,
+    ]),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function mergeContactsWithInvitations(
+  contacts: ContactRow[],
+  invitations: Array<{
+    id: string;
+    contact_id: string | null;
+    contact_name: string;
+    contact_email: string;
+    assigned_role: string;
+    invitation_status: string;
+    activation_status: string;
+    invited_at: string;
+    sent_at: string | null;
+    linked_context: CanonicalContactContext[];
+  }>,
+) {
+  const mergedById = new Map(contacts.map((contact) => [contact.id, contact]));
+
+  for (const row of invitations) {
+    const contactId = String(row.contact_id ?? "").trim();
+    const mergedId = contactId || row.id;
+    const invitationContext: CanonicalContactContext = {
+      source_kind: "invitation",
+      source_id: row.id,
+      section_key: "dashboard",
+      category_key: "contacts",
+      label: "Contact invitation",
+      role: row.assigned_role || null,
+    };
+    const linkedContext = mergeLinkedContexts([...(row.linked_context ?? []), invitationContext]);
+    const existing = contactId ? mergedById.get(contactId) : null;
+
+    if (existing) {
+      mergedById.set(contactId, {
+        ...existing,
+        full_name: row.contact_name || existing.full_name || "Unnamed contact",
+        email: row.contact_email || existing.email,
+        contact_role: row.assigned_role || existing.contact_role,
+        invite_status: row.sent_at ? "invite_sent" : existing.invite_status,
+        verification_status: mapInvitationActivationStatus(row.activation_status),
+        source_type: existing.source_type === "manual" ? "invitation" : existing.source_type,
+        linked_context: mergeLinkedContexts([...normalizeContactContexts(existing.linked_context ?? []), ...linkedContext]),
+        updated_at: row.sent_at || row.invited_at || existing.updated_at,
+      });
+      continue;
+    }
+
+    mergedById.set(mergedId, {
+      id: mergedId,
+      full_name: row.contact_name || "Unnamed contact",
+      email: row.contact_email || null,
+      phone: null,
+      contact_role: row.assigned_role || "trusted_contact",
+      relationship: null,
+      invite_status: row.sent_at ? "invite_sent" : "not_invited",
+      verification_status: mapInvitationActivationStatus(row.activation_status),
+      source_type: "invitation",
+      linked_context: linkedContext,
+      validation_overrides: {},
+      updated_at: row.sent_at || row.invited_at,
+    });
+  }
+
+  return Array.from(mergedById.values());
+}
+
+function mergeLinkedContexts(contexts: CanonicalContactContext[]) {
+  const merged = new Map<string, CanonicalContactContext>();
+  for (const context of contexts) {
+    const key = [
+      context.source_kind,
+      context.source_id,
+      context.section_key ?? "",
+      context.category_key ?? "",
+      context.role ?? "",
+    ].join(":");
+    merged.set(key, context);
+  }
+  return Array.from(merged.values());
+}
+
+function normalizeContactContexts(contexts: ContactRow["linked_context"]): CanonicalContactContext[] {
+  return (contexts ?? []).filter((context): context is CanonicalContactContext => {
+    return (context.source_kind === "asset" || context.source_kind === "record" || context.source_kind === "invitation")
+      && Boolean(String(context.source_id ?? "").trim());
+  });
+}
+
+function mapInvitationActivationStatus(value: string): CanonicalContactVerificationStatus {
+  if (value === "active" || value === "verified" || value === "accepted" || value === "invited") return value;
+  if (value === "revoked" || value === "rejected") return value;
+  if (value === "pending_verification" || value === "verification_submitted") return value;
+  return "invited";
 }
 
 function describeLinkedDocumentContext(context: ContactRow["linked_context"][number]) {
@@ -1224,4 +1368,27 @@ const buildCheckMarkerStyle: CSSProperties = {
   fontSize: 13,
   fontWeight: 800,
   letterSpacing: 0.2,
+};
+
+const contactSearchFieldStyle: CSSProperties = {
+  display: "grid",
+  gap: 5,
+  minWidth: 260,
+};
+
+const contactSearchLabelStyle: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  color: "#475569",
+  fontSize: 12,
+  fontWeight: 700,
+};
+
+const contactSearchInputStyle: CSSProperties = {
+  border: "1px solid #d1d5db",
+  borderRadius: 10,
+  padding: "9px 10px",
+  fontSize: 14,
+  minWidth: 0,
 };

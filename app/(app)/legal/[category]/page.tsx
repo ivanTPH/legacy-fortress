@@ -87,11 +87,10 @@ export default function LegalCategoryPage() {
       <>
         {associationAlert}
         <UniversalRecordWorkspace
-          sectionKey="personal"
-          categoryKey="executors"
+          sectionKey="legal"
+          categoryKey="wills"
           title={`Legal · ${category.label}`}
           subtitle={category.description}
-          recordFilter={(row) => assetMatchesLegalCategory(row, "wills")}
         />
       </>
     );
