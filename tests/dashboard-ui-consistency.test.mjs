@@ -311,7 +311,8 @@ test("dashboard profile chip signs the avatar through the authenticated server r
   assert.match(layout, /function cssEscapeUrl\(value: string\)/);
   assert.match(layout, /const stableAvatarUrl = await loadServerProfileAvatarDataUrl\(\)/);
   assert.match(layout, /if \(stableAvatarUrl\) \{[\s\S]*setAvatarUrl\(stableAvatarUrl\);[\s\S]*return;[\s\S]*\}/);
-  assert.match(layout, /signed_avatar_url=ignored_for_header_stability/);
+  assert.match(layout, /signed_avatar_url=used_as_fallback/);
+  assert.match(layout, /if \(profile\.avatarUrl\) \{[\s\S]*setAvatarUrl\(profile\.avatarUrl\);[\s\S]*return;[\s\S]*\}/);
   assert.match(layout, /avatar_preserved=empty_lookup/);
   assert.match(layout, /fetch\("\/api\/profile\/avatar"/);
   assert.match(layout, /blobToDataUrl\(blob\)/);

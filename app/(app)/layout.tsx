@@ -1176,7 +1176,9 @@ async function hydrateUserChip(
   }
 
   if (profile.avatarUrl) {
-    appendProfileAvatarTrace("[sidebar-hydrate] signed_avatar_url=ignored_for_header_stability");
+    appendProfileAvatarTrace("[sidebar-hydrate] signed_avatar_url=used_as_fallback");
+    setAvatarUrl(profile.avatarUrl);
+    return;
   }
 
   appendProfileAvatarTrace("[sidebar-hydrate] avatar_preserved=empty_lookup");
