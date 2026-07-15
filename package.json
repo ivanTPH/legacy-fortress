@@ -12,9 +12,13 @@
     "validate:env": "node scripts/validate-env.mjs",
     "crawl:links": "node scripts/link-crawler.mjs",
     "matrix:routes": "node scripts/generate-route-matrix.mjs",
+    "test": "npm run test:unit",
+    "test:unit": "npm run test:core && npm run test:stabilisation && node --test tests/admin-phase1-foundation.test.mjs",
     "test:navigation": "node --test tests/menu-key-actions.test.mjs tests/route-parity.test.mjs",
-    "test:core": "node --test tests/menu-key-actions.test.mjs tests/menu-state.test.mjs tests/route-parity.test.mjs tests/auth-and-schema-guards.test.mjs tests/recovery-flow.test.mjs tests/invitation-recovery.test.mjs tests/plan-framework.test.mjs tests/production-smoke-script.test.mjs",
+    "test:core": "node --test tests/menu-key-actions.test.mjs tests/menu-state.test.mjs tests/route-parity.test.mjs tests/auth-and-schema-guards.test.mjs tests/recovery-flow.test.mjs tests/invitation-recovery.test.mjs tests/plan-framework.test.mjs tests/production-smoke-script.test.mjs tests/phase3-product-governance.test.mjs tests/phase4a-customer-dashboard-data-proof.test.mjs",
     "test:stabilisation": "node --test tests/backend-foundations.test.mjs tests/platform-architecture-stabilisation.test.mjs tests/admin-role-api-routes.test.mjs tests/dashboard-ui-consistency.test.mjs tests/access-requests-owner-flow.test.mjs tests/workspace-switcher.test.mjs",
+    "test:uat:local": "PLAYWRIGHT_BASE_URL=http://127.0.0.1:3012 playwright test tests/e2e/local-uat-review-access.spec.ts tests/e2e/admin-role-matrix-local.spec.ts --project=desktop-chromium",
+    "test:uat:admin": "PLAYWRIGHT_BASE_URL=http://127.0.0.1:3012 playwright test tests/e2e/admin-role-matrix-local.spec.ts --project=desktop-chromium",
     "release:check": "node scripts/release-gate.mjs",
     "test:e2e": "playwright test",
     "smoke:auth:reliability": "node scripts/smoke-auth-reliability.mjs",
@@ -26,7 +30,8 @@
     "smoke:production:core": "node scripts/smoke-production-core.mjs",
     "smoke:production:strict": "SMOKE_PERFORMANCE_BUDGET_STRICT=true node scripts/smoke-production-core.mjs",
     "smoke:local:dashboard-bank": "node scripts/smoke-dashboard-bank-dev.mjs",
-    "smoke:owner:launch": "node scripts/smoke-owner-launch-uat.mjs"
+    "smoke:owner:launch": "node scripts/smoke-owner-launch-uat.mjs",
+    "uat:validate": "node scripts/validate-uat-environment.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.98.0",
@@ -48,6 +53,9 @@
     "typescript": "^5"
   },
   "overrides": {
-    "postcss": "^8.5.14"
+    "@babel/core": "^7.29.7",
+    "js-yaml": "^4.3.0",
+    "postcss": "^8.5.14",
+    "ws": "^8.21.0"
   }
 }

@@ -13,6 +13,8 @@
 # testing
 /coverage
 /test-results/
+/playwright-report/
+/blob-report/
 
 # next.js
 /.next/
@@ -33,6 +35,14 @@
 /Legacy/
 /Legacy Fortress docs/
 /archive/
+*.local.sql
+*.dump
+*.backup
+*.log
+*.tmp
+*.screenshot.png
+/screenshots/
+/storage/
 
 # debug
 npm-debug.log*
@@ -40,8 +50,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files: keep secret-bearing env files ignored, but allow safe templates.
 .env*
+!.env.example
+!.env.staging.example
 
 # vercel
 .vercel

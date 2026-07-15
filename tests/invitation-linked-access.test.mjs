@@ -15,7 +15,8 @@ test("invitation email draft includes role, account holder, and secure accept pa
   assert.equal(draft.subject, "You have been invited as Executor for Bill Smith");
   assert.match(draft.preview, /view-only, role-based access/i);
   assert.match(draft.bodyText, /Legacy Fortress is a secure estate-record workspace/i);
-  assert.match(draft.bodyText, /will not be able to edit or delete anything/i);
+  assert.match(draft.bodyText, /Acceptance does not by itself unlock/i);
+  assert.match(draft.bodyText, /required verification or unlock process/i);
   assert.equal(draft.acceptPath, "/invite/accept?invitation=invite-123&token=token-456");
 });
 

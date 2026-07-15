@@ -82,7 +82,7 @@ test("canonical contact architecture documents the shared people entity and migr
   );
   assert.equal(isCanonicalContactEntityField("invite_status"), true);
   assert.equal(isCanonicalContactEntityField("section_entries"), false);
-  assert.deepEqual(CANONICAL_CONTACT_INVITE_STATUSES, ["not_invited", "invite_sent", "accepted", "rejected", "revoked"]);
+  assert.deepEqual(CANONICAL_CONTACT_INVITE_STATUSES, ["not_invited", "invite_sent", "accepted", "rejected", "failed", "revoked"]);
   assert.ok(CANONICAL_CONTACT_VERIFICATION_STATUSES.includes("pending_verification"));
   assert.ok(CANONICAL_CONTACT_SOURCE_TYPES.includes("probate_contact"));
   assert.ok(CANONICAL_CONTACT_SOURCE_TYPES.includes("enterprise_contact"));
@@ -95,6 +95,10 @@ test("canonical contact architecture documents the shared people entity and migr
   assert.ok(snapshot.relationshipPatterns.some((item) => item.key === "enterprise_contact" && item.sourceTypes.includes("enterprise_contact")));
   assert.ok(CONTACT_PERSISTENCE_SURFACES.some((item) => item.surface === "/contacts" && item.currentPattern === "canonical"));
   assert.ok(CONTACT_PERSISTENCE_SURFACES.some((item) => item.currentPattern === "legacy" && item.migrationRisk === "high"));
+  assert.equal(CONTACT_PERSISTENCE_SURFACES.filter((item) => item.currentPattern === "canonical" && item.canonicalTarget === "contacts").length, 1);
+  assert.ok(CONTACT_PERSISTENCE_SURFACES.every((item) => item.canonicalTarget !== "section_entries"));
+  assert.ok(snapshot.persistenceSurfaces.some((item) => item.surface === "executor and trusted-contact invitations" && item.canonicalTarget === "contact_invitations"));
+  assert.ok(snapshot.persistenceSurfaces.some((item) => item.surface === "record-linked contacts" && item.canonicalTarget === "contact_links"));
 
   const entity = buildCanonicalSharedContactEntity({
     id: "contact-1",
@@ -297,14 +301,23 @@ test("access model keeps consumer navigation separate while allowing authorised 
   assert.equal(ACCESS_MODEL_SUMMARY.consumerDefaultLanding, "/dashboard");
   assert.equal(ACCESS_MODEL_SUMMARY.adminDefaultLanding, "/internal/admin");
   assert.equal(getAccessAreaForPath("/dashboard"), "consumer");
+  assert.equal(getAccessAreaForPath("/user"), "consumer");
   assert.equal(getAccessAreaForPath("/internal/admin"), "probate_admin");
+  assert.equal(getAccessAreaForPath("/application/admin"), "probate_admin");
   assert.equal(getAccessAreaForPath("/internal/admin/prototype/enterprise"), "enterprise_admin");
+  assert.equal(getAccessAreaForPath("/application/enterprise"), "enterprise_admin");
   assert.equal(canRoleAccessPath(["consumer_user"], "/internal/admin"), false);
+  assert.equal(canRoleAccessPath(["consumer_user"], "/application/admin"), false);
+  assert.equal(canRoleAccessPath(["consumer_user"], "/application/enterprise"), false);
   assert.equal(canRoleAccessPath(["probate_admin"], "/internal/admin"), true);
+  assert.equal(canRoleAccessPath(["probate_admin"], "/application/admin"), true);
   assert.equal(canRoleAccessPath(["enterprise_admin"], "/internal/admin/prototype/enterprise"), true);
+  assert.equal(canRoleAccessPath(["enterprise_admin"], "/application/enterprise"), true);
   assert.equal(canShowApplicationToAdminSwitch({ roles: ["enterprise_admin"], trustedRoleClaims: false }), false);
   assert.equal(canShowApplicationToAdminSwitch({ roles: ["enterprise_admin"], trustedRoleClaims: true }), true);
   assert.equal(shouldHideFromConsumerNavigation("/internal/admin/prototype"), true);
+  assert.equal(shouldHideFromConsumerNavigation("/application/admin"), true);
+  assert.equal(shouldHideFromConsumerNavigation("/application/enterprise"), true);
   assert.equal(shouldHideFromConsumerNavigation("/dashboard"), false);
   assert.ok(ACCESS_MODEL_ROUTES.some((route) => route.visibility === "authorised_role_only" && route.routePrefix === "/internal/admin"));
   assert.doesNotMatch(routeManifest, /\/internal\/admin|\/internal\/test-login/);

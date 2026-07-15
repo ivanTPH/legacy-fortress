@@ -18,7 +18,8 @@ test("navigation no longer exposes Executors as a standalone destination", () =>
 test("legacy executors route redirects into grouped contacts", () => {
   const executorsRoute = fs.readFileSync(path.join(root, "app/(app)/executors/page.tsx"), "utf8");
 
-  assert.match(executorsRoute, /redirect\("\/contacts\?group=executors"\)/);
+  assert.match(executorsRoute, /router\.replace\("\/contacts\?group=executors"\)/);
+  assert.match(executorsRoute, /Opening executor contacts/);
 });
 
 test("contacts grouped workflow preserves executor group state when selecting a contact", () => {

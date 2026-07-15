@@ -28,6 +28,10 @@ test("legacy people-role routes redirect into contacts group views", () => {
 
   for (const [file, destination] of Object.entries(routes)) {
     const source = fs.readFileSync(path.join(root, file), "utf8");
+    if (file === "app/(app)/executors/page.tsx") {
+      assert.match(source, /router\.replace\("\/contacts\?group=executors"\)/);
+      continue;
+    }
     if (file === "app/(app)/trust/page.tsx") {
       assert.match(source, /params\.set\("group", "trusted-contacts"\)/);
       assert.match(source, /redirect\(`\/contacts\?\$\{params\.toString\(\)\}`\)/);

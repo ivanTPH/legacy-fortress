@@ -178,6 +178,12 @@ test("dashboard overview cards use compact shared summary cards with icon-only r
   assert.doesNotMatch(dashboardPage, /progressTrackStyle/);
   assert.doesNotMatch(dashboardPage, /% ready|% complete/);
   assert.match(dashboardPage, /storedDocumentCount/);
+  assert.match(dashboardPage, /aria-label="Dashboard search results"/);
+  assert.match(dashboardPage, />Dashboard search results<\/h2>/);
+  assert.match(dashboardPage, /Clear dashboard search/);
+  assert.match(dashboardPage, /No dashboard records, contacts, documents, or destinations match this search/);
+  assert.match(dashboardPage, /dashboard records, linked documents, contacts, and key destinations/);
+  assert.match(fs.readFileSync(path.join(root, "app/(app)/layout.tsx"), "utf8"), /placeholder="Search dashboard records"/);
   assert.match(dashboardRender, /<h2 style=\{\{ margin: 0, fontSize: 18 \}\}>Overview<\/h2>/);
   assert.match(dashboardRender, /<ActionQueuePanel items=\{dashboardState\.actions\.items\} context=\{dashboardState\.actions\.context\} onAction=\{handleAction\} \/>/);
   assert.match(dashboardRender, /aria-label="Estate readiness summary"/);
@@ -294,7 +300,7 @@ test("dashboard profile chip signs the avatar through the authenticated server r
   assert.match(layout, /PROFILE_AVATAR_CACHE_KEY/);
   assert.match(layout, /ignored_empty_value=yes/);
   assert.match(layout, /cacheProfileAvatarUrl\(next\)/);
-  assert.match(layout, /hydrateUserChip\(userId, nextEmail, mounted, setDisplayName, setTelephone, setInitials, setFreshAvatarUrl\)/);
+  assert.match(layout, /hydrateUserChip\(userId, nextEmail, mounted, setDisplayName, setInitials, setFreshAvatarUrl\)/);
   assert.doesNotMatch(layout, /failedAvatarUrl/);
   assert.doesNotMatch(layout, /avatarRetryKey/);
   assert.doesNotMatch(layout, /recoverSidebarAvatar/);
@@ -341,8 +347,8 @@ test("document-oriented records avoid forced monetary structure and task linking
   assert.match(workspace, /Narrative instructions/);
   assert.match(workspace, /Document or note type/);
   assert.match(workspace, /!isTrustedContacts && !isNarrativeDocumentWorkspace/);
-  assert.match(workspace, /value_minor: isTrustedContacts \|\| isNarrativeDocumentWorkspace \? null/);
-  assert.match(workspace, /currency_code: isTrustedContacts \|\| isNarrativeDocumentWorkspace \? null/);
+  assert.match(workspace, /value_minor: isTrustedContacts \|\| isNarrativeDocumentWorkspace \? 0/);
+  assert.match(workspace, /currency_code: isTrustedContacts \|\| isNarrativeDocumentWorkspace \? "GBP"/);
   assert.match(workspace, /isNarrativeDocumentWorkspace \? null/);
   assert.match(workspace, /multiple/);
   assert.match(fieldDictionary, /key: "related_asset_id"[\s\S]*required: false/);
@@ -374,7 +380,9 @@ test("shared consumer workflow controls support structured capture and assisted 
   assert.match(documentsWorkspace, /helperText=\{selectedKind === "photo"/);
   assert.match(documentsWorkspace, /disabled=\{saving \|\| !pendingFile\}/);
   assert.match(onboarding, /PlatformSection/);
-  assert.match(onboarding, /Set up your vault in stages/);
+  assert.match(onboarding, /What happens here/);
+  assert.match(onboarding, /Only the terms acceptance is required/);
   assert.match(onboarding, /Tasks and reminders stay inside Action Centre/);
-  assert.match(onboarding, /onboardingMilestones/);
+  assert.match(onboarding, /Continue into your secure record/);
+  assert.match(onboarding, /Terms and Conditions/);
 });
