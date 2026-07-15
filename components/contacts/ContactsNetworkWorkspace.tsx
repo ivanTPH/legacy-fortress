@@ -366,9 +366,11 @@ export default function ContactsNetworkWorkspace() {
     || GROUPS.find((group) => (groupedContacts.get(group.key)?.length ?? 0) > 0)?.key
     || GROUPS[0]?.key
     || null;
-  const effectiveOpenGroupKey = selectedGroup || selectedContactId
+  const effectiveOpenGroupKey = search.trim()
     ? preferredOpenGroup
-    : openGroupKey ?? preferredOpenGroup;
+    : (selectedGroup || selectedContactId)
+      ? preferredOpenGroup
+      : openGroupKey ?? preferredOpenGroup;
 
   useEffect(() => {
     if (!documentPreview) return;
@@ -594,7 +596,7 @@ export default function ContactsNetworkWorkspace() {
         <div style={{ display: "grid", gap: 12 }}>
           {GROUPS.map((group) => {
             const rows = groupedContacts.get(group.key) ?? [];
-            const isOpen = effectiveOpenGroupKey === group.key;
+            const isOpen = search.trim() ? rows.length > 0 : effectiveOpenGroupKey === group.key;
             const groupSummary = summarizeGroupRows(rows, validationSourceText);
 
             return (

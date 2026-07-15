@@ -31,6 +31,10 @@ export function resolveContactStatusBadge({
     return { label: "Rejected", tone: "danger" as ContactStatusTone };
   }
 
+  if (inviteStatus === "failed") {
+    return { label: "Delivery failed", tone: "danger" as ContactStatusTone };
+  }
+
   if (inviteStatus === "revoked" || verificationStatus === "revoked") {
     return { label: "Revoked", tone: "neutral" as ContactStatusTone };
   }

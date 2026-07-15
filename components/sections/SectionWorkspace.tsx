@@ -109,6 +109,12 @@ export default function SectionWorkspace({
   const helpMessage = getWorkspaceHelpMessage(sectionKey, categoryKey);
 
   useEffect(() => {
+    if (searchParams.get("add") !== "1") return;
+    if (!canCreateRecords || showForm || editingId) return;
+    setShowForm(true);
+  }, [canCreateRecords, editingId, searchParams, showForm]);
+
+  useEffect(() => {
     let mounted = true;
     async function load() {
       setLoading(true);
@@ -352,7 +358,7 @@ export default function SectionWorkspace({
 
     setUploadingFor(rowId);
     setStatus("");
-    const filePath = `${user.id}/section/${sectionKey}/${categoryKey}/${Date.now()}-${sanitizeFileName(file.name)}`;
+    const filePath = `users/${user.id}/section/${sectionKey}/${categoryKey}/${Date.now()}-${sanitizeFileName(file.name)}`;
     const upload = await supabase.storage.from("vault-docs").upload(filePath, file, { upsert: false });
     if (upload.error) {
       setUploadingFor(null);
@@ -540,7 +546,7 @@ export default function SectionWorkspace({
 
     setUploadingFor(rowId);
     setStatus("");
-    const filePath = `${user.id}/section/${sectionKey}/${categoryKey}/${Date.now()}-${sanitizeFileName(file.name)}`;
+    const filePath = `users/${user.id}/section/${sectionKey}/${categoryKey}/${Date.now()}-${sanitizeFileName(file.name)}`;
     const upload = await supabase.storage.from("vault-docs").upload(filePath, file, { upsert: false });
     if (upload.error) {
       setUploadingFor(null);

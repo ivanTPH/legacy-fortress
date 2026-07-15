@@ -29,7 +29,11 @@ export function buildInvitationEmailDraft({
     "",
     "Legacy Fortress is a secure estate-record workspace that helps families, executors, trustees, and advisors find the records and documents they need when it matters.",
     "",
-    "If you accept this invitation, you will receive view-only, role-based access to the records that have been shared with you. You will be able to review records, open attachments, and download documents, but you will not be able to edit or delete anything.",
+    "If you accept this invitation, Legacy Fortress records that you accept the named role. Acceptance does not by itself unlock the account holder's private vault, Trust documents, storage links, previews, downloads, or edit rights.",
+    "",
+    "Any future vault or document access remains separate and must follow the account holder's permissions and the required verification or unlock process.",
+    "",
+    "For your security, invitation links can expire. If this link no longer works, ask the account holder to resend the invitation from Legacy Fortress.",
     "",
     `Accept your secure invitation: ${acceptPath}`,
   ].join("\n");

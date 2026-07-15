@@ -1,6 +1,6 @@
 import type { AccessActivationStatus } from "../access-control/roles";
 
-export type InvitationStatus = "pending" | "accepted" | "rejected" | "revoked";
+export type InvitationStatus = "pending" | "accepted" | "rejected" | "failed" | "revoked";
 
 export function resolveInvitationBadgeState(
   invitationStatus: InvitationStatus,
@@ -12,6 +12,9 @@ export function resolveInvitationBadgeState(
   }
   if (invitationStatus === "rejected") {
     return { tone: "danger" as const, label: "Rejected" };
+  }
+  if (invitationStatus === "failed") {
+    return { tone: "danger" as const, label: "Delivery failed" };
   }
   if (invitationStatus === "revoked") {
     return { tone: "neutral" as const, label: "Revoked" };

@@ -7,6 +7,7 @@ export type CanonicalContactInviteStatus =
   | "invite_sent"
   | "accepted"
   | "rejected"
+  | "failed"
   | "revoked";
 
 export type CanonicalContactVerificationStatus =
@@ -57,6 +58,7 @@ export const CANONICAL_CONTACT_INVITE_STATUSES: CanonicalContactInviteStatus[] =
   "invite_sent",
   "accepted",
   "rejected",
+  "failed",
   "revoked",
 ];
 
@@ -948,6 +950,7 @@ export function mapInvitationStatusToCanonicalInviteStatus(status: string): Cano
   const normalized = normalizeText(status);
   if (normalized === "accepted") return "accepted";
   if (normalized === "rejected") return "rejected";
+  if (normalized === "failed") return "failed";
   if (normalized === "revoked") return "revoked";
   if (normalized === "pending") return "invite_sent";
   return "not_invited";
@@ -1412,6 +1415,7 @@ function resolveInviteStatus(
   const weight: Record<CanonicalContactInviteStatus, number> = {
     not_invited: 0,
     invite_sent: 1,
+    failed: 1,
     accepted: 2,
     rejected: 2,
     revoked: 3,

@@ -158,6 +158,7 @@ export default function AttachmentGallery<T extends AttachmentGalleryItem>({
                     <AttachmentReplaceInput
                       item={item}
                       accept={replaceAccept}
+                      label="Replace"
                       onReplace={onReplace}
                     />
                   ) : null}
@@ -197,21 +198,24 @@ export default function AttachmentGallery<T extends AttachmentGalleryItem>({
 function AttachmentReplaceInput<T extends AttachmentGalleryItem>({
   item,
   accept,
+  label,
   onReplace,
 }: {
   item: T;
   accept?: string;
+  label: string;
   onReplace: (item: T, file: File) => void;
 }) {
+  const actionLabel = `${label} ${item.fileName || "this file"}`;
   return (
     <label
       className="lf-attachment-action"
-      aria-label={`Replace ${item.fileName || "this file"}`}
-      title={`Replace ${item.fileName || "this file"}`}
+      aria-label={actionLabel}
+      title={actionLabel}
       style={actionButtonStyle}
     >
       <Icon name="upload_file" size={17} />
-      <span style={{ lineHeight: 1 }}>Replace</span>
+      <span style={{ lineHeight: 1 }}>{label}</span>
       <input
         type="file"
         accept={accept}

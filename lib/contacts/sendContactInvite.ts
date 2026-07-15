@@ -93,6 +93,7 @@ export async function sendContactInvite(
     },
   });
   if (deliveryResult.error) {
+    await markInvitationDeliveryFailed(client, input, invitationId, contactEmail, deliveryResult.error.message);
     throw new Error(deliveryResult.error.message);
   }
 
@@ -167,6 +168,60 @@ export async function sendContactInvite(
     invitationId,
     eventWarning: eventRes.error?.message ?? null,
   };
+}
+
+async function markInvitationDeliveryFailed(
+  client: AnySupabaseClient,
+  input: SendContactInviteInput,
+  invitationId: string,
+  contactEmail: string,
+  reason: string,
+) {
+  const now = new Date().toISOString();
+  const updateRes = await client
+    .from("contact_invitations")
+    .update({
+      invitation_status: "failed",
+      updated_at: now,
+    })
+    .eq("id", invitationId)
+    .eq("owner_user_id", input.ownerUserId);
+  if (updateRes.error) {
+    throw new Error(`${reason}; additionally, failed invitation status could not be saved: ${updateRes.error.message}`);
+  }
+
+  if (input.contactId) {
+    await savePeopleContact(client, {
+      ownerUserId: input.ownerUserId,
+      existingContactId: input.contactId,
+      fullName: input.contactName || contactEmail,
+      email: contactEmail,
+      phone: input.contactPhone ?? null,
+      relationship: input.contactRelationship ?? null,
+      contactRole: input.assignedRole,
+      sourceType: "invitation",
+      inviteStatus: "failed",
+      verificationStatus: "not_verified",
+      link: {
+        sourceKind: "invitation",
+        sourceId: invitationId,
+        sectionKey: "dashboard",
+        categoryKey: "contacts",
+        label: "Contact invitation",
+        role: input.assignedRole,
+      },
+    }).then(() => undefined, () => undefined);
+  }
+
+  await client.from("invitation_events").insert({
+    owner_user_id: input.ownerUserId,
+    invitation_id: invitationId,
+    event_type: "failed",
+    payload: {
+      contact_email: contactEmail,
+      reason,
+    },
+  }).then(() => undefined, () => undefined);
 }
 
 async function resolveContactInvitationId(

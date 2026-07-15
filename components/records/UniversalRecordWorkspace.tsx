@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   optionLabel,
@@ -19,11 +19,18 @@ import AttachmentGallery, { AttachmentGallerySummary } from "../documents/Attach
 import { waitForActiveUser } from "../../lib/auth/session";
 import { formatCurrency } from "../../lib/currency";
 import {
+  CURRENCY_OPTIONS,
   COUNTRY_TO_CURRENCY_DEFAULT,
   getAssetCategoryFormConfig,
   resolveConfiguredFieldValue,
   validateAssetFormValues,
 } from "../../lib/assets/fieldDictionary";
+import {
+  canonicalizeCategoryTypeValue,
+  getCategoryTypeLabel,
+  getCategoryTypeSelectOptions,
+  validateCategoryTypeSelection,
+} from "../../lib/assets/categoryTypeIntegrity.mjs";
 import { getLegalLinkedContactDefinition } from "../../lib/legalCategories";
 import {
   buildCanonicalBankEditSeed,
@@ -98,6 +105,8 @@ import {
   unlinkPeopleContactSource,
   type CanonicalContactContext,
 } from "../../lib/contacts/contactRepository";
+import { sendContactInvite } from "../../lib/contacts/sendContactInvite";
+import type { CollaboratorRole } from "../../lib/access-control/roles";
 import {
   resolveLatestSavedContactIdentityReference,
   resolveSavedCanonicalContactIdForSource,
@@ -122,6 +131,7 @@ import { getWorkspaceHelpMessage } from "../../lib/workspaceHelp";
 
 type RecordStatus = "active" | "archived";
 type WorkspaceVariant = "default" | "possessions" | "trusted_contacts";
+type AssetFormFamily = "document" | "financial" | "asset";
 const DEV_BANK_BUILD_MARKER = "LF_TRACE_BUILD_MARKER: ec9c21b+banktrace-20260320-2038";
 
 type UniversalRecordRow = {
@@ -175,6 +185,15 @@ type RecordContact = {
   created_at: string;
 };
 
+type RecordContactInviteState = "accepted" | "read" | "sent" | "failed" | "not_sent";
+
+type LinkedContactEditDraft = {
+  fullName: string;
+  email: string;
+  phone: string;
+  role: string;
+};
+
 type ProviderCatalogRow = {
   provider_key: string;
   display_name: string;
@@ -207,6 +226,13 @@ type EditForm = {
   contact_name: string;
   contact_email: string;
   contact_role: string;
+  legal_contacts: LegalContactFormRow[];
+  trust_document_type: string;
+  trust_document_type_other: string;
+  trust_date_created: string;
+  trust_jurisdiction: string;
+  trust_jurisdiction_other: string;
+  trust_reference: string;
   possession_category: string;
   possession_subtype: string;
   description: string;
@@ -375,6 +401,14 @@ type EditForm = {
   creditor_address: string;
 };
 
+type LegalContactFormRow = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+};
+
 const EMPTY_FORM: EditForm = {
   title: "",
   provider_name: "",
@@ -385,6 +419,13 @@ const EMPTY_FORM: EditForm = {
   contact_name: "",
   contact_email: "",
   contact_role: "",
+  legal_contacts: [],
+  trust_document_type: "",
+  trust_document_type_other: "",
+  trust_date_created: "",
+  trust_jurisdiction: "",
+  trust_jurisdiction_other: "",
+  trust_reference: "",
   possession_category: "watches",
   possession_subtype: "",
   description: "",
@@ -602,6 +643,143 @@ const POSSESSION_CATEGORY_ICONS: Record<string, string> = {
 };
 
 const EXCLUDED_POSSESSION_CATEGORIES = new Set(["cars_vehicles", "vehicles", "transport"]);
+const LEGAL_CONTACT_FALLBACK_ID = "legal-contact-primary";
+const SIMPLE_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function createLegalContactRow(seed: Partial<LegalContactFormRow> = {}): LegalContactFormRow {
+  return {
+    id: seed.id ?? `legal-contact-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: seed.name ?? "",
+    email: seed.email ?? "",
+    phone: seed.phone ?? "",
+    role: seed.role ?? "",
+  };
+}
+
+function normalizeLegalContactRows(rows: LegalContactFormRow[], fallbackRole: string) {
+  return rows
+    .map((row) => {
+      const name = row.name.trim();
+      const email = row.email.trim();
+      const phone = row.phone.trim();
+      const rawRole = row.role.trim();
+      if (!name && !email && !phone) return null;
+      return {
+        ...row,
+        name,
+        email,
+        phone,
+        role: rawRole || fallbackRole,
+      };
+    })
+    .filter((row): row is LegalContactFormRow => Boolean(row));
+}
+
+function findInvalidLegalContactEmail(rows: LegalContactFormRow[]) {
+  return rows.find((row) => row.email.trim() && !SIMPLE_EMAIL_PATTERN.test(row.email.trim()));
+}
+
+function resolveTrustDocumentType(form: Pick<EditForm, "trust_document_type" | "trust_document_type_other">) {
+  if (form.trust_document_type === "Other") {
+    return form.trust_document_type_other.trim();
+  }
+  return form.trust_document_type.trim();
+}
+
+function resolveTrustDocumentTypeForEdit(value: unknown) {
+  const rawValue = String(value ?? "").trim();
+  if (!rawValue) return { selected: "", other: "" };
+  if (TRUST_DOCUMENT_TYPE_OPTIONS.some((option) => option.value === rawValue)) {
+    return { selected: rawValue, other: "" };
+  }
+  return { selected: "Other", other: rawValue };
+}
+
+function resolveTrustJurisdiction(form: Pick<EditForm, "trust_jurisdiction" | "trust_jurisdiction_other">) {
+  if (form.trust_jurisdiction === "Other") {
+    return form.trust_jurisdiction_other.trim();
+  }
+  return form.trust_jurisdiction.trim();
+}
+
+function resolveTrustJurisdictionForEdit(value: unknown) {
+  const rawValue = String(value ?? "").trim();
+  if (!rawValue) return { selected: "", other: "" };
+  if (TRUST_JURISDICTION_OPTIONS.some((option) => option.value === rawValue)) {
+    return { selected: rawValue, other: "" };
+  }
+  return { selected: "Other", other: rawValue };
+}
+
+const TRUST_DOCUMENT_TYPE_OPTIONS = [
+  { value: "", label: "Select document type" },
+  { value: "Trust deed", label: "Trust deed" },
+  { value: "Declaration of trust", label: "Declaration of trust" },
+  { value: "Deed of variation", label: "Deed of variation" },
+  { value: "Deed of appointment", label: "Deed of appointment" },
+  { value: "Deed of retirement", label: "Deed of retirement" },
+  { value: "Deed of assignment", label: "Deed of assignment" },
+  { value: "Trust amendment", label: "Trust amendment" },
+  { value: "Letter of wishes", label: "Letter of wishes" },
+  { value: "Trustee resolution", label: "Trustee resolution" },
+  { value: "Other", label: "Other" },
+];
+const TRUST_JURISDICTION_OPTIONS = [
+  { value: "", label: "Select jurisdiction / country" },
+  { value: "United Kingdom", label: "United Kingdom" },
+  { value: "United States", label: "United States" },
+  { value: "Austria", label: "Austria" },
+  { value: "Belgium", label: "Belgium" },
+  { value: "Bulgaria", label: "Bulgaria" },
+  { value: "Croatia", label: "Croatia" },
+  { value: "Cyprus", label: "Cyprus" },
+  { value: "Czechia", label: "Czechia" },
+  { value: "Denmark", label: "Denmark" },
+  { value: "Estonia", label: "Estonia" },
+  { value: "Finland", label: "Finland" },
+  { value: "France", label: "France" },
+  { value: "Germany", label: "Germany" },
+  { value: "Greece", label: "Greece" },
+  { value: "Hungary", label: "Hungary" },
+  { value: "Ireland", label: "Ireland" },
+  { value: "Italy", label: "Italy" },
+  { value: "Latvia", label: "Latvia" },
+  { value: "Lithuania", label: "Lithuania" },
+  { value: "Luxembourg", label: "Luxembourg" },
+  { value: "Malta", label: "Malta" },
+  { value: "Netherlands", label: "Netherlands" },
+  { value: "Poland", label: "Poland" },
+  { value: "Portugal", label: "Portugal" },
+  { value: "Romania", label: "Romania" },
+  { value: "Slovakia", label: "Slovakia" },
+  { value: "Slovenia", label: "Slovenia" },
+  { value: "Spain", label: "Spain" },
+  { value: "Sweden", label: "Sweden" },
+  { value: "Other", label: "Other" },
+];
+const TRUST_DOCUMENT_UPLOAD_ACCEPT = ".pdf,.docx,.jpg,.jpeg,.png,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png";
+const TRUST_DOCUMENT_UPLOAD_MIME_TYPES = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "image/jpeg",
+  "image/png",
+];
+const CURRENCY_SELECT_OPTIONS = withSelectPlaceholder(
+  CURRENCY_OPTIONS.filter((option) => option.value !== "__other"),
+  "Select currency",
+);
+const INSURANCE_SELECT_OPTIONS = getCategoryTypeSelectOptions("finances", "insurance", "Select policy type");
+const DEBT_SELECT_OPTIONS = getCategoryTypeSelectOptions("finances", "debts", "Select debt type");
+const OWNERSHIP_TYPE_OPTIONS = [
+  { value: "", label: "Select ownership type" },
+  { value: "Sole owner", label: "Sole owner" },
+  { value: "Joint owner", label: "Joint owner" },
+  { value: "Trust", label: "Trust" },
+  { value: "Company", label: "Company" },
+  { value: "Other", label: "Other" },
+];
+const INVESTMENT_SELECT_OPTIONS = getCategoryTypeSelectOptions("finances", "investments", "Select investment type");
+const PENSION_SELECT_OPTIONS = getCategoryTypeSelectOptions("finances", "pensions", "Select pension type");
 const BANK_FORM_CONFIG = getAssetCategoryFormConfig("bank-accounts");
 const BENEFICIARY_FORM_CONFIG = getAssetCategoryFormConfig("beneficiaries");
 const EXECUTOR_FORM_CONFIG = getAssetCategoryFormConfig("executors");
@@ -631,6 +809,9 @@ export default function UniversalRecordWorkspace({
   const [records, setRecords] = useState<UniversalRecordRow[]>([]);
   const [attachments, setAttachments] = useState<RecordAttachment[]>([]);
   const [contacts, setContacts] = useState<RecordContact[]>([]);
+  const [editingLinkedContactId, setEditingLinkedContactId] = useState<string | null>(null);
+  const [linkedContactDrafts, setLinkedContactDrafts] = useState<Record<string, LinkedContactEditDraft>>({});
+  const [linkedContactErrors, setLinkedContactErrors] = useState<Record<string, string>>({});
   const [catalog, setCatalog] = useState<ProviderCatalogRow[]>(DEFAULT_PROVIDER_CATALOG);
   const [taskRelationOptions, setTaskRelationOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [taskExecutorOptions, setTaskExecutorOptions] = useState<Array<{ value: string; label: string }>>([]);
@@ -642,8 +823,10 @@ export default function UniversalRecordWorkspace({
   const [formVisible, setFormVisible] = useState(false);
   const [form, setForm] = useState<EditForm>(EMPTY_FORM);
   const [pendingPhotoFile, setPendingPhotoFile] = useState<File | null>(null);
-  const [pendingDocumentFile, setPendingDocumentFile] = useState<File | null>(null);
+  const [pendingDocumentFiles, setPendingDocumentFiles] = useState<File[]>([]);
   const [assetReviewConfirmed, setAssetReviewConfirmed] = useState(false);
+  const [showNarrativeNotes, setShowNarrativeNotes] = useState(false);
+  const [savedConfirmation, setSavedConfirmation] = useState("");
   const [search, setSearch] = useState("");
   const [recordStatusFilter, setRecordStatusFilter] = useState<"all" | "active" | "archived">("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -656,6 +839,9 @@ export default function UniversalRecordWorkspace({
   const [submitError, setSubmitError] = useState("");
   const [devBankSubmitTrace, setDevBankSubmitTrace] = useState<string[]>([]);
   const formSectionRef = useRef<HTMLElement | null>(null);
+  const addRecordButtonRef = useRef<HTMLButtonElement | null>(null);
+  const existingRecordsHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const shouldFocusFormOnOpenRef = useRef(false);
 
   const isPossessions = variant === "possessions";
   const isTrustedContacts = variant === "trusted_contacts";
@@ -680,17 +866,29 @@ export default function UniversalRecordWorkspace({
   const isSocialMedia = sectionKey === "personal" && categoryKey === "social-media";
   const isCanonicalProperty = canonicalCategorySlug === "property";
   const isIdentityDocuments = sectionKey === "legal" && categoryKey === "identity-documents";
+  const isWillsWorkspace = sectionKey === "legal" && categoryKey === "wills";
+  const isTrustsWorkspace = sectionKey === "legal" && categoryKey === "trusts";
   const isNarrativeDocumentWorkspace =
     !usesCanonicalAssets &&
     !isIdentityDocuments &&
     !isTrustedContacts &&
     (sectionKey === "legal" || (sectionKey === "personal" && categoryKey === "wishes"));
+  const assetFormFamily: AssetFormFamily = isNarrativeDocumentWorkspace || isIdentityDocuments || Boolean(canonicalLegalDocumentCategorySlug)
+    ? "document"
+    : isFinanceSection
+      ? "financial"
+      : "asset";
+  const displaySubtitle = isWillsWorkspace
+    ? "Add your will documents and contacts here."
+    : isTrustsWorkspace
+      ? "Store trust deeds, trustees and supporting legal documents securely. You can update this anytime."
+      : subtitle;
   const legalLinkedContactDefinition = sectionKey === "legal" ? getLegalLinkedContactDefinition(categoryKey) : null;
   const narrativeTitleLabel =
     sectionKey === "personal" && categoryKey === "wishes"
       ? "Expression of wishes title"
       : categoryKey === "wills"
-        ? "Will or document name"
+        ? "Will title"
         : categoryKey === "funeral-wishes"
           ? "Funeral wishes title"
           : "Document name";
@@ -718,7 +916,14 @@ export default function UniversalRecordWorkspace({
     || searchParams.get("record")
     || "",
   ).trim();
-  const hasStagedExtractionInput = Boolean(pendingDocumentFile || pendingPhotoFile);
+  const hasStagedExtractionInput = Boolean(pendingDocumentFiles.length || pendingPhotoFile);
+  const showInlineDocumentUpload =
+    formVisible &&
+    !editingId &&
+    !isTrustedContacts &&
+    !isWillsWorkspace &&
+    !isTrustsWorkspace &&
+    !isCanonicalTask;
   const addLabel = isPossessions
     ? "Add possession"
     : isTrustedContacts
@@ -992,6 +1197,9 @@ export default function UniversalRecordWorkspace({
   const recordProgressText = hasAnyRecords
     ? `${activeRecords.length} active record${activeRecords.length === 1 ? "" : "s"} saved`
     : "0 records saved";
+  const createFormRegionId = `${sectionId ?? `${sectionKey}-${categoryKey}`}-create-record-form`;
+  const isCreatingRecord = formVisible && !editingId;
+  const shouldShowExistingRecords = !loading && (hasAnyRecords || isTrustsWorkspace) && !isCreatingRecord;
 
   useEffect(() => {
     let cancelled = false;
@@ -1028,20 +1236,81 @@ export default function UniversalRecordWorkspace({
     setOpenRecordId(selectedWorkspaceRecordId);
   }, [selectedWorkspaceRecordId]);
 
-  function startCreate() {
-    setEditingId(null);
-    setForm(EMPTY_FORM);
-    setPendingPhotoFile(null);
-    setPendingDocumentFile(null);
-    setAssetReviewConfirmed(false);
-    resetBankSubmitTrace();
-    showFormSection();
-  }
+  useEffect(() => {
+    if (!formVisible || !shouldFocusFormOnOpenRef.current) return;
+    shouldFocusFormOnOpenRef.current = false;
+    requestAnimationFrame(() => {
+      focusFirstFormControl(formSectionRef.current);
+    });
+  }, [formVisible]);
 
-  function showFormSection() {
+  useEffect(() => {
+    if (searchParams.get("add") !== "1") return;
+    if (!canCreateRecords || formVisible || editingId) return;
+    const nextForm = { ...EMPTY_FORM };
+    if (legalLinkedContactDefinition) {
+      nextForm.legal_contacts = [createLegalContactRow({ role: defaultLegalContactRole })];
+      nextForm.contact_role = defaultLegalContactRole;
+    }
+    if (isPossessions) {
+      const possessionCategory = searchParams.get("possessionCategory") ?? "";
+      const possessionSubtype = searchParams.get("possessionSubtype") ?? "";
+      const hasCategory = personalPossessionCategories.some((item) => item.value === possessionCategory);
+      const hasSubtype = possessionCategory
+        ? (personalPossessionSubcategories[possessionCategory] ?? []).some((item) => item.value === possessionSubtype)
+        : false;
+      if (hasCategory) nextForm.possession_category = possessionCategory;
+      if (hasSubtype) nextForm.possession_subtype = possessionSubtype;
+    }
+    if (isCanonicalDigital) {
+      const digitalType = searchParams.get("digitalType") ?? "";
+      const hasDigitalType = DIGITAL_FORM_CONFIG?.fields
+        .find((field) => field.key === "digital_asset_type")
+        ?.options?.some((item) => item.value === digitalType);
+      if (hasDigitalType) nextForm.digital_asset_type = digitalType;
+    }
+    setEditingId(null);
+    setForm(nextForm);
+    setPendingPhotoFile(null);
+    setPendingDocumentFiles([]);
+    setAssetReviewConfirmed(false);
+    setShowNarrativeNotes(false);
+    setShowNarrativeNotes(false);
+    resetBankSubmitTrace();
     setFormVisible(true);
     requestAnimationFrame(() => {
       formSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [canCreateRecords, defaultLegalContactRole, editingId, formVisible, isCanonicalDigital, isPossessions, legalLinkedContactDefinition, searchParams]);
+
+  function createEmptyForm() {
+    if (!legalLinkedContactDefinition) return { ...EMPTY_FORM };
+    return {
+      ...EMPTY_FORM,
+      contact_role: defaultLegalContactRole,
+      legal_contacts: [createLegalContactRow({ role: defaultLegalContactRole })],
+    };
+  }
+
+  function startCreate() {
+    if (formVisible) return;
+    setEditingId(null);
+    setForm(createEmptyForm());
+    setPendingPhotoFile(null);
+    setPendingDocumentFiles([]);
+    setAssetReviewConfirmed(false);
+    resetBankSubmitTrace();
+    showFormSection({ focusFirstField: true });
+  }
+
+  function showFormSection({ focusFirstField = false }: { focusFirstField?: boolean } = {}) {
+    shouldFocusFormOnOpenRef.current = focusFirstField;
+    setFormVisible(true);
+    requestAnimationFrame(() => {
+      formSectionRef.current?.scrollIntoView({
+        behavior: prefersReducedMotion() ? "auto" : "smooth",
+        block: "start",
+      });
     });
   }
 
@@ -1102,6 +1371,25 @@ export default function UniversalRecordWorkspace({
     const bankAccountType = toSelectableValue(BANK_FORM_CONFIG, "account_type", canonicalBankSeed.account_type);
     const country = toSelectableValue(BANK_FORM_CONFIG, "country", canonicalBankSeed.country_code);
     const currency = toSelectableValue(BANK_FORM_CONFIG, "currency", canonicalBankSeed.currency_code);
+    const trustDocumentType = resolveTrustDocumentTypeForEdit(row.metadata?.trust_document_type ?? row.metadata?.document_type ?? row.provider_name);
+    const trustJurisdiction = resolveTrustJurisdictionForEdit(row.metadata?.trust_jurisdiction);
+    const rowContactsForEdit = contacts.filter((item) => item.record_id === row.id);
+    const legalContactsForEdit = legalLinkedContactDefinition
+      ? rowContactsForEdit.length
+        ? rowContactsForEdit.map((item) => createLegalContactRow({
+            id: item.id,
+            name: item.contact_name ?? "",
+            email: item.contact_email ?? "",
+            phone: item.contact_phone ?? "",
+            role: item.relationship ?? item.contact_role ?? defaultLegalContactRole,
+          }))
+        : [createLegalContactRow({
+            name: usesCanonicalAssets ? "" : rowContact?.contact_name ?? String(row.metadata?.contact_name ?? ""),
+            email: usesCanonicalAssets ? "" : rowContact?.contact_email ?? String(row.metadata?.contact_email ?? ""),
+            phone: usesCanonicalAssets ? "" : rowContact?.contact_phone ?? String(row.metadata?.contact_phone ?? ""),
+            role: usesCanonicalAssets ? defaultLegalContactRole : rowContact?.relationship ?? rowContact?.contact_role ?? String(row.metadata?.contact_role ?? defaultLegalContactRole),
+          })]
+      : [];
     setEditingId(row.id);
     setForm({
       title: isCanonicalExecutor && rowContact?.contact_name ? rowContact.contact_name : row.title ?? "",
@@ -1113,6 +1401,13 @@ export default function UniversalRecordWorkspace({
       contact_name: usesCanonicalAssets ? "" : rowContact?.contact_name ?? "",
       contact_email: usesCanonicalAssets ? "" : rowContact?.contact_email ?? "",
       contact_role: usesCanonicalAssets ? "" : rowContact?.relationship ?? rowContact?.contact_role ?? String(row.metadata?.relationship ?? ""),
+      legal_contacts: legalContactsForEdit,
+      trust_document_type: trustDocumentType.selected,
+      trust_document_type_other: String(row.metadata?.trust_document_type_other ?? trustDocumentType.other),
+      trust_date_created: String(row.metadata?.trust_date_created ?? ""),
+      trust_jurisdiction: trustJurisdiction.selected,
+      trust_jurisdiction_other: String(row.metadata?.trust_jurisdiction_other ?? trustJurisdiction.other),
+      trust_reference: String(row.metadata?.trust_reference ?? ""),
       possession_category: String(row.metadata?.category ?? "watches"),
       possession_subtype: String(row.metadata?.subtype ?? ""),
       description: String(row.metadata?.description ?? ""),
@@ -1233,7 +1528,7 @@ export default function UniversalRecordWorkspace({
       task_completion_date: canonicalTaskSeed.completion_date,
       task_instruction_reference: canonicalTaskSeed.instruction_reference,
       investment_provider: investmentProvider,
-      investment_type: String(row.metadata?.investment_type ?? ""),
+      investment_type: canonicalizeCategoryTypeValue("finances", "investments", row.metadata?.investment_type ?? ""),
       investment_reference: String(row.metadata?.investment_reference ?? ""),
       adviser_name: String(row.metadata?.adviser_name ?? ""),
       adviser_company: String(row.metadata?.adviser_company ?? ""),
@@ -1243,7 +1538,7 @@ export default function UniversalRecordWorkspace({
       ownership_type: String(row.metadata?.ownership_type ?? ""),
       beneficiary_notes: String(row.metadata?.beneficiary_notes ?? ""),
       pension_provider: pensionProvider,
-      pension_type: String(row.metadata?.pension_type ?? ""),
+      pension_type: canonicalizeCategoryTypeValue("finances", "pensions", row.metadata?.pension_type ?? ""),
       pension_member_number: String(row.metadata?.pension_member_number ?? ""),
       employer_name: String(row.metadata?.employer_name ?? ""),
       scheme_name: String(row.metadata?.scheme_name ?? ""),
@@ -1253,7 +1548,7 @@ export default function UniversalRecordWorkspace({
       pension_portal_url: String(row.metadata?.pension_portal_url ?? ""),
       pension_beneficiary: String(row.metadata?.pension_beneficiary ?? ""),
       insurer_name: insurerName,
-      policy_type: String(row.metadata?.policy_type ?? ""),
+      policy_type: canonicalizeCategoryTypeValue("finances", "insurance", row.metadata?.policy_type ?? ""),
       policy_number: String(row.metadata?.policy_number ?? ""),
       insured_item: String(row.metadata?.insured_item ?? ""),
       cover_amount: row.metadata?.cover_amount != null ? String(row.metadata?.cover_amount) : (row.value_minor != null ? String(toMajorUnits(row.value_minor)) : ""),
@@ -1269,7 +1564,7 @@ export default function UniversalRecordWorkspace({
       identity_document_country_other: String(row.metadata?.identity_document_country_other ?? ""),
       identity_issue_date: String(row.metadata?.identity_issue_date ?? ""),
       creditor_name: creditorName,
-      debt_type: String(row.metadata?.debt_type ?? ""),
+      debt_type: canonicalizeCategoryTypeValue("finances", "debts", row.metadata?.debt_type ?? ""),
       debt_reference: String(row.metadata?.debt_reference ?? ""),
       outstanding_balance: row.metadata?.outstanding_balance != null ? String(row.metadata?.outstanding_balance) : (row.value_minor != null ? String(toMajorUnits(row.value_minor)) : ""),
       debtor_name: String(row.metadata?.debtor_name ?? ""),
@@ -1281,19 +1576,287 @@ export default function UniversalRecordWorkspace({
       creditor_address: String(row.metadata?.creditor_address ?? ""),
     });
     setPendingPhotoFile(null);
-    setPendingDocumentFile(null);
+    setPendingDocumentFiles([]);
     setAssetReviewConfirmed(false);
+    setShowNarrativeNotes(Boolean(row.metadata?.notes));
     resetBankSubmitTrace();
     showFormSection();
   }
 
-  function cancelForm() {
+  function resetFormState({ focusAddButton = false, focusExistingRecords = false }: { focusAddButton?: boolean; focusExistingRecords?: boolean } = {}) {
     setEditingId(null);
     setForm(EMPTY_FORM);
     setPendingPhotoFile(null);
-    setPendingDocumentFile(null);
+    setPendingDocumentFiles([]);
     setAssetReviewConfirmed(false);
     setFormVisible(false);
+    setShowNarrativeNotes(false);
+    requestAnimationFrame(() => {
+      if (focusExistingRecords) {
+        existingRecordsHeadingRef.current?.focus();
+        return;
+      }
+      if (focusAddButton) {
+        addRecordButtonRef.current?.focus();
+      }
+    });
+  }
+
+  function cancelForm() {
+    if (hasUnsavedFormChanges() && !window.confirm(getDiscardPrompt())) {
+      return;
+    }
+    resetFormState({ focusAddButton: true });
+    if (isWillsWorkspace && !isTrustsWorkspace) {
+      router.push("/legal");
+    }
+  }
+
+  function hasUnsavedFormChanges() {
+    if (editingId) return true;
+    return hasFormData(form)
+      || pendingDocumentFiles.length > 0
+      || Boolean(pendingPhotoFile)
+      || assetReviewConfirmed
+      || showNarrativeNotes;
+  }
+
+  function getDiscardPrompt() {
+    if (isTrustsWorkspace) return "Discard this unsaved trust record?";
+    if (isWillsWorkspace) return "Discard this unsaved will record?";
+    return "Discard this unsaved record?";
+  }
+
+  function stopSaveForValidation(message: string) {
+    setSubmitError(message);
+    setStatus(message);
+    setSaving(false);
+    requestAnimationFrame(() => {
+      focusFirstFormControl(formSectionRef.current);
+    });
+  }
+
+  function updateLegalContactRow(id: string, field: keyof Omit<LegalContactFormRow, "id">, value: string) {
+    setForm((prev) => {
+      const nextRows = (prev.legal_contacts.length
+        ? prev.legal_contacts
+        : [createLegalContactRow({
+            id: LEGAL_CONTACT_FALLBACK_ID,
+            name: prev.contact_name,
+            email: prev.contact_email,
+            phone: "",
+            role: prev.contact_role || defaultLegalContactRole,
+          })])
+        .map((row) => (row.id === id ? { ...row, [field]: value } : row));
+      const first = nextRows[0];
+      return {
+        ...prev,
+        legal_contacts: nextRows,
+        contact_name: first?.name ?? "",
+        contact_email: first?.email ?? "",
+        contact_role: first?.role ?? "",
+      };
+    });
+  }
+
+  function stageDocumentFiles(
+    files: File[] | FileList,
+    allowedMimeTypes = DOCUMENT_UPLOAD_MIME_TYPES,
+    allowedDescription = "Allowed: PDF, DOCX, XLSX, CSV, JPG, PNG up to 15MB.",
+  ) {
+    const nextFiles = Array.from(files);
+    if (!nextFiles.length) return;
+    const acceptedFiles: File[] = [];
+    for (const file of nextFiles) {
+      const validation = validateUploadFile(file, {
+        allowedMimeTypes,
+        maxBytes: 15 * 1024 * 1024,
+      });
+      if (!validation.ok) {
+        setStatus(`${validation.error}. ${allowedDescription}`);
+        return;
+      }
+      acceptedFiles.push(file);
+    }
+    setPendingDocumentFiles((prev) => [...prev, ...acceptedFiles]);
+  }
+
+  function removePendingDocumentFile(index: number) {
+    setPendingDocumentFiles((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+  }
+
+  function addLegalContactRow() {
+    setForm((prev) => {
+      const rows = prev.legal_contacts.length ? prev.legal_contacts : [createLegalContactRow({
+        id: LEGAL_CONTACT_FALLBACK_ID,
+        name: prev.contact_name,
+        email: prev.contact_email,
+        phone: "",
+        role: prev.contact_role || defaultLegalContactRole,
+      })];
+      return {
+        ...prev,
+        legal_contacts: [...rows, createLegalContactRow({ role: defaultLegalContactRole })],
+      };
+    });
+  }
+
+  function removeLegalContactRow(id: string) {
+    setForm((prev) => {
+      const nextRows = prev.legal_contacts.filter((row) => row.id !== id);
+      const rows = nextRows.length ? nextRows : [createLegalContactRow({ id: LEGAL_CONTACT_FALLBACK_ID, role: defaultLegalContactRole })];
+      const first = rows[0];
+      return {
+        ...prev,
+        legal_contacts: rows,
+        contact_name: first?.name ?? "",
+        contact_email: first?.email ?? "",
+        contact_role: first?.role ?? defaultLegalContactRole,
+      };
+    });
+  }
+
+  function startLinkedContactEdit(contact: RecordContact) {
+    const draft = buildLinkedContactEditDraft(contact, defaultLegalContactRole);
+    setLinkedContactDrafts((prev) => ({ ...prev, [contact.id]: draft }));
+    setLinkedContactErrors((prev) => ({ ...prev, [contact.id]: "" }));
+    setEditingLinkedContactId(contact.id);
+  }
+
+  function cancelLinkedContactEdit(contactId: string) {
+    setEditingLinkedContactId((current) => (current === contactId ? null : current));
+    setLinkedContactErrors((prev) => ({ ...prev, [contactId]: "" }));
+  }
+
+  function updateLinkedContactDraft(contactId: string, field: keyof LinkedContactEditDraft, value: string) {
+    setLinkedContactDrafts((prev) => ({
+      ...prev,
+      [contactId]: {
+        ...(prev[contactId] ?? { fullName: "", email: "", phone: "", role: defaultLegalContactRole }),
+        [field]: value,
+      },
+    }));
+    setLinkedContactErrors((prev) => ({ ...prev, [contactId]: "" }));
+  }
+
+  async function saveLinkedContactDetails(contact: RecordContact) {
+    if (viewer.mode === "linked") {
+      setLinkedContactErrors((prev) => ({ ...prev, [contact.id]: "This shared view is read-only." }));
+      return;
+    }
+    const draft = linkedContactDrafts[contact.id] ?? buildLinkedContactEditDraft(contact, defaultLegalContactRole);
+    const normalized = normalizeLinkedContactEditDraft(draft);
+    const validationError = validateLinkedContactEditDraft(normalized);
+    if (validationError) {
+      setLinkedContactErrors((prev) => ({ ...prev, [contact.id]: validationError }));
+      return;
+    }
+
+    const user = await requireUser(router);
+    if (!user) return;
+    const targetOwnerUserId = viewer.targetOwnerUserId || contact.owner_user_id || user.id;
+    setSaving(true);
+    setStatus("");
+    try {
+      const canonicalContact = await savePeopleContact(supabase, {
+        ownerUserId: targetOwnerUserId,
+        existingContactId: contact.contact_id,
+        fullName: normalized.fullName,
+        email: normalized.email || null,
+        phone: normalized.phone || null,
+        contactRole: normalized.role,
+        relationship: normalized.role,
+        sourceType: "record_contact",
+        link: {
+          sourceKind: usesCanonicalAssetReadPath ? "asset" : "record",
+          sourceId: contact.record_id,
+          sectionKey,
+          categoryKey,
+          label: title,
+          role: normalized.role,
+        },
+      });
+
+      if (usesCanonicalAssetReadPath) {
+        await supabase
+          .from("contact_links")
+          .update({
+            role_label: normalized.role,
+            context_label: title,
+          })
+          .eq("owner_user_id", targetOwnerUserId)
+          .eq("source_kind", "asset")
+          .eq("source_id", contact.record_id)
+          .eq("contact_id", canonicalContact.id);
+      } else {
+        const projectionRes = await supabase
+          .from("record_contacts")
+          .update({
+            contact_id: canonicalContact.id,
+            contact_name: canonicalContact.full_name,
+            contact_email: canonicalContact.email ? canonicalContact.email.toLowerCase() : null,
+            contact_role: normalized.role,
+          })
+          .eq("id", contact.id)
+          .eq("owner_user_id", targetOwnerUserId);
+        if (projectionRes.error) throw new Error(projectionRes.error.message);
+      }
+
+      setEditingLinkedContactId(null);
+      setLinkedContactErrors((prev) => ({ ...prev, [contact.id]: "" }));
+      setStatus(`${canonicalContact.full_name} updated. Invitation status has been preserved.`);
+      await reloadWorkspace(router, sectionKey, categoryKey, setRecords, setAttachments, setContacts, setStatus, {
+        targetOwnerUserId,
+        forceCanonicalRead,
+        recordFilter,
+        viewer,
+      });
+    } catch (error) {
+      setLinkedContactErrors((prev) => ({
+        ...prev,
+        [contact.id]: error instanceof Error ? error.message : "Could not update this contact.",
+      }));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function removeLinkedContactFromRecord(contact: RecordContact) {
+    if (!window.confirm(`Remove ${contact.contact_name || "this contact"} from this Trust record? The contact profile and invitation history will be preserved.`)) {
+      return;
+    }
+    const user = await requireUser(router);
+    if (!user) return;
+    const targetOwnerUserId = viewer.targetOwnerUserId || contact.owner_user_id || user.id;
+    setSaving(true);
+    setStatus("");
+    try {
+      if (usesCanonicalAssetReadPath && contact.contact_id) {
+        await unlinkPeopleContactSource(supabase, {
+          ownerUserId: targetOwnerUserId,
+          sourceKind: "asset",
+          sourceId: contact.record_id,
+        });
+      } else {
+        const deleteRes = await supabase
+          .from("record_contacts")
+          .delete()
+          .eq("id", contact.id)
+          .eq("owner_user_id", targetOwnerUserId);
+        if (deleteRes.error) throw new Error(deleteRes.error.message);
+      }
+      setStatus(`${contact.contact_name || "Contact"} removed from this Trust record. Contact history is preserved.`);
+      await reloadWorkspace(router, sectionKey, categoryKey, setRecords, setAttachments, setContacts, setStatus, {
+        targetOwnerUserId,
+        forceCanonicalRead,
+        recordFilter,
+        viewer,
+      });
+    } catch (error) {
+      setStatus(error instanceof Error ? `Could not remove contact: ${error.message}` : "Could not remove contact.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function saveRecord() {
@@ -1309,6 +1872,7 @@ export default function UniversalRecordWorkspace({
     setSaving(true);
     setStatus("");
     setSubmitError("");
+    setSavedConfirmation("");
     pushBankSubmitTrace("submit clicked");
     mergeDevBankContextTrace({
       source: "UniversalRecordWorkspace.saveRecord",
@@ -1548,14 +2112,77 @@ export default function UniversalRecordWorkspace({
         return;
       }
     }
+    if (isFinanceSection) {
+      const financeTypeValue =
+        categoryKey === "investments"
+          ? form.investment_type
+          : categoryKey === "pensions"
+            ? form.pension_type
+            : categoryKey === "insurance"
+              ? form.policy_type
+              : categoryKey === "debts"
+                ? form.debt_type
+                : "";
+      const financeTypeValidation = validateCategoryTypeSelection({
+        sectionKey,
+        categoryKey,
+        typeValue: financeTypeValue,
+        descriptionText: `${form.investment_provider} ${form.pension_provider} ${form.insurer_name} ${form.creditor_name} ${form.summary} ${form.notes}`,
+      });
+      if (!financeTypeValidation.ok && categoryKey !== "bank") {
+        const validationMessage =
+          financeTypeValidation.message ?? "Choose a valid record type for this section before saving.";
+        setSubmitError(validationMessage);
+        setStatus(validationMessage);
+        setSaving(false);
+        return;
+      }
+    }
+    if (legalLinkedContactDefinition) {
+      const legalContactRowsForValidation = form.legal_contacts.length
+        ? form.legal_contacts
+            : [createLegalContactRow({
+                name: form.contact_name,
+                email: form.contact_email,
+                phone: "",
+                role: form.contact_role || defaultLegalContactRole,
+              })];
+      const invalidEmailRow = findInvalidLegalContactEmail(legalContactRowsForValidation);
+      if (invalidEmailRow) {
+        const message = `${legalLinkedContactDefinition.contactEmailLabel} must be a valid email address.`;
+        stopSaveForValidation(message);
+        return;
+      }
+    }
+    if (isTrustsWorkspace) {
+      if (!form.title.trim()) {
+        const message = `${narrativeTitleLabel} is required before saving.`;
+        pushBankSubmitTrace("validation failed: trust title");
+        stopSaveForValidation(message);
+        return;
+      }
+      if (!form.trust_document_type.trim()) {
+        const message = "Choose a document type before saving this trust record.";
+        stopSaveForValidation(message);
+        return;
+      }
+      if (form.trust_document_type === "Other" && !form.trust_document_type_other.trim()) {
+        const message = "Enter the document type before saving this trust record.";
+        stopSaveForValidation(message);
+        return;
+      }
+      if (form.trust_jurisdiction === "Other" && !form.trust_jurisdiction_other.trim()) {
+        const message = "Enter the jurisdiction or country before saving this trust record.";
+        stopSaveForValidation(message);
+        return;
+      }
+    }
     if (!form.title.trim() && !(isFinanceSection && financeDraft.title) && !(usesCanonicalAssets && canonicalAssetDraft?.title)) {
       const message = isTrustedContacts
         ? "Please enter the contact's full name before saving."
         : isNarrativeDocumentWorkspace
           ? `${narrativeTitleLabel} is required before saving.`
           : "Please enter an item title before saving.";
-      setSubmitError(message);
-      setStatus(message);
       pushBankSubmitTrace("validation failed: title");
       mergeDevBankContextTrace({
         source: "UniversalRecordWorkspace.saveRecord",
@@ -1564,14 +2191,15 @@ export default function UniversalRecordWorkspace({
         error: message,
         assetInsertReached: false,
       });
-      setSaving(false);
+      stopSaveForValidation(message);
       return;
     }
-    if (isNarrativeDocumentWorkspace && !String(form.notes ?? "").trim() && !pendingDocumentFile && !editingId) {
-      const message = "Add a short note or upload a document before saving this record.";
-      setSubmitError(message);
-      setStatus(message);
-      setSaving(false);
+    if (isNarrativeDocumentWorkspace && !String(form.notes ?? "").trim() && !pendingDocumentFiles.length && !editingId) {
+      const message = isTrustsWorkspace
+        ? "Upload a trust document or add notes before saving this trust record."
+        : "Add a short note or upload a document before saving this record.";
+      setShowNarrativeNotes(true);
+      stopSaveForValidation(message);
       return;
     }
     if (Number(form.value_major || 0) < 0) {
@@ -1621,6 +2249,8 @@ export default function UniversalRecordWorkspace({
     const providerMatch = detectProvider(providerInput, catalog);
     const resolvedBankProviderKey = providerMatch?.provider_key ?? null;
     const resolvedLegacyContactRole = form.contact_role.trim() || defaultLegalContactRole || null;
+    const resolvedTrustDocumentType = isTrustsWorkspace ? resolveTrustDocumentType(form) : "";
+    const resolvedTrustJurisdiction = isTrustsWorkspace ? resolveTrustJurisdiction(form) : "";
     const metadata = mergeWorkspaceSaveMetadata({
       baseMetadata: {
       notes: form.notes.trim() || null,
@@ -1648,6 +2278,13 @@ export default function UniversalRecordWorkspace({
       social_login_email: isSocialMedia ? form.social_login_email.trim() || null : null,
       social_credential_hint: isSocialMedia ? form.social_credential_hint.trim() || null : null,
       social_recovery_notes: isSocialMedia ? form.social_recovery_notes.trim() || null : null,
+      trust_document_type: isTrustsWorkspace ? resolvedTrustDocumentType || null : null,
+      trust_document_type_other: isTrustsWorkspace && form.trust_document_type === "Other" ? form.trust_document_type_other.trim() || null : null,
+      document_type: isTrustsWorkspace ? resolvedTrustDocumentType || null : null,
+      trust_date_created: isTrustsWorkspace ? form.trust_date_created || null : null,
+      trust_jurisdiction: isTrustsWorkspace ? resolvedTrustJurisdiction || null : null,
+      trust_jurisdiction_other: isTrustsWorkspace && form.trust_jurisdiction === "Other" ? form.trust_jurisdiction_other.trim() || null : null,
+      trust_reference: isTrustsWorkspace ? form.trust_reference.trim() || null : null,
       finance_category: isFinanceSection ? categoryKey : null,
       },
       financeMetadata: financeDraft.metadata,
@@ -1684,6 +2321,20 @@ export default function UniversalRecordWorkspace({
                 value_major: canonicalAssetDraft?.valueMajor,
               })
           : metadata;
+    const legalContactRows = legalLinkedContactDefinition
+      ? normalizeLegalContactRows(
+          form.legal_contacts.length
+            ? form.legal_contacts
+            : [createLegalContactRow({
+                name: form.contact_name,
+                email: form.contact_email,
+                phone: "",
+                role: form.contact_role || defaultLegalContactRole,
+              })],
+          defaultLegalContactRole,
+        )
+      : [];
+    const primaryLegalContact = legalContactRows[0] ?? null;
 
     const canonicalCurrencyCode = usesCanonicalAssets
       ? String(canonicalAssetDraft?.currencyCode ?? "GBP").toUpperCase()
@@ -1696,7 +2347,15 @@ export default function UniversalRecordWorkspace({
       section_key: sectionKey,
       category_key: categoryKey,
       title: usesCanonicalAssets ? canonicalAssetDraft?.title ?? null : isFinanceSection ? financeDraft.title : form.title.trim() || null,
-      provider_name: usesCanonicalAssets ? canonicalAssetDraft?.providerName ?? null : isFinanceSection ? financeDraft.providerName : isSocialMedia ? form.title.trim() || null : form.provider_name.trim() || null,
+      provider_name: usesCanonicalAssets
+        ? canonicalAssetDraft?.providerName ?? null
+        : isFinanceSection
+          ? financeDraft.providerName
+          : isSocialMedia
+            ? form.title.trim() || null
+            : isTrustsWorkspace
+              ? resolvedTrustDocumentType || null
+              : form.provider_name.trim() || null,
       provider_key: resolvedBankProviderKey,
       summary: usesCanonicalAssets
         ? canonicalAssetDraft?.summary ?? null
@@ -1706,8 +2365,10 @@ export default function UniversalRecordWorkspace({
         ? [form.social_username.trim(), form.social_profile_url.trim()].filter(Boolean).join(" · ") || null
         : isTrustedContacts
         ? [form.contact_role.trim(), form.contact_email.trim()].filter(Boolean).join(" · ") || null
+        : isTrustsWorkspace
+        ? [resolvedTrustJurisdiction, form.trust_reference.trim()].filter(Boolean).join(" · ") || null
         : legalLinkedContactDefinition
-        ? [resolvedLegacyContactRole, form.contact_name.trim() || form.contact_email.trim()].filter(Boolean).join(" · ") || null
+        ? [primaryLegalContact?.role || resolvedLegacyContactRole, primaryLegalContact?.name || primaryLegalContact?.email].filter(Boolean).join(" · ") || null
         : form.summary.trim() || null,
       value_minor: isTrustedContacts || isNarrativeDocumentWorkspace ? 0 : usesCanonicalAssets ? toMinorUnits(canonicalAssetDraft?.valueMajor ?? "0") : isFinanceSection ? toMinorUnits(financeDraft.valueMajor) : toMinorUnits(form.value_major),
       currency_code: isTrustedContacts || isNarrativeDocumentWorkspace ? "GBP" : canonicalCurrencyCode,
@@ -1719,6 +2380,8 @@ export default function UniversalRecordWorkspace({
     );
 
     let recordId = editingId;
+    let trustInvitationSuccessCount = 0;
+    let trustInvitationWarning = "";
     try {
       if (writesCanonicalAsset) {
         const assetCategorySlug = (canonicalCategorySlug ?? canonicalLegalDocumentCategorySlug) as CanonicalAssetCategorySlug;
@@ -1734,9 +2397,16 @@ export default function UniversalRecordWorkspace({
               provider_name: form.provider_name.trim() || null,
               short_description: form.summary.trim() || null,
               notes: form.notes.trim() || null,
-              contact_name: form.contact_name.trim() || null,
-              contact_email: form.contact_email.trim() || null,
-              contact_role: resolvedLegacyContactRole,
+              contact_name: primaryLegalContact?.name || null,
+              contact_email: primaryLegalContact?.email || null,
+              contact_phone: primaryLegalContact?.phone || null,
+              contact_role: primaryLegalContact?.role || resolvedLegacyContactRole,
+              linked_contacts: legalContactRows.map((item) => ({
+                name: item.name || null,
+                email: item.email || null,
+                phone: item.phone || null,
+                role: item.role || null,
+              })),
             };
         const assetInput = {
           userId: user.id,
@@ -1783,20 +2453,19 @@ export default function UniversalRecordWorkspace({
           });
         }
         if (canonicalLegalDocumentCategorySlug && recordId) {
-          const hasLegalContact = Boolean(form.contact_name.trim() || form.contact_email.trim() || form.contact_role.trim());
           await unlinkPeopleContactSource(supabase, {
             ownerUserId: user.id,
             sourceKind: "asset",
             sourceId: recordId,
           }).catch(() => undefined);
-          if (hasLegalContact) {
-            await savePeopleContact(supabase, {
+          for (const legalContact of legalContactRows) {
+            const canonicalContact = await savePeopleContact(supabase, {
               ownerUserId: user.id,
-              fullName: form.contact_name.trim() || "Linked contact",
-              email: form.contact_email.trim() || null,
-              phone: null,
-              contactRole: resolvedLegacyContactRole,
-              relationship: form.contact_role.trim() || null,
+              fullName: legalContact.name || "Linked contact",
+              email: legalContact.email || null,
+              phone: legalContact.phone || null,
+              contactRole: legalContact.role || resolvedLegacyContactRole,
+              relationship: legalContact.role || null,
               sourceType: "record_contact",
               link: {
                 sourceKind: "asset",
@@ -1804,9 +2473,33 @@ export default function UniversalRecordWorkspace({
                 sectionKey,
                 categoryKey,
                 label: legalLinkedContactDefinition?.contactNameLabel ?? "Record contact",
-                role: resolvedLegacyContactRole,
+                role: legalContact.role || resolvedLegacyContactRole,
               },
             });
+            if (isTrustsWorkspace && legalContact.email && SIMPLE_EMAIL_PATTERN.test(legalContact.email)) {
+              try {
+                const invitationContactRole = legalContact.role || resolvedLegacyContactRole || "trustee";
+                const inviteResult = await sendTrustLinkedContactInvitation({
+                  ownerUserId: user.id,
+                  ownerEmail: user.email ?? null,
+                  recordId,
+                  contactId: canonicalContact.id,
+                  contactName: canonicalContact.full_name,
+                  contactEmail: legalContact.email,
+                  contactPhone: legalContact.phone,
+                  contactRole: invitationContactRole,
+                  recordTitle: assetTitle || "Trust record",
+                  sourceKind: "asset",
+                  origin: typeof window !== "undefined" ? window.location.origin : null,
+                });
+                if (inviteResult.sent) trustInvitationSuccessCount += 1;
+              } catch (error) {
+                const message = error instanceof Error ? error.message : "Unknown error";
+                trustInvitationWarning = trustInvitationWarning
+                  ? `${trustInvitationWarning} ${legalContact.name || legalContact.email} invitation failed: ${message}.`
+                  : `${legalContact.name || legalContact.email} was saved, but the invitation email could not be sent: ${message}.`;
+              }
+            }
           }
         }
         pushBankSubmitTrace(`createAsset success: asset_id="${recordId}"`);
@@ -1863,11 +2556,17 @@ export default function UniversalRecordWorkspace({
         form.contact_name.trim() ||
         form.contact_email.trim() ||
         form.contact_role.trim() ||
+        legalContactRows.length > 0 ||
         (isTrustedContacts && form.title.trim()) ||
         (isTrustedContacts && form.provider_name.trim());
       const managesLegacyRecordContacts =
         !usesCanonicalAssets
-        && (isTrustedContacts || contacts.some((item) => item.record_id === recordId) || Boolean(form.contact_name.trim() || form.contact_email.trim() || form.contact_role.trim()));
+        && (
+          isTrustedContacts
+          || Boolean(legalLinkedContactDefinition)
+          || contacts.some((item) => item.record_id === recordId)
+          || Boolean(form.contact_name.trim() || form.contact_email.trim() || form.contact_role.trim())
+        );
       if (managesLegacyRecordContacts) {
         const existingCanonicalContactId = resolveSavedCanonicalContactIdForSource(
           contacts.map((item) => ({
@@ -1892,7 +2591,72 @@ export default function UniversalRecordWorkspace({
           const message = error instanceof Error ? error.message : "Unknown error";
           setStatus(`Saved record, but contact unlink failed: ${message}`);
         }
-        if (hasContact) {
+        if (hasContact && legalLinkedContactDefinition && legalContactRows.length) {
+          try {
+            const projectionRows = [];
+            for (const legalContact of legalContactRows) {
+              const canonicalContact = await savePeopleContact(supabase, {
+                ownerUserId: user.id,
+                fullName: legalContact.name || "Linked contact",
+                email: legalContact.email || null,
+                phone: legalContact.phone || null,
+                contactRole: legalContact.role || resolvedLegacyContactRole,
+                relationship: legalContact.role || null,
+                sourceType: "record_contact",
+                link: {
+                  sourceKind: "record",
+                  sourceId: recordId,
+                  sectionKey,
+                  categoryKey,
+                  label: legalLinkedContactDefinition.contactNameLabel,
+                  role: legalContact.role || resolvedLegacyContactRole,
+                },
+              });
+              projectionRows.push({
+                record_id: recordId,
+                owner_user_id: user.id,
+                contact_id: canonicalContact.id,
+                contact_name: canonicalContact.full_name,
+                contact_email: canonicalContact.email ? canonicalContact.email.toLowerCase() : null,
+                contact_role: canonicalContact.relationship ?? canonicalContact.contact_role,
+                notes: form.notes.trim() || null,
+              });
+              if (isTrustsWorkspace && legalContact.email && SIMPLE_EMAIL_PATTERN.test(legalContact.email)) {
+                try {
+                  const invitationContactRole = legalContact.role || resolvedLegacyContactRole || "trustee";
+                  const inviteResult = await sendTrustLinkedContactInvitation({
+                    ownerUserId: user.id,
+                    ownerEmail: user.email ?? null,
+                    recordId,
+                    contactId: canonicalContact.id,
+                    contactName: canonicalContact.full_name,
+                    contactEmail: legalContact.email,
+                    contactPhone: legalContact.phone,
+                    contactRole: invitationContactRole,
+                    recordTitle: form.title.trim() || "Trust record",
+                    sourceKind: "record",
+                    origin: typeof window !== "undefined" ? window.location.origin : null,
+                  });
+                  if (inviteResult.sent) trustInvitationSuccessCount += 1;
+                } catch (error) {
+                  const message = error instanceof Error ? error.message : "Unknown error";
+                  trustInvitationWarning = trustInvitationWarning
+                    ? `${trustInvitationWarning} ${legalContact.name || legalContact.email} invitation failed: ${message}.`
+                    : `${legalContact.name || legalContact.email} was saved, but the invitation email could not be sent: ${message}.`;
+                }
+              }
+            }
+            if (projectionRows.length) {
+              const projectionInsert = await supabase.from("record_contacts").insert(projectionRows);
+              if (projectionInsert.error) {
+                throw new Error(projectionInsert.error.message);
+              }
+            }
+          } catch (error) {
+            const message = error instanceof Error ? error.message : "Unknown error";
+            setStatus(`Saved record, but linked contacts failed: ${message}`);
+          }
+        } else if (hasContact) {
           try {
             const canonicalContact = await savePeopleContact(supabase, {
               ownerUserId: user.id,
@@ -1925,14 +2689,18 @@ export default function UniversalRecordWorkspace({
         }
       }
 
-      if (pendingDocumentFile) {
-        const documentUpload = await uploadAttachmentAfterSave({
-          userId: user.id,
-          recordId,
-          file: pendingDocumentFile,
-        });
-        if (!documentUpload.ok) {
-          uploadWarning = documentUpload.error;
+      if (pendingDocumentFiles.length) {
+        for (const pendingDocumentFile of pendingDocumentFiles) {
+          const documentUpload = await uploadAttachmentAfterSave({
+            userId: user.id,
+            recordId,
+            file: pendingDocumentFile,
+          });
+          if (!documentUpload.ok) {
+            uploadWarning = uploadWarning
+              ? `${uploadWarning} ${documentUpload.error}`
+              : documentUpload.error;
+          }
         }
       }
 
@@ -1951,7 +2719,13 @@ export default function UniversalRecordWorkspace({
     }
 
     const savedMessage = editingId ? "Changes saved securely." : "Record added securely.";
-    setStatus(uploadWarning ? `${savedMessage} ${uploadWarning}` : savedMessage);
+    const trustInviteMessage = trustInvitationWarning
+      ? trustInvitationWarning
+      : trustInvitationSuccessCount > 0
+        ? `${trustInvitationSuccessCount} Trust invitation${trustInvitationSuccessCount === 1 ? "" : "s"} sent.`
+        : "";
+    setStatus([savedMessage, uploadWarning, trustInviteMessage].filter(Boolean).join(" "));
+    setSavedConfirmation(editingId ? "Changes saved" : "Saved record");
     pushBankSubmitTrace(`reload started: asset_id="${recordId ?? ""}"`);
     mergeDevBankContextTrace({
       source: "UniversalRecordWorkspace.saveRecord",
@@ -1961,7 +2735,6 @@ export default function UniversalRecordWorkspace({
       error: null,
       assetInsertReached: true,
     });
-    cancelForm();
     await reloadWorkspace(router, sectionKey, categoryKey, setRecords, setAttachments, setContacts, setStatus, {
       targetOwnerUserId: viewer.targetOwnerUserId,
       forceCanonicalRead,
@@ -1979,6 +2752,9 @@ export default function UniversalRecordWorkspace({
       pushBankSubmitTrace("router.refresh triggered");
       router.refresh();
     }
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    setSavedConfirmation("");
+    resetFormState({ focusExistingRecords: true });
     pushBankSubmitTrace(`reload completed: asset_id="${recordId ?? ""}"`);
     mergeDevBankContextTrace({
       source: "UniversalRecordWorkspace.saveRecord",
@@ -2415,7 +3191,7 @@ export default function UniversalRecordWorkspace({
       fileName: item.file_name,
       mimeType: item.mime_type,
       createdAt: item.created_at,
-      thumbnailUrl: item.document_kind === "photo" ? photoPreviews[row.id] ?? "" : "",
+      thumbnailUrl: isImageAttachment(item) ? photoPreviews[row.id] ?? "" : "",
       metaLabel: item.parent_label || "",
       attachment: item,
     }));
@@ -2428,6 +3204,135 @@ export default function UniversalRecordWorkspace({
       isPossessions && categoryKeyFromRow
         ? optionLabel(personalPossessionCategories, categoryKeyFromRow, categoryKeyFromRow)
         : null;
+    const linkedContactsTable =
+      rowContacts.length > 0 ? (
+        <div className="lf-linked-contact-table-wrap" aria-label="Linked contacts for this record">
+          <table className="lf-linked-contact-table">
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Role</th>
+                <th scope="col">Invite status</th>
+                <th scope="col">Vault access</th>
+                <th scope="col" className="lf-linked-contact-actions-heading">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rowContacts.map((item) => {
+                const inviteState = getRecordContactInviteState(item);
+                const vaultState = getRecordContactVaultAccessState(item);
+                const isEditingContact = editingLinkedContactId === item.id;
+                const draft = linkedContactDrafts[item.id] ?? buildLinkedContactEditDraft(item, defaultLegalContactRole);
+                const contactLabel = item.contact_name || "Linked contact";
+                const role = item.relationship || item.contact_role || defaultLegalContactRole;
+                return (
+                  <Fragment key={item.id}>
+                    <tr>
+                      <td>
+                        {item.contact_id ? (
+                          <Link href={buildContactsWorkspaceHref(item.contact_id)} style={linkedContactLinkStyle}>
+                            {contactLabel}
+                          </Link>
+                        ) : (
+                          contactLabel
+                        )}
+                      </td>
+                      <td>{formatLinkedContactRole(role || "Role not set")}</td>
+                      <td>
+                        <span className={`lf-record-contact-status is-${inviteState}`}>
+                          <StatusIconForContact state={inviteState} />
+                          {getRecordContactInviteLabel(inviteState)}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`lf-record-vault-status is-${vaultState.state}`}>
+                          <Icon name="visibility_lock" size={13} />
+                          {vaultState.label}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="lf-linked-contact-row-actions" aria-label={`Actions for ${contactLabel}`}>
+                          {item.contact_id ? (
+                            <Link href={buildContactsWorkspaceHref(item.contact_id)} className="lf-icon-only-link" aria-label={`View ${contactLabel}`}>
+                              <Icon name="visibility" size={16} />
+                            </Link>
+                          ) : null}
+                          {canEditWorkspaceRow(row.id) ? (
+                            <>
+                              <button type="button" className="lf-icon-only-button" onClick={() => startLinkedContactEdit(item)} aria-label={`Edit ${contactLabel}`}>
+                                <Icon name="edit" size={16} />
+                              </button>
+                              <button type="button" className="lf-icon-only-button is-danger" disabled={saving} onClick={() => void removeLinkedContactFromRecord(item)} aria-label={`Delete ${contactLabel} from this record`}>
+                                <Icon name="delete" size={16} />
+                              </button>
+                            </>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                    {isEditingContact ? (
+                      <tr>
+                        <td colSpan={5}>
+                          <div className="lf-linked-contact-edit-grid">
+                            <FieldInput
+                              label="Full name"
+                              value={draft.fullName}
+                              onChange={(value) => updateLinkedContactDraft(item.id, "fullName", value)}
+                            />
+                            <FieldInput
+                              label="Email"
+                              type="email"
+                              value={draft.email}
+                              onChange={(value) => updateLinkedContactDraft(item.id, "email", value)}
+                            />
+                            <FieldInput
+                              label="Telephone number"
+                              type="tel"
+                              value={draft.phone}
+                              onChange={(value) => updateLinkedContactDraft(item.id, "phone", value)}
+                            />
+                            <FieldSelect
+                              label={legalLinkedContactDefinition?.contactRoleLabel ?? "Role"}
+                              value={draft.role}
+                              options={legalLinkedContactDefinition?.roleOptions ?? [{ value: draft.role, label: formatLinkedContactRole(draft.role || "Role") }]}
+                              onChange={(value) => updateLinkedContactDraft(item.id, "role", value)}
+                            />
+                            <div className="lf-linked-contact-readonly-status">
+                              <span className={`lf-record-contact-status is-${inviteState}`}>
+                                <StatusIconForContact state={inviteState} />
+                                {getRecordContactInviteLabel(inviteState)}
+                              </span>
+                              <span className={`lf-record-vault-status is-${vaultState.state}`}>
+                                <Icon name="visibility_lock" size={13} />
+                                {vaultState.label}
+                              </span>
+                            </div>
+                            {linkedContactErrors[item.id] ? (
+                              <div className="lf-linked-contact-error" role="alert">
+                                {linkedContactErrors[item.id]}
+                              </div>
+                            ) : null}
+                            <div className="lf-linked-contact-edit-actions">
+                              <button type="button" style={ghostBtn} onClick={() => cancelLinkedContactEdit(item.id)}>
+                                <Icon name="close" size={15} />
+                                Cancel
+                              </button>
+                              <button type="button" style={primaryBtn} disabled={saving} onClick={() => void saveLinkedContactDetails(item)}>
+                                <Icon name="save" size={15} />
+                                {saving ? "Saving..." : "Save changes"}
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : null;
 
     const previewUrl = photoPreviews[row.id];
     const thumbFailed = failedThumbs[row.id] === true;
@@ -2591,22 +3496,22 @@ export default function UniversalRecordWorkspace({
                   ) : null}
                   {categoryKey === "investments" ? (
                     <div style={{ color: "#64748b", fontSize: 13 }}>
-                      {String(row.metadata?.investment_type ?? "Investment")} · Ref: {String(row.metadata?.investment_reference ?? "Not set")}
+                      {getCategoryTypeLabel("finances", "investments", row.metadata?.investment_type ?? "Investment")} · Ref: {String(row.metadata?.investment_reference ?? "Not set")}
                     </div>
                   ) : null}
                   {categoryKey === "pensions" ? (
                     <div style={{ color: "#64748b", fontSize: 13 }}>
-                      {String(row.metadata?.pension_type ?? "Pension")} · Member no: {String(row.metadata?.pension_member_number ?? "Not set")}
+                      {getCategoryTypeLabel("finances", "pensions", row.metadata?.pension_type ?? "Pension")} · Member no: {String(row.metadata?.pension_member_number ?? "Not set")}
                     </div>
                   ) : null}
                   {categoryKey === "insurance" ? (
                     <div style={{ color: "#64748b", fontSize: 13 }}>
-                      {String(row.metadata?.policy_type ?? "Policy")} · {String(row.metadata?.policy_number ?? "No policy number")} · {String(row.metadata?.insured_item ?? "Insured item not set")}
+                      {getCategoryTypeLabel("finances", "insurance", row.metadata?.policy_type ?? "Policy")} · {String(row.metadata?.policy_number ?? "No policy number")} · {String(row.metadata?.insured_item ?? "Insured item not set")}
                     </div>
                   ) : null}
                   {categoryKey === "debts" ? (
                     <div style={{ color: "#64748b", fontSize: 13 }}>
-                      {String(row.metadata?.debt_type ?? "Debt")} · Ref: {String(row.metadata?.debt_reference ?? "Not set")}
+                      {getCategoryTypeLabel("finances", "debts", row.metadata?.debt_type ?? "Debt")} · Ref: {String(row.metadata?.debt_reference ?? "Not set")}
                     </div>
                   ) : null}
                   <div style={{ color: "#94a3b8", fontSize: 12 }}>
@@ -2633,12 +3538,7 @@ export default function UniversalRecordWorkspace({
                     )}
                     Updated {formatDate(row.updated_at)}
                   </div>
-                  {primaryContact && legalLinkedContactDefinition ? (
-                    <div style={{ color: "#64748b", fontSize: 12 }}>
-                      {legalLinkedContactDefinition.contactNameLabel}: {primaryContact.contact_name || "Not set"}
-                      {primaryContact.contact_role ? ` · ${primaryContact.contact_role}` : ""}
-                    </div>
-                  ) : null}
+                  {legalLinkedContactDefinition ? linkedContactsTable : null}
                 </>
               )}
               {attachmentGalleryItems.length > 0 ? (
@@ -2924,24 +3824,10 @@ export default function UniversalRecordWorkspace({
               </div>
             ) : null}
 
-            {rowContacts.length > 0 ? (
-              <div style={{ display: "grid", gap: 6 }}>
+            {linkedContactsTable ? (
+              <div className="lf-linked-contact-panel-list" aria-label="Linked contacts">
                 <div style={{ fontSize: 13, fontWeight: 700 }}>Linked contacts</div>
-                {rowContacts.map((item) => (
-                  <div key={item.id} style={{ color: "#475569", fontSize: 13 }}>
-                    {item.contact_id ? (
-                      <Link href={buildContactsWorkspaceHref(item.contact_id)} style={linkedContactLinkStyle}>
-                        {item.contact_name || "Unnamed contact"}
-                      </Link>
-                    ) : (
-                      <span>{item.contact_name || "Unnamed contact"}</span>
-                    )}
-                    {item.relationship ? ` · ${item.relationship}` : item.contact_role ? ` · ${item.contact_role}` : ""}
-                    {item.contact_email ? ` · ${item.contact_email}` : ""}
-                    {item.contact_phone ? ` · ${item.contact_phone}` : ""}
-                    {item.invite_status ? ` · ${item.invite_status.replace(/_/g, " ")}` : ""}
-                  </div>
-                ))}
+                {linkedContactsTable}
               </div>
             ) : null}
           </div>
@@ -2951,6 +3837,75 @@ export default function UniversalRecordWorkspace({
   };
 
   const possessionSubtypes = personalPossessionSubcategories[form.possession_category] ?? [];
+  const legalContactRowsForForm = form.legal_contacts.length
+    ? form.legal_contacts
+    : [createLegalContactRow({
+        id: LEGAL_CONTACT_FALLBACK_ID,
+        name: form.contact_name,
+        email: form.contact_email,
+        phone: "",
+        role: form.contact_role || defaultLegalContactRole,
+      })];
+  const addLinkedContactLabel = legalLinkedContactDefinition
+    ? isTrustsWorkspace
+      ? "Add another person"
+      : `Add another ${legalLinkedContactDefinition.contactNameLabel.replace(/\s+name$/i, "").toLowerCase()}`
+    : "Add another contact";
+  const legalContactFields = legalLinkedContactDefinition ? (
+    <div style={{ display: "grid", gap: 12, gridColumn: "1 / -1" }}>
+      {legalContactRowsForForm.map((row, index) => (
+        <div key={row.id} className="lf-legal-contact-row" style={legalContactRowStyle}>
+          <FieldInput
+            label={legalLinkedContactDefinition.contactNameLabel}
+            value={row.name}
+            onChange={(value) => updateLegalContactRow(row.id, "name", value)}
+          />
+          <FieldInput
+            label={legalLinkedContactDefinition.contactEmailLabel}
+            type="email"
+            value={row.email}
+            onChange={(value) => updateLegalContactRow(row.id, "email", value)}
+          />
+          <FieldInput
+            label="Telephone number"
+            type="tel"
+            value={row.phone}
+            onChange={(value) => updateLegalContactRow(row.id, "phone", value)}
+          />
+          <FieldSelect
+            label={legalLinkedContactDefinition.contactRoleLabel}
+            value={row.role}
+            options={legalLinkedContactDefinition.roleOptions}
+            onChange={(value) => updateLegalContactRow(row.id, "role", value)}
+          />
+          <div style={linkedContactActionsStyle}>
+            {index > 0 ? (
+              <button
+                type="button"
+                style={removeLinkedContactIconButtonStyle}
+                onClick={() => removeLegalContactRow(row.id)}
+                aria-label={`Remove ${legalLinkedContactDefinition.contactNameLabel.replace(/\s+name$/i, "").toLowerCase()}`}
+                title={`Remove ${legalLinkedContactDefinition.contactNameLabel.replace(/\s+name$/i, "").toLowerCase()}`}
+              >
+                <Icon name="remove" size={16} />
+              </button>
+            ) : null}
+            {index === legalContactRowsForForm.length - 1 ? (
+              <button
+                type="button"
+                style={addLinkedContactIconButtonStyle}
+                onClick={addLegalContactRow}
+                aria-label={addLinkedContactLabel}
+                title={addLinkedContactLabel}
+              >
+                <Icon name="add" size={16} />
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ))}
+    </div>
+  ) : null;
 
   return (
     <section id={sectionId} style={{ display: "grid", gap: 14 }}>
@@ -2961,7 +3916,7 @@ export default function UniversalRecordWorkspace({
             {helpMessage ? <InfoTip label={`Explain ${title}`} message={helpMessage} /> : null}
           </div>
         ) : null}
-        <p style={{ margin: showPageHeading ? "6px 0 0" : 0, color: "#6b7280" }}>{subtitle}</p>
+        <p style={{ margin: showPageHeading ? "6px 0 0" : 0, color: "#6b7280" }}>{displaySubtitle}</p>
         {viewer.mode === "linked" ? (
           <div style={linkedPanelChipStyle}>
             <Icon name="visibility_lock" size={14} />
@@ -2976,13 +3931,23 @@ export default function UniversalRecordWorkspace({
         </div>
       ) : null}
 
-      {!isTrustedContacts ? (
+      {!isTrustedContacts && assetFormFamily !== "document" ? (
         <div style={{ color: "#64748b", fontSize: 13 }}>
           Active value: {formatCurrency(totals.active, "GBP")} · Archived value: {formatCurrency(totals.archived, "GBP")}
         </div>
       ) : null}
 
       {status ? <div style={{ color: "#475569", fontSize: 13 }}>{status}</div> : null}
+      {savedConfirmation ? (
+        <div className="lf-save-confirmation" role="status" aria-live="polite">
+          <div className="lf-save-confirmation-card">
+            <span className="lf-save-confirmation-icon">
+              <Icon name="check" size={40} />
+            </span>
+            <strong>{savedConfirmation}</strong>
+          </div>
+        </div>
+      ) : null}
       {devBankTraceEnabled ? (
         <section
           style={{
@@ -3101,14 +4066,22 @@ export default function UniversalRecordWorkspace({
         </aside>
       ) : null}
 
-      {!loading && hasAnyRecords ? (
+      {shouldShowExistingRecords ? (
       <section style={cardStyle}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           <div style={{ display: "grid", gap: 4 }}>
-            <h2 style={{ margin: 0, fontSize: 17 }}>Existing records</h2>
+            <h2 ref={existingRecordsHeadingRef} tabIndex={-1} style={{ margin: 0, fontSize: 17, outline: "none" }}>Existing records</h2>
             <div style={progressCueStyle}>{recordProgressText}</div>
           </div>
-          {canCreateRecords ? <button type="button" style={primaryBtn} onClick={startCreate} title={`Recommended next action: ${addLabel}`}>
+          {canCreateRecords ? <button
+            ref={addRecordButtonRef}
+            type="button"
+            style={primaryBtn}
+            onClick={startCreate}
+            title={`Recommended next action: ${addLabel}`}
+            aria-expanded={isCreatingRecord}
+            aria-controls={createFormRegionId}
+          >
             {addLabel}
           </button> : null}
         </div>
@@ -3201,9 +4174,16 @@ export default function UniversalRecordWorkspace({
         </section>
       ) : null}
 
-      <section style={cardStyle} ref={formSectionRef}>
+      {formVisible ? (
+      <section
+        id={createFormRegionId}
+        style={cardStyle}
+        ref={formSectionRef}
+        role="region"
+        aria-labelledby={`${createFormRegionId}-heading`}
+      >
         <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
-          <h2 style={{ margin: 0, fontSize: 17 }}>
+          <h2 id={`${createFormRegionId}-heading`} style={{ margin: 0, fontSize: 17 }}>
             {editingId
               ? isTrustedContacts
                 ? "Edit contact"
@@ -3226,7 +4206,7 @@ export default function UniversalRecordWorkspace({
           </h2>
           {formVisible ? <button type="button" style={ghostBtn} onClick={cancelForm}>Cancel</button> : null}
         </div>
-        {formVisible ? (
+        {formVisible && !isTrustsWorkspace ? (
           <div style={formConfidenceStyle}>
             Securely stored in your vault. You can update this anytime.
           </div>
@@ -3257,7 +4237,7 @@ export default function UniversalRecordWorkspace({
           />
         ) : (
         <div className="lf-content-grid">
-          {isNarrativeDocumentWorkspace ? (
+          {isNarrativeDocumentWorkspace && !isWillsWorkspace && !isTrustsWorkspace ? (
             <div style={documentInputModeStyle}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontWeight: 700 }}>
                 <Icon name="description" size={18} />
@@ -3268,16 +4248,102 @@ export default function UniversalRecordWorkspace({
               </span>
             </div>
           ) : null}
-          <label style={fieldStyle}>
-            <span style={labelStyle}>
-              {isTrustedContacts
-                ? "Full name"
-                : isNarrativeDocumentWorkspace
-                  ? `${narrativeTitleLabel} (required)`
-                  : "Item title"}
-            </span>
-            <input style={inputStyle} value={form.title} onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))} />
-          </label>
+          {isWillsWorkspace ? (
+            <div className="lf-will-title-upload-row" style={{ gridColumn: "1 / -1" }}>
+              <label style={fieldStyle}>
+                <span style={labelStyle}>Will title (required)</span>
+                <input style={inputStyle} value={form.title} onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))} />
+              </label>
+              {!editingId ? (
+                <InlineDocumentUploadField
+                  files={pendingDocumentFiles}
+                  onFilesSelected={stageDocumentFiles}
+                  onRemoveFile={removePendingDocumentFile}
+                  disabled={saving}
+                />
+              ) : null}
+            </div>
+          ) : isTrustsWorkspace ? (
+            <div className="lf-trust-document-form" style={{ gridColumn: "1 / -1" }}>
+              <div className="lf-trust-title-upload-row">
+                <FieldInput
+                  label="Document name (required)"
+                  value={form.title}
+                  onChange={(value) => setForm((prev) => ({ ...prev, title: value }))}
+                />
+                <div className="lf-trust-type-column">
+                  <FieldSelect
+                    label="Document type (required)"
+                    value={form.trust_document_type}
+                    options={TRUST_DOCUMENT_TYPE_OPTIONS}
+                    onChange={(value) => setForm((prev) => ({
+                      ...prev,
+                      trust_document_type: value,
+                      trust_document_type_other: value === "Other" ? prev.trust_document_type_other : "",
+                    }))}
+                  />
+                  {form.trust_document_type === "Other" ? (
+                    <FieldInput
+                      label="Other document type"
+                      value={form.trust_document_type_other}
+                      onChange={(value) => setForm((prev) => ({ ...prev, trust_document_type_other: value }))}
+                    />
+                  ) : null}
+                </div>
+                {!editingId ? (
+                  <InlineDocumentUploadField
+                    files={pendingDocumentFiles}
+                    onFilesSelected={(files) => stageDocumentFiles(files, TRUST_DOCUMENT_UPLOAD_MIME_TYPES, "Allowed: PDF, DOCX, JPG, JPEG, PNG up to 15MB.")}
+                    onRemoveFile={removePendingDocumentFile}
+                    disabled={saving}
+                    accept={TRUST_DOCUMENT_UPLOAD_ACCEPT}
+                    helpText="Drop a file here or choose one from your device. PDF, DOCX, JPG, JPEG, or PNG up to 15MB."
+                  />
+                ) : null}
+              </div>
+              <div className="lf-trust-optional-grid">
+                <FieldInput
+                  label="Date created"
+                  type="date"
+                  value={form.trust_date_created}
+                  onChange={(value) => setForm((prev) => ({ ...prev, trust_date_created: value }))}
+                />
+                <FieldSelect
+                  label="Jurisdiction / country"
+                  value={form.trust_jurisdiction}
+                  options={TRUST_JURISDICTION_OPTIONS}
+                  onChange={(value) => setForm((prev) => ({
+                    ...prev,
+                    trust_jurisdiction: value,
+                    trust_jurisdiction_other: value === "Other" ? prev.trust_jurisdiction_other : "",
+                  }))}
+                />
+                {form.trust_jurisdiction === "Other" ? (
+                  <FieldInput
+                    label="Other jurisdiction / country"
+                    value={form.trust_jurisdiction_other}
+                    onChange={(value) => setForm((prev) => ({ ...prev, trust_jurisdiction_other: value }))}
+                  />
+                ) : null}
+                <FieldInput
+                  label="Reference number"
+                  value={form.trust_reference}
+                  onChange={(value) => setForm((prev) => ({ ...prev, trust_reference: value }))}
+                />
+              </div>
+            </div>
+          ) : (
+            <label style={fieldStyle}>
+              <span style={labelStyle}>
+                {isTrustedContacts
+                  ? "Full name"
+                  : isNarrativeDocumentWorkspace
+                    ? `${narrativeTitleLabel} (required)`
+                    : "Item title"}
+              </span>
+              <input style={inputStyle} value={form.title} onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))} />
+            </label>
+          )}
           {isPossessions ? (
             <label style={fieldStyle}>
               <span style={labelStyle}>Category</span>
@@ -3293,7 +4359,7 @@ export default function UniversalRecordWorkspace({
                 ))}
               </select>
             </label>
-          ) : (
+          ) : isWillsWorkspace || isTrustsWorkspace ? null : (
             <label style={fieldStyle}>
               <span style={labelStyle}>{isTrustedContacts ? "Mobile phone" : isNarrativeDocumentWorkspace ? narrativeTypeLabel : "Provider or service"}</span>
               <input style={inputStyle} value={form.provider_name} onChange={(event) => setForm((prev) => ({ ...prev, provider_name: event.target.value }))} />
@@ -3311,7 +4377,7 @@ export default function UniversalRecordWorkspace({
                 ))}
               </select>
             </label>
-          ) : (
+          ) : isWillsWorkspace || isTrustsWorkspace ? null : (
             <label style={fieldStyle}>
               <span style={labelStyle}>{isTrustedContacts ? "Relationship" : isNarrativeDocumentWorkspace ? narrativeSummaryLabel : "Summary"}</span>
               <input
@@ -3393,34 +4459,49 @@ export default function UniversalRecordWorkspace({
               <input style={inputStyle} value={form.location} onChange={(event) => setForm((prev) => ({ ...prev, location: event.target.value }))} />
             </label>
           ) : null}
-          <label style={fieldStyle}>
-            <span style={labelStyle}>
-              {isNarrativeDocumentWorkspace && !editingId
-                ? `${narrativeNotesLabel} (required unless a document is uploaded)`
-                : isNarrativeDocumentWorkspace
-                  ? narrativeNotesLabel
-                  : "Notes"}
-            </span>
-            <textarea style={textAreaStyle} value={form.notes} onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))} />
-          </label>
           {!isTrustedContacts ? (
+            legalLinkedContactDefinition ? (
+              legalContactFields
+            ) : (
             <>
               <label style={fieldStyle}>
-                <span style={labelStyle}>{legalLinkedContactDefinition?.contactNameLabel ?? "Contact name"}</span>
+                <span style={labelStyle}>Contact name</span>
                 <input style={inputStyle} value={form.contact_name} onChange={(event) => setForm((prev) => ({ ...prev, contact_name: event.target.value }))} />
               </label>
               <label style={fieldStyle}>
-                <span style={labelStyle}>{legalLinkedContactDefinition?.contactEmailLabel ?? "Contact email"}</span>
+                <span style={labelStyle}>Contact email</span>
                 <input style={inputStyle} value={form.contact_email} onChange={(event) => setForm((prev) => ({ ...prev, contact_email: event.target.value }))} />
               </label>
               <label style={fieldStyle}>
-                <span style={labelStyle}>{legalLinkedContactDefinition?.contactRoleLabel ?? "Contact role"}</span>
+                <span style={labelStyle}>Contact role</span>
                 <input style={inputStyle} value={form.contact_role} onChange={(event) => setForm((prev) => ({ ...prev, contact_role: event.target.value }))} />
               </label>
             </>
+            )
           ) : null}
+          {!usesStructuredWorkspaceForm && !showNarrativeNotes ? null : (
+            <label style={{ ...fieldStyle, gridColumn: isNarrativeDocumentWorkspace ? "1 / -1" : undefined }}>
+              <span style={labelStyle}>
+                {isNarrativeDocumentWorkspace && !editingId
+                  ? `${narrativeNotesLabel} (required unless a document is uploaded)`
+                  : isNarrativeDocumentWorkspace
+                    ? narrativeNotesLabel
+                    : "Notes"}
+              </span>
+              <textarea style={textAreaStyle} value={form.notes} onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))} />
+            </label>
+          )}
         </div>
         )}
+
+        {showInlineDocumentUpload ? (
+          <InlineDocumentUploadField
+            files={pendingDocumentFiles}
+            onFilesSelected={stageDocumentFiles}
+            onRemoveFile={removePendingDocumentFile}
+            disabled={saving}
+          />
+        ) : null}
 
         {formVisible ? (
           <div style={{ display: "grid", gap: 12 }}>
@@ -3446,26 +4527,6 @@ export default function UniversalRecordWorkspace({
             ) : null}
             {usesCanonicalAssets && !editingId ? (
               <div className="lf-content-grid">
-                <FormField label="Statement or supporting document" iconName="upload_file" helpText="This file will be attached to the asset after save.">
-                  <FileDropzone
-                    label={pendingDocumentFile ? "Replace document" : "Drop a document here"}
-                    accept={DOCUMENT_UPLOAD_ACCEPT}
-                    file={pendingDocumentFile}
-                    onFileSelect={(file) => {
-                      const validation = validateUploadFile(file, {
-                        allowedMimeTypes: DOCUMENT_UPLOAD_MIME_TYPES,
-                        maxBytes: 15 * 1024 * 1024,
-                      });
-                      if (!validation.ok) {
-                        setStatus(`${validation.error}. Allowed: PDF, DOCX, XLSX, CSV, JPG, PNG up to 15MB.`);
-                        return;
-                      }
-                      setPendingDocumentFile(file);
-                    }}
-                    onClear={() => setPendingDocumentFile(null)}
-                    disabled={saving}
-                  />
-                </FormField>
                 <FormField
                   label={isCanonicalTask ? "Task image" : isCanonicalExecutor ? "Executor image" : isCanonicalBeneficiary ? "Beneficiary image" : isCanonicalProperty ? "Property photo" : isCanonicalBusiness ? "Business image" : isCanonicalDigital ? "Digital asset image" : "Photo or cheque image"}
                   iconName="add_a_photo"
@@ -3590,7 +4651,7 @@ export default function UniversalRecordWorkspace({
               </label>
             ) : null}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {(isPossessions || isFinanceSection || isNarrativeDocumentWorkspace) && !editingId ? (
+            {(isPossessions || isFinanceSection || (isNarrativeDocumentWorkspace && !isWillsWorkspace && !isTrustsWorkspace)) && !editingId ? (
               <>
                 {!usesCanonicalAssets ? <label style={ghostBtn}>
                   {pendingPhotoFile ? `Picture selected: ${pendingPhotoFile.name}` : "Add picture"}
@@ -3614,38 +4675,22 @@ export default function UniversalRecordWorkspace({
                     }}
                   />
                 </label> : null}
-                {!usesCanonicalAssets ? <label style={ghostBtn}>
-                  {pendingDocumentFile ? `Document selected: ${pendingDocumentFile.name}` : "Upload document"}
-                  <input
-                    type="file"
-                    accept={DOCUMENT_UPLOAD_ACCEPT}
-                    style={{ display: "none" }}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0] ?? null;
-                      if (!file) return;
-                      const validation = validateUploadFile(file, {
-                        allowedMimeTypes: DOCUMENT_UPLOAD_MIME_TYPES,
-                        maxBytes: 15 * 1024 * 1024,
-                      });
-                      if (!validation.ok) {
-                        setStatus(`${validation.error}. Allowed: PDF, DOCX, XLSX, CSV, JPG, PNG up to 15MB.`);
-                        return;
-                      }
-                      setPendingDocumentFile(file);
-                      event.currentTarget.value = "";
-                    }}
-                  />
-                </label> : null}
               </>
             ) : null}
-            {(!editingId ? canCreateRecords : canEditWorkspaceRow(editingId)) ? <button type="button" style={primaryBtn} disabled={saving} onClick={() => void saveRecord()} title={editingId ? "Save changes to this record" : "Save this new record"}>
-              <Icon name="save" size={16} style={{ marginRight: 6, verticalAlign: "text-bottom" }} />
-              {saving ? "Saving..." : editingId ? "Save changes" : saveLabel}
-            </button> : null}
+            {!showNarrativeNotes && !usesStructuredWorkspaceForm ? (
+              <button type="button" style={ghostBtn} onClick={() => setShowNarrativeNotes(true)}>
+                <Icon name="add" size={16} />
+                Add notes
+              </button>
+            ) : null}
             <button type="button" style={ghostBtn} onClick={cancelForm}>
               <Icon name="close" size={16} />
               Cancel
             </button>
+            {(!editingId ? canCreateRecords : canEditWorkspaceRow(editingId)) ? <button type="button" style={primaryBtn} disabled={saving} onClick={() => void saveRecord()} title={editingId ? "Save changes to this record" : "Save this new record"}>
+              <Icon name="save" size={16} style={{ marginRight: 6, verticalAlign: "text-bottom" }} />
+              {saving ? "Saving..." : editingId ? "Save changes" : saveLabel}
+            </button> : null}
             {editingId && viewer.mode !== "linked" ? (
               <button type="button" style={dangerBtn} onClick={() => void deleteRecord(editingId)}>
                 <Icon name="delete" size={16} />
@@ -3704,7 +4749,7 @@ export default function UniversalRecordWorkspace({
                     fileName: item.file_name,
                     mimeType: item.mime_type,
                     createdAt: item.created_at,
-                    thumbnailUrl: item.document_kind === "photo" ? photoPreviews[item.record_id] ?? "" : "",
+                    thumbnailUrl: isImageAttachment(item) ? photoPreviews[item.record_id] ?? "" : "",
                     attachment: item,
                   }))}
                 emptyText="No attachments yet for this asset."
@@ -3717,8 +4762,83 @@ export default function UniversalRecordWorkspace({
           </div>
         ) : null}
       </section>
+      ) : null}
     </section>
   );
+}
+
+function InlineDocumentUploadField({
+  files,
+  onFilesSelected,
+  onRemoveFile,
+  disabled,
+  accept = DOCUMENT_UPLOAD_ACCEPT,
+  helpText = "Drop a file here or choose one from your device. PDF, DOCX, JPG, PNG, XLSX, CSV, or ICS up to 15MB.",
+}: {
+  files: File[];
+  onFilesSelected: (files: File[] | FileList) => void;
+  onRemoveFile: (index: number) => void;
+  disabled: boolean;
+  accept?: string;
+  helpText?: string;
+}) {
+  return (
+    <label
+      className="lf-will-upload-field lf-shared-document-upload-field"
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={(event) => {
+        event.preventDefault();
+        onFilesSelected(event.dataTransfer.files);
+      }}
+    >
+      <span style={labelStyle}>{files.length ? `${files.length} document${files.length === 1 ? "" : "s"} selected` : "Add document here"}</span>
+      <span className="lf-will-upload-control lf-shared-document-upload-control">
+        <span className="lf-will-upload-icon">
+          <Icon name="upload_file" size={24} />
+        </span>
+        <span className="lf-will-upload-copy">
+          {helpText}
+        </span>
+      </span>
+      {files.length ? (
+        <span className="lf-pending-document-list">
+          {files.map((file, index) => (
+            <span key={`${file.name}-${file.size}-${index}`} className="lf-pending-document-item">
+              <span>{file.name}</span>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.preventDefault();
+                  onRemoveFile(index);
+                }}
+                disabled={disabled}
+                aria-label={`Remove ${file.name}`}
+              >
+                <Icon name="close" size={14} />
+              </button>
+            </span>
+          ))}
+        </span>
+      ) : null}
+      <input
+        type="file"
+        multiple
+        accept={accept}
+        disabled={disabled}
+        style={{ display: "none" }}
+        onChange={(event) => {
+          onFilesSelected(event.target.files ?? []);
+          event.currentTarget.value = "";
+        }}
+      />
+    </label>
+  );
+}
+
+function withSelectPlaceholder(options: Array<{ value: string; label: string }>, label: string) {
+  return options.some((option) => option.value === "")
+    ? options
+    : [{ value: "", label }, ...options];
 }
 
 function FinanceFields({
@@ -4067,16 +5187,16 @@ function FinanceFields({
     return (
       <div className="lf-content-grid">
         <FieldInput label="Provider / platform name" value={form.investment_provider} onChange={(value) => setForm((prev) => ({ ...prev, investment_provider: value }))} />
-        <FieldInput label="Investment type" value={form.investment_type} onChange={(value) => setForm((prev) => ({ ...prev, investment_type: value }))} />
+        <FieldSelect label="Investment type" value={form.investment_type} options={INVESTMENT_SELECT_OPTIONS} onChange={(value) => setForm((prev) => ({ ...prev, investment_type: value }))} />
         <FieldInput label="Account/reference number" value={form.investment_reference} onChange={(value) => setForm((prev) => ({ ...prev, investment_reference: value }))} />
         <FieldInput label="Estimated value" type="number" value={form.value_major} onChange={(value) => setForm((prev) => ({ ...prev, value_major: value }))} />
-        <FieldInput label="Currency" value={form.currency_code} onChange={(value) => setForm((prev) => ({ ...prev, currency_code: value.toUpperCase() }))} />
+        <FieldSelect label="Currency" value={form.currency_code} options={CURRENCY_SELECT_OPTIONS} onChange={(value) => setForm((prev) => ({ ...prev, currency_code: value.toUpperCase() }))} />
         <FieldInput label="Adviser name" value={form.adviser_name} onChange={(value) => setForm((prev) => ({ ...prev, adviser_name: value }))} />
         <FieldInput label="Adviser company" value={form.adviser_company} onChange={(value) => setForm((prev) => ({ ...prev, adviser_company: value }))} />
         <FieldInput label="Adviser phone" value={form.adviser_phone} onChange={(value) => setForm((prev) => ({ ...prev, adviser_phone: value }))} />
         <FieldInput label="Adviser email" value={form.adviser_email} onChange={(value) => setForm((prev) => ({ ...prev, adviser_email: value }))} />
         <FieldInput label="Online portal URL" value={form.investment_portal_url} onChange={(value) => setForm((prev) => ({ ...prev, investment_portal_url: value }))} />
-        <FieldInput label="Ownership type" value={form.ownership_type} onChange={(value) => setForm((prev) => ({ ...prev, ownership_type: value }))} />
+        <FieldSelect label="Ownership type" value={form.ownership_type} options={OWNERSHIP_TYPE_OPTIONS} onChange={(value) => setForm((prev) => ({ ...prev, ownership_type: value }))} />
         <FieldInput label="Beneficiary notes" value={form.beneficiary_notes} onChange={(value) => setForm((prev) => ({ ...prev, beneficiary_notes: value }))} />
         <label style={fieldStyle}>
           <span style={labelStyle}>Notes</span>
@@ -4090,10 +5210,10 @@ function FinanceFields({
     return (
       <div className="lf-content-grid">
         <FieldInput label="Pension provider" value={form.pension_provider} onChange={(value) => setForm((prev) => ({ ...prev, pension_provider: value }))} />
-        <FieldInput label="Pension type" value={form.pension_type} onChange={(value) => setForm((prev) => ({ ...prev, pension_type: value }))} />
+        <FieldSelect label="Pension type" value={form.pension_type} options={PENSION_SELECT_OPTIONS} onChange={(value) => setForm((prev) => ({ ...prev, pension_type: value }))} />
         <FieldInput label="Policy/member number" value={form.pension_member_number} onChange={(value) => setForm((prev) => ({ ...prev, pension_member_number: value }))} />
         <FieldInput label="Estimated value" type="number" value={form.value_major} onChange={(value) => setForm((prev) => ({ ...prev, value_major: value }))} />
-        <FieldInput label="Currency" value={form.currency_code} onChange={(value) => setForm((prev) => ({ ...prev, currency_code: value.toUpperCase() }))} />
+        <FieldSelect label="Currency" value={form.currency_code} options={CURRENCY_SELECT_OPTIONS} onChange={(value) => setForm((prev) => ({ ...prev, currency_code: value.toUpperCase() }))} />
         <FieldInput label="Employer name" value={form.employer_name} onChange={(value) => setForm((prev) => ({ ...prev, employer_name: value }))} />
         <FieldInput label="Scheme name" value={form.scheme_name} onChange={(value) => setForm((prev) => ({ ...prev, scheme_name: value }))} />
         <FieldInput label="Provider phone" value={form.provider_phone} onChange={(value) => setForm((prev) => ({ ...prev, provider_phone: value }))} />
@@ -4113,11 +5233,11 @@ function FinanceFields({
     return (
       <div className="lf-content-grid">
         <FieldInput label="Insurer name" value={form.insurer_name} onChange={(value) => setForm((prev) => ({ ...prev, insurer_name: value }))} />
-        <FieldInput label="Policy type" value={form.policy_type} onChange={(value) => setForm((prev) => ({ ...prev, policy_type: value }))} />
+        <FieldSelect label="Policy type" value={form.policy_type} options={INSURANCE_SELECT_OPTIONS} onChange={(value) => setForm((prev) => ({ ...prev, policy_type: value }))} />
         <FieldInput label="Policy number" value={form.policy_number} onChange={(value) => setForm((prev) => ({ ...prev, policy_number: value }))} />
         <FieldInput label="Insured person/item" value={form.insured_item} onChange={(value) => setForm((prev) => ({ ...prev, insured_item: value }))} />
         <FieldInput label="Cover amount" type="number" value={form.cover_amount} onChange={(value) => setForm((prev) => ({ ...prev, cover_amount: value }))} />
-        <FieldInput label="Currency" value={form.currency_code} onChange={(value) => setForm((prev) => ({ ...prev, currency_code: value.toUpperCase() }))} />
+        <FieldSelect label="Currency" value={form.currency_code} options={CURRENCY_SELECT_OPTIONS} onChange={(value) => setForm((prev) => ({ ...prev, currency_code: value.toUpperCase() }))} />
         <FieldInput label="Renewal date" type="date" value={form.renewal_date} onChange={(value) => setForm((prev) => ({ ...prev, renewal_date: value }))} />
         <FieldInput label="Insurer phone" value={form.insurer_phone} onChange={(value) => setForm((prev) => ({ ...prev, insurer_phone: value }))} />
         <FieldInput label="Insurer email" value={form.insurer_email} onChange={(value) => setForm((prev) => ({ ...prev, insurer_email: value }))} />
@@ -4134,10 +5254,10 @@ function FinanceFields({
   return (
     <div className="lf-content-grid">
       <FieldInput label="Creditor name" value={form.creditor_name} onChange={(value) => setForm((prev) => ({ ...prev, creditor_name: value }))} />
-      <FieldInput label="Debt type" value={form.debt_type} onChange={(value) => setForm((prev) => ({ ...prev, debt_type: value }))} />
+      <FieldSelect label="Debt type" value={form.debt_type} options={DEBT_SELECT_OPTIONS} onChange={(value) => setForm((prev) => ({ ...prev, debt_type: value }))} />
       <FieldInput label="Account/reference number" value={form.debt_reference} onChange={(value) => setForm((prev) => ({ ...prev, debt_reference: value }))} />
       <FieldInput label="Outstanding balance" type="number" value={form.outstanding_balance} onChange={(value) => setForm((prev) => ({ ...prev, outstanding_balance: value }))} />
-      <FieldInput label="Currency" value={form.currency_code} onChange={(value) => setForm((prev) => ({ ...prev, currency_code: value.toUpperCase() }))} />
+      <FieldSelect label="Currency" value={form.currency_code} options={CURRENCY_SELECT_OPTIONS} onChange={(value) => setForm((prev) => ({ ...prev, currency_code: value.toUpperCase() }))} />
       <FieldInput label="Debtor name" value={form.debtor_name} onChange={(value) => setForm((prev) => ({ ...prev, debtor_name: value }))} />
       <FieldInput label="Repayment amount" type="number" value={form.repayment_amount} onChange={(value) => setForm((prev) => ({ ...prev, repayment_amount: value }))} />
       <FieldInput label="Repayment frequency" value={form.repayment_frequency} onChange={(value) => setForm((prev) => ({ ...prev, repayment_frequency: value }))} />
@@ -4164,7 +5284,7 @@ function FieldInput({
   iconName?: string;
   value: string;
   onChange: (value: string) => void;
-  type?: "text" | "number" | "date";
+  type?: "text" | "number" | "date" | "email" | "tel";
 }) {
   return (
     <label style={fieldStyle}>
@@ -4173,6 +5293,36 @@ function FieldInput({
         {label}
       </span>
       <input type={type} style={inputStyle} value={value} onChange={(event) => onChange(event.target.value)} />
+    </label>
+  );
+}
+
+function FieldSelect({
+  label,
+  iconName,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  iconName?: string;
+  value: string;
+  options: Array<{ value: string; label: string }>;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label style={fieldStyle}>
+      <span style={labelStyle}>
+        {iconName ? <Icon name={iconName} size={16} /> : null}
+        {label}
+      </span>
+      <select style={inputStyle} value={value} onChange={(event) => onChange(event.target.value)} required>
+        {options.map((option) => (
+          <option key={`${label}-${option.value || "empty"}`} value={option.value} disabled={!option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
     </label>
   );
 }
@@ -4845,15 +5995,16 @@ function getFinanceDraft(categoryKey: string, form: EditForm) {
   }
 
   if (categoryKey === "investments") {
+    const investmentTypeKey = canonicalizeCategoryTypeValue("finances", "investments", form.investment_type);
     return {
       title: form.investment_provider.trim() || null,
       providerName: form.investment_provider.trim() || null,
-      summary: [form.investment_type.trim(), form.investment_reference.trim()].filter(Boolean).join(" · ") || null,
+      summary: [getCategoryTypeLabel("finances", "investments", investmentTypeKey), form.investment_reference.trim()].filter(Boolean).join(" · ") || null,
       valueMajor: form.value_major || "0",
       currencyCode: form.currency_code || "GBP",
       metadata: {
         investment_provider: form.investment_provider.trim() || null,
-        investment_type: form.investment_type.trim() || null,
+        investment_type: investmentTypeKey || null,
         investment_reference: form.investment_reference.trim() || null,
         adviser_name: form.adviser_name.trim() || null,
         adviser_company: form.adviser_company.trim() || null,
@@ -4867,15 +6018,16 @@ function getFinanceDraft(categoryKey: string, form: EditForm) {
   }
 
   if (categoryKey === "pensions") {
+    const pensionTypeKey = canonicalizeCategoryTypeValue("finances", "pensions", form.pension_type);
     return {
       title: form.pension_provider.trim() || null,
       providerName: form.pension_provider.trim() || null,
-      summary: [form.pension_type.trim(), form.pension_member_number.trim()].filter(Boolean).join(" · ") || null,
+      summary: [getCategoryTypeLabel("finances", "pensions", pensionTypeKey), form.pension_member_number.trim()].filter(Boolean).join(" · ") || null,
       valueMajor: form.value_major || "0",
       currencyCode: form.currency_code || "GBP",
       metadata: {
         pension_provider: form.pension_provider.trim() || null,
-        pension_type: form.pension_type.trim() || null,
+        pension_type: pensionTypeKey || null,
         pension_member_number: form.pension_member_number.trim() || null,
         employer_name: form.employer_name.trim() || null,
         scheme_name: form.scheme_name.trim() || null,
@@ -4889,15 +6041,16 @@ function getFinanceDraft(categoryKey: string, form: EditForm) {
   }
 
   if (categoryKey === "insurance") {
+    const policyTypeKey = canonicalizeCategoryTypeValue("finances", "insurance", form.policy_type);
     return {
       title: form.insurer_name.trim() || null,
       providerName: form.insurer_name.trim() || null,
-      summary: [form.policy_type.trim(), form.policy_number.trim(), form.insured_item.trim()].filter(Boolean).join(" · ") || null,
+      summary: [getCategoryTypeLabel("finances", "insurance", policyTypeKey), form.policy_number.trim(), form.insured_item.trim()].filter(Boolean).join(" · ") || null,
       valueMajor: form.cover_amount || "0",
       currencyCode: form.currency_code || "GBP",
       metadata: {
         insurer_name: form.insurer_name.trim() || null,
-        policy_type: form.policy_type.trim() || null,
+        policy_type: policyTypeKey || null,
         policy_number: form.policy_number.trim() || null,
         insured_item: form.insured_item.trim() || null,
         cover_amount: form.cover_amount || null,
@@ -4911,15 +6064,16 @@ function getFinanceDraft(categoryKey: string, form: EditForm) {
   }
 
   if (categoryKey === "debts") {
+    const debtTypeKey = canonicalizeCategoryTypeValue("finances", "debts", form.debt_type);
     return {
       title: form.creditor_name.trim() || null,
       providerName: form.creditor_name.trim() || null,
-      summary: [form.debt_type.trim(), form.debt_reference.trim()].filter(Boolean).join(" · ") || null,
+      summary: [getCategoryTypeLabel("finances", "debts", debtTypeKey), form.debt_reference.trim()].filter(Boolean).join(" · ") || null,
       valueMajor: form.outstanding_balance || "0",
       currencyCode: form.currency_code || "GBP",
       metadata: {
         creditor_name: form.creditor_name.trim() || null,
-        debt_type: form.debt_type.trim() || null,
+        debt_type: debtTypeKey || null,
         debt_reference: form.debt_reference.trim() || null,
         outstanding_balance: form.outstanding_balance || null,
         debtor_name: form.debtor_name.trim() || null,
@@ -5338,6 +6492,176 @@ function isImageAttachment(item: RecordAttachment) {
   return lowerPath.endsWith(".jpg") || lowerPath.endsWith(".jpeg") || lowerPath.endsWith(".png") || lowerPath.endsWith(".webp");
 }
 
+function getRecordContactInviteState(contact: RecordContact): RecordContactInviteState {
+  const inviteStatus = String(contact.invite_status ?? "").toLowerCase();
+  const verificationStatus = String(contact.verification_status ?? "").toLowerCase();
+  if (["accepted", "active", "verified"].includes(inviteStatus) || ["accepted", "active", "verified"].includes(verificationStatus)) {
+    return "accepted";
+  }
+  if (inviteStatus === "failed") {
+    return "failed";
+  }
+  if (["read", "opened"].includes(inviteStatus) || ["read", "opened"].includes(verificationStatus)) {
+    return "read";
+  }
+  if (["invite_sent", "sent", "pending", "invited"].includes(inviteStatus) || ["invited", "pending"].includes(verificationStatus)) {
+    return "sent";
+  }
+  return "not_sent";
+}
+
+function getRecordContactInviteLabel(state: RecordContactInviteState) {
+  if (state === "accepted") return "Accepted";
+  if (state === "read") return "Message opened";
+  if (state === "sent") return "Message sent";
+  if (state === "failed") return "Delivery failed";
+  return "Not yet invited";
+}
+
+function StatusIconForContact({ state }: { state: RecordContactInviteState }) {
+  if (state === "failed") return <Icon name="warning" size={13} />;
+  if (state === "not_sent") return <Icon name="radio_button_unchecked" size={13} />;
+  return <Icon name="check" size={13} />;
+}
+
+function getRecordContactVaultAccessState(contact: RecordContact): { state: "locked" | "review" | "approved" | "revoked"; label: string } {
+  const verificationStatus = String(contact.verification_status ?? "").trim().toLowerCase();
+  if (["revoked", "rejected"].includes(verificationStatus)) return { state: "revoked", label: "Vault access: Revoked" };
+  if (["active", "verified"].includes(verificationStatus)) return { state: "approved", label: "Vault access: Approved" };
+  if (["pending_verification", "verification_submitted"].includes(verificationStatus)) return { state: "review", label: "Verification under review" };
+  return { state: "locked", label: "Vault access: Locked" };
+}
+
+function buildLinkedContactEditDraft(contact: RecordContact, fallbackRole: string): LinkedContactEditDraft {
+  return {
+    fullName: contact.contact_name || "",
+    email: contact.contact_email || "",
+    phone: contact.contact_phone || "",
+    role: contact.relationship || contact.contact_role || fallbackRole,
+  };
+}
+
+function normalizeLinkedContactEditDraft(draft: LinkedContactEditDraft): LinkedContactEditDraft {
+  return {
+    fullName: draft.fullName.trim(),
+    email: draft.email.trim().toLowerCase(),
+    phone: draft.phone.trim().replace(/\s+/g, " "),
+    role: draft.role.trim(),
+  };
+}
+
+function validateLinkedContactEditDraft(draft: LinkedContactEditDraft) {
+  if (!draft.fullName) return "Full name is required.";
+  if (draft.email && !SIMPLE_EMAIL_PATTERN.test(draft.email)) return "Email must be a valid email address.";
+  if (draft.phone && !isReasonableTelephoneNumber(draft.phone)) {
+    return "Telephone number looks too long or malformed. Use digits, spaces and an optional country code.";
+  }
+  if (!draft.role) return "Role is required.";
+  return "";
+}
+
+function isReasonableTelephoneNumber(value: string) {
+  const trimmed = value.trim();
+  if (!/^\+?[0-9][0-9\s().-]*$/.test(trimmed)) return false;
+  const digitCount = trimmed.replace(/\D/g, "").length;
+  return digitCount >= 7 && digitCount <= 15;
+}
+
+async function sendTrustLinkedContactInvitation({
+  ownerUserId,
+  ownerEmail,
+  recordId,
+  contactId,
+  contactName,
+  contactEmail,
+  contactPhone,
+  contactRole,
+  recordTitle,
+  sourceKind,
+  origin,
+}: {
+  ownerUserId: string;
+  ownerEmail: string | null;
+  recordId: string;
+  contactId: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string | null;
+  contactRole: string;
+  recordTitle: string;
+  sourceKind: "asset" | "record";
+  origin: string | null;
+}): Promise<{ invitationId: string | null; sent: boolean; skipped: boolean }> {
+  const normalizedEmail = contactEmail.trim().toLowerCase();
+  const assignedRole = mapTrustContactRoleToCollaboratorRole(contactRole);
+  const existingRes = await supabase
+    .from("contact_invitations")
+    .select("id,contact_email,invitation_status,sent_at")
+    .eq("owner_user_id", ownerUserId)
+    .eq("contact_id", contactId)
+    .neq("invitation_status", "revoked")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (existingRes.error) {
+    throw new Error(existingRes.error.message);
+  }
+
+  const existing = existingRes.data as Record<string, unknown> | null;
+  if (existing) {
+    const existingEmail = String(existing.contact_email ?? "").trim().toLowerCase();
+    const existingStatus = String(existing.invitation_status ?? "").trim().toLowerCase();
+    const alreadySent = Boolean(String(existing.sent_at ?? "").trim());
+    if (existingEmail === normalizedEmail && (alreadySent || existingStatus === "accepted" || existingStatus === "failed")) {
+      return { invitationId: String(existing.id ?? "") || null, sent: false, skipped: true };
+    }
+  }
+
+  const result = await sendContactInvite(supabase, {
+    ownerUserId,
+    ownerEmail,
+    contactId,
+    contactName,
+    contactEmail: normalizedEmail,
+    contactPhone,
+    contactRelationship: contactRole,
+    assignedRole,
+    activationStatus: "invited",
+    permissionsOverride: {
+      read_only: true,
+      allowed_sections: [],
+      asset_ids: [],
+      record_ids: [],
+      editable_asset_ids: [],
+      editable_record_ids: [],
+      owner_notes: `Trust invitation for ${recordTitle}. Acceptance confirms the role only and does not unlock vault documents.`,
+      requires_unlock_approval: true,
+      source: "trust_record_contact",
+      source_kind: sourceKind,
+      source_id: recordId,
+      trust_role: contactRole,
+    },
+    origin,
+  });
+
+  return { invitationId: result.invitationId, sent: true, skipped: false };
+}
+
+function mapTrustContactRoleToCollaboratorRole(role: string): CollaboratorRole {
+  const normalized = role.trim().toLowerCase();
+  if (normalized === "trustee" || normalized.includes("trustee")) return "trustee";
+  if (normalized.includes("accountant")) return "accountant";
+  if (normalized.includes("solicitor") || normalized.includes("lawyer")) return "lawyer";
+  if (normalized.includes("adviser") || normalized.includes("advisor") || normalized.includes("protector")) return "professional_advisor";
+  return "friend_or_family";
+}
+
+function formatLinkedContactRole(value: string) {
+  return value
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
 function isPhotoAttachmentRecord(item: Record<string, unknown>) {
   const mimeType = String(item.mime_type ?? "").toLowerCase();
   if (mimeType.startsWith("image/")) return true;
@@ -5416,6 +6740,40 @@ async function uploadAttachmentAfterSave({
   }
 
   return { ok: true };
+}
+
+function hasFormData(form: EditForm) {
+  const formRecord = form as unknown as Record<string, unknown>;
+  const emptyRecord = EMPTY_FORM as unknown as Record<string, unknown>;
+
+  for (const [key, value] of Object.entries(formRecord)) {
+    if (key === "legal_contacts") continue;
+    if (key === "contact_role" && !String(form.contact_name ?? "").trim() && !String(form.contact_email ?? "").trim()) {
+      continue;
+    }
+    const normalizedValue = String(value ?? "").trim();
+    if (!normalizedValue) continue;
+    if (normalizedValue !== String(emptyRecord[key] ?? "").trim()) {
+      return true;
+    }
+  }
+
+  return form.legal_contacts.some((contact) =>
+    Boolean(contact.name.trim() || contact.email.trim() || contact.phone.trim()),
+  );
+}
+
+function focusFirstFormControl(container: HTMLElement | null) {
+  const firstField = container?.querySelector<HTMLElement>(
+    "input:not([type='hidden']):not([disabled]), select:not([disabled]), textarea:not([disabled])",
+  );
+  const firstControl = firstField ?? container?.querySelector<HTMLElement>("button:not([disabled])");
+  firstControl?.focus();
+}
+
+function prefersReducedMotion() {
+  if (typeof window === "undefined" || !window.matchMedia) return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 async function loadWorkspaceRows({
@@ -5967,13 +7325,30 @@ const inputStyle: CSSProperties = {
   padding: "11px 12px",
   fontSize: 14,
   width: "100%",
+  minHeight: 44,
+  height: 44,
   background: "#fffefd",
 };
 
 const textAreaStyle: CSSProperties = {
   ...inputStyle,
+  height: undefined,
   minHeight: 90,
   resize: "vertical",
+};
+
+const legalContactRowStyle: CSSProperties = {
+  display: "grid",
+  gap: 14,
+  alignItems: "end",
+};
+
+const linkedContactActionsStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "flex-end",
+  gap: 8,
+  paddingBottom: 6,
 };
 
 const primaryBtn: CSSProperties = {
@@ -6002,6 +7377,35 @@ const ghostBtn: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   gap: 6,
+};
+
+const addLinkedContactIconButtonStyle: CSSProperties = {
+  border: "1px solid #111827",
+  background: "#111827",
+  color: "#ffffff",
+  borderRadius: 999,
+  width: 32,
+  height: 32,
+  padding: 0,
+  cursor: "pointer",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
+
+const removeLinkedContactIconButtonStyle: CSSProperties = {
+  borderColor: "#fecaca",
+  border: "1px solid #fecaca",
+  color: "#991b1b",
+  background: "#fff1f2",
+  borderRadius: 999,
+  width: 32,
+  height: 32,
+  padding: 0,
+  cursor: "pointer",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
 };
 
 const dangerBtn: CSSProperties = {

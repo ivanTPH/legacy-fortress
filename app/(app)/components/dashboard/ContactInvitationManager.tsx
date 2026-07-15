@@ -1332,7 +1332,7 @@ function normalizeCollaboratorRole(value: unknown): CollaboratorRole {
 
 function normalizeInvitationStatus(value: unknown): InvitationStatus {
   const normalized = String(value ?? "").trim();
-  if (normalized === "accepted" || normalized === "rejected" || normalized === "revoked") return normalized;
+  if (normalized === "accepted" || normalized === "rejected" || normalized === "failed" || normalized === "revoked") return normalized;
   return "pending";
 }
 
