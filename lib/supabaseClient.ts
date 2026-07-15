@@ -1,18 +1,9 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { publicEnv } from "./env";
 import { appendDevBankRequestTrace, isDevBankTraceEnabled } from "./devSmoke";
 
-const supabaseUrl = publicEnv.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-const baseSupabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    flowType: "pkce",
-  },
-});
+let baseSupabase: SupabaseClient | null = null;
+let instrumentedSupabase: SupabaseClient | null = null;
 
 type AnyRecord = Record<string, unknown>;
 type InstrumentedBuilder = AnyRecord & { __lfAssetsBuilderInstrumented?: boolean };
@@ -151,10 +142,31 @@ function instrumentAssetsBuilder<T extends object>(table: string, builder: T): T
   return builder;
 }
 
-function createInstrumentedSupabaseClient() {
-  if (process.env.NODE_ENV !== "development") return baseSupabase;
+function getBaseSupabaseClient() {
+  if (baseSupabase) return baseSupabase;
 
-  return new Proxy(baseSupabase, {
+  baseSupabase = createClient(publicEnv.NEXT_PUBLIC_SUPABASE_URL, publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      flowType: "pkce",
+    },
+  });
+
+  return baseSupabase;
+}
+
+function getInstrumentedSupabaseClient() {
+  if (instrumentedSupabase) return instrumentedSupabase;
+
+  const client = getBaseSupabaseClient();
+  if (process.env.NODE_ENV !== "development") {
+    instrumentedSupabase = client;
+    return instrumentedSupabase;
+  }
+
+  instrumentedSupabase = new Proxy(client, {
     get(target, prop, receiver) {
       if (prop === "from") {
         return (table: string) => {
@@ -166,6 +178,12 @@ function createInstrumentedSupabaseClient() {
       return Reflect.get(target, prop, receiver);
     },
   });
+
+  return instrumentedSupabase;
 }
 
-export const supabase = createInstrumentedSupabaseClient();
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(_target, prop, receiver) {
+    return Reflect.get(getInstrumentedSupabaseClient(), prop, receiver);
+  },
+}) as SupabaseClient;
