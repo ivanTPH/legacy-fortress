@@ -25,6 +25,27 @@ export const ACCESS_MODEL_ROUTES: AccessModelRoute[] = [
     description: "Consumer users sign in and land in the Legacy Fortress application dashboard.",
   },
   {
+    area: "consumer",
+    routePrefix: "/user",
+    visibility: "normal_user",
+    landing: "/dashboard",
+    description: "Hosted-UAT friendly customer entry path that resolves to the canonical consumer dashboard.",
+  },
+  {
+    area: "probate_admin",
+    routePrefix: "/application/admin",
+    visibility: "authorised_role_only",
+    landing: "/admin",
+    description: "Hosted-UAT friendly application admin entry path that resolves to the canonical admin dashboard.",
+  },
+  {
+    area: "enterprise_admin",
+    routePrefix: "/application/enterprise",
+    visibility: "authorised_role_only",
+    landing: "/internal/admin/prototype/enterprise",
+    description: "Hosted-UAT friendly enterprise entry path that resolves to the canonical enterprise workspace.",
+  },
+  {
     area: "probate_admin",
     routePrefix: "/internal/admin",
     visibility: "authorised_role_only",
@@ -59,11 +80,16 @@ export const ACCESS_MODEL_SUMMARY = {
 } as const;
 
 export function isInternalAccessRoute(pathname: string) {
-  return pathname.startsWith("/internal/admin") || pathname.startsWith("/internal/test-login");
+  return pathname.startsWith("/internal/admin")
+    || pathname.startsWith("/internal/test-login")
+    || pathname.startsWith("/application/admin")
+    || pathname.startsWith("/application/enterprise");
 }
 
 export function getAccessAreaForPath(pathname: string): AccessArea {
   if (pathname.startsWith("/internal/test-login")) return "test_preview";
+  if (pathname.startsWith("/application/enterprise")) return "enterprise_admin";
+  if (pathname.startsWith("/application/admin")) return "probate_admin";
   if (pathname.startsWith("/internal/admin/prototype")) return "enterprise_admin";
   if (pathname.startsWith("/internal/admin")) return "probate_admin";
   return "consumer";

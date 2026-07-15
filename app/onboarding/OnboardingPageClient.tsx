@@ -17,18 +17,9 @@ import {
   type VaultSubsectionKey,
 } from "../../lib/vaultPreferences";
 import {
-  PlatformInfoTile,
   PlatformNotice,
   PlatformSection,
-  platformInfoGridStyle,
 } from "../../components/ui/PlatformPrimitives";
-
-const onboardingMilestones = [
-  { label: "Account", value: "Prepared" },
-  { label: "Vault focus", value: "Choose now" },
-  { label: "Preferences", value: "Confirm" },
-  { label: "Next step", value: "Profile" },
-];
 
 export default function OnboardingPageClient() {
   const router = useRouter();
@@ -37,6 +28,7 @@ export default function OnboardingPageClient() {
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
   const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [vaultPreferences, setVaultPreferences] = useState<VaultPreferences | null>(null);
 
@@ -77,7 +69,10 @@ export default function OnboardingPageClient() {
   async function completeOnboarding() {
     setStatus("");
     if (!termsAccepted) {
-      setStatus("Please accept Terms and Conditions to continue.");
+      setStatus("Accept the Terms and Conditions to continue. You can skip category choices for now and update them later in My Vault.");
+      window.requestAnimationFrame(() => {
+        document.querySelector(".lf-onboarding-action-panel")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
       return;
     }
 
@@ -136,9 +131,9 @@ export default function OnboardingPageClient() {
   }
 
   return (
-    <main className="lf-auth">
-      <section className="lf-auth-form-side">
-        <div className="lf-auth-card">
+    <main className="lf-auth lf-onboarding-main">
+      <section className="lf-auth-form-side lf-onboarding-form-side">
+        <div className="lf-auth-card lf-onboarding-card">
           <h1>Welcome to Legacy Fortress</h1>
           <p className="lf-auth-subtext">
             Set up the essentials once so your record is clear, secure, and useful to the people who may need it later.
@@ -153,17 +148,71 @@ export default function OnboardingPageClient() {
             Your secure account structure is prepared in the background before you continue.
           </div>
 
+          <section className="lf-onboarding-action-panel" aria-label="Continue or skip setup choices">
+            <div>
+              <strong>Ready to go in?</strong>
+              <p>
+                Category choices are optional. Accept the Terms and Conditions, then continue now and adjust the setup
+                later in My Vault.
+              </p>
+            </div>
+            <div className="lf-onboarding-action-controls">
+              <label className="lf-label lf-onboarding-required-terms">
+                <input
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={(event) => setTermsAccepted(event.target.checked)}
+                />
+                <span>
+                  I accept the{" "}
+                  <button
+                    type="button"
+                    className="lf-onboarding-terms-link"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      setTermsModalOpen(true);
+                    }}
+                  >
+                    Terms and Conditions
+                  </button>
+                </span>
+              </label>
+              <label className="lf-label">
+                <input
+                  type="checkbox"
+                  checked={marketingOptIn}
+                  onChange={(event) => setMarketingOptIn(event.target.checked)}
+                />
+                <span>Receive product updates and helpful reminders (optional)</span>
+              </label>
+              <button className="lf-primary-btn" onClick={() => void completeOnboarding()} disabled={saving}>
+                <Icon name="arrow_forward" size={16} />
+                {saving ? "Saving..." : "Continue into your secure record"}
+              </button>
+            </div>
+            {status ? <div className="lf-onboarding-status" role="alert">{status}</div> : null}
+          </section>
+
           <PlatformSection
-            title="Set up your vault in stages"
-            detail="Start with the categories that matter now. Your dashboard will keep the rest visible inside Action Centre."
+            title="What happens here"
+            detail="Only the terms acceptance is required. Everything else on this page is a preference you can change later."
             icon="checklist"
             emphasis="primary"
           >
-            <div style={platformInfoGridStyle}>
-              {onboardingMilestones.map((item) => (
-                <PlatformInfoTile key={item.label} label={item.label} value={item.value} />
-              ))}
-            </div>
+            <ul className="lf-onboarding-explainer" aria-label="Onboarding choices explained">
+              <li>
+                <strong>Accept the Terms and Conditions</strong>
+                <span>This is required before the secure workspace opens.</span>
+              </li>
+              <li>
+                <strong>Choose visible vault categories</strong>
+                <span>Optional. Untick anything you do not want to focus on today.</span>
+              </li>
+              <li>
+                <strong>Continue to Profile</strong>
+                <span>Your saved choices are applied, then you can add or edit your identity details.</span>
+              </li>
+            </ul>
             <PlatformNotice icon="verified_user">
               Tasks and reminders stay inside Action Centre, so the dashboard remains a calm summary once setup is complete.
             </PlatformNotice>
@@ -186,7 +235,7 @@ export default function OnboardingPageClient() {
                   Keep only the sections you want to focus on right now. You can change these later in My Vault settings.
                 </div>
               </div>
-              <div className="lf-content-grid" style={{ gap: 10 }}>
+              <div className="lf-onboarding-category-grid">
                 {VAULT_CATEGORY_DEFINITIONS.map((category) => (
                   <label
                     key={category.key}
@@ -231,30 +280,11 @@ export default function OnboardingPageClient() {
             </section>
           ) : null}
 
-          <label className="lf-label" style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <input
-              type="checkbox"
-              checked={termsAccepted}
-              onChange={(event) => setTermsAccepted(event.target.checked)}
-            />
-            <span>I accept the Terms and Conditions</span>
-          </label>
-
-          <label className="lf-label" style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <input
-              type="checkbox"
-              checked={marketingOptIn}
-              onChange={(event) => setMarketingOptIn(event.target.checked)}
-            />
-            <span>Receive product updates and helpful reminders (optional)</span>
-          </label>
-
           <button className="lf-primary-btn" onClick={() => void completeOnboarding()} disabled={saving}>
             <Icon name="arrow_forward" size={16} />
             {saving ? "Saving..." : "Continue into your secure record"}
           </button>
 
-          {status ? <div className="lf-muted-note">{status}</div> : null}
           <div className="lf-muted-note" style={{ display: "grid", gap: 4 }}>
             <div>You can add the rest in stages. Good progress means the next person can quickly understand who to contact, what exists, and what still needs review.</div>
             <div>Profile, your selected vault sections, contacts, and the next practical tasks will then guide the rest of your dashboard.</div>
@@ -264,6 +294,48 @@ export default function OnboardingPageClient() {
           </p>
         </div>
       </section>
+      {termsModalOpen ? (
+        <div className="lf-onboarding-modal-backdrop" role="presentation" onClick={() => setTermsModalOpen(false)}>
+          <section
+            className="lf-onboarding-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="onboarding-terms-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="lf-onboarding-modal-header">
+              <h2 id="onboarding-terms-title">Terms and Conditions</h2>
+              <button type="button" className="lf-icon-button" aria-label="Close terms" onClick={() => setTermsModalOpen(false)}>
+                <Icon name="close" size={18} />
+              </button>
+            </div>
+            <div className="lf-onboarding-modal-body">
+              <p>
+                Legacy Fortress stores sensitive estate and account information. By accepting, you confirm that the
+                information you add is yours to store, that you will keep access details accurate, and that you
+                understand shared access should only be granted to people you trust.
+              </p>
+              <p>
+                You can review your acceptance record later from Profile / Terms and Conditions.
+              </p>
+              <Link className="lf-inline-link" href="/account/terms">
+                Open full terms status page
+              </Link>
+            </div>
+            <div className="lf-onboarding-modal-actions">
+              <button type="button" className="lf-primary-btn" onClick={() => {
+                setTermsAccepted(true);
+                setTermsModalOpen(false);
+              }}>
+                Accept terms
+              </button>
+              <button type="button" className="lf-secondary-btn" onClick={() => setTermsModalOpen(false)}>
+                Close
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }

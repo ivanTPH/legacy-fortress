@@ -31,9 +31,9 @@ export type WorkspaceRouteOptions = {
 export function buildPrototypeWorkspaceUrl(workspace: WorkspaceId, options: WorkspaceRouteOptions = {}) {
   if (workspace === "application") {
     if (options.prototype && options.currentRole) {
-      return withPrototypeParams("/dashboard", options.currentRole);
+      return withPrototypeParams("/user", options.currentRole);
     }
-    return "/dashboard";
+    return "/user";
   }
 
   if (workspace === "executor") return "/executors";
@@ -44,10 +44,10 @@ export function buildPrototypeWorkspaceUrl(workspace: WorkspaceId, options: Work
 
   if (workspace === "enterprise_admin") {
     const role = options.currentRole === "licensing_admin" ? "licensing_admin" : "enterprise_admin";
-    return withPrototypeParams("/internal/admin/prototype/enterprise", role);
+    return withPrototypeParams("/application/enterprise", role);
   }
 
-  return withPrototypeParams("/internal/admin/prototype/cases", "probate_admin");
+  return withPrototypeParams("/application/admin", "probate_admin");
 }
 
 export function getPrimaryWorkspaceRole(roles: readonly PlatformRole[]) {
@@ -68,6 +68,9 @@ export function getCurrentWorkspaceForPath(pathname: string): WorkspaceId {
   if (pathname.startsWith("/internal/admin/prototype/licences")) return "enterprise_admin";
   if (pathname.startsWith("/internal/admin/prototype/reports")) return "enterprise_admin";
   if (pathname.startsWith("/internal/admin/prototype/campaigns")) return "enterprise_admin";
+  if (pathname.startsWith("/application/enterprise")) return "enterprise_admin";
+  if (pathname.startsWith("/application/admin")) return "probate_admin";
+  if (pathname.startsWith("/user")) return "application";
   if (pathname.startsWith("/internal/admin/prototype")) return "probate_admin";
   if (pathname.startsWith("/internal/admin/probate")) return "probate_admin";
   if (pathname.startsWith("/executors")) return "executor";

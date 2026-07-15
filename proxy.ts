@@ -12,14 +12,14 @@ function shouldApplyRoleBasedAccess(request: NextRequest) {
   }
 
   if (!pathname.startsWith("/internal/admin")) {
-    return false;
+    return pathname.startsWith("/application/admin") || pathname.startsWith("/application/enterprise");
+  }
+
+  if (pathname.startsWith("/internal/admin/prototype")) {
+    return true;
   }
 
   const hasTrustedClaims = request.headers.get("x-lf-trusted-role-claims") === "true";
-
-  if (pathname.startsWith("/internal/admin/prototype")) {
-    return hasTrustedClaims;
-  }
 
   if (process.env[INTERNAL_ADMIN_EDGE_GUARD_FLAG] === "true") {
     return true;

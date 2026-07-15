@@ -40,21 +40,15 @@ export default function SignUpForm({
     setStatus("Creating account...");
 
     try {
-      const [{ createClient }, { publicEnv }, { supabase }, { bootstrapAuthenticatedUser }] = await Promise.all([
-        import("@supabase/supabase-js"),
+      const [{ createEphemeralBrowserAuthClient }, { publicEnv }, { supabase }, { bootstrapAuthenticatedUser }] = await Promise.all([
+        import("../../lib/auth/browserAuthClient"),
         import("../../lib/env"),
         import("../../lib/supabaseClient"),
         import("../../lib/auth/bootstrap"),
       ]);
       const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}` : undefined;
       const authClient = isLocalSupabaseUrl(publicEnv.NEXT_PUBLIC_SUPABASE_URL)
-        ? createClient(publicEnv.NEXT_PUBLIC_SUPABASE_URL, publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
-            auth: {
-              flowType: "implicit",
-              detectSessionInUrl: false,
-              persistSession: false,
-            },
-          })
+        ? createEphemeralBrowserAuthClient("signup")
         : supabase;
       const { data, error } = await authClient.auth.signUp({
         email,

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import UatEnvironmentBanner from "../components/internal/UatEnvironmentBanner";
 import TestPersonaBanner from "../components/internal/TestPersonaBanner";
+import { getRobotsPolicy } from "../lib/environment/appEnvironment";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,6 +18,7 @@ export const metadata: Metadata = {
     ],
     shortcut: ["/brand/favicon.png"],
   },
+  robots: getRobotsPolicy(),
 };
 
 export default function RootLayout({
@@ -26,6 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
+        <UatEnvironmentBanner />
         {children}
         <TestPersonaBanner />
       </body>

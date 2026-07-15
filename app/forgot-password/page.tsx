@@ -19,19 +19,12 @@ export default function ForgotPasswordPage() {
 
     setSending(true);
     setIsSuccess(false);
-    const [{ createClient }, { getBrowserAuthRedirect }, { publicEnv }] = await Promise.all([
-      import("@supabase/supabase-js"),
+    const [{ createEphemeralBrowserAuthClient }, { getBrowserAuthRedirect }] = await Promise.all([
+      import("../../lib/auth/browserAuthClient"),
       import("../../lib/auth/redirects"),
-      import("../../lib/env"),
     ]);
     const redirectTo = getBrowserAuthRedirect("/reset-password");
-    const recoveryClient = createClient(publicEnv.NEXT_PUBLIC_SUPABASE_URL, publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
-      auth: {
-        flowType: "implicit",
-        detectSessionInUrl: false,
-        persistSession: false,
-      },
-    });
+    const recoveryClient = createEphemeralBrowserAuthClient("password-reset");
     const { error } = await recoveryClient.auth.resetPasswordForEmail(email.trim(), { redirectTo });
     setSending(false);
     if (error) {

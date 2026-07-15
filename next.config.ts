@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const isProduction = process.env.NODE_ENV === "production";
 const localDevelopmentConnectSrc = isProduction ? [] : ["http://127.0.0.1:55421"];
+const localDevelopmentImgSrc = isProduction ? [] : ["http://127.0.0.1:55421"];
 
 const contentSecurityPolicy = [
   "default-src 'self'",
@@ -9,7 +10,7 @@ const contentSecurityPolicy = [
   "form-action 'self'",
   "frame-ancestors 'none'",
   "object-src 'none'",
-  "img-src 'self' data: blob: https:",
+  `img-src 'self' data: blob: https:${localDevelopmentImgSrc.length ? ` ${localDevelopmentImgSrc.join(" ")}` : ""}`,
   "font-src 'self' data: https:",
   "manifest-src 'self'",
   "media-src 'self' blob:",
