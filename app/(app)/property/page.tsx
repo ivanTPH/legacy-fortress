@@ -1,18 +1,34 @@
 "use client";
 
-import Link from "next/link";
-import type { CSSProperties } from "react";
+import { useMemo } from "react";
+import CanonicalAssetOverviewGrid, { type CanonicalAssetOverviewTile } from "../components/dashboard/CanonicalAssetOverviewGrid";
+import DashboardAssetSummaryCard from "../components/dashboard/DashboardAssetSummaryCard";
+import Icon from "../../../components/ui/Icon";
 import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
 import { isVaultSubsectionEnabled, type VaultSubsectionKey } from "../../../lib/vaultPreferences";
 
 const items = [
-  { href: "/vault/property", label: "Property Records", desc: "Manage owned properties and liabilities.", preferenceKey: "property_records" as VaultSubsectionKey },
-  { href: "/property/documents", label: "Property Documents", desc: "Store property-specific files and references.", preferenceKey: "property_documents" as VaultSubsectionKey },
+  { href: "/vault/property", label: "Property Records", desc: "Manage owned properties, deeds, valuations, mortgages, and ownership notes.", icon: "home", preferenceKey: "property_records" as VaultSubsectionKey },
+  { href: "/property/documents", label: "Property Documents", desc: "Store property-specific files, references, photos, and supporting paperwork.", icon: "folder", preferenceKey: "property_documents" as VaultSubsectionKey },
 ];
 
 export default function PropertyOverviewPage() {
   const { preferences } = useVaultPreferences();
   const visibleItems = items.filter((item) => isVaultSubsectionEnabled(preferences, item.preferenceKey));
+  const propertyRecordTiles: CanonicalAssetOverviewTile[] = useMemo(() => (
+    isVaultSubsectionEnabled(preferences, "property_records")
+      ? [{
+        key: "property-records",
+        title: "Property Records",
+        description: "Manage owned properties, deeds, valuations, mortgages, and ownership notes.",
+        icon: "home",
+        href: "/vault/property",
+        addHref: "/vault/property?add=1",
+        sectionKey: "property",
+        categoryKey: "property",
+      }]
+      : []
+  ), [preferences]);
 
   return (
     <section style={{ display: "grid", gap: 14 }}>
@@ -21,11 +37,21 @@ export default function PropertyOverviewPage() {
       </div>
       {visibleItems.length ? (
       <div className="lf-content-grid">
-        {visibleItems.map((item) => (
-          <Link key={item.href} href={item.href} style={cardStyle}>
-            <div style={{ fontWeight: 700 }}>{item.label}</div>
-            <div style={{ color: "#64748b", fontSize: 13 }}>{item.desc}</div>
-          </Link>
+        <CanonicalAssetOverviewGrid tiles={propertyRecordTiles} />
+        {visibleItems.filter((item) => item.href !== "/vault/property").map((item) => (
+          <div key={item.href} className="lf-finance-summary-tile">
+            <div className="lf-finance-summary-tile-desc">{item.desc}</div>
+            <DashboardAssetSummaryCard
+              icon={<Icon name={item.icon} size={13} />}
+              title={item.label}
+              href={`${item.href}?add=1`}
+              value="No records yet"
+              detail="No records yet"
+              items={[]}
+              emptyActionLabel="Add record"
+              emptyState
+            />
+          </div>
         ))}
       </div>
       ) : (
@@ -36,14 +62,3 @@ export default function PropertyOverviewPage() {
     </section>
   );
 }
-
-const cardStyle: CSSProperties = {
-  border: "1px solid #e5e7eb",
-  borderRadius: 14,
-  padding: 14,
-  background: "#fff",
-  textDecoration: "none",
-  color: "#111827",
-  display: "grid",
-  gap: 8,
-};

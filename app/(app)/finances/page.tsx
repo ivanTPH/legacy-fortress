@@ -9,13 +9,13 @@ import { useViewerAccess } from "../../../components/access/ViewerAccessContext"
 import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
 import { waitForActiveUser } from "../../../lib/auth/session";
 import { supabase } from "../../../lib/supabaseClient";
-import { fetchCanonicalAssets } from "../../../lib/assets/fetchCanonicalAssets";
 import { resolveWalletContextForRead } from "../../../lib/canonicalPersistence";
 import {
   buildFinanceCategorySummary,
   type DashboardAssetRow,
   type FinanceCategoryKey,
 } from "../../../lib/dashboard/summary";
+import { loadFinanceDashboardRows } from "../../../lib/dashboard/financeRows";
 import { isVaultSubsectionEnabled, type VaultSubsectionKey } from "../../../lib/vaultPreferences";
 import {
   shouldRefreshDashboardForAssetMutation,
@@ -32,9 +32,9 @@ type FinanceSectionCard = {
 };
 
 const FINANCE_SECTION_CARDS: FinanceSectionCard[] = [
-  { key: "bank", preferenceKey: "finances_bank", title: "Bank", href: "/finances/bank", description: "Current and savings accounts.", icon: "account_balance" },
-  { key: "investments", preferenceKey: "finances_investments", title: "Investments", href: "/finances/investments", description: "Record portfolios, funds, and investment platforms.", icon: "trending_up" },
+  { key: "bank", preferenceKey: "finances_bank", title: "Banks", href: "/finances/bank", description: "Current and savings accounts.", icon: "account_balance" },
   { key: "pensions", preferenceKey: "finances_pensions", title: "Pensions", href: "/finances/pensions", description: "Track pension providers, values, and notes.", icon: "savings" },
+  { key: "investments", preferenceKey: "finances_investments", title: "Investments", href: "/finances/investments", description: "Record portfolios, funds, and investment platforms.", icon: "trending_up" },
   { key: "insurance", preferenceKey: "finances_insurance", title: "Insurance", href: "/finances/insurance", description: "Capture life and protection policy references.", icon: "health_and_safety" },
   { key: "debts", preferenceKey: "finances_debts", title: "Debts", href: "/finances/debts", description: "Track liabilities and repayment obligations.", icon: "credit_card" },
 ];
@@ -72,10 +72,9 @@ export default function FinancesOverviewPage() {
 
         const ownerUserId = viewer.targetOwnerUserId || user.id;
         const wallet = await resolveWalletContextForRead(supabase, ownerUserId);
-        const assetsRes = await fetchCanonicalAssets(supabase, {
+        const assetsRes = await loadFinanceDashboardRows(supabase, {
           userId: ownerUserId,
           walletId: wallet.walletId,
-          sectionKey: "finances",
           select: "id,section_key,category_key,status,archived_at,deleted_at,created_at,updated_at,title,provider_name,provider_key,value_minor,currency_code,metadata_json",
         });
 
@@ -166,21 +165,26 @@ export default function FinancesOverviewPage() {
 
       {summaries.length ? (
       <div className="lf-content-grid">
-        {summaries.map((section) => (
-          <div key={section.href} className="lf-finance-summary-tile">
-            <div className="lf-finance-summary-tile-desc">{section.description}</div>
-            <DashboardAssetSummaryCard
-              icon={<Icon name={section.icon} size={13} />}
-              title={section.title}
-              href={section.href}
-              addedAt={section.summary.addedAt}
-              value={section.summary.valueText}
-              detail={section.summary.detailText}
-              items={section.summary.items}
-              emptyActionLabel="Open category"
-            />
-          </div>
-        ))}
+        {summaries.map((section) => {
+          const isEmpty = !section.summary.items.length;
+          const cardHref = isEmpty ? `${section.href}?add=1` : section.href;
+          return (
+            <div key={section.href} className="lf-finance-summary-tile">
+              <div className="lf-finance-summary-tile-desc">{section.description}</div>
+              <DashboardAssetSummaryCard
+                icon={<Icon name={section.icon} size={13} />}
+                title={section.title}
+                href={cardHref}
+                addedAt={section.summary.addedAt}
+                value={section.summary.valueText}
+                detail={section.summary.detailText}
+                items={section.summary.items}
+                emptyActionLabel="Add record"
+                emptyState={isEmpty}
+              />
+            </div>
+          );
+        })}
       </div>
       ) : (
         <div style={{ color: "#64748b", fontSize: 13 }}>

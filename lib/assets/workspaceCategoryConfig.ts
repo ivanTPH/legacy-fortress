@@ -31,7 +31,7 @@ export const INVESTMENTS_WORKSPACE_CONFIG: ManagedAssetWorkspaceConfig = {
   categoryKey: "investments",
   title: "Finances · Investments",
   subtitle: "Store your investment providers, references, and values in your secure vault.",
-  readsCanonicalAssets: true,
+  readsCanonicalAssets: false,
   canonicalCategorySlug: null,
   fieldConfigCategorySlug: null,
 };

@@ -20,6 +20,14 @@ export function PersonalIcon({ size = 18 }: IconProps) {
   return <NavIcon name="watch" size={size} />;
 }
 
+export function DigitalIcon({ size = 18 }: IconProps) {
+  return <NavIcon name="devices" size={size} />;
+}
+
+export function PossessionsIcon({ size = 18 }: IconProps) {
+  return <NavIcon name="inventory_2" size={size} />;
+}
+
 export function ContactsIcon({ size = 18 }: IconProps) {
   return <NavIcon name="person" size={size} />;
 }

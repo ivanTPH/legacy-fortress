@@ -14,6 +14,7 @@ import {
   buildBucketSummary,
   getDashboardAssetValueMajor,
   getAssetsForBucket,
+  getDashboardAssetBucket,
   getLegalDocuments,
   latestTimestamp,
 } from "../../../lib/dashboard/summary";
@@ -23,6 +24,7 @@ import { waitForActiveUser } from "../../../lib/auth/session";
 import { supabase } from "../../../lib/supabaseClient";
 import { isMissingColumnError, isMissingRelationError } from "../../../lib/supabaseErrors";
 import { fetchCanonicalAssets } from "../../../lib/assets/fetchCanonicalAssets";
+import { loadFinanceDashboardRows } from "../../../lib/dashboard/financeRows";
 import { getStoredFileSignedUrl, isPrintableDocumentMimeType } from "../../../lib/assets/documentLinks";
 import { createAsset } from "../../../lib/assets/createAsset";
 import {
@@ -523,8 +525,9 @@ export default function DashboardPage() {
         }
         const targetOwnerUserId = viewer.targetOwnerUserId || user.id;
         const wallet = await resolveWalletContextForRead(supabase, targetOwnerUserId);
-        const [assetsRes, documentsRes, contactsRes, sectionEntriesRes, profileReadinessRes] = await Promise.all([
+        const [assetsRes, financeRowsRes, documentsRes, contactsRes, sectionEntriesRes, profileReadinessRes] = await Promise.all([
           fetchCanonicalAssets(supabase, { userId: targetOwnerUserId, walletId: wallet.walletId }),
+          loadFinanceDashboardRows(supabase, { userId: targetOwnerUserId, walletId: wallet.walletId }),
           fetchDocuments(targetOwnerUserId, wallet.walletId),
           loadCanonicalContactsForOwner(supabase, targetOwnerUserId),
           fetchSectionEntries(targetOwnerUserId),
@@ -539,6 +542,9 @@ export default function DashboardPage() {
         if (assetsRes.error && !isMissingRelationError(assetsRes.error, "assets")) {
           warnings.push("Asset summary could not be fully loaded.");
         }
+        if (financeRowsRes.error && !isMissingRelationError(financeRowsRes.error, "records")) {
+          warnings.push("Finance summary could not be fully loaded.");
+        }
         if (documentsRes.error && !isMissingRelationError(documentsRes.error, "documents")) {
           warnings.push("Document summary could not be fully loaded.");
         }
@@ -546,7 +552,10 @@ export default function DashboardPage() {
           setStatus(`⚠️ ${warnings[0]}`);
         }
 
-        const assets = filterAssetIdsForViewer((((assetsRes.data ?? []) as unknown) as AssetRow[]), viewer);
+        const canonicalAssets = (((assetsRes.data ?? []) as unknown) as AssetRow[]);
+        const nonFinanceAssets = canonicalAssets.filter((row) => getDashboardAssetBucket(row) !== "finance");
+        const mergedAssets = [...nonFinanceAssets, ...(((financeRowsRes.data ?? []) as unknown) as AssetRow[])];
+        const assets = filterAssetIdsForViewer(mergedAssets, viewer);
         const financeAssets = getAssetsForBucket(assets, "finance");
         setAssetRows(assets);
         appendDevBankTrace({
@@ -1450,20 +1459,23 @@ const legalSummary = useMemo(() => {
       ) : null}
       {loading ? <div style={{ color: "#6b7280" }}>Loading dashboard summary...</div> : null}
       {searchQuery ? (
-        <section style={searchResultsPanelStyle} aria-label="Search results">
+        <section style={searchResultsPanelStyle} aria-label="Dashboard search results">
           <div style={{ display: "grid", gap: 4 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={overviewIconStyle}>
                 <Icon name="search" size={16} />
               </div>
-              <h2 style={{ margin: 0, fontSize: 18 }}>Search results</h2>
+              <h2 style={{ margin: 0, fontSize: 18 }}>Dashboard search results</h2>
             </div>
             <div style={{ color: "#64748b", fontSize: 13 }}>
-              Results for <strong>{searchQuery}</strong> from your current estate records and key destinations.
+              Results for <strong>{searchQuery}</strong> from your dashboard records, linked documents, contacts, and key destinations.
             </div>
+            <button type="button" onClick={() => router.push("/dashboard")} style={searchResetButtonStyle}>
+              Clear dashboard search
+            </button>
           </div>
           {discoveryResults.length === 0 ? (
-            <div style={searchEmptyStateStyle}>No matching records, contacts, or sections found.</div>
+            <div style={searchEmptyStateStyle}>No dashboard records, contacts, documents, or destinations match this search. Clear the search to return to the full dashboard.</div>
           ) : (
             <div style={{ display: "grid", gap: 10 }}>
               {discoveryResults.map((result) => (
@@ -2694,11 +2706,13 @@ function normalizeDashboardContactRole(value: string | null | undefined): Collab
     "accountant",
     "financial_advisor",
     "lawyer",
+    "trustee",
     "executor",
     "power_of_attorney",
     "friend_or_family",
   ]);
   if (allowed.has(normalized as CollaboratorRole)) return normalized as CollaboratorRole;
+  if (normalized.includes("trustee")) return "trustee";
   if (normalized.includes("executor")) return "executor";
   if (normalized.includes("attorney")) return "power_of_attorney";
   if (normalized.includes("accountant")) return "accountant";
@@ -3800,6 +3814,18 @@ const searchEmptyStateStyle = {
   padding: 14,
   color: "#6f645d",
   background: "#fffefd",
+} satisfies CSSProperties;
+
+const searchResetButtonStyle = {
+  border: "1px solid #ded6d1",
+  borderRadius: 999,
+  background: "#fff",
+  color: "#3a2118",
+  padding: "7px 12px",
+  fontSize: 13,
+  fontWeight: 700,
+  justifySelf: "start",
+  cursor: "pointer",
 } satisfies CSSProperties;
 
 const searchResultStyle = {

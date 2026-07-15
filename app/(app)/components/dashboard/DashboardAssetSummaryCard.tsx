@@ -28,6 +28,7 @@ type DashboardAssetSummaryCardProps = {
   actionLabel?: string;
   actionIcon?: string;
   hideItems?: boolean;
+  emptyState?: boolean;
 };
 
 export default function DashboardAssetSummaryCard({
@@ -47,6 +48,7 @@ export default function DashboardAssetSummaryCard({
   actionLabel,
   actionIcon = "open_in_new",
   hideItems = false,
+  emptyState = false,
 }: DashboardAssetSummaryCardProps) {
   const router = useRouter();
 
@@ -78,10 +80,67 @@ export default function DashboardAssetSummaryCard({
             <span className="lf-dashboard-summary-icon" style={iconStyle}>{icon}</span>
             <span className="lf-dashboard-summary-title" style={titleStyle}>{title}</span>
           </div>
-          <IconButton
-            icon={actionIcon}
-            label={actionLabel ?? `Open ${title}`}
-            style={{ width: 40, height: 40 }}
+          {!emptyState ? (
+            <IconButton
+              icon={actionIcon}
+              label={actionLabel ?? `Open ${title}`}
+              style={{ width: 40, height: 40 }}
+              onPointerDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+              }}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                router.push(href);
+              }}
+            />
+          ) : onEmptyActionClick ? (
+            <button
+              type="button"
+              aria-label={emptyActionLabel}
+              title={emptyActionLabel}
+              style={emptyPrimaryIconStyle}
+              onPointerDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+              }}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                onEmptyActionClick();
+              }}
+            >
+              <Icon name="add" size={22} />
+            </button>
+          ) : (
+            <Link
+              href={href}
+              aria-label={emptyActionLabel}
+              title={emptyActionLabel}
+              style={emptyPrimaryIconStyle}
+              onClick={(event) => {
+                event.stopPropagation();
+              }}
+            >
+              <Icon name="add" size={22} />
+            </Link>
+          )}
+        </div>
+        {!emptyState && inlineSummary ? (
+          <div className="lf-dashboard-summary-count" style={inlineSummaryStyle}>
+            <span className="lf-dashboard-summary-value" style={valueStyle}>{obscured ? "Restricted" : value}</span>
+            <span className="lf-dashboard-summary-detail" style={detailStyle}>{obscured ? "Detail hidden for this role" : detail}</span>
+          </div>
+        ) : !emptyState ? (
+          <>
+            <div className="lf-dashboard-summary-value" style={valueStyle}>{obscured ? "Restricted" : value}</div>
+            <div className="lf-dashboard-summary-detail" style={detailStyle}>{obscured ? "Detail hidden for this role" : detail}</div>
+          </>
+        ) : onEmptyActionClick ? (
+          <button
+            type="button"
+            style={emptyPrimaryActionStyle}
             onPointerDown={(event) => {
               event.preventDefault();
               event.stopPropagation();
@@ -89,26 +148,21 @@ export default function DashboardAssetSummaryCard({
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
-              router.push(href);
+              onEmptyActionClick();
             }}
-          />
-        </div>
-        {inlineSummary ? (
-          <div className="lf-dashboard-summary-count" style={inlineSummaryStyle}>
-            <span className="lf-dashboard-summary-value" style={valueStyle}>{obscured ? "Restricted" : value}</span>
-            <span className="lf-dashboard-summary-detail" style={detailStyle}>{obscured ? "Detail hidden for this role" : detail}</span>
-          </div>
+          >
+            <span style={emptyPrimaryLabelStyle}>{emptyActionLabel}</span>
+          </button>
         ) : (
-          <>
-            <div className="lf-dashboard-summary-value" style={valueStyle}>{obscured ? "Restricted" : value}</div>
-            <div className="lf-dashboard-summary-detail" style={detailStyle}>{obscured ? "Detail hidden for this role" : detail}</div>
-          </>
+          <Link href={href} style={emptyPrimaryActionStyle}>
+            <span style={emptyPrimaryLabelStyle}>{emptyActionLabel}</span>
+          </Link>
         )}
         {overview ? <div style={overviewWrapStyle}>{overview}</div> : null}
       </div>
 
-      <div className="lf-dashboard-summary-footer" style={{ borderTop: "1px solid #f1f5f9", paddingTop: 8, display: "grid", gap: 6 }}>
-        {!hideItems && items.length ? (
+      <div className="lf-dashboard-summary-footer" style={emptyState ? emptyFooterStyle : footerWrapStyle}>
+        {!emptyState && !hideItems && items.length ? (
           items.slice(0, 4).map((item) => (
             <Link key={item.id} href={item.href} style={itemLinkStyle} className="lf-dashboard-item-link">
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
@@ -118,7 +172,7 @@ export default function DashboardAssetSummaryCard({
               {item.meta ? <span style={{ color: "#94a3b8", fontSize: 12 }}>{item.meta}</span> : null}
             </Link>
           ))
-        ) : !hideItems && onEmptyActionClick ? (
+        ) : !emptyState && !hideItems && onEmptyActionClick ? (
           <button
             type="button"
             style={{ ...itemLinkStyle, background: "#fff", width: "100%", textAlign: "left", cursor: "pointer" }}
@@ -137,7 +191,7 @@ export default function DashboardAssetSummaryCard({
               {emptyActionLabel}
             </span>
           </button>
-        ) : !hideItems ? (
+        ) : !emptyState && !hideItems ? (
           <Link href={href} style={itemLinkStyle}>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
               <Icon name="open_in_new" size={16} />
@@ -145,9 +199,11 @@ export default function DashboardAssetSummaryCard({
             </span>
           </Link>
         ) : null}
-        <div className="lf-dashboard-summary-date-row" style={footerStyle}>
-          <span className="lf-dashboard-summary-date" style={dateStyle}>{formatDateStamp(addedAt)}</span>
-        </div>
+        {!emptyState ? (
+          <div className="lf-dashboard-summary-date-row" style={footerStyle}>
+            <span className="lf-dashboard-summary-date" style={dateStyle}>{formatDateStamp(addedAt)}</span>
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -223,6 +279,19 @@ const footerStyle: CSSProperties = {
   justifyContent: "flex-end",
 };
 
+const footerWrapStyle: CSSProperties = {
+  borderTop: "1px solid #f1f5f9",
+  paddingTop: 8,
+  display: "grid",
+  gap: 6,
+};
+
+const emptyFooterStyle: CSSProperties = {
+  borderTop: "1px solid #f1f5f9",
+  paddingTop: 8,
+  minHeight: 62,
+};
+
 const valueStyle: CSSProperties = {
   fontSize: 24,
   fontWeight: 800,
@@ -252,6 +321,41 @@ const itemLinkStyle: CSSProperties = {
   textDecoration: "none",
   color: "#0f172a",
   fontSize: 13,
+};
+
+const emptyPrimaryActionStyle: CSSProperties = {
+  display: "inline-block",
+  justifySelf: "start",
+  border: 0,
+  padding: 0,
+  background: "transparent",
+  color: "#94a3b8",
+  textDecoration: "none",
+  fontSize: 24,
+  fontWeight: 800,
+  lineHeight: 1.2,
+  cursor: "pointer",
+};
+
+const emptyPrimaryLabelStyle: CSSProperties = {
+  color: "#a4afbf",
+  fontSize: 24,
+  fontWeight: 800,
+  lineHeight: 1.2,
+};
+
+const emptyPrimaryIconStyle: CSSProperties = {
+  width: 32,
+  height: 32,
+  borderRadius: 999,
+  border: "1px solid #e5e0dc",
+  background: "#fff",
+  color: "#7f8794",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  textDecoration: "none",
+  cursor: "pointer",
 };
 
 const overviewWrapStyle: CSSProperties = {

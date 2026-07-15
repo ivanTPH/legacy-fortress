@@ -180,12 +180,19 @@ export const BUSINESS_STATUS_OPTIONS: AssetFieldOption[] = [
 ];
 
 export const DIGITAL_ASSET_TYPE_OPTIONS: AssetFieldOption[] = [
+  { label: "Social media profile", value: "social_media" },
+  { label: "Messaging account", value: "messaging_account" },
+  { label: "Subscription / streaming service", value: "subscription" },
+  { label: "Email account", value: "email_account" },
+  { label: "Cloud storage", value: "cloud_storage" },
+  { label: "Domain name", value: "domain_name" },
+  { label: "Website / hosting", value: "website_hosting" },
+  { label: "Device account", value: "device_account" },
   { label: "Exchange account", value: "exchange_account" },
   { label: "Custodial wallet", value: "custodial_wallet" },
   { label: "Self-custody wallet", value: "self_custody_wallet" },
-  { label: "Domain name", value: "domain_name" },
+  { label: "Crypto / digital wallet", value: "crypto_wallet" },
   { label: "Creator account", value: "creator_account" },
-  { label: "Cloud storage", value: "cloud_storage" },
   { label: "Other", value: "__other" },
 ];
 

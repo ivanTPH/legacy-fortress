@@ -66,7 +66,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("Secure Account");
-  const [telephone, setTelephone] = useState("");
   const [initials, setInitials] = useState("LF");
   const [avatarUrl, setAvatarUrl] = useState(() => readCachedProfileAvatarUrl());
   const [confirmedAvatarUrl, setConfirmedAvatarUrl] = useState("");
@@ -87,7 +86,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const effectiveAuthState = devSmokeMode || prototypePreviewMode ? "ready" : authState;
   const effectiveEmail = devSmokeMode ? "smoke-user@legacy-fortress.local" : email;
   const effectiveDisplayName = devSmokeMode ? "Smoke User" : displayName;
-  const effectiveTelephone = devSmokeMode ? "0207 000 0000" : telephone;
   const effectiveInitials = devSmokeMode ? "SU" : initials;
   const effectiveAvatarUrl = devSmokeMode ? "" : avatarUrl;
   const renderedAvatarUrl = !devSmokeMode && effectiveAvatarUrl && confirmedAvatarUrl === effectiveAvatarUrl ? confirmedAvatarUrl : "";
@@ -181,6 +179,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const topLevelItems = useMemo(
     () => filterNodesByVaultPreferences(filterNavigationTreeForViewer(baseTopLevelItems, resolvedViewerAccess), vaultPreferences),
     [baseTopLevelItems, resolvedViewerAccess, vaultPreferences],
+  );
+  const dashboardNavigationItems = useMemo(
+    () => stripNavigationChildren(topLevelItems),
+    [topLevelItems],
   );
   const accountItems = useMemo(
     () => filterNodesByVaultPreferences(filterNavigationTreeForViewer(baseAccountItems, resolvedViewerAccess), vaultPreferences),
@@ -329,7 +331,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           appMetadata: user.app_metadata,
         }),
       );
-      await hydrateUserChip(userId, nextEmail, mounted, setDisplayName, setTelephone, setInitials, setFreshAvatarUrl);
+      await hydrateUserChip(userId, nextEmail, mounted, setDisplayName, setInitials, setFreshAvatarUrl);
       if (!mounted) return;
       try {
         const nextViewer = await loadViewerAccessState(supabase, userId, {
@@ -537,7 +539,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       if (!user) return;
       const nextEmail = user.email ?? "";
       setEmail(nextEmail);
-      await hydrateUserChip(user.id, nextEmail, true, setDisplayName, setTelephone, setInitials, setFreshAvatarUrl);
+      await hydrateUserChip(user.id, nextEmail, true, setDisplayName, setInitials, setFreshAvatarUrl);
     }
 
     const onProfileUpdated = (event: Event) => {
@@ -616,6 +618,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   function navigateTo(path: string) {
     closeNavigationState("item_select");
     router.push(path);
+  }
+
+  function navigateBack() {
+    closeNavigationState("item_select", false);
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+      return;
+    }
+    router.push("/dashboard");
   }
 
   function submitShellSearch() {
@@ -746,6 +757,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     ? "Dashboard"
     : currentNode?.label ?? "Dashboard";
   const topbarBreadcrumbs = normalizedPathname === "/dashboard" ? [] : breadcrumbs.slice(0, -1);
+  const showBackButton = normalizedPathname !== "/dashboard";
 
   if (effectiveAuthState !== "ready") {
     const sessionTitle = effectiveAuthState === "error"
@@ -818,7 +830,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               submitShellSearch();
             }}
             role="search"
-            aria-label="Search estate records"
+            aria-label="Search dashboard records"
           >
             <span className="lf-search-icon" aria-hidden>
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -828,15 +840,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </span>
             <input
               className="lf-search"
-              placeholder="Search records"
-              aria-label="Search records"
+              placeholder="Search dashboard records"
+              aria-label="Search dashboard records"
               value={shellSearch}
               onChange={(event) => setShellSearchState({ pathname, value: event.target.value })}
             />
           </form>
 
           <SidebarPrimary
-            items={topLevelItems}
+            items={dashboardNavigationItems}
             activeTopId={activePrimary?.id ?? null}
             highlightedTopId={menuState.openPrimaryId}
             flyoutId={level2FlyoutId}
@@ -934,7 +946,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
           <div className="lf-topbar-main">
             <Breadcrumbs items={topbarBreadcrumbs} />
-            <div className="lf-topbar-title">{topbarTitle}</div>
+            <div className="lf-topbar-heading">
+              {showBackButton ? (
+                <button className="lf-topbar-back" type="button" onClick={navigateBack} aria-label="Go back">
+                  <Icon name="arrow_back" size={16} />
+                  <span>Back</span>
+                </button>
+              ) : null}
+              <div className="lf-topbar-title">{topbarTitle}</div>
+            </div>
           </div>
 
           <div className="lf-topbar-actions">
@@ -959,6 +979,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <Icon name={resolvedViewerAccess.mode === "linked" ? "visibility_lock" : "verified_user"} size={16} />
             </div>
             <Link href="/profile" className="lf-topbar-user" aria-label="Edit account details">
+              <div className="lf-topbar-user-copy">
+                <div className="lf-topbar-user-greeting">Hello</div>
+                <div className="lf-topbar-user-name">{effectiveDisplayName}</div>
+              </div>
               <span
                 className="lf-topbar-user-avatar"
                 aria-label={`Signed-in account picture for ${effectiveDisplayName}`}
@@ -971,12 +995,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 ) : null}
                 <span className="lf-topbar-user-avatar-fallback">{effectiveInitials || "LF"}</span>
               </span>
-              <div className="lf-topbar-user-copy">
-                <div className="lf-topbar-user-name">{effectiveDisplayName}</div>
-                <div className="lf-topbar-user-meta">
-                  {resolvedViewerAccess.mode === "linked" ? "Signed-in reviewer account" : effectiveTelephone || "Add a phone number"}
-                </div>
-              </div>
             </Link>
           </div>
         </header>
@@ -1006,7 +1024,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               />
 
               <MobileNavTree
-                items={topLevelItems}
+                items={dashboardNavigationItems}
                 expandedIds={new Set([...activeChainIds, ...menuState.mobileExpandedIds])}
                 activeChainIds={activeChainIds}
                 onToggle={(id) => {
@@ -1151,7 +1169,6 @@ async function hydrateUserChip(
   email: string,
   mounted: boolean,
   setDisplayName: (value: string) => void,
-  setTelephone: (value: string) => void,
   setInitials: (value: string) => void,
   setAvatarUrl: (value: string) => void,
 ) {
@@ -1172,7 +1189,6 @@ async function hydrateUserChip(
     `[sidebar-hydrate] user=${userId} display=${profile.displayName || "<none>"} avatar_url=${maskAvatarUrl(profile.avatarUrl)}`,
   );
   setDisplayName(profile.displayName);
-  setTelephone(profile.telephone);
   setInitials(makeInitials(profile.displayName));
   const stableAvatarUrl = await loadServerProfileAvatarDataUrl();
   if (stableAvatarUrl) {
@@ -1288,6 +1304,13 @@ function toFriendlyPathLabel(segment: string) {
   }
 
   return cleaned.replace(/-/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function stripNavigationChildren(items: NavNode[]): NavNode[] {
+  return items.map((item) => ({
+    ...item,
+    children: [],
+  }));
 }
 
 const linkedOwnerAvatarStyle: CSSProperties = {

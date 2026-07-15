@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { CSSProperties } from "react";
+import DashboardAssetSummaryCard from "../components/dashboard/DashboardAssetSummaryCard";
+import Icon from "../../../components/ui/Icon";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
 import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
 import { assetMatchesLegalCategory, LEGAL_CATEGORIES } from "../../../lib/legalCategories";
@@ -108,11 +108,7 @@ export default function LegalOverviewPage() {
   }, [rows]);
 
   const visibleCategories = useMemo(
-    () => LEGAL_CATEGORIES.filter(
-      (category) =>
-        ["wills", "trusts", "power-of-attorney", "other-legal-documents"].includes(category.slug)
-        && isVaultSubsectionEnabled(preferences, mapLegalSlugToPreferenceKey(category.slug)),
-    ),
+    () => LEGAL_CATEGORIES.filter((category) => isVaultSubsectionEnabled(preferences, mapLegalSlugToPreferenceKey(category.slug))),
     [preferences],
   );
 
@@ -127,26 +123,28 @@ export default function LegalOverviewPage() {
       {status ? <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div> : null}
       {loading ? <div style={{ color: "#6b7280" }}>Loading legal categories...</div> : null}
 
-      {visibleCategories.length ? (
+      {visibleCategories.length || isVaultSubsectionEnabled(preferences, "personal_wishes") ? (
       <div className="lf-content-grid">
-        {visibleCategories.map((category) => {
-          const total = counts.get(category.slug) ?? 0;
-          return (
-            <Link key={category.slug} href={`/legal/${category.slug}`} style={cardStyle}>
-              <div style={{ fontWeight: 700 }}>{category.label}</div>
-              <div style={{ color: "#6b7280", fontSize: 13 }}>{category.description}</div>
-              <div style={{ color: "#334155", fontSize: 13 }}>
-                {total === 0 ? "Nothing saved yet" : `${total} record${total === 1 ? "" : "s"} ready to review`}
-              </div>
-            </Link>
-          );
-        })}
+        {visibleCategories.map((category) => (
+          <LegalSummaryTile
+            key={category.slug}
+            title={category.label}
+            description={category.description}
+            href={getLegalCategoryHref(category.slug)}
+            icon={getLegalCategoryIcon(category.slug)}
+            total={counts.get(category.slug) ?? 0}
+            addedAt={getLatestDate(rows, category.slug)}
+          />
+        ))}
         {isVaultSubsectionEnabled(preferences, "personal_wishes") ? (
-          <Link href="/personal/wishes" style={cardStyle}>
-            <div style={{ fontWeight: 700 }}>Personal Wishes</div>
-            <div style={{ color: "#6b7280", fontSize: 13 }}>Keep personal guidance, wishes, and instructions available from the legal review flow.</div>
-            <div style={{ color: "#334155", fontSize: 13 }}>Open the personal wishes workspace</div>
-          </Link>
+          <LegalSummaryTile
+            title="Personal Wishes"
+            description="Keep personal guidance, wishes, and instructions available from the legal review flow."
+            href="/personal/wishes"
+            icon="favorite"
+            total={counts.get("personal-wishes") ?? 0}
+            addedAt={getLatestDate(rows, "personal-wishes")}
+          />
         ) : null}
       </div>
       ) : (
@@ -156,6 +154,49 @@ export default function LegalOverviewPage() {
       )}
     </section>
   );
+}
+
+function LegalSummaryTile({
+  title,
+  description,
+  href,
+  icon,
+  total,
+  addedAt,
+}: {
+  title: string;
+  description: string;
+  href: string;
+  icon: string;
+  total: number;
+  addedAt: string | null;
+}) {
+  const hasRecords = total > 0;
+  const cardHref = hasRecords ? href : `${href}?add=1`;
+  return (
+    <div className="lf-finance-summary-tile">
+      <div className="lf-finance-summary-tile-desc">{description}</div>
+      <DashboardAssetSummaryCard
+        icon={<Icon name={icon} size={13} />}
+        title={title}
+        href={cardHref}
+        addedAt={addedAt}
+        value={hasRecords ? String(total) : "No records yet"}
+        detail={hasRecords ? `${total} active record${total === 1 ? "" : "s"}` : "No records yet"}
+        items={[]}
+        emptyActionLabel={hasRecords ? "Open category" : "Add record"}
+        emptyState={!hasRecords}
+      />
+    </div>
+  );
+}
+
+function getLatestDate(rows: LegalRow[], categoryKey: string) {
+  return rows
+    .filter((row) => (row.category_key || "other-legal-documents") === categoryKey)
+    .map((row) => row.created_at)
+    .filter((value): value is string => Boolean(value))
+    .sort((a, b) => Date.parse(b) - Date.parse(a))[0] ?? null;
 }
 
 function mapLegalSlugToPreferenceKey(slug: string): VaultSubsectionKey {
@@ -175,13 +216,26 @@ function mapLegalSlugToPreferenceKey(slug: string): VaultSubsectionKey {
   }
 }
 
-const cardStyle: CSSProperties = {
-  textDecoration: "none",
-  color: "#111827",
-  border: "1px solid #e5e7eb",
-  borderRadius: 14,
-  background: "#fff",
-  padding: 14,
-  display: "grid",
-  gap: 8,
-};
+function getLegalCategoryHref(slug: string) {
+  if (slug === "identity-documents") return "/identity-documents";
+  return `/legal/${slug}`;
+}
+
+function getLegalCategoryIcon(slug: string) {
+  switch (slug) {
+    case "wills":
+      return "history_edu";
+    case "trusts":
+      return "account_balance";
+    case "power-of-attorney":
+      return "gavel";
+    case "funeral-wishes":
+      return "volunteer_activism";
+    case "marriage-divorce-documents":
+      return "diversity_1";
+    case "identity-documents":
+      return "badge";
+    default:
+      return "description";
+  }
+}

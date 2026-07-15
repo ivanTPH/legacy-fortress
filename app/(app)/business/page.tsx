@@ -1,16 +1,30 @@
 "use client";
 
-import Link from "next/link";
-import type { CSSProperties } from "react";
-import UniversalRecordWorkspace from "../../../components/records/UniversalRecordWorkspace";
+import { useMemo } from "react";
+import CanonicalAssetOverviewGrid, { type CanonicalAssetOverviewTile } from "../components/dashboard/CanonicalAssetOverviewGrid";
+import DashboardAssetSummaryCard from "../components/dashboard/DashboardAssetSummaryCard";
+import Icon from "../../../components/ui/Icon";
 import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
-import { BUSINESS_WORKSPACE_CONFIG } from "../../../lib/assets/workspaceCategoryConfig";
 import { isVaultSubsectionEnabled } from "../../../lib/vaultPreferences";
 
 export default function BusinessOverviewPage() {
   const { preferences } = useVaultPreferences();
   const showBusinessInterests = isVaultSubsectionEnabled(preferences, "business_interests");
   const showEmployment = isVaultSubsectionEnabled(preferences, "business_employment");
+  const businessTiles: CanonicalAssetOverviewTile[] = useMemo(() => (
+    showBusinessInterests
+      ? [{
+        key: "business-interests",
+        title: "Business Interests",
+        description: "Manage business ownership, registrations, advisers, values, and supporting files.",
+        href: "/vault/business",
+        addHref: "/vault/business?add=1",
+        icon: "business_center",
+        sectionKey: "business",
+        categoryKey: "business",
+      }]
+      : []
+  ), [showBusinessInterests]);
 
   return (
     <section style={{ display: "grid", gap: 14 }}>
@@ -18,20 +32,21 @@ export default function BusinessOverviewPage() {
         <p style={{ margin: 0, color: "#6b7280" }}>
           Keep your business interests, workplace records, and supporting documents clear for future review.
         </p>
-        {showEmployment ? <Link href="/employment" style={employmentCardStyle}>
-          <div style={{ fontWeight: 700 }}>Employment</div>
-          <div style={{ color: "#64748b", fontSize: 13 }}>
-            Review workplace records, death-in-service details, and employer-linked documents.
-          </div>
-        </Link> : null}
       </div>
 
-      {showBusinessInterests ? <UniversalRecordWorkspace
-        sectionKey={BUSINESS_WORKSPACE_CONFIG.sectionKey}
-        categoryKey={BUSINESS_WORKSPACE_CONFIG.categoryKey}
-        title={BUSINESS_WORKSPACE_CONFIG.title}
-        subtitle={BUSINESS_WORKSPACE_CONFIG.subtitle}
-      /> : null}
+      {showBusinessInterests || showEmployment ? (
+        <div className="lf-content-grid">
+          <CanonicalAssetOverviewGrid tiles={businessTiles} />
+          {showEmployment ? (
+            <BusinessSummaryTile
+              title="Employment"
+              description="Review workplace records, death-in-service details, and employer-linked documents."
+              href="/employment"
+              icon="work"
+            />
+          ) : null}
+        </div>
+      ) : null}
       {!showBusinessInterests && !showEmployment ? (
         <div style={{ color: "#64748b", fontSize: 13 }}>
           Business subsections are currently hidden by My Vault preferences. Re-enable them in Account / My Vault at any time.
@@ -41,13 +56,30 @@ export default function BusinessOverviewPage() {
   );
 }
 
-const employmentCardStyle: CSSProperties = {
-  border: "1px solid #e5e7eb",
-  borderRadius: 14,
-  padding: 14,
-  background: "#fff",
-  textDecoration: "none",
-  color: "#111827",
-  display: "grid",
-  gap: 8,
-};
+function BusinessSummaryTile({
+  title,
+  description,
+  href,
+  icon,
+}: {
+  title: string;
+  description: string;
+  href: string;
+  icon: string;
+}) {
+  return (
+    <div className="lf-finance-summary-tile">
+      <div className="lf-finance-summary-tile-desc">{description}</div>
+      <DashboardAssetSummaryCard
+        icon={<Icon name={icon} size={13} />}
+        title={title}
+        href={`${href}?add=1`}
+        value="No records yet"
+        detail="No records yet"
+        items={[]}
+        emptyActionLabel="Add record"
+        emptyState
+      />
+    </div>
+  );
+}

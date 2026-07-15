@@ -20,6 +20,7 @@ export type LegalLinkedContactDefinition = {
   contactNameLabel: string;
   contactEmailLabel: string;
   contactRoleLabel: string;
+  roleOptions: Array<{ value: string; label: string }>;
   description: string;
 };
 
@@ -34,7 +35,7 @@ export const LEGAL_CATEGORIES: LegalCategoryMeta[] = [
   {
     slug: "trusts",
     label: "Trusts",
-    description: "Capture trust deeds, trustees, and supporting legal records.",
+    description: "Store trust deeds, trustees and supporting legal documents securely.",
     documentType: "trust",
     matchTypes: ["trust", "trusts"],
   },
@@ -144,6 +145,14 @@ export function getLegalLinkedContactDefinition(slug: string): LegalLinkedContac
       contactNameLabel: "Executor name",
       contactEmailLabel: "Executor email",
       contactRoleLabel: "Executor role",
+      roleOptions: [
+        { value: "executor", label: "Executor" },
+        { value: "co_executor", label: "Co-executor" },
+        { value: "reserve_executor", label: "Reserve executor" },
+        { value: "professional_executor", label: "Professional executor" },
+        { value: "legal_adviser", label: "Solicitor / legal adviser" },
+        { value: "guardian", label: "Guardian" },
+      ],
       description: "Link the executor or co-executor someone should contact when reviewing this will.",
     };
   }
@@ -151,10 +160,20 @@ export function getLegalLinkedContactDefinition(slug: string): LegalLinkedContac
   if (slug === "trusts") {
     return {
       defaultRole: "trustee",
-      contactNameLabel: "Trustee name",
-      contactEmailLabel: "Trustee email",
-      contactRoleLabel: "Trustee role",
-      description: "Link the trustee or trust contact responsible for this trust record.",
+      contactNameLabel: "Full name",
+      contactEmailLabel: "Email",
+      contactRoleLabel: "Role",
+      roleOptions: [
+        { value: "trustee", label: "Trustee" },
+        { value: "settlor", label: "Settlor" },
+        { value: "beneficiary", label: "Beneficiary" },
+        { value: "protector", label: "Protector" },
+        { value: "solicitor", label: "Solicitor" },
+        { value: "adviser", label: "Adviser" },
+        { value: "accountant", label: "Accountant" },
+        { value: "other", label: "Other" },
+      ],
+      description: "Link trustees and related people attached to this trust record.",
     };
   }
 
@@ -164,6 +183,12 @@ export function getLegalLinkedContactDefinition(slug: string): LegalLinkedContac
       contactNameLabel: "Attorney / advocate name",
       contactEmailLabel: "Attorney / advocate email",
       contactRoleLabel: "Authority role",
+      roleOptions: [
+        { value: "attorney", label: "Attorney" },
+        { value: "replacement_attorney", label: "Replacement attorney" },
+        { value: "certificate_provider", label: "Certificate provider" },
+        { value: "legal_adviser", label: "Solicitor / legal adviser" },
+      ],
       description: "Link the attorney, advocate, or named representative attached to this power of attorney.",
     };
   }
@@ -174,6 +199,13 @@ export function getLegalLinkedContactDefinition(slug: string): LegalLinkedContac
       contactNameLabel: "Family contact name",
       contactEmailLabel: "Family contact email",
       contactRoleLabel: "Family role",
+      roleOptions: [
+        { value: "family_member", label: "Family member" },
+        { value: "next_of_kin", label: "Next of kin" },
+        { value: "funeral_director", label: "Funeral director" },
+        { value: "celebrant", label: "Celebrant" },
+        { value: "legal_adviser", label: "Solicitor / legal adviser" },
+      ],
       description: "Link the family member or practical contact who should see these wishes first.",
     };
   }
