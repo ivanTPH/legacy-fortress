@@ -197,3 +197,48 @@ Helper:
 - Do not introduce new page-level attachment widgets when [AttachmentGallery.tsx](/Users/ivan-imac/legacy-fortress-web/components/documents/AttachmentGallery.tsx) or [DocumentsWorkspace.tsx](/Users/ivan-imac/legacy-fortress-web/components/documents/DocumentsWorkspace.tsx) already covers the need.
 - Do not add new `SectionWorkspace` routes for categories that can live in canonical `assets`.
 - Do not add another read/write path for Bank, Profile avatar, or canonical documents if a shared helper already exists.
+
+## Phase 2 stabilisation map
+
+Phase 2 dirty-file and reproducibility evidence now lives in:
+
+- [PHASE2_BASELINE_INVENTORY.md](/Users/ivan-imac/legacy-fortress-web/docs/stabilisation/PHASE2_BASELINE_INVENTORY.md)
+- [DIRTY_FILE_REGISTER.md](/Users/ivan-imac/legacy-fortress-web/docs/stabilisation/DIRTY_FILE_REGISTER.md)
+
+Additional current structure notes:
+
+- Admin foundation routes now use `/admin` as the canonical application dashboard landing route and `/admin/access-denied` as the denial page.
+- Internal admin APIs are under `app/api/internal/admin/*` and must continue to use shared admin capability helpers from `lib/admin/*`.
+- Probate case APIs are currently under `app/api/internal/admin/probate-cases/*`; treat them as capability-gated operational APIs, not page-local mock routes.
+- Local review/proof E2E specs are under `tests/e2e/*local*.spec.ts` and require the local app at `http://127.0.0.1:3012` plus local Supabase at `127.0.0.1:55421`.
+- `npm test` now runs deterministic unit/stabilisation/admin-doc checks. Local-Supabase/browser proofs are explicitly named as `npm run test:uat:local` and `npm run test:uat:admin`.
+- `npm run uat:validate` validates UAT/staging/local-UAT environment categories without printing secret values; see `scripts/validate-uat-environment.mjs` and `tests/uat-environment-validation.test.mjs`.
+- Phase 4D release evidence and controlled commit planning live under `docs/release/PHASE4D_*.md`.
+
+## Phase 3 product and dashboard refinement structure
+
+Phase 3 refinement planning now lives in:
+
+- [OWNER_REVIEW_BACKLOG.md](/Users/ivan-imac/legacy-fortress-web/docs/product/OWNER_REVIEW_BACKLOG.md)
+- [DASHBOARD_BOUNDARIES_AND_PRIVACY.md](/Users/ivan-imac/legacy-fortress-web/docs/product/DASHBOARD_BOUNDARIES_AND_PRIVACY.md)
+- [DASHBOARD_COMPONENT_STANDARD.md](/Users/ivan-imac/legacy-fortress-web/docs/architecture/DASHBOARD_COMPONENT_STANDARD.md)
+- [PHASE3_SELECTED_SLICE.md](/Users/ivan-imac/legacy-fortress-web/docs/product/PHASE3_SELECTED_SLICE.md)
+
+Local-only deterministic fixture definitions live in:
+
+- [phase3SyntheticFixturePack.mjs](/Users/ivan-imac/legacy-fortress-web/tests/fixtures/phase3SyntheticFixturePack.mjs)
+
+The first Phase 3 implementation slice keeps customer category dashboard cards on the shared `DashboardAssetSummaryCard` pattern. Future dashboard work should extend the documented metric/service boundaries before adding new UI.
+
+## Phase 4A customer dashboard structure
+
+Phase 4A adds:
+
+- [CanonicalAssetOverviewGrid.tsx](/Users/ivan-imac/legacy-fortress-web/app/(app)/components/dashboard/CanonicalAssetOverviewGrid.tsx)
+- [CUSTOMER_DASHBOARD_ROUTE_AND_DATA_INVENTORY.md](/Users/ivan-imac/legacy-fortress-web/docs/architecture/CUSTOMER_DASHBOARD_ROUTE_AND_DATA_INVENTORY.md)
+- [PHASE4A_SELECTED_SCOPE.md](/Users/ivan-imac/legacy-fortress-web/docs/product/PHASE4A_SELECTED_SCOPE.md)
+- [phase4aSyntheticFixturePack.mjs](/Users/ivan-imac/legacy-fortress-web/tests/fixtures/phase4aSyntheticFixturePack.mjs)
+- [phase4a-customer-dashboard-data-proof.test.mjs](/Users/ivan-imac/legacy-fortress-web/tests/phase4a-customer-dashboard-data-proof.test.mjs)
+- [phase4a-customer-dashboard-consistency.spec.ts](/Users/ivan-imac/legacy-fortress-web/tests/e2e/phase4a-customer-dashboard-consistency.spec.ts)
+
+Selected canonical overview pages are `/property`, `/business`, `/vault/digital`, and `/vault/personal`. These pages read canonical `assets` through shared helpers and render count-only summaries through `DashboardAssetSummaryCard`.

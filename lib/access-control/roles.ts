@@ -35,6 +35,7 @@ export type CollaboratorRole =
   | "accountant"
   | "financial_advisor"
   | "lawyer"
+  | "trustee"
   | "executor"
   | "power_of_attorney"
   | "friend_or_family";
@@ -98,6 +99,14 @@ export const ROLE_RULES: Record<CollaboratorRole, RoleRule> = {
     label: "Lawyer",
     allowedSections: ["dashboard", "legal"],
     allowedActions: ["view", "view_summary", "view_detail", "download"],
+    obscuredSections: ["profile", "personal", "financial", "property", "business", "digital"],
+    requiresVerifiedActivation: false,
+  },
+  trustee: {
+    role: "trustee",
+    label: "Trustee",
+    allowedSections: ["dashboard", "legal"],
+    allowedActions: ["view", "view_summary"],
     obscuredSections: ["profile", "personal", "financial", "property", "business", "digital"],
     requiresVerifiedActivation: false,
   },

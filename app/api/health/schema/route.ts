@@ -26,7 +26,7 @@ export async function GET() {
     detail: sectionEntries.error
       ? isMissingRelationError(sectionEntries.error, "section_entries")
         ? "missing_relation"
-        : "query_error"
+        : getSafeSchemaErrorDetail(sectionEntries.error)
       : "ok",
   });
 
@@ -37,7 +37,7 @@ export async function GET() {
     detail: profileAvatar.error
       ? isMissingColumnError(profileAvatar.error, "avatar_path")
         ? "missing_column"
-        : "query_error"
+        : getSafeSchemaErrorDetail(profileAvatar.error)
       : "ok",
   });
 
@@ -49,4 +49,24 @@ export async function GET() {
     },
     { status: allOk ? 200 : 503 },
   );
+}
+
+function getSafeSchemaErrorDetail(error: { status?: number; code?: string; message?: string }) {
+  const status = Number(error.status ?? 0);
+  const code = String(error.code ?? "").trim().toUpperCase();
+  const message = String(error.message ?? "").toLowerCase();
+
+  if (status === 401 || status === 403 || message.includes("jwt") || message.includes("signature")) {
+    return "authentication_failed";
+  }
+
+  if (status >= 500 || message.includes("fetch failed") || message.includes("connection")) {
+    return "supabase_unreachable";
+  }
+
+  if (code.startsWith("42") || message.includes("schema cache")) {
+    return "migration_mismatch";
+  }
+
+  return "query_failed";
 }

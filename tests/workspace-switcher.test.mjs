@@ -30,14 +30,14 @@ test("workspace route map resolves role-aware admin and application workspaces c
     "Probate Review",
   ]);
   assert.deepEqual(superAdmin.map((workspace) => workspace.href), [
-    "/dashboard?role=super_admin&admin=true&prototype=true",
+    "/user?role=super_admin&admin=true&prototype=true",
     "/internal/admin/prototype/users?role=super_admin&admin=true&prototype=true",
-    "/internal/admin/prototype/enterprise?role=enterprise_admin&admin=true&prototype=true",
-    "/internal/admin/prototype/cases?role=probate_admin&admin=true&prototype=true",
+    "/application/enterprise?role=enterprise_admin&admin=true&prototype=true",
+    "/application/admin?role=probate_admin&admin=true&prototype=true",
   ]);
   assert.equal(
     buildPrototypeWorkspaceUrl("application", { prototype: true, currentRole: "super_admin" }),
-    "/dashboard?role=super_admin&admin=true&prototype=true",
+    "/user?role=super_admin&admin=true&prototype=true",
   );
   assert.equal(
     buildPrototypeWorkspaceUrl("super_admin"),
@@ -114,7 +114,10 @@ test("workspace switcher is present in admin shell, application shell, sign-in, 
 test("current workspace detection recognises enterprise, probate, executor, and application routes", () => {
   assert.equal(getCurrentWorkspaceForPath("/internal/admin/prototype/users"), "super_admin");
   assert.equal(getCurrentWorkspaceForPath("/internal/admin/prototype/enterprise"), "enterprise_admin");
+  assert.equal(getCurrentWorkspaceForPath("/application/enterprise"), "enterprise_admin");
   assert.equal(getCurrentWorkspaceForPath("/internal/admin/prototype/cases"), "probate_admin");
+  assert.equal(getCurrentWorkspaceForPath("/application/admin"), "probate_admin");
   assert.equal(getCurrentWorkspaceForPath("/executors"), "executor");
+  assert.equal(getCurrentWorkspaceForPath("/user"), "application");
   assert.equal(getCurrentWorkspaceForPath("/dashboard"), "application");
 });
