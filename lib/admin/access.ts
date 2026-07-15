@@ -1,10 +1,24 @@
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
 import { createSupabaseAdminClient, getSupabaseAdminConfigIssue } from "../supabaseAdmin.ts";
 import { MASTER_ADMIN_EMAIL, normalizeAdminEmail } from "../auth/adminRoles.ts";
+import {
+  deriveAdminRole,
+  getAdminRoleCapabilities,
+  getDeniedAdminCapabilityMessage,
+  hasAdminCapability,
+  normalizeAdminRole,
+  type AdminCapability,
+  type AdminRole,
+} from "./capabilities.ts";
 
 export { MASTER_ADMIN_EMAIL, normalizeAdminEmail };
 
 type AnySupabaseClient = SupabaseClient;
+type AdminRoleOverride = AdminRole | "standard_user" | "revoked_admin";
+type AdminRowResponse = {
+  data: Record<string, unknown> | null;
+  error: { message: string } | null;
+};
 
 export type AdminUserRow = {
   id: string;
@@ -13,6 +27,7 @@ export type AdminUserRow = {
   display_name: string | null;
   status: "active" | "inactive";
   is_master: boolean;
+  role: AdminRole | string | null;
   granted_by_user_id: string | null;
   created_at: string;
   updated_at: string;
@@ -22,14 +37,38 @@ export type AdminAccessState = {
   user: User;
   emailNormalized: string;
   isMasterAdmin: boolean;
+  adminRole: AdminRole;
+  capabilities: AdminCapability[];
   adminRow: AdminUserRow;
 };
 
-const ADMIN_SELECT = "id,email_normalized,user_id,display_name,status,is_master,granted_by_user_id,created_at,updated_at";
+const ADMIN_ROLE_OVERRIDE_COOKIE = "lf_admin_role_override";
+
+const ADMIN_SELECT = "id,email_normalized,user_id,display_name,status,is_master,role,granted_by_user_id,created_at,updated_at";
+const LEGACY_ADMIN_SELECT = "id,email_normalized,user_id,display_name,status,is_master,granted_by_user_id,created_at,updated_at";
 
 export function isMasterAdminEmail(email: string | null | undefined) {
   return normalizeAdminEmail(email) === MASTER_ADMIN_EMAIL;
 }
+
+export function isLocalAdminRoleHarnessEnabled() {
+  const url = String(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "");
+  return process.env.NODE_ENV !== "production" && (url.includes("127.0.0.1") || url.includes("localhost"));
+}
+
+export function getLocalAdminRoleOverride(request: Request): AdminRoleOverride | null {
+  if (!isLocalAdminRoleHarnessEnabled()) return null;
+  const cookieHeader = request.headers.get("cookie") ?? "";
+  const cookie = cookieHeader
+    .split(";")
+    .map((item) => item.trim())
+    .find((item) => item.startsWith(`${ADMIN_ROLE_OVERRIDE_COOKIE}=`));
+  const value = decodeURIComponent(cookie?.split("=").slice(1).join("=") ?? "");
+  if (value === "standard_user" || value === "revoked_admin") return value;
+  return normalizeAdminRole(value);
+}
+
+export { ADMIN_ROLE_OVERRIDE_COOKIE };
 
 export function isAdminAccessGranted(
   email: string | null | undefined,
@@ -91,6 +130,7 @@ export async function ensureMasterAdminRecord(
         display_name: "Master Admin",
         status: "active",
         is_master: true,
+        role: "super_admin",
         granted_by_user_id: userId,
         updated_at: now,
       },
@@ -98,6 +138,29 @@ export async function ensureMasterAdminRecord(
     )
     .select(ADMIN_SELECT)
     .single();
+
+  if (upsert.error && /role/i.test(upsert.error.message)) {
+    const legacyUpsert = await client
+      .from("admin_users")
+      .upsert(
+        {
+          email_normalized: MASTER_ADMIN_EMAIL,
+          user_id: userId,
+          display_name: "Master Admin",
+          status: "active",
+          is_master: true,
+          granted_by_user_id: userId,
+          updated_at: now,
+        },
+        { onConflict: "email_normalized" },
+      )
+      .select(LEGACY_ADMIN_SELECT)
+      .single();
+    if (legacyUpsert.error || !legacyUpsert.data) {
+      throw new Error(legacyUpsert.error?.message || "Could not ensure master admin record.");
+    }
+    return { ...legacyUpsert.data, role: null } as AdminUserRow;
+  }
 
   if (upsert.error || !upsert.data) {
     throw new Error(upsert.error?.message || "Could not ensure master admin record.");
@@ -135,11 +198,21 @@ export async function requireAdminAccess(request: Request): Promise<
   }
 
   const emailNormalized = normalizeAdminEmail(requestUser.user.email);
-  const rowRes = await adminClient
+  let rowRes = await adminClient
     .from("admin_users")
     .select(ADMIN_SELECT)
     .eq("email_normalized", emailNormalized)
-    .maybeSingle();
+    .maybeSingle() as AdminRowResponse;
+  if (rowRes.error && /role/i.test(rowRes.error.message)) {
+    rowRes = await adminClient
+      .from("admin_users")
+      .select(LEGACY_ADMIN_SELECT)
+      .eq("email_normalized", emailNormalized)
+      .maybeSingle() as AdminRowResponse;
+    if (rowRes.data) {
+      rowRes.data = { ...rowRes.data, role: null };
+    }
+  }
 
   let adminRow = (rowRes.data ?? null) as AdminUserRow | null;
 
@@ -156,12 +229,23 @@ export async function requireAdminAccess(request: Request): Promise<
   }
 
   if (adminRow && !adminRow.user_id) {
-    const claimRes = await adminClient
+    let claimRes = await adminClient
       .from("admin_users")
       .update({ user_id: requestUser.user.id, updated_at: new Date().toISOString() })
       .eq("id", adminRow.id)
       .select(ADMIN_SELECT)
-      .single();
+      .single() as AdminRowResponse;
+    if (claimRes.error && /role/i.test(claimRes.error.message)) {
+      claimRes = await adminClient
+        .from("admin_users")
+        .update({ user_id: requestUser.user.id, updated_at: new Date().toISOString() })
+        .eq("id", adminRow.id)
+        .select(LEGACY_ADMIN_SELECT)
+        .single() as AdminRowResponse;
+      if (claimRes.data) {
+        claimRes.data = { ...claimRes.data, role: null };
+      }
+    }
     if (!claimRes.error && claimRes.data) {
       adminRow = claimRes.data as AdminUserRow;
     }
@@ -175,14 +259,50 @@ export async function requireAdminAccess(request: Request): Promise<
     };
   }
 
+  const normalizedAdminRole = normalizeAdminRole(adminRow.role);
+  if (!adminRow.is_master && adminRow.role && !normalizedAdminRole) {
+    return {
+      ok: false,
+      status: 403,
+      message: "Admin access is restricted.",
+      issue: "invalid_admin_role",
+    };
+  }
+
+  const realRole = adminRow.is_master ? deriveAdminRole(adminRow) : normalizedAdminRole ?? deriveAdminRole(adminRow);
+  const overrideRole = getLocalAdminRoleOverride(request);
+  if (overrideRole === "standard_user" || overrideRole === "revoked_admin") {
+    return {
+      ok: false,
+      status: 403,
+      message: "Admin access is restricted.",
+    };
+  }
+  const effectiveRole = overrideRole ?? realRole;
+
   return {
     ok: true,
     access: {
       user: requestUser.user,
       emailNormalized,
       isMasterAdmin: isMasterAdminEmail(emailNormalized) || adminRow.is_master,
+      adminRole: effectiveRole,
+      capabilities: getAdminRoleCapabilities(effectiveRole),
       adminRow,
     },
     adminClient,
+  };
+}
+
+export function adminHasCapability(access: AdminAccessState, capability: AdminCapability) {
+  return hasAdminCapability(access.adminRole, capability);
+}
+
+export function requireAdminCapability(access: AdminAccessState, capability: AdminCapability) {
+  if (adminHasCapability(access, capability)) return null;
+  return {
+    status: 403,
+    message: getDeniedAdminCapabilityMessage(capability),
+    capability,
   };
 }

@@ -1,7 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 
+const PUBLIC_SUPABASE_URL_ENV = "NEXT_PUBLIC_SUPABASE_URL";
+
+export function getServerSupabaseUrl() {
+  return process.env.SUPABASE_URL || process.env[PUBLIC_SUPABASE_URL_ENV];
+}
+
 export function getSupabaseAdminConfigIssue() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const url = getServerSupabaseUrl();
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url) return "missing_url";
   const normalizedKey = String(key ?? "").trim();
@@ -21,7 +27,7 @@ function isSupportedServiceRoleKey(key: string) {
 export function createSupabaseAdminClient() {
   const issue = getSupabaseAdminConfigIssue();
   if (issue) return null;
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
+  const url = getServerSupabaseUrl() as string;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY as string;
   return createClient(url, key, {
     auth: {

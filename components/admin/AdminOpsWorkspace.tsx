@@ -11,6 +11,8 @@ type AdminSessionPayload = {
   admin?: {
     email: string;
     isMasterAdmin: boolean;
+    role: string;
+    capabilities: string[];
     displayName: string;
   };
   admins?: Array<{
@@ -81,6 +83,49 @@ type AdminSupportSnapshot = {
   }>;
 };
 
+type AdminAuditHistoryItem = {
+  id: string;
+  category: string;
+  action: string;
+  result: string;
+  actorEmail: string | null;
+  actorRole: string | null;
+  resourceType: string;
+  resourceLabel: string | null;
+  route: string;
+  policyDecision: string;
+  createdAt: string;
+};
+
+type ProbateCaseEvidenceItem = {
+  id: string;
+  caseId: string;
+  evidenceType: string;
+  source: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  reviewStatus: string;
+  createdAt: string;
+};
+
+type ProbateCaseItem = {
+  id: string;
+  ownerName: string;
+  contactName: string;
+  contactEmail: string;
+  assignedRole: string;
+  caseType: string;
+  status: string;
+  submittedAt: string;
+  reviewedAt: string | null;
+  decidedAt: string | null;
+  decisionReason: string | null;
+  applicantStatusMessage: string;
+  accessGrantId: string | null;
+  evidence: ProbateCaseEvidenceItem[];
+};
+
 type LoadState = "checking" | "ready" | "denied";
 
 export default function AdminOpsWorkspace() {
@@ -94,16 +139,28 @@ export default function AdminOpsWorkspace() {
   const [lookupLoading, setLookupLoading] = useState(false);
   const [verificationQueue, setVerificationQueue] = useState<AdminVerificationItem[]>([]);
   const [support, setSupport] = useState<AdminSupportSnapshot | null>(null);
+  const [auditHistory, setAuditHistory] = useState<AdminAuditHistoryItem[]>([]);
+  const [probateCases, setProbateCases] = useState<ProbateCaseItem[]>([]);
+  const [probateDecisionNotes, setProbateDecisionNotes] = useState("");
+  const [actingProbateCaseId, setActingProbateCaseId] = useState("");
+  const [uploadingEvidenceFor, setUploadingEvidenceFor] = useState("");
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [savingAdmin, setSavingAdmin] = useState(false);
   const [actingVerificationId, setActingVerificationId] = useState("");
+  const capabilities = adminInfo?.capabilities ?? [];
+  const canManageAdmins = capabilities.includes("admin_users:manage");
+  const canLookupUsers = capabilities.includes("users:lookup");
+  const canReadSupport = capabilities.includes("support:read");
+  const canReviewVerification = capabilities.includes("verification:review");
+  const canDecideVerification = capabilities.includes("verification:decide");
+  const canReadAudit = capabilities.includes("audit:read");
 
   const authFetch = useCallback(async (input: string, init?: RequestInit) => {
     const sessionRes = await supabase.auth.getSession();
     const token = sessionRes.data.session?.access_token ?? "";
     const headers = new Headers(init?.headers ?? {});
     if (token) headers.set("authorization", `Bearer ${token}`);
-    if (!headers.has("content-type") && init?.body) headers.set("content-type", "application/json");
+    if (!headers.has("content-type") && init?.body && !(init.body instanceof FormData)) headers.set("content-type", "application/json");
     return fetch(input, {
       ...init,
       headers,
@@ -119,10 +176,12 @@ export default function AdminOpsWorkspace() {
       return;
     }
 
-    const [sessionRes, verificationRes, supportRes] = await Promise.all([
+    const [sessionRes, verificationRes, supportRes, auditRes, probateRes] = await Promise.all([
       authFetch("/api/internal/admin/session"),
       authFetch("/api/internal/admin/verifications"),
       authFetch("/api/internal/admin/support"),
+      authFetch("/api/internal/admin/audit-history?limit=25"),
+      authFetch("/api/internal/admin/probate-cases"),
     ]);
 
     const sessionJson = (await sessionRes.json().catch(() => ({}))) as AdminSessionPayload;
@@ -137,8 +196,12 @@ export default function AdminOpsWorkspace() {
 
     const verificationJson = (await verificationRes.json().catch(() => ({}))) as { queue?: AdminVerificationItem[] };
     const supportJson = (await supportRes.json().catch(() => ({}))) as { support?: AdminSupportSnapshot };
+    const auditJson = (await auditRes.json().catch(() => ({}))) as { events?: AdminAuditHistoryItem[] };
+    const probateJson = (await probateRes.json().catch(() => ({}))) as { cases?: ProbateCaseItem[] };
     setVerificationQueue(verificationJson.queue ?? []);
     setSupport(supportJson.support ?? null);
+    setAuditHistory(auditJson.events ?? []);
+    setProbateCases(probateJson.cases ?? []);
     setState("ready");
   }, [authFetch, router]);
 
@@ -196,6 +259,57 @@ export default function AdminOpsWorkspace() {
     setActingVerificationId("");
   }
 
+  async function actOnProbateCase(caseId: string, action: "request_information" | "review" | "approve" | "reject" | "revoke") {
+    setActingProbateCaseId(caseId);
+    setStatus("");
+    const res = await authFetch(`/api/internal/admin/probate-cases/${caseId}/actions`, {
+      method: "POST",
+      body: JSON.stringify({ action, reason: probateDecisionNotes }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; case?: ProbateCaseItem; message?: string };
+    if (!res.ok || !json.ok || !json.case) {
+      setStatus(json.message || "Could not update probate case.");
+    } else {
+      setProbateCases((current) => current.map((item) => item.id === caseId ? json.case! : item));
+      setProbateDecisionNotes("");
+    }
+    setActingProbateCaseId("");
+  }
+
+  async function uploadProbateEvidence(caseId: string, file: File | null) {
+    if (!file) return;
+    setUploadingEvidenceFor(caseId);
+    setStatus("");
+    const form = new FormData();
+    form.set("file", file);
+    form.set("evidenceType", "other_supporting_evidence");
+    const res = await authFetch(`/api/internal/admin/probate-cases/${caseId}/evidence`, {
+      method: "POST",
+      body: form,
+      headers: {},
+    });
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; evidence?: ProbateCaseEvidenceItem; message?: string };
+    if (!res.ok || !json.ok || !json.evidence) {
+      setStatus(json.message || "Could not upload evidence.");
+    } else {
+      setProbateCases((current) => current.map((item) => item.id === caseId
+        ? { ...item, evidence: [json.evidence!, ...item.evidence] }
+        : item));
+    }
+    setUploadingEvidenceFor("");
+  }
+
+  async function openProbateEvidence(caseId: string, evidenceId: string) {
+    setStatus("");
+    const res = await authFetch(`/api/internal/admin/probate-cases/${caseId}/evidence/${evidenceId}/signed-url`);
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; signedUrl?: string; message?: string };
+    if (!res.ok || !json.ok || !json.signedUrl) {
+      setStatus(json.message || "Could not open evidence.");
+      return;
+    }
+    window.open(json.signedUrl, "_blank", "noopener,noreferrer");
+  }
+
   const supportCards = useMemo(() => {
     if (!support) return [];
     return [
@@ -238,7 +352,8 @@ export default function AdminOpsWorkspace() {
         </div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
           <span style={pillStyle}>{adminInfo?.displayName || adminInfo?.email}</span>
-          {adminInfo?.isMasterAdmin ? <span style={masterPillStyle}>Master admin</span> : <span style={pillStyle}>Authorised admin</span>}
+          {adminInfo?.isMasterAdmin ? <span style={masterPillStyle}>Master admin</span> : <span style={pillStyle}>{String(adminInfo?.role ?? "authorised_admin").replace(/_/g, " ")}</span>}
+          <span style={pillStyle}>{capabilities.length} permissions</span>
           <Link href="/dashboard" style={linkBtnStyle}>Open customer dashboard</Link>
         </div>
       </section>
@@ -250,10 +365,10 @@ export default function AdminOpsWorkspace() {
           <div style={sectionHeaderStyle}>
             <div>
               <h2 style={h2Style}>Admin users</h2>
-              <div style={mutedStyle}>Designate additional admin users without exposing admin entry points in the main application.</div>
+              <div style={mutedStyle}>{canManageAdmins ? "Designate additional admin users without exposing admin entry points in the main application." : "Your current admin role does not include admin user management."}</div>
             </div>
           </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {canManageAdmins ? <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <input
               value={newAdminEmail}
               onChange={(event) => setNewAdminEmail(event.target.value)}
@@ -263,7 +378,7 @@ export default function AdminOpsWorkspace() {
             <button type="button" style={primaryBtnStyle} onClick={() => void saveAdminUser()} disabled={savingAdmin}>
               {savingAdmin ? "Saving..." : "Add admin"}
             </button>
-          </div>
+          </div> : null}
           <div style={{ display: "grid", gap: 8 }}>
             {admins.map((item) => (
               <article key={item.id} style={rowStyle}>
@@ -282,18 +397,18 @@ export default function AdminOpsWorkspace() {
           <div style={sectionHeaderStyle}>
             <div>
               <h2 style={h2Style}>Support tools</h2>
-              <div style={mutedStyle}>High-level signals for invitation, linked access, and verification support work.</div>
+              <div style={mutedStyle}>{canReadSupport ? "High-level signals for invitation, linked access, and verification support work." : "Support queue access is not available for this admin role."}</div>
             </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 10 }}>
+          {canReadSupport ? <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 10 }}>
             {supportCards.map((item) => (
               <div key={item.label} style={metricCardStyle}>
                 <div style={mutedStyle}>{item.label}</div>
                 <div style={{ fontSize: 24, fontWeight: 700 }}>{item.value}</div>
               </div>
             ))}
-          </div>
-          <div style={{ display: "grid", gap: 8 }}>
+          </div> : null}
+          {canReadSupport ? <div style={{ display: "grid", gap: 8 }}>
             {(support?.issues ?? []).map((item) => (
               <article key={item.invitationId} style={rowStyle}>
                 <div style={{ fontWeight: 700 }}>{item.contactName || item.contactEmail}</div>
@@ -302,7 +417,7 @@ export default function AdminOpsWorkspace() {
               </article>
             ))}
             {support && support.issues.length === 0 ? <div style={mutedStyle}>No invitation or linked-access issues need attention right now.</div> : null}
-          </div>
+          </div> : null}
         </section>
       </section>
 
@@ -310,10 +425,10 @@ export default function AdminOpsWorkspace() {
         <div style={sectionHeaderStyle}>
           <div>
             <h2 style={h2Style}>User lookup</h2>
-            <div style={mutedStyle}>Search by email or display name and review a safe account summary for support context.</div>
+            <div style={mutedStyle}>{canLookupUsers ? "Search by email or display name and review a safe account summary for support context." : "User lookup requires support or super admin permission."}</div>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {canLookupUsers ? <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <input
             value={lookupQuery}
             onChange={(event) => setLookupQuery(event.target.value)}
@@ -323,8 +438,8 @@ export default function AdminOpsWorkspace() {
           <button type="button" style={primaryBtnStyle} onClick={() => void runLookup()} disabled={lookupLoading}>
             {lookupLoading ? "Searching..." : "Search users"}
           </button>
-        </div>
-        <div style={{ display: "grid", gap: 8 }}>
+        </div> : null}
+        {canLookupUsers ? <div style={{ display: "grid", gap: 8 }}>
           {lookupResults.map((item) => (
             <article key={item.userId} style={rowStyle}>
               <div style={{ fontWeight: 700 }}>{item.displayName}</div>
@@ -342,17 +457,17 @@ export default function AdminOpsWorkspace() {
             </article>
           ))}
           {!lookupLoading && lookupResults.length === 0 ? <div style={mutedStyle}>Search results will appear here.</div> : null}
-        </div>
+        </div> : null}
       </section>
 
       <section style={panelStyle}>
         <div style={sectionHeaderStyle}>
           <div>
             <h2 style={h2Style}>Executor verification queue</h2>
-            <div style={mutedStyle}>Review submitted evidence and decide whether linked access can move forward.</div>
+            <div style={mutedStyle}>{canReviewVerification || canDecideVerification ? "Review submitted evidence and decide whether linked access can move forward." : "Verification queue access is not available for this admin role."}</div>
           </div>
         </div>
-        <div style={{ display: "grid", gap: 10 }}>
+        {canReviewVerification || canDecideVerification ? <div style={{ display: "grid", gap: 10 }}>
           {verificationQueue.map((item) => (
             <article key={item.id} style={rowStyle}>
               <div style={{ display: "grid", gap: 4 }}>
@@ -368,20 +483,126 @@ export default function AdminOpsWorkspace() {
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button type="button" style={ghostBtnStyle} onClick={() => void actOnVerification(item.id, "review")} disabled={actingVerificationId === item.id}>
+                <button type="button" style={ghostBtnStyle} onClick={() => void actOnVerification(item.id, "review")} disabled={!canReviewVerification || actingVerificationId === item.id}>
                   Mark reviewed
                 </button>
-                <button type="button" style={primaryBtnStyle} onClick={() => void actOnVerification(item.id, "approve")} disabled={actingVerificationId === item.id}>
+                <button type="button" style={primaryBtnStyle} onClick={() => void actOnVerification(item.id, "approve")} disabled={!canDecideVerification || actingVerificationId === item.id}>
                   Approve
                 </button>
-                <button type="button" style={dangerBtnStyle} onClick={() => void actOnVerification(item.id, "reject")} disabled={actingVerificationId === item.id}>
+                <button type="button" style={dangerBtnStyle} onClick={() => void actOnVerification(item.id, "reject")} disabled={!canDecideVerification || actingVerificationId === item.id}>
                   Reject
                 </button>
               </div>
             </article>
           ))}
           {verificationQueue.length === 0 ? <div style={mutedStyle}>No executor verification cases are waiting in the queue.</div> : null}
+        </div> : null}
+      </section>
+
+      <section style={panelStyle}>
+        <div style={sectionHeaderStyle}>
+          <div>
+            <h2 style={h2Style}>Probate and executor cases</h2>
+            <div style={mutedStyle}>{canReviewVerification || canDecideVerification ? "Live governed cases with evidence, required notes, decisions, access grants, revocation and audit events." : "Probate case access is not available for this admin role."}</div>
+          </div>
         </div>
+        {canReviewVerification || canDecideVerification ? (
+          <div style={{ display: "grid", gap: 12 }}>
+            <label style={{ display: "grid", gap: 6 }}>
+              <span style={mutedStyle}>Decision notes required for request-info, review, approve, reject and revoke</span>
+              <textarea
+                value={probateDecisionNotes}
+                onChange={(event) => setProbateDecisionNotes(event.target.value)}
+                placeholder="Record the operational reason before changing a case."
+                style={{ ...inputStyle, minHeight: 72, resize: "vertical" }}
+              />
+            </label>
+            {probateCases.map((item) => (
+              <article key={item.id} style={rowStyle}>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                  <span style={positivePillStyle}>{item.status.replace(/_/g, " ")}</span>
+                  <span style={pillStyle}>{item.caseType.replace(/_/g, " ")}</span>
+                  <span style={pillStyle}>{item.assignedRole.replace(/_/g, " ")}</span>
+                </div>
+                <div style={{ fontWeight: 700 }}>{item.ownerName} · {item.contactName}</div>
+                <div style={mutedStyle}>{item.contactEmail || "No contact email"} · Submitted {formatDate(item.submittedAt)}</div>
+                <div style={mutedStyle}>{item.applicantStatusMessage}</div>
+                {item.decisionReason ? <div style={mutedStyle}>Last notes: {item.decisionReason}</div> : null}
+                <div style={{ display: "grid", gap: 6 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13 }}>Evidence</div>
+                  {item.evidence.map((evidence) => (
+                    <div key={evidence.id} style={{ ...rowStyle, background: "#fff" }}>
+                      <div style={{ fontWeight: 700 }}>{evidence.fileName}</div>
+                      <div style={mutedStyle}>{evidence.evidenceType.replace(/_/g, " ")} · {evidence.mimeType} · {formatDate(evidence.createdAt)}</div>
+                      <button type="button" style={ghostBtnStyle} onClick={() => void openProbateEvidence(item.id, evidence.id)}>
+                        View evidence
+                      </button>
+                    </div>
+                  ))}
+                  {item.evidence.length === 0 ? <div style={mutedStyle}>No evidence linked yet.</div> : null}
+                  <label style={ghostBtnStyle}>
+                    {uploadingEvidenceFor === item.id ? "Uploading..." : "Upload evidence"}
+                    <input
+                      type="file"
+                      style={{ display: "none" }}
+                      onChange={(event) => {
+                        const file = event.currentTarget.files?.[0] ?? null;
+                        event.currentTarget.value = "";
+                        void uploadProbateEvidence(item.id, file);
+                      }}
+                    />
+                  </label>
+                </div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button type="button" style={ghostBtnStyle} disabled={!canReviewVerification || actingProbateCaseId === item.id} onClick={() => void actOnProbateCase(item.id, "request_information")}>
+                    Request information
+                  </button>
+                  <button type="button" style={ghostBtnStyle} disabled={!canReviewVerification || actingProbateCaseId === item.id} onClick={() => void actOnProbateCase(item.id, "review")}>
+                    Mark under review
+                  </button>
+                  <button type="button" style={primaryBtnStyle} disabled={!canDecideVerification || actingProbateCaseId === item.id} onClick={() => void actOnProbateCase(item.id, "approve")}>
+                    Approve limited access
+                  </button>
+                  <button type="button" style={dangerBtnStyle} disabled={!canDecideVerification || actingProbateCaseId === item.id} onClick={() => void actOnProbateCase(item.id, "reject")}>
+                    Reject
+                  </button>
+                  <button type="button" style={dangerBtnStyle} disabled={!canDecideVerification || actingProbateCaseId === item.id} onClick={() => void actOnProbateCase(item.id, "revoke")}>
+                    Revoke access
+                  </button>
+                </div>
+              </article>
+            ))}
+            {probateCases.length === 0 ? <div style={mutedStyle}>No live probate or executor cases are available yet.</div> : null}
+          </div>
+        ) : null}
+      </section>
+
+      <section style={panelStyle} aria-label="Audit history">
+        <div style={sectionHeaderStyle}>
+          <div>
+            <h2 style={h2Style}>Audit history</h2>
+            <div style={mutedStyle}>{canReadAudit ? "Read-only view of recent admin audit events. Payload metadata and internal secrets are not shown." : "Audit history requires auditor or super admin permission."}</div>
+          </div>
+        </div>
+        {canReadAudit ? <div style={{ display: "grid", gap: 10 }}>
+          {auditHistory.map((item) => (
+            <article key={item.id} style={rowStyle}>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                <span style={positivePillStyle}>{item.result.replace(/_/g, " ")}</span>
+                <span style={pillStyle}>{item.category.replace(/_/g, " ")}</span>
+                <span style={pillStyle}>{item.policyDecision.replace(/_/g, " ")}</span>
+              </div>
+              <div style={{ fontWeight: 700 }}>{item.action}</div>
+              <div style={mutedStyle}>
+                {item.actorEmail || "Unknown actor"} · {item.actorRole ? item.actorRole.replace(/_/g, " ") : "unknown role"} · {formatDate(item.createdAt)}
+              </div>
+              <div style={mutedStyle}>
+                {item.resourceType.replace(/_/g, " ")}{item.resourceLabel ? ` · ${item.resourceLabel}` : ""} · {item.route}
+              </div>
+            </article>
+          ))}
+          {auditHistory.length === 0 ? <div style={mutedStyle}>No audit events are available yet.</div> : null}
+        </div> : null}
       </section>
     </main>
   );

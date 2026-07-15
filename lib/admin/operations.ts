@@ -4,6 +4,14 @@ import { MASTER_ADMIN_EMAIL, normalizeAdminEmail } from "./access.ts";
 import { buildVerificationActionKey, deriveBlockingState } from "../workflow/blockingModel.ts";
 
 type AnySupabaseClient = SupabaseClient;
+type AdminRowsResponse = {
+  data: Array<Record<string, unknown>> | null;
+  error: { message: string } | null;
+};
+type AdminRowResponse = {
+  data: Record<string, unknown> | null;
+  error: { message: string } | null;
+};
 
 type AuthListUser = {
   id: string;
@@ -123,7 +131,27 @@ export type AdminSupportSnapshot = {
   }>;
 };
 
+export type AdminAuditHistoryItem = {
+  id: string;
+  category: string;
+  action: string;
+  result: string;
+  actorEmail: string | null;
+  actorRole: string | null;
+  resourceType: string;
+  resourceLabel: string | null;
+  route: string;
+  policyDecision: string;
+  createdAt: string;
+};
+
 export type VerificationAction = "approve" | "reject" | "review";
+
+export function normalizeAuditHistoryLimit(value: string | number | null | undefined) {
+  const parsed = Number.parseInt(String(value ?? ""), 10);
+  if (!Number.isFinite(parsed)) return 50;
+  return Math.min(Math.max(parsed, 1), 100);
+}
 
 export function buildVerificationMutation(action: VerificationAction) {
   if (action === "approve") {
@@ -159,11 +187,22 @@ export function buildSupportIssueLabel(invitationStatus: string, activationStatu
 }
 
 export async function listAdminUsers(client: AnySupabaseClient) {
-  const res = await client
+  let res = await client
     .from("admin_users")
-    .select("id,email_normalized,user_id,display_name,status,is_master,granted_by_user_id,created_at,updated_at")
+    .select("id,email_normalized,user_id,display_name,status,is_master,role,granted_by_user_id,created_at,updated_at")
     .order("is_master", { ascending: false })
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true }) as AdminRowsResponse;
+
+  if (res.error && /role/i.test(res.error.message)) {
+    res = await client
+      .from("admin_users")
+      .select("id,email_normalized,user_id,display_name,status,is_master,granted_by_user_id,created_at,updated_at")
+      .order("is_master", { ascending: false })
+      .order("created_at", { ascending: true }) as AdminRowsResponse;
+    if (res.data) {
+      res.data = res.data.map((row) => ({ ...row, role: null }));
+    }
+  }
 
   if (res.error) {
     throw new Error(res.error.message);
@@ -171,6 +210,33 @@ export async function listAdminUsers(client: AnySupabaseClient) {
 
   const rows = (res.data ?? []) as AdminUserRow[];
   return rows.sort((a, b) => Number(b.is_master) - Number(a.is_master) || a.email_normalized.localeCompare(b.email_normalized));
+}
+
+export async function loadAuditHistory(client: AnySupabaseClient, limit: number) {
+  const boundedLimit = normalizeAuditHistoryLimit(limit);
+  const res = await client
+    .from("audit_events")
+    .select("id,category,action,result,actor_email_normalized,actor_role,resource_type,resource_label,route,policy_decision,created_at")
+    .order("created_at", { ascending: false })
+    .limit(boundedLimit) as AdminRowsResponse;
+
+  if (res.error) {
+    throw new Error(res.error.message);
+  }
+
+  return (res.data ?? []).map((row) => ({
+    id: String(row.id ?? ""),
+    category: String(row.category ?? ""),
+    action: String(row.action ?? ""),
+    result: String(row.result ?? ""),
+    actorEmail: typeof row.actor_email_normalized === "string" ? row.actor_email_normalized : null,
+    actorRole: typeof row.actor_role === "string" ? row.actor_role : null,
+    resourceType: String(row.resource_type ?? ""),
+    resourceLabel: typeof row.resource_label === "string" ? row.resource_label : null,
+    route: String(row.route ?? ""),
+    policyDecision: String(row.policy_decision ?? ""),
+    createdAt: String(row.created_at ?? ""),
+  })) satisfies AdminAuditHistoryItem[];
 }
 
 export async function addAdminUser(
@@ -218,7 +284,7 @@ async function upsertAdminUser(
   },
 ) {
   const now = new Date().toISOString();
-  const res = await client
+  let res = await client
     .from("admin_users")
     .upsert(
       {
@@ -226,13 +292,35 @@ async function upsertAdminUser(
         display_name: displayName,
         status: "active",
         is_master: isMaster,
+        role: isMaster ? "super_admin" : "support_agent",
         granted_by_user_id: grantedByUserId,
         updated_at: now,
       },
       { onConflict: "email_normalized" },
     )
-    .select("id,email_normalized,user_id,display_name,status,is_master,granted_by_user_id,created_at,updated_at")
-    .single();
+    .select("id,email_normalized,user_id,display_name,status,is_master,role,granted_by_user_id,created_at,updated_at")
+    .single() as AdminRowResponse;
+
+  if (res.error && /role/i.test(res.error.message)) {
+    res = await client
+      .from("admin_users")
+      .upsert(
+        {
+          email_normalized: emailNormalized,
+          display_name: displayName,
+          status: "active",
+          is_master: isMaster,
+          granted_by_user_id: grantedByUserId,
+          updated_at: now,
+        },
+        { onConflict: "email_normalized" },
+      )
+      .select("id,email_normalized,user_id,display_name,status,is_master,granted_by_user_id,created_at,updated_at")
+      .single() as AdminRowResponse;
+    if (res.data) {
+      res.data = { ...res.data, role: null };
+    }
+  }
 
   if (res.error || !res.data) {
     throw new Error(res.error?.message || "Could not store admin user.");

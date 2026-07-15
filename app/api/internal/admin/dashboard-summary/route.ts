@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { lookupUsers } from "@/lib/admin/operations";
+import { loadAdminDashboardSummary } from "@/lib/admin/dashboardSummary";
 import { requireAdminAccess, requireAdminCapability } from "@/lib/admin/access";
 import { recordAdminAuditEvent } from "@/lib/admin/audit";
 
@@ -8,23 +8,25 @@ export async function GET(request: Request) {
   if (!admin.ok) {
     return NextResponse.json({ ok: false, message: admin.message, issue: admin.issue ?? null }, { status: admin.status });
   }
-  const denied = requireAdminCapability(admin.access, "users:lookup");
+
+  const denied = requireAdminCapability(admin.access, "admin.dashboard.read");
   if (denied) {
     return NextResponse.json({ ok: false, message: denied.message, capability: denied.capability }, { status: denied.status });
   }
 
-  const url = new URL(request.url);
-  const query = url.searchParams.get("q") ?? "";
-  const users = await lookupUsers(admin.adminClient, query);
+  const summary = await loadAdminDashboardSummary(admin.adminClient, admin.access);
   await recordAdminAuditEvent(admin.adminClient, admin.access, {
     category: "admin_review",
-    action: "Admin user lookup",
+    action: "Admin dashboard summary opened",
     result: "success",
     resourceType: "access_policy",
-    resourceId: null,
-    resourceLabel: "User lookup",
-    route: "/api/internal/admin/users",
-    metadata: { query_present: Boolean(query.trim()), result_count: users.length },
-  });
-  return NextResponse.json({ ok: true, users });
+    resourceLabel: "Admin dashboard summary",
+    route: "/api/internal/admin/dashboard-summary",
+    metadata: {
+      metric_count: summary.metrics.length,
+      unavailable_count: summary.metrics.filter((metric) => !metric.available).length,
+    },
+  }).catch(() => null);
+
+  return NextResponse.json({ ok: true, summary });
 }
