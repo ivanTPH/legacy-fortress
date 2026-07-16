@@ -1,8 +1,18 @@
 import type { NextConfig } from "next";
 
 const isProduction = process.env.NODE_ENV === "production";
+const deploymentUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.COOLIFY_URL || "";
 const localDevelopmentConnectSrc = isProduction ? [] : ["http://127.0.0.1:55421"];
 const localDevelopmentImgSrc = isProduction ? [] : ["http://127.0.0.1:55421"];
+const shouldUpgradeInsecureRequests = isProduction && (!deploymentUrl || isHttpsUrl(deploymentUrl));
+
+function isHttpsUrl(value: string) {
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 
 const contentSecurityPolicy = [
   "default-src 'self'",
@@ -18,7 +28,7 @@ const contentSecurityPolicy = [
   `connect-src 'self' https:${localDevelopmentConnectSrc.length ? ` ${localDevelopmentConnectSrc.join(" ")}` : ""}`,
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   "style-src 'self' 'unsafe-inline'",
-  ...(isProduction ? ["upgrade-insecure-requests"] : []),
+  ...(shouldUpgradeInsecureRequests ? ["upgrade-insecure-requests"] : []),
 ].join("; ");
 
 const securityHeaders = [
