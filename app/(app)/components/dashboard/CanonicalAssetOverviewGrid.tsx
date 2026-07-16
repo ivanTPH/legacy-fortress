@@ -100,14 +100,13 @@ export default function CanonicalAssetOverviewGrid({ tiles, emptyMessage }: Cano
 
         return (
           <div key={tile.key} className="lf-finance-summary-tile">
-            <div className="lf-finance-summary-tile-desc">{tile.description}</div>
             <DashboardAssetSummaryCard
               icon={<Icon name={tile.icon} size={13} />}
               title={tile.title}
               href={href}
               addedAt={latestTimestamp(rows.map((row) => row.updated_at ?? row.created_at))}
               value={state.status === "loading" ? "Loading" : isEmpty ? "Add record" : String(rows.length)}
-              detail={state.status === "loading" ? "Checking saved records" : isEmpty ? "" : `${rows.length} active record${rows.length === 1 ? "" : "s"}`}
+              detail={state.status === "loading" ? "Checking saved records" : isEmpty ? tile.description : `${rows.length} active record${rows.length === 1 ? "" : "s"}`}
               items={[]}
               emptyActionLabel="Add record"
               emptyState={isEmpty}

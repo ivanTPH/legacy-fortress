@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
+import { buildBankDisplayName } from "../lib/assets/bankAsset.ts";
+import { getAssetCategoryFormConfig } from "../lib/assets/fieldDictionary.ts";
+
 const root = process.cwd();
 
 test("dashboard overview cards use compact shared summary cards with icon-only review actions", () => {
@@ -285,6 +288,34 @@ test("shared attachment gallery uses icon buttons with tooltips instead of ad ho
   assert.doesNotMatch(attachmentGallery, /window\.open/);
   assert.doesNotMatch(attachmentGallery, /<IconButton/);
   assert.doesNotMatch(attachmentGallery, /style=\{miniGhostBtn\}/);
+});
+
+test("hosted UAT customer category cards and bank records keep canonical shared UX", () => {
+  const css = fs.readFileSync(path.join(root, "app/globals.css"), "utf8");
+  const summaryCard = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/DashboardAssetSummaryCard.tsx"), "utf8");
+  const universalWorkspace = fs.readFileSync(path.join(root, "components/records/UniversalRecordWorkspace.tsx"), "utf8");
+  const legalPage = fs.readFileSync(path.join(root, "app/(app)/legal/page.tsx"), "utf8");
+  const financesPage = fs.readFileSync(path.join(root, "app/(app)/finances/page.tsx"), "utf8");
+  const overviewGrid = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/CanonicalAssetOverviewGrid.tsx"), "utf8");
+  const bankConfig = getAssetCategoryFormConfig("bank-accounts");
+
+  assert.ok(bankConfig);
+  assert.equal(bankConfig.fields.some((field) => field.key === "title"), false);
+  assert.equal(bankConfig.fields.some((field) => field.key === "account_nickname" && field.required === false), true);
+  assert.equal(buildBankDisplayName("Barclays", "current_account"), "Barclays — Current Account");
+  assert.equal(buildBankDisplayName("HSBC", "savings"), "HSBC — Savings");
+  assert.equal(buildBankDisplayName("", "", "Legacy imported account"), "Legacy imported account");
+  assert.match(universalWorkspace, /account_nickname/);
+  assert.match(universalWorkspace, /buildBankDisplayName\(resolvedBankName, resolvedAccountType, form\.title\)/);
+  assert.match(universalWorkspace, /clearAddRecordQueryFlag\(\);/);
+  assert.match(universalWorkspace, /url\.searchParams\.delete\("add"\)/);
+  assert.match(css, /\.lf-content-grid \{[\s\S]*align-items: stretch/);
+  assert.match(css, /\.lf-finance-summary-tile \{[\s\S]*height: 100%/);
+  assert.match(css, /\.lf-finance-summary-tile-desc \{[\s\S]*display: none/);
+  assert.match(summaryCard, /gridTemplateColumns: "40px minmax\(0, 1fr\)"/);
+  assert.doesNotMatch(legalPage, /<p style=\{descriptionStyle\}>\{description\}<\/p>/);
+  assert.doesNotMatch(financesPage, /<p style=\{descriptionStyle\}>\{description\}<\/p>/);
+  assert.doesNotMatch(overviewGrid, /<div className="lf-finance-summary-tile-desc">\{description\}<\/div>/);
 });
 
 test("dashboard profile chip signs the avatar through the authenticated server route", () => {

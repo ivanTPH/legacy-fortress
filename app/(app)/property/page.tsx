@@ -40,13 +40,12 @@ export default function PropertyOverviewPage() {
         <CanonicalAssetOverviewGrid tiles={propertyRecordTiles} />
         {visibleItems.filter((item) => item.href !== "/vault/property").map((item) => (
           <div key={item.href} className="lf-finance-summary-tile">
-            <div className="lf-finance-summary-tile-desc">{item.desc}</div>
             <DashboardAssetSummaryCard
               icon={<Icon name={item.icon} size={13} />}
               title={item.label}
               href={`${item.href}?add=1`}
               value="No records yet"
-              detail="No records yet"
+              detail={item.desc}
               items={[]}
               emptyActionLabel="Add record"
               emptyState

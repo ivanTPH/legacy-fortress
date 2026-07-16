@@ -170,14 +170,13 @@ export default function FinancesOverviewPage() {
           const cardHref = isEmpty ? `${section.href}?add=1` : section.href;
           return (
             <div key={section.href} className="lf-finance-summary-tile">
-              <div className="lf-finance-summary-tile-desc">{section.description}</div>
               <DashboardAssetSummaryCard
                 icon={<Icon name={section.icon} size={13} />}
                 title={section.title}
                 href={cardHref}
                 addedAt={section.summary.addedAt}
                 value={section.summary.valueText}
-                detail={section.summary.detailText}
+                detail={isEmpty ? section.description : section.summary.detailText}
                 items={section.summary.items}
                 emptyActionLabel="Add record"
                 emptyState={isEmpty}

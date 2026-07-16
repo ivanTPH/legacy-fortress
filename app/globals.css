@@ -2312,21 +2312,18 @@ textarea {
 .lf-content-grid {
   display: grid;
   gap: 18px;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  align-items: stretch;
 }
 
 .lf-finance-summary-tile {
   display: grid;
-  gap: 4px;
   height: 100%;
-  grid-template-rows: auto 1fr;
+  min-width: 0;
 }
 
 .lf-finance-summary-tile-desc {
-  color: #64748b;
-  font-size: 13px;
-  padding-left: 2px;
-  align-self: start;
+  display: none;
 }
 
 .lf-legal-contact-row {

@@ -69,13 +69,12 @@ function BusinessSummaryTile({
 }) {
   return (
     <div className="lf-finance-summary-tile">
-      <div className="lf-finance-summary-tile-desc">{description}</div>
       <DashboardAssetSummaryCard
         icon={<Icon name={icon} size={13} />}
         title={title}
         href={`${href}?add=1`}
         value="No records yet"
-        detail="No records yet"
+        detail={description}
         items={[]}
         emptyActionLabel="Add record"
         emptyState

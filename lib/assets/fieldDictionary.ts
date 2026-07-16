@@ -340,9 +340,9 @@ const CATEGORY_FORM_CONFIGS: AssetCategoryFormConfig[] = [
     categorySlug: "bank-accounts",
     title: "Bank account",
     fields: [
-      SHARED_TITLE,
       field({ key: "provider_name", label: "Bank / provider name", iconName: "account_balance", inputType: "text", required: true, placeholder: "e.g. HSBC" }),
       field({ key: "account_type", label: "Account type", iconName: "category", inputType: "select", required: true, options: ACCOUNT_TYPE_OPTIONS, supportsOther: true, otherKey: "account_type_other" }),
+      field({ key: "account_nickname", label: "Account nickname", iconName: "label", inputType: "text", required: false, placeholder: "e.g. Household bills" }),
       field({ key: "account_holder", label: "Account holder", iconName: "person", inputType: "text", required: true, placeholder: "e.g. Jane Doe" }),
       field({ key: "account_number", label: "Account number", iconName: "pin", inputType: "text", required: true, placeholder: "e.g. 12345678", sensitive: true }),
       field({ key: "sort_code", label: "Sort code", iconName: "tag", inputType: "text", required: false, placeholder: "e.g. 10-20-30", sensitive: true }),

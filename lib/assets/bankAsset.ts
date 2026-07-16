@@ -14,6 +14,7 @@ export type CanonicalBankAsset = {
   provider_name: string;
   provider_key: string;
   account_type: string;
+  account_nickname: string;
   account_holder: string;
   account_number: string;
   masked_account_number: string;
@@ -35,6 +36,7 @@ export type CanonicalBankEditSeed = {
   provider_name: string;
   provider_key: string;
   account_type: string;
+  account_nickname: string;
   account_holder: string;
   account_number: string;
   sort_code: string;
@@ -57,6 +59,7 @@ export function normalizeBankAssetRow(source: BankAssetSource): CanonicalBankAss
   );
   const providerKey = readString(metadata["provider_key"], source.provider_key).toLowerCase();
   const accountType = readString(metadata["account_type"], metadata["bank_account_type"]);
+  const accountNickname = readString(metadata["account_nickname"], metadata["nickname"]);
   const accountHolder = readString(metadata["account_holder"], metadata["account_holder_name"]);
   const accountNumber = readString(metadata["account_number"]);
   const sortCode = readString(metadata["sort_code"]);
@@ -72,7 +75,7 @@ export function normalizeBankAssetRow(source: BankAssetSource): CanonicalBankAss
   const valuationDate = readString(metadata["valuation_date"], metadata["last_updated_on"]);
   const country = readString(metadata["country"], metadata["country_code"]).toUpperCase();
   const currency = readString(metadata["currency"], metadata["currency_code"], source.currency_code).toUpperCase();
-  const title = readString(source.title, providerName) || "Untitled bank account";
+  const title = buildBankDisplayName(providerName, accountType, source.title);
   const notes = readString(metadata["notes"]);
 
   return {
@@ -80,6 +83,7 @@ export function normalizeBankAssetRow(source: BankAssetSource): CanonicalBankAss
     provider_name: providerName,
     provider_key: providerKey,
     account_type: accountType,
+    account_nickname: accountNickname,
     account_holder: accountHolder,
     account_number: accountNumber,
     masked_account_number: maskSensitiveValue(accountNumber),
@@ -111,6 +115,7 @@ export function normalizeCanonicalBankMetadata(
       readString(metadata["provider_name"], metadata["institution_name"], metadata["bank_name"], context?.provider_name) || null,
     provider_key: readString(metadata["provider_key"], context?.provider_key).toLowerCase() || null,
     account_type: readString(metadata["account_type"], metadata["bank_account_type"]) || null,
+    account_nickname: readString(metadata["account_nickname"], metadata["nickname"]) || null,
     account_holder: readString(metadata["account_holder"], metadata["account_holder_name"]) || null,
     sort_code: readString(metadata["sort_code"]) || null,
     account_number: readString(metadata["account_number"]) || null,
@@ -158,6 +163,7 @@ export function buildCanonicalBankEditSeed(source: BankAssetSource): CanonicalBa
     provider_name: providerName || canonical.provider_name,
     provider_key: canonical.provider_key,
     account_type: canonical.account_type,
+    account_nickname: canonical.account_nickname,
     account_holder: accountHolder,
     account_number: canonical.account_number,
     sort_code: canonical.sort_code,
@@ -168,6 +174,24 @@ export function buildCanonicalBankEditSeed(source: BankAssetSource): CanonicalBa
     last_updated_on: valuationDate || canonical.valuation_date,
     notes: canonical.notes,
   };
+}
+
+export function buildBankDisplayName(providerName: string | null | undefined, accountType: string | null | undefined, fallbackTitle?: string | null) {
+  const provider = readString(providerName);
+  const type = formatBankAccountType(accountType);
+  if (provider && type) return `${provider} — ${type}`;
+  if (provider) return provider;
+  return readString(fallbackTitle) || "Untitled bank account";
+}
+
+export function formatBankAccountType(value: string | null | undefined) {
+  const raw = readString(value);
+  if (!raw) return "";
+  return raw
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function readString(...values: Array<unknown>) {

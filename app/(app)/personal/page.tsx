@@ -34,13 +34,12 @@ export default function PersonalOverviewPage() {
       <div className="lf-content-grid">
         {visibleItems.map((item) => (
           <div key={item.href} className="lf-finance-summary-tile">
-            <div className="lf-finance-summary-tile-desc">{item.desc}</div>
             <DashboardAssetSummaryCard
               icon={<Icon name={item.icon} size={13} />}
               title={item.label}
               href={item.addHref ?? `${item.href}?add=1`}
               value="No records yet"
-              detail="No records yet"
+              detail={item.desc}
               items={[]}
               emptyActionLabel="Add record"
               emptyState

@@ -76,7 +76,7 @@ export default function DashboardAssetSummaryCard({
     >
       <div className="lf-dashboard-summary-main" style={summaryLinkStyle}>
         <div className="lf-dashboard-summary-header" style={headerStyle}>
-          <div className="lf-dashboard-summary-title-wrap" style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+          <div className="lf-dashboard-summary-title-wrap" style={{ display: "grid", gridTemplateColumns: "40px minmax(0, 1fr)", alignItems: "start", gap: 8, minWidth: 0 }}>
             <span className="lf-dashboard-summary-icon" style={iconStyle}>{icon}</span>
             <span className="lf-dashboard-summary-title" style={titleStyle}>{title}</span>
           </div>

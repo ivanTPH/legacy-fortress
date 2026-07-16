@@ -175,14 +175,13 @@ function LegalSummaryTile({
   const cardHref = hasRecords ? href : `${href}?add=1`;
   return (
     <div className="lf-finance-summary-tile">
-      <div className="lf-finance-summary-tile-desc">{description}</div>
       <DashboardAssetSummaryCard
         icon={<Icon name={icon} size={13} />}
         title={title}
         href={cardHref}
         addedAt={addedAt}
         value={hasRecords ? String(total) : "No records yet"}
-        detail={hasRecords ? `${total} active record${total === 1 ? "" : "s"}` : "No records yet"}
+        detail={hasRecords ? `${total} active record${total === 1 ? "" : "s"}` : description}
         items={[]}
         emptyActionLabel={hasRecords ? "Open category" : "Add record"}
         emptyState={!hasRecords}

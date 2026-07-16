@@ -34,6 +34,7 @@ import {
 import { getLegalLinkedContactDefinition } from "../../lib/legalCategories";
 import {
   buildCanonicalBankEditSeed,
+  buildBankDisplayName,
   normalizeCanonicalBankMetadata,
   normalizeBankAssetRow,
 } from "../../lib/assets/bankAsset";
@@ -247,6 +248,7 @@ type EditForm = {
   bank_provider_key: string;
   bank_account_type: string;
   bank_account_type_other: string;
+  account_nickname: string;
   account_holder_name: string;
   sort_code: string;
   account_number: string;
@@ -440,6 +442,7 @@ const EMPTY_FORM: EditForm = {
   bank_provider_key: "",
   bank_account_type: "",
   bank_account_type_other: "",
+  account_nickname: "",
   account_holder_name: "",
   sort_code: "",
   account_number: "",
@@ -1422,6 +1425,7 @@ export default function UniversalRecordWorkspace({
       bank_provider_key: canonicalBankSeed.provider_key,
       bank_account_type: bankAccountType.selected,
       bank_account_type_other: bankAccountType.other,
+      account_nickname: canonicalBankSeed.account_nickname,
       account_holder_name: canonicalBankSeed.account_holder,
       sort_code: canonicalBankSeed.sort_code,
       account_number: canonicalBankSeed.account_number,
@@ -2754,6 +2758,7 @@ export default function UniversalRecordWorkspace({
     }
     await new Promise((resolve) => setTimeout(resolve, 1200));
     setSavedConfirmation("");
+    clearAddRecordQueryFlag();
     resetFormState({ focusExistingRecords: true });
     pushBankSubmitTrace(`reload completed: asset_id="${recordId ?? ""}"`);
     mergeDevBankContextTrace({
@@ -2765,6 +2770,14 @@ export default function UniversalRecordWorkspace({
       assetInsertReached: true,
     });
     setSaving(false);
+  }
+
+  function clearAddRecordQueryFlag() {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("add") !== "1") return;
+    url.searchParams.delete("add");
+    window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
   }
 
   async function archiveRecord(recordId: string) {
@@ -5359,10 +5372,10 @@ function pickConfigFields(
 
 function bankFormToConfigValues(form: EditForm): Record<string, string> {
   return {
-    title: form.title,
     provider_name: form.bank_name,
     account_type: form.bank_account_type,
     account_type_other: form.bank_account_type_other,
+    account_nickname: form.account_nickname,
     account_holder: form.account_holder_name,
     account_number: form.account_number,
     sort_code: form.sort_code,
@@ -5541,10 +5554,10 @@ function taskFormToConfigValues(form: EditForm): Record<string, string> {
 }
 
 function applyBankConfigFieldChange(prev: EditForm, key: string, value: string): EditForm {
-  if (key === "title") return { ...prev, title: value };
   if (key === "provider_name") return { ...prev, bank_name: value };
   if (key === "account_type") return { ...prev, bank_account_type: value };
   if (key === "account_type_other") return { ...prev, bank_account_type_other: value };
+  if (key === "account_nickname") return { ...prev, account_nickname: value };
   if (key === "account_holder") return { ...prev, account_holder_name: value };
   if (key === "account_number") return { ...prev, account_number: value };
   if (key === "sort_code") return { ...prev, sort_code: value };
@@ -5963,18 +5976,19 @@ function getFinanceDraft(categoryKey: string, form: EditForm) {
     const resolvedAccountType = accountTypeField ? resolveConfiguredFieldValue(accountTypeField, values) : form.bank_account_type.trim();
     const resolvedCountry = countryField ? resolveConfiguredFieldValue(countryField, values) : form.country.trim();
     const resolvedCurrency = (currencyField ? resolveConfiguredFieldValue(currencyField, values) : form.currency_code).toUpperCase();
-    const resolvedTitle = form.title.trim() || form.bank_name.trim();
     const resolvedBankName = form.bank_name.trim() || form.title.trim();
+    const resolvedTitle = buildBankDisplayName(resolvedBankName, resolvedAccountType, form.title);
 
     return {
       title: resolvedTitle || null,
       providerName: resolvedBankName || null,
-      summary: [resolvedAccountType, form.account_holder_name.trim()].filter(Boolean).join(" · ") || null,
+      summary: [resolvedAccountType, form.account_nickname.trim(), form.account_holder_name.trim()].filter(Boolean).join(" · ") || null,
       valueMajor: form.value_major || "0",
       currencyCode: resolvedCurrency || "GBP",
       metadata: {
         provider_name: resolvedBankName || null,
         account_type: resolvedAccountType || null,
+        account_nickname: form.account_nickname.trim() || null,
         account_holder: form.account_holder_name.trim() || null,
         sort_code: form.sort_code.trim() || null,
         account_number: form.account_number.trim() || null,
