@@ -40,16 +40,13 @@ export default function SignUpForm({
     setStatus("Creating account...");
 
     try {
-      const [{ createEphemeralBrowserAuthClient }, { publicEnv }, { supabase }, { bootstrapAuthenticatedUser }] = await Promise.all([
+      const [{ createEphemeralBrowserAuthClient }, { supabase }, { bootstrapAuthenticatedUser }] = await Promise.all([
         import("../../lib/auth/browserAuthClient"),
-        import("../../lib/env"),
         import("../../lib/supabaseClient"),
         import("../../lib/auth/bootstrap"),
       ]);
       const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}` : undefined;
-      const authClient = isLocalSupabaseUrl(publicEnv.NEXT_PUBLIC_SUPABASE_URL)
-        ? createEphemeralBrowserAuthClient("signup")
-        : supabase;
+      const authClient = createEphemeralBrowserAuthClient("signup");
       const { data, error } = await authClient.auth.signUp({
         email,
         password,
@@ -147,15 +144,6 @@ export default function SignUpForm({
       {status ? <div className="lf-muted-note">{status}</div> : null}
     </div>
   );
-}
-
-function isLocalSupabaseUrl(value: string) {
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" && (url.hostname === "127.0.0.1" || url.hostname === "localhost");
-  } catch {
-    return false;
-  }
 }
 
 const passwordToggleStyle: CSSProperties = {

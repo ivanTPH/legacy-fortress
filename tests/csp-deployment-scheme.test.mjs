@@ -4,7 +4,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 
-async function loadGeneratedCsp(env) {
+async function loadGeneratedConfig(env) {
   const source = fs.readFileSync("next.config.ts", "utf8");
   const compiled = ts.transpileModule(source, {
     compilerOptions: {
@@ -24,7 +24,11 @@ async function loadGeneratedCsp(env) {
   sandbox.exports = sandbox.module.exports;
   vm.runInNewContext(compiled, sandbox, { filename: "next.config.ts" });
 
-  const config = sandbox.module.exports.default;
+  return sandbox.module.exports.default;
+}
+
+async function loadGeneratedCsp(env) {
+  const config = await loadGeneratedConfig(env);
   const headerGroups = await config.headers();
   const rootHeaders = headerGroups.find((group) => group.source === "/:path*")?.headers ?? [];
   return rootHeaders.find((header) => header.key === "Content-Security-Policy")?.value ?? "";
@@ -70,4 +74,18 @@ test("production CSP keeps upgrade-insecure-requests when no deployment URL is c
 
   assert.match(csp, /upgrade-insecure-requests/);
   assertBaselineSecurityDirectives(csp);
+});
+
+test("browser bundles receive only public Supabase configuration from build env", async () => {
+  const config = await loadGeneratedConfig({
+    NODE_ENV: "production",
+    NEXT_PUBLIC_SUPABASE_URL: "https://staging.example.supabase.co",
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: "public-anon-key",
+    SUPABASE_SERVICE_ROLE_KEY: "server-only-service-role",
+  });
+
+  assert.deepEqual(JSON.parse(JSON.stringify(config.env)), {
+    NEXT_PUBLIC_SUPABASE_URL: "https://staging.example.supabase.co",
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: "public-anon-key",
+  });
 });

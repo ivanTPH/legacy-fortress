@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const isProduction = process.env.NODE_ENV === "production";
 const deploymentUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.COOLIFY_URL || "";
+const publicSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const publicSupabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const localDevelopmentConnectSrc = isProduction ? [] : ["http://127.0.0.1:55421"];
 const localDevelopmentImgSrc = isProduction ? [] : ["http://127.0.0.1:55421"];
 const shouldUpgradeInsecureRequests = isProduction && (!deploymentUrl || isHttpsUrl(deploymentUrl));
@@ -73,6 +75,10 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactCompiler: true,
   allowedDevOrigins: ["127.0.0.1"],
+  env: {
+    ...(publicSupabaseUrl ? { NEXT_PUBLIC_SUPABASE_URL: publicSupabaseUrl } : {}),
+    ...(publicSupabaseAnonKey ? { NEXT_PUBLIC_SUPABASE_ANON_KEY: publicSupabaseAnonKey } : {}),
+  },
   async headers() {
     return [
       {
