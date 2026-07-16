@@ -52,6 +52,7 @@ test("dashboard overview cards use compact shared summary cards with icon-only r
   assert.match(dashboardPage, /executorAccepted: boolean/);
   assert.match(dashboardPage, /willPresent: boolean/);
   assert.match(dashboardPage, /willUploaded: boolean/);
+  assert.match(dashboardPage, /willUploadReasonCode: "linked_current_will_file" \| "legacy_will_file" \| "will_record_without_file" \| "no_will_record"/);
   assert.match(dashboardPage, /keyDocumentsPresent: boolean/);
   assert.match(dashboardPage, /supportingLegalInfoPresent: boolean/);
   assert.match(dashboardPage, /powerOfAttorneyPresent: boolean/);
@@ -77,6 +78,11 @@ test("dashboard overview cards use compact shared summary cards with icon-only r
   assert.match(dashboardPage, /Review recommended/);
   assert.match(dashboardPage, /function renderReadinessActionPanel/);
   assert.match(dashboardPage, /readinessKey: "willUploaded"/);
+  assert.match(dashboardPage, /willUploaded: legalReadiness\.model\.willUploaded/);
+  assert.match(dashboardPage, /function getWillUploadState\(assetRows: AssetRow\[\], documentRows: DocumentRow\[\], attachmentRows: AttachmentRow\[\]\)/);
+  assert.match(dashboardPage, /row\.asset_id && willAssetIds\.has\(row\.asset_id\) && hasStoredDocumentFile\(row\)/);
+  assert.match(dashboardPage, /row\.record_id && willAssetIds\.has\(row\.record_id\) && hasStoredAttachmentFile\(row\)/);
+  assert.match(dashboardPage, /legacyWillFile = willAssetIds\.size === 0/);
   assert.match(dashboardPage, /const requiredReadinessTasks = dashboardState\.legalReadiness\.items\.filter\(\(item\) => !item\.complete\)/);
   assert.match(dashboardPage, /Required estate readiness tasks/);
   assert.match(dashboardPage, /Required tasks/);
@@ -204,6 +210,8 @@ test("dashboard overview cards use compact shared summary cards with icon-only r
 test("contacts keeps the fuller invitation management view while dashboard stays compact", () => {
   const contactsWorkspace = fs.readFileSync(path.join(root, "components/contacts/ContactsNetworkWorkspace.tsx"), "utf8");
   const invitationManager = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/ContactInvitationManager.tsx"), "utf8");
+  const contactGrouping = fs.readFileSync(path.join(root, "lib/contacts/contactGrouping.ts"), "utf8");
+  const dashboardPage = fs.readFileSync(path.join(root, "app/(app)/dashboard/page.tsx"), "utf8");
 
   assert.match(contactsWorkspace, /<ContactInvitationManager[\s\S]*mode="full"[\s\S]*selectedContactId=\{selectedContactId\}[\s\S]*selectedContactProfile=\{selectedContact\}[\s\S]*\/>/);
   assert.match(invitationManager, /mode\?: "full" \| "dashboard"/);
@@ -216,6 +224,13 @@ test("contacts keeps the fuller invitation management view while dashboard stays
   assert.doesNotMatch(invitationManager, />Resend<\/th>/);
   assert.match(invitationManager, /function canSendInvite/);
   assert.match(invitationManager, /function canResendInvite/);
+  assert.match(contactGrouping, /normalized === "family" \|\| normalized === "next-of-kin"/);
+  assert.match(dashboardPage, /\/contacts\?group=next-of-kin&add=1/);
+  assert.match(contactsWorkspace, /const isNextOfKinAddMode = selectedGroup === "family" && searchParams\.get\("add"\) === "1"/);
+  assert.match(contactsWorkspace, /<NextOfKinContactForm/);
+  assert.match(contactsWorkspace, /contactRole: "next_of_kin"/);
+  assert.match(contactsWorkspace, /sourceType: "next_of_kin"/);
+  assert.match(contactsWorkspace, /This designation does not grant vault access/);
 });
 
 test("shared attachment gallery uses icon buttons with tooltips instead of ad hoc text action buttons", () => {
@@ -231,7 +246,10 @@ test("shared attachment gallery uses icon buttons with tooltips instead of ad ho
   assert.match(actionQueue, /className="lf-action-centre-section"/);
   assert.match(actionQueue, /className="lf-action-centre-row"/);
   assert.match(actionQueue, /className="lf-action-centre-row-actions"/);
-  assert.match(css, /\.lf-topbar \{[\s\S]*display: grid;[\s\S]*grid-template-columns: minmax\(0, 1fr\) auto/);
+  assert.match(css, /\.lf-topbar \{[\s\S]*display: grid;[\s\S]*grid-template-columns: minmax\(0, 1fr\) minmax\(300px, max-content\)/);
+  assert.match(css, /\.lf-topbar-actions \{[\s\S]*display: grid;[\s\S]*grid-template-columns: minmax\(148px, max-content\) 34px minmax\(84px, 180px\)/);
+  assert.match(css, /\.lf-topbar-actions \.lf-workspace-switcher \{[\s\S]*min-width: 148px;[\s\S]*max-width: 240px/);
+  assert.match(css, /\.lf-topbar-user \{[\s\S]*overflow: hidden/);
   assert.match(css, /\.lf-topbar-user \{[\s\S]*width: 44px;[\s\S]*height: 44px;[\s\S]*flex: 0 0 44px/);
   assert.match(css, /\.lf-topbar-user-copy \{[\s\S]*display: none/);
   assert.match(css, /max-width: 1100px\)[\s\S]*\.lf-topbar[\s\S]*grid-template-columns: 44px minmax\(0, 1fr\) auto/);
@@ -337,6 +355,8 @@ test("dashboard profile chip signs the avatar through the authenticated server r
   assert.doesNotMatch(layout, /recoverSidebarAvatar/);
   assert.doesNotMatch(layout, /setFailedAvatarUrl\(renderedAvatarUrl\)/);
   assert.match(layout, /className="lf-topbar-user-avatar-img"/);
+  assert.match(layout, /aria-label=\{`Edit account details for \$\{effectiveDisplayName\}`\}/);
+  assert.match(layout, /title=\{effectiveDisplayName\}/);
   assert.match(layout, /src=\{renderedAvatarUrl\}/);
   assert.match(layout, /const \[confirmedAvatarUrl, setConfirmedAvatarUrl\] = useState\(""\)/);
   assert.match(layout, /const image = new Image\(\)/);
