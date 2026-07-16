@@ -281,6 +281,7 @@ type ExecutorLegalReadinessModel = {
   executorAccepted: boolean;
   willPresent: boolean;
   willUploaded: boolean;
+  willUploadReasonCode: "linked_current_will_file" | "legacy_will_file" | "will_record_without_file" | "no_will_record";
   keyDocumentsPresent: boolean;
   supportingLegalInfoPresent: boolean;
   powerOfAttorneyPresent: boolean;
@@ -2063,7 +2064,7 @@ function useDashboardState(input: DashboardStateInput): DashboardState {
           tasks: input.tasks,
           estateReadiness: {
             executorAssigned: legalReadiness.model.executorAssigned,
-            willUploaded: legalReadiness.model.willUploaded || legalReadiness.model.willPresent,
+            willUploaded: legalReadiness.model.willUploaded,
             keyDocumentsPresent: legalReadiness.model.keyDocumentsPresent,
           },
         },
@@ -3052,8 +3053,9 @@ function buildExecutorLegalReadinessState({
   const executorAccepted = contactRows
     .filter(isExecutorContact)
     .some((contact) => isAcceptedExecutorContact(contact, dashboardInviteState[contact.id]));
-  const willUploaded = documentItems.some((item) => dashboardDocumentMatchesCategory(item, ["will", "wills", "testament"]));
   const willPresent = willRecordCount > 0;
+  const willUploadState = getWillUploadState(assetRows, documentRows, attachmentRows);
+  const willUploaded = willUploadState.uploaded;
   const keyDocumentsPresent =
     documentCoverage.categories.will &&
     documentCoverage.categories.id &&
@@ -3081,6 +3083,7 @@ function buildExecutorLegalReadinessState({
     executorAccepted,
     willPresent,
     willUploaded,
+    willUploadReasonCode: willUploadState.reasonCode,
     keyDocumentsPresent,
     supportingLegalInfoPresent,
     powerOfAttorneyPresent,
@@ -3136,7 +3139,9 @@ function buildExecutorLegalReadinessState({
       label: "Will document uploaded",
       complete: model.willUploaded,
       status: model.willUploaded ? "Complete" : "Not yet added",
-      whyItMatters: "A stored will document helps trusted people find the supporting file when needed.",
+      whyItMatters: model.willPresent
+        ? "A stored file linked to the will record helps trusted people find the supporting document when needed."
+        : "Create the will record first, then attach the supporting file to that record.",
       nextAction: "Upload will",
       href: "/legal/wills",
     },
@@ -3156,7 +3161,7 @@ function buildExecutorLegalReadinessState({
       status: model.contactsComplete ? "Complete" : "Recommended",
       whyItMatters: "Executor and next-of-kin details make people and access decisions easier to understand.",
       nextAction: nextOfKinContactCount > 0 ? "Review contacts" : "Confirm next of kin",
-      href: "/contacts",
+      href: nextOfKinContactCount > 0 ? "/contacts?group=next-of-kin" : "/contacts?group=next-of-kin&add=1",
     },
     {
       key: "identityVerified",
@@ -3300,6 +3305,39 @@ function isWillAsset(row: AssetRow) {
 
 function isWillDocument(row: DocumentRow) {
   return includesAny([row.title, row.file_name, row.category_key, row.document_type, row.document_kind], ["will", "wills"]);
+}
+
+function getWillUploadState(assetRows: AssetRow[], documentRows: DocumentRow[], attachmentRows: AttachmentRow[]) {
+  const willAssetIds = new Set(
+    assetRows
+      .filter((row) => row.deleted_at == null && row.archived_at == null && row.status !== "archived" && isWillAsset(row))
+      .map((row) => row.id),
+  );
+  const linkedCurrentWillFile =
+    documentRows.some((row) => Boolean(row.asset_id && willAssetIds.has(row.asset_id) && hasStoredDocumentFile(row))) ||
+    attachmentRows.some((row) => Boolean(row.record_id && willAssetIds.has(row.record_id) && hasStoredAttachmentFile(row)));
+
+  if (linkedCurrentWillFile) {
+    return { uploaded: true, reasonCode: "linked_current_will_file" as const };
+  }
+
+  const legacyWillFile = willAssetIds.size === 0 && documentRows.some((row) => isWillDocument(row) && hasStoredDocumentFile(row));
+  if (legacyWillFile) {
+    return { uploaded: true, reasonCode: "legacy_will_file" as const };
+  }
+
+  return {
+    uploaded: false,
+    reasonCode: willAssetIds.size > 0 ? "will_record_without_file" as const : "no_will_record" as const,
+  };
+}
+
+function hasStoredDocumentFile(row: DocumentRow) {
+  return Boolean(String(row.storage_bucket ?? "").trim() && String(row.storage_path ?? "").trim());
+}
+
+function hasStoredAttachmentFile(row: AttachmentRow) {
+  return Boolean(String(row.storage_bucket ?? "").trim() && String(row.storage_path ?? "").trim());
 }
 
 function hasSupportingLegalInfoRecord(assetRows: AssetRow[], documentRows: DocumentRow[]) {
