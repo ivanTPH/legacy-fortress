@@ -978,7 +978,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             >
               <Icon name={resolvedViewerAccess.mode === "linked" ? "visibility_lock" : "verified_user"} size={16} />
             </div>
-            <Link href="/profile" className="lf-topbar-user" aria-label="Edit account details">
+            <Link href="/profile" className="lf-topbar-user" aria-label={`Edit account details for ${effectiveDisplayName}`} title={effectiveDisplayName}>
               <div className="lf-topbar-user-copy">
                 <div className="lf-topbar-user-greeting">Hello</div>
                 <div className="lf-topbar-user-name">{effectiveDisplayName}</div>
