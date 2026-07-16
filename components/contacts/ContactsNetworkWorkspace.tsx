@@ -8,6 +8,7 @@ import { waitForActiveUser } from "../../lib/auth/session";
 import {
   loadCanonicalContactsForOwner,
   loadCanonicalContactInvitationsForOwner,
+  syncCanonicalContact,
   type CanonicalContactContext,
   type CanonicalContactInviteStatus,
   type CanonicalContactSourceType,
@@ -84,6 +85,8 @@ export default function ContactsNetworkWorkspace() {
   const [documentPreview, setDocumentPreview] = useState<LinkedDocumentPreview | null>(null);
   const [previewTargetsByContextKey, setPreviewTargetsByContextKey] = useState<Map<string, LinkedDocumentSourceItem[]>>(new Map());
   const [openingDocumentKey, setOpeningDocumentKey] = useState("");
+  const [nextOfKinDraft, setNextOfKinDraft] = useState({ fullName: "", relationship: "", email: "", phone: "" });
+  const [savingNextOfKin, setSavingNextOfKin] = useState(false);
 
   const loadContacts = useCallback(async (isMounted: () => boolean = () => true) => {
       setLoading(true);
@@ -344,6 +347,7 @@ export default function ContactsNetworkWorkspace() {
 
   const selectedContactId = String(searchParams.get("contact") ?? "").trim();
   const selectedGroup = normalizeContactGroupKey(searchParams.get("group"));
+  const isNextOfKinAddMode = selectedGroup === "family" && searchParams.get("add") === "1";
   const selectedContact = useMemo(() => {
     const match = contacts.find((item) => item.id === selectedContactId);
     if (!match) return null;
@@ -371,6 +375,12 @@ export default function ContactsNetworkWorkspace() {
     : (selectedGroup || selectedContactId)
       ? preferredOpenGroup
       : openGroupKey ?? preferredOpenGroup;
+
+  useEffect(() => {
+    if (!isNextOfKinAddMode || viewer.readOnly) return;
+    setOpenGroupKey("family");
+    setAddContactGroupKey("family");
+  }, [isNextOfKinAddMode, viewer.readOnly]);
 
   useEffect(() => {
     if (!documentPreview) return;
@@ -439,6 +449,37 @@ export default function ContactsNetworkWorkspace() {
     setAddContactGroupKey(groupKey);
     setOpenGroupKey(groupKey);
     router.replace(groupKey ? `/contacts?group=${groupKey}` : "/contacts");
+  }
+
+  async function saveNextOfKinContact() {
+    setSavingNextOfKin(true);
+    setStatus("");
+    try {
+      const user = await waitForActiveUser(supabase, { attempts: 5, delayMs: 120 });
+      const ownerUserId = viewer.targetOwnerUserId || user?.id;
+      if (!ownerUserId) throw new Error("No active owner context was available.");
+      await syncCanonicalContact(supabase, {
+        ownerUserId,
+        fullName: nextOfKinDraft.fullName,
+        relationship: nextOfKinDraft.relationship,
+        email: nextOfKinDraft.email,
+        phone: nextOfKinDraft.phone,
+        contactRole: "next_of_kin",
+        sourceType: "next_of_kin",
+        inviteStatus: "not_invited",
+        verificationStatus: "not_verified",
+      });
+      setNextOfKinDraft({ fullName: "", relationship: "", email: "", phone: "" });
+      setAddContactGroupKey(null);
+      router.replace("/contacts?group=next-of-kin");
+      window.dispatchEvent(new CustomEvent("lf:contacts-updated"));
+      await loadContacts();
+      setStatus("Next of Kin saved. This designation does not grant vault access; invitations remain a separate action.");
+    } catch (error) {
+      setStatus(`Could not save Next of Kin: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setSavingNextOfKin(false);
+    }
   }
 
   function getPreviewableTargetsForContext(context: ContactRow["linked_context"][number]) {
@@ -554,21 +595,32 @@ export default function ContactsNetworkWorkspace() {
         <section style={addContactPanelStyle} aria-label="Add contact and permissions">
           <div style={{ display: "grid", gap: 4 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-              <h2 style={{ margin: 0, fontSize: 18 }}>Add contact</h2>
+              <h2 style={{ margin: 0, fontSize: 18 }}>{isNextOfKinAddMode ? "Add Next of Kin" : "Add contact"}</h2>
               <button type="button" style={rowTertiaryActionStyle} onClick={() => setAddContactGroupKey(null)}>
                 <Icon name="close" size={16} />
                 Cancel
               </button>
             </div>
             <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}>
-              The role preset comes from the selected contact group. You can still change the role, tick categories, use My wallet - all, and set view/edit permissions before sending the invite.
+              {isNextOfKinAddMode
+                ? "Next of Kin is stored as a canonical contact designation. It does not grant vault access; invitations and permissions stay separate."
+                : "The role preset comes from the selected contact group. You can still change the role, tick categories, use My wallet - all, and set view/edit permissions before sending the invite."}
             </p>
           </div>
-          <ContactInvitationManager
-            mode="full"
-            initialRole={getAddContactPreset(addContactGroupKey).role}
-            initialAllowedSections={getAddContactPreset(addContactGroupKey).sections}
-          />
+          {isNextOfKinAddMode ? (
+            <NextOfKinContactForm
+              draft={nextOfKinDraft}
+              saving={savingNextOfKin}
+              onChange={setNextOfKinDraft}
+              onSave={() => void saveNextOfKinContact()}
+            />
+          ) : (
+            <ContactInvitationManager
+              mode="full"
+              initialRole={getAddContactPreset(addContactGroupKey).role}
+              initialAllowedSections={getAddContactPreset(addContactGroupKey).sections}
+            />
+          )}
         </section>
       ) : null}
 
@@ -1085,6 +1137,83 @@ function getAddContactPreset(groupKey: string): { role: CollaboratorRole; sectio
   return { role: "friend_or_family", sections: ["profile", "personal"] };
 }
 
+function NextOfKinContactForm({
+  draft,
+  saving,
+  onChange,
+  onSave,
+}: {
+  draft: { fullName: string; relationship: string; email: string; phone: string };
+  saving: boolean;
+  onChange: (draft: { fullName: string; relationship: string; email: string; phone: string }) => void;
+  onSave: () => void;
+}) {
+  return (
+    <div style={{ display: "grid", gap: 12 }}>
+      <div className="lf-content-grid">
+        <label style={contactFormFieldStyle}>
+          <span style={contactFormLabelStyle}>Full name *</span>
+          <input
+            style={contactFormInputStyle}
+            value={draft.fullName}
+            onChange={(event) => onChange({ ...draft, fullName: event.target.value })}
+            placeholder="e.g. Jane Yardley"
+          />
+        </label>
+        <label style={contactFormFieldStyle}>
+          <span style={contactFormLabelStyle}>Relationship *</span>
+          <select
+            style={contactFormInputStyle}
+            value={draft.relationship}
+            onChange={(event) => onChange({ ...draft, relationship: event.target.value })}
+          >
+            <option value="">Select relationship</option>
+            <option value="spouse">Spouse / partner</option>
+            <option value="child">Child</option>
+            <option value="parent">Parent</option>
+            <option value="sibling">Sibling</option>
+            <option value="family">Other family</option>
+            <option value="friend">Trusted friend</option>
+          </select>
+        </label>
+        <label style={contactFormFieldStyle}>
+          <span style={contactFormLabelStyle}>Email</span>
+          <input
+            style={contactFormInputStyle}
+            value={draft.email}
+            onChange={(event) => onChange({ ...draft, email: event.target.value })}
+            placeholder="name@example.com"
+            type="email"
+          />
+        </label>
+        <label style={contactFormFieldStyle}>
+          <span style={contactFormLabelStyle}>Phone</span>
+          <input
+            style={contactFormInputStyle}
+            value={draft.phone}
+            onChange={(event) => onChange({ ...draft, phone: event.target.value })}
+            placeholder="+44..."
+          />
+        </label>
+      </div>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <button
+          type="button"
+          style={primaryMenuActionStyle}
+          onClick={onSave}
+          disabled={saving || !draft.fullName.trim() || !draft.relationship.trim()}
+        >
+          <Icon name="person_add" size={16} />
+          {saving ? "Saving..." : "Save Next of Kin"}
+        </button>
+        <span style={{ color: "#64748b", fontSize: 13 }}>
+          Access is granted only through a separate invitation or permission change.
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ display: "grid", gap: 2 }}>
@@ -1391,6 +1520,27 @@ const contactSearchInputStyle: CSSProperties = {
   border: "1px solid #d1d5db",
   borderRadius: 10,
   padding: "9px 10px",
+  fontSize: 14,
+  minWidth: 0,
+};
+
+const contactFormFieldStyle: CSSProperties = {
+  display: "grid",
+  gap: 6,
+  minWidth: 0,
+};
+
+const contactFormLabelStyle: CSSProperties = {
+  color: "#475569",
+  fontSize: 12,
+  fontWeight: 800,
+};
+
+const contactFormInputStyle: CSSProperties = {
+  border: "1px solid #d1d5db",
+  borderRadius: 10,
+  padding: "10px 11px",
+  minHeight: 44,
   fontSize: 14,
   minWidth: 0,
 };
