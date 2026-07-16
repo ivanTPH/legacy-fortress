@@ -11,12 +11,12 @@ function shouldApplyRoleBasedAccess(request: NextRequest) {
     return true;
   }
 
-  if (!pathname.startsWith("/internal/admin")) {
-    return pathname.startsWith("/application/admin") || pathname.startsWith("/application/enterprise");
+  if (pathname.startsWith("/application/admin") || pathname.startsWith("/application/enterprise")) {
+    return false;
   }
 
-  if (pathname.startsWith("/internal/admin/prototype")) {
-    return true;
+  if (!pathname.startsWith("/internal/admin")) {
+    return false;
   }
 
   const hasTrustedClaims = request.headers.get("x-lf-trusted-role-claims") === "true";

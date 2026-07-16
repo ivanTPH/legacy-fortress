@@ -8,7 +8,6 @@ export default function AdminAccessDeniedPage() {
   const router = useRouter();
 
   async function signOut() {
-    await fetch("/api/internal/admin/local-role-override", { method: "DELETE" }).catch(() => null);
     await supabase.auth.signOut();
     router.replace("/sign-in");
   }

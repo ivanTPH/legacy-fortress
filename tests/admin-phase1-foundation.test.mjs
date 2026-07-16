@@ -66,6 +66,13 @@ test("admin command dashboard foundation has protected route, access denied page
   assert.doesNotMatch(dashboardRoute, /document_path|signedUrl|password|service_role/i);
   assert.match(workspace, /\/api\/internal\/admin\/dashboard-summary/);
   assert.match(workspace, /No private vault contents|Customer vault contents/);
+  assert.match(workspace, /href="\/internal\/admin"/);
+  assert.match(workspace, /href="\/internal\/admin\/probate"/);
+  assert.match(workspace, /href="\/application\/enterprise"/);
+  assert.match(workspace, /Blocked until tenant-scoped organisation and licence persistence is implemented/);
+  assert.doesNotMatch(workspace, /local-role-override/);
+  assert.doesNotMatch(workspace, /Local UAT role testing/);
+  assert.doesNotMatch(deniedPage, /local-role-override/);
 });
 
 test("admin access rejects invalid role rows and keeps hosted roles server resolved", () => {
@@ -117,8 +124,11 @@ test("admin audit history is read-only in the workspace", () => {
   assert.doesNotMatch(workspace, /actOnAudit|saveAudit|deleteAudit|removeAudit|approveAudit|revokeAudit/);
 });
 
-test("prototype admin routes are always passed through role middleware", () => {
+test("hosted admin routes use app session checks unless the edge guard is explicitly enabled", () => {
   const proxy = fs.readFileSync(path.join(root, "proxy.ts"), "utf8");
-  assert.match(proxy, /pathname\.startsWith\("\/internal\/admin\/prototype"\)\) \{\n    return true;/);
+  assert.match(proxy, /pathname\.startsWith\("\/application\/admin"\)/);
+  assert.match(proxy, /pathname\.startsWith\("\/application\/enterprise"\)/);
+  assert.match(proxy, /return false;/);
+  assert.match(proxy, /process\.env\[INTERNAL_ADMIN_EDGE_GUARD_FLAG\] === "true"/);
   assert.match(proxy, /applyRoleBasedAccessMiddleware/);
 });

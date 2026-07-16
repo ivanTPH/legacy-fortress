@@ -39,15 +39,15 @@ export function buildPrototypeWorkspaceUrl(workspace: WorkspaceId, options: Work
   if (workspace === "executor") return "/executors";
 
   if (workspace === "super_admin") {
-    return withPrototypeParams("/internal/admin/prototype/users", "super_admin");
+    return "/internal/admin";
   }
 
   if (workspace === "enterprise_admin") {
     const role = options.currentRole === "licensing_admin" ? "licensing_admin" : "enterprise_admin";
-    return withPrototypeParams("/application/enterprise", role);
+    return withPrototypeParams("/internal/admin/prototype/enterprise", role);
   }
 
-  return withPrototypeParams("/application/admin", "probate_admin");
+  return "/internal/admin/probate";
 }
 
 export function getPrimaryWorkspaceRole(roles: readonly PlatformRole[]) {
@@ -62,6 +62,7 @@ export function getPrimaryWorkspaceRole(roles: readonly PlatformRole[]) {
 }
 
 export function getCurrentWorkspaceForPath(pathname: string): WorkspaceId {
+  if (pathname === "/internal/admin" || pathname.startsWith("/internal/admin/ops")) return "super_admin";
   if (pathname.startsWith("/internal/admin/prototype/users")) return "super_admin";
   if (pathname.startsWith("/internal/admin/prototype/enterprise")) return "enterprise_admin";
   if (pathname.startsWith("/internal/admin/prototype/organisations")) return "enterprise_admin";
@@ -69,10 +70,10 @@ export function getCurrentWorkspaceForPath(pathname: string): WorkspaceId {
   if (pathname.startsWith("/internal/admin/prototype/reports")) return "enterprise_admin";
   if (pathname.startsWith("/internal/admin/prototype/campaigns")) return "enterprise_admin";
   if (pathname.startsWith("/application/enterprise")) return "enterprise_admin";
-  if (pathname.startsWith("/application/admin")) return "probate_admin";
+  if (pathname.startsWith("/application/admin")) return "super_admin";
+  if (pathname.startsWith("/internal/admin/probate")) return "probate_admin";
   if (pathname.startsWith("/user")) return "application";
   if (pathname.startsWith("/internal/admin/prototype")) return "probate_admin";
-  if (pathname.startsWith("/internal/admin/probate")) return "probate_admin";
   if (pathname.startsWith("/executors")) return "executor";
   return "application";
 }

@@ -38,24 +38,12 @@ type AdminDashboardSummary = {
 
 type LoadState = "checking" | "ready" | "denied" | "error";
 
-const ROLE_OPTIONS = [
-  "super_admin",
-  "support_agent",
-  "probate_reviewer",
-  "auditor",
-  "enterprise_admin",
-  "standard_user",
-  "revoked_admin",
-];
-
 export default function AdminDashboardWorkspace() {
   const router = useRouter();
   const [state, setState] = useState<LoadState>("checking");
   const [message, setMessage] = useState("");
   const [admin, setAdmin] = useState<AdminSessionPayload["admin"] | null>(null);
   const [summary, setSummary] = useState<AdminDashboardSummary | null>(null);
-  const [roleOverride, setRoleOverride] = useState("super_admin");
-  const [working, setWorking] = useState(false);
 
   const authFetch = useCallback(async (input: string, init?: RequestInit) => {
     const sessionRes = await supabase.auth.getSession();
@@ -100,7 +88,6 @@ export default function AdminDashboardWorkspace() {
 
     setAdmin(sessionJson.admin);
     setSummary(summaryJson.summary);
-    setRoleOverride(summaryJson.summary.role);
     setState("ready");
   }, [authFetch, router]);
 
@@ -111,36 +98,9 @@ export default function AdminDashboardWorkspace() {
     return () => window.clearTimeout(timer);
   }, [loadDashboard]);
 
-  const canUseRoleHarness = Boolean(admin?.capabilities.includes("admin.roles.test")) && summary?.environment === "Local";
   const lastRefreshed = useMemo(() => summary ? new Date(summary.generatedAt).toLocaleString() : "", [summary]);
 
-  async function setLocalRoleOverride() {
-    setWorking(true);
-    setMessage("");
-    const res = await authFetch("/api/internal/admin/local-role-override", {
-      method: "POST",
-      body: JSON.stringify({ role: roleOverride }),
-    });
-    if (!res.ok) {
-      const json = (await res.json().catch(() => ({}))) as { message?: string };
-      setMessage(json.message || "Could not switch local test role.");
-      setWorking(false);
-      return;
-    }
-    setWorking(false);
-    await loadDashboard();
-  }
-
-  async function resetLocalRoleOverride() {
-    setWorking(true);
-    setMessage("");
-    await authFetch("/api/internal/admin/local-role-override", { method: "DELETE" }).catch(() => null);
-    setWorking(false);
-    await loadDashboard();
-  }
-
   async function signOut() {
-    await authFetch("/api/internal/admin/local-role-override", { method: "DELETE" }).catch(() => null);
     await supabase.auth.signOut();
     router.replace("/sign-in");
   }
@@ -181,25 +141,6 @@ export default function AdminDashboardWorkspace() {
       ) : null}
 
       {message ? <div className="lf-admin-alert" role="status">{message}</div> : null}
-
-      {canUseRoleHarness ? (
-        <section className="lf-admin-local-harness" aria-label="Local UAT role testing">
-          <div>
-            <strong>Local UAT role testing</strong>
-            <p>Local-only. This temporarily changes the server-resolved role for this browser session and is ignored outside local development.</p>
-          </div>
-          <div className="lf-admin-filter-row">
-            <label>
-              Test role
-              <select value={roleOverride} onChange={(event) => setRoleOverride(event.target.value)}>
-                {ROLE_OPTIONS.map((role) => <option key={role} value={role}>{formatRole(role)}</option>)}
-              </select>
-            </label>
-            <button type="button" className="lf-admin-primary-button" onClick={setLocalRoleOverride} disabled={working}>Apply role</button>
-            <button type="button" className="lf-admin-secondary-button" onClick={resetLocalRoleOverride} disabled={working}>Reset</button>
-          </div>
-        </section>
-      ) : null}
 
       {state === "error" ? (
         <section className="lf-admin-panel">
@@ -248,12 +189,11 @@ export default function AdminDashboardWorkspace() {
           </section>
 
           <section className="lf-admin-panel">
-            <h2>Restricted future workspaces</h2>
+            <h2>Operational workspaces</h2>
             <div className="lf-admin-placeholder-grid">
-              <AdminPlaceholder title="Probate decisions" text="Future phase. No approve, reject, unlock or revoke action is enabled here." />
-              <AdminPlaceholder title="Support actions" text="Future phase. No account restriction, reinstatement or impersonation is enabled here." />
-              <AdminPlaceholder title="Enterprise and licences" text="Future phase. Current operational view shows placeholders only unless real schema is approved." />
-              <AdminPlaceholder title="Exports" text="Future phase. No CSV, document export or bulk operation is available from this foundation dashboard." />
+              <AdminWorkspaceLink title="Admin operations" text="Open user lookup, support signals, verifications, probate cases, and audit history backed by protected admin APIs." href="/internal/admin" />
+              <AdminWorkspaceLink title="Probate review" text="Open the real probate review workspace. Actions remain capability-protected and audited by the server APIs." href="/internal/admin/probate" />
+              <AdminWorkspaceLink title="Enterprise and licences" text="Blocked until tenant-scoped organisation and licence persistence is implemented. No mock enterprise metrics are exposed." href="/application/enterprise" />
             </div>
           </section>
         </>
@@ -262,12 +202,12 @@ export default function AdminDashboardWorkspace() {
   );
 }
 
-function AdminPlaceholder({ title, text }: { title: string; text: string }) {
+function AdminWorkspaceLink({ title, text, href }: { title: string; text: string; href: string }) {
   return (
-    <div className="lf-admin-placeholder">
+    <Link className="lf-admin-placeholder" href={href}>
       <strong>{title}</strong>
       <span>{text}</span>
-    </div>
+    </Link>
   );
 }
 

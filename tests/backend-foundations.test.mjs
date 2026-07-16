@@ -207,7 +207,8 @@ test("proxy middleware and foundations preserve canonical AttachmentGallery and 
   assert.match(middleware, /applyRoleBasedAccessMiddleware/);
   assert.match(middleware, /startsWith\("\/internal\/test-login"\)/);
   assert.match(middleware, /startsWith\("\/internal\/admin"\)/);
-  assert.match(middleware, /startsWith\("\/internal\/admin\/prototype"\)/);
+  assert.match(middleware, /startsWith\("\/application\/admin"\)/);
+  assert.match(middleware, /startsWith\("\/application\/enterprise"\)/);
   assert.match(middleware, /ENABLE_INTERNAL_ADMIN_EDGE_GUARD/);
   assert.match(middleware, /x-lf-trusted-role-claims/);
   assert.doesNotMatch(middleware, /searchParams\.get\("prototype"\)/);
