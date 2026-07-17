@@ -1,8 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 
 const { buildInvitationEmailDraft } = await import("../lib/contacts/invitations.ts");
 const { canViewPath, filterAssetIdsForViewer } = await import("../lib/access-control/viewerAccess.ts");
+
+const root = process.cwd();
 
 test("invitation email draft includes role, account holder, and secure accept path", () => {
   const draft = buildInvitationEmailDraft({
@@ -99,4 +103,17 @@ test("linked viewers only keep assigned asset rows in shared loaders", () => {
   ], viewer);
 
   assert.deepEqual(rows.map((row) => row.id), ["asset-keep"]);
+});
+
+test("invitation acceptance routes accepted linked users into Contact Wallet", () => {
+  const acceptPage = fs.readFileSync(path.join(root, "app/invite/accept/InvitationAcceptPageClient.tsx"), "utf8");
+  const walletPage = fs.readFileSync(path.join(root, "app/(app)/contact-wallet/page.tsx"), "utf8");
+
+  assert.match(acceptPage, /router\.replace\("\/contact-wallet"\)/);
+  assert.match(acceptPage, /does not create a paid subscription/);
+  assert.match(acceptPage, /does not unlock unrelated private records/);
+  assert.match(walletPage, /Verified Contact Wallet/);
+  assert.match(walletPage, /People you support/);
+  assert.match(walletPage, /paid personal subscription/);
+  assert.match(walletPage, /loadViewerAccessState/);
 });

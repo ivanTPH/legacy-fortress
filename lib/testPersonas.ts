@@ -167,7 +167,7 @@ export function getAdminPrototypeRoleForTestPersona(id: string | null | undefine
 }
 
 export type PrototypeDashboardLink = {
-  id: "consumer" | "executor" | "enterprise_admin" | "probate_admin" | "super_admin";
+  id: "consumer" | "contact_wallet" | "enterprise_admin" | "probate_admin" | "super_admin";
   label: string;
   href: string;
   enabled: boolean;

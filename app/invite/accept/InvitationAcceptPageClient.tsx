@@ -130,8 +130,8 @@ export default function InvitationAcceptPageClient() {
       const result = acceptRes.data[0] as AcceptResult;
       setLinkProblem("none");
       setStoredLinkedGrantId(result.grant_id);
-      setStatus(`Access accepted. Redirecting you to ${result.account_holder_name}'s records...`);
-      router.replace("/dashboard");
+      setStatus(`Access accepted. Redirecting you to your Contact Wallet for ${result.account_holder_name}...`);
+      router.replace("/contact-wallet");
     } catch (error) {
       setStatus(getInvitationValidationMessage(error));
     } finally {
@@ -152,7 +152,7 @@ export default function InvitationAcceptPageClient() {
 
         <div className="lf-auth-art-copy">
           <h2>Secure access for a trusted role.</h2>
-          <p>Review the role you have been invited to, then sign in or create an account to open a protected, view-only version of the estate record.</p>
+          <p>Review the role you have been invited to, then sign in or create an account to open a protected Contact Wallet for this responsibility.</p>
         </div>
       </section>
 
@@ -200,7 +200,7 @@ export default function InvitationAcceptPageClient() {
                   Role: {getRoleLabel(summary.assigned_role as never)}
                 </div>
                 <div style={{ color: "#475569", fontSize: 13 }}>
-                  Access: view-only, role-based review of shared estate records and documents
+                  Access: Contact Wallet first; protected records and documents require explicit permission and verification
                 </div>
                 <div style={{ color: "#475569", fontSize: 13 }}>
                   Email: {summary.contact_email}
@@ -231,9 +231,9 @@ export default function InvitationAcceptPageClient() {
               )}
 
               <div className="lf-muted-note" style={{ display: "grid", gap: 4 }}>
-                <div>You will be able to open records, review attachments, and download documents that have been shared with your role.</div>
-                <div>This access is intentionally view-only so the account holder remains in control of their record.</div>
-                <div>If you later want your own private workspace, you can create a separate Legacy Fortress account without affecting this invitation.</div>
+                <div>Your Contact Wallet will show who you support, your role, required actions, and any explicitly authorised documents.</div>
+                <div>Accepting does not create a paid subscription and does not unlock unrelated private records.</div>
+                <div>If you later want your own private vault, you can activate it from the same identity without affecting this invitation.</div>
               </div>
             </section>
           ) : null}

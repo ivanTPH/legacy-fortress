@@ -184,7 +184,7 @@ function iconForWorkspace(workspace: WorkspaceId) {
   if (workspace === "super_admin") return "admin_panel_settings";
   if (workspace === "enterprise_admin") return "corporate_fare";
   if (workspace === "probate_admin") return "shield_lock";
-  if (workspace === "executor") return "verified_user";
+  if (workspace === "contact_wallet") return "verified_user";
   return "apps";
 }
 

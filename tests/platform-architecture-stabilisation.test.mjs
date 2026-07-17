@@ -343,7 +343,7 @@ test("production role helpers centralise future auth capability checks without a
   assert.equal(canShowAdminViewSwitcher({ roles: ["super_admin"], trustedRoleClaims: true }), true);
   assert.equal(canShowAdminViewSwitcher({ roles: ["super_admin"], trustedRoleClaims: false }), false);
   assert.equal(getDefaultLandingForRoles(["consumer_user"]), "/dashboard");
-  assert.equal(getDefaultLandingForRoles(["executor"]), "/executors");
+  assert.equal(getDefaultLandingForRoles(["executor"]), "/contact-wallet");
   assert.equal(getDefaultLandingForRoles(["probate_admin"]), "/internal/admin/probate");
   assert.equal(getDefaultLandingForRoles(["enterprise_admin"]), "/internal/admin/prototype/enterprise");
   assert.equal(getDefaultLandingForRoles(["super_admin"]), "/internal/admin/prototype/enterprise");

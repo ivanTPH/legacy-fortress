@@ -129,7 +129,7 @@ test("unified login role routing maps future auth roles to expected landing area
   assert.deepEqual(extractPlatformRolesFromMetadata({ roles: ["consumer_user", "unknown"] }), ["consumer_user"]);
   assert.deepEqual(extractPlatformRolesFromMetadata({ role: "super-admin" }), ["super_admin"]);
   assert.equal(getDefaultLandingForRoles(["consumer_user"]), "/dashboard");
-  assert.equal(getDefaultLandingForRoles(["executor"]), "/executors");
+  assert.equal(getDefaultLandingForRoles(["executor"]), "/contact-wallet");
   assert.equal(getDefaultLandingForRoles(["probate_admin"]), "/internal/admin/probate");
   assert.equal(getDefaultLandingForRoles(["enterprise_admin"]), "/internal/admin/prototype/enterprise");
   assert.equal(getDefaultLandingForRoles(["super_admin"]), "/internal/admin/prototype/enterprise");

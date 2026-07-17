@@ -7,7 +7,7 @@ import {
 
 export type WorkspaceId =
   | "application"
-  | "executor"
+  | "contact_wallet"
   | "super_admin"
   | "enterprise_admin"
   | "probate_admin";
@@ -36,7 +36,7 @@ export function buildPrototypeWorkspaceUrl(workspace: WorkspaceId, options: Work
     return "/user";
   }
 
-  if (workspace === "executor") return "/executors";
+  if (workspace === "contact_wallet") return "/contact-wallet";
 
   if (workspace === "super_admin") {
     return "/internal/admin";
@@ -74,7 +74,7 @@ export function getCurrentWorkspaceForPath(pathname: string): WorkspaceId {
   if (pathname.startsWith("/internal/admin/probate")) return "probate_admin";
   if (pathname.startsWith("/user")) return "application";
   if (pathname.startsWith("/internal/admin/prototype")) return "probate_admin";
-  if (pathname.startsWith("/executors")) return "executor";
+  if (pathname.startsWith("/contact-wallet") || pathname.startsWith("/executors")) return "contact_wallet";
   return "application";
 }
 
@@ -97,11 +97,11 @@ export function getAvailableWorkspaces(
       roleContext: primaryRole,
     },
     {
-      id: "executor",
-      label: "Executor Workspace",
-      shortLabel: "Executor",
-      description: "Executor and trusted-access workspace.",
-      href: buildPrototypeWorkspaceUrl("executor", options),
+      id: "contact_wallet",
+      label: "Contact Wallet",
+      shortLabel: "Wallet",
+      description: "Supporting relationships, responsibilities, and explicitly authorised records.",
+      href: buildPrototypeWorkspaceUrl("contact_wallet", options),
       enabled: roleSet.has("executor") || hasPlatformCapability(roles, "executor_view"),
       requiredRole: "executor",
       roleContext: "executor",
@@ -139,7 +139,7 @@ export function getAvailableWorkspaces(
   ];
 
   const filtered = options.includeDisabled ? routes : routes.filter((route) => route.enabled);
-  if (roleSet.has("super_admin")) return filtered.filter((route) => route.id !== "executor");
+  if (roleSet.has("super_admin")) return filtered.filter((route) => route.id !== "contact_wallet");
   return filtered.filter((route) => route.id !== "super_admin");
 }
 

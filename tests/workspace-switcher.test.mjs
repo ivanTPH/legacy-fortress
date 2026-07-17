@@ -52,6 +52,11 @@ test("workspace route map resolves role-aware admin and application workspaces c
 
   const consumer = getAvailableWorkspaces(["consumer_user"], { prototype: true });
   assert.deepEqual(consumer.map((workspace) => workspace.id), ["application"]);
+
+  const executor = getAvailableWorkspaces(["executor"], { prototype: true });
+  assert.deepEqual(executor.map((workspace) => workspace.id), ["application", "contact_wallet"]);
+  assert.deepEqual(executor.map((workspace) => workspace.label), ["Personal Vault", "Contact Wallet"]);
+  assert.equal(buildPrototypeWorkspaceUrl("contact_wallet"), "/contact-wallet");
 });
 
 test("master admin email keeps application and enterprise workspaces visible together", () => {
@@ -119,7 +124,8 @@ test("current workspace detection recognises enterprise, probate, executor, and 
   assert.equal(getCurrentWorkspaceForPath("/internal/admin/prototype/cases"), "probate_admin");
   assert.equal(getCurrentWorkspaceForPath("/application/admin"), "super_admin");
   assert.equal(getCurrentWorkspaceForPath("/internal/admin/probate"), "probate_admin");
-  assert.equal(getCurrentWorkspaceForPath("/executors"), "executor");
+  assert.equal(getCurrentWorkspaceForPath("/contact-wallet"), "contact_wallet");
+  assert.equal(getCurrentWorkspaceForPath("/executors"), "contact_wallet");
   assert.equal(getCurrentWorkspaceForPath("/user"), "application");
   assert.equal(getCurrentWorkspaceForPath("/dashboard"), "application");
 });
