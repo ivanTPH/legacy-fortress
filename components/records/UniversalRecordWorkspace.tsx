@@ -5555,7 +5555,7 @@ function taskFormToConfigValues(form: EditForm): Record<string, string> {
 
 function applyBankConfigFieldChange(prev: EditForm, key: string, value: string): EditForm {
   if (key === "provider_name") return { ...prev, bank_name: value };
-  if (key === "account_type") return { ...prev, bank_account_type: value };
+  if (key === "account_type") return { ...prev, bank_account_type: value, bank_account_type_other: value === "__other" ? prev.bank_account_type_other : "" };
   if (key === "account_type_other") return { ...prev, bank_account_type_other: value };
   if (key === "account_nickname") return { ...prev, account_nickname: value };
   if (key === "account_holder") return { ...prev, account_holder_name: value };
@@ -5973,7 +5973,11 @@ function getFinanceDraft(categoryKey: string, form: EditForm) {
     const accountTypeField = BANK_FORM_CONFIG?.fields.find((field) => field.key === "account_type");
     const countryField = BANK_FORM_CONFIG?.fields.find((field) => field.key === "country");
     const currencyField = BANK_FORM_CONFIG?.fields.find((field) => field.key === "currency");
-    const resolvedAccountType = accountTypeField ? resolveConfiguredFieldValue(accountTypeField, values) : form.bank_account_type.trim();
+    const resolvedAccountType = form.bank_account_type === "__other"
+      ? "other_bank_account"
+      : accountTypeField
+        ? resolveConfiguredFieldValue(accountTypeField, values)
+        : form.bank_account_type.trim();
     const resolvedCountry = countryField ? resolveConfiguredFieldValue(countryField, values) : form.country.trim();
     const resolvedCurrency = (currencyField ? resolveConfiguredFieldValue(currencyField, values) : form.currency_code).toUpperCase();
     const resolvedBankName = form.bank_name.trim() || form.title.trim();
@@ -5988,6 +5992,7 @@ function getFinanceDraft(categoryKey: string, form: EditForm) {
       metadata: {
         provider_name: resolvedBankName || null,
         account_type: resolvedAccountType || null,
+        account_type_other: form.bank_account_type === "__other" ? form.bank_account_type_other.trim() || null : null,
         account_nickname: form.account_nickname.trim() || null,
         account_holder: form.account_holder_name.trim() || null,
         sort_code: form.sort_code.trim() || null,

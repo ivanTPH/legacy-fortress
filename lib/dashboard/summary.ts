@@ -1,5 +1,5 @@
-import { normalizeBankAssetRow } from "../assets/bankAsset";
-import { formatCurrency } from "../currency";
+import { normalizeBankAssetRow } from "../assets/bankAsset.ts";
+import { formatCurrency } from "../currency.ts";
 
 export type DashboardAssetRow = {
   id: string;

@@ -413,6 +413,65 @@ test("finance landing page investments summary card shows investment items only"
   assert.equal(summary.items[0]?.href, "/finances/investments");
 });
 
+test("stocks and shares ISA rows count as active investments in dashboard summaries", () => {
+  const rows = [
+    {
+      id: "stocks-isa-1",
+      section_key: "finances",
+      category_key: "investments",
+      title: "Stocks ISA",
+      provider_name: "Vanguard",
+      value_minor: 1234500,
+      currency_code: "GBP",
+      status: "active",
+      archived_at: null,
+      deleted_at: null,
+      metadata_json: {
+        investment_type: "stocks_shares_isa",
+        investment_provider: "Vanguard",
+      },
+      created_at: "2026-07-17T10:00:00.000Z",
+      updated_at: "2026-07-17T10:00:00.000Z",
+    },
+    {
+      id: "stocks-isa-archived",
+      section_key: "finances",
+      category_key: "investments",
+      title: "Archived Stocks ISA",
+      provider_name: "Old Platform",
+      value_minor: 9999900,
+      currency_code: "GBP",
+      status: "archived",
+      archived_at: "2026-07-17T11:00:00.000Z",
+      deleted_at: null,
+      metadata_json: {
+        investment_type: "stocks_shares_isa",
+      },
+      created_at: "2026-07-17T09:00:00.000Z",
+      updated_at: "2026-07-17T11:00:00.000Z",
+    },
+  ];
+
+  const counts = countAssetsByBucket(rows);
+  const financeSummary = buildFinanceSummary(rows, {
+    createdId: "",
+    currency: "GBP",
+    getHref: (categoryKey) => `/finances/${categoryKey}`,
+  });
+  const investmentSummary = buildFinanceCategorySummary(rows, {
+    categoryKey: "investments",
+    currency: "GBP",
+    href: "/finances/investments",
+  });
+
+  assert.equal(counts.finance, 1);
+  assert.equal(financeSummary.includedCount, 1);
+  assert.equal(financeSummary.totalMajor, 12345);
+  assert.equal(investmentSummary.includedCount, 1);
+  assert.equal(investmentSummary.items[0]?.label, "Stocks ISA");
+  assert.equal(investmentSummary.items[0]?.href, "/finances/investments");
+});
+
 test("empty finance categories show no-records-yet summaries", () => {
   const summary = buildFinanceCategorySummary([], {
     categoryKey: "pensions",

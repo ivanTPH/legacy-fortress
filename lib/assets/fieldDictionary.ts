@@ -1,3 +1,5 @@
+import { getCategoryTypeFieldOptions } from "./categoryTypeIntegrity.mjs";
+
 export type AssetFieldType =
   | "text"
   | "textarea"
@@ -75,38 +77,19 @@ export const CURRENCY_OPTIONS: AssetFieldOption[] = [
 ];
 
 export const ACCOUNT_TYPE_OPTIONS: AssetFieldOption[] = [
-  { label: "Current Account", value: "current_account" },
-  { label: "Savings Account", value: "savings_account" },
-  { label: "Business Account", value: "business_account" },
-  { label: "Joint Account", value: "joint_account" },
-  { label: "ISA", value: "isa" },
-  { label: "Fixed Deposit / Term Deposit", value: "fixed_deposit_term_deposit" },
-  { label: "Investment Account", value: "investment_account" },
-  { label: "Other", value: "__other" },
+  ...getCategoryTypeFieldOptions("finances", "bank", { otherValue: "__other" }),
 ];
 
 export const PENSION_TYPE_OPTIONS: AssetFieldOption[] = [
-  { label: "Workplace pension", value: "workplace" },
-  { label: "Personal pension", value: "personal" },
-  { label: "SIPP", value: "sipp" },
-  { label: "Defined benefit", value: "defined_benefit" },
-  { label: "Other", value: "__other" },
+  ...getCategoryTypeFieldOptions("finances", "pensions", { otherValue: "__other" }),
 ];
 
 export const INSURANCE_TYPE_OPTIONS: AssetFieldOption[] = [
-  { label: "Life", value: "life" },
-  { label: "Health", value: "health" },
-  { label: "Home", value: "home" },
-  { label: "Car", value: "car" },
-  { label: "Other", value: "__other" },
+  ...getCategoryTypeFieldOptions("finances", "insurance", { otherValue: "__other" }),
 ];
 
 export const DEBT_TYPE_OPTIONS: AssetFieldOption[] = [
-  { label: "Credit card", value: "credit_card" },
-  { label: "Loan", value: "loan" },
-  { label: "Mortgage", value: "mortgage" },
-  { label: "Overdraft", value: "overdraft" },
-  { label: "Other", value: "__other" },
+  ...getCategoryTypeFieldOptions("finances", "debts", { otherValue: "__other" }),
 ];
 
 export const IDENTITY_DOCUMENT_TYPE_OPTIONS: AssetFieldOption[] = [
