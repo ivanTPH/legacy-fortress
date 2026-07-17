@@ -64,6 +64,18 @@ export type ProbateCaseEvidenceItem = {
   createdAt: string;
 };
 
+export class ProbateCaseTransitionError extends Error {
+  status: number;
+  code: string;
+
+  constructor(message: string, { status = 409, code = "invalid_probate_transition" }: { status?: number; code?: string } = {}) {
+    super(message);
+    this.name = "ProbateCaseTransitionError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
 type ProbateCaseRow = {
   id: string;
   owner_user_id: string;
@@ -286,6 +298,7 @@ export async function applyProbateCaseAction(
   if (!trimmedReason) throw new Error("Decision notes are required for probate case actions.");
 
   const current = await getProbateCase(client, caseId);
+  assertProbateCaseTransitionAllowed(current.status, action);
   const now = new Date().toISOString();
   const status = getStatusForAction(action);
   const update: Record<string, unknown> = {
@@ -339,8 +352,19 @@ export async function applyProbateCaseAction(
     });
   }
 
-  const updateRes = await client.from("probate_cases").update(update).eq("id", caseId);
+  const updateRes = await client
+    .from("probate_cases")
+    .update(update)
+    .eq("id", caseId)
+    .eq("status", current.status)
+    .select("id");
   if (updateRes.error) throw new Error(updateRes.error.message);
+  if (!updateRes.data?.length) {
+    throw new ProbateCaseTransitionError("Probate case changed while this decision was being saved. Refresh the case and try again.", {
+      status: 409,
+      code: "stale_probate_case_state",
+    });
+  }
   return getProbateCase(client, caseId);
 }
 
@@ -518,6 +542,33 @@ function getStatusForAction(action: ProbateCaseAction): ProbateCaseStatus {
   if (action === "approve") return "approved";
   if (action === "reject") return "rejected";
   return "revoked";
+}
+
+export function isTerminalProbateCaseStatus(status: ProbateCaseStatus) {
+  return status === "approved" || status === "rejected" || status === "revoked" || status === "closed";
+}
+
+export function getAllowedProbateCaseActions(status: ProbateCaseStatus): ProbateCaseAction[] {
+  if (status === "submitted" || status === "needs_information" || status === "under_review") {
+    return ["request_information", "review", "approve", "reject"];
+  }
+  if (status === "approved") return ["revoke"];
+  return [];
+}
+
+export function assertProbateCaseTransitionAllowed(status: ProbateCaseStatus, action: ProbateCaseAction) {
+  const allowed = getAllowedProbateCaseActions(status);
+  if (allowed.includes(action)) return;
+  if (isTerminalProbateCaseStatus(status)) {
+    throw new ProbateCaseTransitionError(`Probate case is already ${status}; ${action.replace(/_/g, " ")} is not allowed.`, {
+      status: 409,
+      code: "terminal_probate_case",
+    });
+  }
+  throw new ProbateCaseTransitionError(`Probate case cannot move from ${status} using ${action.replace(/_/g, " ")}.`, {
+    status: 422,
+    code: "unsupported_probate_transition",
+  });
 }
 
 function getApplicantStatusMessage(action: ProbateCaseAction) {

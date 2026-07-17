@@ -11,6 +11,11 @@ const FALLBACK_COMPLETE_STEP: OnboardingStepId = "complete";
 const ONBOARDING_TABLE = "user_onboarding_state";
 const TERMS_TABLE = "terms_acceptances";
 export const CURRENT_TERMS_VERSION = "legacy-fortress-2026-03";
+export const TERMS_POLICY = {
+  type: "terms",
+  currentVersion: CURRENT_TERMS_VERSION,
+  sourceDefault: "onboarding",
+} as const;
 
 type OnboardingSchema = {
   exists: boolean;
@@ -159,8 +164,8 @@ export async function saveTermsAcceptance(
   userId: string,
   {
     accepted,
-    source = "onboarding",
-    termsVersion = CURRENT_TERMS_VERSION,
+    source = TERMS_POLICY.sourceDefault,
+    termsVersion = TERMS_POLICY.currentVersion,
   }: {
     accepted: boolean;
     source?: string;
@@ -377,4 +382,11 @@ function fallbackTermsAcceptanceState(userId: string) {
     source: "fallback",
     updated_at: null,
   };
+}
+
+export function isCurrentTermsAcceptance(
+  terms: ReturnType<typeof normalizeTermsAcceptanceState> | null | undefined,
+) {
+  if (!terms?.accepted) return false;
+  return terms.terms_version === TERMS_POLICY.currentVersion;
 }

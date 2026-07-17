@@ -109,6 +109,8 @@ type ProbateCaseEvidenceItem = {
   createdAt: string;
 };
 
+type ProbateCaseStatus = "submitted" | "needs_information" | "under_review" | "approved" | "rejected" | "revoked" | "closed";
+
 type ProbateCaseItem = {
   id: string;
   ownerName: string;
@@ -116,7 +118,7 @@ type ProbateCaseItem = {
   contactEmail: string;
   assignedRole: string;
   caseType: string;
-  status: string;
+  status: ProbateCaseStatus;
   submittedAt: string;
   reviewedAt: string | null;
   decidedAt: string | null;
@@ -125,6 +127,37 @@ type ProbateCaseItem = {
   accessGrantId: string | null;
   evidence: ProbateCaseEvidenceItem[];
 };
+
+function getAllowedProbateActions(status: ProbateCaseStatus) {
+  if (status === "submitted" || status === "needs_information" || status === "under_review") {
+    return {
+      canRequestInformation: true,
+      canReview: true,
+      canApprove: true,
+      canReject: true,
+      canRevoke: false,
+      terminal: false,
+    };
+  }
+  if (status === "approved") {
+    return {
+      canRequestInformation: false,
+      canReview: false,
+      canApprove: false,
+      canReject: false,
+      canRevoke: true,
+      terminal: true,
+    };
+  }
+  return {
+    canRequestInformation: false,
+    canReview: false,
+    canApprove: false,
+    canReject: false,
+    canRevoke: false,
+    terminal: true,
+  };
+}
 
 type LoadState = "checking" | "ready" | "denied";
 
@@ -517,7 +550,9 @@ export default function AdminOpsWorkspace() {
                 style={{ ...inputStyle, minHeight: 72, resize: "vertical" }}
               />
             </label>
-            {probateCases.map((item) => (
+            {probateCases.map((item) => {
+              const actions = getAllowedProbateActions(item.status);
+              return (
               <article key={item.id} style={rowStyle}>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                   <span style={positivePillStyle}>{item.status.replace(/_/g, " ")}</span>
@@ -528,6 +563,11 @@ export default function AdminOpsWorkspace() {
                 <div style={mutedStyle}>{item.contactEmail || "No contact email"} · Submitted {formatDate(item.submittedAt)}</div>
                 <div style={mutedStyle}>{item.applicantStatusMessage}</div>
                 {item.decisionReason ? <div style={mutedStyle}>Last notes: {item.decisionReason}</div> : null}
+                {actions.terminal ? (
+                  <div style={mutedStyle}>
+                    Terminal status{item.decidedAt ? ` · decided ${formatDate(item.decidedAt)}` : ""}. Further approve or reject actions are unavailable for this case.
+                  </div>
+                ) : null}
                 <div style={{ display: "grid", gap: 6 }}>
                   <div style={{ fontWeight: 700, fontSize: 13 }}>Evidence</div>
                   {item.evidence.map((evidence) => (
@@ -554,24 +594,25 @@ export default function AdminOpsWorkspace() {
                   </label>
                 </div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button type="button" style={ghostBtnStyle} disabled={!canReviewVerification || actingProbateCaseId === item.id} onClick={() => void actOnProbateCase(item.id, "request_information")}>
+                  <button type="button" style={ghostBtnStyle} disabled={!canReviewVerification || actingProbateCaseId === item.id || !actions.canRequestInformation} onClick={() => void actOnProbateCase(item.id, "request_information")}>
                     Request information
                   </button>
-                  <button type="button" style={ghostBtnStyle} disabled={!canReviewVerification || actingProbateCaseId === item.id} onClick={() => void actOnProbateCase(item.id, "review")}>
+                  <button type="button" style={ghostBtnStyle} disabled={!canReviewVerification || actingProbateCaseId === item.id || !actions.canReview} onClick={() => void actOnProbateCase(item.id, "review")}>
                     Mark under review
                   </button>
-                  <button type="button" style={primaryBtnStyle} disabled={!canDecideVerification || actingProbateCaseId === item.id} onClick={() => void actOnProbateCase(item.id, "approve")}>
+                  <button type="button" style={primaryBtnStyle} disabled={!canDecideVerification || actingProbateCaseId === item.id || !actions.canApprove} onClick={() => void actOnProbateCase(item.id, "approve")}>
                     Approve limited access
                   </button>
-                  <button type="button" style={dangerBtnStyle} disabled={!canDecideVerification || actingProbateCaseId === item.id} onClick={() => void actOnProbateCase(item.id, "reject")}>
+                  <button type="button" style={dangerBtnStyle} disabled={!canDecideVerification || actingProbateCaseId === item.id || !actions.canReject} onClick={() => void actOnProbateCase(item.id, "reject")}>
                     Reject
                   </button>
-                  <button type="button" style={dangerBtnStyle} disabled={!canDecideVerification || actingProbateCaseId === item.id} onClick={() => void actOnProbateCase(item.id, "revoke")}>
+                  <button type="button" style={dangerBtnStyle} disabled={!canDecideVerification || actingProbateCaseId === item.id || !actions.canRevoke} onClick={() => void actOnProbateCase(item.id, "revoke")}>
                     Revoke access
                   </button>
                 </div>
               </article>
-            ))}
+              );
+            })}
             {probateCases.length === 0 ? <div style={mutedStyle}>No live probate or executor cases are available yet.</div> : null}
           </div>
         ) : null}

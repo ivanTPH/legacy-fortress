@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 
 const { resolveBootstrapDestination } = await import("../lib/auth/bootstrapRules.ts");
 const {
@@ -11,6 +13,8 @@ const {
   getDefaultLandingForRoles,
 } = await import("../lib/auth/platformRoles.ts");
 const { resolvePermissionedAdminDestination } = await import("../lib/auth/adminDestination.ts");
+
+const root = process.cwd();
 
 test("owners who have not completed onboarding are sent straight to onboarding", () => {
   const result = resolveBootstrapDestination({
@@ -34,6 +38,18 @@ test("owners with onboarding done but no terms acceptance are sent straight to t
 
   assert.equal(result.onboardingComplete, false);
   assert.equal(result.destination, "/account/terms?required=1");
+});
+
+test("terms acceptance is resolved through the shared current-version policy", () => {
+  const onboarding = fs.readFileSync(path.join(root, "lib/onboarding/index.ts"), "utf8");
+  const bootstrap = fs.readFileSync(path.join(root, "lib/auth/bootstrap.ts"), "utf8");
+
+  assert.match(onboarding, /export const CURRENT_TERMS_VERSION/);
+  assert.match(onboarding, /export const TERMS_POLICY/);
+  assert.match(onboarding, /currentVersion: CURRENT_TERMS_VERSION/);
+  assert.match(onboarding, /export function isCurrentTermsAcceptance/);
+  assert.match(onboarding, /terms\.terms_version === TERMS_POLICY\.currentVersion/);
+  assert.match(bootstrap, /isCurrentTermsAcceptance\(terms\)/);
 });
 
 test("linked or invited viewers bypass owner onboarding and terms gating", () => {

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ensureWalletContext, type WalletContext } from "../canonicalPersistence";
-import { getOrCreateOnboardingState, getTermsAcceptanceState } from "../onboarding";
+import { getOrCreateOnboardingState, getTermsAcceptanceState, isCurrentTermsAcceptance } from "../onboarding";
 import { toSafeInternalPath } from "./session";
 import { hasLinkedAccountAccess } from "../access-control/viewerAccess";
 import { resolveBootstrapDestination } from "./bootstrapRules";
@@ -42,7 +42,7 @@ export async function bootstrapAuthenticatedUser(
     completedDestination: roles.length > 0 ? getDefaultLandingForRoles(roles) : completedDestination,
     canBypassOnboarding,
     onboardingCompleted: onboarding.is_completed,
-    termsAccepted: Boolean(terms?.accepted),
+    termsAccepted: isCurrentTermsAcceptance(terms),
     roles,
   });
 

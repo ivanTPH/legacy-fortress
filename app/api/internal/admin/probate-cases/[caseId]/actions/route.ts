@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdminAccess, requireAdminCapability } from "@/lib/admin/access";
 import { recordAdminAuditEvent } from "@/lib/admin/audit";
-import { applyProbateCaseAction, normalizeProbateCaseAction } from "@/lib/admin/probateCases";
+import { applyProbateCaseAction, normalizeProbateCaseAction, ProbateCaseTransitionError } from "@/lib/admin/probateCases";
 
 export async function POST(request: Request, { params }: { params: Promise<{ caseId: string }> }) {
   const admin = await requireAdminAccess(request);
@@ -25,12 +25,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ cas
   }
 
   const { caseId } = await params;
-  const probateCase = await applyProbateCaseAction(admin.adminClient, {
-    caseId,
-    action,
-    reason,
-    reviewerUserId: admin.access.user.id,
-  });
+  let probateCase;
+  try {
+    probateCase = await applyProbateCaseAction(admin.adminClient, {
+      caseId,
+      action,
+      reason,
+      reviewerUserId: admin.access.user.id,
+    });
+  } catch (error) {
+    if (error instanceof ProbateCaseTransitionError) {
+      return NextResponse.json(
+        { ok: false, message: error.message, code: error.code },
+        { status: error.status },
+      );
+    }
+    throw error;
+  }
   await recordAdminAuditEvent(admin.adminClient, admin.access, {
     category: action === "approve" ? "admin_approval" : "admin_review",
     action: `Probate case ${action.replace(/_/g, " ")}`,

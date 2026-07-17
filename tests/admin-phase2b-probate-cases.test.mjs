@@ -4,6 +4,12 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
+const {
+  ProbateCaseTransitionError,
+  assertProbateCaseTransitionAllowed,
+  getAllowedProbateCaseActions,
+  isTerminalProbateCaseStatus,
+} = await import("../lib/admin/probateCases.ts");
 
 test("Phase 2B migration adds canonical probate case and evidence tables", () => {
   const migration = fs.readFileSync(path.join(root, "supabase/migrations/20260701193000_admin_phase2b_probate_cases.sql"), "utf8");
@@ -53,6 +59,37 @@ test("Phase 2B service creates case-scoped grants and safe signed evidence acces
   assert.doesNotMatch(service, /publicUrl|getPublicUrl/);
 });
 
+test("Phase 2B probate state machine blocks duplicate terminal decisions", () => {
+  assert.deepEqual(getAllowedProbateCaseActions("submitted"), ["request_information", "review", "approve", "reject"]);
+  assert.deepEqual(getAllowedProbateCaseActions("needs_information"), ["request_information", "review", "approve", "reject"]);
+  assert.deepEqual(getAllowedProbateCaseActions("under_review"), ["request_information", "review", "approve", "reject"]);
+  assert.deepEqual(getAllowedProbateCaseActions("approved"), ["revoke"]);
+  assert.deepEqual(getAllowedProbateCaseActions("rejected"), []);
+  assert.equal(isTerminalProbateCaseStatus("approved"), true);
+  assert.equal(isTerminalProbateCaseStatus("rejected"), true);
+  assert.equal(isTerminalProbateCaseStatus("submitted"), false);
+
+  assert.doesNotThrow(() => assertProbateCaseTransitionAllowed("submitted", "reject"));
+  assert.throws(
+    () => assertProbateCaseTransitionAllowed("rejected", "reject"),
+    (error) => error instanceof ProbateCaseTransitionError
+      && error.status === 409
+      && error.code === "terminal_probate_case",
+  );
+  assert.throws(
+    () => assertProbateCaseTransitionAllowed("rejected", "approve"),
+    (error) => error instanceof ProbateCaseTransitionError
+      && error.status === 409
+      && error.code === "terminal_probate_case",
+  );
+  assert.throws(
+    () => assertProbateCaseTransitionAllowed("approved", "reject"),
+    (error) => error instanceof ProbateCaseTransitionError
+      && error.status === 409
+      && error.code === "terminal_probate_case",
+  );
+});
+
 test("Phase 2B workspace exposes live cases without adding prototype-only controls", () => {
   const workspace = fs.readFileSync(path.join(root, "components/admin/AdminOpsWorkspace.tsx"), "utf8");
 
@@ -61,6 +98,16 @@ test("Phase 2B workspace exposes live cases without adding prototype-only contro
   assert.match(workspace, /Approve limited access/);
   assert.match(workspace, /Revoke access/);
   assert.match(workspace, /Upload evidence/);
+  assert.match(workspace, /getAllowedProbateActions/);
+  assert.match(workspace, /Terminal status/);
   assert.match(workspace, /\/api\/internal\/admin\/probate-cases/);
   assert.doesNotMatch(workspace, /Static mock data|Prototype session/);
+});
+
+test("Phase 2B action route returns stable conflict response for invalid transitions", () => {
+  const actionRoute = fs.readFileSync(path.join(root, "app/api/internal/admin/probate-cases/[caseId]/actions/route.ts"), "utf8");
+
+  assert.match(actionRoute, /ProbateCaseTransitionError/);
+  assert.match(actionRoute, /code: error\.code/);
+  assert.match(actionRoute, /status: error\.status/);
 });
