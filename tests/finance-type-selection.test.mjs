@@ -30,8 +30,11 @@ test("finance save canonicalizes type values before persistence", () => {
 
 test("bank other account type stores a stable classification and separate custom text", () => {
   assert.match(workspaceSource, /form\.bank_account_type === "__other"[\s\S]*\? "other_bank_account"/);
-  assert.match(workspaceSource, /account_type_other: form\.bank_account_type === "__other"/);
+  assert.match(workspaceSource, /account_type_other: resolvedAccountTypeOther \|\| null/);
   assert.match(workspaceSource, /bank_account_type_other: value === "__other" \? prev\.bank_account_type_other : ""/);
+  assert.match(workspaceSource, /canonicalBankSeed\.account_type_other/);
+  assert.match(workspaceSource, /canonicalOption\.value[\s\S]*explicitOtherValue\.trim\(\)/);
+  assert.match(workspaceSource, /resolvedAccountTypeOther/);
 });
 
 test("pension save requires a pension type", () => {

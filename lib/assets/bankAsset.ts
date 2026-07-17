@@ -14,6 +14,7 @@ export type CanonicalBankAsset = {
   provider_name: string;
   provider_key: string;
   account_type: string;
+  account_type_other: string;
   account_nickname: string;
   account_holder: string;
   account_number: string;
@@ -36,6 +37,7 @@ export type CanonicalBankEditSeed = {
   provider_name: string;
   provider_key: string;
   account_type: string;
+  account_type_other: string;
   account_nickname: string;
   account_holder: string;
   account_number: string;
@@ -59,6 +61,7 @@ export function normalizeBankAssetRow(source: BankAssetSource): CanonicalBankAss
   );
   const providerKey = readString(metadata["provider_key"], source.provider_key).toLowerCase();
   const accountType = readString(metadata["account_type"], metadata["bank_account_type"]);
+  const accountTypeOther = readBankOtherAccountType(metadata);
   const accountNickname = readString(metadata["account_nickname"], metadata["nickname"]);
   const accountHolder = readString(metadata["account_holder"], metadata["account_holder_name"]);
   const accountNumber = readString(metadata["account_number"]);
@@ -75,7 +78,11 @@ export function normalizeBankAssetRow(source: BankAssetSource): CanonicalBankAss
   const valuationDate = readString(metadata["valuation_date"], metadata["last_updated_on"]);
   const country = readString(metadata["country"], metadata["country_code"]).toUpperCase();
   const currency = readString(metadata["currency"], metadata["currency_code"], source.currency_code).toUpperCase();
-  const title = buildBankDisplayName(providerName, accountType, source.title);
+  const title = buildBankDisplayName(
+    providerName,
+    accountType === "other_bank_account" && accountTypeOther ? accountTypeOther : accountType,
+    source.title,
+  );
   const notes = readString(metadata["notes"]);
 
   return {
@@ -83,6 +90,7 @@ export function normalizeBankAssetRow(source: BankAssetSource): CanonicalBankAss
     provider_name: providerName,
     provider_key: providerKey,
     account_type: accountType,
+    account_type_other: accountTypeOther,
     account_nickname: accountNickname,
     account_holder: accountHolder,
     account_number: accountNumber,
@@ -115,6 +123,7 @@ export function normalizeCanonicalBankMetadata(
       readString(metadata["provider_name"], metadata["institution_name"], metadata["bank_name"], context?.provider_name) || null,
     provider_key: readString(metadata["provider_key"], context?.provider_key).toLowerCase() || null,
     account_type: readString(metadata["account_type"], metadata["bank_account_type"]) || null,
+    account_type_other: readBankOtherAccountType(metadata) || null,
     account_nickname: readString(metadata["account_nickname"], metadata["nickname"]) || null,
     account_holder: readString(metadata["account_holder"], metadata["account_holder_name"]) || null,
     sort_code: readString(metadata["sort_code"]) || null,
@@ -163,6 +172,7 @@ export function buildCanonicalBankEditSeed(source: BankAssetSource): CanonicalBa
     provider_name: providerName || canonical.provider_name,
     provider_key: canonical.provider_key,
     account_type: canonical.account_type,
+    account_type_other: canonical.account_type_other,
     account_nickname: canonical.account_nickname,
     account_holder: accountHolder,
     account_number: canonical.account_number,
@@ -184,6 +194,21 @@ export function buildBankDisplayName(providerName: string | null | undefined, ac
   return readString(fallbackTitle) || "Untitled bank account";
 }
 
+function readBankOtherAccountType(metadata: Record<string, unknown>) {
+  const accountType = readString(metadata["account_type"], metadata["bank_account_type"]);
+  const detail = readString(
+    metadata["account_type_other"],
+    metadata["account_type_details"],
+    metadata["other_account_type"],
+    metadata["bank_account_type_other"],
+    metadata["custom_account_type"],
+  );
+  if (!detail) return "";
+  if (normalizeComparable(detail) === normalizeComparable(accountType)) return "";
+  if (normalizeComparable(detail) === "other_bank_account") return "";
+  return detail;
+}
+
 export function formatBankAccountType(value: string | null | undefined) {
   const raw = readString(value);
   if (!raw) return "";
@@ -201,6 +226,17 @@ function readString(...values: Array<unknown>) {
     if (trimmed) return trimmed;
   }
   return "";
+}
+
+function normalizeComparable(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[/_-]+/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, "_");
 }
 
 function readNumber(...values: Array<unknown>) {

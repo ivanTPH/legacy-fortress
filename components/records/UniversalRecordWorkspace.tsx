@@ -35,6 +35,7 @@ import { getLegalLinkedContactDefinition } from "../../lib/legalCategories";
 import {
   buildCanonicalBankEditSeed,
   buildBankDisplayName,
+  formatBankAccountType,
   normalizeCanonicalBankMetadata,
   normalizeBankAssetRow,
 } from "../../lib/assets/bankAsset";
@@ -1371,7 +1372,12 @@ export default function UniversalRecordWorkspace({
     const pensionProvider = String(row.metadata?.pension_provider ?? row.provider_name ?? "");
     const insurerName = String(row.metadata?.insurer_name ?? row.provider_name ?? "");
     const creditorName = String(row.metadata?.creditor_name ?? row.provider_name ?? "");
-    const bankAccountType = toSelectableValue(BANK_FORM_CONFIG, "account_type", canonicalBankSeed.account_type);
+    const bankAccountType = toSelectableValue(
+      BANK_FORM_CONFIG,
+      "account_type",
+      canonicalBankSeed.account_type,
+      canonicalBankSeed.account_type_other,
+    );
     const country = toSelectableValue(BANK_FORM_CONFIG, "country", canonicalBankSeed.country_code);
     const currency = toSelectableValue(BANK_FORM_CONFIG, "currency", canonicalBankSeed.currency_code);
     const trustDocumentType = resolveTrustDocumentTypeForEdit(row.metadata?.trust_document_type ?? row.metadata?.document_type ?? row.provider_name);
@@ -3128,6 +3134,11 @@ export default function UniversalRecordWorkspace({
           })
         : null;
     const bankProviderName = canonicalBankAsset?.provider_name || canonicalBankAsset?.title || "Unnamed bank account";
+    const bankAccountTypeLabel = canonicalBankAsset
+      ? canonicalBankAsset.account_type === "other_bank_account" && canonicalBankAsset.account_type_other
+        ? canonicalBankAsset.account_type_other
+        : formatBankAccountType(canonicalBankAsset.account_type)
+      : "";
     const providerInput =
       (isBankCategory ? bankProviderName : null) ??
       row.provider_name ??
@@ -3496,7 +3507,7 @@ export default function UniversalRecordWorkspace({
                     <div style={{ color: "#64748b", fontSize: 13 }}>
                       {bankProviderName}
                       {" · "}
-                      {canonicalBankAsset?.account_type || "Account"}
+                      {bankAccountTypeLabel || "Account"}
                       {" · "}
                       {canonicalBankAsset?.account_holder || "Holder not set"}
                     </div>
@@ -3724,7 +3735,7 @@ export default function UniversalRecordWorkspace({
                   <>
                     <div>Provider: {canonicalBankAsset?.provider_name || "Not set"}</div>
                     <div>Provider key: {canonicalBankAsset?.provider_key || "Not set"}</div>
-                    <div>Account type: {canonicalBankAsset?.account_type || "Not set"}</div>
+                    <div>Account type: {bankAccountTypeLabel || "Not set"}</div>
                     <div>Account holder: {canonicalBankAsset?.account_holder || "Not set"}</div>
                     <div>Country: {canonicalBankAsset?.country || "Not set"}</div>
                     <div>Currency: {canonicalBankAsset?.currency || "Not set"}</div>
@@ -5956,6 +5967,7 @@ function toSelectableValue(
   config: ReturnType<typeof getAssetCategoryFormConfig>,
   fieldKey: string,
   rawValue: string,
+  explicitOtherValue = "",
 ) {
   const normalized = rawValue.trim();
   if (!config) return { selected: normalized, other: "" };
@@ -5964,6 +5976,10 @@ function toSelectableValue(
   if (!normalized) return { selected: "", other: "" };
   const valid = field.options.some((option) => option.value === normalized);
   if (valid) return { selected: normalized, other: "" };
+  const canonicalOption = field.options.find((option) => "canonicalValue" in option && option.canonicalValue === normalized);
+  if (canonicalOption?.value) {
+    return { selected: canonicalOption.value, other: explicitOtherValue.trim() };
+  }
   return { selected: "__other", other: normalized };
 }
 
@@ -5978,21 +5994,25 @@ function getFinanceDraft(categoryKey: string, form: EditForm) {
       : accountTypeField
         ? resolveConfiguredFieldValue(accountTypeField, values)
         : form.bank_account_type.trim();
+    const resolvedAccountTypeOther = form.bank_account_type === "__other" ? form.bank_account_type_other.trim() : "";
+    const displayAccountType = resolvedAccountType === "other_bank_account" && resolvedAccountTypeOther
+      ? resolvedAccountTypeOther
+      : resolvedAccountType;
     const resolvedCountry = countryField ? resolveConfiguredFieldValue(countryField, values) : form.country.trim();
     const resolvedCurrency = (currencyField ? resolveConfiguredFieldValue(currencyField, values) : form.currency_code).toUpperCase();
     const resolvedBankName = form.bank_name.trim() || form.title.trim();
-    const resolvedTitle = buildBankDisplayName(resolvedBankName, resolvedAccountType, form.title);
+    const resolvedTitle = buildBankDisplayName(resolvedBankName, displayAccountType, form.title);
 
     return {
       title: resolvedTitle || null,
       providerName: resolvedBankName || null,
-      summary: [resolvedAccountType, form.account_nickname.trim(), form.account_holder_name.trim()].filter(Boolean).join(" · ") || null,
+      summary: [displayAccountType, form.account_nickname.trim(), form.account_holder_name.trim()].filter(Boolean).join(" · ") || null,
       valueMajor: form.value_major || "0",
       currencyCode: resolvedCurrency || "GBP",
       metadata: {
         provider_name: resolvedBankName || null,
         account_type: resolvedAccountType || null,
-        account_type_other: form.bank_account_type === "__other" ? form.bank_account_type_other.trim() || null : null,
+        account_type_other: resolvedAccountTypeOther || null,
         account_nickname: form.account_nickname.trim() || null,
         account_holder: form.account_holder_name.trim() || null,
         sort_code: form.sort_code.trim() || null,

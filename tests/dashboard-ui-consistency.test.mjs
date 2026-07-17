@@ -324,7 +324,7 @@ test("hosted UAT customer category cards and bank records keep canonical shared 
   assert.equal(buildBankDisplayName("HSBC", "savings"), "HSBC — Savings");
   assert.equal(buildBankDisplayName("", "", "Legacy imported account"), "Legacy imported account");
   assert.match(universalWorkspace, /account_nickname/);
-  assert.match(universalWorkspace, /buildBankDisplayName\(resolvedBankName, resolvedAccountType, form\.title\)/);
+  assert.match(universalWorkspace, /buildBankDisplayName\(resolvedBankName, displayAccountType, form\.title\)/);
   assert.match(universalWorkspace, /clearAddRecordQueryFlag\(\);/);
   assert.match(universalWorkspace, /url\.searchParams\.delete\("add"\)/);
   assert.match(css, /\.lf-content-grid \{[\s\S]*align-items: stretch/);

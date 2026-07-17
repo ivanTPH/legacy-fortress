@@ -24,6 +24,7 @@ test("bank create normalization writes canonical metadata keys without legacy du
     provider_name: "HSBC",
     provider_key: null,
     account_type: "current_account",
+    account_type_other: null,
     account_holder: "Jane Doe",
     sort_code: "10-20-30",
     account_number: "12345678",
@@ -112,6 +113,7 @@ test("bank edit seed prefers canonical keys and falls back to legacy keys only w
   assert.equal(seed.provider_name, "Canonical Provider");
   assert.equal(seed.institution_name, "Canonical Provider");
   assert.equal(seed.account_type, "current_account");
+  assert.equal(seed.account_type_other, "");
   assert.equal(seed.account_holder, "Canonical Holder");
   assert.equal(seed.sort_code, "10-20-30");
   assert.equal(seed.account_number, "12345678");
@@ -120,6 +122,66 @@ test("bank edit seed prefers canonical keys and falls back to legacy keys only w
   assert.equal(seed.last_updated_on, "2026-03-23");
   assert.equal(seed.country_code, "UK");
   assert.equal(seed.currency_code, "GBP");
+});
+
+test("bank other edit seed preserves custom account type separate from canonical token", () => {
+  const seed = buildCanonicalBankEditSeed({
+    title: "Imported account",
+    provider_name: "Local Bank",
+    currency_code: "GBP",
+    metadata: {
+      provider_name: "Local Bank",
+      account_type: "other_bank_account",
+      account_type_other: "Offset savings account",
+      account_holder: "Synthetic Holder",
+      account_number: "12345678",
+      country: "UK",
+      currency: "GBP",
+    },
+  });
+
+  assert.equal(seed.account_type, "other_bank_account");
+  assert.equal(seed.account_type_other, "Offset savings account");
+  assert.notEqual(seed.account_type_other, "other_bank_account");
+});
+
+test("bank other compatibility ignores canonical token masquerading as custom detail", () => {
+  const seed = buildCanonicalBankEditSeed({
+    provider_name: "Local Bank",
+    metadata: {
+      provider_name: "Local Bank",
+      account_type: "other_bank_account",
+      account_type_other: "other_bank_account",
+      account_holder: "Synthetic Holder",
+      account_number: "12345678",
+      country: "UK",
+      currency: "GBP",
+    },
+  });
+
+  assert.equal(seed.account_type, "other_bank_account");
+  assert.equal(seed.account_type_other, "");
+});
+
+test("bank other display uses custom detail while preserving canonical classification", () => {
+  const canonical = normalizeBankAssetRow({
+    provider_name: "Local Bank",
+    currency_code: "GBP",
+    metadata: {
+      provider_name: "Local Bank",
+      account_type: "other_bank_account",
+      account_type_other: "Offset savings account",
+      account_holder: "Synthetic Holder",
+      account_number: "12345678",
+      country: "UK",
+      currency: "GBP",
+    },
+  });
+
+  assert.equal(canonical.account_type, "other_bank_account");
+  assert.equal(canonical.account_type_other, "Offset savings account");
+  assert.equal(canonical.title, "Local Bank — Offset Savings Account");
+  assert.doesNotMatch(canonical.title, /other_bank_account/);
 });
 
 test("bank detail reader prefers canonical bank metadata and falls back only when needed", () => {
@@ -144,6 +206,7 @@ test("bank detail reader prefers canonical bank metadata and falls back only whe
 
   assert.equal(canonical.provider_name, "Canonical Provider");
   assert.equal(canonical.account_type, "current_account");
+  assert.equal(canonical.account_type_other, "");
   assert.equal(canonical.account_holder, "Canonical Holder");
   assert.equal(canonical.sort_code, "10-20-30");
   assert.equal(canonical.account_number, "12345678");
