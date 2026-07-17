@@ -10,6 +10,7 @@ const {
 const {
   buildVerificationMutation,
   buildSupportIssueLabel,
+  normalizeAdminUserLifecycleAction,
 } = await import("../lib/admin/operations.ts");
 
 test("admin email normalization is stable", () => {
@@ -48,3 +49,10 @@ test("support issue labels stay human-readable", () => {
   assert.equal(buildSupportIssueLabel("accepted", "accepted"), "Accepted access awaiting activation");
 });
 
+test("admin lifecycle actions are explicitly normalised", () => {
+  assert.equal(normalizeAdminUserLifecycleAction("activate"), "activate");
+  assert.equal(normalizeAdminUserLifecycleAction("deactivate"), "deactivate");
+  assert.equal(normalizeAdminUserLifecycleAction("change_role"), "change_role");
+  assert.equal(normalizeAdminUserLifecycleAction("delete"), null);
+  assert.equal(normalizeAdminUserLifecycleAction(""), null);
+});

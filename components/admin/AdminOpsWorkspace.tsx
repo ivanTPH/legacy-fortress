@@ -18,9 +18,14 @@ type AdminSessionPayload = {
   admins?: Array<{
     id: string;
     email_normalized: string;
+    user_id: string | null;
     status: string;
     is_master: boolean;
+    role: string | null;
     display_name: string | null;
+    granted_by_user_id?: string | null;
+    created_at?: string;
+    updated_at?: string;
   }>;
   message?: string;
 };
@@ -179,6 +184,7 @@ export default function AdminOpsWorkspace() {
   const [uploadingEvidenceFor, setUploadingEvidenceFor] = useState("");
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [savingAdmin, setSavingAdmin] = useState(false);
+  const [actingAdminUserId, setActingAdminUserId] = useState("");
   const [actingVerificationId, setActingVerificationId] = useState("");
   const capabilities = adminInfo?.capabilities ?? [];
   const canManageAdmins = capabilities.includes("admin_users:manage");
@@ -187,6 +193,7 @@ export default function AdminOpsWorkspace() {
   const canReviewVerification = capabilities.includes("verification:review");
   const canDecideVerification = capabilities.includes("verification:decide");
   const canReadAudit = capabilities.includes("audit:read");
+  const adminRoles = ["super_admin", "support_agent", "verification_reviewer", "probate_reviewer", "auditor", "enterprise_admin"];
 
   const authFetch = useCallback(async (input: string, init?: RequestInit) => {
     const sessionRes = await supabase.auth.getSession();
@@ -274,6 +281,35 @@ export default function AdminOpsWorkspace() {
       setNewAdminEmail("");
     }
     setSavingAdmin(false);
+  }
+
+  async function actOnAdminUser(adminUserId: string, action: "activate" | "deactivate" | "change_role", role?: string | null) {
+    const reason =
+      action === "activate"
+        ? ""
+        : window.prompt(
+          action === "change_role"
+            ? "Reason for changing this admin role"
+            : "Reason for deactivating this admin user",
+        );
+    if (action !== "activate" && !String(reason ?? "").trim()) {
+      setStatus("A reason is required before changing admin access.");
+      return;
+    }
+    setActingAdminUserId(adminUserId);
+    setStatus("");
+    const res = await authFetch("/api/internal/admin/admin-users", {
+      method: "PATCH",
+      body: JSON.stringify({ adminUserId, action, role, reason }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; admins?: NonNullable<AdminSessionPayload["admins"]>; message?: string };
+    if (!res.ok || !json.ok) {
+      setStatus(json.message || "Could not update admin user.");
+    } else {
+      setAdmins(json.admins ?? []);
+      void loadAll();
+    }
+    setActingAdminUserId("");
   }
 
   async function actOnVerification(requestId: string, action: "approve" | "reject" | "review") {
@@ -393,8 +429,17 @@ export default function AdminOpsWorkspace() {
 
       {status ? <section style={panelStyle}><div style={{ color: "#b91c1c", fontSize: 13 }}>{status}</div></section> : null}
 
+      <nav aria-label="Admin sections" style={navStyle}>
+        <a href="#admin-users" style={navLinkStyle}>Admin users</a>
+        <a href="#support-tools" style={navLinkStyle}>Support</a>
+        <a href="#user-lookup" style={navLinkStyle}>Users</a>
+        <a href="#verification-queue" style={navLinkStyle}>Verification</a>
+        <a href="#probate-cases" style={navLinkStyle}>Probate</a>
+        <a href="#audit-history" style={navLinkStyle}>Audit</a>
+      </nav>
+
       <section style={gridStyle}>
-        <section style={panelStyle}>
+        <section id="admin-users" style={panelStyle}>
           <div style={sectionHeaderStyle}>
             <div>
               <h2 style={h2Style}>Admin users</h2>
@@ -417,16 +462,47 @@ export default function AdminOpsWorkspace() {
               <article key={item.id} style={rowStyle}>
                 <div style={{ fontWeight: 700 }}>{item.display_name || item.email_normalized}</div>
                 <div style={mutedStyle}>{item.email_normalized}</div>
+                <div style={mutedStyle}>
+                  Role {String(item.role ?? (item.is_master ? "super_admin" : "support_agent")).replace(/_/g, " ")}
+                  {item.created_at ? ` · Created ${formatDate(item.created_at)}` : ""}
+                  {isSyntheticAdmin(item) ? " · Synthetic staging admin" : ""}
+                </div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   <span style={item.is_master ? masterPillStyle : pillStyle}>{item.is_master ? "Master admin" : "Admin"}</span>
                   <span style={item.status === "active" ? positivePillStyle : pillStyle}>{item.status}</span>
                 </div>
+                {canManageAdmins ? (
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                    <label style={{ display: "grid", gap: 4 }}>
+                      <span style={mutedStyle}>Role</span>
+                      <select
+                        value={String(item.role ?? (item.is_master ? "super_admin" : "support_agent"))}
+                        style={inputStyle}
+                        disabled={actingAdminUserId === item.id}
+                        onChange={(event) => void actOnAdminUser(item.id, "change_role", event.target.value)}
+                      >
+                        {adminRoles.map((role) => (
+                          <option key={role} value={role}>{role.replace(/_/g, " ")}</option>
+                        ))}
+                      </select>
+                    </label>
+                    {item.status === "active" ? (
+                      <button type="button" style={dangerBtnStyle} disabled={actingAdminUserId === item.id} onClick={() => void actOnAdminUser(item.id, "deactivate")}>
+                        Deactivate
+                      </button>
+                    ) : (
+                      <button type="button" style={primaryBtnStyle} disabled={actingAdminUserId === item.id} onClick={() => void actOnAdminUser(item.id, "activate")}>
+                        Activate
+                      </button>
+                    )}
+                  </div>
+                ) : null}
               </article>
             ))}
           </div>
         </section>
 
-        <section style={panelStyle}>
+        <section id="support-tools" style={panelStyle}>
           <div style={sectionHeaderStyle}>
             <div>
               <h2 style={h2Style}>Support tools</h2>
@@ -435,10 +511,10 @@ export default function AdminOpsWorkspace() {
           </div>
           {canReadSupport ? <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 10 }}>
             {supportCards.map((item) => (
-              <div key={item.label} style={metricCardStyle}>
+              <a key={item.label} href={supportCardHref(item.label)} style={metricCardLinkStyle}>
                 <div style={mutedStyle}>{item.label}</div>
                 <div style={{ fontSize: 24, fontWeight: 700 }}>{item.value}</div>
-              </div>
+              </a>
             ))}
           </div> : null}
           {canReadSupport ? <div style={{ display: "grid", gap: 8 }}>
@@ -454,7 +530,7 @@ export default function AdminOpsWorkspace() {
         </section>
       </section>
 
-      <section style={panelStyle}>
+      <section id="user-lookup" style={panelStyle}>
         <div style={sectionHeaderStyle}>
           <div>
             <h2 style={h2Style}>User lookup</h2>
@@ -493,7 +569,7 @@ export default function AdminOpsWorkspace() {
         </div> : null}
       </section>
 
-      <section style={panelStyle}>
+      <section id="verification-queue" style={panelStyle}>
         <div style={sectionHeaderStyle}>
           <div>
             <h2 style={h2Style}>Executor verification queue</h2>
@@ -532,7 +608,7 @@ export default function AdminOpsWorkspace() {
         </div> : null}
       </section>
 
-      <section style={panelStyle}>
+      <section id="probate-cases" style={panelStyle}>
         <div style={sectionHeaderStyle}>
           <div>
             <h2 style={h2Style}>Probate and executor cases</h2>
@@ -618,7 +694,7 @@ export default function AdminOpsWorkspace() {
         ) : null}
       </section>
 
-      <section style={panelStyle} aria-label="Audit history">
+      <section id="audit-history" style={panelStyle} aria-label="Audit history">
         <div style={sectionHeaderStyle}>
           <div>
             <h2 style={h2Style}>Audit history</h2>
@@ -658,6 +734,17 @@ function formatDate(value: string) {
   }
 }
 
+function isSyntheticAdmin(item: { email_normalized: string; display_name: string | null }) {
+  return /\blf uat\b/i.test(String(item.display_name ?? "")) || /\.test$/i.test(item.email_normalized);
+}
+
+function supportCardHref(label: string) {
+  if (/pending invitations/i.test(label)) return "#support-tools";
+  if (/verification/i.test(label)) return "#verification-queue";
+  if (/linked accounts|invitation/i.test(label)) return "#support-tools";
+  return "#support-tools";
+}
+
 const pageStyle: CSSProperties = {
   minHeight: "100dvh",
   background: "#f4f5f7",
@@ -670,6 +757,27 @@ const gridStyle: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
   gap: 16,
+};
+
+const navStyle: CSSProperties = {
+  border: "1px solid #d8dee8",
+  borderRadius: 12,
+  background: "#fff",
+  padding: 10,
+  display: "flex",
+  gap: 8,
+  flexWrap: "wrap",
+  alignItems: "center",
+};
+
+const navLinkStyle: CSSProperties = {
+  border: "1px solid #cbd5e1",
+  borderRadius: 999,
+  color: "#0f172a",
+  textDecoration: "none",
+  padding: "7px 10px",
+  fontSize: 13,
+  fontWeight: 600,
 };
 
 const panelStyle: CSSProperties = {
@@ -752,6 +860,12 @@ const metricCardStyle: CSSProperties = {
   padding: 12,
   display: "grid",
   gap: 4,
+};
+
+const metricCardLinkStyle: CSSProperties = {
+  ...metricCardStyle,
+  color: "#0f172a",
+  textDecoration: "none",
 };
 
 const pillStyle: CSSProperties = {

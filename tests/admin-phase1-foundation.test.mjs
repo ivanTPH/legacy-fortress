@@ -94,6 +94,9 @@ test("internal admin API routes enforce capabilities and audit existing sensitiv
 
   assert.match(adminUsersRoute, /requireAdminCapability\(admin\.access, "admin_users:manage"\)/);
   assert.match(adminUsersRoute, /recordAdminAuditEvent/);
+  assert.match(adminUsersRoute, /export async function PATCH/);
+  assert.match(adminUsersRoute, /updateAdminUserLifecycle/);
+  assert.match(adminUsersRoute, /reason_present/);
   assert.match(auditHistoryRoute, /export async function GET/);
   assert.doesNotMatch(auditHistoryRoute, /export async function POST|export async function PUT|export async function PATCH|export async function DELETE/);
   assert.match(auditHistoryRoute, /requireAdminCapability\(admin\.access, "audit:read"\)/);
@@ -111,6 +114,28 @@ test("internal admin API routes enforce capabilities and audit existing sensitiv
   assert.match(verificationRoute, /verification:decide/);
   assert.match(verificationRoute, /Decision notes are required/);
   assert.match(verificationRoute, /recordAdminAuditEvent/);
+});
+
+test("admin operations exposes audited lifecycle controls and section navigation", () => {
+  const workspace = fs.readFileSync(path.join(root, "components/admin/AdminOpsWorkspace.tsx"), "utf8");
+  const operations = fs.readFileSync(path.join(root, "lib/admin/operations.ts"), "utf8");
+
+  assert.match(workspace, /aria-label="Admin sections"/);
+  assert.match(workspace, /id="admin-users"/);
+  assert.match(workspace, /id="support-tools"/);
+  assert.match(workspace, /id="user-lookup"/);
+  assert.match(workspace, /id="verification-queue"/);
+  assert.match(workspace, /id="probate-cases"/);
+  assert.match(workspace, /id="audit-history"/);
+  assert.match(workspace, /method: "PATCH"/);
+  assert.match(workspace, /change_role/);
+  assert.match(workspace, /Deactivate/);
+  assert.match(workspace, /Activate/);
+  assert.match(workspace, /Synthetic staging admin/);
+  assert.match(operations, /assertAnotherActiveMasterAdminExists/);
+  assert.match(operations, /At least one active master admin must remain/);
+  assert.match(operations, /You cannot remove your own active master-admin access/);
+  assert.match(operations, /A reason is required for this admin change/);
 });
 
 test("admin audit history is read-only in the workspace", () => {

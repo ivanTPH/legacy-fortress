@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AdminUserRow } from "./access.ts";
 import { MASTER_ADMIN_EMAIL, normalizeAdminEmail } from "./access.ts";
+import { normalizeAdminRole } from "./capabilities.ts";
 import { buildVerificationActionKey, deriveBlockingState } from "../workflow/blockingModel.ts";
 
 type AnySupabaseClient = SupabaseClient;
@@ -146,6 +147,7 @@ export type AdminAuditHistoryItem = {
 };
 
 export type VerificationAction = "approve" | "reject" | "review";
+export type AdminUserLifecycleAction = "activate" | "deactivate" | "change_role";
 
 export function normalizeAuditHistoryLimit(value: string | number | null | undefined) {
   const parsed = Number.parseInt(String(value ?? ""), 10);
@@ -267,6 +269,100 @@ export async function addAdminUser(
     grantedByUserId,
     isMaster: false,
   });
+}
+
+export function normalizeAdminUserLifecycleAction(value: string | null | undefined): AdminUserLifecycleAction | null {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized === "activate" || normalized === "deactivate" || normalized === "change_role") return normalized;
+  return null;
+}
+
+export async function updateAdminUserLifecycle(
+  client: AnySupabaseClient,
+  {
+    adminUserId,
+    action,
+    role,
+    actorUserId,
+    reason,
+  }: {
+    adminUserId: string;
+    action: AdminUserLifecycleAction;
+    role?: string | null;
+    actorUserId: string;
+    reason?: string | null;
+  },
+) {
+  const targetRes = await client
+    .from("admin_users")
+    .select("id,email_normalized,user_id,display_name,status,is_master,role,granted_by_user_id,created_at,updated_at")
+    .eq("id", adminUserId)
+    .single() as AdminRowResponse;
+
+  if (targetRes.error || !targetRes.data) {
+    throw new Error(targetRes.error?.message || "Admin user was not found.");
+  }
+
+  const target = targetRes.data as AdminUserRow;
+  const normalizedReason = String(reason ?? "").trim();
+  if ((action === "deactivate" || action === "change_role") && !normalizedReason) {
+    throw new Error("A reason is required for this admin change.");
+  }
+  if (target.user_id && target.user_id === actorUserId && (action === "deactivate" || (action === "change_role" && normalizeAdminRole(role) !== "super_admin"))) {
+    throw new Error("You cannot remove your own active master-admin access.");
+  }
+
+  if (action === "deactivate" || (action === "change_role" && target.is_master && normalizeAdminRole(role) !== "super_admin")) {
+    await assertAnotherActiveMasterAdminExists(client, target.id);
+  }
+
+  const now = new Date().toISOString();
+  const patch: Record<string, unknown> = { updated_at: now };
+  if (action === "activate") {
+    patch.status = "active";
+  } else if (action === "deactivate") {
+    patch.status = "inactive";
+    patch.is_master = false;
+    if (target.role === "super_admin") patch.role = "support_agent";
+  } else {
+    const nextRole = normalizeAdminRole(role);
+    if (!nextRole) throw new Error("A valid admin role is required.");
+    patch.role = nextRole;
+    patch.is_master = nextRole === "super_admin";
+    if (nextRole === "super_admin") patch.status = "active";
+  }
+
+  const updateRes = await client
+    .from("admin_users")
+    .update(patch)
+    .eq("id", adminUserId)
+    .select("id,email_normalized,user_id,display_name,status,is_master,role,granted_by_user_id,created_at,updated_at")
+    .single() as AdminRowResponse;
+
+  if (updateRes.error || !updateRes.data) {
+    throw new Error(updateRes.error?.message || "Could not update admin user.");
+  }
+
+  return {
+    before: target,
+    after: updateRes.data as AdminUserRow,
+    reason: normalizedReason || null,
+  };
+}
+
+async function assertAnotherActiveMasterAdminExists(client: AnySupabaseClient, excludedAdminUserId: string) {
+  const res = await client
+    .from("admin_users")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "active")
+    .eq("is_master", true)
+    .neq("id", excludedAdminUserId);
+  if (res.error) {
+    throw new Error(res.error.message);
+  }
+  if ((res.count ?? 0) < 1) {
+    throw new Error("At least one active master admin must remain.");
+  }
 }
 
 async function upsertAdminUser(
