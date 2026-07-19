@@ -30,6 +30,13 @@ type AdminSessionPayload = {
   message?: string;
 };
 
+type AdminActionResponse = {
+  ok?: boolean;
+  admins?: NonNullable<AdminSessionPayload["admins"]>;
+  message?: string;
+  code?: string;
+};
+
 type AdminLookupResult = {
   userId: string;
   email: string;
@@ -273,9 +280,9 @@ export default function AdminOpsWorkspace() {
       method: "POST",
       body: JSON.stringify({ email: newAdminEmail }),
     });
-    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; admins?: NonNullable<AdminSessionPayload["admins"]>; message?: string };
+    const json = (await res.json().catch(() => ({}))) as AdminActionResponse;
     if (!res.ok || !json.ok) {
-      setStatus(json.message || "Could not store admin user.");
+      setStatus(getAdminActionMessage(json.code, json.message));
     } else {
       setAdmins(json.admins ?? []);
       setNewAdminEmail("");
@@ -284,6 +291,11 @@ export default function AdminOpsWorkspace() {
   }
 
   async function actOnAdminUser(adminUserId: string, action: "activate" | "deactivate" | "change_role", role?: string | null) {
+    const target = admins.find((item) => item.id === adminUserId);
+    if (target && isProtectedMasterAdmin(target) && (action === "deactivate" || (action === "change_role" && role !== "super_admin"))) {
+      setStatus(getAdminActionMessage("ADMIN_PROTECTED_ACCOUNT"));
+      return;
+    }
     const reason =
       action === "activate"
         ? ""
@@ -296,15 +308,18 @@ export default function AdminOpsWorkspace() {
       setStatus("A reason is required before changing admin access.");
       return;
     }
+    if (action !== "activate" && !window.confirm("Apply this admin access change? The server will record an audit event before changing access.")) {
+      return;
+    }
     setActingAdminUserId(adminUserId);
     setStatus("");
     const res = await authFetch("/api/internal/admin/admin-users", {
       method: "PATCH",
       body: JSON.stringify({ adminUserId, action, role, reason }),
     });
-    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; admins?: NonNullable<AdminSessionPayload["admins"]>; message?: string };
+    const json = (await res.json().catch(() => ({}))) as AdminActionResponse;
     if (!res.ok || !json.ok) {
-      setStatus(json.message || "Could not update admin user.");
+      setStatus(getAdminActionMessage(json.code, json.message));
     } else {
       setAdmins(json.admins ?? []);
       void loadAll();
@@ -466,6 +481,7 @@ export default function AdminOpsWorkspace() {
                   Role {String(item.role ?? (item.is_master ? "super_admin" : "support_agent")).replace(/_/g, " ")}
                   {item.created_at ? ` · Created ${formatDate(item.created_at)}` : ""}
                   {isSyntheticAdmin(item) ? " · Synthetic staging admin" : ""}
+                  {isProtectedMasterAdmin(item) ? " · Protected master admin" : ""}
                 </div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   <span style={item.is_master ? masterPillStyle : pillStyle}>{item.is_master ? "Master admin" : "Admin"}</span>
@@ -478,7 +494,7 @@ export default function AdminOpsWorkspace() {
                       <select
                         value={String(item.role ?? (item.is_master ? "super_admin" : "support_agent"))}
                         style={inputStyle}
-                        disabled={actingAdminUserId === item.id}
+                        disabled={actingAdminUserId === item.id || isProtectedMasterAdmin(item)}
                         onChange={(event) => void actOnAdminUser(item.id, "change_role", event.target.value)}
                       >
                         {adminRoles.map((role) => (
@@ -487,7 +503,7 @@ export default function AdminOpsWorkspace() {
                       </select>
                     </label>
                     {item.status === "active" ? (
-                      <button type="button" style={dangerBtnStyle} disabled={actingAdminUserId === item.id} onClick={() => void actOnAdminUser(item.id, "deactivate")}>
+                      <button type="button" style={dangerBtnStyle} disabled={actingAdminUserId === item.id || isProtectedMasterAdmin(item)} onClick={() => void actOnAdminUser(item.id, "deactivate")}>
                         Deactivate
                       </button>
                     ) : (
@@ -736,6 +752,28 @@ function formatDate(value: string) {
 
 function isSyntheticAdmin(item: { email_normalized: string; display_name: string | null }) {
   return /\blf uat\b/i.test(String(item.display_name ?? "")) || /\.test$/i.test(item.email_normalized);
+}
+
+function isProtectedMasterAdmin(item: { email_normalized: string; is_master?: boolean | null }) {
+  return item.email_normalized.trim().toLowerCase() === "ivanyardley@me.com" || Boolean(item.is_master && item.email_normalized.trim().toLowerCase() === "ivanyardley@me.com");
+}
+
+function getAdminActionMessage(code?: string, fallback?: string) {
+  const messages: Record<string, string> = {
+    ADMIN_AUTH_REQUIRED: "You must be signed in to continue.",
+    ADMIN_PERMISSION_DENIED: "You do not have permission to manage admin users.",
+    ADMIN_INVALID_EMAIL: "Enter a valid admin email address.",
+    ADMIN_INVALID_ROLE: "Choose a valid admin role.",
+    ADMIN_INVALID_STATUS: "Choose a valid admin user action.",
+    ADMIN_SELF_ACTION_BLOCKED: "You cannot remove your own active super-admin access.",
+    ADMIN_PROTECTED_ACCOUNT: "The protected master admin account cannot be deactivated or demoted.",
+    ADMIN_LAST_SUPER_ADMIN: "At least one active super admin must remain.",
+    ADMIN_AUDIT_FAILED: "Admin audit logging is unavailable, so the change was not applied.",
+    ADMIN_RATE_LIMITED: "Too many admin changes were attempted. Wait and try again.",
+    ADMIN_OPERATION_CONFLICT: "The admin user changed state. Reload and try again.",
+  };
+  if (code && messages[code]) return messages[code];
+  return fallback || "Could not complete the admin change safely.";
 }
 
 function supportCardHref(label: string) {

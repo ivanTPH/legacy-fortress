@@ -18,8 +18,10 @@ test("admin email normalization is stable", () => {
   assert.equal(isMasterAdminEmail("IvAnYardley@me.com"), true);
 });
 
-test("admin access grants master access even without a row", () => {
-  assert.equal(isAdminAccessGranted(MASTER_ADMIN_EMAIL, null), true);
+test("admin access respects persisted status after master bootstrap creates a row", () => {
+  assert.equal(isAdminAccessGranted(MASTER_ADMIN_EMAIL, null), false);
+  assert.equal(isAdminAccessGranted(MASTER_ADMIN_EMAIL, { status: "active", is_master: true }), true);
+  assert.equal(isAdminAccessGranted(MASTER_ADMIN_EMAIL, { status: "inactive", is_master: true }), false);
   assert.equal(isAdminAccessGranted("viewer@example.com", null), false);
   assert.equal(isAdminAccessGranted("viewer@example.com", { status: "active", is_master: false }), true);
   assert.equal(isAdminAccessGranted("viewer@example.com", { status: "inactive", is_master: false }), false);

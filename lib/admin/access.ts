@@ -74,7 +74,6 @@ export function isAdminAccessGranted(
   email: string | null | undefined,
   row: Pick<AdminUserRow, "status" | "is_master"> | null | undefined,
 ) {
-  if (isMasterAdminEmail(email)) return true;
   if (!row) return false;
   return row.status === "active";
 }

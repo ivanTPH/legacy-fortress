@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AdminUserRow } from "./access.ts";
 import { MASTER_ADMIN_EMAIL, normalizeAdminEmail } from "./access.ts";
 import { normalizeAdminRole } from "./capabilities.ts";
+import { adminLifecycleError } from "./lifecycleSecurity.ts";
 import { buildVerificationActionKey, deriveBlockingState } from "../workflow/blockingModel.ts";
 
 type AnySupabaseClient = SupabaseClient;
@@ -148,6 +149,14 @@ export type AdminAuditHistoryItem = {
 
 export type VerificationAction = "approve" | "reject" | "review";
 export type AdminUserLifecycleAction = "activate" | "deactivate" | "change_role";
+export type AdminUserLifecyclePlan = {
+  adminUserId: string;
+  action: AdminUserLifecycleAction;
+  before: AdminUserRow;
+  after: AdminUserRow;
+  patch: Record<string, unknown>;
+  reason: string | null;
+};
 
 export function normalizeAuditHistoryLimit(value: string | number | null | undefined) {
   const parsed = Number.parseInt(String(value ?? ""), 10);
@@ -277,7 +286,7 @@ export function normalizeAdminUserLifecycleAction(value: string | null | undefin
   return null;
 }
 
-export async function updateAdminUserLifecycle(
+export async function planAdminUserLifecycleUpdate(
   client: AnySupabaseClient,
   {
     adminUserId,
@@ -300,19 +309,29 @@ export async function updateAdminUserLifecycle(
     .single() as AdminRowResponse;
 
   if (targetRes.error || !targetRes.data) {
-    throw new Error(targetRes.error?.message || "Admin user was not found.");
+    throw adminLifecycleError("ADMIN_OPERATION_CONFLICT", targetRes.error?.message || "admin_user_not_found");
   }
 
   const target = targetRes.data as AdminUserRow;
   const normalizedReason = String(reason ?? "").trim();
   if ((action === "deactivate" || action === "change_role") && !normalizedReason) {
-    throw new Error("A reason is required for this admin change.");
-  }
-  if (target.user_id && target.user_id === actorUserId && (action === "deactivate" || (action === "change_role" && normalizeAdminRole(role) !== "super_admin"))) {
-    throw new Error("You cannot remove your own active master-admin access.");
+    throw adminLifecycleError("ADMIN_INVALID_STATUS", "missing_lifecycle_reason");
   }
 
-  if (action === "deactivate" || (action === "change_role" && target.is_master && normalizeAdminRole(role) !== "super_admin")) {
+  const nextRole = action === "change_role" ? normalizeAdminRole(role) : null;
+  if (action === "change_role" && !nextRole) {
+    throw adminLifecycleError("ADMIN_INVALID_ROLE", "invalid_lifecycle_role");
+  }
+
+  if (isProtectedMasterAdminRow(target) && (action === "deactivate" || (action === "change_role" && nextRole !== "super_admin"))) {
+    throw adminLifecycleError("ADMIN_PROTECTED_ACCOUNT", "protected_master_identity_change_blocked");
+  }
+
+  if (target.user_id && target.user_id === actorUserId && (action === "deactivate" || (action === "change_role" && nextRole !== "super_admin"))) {
+    throw adminLifecycleError("ADMIN_SELF_ACTION_BLOCKED", "self_lifecycle_change_blocked");
+  }
+
+  if (action === "deactivate" || (action === "change_role" && target.is_master && nextRole !== "super_admin")) {
     await assertAnotherActiveMasterAdminExists(client, target.id);
   }
 
@@ -325,29 +344,66 @@ export async function updateAdminUserLifecycle(
     patch.is_master = false;
     if (target.role === "super_admin") patch.role = "support_agent";
   } else {
-    const nextRole = normalizeAdminRole(role);
-    if (!nextRole) throw new Error("A valid admin role is required.");
     patch.role = nextRole;
     patch.is_master = nextRole === "super_admin";
     if (nextRole === "super_admin") patch.status = "active";
   }
 
+  return {
+    adminUserId,
+    action,
+    before: target,
+    after: { ...target, ...patch } as AdminUserRow,
+    patch,
+    reason: normalizedReason || null,
+  } satisfies AdminUserLifecyclePlan;
+}
+
+export async function applyAdminUserLifecycleUpdate(
+  client: AnySupabaseClient,
+  plan: AdminUserLifecyclePlan,
+  {
+    auditEventId,
+  }: {
+    auditEventId: string;
+  },
+) {
+  if (!auditEventId) {
+    throw adminLifecycleError("ADMIN_AUDIT_FAILED", "missing_lifecycle_audit_event_id");
+  }
+
   const updateRes = await client
     .from("admin_users")
-    .update(patch)
-    .eq("id", adminUserId)
+    .update(plan.patch)
+    .eq("id", plan.adminUserId)
     .select("id,email_normalized,user_id,display_name,status,is_master,role,granted_by_user_id,created_at,updated_at")
     .single() as AdminRowResponse;
 
   if (updateRes.error || !updateRes.data) {
-    throw new Error(updateRes.error?.message || "Could not update admin user.");
+    throw adminLifecycleError("ADMIN_OPERATION_CONFLICT", updateRes.error?.message || "admin_lifecycle_update_failed");
   }
 
   return {
-    before: target,
+    before: plan.before,
     after: updateRes.data as AdminUserRow,
-    reason: normalizedReason || null,
+    reason: plan.reason,
+    auditEventId,
   };
+}
+
+export async function updateAdminUserLifecycle(
+  client: AnySupabaseClient,
+  input: {
+    adminUserId: string;
+    action: AdminUserLifecycleAction;
+    role?: string | null;
+    actorUserId: string;
+    reason?: string | null;
+    auditEventId: string;
+  },
+) {
+  const plan = await planAdminUserLifecycleUpdate(client, input);
+  return applyAdminUserLifecycleUpdate(client, plan, { auditEventId: input.auditEventId });
 }
 
 async function assertAnotherActiveMasterAdminExists(client: AnySupabaseClient, excludedAdminUserId: string) {
@@ -358,11 +414,15 @@ async function assertAnotherActiveMasterAdminExists(client: AnySupabaseClient, e
     .eq("is_master", true)
     .neq("id", excludedAdminUserId);
   if (res.error) {
-    throw new Error(res.error.message);
+    throw adminLifecycleError("ADMIN_INTERNAL_ERROR", res.error.message);
   }
   if ((res.count ?? 0) < 1) {
-    throw new Error("At least one active master admin must remain.");
+    throw adminLifecycleError("ADMIN_LAST_SUPER_ADMIN", "last_active_master_admin_blocked");
   }
+}
+
+export function isProtectedMasterAdminRow(row: Pick<AdminUserRow, "email_normalized" | "is_master">) {
+  return normalizeAdminEmail(row.email_normalized) === MASTER_ADMIN_EMAIL;
 }
 
 async function upsertAdminUser(

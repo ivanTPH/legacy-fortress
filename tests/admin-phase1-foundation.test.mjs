@@ -95,8 +95,13 @@ test("internal admin API routes enforce capabilities and audit existing sensitiv
   assert.match(adminUsersRoute, /requireAdminCapability\(admin\.access, "admin_users:manage"\)/);
   assert.match(adminUsersRoute, /recordAdminAuditEvent/);
   assert.match(adminUsersRoute, /export async function PATCH/);
-  assert.match(adminUsersRoute, /updateAdminUserLifecycle/);
+  assert.match(adminUsersRoute, /planAdminUserLifecycleUpdate/);
+  assert.match(adminUsersRoute, /applyAdminUserLifecycleUpdate/);
+  assert.match(adminUsersRoute, /noStoreJson/);
+  assert.match(adminUsersRoute, /checkAdminLifecycleRateLimit/);
+  assert.match(adminUsersRoute, /safeAdminErrorResponse/);
   assert.match(adminUsersRoute, /reason_present/);
+  assert.doesNotMatch(adminUsersRoute, /error instanceof Error \? error\.message/);
   assert.match(auditHistoryRoute, /export async function GET/);
   assert.doesNotMatch(auditHistoryRoute, /export async function POST|export async function PUT|export async function PATCH|export async function DELETE/);
   assert.match(auditHistoryRoute, /requireAdminCapability\(admin\.access, "audit:read"\)/);
@@ -133,9 +138,11 @@ test("admin operations exposes audited lifecycle controls and section navigation
   assert.match(workspace, /Activate/);
   assert.match(workspace, /Synthetic staging admin/);
   assert.match(operations, /assertAnotherActiveMasterAdminExists/);
-  assert.match(operations, /At least one active master admin must remain/);
-  assert.match(operations, /You cannot remove your own active master-admin access/);
-  assert.match(operations, /A reason is required for this admin change/);
+  assert.match(operations, /ADMIN_LAST_SUPER_ADMIN/);
+  assert.match(operations, /ADMIN_SELF_ACTION_BLOCKED/);
+  assert.match(operations, /ADMIN_PROTECTED_ACCOUNT/);
+  assert.match(operations, /ADMIN_AUDIT_FAILED/);
+  assert.match(operations, /missing_lifecycle_reason/);
 });
 
 test("admin audit history is read-only in the workspace", () => {
