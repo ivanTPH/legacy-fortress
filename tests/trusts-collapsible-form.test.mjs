@@ -13,7 +13,7 @@ test("trusts keep the add form closed by default while preserving existing recor
   const workspace = read("components/records/UniversalRecordWorkspace.tsx");
 
   assert.match(workspace, /const \[formVisible, setFormVisible\] = useState\(false\)/);
-  assert.match(workspace, /const shouldShowExistingRecords = !loading && \(hasAnyRecords \|\| isTrustsWorkspace\) && !isCreatingRecord/);
+  assert.match(workspace, /const shouldShowExistingRecords = !loading && \(hasAnyRecords \|\| isTrustsWorkspace \|\| canCreateRecords\) && !isCreatingRecord/);
   assert.match(workspace, /{formVisible \? \(\s*<section\s+id={createFormRegionId}/);
   assert.doesNotMatch(workspace, /display:\s*formVisible \? "grid" : "none"/);
 });

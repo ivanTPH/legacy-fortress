@@ -1203,7 +1203,7 @@ export default function UniversalRecordWorkspace({
     : "0 records saved";
   const createFormRegionId = `${sectionId ?? `${sectionKey}-${categoryKey}`}-create-record-form`;
   const isCreatingRecord = formVisible && !editingId;
-  const shouldShowExistingRecords = !loading && (hasAnyRecords || isTrustsWorkspace) && !isCreatingRecord;
+  const shouldShowExistingRecords = !loading && (hasAnyRecords || isTrustsWorkspace || canCreateRecords) && !isCreatingRecord;
 
   useEffect(() => {
     let cancelled = false;

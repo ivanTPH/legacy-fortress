@@ -29,6 +29,7 @@ const uniqueTag = Date.now();
 const ownerEmail = process.env.SMOKE_OWNER_EMAIL || `ivanyardley+lf-owner-uat-${uniqueTag}@me.com`;
 const ownerPassword = process.env.SMOKE_OWNER_PASSWORD || "OwnerUAT123!";
 const skipSignUp = process.env.SMOKE_SKIP_SIGNUP === "1";
+const cleanupOnExit = process.env.SMOKE_CLEANUP_ON_EXIT === "1";
 
 const bankAttachmentPath = path.join(os.tmpdir(), `lf-uat-bank-${uniqueTag}.png`);
 const willAttachmentPath = path.join(os.tmpdir(), `lf-uat-will-${uniqueTag}.png`);
@@ -87,12 +88,17 @@ try {
     },
   }, null, 2));
 } finally {
+  if (cleanupOnExit) {
+    await cleanupSyntheticOwner();
+  }
+  cleanupLocalArtifacts();
   await browser.close();
 }
 
 async function signUpOwner(page) {
   await page.goto("/sign-up");
-  await page.getByRole("heading", { name: /create account/i }).waitFor();
+  await page.getByRole("heading", { name: /set up access/i }).waitFor();
+  await page.getByRole("button", { name: /^create account$/i }).waitFor();
   await page.getByLabel(/email/i).fill(ownerEmail);
   await page.getByLabel(/^password/i).fill(ownerPassword);
   await page.getByRole("button", { name: /^create account$/i }).click();
@@ -116,8 +122,9 @@ async function signUpOwner(page) {
 
   if (page.url().includes("/onboarding")) {
     await page.getByRole("heading", { name: /welcome to legacy fortress/i }).waitFor();
-    await page.getByLabel(/i accept the terms and conditions/i).check();
-    await page.getByRole("button", { name: /continue into your secure record/i }).click();
+    const setupChoices = page.getByRole("region", { name: /continue or skip setup choices/i });
+    await setupChoices.getByLabel(/i accept the terms and conditions/i).check();
+    await setupChoices.getByRole("button", { name: /continue into your secure record/i }).click();
     await page.waitForURL(/\/profile/, { timeout: 30000 });
   }
 
@@ -138,11 +145,12 @@ async function signInExistingOwner(page) {
 
   if (page.url().includes("/onboarding")) {
     await page.getByRole("heading", { name: /welcome to legacy fortress/i }).waitFor();
-    const terms = page.getByLabel(/i accept the terms and conditions/i);
+    const setupChoices = page.getByRole("region", { name: /continue or skip setup choices/i });
+    const terms = setupChoices.getByLabel(/i accept the terms and conditions/i);
     if (await terms.count()) {
       await terms.check();
     }
-    await page.getByRole("button", { name: /continue into your secure record|go to dashboard/i }).click();
+    await setupChoices.getByRole("button", { name: /continue into your secure record|go to dashboard/i }).click();
     await page.waitForURL(/\/profile|\/(?:app\/)?dashboard|\/account\/terms/, { timeout: 30000 });
   }
 
@@ -182,7 +190,19 @@ async function completeProfile(page) {
 
 async function createBankRecord(page) {
   await page.goto("/finances/bank");
-  await page.getByRole("button", { name: /add bank record/i }).click();
+  await page.waitForURL(/\/finances\/bank/, { timeout: 30000 });
+  try {
+    await page.getByRole("heading", { name: /existing records/i }).waitFor();
+  } catch (error) {
+    const bodyText = await page.locator("body").innerText();
+    throw new Error(`Bank workspace did not become ready. url=${page.url()} body=${bodyText.slice(0, 2000)}`, { cause: error });
+  }
+  try {
+    await page.getByRole("button", { name: /add bank record/i }).click();
+  } catch (error) {
+    const bodyText = await page.locator("body").innerText();
+    throw new Error(`Bank add action was unavailable. url=${page.url()} body=${bodyText.slice(0, 2000)}`, { cause: error });
+  }
   await page.getByLabel(/record title/i).fill("Launch UAT Current Account");
   await page.getByLabel(/bank \/ provider name/i).fill("HSBC");
   await page.getByLabel(/account type/i).selectOption({ label: "Current Account" });
@@ -475,6 +495,78 @@ async function waitForUserByEmail(email) {
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
   throw new Error(`Timed out waiting for auth user ${email}`);
+}
+
+async function cleanupSyntheticOwner() {
+  if (!ownerUserId) {
+    try {
+      ownerUserId = (await waitForUserByEmail(ownerEmail)).id;
+    } catch {
+      return;
+    }
+  }
+  const userId = ownerUserId;
+  const userEmail = ownerEmail.toLowerCase();
+  const exactDelete = async (table, column, value) => {
+    try {
+      await admin.from(table).delete().eq(column, value);
+    } catch {
+      // Cleanup is best-effort because table availability differs by staging schema.
+    }
+  };
+
+  const storageObjects = [];
+  try {
+    const documents = await admin
+      .from("documents")
+      .select("storage_path")
+      .eq("owner_user_id", userId);
+    if (!documents.error && Array.isArray(documents.data)) {
+      for (const document of documents.data) {
+        if (document?.storage_path) storageObjects.push(String(document.storage_path));
+      }
+    }
+  } catch {}
+
+  await exactDelete("contact_invitations", "owner_user_id", userId);
+  await exactDelete("invitation_events", "owner_user_id", userId);
+  await exactDelete("account_access_grants", "owner_user_id", userId);
+  await exactDelete("role_assignments", "owner_user_id", userId);
+  await exactDelete("probate_cases", "owner_user_id", userId);
+  await exactDelete("record_contacts", "owner_user_id", userId);
+  await exactDelete("contact_links", "owner_user_id", userId);
+  await exactDelete("contacts", "owner_user_id", userId);
+  await exactDelete("documents", "owner_user_id", userId);
+  await exactDelete("assets", "owner_user_id", userId);
+  await exactDelete("records", "user_id", userId);
+  await exactDelete("wallets", "owner_user_id", userId);
+  await exactDelete("organisations", "owner_user_id", userId);
+  await exactDelete("user_onboarding_state", "user_id", userId);
+  await exactDelete("terms_acceptances", "user_id", userId);
+  await exactDelete("user_profiles", "user_id", userId);
+  await exactDelete("user_profiles", "primary_email", userEmail);
+
+  if (storageObjects.length) {
+    try {
+      await admin.storage.from("vault-docs").remove(storageObjects);
+    } catch {}
+  }
+
+  await admin.auth.admin.deleteUser(userId);
+  console.log(JSON.stringify({
+    cleanup: {
+      syntheticOwnerRemoved: true,
+      storageObjectsRemoved: storageObjects.length,
+    },
+  }, null, 2));
+}
+
+function cleanupLocalArtifacts() {
+  for (const filePath of [bankAttachmentPath, willAttachmentPath]) {
+    try {
+      fs.unlinkSync(filePath);
+    } catch {}
+  }
 }
 
 async function selectValueAndAssert(locator, value) {
