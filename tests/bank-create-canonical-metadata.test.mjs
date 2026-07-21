@@ -25,6 +25,7 @@ test("bank create normalization writes canonical metadata keys without legacy du
     provider_key: null,
     account_type: "current_account",
     account_type_other: null,
+    account_nickname: null,
     account_holder: "Jane Doe",
     sort_code: "10-20-30",
     account_number: "12345678",
@@ -278,9 +279,9 @@ test("bank field dictionary includes the canonical create fields", () => {
   assert.deepEqual(
     keys,
     [
-      "title",
       "provider_name",
       "account_type",
+      "account_nickname",
       "account_holder",
       "account_number",
       "sort_code",

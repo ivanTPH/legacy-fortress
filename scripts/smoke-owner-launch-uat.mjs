@@ -203,9 +203,9 @@ async function createBankRecord(page) {
     const bodyText = await page.locator("body").innerText();
     throw new Error(`Bank add action was unavailable. url=${page.url()} body=${bodyText.slice(0, 2000)}`, { cause: error });
   }
-  await page.getByLabel(/record title/i).fill("Launch UAT Current Account");
   await page.getByLabel(/bank \/ provider name/i).fill("HSBC");
-  await page.getByLabel(/account type/i).selectOption({ label: "Current Account" });
+  await page.getByLabel(/account type/i).selectOption("current_account");
+  await page.getByLabel(/account nickname/i).fill("Launch UAT Current Account");
   await page.getByLabel(/account holder/i).fill("Launch Owner");
   await page.getByLabel(/account number/i).fill("12345678");
   await page.getByLabel(/sort code/i).fill("10-20-30");
@@ -213,7 +213,7 @@ async function createBankRecord(page) {
   await page.getByLabel(/^currency$/i).selectOption({ label: "GBP" });
   await page.getByLabel(/current balance/i).fill("4200");
   await page.getByLabel(/balance last updated/i).fill("2026-03-24");
-  await page.getByLabel(/statement or supporting document/i).setInputFiles(bankAttachmentPath);
+  await uploadInlineDocument(page, bankAttachmentPath);
   await page.getByLabel(/i confirm these bank details and staged files are correct before save/i).check();
   await page.getByRole("button", { name: /save bank record/i }).click();
   try {
@@ -222,7 +222,15 @@ async function createBankRecord(page) {
     const bodyText = await page.locator("body").innerText();
     throw new Error(`Bank save did not complete. url=${page.url()} body=${bodyText.slice(0, 2000)}`, { cause: error });
   }
-  await page.getByText(/^HSBC$/i).first().waitFor();
+  if (await page.getByText(/Upload failed: Bucket not found/i).isVisible()) {
+    throw new Error("Bank record persisted, but the staging vault-docs storage bucket is missing so attachment upload failed.");
+  }
+  try {
+    await page.getByText(/HSBC — Current Account/i).first().waitFor();
+  } catch (error) {
+    const bodyText = await page.locator("body").innerText();
+    throw new Error(`Saved bank record was not visible after save. url=${page.url()} body=${bodyText.slice(0, 2000)}`, { cause: error });
+  }
   await page.getByText(/£4,200\.00|4200/i).first().waitFor();
   await page.getByText(/lf-uat-bank-/i).waitFor();
   await page.getByRole("button", { name: /open document/i }).first().click();
@@ -266,12 +274,20 @@ async function createLegalWillRecord(page) {
   await page.getByLabel(/authority level/i).selectOption({ label: "Primary" });
   await page.getByLabel(/jurisdiction/i).selectOption({ label: "United Kingdom" });
   await page.getByLabel(/^status$/i).selectOption({ label: "Active" });
-  await page.getByLabel(/statement or supporting document/i).setInputFiles(willAttachmentPath);
+  await uploadInlineDocument(page, willAttachmentPath);
   await page.getByLabel(/i confirm these executor details and staged files are correct before save/i).check();
   await page.getByRole("button", { name: /save executor/i }).click();
   await page.getByText(/Record added securely/i).waitFor();
   await page.getByText(/Last Will and Testament/i).waitFor();
   await page.getByText(/lf-uat-will-/i).waitFor();
+}
+
+async function uploadInlineDocument(page, filePath) {
+  const uploadField = page
+    .locator("label.lf-shared-document-upload-field")
+    .filter({ hasText: /add document here|drop a file here/i })
+    .locator('input[type="file"]');
+  await uploadField.setInputFiles(filePath);
 }
 
 async function createDashboardContact(page) {
@@ -411,7 +427,7 @@ async function verifyRecordLimit(page) {
   await page.getByRole("button", { name: /add bank record/i }).click();
   await page.getByLabel(/record title/i).fill("Starter limit allowed");
   await page.getByLabel(/bank \/ provider name/i).fill("Limit Test Bank");
-  await page.getByLabel(/account type/i).selectOption({ label: "Current Account" });
+  await page.getByLabel(/account type/i).selectOption("current_account");
   await page.getByLabel(/account holder/i).fill("Launch Owner");
   await page.getByLabel(/account number/i).fill("70000001");
   await page.getByLabel(/^country$/i).selectOption({ label: "United Kingdom" });
@@ -423,7 +439,7 @@ async function verifyRecordLimit(page) {
   await page.getByRole("button", { name: /add bank record/i }).click();
   await page.getByLabel(/record title/i).fill("Starter limit blocked");
   await page.getByLabel(/bank \/ provider name/i).fill("Limit Test Bank");
-  await page.getByLabel(/account type/i).selectOption({ label: "Current Account" });
+  await page.getByLabel(/account type/i).selectOption("current_account");
   await page.getByLabel(/account holder/i).fill("Launch Owner");
   await page.getByLabel(/account number/i).fill("70000002");
   await page.getByLabel(/^country$/i).selectOption({ label: "United Kingdom" });
