@@ -267,19 +267,26 @@ async function createPropertyRecord(page) {
 
 async function createLegalWillRecord(page) {
   await page.goto("/legal/wills");
-  await page.getByRole("button", { name: /add executor/i }).click();
-  await page.getByLabel(/full name/i).fill("Last Will and Testament");
-  await page.getByLabel(/role \/ type/i).selectOption({ label: "Executor" });
-  await page.getByLabel(/^relationship$/i).selectOption({ label: "Friend" });
-  await page.getByLabel(/authority level/i).selectOption({ label: "Primary" });
-  await page.getByLabel(/jurisdiction/i).selectOption({ label: "United Kingdom" });
-  await page.getByLabel(/^status$/i).selectOption({ label: "Active" });
+  await page.getByRole("button", { name: /add record/i }).click();
+  await page.getByLabel(/will title/i).fill("Last Will and Testament");
+  await page.getByLabel(/executor name/i).fill("Launch Executor");
+  await page.getByLabel(/executor email/i).fill(`executor-${uniqueTag}@example.test`);
+  await page.getByLabel(/telephone number/i).fill("07123456789");
+  await page.getByLabel(/executor role/i).selectOption("executor");
   await uploadInlineDocument(page, willAttachmentPath);
-  await page.getByLabel(/i confirm these executor details and staged files are correct before save/i).check();
-  await page.getByRole("button", { name: /save executor/i }).click();
+  await page.getByRole("button", { name: /save record/i }).click();
   await page.getByText(/Record added securely/i).waitFor();
+  if (await page.getByText(/Upload failed:/i).isVisible()) {
+    const bodyText = await page.locator("body").innerText();
+    throw new Error(`Will record persisted, but attachment upload failed. url=${page.url()} body=${bodyText.slice(0, 2000)}`);
+  }
   await page.getByText(/Last Will and Testament/i).waitFor();
-  await page.getByText(/lf-uat-will-/i).waitFor();
+  try {
+    await page.getByText(/lf-uat-will-/i).waitFor();
+  } catch (error) {
+    const bodyText = await page.locator("body").innerText();
+    throw new Error(`Saved will attachment was not visible after save. url=${page.url()} body=${bodyText.slice(0, 2000)}`, { cause: error });
+  }
 }
 
 async function uploadInlineDocument(page, filePath) {

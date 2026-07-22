@@ -98,6 +98,7 @@ import {
   DOCUMENT_UPLOAD_MIME_TYPES,
   IMAGE_UPLOAD_ACCEPT,
   IMAGE_UPLOAD_MIME_TYPES,
+  sanitizeFileName,
   validateUploadFile,
 } from "../../lib/validation/upload";
 import {
@@ -2906,19 +2907,20 @@ export default function UniversalRecordWorkspace({
       assetId: recordId,
       ownerUserId: user.id,
     });
-    if (!assetContext) {
-      setUploadingFor(null);
-      setStatus("Upload paused: choose a saved record first so the file is stored with the right item.");
-      return;
-    }
-
-    const parentLabel = getCanonicalAssetDocumentParentLabel(assetContext);
+    const parentLabel = assetContext ? getCanonicalAssetDocumentParentLabel(assetContext) : "this record";
     setStatus(kind === "photo" ? `Uploading photo to ${parentLabel}...` : `Uploading document to ${parentLabel}...`);
-    const metadataResult = await createCanonicalAssetDocument(supabase, {
-      context: assetContext,
-      file,
-      kind,
-    });
+    const metadataResult = assetContext
+      ? await createCanonicalAssetDocument(supabase, {
+          context: assetContext,
+          file,
+          kind,
+        })
+      : await createLegacyRecordAttachment({
+          userId: user.id,
+          recordId,
+          file,
+          kind,
+        });
     setUploadingFor(null);
     if (!metadataResult.ok) {
       setStatus(metadataResult.error);
@@ -2996,17 +2998,20 @@ export default function UniversalRecordWorkspace({
       assetId: item.record_id,
       ownerUserId: user.id,
     });
-    if (!assetContext) {
-      setStatus("Replace paused: choose a saved record first so the file is stored with the right item.");
-      return;
-    }
 
     setUploadingFor(item.record_id);
-    const replacement = await createCanonicalAssetDocument(supabase, {
-      context: assetContext,
-      file,
-      kind,
-    });
+    const replacement = assetContext
+      ? await createCanonicalAssetDocument(supabase, {
+          context: assetContext,
+          file,
+          kind,
+        })
+      : await createLegacyRecordAttachment({
+          userId: user.id,
+          recordId: item.record_id,
+          file,
+          kind,
+        });
     if (!replacement.ok) {
       setUploadingFor(null);
       setStatus(replacement.error);
@@ -6766,7 +6771,12 @@ async function uploadAttachmentAfterSave({
     ownerUserId: userId,
   });
   if (!assetContext) {
-    return { ok: false, error: "File link warning: asset context could not be resolved." };
+    return createLegacyRecordAttachment({
+      userId,
+      recordId,
+      file,
+      kind: isImage ? "photo" : "document",
+    });
   }
 
   const uploadResult = await createCanonicalAssetDocument(supabase, {
@@ -6776,6 +6786,43 @@ async function uploadAttachmentAfterSave({
   });
   if (!uploadResult.ok) {
     return { ok: false, error: `${uploadResult.error}.` };
+  }
+
+  return { ok: true };
+}
+
+async function createLegacyRecordAttachment({
+  userId,
+  recordId,
+  file,
+  kind,
+}: {
+  userId: string;
+  recordId: string;
+  file: File;
+  kind: "document" | "photo";
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const storageBucket = "vault-docs";
+  const folder = kind === "photo" ? "photos" : "documents";
+  const storagePath = `users/${userId}/records/${recordId}/${folder}/${Date.now()}-${sanitizeFileName(file.name)}`;
+  const uploadResult = await supabase.storage.from(storageBucket).upload(storagePath, file, { upsert: false });
+  if (uploadResult.error) {
+    return { ok: false, error: `Upload failed: ${uploadResult.error.message}.` };
+  }
+
+  const insertResult = await supabase.from("attachments").insert({
+    record_id: recordId,
+    owner_user_id: userId,
+    storage_bucket: storageBucket,
+    storage_path: storagePath,
+    file_name: file.name,
+    mime_type: file.type || "application/octet-stream",
+    size_bytes: file.size,
+    checksum: null,
+  });
+  if (insertResult.error) {
+    await supabase.storage.from(storageBucket).remove([storagePath]);
+    return { ok: false, error: `Attachment link failed: ${insertResult.error.message}.` };
   }
 
   return { ok: true };

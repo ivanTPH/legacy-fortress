@@ -81,3 +81,13 @@ test("wills upload control uses one compact upload affordance", () => {
   assert.match(css, /\.lf-record-contact-status\.is-accepted/);
   assert.doesNotMatch(css, /\.lf-will-upload-control \{[^}]*border: 1px solid #d8d2cc/s);
 });
+
+test("wills document uploads fall back to legacy record attachments when no asset context exists", () => {
+  const workspace = read("components/records/UniversalRecordWorkspace.tsx");
+
+  assert.match(workspace, /function createLegacyRecordAttachment/);
+  assert.match(workspace, /users\/\$\{userId\}\/records\/\$\{recordId\}\/\$\{folder\}/);
+  assert.match(workspace, /\.from\("attachments"\)\.insert/);
+  assert.match(workspace, /return createLegacyRecordAttachment\(\{/);
+  assert.doesNotMatch(workspace, /File link warning: asset context could not be resolved/);
+});
