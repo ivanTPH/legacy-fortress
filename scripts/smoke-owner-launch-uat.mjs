@@ -325,7 +325,7 @@ async function verifyDashboard(page) {
 async function seedAssetsToStarterLimit(userId) {
   const wallet = await ensureSmokeWalletContext(userId);
   const now = new Date().toISOString();
-  for (let index = 0; index < 21; index += 1) {
+  for (let index = 0; index < 22; index += 1) {
     const title = `Starter limit seed ${index + 1} ${uniqueTag}`;
     const existing = await admin
       .from("assets")
@@ -432,21 +432,21 @@ async function ensureSmokeWalletContext(userId) {
 async function verifyRecordLimit(page) {
   await page.goto("/finances/bank");
   await page.getByRole("button", { name: /add bank record/i }).click();
-  await page.getByLabel(/record title/i).fill("Starter limit allowed");
   await page.getByLabel(/bank \/ provider name/i).fill("Limit Test Bank");
   await page.getByLabel(/account type/i).selectOption("current_account");
+  await page.getByLabel(/account nickname/i).fill("Starter limit allowed");
   await page.getByLabel(/account holder/i).fill("Launch Owner");
   await page.getByLabel(/account number/i).fill("70000001");
   await page.getByLabel(/^country$/i).selectOption({ label: "United Kingdom" });
   await page.getByLabel(/^currency$/i).selectOption({ label: "GBP" });
   await page.getByRole("button", { name: /save bank record/i }).click();
   await page.getByText(/Record added securely/i).waitFor();
-  await waitForAssetByTitle(ownerUserId, "Starter limit allowed");
+  await waitForAssetByTitle(ownerUserId, "Limit Test Bank — Current Account");
 
   await page.getByRole("button", { name: /add bank record/i }).click();
-  await page.getByLabel(/record title/i).fill("Starter limit blocked");
   await page.getByLabel(/bank \/ provider name/i).fill("Limit Test Bank");
   await page.getByLabel(/account type/i).selectOption("current_account");
+  await page.getByLabel(/account nickname/i).fill("Starter limit blocked");
   await page.getByLabel(/account holder/i).fill("Launch Owner");
   await page.getByLabel(/account number/i).fill("70000002");
   await page.getByLabel(/^country$/i).selectOption({ label: "United Kingdom" });
@@ -547,6 +547,17 @@ async function cleanupSyntheticOwner() {
     if (!documents.error && Array.isArray(documents.data)) {
       for (const document of documents.data) {
         if (document?.storage_path) storageObjects.push(String(document.storage_path));
+      }
+    }
+  } catch {}
+  try {
+    const attachments = await admin
+      .from("attachments")
+      .select("storage_path")
+      .eq("owner_user_id", userId);
+    if (!attachments.error && Array.isArray(attachments.data)) {
+      for (const attachment of attachments.data) {
+        if (attachment?.storage_path) storageObjects.push(String(attachment.storage_path));
       }
     }
   } catch {}
