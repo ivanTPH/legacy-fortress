@@ -31,7 +31,11 @@ export type AdminCapability =
   | "audit:read"
   | "audit:write"
   | "prototype:view"
-  | "organisation:manage";
+  | "organisation:manage"
+  | "enterprise.invitation.manage"
+  | "enterprise.licence.manage"
+  | "enterprise.report.read"
+  | "enterprise.export.request";
 
 const ADMIN_ROLE_CAPABILITIES: Record<AdminRole, AdminCapability[]> = {
   super_admin: [
@@ -60,6 +64,10 @@ const ADMIN_ROLE_CAPABILITIES: Record<AdminRole, AdminCapability[]> = {
     "audit:write",
     "prototype:view",
     "organisation:manage",
+    "enterprise.invitation.manage",
+    "enterprise.licence.manage",
+    "enterprise.report.read",
+    "enterprise.export.request",
   ],
   support_agent: [
     "admin.dashboard.read",
@@ -108,6 +116,10 @@ const ADMIN_ROLE_CAPABILITIES: Record<AdminRole, AdminCapability[]> = {
     "admin.licences.summary.read",
     "admin_shell:view",
     "organisation:manage",
+    "enterprise.invitation.manage",
+    "enterprise.licence.manage",
+    "enterprise.report.read",
+    "enterprise.export.request",
     "audit:write",
   ],
 };

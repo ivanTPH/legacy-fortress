@@ -49,9 +49,9 @@ test("admin command dashboard foundation has protected route, access denied page
   const deniedPage = fs.readFileSync(path.join(root, "app/admin/access-denied/page.tsx"), "utf8");
   const dashboardRoute = fs.readFileSync(path.join(root, "app/api/internal/admin/dashboard-summary/route.ts"), "utf8");
   const dashboardService = fs.readFileSync(path.join(root, "lib/admin/dashboardSummary.ts"), "utf8");
-  const workspace = fs.readFileSync(path.join(root, "components/admin/AdminDashboardWorkspace.tsx"), "utf8");
+  const workspace = fs.readFileSync(path.join(root, "components/admin/AdminControlPlaneWorkspace.tsx"), "utf8");
 
-  assert.match(adminPage, /AdminDashboardWorkspace/);
+  assert.match(adminPage, /AdminControlPlaneWorkspace/);
   assert.match(deniedPage, /Access not available/);
   assert.match(deniedPage, /Return to your vault/);
   assert.match(dashboardRoute, /requireAdminAccess\(request\)/);
@@ -65,11 +65,11 @@ test("admin command dashboard foundation has protected route, access denied page
   assert.match(dashboardService, /Do not|unavailable|could not be queried/i);
   assert.doesNotMatch(dashboardRoute, /document_path|signedUrl|password|service_role/i);
   assert.match(workspace, /\/api\/internal\/admin\/dashboard-summary/);
-  assert.match(workspace, /No private vault contents|Customer vault contents/);
-  assert.match(workspace, /href="\/internal\/admin"/);
-  assert.match(workspace, /href="\/internal\/admin\/probate"/);
-  assert.match(workspace, /href="\/application\/enterprise"/);
-  assert.match(workspace, /Blocked until tenant-scoped organisation and licence persistence is implemented/);
+  assert.match(workspace, /Customer vault contents and private documents are not shown here/);
+  assert.match(workspace, /\/admin\/admin-users/);
+  assert.match(workspace, /\/admin\/probate/);
+  assert.match(workspace, /\/admin\/system-health/);
+  assert.match(workspace, /High-risk settings remain read-only/);
   assert.doesNotMatch(workspace, /local-role-override/);
   assert.doesNotMatch(workspace, /Local UAT role testing/);
   assert.doesNotMatch(deniedPage, /local-role-override/);
@@ -143,6 +143,42 @@ test("admin operations exposes audited lifecycle controls and section navigation
   assert.match(operations, /ADMIN_PROTECTED_ACCOUNT/);
   assert.match(operations, /ADMIN_AUDIT_FAILED/);
   assert.match(operations, /missing_lifecycle_reason/);
+});
+
+test("admin control plane splits live admin operations into permission-aware routes", () => {
+  const controlPlane = fs.readFileSync(path.join(root, "components/admin/AdminControlPlaneWorkspace.tsx"), "utf8");
+  const adminPage = fs.readFileSync(path.join(root, "app/admin/page.tsx"), "utf8");
+  const adminUsersPage = fs.readFileSync(path.join(root, "app/admin/admin-users/page.tsx"), "utf8");
+  const usersPage = fs.readFileSync(path.join(root, "app/admin/users/page.tsx"), "utf8");
+  const supportPage = fs.readFileSync(path.join(root, "app/admin/support/page.tsx"), "utf8");
+  const auditPage = fs.readFileSync(path.join(root, "app/admin/audit/page.tsx"), "utf8");
+  const healthPage = fs.readFileSync(path.join(root, "app/admin/system-health/page.tsx"), "utf8");
+  const settingsPage = fs.readFileSync(path.join(root, "app/admin/settings/page.tsx"), "utf8");
+
+  assert.match(adminPage, /AdminControlPlaneWorkspace section="overview"/);
+  assert.match(adminUsersPage, /AdminControlPlaneWorkspace section="admin-users"/);
+  assert.match(usersPage, /AdminControlPlaneWorkspace section="users"/);
+  assert.match(supportPage, /AdminControlPlaneWorkspace section="support"/);
+  assert.match(auditPage, /AdminControlPlaneWorkspace section="audit"/);
+  assert.match(healthPage, /AdminControlPlaneWorkspace section="system-health"/);
+  assert.match(settingsPage, /AdminControlPlaneWorkspace section="settings"/);
+
+  assert.match(controlPlane, /aria-label="Admin navigation"/);
+  assert.match(controlPlane, /Admin control plane/);
+  assert.match(controlPlane, /WorkspaceSwitcher/);
+  assert.match(controlPlane, /\/api\/internal\/admin\/session/);
+  assert.match(controlPlane, /\/api\/internal\/admin\/admin-users/);
+  assert.match(controlPlane, /\/api\/internal\/admin\/support/);
+  assert.match(controlPlane, /\/api\/internal\/admin\/verifications/);
+  assert.match(controlPlane, /\/api\/internal\/admin\/probate-cases/);
+  assert.match(controlPlane, /\/api\/internal\/admin\/audit-history\?limit=50/);
+  assert.match(controlPlane, /\/api\/health\/schema/);
+  assert.match(controlPlane, /\/api\/version/);
+  assert.match(controlPlane, /Synthetic staging admin/);
+  assert.match(controlPlane, /No summary metrics are available/);
+  assert.match(controlPlane, /No audit events match this filter/);
+  assert.match(controlPlane, /This page intentionally avoids a generic key\/value editor/);
+  assert.doesNotMatch(controlPlane, /mockData|prototypeDataService|adminUsers\]/);
 });
 
 test("admin audit history is read-only in the workspace", () => {

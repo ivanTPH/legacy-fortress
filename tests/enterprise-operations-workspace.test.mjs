@@ -1,0 +1,80 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import test from "node:test";
+
+const root = process.cwd();
+
+test("enterprise operations migration creates private operational tables without vault access", () => {
+  const migration = fs.readFileSync(path.join(root, "supabase/migrations/20260722103000_admin_enterprise_operations.sql"), "utf8");
+
+  for (const table of [
+    "admin_invitations",
+    "enterprise_organisations",
+    "enterprise_licences",
+    "enterprise_seats",
+    "enterprise_invitations",
+    "enterprise_consent_settings",
+    "enterprise_saved_views",
+  ]) {
+    assert.match(migration, new RegExp(`CREATE TABLE IF NOT EXISTS public\\.${table}`));
+    assert.match(migration, new RegExp(`ALTER TABLE public\\.${table} ENABLE ROW LEVEL SECURITY`));
+  }
+
+  assert.match(migration, /enterprise_licences_seat_entitlement_check CHECK \(allocated_seats <= purchased_seats\)/);
+  assert.match(migration, /is_active_enterprise_operator/);
+  assert.match(migration, /admin_users au/);
+  assert.doesNotMatch(migration, /USING\s*\(\s*true\s*\)/i);
+  assert.doesNotMatch(migration, /section_entries|documents|attachments|assets/);
+});
+
+test("enterprise API enforces admin access, audit, seat limits and privacy exclusions", () => {
+  const route = fs.readFileSync(path.join(root, "app/api/internal/admin/enterprise/route.ts"), "utf8");
+  const service = fs.readFileSync(path.join(root, "lib/admin/enterpriseOperations.ts"), "utf8");
+
+  assert.match(route, /requireAdminAccess\(request\)/);
+  assert.match(route, /requireAdminCapability\(admin\.access, "organisation:manage"\)/);
+  assert.match(route, /recordAdminAuditEvent/);
+  assert.match(route, /private_vault_content_excluded/);
+  assert.match(route, /document_content_excluded/);
+  assert.match(route, /financial_values_excluded/);
+
+  assert.match(service, /allocatedSeats > purchasedSeats/);
+  assert.match(service, /seat_entitlement_exceeded/);
+  assert.match(service, /hashInvitationToken/);
+  assert.match(service, /minimum_reporting_cohort/);
+  assert.match(service, /vaultContentExcluded: true/);
+  assert.doesNotMatch(service, /\.from\("assets"\)|\.from\("documents"\)|\.from\("attachments"\)|\.from\("records"\)/);
+});
+
+test("enterprise workspace replaces disabled prototype with functional controls", () => {
+  const page = fs.readFileSync(path.join(root, "app/application/enterprise/page.tsx"), "utf8");
+  const workspace = fs.readFileSync(path.join(root, "components/enterprise/EnterpriseOperationsWorkspace.tsx"), "utf8");
+  const switcher = fs.readFileSync(path.join(root, "lib/workspaces.ts"), "utf8");
+
+  assert.match(page, /EnterpriseOperationsWorkspace/);
+  assert.doesNotMatch(page, /workspace not yet enabled|blocked in hosted UAT/i);
+  assert.match(workspace, /Create organisation/);
+  assert.match(workspace, /Create licence/);
+  assert.match(workspace, /Send invitation/);
+  assert.match(workspace, /Request governed export/);
+  assert.match(workspace, /Private vault records, uploaded documents, legal contents, individual financial values/);
+  assert.match(workspace, /WorkspaceSwitcher/);
+  assert.match(switcher, /return "\/application\/enterprise"/);
+});
+
+test("admin invitations replace direct administrator activation", () => {
+  const helper = fs.readFileSync(path.join(root, "lib/admin/adminInvitations.ts"), "utf8");
+  const route = fs.readFileSync(path.join(root, "app/api/internal/admin/admin-users/route.ts"), "utf8");
+  const workspace = fs.readFileSync(path.join(root, "components/admin/AdminControlPlaneWorkspace.tsx"), "utf8");
+
+  assert.match(helper, /admin_invitations/);
+  assert.match(helper, /token_hash/);
+  assert.match(helper, /duplicate_pending_admin_invitation/);
+  assert.match(route, /createAdminInvitation/);
+  assert.doesNotMatch(route, /addAdminUser\(admin\.adminClient/);
+  assert.match(workspace, /Invite administrator/);
+  assert.match(workspace, /Review and send invitation/);
+  assert.match(workspace, /The recipient is not active until they accept/);
+  assert.match(workspace, /Permission summary/);
+});

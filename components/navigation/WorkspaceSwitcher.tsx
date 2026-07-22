@@ -204,8 +204,11 @@ async function loadAdminPermissionRoles(token: string): Promise<PlatformRole[]> 
   if (!response.ok) return [];
   const payload = (await response.json().catch(() => null)) as {
     ok?: boolean;
-    admin?: { isMasterAdmin?: boolean };
+    admin?: { isMasterAdmin?: boolean; role?: string; capabilities?: string[] };
   } | null;
   if (!payload?.ok || !payload.admin) return [];
-  return payload.admin.isMasterAdmin ? ["super_admin"] : ["enterprise_admin"];
+  if (payload.admin.isMasterAdmin) return ["super_admin"];
+  if (payload.admin.role === "enterprise_admin" || payload.admin.capabilities?.includes("organisation:manage")) return ["enterprise_admin"];
+  if (payload.admin.role === "probate_reviewer" || payload.admin.role === "verification_reviewer") return ["probate_admin"];
+  return [];
 }

@@ -1,10 +1,10 @@
 import {
-  addAdminUser,
   applyAdminUserLifecycleUpdate,
   listAdminUsers,
   normalizeAdminUserLifecycleAction,
   planAdminUserLifecycleUpdate,
 } from "@/lib/admin/operations";
+import { createAdminInvitation, listAdminInvitations } from "@/lib/admin/adminInvitations";
 import { requireAdminAccess, requireAdminCapability } from "@/lib/admin/access";
 import { recordAdminAuditEvent } from "@/lib/admin/audit";
 import {
@@ -27,7 +27,8 @@ export async function GET(request: Request) {
   }
 
   const admins = await listAdminUsers(admin.adminClient);
-  return noStoreJson({ ok: true, admins });
+  const invitations = await listAdminInvitations(admin.adminClient).catch(() => []);
+  return noStoreJson({ ok: true, admins, invitations });
 }
 
 export async function POST(request: Request) {
@@ -49,29 +50,50 @@ export async function POST(request: Request) {
     return safeAdminErrorResponse(adminLifecycleError("ADMIN_RATE_LIMITED", "admin_grant_rate_limit"));
   }
 
-  const body = (await request.json().catch(() => ({}))) as { email?: string };
+  const body = (await request.json().catch(() => ({}))) as {
+    email?: string;
+    fullName?: string | null;
+    roleTemplate?: string | null;
+    scopeType?: string | null;
+    organisationId?: string | null;
+    requireMfa?: boolean | null;
+    expiryDays?: number | null;
+    accessExpiry?: string | null;
+  };
   const email = String(body.email ?? "").trim();
   if (!email || !isValidAdminEmail(email)) {
     return safeAdminErrorResponse(adminLifecycleError("ADMIN_INVALID_EMAIL", "invalid_admin_email"));
   }
 
   try {
-    const auditEventId = await recordAdminAuditEvent(admin.adminClient, admin.access, {
+    await recordAdminAuditEvent(admin.adminClient, admin.access, {
       category: "admin_approval",
-      action: "Admin user grant authorised",
+      action: "Admin invitation authorised",
       result: "pending",
       resourceType: "access_policy",
       route: "/api/internal/admin/admin-users",
-      metadata: { requested_action: "grant_admin", target_email: email.toLowerCase() },
+      metadata: {
+        requested_action: "admin_invitation",
+        target_email: email.toLowerCase(),
+        role_template: body.roleTemplate ?? "support_agent",
+        scope_type: body.scopeType ?? "platform",
+        require_mfa: body.requireMfa !== false,
+      },
     });
-    if (!auditEventId) throw adminLifecycleError("ADMIN_AUDIT_FAILED", "missing_admin_grant_audit_id");
 
-    const saved = await addAdminUser(admin.adminClient, {
+    const invitation = await createAdminInvitation(admin.adminClient, admin.access, {
       email,
-      grantedByUserId: admin.access.user.id,
+      fullName: body.fullName,
+      roleTemplate: body.roleTemplate,
+      scopeType: body.scopeType,
+      organisationId: body.organisationId,
+      requireMfa: body.requireMfa,
+      expiryDays: body.expiryDays,
+      accessExpiry: body.accessExpiry,
     });
     const admins = await listAdminUsers(admin.adminClient);
-    return noStoreJson({ ok: true, admin: saved, admins });
+    const invitations = await listAdminInvitations(admin.adminClient).catch(() => []);
+    return noStoreJson({ ok: true, invitation, admins, invitations });
   } catch (error) {
     return safeAdminErrorResponse(error);
   }

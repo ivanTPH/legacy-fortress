@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { listAdminUsers } from "@/lib/admin/operations";
+import { listAdminInvitations } from "@/lib/admin/adminInvitations";
 import { adminHasCapability, requireAdminAccess } from "@/lib/admin/access";
 
 export async function GET(request: Request) {
@@ -17,6 +18,7 @@ export async function GET(request: Request) {
 
   const canManageAdmins = adminHasCapability(admin.access, "admin_users:manage");
   const admins = canManageAdmins ? await listAdminUsers(admin.adminClient) : [];
+  const invitations = canManageAdmins ? await listAdminInvitations(admin.adminClient).catch(() => []) : [];
   return NextResponse.json({
     ok: true,
     admin: {
@@ -27,5 +29,6 @@ export async function GET(request: Request) {
       displayName: admin.access.adminRow.display_name || admin.access.user.email || "Admin",
     },
     admins,
+    invitations,
   });
 }

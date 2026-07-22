@@ -39,12 +39,11 @@ export function buildPrototypeWorkspaceUrl(workspace: WorkspaceId, options: Work
   if (workspace === "contact_wallet") return "/contact-wallet";
 
   if (workspace === "super_admin") {
-    return "/internal/admin";
+    return "/admin";
   }
 
   if (workspace === "enterprise_admin") {
-    const role = options.currentRole === "licensing_admin" ? "licensing_admin" : "enterprise_admin";
-    return withPrototypeParams("/internal/admin/prototype/enterprise", role);
+    return "/application/enterprise";
   }
 
   return "/internal/admin/probate";
@@ -62,6 +61,7 @@ export function getPrimaryWorkspaceRole(roles: readonly PlatformRole[]) {
 }
 
 export function getCurrentWorkspaceForPath(pathname: string): WorkspaceId {
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) return "super_admin";
   if (pathname === "/internal/admin" || pathname.startsWith("/internal/admin/ops")) return "super_admin";
   if (pathname.startsWith("/internal/admin/prototype/users")) return "super_admin";
   if (pathname.startsWith("/internal/admin/prototype/enterprise")) return "enterprise_admin";

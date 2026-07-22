@@ -1,5 +1,5 @@
-import AdminDashboardWorkspace from "@/components/admin/AdminDashboardWorkspace";
+import AdminControlPlaneWorkspace from "@/components/admin/AdminControlPlaneWorkspace";
 
 export default function AdminPage() {
-  return <AdminDashboardWorkspace />;
+  return <AdminControlPlaneWorkspace section="overview" />;
 }
