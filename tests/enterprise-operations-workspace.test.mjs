@@ -33,13 +33,14 @@ test("enterprise API enforces admin access, audit, seat limits and privacy exclu
   const service = fs.readFileSync(path.join(root, "lib/admin/enterpriseOperations.ts"), "utf8");
 
   assert.match(route, /requireAdminAccess\(request\)/);
-  assert.match(route, /requireAdminCapability\(admin\.access, "organisation:manage"\)/);
+  assert.match(route, /capabilityForEnterpriseAction/);
+  assert.match(route, /create_organisation[\s\S]*organisation:manage/);
   assert.match(route, /recordAdminAuditEvent/);
   assert.match(route, /private_vault_content_excluded/);
   assert.match(route, /document_content_excluded/);
   assert.match(route, /financial_values_excluded/);
 
-  assert.match(service, /allocatedSeats > purchasedSeats/);
+  assert.match(service, /assertSeatEntitlement/);
   assert.match(service, /seat_entitlement_exceeded/);
   assert.match(service, /hashInvitationToken/);
   assert.match(service, /minimum_reporting_cohort/);
@@ -91,7 +92,7 @@ test("enterprise organisation API supports view, edit, lifecycle, delete/archive
   const capabilities = fs.readFileSync(path.join(root, "lib/admin/capabilities.ts"), "utf8");
 
   assert.match(route, /requireAdminCapability\(admin\.access, "organisation:view"\)/);
-  assert.match(route, /requireAdminCapability\(admin\.access, "organisation:manage"\)/);
+  assert.match(route, /create_organisation[\s\S]*organisation:manage/);
   assert.match(route, /getEnterpriseOrganisationDetail/);
   assert.match(route, /updateEnterpriseOrganisation/);
   assert.match(route, /transitionEnterpriseOrganisation/);

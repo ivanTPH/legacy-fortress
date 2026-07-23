@@ -1,0 +1,256 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import WorkspaceSwitcher from "@/components/navigation/WorkspaceSwitcher";
+import { waitForActiveUser } from "@/lib/auth/session";
+import { supabase } from "@/lib/supabaseClient";
+
+type Licence = {
+  id: string;
+  organisationId: string;
+  plan: string;
+  customPlanName: string | null;
+  contractReference: string | null;
+  billingReference: string | null;
+  startDate: string;
+  renewalDate: string;
+  endDate: string | null;
+  renewalNoticeDays: number;
+  autoRenew: boolean;
+  renewalNotes: string | null;
+  purchasedSeats: number;
+  committedSeats: number;
+  activeSeats: number;
+  invitedSeats: number;
+  suspendedSeats: number;
+  availableSeats: number;
+  billingStatus: string;
+  status: string;
+  accountOwner: string | null;
+  renewalRisk: string;
+  updatedAt: string;
+};
+
+type Detail = {
+  licence: Licence;
+  organisation: { id: string; name: string; legalName: string; status: string } | null;
+  seats: Array<{ id: string; invitee_email_normalized: string | null; seat_status: string; assigned_at: string; released_at: string | null }>;
+  renewals: Array<{ id: string; previous_renewal_date: string; new_renewal_date: string; previous_purchased_seats: number; new_purchased_seats: number; previous_plan: string; new_plan: string; created_at: string }>;
+  auditEvents: Array<{ id: string; action: string; result: string; actor_role: string | null; created_at: string }>;
+};
+
+export default function EnterpriseLicenceDetailWorkspace({ licenceId }: { licenceId: string }) {
+  const router = useRouter();
+  const [state, setState] = useState<"checking" | "ready" | "denied" | "error">("checking");
+  const [message, setMessage] = useState("");
+  const [detail, setDetail] = useState<Detail | null>(null);
+  const [tab, setTab] = useState<"overview" | "seats" | "invitations" | "renewals" | "audit" | "settings">("overview");
+  const [seatQuantity, setSeatQuantity] = useState(25);
+  const [seatEmail, setSeatEmail] = useState("");
+  const [reason, setReason] = useState("");
+  const [renewalDate, setRenewalDate] = useState(nextYearInput());
+  const [renewalSeats, setRenewalSeats] = useState(25);
+
+  const authFetch = useCallback(async (input: string, init?: RequestInit) => {
+    const sessionRes = await supabase.auth.getSession();
+    const token = sessionRes.data.session?.access_token ?? "";
+    const headers = new Headers(init?.headers ?? {});
+    if (token) headers.set("authorization", `Bearer ${token}`);
+    if (!headers.has("content-type") && init?.body) headers.set("content-type", "application/json");
+    return fetch(input, { ...init, headers });
+  }, []);
+
+  const load = useCallback(async () => {
+    const user = await waitForActiveUser(supabase, { attempts: 4, delayMs: 120 });
+    if (!user) {
+      router.replace(`/sign-in?next=${encodeURIComponent(`/application/enterprise/licences/${licenceId}`)}`);
+      return;
+    }
+    const res = await authFetch(`/api/internal/admin/enterprise?licenceId=${encodeURIComponent(licenceId)}`);
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; detail?: Detail; message?: string };
+    if (!res.ok || !json.ok || !json.detail) {
+      setMessage(json.message || "This licence is unavailable.");
+      setState(res.status === 403 ? "denied" : "error");
+      return;
+    }
+    setDetail(json.detail);
+    setSeatQuantity(json.detail.licence.purchasedSeats);
+    setRenewalSeats(json.detail.licence.purchasedSeats);
+    setRenewalDate(json.detail.licence.renewalDate);
+    setState("ready");
+  }, [authFetch, licenceId, router]);
+
+  useEffect(() => {
+    const hash = window.location.hash.replace("#", "");
+    const timer = window.setTimeout(() => {
+      if (["seats", "invitations", "renewals", "audit", "settings"].includes(hash)) setTab(hash as typeof tab);
+      void load();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [load]);
+
+  async function runAction(action: string, payload: Record<string, unknown>) {
+    setMessage("");
+    const res = await authFetch("/api/internal/admin/enterprise", {
+      method: "POST",
+      body: JSON.stringify({ action, licenceId, ...payload }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string; code?: string };
+    if (!res.ok || !json.ok) {
+      setMessage(json.message || json.code || "The licence action was blocked.");
+      return;
+    }
+    setMessage("Licence action completed.");
+    await load();
+  }
+
+  if (state === "checking") return <main style={pageStyle}><section style={panelStyle}><h1>Checking licence access</h1><p>Confirming your signed-in session and role permissions.</p></section></main>;
+  if (state !== "ready" || !detail) return <main style={pageStyle}><section style={panelStyle}><h1>{state === "denied" ? "Access denied" : "Licence unavailable"}</h1><p>{message}</p><Link href="/application/enterprise">Back to Enterprise Operations</Link></section></main>;
+
+  const licence = detail.licence;
+  return (
+    <main style={pageStyle}>
+      <header style={headerStyle}>
+        <div>
+          <p style={eyebrowStyle}>Legacy Fortress Enterprise</p>
+          <h1 style={h1Style}>{licence.plan === "custom" ? licence.customPlanName || "Custom licence" : labelise(licence.plan)}</h1>
+          <p style={mutedStyle}>{detail.organisation?.name ?? "Unknown organisation"} · {labelise(licence.status)} · {licence.availableSeats} seats available</p>
+        </div>
+        <div style={headerActionsStyle}>
+          <span style={stageBadgeStyle}>STAGING — synthetic test data may be present</span>
+          <WorkspaceSwitcher currentPathname={`/application/enterprise/licences/${licenceId}`} alwaysShow compact />
+          <Link style={secondaryLinkStyle} href="/application/enterprise">Enterprise Operations</Link>
+          {detail.organisation ? <Link style={secondaryLinkStyle} href={`/application/enterprise/organisations/${detail.organisation.id}`}>Organisation</Link> : null}
+        </div>
+      </header>
+      {message ? <section style={alertStyle}>{message}</section> : null}
+      <nav aria-label="Licence detail navigation" style={tabListStyle}>
+        {["overview", "seats", "invitations", "renewals", "audit", "settings"].map((item) => (
+          <button key={item} type="button" style={tab === item ? activeTabStyle : tabStyle} onClick={() => setTab(item as typeof tab)}>{labelise(item === "seats" ? "seat_usage" : item)}</button>
+        ))}
+      </nav>
+      {tab === "overview" ? (
+        <section style={panelStyle}>
+          <h2>Overview</h2>
+          <dl style={detailsGridStyle}>
+            <Info label="Organisation" value={detail.organisation?.name ?? "Unknown"} />
+            <Info label="Plan" value={licence.plan === "custom" ? licence.customPlanName || "Custom" : labelise(licence.plan)} />
+            <Info label="Licence status" value={labelise(licence.status)} />
+            <Info label="Billing status" value={labelise(licence.billingStatus)} />
+            <Info label="Purchased seats" value={String(licence.purchasedSeats)} />
+            <Info label="Committed seats" value={String(licence.committedSeats)} />
+            <Info label="Available seats" value={String(licence.availableSeats)} />
+            <Info label="Renewal date" value={formatDate(licence.renewalDate)} />
+            <Info label="Account owner" value={licence.accountOwner ?? "Unassigned"} />
+            <Info label="Recent activity" value={detail.auditEvents[0]?.action ?? "No activity yet"} />
+          </dl>
+          <p style={privacyStyle}>Private vault records, uploaded documents, legal contents and individual financial values are not queried by this workspace.</p>
+        </section>
+      ) : null}
+      {tab === "seats" ? (
+        <section style={panelStyle}>
+          <h2>Seat usage</h2>
+          <p style={privacyStyle}>Committed seats are active + invited + suspended reservations. Suspended seats continue consuming entitlement until released.</p>
+          <div style={detailsGridStyle}>
+            <Info label="Purchased" value={String(licence.purchasedSeats)} />
+            <Info label="Active" value={String(licence.activeSeats)} />
+            <Info label="Invited" value={String(licence.invitedSeats)} />
+            <Info label="Suspended" value={String(licence.suspendedSeats)} />
+            <Info label="Available" value={String(licence.availableSeats)} />
+          </div>
+          <h3>Change entitlement</h3>
+          <FormInput label="New purchased seats" type="number" value={String(seatQuantity)} onChange={(value) => setSeatQuantity(Number(value))} />
+          <FormInput label="Reason" value={reason} onChange={setReason} />
+          <button type="button" style={primaryButtonStyle} onClick={() => runAction("change_licence_seats", { newPurchasedSeats: seatQuantity, reason })}>Save seat entitlement</button>
+          <h3>Controlled Phase 2 seat reservation</h3>
+          <p style={mutedStyle}>This creates a seat reservation record only. Full user invitation acceptance is Phase 3.</p>
+          <FormInput label="Reservation email" value={seatEmail} onChange={setSeatEmail} />
+          <button type="button" style={secondaryButtonStyle} onClick={() => runAction("reserve_licence_seat", { email: seatEmail })}>Reserve seat</button>
+          <table style={tableStyle}><thead><tr><th>Email</th><th>Status</th><th>Assigned</th></tr></thead><tbody>
+            {detail.seats.map((seat) => <tr key={seat.id}><td>{seat.invitee_email_normalized ?? "Unclaimed"}</td><td>{labelise(seat.seat_status)}</td><td>{formatDate(seat.assigned_at)}</td></tr>)}
+            {detail.seats.length === 0 ? <tr><td colSpan={3}>No seats have been allocated yet. Invite users is delivered in Phase 3.</td></tr> : null}
+          </tbody></table>
+        </section>
+      ) : null}
+      {tab === "renewals" ? (
+        <section style={panelStyle}>
+          <h2>Renewals</h2>
+          <FormInput label="New renewal date" type="date" value={renewalDate} onChange={setRenewalDate} />
+          <FormInput label="Renewed seat quantity" type="number" value={String(renewalSeats)} onChange={(value) => setRenewalSeats(Number(value))} />
+          <FormInput label="Renewal notes" value={reason} onChange={setReason} />
+          <button type="button" style={primaryButtonStyle} onClick={() => runAction("renew_licence", { newRenewalDate: renewalDate, renewedSeatQuantity: renewalSeats, renewalNotes: reason })}>Complete renewal</button>
+          <table style={tableStyle}><thead><tr><th>Previous renewal</th><th>New renewal</th><th>Seats</th><th>Plan</th></tr></thead><tbody>
+            {detail.renewals.map((renewal) => <tr key={renewal.id}><td>{formatDate(renewal.previous_renewal_date)}</td><td>{formatDate(renewal.new_renewal_date)}</td><td>{renewal.previous_purchased_seats} to {renewal.new_purchased_seats}</td><td>{labelise(renewal.previous_plan)} to {labelise(renewal.new_plan)}</td></tr>)}
+            {detail.renewals.length === 0 ? <tr><td colSpan={4}>No renewal history yet.</td></tr> : null}
+          </tbody></table>
+        </section>
+      ) : null}
+      {tab === "settings" ? (
+        <section style={panelStyle}>
+          <h2>Lifecycle</h2>
+          <FormInput label="Reason" value={reason} onChange={setReason} />
+          <div style={rowStyle}>
+            <button type="button" style={secondaryButtonStyle} onClick={() => runAction("transition_licence", { status: licence.status === "suspended" ? "active" : "suspended", reason })}>{licence.status === "suspended" ? "Reactivate" : "Suspend"}</button>
+            <button type="button" style={secondaryButtonStyle} onClick={() => runAction("transition_licence", { status: "expiring", reason })}>Mark expiring</button>
+            <button type="button" style={secondaryButtonStyle} onClick={() => runAction("transition_licence", { status: "cancelled", reason })}>Cancel</button>
+          </div>
+        </section>
+      ) : null}
+      {tab === "audit" ? (
+        <section style={panelStyle}>
+          <h2>Audit</h2>
+          <table style={tableStyle}><thead><tr><th>When</th><th>Action</th><th>Result</th><th>Actor role</th></tr></thead><tbody>
+            {detail.auditEvents.map((event) => <tr key={event.id}><td>{formatDate(event.created_at)}</td><td>{event.action}</td><td>{event.result}</td><td>{event.actor_role ?? "Unknown"}</td></tr>)}
+            {detail.auditEvents.length === 0 ? <tr><td colSpan={4}>No audit events for this licence yet.</td></tr> : null}
+          </tbody></table>
+        </section>
+      ) : null}
+      {tab === "invitations" ? <section style={panelStyle}><h2>Invitations</h2><p style={mutedStyle}>Organisation-user invitation acceptance and seat activation are delivered in Phase 3.</p></section> : null}
+    </main>
+  );
+}
+
+function FormInput({ label, value, onChange, required = false, type = "text" }: { label: string; value: string; onChange: (value: string) => void; required?: boolean; type?: string }) {
+  return <label style={labelStyle}>{label}{required ? " *" : ""}<input type={type} value={value} required={required} onChange={(event) => onChange(event.target.value)} /></label>;
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return <div><dt>{label}</dt><dd>{value}</dd></div>;
+}
+
+function nextYearInput() {
+  const next = new Date();
+  next.setFullYear(next.getFullYear() + 1);
+  return next.toISOString().slice(0, 10);
+}
+
+function labelise(value: string) {
+  return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+}
+
+const pageStyle: CSSProperties = { minHeight: "100vh", padding: 24, background: "#f8fafc", color: "#111827" };
+const headerStyle: CSSProperties = { display: "flex", justifyContent: "space-between", gap: 18, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 18 };
+const headerActionsStyle: CSSProperties = { display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" };
+const panelStyle: CSSProperties = { background: "#fff", border: "1px solid #dbe3ef", borderRadius: 8, padding: 18, boxShadow: "0 12px 30px rgba(15,23,42,.05)", display: "grid", gap: 12 };
+const h1Style: CSSProperties = { margin: 0, fontSize: 28, lineHeight: 1.15 };
+const eyebrowStyle: CSSProperties = { margin: "0 0 8px", color: "#475569", fontSize: 12, textTransform: "uppercase", fontWeight: 800, letterSpacing: 0 };
+const mutedStyle: CSSProperties = { color: "#64748b", margin: "6px 0 0", lineHeight: 1.5 };
+const privacyStyle: CSSProperties = { color: "#334155", background: "#f1f5f9", border: "1px solid #dbe3ef", borderRadius: 6, padding: 10, margin: "12px 0 0" };
+const secondaryLinkStyle: CSSProperties = { color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 6, padding: "9px 12px", textDecoration: "none", background: "#fff", fontWeight: 700 };
+const secondaryButtonStyle: CSSProperties = { color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 6, padding: "9px 12px", background: "#fff", fontWeight: 700 };
+const primaryButtonStyle: CSSProperties = { border: 0, borderRadius: 6, padding: "10px 14px", background: "#111827", color: "#fff", fontWeight: 800 };
+const stageBadgeStyle: CSSProperties = { background: "#fff7ed", color: "#9a3412", border: "1px solid #fed7aa", borderRadius: 6, padding: "7px 10px", fontSize: 12, fontWeight: 900 };
+const alertStyle: CSSProperties = { background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 8, padding: 12, marginBottom: 16 };
+const tabListStyle: CSSProperties = { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 };
+const tabStyle: CSSProperties = { border: "1px solid #cbd5e1", background: "#fff", borderRadius: 6, padding: "9px 12px", fontWeight: 700 };
+const activeTabStyle: CSSProperties = { ...tabStyle, background: "#111827", color: "#fff", borderColor: "#111827" };
+const labelStyle: CSSProperties = { display: "grid", gap: 5, fontWeight: 700, color: "#334155", fontSize: 13 };
+const rowStyle: CSSProperties = { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 };
+const detailsGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 };
+const tableStyle: CSSProperties = { width: "100%", borderCollapse: "collapse", fontSize: 14 };

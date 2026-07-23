@@ -33,6 +33,13 @@ export type AdminCapability =
   | "prototype:view"
   | "organisation:view"
   | "organisation:manage"
+  | "licence:view"
+  | "licence:create"
+  | "licence:edit"
+  | "licence:seats"
+  | "licence:renew"
+  | "licence:lifecycle"
+  | "licence:audit"
   | "enterprise.invitation.manage"
   | "enterprise.licence.manage"
   | "enterprise.report.read"
@@ -66,6 +73,13 @@ const ADMIN_ROLE_CAPABILITIES: Record<AdminRole, AdminCapability[]> = {
     "prototype:view",
     "organisation:view",
     "organisation:manage",
+    "licence:view",
+    "licence:create",
+    "licence:edit",
+    "licence:seats",
+    "licence:renew",
+    "licence:lifecycle",
+    "licence:audit",
     "enterprise.invitation.manage",
     "enterprise.licence.manage",
     "enterprise.report.read",
@@ -112,6 +126,8 @@ const ADMIN_ROLE_CAPABILITIES: Record<AdminRole, AdminCapability[]> = {
     "audit:read",
     "organisation:view",
     "enterprise.report.read",
+    "licence:view",
+    "licence:audit",
   ],
   enterprise_admin: [
     "admin.dashboard.read",
@@ -121,6 +137,13 @@ const ADMIN_ROLE_CAPABILITIES: Record<AdminRole, AdminCapability[]> = {
     "admin_shell:view",
     "organisation:view",
     "organisation:manage",
+    "licence:view",
+    "licence:create",
+    "licence:edit",
+    "licence:seats",
+    "licence:renew",
+    "licence:lifecycle",
+    "licence:audit",
     "enterprise.invitation.manage",
     "enterprise.licence.manage",
     "enterprise.report.read",

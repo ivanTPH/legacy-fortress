@@ -38,9 +38,25 @@ type Organisation = {
   updatedAt: string;
 };
 
+type Licence = {
+  id: string;
+  plan: string;
+  customPlanName: string | null;
+  status: string;
+  billingStatus: string;
+  purchasedSeats: number;
+  activeSeats: number;
+  invitedSeats: number;
+  suspendedSeats: number;
+  availableSeats: number;
+  renewalDate: string;
+  contractReference: string | null;
+  accountOwner: string | null;
+};
+
 type Detail = {
   organisation: Organisation;
-  licences: Array<{ id: string; plan: string; status: string; purchasedSeats: number; activeSeats: number }>;
+  licences: Licence[];
   invitations: Array<{ id: string; email: string; invitationType: string; status: string }>;
   auditEvents: Array<{ id: string; action: string; result: string; actor_email_normalized: string | null; actor_role: string | null; created_at: string; policy_decision: string; metadata: Record<string, unknown> }>;
 };
@@ -77,6 +93,21 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
   const [tab, setTab] = useState<"overview" | "licence" | "users" | "invitations" | "adoption" | "consent" | "reports" | "audit" | "settings">("overview");
   const [form, setForm] = useState<FormState | null>(null);
   const [reason, setReason] = useState("");
+  const [licenceForm, setLicenceForm] = useState({
+    licencePlan: "starter",
+    customPlanName: "",
+    contractReference: "",
+    billingReference: "",
+    startDate: todayInput(),
+    renewalDate: nextYearInput(),
+    renewalNoticeDays: 90,
+    purchasedSeats: 25,
+    allocatedSeats: 0,
+    billingStatus: "not_configured",
+    licenceStatus: "active",
+    accountOwner: "",
+    renewalNotes: "",
+  });
 
   const authFetch = useCallback(async (input: string, init?: RequestInit) => {
     const sessionRes = await supabase.auth.getSession();
@@ -123,7 +154,7 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
       setMessage(json.message || json.code || "The organisation action was blocked.");
       return;
     }
-    setMessage(action === "delete_or_archive_organisation" ? "Organisation archived or deleted." : "Organisation updated.");
+    setMessage(action === "delete_or_archive_organisation" ? "Organisation archived or deleted." : action.includes("licence") ? "Licence action completed." : "Organisation updated.");
     if (action === "delete_or_archive_organisation" && json.mode === "deleted") {
       router.replace("/application/enterprise");
       return;
@@ -158,6 +189,10 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
       </nav>
       {tab === "overview" ? (
         <section style={panelStyle}>
+          <div style={rowStyle}>
+            <button type="button" style={primaryButtonStyle} onClick={() => setTab("licence")}>{detail.licences.length ? "View licence" : "Configure licence"}</button>
+            {detail.licences[0] ? <Link style={secondaryLinkStyle} href={`/application/enterprise/licences/${detail.licences[0].id}`}>Manage seats</Link> : null}
+          </div>
           <h2>Overview</h2>
           <dl style={detailsGridStyle}>
             <Info label="Legal name" value={org.legalName} />
@@ -174,6 +209,53 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
             <Info label="Recent activity" value={detail.auditEvents[0]?.action || "No activity yet"} />
           </dl>
           <p style={privacyStyle}>Private customer vault records, uploaded documents, legal contents and individual financial values are not queried by this workspace.</p>
+        </section>
+      ) : null}
+      {tab === "licence" ? (
+        <section style={panelStyle}>
+          <h2>Licence</h2>
+          {detail.licences.length ? (
+            <div style={tableWrapStyle}>
+              <table style={tableStyle}>
+                <thead><tr><th>Plan</th><th>Status</th><th>Billing</th><th>Seats</th><th>Renewal</th><th>Actions</th></tr></thead>
+                <tbody>
+                  {detail.licences.map((licence) => (
+                    <tr key={licence.id}>
+                      <td>{licence.plan === "custom" ? licence.customPlanName || "Custom" : labelise(licence.plan)}<small>{licence.contractReference ?? "No contract reference"}</small></td>
+                      <td>{labelise(licence.status)}</td>
+                      <td>{labelise(licence.billingStatus)}</td>
+                      <td>{licence.activeSeats + licence.invitedSeats + licence.suspendedSeats}/{licence.purchasedSeats}<small>{licence.availableSeats} available</small></td>
+                      <td>{formatDate(licence.renewalDate)}</td>
+                      <td><Link href={`/application/enterprise/licences/${licence.id}`}>View licence</Link></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div style={stackStyle}>
+              <p style={mutedStyle}>No licence has been configured for this organisation.</p>
+              <h3>1. Plan</h3>
+              <label style={labelStyle}>Licence plan<select value={licenceForm.licencePlan} onChange={(event) => setLicenceForm({ ...licenceForm, licencePlan: event.target.value })}><option value="starter">Starter</option><option value="professional">Professional</option><option value="enterprise">Enterprise</option><option value="custom">Custom</option></select></label>
+              {licenceForm.licencePlan === "custom" ? <FormInput label="Custom plan name" required value={licenceForm.customPlanName} onChange={(customPlanName) => setLicenceForm({ ...licenceForm, customPlanName })} /> : null}
+              <FormInput label="Contract reference" value={licenceForm.contractReference} onChange={(contractReference) => setLicenceForm({ ...licenceForm, contractReference })} />
+              <FormInput label="Billing reference" value={licenceForm.billingReference} onChange={(billingReference) => setLicenceForm({ ...licenceForm, billingReference })} />
+              <h3>2. Entitlement</h3>
+              <FormInput label="Purchased seats" type="number" required value={String(licenceForm.purchasedSeats)} onChange={(value) => setLicenceForm({ ...licenceForm, purchasedSeats: Number(value) })} />
+              <p style={privacyStyle}>Committed seats: {licenceForm.allocatedSeats}. Available seats after save: {Math.max(licenceForm.purchasedSeats - licenceForm.allocatedSeats, 0)}.</p>
+              <h3>3. Renewal and status</h3>
+              <FormInput label="Start date" type="date" required value={licenceForm.startDate} onChange={(startDate) => setLicenceForm({ ...licenceForm, startDate })} />
+              <FormInput label="Renewal date" type="date" required value={licenceForm.renewalDate} onChange={(renewalDate) => setLicenceForm({ ...licenceForm, renewalDate })} />
+              <FormInput label="Renewal notice days" type="number" value={String(licenceForm.renewalNoticeDays)} onChange={(value) => setLicenceForm({ ...licenceForm, renewalNoticeDays: Number(value) })} />
+              <label style={labelStyle}>Initial status<select value={licenceForm.licenceStatus} onChange={(event) => setLicenceForm({ ...licenceForm, licenceStatus: event.target.value })}><option value="draft">Draft</option><option value="pending_approval">Pending approval</option><option value="active">Active</option></select></label>
+              <label style={labelStyle}>Billing status<select value={licenceForm.billingStatus} onChange={(event) => setLicenceForm({ ...licenceForm, billingStatus: event.target.value })}><option value="not_configured">Not configured</option><option value="trial">Trial</option><option value="active">Active</option><option value="past_due">Past due</option></select></label>
+              <FormInput label="Account owner" value={licenceForm.accountOwner} onChange={(accountOwner) => setLicenceForm({ ...licenceForm, accountOwner })} />
+              <label style={labelStyle}>Renewal notes<textarea value={licenceForm.renewalNotes} onChange={(event) => setLicenceForm({ ...licenceForm, renewalNotes: event.target.value })} /></label>
+              <h3>4. Review</h3>
+              <p style={privacyStyle}>This will create a {labelise(licenceForm.licencePlan)} licence with {licenceForm.purchasedSeats} purchased seats. No customer vault data is used.</p>
+              <button type="button" style={primaryButtonStyle} onClick={() => runAction("create_licence", { ...licenceForm, organisationId })}>Create licence</button>
+            </div>
+          )}
         </section>
       ) : null}
       {tab === "audit" ? (
@@ -210,7 +292,7 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
           </div>
         </section>
       ) : null}
-      {!["overview", "audit", "settings"].includes(tab) ? <section style={panelStyle}><h2>{labelise(tab)}</h2><p style={mutedStyle}>This section is staged for a later Enterprise Operations phase. No fabricated operational data is shown.</p></section> : null}
+      {!["overview", "licence", "audit", "settings"].includes(tab) ? <section style={panelStyle}><h2>{labelise(tab)}</h2><p style={mutedStyle}>This section is staged for a later Enterprise Operations phase. No fabricated operational data is shown.</p></section> : null}
     </main>
   );
 }
@@ -253,6 +335,16 @@ function labelise(value: string) {
   return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function todayInput() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function nextYearInput() {
+  const next = new Date();
+  next.setFullYear(next.getFullYear() + 1);
+  return next.toISOString().slice(0, 10);
+}
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
@@ -275,5 +367,7 @@ const tabStyle: CSSProperties = { border: "1px solid #cbd5e1", background: "#fff
 const activeTabStyle: CSSProperties = { ...tabStyle, background: "#111827", color: "#fff", borderColor: "#111827" };
 const labelStyle: CSSProperties = { display: "grid", gap: 5, fontWeight: 700, color: "#334155", fontSize: 13 };
 const rowStyle: CSSProperties = { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 };
+const stackStyle: CSSProperties = { display: "grid", gap: 12 };
+const tableWrapStyle: CSSProperties = { overflowX: "auto" };
 const detailsGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 };
 const tableStyle: CSSProperties = { width: "100%", borderCollapse: "collapse", fontSize: 14 };

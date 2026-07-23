@@ -15,13 +15,16 @@ export const ENTERPRISE_ORGANISATION_TYPES = [
   "other",
 ] as const;
 
-export const ENTERPRISE_LICENCE_STATUSES = ["draft", "pending_approval", "active", "expiring", "suspended", "cancelled"] as const;
+export const ENTERPRISE_LICENCE_STATUSES = ["draft", "pending_approval", "active", "expiring", "suspended", "cancelled", "expired"] as const;
+export const ENTERPRISE_LICENCE_PLANS = ["starter", "professional", "enterprise", "custom"] as const;
+export const ENTERPRISE_BILLING_STATUSES = ["not_configured", "trial", "active", "past_due", "suspended", "cancelled", "pending", "current", "overdue", "manual_review"] as const;
 export const ENTERPRISE_INVITATION_STATUSES = ["draft", "scheduled", "sent", "delivered", "accepted", "expired", "revoked", "failed"] as const;
 export const ENTERPRISE_ORGANISATION_STATUSES = ["draft", "pending_setup", "pending_administrator_acceptance", "active", "suspended", "expiring", "cancelled", "archived"] as const;
 export const ENTERPRISE_ONBOARDING_STATUSES = ["not_started", "pending", "in_progress", "blocked", "complete"] as const;
 export const ENTERPRISE_RISK_STATUSES = ["normal", "watch", "at_risk", "critical", "restricted"] as const;
 export const ENTERPRISE_REPORT_MINIMUM_COHORT = 5;
 const ORGANISATION_SELECT = "id,legal_name,trading_name,organisation_type,organisation_type_other,registration_number,country,registered_address,operating_address,primary_contact_name,primary_contact_email,primary_contact_telephone,website,internal_account_owner,contract_reference,customer_reference,onboarding_status,onboarding_notes,nominated_admin_name,nominated_admin_email,nominated_admin_require_mfa,nominated_admin_expiry_days,status,risk_status,same_operating_address,archived_at,created_at,updated_at";
+const LICENCE_SELECT = "id,organisation_id,licence_plan,custom_plan_name,contract_reference,billing_reference,start_date,renewal_date,end_date,renewal_notice_days,auto_renew,renewal_notes,purchased_seats,allocated_seats,active_seats,invited_seats,suspended_seats,billing_status,licence_status,account_owner,created_at,updated_at";
 
 type EnterpriseOrganisationRow = {
   id: string;
@@ -58,10 +61,15 @@ type EnterpriseLicenceRow = {
   id: string;
   organisation_id: string;
   licence_plan: string;
+  custom_plan_name: string | null;
   contract_reference: string | null;
   billing_reference: string | null;
   start_date: string;
   renewal_date: string;
+  end_date: string | null;
+  renewal_notice_days: number;
+  auto_renew: boolean;
+  renewal_notes: string | null;
   purchased_seats: number;
   allocated_seats: number;
   active_seats: number;
@@ -70,6 +78,8 @@ type EnterpriseLicenceRow = {
   billing_status: string;
   licence_status: string;
   account_owner: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 type EnterpriseInvitationRow = {
@@ -133,7 +143,7 @@ export async function loadEnterprisePortfolio(client: AnySupabaseClient, access:
       .limit(200),
     client
       .from("enterprise_licences")
-      .select("id,organisation_id,licence_plan,contract_reference,billing_reference,start_date,renewal_date,purchased_seats,allocated_seats,active_seats,invited_seats,suspended_seats,billing_status,licence_status,account_owner")
+      .select(LICENCE_SELECT)
       .order("renewal_date", { ascending: true })
       .limit(300),
     client
@@ -173,9 +183,10 @@ export async function loadEnterprisePortfolio(client: AnySupabaseClient, access:
       acc.active += licence.activeSeats;
       acc.invited += licence.invitedSeats;
       acc.suspended += licence.suspendedSeats;
+      acc.available += licence.availableSeats;
       return acc;
     },
-    { purchased: 0, allocated: 0, active: 0, invited: 0, suspended: 0 },
+    { purchased: 0, allocated: 0, active: 0, invited: 0, suspended: 0, available: 0 },
   );
   const consentRestricted = organisations.filter((org) => {
     const consent = consentByOrg.get(org.id);
@@ -280,7 +291,7 @@ export async function getEnterpriseOrganisationDetail(client: AnySupabaseClient,
   if (orgRes.error) throw new EnterpriseOperationError("organisation_query_failed", orgRes.error.message, 500);
   if (!orgRes.data) throw new EnterpriseOperationError("organisation_not_found", "Organisation not found.", 404);
   const [licencesRes, invitationsRes, consentRes, auditRes] = await Promise.all([
-    client.from("enterprise_licences").select("id,organisation_id,licence_plan,contract_reference,billing_reference,start_date,renewal_date,purchased_seats,allocated_seats,active_seats,invited_seats,suspended_seats,billing_status,licence_status,account_owner").eq("organisation_id", organisationId).order("renewal_date", { ascending: true }),
+    client.from("enterprise_licences").select(LICENCE_SELECT).eq("organisation_id", organisationId).order("renewal_date", { ascending: true }),
     client.from("enterprise_invitations").select("id,organisation_id,licence_id,email_normalized,full_name,invitation_type,role_template,status,expires_at,require_mfa,sent_at,accepted_at,revoked_at,failure_reason,created_at").eq("organisation_id", organisationId).order("created_at", { ascending: false }),
     client.from("enterprise_consent_settings").select("organisation_id,adviser_insight_consent,marketing_consent,reporting_consent,export_permission,minimum_reporting_cohort,retention_rule").eq("organisation_id", organisationId).maybeSingle(),
     client.from("audit_events").select("id,action,result,actor_email_normalized,actor_role,resource_type,resource_id,resource_label,policy_decision,metadata,created_at").eq("resource_type", "organisation").eq("resource_id", organisationId).order("created_at", { ascending: false }).limit(50),
@@ -396,34 +407,227 @@ export async function createEnterpriseLicence(
   input: Record<string, unknown>,
 ) {
   const organisationId = requiredText(input.organisationId, "Organisation is required.");
-  const purchasedSeats = Math.max(Number(input.purchasedSeats ?? 0), 0);
-  const allocatedSeats = Math.max(Number(input.allocatedSeats ?? 0), 0);
-  if (allocatedSeats > purchasedSeats) {
-    throw new EnterpriseOperationError("seat_entitlement_exceeded", "Allocated seats cannot exceed purchased seats.", 409);
+  const organisation = await getOrganisationRow(client, organisationId);
+  if (["archived", "cancelled"].includes(organisation.status)) {
+    throw new EnterpriseOperationError("organisation_not_licensable", "Archived or cancelled organisations cannot receive a new licence.", 409);
   }
+  await assertNoOpenLicenceForOrganisation(client, organisationId);
+  const licencePlan = normalizeChoice(input.licencePlan, ENTERPRISE_LICENCE_PLANS, "Choose a valid licence plan.");
+  const startDate = requiredDate(input.startDate, "Start date is required.");
+  const renewalDate = requiredDate(input.renewalDate, "Renewal date is required.");
+  if (new Date(renewalDate).getTime() < new Date(startDate).getTime()) {
+    throw new EnterpriseOperationError("invalid_licence_dates", "Renewal date must be on or after the start date.", 400);
+  }
+  const purchasedSeats = requiredPositiveInteger(input.purchasedSeats, "Purchased seats must be at least 1.");
+  const committedSeats = Math.max(Number(input.allocatedSeats ?? 0), 0);
+  assertSeatEntitlement(purchasedSeats, committedSeats);
+  const licenceStatus = normalizeChoice(input.licenceStatus ?? "pending_approval", ENTERPRISE_LICENCE_STATUSES, "Choose a valid licence status.");
+  const billingStatus = normalizeChoice(input.billingStatus ?? "not_configured", ENTERPRISE_BILLING_STATUSES, "Choose a valid billing status.");
   const insert = await client
     .from("enterprise_licences")
     .insert({
       organisation_id: organisationId,
-      licence_plan: requiredText(input.licencePlan, "Licence plan is required."),
+      licence_plan: licencePlan,
+      custom_plan_name: licencePlan === "custom" ? requiredText(input.customPlanName, "Custom plan name is required.") : null,
       contract_reference: optionalText(input.contractReference),
       billing_reference: optionalText(input.billingReference),
-      start_date: requiredText(input.startDate, "Start date is required."),
-      renewal_date: requiredText(input.renewalDate, "Renewal date is required."),
+      start_date: startDate,
+      renewal_date: renewalDate,
+      end_date: optionalDate(input.endDate),
+      renewal_notice_days: boundedInteger(input.renewalNoticeDays ?? 90, 1, 365, "Renewal notice period must be between 1 and 365 days."),
+      auto_renew: Boolean(input.autoRenew),
+      renewal_notes: optionalText(input.renewalNotes),
       purchased_seats: purchasedSeats,
-      allocated_seats: allocatedSeats,
+      allocated_seats: committedSeats,
       invited_seats: 0,
       active_seats: 0,
       suspended_seats: 0,
-      billing_status: optionalText(input.billingStatus) ?? "pending",
-      licence_status: optionalText(input.licenceStatus) ?? "pending_approval",
+      billing_status: billingStatus,
+      licence_status: licenceStatus,
       account_owner: optionalText(input.accountOwner),
       created_by_user_id: access.user.id,
     })
-    .select("id,organisation_id,licence_plan,contract_reference,billing_reference,start_date,renewal_date,purchased_seats,allocated_seats,active_seats,invited_seats,suspended_seats,billing_status,licence_status,account_owner")
+    .select(LICENCE_SELECT)
     .single();
   if (insert.error || !insert.data) throw new EnterpriseOperationError("licence_create_failed", insert.error?.message ?? "Could not create licence.", 500);
   return mapLicence(insert.data as EnterpriseLicenceRow);
+}
+
+export async function getEnterpriseLicenceDetail(client: AnySupabaseClient, licenceId: string) {
+  const licenceRes = await client.from("enterprise_licences").select(LICENCE_SELECT).eq("id", licenceId).maybeSingle();
+  if (licenceRes.error) throw new EnterpriseOperationError("licence_query_failed", licenceRes.error.message, 500);
+  if (!licenceRes.data) throw new EnterpriseOperationError("licence_not_found", "Licence not found.", 404);
+  const licence = mapLicence(licenceRes.data as EnterpriseLicenceRow);
+  const [orgRes, seatsRes, renewalsRes, auditRes] = await Promise.all([
+    client.from("enterprise_organisations").select(ORGANISATION_SELECT).eq("id", licence.organisationId).maybeSingle(),
+    client.from("enterprise_seats").select("id,organisation_id,licence_id,user_id,invitee_email_normalized,seat_status,assigned_at,activated_at,suspended_at,released_at").eq("licence_id", licenceId).order("assigned_at", { ascending: false }),
+    client.from("enterprise_licence_renewals").select("id,organisation_id,licence_id,previous_renewal_date,new_renewal_date,previous_purchased_seats,new_purchased_seats,previous_plan,new_plan,contract_reference,billing_reference,notes,synthetic_run_marker,created_at").eq("licence_id", licenceId).order("created_at", { ascending: false }),
+    client.from("audit_events").select("id,action,result,actor_email_normalized,actor_role,resource_type,resource_id,resource_label,policy_decision,metadata,created_at").eq("resource_type", "licence").eq("resource_id", licenceId).order("created_at", { ascending: false }).limit(50),
+  ]);
+  for (const result of [seatsRes, renewalsRes, auditRes]) {
+    if (result.error) throw new EnterpriseOperationError("licence_detail_failed", result.error.message, 500);
+  }
+  if (orgRes.error) throw new EnterpriseOperationError("licence_detail_failed", orgRes.error.message, 500);
+  return {
+    licence,
+    organisation: orgRes.data ? mapOrganisation(orgRes.data as EnterpriseOrganisationRow) : null,
+    seats: seatsRes.data ?? [],
+    renewals: renewalsRes.data ?? [],
+    auditEvents: auditRes.data ?? [],
+    privacyBoundary: {
+      vaultContentExcluded: true,
+      documentContentExcluded: true,
+      financialValuesExcluded: true,
+    },
+  };
+}
+
+export async function updateEnterpriseLicence(client: AnySupabaseClient, licenceId: string, input: Record<string, unknown>) {
+  const current = await getLicenceRow(client, licenceId);
+  const licencePlan = normalizeChoice(input.licencePlan ?? current.licence_plan, ENTERPRISE_LICENCE_PLANS, "Choose a valid licence plan.");
+  const startDate = requiredDate(input.startDate ?? current.start_date, "Start date is required.");
+  const renewalDate = requiredDate(input.renewalDate ?? current.renewal_date, "Renewal date is required.");
+  if (new Date(renewalDate).getTime() < new Date(startDate).getTime()) {
+    throw new EnterpriseOperationError("invalid_licence_dates", "Renewal date must be on or after the start date.", 400);
+  }
+  const purchasedSeats = input.purchasedSeats === undefined ? Number(current.purchased_seats) : requiredPositiveInteger(input.purchasedSeats, "Purchased seats must be at least 1.");
+  assertSeatEntitlement(purchasedSeats, committedSeatsForRow(current));
+  const patch = {
+    licence_plan: licencePlan,
+    custom_plan_name: licencePlan === "custom" ? requiredText(input.customPlanName ?? current.custom_plan_name, "Custom plan name is required.") : null,
+    contract_reference: optionalText(input.contractReference ?? current.contract_reference),
+    billing_reference: optionalText(input.billingReference ?? current.billing_reference),
+    start_date: startDate,
+    renewal_date: renewalDate,
+    end_date: optionalDate(input.endDate ?? current.end_date),
+    renewal_notice_days: boundedInteger(input.renewalNoticeDays ?? current.renewal_notice_days ?? 90, 1, 365, "Renewal notice period must be between 1 and 365 days."),
+    auto_renew: Boolean(input.autoRenew ?? current.auto_renew),
+    renewal_notes: optionalText(input.renewalNotes ?? current.renewal_notes),
+    purchased_seats: purchasedSeats,
+    allocated_seats: committedSeatsForRow(current),
+    billing_status: normalizeChoice(input.billingStatus ?? current.billing_status, ENTERPRISE_BILLING_STATUSES, "Choose a valid billing status."),
+    licence_status: normalizeChoice(input.licenceStatus ?? current.licence_status, ENTERPRISE_LICENCE_STATUSES, "Choose a valid licence status."),
+    account_owner: optionalText(input.accountOwner ?? current.account_owner),
+    updated_at: new Date().toISOString(),
+  };
+  const update = await client.from("enterprise_licences").update(patch).eq("id", licenceId).select(LICENCE_SELECT).single();
+  if (update.error || !update.data) throw new EnterpriseOperationError("licence_update_failed", update.error?.message ?? "Could not update licence.", 500);
+  return { before: mapLicence(current), after: mapLicence(update.data as EnterpriseLicenceRow), changedFields: changedLicenceFields(current, update.data as EnterpriseLicenceRow) };
+}
+
+export async function changeEnterpriseLicenceSeats(client: AnySupabaseClient, licenceId: string, input: Record<string, unknown>) {
+  const current = await getLicenceRow(client, licenceId);
+  const newPurchasedSeats = requiredPositiveInteger(input.newPurchasedSeats ?? input.purchasedSeats, "Enter the new purchased-seat quantity.");
+  const committed = committedSeatsForRow(current);
+  assertSeatEntitlement(newPurchasedSeats, committed);
+  const update = await client
+    .from("enterprise_licences")
+    .update({
+      purchased_seats: newPurchasedSeats,
+      allocated_seats: committed,
+      account_owner: optionalText(input.accountOwner ?? current.account_owner),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", licenceId)
+    .select(LICENCE_SELECT)
+    .single();
+  if (update.error || !update.data) throw new EnterpriseOperationError("licence_seat_update_failed", update.error?.message ?? "Could not update seat entitlement.", 500);
+  return { before: mapLicence(current), after: mapLicence(update.data as EnterpriseLicenceRow), committedSeats: committed };
+}
+
+export async function transitionEnterpriseLicence(client: AnySupabaseClient, licenceId: string, nextStatus: string, reason: unknown) {
+  const current = await getLicenceRow(client, licenceId);
+  const normalized = normalizeChoice(nextStatus, ENTERPRISE_LICENCE_STATUSES, "Choose a valid licence status.");
+  if (!isValidLicenceTransition(current.licence_status, normalized)) {
+    throw new EnterpriseOperationError("invalid_licence_transition", `Cannot move licence from ${current.licence_status} to ${normalized}.`, 409);
+  }
+  const patch: Record<string, unknown> = { licence_status: normalized, updated_at: new Date().toISOString() };
+  if (normalized === "suspended") {
+    patch.billing_status = "suspended";
+    patch.suspended_at = new Date().toISOString();
+    patch.renewal_notes = appendReason(current.renewal_notes, reason);
+  }
+  if (normalized === "active" && current.licence_status === "suspended") {
+    patch.billing_status = current.billing_status === "suspended" ? "active" : current.billing_status;
+  }
+  if (normalized === "cancelled") {
+    patch.billing_status = "cancelled";
+    patch.cancelled_at = new Date().toISOString();
+    patch.renewal_notes = appendReason(current.renewal_notes, reason);
+  }
+  if (normalized === "expired") patch.expired_at = new Date().toISOString();
+  const update = await client.from("enterprise_licences").update(patch).eq("id", licenceId).select(LICENCE_SELECT).single();
+  if (update.error || !update.data) throw new EnterpriseOperationError("licence_transition_failed", update.error?.message ?? "Could not update licence status.", 500);
+  return { before: mapLicence(current), after: mapLicence(update.data as EnterpriseLicenceRow) };
+}
+
+export async function renewEnterpriseLicence(client: AnySupabaseClient, access: AdminAccessState, licenceId: string, input: Record<string, unknown>) {
+  const current = await getLicenceRow(client, licenceId);
+  if (!["active", "expiring"].includes(current.licence_status)) {
+    throw new EnterpriseOperationError("licence_not_renewable", "Only active or expiring licences can be renewed.", 409);
+  }
+  const newRenewalDate = requiredDate(input.newRenewalDate ?? input.renewalDate, "New renewal date is required.");
+  if (new Date(newRenewalDate).getTime() <= new Date(current.renewal_date).getTime()) {
+    throw new EnterpriseOperationError("invalid_renewal_date", "New renewal date must be after the current renewal date.", 409);
+  }
+  const newPurchasedSeats = input.renewedSeatQuantity === undefined ? Number(current.purchased_seats) : requiredPositiveInteger(input.renewedSeatQuantity, "Renewed seat quantity must be at least 1.");
+  assertSeatEntitlement(newPurchasedSeats, committedSeatsForRow(current));
+  const newPlan = normalizeChoice(input.licencePlan ?? current.licence_plan, ENTERPRISE_LICENCE_PLANS, "Choose a valid licence plan.");
+  const renewal = await client.from("enterprise_licence_renewals").insert({
+    organisation_id: current.organisation_id,
+    licence_id: current.id,
+    previous_renewal_date: current.renewal_date,
+    new_renewal_date: newRenewalDate,
+    previous_purchased_seats: current.purchased_seats,
+    new_purchased_seats: newPurchasedSeats,
+    previous_plan: current.licence_plan,
+    new_plan: newPlan,
+    contract_reference: optionalText(input.contractReference ?? current.contract_reference),
+    billing_reference: optionalText(input.billingReference ?? current.billing_reference),
+    notes: optionalText(input.renewalNotes),
+    synthetic_run_marker: optionalText(input.syntheticRunMarker),
+    created_by_user_id: access.user.id,
+  }).select("id").single();
+  if (renewal.error) throw new EnterpriseOperationError("licence_renewal_failed", renewal.error.message, 500);
+  const update = await client.from("enterprise_licences").update({
+    licence_plan: newPlan,
+    custom_plan_name: newPlan === "custom" ? requiredText(input.customPlanName ?? current.custom_plan_name, "Custom plan name is required.") : null,
+    purchased_seats: newPurchasedSeats,
+    allocated_seats: committedSeatsForRow(current),
+    renewal_date: newRenewalDate,
+    contract_reference: optionalText(input.contractReference ?? current.contract_reference),
+    billing_reference: optionalText(input.billingReference ?? current.billing_reference),
+    renewal_notes: optionalText(input.renewalNotes ?? current.renewal_notes),
+    licence_status: "active",
+    billing_status: normalizeChoice(input.billingStatus ?? current.billing_status ?? "active", ENTERPRISE_BILLING_STATUSES, "Choose a valid billing status."),
+    updated_at: new Date().toISOString(),
+  }).eq("id", licenceId).select(LICENCE_SELECT).single();
+  if (update.error || !update.data) throw new EnterpriseOperationError("licence_renewal_update_failed", update.error?.message ?? "Could not update renewed licence.", 500);
+  return { before: mapLicence(current), after: mapLicence(update.data as EnterpriseLicenceRow), renewalId: renewal.data?.id };
+}
+
+export async function createEnterpriseSeatReservation(client: AnySupabaseClient, licenceId: string, input: Record<string, unknown>) {
+  const current = await getLicenceRow(client, licenceId);
+  if (!["active", "expiring", "pending_approval"].includes(current.licence_status)) {
+    throw new EnterpriseOperationError("licence_allocation_blocked", "Cancelled, expired or suspended licences cannot allocate new seats.", 409);
+  }
+  const email = optionalEmail(input.email);
+  const committed = committedSeatsForRow(current);
+  assertSeatEntitlement(Number(current.purchased_seats), committed + 1);
+  const seat = await client.from("enterprise_seats").insert({
+    organisation_id: current.organisation_id,
+    licence_id: current.id,
+    invitee_email_normalized: email,
+    seat_status: "invited",
+  }).select("id").single();
+  if (seat.error) throw new EnterpriseOperationError("seat_reservation_failed", seat.error.message, 500);
+  const update = await client.from("enterprise_licences").update({
+    invited_seats: Number(current.invited_seats ?? 0) + 1,
+    allocated_seats: committed + 1,
+    updated_at: new Date().toISOString(),
+  }).eq("id", licenceId).select(LICENCE_SELECT).single();
+  if (update.error || !update.data) throw new EnterpriseOperationError("seat_counter_update_failed", update.error?.message ?? "Could not update seat counters.", 500);
+  return { seatId: seat.data?.id, licence: mapLicence(update.data as EnterpriseLicenceRow) };
 }
 
 export async function createEnterpriseInvitation(
@@ -510,15 +714,16 @@ async function incrementLicenceInvitedSeats(client: AnySupabaseClient, licenceId
   if (!licenceId) return;
   const current = await client
     .from("enterprise_licences")
-    .select("id,purchased_seats,allocated_seats,invited_seats")
+    .select(LICENCE_SELECT)
     .eq("id", licenceId)
     .single();
   if (current.error || !current.data) return;
-  const invited = Number(current.data.invited_seats ?? 0) + 1;
-  const allocated = Number(current.data.allocated_seats ?? 0) + 1;
-  if (allocated > Number(current.data.purchased_seats ?? 0)) {
-    throw new EnterpriseOperationError("seat_entitlement_exceeded", "No unallocated licence seats are available.", 409);
+  if (!["active", "expiring", "pending_approval"].includes(String(current.data.licence_status))) {
+    throw new EnterpriseOperationError("licence_allocation_blocked", "Cancelled, expired or suspended licences cannot allocate new seats.", 409);
   }
+  const invited = Number(current.data.invited_seats ?? 0) + 1;
+  const allocated = committedSeatsForRow(current.data as EnterpriseLicenceRow) + 1;
+  assertSeatEntitlement(Number(current.data.purchased_seats ?? 0), allocated);
   await client.from("enterprise_licences").update({ invited_seats: invited, allocated_seats: allocated, updated_at: new Date().toISOString() }).eq("id", licenceId);
 }
 
@@ -585,22 +790,35 @@ function mapOrganisation(row: EnterpriseOrganisationRow) {
 }
 
 function mapLicence(row: EnterpriseLicenceRow) {
+  const committedSeats = committedSeatsForRow(row);
+  const availableSeats = Math.max(Number(row.purchased_seats ?? 0) - committedSeats, 0);
   return {
     id: row.id,
     organisationId: row.organisation_id,
     plan: row.licence_plan,
+    customPlanName: row.custom_plan_name,
     contractReference: row.contract_reference,
     billingReference: row.billing_reference,
     startDate: row.start_date,
     renewalDate: row.renewal_date,
+    endDate: row.end_date,
+    renewalNoticeDays: Number(row.renewal_notice_days ?? 90),
+    autoRenew: Boolean(row.auto_renew),
+    renewalNotes: row.renewal_notes,
     purchasedSeats: Number(row.purchased_seats ?? 0),
-    allocatedSeats: Number(row.allocated_seats ?? 0),
+    allocatedSeats: committedSeats,
+    committedSeats,
     activeSeats: Number(row.active_seats ?? 0),
     invitedSeats: Number(row.invited_seats ?? 0),
     suspendedSeats: Number(row.suspended_seats ?? 0),
+    availableSeats,
+    unclaimedSeats: availableSeats,
     billingStatus: row.billing_status,
     status: row.licence_status,
     accountOwner: row.account_owner,
+    renewalRisk: renewalRisk(row.renewal_date, row.licence_status),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 
@@ -639,6 +857,33 @@ function requiredText(value: unknown, message: string) {
   const text = optionalText(value);
   if (!text) throw new EnterpriseOperationError("invalid_payload", message, 400);
   return text;
+}
+
+function requiredDate(value: unknown, message: string) {
+  const text = requiredText(value, message);
+  const date = new Date(text);
+  if (Number.isNaN(date.getTime())) throw new EnterpriseOperationError("invalid_date", message, 400);
+  return text.slice(0, 10);
+}
+
+function optionalDate(value: unknown) {
+  const text = optionalText(value);
+  if (!text) return null;
+  const date = new Date(text);
+  if (Number.isNaN(date.getTime())) throw new EnterpriseOperationError("invalid_date", "Enter a valid date.", 400);
+  return text.slice(0, 10);
+}
+
+function requiredPositiveInteger(value: unknown, message: string) {
+  const number = Math.floor(Number(value));
+  if (!Number.isFinite(number) || number < 1) throw new EnterpriseOperationError("invalid_seat_quantity", message, 400);
+  return number;
+}
+
+function boundedInteger(value: unknown, min: number, max: number, message: string) {
+  const number = Math.floor(Number(value));
+  if (!Number.isFinite(number) || number < min || number > max) throw new EnterpriseOperationError("invalid_number", message, 400);
+  return number;
 }
 
 function requiredEmail(value: unknown, message: string) {
@@ -688,6 +933,37 @@ async function getOrganisationRow(client: AnySupabaseClient, organisationId: str
   return res.data as EnterpriseOrganisationRow;
 }
 
+async function getLicenceRow(client: AnySupabaseClient, licenceId: string) {
+  const res = await client.from("enterprise_licences").select(LICENCE_SELECT).eq("id", licenceId).maybeSingle();
+  if (res.error) throw new EnterpriseOperationError("licence_query_failed", res.error.message, 500);
+  if (!res.data) throw new EnterpriseOperationError("licence_not_found", "Licence not found.", 404);
+  return res.data as EnterpriseLicenceRow;
+}
+
+async function assertNoOpenLicenceForOrganisation(client: AnySupabaseClient, organisationId: string, excludeId?: string) {
+  let query = client
+    .from("enterprise_licences")
+    .select("id")
+    .eq("organisation_id", organisationId)
+    .in("licence_status", ["draft", "pending_approval", "active", "expiring", "suspended"])
+    .limit(1);
+  if (excludeId) query = query.neq("id", excludeId);
+  const res = await query;
+  if (res.error) throw new EnterpriseOperationError("licence_duplicate_check_failed", res.error.message, 500);
+  if ((res.data ?? []).length > 0) throw new EnterpriseOperationError("duplicate_open_licence", "This organisation already has an open licence.", 409);
+}
+
+function committedSeatsForRow(row: Pick<EnterpriseLicenceRow, "active_seats" | "invited_seats" | "suspended_seats" | "allocated_seats">) {
+  const derived = Number(row.active_seats ?? 0) + Number(row.invited_seats ?? 0) + Number(row.suspended_seats ?? 0);
+  return Math.max(derived, Number(row.allocated_seats ?? 0));
+}
+
+function assertSeatEntitlement(purchasedSeats: number, committedSeats: number) {
+  if (committedSeats > purchasedSeats) {
+    throw new EnterpriseOperationError("seat_entitlement_exceeded", `Purchased seats cannot be below committed usage (${committedSeats}).`, 409);
+  }
+}
+
 async function assertNoDuplicateRegistration(client: AnySupabaseClient, registrationNumber: string | null, excludeId?: string) {
   if (!registrationNumber) return;
   let query = client.from("enterprise_organisations").select("id").ilike("registration_number", registrationNumber).limit(1);
@@ -728,6 +1004,30 @@ function isValidOrganisationTransition(from: string, to: string) {
   return (allowed[from] ?? []).includes(to);
 }
 
+function isValidLicenceTransition(from: string, to: string) {
+  if (from === to) return true;
+  const allowed: Record<string, string[]> = {
+    draft: ["pending_approval", "cancelled"],
+    pending_approval: ["active", "cancelled"],
+    active: ["expiring", "suspended", "cancelled", "expired"],
+    expiring: ["active", "cancelled", "expired"],
+    suspended: ["active", "cancelled"],
+    cancelled: [],
+    expired: [],
+  };
+  return (allowed[from] ?? []).includes(to);
+}
+
+function renewalRisk(renewalDate: string, status: string) {
+  if (status === "cancelled" || status === "expired") return status;
+  const days = Math.ceil((new Date(renewalDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+  if (days < 0) return "overdue";
+  if (days <= 30) return "due_30";
+  if (days <= 60) return "due_60";
+  if (days <= 90) return "due_90";
+  return "normal";
+}
+
 function appendReason(notes: string | null, reason: unknown) {
   const text = optionalText(reason);
   if (!text) return notes;
@@ -748,6 +1048,25 @@ function changedFields(before: EnterpriseOrganisationRow, after: EnterpriseOrgan
     "risk_status",
     "onboarding_status",
     "nominated_admin_email",
+  ];
+  return fields.filter((field) => before[field] !== after[field]).map(String);
+}
+
+function changedLicenceFields(before: EnterpriseLicenceRow, after: EnterpriseLicenceRow) {
+  const fields: Array<keyof EnterpriseLicenceRow> = [
+    "licence_plan",
+    "custom_plan_name",
+    "contract_reference",
+    "billing_reference",
+    "start_date",
+    "renewal_date",
+    "end_date",
+    "renewal_notice_days",
+    "auto_renew",
+    "purchased_seats",
+    "billing_status",
+    "licence_status",
+    "account_owner",
   ];
   return fields.filter((field) => before[field] !== after[field]).map(String);
 }

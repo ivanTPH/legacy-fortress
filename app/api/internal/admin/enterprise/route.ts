@@ -5,13 +5,19 @@ import {
   buildEnterpriseReportExportDecision,
   createEnterpriseInvitation,
   createEnterpriseLicence,
+  changeEnterpriseLicenceSeats,
+  createEnterpriseSeatReservation,
   createEnterpriseOrganisation,
   deleteOrArchiveEnterpriseOrganisation,
   EnterpriseOperationError,
+  getEnterpriseLicenceDetail,
   getEnterpriseOrganisationDetail,
   loadEnterprisePortfolio,
+  renewEnterpriseLicence,
   saveEnterpriseView,
+  transitionEnterpriseLicence,
   transitionEnterpriseOrganisation,
+  updateEnterpriseLicence,
   updateEnterpriseOrganisation,
   updateEnterpriseInvitationStatus,
 } from "@/lib/admin/enterpriseOperations";
@@ -26,7 +32,20 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, message: denied.message, capability: denied.capability }, { status: denied.status });
   }
 
-  const organisationId = new URL(request.url).searchParams.get("organisationId");
+  const url = new URL(request.url);
+  const organisationId = url.searchParams.get("organisationId");
+  const licenceId = url.searchParams.get("licenceId");
+  if (licenceId) {
+    const licenceDenied = requireAdminCapability(admin.access, "licence:view");
+    if (licenceDenied) return NextResponse.json({ ok: false, message: licenceDenied.message, capability: licenceDenied.capability }, { status: licenceDenied.status });
+    const detail = await getEnterpriseLicenceDetail(admin.adminClient, licenceId);
+    await recordEnterpriseAudit(request, admin, "Enterprise licence viewed", "licence", detail.licence.id, detail.licence.plan, "success", {
+      private_vault_content_excluded: true,
+      document_content_excluded: true,
+      financial_values_excluded: true,
+    }).catch(() => null);
+    return NextResponse.json({ ok: true, detail });
+  }
   if (organisationId) {
     const detail = await getEnterpriseOrganisationDetail(admin.adminClient, organisationId);
     await recordEnterpriseAudit(request, admin, "Enterprise organisation viewed", "organisation", detail.organisation.id, detail.organisation.name, "success", {
@@ -60,13 +79,16 @@ export async function POST(request: Request) {
   if (!admin.ok) {
     return NextResponse.json({ ok: false, message: admin.message, issue: admin.issue ?? null }, { status: admin.status });
   }
-  const denied = requireAdminCapability(admin.access, "organisation:manage");
+  const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+  const action = String(body.action ?? "").trim();
+  const requiredCapability = capabilityForEnterpriseAction(action);
+  const denied = requiredCapability ? requireAdminCapability(admin.access, requiredCapability) : null;
   if (denied) {
     await recordAdminAuditEvent(admin.adminClient, admin.access, {
       category: "restricted_action_blocked",
-      action: "Enterprise organisation action denied",
+      action: action.startsWith("licence") || action.includes("_licence") ? "Enterprise licence action denied" : "Enterprise organisation action denied",
       result: "blocked",
-      resourceType: "organisation",
+      resourceType: action.startsWith("licence") || action.includes("_licence") ? "licence" : "organisation",
       route: new URL(request.url).pathname,
       policyDecision: "blocked",
       metadata: {
@@ -78,9 +100,6 @@ export async function POST(request: Request) {
     }).catch(() => null);
     return NextResponse.json({ ok: false, message: denied.message, capability: denied.capability }, { status: denied.status });
   }
-
-  const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-  const action = String(body.action ?? "").trim();
 
   try {
     if (action === "create_organisation") {
@@ -126,8 +145,65 @@ export async function POST(request: Request) {
 
     if (action === "create_licence") {
       const licence = await createEnterpriseLicence(admin.adminClient, admin.access, body);
-      await recordEnterpriseAudit(request, admin, "Enterprise licence created", "licence", licence.id, licence.plan);
+      await recordEnterpriseAudit(request, admin, "Enterprise licence created", "licence", licence.id, licence.plan, "success", {
+        organisation_id: licence.organisationId,
+        purchased_seats: licence.purchasedSeats,
+        synthetic_run_marker: body.syntheticRunMarker ?? null,
+      });
       return NextResponse.json({ ok: true, licence, portfolio: await loadEnterprisePortfolio(admin.adminClient, admin.access) });
+    }
+
+    if (action === "update_licence") {
+      const result = await updateEnterpriseLicence(admin.adminClient, String(body.licenceId ?? ""), body);
+      await recordEnterpriseAudit(request, admin, "Enterprise licence updated", "licence", result.after.id, result.after.plan, "success", {
+        changed_fields: result.changedFields,
+        synthetic_run_marker: body.syntheticRunMarker ?? null,
+      });
+      return NextResponse.json({ ok: true, licence: result.after, changedFields: result.changedFields, portfolio: await loadEnterprisePortfolio(admin.adminClient, admin.access) });
+    }
+
+    if (action === "change_licence_seats") {
+      const result = await changeEnterpriseLicenceSeats(admin.adminClient, String(body.licenceId ?? ""), body);
+      await recordEnterpriseAudit(request, admin, result.after.purchasedSeats > result.before.purchasedSeats ? "Enterprise licence seats increased" : "Enterprise licence seats reduced", "licence", result.after.id, result.after.plan, "success", {
+        old_purchased_seats: result.before.purchasedSeats,
+        new_purchased_seats: result.after.purchasedSeats,
+        committed_seats: result.committedSeats,
+        synthetic_run_marker: body.syntheticRunMarker ?? null,
+      });
+      return NextResponse.json({ ok: true, licence: result.after, portfolio: await loadEnterprisePortfolio(admin.adminClient, admin.access) });
+    }
+
+    if (action === "transition_licence") {
+      const result = await transitionEnterpriseLicence(admin.adminClient, String(body.licenceId ?? ""), String(body.status ?? ""), body.reason);
+      await recordEnterpriseAudit(request, admin, `Enterprise licence ${result.after.status}`, "licence", result.after.id, result.after.plan, "success", {
+        previous_status: result.before.status,
+        next_status: result.after.status,
+        reason_present: Boolean(body.reason),
+        synthetic_run_marker: body.syntheticRunMarker ?? null,
+      });
+      return NextResponse.json({ ok: true, licence: result.after, portfolio: await loadEnterprisePortfolio(admin.adminClient, admin.access) });
+    }
+
+    if (action === "renew_licence") {
+      const result = await renewEnterpriseLicence(admin.adminClient, admin.access, String(body.licenceId ?? ""), body);
+      await recordEnterpriseAudit(request, admin, "Enterprise licence renewed", "licence", result.after.id, result.after.plan, "success", {
+        renewal_id: result.renewalId,
+        previous_renewal_date: result.before.renewalDate,
+        new_renewal_date: result.after.renewalDate,
+        previous_purchased_seats: result.before.purchasedSeats,
+        new_purchased_seats: result.after.purchasedSeats,
+        synthetic_run_marker: body.syntheticRunMarker ?? null,
+      });
+      return NextResponse.json({ ok: true, licence: result.after, renewalId: result.renewalId, portfolio: await loadEnterprisePortfolio(admin.adminClient, admin.access) });
+    }
+
+    if (action === "reserve_licence_seat") {
+      const result = await createEnterpriseSeatReservation(admin.adminClient, String(body.licenceId ?? ""), body);
+      await recordEnterpriseAudit(request, admin, "Enterprise licence seat reserved", "licence", result.licence.id, result.licence.plan, "success", {
+        seat_id: result.seatId,
+        synthetic_run_marker: body.syntheticRunMarker ?? null,
+      });
+      return NextResponse.json({ ok: true, seatId: result.seatId, licence: result.licence, portfolio: await loadEnterprisePortfolio(admin.adminClient, admin.access) });
     }
 
     if (action === "invite_organisation_admin" || action === "invite_enterprise_user") {
@@ -180,10 +256,10 @@ export async function POST(request: Request) {
       if (error.status === 409) {
         await recordAdminAuditEvent(admin.adminClient, admin.access, {
           category: "admin_approval",
-          action: "Enterprise organisation action rejected",
+          action: action.includes("licence") ? "Enterprise licence action rejected" : "Enterprise organisation action rejected",
           result: "blocked",
-          resourceType: "organisation",
-          resourceId: String(body.organisationId ?? ""),
+          resourceType: action.includes("licence") ? "licence" : "organisation",
+          resourceId: String(body.licenceId ?? body.organisationId ?? ""),
           route: new URL(request.url).pathname,
           policyDecision: "blocked",
           metadata: {
@@ -197,6 +273,19 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({ ok: false, code: "enterprise_action_failed", message: "Could not complete enterprise action safely." }, { status: 500 });
   }
+}
+
+function capabilityForEnterpriseAction(action: string) {
+  if (["create_organisation", "update_organisation", "transition_organisation", "delete_or_archive_organisation"].includes(action)) return "organisation:manage" as const;
+  if (action === "create_licence") return "licence:create" as const;
+  if (action === "update_licence") return "licence:edit" as const;
+  if (action === "change_licence_seats" || action === "reserve_licence_seat") return "licence:seats" as const;
+  if (action === "renew_licence") return "licence:renew" as const;
+  if (action === "transition_licence") return "licence:lifecycle" as const;
+  if (["invite_organisation_admin", "invite_enterprise_user", "update_invitation"].includes(action)) return "enterprise.invitation.manage" as const;
+  if (action === "save_view") return "enterprise.report.read" as const;
+  if (action === "export_report") return "enterprise.export.request" as const;
+  return null;
 }
 
 async function recordEnterpriseAudit(
