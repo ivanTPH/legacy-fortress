@@ -507,7 +507,7 @@ function renderOrganisations(
   return (
     <div style={twoColumnStyle}>
       <section style={panelStyle}>
-        <h2 style={h2Style}>Add organisation</h2>
+        <h2 id="add-organisation-form" style={h2Style}>Add organisation</h2>
         <p style={mutedStyle}>Create a real staging organisation record. No customer vault data is requested or shown.</p>
         <h3 style={h3Style}>1. Organisation identity</h3>
         <FormInput label="Legal name" required value={String(form.legalName)} onChange={(value) => setForm({ ...form, legalName: value })} />
@@ -579,7 +579,12 @@ function renderOrganisations(
         <button type="button" style={primaryButtonStyle} onClick={submit}>Create organisation</button>
       </section>
       <section style={panelStyle}>
-        <h2 style={h2Style}>Organisations</h2>
+        <div style={sectionHeaderStyle}>
+          <h2 style={h2Style}>Organisations</h2>
+          <button type="button" style={primaryButtonStyle} onClick={() => document.getElementById("add-organisation-form")?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+            Add organisation
+          </button>
+        </div>
         {renderOrganisationTable(organisations, portfolio, runAction)}
       </section>
     </div>
@@ -888,8 +893,13 @@ function renderOrganisationTable(organisations: EnterpriseOrganisation[], portfo
                 <td>{labelise(org.risk)}</td>
                 <td style={actionsCellStyle}>
                   <Link href={`/application/enterprise/organisations/${org.id}`}>View</Link>
+                  <Link href={`/application/enterprise/organisations/${org.id}#settings`}>Edit</Link>
+                  <button type="button" disabled>Manage licence - Phase 2</button>
+                  <button type="button" disabled>Manage users - Phase 3</button>
+                  <Link href={`/application/enterprise/organisations/${org.id}#invitations`}>Invite administrator</Link>
                   <button type="button" disabled={!runAction} onClick={() => runAction?.("transition_organisation", { organisationId: org.id, status: org.status === "suspended" ? "active" : "suspended", reason: "Updated from organisation list" })}>{org.status === "suspended" ? "Reactivate" : "Suspend"}</button>
                   <button type="button" disabled={!runAction} onClick={() => runAction?.("delete_or_archive_organisation", { organisationId: org.id, reason: "Archived from organisation list" })}>Archive/delete</button>
+                  <Link href={`/application/enterprise/organisations/${org.id}#audit`}>View audit history</Link>
                 </td>
               </tr>
             );
@@ -1009,6 +1019,7 @@ const eyebrowStyle: CSSProperties = { margin: "0 0 8px", color: "#475569", fontS
 const mutedStyle: CSSProperties = { color: "#64748b", margin: "6px 0 0", lineHeight: 1.5 };
 const privacyStyle: CSSProperties = { color: "#334155", background: "#f1f5f9", border: "1px solid #dbe3ef", borderRadius: 6, padding: 10, margin: "12px 0 0" };
 const rowStyle: CSSProperties = { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 };
+const sectionHeaderStyle: CSSProperties = { display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 12 };
 const secondaryLinkStyle: CSSProperties = { color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 6, padding: "9px 12px", textDecoration: "none", background: "#fff", fontWeight: 700 };
 const secondaryButtonStyle: CSSProperties = { color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 6, padding: "9px 12px", background: "#fff", fontWeight: 700 };
 const primaryButtonStyle: CSSProperties = { border: 0, borderRadius: 6, padding: "10px 14px", background: "#111827", color: "#fff", fontWeight: 800 };
