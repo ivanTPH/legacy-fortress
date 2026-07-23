@@ -55,12 +55,88 @@ test("enterprise workspace replaces disabled prototype with functional controls"
   assert.match(page, /EnterpriseOperationsWorkspace/);
   assert.doesNotMatch(page, /workspace not yet enabled|blocked in hosted UAT/i);
   assert.match(workspace, /Create organisation/);
+  assert.match(workspace, /Add organisation/);
   assert.match(workspace, /Create licence/);
   assert.match(workspace, /Send invitation/);
   assert.match(workspace, /Request governed export/);
   assert.match(workspace, /Private vault records, uploaded documents, legal contents, individual financial values/);
   assert.match(workspace, /WorkspaceSwitcher/);
   assert.match(switcher, /return "\/application\/enterprise"/);
+});
+
+test("enterprise organisation Phase 1 migration adds lifecycle fields without vault leakage", () => {
+  const migration = fs.readFileSync(path.join(root, "supabase/migrations/20260722193000_enterprise_organisation_management_phase1.sql"), "utf8");
+
+  for (const column of [
+    "primary_contact_telephone",
+    "contract_reference",
+    "customer_reference",
+    "onboarding_status",
+    "nominated_admin_email",
+    "archived_at",
+  ]) {
+    assert.match(migration, new RegExp(`ADD COLUMN IF NOT EXISTS ${column}`));
+  }
+
+  assert.match(migration, /'archived'/);
+  assert.match(migration, /enterprise_organisations_registration_unique_idx/);
+  assert.match(migration, /audit_events_enterprise_org_idx/);
+  assert.doesNotMatch(migration, /section_entries|documents|attachments|assets/);
+  assert.doesNotMatch(migration, /USING\s*\(\s*true\s*\)/i);
+});
+
+test("enterprise organisation API supports view, edit, lifecycle, delete/archive and audit", () => {
+  const route = fs.readFileSync(path.join(root, "app/api/internal/admin/enterprise/route.ts"), "utf8");
+  const service = fs.readFileSync(path.join(root, "lib/admin/enterpriseOperations.ts"), "utf8");
+  const capabilities = fs.readFileSync(path.join(root, "lib/admin/capabilities.ts"), "utf8");
+
+  assert.match(route, /requireAdminCapability\(admin\.access, "organisation:view"\)/);
+  assert.match(route, /requireAdminCapability\(admin\.access, "organisation:manage"\)/);
+  assert.match(route, /getEnterpriseOrganisationDetail/);
+  assert.match(route, /updateEnterpriseOrganisation/);
+  assert.match(route, /transitionEnterpriseOrganisation/);
+  assert.match(route, /deleteOrArchiveEnterpriseOrganisation/);
+  assert.match(route, /Enterprise organisation action rejected/);
+
+  assert.match(service, /stale_organisation_update/);
+  assert.match(service, /duplicate_registration_number/);
+  assert.match(service, /invalid_organisation_transition/);
+  assert.match(service, /canHardDelete/);
+  assert.match(service, /resource_type", "organisation"/);
+  assert.doesNotMatch(service, /\.from\("assets"\)|\.from\("documents"\)|\.from\("attachments"\)|\.from\("records"\)/);
+
+  assert.match(capabilities, /"organisation:view"/);
+  assert.match(capabilities, /auditor:[\s\S]*"organisation:view"/);
+  assert.doesNotMatch(capabilities, /support_agent:[\s\S]*"organisation:manage"[\s\S]*verification_reviewer:/);
+});
+
+test("enterprise organisation UI exposes operational navigation, create form and detail route", () => {
+  const workspace = fs.readFileSync(path.join(root, "components/enterprise/EnterpriseOperationsWorkspace.tsx"), "utf8");
+  const detail = fs.readFileSync(path.join(root, "components/enterprise/EnterpriseOrganisationDetailWorkspace.tsx"), "utf8");
+  const route = fs.readFileSync(path.join(root, "app/application/enterprise/organisations/[organisationId]/page.tsx"), "utf8");
+
+  for (const label of [
+    "Users and seats",
+    "Consent and compliance",
+    "Renewals",
+    "Account settings",
+    "STAGING — synthetic test data may be present",
+    "No licence configured",
+    "Prepare administrator invitation",
+    "Archive/delete",
+  ]) {
+    assert.match(workspace, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+
+  assert.match(route, /EnterpriseOrganisationDetailWorkspace/);
+  assert.match(detail, /Edit organisation/);
+  assert.match(detail, /Save organisation/);
+  assert.match(detail, /Suspend/);
+  assert.match(detail, /Reactivate/);
+  assert.match(detail, /Archive or delete/);
+  assert.match(detail, /auditEvents/);
+  assert.match(detail, /Private customer vault records/);
+  assert.doesNotMatch(workspace, /Static mock data|Prototype session|Northbridge|Harrington|Ledger House|Whitestone/);
 });
 
 test("admin invitations replace direct administrator activation", () => {

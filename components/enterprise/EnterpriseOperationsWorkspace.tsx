@@ -51,12 +51,27 @@ type EnterpriseOrganisation = {
   tradingName: string | null;
   type: string;
   typeOther: string | null;
+  registrationNumber: string | null;
   country: string;
+  registeredAddress: Record<string, unknown>;
+  operatingAddress: Record<string, unknown>;
+  sameOperatingAddress: boolean;
   status: string;
   risk: string;
   primaryContactName: string | null;
   primaryContactEmail: string | null;
+  primaryContactTelephone: string | null;
+  website: string | null;
   accountOwner: string | null;
+  contractReference: string | null;
+  customerReference: string | null;
+  onboardingStatus: string;
+  onboardingNotes: string | null;
+  nominatedAdminName: string | null;
+  nominatedAdminEmail: string | null;
+  nominatedAdminRequireMfa: boolean;
+  nominatedAdminExpiryDays: number;
+  archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -108,12 +123,15 @@ type EnterpriseConsent = {
 type EnterpriseFilters = {
   organisation: string;
   status: string;
+  type: string;
   licence: string;
   invitation: string;
   adoption: string;
   consent: string;
   risk: string;
   country: string;
+  accountOwner: string;
+  onboarding: string;
 };
 
 type EnterpriseOrgForm = {
@@ -121,15 +139,40 @@ type EnterpriseOrgForm = {
   tradingName: string;
   organisationType: string;
   organisationTypeOther: string;
+  registrationNumber: string;
   country: string;
+  website: string;
+  primaryContactTelephone: string;
+  registeredAddress: AddressForm;
+  operatingAddress: AddressForm;
+  sameOperatingAddress: boolean;
   primaryContactName: string;
   primaryContactEmail: string;
   internalAccountOwner: string;
+  contractReference: string;
+  customerReference: string;
+  onboardingStatus: string;
+  onboardingNotes: string;
+  riskStatus: string;
+  initialStatus: string;
+  nominatedAdminName: string;
+  nominatedAdminEmail: string;
+  nominatedAdminRequireMfa: boolean;
+  nominatedAdminExpiryDays: number;
   adviserInsightConsent: boolean;
   marketingConsent: boolean;
   reportingConsent: boolean;
   exportPermission: boolean;
   minimumReportingCohort: number;
+};
+
+type AddressForm = {
+  line1: string;
+  line2: string;
+  city: string;
+  region: string;
+  postcode: string;
+  country: string;
 };
 
 type EnterpriseLicenceForm = {
@@ -184,26 +227,45 @@ export default function EnterpriseOperationsWorkspace() {
   const [state, setState] = useState<"checking" | "ready" | "denied" | "error">("checking");
   const [message, setMessage] = useState("");
   const [portfolio, setPortfolio] = useState<EnterprisePortfolio>(EMPTY_PORTFOLIO);
-  const [activeTab, setActiveTab] = useState<"overview" | "organisations" | "licences" | "invitations" | "adoption" | "reports" | "consent">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "organisations" | "licences" | "users" | "invitations" | "adoption" | "reports" | "consent" | "renewals" | "settings">("overview");
   const [filters, setFilters] = useState({
     organisation: "",
     status: "",
+    type: "",
     licence: "",
     invitation: "",
     adoption: "",
     consent: "",
     risk: "",
     country: "",
+    accountOwner: "",
+    onboarding: "",
   });
   const [orgForm, setOrgForm] = useState({
     legalName: "",
     tradingName: "",
     organisationType: "employer",
     organisationTypeOther: "",
+    registrationNumber: "",
     country: "GB",
+    website: "",
+    primaryContactTelephone: "",
+    registeredAddress: emptyAddress(),
+    operatingAddress: emptyAddress(),
+    sameOperatingAddress: true,
     primaryContactName: "",
     primaryContactEmail: "",
     internalAccountOwner: "",
+    contractReference: "",
+    customerReference: "",
+    onboardingStatus: "not_started",
+    onboardingNotes: "",
+    riskStatus: "normal",
+    initialStatus: "pending_setup",
+    nominatedAdminName: "",
+    nominatedAdminEmail: "",
+    nominatedAdminRequireMfa: true,
+    nominatedAdminExpiryDays: 14,
     adviserInsightConsent: false,
     marketingConsent: false,
     reportingConsent: true,
@@ -285,10 +347,13 @@ export default function EnterpriseOperationsWorkspace() {
 
   const filteredOrganisations = useMemo(() => {
     return portfolio.organisations.filter((org) => {
-      if (filters.organisation && !`${org.name} ${org.legalName}`.toLowerCase().includes(filters.organisation.toLowerCase())) return false;
+      if (filters.organisation && !`${org.name} ${org.legalName} ${org.tradingName ?? ""} ${org.registrationNumber ?? ""} ${org.primaryContactEmail ?? ""} ${org.accountOwner ?? ""}`.toLowerCase().includes(filters.organisation.toLowerCase())) return false;
       if (filters.status && org.status !== filters.status) return false;
+      if (filters.type && org.type !== filters.type) return false;
       if (filters.risk && org.risk !== filters.risk) return false;
       if (filters.country && org.country.toLowerCase() !== filters.country.toLowerCase()) return false;
+      if (filters.accountOwner && (org.accountOwner ?? "").toLowerCase() !== filters.accountOwner.toLowerCase()) return false;
+      if (filters.onboarding && org.onboardingStatus !== filters.onboarding) return false;
       if (filters.consent) {
         const consent = portfolio.consent[org.id];
         const restricted = !consent?.reportingConsent || !consent?.adviserInsightConsent;
@@ -344,7 +409,7 @@ export default function EnterpriseOperationsWorkspace() {
           <p style={mutedStyle}>Organisation licensing, seats, invitations, consent-aware reporting, and renewals. Private vault records and documents are excluded.</p>
         </div>
         <div style={headerActionsStyle}>
-          <span style={stageBadgeStyle}>STAGING</span>
+          <span style={stageBadgeStyle}>STAGING — synthetic test data may be present</span>
           <WorkspaceSwitcher currentPathname="/application/enterprise" alwaysShow compact />
           <Link style={secondaryLinkStyle} href="/dashboard">Personal Vault</Link>
           <Link style={secondaryLinkStyle} href="/admin">Admin Operations</Link>
@@ -358,10 +423,13 @@ export default function EnterpriseOperationsWorkspace() {
           ["overview", "Overview"],
           ["organisations", "Organisations"],
           ["licences", "Licences"],
+          ["users", "Users and seats"],
           ["invitations", "Invitations"],
           ["adoption", "Adoption"],
           ["reports", "Reports"],
-          ["consent", "Consent"],
+          ["consent", "Consent and compliance"],
+          ["renewals", "Renewals"],
+          ["settings", "Account settings"],
         ].map(([key, label]) => (
           <button key={key} type="button" onClick={() => setActiveTab(key as typeof activeTab)} style={activeTab === key ? activeTabStyle : tabStyle}>
             {label}
@@ -369,15 +437,26 @@ export default function EnterpriseOperationsWorkspace() {
         ))}
       </nav>
 
-      {renderFilterBar(filters, setFilters, () => setFilters({ organisation: "", status: "", licence: "", invitation: "", adoption: "", consent: "", risk: "", country: "" }), () => runAction("save_view", { name: savedViewName || "Enterprise portfolio view", viewType: activeTab, filters }), savedViewName, setSavedViewName)}
+      {renderFilterBar(
+        filters,
+        setFilters,
+        () => setFilters({ organisation: "", status: "", type: "", licence: "", invitation: "", adoption: "", consent: "", risk: "", country: "", accountOwner: "", onboarding: "" }),
+        () => runAction("save_view", { name: savedViewName || "Enterprise portfolio view", viewType: activeTab, filters }),
+        savedViewName,
+        setSavedViewName,
+        portfolio.organisations,
+      )}
 
       {activeTab === "overview" ? renderOverview(portfolio, filteredOrganisations, filteredLicences, filteredInvitations, setActiveTab) : null}
-      {activeTab === "organisations" ? renderOrganisations(filteredOrganisations, portfolio, orgForm, setOrgForm, () => runAction("create_organisation", orgForm)) : null}
+      {activeTab === "organisations" ? renderOrganisations(filteredOrganisations, portfolio, orgForm, setOrgForm, runAction, () => runAction("create_organisation", orgForm)) : null}
       {activeTab === "licences" ? renderLicences(filteredLicences, portfolio, licenceForm, setLicenceForm, () => runAction("create_licence", licenceForm)) : null}
+      {activeTab === "users" ? renderPhasePlaceholder("Users and seats", "Seat allocation and user administration are delivered in Phase 3. Organisation status changes made in Phase 1 will be enforced by those later workflows.") : null}
       {activeTab === "invitations" ? renderInvitations(filteredInvitations, portfolio, inviteForm, setInviteForm, runAction) : null}
       {activeTab === "adoption" ? renderAdoption(portfolio, filteredOrganisations) : null}
       {activeTab === "reports" ? renderReports(portfolio, () => runAction("export_report", { reportType: "portfolio" })) : null}
       {activeTab === "consent" ? renderConsent(portfolio, filteredOrganisations) : null}
+      {activeTab === "renewals" ? renderPhasePlaceholder("Renewals", "Licence renewals are delivered in Phase 2. No fabricated renewal pipeline is shown in this Phase 1 organisation workspace.") : null}
+      {activeTab === "settings" ? renderPhasePlaceholder("Account settings", "Enterprise account settings are staged for later phases. Organisation settings are available from each organisation detail workspace.") : null}
     </main>
   );
 }
@@ -387,7 +466,7 @@ function renderOverview(
   organisations: EnterpriseOrganisation[],
   licences: EnterpriseLicence[],
   invitations: EnterpriseInvitation[],
-  setActiveTab: (tab: "overview" | "organisations" | "licences" | "invitations" | "adoption" | "reports" | "consent") => void,
+  setActiveTab: (tab: "overview" | "organisations" | "licences" | "users" | "invitations" | "adoption" | "reports" | "consent" | "renewals" | "settings") => void,
 ) {
   const cards = [
     { label: "Licensed organisations", value: portfolio.summary.organisations, tab: "organisations" as const },
@@ -422,14 +501,19 @@ function renderOrganisations(
   portfolio: EnterprisePortfolio,
   form: EnterpriseOrgForm,
   setForm: (value: EnterpriseOrgForm) => void,
+  runAction: (action: string, payload: Record<string, unknown>) => void,
   submit: () => void,
 ) {
   return (
     <div style={twoColumnStyle}>
       <section style={panelStyle}>
-        <h2 style={h2Style}>Create organisation</h2>
+        <h2 style={h2Style}>Add organisation</h2>
+        <p style={mutedStyle}>Create a real staging organisation record. No customer vault data is requested or shown.</p>
+        <h3 style={h3Style}>1. Organisation identity</h3>
         <FormInput label="Legal name" required value={String(form.legalName)} onChange={(value) => setForm({ ...form, legalName: value })} />
         <FormInput label="Trading name" value={String(form.tradingName)} onChange={(value) => setForm({ ...form, tradingName: value })} />
+        <FormInput label="Registration number" value={String(form.registrationNumber)} onChange={(value) => setForm({ ...form, registrationNumber: value })} />
+        <FormInput label="Website" type="url" value={String(form.website)} onChange={(value) => setForm({ ...form, website: value })} />
         <label style={labelStyle}>Organisation type
           <select value={String(form.organisationType)} onChange={(event) => setForm({ ...form, organisationType: event.target.value })}>
             <option value="employer">Employer</option>
@@ -445,8 +529,50 @@ function renderOrganisations(
         {form.organisationType === "other" ? <FormInput label="Other organisation type" required value={String(form.organisationTypeOther)} onChange={(value) => setForm({ ...form, organisationTypeOther: value })} /> : null}
         <FormInput label="Country" required value={String(form.country)} onChange={(value) => setForm({ ...form, country: value })} />
         <FormInput label="Primary contact" value={String(form.primaryContactName)} onChange={(value) => setForm({ ...form, primaryContactName: value })} />
-        <FormInput label="Primary contact email" value={String(form.primaryContactEmail)} onChange={(value) => setForm({ ...form, primaryContactEmail: value })} />
-        <FormInput label="Internal account owner" value={String(form.internalAccountOwner)} onChange={(value) => setForm({ ...form, internalAccountOwner: value })} />
+        <FormInput label="Primary contact email" required value={String(form.primaryContactEmail)} onChange={(value) => setForm({ ...form, primaryContactEmail: value })} />
+        <FormInput label="Primary contact telephone" value={String(form.primaryContactTelephone)} onChange={(value) => setForm({ ...form, primaryContactTelephone: value })} />
+        <h3 style={h3Style}>2. Address</h3>
+        {renderAddressFields("Registered address", form.registeredAddress, (address) => setForm({ ...form, registeredAddress: address }))}
+        <label style={checkboxStyle}><input type="checkbox" checked={Boolean(form.sameOperatingAddress)} onChange={(event) => setForm({ ...form, sameOperatingAddress: event.target.checked })} /> Operating address is the same as registered address</label>
+        {!form.sameOperatingAddress ? renderAddressFields("Operating address", form.operatingAddress, (address) => setForm({ ...form, operatingAddress: address })) : null}
+        <h3 style={h3Style}>3. Operational details</h3>
+        <FormInput label="Internal account owner" required value={String(form.internalAccountOwner)} onChange={(value) => setForm({ ...form, internalAccountOwner: value })} />
+        <FormInput label="Contract reference" value={String(form.contractReference)} onChange={(value) => setForm({ ...form, contractReference: value })} />
+        <FormInput label="Customer reference" value={String(form.customerReference)} onChange={(value) => setForm({ ...form, customerReference: value })} />
+        <label style={labelStyle}>Initial status
+          <select value={String(form.initialStatus)} onChange={(event) => setForm({ ...form, initialStatus: event.target.value })}>
+            <option value="draft">Draft</option>
+            <option value="pending_setup">Pending setup</option>
+            <option value="pending_administrator_acceptance">Pending administrator acceptance</option>
+          </select>
+        </label>
+        <label style={labelStyle}>Onboarding status
+          <select value={String(form.onboardingStatus)} onChange={(event) => setForm({ ...form, onboardingStatus: event.target.value })}>
+            <option value="not_started">Not started</option>
+            <option value="pending">Pending</option>
+            <option value="in_progress">In progress</option>
+            <option value="blocked">Blocked</option>
+            <option value="complete">Complete</option>
+          </select>
+        </label>
+        <label style={labelStyle}>Risk
+          <select value={String(form.riskStatus)} onChange={(event) => setForm({ ...form, riskStatus: event.target.value })}>
+            <option value="normal">Normal</option>
+            <option value="watch">Watch</option>
+            <option value="at_risk">At risk</option>
+            <option value="critical">Critical</option>
+          </select>
+        </label>
+        <label style={labelStyle}>Onboarding notes
+          <textarea value={String(form.onboardingNotes)} onChange={(event) => setForm({ ...form, onboardingNotes: event.target.value })} />
+        </label>
+        <h3 style={h3Style}>4. Administrator preparation</h3>
+        <FormInput label="Nominated administrator name" value={String(form.nominatedAdminName)} onChange={(value) => setForm({ ...form, nominatedAdminName: value })} />
+        <FormInput label="Nominated administrator email" value={String(form.nominatedAdminEmail)} onChange={(value) => setForm({ ...form, nominatedAdminEmail: value })} />
+        <label style={checkboxStyle}><input type="checkbox" checked={Boolean(form.nominatedAdminRequireMfa)} onChange={(event) => setForm({ ...form, nominatedAdminRequireMfa: event.target.checked })} /> Require MFA</label>
+        <FormInput label="Invitation expiry days" type="number" value={String(form.nominatedAdminExpiryDays)} onChange={(value) => setForm({ ...form, nominatedAdminExpiryDays: Number(value) })} />
+        <h3 style={h3Style}>5. Review and create</h3>
+        <p style={privacyStyle}>{form.legalName || "New organisation"} will be created with status {labelise(form.initialStatus)} and risk {labelise(form.riskStatus)}. Administrator access is prepared only; nobody is activated automatically.</p>
         <label style={checkboxStyle}><input type="checkbox" checked={Boolean(form.reportingConsent)} onChange={(event) => setForm({ ...form, reportingConsent: event.target.checked })} /> Reporting consent</label>
         <label style={checkboxStyle}><input type="checkbox" checked={Boolean(form.adviserInsightConsent)} onChange={(event) => setForm({ ...form, adviserInsightConsent: event.target.checked })} /> Adviser insight consent</label>
         <label style={checkboxStyle}><input type="checkbox" checked={Boolean(form.exportPermission)} onChange={(event) => setForm({ ...form, exportPermission: event.target.checked })} /> Export permission</label>
@@ -454,7 +580,7 @@ function renderOrganisations(
       </section>
       <section style={panelStyle}>
         <h2 style={h2Style}>Organisations</h2>
-        {renderOrganisationTable(organisations, portfolio)}
+        {renderOrganisationTable(organisations, portfolio, runAction)}
       </section>
     </div>
   );
@@ -617,19 +743,49 @@ function renderFilterBar(
   save: () => void,
   savedViewName: string,
   setSavedViewName: (value: string) => void,
+  organisations: EnterpriseOrganisation[],
 ) {
+  const accountOwners = Array.from(new Set(organisations.map((org) => org.accountOwner).filter(Boolean) as string[])).sort((a, b) => a.localeCompare(b));
+  const activeFilters = [
+    ["organisation", filters.organisation],
+    ["status", filters.status],
+    ["type", filters.type],
+    ["licence", filters.licence],
+    ["invitation", filters.invitation],
+    ["adoption", filters.adoption],
+    ["consent", filters.consent],
+    ["risk", filters.risk],
+    ["country", filters.country],
+    ["accountOwner", filters.accountOwner],
+    ["onboarding", filters.onboarding],
+  ].filter(([, value]) => value);
   return (
     <section style={filterBarStyle} aria-label="Enterprise filters">
       <FormInput label="Organisation" value={filters.organisation} onChange={(value) => setFilters({ ...filters, organisation: value })} />
       <label style={labelStyle}>Status
         <select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })}>
           <option value="">Any</option>
+          <option value="draft">Draft</option>
           <option value="pending_setup">Pending setup</option>
           <option value="pending_administrator_acceptance">Pending administrator acceptance</option>
           <option value="active">Active</option>
           <option value="suspended">Suspended</option>
           <option value="expiring">Expiring</option>
           <option value="cancelled">Cancelled</option>
+          <option value="archived">Archived</option>
+        </select>
+      </label>
+      <label style={labelStyle}>Organisation type
+        <select value={filters.type} onChange={(event) => setFilters({ ...filters, type: event.target.value })}>
+          <option value="">Any</option>
+          <option value="employer">Employer</option>
+          <option value="law_firm">Law firm</option>
+          <option value="wealth_manager">Wealth manager</option>
+          <option value="insurer">Insurer</option>
+          <option value="funeral_provider">Funeral provider</option>
+          <option value="employee_benefit_provider">Employee-benefit provider</option>
+          <option value="enterprise_reseller">Enterprise reseller</option>
+          <option value="other">Other</option>
         </select>
       </label>
       <label style={labelStyle}>Licence
@@ -666,40 +822,119 @@ function renderFilterBar(
           <option value="restricted">Restricted</option>
         </select>
       </label>
+      <label style={labelStyle}>Risk
+        <select value={filters.risk} onChange={(event) => setFilters({ ...filters, risk: event.target.value })}>
+          <option value="">Any</option>
+          <option value="normal">Normal</option>
+          <option value="watch">Watch</option>
+          <option value="at_risk">At risk</option>
+          <option value="critical">Critical</option>
+          <option value="restricted">Restricted</option>
+        </select>
+      </label>
+      <FormInput label="Country" value={filters.country} onChange={(value) => setFilters({ ...filters, country: value })} />
+      <label style={labelStyle}>Account owner
+        <select value={filters.accountOwner} onChange={(event) => setFilters({ ...filters, accountOwner: event.target.value })}>
+          <option value="">Any</option>
+          {accountOwners.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
+        </select>
+      </label>
+      <label style={labelStyle}>Onboarding
+        <select value={filters.onboarding} onChange={(event) => setFilters({ ...filters, onboarding: event.target.value })}>
+          <option value="">Any</option>
+          <option value="not_started">Not started</option>
+          <option value="pending">Pending</option>
+          <option value="in_progress">In progress</option>
+          <option value="blocked">Blocked</option>
+          <option value="complete">Complete</option>
+        </select>
+      </label>
       <button type="button" style={secondaryButtonStyle} onClick={clear}>Clear</button>
       <FormInput label="Saved view name" value={savedViewName} onChange={setSavedViewName} />
       <button type="button" style={secondaryButtonStyle} onClick={save}>Save view</button>
+      {activeFilters.length ? (
+        <div style={filterChipsStyle}>
+          {activeFilters.map(([key, value]) => (
+            <button key={key} type="button" style={chipStyle} onClick={() => setFilters({ ...filters, [key]: "" })}>
+              {labelise(key)}: {labelise(String(value))} x
+            </button>
+          ))}
+          <button type="button" style={secondaryButtonStyle} onClick={clear}>Clear all</button>
+        </div>
+      ) : null}
     </section>
   );
 }
 
-function renderOrganisationTable(organisations: EnterpriseOrganisation[], portfolio: EnterprisePortfolio) {
+function renderOrganisationTable(organisations: EnterpriseOrganisation[], portfolio: EnterprisePortfolio, runAction?: (action: string, payload: Record<string, unknown>) => void) {
   return (
     <div style={tableWrapStyle}>
       <table style={tableStyle}>
-        <thead><tr><th>Organisation</th><th>Type</th><th>Status</th><th>Licence seats</th><th>Consent</th><th>Risk</th></tr></thead>
+        <thead><tr><th>Organisation</th><th>Type</th><th>Status</th><th>Licence summary</th><th>Primary administrator</th><th>Account owner</th><th>Onboarding</th><th>Risk</th><th>Actions</th></tr></thead>
         <tbody>
           {organisations.map((org) => {
             const orgLicences = portfolio.licences.filter((licence) => licence.organisationId === org.id);
             const seats = orgLicences.reduce((sum, licence) => sum + licence.purchasedSeats, 0);
             const active = orgLicences.reduce((sum, licence) => sum + licence.activeSeats, 0);
-            const consent = portfolio.consent[org.id];
             return (
               <tr key={org.id}>
-                <td>{org.name}<small>{org.primaryContactEmail ?? "No admin invitation yet"}</small></td>
+                <td>{org.name}<small>{org.registrationNumber ?? org.legalName}</small></td>
                 <td>{labelise(org.type)}</td>
                 <td>{labelise(org.status)}</td>
-                <td>{active}/{seats}</td>
-                <td>{consent?.reportingConsent && consent?.adviserInsightConsent ? "Reportable" : "Restricted"}</td>
+                <td>{orgLicences.length ? `${active}/${seats} seats` : "No licence configured"}</td>
+                <td>{org.nominatedAdminEmail ?? org.primaryContactEmail ?? "No organisation administrator has accepted access."}<small>Prepare administrator invitation</small></td>
+                <td>{org.accountOwner ?? "Unassigned"}</td>
+                <td>{labelise(org.onboardingStatus ?? "not_started")}</td>
                 <td>{labelise(org.risk)}</td>
+                <td style={actionsCellStyle}>
+                  <Link href={`/application/enterprise/organisations/${org.id}`}>View</Link>
+                  <button type="button" disabled={!runAction} onClick={() => runAction?.("transition_organisation", { organisationId: org.id, status: org.status === "suspended" ? "active" : "suspended", reason: "Updated from organisation list" })}>{org.status === "suspended" ? "Reactivate" : "Suspend"}</button>
+                  <button type="button" disabled={!runAction} onClick={() => runAction?.("delete_or_archive_organisation", { organisationId: org.id, reason: "Archived from organisation list" })}>Archive/delete</button>
+                </td>
               </tr>
             );
           })}
-          {organisations.length === 0 ? <tr><td colSpan={6}>No organisations match this view. Create an organisation if your role permits it.</td></tr> : null}
+          {organisations.length === 0 ? <tr><td colSpan={9}>No organisations have been created yet. Add organisation if your role permits it.</td></tr> : null}
         </tbody>
       </table>
     </div>
   );
+}
+
+function renderPhasePlaceholder(title: string, message: string) {
+  return (
+    <section style={panelStyle}>
+      <h2 style={h2Style}>{title}</h2>
+      <p style={mutedStyle}>{message}</p>
+      <p style={privacyStyle}>This staged section does not display fabricated operational data.</p>
+    </section>
+  );
+}
+
+function renderAddressFields(title: string, address: AddressForm, onChange: (address: AddressForm) => void) {
+  return (
+    <fieldset style={fieldsetStyle}>
+      <legend>{title}</legend>
+      <FormInput label="Address line 1" value={address.line1} onChange={(line1) => onChange({ ...address, line1 })} />
+      <FormInput label="Address line 2" value={address.line2} onChange={(line2) => onChange({ ...address, line2 })} />
+      <FormInput label="Town or city" value={address.city} onChange={(city) => onChange({ ...address, city })} />
+      <FormInput label="Region" value={address.region} onChange={(region) => onChange({ ...address, region })} />
+      <FormInput label="Postcode" value={address.postcode} onChange={(postcode) => onChange({ ...address, postcode })} />
+      <label style={labelStyle}>Country
+        <select value={address.country} onChange={(event) => onChange({ ...address, country: event.target.value })}>
+          <option value="GB">United Kingdom</option>
+          <option value="IE">Ireland</option>
+          <option value="US">United States</option>
+          <option value="CA">Canada</option>
+          <option value="AU">Australia</option>
+        </select>
+      </label>
+    </fieldset>
+  );
+}
+
+function emptyAddress(): AddressForm {
+  return { line1: "", line2: "", city: "", region: "", postcode: "", country: "GB" };
 }
 
 function renderLicenceTable(licences: EnterpriseLicence[], portfolio: EnterprisePortfolio) {
@@ -769,6 +1004,7 @@ const headerActionsStyle: CSSProperties = { display: "flex", gap: 10, alignItems
 const panelStyle: CSSProperties = { background: "#fff", border: "1px solid #dbe3ef", borderRadius: 8, padding: 18, boxShadow: "0 12px 30px rgba(15,23,42,.05)" };
 const h1Style: CSSProperties = { margin: 0, fontSize: 28, lineHeight: 1.15 };
 const h2Style: CSSProperties = { margin: "0 0 12px", fontSize: 18 };
+const h3Style: CSSProperties = { margin: "18px 0 8px", fontSize: 15 };
 const eyebrowStyle: CSSProperties = { margin: "0 0 8px", color: "#475569", fontSize: 12, textTransform: "uppercase", fontWeight: 800, letterSpacing: 0 };
 const mutedStyle: CSSProperties = { color: "#64748b", margin: "6px 0 0", lineHeight: 1.5 };
 const privacyStyle: CSSProperties = { color: "#334155", background: "#f1f5f9", border: "1px solid #dbe3ef", borderRadius: 6, padding: 10, margin: "12px 0 0" };
@@ -782,6 +1018,8 @@ const tabListStyle: CSSProperties = { display: "flex", gap: 8, flexWrap: "wrap",
 const tabStyle: CSSProperties = { border: "1px solid #cbd5e1", background: "#fff", borderRadius: 6, padding: "9px 12px", fontWeight: 700 };
 const activeTabStyle: CSSProperties = { ...tabStyle, background: "#111827", color: "#fff", borderColor: "#111827" };
 const filterBarStyle: CSSProperties = { ...panelStyle, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 10, alignItems: "end", marginBottom: 16 };
+const filterChipsStyle: CSSProperties = { gridColumn: "1 / -1", display: "flex", gap: 8, flexWrap: "wrap" };
+const chipStyle: CSSProperties = { border: "1px solid #bfdbfe", background: "#eff6ff", borderRadius: 999, padding: "7px 10px", color: "#1e3a8a", fontWeight: 800 };
 const gridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 };
 const stackStyle: CSSProperties = { display: "grid", gap: 16 };
 const twoColumnStyle: CSSProperties = { display: "grid", gridTemplateColumns: "minmax(280px, 420px) minmax(0, 1fr)", gap: 16, alignItems: "start" };
@@ -789,6 +1027,7 @@ const metricButtonStyle: CSSProperties = { ...panelStyle, textAlign: "left", cur
 const tileStyle: CSSProperties = { border: "1px solid #dbe3ef", borderRadius: 8, padding: 12, background: "#f8fafc" };
 const labelStyle: CSSProperties = { display: "grid", gap: 5, fontWeight: 700, color: "#334155", fontSize: 13 };
 const checkboxStyle: CSSProperties = { display: "flex", gap: 8, alignItems: "center", color: "#334155", fontWeight: 700 };
+const fieldsetStyle: CSSProperties = { border: "1px solid #dbe3ef", borderRadius: 8, padding: 12, display: "grid", gap: 10 };
 const tableWrapStyle: CSSProperties = { overflowX: "auto" };
 const tableStyle: CSSProperties = { width: "100%", borderCollapse: "collapse", fontSize: 14 };
 const actionsCellStyle: CSSProperties = { display: "flex", gap: 8, flexWrap: "wrap" };

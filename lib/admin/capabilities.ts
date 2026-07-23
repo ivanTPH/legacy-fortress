@@ -31,6 +31,7 @@ export type AdminCapability =
   | "audit:read"
   | "audit:write"
   | "prototype:view"
+  | "organisation:view"
   | "organisation:manage"
   | "enterprise.invitation.manage"
   | "enterprise.licence.manage"
@@ -63,6 +64,7 @@ const ADMIN_ROLE_CAPABILITIES: Record<AdminRole, AdminCapability[]> = {
     "audit:read",
     "audit:write",
     "prototype:view",
+    "organisation:view",
     "organisation:manage",
     "enterprise.invitation.manage",
     "enterprise.licence.manage",
@@ -108,6 +110,8 @@ const ADMIN_ROLE_CAPABILITIES: Record<AdminRole, AdminCapability[]> = {
     "admin.reporting.summary.read",
     "admin_shell:view",
     "audit:read",
+    "organisation:view",
+    "enterprise.report.read",
   ],
   enterprise_admin: [
     "admin.dashboard.read",
@@ -115,6 +119,7 @@ const ADMIN_ROLE_CAPABILITIES: Record<AdminRole, AdminCapability[]> = {
     "admin.organisations.summary.read",
     "admin.licences.summary.read",
     "admin_shell:view",
+    "organisation:view",
     "organisation:manage",
     "enterprise.invitation.manage",
     "enterprise.licence.manage",
