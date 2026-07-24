@@ -61,6 +61,8 @@ test("enterprise API has separate Phase 3 permission gates and audit actions", (
   const route = read("app/api/internal/admin/enterprise/route.ts");
   const caps = read("lib/admin/capabilities.ts");
   const acceptRoute = read("app/api/enterprise/invitations/accept/route.ts");
+  const access = read("lib/admin/access.ts");
+  const sessionRoute = read("app/api/internal/admin/session/route.ts");
 
   for (const action of [
     "invite_organisation_admin",
@@ -87,6 +89,29 @@ test("enterprise API has separate Phase 3 permission gates and audit actions", (
   assert.match(acceptRoute, /acceptEnterpriseInvitation/);
   assert.match(acceptRoute, /claimEnterpriseEnrolmentLink/);
   assert.doesNotMatch(acceptRoute, /console\.log|token_hash.*json/i);
+  assert.match(access, /requireEnterpriseAccess/);
+  assert.match(access, /resolveEnterpriseMembershipAccess/);
+  assert.match(access, /ENTERPRISE_WORKSPACE_MEMBERSHIP_ROLES/);
+  assert.doesNotMatch(access, /organisation_member["\s,\]]+:[\s\S]*enterprise\.membership\.manage/);
+  assert.match(route, /requireEnterpriseAccess\(request\)/);
+  assert.match(route, /assertEnterpriseActionScope/);
+  assert.match(sessionRoute, /requireEnterpriseAccess\(request\)/);
+});
+
+test("Phase 3B capability resolver keeps organisation-scoped access separate from platform admin", () => {
+  const access = read("lib/admin/access.ts");
+  const sessionRoute = read("app/api/internal/admin/session/route.ts");
+  const switcher = read("components/navigation/WorkspaceSwitcher.tsx");
+
+  assert.match(access, /enterpriseScope/);
+  assert.match(access, /organisationScoped: activeRows\.length > 0/);
+  assert.match(access, /adminRole: "enterprise_admin"/);
+  assert.match(access, /capabilities: enterprise\.capabilities/);
+  assert.match(access, /adminHasCapability\(access: AdminAccessState, capability: AdminCapability\)[\s\S]*access\.capabilities\.includes\(capability\)/);
+  assert.match(access, /id: `enterprise-membership:\$\{firstMembershipId\}`/);
+  assert.match(access, /granted_by_user_id: null/);
+  assert.match(sessionRoute, /enterpriseScope: admin\.access\.enterpriseScope/);
+  assert.match(switcher, /payload\.admin\.role === "enterprise_admin"/);
 });
 
 test("Phase 3 UI exposes operational invitations, users, seats, enrolment links and consent acceptance", () => {

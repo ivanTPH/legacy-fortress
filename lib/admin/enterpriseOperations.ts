@@ -211,35 +211,42 @@ export class EnterpriseOperationError extends Error {
 }
 
 export async function loadEnterprisePortfolio(client: AnySupabaseClient, access: AdminAccessState) {
+  const scopedOrganisationIds = access.enterpriseScope?.organisationScoped ? access.enterpriseScope.organisationIds : [];
+  const organisationsQuery = client
+    .from("enterprise_organisations")
+    .select(ORGANISATION_SELECT)
+    .order("created_at", { ascending: false })
+    .limit(200);
+  const licencesQuery = client
+    .from("enterprise_licences")
+    .select(LICENCE_SELECT)
+    .order("renewal_date", { ascending: true })
+    .limit(300);
+  const invitationsQuery = client
+    .from("enterprise_invitations")
+    .select(INVITATION_SELECT)
+    .order("created_at", { ascending: false })
+    .limit(300);
+  const membershipsQuery = client
+    .from("enterprise_memberships")
+    .select(MEMBERSHIP_SELECT)
+    .order("created_at", { ascending: false })
+    .limit(300);
+  const enrolmentLinksQuery = client
+    .from("enterprise_enrolment_links")
+    .select(ENROLMENT_LINK_SELECT)
+    .order("created_at", { ascending: false })
+    .limit(200);
+  const consentQuery = client
+    .from("enterprise_consent_settings")
+    .select("organisation_id,adviser_insight_consent,marketing_consent,reporting_consent,export_permission,minimum_reporting_cohort,retention_rule");
   const [organisationsRes, licencesRes, invitationsRes, membershipsRes, enrolmentLinksRes, consentRes, savedViewsRes] = await Promise.all([
-    client
-      .from("enterprise_organisations")
-      .select(ORGANISATION_SELECT)
-      .order("created_at", { ascending: false })
-      .limit(200),
-    client
-      .from("enterprise_licences")
-      .select(LICENCE_SELECT)
-      .order("renewal_date", { ascending: true })
-      .limit(300),
-    client
-      .from("enterprise_invitations")
-      .select(INVITATION_SELECT)
-      .order("created_at", { ascending: false })
-      .limit(300),
-    client
-      .from("enterprise_memberships")
-      .select(MEMBERSHIP_SELECT)
-      .order("created_at", { ascending: false })
-      .limit(300),
-    client
-      .from("enterprise_enrolment_links")
-      .select(ENROLMENT_LINK_SELECT)
-      .order("created_at", { ascending: false })
-      .limit(200),
-    client
-      .from("enterprise_consent_settings")
-      .select("organisation_id,adviser_insight_consent,marketing_consent,reporting_consent,export_permission,minimum_reporting_cohort,retention_rule"),
+    scopedOrganisationIds.length ? organisationsQuery.in("id", scopedOrganisationIds) : organisationsQuery,
+    scopedOrganisationIds.length ? licencesQuery.in("organisation_id", scopedOrganisationIds) : licencesQuery,
+    scopedOrganisationIds.length ? invitationsQuery.in("organisation_id", scopedOrganisationIds) : invitationsQuery,
+    scopedOrganisationIds.length ? membershipsQuery.in("organisation_id", scopedOrganisationIds) : membershipsQuery,
+    scopedOrganisationIds.length ? enrolmentLinksQuery.in("organisation_id", scopedOrganisationIds) : enrolmentLinksQuery,
+    scopedOrganisationIds.length ? consentQuery.in("organisation_id", scopedOrganisationIds) : consentQuery,
     client
       .from("enterprise_saved_views")
       .select("id,name,view_type,filters,created_at")

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { listAdminUsers } from "@/lib/admin/operations";
 import { listAdminInvitations } from "@/lib/admin/adminInvitations";
-import { adminHasCapability, requireAdminAccess } from "@/lib/admin/access";
+import { adminHasCapability, requireEnterpriseAccess } from "@/lib/admin/access";
 
 export async function GET(request: Request) {
-  const admin = await requireAdminAccess(request);
+  const admin = await requireEnterpriseAccess(request);
   if (!admin.ok) {
     return NextResponse.json(
       {
@@ -26,6 +26,7 @@ export async function GET(request: Request) {
       isMasterAdmin: admin.access.isMasterAdmin,
       role: admin.access.adminRole,
       capabilities: admin.access.capabilities,
+      enterpriseScope: admin.access.enterpriseScope ?? null,
       displayName: admin.access.adminRow.display_name || admin.access.user.email || "Admin",
     },
     admins,

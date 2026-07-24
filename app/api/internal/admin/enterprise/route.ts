@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdminAccess, requireAdminCapability } from "@/lib/admin/access";
+import { requireEnterpriseAccess, requireAdminCapability } from "@/lib/admin/access";
 import { recordAdminAuditEvent } from "@/lib/admin/audit";
 import {
   buildEnterpriseReportExportDecision,
@@ -26,7 +26,7 @@ import {
 } from "@/lib/admin/enterpriseOperations";
 
 export async function GET(request: Request) {
-  const admin = await requireAdminAccess(request);
+  const admin = await requireEnterpriseAccess(request);
   if (!admin.ok) {
     return NextResponse.json({ ok: false, message: admin.message, issue: admin.issue ?? null }, { status: admin.status });
   }
@@ -42,6 +42,8 @@ export async function GET(request: Request) {
     const licenceDenied = requireAdminCapability(admin.access, "licence:view");
     if (licenceDenied) return NextResponse.json({ ok: false, message: licenceDenied.message, capability: licenceDenied.capability }, { status: licenceDenied.status });
     const detail = await getEnterpriseLicenceDetail(admin.adminClient, licenceId);
+    const scopeDenied = assertEnterpriseOrganisationScope(admin.access, detail.licence.organisationId);
+    if (scopeDenied) return scopeDenied;
     await recordEnterpriseAudit(request, admin, "Enterprise licence viewed", "licence", detail.licence.id, detail.licence.plan, "success", {
       private_vault_content_excluded: true,
       document_content_excluded: true,
@@ -50,6 +52,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: true, detail });
   }
   if (organisationId) {
+    const scopeDenied = assertEnterpriseOrganisationScope(admin.access, organisationId);
+    if (scopeDenied) return scopeDenied;
     const detail = await getEnterpriseOrganisationDetail(admin.adminClient, organisationId);
     await recordEnterpriseAudit(request, admin, "Enterprise organisation viewed", "organisation", detail.organisation.id, detail.organisation.name, "success", {
       private_vault_content_excluded: true,
@@ -78,7 +82,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const admin = await requireAdminAccess(request);
+  const admin = await requireEnterpriseAccess(request);
   if (!admin.ok) {
     return NextResponse.json({ ok: false, message: admin.message, issue: admin.issue ?? null }, { status: admin.status });
   }
@@ -103,6 +107,8 @@ export async function POST(request: Request) {
     }).catch(() => null);
     return NextResponse.json({ ok: false, message: denied.message, capability: denied.capability }, { status: denied.status });
   }
+  const scopeDenied = await assertEnterpriseActionScope(admin, action, body);
+  if (scopeDenied) return scopeDenied;
 
   try {
     if (action === "create_organisation") {
@@ -362,9 +368,52 @@ function capabilityForEnterpriseAction(action: string) {
   return null;
 }
 
+function assertEnterpriseOrganisationScope(access: { enterpriseScope?: { organisationScoped: boolean; organisationIds: string[] } }, organisationId: string | null | undefined) {
+  const scope = access.enterpriseScope;
+  if (!scope?.organisationScoped) return null;
+  if (organisationId && scope.organisationIds.includes(organisationId)) return null;
+  return NextResponse.json({ ok: false, code: "enterprise_scope_denied", message: "Enterprise organisation access is restricted." }, { status: 403 });
+}
+
+async function assertEnterpriseActionScope(
+  admin: Awaited<ReturnType<typeof requireEnterpriseAccess>> & { ok: true },
+  action: string,
+  body: Record<string, unknown>,
+) {
+  if (!admin.access.enterpriseScope?.organisationScoped) return null;
+  if (action === "create_organisation") {
+    return NextResponse.json({ ok: false, code: "enterprise_scope_denied", message: "Organisation-scoped users cannot create organisations." }, { status: 403 });
+  }
+
+  let organisationId = typeof body.organisationId === "string" ? body.organisationId : "";
+  const licenceId = typeof body.licenceId === "string" ? body.licenceId : "";
+  const membershipId = typeof body.membershipId === "string" ? body.membershipId : "";
+  const invitationId = typeof body.invitationId === "string" ? body.invitationId : "";
+  const enrolmentLinkId = typeof body.enrolmentLinkId === "string" ? body.enrolmentLinkId : "";
+
+  if (!organisationId && licenceId) {
+    const res = await admin.adminClient.from("enterprise_licences").select("organisation_id").eq("id", licenceId).maybeSingle();
+    organisationId = String(res.data?.organisation_id ?? "");
+  }
+  if (!organisationId && membershipId) {
+    const res = await admin.adminClient.from("enterprise_memberships").select("organisation_id").eq("id", membershipId).maybeSingle();
+    organisationId = String(res.data?.organisation_id ?? "");
+  }
+  if (!organisationId && invitationId) {
+    const res = await admin.adminClient.from("enterprise_invitations").select("organisation_id").eq("id", invitationId).maybeSingle();
+    organisationId = String(res.data?.organisation_id ?? "");
+  }
+  if (!organisationId && enrolmentLinkId) {
+    const res = await admin.adminClient.from("enterprise_enrolment_links").select("organisation_id").eq("id", enrolmentLinkId).maybeSingle();
+    organisationId = String(res.data?.organisation_id ?? "");
+  }
+
+  return assertEnterpriseOrganisationScope(admin.access, organisationId);
+}
+
 async function recordEnterpriseAudit(
   request: Request,
-  admin: Awaited<ReturnType<typeof requireAdminAccess>> & { ok: true },
+  admin: Awaited<ReturnType<typeof requireEnterpriseAccess>> & { ok: true },
   action: string,
   resourceType: "organisation" | "licence" | "access_policy" | "report",
   resourceId: string,

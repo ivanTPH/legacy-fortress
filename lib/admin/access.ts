@@ -5,7 +5,6 @@ import {
   deriveAdminRole,
   getAdminRoleCapabilities,
   getDeniedAdminCapabilityMessage,
-  hasAdminCapability,
   normalizeAdminRole,
   type AdminCapability,
   type AdminRole,
@@ -40,6 +39,91 @@ export type AdminAccessState = {
   adminRole: AdminRole;
   capabilities: AdminCapability[];
   adminRow: AdminUserRow;
+  enterpriseScope?: EnterpriseAccessScope;
+};
+
+export type EnterpriseAccessScope = {
+  canAccessEnterpriseWorkspace: boolean;
+  organisationIds: string[];
+  membershipIds: string[];
+  membershipRoles: string[];
+  organisationScoped: boolean;
+};
+
+type EnterpriseMembershipAccessRow = {
+  id: string;
+  organisation_id: string;
+  organisation_role: string;
+  membership_status: string;
+  enterprise_organisations?: { status?: string | null } | null;
+};
+
+const ENTERPRISE_MEMBERSHIP_SELECT = "id,organisation_id,organisation_role,membership_status,enterprise_organisations(status)";
+
+const ENTERPRISE_WORKSPACE_MEMBERSHIP_ROLES = new Set([
+  "organisation_admin",
+  "organisation_licence_manager",
+  "organisation_user_manager",
+  "organisation_reporting_viewer",
+  "organisation_auditor",
+  "licence_manager",
+  "user_manager",
+  "reporting_viewer",
+  "read_only_auditor",
+]);
+
+const ENTERPRISE_MUTATION_CAPABILITIES_BY_ROLE: Record<string, AdminCapability[]> = {
+  organisation_admin: [
+    "organisation:view",
+    "organisation:manage",
+    "licence:view",
+    "enterprise.membership.read",
+    "enterprise.membership.manage",
+    "enterprise.invitation.manage",
+    "enterprise.enrolment_link.manage",
+    "enterprise.report.read",
+    "licence:audit",
+  ],
+  organisation_licence_manager: [
+    "organisation:view",
+    "licence:view",
+    "licence:edit",
+    "licence:seats",
+    "licence:renew",
+    "licence:lifecycle",
+    "licence:audit",
+    "enterprise.membership.read",
+  ],
+  licence_manager: [
+    "organisation:view",
+    "licence:view",
+    "licence:edit",
+    "licence:seats",
+    "licence:renew",
+    "licence:lifecycle",
+    "licence:audit",
+    "enterprise.membership.read",
+  ],
+  organisation_user_manager: [
+    "organisation:view",
+    "licence:view",
+    "enterprise.membership.read",
+    "enterprise.membership.manage",
+    "enterprise.invitation.manage",
+    "enterprise.enrolment_link.manage",
+  ],
+  user_manager: [
+    "organisation:view",
+    "licence:view",
+    "enterprise.membership.read",
+    "enterprise.membership.manage",
+    "enterprise.invitation.manage",
+    "enterprise.enrolment_link.manage",
+  ],
+  organisation_reporting_viewer: ["organisation:view", "licence:view", "enterprise.membership.read", "enterprise.report.read"],
+  reporting_viewer: ["organisation:view", "licence:view", "enterprise.membership.read", "enterprise.report.read"],
+  organisation_auditor: ["organisation:view", "licence:view", "enterprise.membership.read", "enterprise.report.read", "licence:audit"],
+  read_only_auditor: ["organisation:view", "licence:view", "enterprise.membership.read", "enterprise.report.read", "licence:audit"],
 };
 
 const ADMIN_ROLE_OVERRIDE_COOKIE = "lf_admin_role_override";
@@ -293,8 +377,131 @@ export async function requireAdminAccess(request: Request): Promise<
   };
 }
 
+export async function requireEnterpriseAccess(request: Request): Promise<
+  | { ok: true; access: AdminAccessState; adminClient: AnySupabaseClient }
+  | { ok: false; status: number; message: string; issue?: string }
+> {
+  const admin = await requireAdminAccess(request);
+  if (admin.ok) {
+    return {
+      ...admin,
+      access: {
+        ...admin.access,
+        enterpriseScope: {
+          canAccessEnterpriseWorkspace: admin.access.capabilities.includes("organisation:view"),
+          organisationIds: [],
+          membershipIds: [],
+          membershipRoles: [],
+          organisationScoped: false,
+        },
+      },
+    };
+  }
+
+  if (admin.status !== 403) return admin;
+
+  const issue = getSupabaseAdminConfigIssue();
+  const adminClient = createSupabaseAdminClient();
+  if (!adminClient) {
+    return {
+      ok: false,
+      status: 503,
+      message: "Admin service is unavailable in this environment.",
+      issue: issue ?? undefined,
+    };
+  }
+
+  const requestUser = await getRequestUser(request);
+  if (!requestUser.user) {
+    return {
+      ok: false,
+      status: requestUser.error === "missing_public_env" ? 503 : 401,
+      message:
+        requestUser.error === "missing_public_env"
+          ? "Public auth configuration is unavailable."
+          : "You must be signed in to continue.",
+      issue: requestUser.error === "missing_public_env" ? "missing_public_env" : requestUser.error ?? undefined,
+    };
+  }
+
+  const enterprise = await resolveEnterpriseMembershipAccess(adminClient, requestUser.user.id);
+  if (!enterprise.scope.canAccessEnterpriseWorkspace) {
+    return {
+      ok: false,
+      status: 403,
+      message: "Enterprise Operations access is restricted.",
+    };
+  }
+
+  const emailNormalized = normalizeAdminEmail(requestUser.user.email);
+  const firstMembershipId = enterprise.scope.membershipIds[0] ?? requestUser.user.id;
+  const firstRole = enterprise.scope.membershipRoles[0] ?? "enterprise_admin";
+  const adminRow: AdminUserRow = {
+    id: `enterprise-membership:${firstMembershipId}`,
+    email_normalized: emailNormalized,
+    user_id: requestUser.user.id,
+    display_name: String(requestUser.user.user_metadata?.full_name ?? requestUser.user.email ?? "Enterprise user"),
+    status: "active",
+    is_master: false,
+    role: firstRole,
+    granted_by_user_id: null,
+    created_at: new Date(0).toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  return {
+    ok: true,
+    adminClient,
+    access: {
+      user: requestUser.user,
+      emailNormalized,
+      isMasterAdmin: false,
+      adminRole: "enterprise_admin",
+      capabilities: enterprise.capabilities,
+      adminRow,
+      enterpriseScope: enterprise.scope,
+    },
+  };
+}
+
+export async function resolveEnterpriseMembershipAccess(client: AnySupabaseClient, userId: string) {
+  const res = await client
+    .from("enterprise_memberships")
+    .select(ENTERPRISE_MEMBERSHIP_SELECT)
+    .eq("user_id", userId)
+    .eq("membership_status", "active") as {
+      data: EnterpriseMembershipAccessRow[] | null;
+      error: { message: string } | null;
+    };
+
+  if (res.error) throw new Error(res.error.message);
+
+  const activeRows = (res.data ?? []).filter((row) => {
+    const organisationStatus = row.enterprise_organisations?.status ?? "active";
+    return ENTERPRISE_WORKSPACE_MEMBERSHIP_ROLES.has(row.organisation_role)
+      && !["suspended", "cancelled", "archived"].includes(organisationStatus);
+  });
+  const capabilities = new Set<AdminCapability>();
+  for (const row of activeRows) {
+    for (const capability of ENTERPRISE_MUTATION_CAPABILITIES_BY_ROLE[row.organisation_role] ?? []) {
+      capabilities.add(capability);
+    }
+  }
+
+  return {
+    capabilities: [...capabilities],
+    scope: {
+      canAccessEnterpriseWorkspace: activeRows.length > 0 && capabilities.has("organisation:view"),
+      organisationIds: [...new Set(activeRows.map((row) => row.organisation_id))],
+      membershipIds: [...new Set(activeRows.map((row) => row.id))],
+      membershipRoles: [...new Set(activeRows.map((row) => row.organisation_role))],
+      organisationScoped: activeRows.length > 0,
+    },
+  };
+}
+
 export function adminHasCapability(access: AdminAccessState, capability: AdminCapability) {
-  return hasAdminCapability(access.adminRole, capability);
+  return access.capabilities.includes(capability);
 }
 
 export function requireAdminCapability(access: AdminAccessState, capability: AdminCapability) {

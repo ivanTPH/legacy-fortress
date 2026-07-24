@@ -32,7 +32,8 @@ test("enterprise API enforces admin access, audit, seat limits and privacy exclu
   const route = fs.readFileSync(path.join(root, "app/api/internal/admin/enterprise/route.ts"), "utf8");
   const service = fs.readFileSync(path.join(root, "lib/admin/enterpriseOperations.ts"), "utf8");
 
-  assert.match(route, /requireAdminAccess\(request\)/);
+  assert.match(route, /requireEnterpriseAccess\(request\)/);
+  assert.match(route, /assertEnterpriseActionScope/);
   assert.match(route, /capabilityForEnterpriseAction/);
   assert.match(route, /create_organisation[\s\S]*organisation:manage/);
   assert.match(route, /recordAdminAuditEvent/);
