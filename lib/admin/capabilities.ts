@@ -41,6 +41,9 @@ export type AdminCapability =
   | "licence:lifecycle"
   | "licence:audit"
   | "enterprise.invitation.manage"
+  | "enterprise.membership.read"
+  | "enterprise.membership.manage"
+  | "enterprise.enrolment_link.manage"
   | "enterprise.licence.manage"
   | "enterprise.report.read"
   | "enterprise.export.request";
@@ -81,6 +84,9 @@ const ADMIN_ROLE_CAPABILITIES: Record<AdminRole, AdminCapability[]> = {
     "licence:lifecycle",
     "licence:audit",
     "enterprise.invitation.manage",
+    "enterprise.membership.read",
+    "enterprise.membership.manage",
+    "enterprise.enrolment_link.manage",
     "enterprise.licence.manage",
     "enterprise.report.read",
     "enterprise.export.request",
@@ -128,6 +134,7 @@ const ADMIN_ROLE_CAPABILITIES: Record<AdminRole, AdminCapability[]> = {
     "enterprise.report.read",
     "licence:view",
     "licence:audit",
+    "enterprise.membership.read",
   ],
   enterprise_admin: [
     "admin.dashboard.read",
@@ -145,6 +152,9 @@ const ADMIN_ROLE_CAPABILITIES: Record<AdminRole, AdminCapability[]> = {
     "licence:lifecycle",
     "licence:audit",
     "enterprise.invitation.manage",
+    "enterprise.membership.read",
+    "enterprise.membership.manage",
+    "enterprise.enrolment_link.manage",
     "enterprise.licence.manage",
     "enterprise.report.read",
     "enterprise.export.request",

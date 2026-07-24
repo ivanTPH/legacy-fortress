@@ -19,12 +19,18 @@ export const ENTERPRISE_LICENCE_STATUSES = ["draft", "pending_approval", "active
 export const ENTERPRISE_LICENCE_PLANS = ["starter", "professional", "enterprise", "custom"] as const;
 export const ENTERPRISE_BILLING_STATUSES = ["not_configured", "trial", "active", "past_due", "suspended", "cancelled", "pending", "current", "overdue", "manual_review"] as const;
 export const ENTERPRISE_INVITATION_STATUSES = ["draft", "scheduled", "sent", "delivered", "accepted", "expired", "revoked", "failed"] as const;
+export const ENTERPRISE_MEMBERSHIP_STATUSES = ["invited", "active", "suspended", "removed"] as const;
+export const ENTERPRISE_ORGANISATION_ROLES = ["organisation_admin", "organisation_licence_manager", "organisation_user_manager", "organisation_reporting_viewer", "organisation_auditor", "organisation_member", "licence_manager", "user_manager", "reporting_viewer", "read_only_auditor", "enterprise_user"] as const;
+export const ENTERPRISE_ENROLMENT_LINK_STATUSES = ["active", "paused", "expired", "exhausted", "revoked"] as const;
 export const ENTERPRISE_ORGANISATION_STATUSES = ["draft", "pending_setup", "pending_administrator_acceptance", "active", "suspended", "expiring", "cancelled", "archived"] as const;
 export const ENTERPRISE_ONBOARDING_STATUSES = ["not_started", "pending", "in_progress", "blocked", "complete"] as const;
 export const ENTERPRISE_RISK_STATUSES = ["normal", "watch", "at_risk", "critical", "restricted"] as const;
 export const ENTERPRISE_REPORT_MINIMUM_COHORT = 5;
 const ORGANISATION_SELECT = "id,legal_name,trading_name,organisation_type,organisation_type_other,registration_number,country,registered_address,operating_address,primary_contact_name,primary_contact_email,primary_contact_telephone,website,internal_account_owner,contract_reference,customer_reference,onboarding_status,onboarding_notes,nominated_admin_name,nominated_admin_email,nominated_admin_require_mfa,nominated_admin_expiry_days,status,risk_status,same_operating_address,archived_at,created_at,updated_at";
 const LICENCE_SELECT = "id,organisation_id,licence_plan,custom_plan_name,contract_reference,billing_reference,start_date,renewal_date,end_date,renewal_notice_days,auto_renew,renewal_notes,purchased_seats,allocated_seats,active_seats,invited_seats,suspended_seats,billing_status,licence_status,account_owner,created_at,updated_at";
+const INVITATION_SELECT = "id,organisation_id,licence_id,email_normalized,full_name,invitation_type,role_template,status,expires_at,require_mfa,sent_at,accepted_at,revoked_at,failure_reason,created_at,scope,access_expires_at,resend_count,last_resent_at,delivered_at,failed_at,seat_id,internal_reference,department,synthetic_run_marker";
+const MEMBERSHIP_SELECT = "id,organisation_id,licence_id,seat_id,user_id,email_normalized,full_name,organisation_role,membership_status,onboarding_status,consent_status,internal_reference,department,invited_at,joined_at,suspended_at,removed_at,last_active_at,access_expires_at,synthetic_run_marker,created_at,updated_at";
+const ENROLMENT_LINK_SELECT = "id,organisation_id,licence_id,display_name,status,expires_at,max_claims,claims_used,allowed_email_domain,approval_required,default_role,revoked_at,synthetic_run_marker,created_at,updated_at";
 
 type EnterpriseOrganisationRow = {
   id: string;
@@ -98,6 +104,76 @@ type EnterpriseInvitationRow = {
   revoked_at: string | null;
   failure_reason: string | null;
   created_at: string;
+  scope?: string;
+  access_expires_at?: string | null;
+  resend_count?: number;
+  last_resent_at?: string | null;
+  delivered_at?: string | null;
+  failed_at?: string | null;
+  seat_id?: string | null;
+  internal_reference?: string | null;
+  department?: string | null;
+  synthetic_run_marker?: string | null;
+};
+
+type EnterpriseMembershipRow = {
+  id: string;
+  organisation_id: string;
+  licence_id: string | null;
+  seat_id: string | null;
+  user_id: string;
+  email_normalized: string;
+  full_name: string | null;
+  organisation_role: string;
+  membership_status: string;
+  onboarding_status: string;
+  consent_status: string;
+  internal_reference: string | null;
+  department: string | null;
+  invited_at: string | null;
+  joined_at: string | null;
+  suspended_at: string | null;
+  removed_at: string | null;
+  last_active_at: string | null;
+  access_expires_at: string | null;
+  synthetic_run_marker: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type EnterpriseEnrolmentLinkRow = {
+  id: string;
+  organisation_id: string;
+  licence_id: string;
+  display_name: string;
+  status: string;
+  expires_at: string;
+  max_claims: number;
+  claims_used: number;
+  allowed_email_domain: string | null;
+  approval_required: boolean;
+  default_role: string;
+  revoked_at: string | null;
+  synthetic_run_marker: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type EnterpriseConsentAcceptanceRow = {
+  id: string;
+  organisation_id: string;
+  membership_id: string | null;
+  invitation_id: string | null;
+  user_id: string;
+  consent_version: string;
+  organisation_terms_accepted: boolean;
+  reporting_consent: boolean;
+  adviser_insight_consent: boolean;
+  marketing_consent: boolean;
+  communication_preferences: Record<string, unknown>;
+  source: string;
+  synthetic_run_marker: string | null;
+  accepted_at: string;
 };
 
 type EnterpriseConsentRow = {
@@ -135,7 +211,7 @@ export class EnterpriseOperationError extends Error {
 }
 
 export async function loadEnterprisePortfolio(client: AnySupabaseClient, access: AdminAccessState) {
-  const [organisationsRes, licencesRes, invitationsRes, consentRes, savedViewsRes] = await Promise.all([
+  const [organisationsRes, licencesRes, invitationsRes, membershipsRes, enrolmentLinksRes, consentRes, savedViewsRes] = await Promise.all([
     client
       .from("enterprise_organisations")
       .select(ORGANISATION_SELECT)
@@ -148,9 +224,19 @@ export async function loadEnterprisePortfolio(client: AnySupabaseClient, access:
       .limit(300),
     client
       .from("enterprise_invitations")
-      .select("id,organisation_id,licence_id,email_normalized,full_name,invitation_type,role_template,status,expires_at,require_mfa,sent_at,accepted_at,revoked_at,failure_reason,created_at")
+      .select(INVITATION_SELECT)
       .order("created_at", { ascending: false })
       .limit(300),
+    client
+      .from("enterprise_memberships")
+      .select(MEMBERSHIP_SELECT)
+      .order("created_at", { ascending: false })
+      .limit(300),
+    client
+      .from("enterprise_enrolment_links")
+      .select(ENROLMENT_LINK_SELECT)
+      .order("created_at", { ascending: false })
+      .limit(200),
     client
       .from("enterprise_consent_settings")
       .select("organisation_id,adviser_insight_consent,marketing_consent,reporting_consent,export_permission,minimum_reporting_cohort,retention_rule"),
@@ -162,13 +248,15 @@ export async function loadEnterprisePortfolio(client: AnySupabaseClient, access:
       .limit(30),
   ]);
 
-  for (const result of [organisationsRes, licencesRes, invitationsRes, consentRes, savedViewsRes]) {
+  for (const result of [organisationsRes, licencesRes, invitationsRes, membershipsRes, enrolmentLinksRes, consentRes, savedViewsRes]) {
     if (result.error) throw new EnterpriseOperationError("enterprise_query_failed", result.error.message, 500);
   }
 
   const organisations = ((organisationsRes.data ?? []) as EnterpriseOrganisationRow[]).map((row) => mapOrganisation(row));
   const licences = ((licencesRes.data ?? []) as EnterpriseLicenceRow[]).map((row) => mapLicence(row));
   const invitations = ((invitationsRes.data ?? []) as EnterpriseInvitationRow[]).map((row) => mapInvitation(row));
+  const memberships = ((membershipsRes.data ?? []) as EnterpriseMembershipRow[]).map((row) => mapMembership(row));
+  const enrolmentLinks = ((enrolmentLinksRes.data ?? []) as EnterpriseEnrolmentLinkRow[]).map((row) => mapEnrolmentLink(row));
   const consentByOrg = new Map(((consentRes.data ?? []) as EnterpriseConsentRow[]).map((row) => [row.organisation_id, row]));
   const today = new Date();
   const renewalsDue = licences.filter((licence) => {
@@ -207,6 +295,8 @@ export async function loadEnterprisePortfolio(client: AnySupabaseClient, access:
     organisations,
     licences,
     invitations,
+    memberships,
+    enrolmentLinks,
     consent: Object.fromEntries([...consentByOrg.entries()].map(([id, row]) => [id, mapConsent(row)])),
     adoptionBands,
     savedViews: savedViewsRes.data ?? [],
@@ -290,19 +380,25 @@ export async function getEnterpriseOrganisationDetail(client: AnySupabaseClient,
   const orgRes = await client.from("enterprise_organisations").select(ORGANISATION_SELECT).eq("id", organisationId).maybeSingle();
   if (orgRes.error) throw new EnterpriseOperationError("organisation_query_failed", orgRes.error.message, 500);
   if (!orgRes.data) throw new EnterpriseOperationError("organisation_not_found", "Organisation not found.", 404);
-  const [licencesRes, invitationsRes, consentRes, auditRes] = await Promise.all([
+  const [licencesRes, invitationsRes, membershipsRes, enrolmentLinksRes, consentRes, consentAcceptancesRes, auditRes] = await Promise.all([
     client.from("enterprise_licences").select(LICENCE_SELECT).eq("organisation_id", organisationId).order("renewal_date", { ascending: true }),
-    client.from("enterprise_invitations").select("id,organisation_id,licence_id,email_normalized,full_name,invitation_type,role_template,status,expires_at,require_mfa,sent_at,accepted_at,revoked_at,failure_reason,created_at").eq("organisation_id", organisationId).order("created_at", { ascending: false }),
+    client.from("enterprise_invitations").select(INVITATION_SELECT).eq("organisation_id", organisationId).order("created_at", { ascending: false }),
+    client.from("enterprise_memberships").select(MEMBERSHIP_SELECT).eq("organisation_id", organisationId).order("created_at", { ascending: false }),
+    client.from("enterprise_enrolment_links").select(ENROLMENT_LINK_SELECT).eq("organisation_id", organisationId).order("created_at", { ascending: false }),
     client.from("enterprise_consent_settings").select("organisation_id,adviser_insight_consent,marketing_consent,reporting_consent,export_permission,minimum_reporting_cohort,retention_rule").eq("organisation_id", organisationId).maybeSingle(),
-    client.from("audit_events").select("id,action,result,actor_email_normalized,actor_role,resource_type,resource_id,resource_label,policy_decision,metadata,created_at").eq("resource_type", "organisation").eq("resource_id", organisationId).order("created_at", { ascending: false }).limit(50),
+    client.from("enterprise_consent_acceptances").select("id,organisation_id,membership_id,invitation_id,user_id,consent_version,organisation_terms_accepted,reporting_consent,adviser_insight_consent,marketing_consent,communication_preferences,source,synthetic_run_marker,accepted_at").eq("organisation_id", organisationId).order("accepted_at", { ascending: false }).limit(100),
+    client.from("audit_events").select("id,action,result,actor_email_normalized,actor_role,resource_type,resource_id,resource_label,policy_decision,metadata,created_at").eq("resource_type", "organisation").eq("resource_id", organisationId).order("created_at", { ascending: false }).limit(80),
   ]);
-  for (const result of [licencesRes, invitationsRes, auditRes]) {
+  for (const result of [licencesRes, invitationsRes, membershipsRes, enrolmentLinksRes, consentAcceptancesRes, auditRes]) {
     if (result.error) throw new EnterpriseOperationError("organisation_detail_failed", result.error.message, 500);
   }
   return {
     organisation: mapOrganisation(orgRes.data as EnterpriseOrganisationRow),
     licences: ((licencesRes.data ?? []) as EnterpriseLicenceRow[]).map(mapLicence),
     invitations: ((invitationsRes.data ?? []) as EnterpriseInvitationRow[]).map(mapInvitation),
+    memberships: ((membershipsRes.data ?? []) as EnterpriseMembershipRow[]).map(mapMembership),
+    enrolmentLinks: ((enrolmentLinksRes.data ?? []) as EnterpriseEnrolmentLinkRow[]).map(mapEnrolmentLink),
+    consentAcceptances: ((consentAcceptancesRes.data ?? []) as EnterpriseConsentAcceptanceRow[]).map(mapConsentAcceptance),
     consent: consentRes.data ? mapConsent(consentRes.data as EnterpriseConsentRow) : null,
     auditEvents: auditRes.data ?? [],
     privacyBoundary: {
@@ -619,6 +715,7 @@ export async function createEnterpriseSeatReservation(client: AnySupabaseClient,
     licence_id: current.id,
     invitee_email_normalized: email,
     seat_status: "invited",
+    synthetic_run_marker: optionalText(input.syntheticRunMarker),
   }).select("id").single();
   if (seat.error) throw new EnterpriseOperationError("seat_reservation_failed", seat.error.message, 500);
   const update = await client.from("enterprise_licences").update({
@@ -636,11 +733,37 @@ export async function createEnterpriseInvitation(
   input: Record<string, unknown>,
 ) {
   const organisationId = requiredText(input.organisationId, "Organisation is required.");
+  const organisation = await getOrganisationRow(client, organisationId);
+  if (!["active", "pending_setup", "pending_administrator_acceptance"].includes(organisation.status)) {
+    throw new EnterpriseOperationError("organisation_invitation_blocked", "Suspended, archived or cancelled organisations cannot issue invitations.", 409);
+  }
   const email = normalizeEnterpriseEmail(input.email as string);
   assertEnterpriseEmail(email);
   const invitationType = String(input.invitationType ?? "enterprise_user") === "organisation_admin" ? "organisation_admin" : "enterprise_user";
-  const tokenHash = hashInvitationToken(randomBytes(32).toString("base64url"));
+  const roleTemplate = normalizeEnterpriseRole(input.roleTemplate ?? (invitationType === "organisation_admin" ? "organisation_admin" : "organisation_member"));
+  if (invitationType === "organisation_admin" && !roleTemplate.startsWith("organisation_")) {
+    throw new EnterpriseOperationError("invalid_invitation_role", "Choose an organisation-scoped administrator role.", 400);
+  }
+  const duplicate = await client
+    .from("enterprise_invitations")
+    .select("id")
+    .eq("organisation_id", organisationId)
+    .eq("email_normalized", email)
+    .in("status", ["draft", "scheduled", "sent", "delivered"])
+    .limit(1);
+  if (duplicate.error) throw new EnterpriseOperationError("invitation_duplicate_check_failed", duplicate.error.message, 500);
+  if ((duplicate.data ?? []).length > 0) throw new EnterpriseOperationError("duplicate_pending_invitation", "This organisation already has a pending invitation for that email.", 409);
+  const token = randomBytes(32).toString("base64url");
+  const tokenHash = hashInvitationToken(token);
   const expiresAt = new Date(Date.now() + Math.max(Number(input.expiryDays ?? 14), 1) * 24 * 60 * 60 * 1000).toISOString();
+  let seatId: string | null = null;
+  if (invitationType === "enterprise_user") {
+    const reservation = await createEnterpriseSeatReservation(client, requiredText(input.licenceId, "Licence is required for organisation user invitations."), {
+      email,
+      syntheticRunMarker: input.syntheticRunMarker,
+    });
+    seatId = String(reservation.seatId ?? "");
+  }
   const insert = await client
     .from("enterprise_invitations")
     .insert({
@@ -649,33 +772,275 @@ export async function createEnterpriseInvitation(
       email_normalized: email,
       full_name: optionalText(input.fullName),
       invitation_type: invitationType,
-      role_template: invitationType === "organisation_admin" ? "organisation_admin" : "enterprise_user",
+      role_template: roleTemplate,
       status: "sent",
       token_hash: tokenHash,
       expires_at: expiresAt,
+      access_expires_at: optionalDateTime(input.accessExpiresAt),
       require_mfa: Boolean(input.requireMfa),
+      seat_id: seatId,
+      internal_reference: optionalText(input.internalReference),
+      department: optionalText(input.department),
+      synthetic_run_marker: optionalText(input.syntheticRunMarker),
       sent_at: new Date().toISOString(),
       created_by_user_id: access.user.id,
     })
-    .select("id,organisation_id,licence_id,email_normalized,full_name,invitation_type,role_template,status,expires_at,require_mfa,sent_at,accepted_at,revoked_at,failure_reason,created_at")
+    .select(INVITATION_SELECT)
     .single();
   if (insert.error || !insert.data) throw new EnterpriseOperationError("invitation_create_failed", insert.error?.message ?? "Could not create invitation.", 500);
-  await incrementLicenceInvitedSeats(client, optionalText(input.licenceId));
-  return mapInvitation(insert.data as EnterpriseInvitationRow);
+  if (seatId) {
+    await client.from("enterprise_seats").update({ invitation_id: insert.data.id }).eq("id", seatId);
+  }
+  return { ...mapInvitation(insert.data as EnterpriseInvitationRow), stagingAcceptPath: buildEnterpriseInvitationAcceptPath(token) };
 }
 
 export async function updateEnterpriseInvitationStatus(client: AnySupabaseClient, id: string, status: string) {
   const normalized = normalizeChoice(status, ENTERPRISE_INVITATION_STATUSES, "Choose a valid invitation status.");
+  const current = await getInvitationRow(client, id);
   const patch: Record<string, unknown> = { status: normalized, updated_at: new Date().toISOString() };
   if (normalized === "revoked") patch.revoked_at = new Date().toISOString();
+  if (normalized === "sent") {
+    patch.sent_at = new Date().toISOString();
+    patch.last_resent_at = new Date().toISOString();
+    patch.resend_count = Number(current.resend_count ?? 0) + 1;
+  }
+  if (normalized === "expired") patch.failure_reason = appendReason(current.failure_reason, "Expired by administrator");
   const update = await client
     .from("enterprise_invitations")
     .update(patch)
     .eq("id", id)
-    .select("id,organisation_id,licence_id,email_normalized,full_name,invitation_type,role_template,status,expires_at,require_mfa,sent_at,accepted_at,revoked_at,failure_reason,created_at")
+    .select(INVITATION_SELECT)
     .single();
   if (update.error || !update.data) throw new EnterpriseOperationError("invitation_update_failed", update.error?.message ?? "Could not update invitation.", 500);
+  if (["revoked", "expired", "failed"].includes(normalized) && current.seat_id) {
+    await releaseEnterpriseSeat(client, current.seat_id, "invitation_release");
+  }
   return mapInvitation(update.data as EnterpriseInvitationRow);
+}
+
+export async function getEnterpriseInvitationPreview(client: AnySupabaseClient, token: string) {
+  const invitation = await getInvitationByToken(client, token);
+  assertInvitationCanBeAccepted(invitation);
+  const organisation = await getOrganisationRow(client, invitation.organisation_id);
+  return {
+    invitation: mapInvitation(invitation),
+    organisation: mapOrganisation(organisation),
+    privacyBoundary: {
+      vaultContentExcluded: true,
+      documentContentExcluded: true,
+      financialValuesExcluded: true,
+    },
+  };
+}
+
+export async function acceptEnterpriseInvitation(
+  client: AnySupabaseClient,
+  access: { user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> | null } },
+  input: Record<string, unknown>,
+) {
+  const invitation = await getInvitationByToken(client, requiredText(input.token, "Invitation token is required."));
+  assertInvitationCanBeAccepted(invitation);
+  const userEmail = normalizeEnterpriseEmail(access.user.email);
+  if (!userEmail || userEmail !== invitation.email_normalized) {
+    throw new EnterpriseOperationError("invitation_identity_mismatch", "Sign in with the invited email address before accepting this invitation.", 403);
+  }
+  const organisation = await getOrganisationRow(client, invitation.organisation_id);
+  if (!["active", "pending_setup", "pending_administrator_acceptance"].includes(organisation.status)) {
+    throw new EnterpriseOperationError("organisation_not_accepting_members", "This organisation is not accepting membership changes.", 409);
+  }
+  const consent = normaliseConsentInput(input);
+  if (!consent.organisationTermsAccepted) {
+    throw new EnterpriseOperationError("organisation_terms_required", "Accept the organisation terms to continue.", 400);
+  }
+  const now = new Date().toISOString();
+  let seatId = invitation.seat_id ?? null;
+  if (invitation.invitation_type === "enterprise_user" && !seatId) {
+    const reservation = await createEnterpriseSeatReservation(client, requiredText(invitation.licence_id, "Invitation is missing a licence."), {
+      email: invitation.email_normalized,
+      syntheticRunMarker: invitation.synthetic_run_marker,
+    });
+    seatId = String(reservation.seatId ?? "");
+  }
+  await assertNoActiveMembershipForUser(client, invitation.organisation_id, access.user.id);
+  const membership = await client.from("enterprise_memberships").insert({
+    organisation_id: invitation.organisation_id,
+    licence_id: invitation.licence_id,
+    seat_id: seatId,
+    user_id: access.user.id,
+    email_normalized: invitation.email_normalized,
+    full_name: invitation.full_name ?? optionalText(access.user.user_metadata?.full_name) ?? invitation.email_normalized,
+    organisation_role: normalizeMembershipRole(invitation.role_template),
+    membership_status: "active",
+    onboarding_status: "pending",
+    consent_status: consent.marketingConsent === false ? "partially_accepted" : "accepted",
+    internal_reference: invitation.internal_reference ?? null,
+    department: invitation.department ?? null,
+    invited_at: invitation.sent_at,
+    joined_at: now,
+    access_expires_at: invitation.access_expires_at,
+    synthetic_run_marker: invitation.synthetic_run_marker,
+    updated_by_user_id: access.user.id,
+    updated_at: now,
+  }).select(MEMBERSHIP_SELECT).single();
+  if (membership.error || !membership.data) throw new EnterpriseOperationError("membership_activation_failed", membership.error?.message ?? "Could not activate organisation membership.", 500);
+  if (seatId) await activateEnterpriseSeat(client, seatId, access.user.id, membership.data.id);
+  const accepted = await client.from("enterprise_invitations").update({
+    status: "accepted",
+    accepted_by_user_id: access.user.id,
+    accepted_at: now,
+    seat_id: seatId,
+    updated_at: now,
+  }).eq("id", invitation.id).eq("status", invitation.status).select(INVITATION_SELECT).single();
+  if (accepted.error || !accepted.data) throw new EnterpriseOperationError("invitation_accept_failed", accepted.error?.message ?? "Could not accept invitation.", 409);
+  const consentInsert = await client.from("enterprise_consent_acceptances").insert({
+    organisation_id: invitation.organisation_id,
+    membership_id: membership.data.id,
+    invitation_id: invitation.id,
+    user_id: access.user.id,
+    organisation_terms_accepted: consent.organisationTermsAccepted,
+    reporting_consent: consent.reportingConsent,
+    adviser_insight_consent: consent.adviserInsightConsent,
+    marketing_consent: consent.marketingConsent,
+    communication_preferences: consent.communicationPreferences,
+    source: "invitation_acceptance",
+    synthetic_run_marker: invitation.synthetic_run_marker,
+  }).select("id").single();
+  if (consentInsert.error) throw new EnterpriseOperationError("consent_acceptance_failed", consentInsert.error.message, 500);
+  if (invitation.invitation_type === "organisation_admin" && organisation.status === "pending_administrator_acceptance") {
+    await client.from("enterprise_organisations").update({ status: "active", updated_at: now }).eq("id", organisation.id);
+  }
+  return {
+    invitation: mapInvitation(accepted.data as EnterpriseInvitationRow),
+    membership: mapMembership(membership.data as EnterpriseMembershipRow),
+    consentAcceptanceId: consentInsert.data?.id,
+  };
+}
+
+export async function transitionEnterpriseMembership(client: AnySupabaseClient, membershipId: string, nextStatus: string, reason: unknown) {
+  const current = await getMembershipRow(client, membershipId);
+  const normalized = normalizeChoice(nextStatus, ENTERPRISE_MEMBERSHIP_STATUSES, "Choose a valid membership status.");
+  if (!isValidMembershipTransition(current.membership_status, normalized)) {
+    throw new EnterpriseOperationError("invalid_membership_transition", `Cannot move membership from ${current.membership_status} to ${normalized}.`, 409);
+  }
+  const now = new Date().toISOString();
+  const patch: Record<string, unknown> = { membership_status: normalized, updated_at: now };
+  if (normalized === "suspended") patch.suspended_at = now;
+  if (normalized === "active") patch.last_active_at = now;
+  if (normalized === "removed") patch.removed_at = now;
+  const update = await client.from("enterprise_memberships").update(patch).eq("id", membershipId).select(MEMBERSHIP_SELECT).single();
+  if (update.error || !update.data) throw new EnterpriseOperationError("membership_update_failed", update.error?.message ?? "Could not update membership.", 500);
+  if (current.seat_id) {
+    if (normalized === "suspended") await setEnterpriseSeatStatus(client, current.seat_id, "suspended", current.user_id);
+    if (normalized === "active" && current.membership_status === "suspended") await setEnterpriseSeatStatus(client, current.seat_id, "active", current.user_id);
+    if (normalized === "removed") await releaseEnterpriseSeat(client, current.seat_id, optionalText(reason) ?? "membership_removed");
+  }
+  return { before: mapMembership(current), after: mapMembership(update.data as EnterpriseMembershipRow) };
+}
+
+export async function createEnterpriseEnrolmentLink(client: AnySupabaseClient, access: AdminAccessState, input: Record<string, unknown>) {
+  const organisationId = requiredText(input.organisationId, "Organisation is required.");
+  const licenceId = requiredText(input.licenceId, "Licence is required.");
+  const organisation = await getOrganisationRow(client, organisationId);
+  if (organisation.status !== "active") throw new EnterpriseOperationError("organisation_link_blocked", "Only active organisations can create enrolment links.", 409);
+  const licence = await getLicenceRow(client, licenceId);
+  if (licence.organisation_id !== organisationId) throw new EnterpriseOperationError("licence_scope_mismatch", "Choose a licence for this organisation.", 403);
+  if (!["active", "expiring"].includes(licence.licence_status)) throw new EnterpriseOperationError("licence_allocation_blocked", "Only active licences can accept enrolment claims.", 409);
+  const token = randomBytes(32).toString("base64url");
+  const insert = await client.from("enterprise_enrolment_links").insert({
+    organisation_id: organisationId,
+    licence_id: licenceId,
+    display_name: requiredText(input.displayName, "Display name is required."),
+    token_hash: hashInvitationToken(token),
+    expires_at: optionalDateTime(input.expiresAt) ?? new Date(Date.now() + Math.max(Number(input.expiryDays ?? 14), 1) * 24 * 60 * 60 * 1000).toISOString(),
+    max_claims: boundedInteger(input.maxClaims ?? 1, 1, 10000, "Claim limit must be between 1 and 10000."),
+    allowed_email_domain: normalizeDomain(input.allowedEmailDomain),
+    approval_required: Boolean(input.approvalRequired),
+    default_role: normalizeMembershipRole(input.defaultRole ?? "organisation_member"),
+    created_by_user_id: access.user.id,
+    synthetic_run_marker: optionalText(input.syntheticRunMarker),
+  }).select(ENROLMENT_LINK_SELECT).single();
+  if (insert.error || !insert.data) throw new EnterpriseOperationError("enrolment_link_create_failed", insert.error?.message ?? "Could not create enrolment link.", 500);
+  return { ...mapEnrolmentLink(insert.data as EnterpriseEnrolmentLinkRow), stagingClaimPath: buildEnterpriseEnrolmentClaimPath(token) };
+}
+
+export async function claimEnterpriseEnrolmentLink(
+  client: AnySupabaseClient,
+  access: { user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> | null } },
+  input: Record<string, unknown>,
+) {
+  const link = await getEnrolmentLinkByToken(client, requiredText(input.token, "Enrolment token is required."));
+  assertEnrolmentLinkClaimable(link);
+  const email = normalizeEnterpriseEmail(access.user.email);
+  if (!email) throw new EnterpriseOperationError("claim_identity_required", "Sign in before claiming this enrolment link.", 401);
+  const domain = email.split("@")[1] ?? "";
+  if (link.allowed_email_domain && domain !== link.allowed_email_domain) {
+    throw new EnterpriseOperationError("claim_domain_rejected", "This enrolment link is restricted to a different email domain.", 403);
+  }
+  const organisation = await getOrganisationRow(client, link.organisation_id);
+  if (organisation.status !== "active") throw new EnterpriseOperationError("organisation_link_blocked", "This organisation is not accepting enrolment claims.", 409);
+  const consent = normaliseConsentInput(input);
+  if (!consent.organisationTermsAccepted) throw new EnterpriseOperationError("organisation_terms_required", "Accept the organisation terms to continue.", 400);
+  const reservation = await createEnterpriseSeatReservation(client, link.licence_id, { email, syntheticRunMarker: link.synthetic_run_marker });
+  const now = new Date().toISOString();
+  await assertNoActiveMembershipForUser(client, link.organisation_id, access.user.id);
+  const membership = await client.from("enterprise_memberships").insert({
+    organisation_id: link.organisation_id,
+    licence_id: link.licence_id,
+    seat_id: reservation.seatId,
+    user_id: access.user.id,
+    email_normalized: email,
+    full_name: optionalText(access.user.user_metadata?.full_name) ?? email,
+    organisation_role: normalizeMembershipRole(link.default_role),
+    membership_status: "active",
+    onboarding_status: "pending",
+    consent_status: consent.marketingConsent === false ? "partially_accepted" : "accepted",
+    joined_at: now,
+    synthetic_run_marker: link.synthetic_run_marker,
+    updated_by_user_id: access.user.id,
+  }).select(MEMBERSHIP_SELECT).single();
+  if (membership.error || !membership.data) throw new EnterpriseOperationError("enrolment_membership_failed", membership.error?.message ?? "Could not activate enrolment membership.", 500);
+  await activateEnterpriseSeat(client, String(reservation.seatId), access.user.id, membership.data.id);
+  const claim = await client.from("enterprise_enrolment_claims").insert({
+    enrolment_link_id: link.id,
+    organisation_id: link.organisation_id,
+    licence_id: link.licence_id,
+    membership_id: membership.data.id,
+    seat_id: reservation.seatId,
+    claimed_by_user_id: access.user.id,
+    email_normalized: email,
+    claim_status: "accepted",
+    synthetic_run_marker: link.synthetic_run_marker,
+  }).select("id").single();
+  if (claim.error) throw new EnterpriseOperationError("enrolment_claim_failed", claim.error.message, 409);
+  const used = Number(link.claims_used ?? 0) + 1;
+  await client.from("enterprise_enrolment_links").update({
+    claims_used: used,
+    status: used >= Number(link.max_claims) ? "exhausted" : link.status,
+    updated_at: now,
+  }).eq("id", link.id);
+  const consentInsert = await client.from("enterprise_consent_acceptances").insert({
+    organisation_id: link.organisation_id,
+    membership_id: membership.data.id,
+    user_id: access.user.id,
+    organisation_terms_accepted: consent.organisationTermsAccepted,
+    reporting_consent: consent.reportingConsent,
+    adviser_insight_consent: consent.adviserInsightConsent,
+    marketing_consent: consent.marketingConsent,
+    communication_preferences: consent.communicationPreferences,
+    source: "enrolment_link_claim",
+    synthetic_run_marker: link.synthetic_run_marker,
+  }).select("id").single();
+  if (consentInsert.error) throw new EnterpriseOperationError("consent_acceptance_failed", consentInsert.error.message, 500);
+  return { membership: mapMembership(membership.data as EnterpriseMembershipRow), claimId: claim.data?.id, consentAcceptanceId: consentInsert.data?.id };
+}
+
+export async function updateEnterpriseEnrolmentLinkStatus(client: AnySupabaseClient, linkId: string, status: string) {
+  const normalized = normalizeChoice(status, ENTERPRISE_ENROLMENT_LINK_STATUSES, "Choose a valid enrolment-link status.");
+  const patch: Record<string, unknown> = { status: normalized, updated_at: new Date().toISOString() };
+  if (normalized === "revoked") patch.revoked_at = new Date().toISOString();
+  const update = await client.from("enterprise_enrolment_links").update(patch).eq("id", linkId).select(ENROLMENT_LINK_SELECT).single();
+  if (update.error || !update.data) throw new EnterpriseOperationError("enrolment_link_update_failed", update.error?.message ?? "Could not update enrolment link.", 500);
+  return mapEnrolmentLink(update.data as EnterpriseEnrolmentLinkRow);
 }
 
 export async function saveEnterpriseView(client: AnySupabaseClient, access: AdminAccessState, input: Record<string, unknown>) {
@@ -708,23 +1073,6 @@ export async function buildEnterpriseReportExportDecision(client: AnySupabaseCli
     cohort,
     minimumCohort: ENTERPRISE_REPORT_MINIMUM_COHORT,
   };
-}
-
-async function incrementLicenceInvitedSeats(client: AnySupabaseClient, licenceId: string | null) {
-  if (!licenceId) return;
-  const current = await client
-    .from("enterprise_licences")
-    .select(LICENCE_SELECT)
-    .eq("id", licenceId)
-    .single();
-  if (current.error || !current.data) return;
-  if (!["active", "expiring", "pending_approval"].includes(String(current.data.licence_status))) {
-    throw new EnterpriseOperationError("licence_allocation_blocked", "Cancelled, expired or suspended licences cannot allocate new seats.", 409);
-  }
-  const invited = Number(current.data.invited_seats ?? 0) + 1;
-  const allocated = committedSeatsForRow(current.data as EnterpriseLicenceRow) + 1;
-  assertSeatEntitlement(Number(current.data.purchased_seats ?? 0), allocated);
-  await client.from("enterprise_licences").update({ invited_seats: invited, allocated_seats: allocated, updated_at: new Date().toISOString() }).eq("id", licenceId);
 }
 
 function buildAdoptionBands(
@@ -838,7 +1186,83 @@ function mapInvitation(row: EnterpriseInvitationRow) {
     acceptedAt: row.accepted_at,
     revokedAt: row.revoked_at,
     failureReason: row.failure_reason,
+    scope: row.scope ?? "organisation",
+    accessExpiresAt: row.access_expires_at ?? null,
+    resendCount: Number(row.resend_count ?? 0),
+    lastResentAt: row.last_resent_at ?? null,
+    deliveredAt: row.delivered_at ?? null,
+    failedAt: row.failed_at ?? null,
+    seatId: row.seat_id ?? null,
+    internalReference: row.internal_reference ?? null,
+    department: row.department ?? null,
+    syntheticRunMarker: row.synthetic_run_marker ?? null,
     createdAt: row.created_at,
+  };
+}
+
+function mapMembership(row: EnterpriseMembershipRow) {
+  return {
+    id: row.id,
+    organisationId: row.organisation_id,
+    licenceId: row.licence_id,
+    seatId: row.seat_id,
+    userId: row.user_id,
+    email: row.email_normalized,
+    fullName: row.full_name,
+    organisationRole: row.organisation_role,
+    status: row.membership_status,
+    onboardingStatus: row.onboarding_status,
+    consentStatus: row.consent_status,
+    internalReference: row.internal_reference,
+    department: row.department,
+    invitedAt: row.invited_at,
+    joinedAt: row.joined_at,
+    suspendedAt: row.suspended_at,
+    removedAt: row.removed_at,
+    lastActiveAt: row.last_active_at,
+    accessExpiresAt: row.access_expires_at,
+    syntheticRunMarker: row.synthetic_run_marker,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapEnrolmentLink(row: EnterpriseEnrolmentLinkRow) {
+  return {
+    id: row.id,
+    organisationId: row.organisation_id,
+    licenceId: row.licence_id,
+    displayName: row.display_name,
+    status: row.status,
+    expiresAt: row.expires_at,
+    maxClaims: Number(row.max_claims ?? 0),
+    claimsUsed: Number(row.claims_used ?? 0),
+    allowedEmailDomain: row.allowed_email_domain,
+    approvalRequired: row.approval_required,
+    defaultRole: row.default_role,
+    revokedAt: row.revoked_at,
+    syntheticRunMarker: row.synthetic_run_marker,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapConsentAcceptance(row: EnterpriseConsentAcceptanceRow) {
+  return {
+    id: row.id,
+    organisationId: row.organisation_id,
+    membershipId: row.membership_id,
+    invitationId: row.invitation_id,
+    userId: row.user_id,
+    consentVersion: row.consent_version,
+    organisationTermsAccepted: row.organisation_terms_accepted,
+    reportingConsent: row.reporting_consent,
+    adviserInsightConsent: row.adviser_insight_consent,
+    marketingConsent: row.marketing_consent,
+    communicationPreferences: row.communication_preferences ?? {},
+    source: row.source,
+    syntheticRunMarker: row.synthetic_run_marker,
+    acceptedAt: row.accepted_at,
   };
 }
 
@@ -922,6 +1346,88 @@ function normalizeChoice<T extends readonly string[]>(value: unknown, choices: T
   throw new EnterpriseOperationError("invalid_payload", message, 400);
 }
 
+function normalizeEnterpriseRole(value: unknown) {
+  return normalizeChoice(value, ENTERPRISE_ORGANISATION_ROLES, "Choose a valid organisation role.");
+}
+
+function normalizeMembershipRole(value: unknown) {
+  const role = normalizeEnterpriseRole(value);
+  if (role === "enterprise_user") return "organisation_member";
+  if (role === "licence_manager") return "organisation_licence_manager";
+  if (role === "user_manager") return "organisation_user_manager";
+  if (role === "reporting_viewer") return "organisation_reporting_viewer";
+  if (role === "read_only_auditor") return "organisation_auditor";
+  return role;
+}
+
+function optionalDateTime(value: unknown) {
+  const text = optionalText(value);
+  if (!text) return null;
+  const date = new Date(text);
+  if (Number.isNaN(date.getTime())) throw new EnterpriseOperationError("invalid_date", "Enter a valid date and time.", 400);
+  return date.toISOString();
+}
+
+function normalizeDomain(value: unknown) {
+  const text = optionalText(value);
+  if (!text) return null;
+  const normalized = text.toLowerCase().replace(/^@/, "");
+  if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(normalized)) throw new EnterpriseOperationError("invalid_domain", "Enter a valid email domain.", 400);
+  return normalized;
+}
+
+function assertInvitationCanBeAccepted(invitation: EnterpriseInvitationRow) {
+  if (!["sent", "delivered"].includes(invitation.status)) {
+    throw new EnterpriseOperationError("invitation_not_active", "This invitation is no longer active.", invitation.status === "accepted" ? 409 : 410);
+  }
+  if (new Date(invitation.expires_at).getTime() < Date.now()) {
+    throw new EnterpriseOperationError("invitation_expired", "This invitation has expired.", 410);
+  }
+}
+
+function assertEnrolmentLinkClaimable(link: EnterpriseEnrolmentLinkRow) {
+  if (link.status !== "active") {
+    throw new EnterpriseOperationError("enrolment_link_not_active", "This enrolment link is not active.", 410);
+  }
+  if (new Date(link.expires_at).getTime() < Date.now()) {
+    throw new EnterpriseOperationError("enrolment_link_expired", "This enrolment link has expired.", 410);
+  }
+  if (Number(link.claims_used ?? 0) >= Number(link.max_claims ?? 0)) {
+    throw new EnterpriseOperationError("enrolment_link_exhausted", "This enrolment link has already reached its claim limit.", 409);
+  }
+}
+
+function normaliseConsentInput(input: Record<string, unknown>) {
+  return {
+    organisationTermsAccepted: Boolean(input.organisationTermsAccepted ?? input.termsAccepted),
+    reportingConsent: Boolean(input.reportingConsent),
+    adviserInsightConsent: Boolean(input.adviserInsightConsent),
+    marketingConsent: Boolean(input.marketingConsent),
+    communicationPreferences: typeof input.communicationPreferences === "object" && input.communicationPreferences !== null
+      ? input.communicationPreferences as Record<string, unknown>
+      : {},
+  };
+}
+
+function isValidMembershipTransition(from: string, to: string) {
+  if (from === to) return true;
+  const allowed: Record<string, string[]> = {
+    invited: ["active", "removed"],
+    active: ["suspended", "removed"],
+    suspended: ["active", "removed"],
+    removed: [],
+  };
+  return (allowed[from] ?? []).includes(to);
+}
+
+function buildEnterpriseInvitationAcceptPath(token: string) {
+  return `/accept-invitation?type=enterprise&token=${encodeURIComponent(token)}`;
+}
+
+function buildEnterpriseEnrolmentClaimPath(token: string) {
+  return `/accept-invitation?type=enrolment&token=${encodeURIComponent(token)}`;
+}
+
 function structuredAddress(value: unknown) {
   return typeof value === "object" && value !== null ? value : {};
 }
@@ -940,6 +1446,48 @@ async function getLicenceRow(client: AnySupabaseClient, licenceId: string) {
   return res.data as EnterpriseLicenceRow;
 }
 
+async function getInvitationRow(client: AnySupabaseClient, invitationId: string) {
+  const res = await client.from("enterprise_invitations").select(INVITATION_SELECT).eq("id", invitationId).maybeSingle();
+  if (res.error) throw new EnterpriseOperationError("invitation_query_failed", res.error.message, 500);
+  if (!res.data) throw new EnterpriseOperationError("invitation_not_found", "Invitation not found.", 404);
+  return res.data as EnterpriseInvitationRow;
+}
+
+async function getMembershipRow(client: AnySupabaseClient, membershipId: string) {
+  const res = await client.from("enterprise_memberships").select(MEMBERSHIP_SELECT).eq("id", membershipId).maybeSingle();
+  if (res.error) throw new EnterpriseOperationError("membership_query_failed", res.error.message, 500);
+  if (!res.data) throw new EnterpriseOperationError("membership_not_found", "Membership not found.", 404);
+  return res.data as EnterpriseMembershipRow;
+}
+
+async function assertNoActiveMembershipForUser(client: AnySupabaseClient, organisationId: string, userId: string) {
+  const res = await client
+    .from("enterprise_memberships")
+    .select("id")
+    .eq("organisation_id", organisationId)
+    .eq("user_id", userId)
+    .in("membership_status", ["invited", "active", "suspended"])
+    .limit(1);
+  if (res.error) throw new EnterpriseOperationError("membership_duplicate_check_failed", res.error.message, 500);
+  if ((res.data ?? []).length > 0) {
+    throw new EnterpriseOperationError("duplicate_membership", "This user already has active organisation access.", 409);
+  }
+}
+
+async function getInvitationByToken(client: AnySupabaseClient, token: string) {
+  const res = await client.from("enterprise_invitations").select(INVITATION_SELECT).eq("token_hash", hashInvitationToken(token)).maybeSingle();
+  if (res.error) throw new EnterpriseOperationError("invitation_query_failed", res.error.message, 500);
+  if (!res.data) throw new EnterpriseOperationError("invitation_not_found", "Invitation not found.", 404);
+  return res.data as EnterpriseInvitationRow;
+}
+
+async function getEnrolmentLinkByToken(client: AnySupabaseClient, token: string) {
+  const res = await client.from("enterprise_enrolment_links").select(ENROLMENT_LINK_SELECT).eq("token_hash", hashInvitationToken(token)).maybeSingle();
+  if (res.error) throw new EnterpriseOperationError("enrolment_link_query_failed", res.error.message, 500);
+  if (!res.data) throw new EnterpriseOperationError("enrolment_link_not_found", "Enrolment link not found.", 404);
+  return res.data as EnterpriseEnrolmentLinkRow;
+}
+
 async function assertNoOpenLicenceForOrganisation(client: AnySupabaseClient, organisationId: string, excludeId?: string) {
   let query = client
     .from("enterprise_licences")
@@ -956,6 +1504,75 @@ async function assertNoOpenLicenceForOrganisation(client: AnySupabaseClient, org
 function committedSeatsForRow(row: Pick<EnterpriseLicenceRow, "active_seats" | "invited_seats" | "suspended_seats" | "allocated_seats">) {
   const derived = Number(row.active_seats ?? 0) + Number(row.invited_seats ?? 0) + Number(row.suspended_seats ?? 0);
   return Math.max(derived, Number(row.allocated_seats ?? 0));
+}
+
+async function activateEnterpriseSeat(client: AnySupabaseClient, seatId: string, userId: string, membershipId: string) {
+  const seatRes = await client.from("enterprise_seats").select("id,licence_id,seat_status").eq("id", seatId).maybeSingle();
+  if (seatRes.error) throw new EnterpriseOperationError("seat_query_failed", seatRes.error.message, 500);
+  if (!seatRes.data) throw new EnterpriseOperationError("seat_not_found", "Seat reservation not found.", 404);
+  if (seatRes.data.seat_status !== "invited") throw new EnterpriseOperationError("seat_not_activatable", "Only invited seats can be activated.", 409);
+  const licence = await getLicenceRow(client, String(seatRes.data.licence_id));
+  const updateSeat = await client.from("enterprise_seats").update({
+    user_id: userId,
+    membership_id: membershipId,
+    seat_status: "active",
+    activated_at: new Date().toISOString(),
+  }).eq("id", seatId);
+  if (updateSeat.error) throw new EnterpriseOperationError("seat_activation_failed", updateSeat.error.message, 500);
+  const invited = Math.max(Number(licence.invited_seats ?? 0) - 1, 0);
+  const active = Number(licence.active_seats ?? 0) + 1;
+  await client.from("enterprise_licences").update({
+    invited_seats: invited,
+    active_seats: active,
+    allocated_seats: active + invited + Number(licence.suspended_seats ?? 0),
+    updated_at: new Date().toISOString(),
+  }).eq("id", licence.id);
+}
+
+async function setEnterpriseSeatStatus(client: AnySupabaseClient, seatId: string, status: "active" | "suspended", userId: string) {
+  const seatRes = await client.from("enterprise_seats").select("id,licence_id,seat_status").eq("id", seatId).maybeSingle();
+  if (seatRes.error || !seatRes.data) throw new EnterpriseOperationError("seat_query_failed", seatRes.error?.message ?? "Seat not found.", seatRes.error ? 500 : 404);
+  const licence = await getLicenceRow(client, String(seatRes.data.licence_id));
+  const from = String(seatRes.data.seat_status);
+  if (from === status) return;
+  const patch: Record<string, unknown> = { seat_status: status, user_id: userId };
+  if (status === "suspended") patch.suspended_at = new Date().toISOString();
+  if (status === "active") patch.activated_at = new Date().toISOString();
+  const updateSeat = await client.from("enterprise_seats").update(patch).eq("id", seatId);
+  if (updateSeat.error) throw new EnterpriseOperationError("seat_status_failed", updateSeat.error.message, 500);
+  const active = Number(licence.active_seats ?? 0) + (status === "active" ? 1 : -1);
+  const suspended = Number(licence.suspended_seats ?? 0) + (status === "suspended" ? 1 : -1);
+  const invited = Number(licence.invited_seats ?? 0);
+  await client.from("enterprise_licences").update({
+    active_seats: Math.max(active, 0),
+    suspended_seats: Math.max(suspended, 0),
+    allocated_seats: Math.max(active, 0) + invited + Math.max(suspended, 0),
+    updated_at: new Date().toISOString(),
+  }).eq("id", licence.id);
+}
+
+async function releaseEnterpriseSeat(client: AnySupabaseClient, seatId: string, reason: string) {
+  const seatRes = await client.from("enterprise_seats").select("id,licence_id,seat_status").eq("id", seatId).maybeSingle();
+  if (seatRes.error) throw new EnterpriseOperationError("seat_query_failed", seatRes.error.message, 500);
+  if (!seatRes.data || seatRes.data.seat_status === "removed") return;
+  const licence = await getLicenceRow(client, String(seatRes.data.licence_id));
+  const status = String(seatRes.data.seat_status);
+  const updateSeat = await client.from("enterprise_seats").update({
+    seat_status: "removed",
+    released_at: new Date().toISOString(),
+  }).eq("id", seatId);
+  if (updateSeat.error) throw new EnterpriseOperationError("seat_release_failed", updateSeat.error.message, 500);
+  const invited = Number(licence.invited_seats ?? 0) - (status === "invited" ? 1 : 0);
+  const active = Number(licence.active_seats ?? 0) - (status === "active" ? 1 : 0);
+  const suspended = Number(licence.suspended_seats ?? 0) - (status === "suspended" ? 1 : 0);
+  await client.from("enterprise_licences").update({
+    invited_seats: Math.max(invited, 0),
+    active_seats: Math.max(active, 0),
+    suspended_seats: Math.max(suspended, 0),
+    allocated_seats: Math.max(invited, 0) + Math.max(active, 0) + Math.max(suspended, 0),
+    renewal_notes: appendReason(licence.renewal_notes, reason),
+    updated_at: new Date().toISOString(),
+  }).eq("id", licence.id);
 }
 
 function assertSeatEntitlement(purchasedSeats: number, committedSeats: number) {

@@ -57,7 +57,10 @@ type Licence = {
 type Detail = {
   organisation: Organisation;
   licences: Licence[];
-  invitations: Array<{ id: string; email: string; invitationType: string; status: string }>;
+  invitations: Array<{ id: string; email: string; invitationType: string; roleTemplate: string; status: string; seatId: string | null; expiresAt: string; resendCount: number }>;
+  memberships: Array<{ id: string; email: string; fullName: string | null; organisationRole: string; status: string; onboardingStatus: string; consentStatus: string; seatId: string | null }>;
+  enrolmentLinks: Array<{ id: string; displayName: string; status: string; maxClaims: number; claimsUsed: number; allowedEmailDomain: string | null }>;
+  consentAcceptances: Array<{ id: string; organisationTermsAccepted: boolean; reportingConsent: boolean; adviserInsightConsent: boolean; marketingConsent: boolean; acceptedAt: string }>;
   auditEvents: Array<{ id: string; action: string; result: string; actor_email_normalized: string | null; actor_role: string | null; created_at: string; policy_decision: string; metadata: Record<string, unknown> }>;
 };
 
@@ -107,6 +110,25 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
     licenceStatus: "active",
     accountOwner: "",
     renewalNotes: "",
+  });
+  const [inviteForm, setInviteForm] = useState({
+    licenceId: "",
+    email: "",
+    fullName: "",
+    invitationType: "enterprise_user",
+    roleTemplate: "organisation_member",
+    expiryDays: 14,
+    requireMfa: false,
+    internalReference: "",
+    department: "",
+  });
+  const [enrolmentForm, setEnrolmentForm] = useState({
+    licenceId: "",
+    displayName: "",
+    expiryDays: 14,
+    maxClaims: 1,
+    allowedEmailDomain: "",
+    defaultRole: "organisation_member",
   });
 
   const authFetch = useCallback(async (input: string, init?: RequestInit) => {
@@ -267,6 +289,64 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
           </tbody></table>
         </section>
       ) : null}
+      {tab === "users" ? (
+        <section style={panelStyle}>
+          <h2>Users and seats</h2>
+          <dl style={detailsGridStyle}>
+            <Info label="Active members" value={String(detail.memberships.filter((item) => item.status === "active").length)} />
+            <Info label="Invited seats" value={String(detail.licences.reduce((sum, licence) => sum + licence.invitedSeats, 0))} />
+            <Info label="Available seats" value={String(detail.licences.reduce((sum, licence) => sum + licence.availableSeats, 0))} />
+            <Info label="Consent accepted" value={String(detail.consentAcceptances.length)} />
+          </dl>
+          <table style={tableStyle}><thead><tr><th>User</th><th>Role</th><th>Status</th><th>Seat</th><th>Consent</th><th>Actions</th></tr></thead><tbody>
+            {detail.memberships.map((member) => (
+              <tr key={member.id}>
+                <td>{member.fullName || member.email}<small>{member.email}</small></td>
+                <td>{labelise(member.organisationRole)}</td>
+                <td>{labelise(member.status)}</td>
+                <td>{member.seatId ? "Assigned" : "No seat"}</td>
+                <td>{labelise(member.consentStatus)}</td>
+                <td style={rowStyle}>
+                  <button type="button" style={secondaryButtonStyle} onClick={() => runAction("transition_membership", { membershipId: member.id, status: member.status === "suspended" ? "active" : "suspended", reason })}>{member.status === "suspended" ? "Reactivate" : "Suspend"}</button>
+                  <button type="button" style={secondaryButtonStyle} onClick={() => runAction("transition_membership", { membershipId: member.id, status: "removed", reason })}>Remove</button>
+                </td>
+              </tr>
+            ))}
+            {detail.memberships.length === 0 ? <tr><td colSpan={6}>No organisation users have accepted access yet.</td></tr> : null}
+          </tbody></table>
+          <p style={privacyStyle}>Organisation membership is separate from the user’s personal vault. Suspending or removing access does not delete their personal account.</p>
+        </section>
+      ) : null}
+      {tab === "invitations" ? (
+        <section style={panelStyle}>
+          <h2>Invite administrator or user</h2>
+          <label style={labelStyle}>Licence<select value={inviteForm.licenceId} onChange={(event) => setInviteForm({ ...inviteForm, licenceId: event.target.value })}><option value="">No seat allocation</option>{detail.licences.map((licence) => <option key={licence.id} value={licence.id}>{licence.plan} · {licence.availableSeats} available</option>)}</select></label>
+          <label style={labelStyle}>Invitation type<select value={inviteForm.invitationType} onChange={(event) => setInviteForm({ ...inviteForm, invitationType: event.target.value })}><option value="enterprise_user">Enterprise user</option><option value="organisation_admin">Organisation administrator</option></select></label>
+          <label style={labelStyle}>Role<select value={inviteForm.roleTemplate} onChange={(event) => setInviteForm({ ...inviteForm, roleTemplate: event.target.value })}><option value="organisation_member">Organisation member</option><option value="organisation_admin">Organisation administrator</option><option value="organisation_licence_manager">Licence manager</option><option value="organisation_user_manager">User manager</option><option value="organisation_reporting_viewer">Reporting viewer</option><option value="organisation_auditor">Auditor/read-only</option></select></label>
+          <FormInput label="Email" required value={inviteForm.email} onChange={(email) => setInviteForm({ ...inviteForm, email })} />
+          <FormInput label="Full name" value={inviteForm.fullName} onChange={(fullName) => setInviteForm({ ...inviteForm, fullName })} />
+          <FormInput label="Department" value={inviteForm.department} onChange={(department) => setInviteForm({ ...inviteForm, department })} />
+          <FormInput label="Expiry days" type="number" value={String(inviteForm.expiryDays)} onChange={(value) => setInviteForm({ ...inviteForm, expiryDays: Number(value) })} />
+          <label style={checkboxStyle}><input type="checkbox" checked={inviteForm.requireMfa} onChange={(event) => setInviteForm({ ...inviteForm, requireMfa: event.target.checked })} /> Require MFA</label>
+          <button type="button" style={primaryButtonStyle} onClick={() => runAction(inviteForm.invitationType === "organisation_admin" ? "invite_organisation_admin" : "invite_enterprise_user", inviteForm)}>Send invitation</button>
+          <h2>Enrolment link</h2>
+          <label style={labelStyle}>Licence<select value={enrolmentForm.licenceId} onChange={(event) => setEnrolmentForm({ ...enrolmentForm, licenceId: event.target.value })}><option value="">Select licence</option>{detail.licences.map((licence) => <option key={licence.id} value={licence.id}>{licence.plan} · {licence.availableSeats} available</option>)}</select></label>
+          <FormInput label="Display name" required value={enrolmentForm.displayName} onChange={(displayName) => setEnrolmentForm({ ...enrolmentForm, displayName })} />
+          <FormInput label="Claim limit" type="number" value={String(enrolmentForm.maxClaims)} onChange={(value) => setEnrolmentForm({ ...enrolmentForm, maxClaims: Number(value) })} />
+          <FormInput label="Allowed email domain" value={enrolmentForm.allowedEmailDomain} onChange={(allowedEmailDomain) => setEnrolmentForm({ ...enrolmentForm, allowedEmailDomain })} />
+          <button type="button" style={primaryButtonStyle} onClick={() => runAction("create_enrolment_link", enrolmentForm)}>Create enrolment link</button>
+          <h2>Invitation history</h2>
+          <table style={tableStyle}><thead><tr><th>Recipient</th><th>Role</th><th>Status</th><th>Seat</th><th>Actions</th></tr></thead><tbody>
+            {detail.invitations.map((item) => <tr key={item.id}><td>{item.email}</td><td>{labelise(item.roleTemplate)}</td><td>{labelise(item.status)}</td><td>{item.seatId ? "Reserved" : "Not reserved"}</td><td style={rowStyle}><button type="button" style={secondaryButtonStyle} onClick={() => runAction("update_invitation", { invitationId: item.id, status: "sent" })}>Resend</button><button type="button" style={secondaryButtonStyle} onClick={() => runAction("update_invitation", { invitationId: item.id, status: "revoked" })}>Revoke</button></td></tr>)}
+            {detail.invitations.length === 0 ? <tr><td colSpan={5}>No invitations have been sent for this organisation.</td></tr> : null}
+          </tbody></table>
+          <h2>Enrolment links</h2>
+          <table style={tableStyle}><thead><tr><th>Name</th><th>Status</th><th>Claims</th><th>Domain</th></tr></thead><tbody>
+            {detail.enrolmentLinks.map((link) => <tr key={link.id}><td>{link.displayName}</td><td>{labelise(link.status)}</td><td>{link.claimsUsed}/{link.maxClaims}</td><td>{link.allowedEmailDomain || "Any"}</td></tr>)}
+            {detail.enrolmentLinks.length === 0 ? <tr><td colSpan={4}>No enrolment links have been created.</td></tr> : null}
+          </tbody></table>
+        </section>
+      ) : null}
       {tab === "settings" ? (
         <section style={panelStyle}>
           <h2>Edit organisation</h2>
@@ -292,7 +372,7 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
           </div>
         </section>
       ) : null}
-      {!["overview", "licence", "audit", "settings"].includes(tab) ? <section style={panelStyle}><h2>{labelise(tab)}</h2><p style={mutedStyle}>This section is staged for a later Enterprise Operations phase. No fabricated operational data is shown.</p></section> : null}
+      {!["overview", "licence", "users", "invitations", "audit", "settings"].includes(tab) ? <section style={panelStyle}><h2>{labelise(tab)}</h2><p style={mutedStyle}>This section is staged for a later Enterprise Operations phase. No fabricated operational data is shown.</p></section> : null}
     </main>
   );
 }
@@ -366,6 +446,7 @@ const tabListStyle: CSSProperties = { display: "flex", gap: 8, flexWrap: "wrap",
 const tabStyle: CSSProperties = { border: "1px solid #cbd5e1", background: "#fff", borderRadius: 6, padding: "9px 12px", fontWeight: 700 };
 const activeTabStyle: CSSProperties = { ...tabStyle, background: "#111827", color: "#fff", borderColor: "#111827" };
 const labelStyle: CSSProperties = { display: "grid", gap: 5, fontWeight: 700, color: "#334155", fontSize: 13 };
+const checkboxStyle: CSSProperties = { display: "flex", gap: 8, alignItems: "flex-start", color: "#334155", fontSize: 13, lineHeight: 1.45 };
 const rowStyle: CSSProperties = { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 };
 const stackStyle: CSSProperties = { display: "grid", gap: 12 };
 const tableWrapStyle: CSSProperties = { overflowX: "auto" };

@@ -3,6 +3,7 @@ import { requireAdminAccess, requireAdminCapability } from "@/lib/admin/access";
 import { recordAdminAuditEvent } from "@/lib/admin/audit";
 import {
   buildEnterpriseReportExportDecision,
+  createEnterpriseEnrolmentLink,
   createEnterpriseInvitation,
   createEnterpriseLicence,
   changeEnterpriseLicenceSeats,
@@ -15,9 +16,11 @@ import {
   loadEnterprisePortfolio,
   renewEnterpriseLicence,
   saveEnterpriseView,
+  transitionEnterpriseMembership,
   transitionEnterpriseLicence,
   transitionEnterpriseOrganisation,
   updateEnterpriseLicence,
+  updateEnterpriseEnrolmentLinkStatus,
   updateEnterpriseOrganisation,
   updateEnterpriseInvitationStatus,
 } from "@/lib/admin/enterpriseOperations";
@@ -211,7 +214,13 @@ export async function POST(request: Request) {
         ...body,
         invitationType: action === "invite_organisation_admin" ? "organisation_admin" : "enterprise_user",
       });
-      await recordEnterpriseAudit(request, admin, "Enterprise invitation sent", "access_policy", invitation.id, invitation.email);
+      await recordEnterpriseAudit(request, admin, action === "invite_organisation_admin" ? "Enterprise organisation administrator invitation sent" : "Enterprise user invitation sent", "access_policy", invitation.id, invitation.email, "success", {
+        organisation_id: invitation.organisationId,
+        licence_id: invitation.licenceId,
+        seat_id: invitation.seatId,
+        role_template: invitation.roleTemplate,
+        synthetic_run_marker: body.syntheticRunMarker ?? null,
+      });
       return NextResponse.json({ ok: true, invitation, portfolio: await loadEnterprisePortfolio(admin.adminClient, admin.access) });
     }
 
@@ -221,8 +230,70 @@ export async function POST(request: Request) {
         String(body.invitationId ?? ""),
         String(body.status ?? ""),
       );
-      await recordEnterpriseAudit(request, admin, `Enterprise invitation ${invitation.status}`, "access_policy", invitation.id, invitation.email);
+      await recordEnterpriseAudit(request, admin, `Enterprise invitation ${invitation.status}`, "access_policy", invitation.id, invitation.email, "success", {
+        organisation_id: invitation.organisationId,
+        licence_id: invitation.licenceId,
+        seat_released: ["revoked", "expired", "failed"].includes(invitation.status),
+        synthetic_run_marker: body.syntheticRunMarker ?? null,
+      });
       return NextResponse.json({ ok: true, invitation, portfolio: await loadEnterprisePortfolio(admin.adminClient, admin.access) });
+    }
+
+    if (action === "transition_membership") {
+      const result = await transitionEnterpriseMembership(admin.adminClient, String(body.membershipId ?? ""), String(body.status ?? ""), body.reason);
+      await recordEnterpriseAudit(request, admin, `Enterprise membership ${result.after.status}`, "access_policy", result.after.id, result.after.email, "success", {
+        organisation_id: result.after.organisationId,
+        licence_id: result.after.licenceId,
+        seat_id: result.after.seatId,
+        previous_status: result.before.status,
+        next_status: result.after.status,
+        synthetic_run_marker: body.syntheticRunMarker ?? null,
+      });
+      return NextResponse.json({ ok: true, membership: result.after, portfolio: await loadEnterprisePortfolio(admin.adminClient, admin.access) });
+    }
+
+    if (action === "create_enrolment_link") {
+      const link = await createEnterpriseEnrolmentLink(admin.adminClient, admin.access, body);
+      await recordEnterpriseAudit(request, admin, "Enterprise enrolment link created", "access_policy", link.id, link.displayName, "success", {
+        organisation_id: link.organisationId,
+        licence_id: link.licenceId,
+        max_claims: link.maxClaims,
+        approval_required: link.approvalRequired,
+        synthetic_run_marker: body.syntheticRunMarker ?? null,
+      });
+      return NextResponse.json({ ok: true, enrolmentLink: link, portfolio: await loadEnterprisePortfolio(admin.adminClient, admin.access) });
+    }
+
+    if (action === "update_enrolment_link") {
+      const link = await updateEnterpriseEnrolmentLinkStatus(admin.adminClient, String(body.enrolmentLinkId ?? ""), String(body.status ?? ""));
+      await recordEnterpriseAudit(request, admin, `Enterprise enrolment link ${link.status}`, "access_policy", link.id, link.displayName, "success", {
+        organisation_id: link.organisationId,
+        licence_id: link.licenceId,
+        synthetic_run_marker: body.syntheticRunMarker ?? null,
+      });
+      return NextResponse.json({ ok: true, enrolmentLink: link, portfolio: await loadEnterprisePortfolio(admin.adminClient, admin.access) });
+    }
+
+    if (action === "validate_bulk_invitations") {
+      const rows = Array.isArray(body.rows) ? body.rows : [];
+      const portfolio = await loadEnterprisePortfolio(admin.adminClient, admin.access);
+      const emails = new Set<string>();
+      const validation = rows.map((row, index) => {
+        const entry = row && typeof row === "object" ? row as Record<string, unknown> : {};
+        const email = String(entry.email ?? "").trim().toLowerCase();
+        const issues: string[] = [];
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) issues.push("invalid_email");
+        if (emails.has(email)) issues.push("duplicate_row");
+        emails.add(email);
+        if (!entry.licence_id) issues.push("missing_licence");
+        return { index, email, valid: issues.length === 0, issues };
+      });
+      await recordEnterpriseAudit(request, admin, "Enterprise bulk invitation validated", "access_policy", "", "Bulk invitation CSV", "success", {
+        rows: rows.length,
+        valid_rows: validation.filter((row) => row.valid).length,
+        synthetic_run_marker: body.syntheticRunMarker ?? null,
+      });
+      return NextResponse.json({ ok: true, validation, portfolio });
     }
 
     if (action === "save_view") {
@@ -283,6 +354,9 @@ function capabilityForEnterpriseAction(action: string) {
   if (action === "renew_licence") return "licence:renew" as const;
   if (action === "transition_licence") return "licence:lifecycle" as const;
   if (["invite_organisation_admin", "invite_enterprise_user", "update_invitation"].includes(action)) return "enterprise.invitation.manage" as const;
+  if (action === "transition_membership") return "enterprise.membership.manage" as const;
+  if (["create_enrolment_link", "update_enrolment_link"].includes(action)) return "enterprise.enrolment_link.manage" as const;
+  if (action === "validate_bulk_invitations") return "enterprise.invitation.manage" as const;
   if (action === "save_view") return "enterprise.report.read" as const;
   if (action === "export_report") return "enterprise.export.request" as const;
   return null;
