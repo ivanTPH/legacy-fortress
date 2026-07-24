@@ -407,6 +407,17 @@ async function assertEnterpriseActionScope(
     const res = await admin.adminClient.from("enterprise_enrolment_links").select("organisation_id").eq("id", enrolmentLinkId).maybeSingle();
     organisationId = String(res.data?.organisation_id ?? "");
   }
+  if (!organisationId && action === "validate_bulk_invitations" && Array.isArray(body.rows)) {
+    const licenceIds = [...new Set(body.rows
+      .map((row) => row && typeof row === "object" ? String((row as Record<string, unknown>).licence_id ?? (row as Record<string, unknown>).licenceId ?? "") : "")
+      .filter(Boolean))];
+    if (licenceIds.length > 0) {
+      const res = await admin.adminClient.from("enterprise_licences").select("organisation_id").in("id", licenceIds);
+      const organisationIds = [...new Set((res.data ?? []).map((row) => String(row.organisation_id ?? "")).filter(Boolean))];
+      const scope = admin.access.enterpriseScope;
+      if (organisationIds.length > 0 && organisationIds.every((id) => scope?.organisationIds.includes(id))) return null;
+    }
+  }
 
   return assertEnterpriseOrganisationScope(admin.access, organisationId);
 }
