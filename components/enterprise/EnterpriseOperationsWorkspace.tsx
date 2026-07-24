@@ -38,7 +38,26 @@ type EnterprisePortfolio = {
     seatUtilisation: number;
     consentRestricted: boolean;
   }>;
-  savedViews: Array<{ id: string; name: string; view_type: string; filters: Record<string, unknown>; created_at: string }>;
+  savedViews: Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    view_type: string;
+    filters: Record<string, unknown>;
+    shareScope: string;
+    isDefault: boolean;
+    lastUsedAt: string | null;
+    created_at: string;
+  }>;
+  reports: Array<{ type: string; label: string; exportAllowed: boolean; minimumCohort: number; aggregation: string; privateVaultFieldsExcluded: boolean }>;
+  reportRows: {
+    portfolio: number;
+    invitationStatus: Record<string, number>;
+    membershipStatus: Record<string, number>;
+    enrolmentLinkStatus: Record<string, number>;
+    consentReadiness: Array<{ organisationId: string; organisationName: string; reportingEligible: boolean; exportEligible: boolean; minimumCohort: number }>;
+  };
+  risk: Array<{ organisationId: string; organisationName: string; band: string; reasons: string[] }>;
   privacyBoundary: {
     vaultContentExcluded: boolean;
     documentContentExcluded: boolean;
@@ -187,6 +206,10 @@ type EnterpriseFilters = {
   country: string;
   accountOwner: string;
   onboarding: string;
+  membership: string;
+  role: string;
+  dateRange: string;
+  synthetic: string;
 };
 
 type EnterpriseOrgForm = {
@@ -280,6 +303,15 @@ const EMPTY_PORTFOLIO: EnterprisePortfolio = {
   consent: {},
   adoptionBands: [],
   savedViews: [],
+  reports: [],
+  reportRows: {
+    portfolio: 0,
+    invitationStatus: {},
+    membershipStatus: {},
+    enrolmentLinkStatus: {},
+    consentReadiness: [],
+  },
+  risk: [],
   privacyBoundary: {
     vaultContentExcluded: true,
     documentContentExcluded: true,
@@ -310,6 +342,10 @@ export default function EnterpriseOperationsWorkspace() {
     country: "",
     accountOwner: "",
     onboarding: "",
+    membership: "",
+    role: "",
+    dateRange: "",
+    synthetic: "",
   });
   const [orgForm, setOrgForm] = useState({
     legalName: "",
@@ -383,6 +419,7 @@ export default function EnterpriseOperationsWorkspace() {
   });
   const [bulkRows, setBulkRows] = useState("first_name,last_name,email,department,internal_reference,organisation_role,licence_id,invitation_expiry\n");
   const [savedViewName, setSavedViewName] = useState("");
+  const [reportType, setReportType] = useState("portfolio");
 
   const authFetch = useCallback(async (input: string, init?: RequestInit) => {
     const sessionRes = await supabase.auth.getSession();
@@ -470,6 +507,15 @@ export default function EnterpriseOperationsWorkspace() {
     return true;
   });
   const filteredInvitations = portfolio.invitations.filter((invitation) => visibleOrganisationIds.has(invitation.organisationId) && (!filters.invitation || invitation.status === filters.invitation));
+  const filteredMemberships = portfolio.memberships.filter((membership) => {
+    if (!visibleOrganisationIds.has(membership.organisationId)) return false;
+    if (filters.membership && membership.status !== filters.membership) return false;
+    if (filters.role && membership.organisationRole !== filters.role) return false;
+    if (filters.onboarding && membership.onboardingStatus !== filters.onboarding) return false;
+    if (filters.consent === "restricted" && membership.consentStatus === "accepted") return false;
+    if (filters.consent === "reportable" && membership.consentStatus !== "accepted") return false;
+    return true;
+  });
 
   if (state === "checking") {
     return (
@@ -539,20 +585,27 @@ export default function EnterpriseOperationsWorkspace() {
       {renderFilterBar(
         filters,
         setFilters,
-        () => setFilters({ organisation: "", status: "", type: "", licence: "", licencePlan: "", billingStatus: "", renewal: "", utilisation: "", invitation: "", adoption: "", consent: "", risk: "", country: "", accountOwner: "", onboarding: "" }),
+        () => setFilters({ organisation: "", status: "", type: "", licence: "", licencePlan: "", billingStatus: "", renewal: "", utilisation: "", invitation: "", adoption: "", consent: "", risk: "", country: "", accountOwner: "", onboarding: "", membership: "", role: "", dateRange: "", synthetic: "" }),
         () => runAction("save_view", { name: savedViewName || "Enterprise portfolio view", viewType: activeTab, filters }),
         savedViewName,
         setSavedViewName,
         portfolio.organisations,
+        portfolio.savedViews,
+        (view) => {
+          setFilters({ organisation: "", status: "", type: "", licence: "", licencePlan: "", billingStatus: "", renewal: "", utilisation: "", invitation: "", adoption: "", consent: "", risk: "", country: "", accountOwner: "", onboarding: "", membership: "", role: "", dateRange: "", synthetic: "", ...coerceSavedFilters(view.filters) });
+          setActiveTab((view.view_type === "portfolio" ? "overview" : view.view_type) as typeof activeTab);
+          void runAction("update_view", { viewId: view.id, touch: true });
+        },
+        (view) => runAction("delete_view", { viewId: view.id }),
       )}
 
-      {activeTab === "overview" ? renderOverview(portfolio, filteredOrganisations, filteredLicences, filteredInvitations, setActiveTab) : null}
+      {activeTab === "overview" ? renderOverview(portfolio, filteredOrganisations, filteredLicences, filteredInvitations, setActiveTab, setFilters) : null}
       {activeTab === "organisations" ? renderOrganisations(filteredOrganisations, portfolio, orgForm, setOrgForm, runAction, () => runAction("create_organisation", orgForm)) : null}
       {activeTab === "licences" ? renderLicences(filteredLicences, portfolio, licenceForm, setLicenceForm, () => runAction("create_licence", licenceForm)) : null}
-      {activeTab === "users" ? renderUsersAndSeats(portfolio, runAction) : null}
+      {activeTab === "users" ? renderUsersAndSeats({ ...portfolio, memberships: filteredMemberships }, runAction) : null}
       {activeTab === "invitations" ? renderInvitations(filteredInvitations, portfolio, inviteForm, setInviteForm, enrolmentForm, setEnrolmentForm, bulkRows, setBulkRows, runAction) : null}
       {activeTab === "adoption" ? renderAdoption(portfolio, filteredOrganisations) : null}
-      {activeTab === "reports" ? renderReports(portfolio, () => runAction("export_report", { reportType: "portfolio" })) : null}
+      {activeTab === "reports" ? renderReports(portfolio, reportType, setReportType, () => runAction("export_report", { reportType, filters })) : null}
       {activeTab === "consent" ? renderConsent(portfolio, filteredOrganisations) : null}
       {activeTab === "renewals" ? renderRenewals(filteredLicences, portfolio) : null}
       {activeTab === "settings" ? renderPhasePlaceholder("Account settings", "Enterprise account settings are staged for later phases. Organisation settings are available from each organisation detail workspace.") : null}
@@ -566,21 +619,28 @@ function renderOverview(
   licences: EnterpriseLicence[],
   invitations: EnterpriseInvitation[],
   setActiveTab: (tab: "overview" | "organisations" | "licences" | "users" | "invitations" | "adoption" | "reports" | "consent" | "renewals" | "settings") => void,
+  setFilters: (filters: EnterpriseFilters) => void,
 ) {
+  const baseFilters: EnterpriseFilters = { organisation: "", status: "", type: "", licence: "", licencePlan: "", billingStatus: "", renewal: "", utilisation: "", invitation: "", adoption: "", consent: "", risk: "", country: "", accountOwner: "", onboarding: "", membership: "", role: "", dateRange: "", synthetic: "" };
   const cards = [
-    { label: "Licensed organisations", value: portfolio.summary.organisations, tab: "organisations" as const },
-    { label: "Active licences", value: portfolio.summary.activeLicences, tab: "licences" as const },
-    { label: "Seats used", value: `${portfolio.summary.seats.active}/${portfolio.summary.seats.purchased}`, tab: "licences" as const },
-    { label: "Seats available", value: String(portfolio.summary.seats.available ?? Math.max(portfolio.summary.seats.purchased - portfolio.summary.seats.allocated, 0)), tab: "licences" as const },
-    { label: "Renewals due", value: portfolio.summary.renewalsDue, tab: "licences" as const },
-    { label: "Pending invitations", value: portfolio.summary.pendingInvitations, tab: "invitations" as const },
-    { label: "Consent restricted", value: portfolio.summary.consentRestricted, tab: "consent" as const },
+    { label: "Licensed organisations", value: portfolio.summary.organisations, tab: "organisations" as const, filters: baseFilters },
+    { label: "Active licences", value: portfolio.summary.activeLicences, tab: "licences" as const, filters: { ...baseFilters, licence: "active" } },
+    { label: "Seats used", value: `${portfolio.summary.seats.active}/${portfolio.summary.seats.purchased}`, tab: "users" as const, filters: { ...baseFilters, membership: "active" } },
+    { label: "Seats available", value: String(portfolio.summary.seats.available ?? Math.max(portfolio.summary.seats.purchased - portfolio.summary.seats.allocated, 0)), tab: "licences" as const, filters: { ...baseFilters, utilisation: "0_25" } },
+    { label: "Renewals due", value: portfolio.summary.renewalsDue, tab: "renewals" as const, filters: { ...baseFilters, renewal: "due_90" } },
+    { label: "Pending invitations", value: portfolio.summary.pendingInvitations, tab: "invitations" as const, filters: { ...baseFilters, invitation: "sent" } },
+    { label: "Low adoption", value: portfolio.adoptionBands.filter((row) => row.band === "low").length, tab: "adoption" as const, filters: { ...baseFilters, adoption: "low" } },
+    { label: "Consent restricted", value: portfolio.summary.consentRestricted, tab: "consent" as const, filters: { ...baseFilters, consent: "restricted" } },
+    { label: "At-risk organisations", value: portfolio.risk.filter((row) => row.band === "at_risk" || row.band === "critical").length, tab: "organisations" as const, filters: { ...baseFilters, risk: "at_risk" } },
   ];
   return (
     <div style={stackStyle}>
       <section style={gridStyle}>
         {cards.map((card) => (
-          <button key={card.label} type="button" style={metricButtonStyle} onClick={() => setActiveTab(card.tab)}>
+          <button key={card.label} type="button" style={metricButtonStyle} onClick={() => {
+            setFilters(card.filters);
+            setActiveTab(card.tab);
+          }}>
             <span>{card.label}</span>
             <strong>{card.value}</strong>
             <small>Open filtered view</small>
@@ -594,6 +654,13 @@ function renderOverview(
       </section>
     </div>
   );
+}
+
+function coerceSavedFilters(value: Record<string, unknown>) {
+  const allowed: Array<keyof EnterpriseFilters> = ["organisation", "status", "type", "licence", "licencePlan", "billingStatus", "renewal", "utilisation", "invitation", "adoption", "consent", "risk", "country", "accountOwner", "onboarding", "membership", "role", "dateRange", "synthetic"];
+  return Object.fromEntries(allowed
+    .map((key) => [key, typeof value[key] === "string" ? value[key] : ""])
+    .filter(([, entry]) => entry)) as Partial<EnterpriseFilters>;
 }
 
 function renderOrganisations(
@@ -936,7 +1003,7 @@ function renderAdoption(portfolio: EnterprisePortfolio, organisations: Enterpris
       <p style={mutedStyle}>Bands use invitation acceptance and seat-utilisation ratios only. They do not inspect vault contents or individual financial values.</p>
       <div style={tableWrapStyle}>
         <table style={tableStyle}>
-          <thead><tr><th>Organisation</th><th>Band</th><th>Acceptance</th><th>Seat utilisation</th><th>Consent</th></tr></thead>
+          <thead><tr><th>Organisation</th><th>Band</th><th>Acceptance</th><th>Seat utilisation</th><th>Consent</th><th>Risk reasons</th><th>Actions</th></tr></thead>
           <tbody>
             {rows.map((row) => (
               <tr key={row.organisationId}>
@@ -945,9 +1012,11 @@ function renderAdoption(portfolio: EnterprisePortfolio, organisations: Enterpris
                 <td>{row.acceptanceRate}%</td>
                 <td>{row.seatUtilisation}%</td>
                 <td>{row.consentRestricted ? "Restricted" : "Reportable"}</td>
+                <td>{portfolio.risk.find((risk) => risk.organisationId === row.organisationId)?.reasons.join(" ") || "No current risk triggers."}</td>
+                <td><Link href={`/application/enterprise/organisations/${row.organisationId}`}>View organisation</Link></td>
               </tr>
             ))}
-            {rows.length === 0 ? <tr><td colSpan={5}>No adoption rows match this view.</td></tr> : null}
+            {rows.length === 0 ? <tr><td colSpan={7}>No adoption rows match this view.</td></tr> : null}
           </tbody>
         </table>
       </div>
@@ -955,18 +1024,49 @@ function renderAdoption(portfolio: EnterprisePortfolio, organisations: Enterpris
   );
 }
 
-function renderReports(portfolio: EnterprisePortfolio, requestExport: () => void) {
+function renderReports(
+  portfolio: EnterprisePortfolio,
+  reportType: string,
+  setReportType: (value: string) => void,
+  requestExport: () => void,
+) {
+  const selected = portfolio.reports.find((report) => report.type === reportType) ?? portfolio.reports[0];
   return (
     <section style={panelStyle}>
       <h2 style={h2Style}>Consent-aware reports</h2>
+      <p style={mutedStyle}>Choose a governed catalogue report. Reports use organisation, licence, invitation, membership, consent and audit metadata only.</p>
+      <label style={labelStyle}>Report type
+        <select value={reportType} onChange={(event) => setReportType(event.target.value)}>
+          {(portfolio.reports.length ? portfolio.reports : [{ type: "portfolio", label: "Portfolio", exportAllowed: false, minimumCohort: portfolio.privacyBoundary.reportingMinimumCohort, aggregation: "organisation_aggregate", privateVaultFieldsExcluded: true }]).map((report) => (
+            <option key={report.type} value={report.type}>{report.label}</option>
+          ))}
+        </select>
+      </label>
       <div style={gridStyle}>
         <InfoTile label="Licence utilisation" value={`${portfolio.summary.seats.allocated}/${portfolio.summary.seats.purchased}`} />
         <InfoTile label="Invitation acceptance" value={`${portfolio.invitations.filter((item) => item.status === "accepted").length}/${portfolio.invitations.length}`} />
         <InfoTile label="Renewal pipeline" value={String(portfolio.summary.renewalsDue)} />
         <InfoTile label="Consent restricted" value={String(portfolio.summary.consentRestricted)} />
       </div>
-      <p style={privacyStyle}>Exports require explicit permission, minimum cohort size, audit logging, and consent. Export payloads exclude private vault values and document contents.</p>
-      <button type="button" style={primaryButtonStyle} onClick={requestExport}>Request governed export</button>
+      <div style={tableWrapStyle}>
+        <table style={tableStyle}>
+          <thead><tr><th>Report</th><th>Aggregation</th><th>Minimum cohort</th><th>Export</th><th>Privacy boundary</th></tr></thead>
+          <tbody>
+            {portfolio.reports.map((report) => (
+              <tr key={report.type}>
+                <td>{report.label}</td>
+                <td>{labelise(report.aggregation)}</td>
+                <td>{report.minimumCohort}</td>
+                <td>{report.exportAllowed ? "Governed CSV" : "View only"}</td>
+                <td>{report.privateVaultFieldsExcluded ? "Private vault fields excluded" : "Blocked"}</td>
+              </tr>
+            ))}
+            {portfolio.reports.length === 0 ? <tr><td colSpan={5}>No report definitions are available for this role.</td></tr> : null}
+          </tbody>
+        </table>
+      </div>
+      <p style={privacyStyle}>Exports require explicit permission, reporting consent, export consent, minimum cohort size, audit logging, and CSV formula-injection protection. Export payloads exclude private vault values, document contents, legal content, wishes, notes, account numbers and policy details.</p>
+      <button type="button" style={primaryButtonStyle} disabled={!selected?.exportAllowed} onClick={requestExport}>Request governed export (CSV)</button>
     </section>
   );
 }
@@ -975,7 +1075,33 @@ function renderConsent(portfolio: EnterprisePortfolio, organisations: Enterprise
   return (
     <section style={panelStyle}>
       <h2 style={h2Style}>Consent and compliance</h2>
-      {renderOrganisationTable(organisations, portfolio)}
+      <p style={mutedStyle}>Mandatory organisation terms are tracked separately from optional adviser, marketing and reporting/export consent.</p>
+      <div style={tableWrapStyle}>
+        <table style={tableStyle}>
+          <thead><tr><th>Organisation</th><th>Reporting consent</th><th>Adviser insight</th><th>Marketing</th><th>Export</th><th>Minimum cohort</th><th>Eligibility</th><th>Actions</th></tr></thead>
+          <tbody>
+            {organisations.map((org) => {
+              const consent = portfolio.consent[org.id];
+              const readiness = portfolio.reportRows.consentReadiness.find((row) => row.organisationId === org.id);
+              const eligible = Boolean(readiness?.reportingEligible && readiness.exportEligible);
+              return (
+                <tr key={org.id}>
+                  <td>{org.name}</td>
+                  <td>{consent?.reportingConsent ? "Accepted" : "Restricted"}</td>
+                  <td>{consent?.adviserInsightConsent ? "Accepted" : "Declined or missing"}</td>
+                  <td>{consent?.marketingConsent ? "Accepted" : "Declined or missing"}</td>
+                  <td>{consent?.exportPermission ? "Permitted" : "Blocked"}</td>
+                  <td>{consent?.minimumReportingCohort ?? portfolio.privacyBoundary.reportingMinimumCohort}</td>
+                  <td>{eligible ? "Report/export eligible" : "Consent or threshold restricted"}</td>
+                  <td><Link href={`/application/enterprise/organisations/${org.id}#audit`}>View audit history</Link></td>
+                </tr>
+              );
+            })}
+            {organisations.length === 0 ? <tr><td colSpan={8}>No consent rows match this view.</td></tr> : null}
+          </tbody>
+        </table>
+      </div>
+      <p style={privacyStyle}>Administrators cannot accept consent on behalf of users. Restricted cohorts are suppressed before report rendering and export.</p>
     </section>
   );
 }
@@ -1018,6 +1144,9 @@ function renderFilterBar(
   savedViewName: string,
   setSavedViewName: (value: string) => void,
   organisations: EnterpriseOrganisation[],
+  savedViews: EnterprisePortfolio["savedViews"],
+  openSavedView: (view: EnterprisePortfolio["savedViews"][number]) => void,
+  deleteSavedView: (view: EnterprisePortfolio["savedViews"][number]) => void,
 ) {
   const accountOwners = Array.from(new Set(organisations.map((org) => org.accountOwner).filter(Boolean) as string[])).sort((a, b) => a.localeCompare(b));
   const activeFilters = [
@@ -1036,6 +1165,10 @@ function renderFilterBar(
     ["country", filters.country],
     ["accountOwner", filters.accountOwner],
     ["onboarding", filters.onboarding],
+    ["membership", filters.membership],
+    ["role", filters.role],
+    ["dateRange", filters.dateRange],
+    ["synthetic", filters.synthetic],
   ].filter(([, value]) => value);
   return (
     <section style={filterBarStyle} aria-label="Enterprise filters">
@@ -1122,10 +1255,33 @@ function renderFilterBar(
       <label style={labelStyle}>Invitation
         <select value={filters.invitation} onChange={(event) => setFilters({ ...filters, invitation: event.target.value })}>
           <option value="">Any</option>
+          <option value="scheduled">Scheduled</option>
           <option value="sent">Sent</option>
+          <option value="delivered">Delivered</option>
           <option value="accepted">Accepted</option>
+          <option value="expired">Expired</option>
           <option value="revoked">Revoked</option>
           <option value="failed">Failed</option>
+        </select>
+      </label>
+      <label style={labelStyle}>Membership
+        <select value={filters.membership} onChange={(event) => setFilters({ ...filters, membership: event.target.value })}>
+          <option value="">Any</option>
+          <option value="invited">Invited</option>
+          <option value="active">Active</option>
+          <option value="suspended">Suspended</option>
+          <option value="removed">Removed</option>
+        </select>
+      </label>
+      <label style={labelStyle}>Organisation role
+        <select value={filters.role} onChange={(event) => setFilters({ ...filters, role: event.target.value })}>
+          <option value="">Any</option>
+          <option value="organisation_admin">Organisation administrator</option>
+          <option value="organisation_licence_manager">Licence manager</option>
+          <option value="organisation_user_manager">User manager</option>
+          <option value="organisation_reporting_viewer">Reporting viewer</option>
+          <option value="organisation_auditor">Auditor/read-only</option>
+          <option value="organisation_member">Organisation member</option>
         </select>
       </label>
       <label style={labelStyle}>Adoption
@@ -1154,6 +1310,21 @@ function renderFilterBar(
         </select>
       </label>
       <FormInput label="Country" value={filters.country} onChange={(value) => setFilters({ ...filters, country: value })} />
+      <label style={labelStyle}>Date range
+        <select value={filters.dateRange} onChange={(event) => setFilters({ ...filters, dateRange: event.target.value })}>
+          <option value="">Any</option>
+          <option value="last_30">Last 30 days</option>
+          <option value="last_90">Last 90 days</option>
+          <option value="this_year">This year</option>
+        </select>
+      </label>
+      <label style={labelStyle}>Synthetic/UAT
+        <select value={filters.synthetic} onChange={(event) => setFilters({ ...filters, synthetic: event.target.value })}>
+          <option value="">Any</option>
+          <option value="synthetic">Synthetic/UAT only</option>
+          <option value="non_synthetic">Non-synthetic only</option>
+        </select>
+      </label>
       <label style={labelStyle}>Account owner
         <select value={filters.accountOwner} onChange={(event) => setFilters({ ...filters, accountOwner: event.target.value })}>
           <option value="">Any</option>
@@ -1170,9 +1341,19 @@ function renderFilterBar(
           <option value="complete">Complete</option>
         </select>
       </label>
-      <button type="button" style={secondaryButtonStyle} onClick={clear}>Clear</button>
+      <button type="button" style={secondaryButtonStyle} onClick={clear}>Reset to default</button>
       <FormInput label="Saved view name" value={savedViewName} onChange={setSavedViewName} />
       <button type="button" style={secondaryButtonStyle} onClick={save}>Save view</button>
+      <div style={savedViewsStyle} aria-label="Saved enterprise views">
+        {savedViews.map((view) => (
+          <span key={view.id} style={savedViewChipStyle}>
+            <button type="button" onClick={() => openSavedView(view)}>{view.name}{view.isDefault ? " (default)" : ""}</button>
+            <small>{labelise(view.view_type)} · {labelise(view.shareScope)}</small>
+            <button type="button" aria-label={`Delete ${view.name}`} onClick={() => deleteSavedView(view)}>Delete</button>
+          </span>
+        ))}
+        {savedViews.length === 0 ? <span style={mutedInlineStyle}>No saved views yet.</span> : null}
+      </div>
       {activeFilters.length ? (
         <div style={filterChipsStyle}>
           {activeFilters.map(([key, value]) => (
@@ -1385,6 +1566,9 @@ const activeTabStyle: CSSProperties = { ...tabStyle, background: "#111827", colo
 const filterBarStyle: CSSProperties = { ...panelStyle, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 10, alignItems: "end", marginBottom: 16 };
 const filterChipsStyle: CSSProperties = { gridColumn: "1 / -1", display: "flex", gap: 8, flexWrap: "wrap" };
 const chipStyle: CSSProperties = { border: "1px solid #bfdbfe", background: "#eff6ff", borderRadius: 999, padding: "7px 10px", color: "#1e3a8a", fontWeight: 800 };
+const savedViewsStyle: CSSProperties = { gridColumn: "1 / -1", display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" };
+const savedViewChipStyle: CSSProperties = { display: "inline-flex", gap: 6, alignItems: "center", border: "1px solid #dbe3ef", background: "#f8fafc", borderRadius: 6, padding: "6px 8px" };
+const mutedInlineStyle: CSSProperties = { color: "#64748b", fontSize: 13 };
 const gridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 };
 const stackStyle: CSSProperties = { display: "grid", gap: 16 };
 const twoColumnStyle: CSSProperties = { display: "grid", gridTemplateColumns: "minmax(280px, 420px) minmax(0, 1fr)", gap: 16, alignItems: "start" };

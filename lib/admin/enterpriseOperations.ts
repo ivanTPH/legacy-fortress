@@ -26,6 +26,42 @@ export const ENTERPRISE_ORGANISATION_STATUSES = ["draft", "pending_setup", "pend
 export const ENTERPRISE_ONBOARDING_STATUSES = ["not_started", "pending", "in_progress", "blocked", "complete"] as const;
 export const ENTERPRISE_RISK_STATUSES = ["normal", "watch", "at_risk", "critical", "restricted"] as const;
 export const ENTERPRISE_REPORT_MINIMUM_COHORT = 5;
+export const ENTERPRISE_REPORT_TYPES = [
+  "portfolio",
+  "licence_utilisation",
+  "seat_availability",
+  "invitation_status",
+  "membership_status",
+  "onboarding_completion",
+  "adoption_bands",
+  "renewal_pipeline",
+  "organisation_risk",
+  "consent_readiness",
+  "consent_restrictions",
+  "enrolment_link_usage",
+  "audit_activity",
+] as const;
+export const ENTERPRISE_FILTER_KEYS = [
+  "dateRange",
+  "organisation",
+  "status",
+  "type",
+  "country",
+  "accountOwner",
+  "licence",
+  "licencePlan",
+  "billingStatus",
+  "renewal",
+  "utilisation",
+  "invitation",
+  "membership",
+  "role",
+  "onboarding",
+  "adoption",
+  "consent",
+  "risk",
+  "synthetic",
+] as const;
 const ORGANISATION_SELECT = "id,legal_name,trading_name,organisation_type,organisation_type_other,registration_number,country,registered_address,operating_address,primary_contact_name,primary_contact_email,primary_contact_telephone,website,internal_account_owner,contract_reference,customer_reference,onboarding_status,onboarding_notes,nominated_admin_name,nominated_admin_email,nominated_admin_require_mfa,nominated_admin_expiry_days,status,risk_status,same_operating_address,archived_at,created_at,updated_at";
 const LICENCE_SELECT = "id,organisation_id,licence_plan,custom_plan_name,contract_reference,billing_reference,start_date,renewal_date,end_date,renewal_notice_days,auto_renew,renewal_notes,purchased_seats,allocated_seats,active_seats,invited_seats,suspended_seats,billing_status,licence_status,account_owner,created_at,updated_at";
 const INVITATION_SELECT = "id,organisation_id,licence_id,email_normalized,full_name,invitation_type,role_template,status,expires_at,require_mfa,sent_at,accepted_at,revoked_at,failure_reason,created_at,scope,access_expires_at,resend_count,last_resent_at,delivered_at,failed_at,seat_id,internal_reference,department,synthetic_run_marker";
@@ -186,6 +222,23 @@ type EnterpriseConsentRow = {
   retention_rule: string;
 };
 
+type EnterpriseSavedViewRow = {
+  id: string;
+  name: string;
+  description?: string | null;
+  view_type: string;
+  filters: Record<string, unknown>;
+  sort_config?: Record<string, unknown> | null;
+  visible_columns?: unknown[] | null;
+  organisation_id?: string | null;
+  owner_user_id?: string | null;
+  share_scope?: string | null;
+  is_default?: boolean | null;
+  last_used_at?: string | null;
+  created_at: string;
+  updated_at?: string | null;
+};
+
 export type EnterprisePortfolio = Awaited<ReturnType<typeof loadEnterprisePortfolio>>;
 
 export function normalizeEnterpriseEmail(value: string | null | undefined) {
@@ -249,9 +302,9 @@ export async function loadEnterprisePortfolio(client: AnySupabaseClient, access:
     scopedOrganisationIds.length ? consentQuery.in("organisation_id", scopedOrganisationIds) : consentQuery,
     client
       .from("enterprise_saved_views")
-      .select("id,name,view_type,filters,created_at")
-      .eq("owner_user_id", access.user.id)
-      .order("created_at", { ascending: false })
+      .select("id,name,description,view_type,filters,sort_config,visible_columns,organisation_id,share_scope,is_default,last_used_at,owner_user_id,created_at,updated_at")
+      .or(`owner_user_id.eq.${access.user.id},share_scope.neq.private`)
+      .order("updated_at", { ascending: false })
       .limit(30),
   ]);
 
@@ -288,6 +341,9 @@ export async function loadEnterprisePortfolio(client: AnySupabaseClient, access:
     return !consent?.reporting_consent || !consent?.adviser_insight_consent;
   });
   const adoptionBands = buildAdoptionBands(organisations, licences, invitations, consentByOrg);
+  const reports = buildEnterpriseReportCatalogue(access);
+  const reportRows = buildEnterpriseReportSummaries(organisations, licences, invitations, memberships, enrolmentLinks, consentByOrg, adoptionBands);
+  const risk = buildEnterpriseRiskSummaries(organisations, licences, invitations, memberships, consentByOrg, adoptionBands);
 
   return {
     summary: {
@@ -306,7 +362,10 @@ export async function loadEnterprisePortfolio(client: AnySupabaseClient, access:
     enrolmentLinks,
     consent: Object.fromEntries([...consentByOrg.entries()].map(([id, row]) => [id, mapConsent(row)])),
     adoptionBands,
-    savedViews: savedViewsRes.data ?? [],
+    savedViews: ((savedViewsRes.data ?? []) as EnterpriseSavedViewRow[]).filter((row) => canAccessSavedView(access, row, scopedOrganisationIds)).map(mapSavedView),
+    reports,
+    reportRows,
+    risk,
     privacyBoundary: {
       vaultContentExcluded: true,
       documentContentExcluded: true,
@@ -1051,34 +1110,137 @@ export async function updateEnterpriseEnrolmentLinkStatus(client: AnySupabaseCli
 }
 
 export async function saveEnterpriseView(client: AnySupabaseClient, access: AdminAccessState, input: Record<string, unknown>) {
+  const shareScope = normalizeChoice(input.shareScope ?? "private", ["private", "organisation", "platform"] as const, "Choose a valid saved-view sharing option.");
+  const filters = sanitizeEnterpriseFilters(input.filters);
+  const organisationId = optionalText(input.organisationId);
+  const scopedIds = access.enterpriseScope?.organisationIds ?? [];
+  if (shareScope === "platform" && access.enterpriseScope?.organisationScoped) {
+    throw new EnterpriseOperationError("saved_view_scope_denied", "Organisation-scoped users cannot create platform-wide saved views.", 403);
+  }
+  if (shareScope === "organisation" && (!organisationId || (access.enterpriseScope?.organisationScoped && !scopedIds.includes(organisationId)))) {
+    throw new EnterpriseOperationError("saved_view_scope_required", "Organisation-shared views require an organisation scope.", 400);
+  }
   const insert = await client
     .from("enterprise_saved_views")
     .insert({
       owner_user_id: access.user.id,
       name: requiredText(input.name, "Saved view name is required."),
-      view_type: optionalText(input.viewType) ?? "portfolio",
-      filters: typeof input.filters === "object" && input.filters !== null ? input.filters : {},
+      description: optionalText(input.description),
+      view_type: normalizeChoice(input.viewType ?? "portfolio", ["portfolio", "overview", "organisations", "licences", "users", "invitations", "adoption", "reports", "consent", "renewals", "settings"] as const, "Choose a valid saved-view workspace."),
+      filters,
+      sort_config: sanitizeJsonObject(input.sortConfig),
+      visible_columns: Array.isArray(input.visibleColumns) ? input.visibleColumns.map(String).slice(0, 30) : [],
+      organisation_id: organisationId,
+      share_scope: shareScope,
+      is_default: Boolean(input.isDefault),
+      synthetic_run_marker: optionalText(input.syntheticRunMarker),
     })
-    .select("id,name,view_type,filters,created_at")
+    .select("id,name,description,view_type,filters,sort_config,visible_columns,organisation_id,share_scope,is_default,last_used_at,created_at,updated_at")
     .single();
   if (insert.error || !insert.data) throw new EnterpriseOperationError("saved_view_failed", insert.error?.message ?? "Could not save view.", 500);
-  return insert.data;
+  return mapSavedView(insert.data as EnterpriseSavedViewRow);
+}
+
+export async function updateEnterpriseView(client: AnySupabaseClient, access: AdminAccessState, input: Record<string, unknown>) {
+  const viewId = requiredText(input.viewId, "Saved view is required.");
+  const current = await getEnterpriseSavedViewRow(client, viewId);
+  assertSavedViewOwner(access, current);
+  const patch: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+  if (input.name !== undefined) patch.name = requiredText(input.name, "Saved view name is required.");
+  if (input.description !== undefined) patch.description = optionalText(input.description);
+  if (input.filters !== undefined) patch.filters = sanitizeEnterpriseFilters(input.filters);
+  if (input.sortConfig !== undefined) patch.sort_config = sanitizeJsonObject(input.sortConfig);
+  if (input.visibleColumns !== undefined) patch.visible_columns = Array.isArray(input.visibleColumns) ? input.visibleColumns.map(String).slice(0, 30) : [];
+  if (input.isDefault !== undefined) patch.is_default = Boolean(input.isDefault);
+  if (input.touch === true) patch.last_used_at = new Date().toISOString();
+  const update = await client
+    .from("enterprise_saved_views")
+    .update(patch)
+    .eq("id", viewId)
+    .select("id,name,description,view_type,filters,sort_config,visible_columns,organisation_id,share_scope,is_default,last_used_at,created_at,updated_at")
+    .single();
+  if (update.error || !update.data) throw new EnterpriseOperationError("saved_view_update_failed", update.error?.message ?? "Could not update saved view.", 500);
+  return mapSavedView(update.data as EnterpriseSavedViewRow);
+}
+
+export async function deleteEnterpriseView(client: AnySupabaseClient, access: AdminAccessState, input: Record<string, unknown>) {
+  const viewId = requiredText(input.viewId, "Saved view is required.");
+  const current = await getEnterpriseSavedViewRow(client, viewId);
+  assertSavedViewOwner(access, current);
+  const deleted = await client.from("enterprise_saved_views").delete().eq("id", viewId).select("id").single();
+  if (deleted.error) throw new EnterpriseOperationError("saved_view_delete_failed", deleted.error.message, 500);
+  return { id: viewId };
 }
 
 export async function buildEnterpriseReportExportDecision(client: AnySupabaseClient, access: AdminAccessState, input: Record<string, unknown>) {
   const portfolio = await loadEnterprisePortfolio(client, access);
-  const cohort = portfolio.organisations.length;
-  const exportAllowed = portfolio.organisations.some((org) => portfolio.consent[org.id]?.exportPermission)
-    && cohort >= ENTERPRISE_REPORT_MINIMUM_COHORT;
+  const reportType = normalizeChoice(input.reportType ?? "portfolio", ENTERPRISE_REPORT_TYPES, "Choose a governed report type.");
+  const filters = sanitizeEnterpriseFilters(input.filters);
+  const scopedOrganisations = applyEnterpriseReportFilters(portfolio.organisations, filters);
+  const cohort = scopedOrganisations.length;
+  const minimumCohort = Math.max(...scopedOrganisations.map((org) => portfolio.consent[org.id]?.minimumReportingCohort ?? ENTERPRISE_REPORT_MINIMUM_COHORT), ENTERPRISE_REPORT_MINIMUM_COHORT);
+  const consentAllowed = scopedOrganisations.length > 0 && scopedOrganisations.every((org) => {
+    const consent = portfolio.consent[org.id];
+    return Boolean(consent?.reportingConsent && consent?.exportPermission);
+  });
+  const thresholdAllowed = cohort >= minimumCohort;
+  const exportAllowed = consentAllowed && thresholdAllowed;
+  const reportRun = await client.from("enterprise_report_runs").insert({
+    report_type: reportType,
+    organisation_id: scopedOrganisations.length === 1 ? scopedOrganisations[0]?.id : null,
+    actor_user_id: access.user.id,
+    actor_scope: access.enterpriseScope?.organisationScoped ? "organisation" : "platform",
+    filters,
+    cohort_count: cohort,
+    minimum_cohort: minimumCohort,
+    consent_result: consentAllowed ? "passed" : "blocked",
+    threshold_result: thresholdAllowed ? "passed" : "blocked",
+    policy_result: exportAllowed ? "allowed" : "blocked",
+    suppression_applied: !thresholdAllowed,
+    synthetic_run_marker: optionalText(input.syntheticRunMarker),
+  }).select("id").single();
+  if (reportRun.error) throw new EnterpriseOperationError("report_run_failed", reportRun.error.message, 500);
+  let exportEvent = null;
+  let csvPreview = null;
+  if (exportAllowed) {
+    const safeFilename = safeExportFilename(reportType);
+    const event = await client.from("enterprise_export_events").insert({
+      report_run_id: reportRun.data?.id,
+      report_type: reportType,
+      organisation_id: scopedOrganisations.length === 1 ? scopedOrganisations[0]?.id : null,
+      actor_user_id: access.user.id,
+      export_format: "csv",
+      safe_filename: safeFilename,
+      filters,
+      aggregate_count: scopedOrganisations.length,
+      policy_result: "allowed",
+      consent_result: "passed",
+      threshold_result: "passed",
+      synthetic_run_marker: optionalText(input.syntheticRunMarker),
+    }).select("id,safe_filename,created_at").single();
+    if (event.error) throw new EnterpriseOperationError("export_event_failed", event.error.message, 500);
+    exportEvent = event.data;
+    csvPreview = buildGovernedCsv(reportType, scopedOrganisations, portfolio);
+  }
   return {
     ok: exportAllowed,
     code: exportAllowed ? "export_ready" : "export_blocked",
     message: exportAllowed
-      ? "Aggregated report export can be prepared by a governed export worker."
-      : "Export blocked: cohort threshold or organisation export consent is not met.",
-    reportType: optionalText(input.reportType) ?? "portfolio",
+      ? "Aggregated CSV export is ready. Private vault values and document contents are excluded."
+      : !thresholdAllowed
+        ? "Results are suppressed because this cohort is below the minimum reporting threshold."
+        : "Export blocked: organisation reporting/export consent is not met.",
+    reportType,
     cohort,
-    minimumCohort: ENTERPRISE_REPORT_MINIMUM_COHORT,
+    minimumCohort,
+    consentResult: consentAllowed ? "passed" : "blocked",
+    thresholdResult: thresholdAllowed ? "passed" : "blocked",
+    reportRunId: reportRun.data?.id,
+    exportEvent,
+    csvPreview,
+    privateVaultFieldsExcluded: true,
   };
 }
 
@@ -1108,6 +1270,222 @@ function buildAdoptionBands(
       consentRestricted: !consent?.reporting_consent || !consent?.adviser_insight_consent,
     };
   });
+}
+
+function buildEnterpriseReportCatalogue(access: AdminAccessState) {
+  const canExport = access.capabilities.includes("enterprise.export.request");
+  return ENTERPRISE_REPORT_TYPES.map((type) => ({
+    type,
+    label: labeliseReportType(type),
+    exportAllowed: canExport && type !== "audit_activity",
+    minimumCohort: ENTERPRISE_REPORT_MINIMUM_COHORT,
+    aggregation: type === "audit_activity" ? "event_summary" : "organisation_aggregate",
+    privateVaultFieldsExcluded: true,
+  }));
+}
+
+function buildEnterpriseReportSummaries(
+  organisations: ReturnType<typeof mapOrganisation>[],
+  licences: ReturnType<typeof mapLicence>[],
+  invitations: ReturnType<typeof mapInvitation>[],
+  memberships: ReturnType<typeof mapMembership>[],
+  enrolmentLinks: ReturnType<typeof mapEnrolmentLink>[],
+  consentByOrg: Map<string, EnterpriseConsentRow>,
+  adoptionBands: ReturnType<typeof buildAdoptionBands>,
+) {
+  return {
+    portfolio: organisations.length,
+    licenceUtilisation: licences.map((licence) => ({
+      organisationId: licence.organisationId,
+      licenceId: licence.id,
+      plan: licence.plan,
+      purchasedSeats: licence.purchasedSeats,
+      activeSeats: licence.activeSeats,
+      invitedSeats: licence.invitedSeats,
+      suspendedSeats: licence.suspendedSeats,
+      availableSeats: licence.availableSeats,
+      utilisationBand: utilisationBandFromNumbers(licence.activeSeats + licence.invitedSeats + licence.suspendedSeats, licence.purchasedSeats),
+    })),
+    invitationStatus: countBy(invitations, (item) => item.status),
+    membershipStatus: countBy(memberships, (item) => item.status),
+    enrolmentLinkStatus: countBy(enrolmentLinks, (item) => item.status),
+    adoptionBands,
+    consentReadiness: organisations.map((org) => {
+      const consent = consentByOrg.get(org.id);
+      return {
+        organisationId: org.id,
+        organisationName: org.name,
+        reportingEligible: Boolean(consent?.reporting_consent && consent?.adviser_insight_consent),
+        exportEligible: Boolean(consent?.reporting_consent && consent?.export_permission),
+        minimumCohort: consent?.minimum_reporting_cohort ?? ENTERPRISE_REPORT_MINIMUM_COHORT,
+      };
+    }),
+  };
+}
+
+function buildEnterpriseRiskSummaries(
+  organisations: ReturnType<typeof mapOrganisation>[],
+  licences: ReturnType<typeof mapLicence>[],
+  invitations: ReturnType<typeof mapInvitation>[],
+  memberships: ReturnType<typeof mapMembership>[],
+  consentByOrg: Map<string, EnterpriseConsentRow>,
+  adoptionBands: ReturnType<typeof buildAdoptionBands>,
+) {
+  return organisations.map((org) => {
+    const orgLicences = licences.filter((licence) => licence.organisationId === org.id);
+    const orgInvitations = invitations.filter((invitation) => invitation.organisationId === org.id);
+    const orgMemberships = memberships.filter((membership) => membership.organisationId === org.id);
+    const adoption = adoptionBands.find((band) => band.organisationId === org.id);
+    const reasons: string[] = [];
+    if (org.risk !== "normal") reasons.push(`Manual organisation risk is ${org.risk}.`);
+    if (orgLicences.some((licence) => ["due_30", "overdue"].includes(licence.renewalRisk))) reasons.push("Licence renewal is due soon or overdue.");
+    if (orgLicences.some((licence) => ["past_due", "suspended"].includes(licence.billingStatus))) reasons.push("Billing status requires attention.");
+    if (orgInvitations.filter((invite) => ["scheduled", "sent", "delivered"].includes(invite.status)).length >= 5) reasons.push("Pending invitation backlog.");
+    if (adoption?.band === "low") reasons.push("Low adoption band.");
+    if (!consentByOrg.get(org.id)?.reporting_consent) reasons.push("Reporting consent is restricted.");
+    if (orgMemberships.some((member) => member.status === "suspended")) reasons.push("Suspended membership present.");
+    const band = reasons.some((reason) => /overdue|restricted|past_due|suspended/i.test(reason))
+      ? "critical"
+      : reasons.length >= 2
+        ? "at_risk"
+        : reasons.length === 1
+          ? "watch"
+          : "normal";
+    return {
+      organisationId: org.id,
+      organisationName: org.name,
+      band,
+      reasons,
+    };
+  });
+}
+
+function sanitizeEnterpriseFilters(value: unknown) {
+  const input = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  const allowed = new Set<string>(ENTERPRISE_FILTER_KEYS);
+  return Object.fromEntries(Object.entries(input)
+    .filter(([key]) => allowed.has(key))
+    .map(([key, entry]) => [key, typeof entry === "string" || typeof entry === "number" || typeof entry === "boolean" ? entry : ""])
+    .filter(([, entry]) => entry !== ""));
+}
+
+function sanitizeJsonObject(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value as Record<string, unknown>)
+    .filter(([key]) => /^[a-zA-Z0-9_.-]{1,60}$/.test(key))
+    .map(([key, entry]) => [key, typeof entry === "string" || typeof entry === "number" || typeof entry === "boolean" ? entry : ""]));
+}
+
+function applyEnterpriseReportFilters(organisations: ReturnType<typeof mapOrganisation>[], filters: Record<string, unknown>) {
+  return organisations.filter((org) => {
+    if (filters.organisation && !`${org.name} ${org.legalName} ${org.tradingName ?? ""}`.toLowerCase().includes(String(filters.organisation).toLowerCase())) return false;
+    if (filters.status && org.status !== filters.status) return false;
+    if (filters.type && org.type !== filters.type) return false;
+    if (filters.country && org.country !== filters.country) return false;
+    if (filters.accountOwner && org.accountOwner !== filters.accountOwner) return false;
+    if (filters.risk && org.risk !== filters.risk) return false;
+    return true;
+  });
+}
+
+function buildGovernedCsv(reportType: string, organisations: ReturnType<typeof mapOrganisation>[], portfolio: Awaited<ReturnType<typeof loadEnterprisePortfolio>>) {
+  const rows = organisations.map((org) => {
+    const consent = portfolio.consent[org.id];
+    const orgLicences = portfolio.licences.filter((licence) => licence.organisationId === org.id);
+    const purchasedSeats = orgLicences.reduce((sum, licence) => sum + licence.purchasedSeats, 0);
+    const activeSeats = orgLicences.reduce((sum, licence) => sum + licence.activeSeats, 0);
+    return [
+      reportType,
+      org.name,
+      org.type,
+      org.status,
+      org.risk,
+      String(purchasedSeats),
+      String(activeSeats),
+      consent?.reportingConsent ? "reporting-consented" : "reporting-restricted",
+    ];
+  });
+  const header = ["report_type", "organisation", "type", "status", "risk", "purchased_seats", "active_seats", "consent_status"];
+  return [header, ...rows].map((row) => row.map(csvSafeCell).join(",")).join("\n");
+}
+
+function csvSafeCell(value: unknown) {
+  const text = String(value ?? "").replace(/"/g, "\"\"");
+  const safe = /^[=+\-@]/.test(text) ? `'${text}` : text;
+  return `"${safe}"`;
+}
+
+function safeExportFilename(reportType: string) {
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  return `legacy-fortress-${reportType.replace(/[^a-z0-9_-]/gi, "-")}-${stamp}.csv`;
+}
+
+function mapSavedView(row: EnterpriseSavedViewRow) {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description ?? null,
+    view_type: row.view_type,
+    filters: row.filters ?? {},
+    sortConfig: row.sort_config ?? {},
+    visibleColumns: row.visible_columns ?? [],
+    organisationId: row.organisation_id ?? null,
+    shareScope: row.share_scope ?? "private",
+    isDefault: Boolean(row.is_default),
+    lastUsedAt: row.last_used_at ?? null,
+    created_at: row.created_at,
+    updatedAt: row.updated_at ?? row.created_at,
+  };
+}
+
+async function getEnterpriseSavedViewRow(client: AnySupabaseClient, viewId: string) {
+  const res = await client
+    .from("enterprise_saved_views")
+    .select("id,name,description,view_type,filters,sort_config,visible_columns,organisation_id,share_scope,is_default,last_used_at,owner_user_id,created_at,updated_at")
+    .eq("id", viewId)
+    .maybeSingle();
+  if (res.error) throw new EnterpriseOperationError("saved_view_query_failed", res.error.message, 500);
+  if (!res.data) throw new EnterpriseOperationError("saved_view_not_found", "Saved view not found.", 404);
+  return res.data as EnterpriseSavedViewRow & { owner_user_id?: string | null };
+}
+
+function assertSavedViewOwner(access: AdminAccessState, view: { owner_user_id?: string | null; share_scope?: string | null }) {
+  if (view.owner_user_id === access.user.id) return;
+  if (view.share_scope === "platform" && access.capabilities.includes("enterprise.export.request")) return;
+  throw new EnterpriseOperationError("saved_view_denied", "You cannot modify this saved view.", 403);
+}
+
+function canAccessSavedView(access: AdminAccessState, view: EnterpriseSavedViewRow & { owner_user_id?: string | null }, scopedOrganisationIds: string[]) {
+  if (view.owner_user_id === access.user.id) return true;
+  if (view.share_scope === "platform") return !access.enterpriseScope?.organisationScoped;
+  if (view.share_scope === "organisation") {
+    return Boolean(view.organisation_id && (!access.enterpriseScope?.organisationScoped || scopedOrganisationIds.includes(view.organisation_id)));
+  }
+  return false;
+}
+
+function countBy<T>(rows: T[], key: (row: T) => string) {
+  return rows.reduce<Record<string, number>>((acc, row) => {
+    const value = key(row);
+    acc[value] = (acc[value] ?? 0) + 1;
+    return acc;
+  }, {});
+}
+
+function utilisationBandFromNumbers(committed: number, purchased: number) {
+  if (purchased <= 0 && committed > 0) return "over_capacity";
+  if (purchased <= 0) return "0_25";
+  const percentage = Math.round((committed / purchased) * 100);
+  if (percentage > 100) return "over_capacity";
+  if (percentage <= 25) return "0_25";
+  if (percentage <= 50) return "26_50";
+  if (percentage <= 75) return "51_75";
+  if (percentage <= 90) return "76_90";
+  return "91_100";
+}
+
+function labeliseReportType(value: string) {
+  return value.split("_").map((part) => part[0]?.toUpperCase() + part.slice(1)).join(" ");
 }
 
 function mapOrganisation(row: EnterpriseOrganisationRow) {

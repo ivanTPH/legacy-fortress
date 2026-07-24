@@ -15,12 +15,14 @@ import {
   getEnterpriseOrganisationDetail,
   loadEnterprisePortfolio,
   renewEnterpriseLicence,
+  deleteEnterpriseView,
   saveEnterpriseView,
   transitionEnterpriseMembership,
   transitionEnterpriseLicence,
   transitionEnterpriseOrganisation,
   updateEnterpriseLicence,
   updateEnterpriseEnrolmentLinkStatus,
+  updateEnterpriseView,
   updateEnterpriseOrganisation,
   updateEnterpriseInvitationStatus,
 } from "@/lib/admin/enterpriseOperations";
@@ -304,8 +306,30 @@ export async function POST(request: Request) {
 
     if (action === "save_view") {
       const view = await saveEnterpriseView(admin.adminClient, admin.access, body);
-      await recordEnterpriseAudit(request, admin, "Enterprise saved view created", "report", String(view.id ?? ""), String(view.name ?? ""));
+      await recordEnterpriseAudit(request, admin, "Enterprise saved view created", "report", String(view.id ?? ""), String(view.name ?? ""), "success", {
+        view_type: view.view_type,
+        share_scope: view.shareScope,
+        synthetic_run_marker: body.syntheticRunMarker ?? null,
+      });
       return NextResponse.json({ ok: true, view, portfolio: await loadEnterprisePortfolio(admin.adminClient, admin.access) });
+    }
+
+    if (action === "update_view") {
+      const view = await updateEnterpriseView(admin.adminClient, admin.access, body);
+      await recordEnterpriseAudit(request, admin, "Enterprise saved view updated", "report", String(view.id ?? ""), String(view.name ?? ""), "success", {
+        view_type: view.view_type,
+        share_scope: view.shareScope,
+        synthetic_run_marker: body.syntheticRunMarker ?? null,
+      });
+      return NextResponse.json({ ok: true, view, portfolio: await loadEnterprisePortfolio(admin.adminClient, admin.access) });
+    }
+
+    if (action === "delete_view") {
+      const deleted = await deleteEnterpriseView(admin.adminClient, admin.access, body);
+      await recordEnterpriseAudit(request, admin, "Enterprise saved view deleted", "report", deleted.id, "Saved view", "success", {
+        synthetic_run_marker: body.syntheticRunMarker ?? null,
+      });
+      return NextResponse.json({ ok: true, deleted, portfolio: await loadEnterprisePortfolio(admin.adminClient, admin.access) });
     }
 
     if (action === "export_report") {
@@ -321,7 +345,13 @@ export async function POST(request: Request) {
         metadata: {
           cohort: decision.cohort,
           minimum_cohort: decision.minimumCohort,
+          consent_result: decision.consentResult,
+          threshold_result: decision.thresholdResult,
+          report_run_id: decision.reportRunId,
+          export_event_id: decision.exportEvent?.id ?? null,
           private_vault_content_excluded: true,
+          document_content_excluded: true,
+          financial_values_excluded: true,
         },
       });
       return NextResponse.json({ ok: decision.ok, decision }, { status: decision.ok ? 202 : 403 });
@@ -363,7 +393,7 @@ function capabilityForEnterpriseAction(action: string) {
   if (action === "transition_membership") return "enterprise.membership.manage" as const;
   if (["create_enrolment_link", "update_enrolment_link"].includes(action)) return "enterprise.enrolment_link.manage" as const;
   if (action === "validate_bulk_invitations") return "enterprise.invitation.manage" as const;
-  if (action === "save_view") return "enterprise.report.read" as const;
+  if (["save_view", "update_view", "delete_view"].includes(action)) return "enterprise.report.read" as const;
   if (action === "export_report") return "enterprise.export.request" as const;
   return null;
 }
