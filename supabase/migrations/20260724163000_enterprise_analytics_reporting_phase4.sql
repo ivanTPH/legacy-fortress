@@ -94,19 +94,83 @@ DROP POLICY IF EXISTS "active enterprise operators can read report runs" ON publ
 CREATE POLICY "active enterprise operators can read report runs"
   ON public.enterprise_report_runs FOR SELECT
   TO authenticated
-  USING (public.is_active_enterprise_operator());
+  USING (
+    public.is_active_enterprise_operator()
+    OR (
+      organisation_id IS NOT NULL
+      AND EXISTS (
+        SELECT 1
+        FROM public.enterprise_memberships membership
+        WHERE membership.organisation_id = enterprise_report_runs.organisation_id
+          AND membership.user_id = auth.uid()
+          AND membership.membership_status = 'active'
+          AND membership.organisation_role IN (
+            'organisation_admin',
+            'organisation_licence_manager',
+            'organisation_user_manager',
+            'organisation_reporting_viewer',
+            'organisation_auditor',
+            'licence_manager',
+            'user_manager',
+            'reporting_viewer',
+            'read_only_auditor'
+          )
+      )
+    )
+  );
 
 DROP POLICY IF EXISTS "active enterprise operators can read export events" ON public.enterprise_export_events;
 CREATE POLICY "active enterprise operators can read export events"
   ON public.enterprise_export_events FOR SELECT
   TO authenticated
-  USING (public.is_active_enterprise_operator());
+  USING (
+    public.is_active_enterprise_operator()
+    OR (
+      organisation_id IS NOT NULL
+      AND EXISTS (
+        SELECT 1
+        FROM public.enterprise_memberships membership
+        WHERE membership.organisation_id = enterprise_export_events.organisation_id
+          AND membership.user_id = auth.uid()
+          AND membership.membership_status = 'active'
+          AND membership.organisation_role IN (
+            'organisation_admin',
+            'organisation_licence_manager',
+            'organisation_reporting_viewer',
+            'organisation_auditor',
+            'licence_manager',
+            'reporting_viewer',
+            'read_only_auditor'
+          )
+      )
+    )
+  );
 
 DROP POLICY IF EXISTS "active enterprise operators can read risk overrides" ON public.enterprise_risk_overrides;
 CREATE POLICY "active enterprise operators can read risk overrides"
   ON public.enterprise_risk_overrides FOR SELECT
   TO authenticated
-  USING (public.is_active_enterprise_operator());
+  USING (
+    public.is_active_enterprise_operator()
+    OR EXISTS (
+      SELECT 1
+      FROM public.enterprise_memberships membership
+      WHERE membership.organisation_id = enterprise_risk_overrides.organisation_id
+        AND membership.user_id = auth.uid()
+        AND membership.membership_status = 'active'
+        AND membership.organisation_role IN (
+          'organisation_admin',
+          'organisation_licence_manager',
+          'organisation_user_manager',
+          'organisation_reporting_viewer',
+          'organisation_auditor',
+          'licence_manager',
+          'user_manager',
+          'reporting_viewer',
+          'read_only_auditor'
+        )
+    )
+  );
 
 DROP POLICY IF EXISTS "saved views are owner or organisation scoped" ON public.enterprise_saved_views;
 CREATE POLICY "saved views are owner or organisation scoped"
@@ -115,4 +179,26 @@ CREATE POLICY "saved views are owner or organisation scoped"
   USING (
     owner_user_id = auth.uid()
     OR public.is_active_enterprise_operator()
+    OR (
+      share_scope = 'organisation'
+      AND organisation_id IS NOT NULL
+      AND EXISTS (
+        SELECT 1
+        FROM public.enterprise_memberships membership
+        WHERE membership.organisation_id = enterprise_saved_views.organisation_id
+          AND membership.user_id = auth.uid()
+          AND membership.membership_status = 'active'
+          AND membership.organisation_role IN (
+            'organisation_admin',
+            'organisation_licence_manager',
+            'organisation_user_manager',
+            'organisation_reporting_viewer',
+            'organisation_auditor',
+            'licence_manager',
+            'user_manager',
+            'reporting_viewer',
+            'read_only_auditor'
+          )
+      )
+    )
   );

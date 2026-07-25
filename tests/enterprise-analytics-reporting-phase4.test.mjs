@@ -36,6 +36,10 @@ test("Phase 4 migration adds saved views, report runs, exports and risk override
   assert.match(migration, /enterprise_export_events_format_check CHECK \(export_format IN \('csv'\)\)/);
   assert.match(migration, /enterprise_saved_views_share_scope_check/);
   assert.match(migration, /public\.is_active_enterprise_operator\(\)/);
+  assert.match(migration, /FROM public\.enterprise_memberships membership/);
+  assert.match(migration, /membership\.membership_status = 'active'/);
+  assert.match(migration, /share_scope = 'organisation'/);
+  assert.doesNotMatch(migration, /organisation_member'\s*\)/);
   assert.doesNotMatch(migration, /USING\s*\(\s*true\s*\)/i);
   assert.doesNotMatch(migration, /section_entries|documents|attachments|assets|records/);
 });
