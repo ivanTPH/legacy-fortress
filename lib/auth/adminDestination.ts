@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { toSafeInternalPath } from "./session.ts";
-import { canRoleAccessPath } from "../accessModel.ts";
+import { canRoleAccessPath, isInternalAccessRoute } from "../accessModel.ts";
 import type { PlatformRole } from "./platformRoles.ts";
 
 type AnySupabaseClient = SupabaseClient;
@@ -18,7 +18,7 @@ export async function resolvePermissionedAdminDestination(
   },
 ) {
   const safeNext = toSafeInternalPath(nextPath, "");
-  if (!safeNext.startsWith("/internal/admin")) return fallbackDestination;
+  if (!isInternalAccessRoute(safeNext)) return fallbackDestination;
   if (canRoleAccessPath(roles, safeNext)) return safeNext;
 
   const { data } = await client.auth.getSession();

@@ -420,6 +420,8 @@ export default function EnterpriseOperationsWorkspace() {
   const [bulkRows, setBulkRows] = useState("first_name,last_name,email,department,internal_reference,organisation_role,licence_id,invitation_expiry\n");
   const [savedViewName, setSavedViewName] = useState("");
   const [reportType, setReportType] = useState("portfolio");
+  const [organisationFormOpen, setOrganisationFormOpen] = useState(false);
+  const [licenceFormOpen, setLicenceFormOpen] = useState(false);
 
   const authFetch = useCallback(async (input: string, init?: RequestInit) => {
     const sessionRes = await supabase.auth.getSession();
@@ -609,8 +611,18 @@ export default function EnterpriseOperationsWorkspace() {
       )}
 
       {activeTab === "overview" ? renderOverview(portfolio, filteredOrganisations, filteredLicences, filteredInvitations, setActiveTab, setFilters) : null}
-      {activeTab === "organisations" ? renderOrganisations(filteredOrganisations, portfolio, orgForm, setOrgForm, runAction, () => runAction("create_organisation", orgForm)) : null}
-      {activeTab === "licences" ? renderLicences(filteredLicences, portfolio, licenceForm, setLicenceForm, () => runAction("create_licence", licenceForm)) : null}
+      {activeTab === "organisations" ? renderOrganisations(filteredOrganisations, portfolio, orgForm, setOrgForm, runAction, async () => {
+        await runAction("create_organisation", orgForm);
+        setOrganisationFormOpen(false);
+      }, organisationFormOpen, setOrganisationFormOpen, (organisationId) => {
+        setLicenceForm({ ...licenceForm, organisationId });
+        setLicenceFormOpen(true);
+        setActiveTab("licences");
+      }) : null}
+      {activeTab === "licences" ? renderLicences(filteredLicences, portfolio, licenceForm, setLicenceForm, async () => {
+        await runAction("create_licence", licenceForm);
+        setLicenceFormOpen(false);
+      }, licenceFormOpen, setLicenceFormOpen) : null}
       {activeTab === "users" ? renderUsersAndSeats({ ...portfolio, memberships: filteredMemberships }, runAction) : null}
       {activeTab === "invitations" ? renderInvitations(filteredInvitations, portfolio, inviteForm, setInviteForm, enrolmentForm, setEnrolmentForm, bulkRows, setBulkRows, runAction) : null}
       {activeTab === "adoption" ? renderAdoption(portfolio, filteredOrganisations) : null}
@@ -678,13 +690,28 @@ function renderOrganisations(
   form: EnterpriseOrgForm,
   setForm: (value: EnterpriseOrgForm) => void,
   runAction: (action: string, payload: Record<string, unknown>) => void,
-  submit: () => void,
+  submit: () => void | Promise<void>,
+  formOpen: boolean,
+  setFormOpen: (value: boolean) => void,
+  configureLicence: (organisationId: string) => void,
 ) {
   return (
-    <div style={twoColumnStyle}>
+    <div style={stackStyle}>
       <section style={panelStyle}>
+        <div style={sectionHeaderStyle}>
+          <div>
+            <h2 style={h2Style}>Organisations</h2>
+            <p style={mutedStyle}>Create, inspect and manage real organisation records. No customer vault data is requested or shown.</p>
+          </div>
+          <button type="button" style={primaryButtonStyle} onClick={() => setFormOpen(true)}>
+            Add organisation
+          </button>
+        </div>
+        {renderOrganisationTable(organisations, portfolio, runAction, configureLicence)}
+      </section>
+      {formOpen ? (
+      <section style={contextPanelStyle} aria-label="Add organisation form">
         <h2 id="add-organisation-form" style={h2Style}>Add organisation</h2>
-        <p style={mutedStyle}>Create a real staging organisation record. No customer vault data is requested or shown.</p>
         <h3 style={h3Style}>1. Organisation identity</h3>
         <FormInput label="Legal name" required value={String(form.legalName)} onChange={(value) => setForm({ ...form, legalName: value })} />
         <FormInput label="Trading name" value={String(form.tradingName)} onChange={(value) => setForm({ ...form, tradingName: value })} />
@@ -752,17 +779,12 @@ function renderOrganisations(
         <label style={checkboxStyle}><input type="checkbox" checked={Boolean(form.reportingConsent)} onChange={(event) => setForm({ ...form, reportingConsent: event.target.checked })} /> Reporting consent</label>
         <label style={checkboxStyle}><input type="checkbox" checked={Boolean(form.adviserInsightConsent)} onChange={(event) => setForm({ ...form, adviserInsightConsent: event.target.checked })} /> Adviser insight consent</label>
         <label style={checkboxStyle}><input type="checkbox" checked={Boolean(form.exportPermission)} onChange={(event) => setForm({ ...form, exportPermission: event.target.checked })} /> Export permission</label>
-        <button type="button" style={primaryButtonStyle} onClick={submit}>Create organisation</button>
-      </section>
-      <section style={panelStyle}>
-        <div style={sectionHeaderStyle}>
-          <h2 style={h2Style}>Organisations</h2>
-          <button type="button" style={primaryButtonStyle} onClick={() => document.getElementById("add-organisation-form")?.scrollIntoView({ behavior: "smooth", block: "start" })}>
-            Add organisation
-          </button>
+        <div style={rowStyle}>
+          <button type="button" style={primaryButtonStyle} onClick={() => void submit()}>Create organisation</button>
+          <button type="button" style={secondaryButtonStyle} onClick={() => setFormOpen(false)}>Cancel</button>
         </div>
-        {renderOrganisationTable(organisations, portfolio, runAction)}
       </section>
+      ) : null}
     </div>
   );
 }
@@ -772,15 +794,29 @@ function renderLicences(
   portfolio: EnterprisePortfolio,
   form: EnterpriseLicenceForm,
   setForm: (value: EnterpriseLicenceForm) => void,
-  submit: () => void,
+  submit: () => void | Promise<void>,
+  formOpen: boolean,
+  setFormOpen: (value: boolean) => void,
 ) {
   const committedSeats = Math.max(Number(form.allocatedSeats ?? 0), 0);
   const availableSeats = Math.max(Number(form.purchasedSeats ?? 0) - committedSeats, 0);
   return (
-    <div style={twoColumnStyle}>
+    <div style={stackStyle}>
       <section style={panelStyle}>
+        <div style={sectionHeaderStyle}>
+          <div>
+            <h2 style={h2Style}>Licences</h2>
+            <p style={mutedStyle}>Configure and inspect real licence entitlements. Committed seats are active + invited + suspended reservations.</p>
+          </div>
+          <button type="button" style={primaryButtonStyle} onClick={() => setFormOpen(true)}>
+            Create licence
+          </button>
+        </div>
+        {renderLicenceTable(licences, portfolio)}
+      </section>
+      {formOpen ? (
+      <section style={contextPanelStyle} aria-label="Create licence form">
         <h2 id="create-licence-form" style={h2Style}>Create licence</h2>
-        <p style={mutedStyle}>Configure a real licence entitlement. Committed seats are active + invited + suspended reservations; available seats are purchased minus committed usage.</p>
         <h3 style={h3Style}>1. Plan</h3>
         <label style={labelStyle}>Organisation
           <select value={String(form.organisationId)} onChange={(event) => setForm({ ...form, organisationId: event.target.value })}>
@@ -830,17 +866,12 @@ function renderLicences(
         </label>
         <h3 style={h3Style}>4. Review</h3>
         <p style={privacyStyle}>{labelise(form.licencePlan)} licence for {form.purchasedSeats} purchased seats, renewing on {form.renewalDate}. Seat limits are enforced server-side.</p>
-        <button type="button" style={primaryButtonStyle} onClick={submit}>Create licence</button>
-      </section>
-      <section style={panelStyle}>
-        <div style={sectionHeaderStyle}>
-          <h2 style={h2Style}>Licences</h2>
-          <button type="button" style={primaryButtonStyle} onClick={() => document.getElementById("create-licence-form")?.scrollIntoView({ behavior: "smooth", block: "start" })}>
-            Create licence
-          </button>
+        <div style={rowStyle}>
+          <button type="button" style={primaryButtonStyle} onClick={() => void submit()}>Create licence</button>
+          <button type="button" style={secondaryButtonStyle} onClick={() => setFormOpen(false)}>Cancel</button>
         </div>
-        {renderLicenceTable(licences, portfolio)}
       </section>
+      ) : null}
     </div>
   );
 }
@@ -1377,7 +1408,7 @@ function renderFilterBar(
   );
 }
 
-function renderOrganisationTable(organisations: EnterpriseOrganisation[], portfolio: EnterprisePortfolio, runAction?: (action: string, payload: Record<string, unknown>) => void) {
+function renderOrganisationTable(organisations: EnterpriseOrganisation[], portfolio: EnterprisePortfolio, runAction?: (action: string, payload: Record<string, unknown>) => void, configureLicence?: (organisationId: string) => void) {
   return (
     <div style={tableWrapStyle}>
       <table style={tableStyle}>
@@ -1403,8 +1434,8 @@ function renderOrganisationTable(organisations: EnterpriseOrganisation[], portfo
                 <td style={actionsCellStyle}>
                   <Link href={`/application/enterprise/organisations/${org.id}`}>View</Link>
                   <Link href={`/application/enterprise/organisations/${org.id}#settings`}>Edit</Link>
-                  {orgLicences[0] ? <Link href={`/application/enterprise/licences/${orgLicences[0].id}`}>Manage licence</Link> : <button type="button" disabled={!runAction} onClick={() => document.getElementById("create-licence-form")?.scrollIntoView({ behavior: "smooth", block: "start" })}>Configure licence</button>}
-                  <button type="button" disabled>Manage users - Phase 3</button>
+                  {orgLicences[0] ? <Link href={`/application/enterprise/licences/${orgLicences[0].id}`}>Manage licence</Link> : <button type="button" disabled={!configureLicence} onClick={() => configureLicence?.(org.id)}>Configure licence</button>}
+                  <Link href={`/application/enterprise/organisations/${org.id}#users`}>Manage users</Link>
                   <Link href={`/application/enterprise/organisations/${org.id}#invitations`}>Invite administrator</Link>
                   <button type="button" disabled={!runAction} onClick={() => runAction?.("transition_organisation", { organisationId: org.id, status: org.status === "suspended" ? "active" : "suspended", reason: "Updated from organisation list" })}>{org.status === "suspended" ? "Reactivate" : "Suspend"}</button>
                   <button type="button" disabled={!runAction} onClick={() => runAction?.("delete_or_archive_organisation", { organisationId: org.id, reason: "Archived from organisation list" })}>Archive/delete</button>
@@ -1564,6 +1595,7 @@ const mutedStyle: CSSProperties = { color: "#64748b", margin: "6px 0 0", lineHei
 const privacyStyle: CSSProperties = { color: "#334155", background: "#f1f5f9", border: "1px solid #dbe3ef", borderRadius: 6, padding: 10, margin: "12px 0 0" };
 const rowStyle: CSSProperties = { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 };
 const sectionHeaderStyle: CSSProperties = { display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 12 };
+const contextPanelStyle: CSSProperties = { border: "1px solid #cbd5e1", borderRadius: 8, padding: 14, display: "grid", gap: 12, background: "#f8fafc" };
 const secondaryLinkStyle: CSSProperties = { color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 6, padding: "9px 12px", textDecoration: "none", background: "#fff", fontWeight: 700 };
 const secondaryButtonStyle: CSSProperties = { color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 6, padding: "9px 12px", background: "#fff", fontWeight: 700 };
 const primaryButtonStyle: CSSProperties = { border: 0, borderRadius: 6, padding: "10px 14px", background: "#111827", color: "#fff", fontWeight: 800 };

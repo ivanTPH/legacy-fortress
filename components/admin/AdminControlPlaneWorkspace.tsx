@@ -319,6 +319,13 @@ export default function AdminControlPlaneWorkspace({
     expiryDays: 7,
     requireMfa: true,
   });
+  const [adminInviteOpen, setAdminInviteOpen] = useState(false);
+  const [adminLifecycleForm, setAdminLifecycleForm] = useState({
+    adminUserId: "",
+    action: "activate",
+    role: "support_agent",
+    reason: "",
+  });
   const [health, setHealth] = useState<HealthState>({
     appHealth: null,
     schemaHealth: null,
@@ -436,7 +443,45 @@ export default function AdminControlPlaneWorkspace({
     setAdmins(json.admins ?? []);
     setAdminInvitations(json.invitations ?? []);
     setAdminInviteForm({ email: "", fullName: "", roleTemplate: "support_agent", scopeType: "platform", expiryDays: 7, requireMfa: true });
+    setAdminInviteOpen(false);
     setMessage("Admin invitation sent. The recipient is not active until they accept and satisfy required checks.");
+  }
+
+  async function runAdminLifecycle() {
+    setMessage("");
+    const res = await authFetch("/api/internal/admin/admin-users", {
+      method: "PATCH",
+      body: JSON.stringify(adminLifecycleForm),
+    });
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; admins?: AdminUser[]; message?: string; code?: string };
+    if (!res.ok || !json.ok) {
+      setMessage(json.message || json.code || "Admin lifecycle action was blocked.");
+      return;
+    }
+    setAdmins(json.admins ?? []);
+    setAdminLifecycleForm({ adminUserId: "", action: "activate", role: "support_agent", reason: "" });
+    setMessage("Admin lifecycle action completed and audit recorded.");
+  }
+
+  async function runAdminInvitationLifecycle(invitationId: string, action: "resend_invitation" | "revoke_invitation") {
+    const res = await authFetch("/api/internal/admin/admin-users", {
+      method: "PATCH",
+      body: JSON.stringify({ invitationId, action }),
+    });
+    const json = (await res.json().catch(() => ({}))) as {
+      ok?: boolean;
+      message?: string;
+      code?: string;
+      admins?: AdminUser[];
+      invitations?: AdminInvitation[];
+    };
+    if (!res.ok || !json.ok) {
+      setMessage(json.message || json.code || "Admin invitation lifecycle action failed.");
+      return;
+    }
+    if (json.admins) setAdmins(json.admins);
+    if (json.invitations) setAdminInvitations(json.invitations);
+    setMessage(action === "revoke_invitation" ? "Admin invitation revoked and audit recorded." : "Admin invitation resent and audit recorded.");
   }
 
   const visibleNav = useMemo(() => {
@@ -525,7 +570,7 @@ export default function AdminControlPlaneWorkspace({
         {message ? <section style={alertStyle}>{message}</section> : null}
 
         {section === "overview" ? renderOverview(metrics, support, verificationQueue, probateCases) : null}
-        {section === "admin-users" || section === "admin-user-detail" ? renderAdminUsers(admins, adminInvitations, adminFilter, setAdminFilter, adminInviteForm, setAdminInviteForm, sendAdminInvitation, resourceId) : null}
+        {section === "admin-users" || section === "admin-user-detail" ? renderAdminUsers(admins, adminInvitations, adminFilter, setAdminFilter, adminInviteForm, setAdminInviteForm, sendAdminInvitation, adminInviteOpen, setAdminInviteOpen, adminLifecycleForm, setAdminLifecycleForm, runAdminLifecycle, runAdminInvitationLifecycle, resourceId) : null}
         {section === "users" || section === "user-detail" ? renderUsers(lookupQuery, setLookupQuery, lookupResults, runLookup, resourceId) : null}
         {section === "support" || section === "invitations" || section === "access" ? renderSupport(section, support) : null}
         {section === "verification" || section === "verification-detail" ? renderVerification(verificationQueue, resourceId) : null}
@@ -637,6 +682,22 @@ function renderAdminUsers(
     requireMfa: boolean;
   }) => void,
   sendAdminInvitation: () => Promise<void>,
+  inviteOpen: boolean,
+  setInviteOpen: (value: boolean) => void,
+  lifecycleForm: {
+    adminUserId: string;
+    action: string;
+    role: string;
+    reason: string;
+  },
+  setLifecycleForm: (value: {
+    adminUserId: string;
+    action: string;
+    role: string;
+    reason: string;
+  }) => void,
+  runAdminLifecycle: () => Promise<void>,
+  runAdminInvitationLifecycle: (invitationId: string, action: "resend_invitation" | "revoke_invitation") => Promise<void>,
   resourceId: string | null,
 ) {
   const filtered = admins.filter((item) => {
@@ -650,55 +711,67 @@ function renderAdminUsers(
   return (
     <div style={stackStyle}>
       <section style={panelStyle}>
-        <h2 style={h2Style}>Invite administrator</h2>
-        <p style={mutedStyle}>Sending an invitation does not activate admin access. The recipient must authenticate, accept terms, accept the role, and satisfy MFA where required.</p>
-        <div style={formGridStyle}>
-          <label>Email address *
-            <input value={inviteForm.email} onChange={(event) => setInviteForm({ ...inviteForm, email: event.target.value })} />
-          </label>
-          <label>Full name
-            <input value={inviteForm.fullName} onChange={(event) => setInviteForm({ ...inviteForm, fullName: event.target.value })} />
-          </label>
-          <label>Role template
-            <select value={inviteForm.roleTemplate} onChange={(event) => setInviteForm({ ...inviteForm, roleTemplate: event.target.value })}>
-              <option value="super_admin">Super administrator</option>
-              <option value="support_agent">Support agent</option>
-              <option value="probate_reviewer">Probate reviewer</option>
-              <option value="auditor">Auditor</option>
-              <option value="enterprise_admin">Enterprise administrator</option>
-              <option value="read_only_operations">Read-only operations user</option>
-            </select>
-          </label>
-          <label>Access scope
-            <select value={inviteForm.scopeType} onChange={(event) => setInviteForm({ ...inviteForm, scopeType: event.target.value })}>
-              <option value="platform">Platform-wide</option>
-              <option value="organisation">Specific organisation</option>
-              <option value="support_only">Support-only</option>
-              <option value="probate_only">Probate-only</option>
-              <option value="read_only">Read-only</option>
-              <option value="time_limited">Time-limited</option>
-            </select>
-          </label>
-          <label>Invitation expiry days
-            <input type="number" min={1} max={90} value={inviteForm.expiryDays} onChange={(event) => setInviteForm({ ...inviteForm, expiryDays: Number(event.target.value) })} />
-          </label>
-          <label style={checkboxLineStyle}>
-            <input type="checkbox" checked={inviteForm.requireMfa} onChange={(event) => setInviteForm({ ...inviteForm, requireMfa: event.target.checked })} />
-            Require MFA
-          </label>
+        <div style={sectionHeaderStyle}>
+          <div>
+            <h2 style={h2Style}>Administrator access</h2>
+            <p style={mutedStyle}>Create invitations and run lifecycle actions from the canonical admin route. Recipients are not active until acceptance and required checks succeed.</p>
+          </div>
+          <button type="button" onClick={() => setInviteOpen(true)} style={primaryButtonStyle}>Invite administrator</button>
         </div>
-        <section style={permissionSummaryStyle}>
-          <strong>Permission summary</strong>
-          <span>{permissionSummaryForRole(inviteForm.roleTemplate)}</span>
-        </section>
-        <button type="button" onClick={() => void sendAdminInvitation()} style={primaryButtonStyle}>Review and send invitation</button>
+        {inviteOpen ? (
+          <section style={contextPanelStyle} aria-label="Invite administrator form">
+            <div style={formGridStyle}>
+              <label>Email address *
+                <input value={inviteForm.email} onChange={(event) => setInviteForm({ ...inviteForm, email: event.target.value })} />
+              </label>
+              <label>Full name
+                <input value={inviteForm.fullName} onChange={(event) => setInviteForm({ ...inviteForm, fullName: event.target.value })} />
+              </label>
+              <label>Role template
+                <select value={inviteForm.roleTemplate} onChange={(event) => setInviteForm({ ...inviteForm, roleTemplate: event.target.value })}>
+                  <option value="super_admin">Super administrator</option>
+                  <option value="support_agent">Support agent</option>
+                  <option value="probate_reviewer">Probate reviewer</option>
+                  <option value="auditor">Auditor</option>
+                  <option value="enterprise_admin">Enterprise administrator</option>
+                  <option value="read_only_operations">Read-only operations user</option>
+                </select>
+              </label>
+              <label>Access scope
+                <select value={inviteForm.scopeType} onChange={(event) => setInviteForm({ ...inviteForm, scopeType: event.target.value })}>
+                  <option value="platform">Platform-wide</option>
+                  <option value="organisation">Specific organisation</option>
+                  <option value="support_only">Support-only</option>
+                  <option value="probate_only">Probate-only</option>
+                  <option value="read_only">Read-only</option>
+                  <option value="time_limited">Time-limited</option>
+                </select>
+              </label>
+              <label>Invitation expiry days
+                <input type="number" min={1} max={90} value={inviteForm.expiryDays} onChange={(event) => setInviteForm({ ...inviteForm, expiryDays: Number(event.target.value) })} />
+              </label>
+              <label style={checkboxLineStyle}>
+                <input type="checkbox" checked={inviteForm.requireMfa} onChange={(event) => setInviteForm({ ...inviteForm, requireMfa: event.target.checked })} />
+                Require MFA
+              </label>
+            </div>
+            <section style={permissionSummaryStyle}>
+              <strong>Permission summary</strong>
+              <span>{permissionSummaryForRole(inviteForm.roleTemplate)}</span>
+            </section>
+            <div style={rowStyle}>
+              <button type="button" onClick={() => void sendAdminInvitation()} style={primaryButtonStyle}>Review and send invitation</button>
+              <button type="button" onClick={() => setInviteOpen(false)} style={secondaryButtonStyle}>Cancel</button>
+            </div>
+          </section>
+        ) : null}
       </section>
 
       <section style={panelStyle}>
         <h2 style={h2Style}>Administrator invitations</h2>
         <div style={tableWrapStyle}>
           <table style={tableStyle}>
-            <thead><tr><th>Recipient</th><th>Role</th><th>Scope</th><th>Status</th><th>MFA</th><th>Expires</th></tr></thead>
+            <thead><tr><th>Recipient</th><th>Role</th><th>Scope</th><th>Status</th><th>MFA</th><th>Expires</th><th>Actions</th></tr></thead>
             <tbody>
               {invitations.map((item) => (
                 <tr key={item.id}>
@@ -708,9 +781,14 @@ function renderAdminUsers(
                   <td>{item.status}</td>
                   <td>{item.require_mfa ? "Required" : "Not required"}</td>
                   <td>{formatDate(item.expires_at)}</td>
+                  <td style={actionsCellStyle}>
+                    {["draft", "pending", "sent", "delivered", "failed"].includes(item.status) ? <button type="button" onClick={() => void runAdminInvitationLifecycle(item.id, "resend_invitation")}>Resend</button> : null}
+                    {["draft", "pending", "sent", "delivered", "failed"].includes(item.status) ? <button type="button" onClick={() => window.confirm("Revoke this pending administrator invitation? The recipient will not become active and no authentication account is deleted.") && void runAdminInvitationLifecycle(item.id, "revoke_invitation")}>Revoke</button> : null}
+                    {["accepted", "revoked", "expired"].includes(item.status) ? <span style={mutedInlineStyle}>No pending action</span> : null}
+                  </td>
                 </tr>
               ))}
-              {invitations.length === 0 ? <tr><td colSpan={6}>No administrator invitations have been created.</td></tr> : null}
+              {invitations.length === 0 ? <tr><td colSpan={7}>No administrator invitations have been created.</td></tr> : null}
             </tbody>
           </table>
         </div>
@@ -740,7 +818,11 @@ function renderAdminUsers(
                   <td>{formatRoleLabel(item.role, item.is_master)}</td>
                   <td>{item.status}</td>
                   <td>{formatDate(item.created_at)}</td>
-                  <td><Link href={`/admin/admin-users/${item.id}`}>Inspect</Link></td>
+                  <td style={actionsCellStyle}>
+                    <Link href={`/admin/admin-users/${item.id}`}>Inspect</Link>
+                    <button type="button" onClick={() => setLifecycleForm({ ...lifecycleForm, adminUserId: item.id, action: item.status === "active" ? "deactivate" : "activate" })}>{item.status === "active" ? "Suspend access" : "Reactivate access"}</button>
+                    <button type="button" onClick={() => setLifecycleForm({ ...lifecycleForm, adminUserId: item.id, action: "change_role", role: item.role ?? "support_agent" })}>Edit role</button>
+                  </td>
                 </tr>
               ))}
               {filtered.length === 0 ? <tr><td colSpan={5}>No admin users match this filter.</td></tr> : null}
@@ -750,8 +832,39 @@ function renderAdminUsers(
       </section>
       <section style={panelStyle}>
         <h2 style={h2Style}>Lifecycle controls</h2>
-        <p style={mutedStyle}>Role change, activation, deactivation, final-master protection, self-lockout protection, and audit recording are still served by `/api/internal/admin/admin-users`. High-impact actions require server-side permission and reason validation.</p>
-        <Link href="/internal/admin" style={secondaryLinkStyle}>Open legacy lifecycle controls</Link>
+        <p style={mutedStyle}>Role change, activation, deactivation, final-master protection, self-lockout protection, and audit recording are served by the canonical admin lifecycle API.</p>
+        <div style={formGridStyle}>
+          <label>Selected administrator
+            <select value={lifecycleForm.adminUserId} onChange={(event) => setLifecycleForm({ ...lifecycleForm, adminUserId: event.target.value })}>
+              <option value="">Select administrator</option>
+              {admins.map((item) => <option key={item.id} value={item.id}>{item.display_name || item.email_normalized}</option>)}
+            </select>
+          </label>
+          <label>Action
+            <select value={lifecycleForm.action} onChange={(event) => setLifecycleForm({ ...lifecycleForm, action: event.target.value })}>
+              <option value="activate">Reactivate access</option>
+              <option value="deactivate">Suspend access</option>
+              <option value="change_role">Edit role</option>
+            </select>
+          </label>
+          <label>New role
+            <select value={lifecycleForm.role} disabled={lifecycleForm.action !== "change_role"} onChange={(event) => setLifecycleForm({ ...lifecycleForm, role: event.target.value })}>
+              <option value="super_admin">Super administrator</option>
+              <option value="support_agent">Support agent</option>
+              <option value="probate_reviewer">Probate reviewer</option>
+              <option value="auditor">Auditor</option>
+              <option value="enterprise_admin">Enterprise administrator</option>
+            </select>
+          </label>
+          <label>Reason
+            <input value={lifecycleForm.reason} onChange={(event) => setLifecycleForm({ ...lifecycleForm, reason: event.target.value })} />
+          </label>
+        </div>
+        <section style={permissionSummaryStyle}>
+          <strong>Consequence</strong>
+          <span>{lifecycleForm.action === "deactivate" ? "Suspends platform administrator access only. It does not delete the person’s authentication account or personal vault." : lifecycleForm.action === "change_role" ? "Changes the platform role after server-side final-super-admin and self-lockout checks." : "Restores administrator access if the account is eligible."}</span>
+        </section>
+        <button type="button" onClick={() => void runAdminLifecycle()} disabled={!lifecycleForm.adminUserId} style={primaryButtonStyle}>Confirm lifecycle action</button>
       </section>
     </div>
   );
@@ -1156,8 +1269,12 @@ const h1Style = { margin: 0, fontSize: 28, lineHeight: 1.15 } satisfies CSSPrope
 const h2Style = { margin: 0, fontSize: 20 } satisfies CSSProperties;
 const h3Style = { margin: 0, fontSize: 16 } satisfies CSSProperties;
 const mutedStyle = { margin: 0, color: "#64748b", lineHeight: 1.45 } satisfies CSSProperties;
+const mutedInlineStyle = { color: "#64748b", fontSize: 13 } satisfies CSSProperties;
 const secondaryLinkStyle = { border: "1px solid #cbd5e1", borderRadius: 6, padding: "9px 12px", color: "#0f172a", textDecoration: "none", fontWeight: 700, background: "#fff" } satisfies CSSProperties;
 const secondaryButtonStyle = { ...secondaryLinkStyle, cursor: "pointer" } satisfies CSSProperties;
 const primaryButtonStyle = { border: 0, borderRadius: 6, padding: "10px 14px", color: "#fff", background: "#111827", fontWeight: 800, cursor: "pointer" } satisfies CSSProperties;
 const checkboxLineStyle = { display: "flex", gap: 8, alignItems: "center", fontWeight: 700 } satisfies CSSProperties;
 const permissionSummaryStyle = { border: "1px solid #bfdbfe", borderRadius: 8, padding: 12, background: "#eff6ff", color: "#1e3a8a", display: "grid", gap: 4 } satisfies CSSProperties;
+const sectionHeaderStyle = { display: "flex", justifyContent: "space-between", alignItems: "start", gap: 12, flexWrap: "wrap" } satisfies CSSProperties;
+const contextPanelStyle = { border: "1px solid #cbd5e1", borderRadius: 8, padding: 14, display: "grid", gap: 12, background: "#f8fafc" } satisfies CSSProperties;
+const actionsCellStyle = { display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" } satisfies CSSProperties;

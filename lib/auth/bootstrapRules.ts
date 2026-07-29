@@ -1,5 +1,5 @@
 import { toSafeInternalPath } from "./session.ts";
-import { canRoleAccessPath } from "../accessModel.ts";
+import { canRoleAccessPath, isInternalAccessRoute } from "../accessModel.ts";
 import type { PlatformRole } from "./platformRoles.ts";
 
 export function resolveBootstrapDestination({
@@ -49,6 +49,6 @@ function resolveAuthorizedDestination(
   roles: readonly PlatformRole[],
 ) {
   const destination = toSafeInternalPath(nextPath, completedDestination);
-  if (!destination.startsWith("/internal/admin")) return destination;
+  if (!isInternalAccessRoute(destination)) return destination;
   return canRoleAccessPath(roles, destination) ? destination : completedDestination;
 }

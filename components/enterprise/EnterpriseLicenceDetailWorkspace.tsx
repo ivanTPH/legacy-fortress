@@ -52,6 +52,23 @@ export default function EnterpriseLicenceDetailWorkspace({ licenceId }: { licenc
   const [reason, setReason] = useState("");
   const [renewalDate, setRenewalDate] = useState(nextYearInput());
   const [renewalSeats, setRenewalSeats] = useState(25);
+  const [editOpen, setEditOpen] = useState(false);
+  const [licenceForm, setLicenceForm] = useState({
+    licencePlan: "starter",
+    customPlanName: "",
+    contractReference: "",
+    billingReference: "",
+    startDate: "",
+    renewalDate: "",
+    endDate: "",
+    renewalNoticeDays: 90,
+    autoRenew: false,
+    renewalNotes: "",
+    purchasedSeats: 1,
+    billingStatus: "not_configured",
+    licenceStatus: "draft",
+    accountOwner: "",
+  });
 
   const authFetch = useCallback(async (input: string, init?: RequestInit) => {
     const sessionRes = await supabase.auth.getSession();
@@ -79,6 +96,7 @@ export default function EnterpriseLicenceDetailWorkspace({ licenceId }: { licenc
     setSeatQuantity(json.detail.licence.purchasedSeats);
     setRenewalSeats(json.detail.licence.purchasedSeats);
     setRenewalDate(json.detail.licence.renewalDate);
+    setLicenceForm(toLicenceForm(json.detail.licence));
     setState("ready");
   }, [authFetch, licenceId, router]);
 
@@ -106,6 +124,14 @@ export default function EnterpriseLicenceDetailWorkspace({ licenceId }: { licenc
     await load();
   }
 
+  async function signOut() {
+    setDetail(null);
+    setMessage("");
+    await supabase.auth.signOut();
+    router.replace("/sign-in");
+    router.refresh();
+  }
+
   if (state === "checking") return <main style={pageStyle}><section style={panelStyle}><h1>Checking licence access</h1><p>Confirming your signed-in session and role permissions.</p></section></main>;
   if (state !== "ready" || !detail) return <main style={pageStyle}><section style={panelStyle}><h1>{state === "denied" ? "Access denied" : "Licence unavailable"}</h1><p>{message}</p><Link href="/application/enterprise">Back to Enterprise Operations</Link></section></main>;
 
@@ -122,7 +148,9 @@ export default function EnterpriseLicenceDetailWorkspace({ licenceId }: { licenc
           <span style={stageBadgeStyle}>STAGING — synthetic test data may be present</span>
           <WorkspaceSwitcher currentPathname={`/application/enterprise/licences/${licenceId}`} alwaysShow compact />
           <Link style={secondaryLinkStyle} href="/application/enterprise">Enterprise Operations</Link>
+          <Link style={secondaryLinkStyle} href="/dashboard">Personal Vault</Link>
           {detail.organisation ? <Link style={secondaryLinkStyle} href={`/application/enterprise/organisations/${detail.organisation.id}`}>Organisation</Link> : null}
+          <button type="button" aria-label="Sign out of Legacy Fortress" style={secondaryButtonStyle} onClick={signOut}>Sign out</button>
         </div>
       </header>
       {message ? <section style={alertStyle}>{message}</section> : null}
@@ -189,6 +217,36 @@ export default function EnterpriseLicenceDetailWorkspace({ licenceId }: { licenc
       ) : null}
       {tab === "settings" ? (
         <section style={panelStyle}>
+          <div style={sectionHeaderStyle}>
+            <div>
+              <h2>Edit licence</h2>
+              <p style={mutedStyle}>Edit the currently supported canonical licence fields. Seat reductions remain protected by committed usage.</p>
+            </div>
+            <button type="button" style={primaryButtonStyle} onClick={() => setEditOpen(true)}>Edit licence</button>
+          </div>
+          {editOpen ? (
+            <section style={contextPanelStyle} aria-label="Edit licence form">
+              <label style={labelStyle}>Licence plan<select value={licenceForm.licencePlan} onChange={(event) => setLicenceForm({ ...licenceForm, licencePlan: event.target.value })}><option value="starter">Starter</option><option value="professional">Professional</option><option value="enterprise">Enterprise</option><option value="custom">Custom</option></select></label>
+              {licenceForm.licencePlan === "custom" ? <FormInput label="Custom plan name" required value={licenceForm.customPlanName} onChange={(customPlanName) => setLicenceForm({ ...licenceForm, customPlanName })} /> : null}
+              <FormInput label="Contract reference" value={licenceForm.contractReference} onChange={(contractReference) => setLicenceForm({ ...licenceForm, contractReference })} />
+              <FormInput label="Billing reference" value={licenceForm.billingReference} onChange={(billingReference) => setLicenceForm({ ...licenceForm, billingReference })} />
+              <FormInput label="Purchased seats" type="number" required value={String(licenceForm.purchasedSeats)} onChange={(value) => setLicenceForm({ ...licenceForm, purchasedSeats: Number(value) })} />
+              <p style={privacyStyle}>Minimum safe seat count is {licence.committedSeats}. The server rejects reductions below committed seats.</p>
+              <FormInput label="Start date" type="date" required value={licenceForm.startDate} onChange={(startDate) => setLicenceForm({ ...licenceForm, startDate })} />
+              <FormInput label="Renewal date" type="date" required value={licenceForm.renewalDate} onChange={(renewalDate) => setLicenceForm({ ...licenceForm, renewalDate })} />
+              <FormInput label="End date" type="date" value={licenceForm.endDate} onChange={(endDate) => setLicenceForm({ ...licenceForm, endDate })} />
+              <FormInput label="Renewal notice days" type="number" value={String(licenceForm.renewalNoticeDays)} onChange={(value) => setLicenceForm({ ...licenceForm, renewalNoticeDays: Number(value) })} />
+              <label style={labelStyle}>Licence status<select value={licenceForm.licenceStatus} onChange={(event) => setLicenceForm({ ...licenceForm, licenceStatus: event.target.value })}><option value="draft">Draft</option><option value="pending_approval">Pending approval</option><option value="active">Active</option><option value="expiring">Expiring</option><option value="suspended">Suspended</option><option value="cancelled">Cancelled</option><option value="expired">Expired</option></select></label>
+              <label style={labelStyle}>Billing status<select value={licenceForm.billingStatus} onChange={(event) => setLicenceForm({ ...licenceForm, billingStatus: event.target.value })}><option value="not_configured">Not configured</option><option value="trial">Trial</option><option value="active">Active</option><option value="past_due">Past due</option><option value="suspended">Suspended</option><option value="cancelled">Cancelled</option></select></label>
+              <FormInput label="Account owner" value={licenceForm.accountOwner} onChange={(accountOwner) => setLicenceForm({ ...licenceForm, accountOwner })} />
+              <label style={checkboxStyle}><input type="checkbox" checked={licenceForm.autoRenew} onChange={(event) => setLicenceForm({ ...licenceForm, autoRenew: event.target.checked })} /> Auto-renew</label>
+              <label style={labelStyle}>Renewal notes<textarea value={licenceForm.renewalNotes} onChange={(event) => setLicenceForm({ ...licenceForm, renewalNotes: event.target.value })} /></label>
+              <div style={rowStyle}>
+                <button type="button" style={primaryButtonStyle} onClick={() => runAction("update_licence", licenceForm).then(() => setEditOpen(false))}>Save licence</button>
+                <button type="button" style={secondaryButtonStyle} onClick={() => { setLicenceForm(toLicenceForm(licence)); setEditOpen(false); }}>Cancel</button>
+              </div>
+            </section>
+          ) : null}
           <h2>Lifecycle</h2>
           <FormInput label="Reason" value={reason} onChange={setReason} />
           <div style={rowStyle}>
@@ -210,6 +268,25 @@ export default function EnterpriseLicenceDetailWorkspace({ licenceId }: { licenc
       {tab === "invitations" ? <section style={panelStyle}><h2>Invitations</h2><p style={mutedStyle}>Organisation-user invitation acceptance and seat activation are delivered in Phase 3.</p></section> : null}
     </main>
   );
+}
+
+function toLicenceForm(licence: Licence) {
+  return {
+    licencePlan: licence.plan,
+    customPlanName: licence.customPlanName || "",
+    contractReference: licence.contractReference || "",
+    billingReference: licence.billingReference || "",
+    startDate: licence.startDate,
+    renewalDate: licence.renewalDate,
+    endDate: licence.endDate || "",
+    renewalNoticeDays: licence.renewalNoticeDays || 90,
+    autoRenew: Boolean(licence.autoRenew),
+    renewalNotes: licence.renewalNotes || "",
+    purchasedSeats: licence.purchasedSeats,
+    billingStatus: licence.billingStatus,
+    licenceStatus: licence.status,
+    accountOwner: licence.accountOwner || "",
+  };
 }
 
 function FormInput({ label, value, onChange, required = false, type = "text" }: { label: string; value: string; onChange: (value: string) => void; required?: boolean; type?: string }) {
@@ -251,6 +328,9 @@ const tabListStyle: CSSProperties = { display: "flex", gap: 8, flexWrap: "wrap",
 const tabStyle: CSSProperties = { border: "1px solid #cbd5e1", background: "#fff", borderRadius: 6, padding: "9px 12px", fontWeight: 700 };
 const activeTabStyle: CSSProperties = { ...tabStyle, background: "#111827", color: "#fff", borderColor: "#111827" };
 const labelStyle: CSSProperties = { display: "grid", gap: 5, fontWeight: 700, color: "#334155", fontSize: 13 };
+const checkboxStyle: CSSProperties = { display: "flex", gap: 8, alignItems: "center", color: "#334155", fontWeight: 700 };
 const rowStyle: CSSProperties = { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 };
+const sectionHeaderStyle: CSSProperties = { display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" };
+const contextPanelStyle: CSSProperties = { border: "1px solid #cbd5e1", borderRadius: 8, padding: 14, display: "grid", gap: 12, background: "#f8fafc" };
 const detailsGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 };
 const tableStyle: CSSProperties = { width: "100%", borderCollapse: "collapse", fontSize: 14 };

@@ -147,11 +147,11 @@ test("role middleware blocks consumer-only internal access without leaking page 
   assert.equal(decideRouteAccess(requestFor("/internal/admin/prototype/enterprise")).allowed, false);
   assert.deepEqual(decideRouteAccess(requestFor(
     "/internal/admin/prototype/enterprise?role=super_admin&admin=true&prototype=true",
-  )), { allowed: true, reason: "role_allowed" });
+  )), { allowed: false, status: 403, reason: "admin_role_required" });
   assert.equal(decideRouteAccess(requestFor(
     "/internal/admin/prototype/enterprise",
     { "x-lf-platform-roles": "enterprise_admin", "x-lf-trusted-role-claims": "true" },
-  )).allowed, true);
+  )).allowed, false);
 
   const previousEnvironment = process.env.LEGACY_FORTRESS_ENV;
   process.env.LEGACY_FORTRESS_ENV = "production";

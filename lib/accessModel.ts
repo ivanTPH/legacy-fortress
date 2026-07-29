@@ -42,7 +42,7 @@ export const ACCESS_MODEL_ROUTES: AccessModelRoute[] = [
     area: "enterprise_admin",
     routePrefix: "/application/enterprise",
     visibility: "authorised_role_only",
-    landing: "/internal/admin/prototype/enterprise",
+    landing: "/application/enterprise",
     description: "Hosted-UAT friendly enterprise entry path that resolves to the canonical enterprise workspace.",
   },
   {
@@ -53,11 +53,11 @@ export const ACCESS_MODEL_ROUTES: AccessModelRoute[] = [
     description: "Live operational admin access is role controlled and separate from consumer navigation.",
   },
   {
-    area: "enterprise_admin",
+    area: "test_preview",
     routePrefix: "/internal/admin/prototype",
-    visibility: "authorised_role_only",
+    visibility: "development_or_staging_only",
     landing: "/internal/admin/prototype",
-    description: "Static probate and enterprise prototype routes are direct-access only and permission gated by mock role.",
+    description: "Static probate and enterprise prototype routes are quarantined outside explicit local-development preview.",
   },
   {
     area: "test_preview",
@@ -71,8 +71,8 @@ export const ACCESS_MODEL_ROUTES: AccessModelRoute[] = [
 export const ACCESS_MODEL_SUMMARY = {
   preferredModel: "one_authentication_system_with_role_permissions",
   consumerDefaultLanding: "/dashboard",
-  adminDefaultLanding: "/internal/admin",
-  prototypeDefaultLanding: "/internal/admin/prototype",
+  adminDefaultLanding: "/admin",
+  prototypeDefaultLanding: null,
   consumerNavigationRule: "Consumer-only users should not see internal admin or test routes in app navigation.",
   authorisedSwitcherRule: "Authorised operational users may switch between Application view and Admin dashboard when their role permits.",
   productionAuthRule: "Admin access should be permission-controlled through the same production authentication system, not a separate insecure shortcut.",
@@ -80,7 +80,9 @@ export const ACCESS_MODEL_SUMMARY = {
 } as const;
 
 export function isInternalAccessRoute(pathname: string) {
-  return pathname.startsWith("/internal/admin")
+  return pathname === "/admin"
+    || pathname.startsWith("/admin/")
+    || pathname.startsWith("/internal/admin")
     || pathname.startsWith("/internal/test-login")
     || pathname.startsWith("/application/admin")
     || pathname.startsWith("/application/enterprise");
@@ -88,9 +90,10 @@ export function isInternalAccessRoute(pathname: string) {
 
 export function getAccessAreaForPath(pathname: string): AccessArea {
   if (pathname.startsWith("/internal/test-login")) return "test_preview";
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) return "probate_admin";
   if (pathname.startsWith("/application/enterprise")) return "enterprise_admin";
   if (pathname.startsWith("/application/admin")) return "probate_admin";
-  if (pathname.startsWith("/internal/admin/prototype")) return "enterprise_admin";
+  if (pathname.startsWith("/internal/admin/prototype")) return "test_preview";
   if (pathname.startsWith("/internal/admin")) return "probate_admin";
   return "consumer";
 }

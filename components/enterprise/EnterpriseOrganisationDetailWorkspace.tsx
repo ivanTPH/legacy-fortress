@@ -96,6 +96,7 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
   const [tab, setTab] = useState<"overview" | "licence" | "users" | "invitations" | "adoption" | "consent" | "reports" | "audit" | "settings">("overview");
   const [form, setForm] = useState<FormState | null>(null);
   const [reason, setReason] = useState("");
+  const [inviteFormOpen, setInviteFormOpen] = useState(false);
   const [licenceForm, setLicenceForm] = useState({
     licencePlan: "starter",
     customPlanName: "",
@@ -184,6 +185,14 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
     await load();
   }
 
+  async function signOut() {
+    setDetail(null);
+    setMessage("");
+    await supabase.auth.signOut();
+    router.replace("/sign-in");
+    router.refresh();
+  }
+
   if (state === "checking") return <main style={pageStyle}><section style={panelStyle}><h1>Checking organisation access</h1><p>Confirming your signed-in session and role permissions.</p></section></main>;
   if (state !== "ready" || !detail || !form) return <main style={pageStyle}><section style={panelStyle}><h1>{state === "denied" ? "Access denied" : "Organisation unavailable"}</h1><p>{message}</p><Link href="/application/enterprise">Back to Enterprise Operations</Link></section></main>;
 
@@ -201,6 +210,7 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
           <WorkspaceSwitcher currentPathname={`/application/enterprise/organisations/${organisationId}`} alwaysShow compact />
           <Link style={secondaryLinkStyle} href="/application/enterprise">Enterprise Operations</Link>
           <Link style={secondaryLinkStyle} href="/dashboard">Personal Vault</Link>
+          <button type="button" aria-label="Sign out of Legacy Fortress" style={secondaryButtonStyle} onClick={signOut}>Sign out</button>
         </div>
       </header>
       {message ? <section style={alertStyle}>{message}</section> : null}
@@ -319,16 +329,30 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
       ) : null}
       {tab === "invitations" ? (
         <section style={panelStyle}>
-          <h2>Invite administrator or user</h2>
-          <label style={labelStyle}>Licence<select value={inviteForm.licenceId} onChange={(event) => setInviteForm({ ...inviteForm, licenceId: event.target.value })}><option value="">No seat allocation</option>{detail.licences.map((licence) => <option key={licence.id} value={licence.id}>{licence.plan} · {licence.availableSeats} available</option>)}</select></label>
-          <label style={labelStyle}>Invitation type<select value={inviteForm.invitationType} onChange={(event) => setInviteForm({ ...inviteForm, invitationType: event.target.value })}><option value="enterprise_user">Enterprise user</option><option value="organisation_admin">Organisation administrator</option></select></label>
-          <label style={labelStyle}>Role<select value={inviteForm.roleTemplate} onChange={(event) => setInviteForm({ ...inviteForm, roleTemplate: event.target.value })}><option value="organisation_member">Organisation member</option><option value="organisation_admin">Organisation administrator</option><option value="organisation_licence_manager">Licence manager</option><option value="organisation_user_manager">User manager</option><option value="organisation_reporting_viewer">Reporting viewer</option><option value="organisation_auditor">Auditor/read-only</option></select></label>
-          <FormInput label="Email" required value={inviteForm.email} onChange={(email) => setInviteForm({ ...inviteForm, email })} />
-          <FormInput label="Full name" value={inviteForm.fullName} onChange={(fullName) => setInviteForm({ ...inviteForm, fullName })} />
-          <FormInput label="Department" value={inviteForm.department} onChange={(department) => setInviteForm({ ...inviteForm, department })} />
-          <FormInput label="Expiry days" type="number" value={String(inviteForm.expiryDays)} onChange={(value) => setInviteForm({ ...inviteForm, expiryDays: Number(value) })} />
-          <label style={checkboxStyle}><input type="checkbox" checked={inviteForm.requireMfa} onChange={(event) => setInviteForm({ ...inviteForm, requireMfa: event.target.checked })} /> Require MFA</label>
-          <button type="button" style={primaryButtonStyle} onClick={() => runAction(inviteForm.invitationType === "organisation_admin" ? "invite_organisation_admin" : "invite_enterprise_user", inviteForm)}>Send invitation</button>
+          <div style={sectionHeaderStyle}>
+            <div>
+              <h2>Invitations</h2>
+              <p style={mutedStyle}>Current invitations are shown before contextual administrator and user invite controls.</p>
+            </div>
+            <button type="button" style={primaryButtonStyle} onClick={() => setInviteFormOpen(true)}>Invite administrator</button>
+          </div>
+          {inviteFormOpen ? (
+            <section style={contextPanelStyle} aria-label="Invite administrator or user form">
+              <h3>Invite administrator or user</h3>
+              <label style={labelStyle}>Licence<select value={inviteForm.licenceId} onChange={(event) => setInviteForm({ ...inviteForm, licenceId: event.target.value })}><option value="">No seat allocation</option>{detail.licences.map((licence) => <option key={licence.id} value={licence.id}>{licence.plan} · {licence.availableSeats} available</option>)}</select></label>
+              <label style={labelStyle}>Invitation type<select value={inviteForm.invitationType} onChange={(event) => setInviteForm({ ...inviteForm, invitationType: event.target.value })}><option value="enterprise_user">Enterprise user</option><option value="organisation_admin">Organisation administrator</option></select></label>
+              <label style={labelStyle}>Role<select value={inviteForm.roleTemplate} onChange={(event) => setInviteForm({ ...inviteForm, roleTemplate: event.target.value })}><option value="organisation_member">Organisation member</option><option value="organisation_admin">Organisation administrator</option><option value="organisation_licence_manager">Licence manager</option><option value="organisation_user_manager">User manager</option><option value="organisation_reporting_viewer">Reporting viewer</option><option value="organisation_auditor">Auditor/read-only</option></select></label>
+              <FormInput label="Email" required value={inviteForm.email} onChange={(email) => setInviteForm({ ...inviteForm, email })} />
+              <FormInput label="Full name" value={inviteForm.fullName} onChange={(fullName) => setInviteForm({ ...inviteForm, fullName })} />
+              <FormInput label="Department" value={inviteForm.department} onChange={(department) => setInviteForm({ ...inviteForm, department })} />
+              <FormInput label="Expiry days" type="number" value={String(inviteForm.expiryDays)} onChange={(value) => setInviteForm({ ...inviteForm, expiryDays: Number(value) })} />
+              <label style={checkboxStyle}><input type="checkbox" checked={inviteForm.requireMfa} onChange={(event) => setInviteForm({ ...inviteForm, requireMfa: event.target.checked })} /> Require MFA</label>
+              <div style={rowStyle}>
+                <button type="button" style={primaryButtonStyle} onClick={() => runAction(inviteForm.invitationType === "organisation_admin" ? "invite_organisation_admin" : "invite_enterprise_user", inviteForm).then(() => setInviteFormOpen(false))}>Send invitation</button>
+                <button type="button" style={secondaryButtonStyle} onClick={() => setInviteFormOpen(false)}>Cancel</button>
+              </div>
+            </section>
+          ) : null}
           <h2>Enrolment link</h2>
           <label style={labelStyle}>Licence<select value={enrolmentForm.licenceId} onChange={(event) => setEnrolmentForm({ ...enrolmentForm, licenceId: event.target.value })}><option value="">Select licence</option>{detail.licences.map((licence) => <option key={licence.id} value={licence.id}>{licence.plan} · {licence.availableSeats} available</option>)}</select></label>
           <FormInput label="Display name" required value={enrolmentForm.displayName} onChange={(displayName) => setEnrolmentForm({ ...enrolmentForm, displayName })} />
@@ -448,6 +472,8 @@ const activeTabStyle: CSSProperties = { ...tabStyle, background: "#111827", colo
 const labelStyle: CSSProperties = { display: "grid", gap: 5, fontWeight: 700, color: "#334155", fontSize: 13 };
 const checkboxStyle: CSSProperties = { display: "flex", gap: 8, alignItems: "flex-start", color: "#334155", fontSize: 13, lineHeight: 1.45 };
 const rowStyle: CSSProperties = { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 };
+const sectionHeaderStyle: CSSProperties = { display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" };
+const contextPanelStyle: CSSProperties = { border: "1px solid #cbd5e1", borderRadius: 8, padding: 14, display: "grid", gap: 12, background: "#f8fafc" };
 const stackStyle: CSSProperties = { display: "grid", gap: 12 };
 const tableWrapStyle: CSSProperties = { overflowX: "auto" };
 const detailsGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 };

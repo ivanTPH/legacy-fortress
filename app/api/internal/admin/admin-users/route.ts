@@ -4,7 +4,7 @@ import {
   normalizeAdminUserLifecycleAction,
   planAdminUserLifecycleUpdate,
 } from "@/lib/admin/operations";
-import { createAdminInvitation, listAdminInvitations } from "@/lib/admin/adminInvitations";
+import { createAdminInvitation, listAdminInvitations, updateAdminInvitationStatus } from "@/lib/admin/adminInvitations";
 import { requireAdminAccess, requireAdminCapability } from "@/lib/admin/access";
 import { recordAdminAuditEvent } from "@/lib/admin/audit";
 import {
@@ -111,10 +111,48 @@ export async function PATCH(request: Request) {
 
   const body = (await request.json().catch(() => ({}))) as {
     adminUserId?: string;
+    invitationId?: string;
     action?: string;
     role?: string | null;
     reason?: string | null;
   };
+  const rawAction = String(body.action ?? "").trim();
+  const invitationId = String(body.invitationId ?? "").trim();
+  if (invitationId && ["resend_invitation", "revoke_invitation"].includes(rawAction)) {
+    const invitationStatus = rawAction === "revoke_invitation" ? "revoked" : "sent";
+    const rate = checkAdminLifecycleRateLimit({
+      actorId: admin.access.user.id,
+      sourceIp: getRequestSourceIp(request),
+      route: "/api/internal/admin/admin-users",
+      action: rawAction,
+    });
+    if (!rate.ok) {
+      return safeAdminErrorResponse(adminLifecycleError("ADMIN_RATE_LIMITED", "admin_invitation_lifecycle_rate_limit"));
+    }
+    try {
+      const invitation = await updateAdminInvitationStatus(admin.adminClient, invitationId, invitationStatus);
+      await recordAdminAuditEvent(admin.adminClient, admin.access, {
+        category: "admin_approval",
+        action: rawAction === "revoke_invitation" ? "Admin invitation revoked" : "Admin invitation resent",
+        result: "success",
+        resourceType: "access_policy",
+        resourceId: invitation.id,
+        resourceLabel: invitation.email_normalized,
+        route: "/api/internal/admin/admin-users",
+        metadata: {
+          action: rawAction,
+          next_status: invitationStatus,
+          reason_present: Boolean(body.reason),
+          target_email: invitation.email_normalized,
+        },
+      });
+      const admins = await listAdminUsers(admin.adminClient);
+      const invitations = await listAdminInvitations(admin.adminClient).catch(() => []);
+      return noStoreJson({ ok: true, invitation, admins, invitations });
+    } catch (error) {
+      return safeAdminErrorResponse(error);
+    }
+  }
   const adminUserId = String(body.adminUserId ?? "").trim();
   const action = normalizeAdminUserLifecycleAction(body.action);
   if (!adminUserId || !action) {

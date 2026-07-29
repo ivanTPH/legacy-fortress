@@ -66,7 +66,7 @@ test("linked or invited viewers bypass owner onboarding and terms gating", () =>
 
 test("admin next paths are honoured only for matching trusted role claims", () => {
   const consumer = resolveBootstrapDestination({
-    nextPath: "/internal/admin/prototype/enterprise",
+    nextPath: "/application/enterprise",
     completedDestination: "/dashboard",
     canBypassOnboarding: false,
     onboardingCompleted: true,
@@ -74,7 +74,7 @@ test("admin next paths are honoured only for matching trusted role claims", () =
     roles: ["consumer_user"],
   });
   const enterprise = resolveBootstrapDestination({
-    nextPath: "/internal/admin/prototype/enterprise",
+    nextPath: "/application/enterprise",
     completedDestination: "/dashboard",
     canBypassOnboarding: false,
     onboardingCompleted: true,
@@ -83,7 +83,7 @@ test("admin next paths are honoured only for matching trusted role claims", () =
   });
 
   assert.equal(consumer.destination, "/dashboard");
-  assert.equal(enterprise.destination, "/internal/admin/prototype/enterprise");
+  assert.equal(enterprise.destination, "/application/enterprise");
 });
 
 test("master owner email can keep internal admin destination during sign-in bootstrap", () => {
@@ -92,7 +92,7 @@ test("master owner email can keep internal admin destination during sign-in boot
     getMasterAdminRolesForEmail("ivanyardley@me.com"),
   );
   const result = resolveBootstrapDestination({
-    nextPath: "/internal/admin/prototype/enterprise?role=enterprise_admin&admin=true&prototype=true",
+    nextPath: "/application/enterprise",
     completedDestination: "/dashboard",
     canBypassOnboarding: false,
     onboardingCompleted: true,
@@ -102,7 +102,7 @@ test("master owner email can keep internal admin destination during sign-in boot
 
   assert.equal(
     result.destination,
-    "/internal/admin/prototype/enterprise?role=enterprise_admin&admin=true&prototype=true",
+    "/application/enterprise",
   );
 });
 
@@ -116,13 +116,13 @@ test("permissioned admin redirects do not depend on admin session API when roles
       },
     },
     {
-      nextPath: "/internal/admin/prototype/users?role=super_admin&admin=true&prototype=true",
+      nextPath: "/admin/admin-users",
       fallbackDestination: "/dashboard",
       roles: ["super_admin"],
     },
   );
 
-  assert.equal(result, "/internal/admin/prototype/users?role=super_admin&admin=true&prototype=true");
+  assert.equal(result, "/admin/admin-users");
 });
 
 test("unified login role routing maps future auth roles to expected landing areas", () => {
@@ -131,6 +131,6 @@ test("unified login role routing maps future auth roles to expected landing area
   assert.equal(getDefaultLandingForRoles(["consumer_user"]), "/dashboard");
   assert.equal(getDefaultLandingForRoles(["executor"]), "/contact-wallet");
   assert.equal(getDefaultLandingForRoles(["probate_admin"]), "/internal/admin/probate");
-  assert.equal(getDefaultLandingForRoles(["enterprise_admin"]), "/internal/admin/prototype/enterprise");
-  assert.equal(getDefaultLandingForRoles(["super_admin"]), "/internal/admin/prototype/enterprise");
+  assert.equal(getDefaultLandingForRoles(["enterprise_admin"]), "/application/enterprise");
+  assert.equal(getDefaultLandingForRoles(["super_admin"]), "/admin");
 });
