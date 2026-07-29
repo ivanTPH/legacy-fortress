@@ -455,6 +455,14 @@ export default function EnterpriseOperationsWorkspace() {
     return () => window.clearTimeout(timer);
   }, [loadPortfolio]);
 
+  async function signOut() {
+    setPortfolio(EMPTY_PORTFOLIO);
+    setMessage("");
+    await supabase.auth.signOut();
+    router.replace("/sign-in");
+    router.refresh();
+  }
+
   async function runAction(action: string, payload: Record<string, unknown>) {
     setMessage("");
     const res = await authFetch("/api/internal/admin/enterprise", {
@@ -558,6 +566,7 @@ export default function EnterpriseOperationsWorkspace() {
           <WorkspaceSwitcher currentPathname="/application/enterprise" alwaysShow compact />
           <Link style={secondaryLinkStyle} href="/dashboard">Personal Vault</Link>
           <Link style={secondaryLinkStyle} href="/admin">Admin Operations</Link>
+          <button type="button" aria-label="Sign out of Legacy Fortress" style={secondaryButtonStyle} onClick={signOut}>Sign out</button>
         </div>
       </header>
 

@@ -63,6 +63,11 @@ test("enterprise workspace replaces disabled prototype with functional controls"
   assert.match(workspace, /Request governed export/);
   assert.match(workspace, /Private vault records, uploaded documents, legal contents, individual financial values/);
   assert.match(workspace, /WorkspaceSwitcher/);
+  assert.match(workspace, /aria-label="Sign out of Legacy Fortress"/);
+  assert.match(workspace, /supabase\.auth\.signOut\(\)/);
+  assert.match(workspace, /setPortfolio\(EMPTY_PORTFOLIO\)/);
+  assert.match(workspace, /router\.replace\("\/sign-in"\)/);
+  assert.match(workspace, /router\.refresh\(\)/);
   assert.match(switcher, /return "\/application\/enterprise"/);
 });
 
