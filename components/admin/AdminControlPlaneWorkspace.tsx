@@ -409,8 +409,20 @@ export default function AdminControlPlaneWorkspace({
   }, [loadAll]);
 
   async function signOut() {
+    setState("checking");
+    setMessage("");
+    setAdmin(null);
+    setAdmins([]);
+    setAdminInvitations([]);
+    setMetrics([]);
+    setSupport(null);
+    setVerificationQueue([]);
+    setProbateCases([]);
+    setAuditEvents([]);
+    setLookupResults([]);
     await supabase.auth.signOut();
     router.replace("/sign-in");
+    router.refresh();
   }
 
   async function runLookup(query = lookupQuery) {

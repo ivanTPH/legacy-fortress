@@ -49,6 +49,24 @@ test("canonical admin users page owns invitation and lifecycle controls without 
   assert.doesNotMatch(workspace, /href="\/internal\/admin"/);
 });
 
+test("admin segment disables static caching and clears protected state during sign-out", () => {
+  const layout = read("app/admin/layout.tsx");
+  const workspace = read("components/admin/AdminControlPlaneWorkspace.tsx");
+
+  assert.match(layout, /dynamic = "force-dynamic"/);
+  assert.match(layout, /revalidate = 0/);
+  assert.match(layout, /fetchCache = "force-no-store"/);
+  assert.match(workspace, /setState\("checking"\)/);
+  assert.match(workspace, /setAdmin\(null\)/);
+  assert.match(workspace, /setAdmins\(\[\]\)/);
+  assert.match(workspace, /setAdminInvitations\(\[\]\)/);
+  assert.match(workspace, /setMetrics\(\[\]\)/);
+  assert.match(workspace, /setAuditEvents\(\[\]\)/);
+  assert.match(workspace, /await supabase\.auth\.signOut\(\)/);
+  assert.match(workspace, /router\.replace\("\/sign-in"\)/);
+  assert.match(workspace, /router\.refresh\(\)/);
+});
+
 test("enterprise organisation and licence create forms are contextual rather than permanently rendered", () => {
   const workspace = read("components/enterprise/EnterpriseOperationsWorkspace.tsx");
 
