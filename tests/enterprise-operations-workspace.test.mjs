@@ -30,12 +30,13 @@ test("enterprise operations migration creates private operational tables without
 
 test("enterprise API enforces admin access, audit, seat limits and privacy exclusions", () => {
   const route = fs.readFileSync(path.join(root, "app/api/internal/admin/enterprise/route.ts"), "utf8");
+  const actionCapabilities = fs.readFileSync(path.join(root, "lib/admin/enterpriseActionCapabilities.ts"), "utf8");
   const service = fs.readFileSync(path.join(root, "lib/admin/enterpriseOperations.ts"), "utf8");
 
   assert.match(route, /requireEnterpriseAccess\(request\)/);
   assert.match(route, /assertEnterpriseActionScope/);
   assert.match(route, /capabilityForEnterpriseAction/);
-  assert.match(route, /create_organisation[\s\S]*organisation:manage/);
+  assert.match(actionCapabilities, /create_organisation[\s\S]*organisation:manage/);
   assert.match(route, /recordAdminAuditEvent/);
   assert.match(route, /private_vault_content_excluded/);
   assert.match(route, /document_content_excluded/);
@@ -94,11 +95,12 @@ test("enterprise organisation Phase 1 migration adds lifecycle fields without va
 
 test("enterprise organisation API supports view, edit, lifecycle, delete/archive and audit", () => {
   const route = fs.readFileSync(path.join(root, "app/api/internal/admin/enterprise/route.ts"), "utf8");
+  const actionCapabilities = fs.readFileSync(path.join(root, "lib/admin/enterpriseActionCapabilities.ts"), "utf8");
   const service = fs.readFileSync(path.join(root, "lib/admin/enterpriseOperations.ts"), "utf8");
   const capabilities = fs.readFileSync(path.join(root, "lib/admin/capabilities.ts"), "utf8");
 
   assert.match(route, /requireAdminCapability\(admin\.access, "organisation:view"\)/);
-  assert.match(route, /create_organisation[\s\S]*organisation:manage/);
+  assert.match(actionCapabilities, /create_organisation[\s\S]*organisation:manage/);
   assert.match(route, /getEnterpriseOrganisationDetail/);
   assert.match(route, /updateEnterpriseOrganisation/);
   assert.match(route, /transitionEnterpriseOrganisation/);

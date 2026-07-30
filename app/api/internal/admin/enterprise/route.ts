@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireEnterpriseAccess, requireAdminCapability } from "@/lib/admin/access";
 import { recordAdminAuditEvent } from "@/lib/admin/audit";
+import { capabilityForEnterpriseAction } from "@/lib/admin/enterpriseActionCapabilities";
 import {
   buildEnterpriseReportExportDecision,
   createEnterpriseEnrolmentLink,
@@ -380,22 +381,6 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({ ok: false, code: "enterprise_action_failed", message: "Could not complete enterprise action safely." }, { status: 500 });
   }
-}
-
-function capabilityForEnterpriseAction(action: string) {
-  if (["create_organisation", "update_organisation", "transition_organisation", "delete_or_archive_organisation"].includes(action)) return "organisation:manage" as const;
-  if (action === "create_licence") return "licence:create" as const;
-  if (action === "update_licence") return "licence:edit" as const;
-  if (action === "change_licence_seats" || action === "reserve_licence_seat") return "licence:seats" as const;
-  if (action === "renew_licence") return "licence:renew" as const;
-  if (action === "transition_licence") return "licence:lifecycle" as const;
-  if (["invite_organisation_admin", "invite_enterprise_user", "update_invitation"].includes(action)) return "enterprise.invitation.manage" as const;
-  if (action === "transition_membership") return "enterprise.membership.manage" as const;
-  if (["create_enrolment_link", "update_enrolment_link"].includes(action)) return "enterprise.enrolment_link.manage" as const;
-  if (action === "validate_bulk_invitations") return "enterprise.invitation.manage" as const;
-  if (["save_view", "update_view", "delete_view"].includes(action)) return "enterprise.report.read" as const;
-  if (action === "export_report") return "enterprise.export.request" as const;
-  return null;
 }
 
 function assertEnterpriseOrganisationScope(access: { enterpriseScope?: { organisationScoped: boolean; organisationIds: string[] } }, organisationId: string | null | undefined) {
