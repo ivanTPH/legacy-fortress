@@ -51,6 +51,15 @@ export async function createAdminInvitation(
   const template = normalizeAdminInvitationRole(input.roleTemplate);
   if (!template) throw adminLifecycleError("ADMIN_INVALID_ROLE", "invalid_admin_invitation_role");
 
+  const activeAdmin = await client
+    .from("admin_users")
+    .select("id,status")
+    .eq("email_normalized", email)
+    .eq("status", "active")
+    .limit(1);
+  if (activeAdmin.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", activeAdmin.error.message);
+  if ((activeAdmin.data ?? []).length > 0) throw adminLifecycleError("ADMIN_DUPLICATE_USER", "duplicate_active_admin_user");
+
   const existing = await client
     .from("admin_invitations")
     .select("id,status")
@@ -85,6 +94,19 @@ export async function createAdminInvitation(
 }
 
 export async function updateAdminInvitationStatus(client: AnySupabaseClient, invitationId: string, status: "sent" | "revoked" | "expired") {
+  const current = await client
+    .from("admin_invitations")
+    .select("id,email_normalized,status")
+    .eq("id", invitationId)
+    .single();
+  if (current.error || !current.data) throw adminLifecycleError("ADMIN_OPERATION_CONFLICT", current.error?.message || "admin_invitation_not_found");
+  const currentStatus = String(current.data.status ?? "").trim().toLowerCase();
+  if (status === "sent" && ["revoked", "expired", "accepted"].includes(currentStatus)) {
+    throw adminLifecycleError("ADMIN_OPERATION_CONFLICT", "admin_invitation_resend_terminal_state");
+  }
+  if (status === "revoked" && currentStatus === "revoked") {
+    throw adminLifecycleError("ADMIN_OPERATION_CONFLICT", "admin_invitation_already_revoked");
+  }
   const patch: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
   if (status === "revoked") patch.revoked_at = new Date().toISOString();
   const update = await client

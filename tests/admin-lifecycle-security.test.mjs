@@ -8,6 +8,13 @@ const {
   planAdminUserLifecycleUpdate,
 } = await import("../lib/admin/operations.ts");
 const {
+  createAdminInvitation,
+  updateAdminInvitationStatus,
+} = await import("../lib/admin/adminInvitations.ts");
+const {
+  recordAdminLifecycleDenied,
+} = await import("../lib/admin/adminLifecycleAudit.ts");
+const {
   AdminLifecycleError,
   checkAdminLifecycleRateLimit,
   noStoreJson,
@@ -22,11 +29,13 @@ const {
 const root = process.cwd();
 
 class FakeSupabaseClient {
-  constructor({ adminRows = [], auditFails = false } = {}) {
+  constructor({ adminRows = [], invitationRows = [], auditFails = false } = {}) {
     this.adminRows = adminRows.map((row) => ({ ...row }));
+    this.invitationRows = invitationRows.map((row) => ({ ...row }));
     this.auditRows = [];
     this.auditFails = auditFails;
     this.updateCalls = 0;
+    this.insertCalls = 0;
   }
 
   from(table) {
@@ -77,6 +86,11 @@ class FakeQuery {
     return this;
   }
 
+  in(column, values) {
+    this.filters.push({ op: "in", column, values });
+    return this;
+  }
+
   single() {
     return this.execute({ single: true });
   }
@@ -97,26 +111,41 @@ class FakeQuery {
       return { data: { id: row.id }, error: null };
     }
 
+    if (this.table === "admin_invitations") {
+      return this.executeTable(this.client.invitationRows, { single, maybe });
+    }
     if (this.table !== "admin_users") return { data: single ? null : [], error: null, count: 0 };
-    const matches = this.client.adminRows.filter((row) => this.filters.every((filter) => {
+    return this.executeTable(this.client.adminRows, { single, maybe });
+  }
+
+  async executeTable(rows, { single = false, maybe = false } = {}) {
+    const matches = rows.filter((row) => this.filters.every((filter) => {
       if (filter.op === "eq") return row[filter.column] === filter.value;
       if (filter.op === "neq") return row[filter.column] !== filter.value;
+      if (filter.op === "in") return filter.values.includes(row[filter.column]);
       return true;
     }));
 
     if (this.countMode) return { data: null, error: null, count: matches.length };
 
+    if (this.insertRow) {
+      this.client.insertCalls += 1;
+      const row = { id: `${this.table}-${this.client.insertCalls}`, ...this.insertRow };
+      rows.push(row);
+      return { data: { ...row }, error: null };
+    }
+
     if (this.patch) {
       this.client.updateCalls += 1;
       const target = matches[0];
-      if (!target) return { data: null, error: { message: "admin_users missing target" } };
+      if (!target) return { data: null, error: { message: `${this.table} missing target` } };
       Object.assign(target, this.patch);
       return { data: { ...target }, error: null };
     }
 
     if (single) {
       if (!matches[0] && maybe) return { data: null, error: null };
-      if (!matches[0]) return { data: null, error: { message: "admin_users missing target" } };
+      if (!matches[0]) return { data: null, error: { message: `${this.table} missing target` } };
       return { data: { ...matches[0] }, error: null };
     }
 
@@ -252,6 +281,139 @@ test("last active super admin and self-demotion are blocked", async () => {
   );
 });
 
+test("role-based final active super admin is protected even when is_master is false", async () => {
+  const client = new FakeSupabaseClient({
+    adminRows: [
+      adminRow({ id: "role-super", role: "super_admin", is_master: false, user_id: "role-super-user" }),
+    ],
+  });
+
+  await assert.rejects(
+    () => planAdminUserLifecycleUpdate(client, {
+      adminUserId: "role-super",
+      action: "deactivate",
+      actorUserId: "other-user",
+      reason: "test",
+    }),
+    (error) => error instanceof AdminLifecycleError && error.code === "ADMIN_LAST_SUPER_ADMIN",
+  );
+});
+
+test("super admin lifecycle can demote another super admin when a second active super remains", async () => {
+  const client = new FakeSupabaseClient({
+    adminRows: [
+      adminRow({ id: "target-super", role: "super_admin", is_master: true, user_id: "target-user" }),
+      adminRow({ id: "remaining-super", role: "super_admin", is_master: false, user_id: "remaining-user" }),
+    ],
+  });
+
+  const plan = await planAdminUserLifecycleUpdate(client, {
+    adminUserId: "target-super",
+    action: "change_role",
+    role: "support_agent",
+    actorUserId: "remaining-user",
+    reason: "handover complete",
+  });
+
+  assert.equal(plan.after.role, "support_agent");
+  assert.equal(plan.after.is_master, false);
+});
+
+test("stale lifecycle target version is rejected before mutation", async () => {
+  const client = new FakeSupabaseClient({
+    adminRows: [
+      adminRow({ id: "target-admin", updated_at: "2026-07-19T00:00:00.000Z" }),
+      adminRow({ id: "master-admin", role: "super_admin", is_master: true }),
+    ],
+  });
+
+  await assert.rejects(
+    () => planAdminUserLifecycleUpdate(client, {
+      adminUserId: "target-admin",
+      action: "change_role",
+      role: "auditor",
+      actorUserId: "actor-user",
+      reason: "least privilege",
+      expectedUpdatedAt: "2026-07-20T00:00:00.000Z",
+    }),
+    (error) => error instanceof AdminLifecycleError && error.code === "ADMIN_OPERATION_CONFLICT",
+  );
+  assert.equal(client.updateCalls, 0);
+});
+
+test("admin lifecycle update uses the planned updated_at guard", async () => {
+  const client = new FakeSupabaseClient({
+    adminRows: [
+      adminRow({ id: "target-admin", role: "support_agent", updated_at: "2026-07-19T00:00:00.000Z" }),
+      adminRow({ id: "master-admin", role: "super_admin", is_master: true }),
+    ],
+  });
+  const plan = await planAdminUserLifecycleUpdate(client, {
+    adminUserId: "target-admin",
+    action: "change_role",
+    role: "auditor",
+    actorUserId: "actor-user",
+    reason: "least privilege",
+  });
+  client.adminRows.find((row) => row.id === "target-admin").updated_at = "2026-07-20T00:00:00.000Z";
+
+  await assert.rejects(
+    () => applyAdminUserLifecycleUpdate(client, plan, { auditEventId: "audit-1" }),
+    (error) => error instanceof AdminLifecycleError && error.code === "ADMIN_OPERATION_CONFLICT",
+  );
+});
+
+test("admin invitation blocks duplicate active admins and terminal resend conflicts", async () => {
+  const access = {
+    user: { id: "actor-user", email: "actor@example.test" },
+    emailNormalized: "actor@example.test",
+    adminRole: "super_admin",
+    capabilities: [],
+    adminRow: adminRow({ id: "actor-admin", user_id: "actor-user", role: "super_admin", is_master: true }),
+  };
+  const client = new FakeSupabaseClient({
+    adminRows: [adminRow({ id: "active-admin", email_normalized: "active@example.test", status: "active" })],
+    invitationRows: [adminRow({ id: "revoked-invite", email_normalized: "revoked@example.test", status: "revoked" })],
+  });
+
+  await assert.rejects(
+    () => createAdminInvitation(client, access, { email: "active@example.test", roleTemplate: "support_agent" }),
+    (error) => error instanceof AdminLifecycleError && error.code === "ADMIN_DUPLICATE_USER",
+  );
+  await assert.rejects(
+    () => updateAdminInvitationStatus(client, "revoked-invite", "sent"),
+    (error) => error instanceof AdminLifecycleError && error.code === "ADMIN_OPERATION_CONFLICT",
+  );
+  await assert.rejects(
+    () => updateAdminInvitationStatus(client, "revoked-invite", "revoked"),
+    (error) => error instanceof AdminLifecycleError && error.code === "ADMIN_OPERATION_CONFLICT",
+  );
+});
+
+test("denied admin lifecycle attempts create blocked audit evidence without mutation", async () => {
+  const client = new FakeSupabaseClient();
+  const access = {
+    user: { id: "actor-user", email: "actor@example.test" },
+    emailNormalized: "actor@example.test",
+    adminRole: "super_admin",
+    capabilities: [],
+    adminRow: adminRow({ id: "actor-admin", user_id: "actor-user", role: "super_admin", is_master: true }),
+  };
+
+  await recordAdminLifecycleDenied(client, access, {
+    attemptedAction: "deactivate",
+    targetAdminUserId: "target-admin",
+    requestedRole: null,
+    error: new AdminLifecycleError("ADMIN_SELF_ACTION_BLOCKED", "self_lifecycle_change_blocked"),
+  });
+
+  assert.equal(client.auditRows.length, 1);
+  assert.equal(client.auditRows[0].result, "blocked");
+  assert.equal(client.auditRows[0].policy_decision, "blocked");
+  assert.equal(client.auditRows[0].metadata.reason_code, "ADMIN_SELF_ACTION_BLOCKED");
+  assert.equal(client.updateCalls, 0);
+});
+
 test("arbitrary lifecycle roles and statuses are rejected safely", async () => {
   const client = new FakeSupabaseClient({ adminRows: [adminRow({ id: "target-admin" })] });
   await assert.rejects(
@@ -301,8 +463,24 @@ test("admin-users route is no-store, rate-limited, audit-gated, and suppresses r
   assert.match(route, /noStoreJson/);
   assert.match(route, /checkAdminLifecycleRateLimit/);
   assert.match(route, /recordAdminAuditEvent[\s\S]*applyAdminUserLifecycleUpdate/);
+  assert.match(route, /recordAdminLifecycleDenied/);
+  assert.match(route, /expectedUpdatedAt/);
   assert.match(route, /safeAdminErrorResponse\(error\)/);
   assert.doesNotMatch(route, /error instanceof Error \? error\.message/);
+});
+
+test("admin lifecycle policy and database invariant are documented and migrated", () => {
+  const policy = fs.readFileSync(path.join(root, "docs/admin/ADMIN_USER_LIFECYCLE_POLICY.md"), "utf8");
+  const migration = fs.readFileSync(path.join(root, "supabase/migrations/20260730162000_admin_lifecycle_super_admin_invariant.sql"), "utf8");
+
+  assert.match(policy, /Self-demotion \| denied/);
+  assert.match(policy, /Self-disable \| denied/);
+  assert.match(policy, /Last-active-super-admin disable \| denied/);
+  assert.match(policy, /Denied lifecycle audit/);
+  assert.match(migration, /prevent_last_active_super_admin_loss/);
+  assert.match(migration, /pg_advisory_xact_lock/);
+  assert.match(migration, /BEFORE UPDATE OF status, role, is_master ON public\.admin_users/);
+  assert.match(migration, /BEFORE DELETE ON public\.admin_users/);
 });
 
 test("admin lifecycle UI mirrors protected account and safe-error rules", () => {

@@ -4,6 +4,7 @@ import {
   normalizeAdminUserLifecycleAction,
   planAdminUserLifecycleUpdate,
 } from "@/lib/admin/operations";
+import { recordAdminLifecycleDenied } from "@/lib/admin/adminLifecycleAudit";
 import { createAdminInvitation, listAdminInvitations, updateAdminInvitationStatus } from "@/lib/admin/adminInvitations";
 import { requireAdminAccess, requireAdminCapability } from "@/lib/admin/access";
 import { recordAdminAuditEvent } from "@/lib/admin/audit";
@@ -23,6 +24,10 @@ export async function GET(request: Request) {
   }
   const denied = requireAdminCapability(admin.access, "admin_users:manage");
   if (denied) {
+    await recordAdminLifecycleDenied(admin.adminClient, admin.access, {
+      attemptedAction: "admin_user_list",
+      reasonCode: "missing_admin_users_manage_capability",
+    });
     return noStoreJson({ ok: false, code: "ADMIN_PERMISSION_DENIED", message: denied.message, capability: denied.capability }, { status: denied.status });
   }
 
@@ -38,6 +43,10 @@ export async function POST(request: Request) {
   }
   const denied = requireAdminCapability(admin.access, "admin_users:manage");
   if (denied) {
+    await recordAdminLifecycleDenied(admin.adminClient, admin.access, {
+      attemptedAction: "admin_invitation",
+      reasonCode: "missing_admin_users_manage_capability",
+    });
     return noStoreJson({ ok: false, code: "ADMIN_PERMISSION_DENIED", message: denied.message, capability: denied.capability }, { status: denied.status });
   }
   const rate = checkAdminLifecycleRateLimit({
@@ -95,6 +104,12 @@ export async function POST(request: Request) {
     const invitations = await listAdminInvitations(admin.adminClient).catch(() => []);
     return noStoreJson({ ok: true, invitation, admins, invitations });
   } catch (error) {
+    await recordAdminLifecycleDenied(admin.adminClient, admin.access, {
+      attemptedAction: "admin_invitation",
+      targetEmail: email.toLowerCase(),
+      requestedRole: body.roleTemplate ?? "support_agent",
+      error,
+    });
     return safeAdminErrorResponse(error);
   }
 }
@@ -106,6 +121,10 @@ export async function PATCH(request: Request) {
   }
   const denied = requireAdminCapability(admin.access, "admin_users:manage");
   if (denied) {
+    await recordAdminLifecycleDenied(admin.adminClient, admin.access, {
+      attemptedAction: "admin_lifecycle",
+      reasonCode: "missing_admin_users_manage_capability",
+    });
     return noStoreJson({ ok: false, code: "ADMIN_PERMISSION_DENIED", message: denied.message, capability: denied.capability }, { status: denied.status });
   }
 
@@ -115,6 +134,7 @@ export async function PATCH(request: Request) {
     action?: string;
     role?: string | null;
     reason?: string | null;
+    expectedUpdatedAt?: string | null;
   };
   const rawAction = String(body.action ?? "").trim();
   const invitationId = String(body.invitationId ?? "").trim();
@@ -150,6 +170,11 @@ export async function PATCH(request: Request) {
       const invitations = await listAdminInvitations(admin.adminClient).catch(() => []);
       return noStoreJson({ ok: true, invitation, admins, invitations });
     } catch (error) {
+      await recordAdminLifecycleDenied(admin.adminClient, admin.access, {
+        attemptedAction: rawAction,
+        targetInvitationId: invitationId,
+        error,
+      });
       return safeAdminErrorResponse(error);
     }
   }
@@ -177,6 +202,7 @@ export async function PATCH(request: Request) {
       role: body.role ?? null,
       reason: body.reason ?? null,
       actorUserId: admin.access.user.id,
+      expectedUpdatedAt: body.expectedUpdatedAt ?? null,
     });
 
     const auditEventId = await recordAdminAuditEvent(admin.adminClient, admin.access, {
@@ -199,6 +225,12 @@ export async function PATCH(request: Request) {
     });
     result = await applyAdminUserLifecycleUpdate(admin.adminClient, plan, { auditEventId });
   } catch (error) {
+    await recordAdminLifecycleDenied(admin.adminClient, admin.access, {
+      attemptedAction: action || rawAction || "admin_lifecycle",
+      targetAdminUserId: adminUserId || null,
+      requestedRole: body.role ?? null,
+      error,
+    });
     return safeAdminErrorResponse(error);
   }
 

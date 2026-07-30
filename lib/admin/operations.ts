@@ -294,12 +294,14 @@ export async function planAdminUserLifecycleUpdate(
     role,
     actorUserId,
     reason,
+    expectedUpdatedAt,
   }: {
     adminUserId: string;
     action: AdminUserLifecycleAction;
     role?: string | null;
     actorUserId: string;
     reason?: string | null;
+    expectedUpdatedAt?: string | null;
   },
 ) {
   const targetRes = await client
@@ -313,6 +315,10 @@ export async function planAdminUserLifecycleUpdate(
   }
 
   const target = targetRes.data as AdminUserRow;
+  const expected = String(expectedUpdatedAt ?? "").trim();
+  if (expected && expected !== target.updated_at) {
+    throw adminLifecycleError("ADMIN_OPERATION_CONFLICT", "stale_admin_lifecycle_target");
+  }
   const normalizedReason = String(reason ?? "").trim();
   if ((action === "deactivate" || action === "change_role") && !normalizedReason) {
     throw adminLifecycleError("ADMIN_INVALID_STATUS", "missing_lifecycle_reason");
@@ -331,7 +337,7 @@ export async function planAdminUserLifecycleUpdate(
     throw adminLifecycleError("ADMIN_SELF_ACTION_BLOCKED", "self_lifecycle_change_blocked");
   }
 
-  if (action === "deactivate" || (action === "change_role" && target.is_master && nextRole !== "super_admin")) {
+  if (removesActiveSuperAdmin(target, action, nextRole)) {
     await assertAnotherActiveMasterAdminExists(client, target.id);
   }
 
@@ -376,6 +382,7 @@ export async function applyAdminUserLifecycleUpdate(
     .from("admin_users")
     .update(plan.patch)
     .eq("id", plan.adminUserId)
+    .eq("updated_at", plan.before.updated_at)
     .select("id,email_normalized,user_id,display_name,status,is_master,role,granted_by_user_id,created_at,updated_at")
     .single() as AdminRowResponse;
 
@@ -399,6 +406,7 @@ export async function updateAdminUserLifecycle(
     role?: string | null;
     actorUserId: string;
     reason?: string | null;
+    expectedUpdatedAt?: string | null;
     auditEventId: string;
   },
 ) {
@@ -409,20 +417,31 @@ export async function updateAdminUserLifecycle(
 async function assertAnotherActiveMasterAdminExists(client: AnySupabaseClient, excludedAdminUserId: string) {
   const res = await client
     .from("admin_users")
-    .select("id", { count: "exact", head: true })
+    .select("id,is_master,role")
     .eq("status", "active")
-    .eq("is_master", true)
-    .neq("id", excludedAdminUserId);
+    .neq("id", excludedAdminUserId)
+    .limit(10);
   if (res.error) {
     throw adminLifecycleError("ADMIN_INTERNAL_ERROR", res.error.message);
   }
-  if ((res.count ?? 0) < 1) {
-    throw adminLifecycleError("ADMIN_LAST_SUPER_ADMIN", "last_active_master_admin_blocked");
+  const rows = (res.data ?? []) as Pick<AdminUserRow, "is_master" | "role">[];
+  if (!rows.some(isActiveSuperAdminMarker)) {
+    throw adminLifecycleError("ADMIN_LAST_SUPER_ADMIN", "last_active_super_admin_blocked");
   }
 }
 
 export function isProtectedMasterAdminRow(row: Pick<AdminUserRow, "email_normalized" | "is_master">) {
   return normalizeAdminEmail(row.email_normalized) === MASTER_ADMIN_EMAIL;
+}
+
+function isActiveSuperAdminMarker(row: Pick<AdminUserRow, "is_master" | "role">) {
+  return Boolean(row.is_master) || normalizeAdminRole(row.role) === "super_admin";
+}
+
+function removesActiveSuperAdmin(row: AdminUserRow, action: AdminUserLifecycleAction, nextRole: ReturnType<typeof normalizeAdminRole>) {
+  if (row.status !== "active" || !isActiveSuperAdminMarker(row)) return false;
+  if (action === "deactivate") return true;
+  return action === "change_role" && nextRole !== "super_admin";
 }
 
 async function upsertAdminUser(
