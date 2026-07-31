@@ -4,7 +4,8 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import WorkspaceSwitcher from "@/components/navigation/WorkspaceSwitcher";
+import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell";
+import { filterAdminNavigation, PLATFORM_ADMIN_NAVIGATION } from "@/components/admin/adminNavigation";
 import { waitForActiveUser } from "@/lib/auth/session";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -176,41 +177,6 @@ type HealthState = {
   environment: string | null;
 };
 
-const ADMIN_NAV = [
-  {
-    group: "Overview",
-    items: [
-      { section: "overview", label: "Overview", href: "/admin", capability: "admin.dashboard.read" },
-    ],
-  },
-  {
-    group: "Operations",
-    items: [
-      { section: "users", label: "Users", href: "/admin/users", capability: "users:lookup" },
-      { section: "invitations", label: "Invitations", href: "/admin/invitations", capability: "support:read" },
-      { section: "access", label: "Access requests", href: "/admin/access", capability: "support:read" },
-      { section: "verification", label: "Verification", href: "/admin/verification", capability: "verification:read" },
-      { section: "probate", label: "Probate", href: "/admin/probate", capability: "verification:read" },
-      { section: "support", label: "Support", href: "/admin/support", capability: "support:read" },
-      { section: "settings", label: "Enterprise organisations", href: "/application/enterprise", capability: "organisation:manage" },
-    ],
-  },
-  {
-    group: "Administration",
-    items: [
-      { section: "admin-users", label: "Admin users", href: "/admin/admin-users", capability: "admin_users:manage" },
-      { section: "settings", label: "Settings", href: "/admin/settings", capability: "admin_shell:view" },
-    ],
-  },
-  {
-    group: "Governance",
-    items: [
-      { section: "audit", label: "Audit", href: "/admin/audit", capability: "audit:read" },
-      { section: "system-health", label: "System health", href: "/admin/system-health", capability: "admin.dashboard.read" },
-    ],
-  },
-] as const;
-
 const PAGE_COPY: Record<AdminControlPlaneSection, { title: string; eyebrow: string; description: string }> = {
   overview: {
     title: "Admin overview",
@@ -345,7 +311,6 @@ export default function AdminControlPlaneWorkspace({
   }, []);
 
   const capabilities = useMemo(() => admin?.capabilities ?? [], [admin?.capabilities]);
-  const can = useCallback((capability: string) => capabilities.includes(capability), [capabilities]);
 
   const loadAll = useCallback(async () => {
     setState("checking");
@@ -497,13 +462,11 @@ export default function AdminControlPlaneWorkspace({
   }
 
   const visibleNav = useMemo(() => {
-    return ADMIN_NAV.map((group) => ({
-      ...group,
-      items: group.items.filter((item) => can(item.capability)),
-    })).filter((group) => group.items.length > 0);
-  }, [can]);
+    return filterAdminNavigation(PLATFORM_ADMIN_NAVIGATION, capabilities);
+  }, [capabilities]);
 
   const page = PAGE_COPY[section];
+  const currentPathname = currentHrefForSection(section, resourceId);
 
   if (state === "checking") {
     return (
@@ -531,54 +494,18 @@ export default function AdminControlPlaneWorkspace({
   }
 
   return (
-    <main style={shellStyle}>
-      <aside style={sidebarStyle} aria-label="Admin navigation">
-        <Link href="/admin" style={brandStyle}>
-          <span style={brandMarkStyle}>LF</span>
-          <span>
-            <strong>Legacy Fortress</strong>
-            <small>Admin control plane</small>
-          </span>
-        </Link>
-        <nav style={navStackStyle}>
-          {visibleNav.map((group) => (
-            <section key={group.group} style={navGroupStyle}>
-              <div style={navGroupLabelStyle}>{group.group}</div>
-              {group.items.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-current={isCurrentSection(section, item.section) ? "page" : undefined}
-                  style={isCurrentSection(section, item.section) ? activeNavLinkStyle : navLinkStyle}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </section>
-          ))}
-        </nav>
-      </aside>
-
-      <section style={contentStyle}>
-        <header style={topbarStyle}>
-          <div>
-            <p style={eyebrowStyle}>{page.eyebrow}</p>
-            <h1 style={h1Style}>{page.title}</h1>
-            <p style={mutedStyle}>{page.description}</p>
-          </div>
-          <div style={topbarActionsStyle}>
-            <WorkspaceSwitcher currentPathname={currentHrefForSection(section, resourceId)} alwaysShow compact />
-            <Link href="/dashboard" style={secondaryLinkStyle}>Customer app</Link>
-            <button type="button" onClick={signOut} style={secondaryButtonStyle}>Sign out</button>
-          </div>
-        </header>
-
-        <nav aria-label="Breadcrumb" style={breadcrumbStyle}>
-          <Link href="/admin">Admin</Link>
-          <span>/</span>
-          <span>{page.title}</span>
-        </nav>
-
+    <AdminWorkspaceShell
+      workspaceLabel="Platform Administration"
+      eyebrow={page.eyebrow}
+      title={page.title}
+      description={page.description}
+      currentPathname={currentPathname}
+      navigation={visibleNav}
+      onSignOut={signOut}
+      identityLabel={admin?.displayName || admin?.email || "Admin user"}
+      identityDetail={admin ? `${admin.role.replace(/_/g, " ")} · ${admin.email}` : undefined}
+      breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: page.title }]}
+    >
         {message ? <section style={alertStyle}>{message}</section> : null}
 
         {section === "overview" ? renderOverview(metrics, support, verificationQueue, probateCases) : null}
@@ -590,8 +517,7 @@ export default function AdminControlPlaneWorkspace({
         {section === "audit" ? renderAudit(auditEvents, auditFilter, setAuditFilter) : null}
         {section === "system-health" ? renderSystemHealth(health, metrics, support) : null}
         {section === "settings" ? renderSettings(capabilities) : null}
-      </section>
-    </main>
+    </AdminWorkspaceShell>
   );
 }
 
@@ -620,15 +546,6 @@ function currentHrefForSection(section: AdminControlPlaneSection, resourceId: st
   if (section === "verification-detail") return `/admin/verification/${resourceId ?? ""}`;
   if (section === "probate-detail") return `/admin/probate/${resourceId ?? ""}`;
   return `/admin/${section}`;
-}
-
-function isCurrentSection(current: AdminControlPlaneSection, navSection: string) {
-  if (current === navSection) return true;
-  if (current === "admin-user-detail" && navSection === "admin-users") return true;
-  if (current === "user-detail" && navSection === "users") return true;
-  if (current === "verification-detail" && navSection === "verification") return true;
-  if (current === "probate-detail" && navSection === "probate") return true;
-  return false;
 }
 
 function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | null, verification: VerificationItem[], probate: ProbateCase[]) {
@@ -1206,14 +1123,6 @@ function getAllowedProbateActions(status: string) {
   };
 }
 
-const shellStyle = {
-  minHeight: "100dvh",
-  display: "grid",
-  gridTemplateColumns: "280px minmax(0, 1fr)",
-  background: "#f4f6f8",
-  color: "#0f172a",
-} satisfies CSSProperties;
-
 const loadingPageStyle = {
   minHeight: "100dvh",
   display: "grid",
@@ -1222,47 +1131,6 @@ const loadingPageStyle = {
   padding: 24,
 } satisfies CSSProperties;
 
-const sidebarStyle = {
-  position: "sticky",
-  top: 0,
-  height: "100dvh",
-  overflow: "auto",
-  background: "#111827",
-  color: "#f8fafc",
-  padding: 20,
-  display: "grid",
-  alignContent: "start",
-  gap: 24,
-} satisfies CSSProperties;
-
-const brandStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: 10,
-  color: "inherit",
-  textDecoration: "none",
-} satisfies CSSProperties;
-
-const brandMarkStyle = {
-  width: 36,
-  height: 36,
-  display: "grid",
-  placeItems: "center",
-  background: "#e5e7eb",
-  color: "#111827",
-  fontWeight: 800,
-} satisfies CSSProperties;
-
-const navStackStyle = { display: "grid", gap: 18 } satisfies CSSProperties;
-const navGroupStyle = { display: "grid", gap: 6 } satisfies CSSProperties;
-const navGroupLabelStyle = { fontSize: 11, textTransform: "uppercase", color: "#94a3b8", fontWeight: 800 } satisfies CSSProperties;
-const navLinkStyle = { color: "#cbd5e1", textDecoration: "none", padding: "9px 10px", borderRadius: 6, fontWeight: 700 } satisfies CSSProperties;
-const activeNavLinkStyle = { ...navLinkStyle, background: "#f8fafc", color: "#111827" } satisfies CSSProperties;
-
-const contentStyle = { minWidth: 0, padding: 28, display: "grid", gap: 18, alignContent: "start" } satisfies CSSProperties;
-const topbarStyle = { display: "flex", justifyContent: "space-between", gap: 16, alignItems: "start", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: 20 } satisfies CSSProperties;
-const topbarActionsStyle = { display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" } satisfies CSSProperties;
-const breadcrumbStyle = { display: "flex", gap: 8, fontSize: 13, color: "#64748b" } satisfies CSSProperties;
 const panelStyle = { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: 18, display: "grid", gap: 14 } satisfies CSSProperties;
 const alertStyle = { ...panelStyle, color: "#991b1b", background: "#fff7ed" } satisfies CSSProperties;
 const stackStyle = { display: "grid", gap: 16 } satisfies CSSProperties;

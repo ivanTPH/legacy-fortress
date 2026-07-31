@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import WorkspaceSwitcher from "@/components/navigation/WorkspaceSwitcher";
+import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell";
+import { ENTERPRISE_ADMIN_NAVIGATION, filterAdminNavigation } from "@/components/admin/adminNavigation";
 import { waitForActiveUser } from "@/lib/auth/session";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -322,8 +323,11 @@ const EMPTY_PORTFOLIO: EnterprisePortfolio = {
 
 export default function EnterpriseOperationsWorkspace() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [state, setState] = useState<"checking" | "ready" | "denied" | "error">("checking");
   const [message, setMessage] = useState("");
+  const [identity, setIdentity] = useState({ label: "Enterprise user", detail: "" });
+  const [navigationCapabilities, setNavigationCapabilities] = useState<string[]>([]);
   const [portfolio, setPortfolio] = useState<EnterprisePortfolio>(EMPTY_PORTFOLIO);
   const [activeTab, setActiveTab] = useState<"overview" | "organisations" | "licences" | "users" | "invitations" | "adoption" | "reports" | "consent" | "renewals" | "settings">("overview");
   const [filters, setFilters] = useState({
@@ -439,6 +443,10 @@ export default function EnterpriseOperationsWorkspace() {
       router.replace("/sign-in?next=%2Fapplication%2Fenterprise");
       return;
     }
+    setIdentity({
+      label: String(user.user_metadata?.full_name ?? user.email ?? "Enterprise user"),
+      detail: String(user.email ?? ""),
+    });
     const res = await authFetch("/api/internal/admin/enterprise");
     const json = (await res.json().catch(() => ({}))) as { ok?: boolean; portfolio?: EnterprisePortfolio; message?: string };
     if (!res.ok || !json.ok || !json.portfolio) {
@@ -447,6 +455,11 @@ export default function EnterpriseOperationsWorkspace() {
       return;
     }
     setPortfolio(json.portfolio);
+    const sessionRes = await authFetch("/api/internal/admin/session");
+    const sessionJson = await sessionRes.json().catch(() => ({})) as { admin?: { capabilities?: string[] } };
+    setNavigationCapabilities(sessionRes.ok && sessionJson.admin?.capabilities?.length
+      ? sessionJson.admin.capabilities
+      : ["organisation:view", "licence:view", "enterprise.membership.read", "enterprise.report.read"]);
     setState("ready");
   }, [authFetch, router]);
 
@@ -457,9 +470,17 @@ export default function EnterpriseOperationsWorkspace() {
     return () => window.clearTimeout(timer);
   }, [loadPortfolio]);
 
+  useEffect(() => {
+    const tab = normalizeEnterpriseTab(searchParams.get("tab"));
+    if (!tab) return;
+    const timer = window.setTimeout(() => setActiveTab(tab), 0);
+    return () => window.clearTimeout(timer);
+  }, [searchParams]);
+
   async function signOut() {
     setPortfolio(EMPTY_PORTFOLIO);
     setMessage("");
+    setNavigationCapabilities([]);
     await supabase.auth.signOut();
     router.replace("/sign-in");
     router.refresh();
@@ -526,6 +547,8 @@ export default function EnterpriseOperationsWorkspace() {
     if (filters.consent === "reportable" && membership.consentStatus !== "accepted") return false;
     return true;
   });
+  const currentPathname = `/application/enterprise${activeTab === "overview" ? "" : `?tab=${activeTab}`}`;
+  const visibleNavigation = useMemo(() => filterAdminNavigation(ENTERPRISE_ADMIN_NAVIGATION, navigationCapabilities), [navigationCapabilities]);
 
   if (state === "checking") {
     return (
@@ -556,21 +579,19 @@ export default function EnterpriseOperationsWorkspace() {
   }
 
   return (
-    <main style={shellStyle}>
-      <header style={headerStyle}>
-        <div>
-          <p style={eyebrowStyle}>Legacy Fortress Enterprise</p>
-          <h1 style={h1Style}>Enterprise Operations</h1>
-          <p style={mutedStyle}>Organisation licensing, seats, invitations, consent-aware reporting, and renewals. Private vault records and documents are excluded.</p>
-        </div>
-        <div style={headerActionsStyle}>
-          <span style={stageBadgeStyle}>STAGING — synthetic test data may be present</span>
-          <WorkspaceSwitcher currentPathname="/application/enterprise" alwaysShow compact />
-          <Link style={secondaryLinkStyle} href="/dashboard">Personal Vault</Link>
-          <Link style={secondaryLinkStyle} href="/admin">Admin Operations</Link>
-          <button type="button" aria-label="Sign out of Legacy Fortress" style={secondaryButtonStyle} onClick={signOut}>Sign out</button>
-        </div>
-      </header>
+    <AdminWorkspaceShell
+      workspaceLabel="Enterprise Operations"
+      eyebrow="Legacy Fortress Enterprise"
+      title="Enterprise Operations"
+      description="Organisation licensing, seats, invitations, consent-aware reporting, and renewals. Private vault records and documents are excluded."
+      currentPathname={currentPathname}
+      navigation={visibleNavigation}
+      onSignOut={signOut}
+      identityLabel={identity.label}
+      identityDetail={identity.detail}
+      breadcrumbs={[{ label: "Enterprise Operations", href: "/application/enterprise" }, { label: labelise(activeTab) }]}
+      stagingLabel="STAGING - synthetic test data may be present"
+    >
 
       {message ? <section style={alertStyle}>{message}</section> : null}
 
@@ -630,7 +651,7 @@ export default function EnterpriseOperationsWorkspace() {
       {activeTab === "consent" ? renderConsent(portfolio, filteredOrganisations) : null}
       {activeTab === "renewals" ? renderRenewals(filteredLicences, portfolio) : null}
       {activeTab === "settings" ? renderPhasePlaceholder("Account settings", "Enterprise account settings are staged for later phases. Organisation settings are available from each organisation detail workspace.") : null}
-    </main>
+    </AdminWorkspaceShell>
   );
 }
 
@@ -1568,6 +1589,11 @@ function labelise(value: string) {
   return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function normalizeEnterpriseTab(value: string | null): "overview" | "organisations" | "licences" | "users" | "invitations" | "adoption" | "reports" | "consent" | "renewals" | "settings" | null {
+  if (value === "overview" || value === "organisations" || value === "licences" || value === "users" || value === "invitations" || value === "adoption" || value === "reports" || value === "consent" || value === "renewals" || value === "settings") return value;
+  return null;
+}
+
 function formatDate(value: string | null) {
   if (!value) return "Not set";
   return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
@@ -1583,9 +1609,6 @@ function parseBulkRows(value: string) {
 }
 
 const pageStyle: CSSProperties = { minHeight: "100vh", padding: 24, background: "#f8fafc" };
-const shellStyle: CSSProperties = { minHeight: "100vh", padding: 24, background: "#f8fafc", color: "#111827" };
-const headerStyle: CSSProperties = { display: "flex", justifyContent: "space-between", gap: 18, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 18 };
-const headerActionsStyle: CSSProperties = { display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" };
 const panelStyle: CSSProperties = { background: "#fff", border: "1px solid #dbe3ef", borderRadius: 8, padding: 18, boxShadow: "0 12px 30px rgba(15,23,42,.05)" };
 const h1Style: CSSProperties = { margin: 0, fontSize: 28, lineHeight: 1.15 };
 const h2Style: CSSProperties = { margin: "0 0 12px", fontSize: 18 };
@@ -1599,7 +1622,6 @@ const contextPanelStyle: CSSProperties = { border: "1px solid #cbd5e1", borderRa
 const secondaryLinkStyle: CSSProperties = { color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 6, padding: "9px 12px", textDecoration: "none", background: "#fff", fontWeight: 700 };
 const secondaryButtonStyle: CSSProperties = { color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 6, padding: "9px 12px", background: "#fff", fontWeight: 700 };
 const primaryButtonStyle: CSSProperties = { border: 0, borderRadius: 6, padding: "10px 14px", background: "#111827", color: "#fff", fontWeight: 800 };
-const stageBadgeStyle: CSSProperties = { background: "#fff7ed", color: "#9a3412", border: "1px solid #fed7aa", borderRadius: 6, padding: "7px 10px", fontSize: 12, fontWeight: 900 };
 const alertStyle: CSSProperties = { background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 8, padding: 12, marginBottom: 16 };
 const tabListStyle: CSSProperties = { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 };
 const tabStyle: CSSProperties = { border: "1px solid #cbd5e1", background: "#fff", borderRadius: 6, padding: "9px 12px", fontWeight: 700 };

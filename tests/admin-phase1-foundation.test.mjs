@@ -147,6 +147,7 @@ test("admin operations exposes audited lifecycle controls and section navigation
 
 test("admin control plane splits live admin operations into permission-aware routes", () => {
   const controlPlane = fs.readFileSync(path.join(root, "components/admin/AdminControlPlaneWorkspace.tsx"), "utf8");
+  const adminShell = fs.readFileSync(path.join(root, "components/admin/AdminWorkspaceShell.tsx"), "utf8");
   const adminPage = fs.readFileSync(path.join(root, "app/admin/page.tsx"), "utf8");
   const adminUsersPage = fs.readFileSync(path.join(root, "app/admin/admin-users/page.tsx"), "utf8");
   const usersPage = fs.readFileSync(path.join(root, "app/admin/users/page.tsx"), "utf8");
@@ -163,9 +164,10 @@ test("admin control plane splits live admin operations into permission-aware rou
   assert.match(healthPage, /AdminControlPlaneWorkspace section="system-health"/);
   assert.match(settingsPage, /AdminControlPlaneWorkspace section="settings"/);
 
-  assert.match(controlPlane, /aria-label="Admin navigation"/);
-  assert.match(controlPlane, /Admin control plane/);
-  assert.match(controlPlane, /WorkspaceSwitcher/);
+  assert.match(controlPlane, /workspaceLabel="Platform Administration"/);
+  assert.match(controlPlane, /AdminWorkspaceShell/);
+  assert.match(adminShell, /aria-label=\{`\$\{workspaceLabel\} navigation`\}/);
+  assert.match(adminShell, /WorkspaceSwitcher/);
   assert.match(controlPlane, /\/api\/internal\/admin\/session/);
   assert.match(controlPlane, /\/api\/internal\/admin\/admin-users/);
   assert.match(controlPlane, /\/api\/internal\/admin\/support/);
