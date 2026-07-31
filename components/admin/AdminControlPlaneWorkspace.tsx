@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import AdminDataTable, { AdminEmptyState, AdminStatusBadge } from "@/components/admin/AdminPrimitives";
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell";
 import { filterAdminNavigation, PLATFORM_ADMIN_NAVIGATION } from "@/components/admin/adminNavigation";
 import { waitForActiveUser } from "@/lib/auth/session";
@@ -698,29 +699,39 @@ function renderAdminUsers(
 
       <section style={panelStyle}>
         <h2 style={h2Style}>Administrator invitations</h2>
-        <div style={tableWrapStyle}>
-          <table style={tableStyle}>
-            <thead><tr><th>Recipient</th><th>Role</th><th>Scope</th><th>Status</th><th>MFA</th><th>Expires</th><th>Actions</th></tr></thead>
-            <tbody>
-              {invitations.map((item) => (
-                <tr key={item.id}>
-                  <td>{item.full_name || item.email_normalized}<small>{item.email_normalized}</small></td>
-                  <td>{formatRoleLabel(item.role_template, item.role_template === "super_admin")}</td>
-                  <td>{item.scope_type.replace(/_/g, " ")}</td>
-                  <td>{item.status}</td>
-                  <td>{item.require_mfa ? "Required" : "Not required"}</td>
-                  <td>{formatDate(item.expires_at)}</td>
-                  <td style={actionsCellStyle}>
-                    {["draft", "pending", "sent", "delivered", "failed"].includes(item.status) ? <button type="button" onClick={() => void runAdminInvitationLifecycle(item.id, "resend_invitation")}>Resend</button> : null}
-                    {["draft", "pending", "sent", "delivered", "failed"].includes(item.status) ? <button type="button" onClick={() => window.confirm("Revoke this pending administrator invitation? The recipient will not become active and no authentication account is deleted.") && void runAdminInvitationLifecycle(item.id, "revoke_invitation")}>Revoke</button> : null}
-                    {["accepted", "revoked", "expired"].includes(item.status) ? <span style={mutedInlineStyle}>No pending action</span> : null}
-                  </td>
-                </tr>
-              ))}
-              {invitations.length === 0 ? <tr><td colSpan={7}>No administrator invitations have been created.</td></tr> : null}
-            </tbody>
-          </table>
-        </div>
+        <AdminDataTable
+          caption="Administrator invitations"
+          columns={[
+            {
+              key: "recipient",
+              header: "Recipient",
+              render: (item) => <>{item.full_name || item.email_normalized}<small>{item.email_normalized}</small></>,
+            },
+            {
+              key: "role",
+              header: "Role",
+              render: (item) => formatRoleLabel(item.role_template, item.role_template === "super_admin"),
+            },
+            { key: "scope", header: "Scope", render: (item) => item.scope_type.replace(/_/g, " ") },
+            { key: "status", header: "Status", render: (item) => <AdminStatusBadge status={item.status} /> },
+            { key: "mfa", header: "MFA", render: (item) => item.require_mfa ? "Required" : "Not required" },
+            { key: "expires", header: "Expires", render: (item) => formatDate(item.expires_at) },
+            {
+              key: "actions",
+              header: "Actions",
+              render: (item) => (
+                <div style={actionsCellStyle}>
+                  {["draft", "pending", "sent", "delivered", "failed"].includes(item.status) ? <button type="button" onClick={() => void runAdminInvitationLifecycle(item.id, "resend_invitation")}>Resend</button> : null}
+                  {["draft", "pending", "sent", "delivered", "failed"].includes(item.status) ? <button type="button" onClick={() => window.confirm("Revoke this pending administrator invitation? The recipient will not become active and no authentication account is deleted.") && void runAdminInvitationLifecycle(item.id, "revoke_invitation")}>Revoke</button> : null}
+                  {["accepted", "revoked", "expired"].includes(item.status) ? <span style={mutedInlineStyle}>No pending action</span> : null}
+                </div>
+              ),
+            },
+          ]}
+          rows={invitations}
+          getRowKey={(item) => item.id}
+          emptyState={<AdminEmptyState title="No administrator invitations">No administrator invitations have been created.</AdminEmptyState>}
+        />
       </section>
 
       <section style={toolbarStyle}>
@@ -737,27 +748,33 @@ function renderAdminUsers(
       {selected ? renderAdminDetail(selected) : null}
       <section style={panelStyle}>
         <h2 style={h2Style}>Admin users</h2>
-        <div style={tableWrapStyle}>
-          <table style={tableStyle}>
-            <thead><tr><th>Name</th><th>Role</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
-            <tbody>
-              {filtered.map((item) => (
-                <tr key={item.id}>
-                  <td>{item.display_name || item.email_normalized}<small>{item.email_normalized}{isSyntheticAdmin(item) ? " · Synthetic staging admin" : ""}</small></td>
-                  <td>{formatRoleLabel(item.role, item.is_master)}</td>
-                  <td>{item.status}</td>
-                  <td>{formatDate(item.created_at)}</td>
-                  <td style={actionsCellStyle}>
-                    <Link href={`/admin/admin-users/${item.id}`}>Inspect</Link>
-                    <button type="button" onClick={() => setLifecycleForm({ ...lifecycleForm, adminUserId: item.id, action: item.status === "active" ? "deactivate" : "activate" })}>{item.status === "active" ? "Suspend access" : "Reactivate access"}</button>
-                    <button type="button" onClick={() => setLifecycleForm({ ...lifecycleForm, adminUserId: item.id, action: "change_role", role: item.role ?? "support_agent" })}>Edit role</button>
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 ? <tr><td colSpan={5}>No admin users match this filter.</td></tr> : null}
-            </tbody>
-          </table>
-        </div>
+        <AdminDataTable
+          caption="Admin users"
+          columns={[
+            {
+              key: "name",
+              header: "Name",
+              render: (item) => <>{item.display_name || item.email_normalized}<small>{item.email_normalized}{isSyntheticAdmin(item) ? " · Synthetic staging admin" : ""}</small></>,
+            },
+            { key: "role", header: "Role", render: (item) => formatRoleLabel(item.role, item.is_master) },
+            { key: "status", header: "Status", render: (item) => <AdminStatusBadge status={item.status} /> },
+            { key: "created", header: "Created", render: (item) => formatDate(item.created_at) },
+            {
+              key: "actions",
+              header: "Actions",
+              render: (item) => (
+                <div style={actionsCellStyle}>
+                  <Link href={`/admin/admin-users/${item.id}`}>Inspect</Link>
+                  <button type="button" onClick={() => setLifecycleForm({ ...lifecycleForm, adminUserId: item.id, action: item.status === "active" ? "deactivate" : "activate" })}>{item.status === "active" ? "Suspend access" : "Reactivate access"}</button>
+                  <button type="button" onClick={() => setLifecycleForm({ ...lifecycleForm, adminUserId: item.id, action: "change_role", role: item.role ?? "support_agent" })}>Edit role</button>
+                </div>
+              ),
+            },
+          ]}
+          rows={filtered}
+          getRowKey={(item) => item.id}
+          emptyState={<AdminEmptyState title="No matching administrators">No admin users match this filter.</AdminEmptyState>}
+        />
       </section>
       <section style={panelStyle}>
         <h2 style={h2Style}>Lifecycle controls</h2>
@@ -848,22 +865,30 @@ function renderUsers(
       ) : null}
       <section style={panelStyle}>
         <h2 style={h2Style}>Safe lookup results</h2>
-        <div style={tableWrapStyle}>
-          <table style={tableStyle}>
-            <thead><tr><th>User</th><th>Plan</th><th>Counts</th><th>Last sign-in</th></tr></thead>
-            <tbody>
-              {results.map((item) => (
-                <tr key={item.userId}>
-                  <td>{item.displayName}<small>{item.email ?? "No email"} · {item.hasProfile ? "Profile present" : "Profile missing"}</small></td>
-                  <td>{item.commercial.accountPlan.replace(/_/g, " ")} · {item.commercial.planStatus.replace(/_/g, " ")}</td>
-                  <td>Assets {item.counts.assets} · Documents {item.counts.documents} · Contacts {item.counts.contacts}</td>
-                  <td>{formatDate(item.lastSignInAt ?? "")}</td>
-                </tr>
-              ))}
-              {results.length === 0 ? <tr><td colSpan={4}>Search to load live customer metadata.</td></tr> : null}
-            </tbody>
-          </table>
-        </div>
+        <AdminDataTable
+          caption="Safe lookup results"
+          columns={[
+            {
+              key: "user",
+              header: "User",
+              render: (item) => <>{item.displayName}<small>{item.email ?? "No email"} · {item.hasProfile ? "Profile present" : "Profile missing"}</small></>,
+            },
+            {
+              key: "plan",
+              header: "Plan",
+              render: (item) => `${item.commercial.accountPlan.replace(/_/g, " ")} · ${item.commercial.planStatus.replace(/_/g, " ")}`,
+            },
+            {
+              key: "counts",
+              header: "Counts",
+              render: (item) => `Assets ${item.counts.assets} · Documents ${item.counts.documents} · Contacts ${item.counts.contacts}`,
+            },
+            { key: "last-sign-in", header: "Last sign-in", render: (item) => formatDate(item.lastSignInAt ?? "") },
+          ]}
+          rows={results}
+          getRowKey={(item) => item.userId}
+          emptyState={<AdminEmptyState title="No lookup results">Search to load live customer metadata.</AdminEmptyState>}
+        />
       </section>
     </div>
   );

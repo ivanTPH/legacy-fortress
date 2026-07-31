@@ -13,6 +13,7 @@ const dynamic = routes.filter((route) => route.includes("["));
 
 const sourceFiles = walk(path.join(root, "app"))
   .concat(walk(path.join(root, "components")))
+  .filter((file) => !isQuarantinedSource(file))
   .filter((file) => file.endsWith(".tsx") || file.endsWith(".ts"));
 
 const hrefPattern = /href\s*=\s*["'`]([^"'`]+)["'`]/g;
@@ -74,6 +75,15 @@ function walk(dir) {
     else out.push(full);
   }
   return out;
+}
+
+function isQuarantinedSource(file) {
+  const rel = path.relative(root, file).split(path.sep).join("/");
+  return (
+    rel.startsWith("app/internal/admin/prototype/") ||
+    rel.startsWith("components/admin/prototype/") ||
+    rel.startsWith("app/api/internal/admin/local-role-override/")
+  );
 }
 
 function matchesDynamic(pattern, target) {

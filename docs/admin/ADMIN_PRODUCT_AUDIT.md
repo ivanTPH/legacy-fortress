@@ -36,8 +36,8 @@ The backend controls from Admin Phases 1-3 remain the authority. This audit focu
 | ADMIN-UX-001 | P2 | `/admin`, `/application/enterprise`, `/admin/probate` | Three admin workspaces used separate wrapper styles, causing inconsistent navigation, account controls and responsive behaviour. | Duplicate shell/header/sidebar constants in platform and enterprise components. | Remediated with `AdminWorkspaceShell` and shared navigation model. |
 | ADMIN-UX-002 | P2 | `/application/enterprise` | Enterprise sidebar/workspace navigation did not share the Platform Administration information architecture. | Enterprise component rendered only a header and tab bar, separate from `/admin`. | Remediated for the principal entry route. |
 | ADMIN-UX-003 | P2 | `/application/enterprise` | Sidebar links to tab views required safe URL state handling. | Enterprise tab state was local-only. | Remediated by reading safe `tab` query values. |
-| ADMIN-UX-004 | P1 | `/internal/admin/prototype/*` | Prototype/mock routes remain implemented and visible in the build route list. | Prototype files and static routes remain under `app/internal/admin/prototype/*`. | Deferred: quarantine was not part of this phase's implementation scope. |
-| ADMIN-UX-005 | P1 | `/admin/admin-users`, `/internal/admin` | Some legacy admin lifecycle dependencies remain in the broader architecture. | Existing audit documents identify duplicate `/api/admin/*` and `/api/internal/admin/*` route families. | Deferred to admin lifecycle consolidation phase. |
+| ADMIN-UX-004 | P1 | `/internal/admin/prototype/*` | Prototype/mock routes remain implemented but must not be operationally reachable outside local development. | `app/internal/admin/prototype/layout.tsx` denies non-local/non-explicit access; normal link crawl now excludes quarantined prototype source. | Remediated for staging/production quarantine; prototype source retained for local development only. |
+| ADMIN-UX-005 | P1 | `/admin/admin-users`, `/internal/admin` | Some legacy admin lifecycle dependencies remain in the broader architecture. | Existing audit documents identify duplicate `/api/admin/*` and `/api/internal/admin/*` route families. | Partially remediated: `/internal/admin` and `/internal/admin/probate` redirect to canonical routes; duplicate API families remain documented follow-up. |
 | ADMIN-UX-006 | P2 | `/application/enterprise` | Some controls are partial rather than full end-to-end workflows. | Bulk CSV validation, enrolment-link concurrency and report/export filter semantics are known partials. | Deferred and recorded for follow-up. |
 | ADMIN-UX-007 | P2 | Enterprise detail pages | Detail workspaces still have separate local wrappers. | `EnterpriseOrganisationDetailWorkspace.tsx` and `EnterpriseLicenceDetailWorkspace.tsx` retain page-local headers. | Deferred to detail-workspace remediation. |
 | ADMIN-UX-008 | P3 | `/admin`, `/application/enterprise` | Material icons were not consistently used in admin navigation labels. | Previous nav was text-only in `/admin`; enterprise had no shared sidebar. | Remediated in shared navigation. |
@@ -47,8 +47,9 @@ The backend controls from Admin Phases 1-3 remain the authority. This audit focu
 | Route | Action | Backend/API | Current result |
 | --- | --- | --- | --- |
 | `/admin` | Dashboard cards | `/api/internal/admin/dashboard-summary` | Functional aggregate/read-only navigation. |
-| `/admin/admin-users` | Invite administrator | `/api/internal/admin/admin-users` | Functional and audited from previous Phase 3 proof. |
-| `/admin/admin-users` | Lifecycle action | `/api/internal/admin/admin-users` | Functional and protected from self/last-super/stale state by Phase 3 controls. |
+| `/admin/admin-users` | Invite administrator | `/api/internal/admin/admin-users` | Functional, audited and now displayed through shared responsive data primitives. |
+| `/admin/admin-users` | Lifecycle action | `/api/internal/admin/admin-users` | Functional and protected from self/last-super/stale state by Phase 3 controls; no legacy UI handoff remains on the canonical surface. |
+| `/admin/users` | User lookup and filter | `/api/internal/admin/users` | Functional privacy-bounded lookup; results now use shared responsive table/card fallback. |
 | `/application/enterprise` | Add organisation | `/api/internal/admin/enterprise` `create_organisation` | Functional; contextual toggle exists. |
 | `/application/enterprise` | Add licence | `/api/internal/admin/enterprise` `create_licence` | Functional; contextual toggle exists. |
 | `/application/enterprise` | Invite/revoke/resend enterprise users | `/api/internal/admin/enterprise` invitation actions | Functional, with validation follow-ups. |
@@ -60,7 +61,7 @@ The backend controls from Admin Phases 1-3 remain the authority. This audit focu
 
 - The shared shell now provides one responsive sidebar, mobile drawer, header, workspace switcher, identity area and sign-out action.
 - The shell uses minimum touch target sizing for mobile controls and prevents whole-page horizontal overflow by constraining content and wrapping action groups.
-- Existing data tables still rely on contained horizontal scrolling; full mobile card conversion is deferred.
+- Priority Platform Administration tables now use a shared responsive table/card primitive; remaining enterprise/probate list conversions are deferred.
 - Enterprise organisation/licence detail workspaces still need the shared shell in the next phase.
 
 ## Security and Permission Findings
@@ -75,12 +76,20 @@ The backend controls from Admin Phases 1-3 remain the authority. This audit focu
 | ID | Severity | Title | Affected routes | Recommended remediation |
 | --- | --- | --- | --- | --- |
 | ADMIN-NEXT-001 | P1 | Consolidate enterprise detail shells | `/application/enterprise/organisations/[organisationId]`, `/application/enterprise/licences/[licenceId]` | Move detail pages to `AdminWorkspaceShell`, preserve APIs and add responsive tests. |
-| ADMIN-NEXT-002 | P1 | Quarantine remaining prototypes | `/internal/admin/prototype/*` | Block or local-gate prototype routes outside local development. |
-| ADMIN-NEXT-003 | P1 | Complete admin lifecycle consolidation | `/admin/admin-users`, `/internal/admin` | Remove remaining legacy lifecycle routing and keep canonical `/admin` controls only. |
+| ADMIN-NEXT-002 | P2 | Review retained local-only prototypes | `/internal/admin/prototype/*` | Decide whether retained local-only prototype source should be deleted or archived after owner sign-off. |
+| ADMIN-NEXT-003 | P1 | Complete duplicate API lifecycle consolidation | `/api/admin/*`, `/api/internal/admin/*` | Remove or isolate remaining duplicate legacy API families after compatibility review. |
 | ADMIN-NEXT-004 | P1 | Harden enterprise bulk invitation validation | `/application/enterprise` invitations | Validate duplicates, existing members, missing licence, unsupported roles and seat shortfall server-side. |
 | ADMIN-NEXT-005 | P1 | Transactional enrolment-link claims | `/api/internal/admin/enterprise`, invitation acceptance | Add transaction/locking proof for claim count and seat reservation. |
-| ADMIN-NEXT-006 | P2 | Convert admin tables to shared responsive table/card primitive | Platform, enterprise and probate lists | Add one reusable table/card component with empty/error/loading states. |
+| ADMIN-NEXT-006 | P2 | Extend shared responsive table/card primitive | Enterprise and probate lists | Apply the new reusable table/card component to remaining operational lists with empty/error/loading states. |
 | ADMIN-NEXT-007 | P2 | Report/export parity | `/application/enterprise` reports | Ensure every filter and cohort/consent decision is applied consistently to UI and export. |
+
+## Platform Administration Functional Completion Update
+
+| ID | Severity | Area | Result | Evidence |
+| --- | --- | --- | --- | --- |
+| ADMIN-PFC-001 | P1 | Prototype route quarantine | Prototype routes are quarantined outside local development and excluded from normal source link crawl. | `app/internal/admin/prototype/layout.tsx`, `scripts/link-crawler.mjs`, `tests/admin-platform-functional-completion.test.mjs`. |
+| ADMIN-PFC-002 | P2 | Platform responsive data | Administrator invitations, admin users and safe user lookup now render through the shared responsive data table/card primitive. | `components/admin/AdminPrimitives.tsx`, `components/admin/AdminControlPlaneWorkspace.tsx`. |
+| ADMIN-PFC-003 | P1 | Legacy entry isolation | `/internal/admin` and `/internal/admin/probate` redirect to canonical `/admin` and `/admin/probate`. | `app/internal/admin/page.tsx`, `app/internal/admin/probate/page.tsx`. |
 
 ## Evidence Commands
 

@@ -1,5 +1,5 @@
-import AdminOpsWorkspace from "@/components/admin/AdminOpsWorkspace";
+import { redirect } from "next/navigation";
 
 export default function ProbateAdminPage() {
-  return <AdminOpsWorkspace />;
+  redirect("/admin/probate");
 }
