@@ -42,7 +42,7 @@ export default function AdminWorkspaceShell({
 
   const sidebar = (
     <aside className="lf-admin-shell-sidebar" aria-label={`${workspaceLabel} navigation`}>
-      <Link href="/admin" className="lf-admin-shell-brand">
+      <Link href="/admin" className="lf-admin-shell-brand" prefetch={false}>
         <span className="lf-admin-shell-brand-mark">LF</span>
         <span>
           <strong>Legacy Fortress</strong>
@@ -56,7 +56,7 @@ export default function AdminWorkspaceShell({
             {group.items.map((item) => {
               const active = isActivePath(currentPathname, item.href);
               return (
-                <Link key={item.key} href={item.href} className={active ? "lf-admin-shell-nav-link active" : "lf-admin-shell-nav-link"} onClick={() => setMenuOpen(false)}>
+                <Link key={item.key} href={item.href} className={active ? "lf-admin-shell-nav-link active" : "lf-admin-shell-nav-link"} onClick={() => setMenuOpen(false)} prefetch={false}>
                   <Icon name={item.icon} size={18} />
                   <span>{item.label}</span>
                 </Link>
@@ -97,7 +97,7 @@ export default function AdminWorkspaceShell({
               <nav className="lf-admin-shell-breadcrumb" aria-label="Breadcrumb">
                 {breadcrumbs.map((item, index) => (
                   <span key={`${item.label}-${index}`}>
-                    {item.href ? <Link href={item.href}>{item.label}</Link> : item.label}
+                    {item.href ? <Link href={item.href} prefetch={false}>{item.label}</Link> : item.label}
                   </span>
                 ))}
               </nav>
@@ -107,7 +107,7 @@ export default function AdminWorkspaceShell({
             {stagingLabel ? <span className="lf-admin-shell-stage">{stagingLabel}</span> : null}
             {primaryAction}
             <WorkspaceSwitcher currentPathname={currentPathname} alwaysShow compact />
-            <Link href="/dashboard" className="lf-admin-shell-secondary">Personal Vault</Link>
+            <Link href="/dashboard" className="lf-admin-shell-secondary" prefetch={false}>Personal Vault</Link>
             <div className="lf-admin-shell-identity" title={identityDetail ?? identityLabel}>
               <Icon name="account_circle" size={22} />
               <span>

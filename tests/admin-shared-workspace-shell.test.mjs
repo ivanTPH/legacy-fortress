@@ -14,6 +14,7 @@ test("shared admin shell exposes responsive navigation, identity and sign-out co
   assert.match(source, /WorkspaceSwitcher/);
   assert.match(source, /Personal Vault/);
   assert.match(source, /Sign out/);
+  assert.match(source, /prefetch=\{false\}/);
   assert.match(source, /@media \(max-width: 860px\)/);
   assert.match(source, /overflow-wrap: anywhere/);
   assert.match(source, /min-height: 44px/);
