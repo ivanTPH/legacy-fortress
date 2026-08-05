@@ -12,7 +12,6 @@ import {
 } from "../lib/backend/adminRoleApiHandlers.ts";
 import { adminApiGuardReadiness, requireAdminApiAccess } from "../lib/backend/adminApiGuard.ts";
 import { createPrototypeAuditEvent } from "../lib/audit/auditEvents.ts";
-import { retiredLegacyAdminMutationResponse } from "../lib/backend/legacyAdminApi.ts";
 
 const root = process.cwd();
 const prototypeSearch = "role=super_admin&admin=true&prototype=true";
@@ -32,21 +31,13 @@ async function json(response) {
   return response.json();
 }
 
-test("admin API route files exist for user, role, workspace, and audit contracts", () => {
-  for (const routePath of [
-    "app/api/admin/users/route.ts",
-    "app/api/admin/users/[userId]/route.ts",
-    "app/api/admin/roles/route.ts",
-    "app/api/admin/roles/propose-change/route.ts",
-    "app/api/admin/roles/validate-change/route.ts",
-    "app/api/admin/roles/submit-change/route.ts",
-    "app/api/admin/users/[userId]/suspend/route.ts",
-    "app/api/admin/accounts/[accountId]/restrict/route.ts",
-    "app/api/admin/audit/route.ts",
-    "app/api/admin/workspaces/route.ts",
-  ]) {
-    assert.equal(fs.existsSync(path.join(root, routePath)), true, routePath);
-  }
+test("legacy admin API route files are not runtime-exposed", () => {
+  const adminApiRoot = path.join(root, "app/api/admin");
+  const routeHandlers = fs.existsSync(adminApiRoot)
+    ? fs.readdirSync(adminApiRoot, { recursive: true }).filter((entry) => String(entry).endsWith("route.ts"))
+    : [];
+
+  assert.deepEqual(routeHandlers, []);
 });
 
 test("guard blocks unauthorised admin API calls and production query-param escalation", async () => {
@@ -91,28 +82,7 @@ test("GET admin API routes return standard mock envelopes", async () => {
   assert.ok(workspaces.data.some((item) => item.id === "super_admin"));
 });
 
-test("legacy /api/admin mutation endpoints are retired instead of returning mock success", async () => {
-  for (const [action, canonicalPath] of [
-    ["propose_role_change", "/api/internal/admin/admin-users"],
-    ["validate_role_change", "/api/internal/admin/admin-users"],
-    ["submit_role_change", "/api/internal/admin/admin-users"],
-    ["suspend_user", "/api/internal/admin/admin-users"],
-    ["restrict_account", "/api/internal/admin/admin-users"],
-    ["emit_audit_event", "/api/internal/admin/audit-history"],
-  ]) {
-    const response = await retiredLegacyAdminMutationResponse({ action, canonicalPath });
-    assert.equal(response.status, 410);
-    assert.equal(response.headers.get("cache-control"), "private, no-cache, no-store, max-age=0, must-revalidate");
-    const body = await json(response);
-    assert.equal(body.ok, false);
-    assert.equal(body.code, "LEGACY_ADMIN_API_RETIRED");
-    assert.equal(body.action, action);
-    assert.equal(body.canonicalPath, canonicalPath);
-    assert.equal(body.databaseChanged, false);
-  }
-});
-
-test("legacy audit read remains mock-backed while audit writes are retired", async () => {
+test("admin mock contract reads remain unit fixtures, not runtime routes", async () => {
   const event = createPrototypeAuditEvent({
     id: "api-audit-1",
     category: "admin_review",
