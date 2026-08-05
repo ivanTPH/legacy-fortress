@@ -89,7 +89,6 @@ export default function AdminWorkspaceShell({
               <Icon name="close" size={18} />
               Close
             </button>
-            {sidebar}
             <div className="lf-admin-shell-drawer-account">
               <div className="lf-admin-shell-identity" title={identityDetail ?? identityLabel}>
                 <Icon name="account_circle" size={22} />
@@ -100,6 +99,7 @@ export default function AdminWorkspaceShell({
               </div>
               {signOutButton("lf-admin-shell-secondary lf-admin-shell-drawer-signout")}
             </div>
+            {sidebar}
           </div>
         </div>
       ) : null}

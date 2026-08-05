@@ -17,6 +17,7 @@ test("shared admin shell exposes responsive navigation, identity and sign-out co
   assert.match(source, /aria-label="Sign out of Legacy Fortress"/);
   assert.match(source, /lf-admin-shell-drawer-account/);
   assert.match(source, /lf-admin-shell-drawer-signout/);
+  assert.match(source, /lf-admin-shell-drawer-close[\s\S]+lf-admin-shell-drawer-account[\s\S]+\{sidebar\}/);
   assert.match(source, /flex-wrap: wrap/);
   assert.match(source, /white-space: nowrap/);
   assert.match(source, /prefetch=\{false\}/);
