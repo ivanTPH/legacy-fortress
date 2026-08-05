@@ -68,6 +68,12 @@ export default function AdminWorkspaceShell({
     </aside>
   );
 
+  const signOutButton = (className = "lf-admin-shell-secondary") => (
+    <button type="button" className={className} aria-label="Sign out of Legacy Fortress" onClick={onSignOut}>
+      Sign out
+    </button>
+  );
+
   return (
     <main className="lf-admin-shell">
       <button type="button" className="lf-admin-shell-mobile-toggle" onClick={() => setMenuOpen(true)} aria-expanded={menuOpen} aria-controls="admin-mobile-navigation">
@@ -84,6 +90,16 @@ export default function AdminWorkspaceShell({
               Close
             </button>
             {sidebar}
+            <div className="lf-admin-shell-drawer-account">
+              <div className="lf-admin-shell-identity" title={identityDetail ?? identityLabel}>
+                <Icon name="account_circle" size={22} />
+                <span>
+                  <strong>{identityLabel}</strong>
+                  {identityDetail ? <small>{identityDetail}</small> : null}
+                </span>
+              </div>
+              {signOutButton("lf-admin-shell-secondary lf-admin-shell-drawer-signout")}
+            </div>
           </div>
         </div>
       ) : null}
@@ -115,7 +131,7 @@ export default function AdminWorkspaceShell({
                 {identityDetail ? <small>{identityDetail}</small> : null}
               </span>
             </div>
-            <button type="button" className="lf-admin-shell-secondary" onClick={onSignOut}>Sign out</button>
+            {signOutButton()}
           </div>
         </header>
         {children}
@@ -220,6 +236,7 @@ const adminShellCss = `
     justify-content: space-between;
     gap: 16px;
     align-items: flex-start;
+    flex-wrap: wrap;
     background: #fff;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
@@ -229,6 +246,7 @@ const adminShellCss = `
     display: grid;
     gap: 6px;
     min-width: 0;
+    flex: 1 1 360px;
   }
   .lf-admin-shell-title h1 {
     margin: 0;
@@ -253,7 +271,8 @@ const adminShellCss = `
     justify-content: flex-end;
     gap: 10px;
     flex-wrap: wrap;
-    min-width: min(100%, 360px);
+    min-width: 0;
+    flex: 1 1 420px;
   }
   .lf-admin-shell-secondary {
     border: 1px solid #cbd5e1;
@@ -265,6 +284,7 @@ const adminShellCss = `
     background: #fff;
     min-height: 40px;
     cursor: pointer;
+    white-space: nowrap;
   }
   .lf-admin-shell-stage {
     background: #fff7ed;
@@ -311,6 +331,9 @@ const adminShellCss = `
   .lf-admin-shell-drawer {
     display: none;
   }
+  .lf-admin-shell-drawer-account {
+    display: none;
+  }
   @media (max-width: 860px) {
     .lf-admin-shell {
       display: block;
@@ -346,6 +369,7 @@ const adminShellCss = `
       justify-content: flex-start;
       min-width: 0;
       width: 100%;
+      flex: none;
     }
     .lf-admin-shell-title h1 {
       font-size: 24px;
@@ -394,6 +418,22 @@ const adminShellCss = `
       color: #f8fafc;
       padding: 10px 12px;
       font-weight: 800;
+    }
+    .lf-admin-shell-drawer-account {
+      display: grid;
+      gap: 10px;
+      padding: 12px 20px 20px;
+    }
+    .lf-admin-shell-drawer-account .lf-admin-shell-identity {
+      background: #1f2937;
+      border-color: #475569;
+      color: #f8fafc;
+    }
+    .lf-admin-shell-drawer-signout {
+      width: 100%;
+      background: #f8fafc;
+      color: #111827;
+      text-align: center;
     }
   }
 `;
