@@ -4,20 +4,15 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {
-  handleEmitAuditEvent,
   handleGetAdminUser,
   handleListAdminUsers,
   handleListAuditEvents,
   handleListRoles,
   handleListWorkspaces,
-  handleProposeRoleChange,
-  handleRestrictAccount,
-  handleSubmitRoleChange,
-  handleSuspendUser,
-  handleValidateRoleChange,
 } from "../lib/backend/adminRoleApiHandlers.ts";
 import { adminApiGuardReadiness, requireAdminApiAccess } from "../lib/backend/adminApiGuard.ts";
 import { createPrototypeAuditEvent } from "../lib/audit/auditEvents.ts";
+import { retiredLegacyAdminMutationResponse } from "../lib/backend/legacyAdminApi.ts";
 
 const root = process.cwd();
 const prototypeSearch = "role=super_admin&admin=true&prototype=true";
@@ -35,30 +30,6 @@ function req(pathname, { method = "GET", body, headers = {} } = {}) {
 
 async function json(response) {
   return response.json();
-}
-
-function roleChange(overrides = {}) {
-  return {
-    request_id: "api-role-1",
-    action_type: "permission_toggle",
-    actor: {
-      actor_id: "IND-ADM-001",
-      actor_role: "super_admin",
-      actor_permissions: ["view_account", "assign_account_roles", "manage_platform_admins", "suspend_users", "delete_users"],
-      trusted_role_claims: false,
-      source: "prototype",
-    },
-    target: {
-      target_user_id: "USR-552",
-      target_account_id: "VAULT-552",
-      target_layer: "account",
-    },
-    previous_value: ["view_account"],
-    proposed_value: ["view_account", "assign_account_roles"],
-    requested_permissions: ["view_account", "assign_account_roles"],
-    reason: "API route regression",
-    ...overrides,
-  };
 }
 
 test("admin API route files exist for user, role, workspace, and audit contracts", () => {
@@ -120,72 +91,28 @@ test("GET admin API routes return standard mock envelopes", async () => {
   assert.ok(workspaces.data.some((item) => item.id === "super_admin"));
 });
 
-test("POST role routes validate payloads and return blocked decisions through contract envelopes", async () => {
-  const invalid = await handleValidateRoleChange(req(`/api/admin/roles/validate-change?${prototypeSearch}`, {
-    method: "POST",
-    body: { nope: true },
-  }));
-  assert.equal(invalid.status, 400);
-  const invalidPayload = await json(invalid);
-  assert.equal(invalidPayload.ok, false);
-  assert.equal(invalidPayload.error.code, "invalid_payload");
-
-  const proposed = await json(await handleProposeRoleChange(req(`/api/admin/roles/propose-change?${prototypeSearch}`, {
-    method: "POST",
-    body: roleChange(),
-  })));
-  assert.equal(proposed.ok, true);
-  assert.equal(proposed.workflowState, "submitted");
-
-  const blocked = await json(await handleSubmitRoleChange(req(`/api/admin/roles/submit-change?${prototypeSearch}`, {
-    method: "POST",
-    body: roleChange({
-      actor: {
-        actor_id: "USR-552",
-        actor_role: "account_owner",
-        actor_permissions: ["view_account", "assign_account_roles"],
-        trusted_role_claims: false,
-        source: "prototype",
-      },
-      target: {
-        target_user_id: "IND-ADM-002",
-        target_account_id: "PLATFORM",
-        target_layer: "platform",
-      },
-      requested_permissions: ["manage_platform_admins"],
-      proposed_value: "Admin",
-      requested_platform_role: "admin",
-    }),
-  })));
-  assert.equal(blocked.ok, false);
-  assert.equal(blocked.policyDecision, "blocked");
-  assert.equal(blocked.workflowState, "blocked");
-  assert.ok(blocked.auditEventId);
+test("legacy /api/admin mutation endpoints are retired instead of returning mock success", async () => {
+  for (const [action, canonicalPath] of [
+    ["propose_role_change", "/api/internal/admin/admin-users"],
+    ["validate_role_change", "/api/internal/admin/admin-users"],
+    ["submit_role_change", "/api/internal/admin/admin-users"],
+    ["suspend_user", "/api/internal/admin/admin-users"],
+    ["restrict_account", "/api/internal/admin/admin-users"],
+    ["emit_audit_event", "/api/internal/admin/audit-history"],
+  ]) {
+    const response = await retiredLegacyAdminMutationResponse({ action, canonicalPath });
+    assert.equal(response.status, 410);
+    assert.equal(response.headers.get("cache-control"), "private, no-cache, no-store, max-age=0, must-revalidate");
+    const body = await json(response);
+    assert.equal(body.ok, false);
+    assert.equal(body.code, "LEGACY_ADMIN_API_RETIRED");
+    assert.equal(body.action, action);
+    assert.equal(body.canonicalPath, canonicalPath);
+    assert.equal(body.databaseChanged, false);
+  }
 });
 
-test("suspend, restrict, and audit routes stay mock-backed and audit shaped", async () => {
-  const suspend = await json(await handleSuspendUser(req(`/api/admin/users/IND-ADM-002/suspend?${prototypeSearch}`, {
-    method: "POST",
-    body: roleChange({
-      target: { target_user_id: "IND-ADM-002", target_account_id: "PLATFORM", target_layer: "platform" },
-      requested_permissions: ["suspend_users"],
-      dangerous_action: "suspend_user",
-      confirmation: { confirmation_required: true, confirmed: false },
-    }),
-  }), "IND-ADM-002"));
-  assert.equal(suspend.ok, false);
-  assert.equal(suspend.error.code, "confirmation_required");
-
-  const restrict = await json(await handleRestrictAccount(req(`/api/admin/accounts/VAULT-552/restrict?${prototypeSearch}`, {
-    method: "POST",
-    body: roleChange({
-      action_type: "account_access_restriction",
-      target: { target_user_id: "USR-552", target_account_id: "VAULT-552", target_layer: "account" },
-    }),
-  }), "VAULT-552"));
-  assert.equal(restrict.ok, true);
-  assert.equal(restrict.mock, true);
-
+test("legacy audit read remains mock-backed while audit writes are retired", async () => {
   const event = createPrototypeAuditEvent({
     id: "api-audit-1",
     category: "admin_review",
@@ -196,11 +123,8 @@ test("suspend, restrict, and audit routes stay mock-backed and audit shaped", as
     context: { surface: "role_permission_management", route: "/api/admin/audit" },
     governance: { prototypeOnly: true, exportEnabled: false },
   });
-  const audit = await json(await handleEmitAuditEvent(req(`/api/admin/audit?${prototypeSearch}`, {
-    method: "POST",
-    body: event,
-  })));
+  assert.equal(Boolean(event.id), true);
+  const audit = await json(await handleListAuditEvents(req(`/api/admin/audit?${prototypeSearch}&userId=USR-552`)));
   assert.equal(audit.ok, true);
-  assert.equal(audit.data.stored, false);
-  assert.equal(audit.auditEventId, "api-audit-1");
+  assert.equal(audit.mock, true);
 });

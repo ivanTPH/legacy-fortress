@@ -91,6 +91,18 @@ The backend controls from Admin Phases 1-3 remain the authority. This audit focu
 | ADMIN-PFC-002 | P2 | Platform responsive data | Administrator invitations, admin users and safe user lookup now render through the shared responsive data table/card primitive. | `components/admin/AdminPrimitives.tsx`, `components/admin/AdminControlPlaneWorkspace.tsx`. |
 | ADMIN-PFC-003 | P1 | Legacy entry isolation | `/internal/admin` and `/internal/admin/probate` redirect to canonical `/admin` and `/admin/probate`. | `app/internal/admin/page.tsx`, `app/internal/admin/probate/page.tsx`. |
 
+## Platform Administration API Consolidation
+
+| Route family | Decision | Evidence |
+| --- | --- | --- |
+| `/api/internal/admin/admin-users` | Canonical lifecycle API for administrator invitation, resend, revoke, activation, suspension/reactivation and role change. | Server route uses `requireAdminAccess`, `requireAdminCapability`, `planAdminUserLifecycleUpdate`, `applyAdminUserLifecycleUpdate`, `recordAdminLifecycleDenied` and `noStoreJson`. |
+| `/api/internal/admin/users` | Canonical privacy-bounded user lookup API. | Platform Administration workspace calls this route directly; it remains capability-gated server-side. |
+| `/api/internal/admin/audit-history` | Canonical audit-history read API. | Platform Administration workspace calls this route directly for read-only audit inspection. |
+| `/api/admin/roles/propose-change`, `/api/admin/roles/validate-change`, `/api/admin/roles/submit-change`, `/api/admin/users/[userId]/suspend`, `/api/admin/accounts/[accountId]/restrict`, `/api/admin/audit` `POST` | Retired duplicate mutation routes. They now return `410 LEGACY_ADMIN_API_RETIRED`, private/no-store headers and `databaseChanged: false`; they do not call mock role-management mutation handlers. | `lib/backend/legacyAdminApi.ts`, `tests/admin-api-consolidation.test.mjs`, `tests/admin-role-api-routes.test.mjs`. |
+| `/api/admin/users`, `/api/admin/users/[userId]`, `/api/admin/roles`, `/api/admin/audit` `GET`, `/api/admin/workspaces` | Retained as read-only mock contract routes for backend contract tests only. They are not called by canonical Platform Administration UI and remain blocked from production-style query-parameter escalation by `adminApiGuard`. | `tests/admin-role-api-routes.test.mjs`; `components/admin/AdminControlPlaneWorkspace.tsx` contains no `/api/admin/` calls. |
+
+Open owner decision: archive or delete the retained read-only `/api/admin/*` mock contract routes after any remaining contract tests are migrated to canonical `/api/internal/admin/*` fixtures.
+
 ## Evidence Commands
 
 See the implementation report for exact validation and hosted UAT commands.

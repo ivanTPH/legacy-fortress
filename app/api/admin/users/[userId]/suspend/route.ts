@@ -1,6 +1,8 @@
-import { handleSuspendUser } from "@/lib/backend/adminRoleApiHandlers";
+import { retiredLegacyAdminMutationResponse } from "@/lib/backend/legacyAdminApi";
 
-export async function POST(request: Request, { params }: { params: Promise<{ userId: string }> }) {
-  const { userId } = await params;
-  return handleSuspendUser(request, userId);
+export async function POST() {
+  return retiredLegacyAdminMutationResponse({
+    action: "suspend_user",
+    canonicalPath: "/api/internal/admin/admin-users",
+  });
 }

@@ -1,6 +1,8 @@
-import { handleRestrictAccount } from "@/lib/backend/adminRoleApiHandlers";
+import { retiredLegacyAdminMutationResponse } from "@/lib/backend/legacyAdminApi";
 
-export async function POST(request: Request, { params }: { params: Promise<{ accountId: string }> }) {
-  const { accountId } = await params;
-  return handleRestrictAccount(request, accountId);
+export async function POST() {
+  return retiredLegacyAdminMutationResponse({
+    action: "restrict_account",
+    canonicalPath: "/api/internal/admin/admin-users",
+  });
 }
