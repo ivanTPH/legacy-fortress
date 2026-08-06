@@ -27,6 +27,9 @@ test("production smoke checks public, protected, recovery, API, and mobile surfa
   assert.match(healthRoute, /Vercel-CDN-Cache-Control": "max-age=30, stale-while-revalidate=120/);
   assert.match(versionRoute, /Cache-Control": "public, max-age=0, must-revalidate/);
   assert.match(versionRoute, /Vercel-CDN-Cache-Control": "max-age=300, stale-while-revalidate=3600/);
+  assert.match(versionRoute, /buildId: getRuntimeBuildId/);
+  assert.match(versionRoute, /commitSha: getRuntimeCommitSha/);
+  assert.match(versionRoute, /LF_BUILD_COMMIT_SHA/);
 });
 
 test("production smoke is available as an npm script", () => {

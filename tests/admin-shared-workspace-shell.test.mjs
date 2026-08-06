@@ -61,20 +61,29 @@ test("platform, enterprise and probate entry surfaces use the shared shell", () 
 
 test("shared admin shell constrains long content and tables on small screens", () => {
   const source = read("components/admin/AdminWorkspaceShell.tsx");
+  const globalCss = read("app/globals.css");
   assert.match(source, /overflow-x: hidden/);
   assert.match(source, /overflow-wrap: anywhere/);
   assert.match(source, /lf-admin-shell-content table/);
   assert.match(source, /overflow-x: auto/);
   assert.match(source, /-webkit-overflow-scrolling: touch/);
+  assert.match(globalCss, /\.lf-admin-shell\s*\{/);
+  assert.match(globalCss, /grid-template-columns: 280px minmax\(0, 1fr\)/);
+  assert.match(globalCss, /\.lf-admin-shell > \.lf-admin-shell-sidebar[\s\S]+display: none/);
+  assert.match(globalCss, /\.lf-admin-shell-mobile-toggle[\s\S]+display: inline-flex/);
 });
 
 test("shared admin data table supports toolbar and mobile card rows", () => {
   const source = read("components/admin/AdminPrimitives.tsx");
+  const globalCss = read("app/globals.css");
   assert.match(source, /description\?: ReactNode/);
   assert.match(source, /actions\?: ReactNode/);
   assert.match(source, /lf-admin-data-toolbar/);
   assert.match(source, /lf-admin-data-card-row/);
   assert.match(source, /overflow-wrap: anywhere/);
+  assert.match(globalCss, /\.lf-admin-data-table\s*\{/);
+  assert.match(globalCss, /\.lf-admin-data-cards[\s\S]+display: none/);
+  assert.match(globalCss, /@media \(max-width: 720px\)[\s\S]+\.lf-admin-data-table[\s\S]+display: none/);
 });
 
 test("enterprise shared navigation tab links are safe query-state links", () => {

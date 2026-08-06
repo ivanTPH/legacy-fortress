@@ -4,6 +4,8 @@ const isProduction = process.env.NODE_ENV === "production";
 const deploymentUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.COOLIFY_URL || "";
 const publicSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const publicSupabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const buildCommitSha = getBuildCommitSha();
+const buildId = buildCommitSha.slice(0, 12) || process.env.LF_BUILD_ID || "unknown";
 const localDevelopmentConnectSrc = isProduction ? [] : ["http://127.0.0.1:55421"];
 const localDevelopmentImgSrc = isProduction ? [] : ["http://127.0.0.1:55421"];
 const shouldUpgradeInsecureRequests = isProduction && (!deploymentUrl || isHttpsUrl(deploymentUrl));
@@ -79,6 +81,7 @@ const nextConfig: NextConfig = {
     ...(publicSupabaseUrl ? { NEXT_PUBLIC_SUPABASE_URL: publicSupabaseUrl } : {}),
     ...(publicSupabaseAnonKey ? { NEXT_PUBLIC_SUPABASE_ANON_KEY: publicSupabaseAnonKey } : {}),
   },
+  generateBuildId: async () => buildId,
   async headers() {
     return [
       {
@@ -115,5 +118,25 @@ const nextConfig: NextConfig = {
     ];
   },
 };
+
+function getBuildCommitSha() {
+  const fromEnv =
+    process.env.LF_BUILD_COMMIT_SHA ||
+    process.env.GIT_COMMIT_SHA ||
+    process.env.SOURCE_COMMIT ||
+    process.env.COOLIFY_GIT_COMMIT_SHA ||
+    process.env.VERCEL_GIT_COMMIT_SHA ||
+    process.env.GITHUB_SHA ||
+    "";
+  if (/^[0-9a-f]{7,40}$/i.test(fromEnv)) return fromEnv;
+  try {
+    const childProcess = (process as typeof process & {
+      getBuiltinModule?: (name: "node:child_process") => { execSync: (command: string, options: { encoding: "utf8"; stdio: ["ignore", "pipe", "ignore"] }) => string };
+    }).getBuiltinModule?.("node:child_process");
+    return childProcess?.execSync("git rev-parse HEAD", { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim() ?? "";
+  } catch {
+    return "";
+  }
+}
 
 export default nextConfig;
