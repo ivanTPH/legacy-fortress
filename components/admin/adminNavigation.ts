@@ -24,12 +24,11 @@ export const PLATFORM_ADMIN_NAVIGATION: AdminNavigationGroup[] = [
     ],
   },
   {
-    label: "Enterprise Operations",
+    label: "Enterprise Administration",
     items: [
-      { key: "enterprise", label: "Enterprise workspace", href: "/application/enterprise", icon: "corporate_fare", capability: "organisation:view" },
-      { key: "enterprise-organisations", label: "Organisations", href: "/application/enterprise?tab=organisations", icon: "domain", capability: "organisation:view" },
-      { key: "enterprise-licences", label: "Licences", href: "/application/enterprise?tab=licences", icon: "license", capability: "licence:view" },
-      { key: "enterprise-reports", label: "Reports", href: "/application/enterprise?tab=reports", icon: "analytics", capability: "enterprise.report.read" },
+      { key: "organisations", label: "Organisations", href: "/admin/organisations", icon: "domain", capability: "organisation:view" },
+      { key: "licences", label: "Licences", href: "/admin/licences", icon: "license", capability: "licence:view" },
+      { key: "enterprise-reports", label: "Enterprise reports", href: "/admin/audit?scope=enterprise", icon: "analytics", capability: "enterprise.report.read" },
     ],
   },
   {

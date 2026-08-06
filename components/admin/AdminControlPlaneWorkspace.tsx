@@ -12,6 +12,13 @@ import { supabase } from "@/lib/supabaseClient";
 
 type AdminControlPlaneSection =
   | "overview"
+  | "organisations"
+  | "organisation-detail"
+  | "organisation-users"
+  | "organisation-invitations"
+  | "organisation-licences"
+  | "licences"
+  | "licence-detail"
   | "users"
   | "user-detail"
   | "admin-users"
@@ -69,6 +76,88 @@ type AdminInvitation = {
   failure_reason: string | null;
   created_at: string;
   updated_at: string;
+};
+
+type EnterprisePortfolio = {
+  summary: {
+    organisations: number;
+    activeLicences: number;
+    pendingInvitations: number;
+    seats: {
+      purchased: number;
+      active: number;
+      invited: number;
+      available?: number;
+    };
+  };
+  organisations: EnterpriseOrganisation[];
+  licences: EnterpriseLicence[];
+  invitations: EnterpriseInvitation[];
+  memberships: EnterpriseMembership[];
+};
+
+type EnterpriseOrganisation = {
+  id: string;
+  name: string;
+  legalName: string;
+  tradingName: string | null;
+  type: string;
+  status: string;
+  risk: string;
+  primaryContactEmail: string | null;
+  accountOwner: string | null;
+  onboardingStatus: string;
+  nominatedAdminName: string | null;
+  nominatedAdminEmail: string | null;
+  registrationNumber: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type EnterpriseLicence = {
+  id: string;
+  organisationId: string;
+  plan: string;
+  customPlanName: string | null;
+  startDate: string;
+  renewalDate: string;
+  endDate: string | null;
+  purchasedSeats: number;
+  activeSeats: number;
+  invitedSeats: number;
+  availableSeats: number;
+  billingStatus: string;
+  status: string;
+  accountOwner: string | null;
+  renewalRisk: string;
+  updatedAt: string;
+};
+
+type EnterpriseInvitation = {
+  id: string;
+  organisationId: string;
+  licenceId: string | null;
+  email: string;
+  fullName: string | null;
+  invitationType: string;
+  roleTemplate: string;
+  status: string;
+  expiresAt: string;
+  acceptedAt: string | null;
+  revokedAt: string | null;
+};
+
+type EnterpriseMembership = {
+  id: string;
+  organisationId: string;
+  licenceId: string | null;
+  email: string;
+  fullName: string | null;
+  organisationRole: string;
+  status: string;
+  onboardingStatus: string;
+  consentStatus: string;
+  lastActiveAt: string | null;
 };
 
 type DashboardMetric = {
@@ -209,6 +298,41 @@ const PAGE_COPY: Record<AdminControlPlaneSection, { title: string; eyebrow: stri
     eyebrow: "Operations",
     description: "Review invitation and linked-access signals from the support snapshot.",
   },
+  organisations: {
+    title: "Enterprise organisations",
+    eyebrow: "Platform Administration",
+    description: "Global licensed organisation portfolio. Select an organisation before managing its licence, users, invitations, seats, or audit history.",
+  },
+  "organisation-detail": {
+    title: "Organisation detail",
+    eyebrow: "Platform Administration",
+    description: "Organisation context, licence position, users, invitations, and audit links for the selected enterprise account.",
+  },
+  "organisation-users": {
+    title: "Organisation users and seats",
+    eyebrow: "Platform Administration",
+    description: "Scoped users and seat status for the selected organisation.",
+  },
+  "organisation-invitations": {
+    title: "Organisation invitations",
+    eyebrow: "Platform Administration",
+    description: "Scoped organisation administrator and user invitations.",
+  },
+  "organisation-licences": {
+    title: "Organisation licences",
+    eyebrow: "Platform Administration",
+    description: "Licences attached to the selected organisation.",
+  },
+  licences: {
+    title: "Enterprise licences",
+    eyebrow: "Platform Administration",
+    description: "Platform-level licence register linked back to the owning organisation before detail actions.",
+  },
+  "licence-detail": {
+    title: "Licence detail",
+    eyebrow: "Platform Administration",
+    description: "Licence entitlement, seat usage, renewal state, and linked organisation context.",
+  },
   access: {
     title: "Access requests",
     eyebrow: "Operations",
@@ -274,6 +398,12 @@ export default function AdminControlPlaneWorkspace({
   const [verificationQueue, setVerificationQueue] = useState<VerificationItem[]>([]);
   const [probateCases, setProbateCases] = useState<ProbateCase[]>([]);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
+  const [enterprisePortfolio, setEnterprisePortfolio] = useState<EnterprisePortfolio | null>(null);
+  const [enterpriseSearch, setEnterpriseSearch] = useState("");
+  const [enterpriseStatusFilter, setEnterpriseStatusFilter] = useState("");
+  const [enterpriseTypeFilter, setEnterpriseTypeFilter] = useState("");
+  const [enterpriseLicenceFilter, setEnterpriseLicenceFilter] = useState("");
+  const [enterprisePlanFilter, setEnterprisePlanFilter] = useState("");
   const [lookupQuery, setLookupQuery] = useState("");
   const [lookupResults, setLookupResults] = useState<LookupUser[]>([]);
   const [auditFilter, setAuditFilter] = useState("");
@@ -346,6 +476,7 @@ export default function AdminControlPlaneWorkspace({
       if (item.key === "verification") setVerificationQueue(item.json.queue ?? []);
       if (item.key === "probate") setProbateCases(item.json.cases ?? []);
       if (item.key === "audit") setAuditEvents(item.json.events ?? []);
+      if (item.key === "enterprise") setEnterprisePortfolio(item.json.portfolio ?? null);
     }
     if (section === "system-health") {
       const [appHealth, schemaHealth, version] = await Promise.all([
@@ -385,6 +516,7 @@ export default function AdminControlPlaneWorkspace({
     setVerificationQueue([]);
     setProbateCases([]);
     setAuditEvents([]);
+    setEnterprisePortfolio(null);
     setLookupResults([]);
     await supabase.auth.signOut();
     router.replace("/sign-in");
@@ -468,6 +600,15 @@ export default function AdminControlPlaneWorkspace({
 
   const page = PAGE_COPY[section];
   const currentPathname = currentHrefForSection(section, resourceId);
+  const enterpriseViews = useMemo(() => {
+    return buildEnterpriseViews(enterprisePortfolio, {
+      search: enterpriseSearch,
+      status: enterpriseStatusFilter,
+      type: enterpriseTypeFilter,
+      licence: enterpriseLicenceFilter,
+      plan: enterprisePlanFilter,
+    });
+  }, [enterpriseLicenceFilter, enterprisePlanFilter, enterprisePortfolio, enterpriseSearch, enterpriseStatusFilter, enterpriseTypeFilter]);
 
   if (state === "checking") {
     return (
@@ -505,11 +646,34 @@ export default function AdminControlPlaneWorkspace({
       onSignOut={signOut}
       identityLabel={admin?.displayName || admin?.email || "Admin user"}
       identityDetail={admin ? `${admin.role.replace(/_/g, " ")} · ${admin.email}` : undefined}
-      breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: page.title }]}
+      breadcrumbs={buildPlatformBreadcrumbs(section, resourceId, enterprisePortfolio, page.title)}
     >
         {message ? <section style={alertStyle}>{message}</section> : null}
 
         {section === "overview" ? renderOverview(metrics, support, verificationQueue, probateCases) : null}
+        {section === "organisations" ? renderPlatformOrganisations(enterpriseViews, {
+          search: enterpriseSearch,
+          status: enterpriseStatusFilter,
+          type: enterpriseTypeFilter,
+          licence: enterpriseLicenceFilter,
+          plan: enterprisePlanFilter,
+        }, {
+          setSearch: setEnterpriseSearch,
+          setStatus: setEnterpriseStatusFilter,
+          setType: setEnterpriseTypeFilter,
+          setLicence: setEnterpriseLicenceFilter,
+          setPlan: setEnterprisePlanFilter,
+          reset: () => {
+            setEnterpriseSearch("");
+            setEnterpriseStatusFilter("");
+            setEnterpriseTypeFilter("");
+            setEnterpriseLicenceFilter("");
+            setEnterprisePlanFilter("");
+          },
+        }) : null}
+        {section === "organisation-detail" || section === "organisation-users" || section === "organisation-invitations" || section === "organisation-licences" ? renderPlatformOrganisationDetail(section, resourceId, enterprisePortfolio) : null}
+        {section === "licences" ? renderPlatformLicences(enterpriseViews) : null}
+        {section === "licence-detail" ? renderPlatformLicenceDetail(resourceId, enterprisePortfolio) : null}
         {section === "admin-users" || section === "admin-user-detail" ? renderAdminUsers(admins, adminInvitations, adminFilter, setAdminFilter, adminInviteForm, setAdminInviteForm, sendAdminInvitation, adminInviteOpen, setAdminInviteOpen, adminLifecycleForm, setAdminLifecycleForm, runAdminLifecycle, runAdminInvitationLifecycle, resourceId) : null}
         {section === "users" || section === "user-detail" ? renderUsers(lookupQuery, setLookupQuery, lookupResults, runLookup, resourceId) : null}
         {section === "support" || section === "invitations" || section === "access" ? renderSupport(section, support) : null}
@@ -537,16 +701,49 @@ function requestsForSection(section: AdminControlPlaneSection, capabilities: str
   if (["audit", "admin-user-detail"].includes(section) && capabilities.includes("audit:read")) {
     requests.push({ key: "audit", url: "/api/internal/admin/audit-history?limit=50" });
   }
+  if (["organisations", "organisation-detail", "organisation-users", "organisation-invitations", "organisation-licences", "licences", "licence-detail", "overview"].includes(section) && capabilities.includes("organisation:view")) {
+    requests.push({ key: "enterprise", url: "/api/internal/admin/enterprise" });
+  }
   return requests;
 }
 
 function currentHrefForSection(section: AdminControlPlaneSection, resourceId: string | null) {
   if (section === "overview") return "/admin";
+  if (section === "organisation-detail") return `/admin/organisations/${resourceId ?? ""}`;
+  if (section === "organisation-users") return `/admin/organisations/${resourceId ?? ""}/users`;
+  if (section === "organisation-invitations") return `/admin/organisations/${resourceId ?? ""}/invitations`;
+  if (section === "organisation-licences") return `/admin/organisations/${resourceId ?? ""}/licences`;
+  if (section === "licence-detail") return `/admin/licences/${resourceId ?? ""}`;
   if (section === "admin-user-detail") return `/admin/admin-users/${resourceId ?? ""}`;
   if (section === "user-detail") return `/admin/users/${resourceId ?? ""}`;
   if (section === "verification-detail") return `/admin/verification/${resourceId ?? ""}`;
   if (section === "probate-detail") return `/admin/probate/${resourceId ?? ""}`;
   return `/admin/${section}`;
+}
+
+function buildPlatformBreadcrumbs(section: AdminControlPlaneSection, resourceId: string | null, portfolio: EnterprisePortfolio | null, fallbackTitle: string) {
+  const crumbs: Array<{ label: string; href?: string }> = [{ label: "Platform Administration", href: "/admin" }];
+  if (["organisations", "organisation-detail", "organisation-users", "organisation-invitations", "organisation-licences"].includes(section)) {
+    crumbs.push({ label: "Organisations", href: "/admin/organisations" });
+    if (resourceId && section !== "organisations") {
+      const org = portfolio?.organisations.find((item) => item.id === resourceId);
+      crumbs.push({ label: org?.name ?? "Selected organisation", href: `/admin/organisations/${resourceId}` });
+    }
+    if (section === "organisation-users") crumbs.push({ label: "Users" });
+    if (section === "organisation-invitations") crumbs.push({ label: "Invitations" });
+    if (section === "organisation-licences") crumbs.push({ label: "Licences" });
+    return crumbs;
+  }
+  if (section === "licences" || section === "licence-detail") {
+    crumbs.push({ label: "Licences", href: "/admin/licences" });
+    if (resourceId && section === "licence-detail") {
+      const licence = portfolio?.licences.find((item) => item.id === resourceId);
+      crumbs.push({ label: licence ? licenceLabel(licence) : "Selected licence" });
+    }
+    return crumbs;
+  }
+  crumbs.push({ label: fallbackTitle });
+  return crumbs;
 }
 
 function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | null, verification: VerificationItem[], probate: ProbateCase[]) {
@@ -588,6 +785,353 @@ function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | n
       </section>
     </div>
   );
+}
+
+function buildEnterpriseViews(portfolio: EnterprisePortfolio | null, filters: { search: string; status: string; type: string; licence: string; plan: string }) {
+  const empty = { organisations: [] as EnterpriseOrganisation[], licences: [] as EnterpriseLicence[] };
+  if (!portfolio) return empty;
+  const search = filters.search.trim().toLowerCase();
+  const organisations = portfolio.organisations.filter((org) => {
+    const orgLicences = portfolio.licences.filter((licence) => licence.organisationId === org.id);
+    if (search && !`${org.name} ${org.legalName} ${org.registrationNumber ?? ""} ${org.primaryContactEmail ?? ""} ${org.nominatedAdminEmail ?? ""}`.toLowerCase().includes(search)) return false;
+    if (filters.status && org.status !== filters.status) return false;
+    if (filters.type && org.type !== filters.type) return false;
+    if (filters.licence && !orgLicences.some((licence) => licence.status === filters.licence)) return false;
+    if (filters.plan && !orgLicences.some((licence) => licence.plan === filters.plan)) return false;
+    return true;
+  });
+  const visibleOrganisationIds = new Set(organisations.map((org) => org.id));
+  const licences = portfolio.licences.filter((licence) => {
+    const org = portfolio.organisations.find((item) => item.id === licence.organisationId);
+    if (!visibleOrganisationIds.has(licence.organisationId)) return false;
+    if (search && !`${org?.name ?? ""} ${licence.plan} ${licence.status} ${licence.billingStatus}`.toLowerCase().includes(search)) return false;
+    if (filters.licence && licence.status !== filters.licence) return false;
+    if (filters.plan && licence.plan !== filters.plan) return false;
+    return true;
+  });
+  return { organisations, licences };
+}
+
+function renderPlatformOrganisations(
+  views: { organisations: EnterpriseOrganisation[]; licences: EnterpriseLicence[] },
+  filters: { search: string; status: string; type: string; licence: string; plan: string },
+  actions: {
+    setSearch: (value: string) => void;
+    setStatus: (value: string) => void;
+    setType: (value: string) => void;
+    setLicence: (value: string) => void;
+    setPlan: (value: string) => void;
+    reset: () => void;
+  },
+) {
+  return (
+    <div style={stackStyle}>
+      <section style={gridStyle} aria-label="Enterprise portfolio metrics">
+        <MetricCard label="Organisations" value={String(views.organisations.length)} detail="Visible in Platform Administration" href="/admin/organisations" />
+        <MetricCard label="Licences" value={String(views.licences.length)} detail="Linked to listed organisations" href="/admin/licences" />
+        <MetricCard label="Purchased seats" value={String(views.licences.reduce((sum, licence) => sum + licence.purchasedSeats, 0))} detail="Across listed licences" />
+        <MetricCard label="Active seats" value={String(views.licences.reduce((sum, licence) => sum + licence.activeSeats, 0))} detail="Currently consuming entitlement" />
+      </section>
+      {renderPlatformFilterToolbar(filters, actions)}
+      <section style={panelStyle}>
+        <AdminDataTable
+          caption="Platform enterprise organisations"
+          description={<p style={mutedStyle}>Global organisation register. Select an organisation before managing licence, users, invitations, seats, or activity.</p>}
+          columns={[
+            { key: "organisation", header: "Organisation", render: (org) => <><Link href={`/admin/organisations/${org.id}`}>{org.name}</Link><small>{org.registrationNumber ?? org.legalName}</small></> },
+            { key: "type", header: "Type", render: (org) => labelise(org.type) },
+            { key: "status", header: "Status", render: (org) => <AdminStatusBadge status={org.status} /> },
+            { key: "licence", header: "Licence", render: (org) => renderOrgLicenceSummary(org, views.licences) },
+            { key: "admin", header: "Primary administrator", render: (org) => <>{org.nominatedAdminEmail ?? org.primaryContactEmail ?? "Not assigned"}<small>{org.nominatedAdminName ?? "Manage administrator from detail"}</small></> },
+            { key: "risk", header: "Risk", render: (org) => <AdminStatusBadge status={org.risk} /> },
+            { key: "actions", header: "Actions", render: (org) => renderOrganisationActions(org, views.licences) },
+          ]}
+          rows={views.organisations}
+          getRowKey={(org) => org.id}
+          emptyState={<AdminEmptyState title="No organisations found">No enterprise organisations match the current filters.</AdminEmptyState>}
+        />
+      </section>
+    </div>
+  );
+}
+
+function renderPlatformFilterToolbar(
+  filters: { search: string; status: string; type: string; licence: string; plan: string },
+  actions: {
+    setSearch: (value: string) => void;
+    setStatus: (value: string) => void;
+    setType: (value: string) => void;
+    setLicence: (value: string) => void;
+    setPlan: (value: string) => void;
+    reset: () => void;
+  },
+) {
+  return (
+    <section style={compactFilterStyle} aria-label="Organisation filters">
+      <label style={labelStyle}>Search
+        <input value={filters.search} onChange={(event) => actions.setSearch(event.target.value)} placeholder="Organisation, contact or registration" />
+      </label>
+      <label style={labelStyle}>Status
+        <select value={filters.status} onChange={(event) => actions.setStatus(event.target.value)}>
+          <option value="">Any</option>
+          <option value="active">Active</option>
+          <option value="pending_setup">Pending setup</option>
+          <option value="suspended">Suspended</option>
+          <option value="archived">Archived</option>
+        </select>
+      </label>
+      <label style={labelStyle}>Organisation type
+        <select value={filters.type} onChange={(event) => actions.setType(event.target.value)}>
+          <option value="">Any</option>
+          <option value="employer">Employer</option>
+          <option value="law_firm">Law firm</option>
+          <option value="wealth_manager">Wealth manager</option>
+          <option value="insurer">Insurer</option>
+          <option value="enterprise_reseller">Enterprise reseller</option>
+          <option value="other">Other</option>
+        </select>
+      </label>
+      <label style={labelStyle}>Licence status
+        <select value={filters.licence} onChange={(event) => actions.setLicence(event.target.value)}>
+          <option value="">Any</option>
+          <option value="active">Active</option>
+          <option value="suspended">Suspended</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="expired">Expired</option>
+        </select>
+      </label>
+      <label style={labelStyle}>Plan
+        <select value={filters.plan} onChange={(event) => actions.setPlan(event.target.value)}>
+          <option value="">Any</option>
+          <option value="starter">Starter</option>
+          <option value="professional">Professional</option>
+          <option value="enterprise">Enterprise</option>
+          <option value="custom">Custom</option>
+        </select>
+      </label>
+      <button type="button" style={secondaryButtonStyle} onClick={actions.reset}>Reset</button>
+    </section>
+  );
+}
+
+function renderPlatformOrganisationDetail(section: AdminControlPlaneSection, organisationId: string | null, portfolio: EnterprisePortfolio | null) {
+  const org = portfolio?.organisations.find((item) => item.id === organisationId);
+  if (!portfolio || !org) {
+    return <AdminEmptyState title="Organisation unavailable">The selected organisation was not found or is outside your authorised scope.</AdminEmptyState>;
+  }
+  const licences = portfolio.licences.filter((licence) => licence.organisationId === org.id);
+  const invitations = portfolio.invitations.filter((invitation) => invitation.organisationId === org.id);
+  const memberships = portfolio.memberships.filter((membership) => membership.organisationId === org.id);
+  const primaryLicence = licences[0] ?? null;
+  return (
+    <div style={stackStyle}>
+      <section style={panelStyle}>
+        <Link href="/admin/organisations" style={secondaryLinkStyle}>Back to organisations</Link>
+        <div style={sectionHeaderStyle}>
+          <div>
+            <h2 style={h2Style}>{org.name}</h2>
+            <p style={mutedStyle}>{labelise(org.type)} · {org.primaryContactEmail ?? "No primary contact"} · updated {formatDate(org.updatedAt)}</p>
+          </div>
+          <div style={actionRowStyle}>
+            <AdminStatusBadge status={org.status} />
+            <AdminStatusBadge status={org.risk} />
+          </div>
+        </div>
+        <nav aria-label="Organisation sections" style={contextNavStyle}>
+          <Link href={`/admin/organisations/${org.id}`}>Overview</Link>
+          <Link href={`/admin/organisations/${org.id}/licences`}>Licence</Link>
+          <Link href={`/admin/organisations/${org.id}/users`}>Users</Link>
+          <Link href={`/admin/organisations/${org.id}/invitations`}>Invitations</Link>
+          <Link href={`/admin/audit?resource=organisation:${org.id}`}>Activity</Link>
+        </nav>
+      </section>
+      {section === "organisation-users" ? renderOrganisationMembers(memberships) : null}
+      {section === "organisation-invitations" ? renderOrganisationInvitations(invitations) : null}
+      {section === "organisation-licences" ? renderScopedLicences(licences, portfolio) : null}
+      {section === "organisation-detail" ? (
+        <>
+          <section style={gridStyle}>
+            <MetricCard label="Licence plan" value={primaryLicence ? licenceLabel(primaryLicence) : "None"} detail={primaryLicence ? labelise(primaryLicence.status) : "No active licence configured"} href={primaryLicence ? `/admin/organisations/${org.id}/licences/${primaryLicence.id}` : undefined} />
+            <MetricCard label="Purchased seats" value={String(licences.reduce((sum, licence) => sum + licence.purchasedSeats, 0))} detail="Across organisation licences" />
+            <MetricCard label="Active seats" value={String(licences.reduce((sum, licence) => sum + licence.activeSeats, 0))} detail="Current seat use" />
+            <MetricCard label="Pending invitations" value={String(invitations.filter((item) => ["sent", "scheduled", "delivered"].includes(item.status)).length)} detail="Organisation invitations" href={`/admin/organisations/${org.id}/invitations`} />
+          </section>
+          <section style={panelStyle}>
+            <h2 style={h2Style}>Authorised actions</h2>
+            <div style={actionRowStyle}>
+              <button type="button" style={secondaryButtonStyle} disabled title="Platform edit form has not yet been promoted from the enterprise detail workflow.">Edit organisation unavailable</button>
+              {primaryLicence ? <Link href={`/admin/organisations/${org.id}/licences/${primaryLicence.id}`} style={secondaryLinkStyle}>View licence</Link> : <button type="button" style={secondaryButtonStyle} disabled title="Licence creation remains in Enterprise Operations until the platform create form is promoted.">Add licence unavailable</button>}
+              <button type="button" style={secondaryButtonStyle} disabled title="Platform administrator invitation for organisations remains a recorded workflow blocker.">Invite administrator unavailable</button>
+              <Link href={`/admin/audit?resource=organisation:${org.id}`} style={secondaryLinkStyle}>View audit history</Link>
+            </div>
+          </section>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function renderPlatformLicences(views: { organisations: EnterpriseOrganisation[]; licences: EnterpriseLicence[] }) {
+  const portfolio = { organisations: views.organisations, licences: views.licences };
+  return (
+    <section style={panelStyle}>
+      <AdminDataTable
+        caption="Platform enterprise licences"
+        description={<p style={mutedStyle}>Licence register with organisation context preserved. Open a licence only after selecting a record.</p>}
+        columns={[
+          { key: "organisation", header: "Organisation", render: (licence) => orgLink(licence.organisationId, views.organisations) },
+          { key: "plan", header: "Plan", render: (licence) => <><Link href={`/admin/licences/${licence.id}`}>{licenceLabel(licence)}</Link><small>{labelise(licence.billingStatus)}</small></> },
+          { key: "status", header: "Status", render: (licence) => <AdminStatusBadge status={licence.status} /> },
+          { key: "seats", header: "Seats", render: (licence) => <>{licence.activeSeats}/{licence.purchasedSeats}<small>{licence.availableSeats} available · {licence.invitedSeats} invited</small></> },
+          { key: "renewal", header: "Renewal", render: (licence) => <>{formatDate(licence.renewalDate)}<small>{labelise(licence.renewalRisk)}</small></> },
+          { key: "actions", header: "Actions", render: (licence) => renderLicenceActions(licence, portfolio) },
+        ]}
+        rows={views.licences}
+        getRowKey={(licence) => licence.id}
+        emptyState={<AdminEmptyState title="No licences found">No enterprise licences match the current filters.</AdminEmptyState>}
+      />
+    </section>
+  );
+}
+
+function renderPlatformLicenceDetail(licenceId: string | null, portfolio: EnterprisePortfolio | null) {
+  const licence = portfolio?.licences.find((item) => item.id === licenceId);
+  const org = licence ? portfolio?.organisations.find((item) => item.id === licence.organisationId) : null;
+  if (!portfolio || !licence || !org) {
+    return <AdminEmptyState title="Licence unavailable">The selected licence was not found or is outside your authorised scope.</AdminEmptyState>;
+  }
+  const memberships = portfolio.memberships.filter((item) => item.licenceId === licence.id);
+  return (
+    <div style={stackStyle}>
+      <section style={panelStyle}>
+        <Link href="/admin/licences" style={secondaryLinkStyle}>Back to licences</Link>
+        <div style={sectionHeaderStyle}>
+          <div>
+            <h2 style={h2Style}>{licenceLabel(licence)}</h2>
+            <p style={mutedStyle}>Linked to <Link href={`/admin/organisations/${org.id}`}>{org.name}</Link> · renewal {formatDate(licence.renewalDate)}</p>
+          </div>
+          <AdminStatusBadge status={licence.status} />
+        </div>
+      </section>
+      <section style={gridStyle}>
+        <MetricCard label="Purchased seats" value={String(licence.purchasedSeats)} detail="Configured entitlement" />
+        <MetricCard label="Active seats" value={String(licence.activeSeats)} detail="Current usage" />
+        <MetricCard label="Available seats" value={String(licence.availableSeats)} detail={`${licence.invitedSeats} invited or reserved`} />
+        <MetricCard label="Billing status" value={labelise(licence.billingStatus)} detail="No private payment details shown" />
+      </section>
+      <section style={panelStyle}>
+        <h2 style={h2Style}>Authorised actions</h2>
+        <div style={actionRowStyle}>
+          <button type="button" style={secondaryButtonStyle} disabled title="Platform licence edit form has not yet been promoted.">Edit licence unavailable</button>
+          <Link href={`/admin/organisations/${org.id}`} style={secondaryLinkStyle}>View organisation</Link>
+          <Link href={`/admin/organisations/${org.id}/users`} style={secondaryLinkStyle}>View users consuming seats</Link>
+          <Link href={`/admin/audit?resource=licence:${licence.id}`} style={secondaryLinkStyle}>View audit history</Link>
+        </div>
+        <p style={mutedStyle}>Suspend, cancel, renewal, and seat-allocation changes remain available through the existing authorised licence detail action surface until the platform edit form is promoted.</p>
+      </section>
+      {renderOrganisationMembers(memberships)}
+    </div>
+  );
+}
+
+function renderOrganisationMembers(memberships: EnterpriseMembership[]) {
+  return (
+    <section style={panelStyle}>
+      <AdminDataTable
+        caption="Organisation users and seats"
+        columns={[
+          { key: "user", header: "User", render: (membership) => <>{membership.fullName ?? membership.email}<small>{membership.email}</small></> },
+          { key: "role", header: "Role", render: (membership) => labelise(membership.organisationRole) },
+          { key: "status", header: "Status", render: (membership) => <AdminStatusBadge status={membership.status} /> },
+          { key: "onboarding", header: "Onboarding", render: (membership) => labelise(membership.onboardingStatus) },
+          { key: "consent", header: "Consent", render: (membership) => <AdminStatusBadge status={membership.consentStatus} /> },
+        ]}
+        rows={memberships}
+        getRowKey={(membership) => membership.id}
+        emptyState={<AdminEmptyState title="No users found">No users are linked to this organisation in the current scope.</AdminEmptyState>}
+      />
+    </section>
+  );
+}
+
+function renderOrganisationInvitations(invitations: EnterpriseInvitation[]) {
+  return (
+    <section style={panelStyle}>
+      <AdminDataTable
+        caption="Organisation invitations"
+        columns={[
+          { key: "recipient", header: "Recipient", render: (invitation) => <>{invitation.fullName ?? invitation.email}<small>{invitation.email}</small></> },
+          { key: "type", header: "Type", render: (invitation) => labelise(invitation.invitationType) },
+          { key: "role", header: "Role", render: (invitation) => labelise(invitation.roleTemplate) },
+          { key: "status", header: "Status", render: (invitation) => <AdminStatusBadge status={invitation.status} /> },
+          { key: "expiry", header: "Expiry", render: (invitation) => formatDate(invitation.expiresAt) },
+        ]}
+        rows={invitations}
+        getRowKey={(invitation) => invitation.id}
+        emptyState={<AdminEmptyState title="No invitations found">No invitations are linked to this organisation.</AdminEmptyState>}
+      />
+    </section>
+  );
+}
+
+function renderScopedLicences(licences: EnterpriseLicence[], portfolio: EnterprisePortfolio) {
+  return renderPlatformLicences({ organisations: portfolio.organisations, licences });
+}
+
+function renderOrgLicenceSummary(org: EnterpriseOrganisation, licences: EnterpriseLicence[]) {
+  const orgLicences = licences.filter((licence) => licence.organisationId === org.id);
+  const primary = orgLicences[0];
+  if (!primary) return "No licence configured";
+  return (
+    <>
+      <Link href={`/admin/organisations/${org.id}/licences/${primary.id}`}>{licenceLabel(primary)}</Link>
+      <small>{primary.activeSeats}/{primary.purchasedSeats} active seats · renews {formatDate(primary.renewalDate)}</small>
+    </>
+  );
+}
+
+function renderOrganisationActions(org: EnterpriseOrganisation, licences: EnterpriseLicence[]) {
+  const licence = licences.find((item) => item.organisationId === org.id);
+  return (
+    <div style={actionsCellStyle}>
+      <Link href={`/admin/organisations/${org.id}`}>View organisation</Link>
+      {licence ? <Link href={`/admin/organisations/${org.id}/licences/${licence.id}`}>View licence</Link> : <span title="No licence exists for this organisation yet.">No licence</span>}
+      <Link href={`/admin/organisations/${org.id}/users`}>Users</Link>
+      <Link href={`/admin/organisations/${org.id}/invitations`}>Invitations</Link>
+    </div>
+  );
+}
+
+function renderLicenceActions(licence: EnterpriseLicence, portfolio: { organisations: EnterpriseOrganisation[]; licences: EnterpriseLicence[] }) {
+  const org = portfolio.organisations.find((item) => item.id === licence.organisationId);
+  return (
+    <div style={actionsCellStyle}>
+      <Link href={`/admin/licences/${licence.id}`}>View licence</Link>
+      {org ? <Link href={`/admin/organisations/${org.id}`}>Organisation</Link> : null}
+      {org ? <Link href={`/admin/organisations/${org.id}/users`}>Users and seats</Link> : null}
+    </div>
+  );
+}
+
+function orgLink(organisationId: string, organisations: EnterpriseOrganisation[]) {
+  const org = organisations.find((item) => item.id === organisationId);
+  if (!org) return "Unknown organisation";
+  return <Link href={`/admin/organisations/${org.id}`}>{org.name}</Link>;
+}
+
+function licenceLabel(licence: EnterpriseLicence) {
+  return licence.plan === "custom" ? licence.customPlanName || "Custom licence" : `${labelise(licence.plan)} licence`;
+}
+
+function MetricCard({ label, value, detail, href }: { label: string; value: string; detail: string; href?: string }) {
+  const body = (
+    <>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <small>{detail}</small>
+    </>
+  );
+  return href ? <Link href={href} style={metricLinkStyle}>{body}</Link> : <div style={metricLinkStyle}>{body}</div>;
 }
 
 function renderAdminUsers(
@@ -1126,7 +1670,11 @@ function formatRoleLabel(role: string | null, isMaster: boolean) {
   return String(role ?? "support_agent").replace(/_/g, " ");
 }
 
-function formatDate(value: string) {
+function labelise(value: string) {
+  return String(value || "unknown").replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatDate(value: string | null) {
   if (!value) return "Not available";
   try {
     return new Date(value).toLocaleString();
@@ -1184,3 +1732,7 @@ const permissionSummaryStyle = { border: "1px solid #bfdbfe", borderRadius: 8, p
 const sectionHeaderStyle = { display: "flex", justifyContent: "space-between", alignItems: "start", gap: 12, flexWrap: "wrap" } satisfies CSSProperties;
 const contextPanelStyle = { border: "1px solid #cbd5e1", borderRadius: 8, padding: 14, display: "grid", gap: 12, background: "#f8fafc" } satisfies CSSProperties;
 const actionsCellStyle = { display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" } satisfies CSSProperties;
+const actionRowStyle = { display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" } satisfies CSSProperties;
+const compactFilterStyle = { ...panelStyle, display: "grid", gridTemplateColumns: "minmax(220px, 1.5fr) repeat(4, minmax(150px, 1fr)) auto", gap: 10, alignItems: "end" } satisfies CSSProperties;
+const contextNavStyle = { display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 } satisfies CSSProperties;
+const labelStyle = { display: "grid", gap: 5, color: "#334155", fontSize: 13, fontWeight: 700 } satisfies CSSProperties;

@@ -590,29 +590,10 @@ export default function EnterpriseOperationsWorkspace() {
       identityLabel={identity.label}
       identityDetail={identity.detail}
       breadcrumbs={[{ label: "Enterprise Operations", href: "/application/enterprise" }, { label: labelise(activeTab) }]}
-      stagingLabel="STAGING - synthetic test data may be present"
+      stagingLabel="STAGING — synthetic test data may be present"
     >
 
       {message ? <section style={alertStyle}>{message}</section> : null}
-
-      <nav aria-label="Enterprise navigation" style={tabListStyle}>
-        {[
-          ["overview", "Overview"],
-          ["organisations", "Organisations"],
-          ["licences", "Licences"],
-          ["users", "Users and seats"],
-          ["invitations", "Invitations"],
-          ["adoption", "Adoption"],
-          ["reports", "Reports"],
-          ["consent", "Consent and compliance"],
-          ["renewals", "Renewals"],
-          ["settings", "Account settings"],
-        ].map(([key, label]) => (
-          <button key={key} type="button" onClick={() => setActiveTab(key as typeof activeTab)} style={activeTab === key ? activeTabStyle : tabStyle}>
-            {label}
-          </button>
-        ))}
-      </nav>
 
       {renderFilterBar(
         filters,
@@ -1281,6 +1262,9 @@ function renderFilterBar(
           <option value="custom">Custom</option>
         </select>
       </label>
+      <button type="button" style={secondaryButtonStyle} onClick={clear}>Reset</button>
+      <details style={moreFiltersStyle}>
+        <summary>More filters and saved views</summary>
       <label style={labelStyle}>Billing status
         <select value={filters.billingStatus} onChange={(event) => setFilters({ ...filters, billingStatus: event.target.value })}>
           <option value="">Any</option>
@@ -1402,7 +1386,6 @@ function renderFilterBar(
           <option value="complete">Complete</option>
         </select>
       </label>
-      <button type="button" style={secondaryButtonStyle} onClick={clear}>Reset to default</button>
       <FormInput label="Saved view name" value={savedViewName} onChange={setSavedViewName} />
       <button type="button" style={secondaryButtonStyle} onClick={save}>Save view</button>
       <div style={savedViewsStyle} aria-label="Saved enterprise views">
@@ -1415,6 +1398,7 @@ function renderFilterBar(
         ))}
         {savedViews.length === 0 ? <span style={mutedInlineStyle}>No saved views yet.</span> : null}
       </div>
+      </details>
       {activeFilters.length ? (
         <div style={filterChipsStyle}>
           {activeFilters.map(([key, value]) => (
@@ -1623,10 +1607,8 @@ const secondaryLinkStyle: CSSProperties = { color: "#0f172a", border: "1px solid
 const secondaryButtonStyle: CSSProperties = { color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 6, padding: "9px 12px", background: "#fff", fontWeight: 700 };
 const primaryButtonStyle: CSSProperties = { border: 0, borderRadius: 6, padding: "10px 14px", background: "#111827", color: "#fff", fontWeight: 800 };
 const alertStyle: CSSProperties = { background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 8, padding: 12, marginBottom: 16 };
-const tabListStyle: CSSProperties = { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 };
-const tabStyle: CSSProperties = { border: "1px solid #cbd5e1", background: "#fff", borderRadius: 6, padding: "9px 12px", fontWeight: 700 };
-const activeTabStyle: CSSProperties = { ...tabStyle, background: "#111827", color: "#fff", borderColor: "#111827" };
 const filterBarStyle: CSSProperties = { ...panelStyle, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 10, alignItems: "end", marginBottom: 16 };
+const moreFiltersStyle: CSSProperties = { gridColumn: "1 / -1", border: "1px solid #dbe3ef", borderRadius: 8, padding: 12, display: "grid", gap: 10, background: "#f8fafc" };
 const filterChipsStyle: CSSProperties = { gridColumn: "1 / -1", display: "flex", gap: 8, flexWrap: "wrap" };
 const chipStyle: CSSProperties = { border: "1px solid #bfdbfe", background: "#eff6ff", borderRadius: 999, padding: "7px 10px", color: "#1e3a8a", fontWeight: 800 };
 const savedViewsStyle: CSSProperties = { gridColumn: "1 / -1", display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" };
