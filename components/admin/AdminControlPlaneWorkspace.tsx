@@ -852,7 +852,7 @@ function renderUsers(
   return (
     <div style={stackStyle}>
       <section style={toolbarStyle}>
-        <label>Search users
+        <label style={fieldStackStyle}>Search users
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Email or display name" />
         </label>
         <button type="button" onClick={() => void runLookup()}>Search</button>
@@ -1161,6 +1161,7 @@ const alertStyle = { ...panelStyle, color: "#991b1b", background: "#fff7ed" } sa
 const stackStyle = { display: "grid", gap: 16 } satisfies CSSProperties;
 const gridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 12 } satisfies CSSProperties;
 const toolbarStyle = { ...panelStyle, display: "flex", alignItems: "end", justifyContent: "space-between", gap: 12, flexWrap: "wrap" } satisfies CSSProperties;
+const fieldStackStyle = { display: "grid", gap: 6, minWidth: 0, flex: "1 1 260px" } satisfies CSSProperties;
 const formGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 12 } satisfies CSSProperties;
 const tableWrapStyle = { overflowX: "auto" } satisfies CSSProperties;
 const tableStyle = { width: "100%", borderCollapse: "collapse", fontSize: 14 } satisfies CSSProperties;

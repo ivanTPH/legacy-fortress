@@ -947,6 +947,8 @@
     min-width: 0;
     width: 100%;
     flex: none;
+    display: grid;
+    grid-template-columns: 1fr;
   }
 
   .lf-admin-shell-title h1 {
@@ -955,12 +957,21 @@
 
   .lf-admin-shell-identity {
     max-width: 100%;
-    flex: 1 1 220px;
+    width: 100%;
+    min-width: 0;
   }
 
   .lf-admin-shell-secondary,
   .lf-admin-shell-stage {
     min-height: 44px;
+  }
+
+  .lf-admin-shell-actions > .lf-admin-shell-secondary,
+  .lf-admin-shell-actions > button,
+  .lf-admin-shell-actions > a,
+  .lf-admin-shell-actions > .lf-admin-shell-stage {
+    width: 100%;
+    justify-content: center;
   }
 
   .lf-admin-shell-content table {
