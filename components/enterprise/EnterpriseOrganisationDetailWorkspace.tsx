@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type CSSProperties } from "react";
-import WorkspaceSwitcher from "@/components/navigation/WorkspaceSwitcher";
+import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell";
+import { ENTERPRISE_ADMIN_NAVIGATION, filterAdminNavigation } from "@/components/admin/adminNavigation";
 import { waitForActiveUser } from "@/lib/auth/session";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -93,6 +94,8 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
   const [state, setState] = useState<"checking" | "ready" | "denied" | "error">("checking");
   const [message, setMessage] = useState("");
   const [detail, setDetail] = useState<Detail | null>(null);
+  const [navigationCapabilities, setNavigationCapabilities] = useState<string[]>([]);
+  const [identity, setIdentity] = useState({ label: "Enterprise user", detail: "" });
   const [tab, setTab] = useState<"overview" | "licence" | "users" | "invitations" | "adoption" | "consent" | "reports" | "audit" | "settings">("overview");
   const [form, setForm] = useState<FormState | null>(null);
   const [reason, setReason] = useState("");
@@ -154,6 +157,13 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
       setState(res.status === 403 ? "denied" : "error");
       return;
     }
+    const sessionRes = await authFetch("/api/internal/admin/session");
+    const sessionJson = await sessionRes.json().catch(() => ({})) as { admin?: { displayName?: string; email?: string; role?: string; capabilities?: string[] } };
+    setNavigationCapabilities(sessionRes.ok && sessionJson.admin?.capabilities?.length ? sessionJson.admin.capabilities : ["enterprise.workspace.access", "organisation:view", "licence:view"]);
+    setIdentity({
+      label: sessionJson.admin?.displayName || sessionJson.admin?.email || user.email || "Enterprise user",
+      detail: sessionJson.admin?.role ? `${sessionJson.admin.role.replace(/_/g, " ")} · ${sessionJson.admin.email ?? user.email ?? ""}` : user.email ?? "",
+    });
     setDetail(json.detail);
     setForm(toForm(json.detail.organisation));
     setState("ready");
@@ -197,22 +207,21 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
   if (state !== "ready" || !detail || !form) return <main style={pageStyle}><section style={panelStyle}><h1>{state === "denied" ? "Access denied" : "Organisation unavailable"}</h1><p>{message}</p><Link href="/application/enterprise">Back to Enterprise Operations</Link></section></main>;
 
   const org = detail.organisation;
+  const navigation = filterAdminNavigation(ENTERPRISE_ADMIN_NAVIGATION, navigationCapabilities);
   return (
-    <main style={pageStyle}>
-      <header style={headerStyle}>
-        <div>
-          <p style={eyebrowStyle}>Legacy Fortress Enterprise</p>
-          <h1 style={h1Style}>{org.name}</h1>
-          <p style={mutedStyle}>{labelise(org.status)} · {labelise(org.risk)} · {org.accountOwner || "No account owner"}</p>
-        </div>
-        <div style={headerActionsStyle}>
-          <span style={stageBadgeStyle}>STAGING — synthetic test data may be present</span>
-          <WorkspaceSwitcher currentPathname={`/application/enterprise/organisations/${organisationId}`} alwaysShow compact />
-          <Link style={secondaryLinkStyle} href="/application/enterprise">Enterprise Operations</Link>
-          <Link style={secondaryLinkStyle} href="/dashboard">Personal Vault</Link>
-          <button type="button" aria-label="Sign out of Legacy Fortress" style={secondaryButtonStyle} onClick={signOut}>Sign out</button>
-        </div>
-      </header>
+    <AdminWorkspaceShell
+      workspaceLabel="Enterprise Operations"
+      eyebrow="Legacy Fortress Enterprise"
+      title={org.name}
+      description={`${labelise(org.status)} · ${labelise(org.risk)} · ${org.accountOwner || "No account owner"}`}
+      currentPathname={`/application/enterprise/organisations/${organisationId}`}
+      navigation={navigation}
+      onSignOut={signOut}
+      identityLabel={identity.label}
+      identityDetail={identity.detail}
+      breadcrumbs={[{ label: "Enterprise Operations", href: "/application/enterprise" }, { label: "Organisations", href: "/application/enterprise?tab=organisations" }, { label: org.name }]}
+      stagingLabel="STAGING - synthetic test data may be present"
+    >
       {message ? <section style={alertStyle}>{message}</section> : null}
       <nav style={tabListStyle} aria-label="Organisation detail navigation">
         {["overview", "licence", "users", "invitations", "adoption", "consent", "reports", "audit", "settings"].map((item) => (
@@ -397,7 +406,7 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
         </section>
       ) : null}
       {!["overview", "licence", "users", "invitations", "audit", "settings"].includes(tab) ? <section style={panelStyle}><h2>{labelise(tab)}</h2><p style={mutedStyle}>This section is staged for a later Enterprise Operations phase. No fabricated operational data is shown.</p></section> : null}
-    </main>
+    </AdminWorkspaceShell>
   );
 }
 
@@ -454,17 +463,12 @@ function formatDate(value: string) {
 }
 
 const pageStyle: CSSProperties = { minHeight: "100vh", padding: 24, background: "#f8fafc", color: "#111827" };
-const headerStyle: CSSProperties = { display: "flex", justifyContent: "space-between", gap: 18, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 18 };
-const headerActionsStyle: CSSProperties = { display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" };
 const panelStyle: CSSProperties = { background: "#fff", border: "1px solid #dbe3ef", borderRadius: 8, padding: 18, boxShadow: "0 12px 30px rgba(15,23,42,.05)", display: "grid", gap: 12 };
-const h1Style: CSSProperties = { margin: 0, fontSize: 28, lineHeight: 1.15 };
-const eyebrowStyle: CSSProperties = { margin: "0 0 8px", color: "#475569", fontSize: 12, textTransform: "uppercase", fontWeight: 800, letterSpacing: 0 };
 const mutedStyle: CSSProperties = { color: "#64748b", margin: "6px 0 0", lineHeight: 1.5 };
 const privacyStyle: CSSProperties = { color: "#334155", background: "#f1f5f9", border: "1px solid #dbe3ef", borderRadius: 6, padding: 10, margin: "12px 0 0" };
 const secondaryLinkStyle: CSSProperties = { color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 6, padding: "9px 12px", textDecoration: "none", background: "#fff", fontWeight: 700 };
 const secondaryButtonStyle: CSSProperties = { color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 6, padding: "9px 12px", background: "#fff", fontWeight: 700 };
 const primaryButtonStyle: CSSProperties = { border: 0, borderRadius: 6, padding: "10px 14px", background: "#111827", color: "#fff", fontWeight: 800 };
-const stageBadgeStyle: CSSProperties = { background: "#fff7ed", color: "#9a3412", border: "1px solid #fed7aa", borderRadius: 6, padding: "7px 10px", fontSize: 12, fontWeight: 900 };
 const alertStyle: CSSProperties = { background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 8, padding: 12, marginBottom: 16 };
 const tabListStyle: CSSProperties = { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 };
 const tabStyle: CSSProperties = { border: "1px solid #cbd5e1", background: "#fff", borderRadius: 6, padding: "9px 12px", fontWeight: 700 };

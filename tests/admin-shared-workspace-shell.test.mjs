@@ -42,6 +42,8 @@ test("admin navigation is capability-filtered without defining a second role mat
 test("platform, enterprise and probate entry surfaces use the shared shell", () => {
   const platform = read("components/admin/AdminControlPlaneWorkspace.tsx");
   const enterprise = read("components/enterprise/EnterpriseOperationsWorkspace.tsx");
+  const enterpriseOrgDetail = read("components/enterprise/EnterpriseOrganisationDetailWorkspace.tsx");
+  const enterpriseLicenceDetail = read("components/enterprise/EnterpriseLicenceDetailWorkspace.tsx");
   const probatePage = read("app/admin/probate/page.tsx");
 
   assert.match(platform, /AdminWorkspaceShell/);
@@ -50,7 +52,29 @@ test("platform, enterprise and probate entry surfaces use the shared shell", () 
   assert.match(enterprise, /AdminWorkspaceShell/);
   assert.match(enterprise, /ENTERPRISE_ADMIN_NAVIGATION/);
   assert.match(enterprise, /workspaceLabel="Enterprise Operations"/);
+  assert.match(enterpriseOrgDetail, /AdminWorkspaceShell/);
+  assert.match(enterpriseOrgDetail, /filterAdminNavigation\(ENTERPRISE_ADMIN_NAVIGATION/);
+  assert.match(enterpriseLicenceDetail, /AdminWorkspaceShell/);
+  assert.match(enterpriseLicenceDetail, /filterAdminNavigation\(ENTERPRISE_ADMIN_NAVIGATION/);
   assert.match(probatePage, /section="probate"/);
+});
+
+test("shared admin shell constrains long content and tables on small screens", () => {
+  const source = read("components/admin/AdminWorkspaceShell.tsx");
+  assert.match(source, /overflow-x: hidden/);
+  assert.match(source, /overflow-wrap: anywhere/);
+  assert.match(source, /lf-admin-shell-content table/);
+  assert.match(source, /overflow-x: auto/);
+  assert.match(source, /-webkit-overflow-scrolling: touch/);
+});
+
+test("shared admin data table supports toolbar and mobile card rows", () => {
+  const source = read("components/admin/AdminPrimitives.tsx");
+  assert.match(source, /description\?: ReactNode/);
+  assert.match(source, /actions\?: ReactNode/);
+  assert.match(source, /lf-admin-data-toolbar/);
+  assert.match(source, /lf-admin-data-card-row/);
+  assert.match(source, /overflow-wrap: anywhere/);
 });
 
 test("enterprise shared navigation tab links are safe query-state links", () => {
@@ -65,11 +89,11 @@ test("enterprise shared navigation tab links are safe query-state links", () => 
   assert.doesNotMatch(enterprise, /dangerouslySetInnerHTML/);
 });
 
-test("admin product audit records unresolved prototype and detail-shell follow-ups", () => {
+test("admin product audit records prototype follow-up and remediated detail shells", () => {
   const audit = read("docs/admin/ADMIN_PRODUCT_AUDIT.md");
   assert.match(audit, /ADMIN-UX-004/);
   assert.match(audit, /internal\/admin\/prototype/);
   assert.match(audit, /ADMIN-NEXT-001/);
-  assert.match(audit, /EnterpriseOrganisationDetailWorkspace/);
+  assert.match(audit, /Remediated with `AdminWorkspaceShell`/);
   assert.match(audit, /Severity Scale/);
 });

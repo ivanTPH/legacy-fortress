@@ -39,7 +39,7 @@ The backend controls from Admin Phases 1-3 remain the authority. This audit focu
 | ADMIN-UX-004 | P1 | `/internal/admin/prototype/*` | Prototype/mock routes remain implemented but must not be operationally reachable outside local development. | `app/internal/admin/prototype/layout.tsx` denies non-local/non-explicit access; normal link crawl now excludes quarantined prototype source. | Remediated for staging/production quarantine; prototype source retained for local development only. |
 | ADMIN-UX-005 | P1 | `/admin/admin-users`, `/internal/admin` | Some legacy admin lifecycle dependencies remained in the broader architecture. | Earlier audit documents identified duplicate `/api/admin/*` and `/api/internal/admin/*` route families. | Remediated for Platform Administration: `/internal/admin` and `/internal/admin/probate` redirect to canonical routes, and runtime `/api/admin/*` route handlers have been removed. |
 | ADMIN-UX-006 | P2 | `/application/enterprise` | Some controls are partial rather than full end-to-end workflows. | Bulk CSV validation, enrolment-link concurrency and report/export filter semantics are known partials. | Deferred and recorded for follow-up. |
-| ADMIN-UX-007 | P2 | Enterprise detail pages | Detail workspaces still have separate local wrappers. | `EnterpriseOrganisationDetailWorkspace.tsx` and `EnterpriseLicenceDetailWorkspace.tsx` retain page-local headers. | Deferred to detail-workspace remediation. |
+| ADMIN-UX-007 | P2 | Enterprise detail pages | Detail workspaces used separate local wrappers. | `EnterpriseOrganisationDetailWorkspace.tsx` and `EnterpriseLicenceDetailWorkspace.tsx` previously retained page-local headers. | Remediated with `AdminWorkspaceShell` while preserving existing enterprise APIs. |
 | ADMIN-UX-008 | P3 | `/admin`, `/application/enterprise` | Material icons were not consistently used in admin navigation labels. | Previous nav was text-only in `/admin`; enterprise had no shared sidebar. | Remediated in shared navigation. |
 
 ## Functional Actions
@@ -62,7 +62,7 @@ The backend controls from Admin Phases 1-3 remain the authority. This audit focu
 - The shared shell now provides one responsive sidebar, mobile drawer, header, workspace switcher, identity area and sign-out action.
 - The shell uses minimum touch target sizing for mobile controls and prevents whole-page horizontal overflow by constraining content and wrapping action groups.
 - Priority Platform Administration tables now use a shared responsive table/card primitive; remaining enterprise/probate list conversions are deferred.
-- Enterprise organisation/licence detail workspaces still need the shared shell in the next phase.
+- Enterprise organisation/licence detail workspaces now use the shared shell; remaining enterprise/probate list conversions are deferred.
 
 ## Security and Permission Findings
 
@@ -75,13 +75,12 @@ The backend controls from Admin Phases 1-3 remain the authority. This audit focu
 
 | ID | Severity | Title | Affected routes | Recommended remediation |
 | --- | --- | --- | --- | --- |
-| ADMIN-NEXT-001 | P1 | Consolidate enterprise detail shells | `/application/enterprise/organisations/[organisationId]`, `/application/enterprise/licences/[licenceId]` | Move detail pages to `AdminWorkspaceShell`, preserve APIs and add responsive tests. |
-| ADMIN-NEXT-002 | P2 | Review retained local-only prototypes | `/internal/admin/prototype/*` | Decide whether retained local-only prototype source should be deleted or archived after owner sign-off. |
-| ADMIN-NEXT-003 | P3 | Archive historical admin mock fixtures | `lib/backend/adminRoleApiHandlers.ts`, `components/admin/prototype/*` | The runtime `/api/admin/*` API family is removed; decide whether the remaining unit-level mock contract helpers should be archived after tests no longer need them. |
-| ADMIN-NEXT-004 | P1 | Harden enterprise bulk invitation validation | `/application/enterprise` invitations | Validate duplicates, existing members, missing licence, unsupported roles and seat shortfall server-side. |
-| ADMIN-NEXT-005 | P1 | Transactional enrolment-link claims | `/api/internal/admin/enterprise`, invitation acceptance | Add transaction/locking proof for claim count and seat reservation. |
-| ADMIN-NEXT-006 | P2 | Extend shared responsive table/card primitive | Enterprise and probate lists | Apply the new reusable table/card component to remaining operational lists with empty/error/loading states. |
-| ADMIN-NEXT-007 | P2 | Report/export parity | `/application/enterprise` reports | Ensure every filter and cohort/consent decision is applied consistently to UI and export. |
+| ADMIN-NEXT-001 | P2 | Review retained local-only prototypes | `/internal/admin/prototype/*` | Decide whether retained local-only prototype source should be deleted or archived after owner sign-off. |
+| ADMIN-NEXT-002 | P3 | Archive historical admin mock fixtures | `lib/backend/adminRoleApiHandlers.ts`, `components/admin/prototype/*` | The runtime `/api/admin/*` API family is removed; decide whether the remaining unit-level mock contract helpers should be archived after tests no longer need them. |
+| ADMIN-NEXT-003 | P1 | Harden enterprise bulk invitation validation | `/application/enterprise` invitations | Validate duplicates, existing members, missing licence, unsupported roles and seat shortfall server-side. |
+| ADMIN-NEXT-004 | P1 | Transactional enrolment-link claims | `/api/internal/admin/enterprise`, invitation acceptance | Add transaction/locking proof for claim count and seat reservation. |
+| ADMIN-NEXT-005 | P2 | Extend shared responsive table/card primitive | Enterprise and probate lists | Apply the new reusable table/card component to remaining operational lists with empty/error/loading states. |
+| ADMIN-NEXT-006 | P2 | Report/export parity | `/application/enterprise` reports | Ensure every filter and cohort/consent decision is applied consistently to UI and export. |
 
 ## Platform Administration Functional Completion Update
 

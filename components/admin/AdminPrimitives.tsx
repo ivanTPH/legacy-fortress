@@ -9,12 +9,16 @@ export type AdminDataColumn<T> = {
 
 export default function AdminDataTable<T>({
   caption,
+  description,
+  actions,
   columns,
   rows,
   getRowKey,
   emptyState,
 }: {
   caption: string;
+  description?: ReactNode;
+  actions?: ReactNode;
   columns: Array<AdminDataColumn<T>>;
   rows: T[];
   getRowKey: (row: T) => string;
@@ -22,6 +26,12 @@ export default function AdminDataTable<T>({
 }) {
   return (
     <div className="lf-admin-data-table-wrap">
+      {(description || actions) ? (
+        <div className="lf-admin-data-toolbar">
+          {description ? <div>{description}</div> : <span />}
+          {actions ? <div className="lf-admin-data-toolbar-actions">{actions}</div> : null}
+        </div>
+      ) : null}
       <table className="lf-admin-data-table">
         <caption>{caption}</caption>
         <thead>
@@ -44,7 +54,7 @@ export default function AdminDataTable<T>({
         {rows.map((row) => (
           <article key={getRowKey(row)} className="lf-admin-data-card">
             {columns.map((column) => (
-              <div key={column.key}>
+              <div key={column.key} className="lf-admin-data-card-row">
                 <span>{column.cardLabel ?? column.header}</span>
                 <div>{column.render(row)}</div>
               </div>
@@ -85,10 +95,30 @@ const adminPrimitiveCss = `
     min-width: 0;
     overflow-x: auto;
   }
+  .lf-admin-data-toolbar {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+    min-width: 0;
+  }
+  .lf-admin-data-toolbar > div {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .lf-admin-data-toolbar-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }
   .lf-admin-data-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 14px;
+    table-layout: auto;
   }
   .lf-admin-data-table caption {
     height: 1px;
@@ -102,6 +132,14 @@ const adminPrimitiveCss = `
     padding: 10px;
     text-align: left;
     vertical-align: top;
+    overflow-wrap: anywhere;
+  }
+  .lf-admin-data-table th {
+    color: #334155;
+    font-size: 12px;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+    white-space: nowrap;
   }
   .lf-admin-data-table small,
   .lf-admin-data-card small {
@@ -160,6 +198,13 @@ const adminPrimitiveCss = `
       display: grid;
       gap: 10px;
       min-width: 0;
+    }
+    .lf-admin-data-toolbar {
+      align-items: stretch;
+      display: grid;
+    }
+    .lf-admin-data-toolbar-actions {
+      justify-content: flex-start;
     }
     .lf-admin-data-card {
       background: #fff;

@@ -230,6 +230,42 @@ const adminShellCss = `
     display: grid;
     gap: 18px;
     align-content: start;
+    overflow-x: hidden;
+  }
+  .lf-admin-shell-content section,
+  .lf-admin-shell-content article,
+  .lf-admin-shell-content div,
+  .lf-admin-shell-content dl,
+  .lf-admin-shell-content form,
+  .lf-admin-shell-content nav {
+    max-width: 100%;
+  }
+  .lf-admin-shell-content h2,
+  .lf-admin-shell-content h3,
+  .lf-admin-shell-content p,
+  .lf-admin-shell-content td,
+  .lf-admin-shell-content th,
+  .lf-admin-shell-content dd,
+  .lf-admin-shell-content dt,
+  .lf-admin-shell-content label {
+    overflow-wrap: anywhere;
+  }
+  .lf-admin-shell-content table {
+    width: 100%;
+    max-width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+  }
+  .lf-admin-shell-content th,
+  .lf-admin-shell-content td {
+    padding: 10px;
+    vertical-align: top;
+  }
+  .lf-admin-shell-content input,
+  .lf-admin-shell-content select,
+  .lf-admin-shell-content textarea,
+  .lf-admin-shell-content button {
+    max-width: 100%;
   }
   .lf-admin-shell-header {
     display: flex;
@@ -360,6 +396,7 @@ const adminShellCss = `
     .lf-admin-shell-content {
       padding: 12px;
       gap: 12px;
+      overflow-x: clip;
     }
     .lf-admin-shell-header {
       display: grid;
@@ -381,6 +418,16 @@ const adminShellCss = `
     .lf-admin-shell-secondary,
     .lf-admin-shell-stage {
       min-height: 44px;
+    }
+    .lf-admin-shell-content table {
+      display: block;
+      overflow-x: auto;
+      white-space: normal;
+      -webkit-overflow-scrolling: touch;
+    }
+    .lf-admin-shell-content th,
+    .lf-admin-shell-content td {
+      min-width: 128px;
     }
     .lf-admin-shell-drawer {
       display: block;
