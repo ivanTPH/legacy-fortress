@@ -766,6 +766,18 @@
   white-space: nowrap;
 }
 
+.lf-admin-shell-identity > span {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.lf-admin-shell-identity small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .lf-admin-shell-breadcrumb {
   display: flex;
   gap: 8px;
