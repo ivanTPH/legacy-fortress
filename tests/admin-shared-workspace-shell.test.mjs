@@ -22,7 +22,7 @@ test("shared admin shell exposes responsive navigation, identity and sign-out co
   assert.match(source, /white-space: nowrap/);
   assert.match(source, /prefetch=\{false\}/);
   assert.match(source, /@media \(max-width: 860px\)/);
-  assert.match(source, /overflow-wrap: anywhere/);
+  assert.match(source, /overflow-wrap: break-word/);
   assert.match(source, /min-height: 44px/);
 });
 
@@ -63,7 +63,7 @@ test("shared admin shell constrains long content and tables on small screens", (
   const source = read("components/admin/AdminWorkspaceShell.tsx");
   const globalCss = read("app/globals.css");
   assert.match(source, /overflow-x: hidden/);
-  assert.match(source, /overflow-wrap: anywhere/);
+  assert.match(source, /overflow-wrap: break-word/);
   assert.match(source, /lf-admin-shell-content table/);
   assert.match(source, /overflow-x: auto/);
   assert.match(source, /-webkit-overflow-scrolling: touch/);
@@ -80,7 +80,8 @@ test("shared admin data table supports toolbar and mobile card rows", () => {
   assert.match(source, /actions\?: ReactNode/);
   assert.match(source, /lf-admin-data-toolbar/);
   assert.match(source, /lf-admin-data-card-row/);
-  assert.match(source, /overflow-wrap: anywhere/);
+  assert.match(source, /overflow-wrap: break-word/);
+  assert.match(source, /word-break: keep-all/);
   assert.match(globalCss, /\.lf-admin-data-table\s*\{/);
   assert.match(globalCss, /\.lf-admin-data-cards[\s\S]+display: none/);
   assert.match(globalCss, /@media \(max-width: 720px\)[\s\S]+\.lf-admin-data-table[\s\S]+display: none/);

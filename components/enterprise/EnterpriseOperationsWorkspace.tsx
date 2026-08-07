@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { AdminMetricCard, AdminStatusBadge } from "@/components/admin/AdminPrimitives";
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell";
 import { ENTERPRISE_ADMIN_NAVIGATION, filterAdminNavigation } from "@/components/admin/adminNavigation";
 import { waitForActiveUser } from "@/lib/auth/session";
@@ -660,14 +661,17 @@ function renderOverview(
     <div style={stackStyle}>
       <section style={gridStyle}>
         {cards.map((card) => (
-          <button key={card.label} type="button" style={metricButtonStyle} onClick={() => {
-            setFilters(card.filters);
-            setActiveTab(card.tab);
-          }}>
-            <span>{card.label}</span>
-            <strong>{card.value}</strong>
-            <small>Open filtered view</small>
-          </button>
+          <AdminMetricCard
+            key={card.label}
+            label={card.label}
+            value={card.value}
+            detail="Filtered by current enterprise scope"
+            actionLabel="Open filtered view"
+            onClick={() => {
+              setFilters(card.filters);
+              setActiveTab(card.tab);
+            }}
+          />
         ))}
       </section>
       <section style={panelStyle}>
@@ -963,7 +967,7 @@ function renderInvitations(
                 <tr key={item.id}>
                   <td>{item.fullName || item.email}<small>{item.email}</small></td>
                   <td>{labelise(item.roleTemplate)}</td>
-                  <td>{labelise(item.status)}</td>
+                  <td><AdminStatusBadge status={item.status} /></td>
                   <td>{item.seatId ? "Reserved" : "Not reserved"}</td>
                   <td>{formatDate(item.expiresAt)}</td>
                   <td style={actionsCellStyle}>
@@ -982,7 +986,7 @@ function renderInvitations(
           <thead><tr><th>Name</th><th>Status</th><th>Claims</th><th>Domain</th><th>Actions</th></tr></thead>
           <tbody>
             {portfolio.enrolmentLinks.map((link) => (
-              <tr key={link.id}><td>{link.displayName}</td><td>{labelise(link.status)}</td><td>{link.claimsUsed}/{link.maxClaims}</td><td>{link.allowedEmailDomain || "Any"}</td><td><button type="button" onClick={() => runAction("update_enrolment_link", { enrolmentLinkId: link.id, status: "revoked" })}>Revoke</button></td></tr>
+              <tr key={link.id}><td>{link.displayName}</td><td><AdminStatusBadge status={link.status} /></td><td>{link.claimsUsed}/{link.maxClaims}</td><td>{link.allowedEmailDomain || "Any"}</td><td><button type="button" onClick={() => runAction("update_enrolment_link", { enrolmentLinkId: link.id, status: "revoked" })}>Revoke</button></td></tr>
             ))}
             {portfolio.enrolmentLinks.length === 0 ? <tr><td colSpan={5}>No enrolment links have been created.</td></tr> : null}
           </tbody>
@@ -997,13 +1001,13 @@ function renderUsersAndSeats(portfolio: EnterprisePortfolio, runAction: (action:
   return (
     <div style={stackStyle}>
       <section style={gridStyle}>
-        <InfoTile label="Purchased seats" value={String(seats.purchased)} />
-        <InfoTile label="Active seats" value={String(seats.active)} />
-        <InfoTile label="Invited/reserved seats" value={String(seats.invited)} />
-        <InfoTile label="Suspended seats" value={String(seats.suspended)} />
-        <InfoTile label="Available seats" value={String(seats.available ?? 0)} />
-        <InfoTile label="Expired invitations" value={String(portfolio.invitations.filter((item) => item.status === "expired").length)} />
-        <InfoTile label="Revoked invitations" value={String(portfolio.invitations.filter((item) => item.status === "revoked").length)} />
+        <AdminMetricCard label="Purchased seats" value={String(seats.purchased)} detail="Total seats bought" />
+        <AdminMetricCard label="Active seats" value={String(seats.active)} detail="Currently consuming entitlement" />
+        <AdminMetricCard label="Invited/reserved seats" value={String(seats.invited)} detail="Pending invitation reservations" />
+        <AdminMetricCard label="Suspended seats" value={String(seats.suspended)} detail="Temporarily unavailable" />
+        <AdminMetricCard label="Available seats" value={String(seats.available ?? 0)} detail="Remaining capacity" />
+        <AdminMetricCard label="Expired invitations" value={String(portfolio.invitations.filter((item) => item.status === "expired").length)} detail="No longer claimable" />
+        <AdminMetricCard label="Revoked invitations" value={String(portfolio.invitations.filter((item) => item.status === "revoked").length)} detail="Cancelled invitations" />
       </section>
       <section style={panelStyle}>
         <h2 style={h2Style}>Users and seats</h2>
@@ -1016,10 +1020,10 @@ function renderUsersAndSeats(portfolio: EnterprisePortfolio, runAction: (action:
                   <td>{member.fullName || "Not set"}<small>{member.department || member.internalReference || "No reference"}</small></td>
                   <td>{member.email}</td>
                   <td>{labelise(member.organisationRole)}</td>
-                  <td>{labelise(member.status)}</td>
-                  <td>{member.seatId ? labelise(member.status === "removed" ? "released" : member.status === "suspended" ? "suspended" : "active") : "No seat"}</td>
+                  <td><AdminStatusBadge status={member.status} /></td>
+                  <td>{member.seatId ? <AdminStatusBadge status={member.status === "removed" ? "released" : member.status === "suspended" ? "suspended" : "active"} /> : "No seat"}</td>
                   <td>{labelise(member.onboardingStatus)}</td>
-                  <td>{labelise(member.consentStatus)}</td>
+                  <td><AdminStatusBadge status={member.consentStatus} /></td>
                   <td style={actionsCellStyle}>
                     <button type="button" onClick={() => runAction("transition_membership", { membershipId: member.id, status: member.status === "suspended" ? "active" : "suspended", reason: "Operator lifecycle change" })}>{member.status === "suspended" ? "Reactivate" : "Suspend"}</button>
                     <button type="button" onClick={() => runAction("transition_membership", { membershipId: member.id, status: "removed", reason: "Operator removal" })}>Remove</button>
@@ -1085,10 +1089,10 @@ function renderReports(
         </select>
       </label>
       <div style={gridStyle}>
-        <InfoTile label="Licence utilisation" value={`${portfolio.summary.seats.allocated}/${portfolio.summary.seats.purchased}`} />
-        <InfoTile label="Invitation acceptance" value={`${portfolio.invitations.filter((item) => item.status === "accepted").length}/${portfolio.invitations.length}`} />
-        <InfoTile label="Renewal pipeline" value={String(portfolio.summary.renewalsDue)} />
-        <InfoTile label="Consent restricted" value={String(portfolio.summary.consentRestricted)} />
+        <AdminMetricCard label="Licence utilisation" value={`${portfolio.summary.seats.allocated}/${portfolio.summary.seats.purchased}`} detail="Allocated against purchased seats" />
+        <AdminMetricCard label="Invitation acceptance" value={`${portfolio.invitations.filter((item) => item.status === "accepted").length}/${portfolio.invitations.length}`} detail="Accepted invitations" />
+        <AdminMetricCard label="Renewal pipeline" value={String(portfolio.summary.renewalsDue)} detail="Renewals requiring attention" />
+        <AdminMetricCard label="Consent restricted" value={String(portfolio.summary.consentRestricted)} detail="Suppressed from governed reports" />
       </div>
       <div style={tableWrapStyle}>
         <table style={tableStyle}>
@@ -1550,15 +1554,6 @@ function FormInput({ label, value, onChange, required = false, type = "text" }: 
   );
 }
 
-function InfoTile({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={tileStyle}>
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
 function todayInput() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -1617,8 +1612,6 @@ const mutedInlineStyle: CSSProperties = { color: "#64748b", fontSize: 13 };
 const gridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 };
 const stackStyle: CSSProperties = { display: "grid", gap: 16 };
 const twoColumnStyle: CSSProperties = { display: "grid", gridTemplateColumns: "minmax(280px, 420px) minmax(0, 1fr)", gap: 16, alignItems: "start" };
-const metricButtonStyle: CSSProperties = { ...panelStyle, textAlign: "left", cursor: "pointer" };
-const tileStyle: CSSProperties = { border: "1px solid #dbe3ef", borderRadius: 8, padding: 12, background: "#f8fafc" };
 const labelStyle: CSSProperties = { display: "grid", gap: 5, fontWeight: 700, color: "#334155", fontSize: 13 };
 const checkboxStyle: CSSProperties = { display: "flex", gap: 8, alignItems: "center", color: "#334155", fontWeight: 700 };
 const fieldsetStyle: CSSProperties = { border: "1px solid #dbe3ef", borderRadius: 8, padding: 12, display: "grid", gap: 10 };

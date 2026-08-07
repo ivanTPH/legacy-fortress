@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import AdminDataTable, { AdminEmptyState, AdminStatusBadge } from "@/components/admin/AdminPrimitives";
+import AdminDataTable, { AdminContextHelp, AdminEmptyState, AdminMetricCard, AdminStatusBadge } from "@/components/admin/AdminPrimitives";
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell";
 import { filterAdminNavigation, PLATFORM_ADMIN_NAVIGATION } from "@/components/admin/adminNavigation";
 import { waitForActiveUser } from "@/lib/auth/session";
@@ -757,11 +757,14 @@ function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | n
     <div style={stackStyle}>
       <section style={gridStyle}>
         {cards.map((card) => (
-          <Link key={card.label} href={card.href} style={metricLinkStyle}>
-            <span>{card.label}</span>
-            <strong>{card.value === null ? "Unavailable" : card.value.toLocaleString()}</strong>
-            <small>Source: {card.source}</small>
-          </Link>
+          <AdminMetricCard
+            key={card.label}
+            label={card.label}
+            value={card.value === null ? "Unavailable" : card.value.toLocaleString()}
+            detail={`Source: ${card.source}`}
+            actionLabel="Open queue"
+            href={card.href}
+          />
         ))}
       </section>
       <section style={panelStyle}>
@@ -827,10 +830,10 @@ function renderPlatformOrganisations(
   return (
     <div style={stackStyle}>
       <section style={gridStyle} aria-label="Enterprise portfolio metrics">
-        <MetricCard label="Organisations" value={String(views.organisations.length)} detail="Visible in Platform Administration" href="/admin/organisations" />
-        <MetricCard label="Licences" value={String(views.licences.length)} detail="Linked to listed organisations" href="/admin/licences" />
-        <MetricCard label="Purchased seats" value={String(views.licences.reduce((sum, licence) => sum + licence.purchasedSeats, 0))} detail="Across listed licences" />
-        <MetricCard label="Active seats" value={String(views.licences.reduce((sum, licence) => sum + licence.activeSeats, 0))} detail="Currently consuming entitlement" />
+        <AdminMetricCard label="Organisations" value={String(views.organisations.length)} detail="Visible in Platform Administration" actionLabel="Open register" href="/admin/organisations" />
+        <AdminMetricCard label="Licences" value={String(views.licences.length)} detail="Linked to listed organisations" actionLabel="Open register" href="/admin/licences" />
+        <AdminMetricCard label="Purchased seats" value={String(views.licences.reduce((sum, licence) => sum + licence.purchasedSeats, 0))} detail="Across listed licences" />
+        <AdminMetricCard label="Active seats" value={String(views.licences.reduce((sum, licence) => sum + licence.activeSeats, 0))} detail="Currently consuming entitlement" />
       </section>
       {renderPlatformFilterToolbar(filters, actions)}
       <section style={panelStyle}>
@@ -944,6 +947,7 @@ function renderPlatformOrganisationDetail(section: AdminControlPlaneSection, org
           <Link href={`/admin/organisations/${org.id}/invitations`}>Invitations</Link>
           <Link href={`/admin/audit?resource=organisation:${org.id}`}>Activity</Link>
         </nav>
+        <AdminContextHelp label="Platform context">You are inspecting an enterprise organisation from Platform Administration. This does not switch you into the enterprise customer workspace.</AdminContextHelp>
       </section>
       {section === "organisation-users" ? renderOrganisationMembers(memberships) : null}
       {section === "organisation-invitations" ? renderOrganisationInvitations(invitations) : null}
@@ -951,10 +955,10 @@ function renderPlatformOrganisationDetail(section: AdminControlPlaneSection, org
       {section === "organisation-detail" ? (
         <>
           <section style={gridStyle}>
-            <MetricCard label="Licence plan" value={primaryLicence ? licenceLabel(primaryLicence) : "None"} detail={primaryLicence ? labelise(primaryLicence.status) : "No active licence configured"} href={primaryLicence ? `/admin/organisations/${org.id}/licences/${primaryLicence.id}` : undefined} />
-            <MetricCard label="Purchased seats" value={String(licences.reduce((sum, licence) => sum + licence.purchasedSeats, 0))} detail="Across organisation licences" />
-            <MetricCard label="Active seats" value={String(licences.reduce((sum, licence) => sum + licence.activeSeats, 0))} detail="Current seat use" />
-            <MetricCard label="Pending invitations" value={String(invitations.filter((item) => ["sent", "scheduled", "delivered"].includes(item.status)).length)} detail="Organisation invitations" href={`/admin/organisations/${org.id}/invitations`} />
+            <AdminMetricCard label="Licence plan" value={primaryLicence ? licenceLabel(primaryLicence) : "None"} detail={primaryLicence ? labelise(primaryLicence.status) : "No active licence configured"} actionLabel={primaryLicence ? "Open licence" : undefined} href={primaryLicence ? `/admin/organisations/${org.id}/licences/${primaryLicence.id}` : undefined} />
+            <AdminMetricCard label="Purchased seats" value={String(licences.reduce((sum, licence) => sum + licence.purchasedSeats, 0))} detail="Across organisation licences" />
+            <AdminMetricCard label="Active seats" value={String(licences.reduce((sum, licence) => sum + licence.activeSeats, 0))} detail="Current seat use" />
+            <AdminMetricCard label="Pending invitations" value={String(invitations.filter((item) => ["sent", "scheduled", "delivered"].includes(item.status)).length)} detail="Organisation invitations" actionLabel="Open invitations" href={`/admin/organisations/${org.id}/invitations`} />
           </section>
           <section style={panelStyle}>
             <h2 style={h2Style}>Authorised actions</h2>
@@ -1014,10 +1018,10 @@ function renderPlatformLicenceDetail(licenceId: string | null, portfolio: Enterp
         </div>
       </section>
       <section style={gridStyle}>
-        <MetricCard label="Purchased seats" value={String(licence.purchasedSeats)} detail="Configured entitlement" />
-        <MetricCard label="Active seats" value={String(licence.activeSeats)} detail="Current usage" />
-        <MetricCard label="Available seats" value={String(licence.availableSeats)} detail={`${licence.invitedSeats} invited or reserved`} />
-        <MetricCard label="Billing status" value={labelise(licence.billingStatus)} detail="No private payment details shown" />
+        <AdminMetricCard label="Purchased seats" value={String(licence.purchasedSeats)} detail="Configured entitlement" />
+        <AdminMetricCard label="Active seats" value={String(licence.activeSeats)} detail="Current usage" />
+        <AdminMetricCard label="Available seats" value={String(licence.availableSeats)} detail={`${licence.invitedSeats} invited or reserved`} />
+        <AdminMetricCard label="Billing status" value={labelise(licence.billingStatus)} detail="No private payment details shown" />
       </section>
       <section style={panelStyle}>
         <h2 style={h2Style}>Authorised actions</h2>
@@ -1123,17 +1127,6 @@ function licenceLabel(licence: EnterpriseLicence) {
   return licence.plan === "custom" ? licence.customPlanName || "Custom licence" : `${labelise(licence.plan)} licence`;
 }
 
-function MetricCard({ label, value, detail, href }: { label: string; value: string; detail: string; href?: string }) {
-  const body = (
-    <>
-      <span>{label}</span>
-      <strong>{value}</strong>
-      <small>{detail}</small>
-    </>
-  );
-  return href ? <Link href={href} style={metricLinkStyle}>{body}</Link> : <div style={metricLinkStyle}>{body}</div>;
-}
-
 function renderAdminUsers(
   admins: AdminUser[],
   invitations: AdminInvitation[],
@@ -1182,6 +1175,45 @@ function renderAdminUsers(
     return true;
   });
   const selected = resourceId ? admins.find((item) => item.id === resourceId) : null;
+  if (resourceId) {
+    return (
+      <div style={stackStyle}>
+        <section style={panelStyle}>
+          <Link href="/admin/admin-users" style={secondaryLinkStyle}>Back to administrators</Link>
+          {selected ? renderAdminDetail(selected) : <AdminEmptyState title="Administrator unavailable">The selected administrator was not found or is outside your authorised scope.</AdminEmptyState>}
+        </section>
+        {selected ? (
+          <section style={panelStyle}>
+            <h2 style={h2Style}>Permitted lifecycle actions</h2>
+            <p style={mutedStyle}>Lifecycle mutations use the canonical admin-user API and remain subject to self-action, stale-state and last-super-admin safeguards.</p>
+            <div style={formGridStyle}>
+              <label>Action
+                <select value={lifecycleForm.adminUserId === selected.id ? lifecycleForm.action : ""} onChange={(event) => setLifecycleForm({ ...lifecycleForm, adminUserId: selected.id, action: event.target.value })}>
+                  <option value="">Select action</option>
+                  <option value="activate">Reactivate access</option>
+                  <option value="deactivate">Suspend access</option>
+                  <option value="change_role">Edit role</option>
+                </select>
+              </label>
+              <label>New role
+                <select value={lifecycleForm.role} disabled={lifecycleForm.action !== "change_role" || lifecycleForm.adminUserId !== selected.id} onChange={(event) => setLifecycleForm({ ...lifecycleForm, role: event.target.value })}>
+                  <option value="super_admin">Super administrator</option>
+                  <option value="support_agent">Support agent</option>
+                  <option value="probate_reviewer">Probate reviewer</option>
+                  <option value="auditor">Auditor</option>
+                  <option value="enterprise_admin">Enterprise administrator</option>
+                </select>
+              </label>
+              <label>Reason
+                <input value={lifecycleForm.adminUserId === selected.id ? lifecycleForm.reason : ""} onChange={(event) => setLifecycleForm({ ...lifecycleForm, adminUserId: selected.id, reason: event.target.value })} />
+              </label>
+            </div>
+            <button type="button" onClick={() => void runAdminLifecycle()} disabled={lifecycleForm.adminUserId !== selected.id || !lifecycleForm.action} style={primaryButtonStyle}>Confirm lifecycle action</button>
+          </section>
+        ) : null}
+      </div>
+    );
+  }
   return (
     <div style={stackStyle}>
       <section style={panelStyle}>
@@ -1371,12 +1403,12 @@ function permissionSummaryForRole(role: string) {
 
 function renderAdminDetail(item: AdminUser) {
   return (
-    <section style={panelStyle}>
+    <section style={rowStyle}>
       <h2 style={h2Style}>{item.display_name || item.email_normalized}</h2>
       <dl style={definitionGridStyle}>
         <div><dt>Email</dt><dd>{item.email_normalized}</dd></div>
         <div><dt>Role</dt><dd>{formatRoleLabel(item.role, item.is_master)}</dd></div>
-        <div><dt>Status</dt><dd>{item.status}</dd></div>
+        <div><dt>Status</dt><dd><AdminStatusBadge status={item.status} /></dd></div>
         <div><dt>Environment scope</dt><dd>{isSyntheticAdmin(item) ? "Synthetic staging/local review" : "Staging operational admin"}</dd></div>
         <div><dt>Created</dt><dd>{formatDate(item.created_at)}</dd></div>
         <div><dt>Updated</dt><dd>{formatDate(item.updated_at)}</dd></div>
@@ -1506,6 +1538,16 @@ function renderVerification(queue: VerificationItem[], resourceId: string | null
 
 function renderProbate(cases: ProbateCase[], resourceId: string | null) {
   const selected = resourceId ? cases.find((item) => item.id === resourceId) : null;
+  if (resourceId) {
+    return (
+      <div style={stackStyle}>
+        <section style={panelStyle}>
+          <Link href="/admin/probate" style={secondaryLinkStyle}>Back to probate queue</Link>
+          {selected ? renderProbateDetail(selected) : <AdminEmptyState title="Probate case unavailable">The selected probate case was not found or is outside your authorised scope.</AdminEmptyState>}
+        </section>
+      </div>
+    );
+  }
   return (
     <div style={stackStyle}>
       {selected ? renderProbateDetail(selected) : null}
@@ -1520,7 +1562,7 @@ function renderProbate(cases: ProbateCase[], resourceId: string | null) {
                 return (
                   <tr key={item.id}>
                     <td>{item.ownerName}<small>{item.contactName} · {formatDate(item.submittedAt)}</small></td>
-                    <td>{item.status.replace(/_/g, " ")}</td>
+                    <td><AdminStatusBadge status={item.status} /></td>
                     <td>{item.evidence.length}</td>
                     <td>{actions.terminal ? "Terminal: inspect only" : "Review action available in legacy case controls"}</td>
                     <td><Link href={`/admin/probate/${item.id}`}>Inspect</Link></td>
@@ -1542,7 +1584,7 @@ function renderProbateDetail(item: ProbateCase) {
     <section style={panelStyle}>
       <h2 style={h2Style}>{item.ownerName} / {item.contactName}</h2>
       <dl style={definitionGridStyle}>
-        <div><dt>Status</dt><dd>{item.status.replace(/_/g, " ")}</dd></div>
+        <div><dt>Status</dt><dd><AdminStatusBadge status={item.status} /></dd></div>
         <div><dt>Applicant</dt><dd>{item.contactEmail ?? "No email"}</dd></div>
         <div><dt>Role</dt><dd>{item.assignedRole.replace(/_/g, " ")}</dd></div>
         <div><dt>Evidence count</dt><dd>{item.evidence.length}</dd></div>
@@ -1644,13 +1686,7 @@ function renderSettings(capabilities: string[]) {
 }
 
 function Metric({ label, value, suffix = "" }: { label: string; value: number | null; suffix?: string }) {
-  return (
-    <article style={metricCardStyle}>
-      <span>{label}</span>
-      <strong>{value === null ? "Unavailable" : value.toLocaleString()}</strong>
-      {suffix ? <small>{suffix}</small> : null}
-    </article>
-  );
+  return <AdminMetricCard label={label} value={value === null ? "Unavailable" : value.toLocaleString()} detail={suffix || undefined} />;
 }
 
 function metricDestination(key: string) {
@@ -1714,8 +1750,6 @@ const formGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, 
 const tableWrapStyle = { overflowX: "auto" } satisfies CSSProperties;
 const tableStyle = { width: "100%", borderCollapse: "collapse", fontSize: 14 } satisfies CSSProperties;
 const definitionGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 } satisfies CSSProperties;
-const metricLinkStyle = { ...panelStyle, color: "inherit", textDecoration: "none" } satisfies CSSProperties;
-const metricCardStyle = { ...panelStyle, gap: 6 } satisfies CSSProperties;
 const settingsCardStyle = { ...panelStyle, gap: 8 } satisfies CSSProperties;
 const rowStyle = { border: "1px solid #e2e8f0", borderRadius: 8, padding: 12, display: "grid", gap: 4 } satisfies CSSProperties;
 const eyebrowStyle = { margin: 0, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 12, fontWeight: 800 } satisfies CSSProperties;

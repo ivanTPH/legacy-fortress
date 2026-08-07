@@ -28,7 +28,7 @@ export const PLATFORM_ADMIN_NAVIGATION: AdminNavigationGroup[] = [
     items: [
       { key: "organisations", label: "Organisations", href: "/admin/organisations", icon: "domain", capability: "organisation:view" },
       { key: "licences", label: "Licences", href: "/admin/licences", icon: "license", capability: "licence:view" },
-      { key: "enterprise-reports", label: "Enterprise reports", href: "/admin/audit?scope=enterprise", icon: "analytics", capability: "enterprise.report.read" },
+      { key: "enterprise-audit", label: "Enterprise audit", href: "/admin/audit?scope=enterprise", icon: "history", capability: "enterprise.report.read" },
     ],
   },
   {

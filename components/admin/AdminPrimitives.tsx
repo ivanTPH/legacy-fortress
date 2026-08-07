@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 export type AdminDataColumn<T> = {
@@ -80,6 +81,55 @@ export function AdminStatusBadge({ status }: { status: string }) {
   return <span className={`lf-admin-status-badge ${tone}`}>{String(status || "Unknown").replace(/_/g, " ")}</span>;
 }
 
+export function AdminMetricCard({
+  label,
+  value,
+  detail,
+  href,
+  onClick,
+  actionLabel,
+}: {
+  label: string;
+  value: ReactNode;
+  detail?: ReactNode;
+  href?: string;
+  onClick?: () => void;
+  actionLabel?: string;
+}) {
+  const body = (
+    <>
+      <span className="lf-admin-metric-label">{label}</span>
+      <strong className="lf-admin-metric-value">{value}</strong>
+      {detail ? <small className="lf-admin-metric-detail">{detail}</small> : null}
+      {actionLabel ? <span className="lf-admin-metric-action-label">{actionLabel}</span> : null}
+      <style jsx global>{adminPrimitiveCss}</style>
+    </>
+  );
+
+  if (href) {
+    return <Link href={href} className="lf-admin-metric-card" prefetch={false}>{body}</Link>;
+  }
+
+  if (onClick) {
+    return <button type="button" className="lf-admin-metric-card lf-admin-metric-card-button" onClick={onClick}>{body}</button>;
+  }
+
+  return <article className="lf-admin-metric-card">{body}</article>;
+}
+
+export function AdminContextHelp({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <span className="lf-admin-context-help">
+      <span aria-hidden="true" className="material-symbols-outlined">help</span>
+      <span>
+        <strong>{label}</strong>
+        <small>{children}</small>
+      </span>
+      <style jsx global>{adminPrimitiveCss}</style>
+    </span>
+  );
+}
+
 export function AdminEmptyState({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="lf-admin-empty-state">
@@ -105,7 +155,8 @@ const adminPrimitiveCss = `
   }
   .lf-admin-data-toolbar > div {
     min-width: 0;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    word-break: normal;
   }
   .lf-admin-data-toolbar-actions {
     align-items: center;
@@ -132,7 +183,8 @@ const adminPrimitiveCss = `
     padding: 10px;
     text-align: left;
     vertical-align: top;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    word-break: normal;
   }
   .lf-admin-data-table th {
     color: #334155;
@@ -140,13 +192,15 @@ const adminPrimitiveCss = `
     letter-spacing: .02em;
     text-transform: uppercase;
     white-space: nowrap;
+    word-break: keep-all;
   }
   .lf-admin-data-table small,
   .lf-admin-data-card small {
     color: #64748b;
     display: block;
     line-height: 1.35;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    word-break: normal;
   }
   .lf-admin-status-badge {
     align-items: center;
@@ -158,6 +212,8 @@ const adminPrimitiveCss = `
     min-height: 26px;
     padding: 3px 9px;
     text-transform: capitalize;
+    white-space: nowrap;
+    word-break: keep-all;
   }
   .lf-admin-status-badge.success {
     background: #ecfdf5;
@@ -180,6 +236,68 @@ const adminPrimitiveCss = `
   }
   .lf-admin-data-cards {
     display: none;
+  }
+  .lf-admin-metric-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    color: inherit;
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+    padding: 16px;
+    text-align: left;
+    text-decoration: none;
+  }
+  .lf-admin-metric-card-button {
+    cursor: pointer;
+    font: inherit;
+  }
+  .lf-admin-metric-label {
+    color: #475569;
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+  .lf-admin-metric-value {
+    color: #0f172a;
+    display: block;
+    font-size: 28px;
+    line-height: 1.1;
+    overflow-wrap: break-word;
+  }
+  .lf-admin-metric-detail {
+    color: #64748b;
+    display: block;
+    line-height: 1.35;
+  }
+  .lf-admin-metric-action-label {
+    color: #1d4ed8;
+    font-size: 13px;
+    font-weight: 800;
+  }
+  .lf-admin-context-help {
+    align-items: flex-start;
+    background: #f8fafc;
+    border: 1px solid #dbe3ef;
+    border-radius: 8px;
+    color: #334155;
+    display: inline-flex;
+    gap: 8px;
+    padding: 9px 10px;
+  }
+  .lf-admin-context-help .material-symbols-outlined {
+    color: #475569;
+    font-size: 18px;
+    line-height: 1.3;
+  }
+  .lf-admin-context-help strong,
+  .lf-admin-context-help small {
+    display: block;
+  }
+  .lf-admin-context-help small {
+    color: #64748b;
+    line-height: 1.35;
   }
   .lf-admin-empty-state {
     background: #f8fafc;

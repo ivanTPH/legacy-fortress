@@ -193,7 +193,8 @@ const adminShellCss = `
     display: block;
     color: #94a3b8;
     font-size: 12px;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    word-break: normal;
   }
   .lf-admin-shell-nav,
   .lf-admin-shell-nav-group {
@@ -243,12 +244,20 @@ const adminShellCss = `
   .lf-admin-shell-content h2,
   .lf-admin-shell-content h3,
   .lf-admin-shell-content p,
-  .lf-admin-shell-content td,
-  .lf-admin-shell-content th,
   .lf-admin-shell-content dd,
   .lf-admin-shell-content dt,
   .lf-admin-shell-content label {
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+  .lf-admin-shell-content td {
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+  .lf-admin-shell-content th {
+    overflow-wrap: normal;
+    white-space: nowrap;
+    word-break: keep-all;
   }
   .lf-admin-shell-content table {
     width: 100%;
@@ -260,6 +269,39 @@ const adminShellCss = `
   .lf-admin-shell-content td {
     padding: 10px;
     vertical-align: top;
+  }
+  .lf-admin-shell-content input,
+  .lf-admin-shell-content select,
+  .lf-admin-shell-content textarea {
+    appearance: auto;
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    color: #0f172a;
+    min-height: 40px;
+    padding: 9px 10px;
+    width: 100%;
+  }
+  .lf-admin-shell-content textarea {
+    min-height: 96px;
+  }
+  .lf-admin-shell-content input:focus,
+  .lf-admin-shell-content select:focus,
+  .lf-admin-shell-content textarea:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .18);
+    outline: none;
+  }
+  .lf-admin-shell-content input:disabled,
+  .lf-admin-shell-content select:disabled,
+  .lf-admin-shell-content textarea:disabled {
+    background: #f1f5f9;
+    color: #64748b;
+  }
+  .lf-admin-shell-content button,
+  .lf-admin-shell-content a {
+    overflow-wrap: normal;
+    word-break: normal;
   }
   .lf-admin-shell-content input,
   .lf-admin-shell-content select,
@@ -288,7 +330,8 @@ const adminShellCss = `
     margin: 0;
     font-size: 28px;
     line-height: 1.15;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    word-break: normal;
   }
   .lf-admin-shell-title p {
     margin: 0;

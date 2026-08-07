@@ -15,6 +15,8 @@ test("platform administration enterprise links stay inside the platform hierarch
 
   assert.match(platformBlock, /href: "\/admin\/organisations"/);
   assert.match(platformBlock, /href: "\/admin\/licences"/);
+  assert.match(platformBlock, /label: "Enterprise audit"/);
+  assert.doesNotMatch(platformBlock, /label: "Enterprise reports"/);
   assert.doesNotMatch(platformBlock, /href: "\/application\/enterprise/);
   assert.doesNotMatch(platformBlock, /tab=organisations|tab=licences/);
 });
@@ -64,10 +66,50 @@ test("enterprise entry no longer renders a duplicate horizontal workspace tab ba
 
 test("platform metrics render labels, values and supporting text separately", () => {
   const controlPlane = read("components/admin/AdminControlPlaneWorkspace.tsx");
+  const primitives = read("components/admin/AdminPrimitives.tsx");
 
-  assert.match(controlPlane, /function MetricCard/);
-  assert.match(controlPlane, /<span>\{label\}<\/span>/);
-  assert.match(controlPlane, /<strong>\{value\}<\/strong>/);
-  assert.match(controlPlane, /<small>\{detail\}<\/small>/);
+  assert.match(primitives, /function AdminMetricCard/);
+  assert.match(primitives, /lf-admin-metric-label/);
+  assert.match(primitives, /lf-admin-metric-value/);
+  assert.match(primitives, /lf-admin-metric-detail/);
+  assert.match(controlPlane, /AdminMetricCard/);
   assert.doesNotMatch(controlPlane, /Purchased seats0|Active seats0|Invited\/reserved seats0/);
+});
+
+test("shared admin primitives prevent mid-word headings and default-looking controls", () => {
+  const primitives = read("components/admin/AdminPrimitives.tsx");
+  const shell = read("components/admin/AdminWorkspaceShell.tsx");
+
+  assert.match(primitives, /word-break: keep-all/);
+  assert.match(primitives, /white-space: nowrap/);
+  assert.doesNotMatch(primitives, /overflow-wrap: anywhere/);
+  assert.match(shell, /border: 1px solid #cbd5e1/);
+  assert.match(shell, /box-shadow: 0 0 0 3px/);
+  assert.doesNotMatch(shell, /th,[\s\S]*overflow-wrap: anywhere/);
+});
+
+test("admin detail routes focus on the selected record instead of re-rendering global queues", () => {
+  const controlPlane = read("components/admin/AdminControlPlaneWorkspace.tsx");
+  const adminDetailBranch = controlPlane.match(/if \(resourceId\) \{\n    return \(\n      <div style=\{stackStyle\}>[\s\S]*?function permissionSummaryForRole/)?.[0] ?? "";
+  const probateDetailBranch = controlPlane.match(/function renderProbate[\s\S]*?if \(resourceId\) \{[\s\S]*?return \(\n    <div style=\{stackStyle\}>/)?.[0] ?? "";
+
+  assert.match(adminDetailBranch, /Back to administrators/);
+  assert.match(adminDetailBranch, /Permitted lifecycle actions/);
+  assert.match(probateDetailBranch, /Back to probate queue/);
+  assert.match(controlPlane, /This case is terminal/);
+});
+
+test("enterprise saved views are server persisted and licence actions map to explicit capabilities", () => {
+  const route = read("app/api/internal/admin/enterprise/route.ts");
+  const service = read("lib/admin/enterpriseOperations.ts");
+  const capabilities = read("lib/admin/enterpriseActionCapabilities.ts");
+
+  assert.match(service, /from\("enterprise_saved_views"\)/);
+  assert.match(route, /action === "save_view"/);
+  assert.match(route, /action === "update_view"/);
+  assert.match(route, /action === "delete_view"/);
+
+  for (const action of ["update_licence", "change_licence_seats", "renew_licence", "transition_licence"]) {
+    assert.match(capabilities, new RegExp(action));
+  }
 });
