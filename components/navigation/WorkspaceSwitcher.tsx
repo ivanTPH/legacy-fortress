@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import Icon from "../ui/Icon";
 import {
   extractPlatformRolesFromMetadata,
@@ -52,6 +52,10 @@ export default function WorkspaceSwitcher({
   alwaysShow = false,
 }: WorkspaceSwitcherProps) {
   const [session, setSession] = useState<WorkspaceSession | null>(null);
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const menuId = useId();
 
   useEffect(() => {
     let mounted = true;
@@ -124,12 +128,63 @@ export default function WorkspaceSwitcher({
     ?? workspaces[0];
   const hasMultipleContexts = workspaces.length > 1;
 
+  useEffect(() => {
+    queueMicrotask(() => setOpen(false));
+  }, [currentPathname]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    function onPointerDown(event: PointerEvent) {
+      if (menuRef.current?.contains(event.target as Node)) return;
+      setOpen(false);
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      triggerRef.current?.focus();
+    }
+
+    function onOtherMenuOpen(event: Event) {
+      if ((event as CustomEvent).detail?.source === menuId) return;
+      setOpen(false);
+    }
+
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    window.addEventListener("lf-admin-menu-open", onOtherMenuOpen);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("lf-admin-menu-open", onOtherMenuOpen);
+    };
+  }, [menuId, open]);
+
+  function toggleOpen() {
+    setOpen((current) => {
+      const next = !current;
+      if (next) {
+        window.dispatchEvent(new CustomEvent("lf-admin-menu-open", { detail: { source: menuId } }));
+      }
+      return next;
+    });
+  }
+
   if (!session || (!hasMultipleContexts && !alwaysShow)) return null;
 
   return (
-    <section className={compact ? "lf-workspace-switcher compact" : "lf-workspace-switcher"} aria-label="Workspace switcher">
-      <details className="lf-workspace-menu">
-        <summary className="lf-workspace-current">
+    <section ref={menuRef} className={compact ? "lf-workspace-switcher compact" : "lf-workspace-switcher"} aria-label="Workspace switcher">
+      <div className="lf-workspace-menu">
+        <button
+          ref={triggerRef}
+          type="button"
+          className="lf-workspace-current"
+          aria-expanded={open}
+          aria-controls={menuId}
+          aria-haspopup="menu"
+          onClick={toggleOpen}
+        >
           <span className="lf-workspace-icon" aria-hidden="true">
             <Icon name={iconForWorkspace(activeWorkspace?.id ?? "application")} size={16} />
           </span>
@@ -138,29 +193,32 @@ export default function WorkspaceSwitcher({
             <strong>{activeWorkspace?.label ?? "Personal Vault"}</strong>
           </span>
           <Icon name="expand_more" size={18} />
-        </summary>
-        <nav className="lf-workspace-links" aria-label="Available workspaces">
-          <div className="lf-workspace-menu-heading">
-            <span>Switch workspace</span>
-            <small>{workspaces.length} available</small>
-          </div>
-          {workspaces.map((workspace) => (
-            <Link
-              key={workspace.id}
-              href={workspace.href}
-              className={workspace.id === currentWorkspace ? "is-active" : ""}
-              aria-current={workspace.id === currentWorkspace ? "page" : undefined}
-            >
-              <Icon name={iconForWorkspace(workspace.id)} size={15} />
-              <span>
-                <strong>{workspace.label}</strong>
-                <small>{workspace.description}</small>
-              </span>
-              <span className="lf-workspace-route-meta">{workspace.shortLabel}</span>
-            </Link>
-          ))}
-        </nav>
-      </details>
+        </button>
+        {open ? (
+          <nav id={menuId} className="lf-workspace-links" aria-label="Available workspaces">
+            <div className="lf-workspace-menu-heading">
+              <span>Switch workspace</span>
+              <small>{workspaces.length} available</small>
+            </div>
+            {workspaces.map((workspace) => (
+              <Link
+                key={workspace.id}
+                href={workspace.href}
+                className={workspace.id === currentWorkspace ? "is-active" : ""}
+                aria-current={workspace.id === currentWorkspace ? "page" : undefined}
+                onClick={() => setOpen(false)}
+              >
+                <Icon name={iconForWorkspace(workspace.id)} size={15} />
+                <span>
+                  <strong>{workspace.label}</strong>
+                  <small>{workspace.description}</small>
+                </span>
+                <span className="lf-workspace-route-meta">{workspace.shortLabel}</span>
+              </Link>
+            ))}
+          </nav>
+        ) : null}
+      </div>
       {showDetails ? (
         <details className="lf-workspace-details">
           <summary>Prototype session</summary>

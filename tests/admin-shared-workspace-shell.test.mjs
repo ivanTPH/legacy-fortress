@@ -12,9 +12,14 @@ test("shared admin shell exposes responsive navigation, identity and sign-out co
   assert.match(source, /lf-admin-shell-mobile-toggle/);
   assert.match(source, /role="dialog"/);
   assert.match(source, /WorkspaceSwitcher/);
-  assert.match(source, /Personal Vault/);
   assert.match(source, /Sign out/);
   assert.match(source, /aria-label="Sign out of Legacy Fortress"/);
+  assert.match(source, /lf-admin-shell-account-trigger/);
+  assert.match(source, /lf-admin-shell-account-popover/);
+  assert.match(source, /role="menu"/);
+  assert.match(source, /role="menuitem"/);
+  assert.match(source, /\/account\/security/);
+  assert.doesNotMatch(source, /href="\/dashboard" className="lf-admin-shell-secondary"/);
   assert.match(source, /lf-admin-shell-drawer-account/);
   assert.match(source, /lf-admin-shell-drawer-signout/);
   assert.match(source, /lf-admin-shell-drawer-close[\s\S]+lf-admin-shell-drawer-account[\s\S]+\{sidebar\}/);
@@ -24,6 +29,19 @@ test("shared admin shell exposes responsive navigation, identity and sign-out co
   assert.match(source, /@media \(max-width: 860px\)/);
   assert.match(source, /overflow-wrap: break-word/);
   assert.match(source, /min-height: 44px/);
+});
+
+test("admin account menu dismisses on outside click, Escape and route change", () => {
+  const source = read("components/admin/AdminWorkspaceShell.tsx");
+
+  assert.match(source, /queueMicrotask\(\(\) => \{[\s\S]*setAccountMenuOpen\(false\);[\s\S]*setMenuOpen\(false\);/);
+  assert.match(source, /document\.addEventListener\("pointerdown", onPointerDown\)/);
+  assert.match(source, /document\.addEventListener\("keydown", onKeyDown\)/);
+  assert.match(source, /event\.key !== "Escape"/);
+  assert.match(source, /accountTriggerRef\.current\?\.focus\(\)/);
+  assert.match(source, /window\.dispatchEvent\(new CustomEvent\("lf-admin-menu-open"/);
+  assert.match(source, /window\.addEventListener\("lf-admin-menu-open", onOtherMenuOpen\)/);
+  assert.match(source, /onClick=\{\(\) => \{ setAccountMenuOpen\(false\); onSignOut\(\); \}\}/);
 });
 
 test("admin navigation is capability-filtered without defining a second role matrix", () => {

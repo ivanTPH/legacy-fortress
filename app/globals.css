@@ -4337,9 +4337,13 @@ textarea {
 }
 
 .lf-workspace-current {
+  border: 0;
+  background: transparent;
+  color: inherit;
   display: flex;
   align-items: center;
   gap: 9px;
+  font: inherit;
   width: 100%;
   min-width: 0;
   min-height: 42px;

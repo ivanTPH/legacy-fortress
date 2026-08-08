@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import WorkspaceSwitcher from "@/components/navigation/WorkspaceSwitcher";
 import Icon from "@/components/ui/Icon";
 import type { AdminNavigationGroup } from "./adminNavigation";
@@ -39,6 +39,64 @@ export default function AdminWorkspaceShell({
   stagingLabel = "STAGING",
 }: AdminWorkspaceShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement | null>(null);
+  const accountTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const accountMenuId = useId();
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      setAccountMenuOpen(false);
+      setMenuOpen(false);
+    });
+  }, [currentPathname]);
+
+  useEffect(() => {
+    if (!menuOpen && !accountMenuOpen) return;
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      if (accountMenuOpen) {
+        setAccountMenuOpen(false);
+        accountTriggerRef.current?.focus();
+      }
+      if (menuOpen) setMenuOpen(false);
+    }
+
+    function onOtherMenuOpen(event: Event) {
+      if ((event as CustomEvent).detail?.source === accountMenuId) return;
+      setAccountMenuOpen(false);
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    window.addEventListener("lf-admin-menu-open", onOtherMenuOpen);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("lf-admin-menu-open", onOtherMenuOpen);
+    };
+  }, [accountMenuId, accountMenuOpen, menuOpen]);
+
+  useEffect(() => {
+    if (!accountMenuOpen) return;
+
+    function onPointerDown(event: PointerEvent) {
+      if (accountMenuRef.current?.contains(event.target as Node)) return;
+      setAccountMenuOpen(false);
+    }
+
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [accountMenuOpen]);
+
+  function toggleAccountMenu() {
+    setAccountMenuOpen((current) => {
+      const next = !current;
+      if (next) {
+        window.dispatchEvent(new CustomEvent("lf-admin-menu-open", { detail: { source: accountMenuId } }));
+      }
+      return next;
+    });
+  }
 
   const sidebar = (
     <aside className="lf-admin-shell-sidebar" aria-label={`${workspaceLabel} navigation`}>
@@ -72,6 +130,53 @@ export default function AdminWorkspaceShell({
     <button type="button" className={className} aria-label="Sign out of Legacy Fortress" onClick={onSignOut}>
       Sign out
     </button>
+  );
+
+  const initials = getInitials(identityLabel);
+
+  const accountMenu = (
+    <div ref={accountMenuRef} className="lf-admin-shell-account-menu">
+      <button
+        ref={accountTriggerRef}
+        type="button"
+        className="lf-admin-shell-account-trigger"
+        aria-label={`Open account menu for ${identityLabel}`}
+        aria-expanded={accountMenuOpen}
+        aria-controls={accountMenuId}
+        aria-haspopup="menu"
+        onClick={toggleAccountMenu}
+      >
+        <span className="lf-admin-shell-avatar" aria-hidden="true">{initials}</span>
+        <span className="lf-admin-shell-account-copy">
+          <span>Account</span>
+          <strong>{identityLabel}</strong>
+        </span>
+        <Icon name="expand_more" size={18} />
+      </button>
+      {accountMenuOpen ? (
+        <div id={accountMenuId} className="lf-admin-shell-account-popover" role="menu" aria-label="Account menu">
+          <div className="lf-admin-shell-account-summary">
+            <span className="lf-admin-shell-avatar" aria-hidden="true">{initials}</span>
+            <span>
+              <strong>{identityLabel}</strong>
+              {identityDetail ? <small>{identityDetail}</small> : null}
+            </span>
+          </div>
+          <Link href="/profile" role="menuitem" onClick={() => setAccountMenuOpen(false)} prefetch={false}>
+            <Icon name="account_circle" size={17} />
+            Profile
+          </Link>
+          <Link href="/account/security" role="menuitem" onClick={() => setAccountMenuOpen(false)} prefetch={false}>
+            <Icon name="shield_lock" size={17} />
+            Account security
+          </Link>
+          <button type="button" role="menuitem" onClick={() => { setAccountMenuOpen(false); onSignOut(); }}>
+            <Icon name="logout" size={17} />
+            Sign out
+          </button>
+        </div>
+      ) : null}
+    </div>
   );
 
   return (
@@ -122,16 +227,8 @@ export default function AdminWorkspaceShell({
           <div className="lf-admin-shell-actions">
             {stagingLabel ? <span className="lf-admin-shell-stage">{stagingLabel}</span> : null}
             {primaryAction}
-            <WorkspaceSwitcher currentPathname={currentPathname} alwaysShow compact />
-            <Link href="/dashboard" className="lf-admin-shell-secondary" prefetch={false}>Personal Vault</Link>
-            <div className="lf-admin-shell-identity" title={identityDetail ?? identityLabel}>
-              <Icon name="account_circle" size={22} />
-              <span>
-                <strong>{identityLabel}</strong>
-                {identityDetail ? <small>{identityDetail}</small> : null}
-              </span>
-            </div>
-            {signOutButton()}
+            <WorkspaceSwitcher currentPathname={currentPathname} compact />
+            {accountMenu}
           </div>
         </header>
         {children}
@@ -148,6 +245,13 @@ function isActivePath(currentPathname: string, href: string) {
   if (hrefPath === "/admin") return currentPath === "/admin";
   if (hrefPath === "/application/enterprise") return currentPath === "/application/enterprise" && !currentQuery;
   return currentPath === hrefPath || currentPath.startsWith(`${hrefPath}/`);
+}
+
+function getInitials(label: string) {
+  const parts = label.trim().split(/\s+/).filter(Boolean);
+  const first = parts[0]?.[0] ?? "L";
+  const second = parts.length > 1 ? parts[parts.length - 1]?.[0] : parts[0]?.[1];
+  return `${first}${second ?? "F"}`.toUpperCase();
 }
 
 const adminShellCss = `
@@ -353,6 +457,9 @@ const adminShellCss = `
     min-width: 0;
     flex: 1 1 420px;
   }
+  .lf-admin-shell-actions > .lf-workspace-switcher {
+    width: min(260px, 100%);
+  }
   .lf-admin-shell-secondary {
     border: 1px solid #cbd5e1;
     border-radius: 6px;
@@ -393,6 +500,122 @@ const adminShellCss = `
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .lf-admin-shell-account-menu {
+    position: relative;
+    min-width: 0;
+  }
+  .lf-admin-shell-account-trigger {
+    align-items: center;
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    color: #0f172a;
+    cursor: pointer;
+    display: inline-flex;
+    gap: 8px;
+    min-height: 42px;
+    max-width: 240px;
+    padding: 4px 8px 4px 4px;
+  }
+  .lf-admin-shell-account-trigger:focus-visible {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .18);
+    outline: none;
+  }
+  .lf-admin-shell-avatar {
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #334155;
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 12px;
+    font-weight: 900;
+    height: 34px;
+    justify-content: center;
+    width: 34px;
+  }
+  .lf-admin-shell-account-copy {
+    display: grid;
+    justify-items: start;
+    min-width: 0;
+  }
+  .lf-admin-shell-account-copy span {
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+  .lf-admin-shell-account-copy strong {
+    display: block;
+    font-size: 13px;
+    max-width: 145px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .lf-admin-shell-account-popover {
+    background: #fff;
+    border: 1px solid #dbe3ef;
+    border-radius: 12px;
+    box-shadow: 0 20px 48px rgba(15, 23, 42, .14);
+    display: grid;
+    gap: 6px;
+    padding: 8px;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    width: min(280px, calc(100vw - 32px));
+    z-index: 70;
+  }
+  .lf-admin-shell-account-summary {
+    align-items: center;
+    border-bottom: 1px solid #e2e8f0;
+    color: #0f172a;
+    display: grid;
+    gap: 9px;
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 6px 6px 10px;
+  }
+  .lf-admin-shell-account-summary strong,
+  .lf-admin-shell-account-summary small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .lf-admin-shell-account-summary small {
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.3;
+  }
+  .lf-admin-shell-account-popover a,
+  .lf-admin-shell-account-popover button {
+    align-items: center;
+    background: #fff;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: #0f172a;
+    cursor: pointer;
+    display: flex;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 800;
+    gap: 8px;
+    min-height: 40px;
+    padding: 8px 9px;
+    text-align: left;
+    text-decoration: none;
+    width: 100%;
+  }
+  .lf-admin-shell-account-popover a:hover,
+  .lf-admin-shell-account-popover a:focus-visible,
+  .lf-admin-shell-account-popover button:hover,
+  .lf-admin-shell-account-popover button:focus-visible {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    outline: none;
   }
   .lf-admin-shell-breadcrumb {
     display: flex;
@@ -450,6 +673,17 @@ const adminShellCss = `
       min-width: 0;
       width: 100%;
       flex: none;
+    }
+    .lf-admin-shell-actions > .lf-workspace-switcher,
+    .lf-admin-shell-account-menu,
+    .lf-admin-shell-account-trigger {
+      width: 100%;
+      max-width: 100%;
+    }
+    .lf-admin-shell-account-popover {
+      left: 0;
+      right: auto;
+      width: min(320px, calc(100vw - 32px));
     }
     .lf-admin-shell-title h1 {
       font-size: 24px;

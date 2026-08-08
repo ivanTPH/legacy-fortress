@@ -108,12 +108,31 @@ test("workspace switcher is present in admin shell, application shell, sign-in, 
   assert.match(switcher, /alwaysShow/);
   assert.match(switcher, /!hasMultipleContexts && !alwaysShow/);
   assert.match(switcher, /lf-workspace-menu/);
+  assert.match(switcher, /aria-haspopup="menu"/);
+  assert.match(switcher, /aria-expanded=\{open\}/);
   assert.match(switcher, /Switch workspace/);
   assert.match(switcher, /lf-workspace-route-meta/);
   assert.match(switcher, /Workspace/);
   assert.match(globals, /--lf-shell-sidebar-width: 286px/);
   assert.match(globals, /--lf-shell-header-min-height: 76px/);
   assert.match(globals, /max-width: 700px\)[\s\S]*\.lf-mobile-drawer \.lf-workspace-switcher[\s\S]*display: block/);
+});
+
+test("workspace switcher uses controlled dismissal instead of sticky native details", () => {
+  const switcher = fs.readFileSync(path.join(root, "components/navigation/WorkspaceSwitcher.tsx"), "utf8");
+  const globals = fs.readFileSync(path.join(root, "app/globals.css"), "utf8");
+
+  assert.match(switcher, /const \[open, setOpen\] = useState\(false\)/);
+  assert.match(switcher, /queueMicrotask\(\(\) => setOpen\(false\)\)/);
+  assert.match(switcher, /document\.addEventListener\("pointerdown", onPointerDown\)/);
+  assert.match(switcher, /document\.addEventListener\("keydown", onKeyDown\)/);
+  assert.match(switcher, /event\.key !== "Escape"/);
+  assert.match(switcher, /triggerRef\.current\?\.focus\(\)/);
+  assert.match(switcher, /window\.dispatchEvent\(new CustomEvent\("lf-admin-menu-open"/);
+  assert.match(switcher, /window\.addEventListener\("lf-admin-menu-open", onOtherMenuOpen\)/);
+  assert.doesNotMatch(switcher, /<details className="lf-workspace-menu"/);
+  assert.doesNotMatch(switcher, /<summary className="lf-workspace-current"/);
+  assert.match(globals, /\.lf-workspace-current \{\n  border: 0;\n  background: transparent;/);
 });
 
 test("current workspace detection recognises enterprise, probate, executor, and application routes", () => {
