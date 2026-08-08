@@ -778,6 +778,186 @@
   white-space: nowrap;
 }
 
+.lf-admin-shell-account-menu {
+  position: relative;
+  min-width: 0;
+}
+
+.lf-admin-shell-account-trigger {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  color: #0f172a;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 10px;
+  min-height: 46px;
+  max-width: 280px;
+  padding: 4px 9px 4px 4px;
+  text-align: left;
+}
+
+.lf-admin-shell-account-trigger:focus-visible {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+  outline: none;
+}
+
+.lf-admin-shell-avatar {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  color: #334155;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 800;
+  height: 38px;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  width: 38px;
+}
+
+.lf-admin-shell-account-copy {
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+  min-width: 0;
+}
+
+.lf-admin-shell-account-copy strong,
+.lf-admin-shell-account-copy small {
+  display: block;
+  max-width: 158px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lf-admin-shell-account-copy strong {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.lf-admin-shell-account-copy small {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.lf-admin-shell-account-popover {
+  background: #fff;
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.14);
+  display: grid;
+  gap: 0;
+  padding: 8px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: min(280px, calc(100vw - 32px));
+  z-index: 70;
+}
+
+.lf-admin-shell-account-summary {
+  align-items: center;
+  color: #0f172a;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr);
+  padding: 8px 8px 12px;
+}
+
+.lf-admin-shell-account-summary-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.lf-admin-shell-account-summary strong,
+.lf-admin-shell-account-email,
+.lf-admin-shell-account-role {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lf-admin-shell-account-summary strong {
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.15;
+}
+
+.lf-admin-shell-account-email,
+.lf-admin-shell-account-role {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.lf-admin-shell-account-role {
+  color: #475569;
+  font-weight: 750;
+}
+
+.lf-admin-shell-account-menu-section {
+  border-top: 1px solid #e2e8f0;
+  display: grid;
+  gap: 3px;
+  padding: 7px 0 0;
+}
+
+.lf-admin-shell-account-menu-section + .lf-admin-shell-account-menu-section {
+  margin-top: 7px;
+}
+
+.lf-admin-shell-account-popover a,
+.lf-admin-shell-account-popover button {
+  align-items: center;
+  background: #fff;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #0f172a;
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 9px;
+  text-align: left;
+  text-decoration: none;
+  width: 100%;
+}
+
+.lf-admin-shell-account-popover a > span,
+.lf-admin-shell-account-popover button > span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lf-admin-shell-account-popover a:hover,
+.lf-admin-shell-account-popover a:focus-visible,
+.lf-admin-shell-account-popover button:hover,
+.lf-admin-shell-account-popover button:focus-visible {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  outline: none;
+}
+
 .lf-admin-shell-breadcrumb {
   display: flex;
   gap: 8px;
@@ -961,6 +1141,19 @@
     flex: none;
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .lf-admin-shell-actions > .lf-workspace-switcher,
+  .lf-admin-shell-account-menu,
+  .lf-admin-shell-account-trigger {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .lf-admin-shell-account-popover {
+    left: 0;
+    right: auto;
+    width: min(320px, calc(100vw - 32px));
   }
 
   .lf-admin-shell-title h1 {

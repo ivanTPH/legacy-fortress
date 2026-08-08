@@ -37,7 +37,7 @@ test("shared admin shell exposes responsive navigation, identity and sign-out co
 
 test("admin account menu uses separated avatar identity rows and avoids fused account text", () => {
   const source = read("components/admin/AdminWorkspaceShell.tsx");
-  const css = source.match(/const adminShellCss = `([\s\S]+)`;/)?.[1] ?? "";
+  const globalCss = read("app/globals.css");
 
   assert.match(source, /splitIdentityDetail/);
   assert.match(source, /toDisplayRole/);
@@ -51,9 +51,11 @@ test("admin account menu uses separated avatar identity rows and avoids fused ac
   assert.match(source, /<span>Sign out<\/span>/);
   assert.doesNotMatch(source, /Ivan Yardleysuper admin/);
   assert.doesNotMatch(source, /ProfileAccount securitySign out/);
-  assert.match(css, /\.lf-admin-shell-account-summary-copy\s*\{[\s\S]+display: grid/);
-  assert.match(css, /\.lf-admin-shell-account-menu-section\s*\{[\s\S]+border-top: 1px solid #e2e8f0/);
-  assert.match(css, /\.lf-admin-shell-account-popover a > span,[\s\S]+white-space: nowrap/);
+  assert.match(globalCss, /\.lf-admin-shell-account-popover\s*\{[\s\S]+position: absolute/);
+  assert.match(globalCss, /\.lf-admin-shell-account-summary-copy\s*\{[\s\S]+display: grid/);
+  assert.match(globalCss, /\.lf-admin-shell-account-menu-section\s*\{[\s\S]+border-top: 1px solid #e2e8f0/);
+  assert.match(globalCss, /\.lf-admin-shell-account-popover a > span,[\s\S]+white-space: nowrap/);
+  assert.match(globalCss, /@media \(max-width: 860px\)[\s\S]+\.lf-admin-shell-account-popover[\s\S]+width: min\(320px, calc\(100vw - 32px\)\)/);
 });
 
 test("admin account menu dismisses on outside click, Escape and route change", () => {
