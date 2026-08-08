@@ -16,6 +16,10 @@ test("shared admin shell exposes responsive navigation, identity and sign-out co
   assert.match(source, /aria-label="Sign out of Legacy Fortress"/);
   assert.match(source, /lf-admin-shell-account-trigger/);
   assert.match(source, /lf-admin-shell-account-popover/);
+  assert.match(source, /AccountAvatar/);
+  assert.match(source, /lf-topbar-user-avatar/);
+  assert.match(source, /lf-topbar-user-avatar-fallback/);
+  assert.match(source, /identityAvatarUrl/);
   assert.match(source, /role="menu"/);
   assert.match(source, /role="menuitem"/);
   assert.match(source, /\/account\/security/);
@@ -29,6 +33,27 @@ test("shared admin shell exposes responsive navigation, identity and sign-out co
   assert.match(source, /@media \(max-width: 860px\)/);
   assert.match(source, /overflow-wrap: break-word/);
   assert.match(source, /min-height: 44px/);
+});
+
+test("admin account menu uses separated avatar identity rows and avoids fused account text", () => {
+  const source = read("components/admin/AdminWorkspaceShell.tsx");
+  const css = source.match(/const adminShellCss = `([\s\S]+)`;/)?.[1] ?? "";
+
+  assert.match(source, /splitIdentityDetail/);
+  assert.match(source, /toDisplayRole/);
+  assert.match(source, /lf-admin-shell-account-summary-copy/);
+  assert.match(source, /lf-admin-shell-account-email/);
+  assert.match(source, /lf-admin-shell-account-role/);
+  assert.match(source, /lf-admin-shell-account-menu-section/);
+  assert.match(source, /lf-admin-shell-account-signout/);
+  assert.match(source, /<span>Profile<\/span>/);
+  assert.match(source, /<span>Account security<\/span>/);
+  assert.match(source, /<span>Sign out<\/span>/);
+  assert.doesNotMatch(source, /Ivan Yardleysuper admin/);
+  assert.doesNotMatch(source, /ProfileAccount securitySign out/);
+  assert.match(css, /\.lf-admin-shell-account-summary-copy\s*\{[\s\S]+display: grid/);
+  assert.match(css, /\.lf-admin-shell-account-menu-section\s*\{[\s\S]+border-top: 1px solid #e2e8f0/);
+  assert.match(css, /\.lf-admin-shell-account-popover a > span,[\s\S]+white-space: nowrap/);
 });
 
 test("admin account menu dismisses on outside click, Escape and route change", () => {

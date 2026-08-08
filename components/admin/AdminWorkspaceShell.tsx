@@ -18,6 +18,7 @@ type AdminWorkspaceShellProps = {
   onSignOut: () => void;
   identityLabel?: string;
   identityDetail?: string;
+  identityAvatarUrl?: string;
   primaryAction?: ReactNode;
   breadcrumbs?: Array<{ label: string; href?: string }>;
   stagingLabel?: string;
@@ -34,6 +35,7 @@ export default function AdminWorkspaceShell({
   onSignOut,
   identityLabel = "Secure account",
   identityDetail,
+  identityAvatarUrl = "",
   primaryAction,
   breadcrumbs = [],
   stagingLabel = "STAGING",
@@ -133,6 +135,8 @@ export default function AdminWorkspaceShell({
   );
 
   const initials = getInitials(identityLabel);
+  const accountIdentity = splitIdentityDetail(identityDetail);
+  const closedAccountMeta = accountIdentity.role || accountIdentity.context || "Secure account";
 
   const accountMenu = (
     <div ref={accountMenuRef} className="lf-admin-shell-account-menu">
@@ -146,34 +150,40 @@ export default function AdminWorkspaceShell({
         aria-haspopup="menu"
         onClick={toggleAccountMenu}
       >
-        <span className="lf-admin-shell-avatar" aria-hidden="true">{initials}</span>
+        <AccountAvatar label={identityLabel} initials={initials} avatarUrl={identityAvatarUrl} />
         <span className="lf-admin-shell-account-copy">
-          <span>Account</span>
           <strong>{identityLabel}</strong>
+          <small>{closedAccountMeta}</small>
         </span>
         <Icon name="expand_more" size={18} />
       </button>
       {accountMenuOpen ? (
         <div id={accountMenuId} className="lf-admin-shell-account-popover" role="menu" aria-label="Account menu">
           <div className="lf-admin-shell-account-summary">
-            <span className="lf-admin-shell-avatar" aria-hidden="true">{initials}</span>
-            <span>
+            <AccountAvatar label={identityLabel} initials={initials} avatarUrl={identityAvatarUrl} />
+            <div className="lf-admin-shell-account-summary-copy">
               <strong>{identityLabel}</strong>
-              {identityDetail ? <small>{identityDetail}</small> : null}
-            </span>
+              {accountIdentity.email ? <span className="lf-admin-shell-account-email">{accountIdentity.email}</span> : null}
+              {accountIdentity.role ? <span className="lf-admin-shell-account-role">{accountIdentity.role}</span> : null}
+              {!accountIdentity.email && accountIdentity.context ? <span className="lf-admin-shell-account-role">{accountIdentity.context}</span> : null}
+            </div>
           </div>
-          <Link href="/profile" role="menuitem" onClick={() => setAccountMenuOpen(false)} prefetch={false}>
-            <Icon name="account_circle" size={17} />
-            Profile
-          </Link>
-          <Link href="/account/security" role="menuitem" onClick={() => setAccountMenuOpen(false)} prefetch={false}>
-            <Icon name="shield_lock" size={17} />
-            Account security
-          </Link>
-          <button type="button" role="menuitem" onClick={() => { setAccountMenuOpen(false); onSignOut(); }}>
-            <Icon name="logout" size={17} />
-            Sign out
-          </button>
+          <div className="lf-admin-shell-account-menu-section" role="none">
+            <Link href="/profile" role="menuitem" onClick={() => setAccountMenuOpen(false)} prefetch={false}>
+              <Icon name="account_circle" size={17} />
+              <span>Profile</span>
+            </Link>
+            <Link href="/account/security" role="menuitem" onClick={() => setAccountMenuOpen(false)} prefetch={false}>
+              <Icon name="shield_lock" size={17} />
+              <span>Account security</span>
+            </Link>
+          </div>
+          <div className="lf-admin-shell-account-menu-section" role="none">
+            <button type="button" role="menuitem" className="lf-admin-shell-account-signout" onClick={() => { setAccountMenuOpen(false); onSignOut(); }}>
+              <Icon name="logout" size={17} />
+              <span>Sign out</span>
+            </button>
+          </div>
         </div>
       ) : null}
     </div>
@@ -252,6 +262,45 @@ function getInitials(label: string) {
   const first = parts[0]?.[0] ?? "L";
   const second = parts.length > 1 ? parts[parts.length - 1]?.[0] : parts[0]?.[1];
   return `${first}${second ?? "F"}`.toUpperCase();
+}
+
+function AccountAvatar({ label, initials, avatarUrl }: { label: string; initials: string; avatarUrl?: string }) {
+  const ready = Boolean(avatarUrl);
+  return (
+    <span
+      className="lf-admin-shell-avatar lf-topbar-user-avatar"
+      aria-label={`Signed-in account picture for ${label}`}
+      role="img"
+      data-avatar-ready={ready ? "true" : "false"}
+    >
+      {ready ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img className="lf-topbar-user-avatar-img" src={avatarUrl} alt="" aria-hidden="true" />
+      ) : null}
+      <span className="lf-topbar-user-avatar-fallback">{initials || "LF"}</span>
+    </span>
+  );
+}
+
+function splitIdentityDetail(detail?: string) {
+  const raw = String(detail ?? "").trim();
+  if (!raw) return { role: "", email: "", context: "" };
+  const parts = raw.split("·").map((part) => part.trim()).filter(Boolean);
+  const email = parts.find((part) => /@/.test(part)) ?? (/@/.test(raw) ? raw : "");
+  const role = parts.find((part) => part !== email && !/@/.test(part)) ?? "";
+  return {
+    role: role ? toDisplayRole(role) : "",
+    email,
+    context: !role && !email ? raw : "",
+  };
+}
+
+function toDisplayRole(value: string) {
+  return value
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 const adminShellCss = `
@@ -509,14 +558,15 @@ const adminShellCss = `
     align-items: center;
     background: #fff;
     border: 1px solid #cbd5e1;
-    border-radius: 999px;
+    border-radius: 12px;
     color: #0f172a;
     cursor: pointer;
     display: inline-flex;
-    gap: 8px;
-    min-height: 42px;
-    max-width: 240px;
-    padding: 4px 8px 4px 4px;
+    gap: 10px;
+    min-height: 46px;
+    max-width: 280px;
+    padding: 4px 9px 4px 4px;
+    text-align: left;
   }
   .lf-admin-shell-account-trigger:focus-visible {
     border-color: #2563eb;
@@ -531,27 +581,37 @@ const adminShellCss = `
     color: #334155;
     display: inline-flex;
     flex: 0 0 auto;
-    font-size: 12px;
-    font-weight: 900;
-    height: 34px;
+    font-size: 13px;
+    font-weight: 800;
+    height: 38px;
     justify-content: center;
-    width: 34px;
+    overflow: hidden;
+    position: relative;
+    width: 38px;
   }
   .lf-admin-shell-account-copy {
     display: grid;
+    gap: 2px;
     justify-items: start;
     min-width: 0;
-  }
-  .lf-admin-shell-account-copy span {
-    color: #64748b;
-    font-size: 10px;
-    font-weight: 900;
-    text-transform: uppercase;
   }
   .lf-admin-shell-account-copy strong {
     display: block;
     font-size: 13px;
-    max-width: 145px;
+    font-weight: 800;
+    line-height: 1.1;
+    max-width: 158px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .lf-admin-shell-account-copy small {
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.1;
+    display: block;
+    max-width: 158px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -562,7 +622,7 @@ const adminShellCss = `
     border-radius: 12px;
     box-shadow: 0 20px 48px rgba(15, 23, 42, .14);
     display: grid;
-    gap: 6px;
+    gap: 0;
     padding: 8px;
     position: absolute;
     right: 0;
@@ -572,23 +632,49 @@ const adminShellCss = `
   }
   .lf-admin-shell-account-summary {
     align-items: center;
-    border-bottom: 1px solid #e2e8f0;
     color: #0f172a;
     display: grid;
-    gap: 9px;
+    gap: 10px;
     grid-template-columns: auto minmax(0, 1fr);
-    padding: 6px 6px 10px;
+    padding: 8px 8px 12px;
+  }
+  .lf-admin-shell-account-summary-copy {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
   }
   .lf-admin-shell-account-summary strong,
-  .lf-admin-shell-account-summary small {
+  .lf-admin-shell-account-email,
+  .lf-admin-shell-account-role {
     display: block;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
   }
-  .lf-admin-shell-account-summary small {
+  .lf-admin-shell-account-summary strong {
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 850;
+    line-height: 1.15;
+  }
+  .lf-admin-shell-account-email,
+  .lf-admin-shell-account-role {
     color: #64748b;
     font-size: 12px;
     line-height: 1.3;
+  }
+  .lf-admin-shell-account-role {
+    color: #475569;
+    font-weight: 750;
+  }
+  .lf-admin-shell-account-menu-section {
+    border-top: 1px solid #e2e8f0;
+    display: grid;
+    gap: 3px;
+    padding: 7px 0 0;
+  }
+  .lf-admin-shell-account-menu-section + .lf-admin-shell-account-menu-section {
+    margin-top: 7px;
   }
   .lf-admin-shell-account-popover a,
   .lf-admin-shell-account-popover button {
@@ -608,6 +694,14 @@ const adminShellCss = `
     text-align: left;
     text-decoration: none;
     width: 100%;
+  }
+  .lf-admin-shell-account-popover a > span,
+  .lf-admin-shell-account-popover button > span {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .lf-admin-shell-account-popover a:hover,
   .lf-admin-shell-account-popover a:focus-visible,
