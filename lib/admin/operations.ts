@@ -4,6 +4,7 @@ import { MASTER_ADMIN_EMAIL, normalizeAdminEmail } from "./access.ts";
 import { normalizeAdminRole } from "./capabilities.ts";
 import { adminLifecycleError } from "./lifecycleSecurity.ts";
 import { buildVerificationActionKey, deriveBlockingState } from "../workflow/blockingModel.ts";
+import { ROLE_RULES, type CollaboratorRole } from "../access-control/roles.ts";
 
 type AnySupabaseClient = SupabaseClient;
 type AdminRowsResponse = {
@@ -57,6 +58,14 @@ type ContactInvitationRow = {
   contact_email: string | null;
   invitation_status: string;
   sent_at?: string | null;
+  last_sent_at?: string | null;
+  invited_at?: string | null;
+  accepted_at?: string | null;
+  rejected_at?: string | null;
+  revoked_at?: string | null;
+  accepted_user_id?: string | null;
+  assigned_role?: string | null;
+  permissions_override?: Record<string, unknown> | null;
   owner_user_id: string;
 };
 
@@ -133,6 +142,53 @@ export type AdminSupportSnapshot = {
     sentAt: string | null;
     activationStatus: string;
     issueLabel: string;
+  }>;
+};
+
+export type AdminSupportInvitationDetail = {
+  invitation: {
+    id: string;
+    ownerUserId: string;
+    ownerName: string;
+    ownerEmail: string | null;
+    contactId: string | null;
+    contactName: string;
+    contactEmail: string;
+    assignedRole: string;
+    invitationStatus: string;
+    activationStatus: string;
+    sentAt: string | null;
+    lastSentAt: string | null;
+    invitedAt: string | null;
+    acceptedAt: string | null;
+    rejectedAt: string | null;
+    revokedAt: string | null;
+    linkedAccountUserId: string | null;
+    issueLabel: string;
+    availableActions: Array<"resend" | "revoke">;
+  };
+  contact: {
+    id: string;
+    fullName: string;
+    email: string | null;
+    relationship: string | null;
+  } | null;
+  roleAssignment: {
+    id: string;
+    assignedRole: string;
+    activationStatus: string;
+    updatedAt: string | null;
+  } | null;
+  accessGrant: {
+    id: string;
+    activationStatus: string;
+    updatedAt: string | null;
+  } | null;
+  events: Array<{
+    id: string;
+    eventType: string;
+    createdAt: string;
+    payload: Record<string, unknown>;
   }>;
 };
 
@@ -830,6 +886,194 @@ export async function loadSupportSnapshot(client: AnySupabaseClient) {
     },
     issues,
   } satisfies AdminSupportSnapshot;
+}
+
+export async function loadSupportInvitationDetail(client: AnySupabaseClient, invitationId: string) {
+  const id = String(invitationId ?? "").trim();
+  if (!id) throw adminLifecycleError("ADMIN_INVALID_STATUS", "missing_invitation_id");
+
+  const invitationRes = await client
+    .from("contact_invitations")
+    .select("id,contact_id,contact_name,contact_email,assigned_role,invitation_status,owner_user_id,invited_at,sent_at,last_sent_at,accepted_at,rejected_at,revoked_at,accepted_user_id,permissions_override")
+    .eq("id", id)
+    .maybeSingle() as AdminRowResponse;
+  if (invitationRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", invitationRes.error.message);
+  if (!invitationRes.data) throw adminLifecycleError("ADMIN_OPERATION_CONFLICT", "contact_invitation_not_found");
+
+  const invitation = invitationRes.data as ContactInvitationRow;
+  const [ownerProfileRes, contactRes, roleRes, grantRes, eventsRes, ownerAuthRes] = await Promise.all([
+    client.from("user_profiles").select("user_id,display_name").eq("user_id", invitation.owner_user_id).maybeSingle(),
+    invitation.contact_id
+      ? client.from("contacts").select("id,full_name,email,relationship").eq("id", invitation.contact_id).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    client.from("role_assignments").select("id,assigned_role,activation_status,updated_at").eq("invitation_id", id).maybeSingle(),
+    client.from("account_access_grants").select("id,activation_status,updated_at").eq("invitation_id", id).maybeSingle(),
+    client.from("invitation_events").select("id,event_type,created_at,payload").eq("invitation_id", id).order("created_at", { ascending: false }).limit(20),
+    client.auth.admin.getUserById(invitation.owner_user_id).catch((error: unknown) => ({ data: { user: null }, error })),
+  ]);
+
+  if (ownerProfileRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", ownerProfileRes.error.message);
+  if (contactRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", contactRes.error.message);
+  if (roleRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", roleRes.error.message);
+  if (grantRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", grantRes.error.message);
+  if (eventsRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", eventsRes.error.message);
+
+  const role = roleRes.data as Record<string, unknown> | null;
+  const grant = grantRes.data as Record<string, unknown> | null;
+  const contact = contactRes.data as ContactRow | null;
+  const ownerUser = "data" in ownerAuthRes ? ownerAuthRes.data.user : null;
+  const activationStatus = String(role?.activation_status ?? "invited");
+
+  return {
+    invitation: {
+      id: invitation.id,
+      ownerUserId: invitation.owner_user_id,
+      ownerName: String((ownerProfileRes.data as UserProfileRow | null)?.display_name ?? ownerUser?.email ?? "Secure Account"),
+      ownerEmail: typeof ownerUser?.email === "string" ? ownerUser.email : null,
+      contactId: invitation.contact_id,
+      contactName: invitation.contact_name ?? contact?.full_name ?? "Unknown contact",
+      contactEmail: invitation.contact_email ?? contact?.email ?? "",
+      assignedRole: invitation.assigned_role ?? String(role?.assigned_role ?? "professional_advisor"),
+      invitationStatus: invitation.invitation_status,
+      activationStatus,
+      sentAt: invitation.sent_at ?? null,
+      lastSentAt: invitation.last_sent_at ?? null,
+      invitedAt: invitation.invited_at ?? null,
+      acceptedAt: invitation.accepted_at ?? null,
+      rejectedAt: invitation.rejected_at ?? null,
+      revokedAt: invitation.revoked_at ?? null,
+      linkedAccountUserId: invitation.accepted_user_id ?? null,
+      issueLabel: buildSupportIssueLabel(invitation.invitation_status, activationStatus),
+      availableActions: getSupportInvitationActions(invitation.invitation_status),
+    },
+    contact: contact
+      ? {
+          id: contact.id,
+          fullName: contact.full_name,
+          email: contact.email,
+          relationship: contact.relationship,
+        }
+      : null,
+    roleAssignment: role
+      ? {
+          id: String(role.id ?? ""),
+          assignedRole: String(role.assigned_role ?? ""),
+          activationStatus: String(role.activation_status ?? ""),
+          updatedAt: typeof role.updated_at === "string" ? role.updated_at : null,
+        }
+      : null,
+    accessGrant: grant
+      ? {
+          id: String(grant.id ?? ""),
+          activationStatus: String(grant.activation_status ?? ""),
+          updatedAt: typeof grant.updated_at === "string" ? grant.updated_at : null,
+        }
+      : null,
+    events: ((eventsRes.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+      id: String(row.id ?? ""),
+      eventType: String(row.event_type ?? ""),
+      createdAt: String(row.created_at ?? ""),
+      payload: sanitizeInvitationEventPayload(row.payload),
+    })),
+  } satisfies AdminSupportInvitationDetail;
+}
+
+export async function resendSupportInvitation(client: AnySupabaseClient, invitationId: string, origin: string | null) {
+  const detail = await loadSupportInvitationDetail(client, invitationId);
+  const invitation = detail.invitation;
+  if (!getSupportInvitationActions(invitation.invitationStatus).includes("resend")) {
+    throw adminLifecycleError("ADMIN_OPERATION_CONFLICT", "contact_invitation_terminal_state");
+  }
+  if (!invitation.contactEmail) {
+    throw adminLifecycleError("ADMIN_INVALID_EMAIL", "missing_contact_invitation_email");
+  }
+  const role = normalizeCollaboratorRole(invitation.assignedRole);
+  if (!role) {
+    throw adminLifecycleError("ADMIN_INVALID_ROLE", "invalid_contact_invitation_role");
+  }
+
+  const { sendContactInvite } = await import("../contacts/sendContactInvite.ts");
+  await sendContactInvite(client, {
+    ownerUserId: invitation.ownerUserId,
+    ownerEmail: detail.invitation.ownerEmail,
+    contactId: invitation.contactId,
+    contactName: invitation.contactName,
+    contactEmail: invitation.contactEmail,
+    contactRelationship: detail.contact?.relationship ?? null,
+    assignedRole: role,
+    invitationId,
+    invitedAt: invitation.invitedAt,
+    activationStatus: normalizeActivationStatus(invitation.activationStatus),
+    resend: Boolean(invitation.sentAt),
+    origin,
+  });
+
+  return loadSupportInvitationDetail(client, invitationId);
+}
+
+export async function revokeSupportInvitation(client: AnySupabaseClient, invitationId: string, reason: string | null = null) {
+  const detail = await loadSupportInvitationDetail(client, invitationId);
+  const invitation = detail.invitation;
+  if (!getSupportInvitationActions(invitation.invitationStatus).includes("revoke")) {
+    throw adminLifecycleError("ADMIN_OPERATION_CONFLICT", "contact_invitation_terminal_state");
+  }
+
+  const now = new Date().toISOString();
+  const [invitationRes, roleRes, grantRes, contactRes, eventRes] = await Promise.all([
+    client.from("contact_invitations").update({ invitation_status: "revoked", revoked_at: now, updated_at: now }).eq("id", invitationId),
+    client.from("role_assignments").update({ activation_status: "revoked", updated_at: now }).eq("invitation_id", invitationId),
+    client.from("account_access_grants").update({ activation_status: "revoked", updated_at: now }).eq("invitation_id", invitationId),
+    invitation.contactId
+      ? client.from("contacts").update({ invite_status: "revoked", verification_status: "revoked", updated_at: now }).eq("id", invitation.contactId).eq("owner_user_id", invitation.ownerUserId)
+      : Promise.resolve({ error: null }),
+    client.from("invitation_events").insert({
+      owner_user_id: invitation.ownerUserId,
+      invitation_id: invitationId,
+      event_type: "revoked",
+      payload: {
+        reason_present: Boolean(String(reason ?? "").trim()),
+        actor: "platform_admin",
+      },
+    }),
+  ]);
+
+  if (invitationRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", invitationRes.error.message);
+  if (roleRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", roleRes.error.message);
+  if (grantRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", grantRes.error.message);
+  if (contactRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", contactRes.error.message);
+  if (eventRes.error) throw adminLifecycleError("ADMIN_AUDIT_FAILED", eventRes.error.message);
+
+  return loadSupportInvitationDetail(client, invitationId);
+}
+
+function getSupportInvitationActions(status: string) {
+  const normalized = String(status ?? "").trim().toLowerCase();
+  if (["accepted", "revoked", "expired"].includes(normalized)) return [];
+  if (["pending", "failed", "delivery_failed"].includes(normalized)) return ["resend", "revoke"] as Array<"resend" | "revoke">;
+  return [];
+}
+
+function normalizeCollaboratorRole(value: string): CollaboratorRole | null {
+  const normalized = String(value ?? "").trim().toLowerCase().replace(/-/g, "_");
+  return normalized in ROLE_RULES ? normalized as CollaboratorRole : null;
+}
+
+function normalizeActivationStatus(value: string) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (["invited", "accepted", "pending_verification", "verification_submitted", "verified", "active", "rejected", "revoked"].includes(normalized)) {
+    return normalized as "invited" | "accepted" | "pending_verification" | "verification_submitted" | "verified" | "active" | "rejected" | "revoked";
+  }
+  return "invited";
+}
+
+function sanitizeInvitationEventPayload(value: unknown) {
+  const input = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  const safe: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(input)) {
+    if (/token|accept_path|body_text|password|secret|key/i.test(key)) continue;
+    safe[key] = entry;
+  }
+  return safe;
 }
 
 async function countRows(client: AnySupabaseClient, table: string, column: string, value: string) {

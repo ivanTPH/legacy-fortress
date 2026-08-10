@@ -181,11 +181,62 @@ type SupportSnapshot = {
   };
   issues: Array<{
     invitationId: string;
+    ownerUserId?: string;
     ownerName: string;
     contactName: string | null;
     contactEmail: string | null;
     assignedRole: string;
+    invitationStatus?: string;
+    sentAt?: string | null;
+    activationStatus?: string;
     issueLabel: string;
+  }>;
+};
+
+type SupportInvitationDetail = {
+  invitation: {
+    id: string;
+    ownerUserId: string;
+    ownerName: string;
+    ownerEmail: string | null;
+    contactId: string | null;
+    contactName: string;
+    contactEmail: string;
+    assignedRole: string;
+    invitationStatus: string;
+    activationStatus: string;
+    sentAt: string | null;
+    lastSentAt: string | null;
+    invitedAt: string | null;
+    acceptedAt: string | null;
+    rejectedAt: string | null;
+    revokedAt: string | null;
+    linkedAccountUserId: string | null;
+    issueLabel: string;
+    availableActions: Array<"resend" | "revoke">;
+  };
+  contact: {
+    id: string;
+    fullName: string;
+    email: string | null;
+    relationship: string | null;
+  } | null;
+  roleAssignment: {
+    id: string;
+    assignedRole: string;
+    activationStatus: string;
+    updatedAt: string | null;
+  } | null;
+  accessGrant: {
+    id: string;
+    activationStatus: string;
+    updatedAt: string | null;
+  } | null;
+  events: Array<{
+    id: string;
+    eventType: string;
+    createdAt: string;
+    payload: Record<string, unknown>;
   }>;
 };
 
@@ -396,6 +447,9 @@ export default function AdminControlPlaneWorkspace({
   const [adminInvitations, setAdminInvitations] = useState<AdminInvitation[]>([]);
   const [metrics, setMetrics] = useState<DashboardMetric[]>([]);
   const [support, setSupport] = useState<SupportSnapshot | null>(null);
+  const [supportDetail, setSupportDetail] = useState<SupportInvitationDetail | null>(null);
+  const [supportDetailLoading, setSupportDetailLoading] = useState(false);
+  const [supportActionLoading, setSupportActionLoading] = useState("");
   const [verificationQueue, setVerificationQueue] = useState<VerificationItem[]>([]);
   const [probateCases, setProbateCases] = useState<ProbateCase[]>([]);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
@@ -514,6 +568,7 @@ export default function AdminControlPlaneWorkspace({
     setAdminInvitations([]);
     setMetrics([]);
     setSupport(null);
+    setSupportDetail(null);
     setVerificationQueue([]);
     setProbateCases([]);
     setAuditEvents([]);
@@ -593,6 +648,43 @@ export default function AdminControlPlaneWorkspace({
     if (json.admins) setAdmins(json.admins);
     if (json.invitations) setAdminInvitations(json.invitations);
     setMessage(action === "revoke_invitation" ? "Admin invitation revoked and audit recorded." : "Admin invitation resent and audit recorded.");
+  }
+
+  async function loadSupportInvitationDetail(invitationId: string) {
+    setMessage("");
+    setSupportDetailLoading(true);
+    const res = await authFetch(`/api/internal/admin/support/${encodeURIComponent(invitationId)}`);
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; detail?: SupportInvitationDetail; message?: string; code?: string };
+    setSupportDetailLoading(false);
+    if (!res.ok || !json.ok || !json.detail) {
+      setMessage(json.message || json.code || "Could not load invitation detail.");
+      return;
+    }
+    setSupportDetail(json.detail);
+  }
+
+  async function runSupportInvitationAction(invitationId: string, action: "resend" | "revoke") {
+    const confirmed = action === "revoke"
+      ? window.confirm("Revoke this contact invitation? The recipient will not gain access from this invitation.")
+      : true;
+    if (!confirmed) return;
+    setMessage("");
+    setSupportActionLoading(`${invitationId}:${action}`);
+    const res = await authFetch(`/api/internal/admin/support/${encodeURIComponent(invitationId)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ action }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; detail?: SupportInvitationDetail; message?: string; code?: string };
+    setSupportActionLoading("");
+    if (!res.ok || !json.ok || !json.detail) {
+      setMessage(json.message || json.code || "Support invitation action was blocked.");
+      return;
+    }
+    setSupportDetail(json.detail);
+    const supportRes = await authFetch("/api/internal/admin/support");
+    const supportJson = (await supportRes.json().catch(() => ({}))) as { ok?: boolean; support?: SupportSnapshot };
+    if (supportRes.ok && supportJson.ok) setSupport(supportJson.support ?? null);
+    setMessage(action === "revoke" ? "Contact invitation revoked and audit recorded." : "Contact invitation resent and audit recorded.");
   }
 
   const visibleNav = useMemo(() => {
@@ -677,7 +769,7 @@ export default function AdminControlPlaneWorkspace({
         {section === "licence-detail" ? renderPlatformLicenceDetail(resourceId, enterprisePortfolio) : null}
         {section === "admin-users" || section === "admin-user-detail" ? renderAdminUsers(admins, adminInvitations, adminFilter, setAdminFilter, adminInviteForm, setAdminInviteForm, sendAdminInvitation, adminInviteOpen, setAdminInviteOpen, adminLifecycleForm, setAdminLifecycleForm, runAdminLifecycle, runAdminInvitationLifecycle, resourceId) : null}
         {section === "users" || section === "user-detail" ? renderUsers(lookupQuery, setLookupQuery, lookupResults, runLookup, resourceId) : null}
-        {section === "support" || section === "invitations" || section === "access" ? renderSupport(section, support) : null}
+        {section === "support" || section === "invitations" || section === "access" ? renderSupport(section, support, supportDetail, supportDetailLoading, supportActionLoading, loadSupportInvitationDetail, runSupportInvitationAction, capabilities) : null}
         {section === "verification" || section === "verification-detail" ? renderVerification(verificationQueue, resourceId) : null}
         {section === "probate" || section === "probate-detail" ? renderProbate(probateCases, resourceId) : null}
         {section === "audit" ? renderAudit(auditEvents, auditFilter, setAuditFilter) : null}
@@ -1472,36 +1564,134 @@ function renderUsers(
   );
 }
 
-function renderSupport(section: AdminControlPlaneSection, support: SupportSnapshot | null) {
+function renderSupport(
+  section: AdminControlPlaneSection,
+  support: SupportSnapshot | null,
+  detail: SupportInvitationDetail | null,
+  detailLoading: boolean,
+  actionLoading: string,
+  loadDetail: (invitationId: string) => Promise<void>,
+  runAction: (invitationId: string, action: "resend" | "revoke") => Promise<void>,
+  capabilities: string[],
+) {
   const title = section === "invitations" ? "Invitation issues" : section === "access" ? "Linked-access issues" : "Support issues";
+  const canManageSupport = capabilities.includes("support:manage");
   return (
-    <section style={panelStyle}>
-      <h2 style={h2Style}>{title}</h2>
-      <div style={gridStyle}>
-        <Metric label="Pending invitations" value={support?.counts.pendingInvitations ?? null} />
-        <Metric label="Ready to send" value={support?.counts.readyToSendInvitations ?? null} />
-        <Metric label="Verification awaiting review" value={support?.counts.verificationAwaitingReview ?? null} />
-        <Metric label="Active linked accounts" value={support?.counts.linkedAccountsActive ?? null} />
-        <Metric label="Invitation/access issues" value={support?.counts.invitationIssues ?? null} />
+    <div style={stackStyle}>
+      <section style={panelStyle}>
+        <h2 style={h2Style}>{title}</h2>
+        <div style={gridStyle}>
+          <Metric label="Pending invitations" value={support?.counts.pendingInvitations ?? null} />
+          <Metric label="Ready to send" value={support?.counts.readyToSendInvitations ?? null} />
+          <Metric label="Verification awaiting review" value={support?.counts.verificationAwaitingReview ?? null} />
+          <Metric label="Active linked accounts" value={support?.counts.linkedAccountsActive ?? null} />
+          <Metric label="Invitation/access issues" value={support?.counts.invitationIssues ?? null} />
+        </div>
+        <div style={tableWrapStyle}>
+          <table style={tableStyle}>
+            <thead><tr><th>Contact</th><th>Owner</th><th>Role</th><th>Status</th><th>Issue</th><th>Actions</th></tr></thead>
+            <tbody>
+              {(support?.issues ?? []).map((item) => (
+                <tr key={item.invitationId}>
+                  <td>{item.contactName || item.contactEmail || "Unknown contact"}<small>{item.contactEmail}</small></td>
+                  <td>{item.ownerName}</td>
+                  <td>{item.assignedRole.replace(/_/g, " ")}</td>
+                  <td><AdminStatusBadge status={item.invitationStatus ?? "pending"} /></td>
+                  <td>{item.issueLabel}</td>
+                  <td>
+                    <div style={actionsCellStyle}>
+                      <button type="button" onClick={() => void loadDetail(item.invitationId)} disabled={detailLoading}>View</button>
+                      {canManageSupport && item.invitationStatus !== "revoked" && item.invitationStatus !== "accepted" ? (
+                        <button type="button" onClick={() => void runAction(item.invitationId, "resend")} disabled={actionLoading === `${item.invitationId}:resend`}>
+                          {actionLoading === `${item.invitationId}:resend` ? "Sending..." : item.sentAt ? "Resend" : "Send"}
+                        </button>
+                      ) : null}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {support && support.issues.length === 0 ? <tr><td colSpan={6}>No support issues match this queue.</td></tr> : null}
+              {!support ? <tr><td colSpan={6}>Support snapshot unavailable for this role or environment.</td></tr> : null}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      {detail || detailLoading ? (
+        <section style={panelStyle} aria-live="polite">
+          {detailLoading ? <p style={mutedStyle}>Loading invitation detail...</p> : null}
+          {detail ? renderSupportInvitationDetail(detail, canManageSupport, actionLoading, runAction) : null}
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+function renderSupportInvitationDetail(
+  detail: SupportInvitationDetail,
+  canManageSupport: boolean,
+  actionLoading: string,
+  runAction: (invitationId: string, action: "resend" | "revoke") => Promise<void>,
+) {
+  const invitation = detail.invitation;
+  return (
+    <div style={stackStyle}>
+      <div style={sectionHeaderStyle}>
+        <div>
+          <h2 style={h2Style}>{invitation.contactName || invitation.contactEmail || "Contact invitation"}</h2>
+          <p style={mutedStyle}>Invitation detail for {invitation.ownerName}. This view shows operational metadata only, not private vault contents.</p>
+        </div>
+        <AdminStatusBadge status={invitation.invitationStatus} />
       </div>
-      <div style={tableWrapStyle}>
-        <table style={tableStyle}>
-          <thead><tr><th>Contact</th><th>Owner</th><th>Role</th><th>Issue</th></tr></thead>
-          <tbody>
-            {(support?.issues ?? []).map((item) => (
-              <tr key={item.invitationId}>
-                <td>{item.contactName || item.contactEmail || "Unknown contact"}</td>
-                <td>{item.ownerName}</td>
-                <td>{item.assignedRole.replace(/_/g, " ")}</td>
-                <td>{item.issueLabel}</td>
-              </tr>
+      <div style={detailGridStyle}>
+        <Detail label="Recipient" value={invitation.contactEmail || "No email recorded"} />
+        <Detail label="Owner" value={invitation.ownerEmail ? `${invitation.ownerName} (${invitation.ownerEmail})` : invitation.ownerName} />
+        <Detail label="Role" value={invitation.assignedRole.replace(/_/g, " ")} />
+        <Detail label="Access state" value={invitation.activationStatus.replace(/_/g, " ")} />
+        <Detail label="Invited" value={formatDate(invitation.invitedAt)} />
+        <Detail label="Sent" value={formatDate(invitation.sentAt)} />
+        <Detail label="Last sent" value={formatDate(invitation.lastSentAt)} />
+        <Detail label="Accepted" value={formatDate(invitation.acceptedAt)} />
+        <Detail label="Revoked" value={formatDate(invitation.revokedAt)} />
+        <Detail label="Linked account" value={invitation.linkedAccountUserId ? "Linked" : "Not linked"} />
+      </div>
+      {detail.contact ? (
+        <section style={contextPanelStyle}>
+          <h3 style={h3Style}>Contact record</h3>
+          <p style={mutedStyle}>{detail.contact.fullName} · {detail.contact.relationship || "Relationship not recorded"}</p>
+        </section>
+      ) : null}
+      <section style={contextPanelStyle}>
+        <h3 style={h3Style}>Permitted actions</h3>
+        <div style={rowStyle}>
+          {canManageSupport && invitation.availableActions.includes("resend") ? (
+            <button type="button" onClick={() => void runAction(invitation.id, "resend")} disabled={actionLoading === `${invitation.id}:resend`} style={primaryButtonStyle}>
+              {actionLoading === `${invitation.id}:resend` ? "Sending..." : invitation.sentAt ? "Resend invitation" : "Send invitation"}
+            </button>
+          ) : null}
+          {canManageSupport && invitation.availableActions.includes("revoke") ? (
+            <button type="button" onClick={() => void runAction(invitation.id, "revoke")} disabled={actionLoading === `${invitation.id}:revoke`} style={dangerButtonStyle}>
+              {actionLoading === `${invitation.id}:revoke` ? "Revoking..." : "Revoke invitation"}
+            </button>
+          ) : null}
+          {!canManageSupport ? <span style={mutedInlineStyle}>You can inspect this invitation but cannot mutate it.</span> : null}
+          {canManageSupport && invitation.availableActions.length === 0 ? <span style={mutedInlineStyle}>No action is available for this terminal state.</span> : null}
+        </div>
+      </section>
+      <section style={contextPanelStyle}>
+        <h3 style={h3Style}>Lifecycle events</h3>
+        {detail.events.length ? (
+          <ul style={eventListStyle}>
+            {detail.events.map((event) => (
+              <li key={event.id}>
+                <strong>{event.eventType.replace(/_/g, " ")}</strong>
+                <span>{formatDate(event.createdAt)}</span>
+                <small>{formatEventPayload(event.payload)}</small>
+              </li>
             ))}
-            {support && support.issues.length === 0 ? <tr><td colSpan={4}>No support issues match this queue.</td></tr> : null}
-            {!support ? <tr><td colSpan={4}>Support snapshot unavailable for this role or environment.</td></tr> : null}
-          </tbody>
-        </table>
-      </div>
-    </section>
+          </ul>
+        ) : <p style={mutedStyle}>No invitation events have been recorded.</p>}
+      </section>
+    </div>
   );
 }
 
@@ -1722,6 +1912,23 @@ function formatDate(value: string | null) {
   }
 }
 
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={detailItemStyle}>
+      <span style={mutedInlineStyle}>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function formatEventPayload(payload: Record<string, unknown>) {
+  const entries = Object.entries(payload)
+    .filter(([, value]) => value !== null && value !== undefined && value !== "")
+    .slice(0, 4)
+    .map(([key, value]) => `${labelise(key)}: ${String(value)}`);
+  return entries.length ? entries.join(" · ") : "No additional metadata";
+}
+
 function getAllowedProbateActions(status: string) {
   const normalized = String(status ?? "").toLowerCase();
   const terminal = ["approved", "rejected", "revoked", "completed", "closed"].includes(normalized);
@@ -1764,12 +1971,16 @@ const mutedInlineStyle = { color: "#64748b", fontSize: 13 } satisfies CSSPropert
 const secondaryLinkStyle = { border: "1px solid #cbd5e1", borderRadius: 6, padding: "9px 12px", color: "#0f172a", textDecoration: "none", fontWeight: 700, background: "#fff" } satisfies CSSProperties;
 const secondaryButtonStyle = { ...secondaryLinkStyle, cursor: "pointer" } satisfies CSSProperties;
 const primaryButtonStyle = { border: 0, borderRadius: 6, padding: "10px 14px", color: "#fff", background: "#111827", fontWeight: 800, cursor: "pointer" } satisfies CSSProperties;
+const dangerButtonStyle = { ...primaryButtonStyle, background: "#991b1b" } satisfies CSSProperties;
 const checkboxLineStyle = { display: "flex", gap: 8, alignItems: "center", fontWeight: 700 } satisfies CSSProperties;
 const permissionSummaryStyle = { border: "1px solid #bfdbfe", borderRadius: 8, padding: 12, background: "#eff6ff", color: "#1e3a8a", display: "grid", gap: 4 } satisfies CSSProperties;
 const sectionHeaderStyle = { display: "flex", justifyContent: "space-between", alignItems: "start", gap: 12, flexWrap: "wrap" } satisfies CSSProperties;
 const contextPanelStyle = { border: "1px solid #cbd5e1", borderRadius: 8, padding: 14, display: "grid", gap: 12, background: "#f8fafc" } satisfies CSSProperties;
 const actionsCellStyle = { display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" } satisfies CSSProperties;
 const actionRowStyle = { display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" } satisfies CSSProperties;
+const detailGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10 } satisfies CSSProperties;
+const detailItemStyle = { display: "grid", gap: 4, border: "1px solid #e2e8f0", borderRadius: 8, padding: 10, background: "#fff", minWidth: 0 } satisfies CSSProperties;
+const eventListStyle = { margin: 0, paddingLeft: 18, display: "grid", gap: 8 } satisfies CSSProperties;
 const compactFilterStyle = { ...panelStyle, display: "grid", gridTemplateColumns: "minmax(220px, 1.5fr) repeat(4, minmax(150px, 1fr)) auto", gap: 10, alignItems: "end" } satisfies CSSProperties;
 const contextNavStyle = { display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 } satisfies CSSProperties;
 const labelStyle = { display: "grid", gap: 5, color: "#334155", fontSize: 13, fontWeight: 700 } satisfies CSSProperties;

@@ -25,6 +25,7 @@ export type AdminCapability =
   | "admin_users:manage"
   | "users:lookup"
   | "support:read"
+  | "support:manage"
   | "verification:read"
   | "verification:review"
   | "verification:decide"
@@ -68,6 +69,7 @@ const ADMIN_ROLE_CAPABILITIES: Record<AdminRole, AdminCapability[]> = {
     "admin_users:manage",
     "users:lookup",
     "support:read",
+    "support:manage",
     "verification:read",
     "verification:review",
     "verification:decide",
@@ -101,6 +103,7 @@ const ADMIN_ROLE_CAPABILITIES: Record<AdminRole, AdminCapability[]> = {
     "admin_shell:view",
     "users:lookup",
     "support:read",
+    "support:manage",
     "audit:write",
   ],
   verification_reviewer: [

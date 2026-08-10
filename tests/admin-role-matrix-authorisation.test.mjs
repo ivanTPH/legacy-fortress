@@ -68,11 +68,13 @@ test("platform role capability mapping follows least privilege matrix", () => {
 
   assert.ok(capabilities.hasAdminCapability("support_agent", "users:lookup"));
   assert.ok(capabilities.hasAdminCapability("support_agent", "support:read"));
+  assert.ok(capabilities.hasAdminCapability("support_agent", "support:manage"));
   assert.equal(capabilities.hasAdminCapability("support_agent", "admin_users:manage"), false);
   assert.equal(capabilities.hasAdminCapability("support_agent", "verification:decide"), false);
   assert.equal(capabilities.hasAdminCapability("support_agent", "licence:edit"), false);
 
   assert.ok(capabilities.hasAdminCapability("probate_reviewer", "verification:decide"));
+  assert.equal(capabilities.hasAdminCapability("probate_reviewer", "support:manage"), false);
   assert.equal(capabilities.hasAdminCapability("probate_reviewer", "admin_users:manage"), false);
   assert.equal(capabilities.hasAdminCapability("probate_reviewer", "licence:edit"), false);
 
