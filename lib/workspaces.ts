@@ -28,6 +28,13 @@ export type WorkspaceRouteOptions = {
   currentRole?: PlatformRole | null;
 };
 
+const ENTERPRISE_WORKSPACE_ROLES = new Set<PlatformRole>([
+  "enterprise_admin",
+  "enterprise_viewer",
+  "partner_organisation_user",
+  "licensing_admin",
+]);
+
 export function buildPrototypeWorkspaceUrl(workspace: WorkspaceId, options: WorkspaceRouteOptions = {}) {
   if (workspace === "application") {
     if (options.prototype && options.currentRole) {
@@ -120,10 +127,10 @@ export function getAvailableWorkspaces(
       id: "enterprise_admin",
       label: "Enterprise Operations",
       shortLabel: "Enterprise",
-      description: "Organisation licensing, reporting, and commercial signals.",
+      description: "Your authorised enterprise organisation context, licensing, reporting, and commercial signals.",
       href: buildPrototypeWorkspaceUrl("enterprise_admin", { ...options, currentRole: primaryRole }),
-      enabled: canAccessEnterpriseOperations(roles),
-      requiredRole: "enterprise_admin, licensing_admin, or super_admin",
+      enabled: roles.some((role) => ENTERPRISE_WORKSPACE_ROLES.has(role)) && canAccessEnterpriseOperations(roles),
+      requiredRole: "enterprise_admin, enterprise_viewer, partner_organisation_user, or licensing_admin",
       roleContext: primaryRole === "licensing_admin" ? "licensing_admin" : "enterprise_admin",
     },
     {

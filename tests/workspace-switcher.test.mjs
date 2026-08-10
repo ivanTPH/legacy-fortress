@@ -20,19 +20,16 @@ test("workspace route map resolves role-aware admin and application workspaces c
   assert.deepEqual(superAdmin.map((workspace) => workspace.id), [
     "application",
     "super_admin",
-    "enterprise_admin",
     "probate_admin",
   ]);
   assert.deepEqual(superAdmin.map((workspace) => workspace.label), [
     "Personal Vault",
     "Platform Administration",
-    "Enterprise Operations",
     "Probate Review",
   ]);
   assert.deepEqual(superAdmin.map((workspace) => workspace.href), [
     "/user?role=super_admin&admin=true&prototype=true",
     "/admin",
-    "/application/enterprise",
     "/internal/admin/probate",
   ]);
   assert.equal(
@@ -47,6 +44,14 @@ test("workspace route map resolves role-aware admin and application workspaces c
   const enterprise = getAvailableWorkspaces(["enterprise_admin"], { prototype: true });
   assert.deepEqual(enterprise.map((workspace) => workspace.id), ["application", "enterprise_admin"]);
 
+  const combined = getAvailableWorkspaces(["super_admin", "enterprise_admin"], { prototype: true });
+  assert.deepEqual(combined.map((workspace) => workspace.id), [
+    "application",
+    "super_admin",
+    "enterprise_admin",
+    "probate_admin",
+  ]);
+
   const probate = getAvailableWorkspaces(["probate_admin"], { prototype: true });
   assert.deepEqual(probate.map((workspace) => workspace.id), ["application", "probate_admin"]);
 
@@ -59,13 +64,12 @@ test("workspace route map resolves role-aware admin and application workspaces c
   assert.equal(buildPrototypeWorkspaceUrl("contact_wallet"), "/contact-wallet");
 });
 
-test("master admin email keeps application and enterprise workspaces visible together", () => {
+test("master admin email stays in platform context unless an enterprise role is present", () => {
   const roles = mergePlatformRoles(["consumer_user"], getMasterAdminRolesForEmail("IVANYARDLEY@ME.COM"));
   assert.deepEqual(roles, ["consumer_user", "super_admin"]);
   assert.deepEqual(getAvailableWorkspaces(roles).map((workspace) => workspace.id), [
     "application",
     "super_admin",
-    "enterprise_admin",
     "probate_admin",
   ]);
 });
