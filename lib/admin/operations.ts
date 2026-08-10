@@ -107,6 +107,48 @@ export type AdminLookupResult = {
   };
 };
 
+export type AdminUserOperationalDetail = AdminLookupResult & {
+  profile: {
+    displayName: string | null;
+    hasProfile: boolean;
+  };
+  contacts: Array<{
+    id: string;
+    fullName: string;
+    email: string | null;
+    relationship: string | null;
+    inviteStatus: string | null;
+    verificationStatus: string | null;
+  }>;
+  invitations: Array<{
+    id: string;
+    contactName: string;
+    contactEmail: string | null;
+    assignedRole: string;
+    invitationStatus: string;
+    sentAt: string | null;
+    acceptedAt: string | null;
+    revokedAt: string | null;
+  }>;
+  accessGrants: Array<{
+    id: string;
+    invitationId: string | null;
+    activationStatus: string;
+    updatedAt: string | null;
+  }>;
+  verificationRequests: Array<{
+    id: string;
+    requestType: string;
+    requestStatus: string;
+    submittedAt: string;
+    reviewedAt: string | null;
+  }>;
+  unavailableActions: Array<{
+    action: string;
+    reason: string;
+  }>;
+};
+
 export type AdminVerificationItem = {
   id: string;
   ownerUserId: string;
@@ -636,6 +678,147 @@ export async function lookupUsers(client: AnySupabaseClient, query: string) {
   );
 
   return results;
+}
+
+export async function loadUserOperationalDetail(client: AnySupabaseClient, userId: string) {
+  const id = String(userId ?? "").trim();
+  if (!id) throw adminLifecycleError("ADMIN_INVALID_STATUS", "missing_user_id");
+
+  const authRes = await client.auth.admin.getUserById(id);
+  if (authRes.error || !authRes.data?.user) {
+    throw adminLifecycleError("ADMIN_OPERATION_CONFLICT", "user_not_found");
+  }
+  const user = authRes.data.user as AuthListUser;
+
+  const [
+    profileRes,
+    billingRes,
+    contactsRes,
+    invitationsRes,
+    grantsRes,
+    verificationRes,
+    assets,
+    documents,
+  ] = await Promise.all([
+    client.from("user_profiles").select("user_id,display_name").eq("user_id", id).maybeSingle(),
+    client.from("billing_profiles").select("user_id,account_plan,plan_status,monthly_charge,billing_currency").eq("user_id", id).maybeSingle(),
+    client
+      .from("contacts")
+      .select("id,full_name,email,relationship,invite_status,verification_status")
+      .eq("owner_user_id", id)
+      .order("updated_at", { ascending: false })
+      .limit(20),
+    client
+      .from("contact_invitations")
+      .select("id,contact_name,contact_email,assigned_role,invitation_status,sent_at,accepted_at,revoked_at")
+      .eq("owner_user_id", id)
+      .order("updated_at", { ascending: false })
+      .limit(20),
+    client
+      .from("account_access_grants")
+      .select("id,invitation_id,activation_status,updated_at")
+      .eq("owner_user_id", id)
+      .order("updated_at", { ascending: false })
+      .limit(20),
+    client
+      .from("verification_requests")
+      .select("id,request_type,request_status,submitted_at,reviewed_at")
+      .eq("owner_user_id", id)
+      .order("submitted_at", { ascending: false })
+      .limit(20),
+    countRows(client, "assets", "owner_user_id", id),
+    countRows(client, "documents", "owner_user_id", id),
+  ]);
+
+  if (profileRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", profileRes.error.message);
+  if (billingRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", billingRes.error.message);
+  if (contactsRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", contactsRes.error.message);
+  if (invitationsRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", invitationsRes.error.message);
+  if (grantsRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", grantsRes.error.message);
+  if (verificationRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", verificationRes.error.message);
+
+  const profile = profileRes.data as UserProfileRow | null;
+  const billing = billingRes.data as BillingProfileRow | null;
+  const contacts = (contactsRes.data ?? []) as Array<ContactRow & { invite_status?: string | null; verification_status?: string | null }>;
+  const invitations = (invitationsRes.data ?? []) as ContactInvitationRow[];
+  const grants = (grantsRes.data ?? []) as Array<Record<string, unknown>>;
+  const verifications = (verificationRes.data ?? []) as Array<Record<string, unknown>>;
+  const displayName =
+    String(profile?.display_name ?? "").trim()
+    || String(user.user_metadata?.display_name ?? user.user_metadata?.full_name ?? "").trim()
+    || "Unnamed user";
+
+  return {
+    userId: id,
+    email: String(user.email ?? ""),
+    displayName,
+    createdAt: String(user.created_at ?? ""),
+    lastSignInAt: String(user.last_sign_in_at ?? ""),
+    hasProfile: Boolean(profile?.display_name),
+    profile: {
+      displayName: profile?.display_name ?? null,
+      hasProfile: Boolean(profile?.display_name),
+    },
+    counts: {
+      assets,
+      documents,
+      contacts: contacts.length,
+      invitations: invitations.length,
+      linkedAccessGrants: grants.length,
+      verificationRequests: verifications.length,
+    },
+    commercial: {
+      accountPlan: String(billing?.account_plan ?? "starter"),
+      planStatus: String(billing?.plan_status ?? "active"),
+      monthlyCharge: Number(billing?.monthly_charge ?? 0),
+      billingCurrency: String(billing?.billing_currency ?? "GBP"),
+    },
+    contacts: contacts.map((row) => ({
+      id: row.id,
+      fullName: row.full_name,
+      email: row.email,
+      relationship: row.relationship,
+      inviteStatus: row.invite_status ?? null,
+      verificationStatus: row.verification_status ?? null,
+    })),
+    invitations: invitations.map((row) => ({
+      id: row.id,
+      contactName: row.contact_name ?? "Unknown contact",
+      contactEmail: row.contact_email ?? null,
+      assignedRole: row.assigned_role ?? "professional_advisor",
+      invitationStatus: row.invitation_status,
+      sentAt: row.sent_at ?? null,
+      acceptedAt: row.accepted_at ?? null,
+      revokedAt: row.revoked_at ?? null,
+    })),
+    accessGrants: grants.map((row) => ({
+      id: String(row.id ?? ""),
+      invitationId: typeof row.invitation_id === "string" ? row.invitation_id : null,
+      activationStatus: String(row.activation_status ?? ""),
+      updatedAt: typeof row.updated_at === "string" ? row.updated_at : null,
+    })),
+    verificationRequests: verifications.map((row) => ({
+      id: String(row.id ?? ""),
+      requestType: String(row.request_type ?? ""),
+      requestStatus: String(row.request_status ?? ""),
+      submittedAt: String(row.submitted_at ?? ""),
+      reviewedAt: typeof row.reviewed_at === "string" ? row.reviewed_at : null,
+    })),
+    unavailableActions: [
+      {
+        action: "Inline user audit timeline",
+        reason: "Use the canonical Audit history page; the user detail service does not duplicate audit retrieval.",
+      },
+      {
+        action: "Suspend or restrict account",
+        reason: "No canonical customer account suspension mutation is implemented for Platform Administration yet.",
+      },
+      {
+        action: "Impersonate user",
+        reason: "Impersonation is intentionally unavailable; administrators must not enter private vault contexts.",
+      },
+    ],
+  } satisfies AdminUserOperationalDetail;
 }
 
 export async function loadVerificationQueue(client: AnySupabaseClient) {

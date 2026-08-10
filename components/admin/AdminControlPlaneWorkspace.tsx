@@ -307,7 +307,50 @@ type LookupUser = {
     contacts: number;
     invitations: number;
     linkedAccessGrants: number;
+    verificationRequests: number;
   };
+};
+
+type UserOperationalDetail = LookupUser & {
+  profile: {
+    displayName: string | null;
+    hasProfile: boolean;
+  };
+  contacts: Array<{
+    id: string;
+    fullName: string;
+    email: string | null;
+    relationship: string | null;
+    inviteStatus: string | null;
+    verificationStatus: string | null;
+  }>;
+  invitations: Array<{
+    id: string;
+    contactName: string;
+    contactEmail: string | null;
+    assignedRole: string;
+    invitationStatus: string;
+    sentAt: string | null;
+    acceptedAt: string | null;
+    revokedAt: string | null;
+  }>;
+  accessGrants: Array<{
+    id: string;
+    invitationId: string | null;
+    activationStatus: string;
+    updatedAt: string | null;
+  }>;
+  verificationRequests: Array<{
+    id: string;
+    requestType: string;
+    requestStatus: string;
+    submittedAt: string;
+    reviewedAt: string | null;
+  }>;
+  unavailableActions: Array<{
+    action: string;
+    reason: string;
+  }>;
 };
 
 type HealthState = {
@@ -461,6 +504,8 @@ export default function AdminControlPlaneWorkspace({
   const [enterprisePlanFilter, setEnterprisePlanFilter] = useState("");
   const [lookupQuery, setLookupQuery] = useState("");
   const [lookupResults, setLookupResults] = useState<LookupUser[]>([]);
+  const [userDetail, setUserDetail] = useState<UserOperationalDetail | null>(null);
+  const [userDetailLoading, setUserDetailLoading] = useState(false);
   const [auditFilter, setAuditFilter] = useState("");
   const [adminFilter, setAdminFilter] = useState<"real-active" | "all" | "synthetic" | "inactive">("real-active");
   const [adminInviteForm, setAdminInviteForm] = useState({
@@ -574,6 +619,7 @@ export default function AdminControlPlaneWorkspace({
     setAuditEvents([]);
     setEnterprisePortfolio(null);
     setLookupResults([]);
+    setUserDetail(null);
     await supabase.auth.signOut();
     router.replace("/sign-in");
     router.refresh();
@@ -594,6 +640,28 @@ export default function AdminControlPlaneWorkspace({
     }
     setLookupResults(json.users ?? []);
   }
+
+  const loadUserDetail = useCallback(async (userId: string) => {
+    setMessage("");
+    setUserDetailLoading(true);
+    const res = await authFetch(`/api/internal/admin/users/${encodeURIComponent(userId)}`);
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; detail?: UserOperationalDetail; message?: string; code?: string };
+    setUserDetailLoading(false);
+    if (!res.ok || !json.ok || !json.detail) {
+      setMessage(json.message || json.code || "Could not load user detail.");
+      setUserDetail(null);
+      return;
+    }
+    setUserDetail(json.detail);
+  }, [authFetch]);
+
+  useEffect(() => {
+    if (state !== "ready" || section !== "user-detail" || !resourceId) return;
+    const timer = window.setTimeout(() => {
+      void loadUserDetail(resourceId);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadUserDetail, resourceId, section, state]);
 
   async function sendAdminInvitation() {
     setMessage("");
@@ -768,7 +836,7 @@ export default function AdminControlPlaneWorkspace({
         {section === "licences" ? renderPlatformLicences(enterpriseViews) : null}
         {section === "licence-detail" ? renderPlatformLicenceDetail(resourceId, enterprisePortfolio) : null}
         {section === "admin-users" || section === "admin-user-detail" ? renderAdminUsers(admins, adminInvitations, adminFilter, setAdminFilter, adminInviteForm, setAdminInviteForm, sendAdminInvitation, adminInviteOpen, setAdminInviteOpen, adminLifecycleForm, setAdminLifecycleForm, runAdminLifecycle, runAdminInvitationLifecycle, resourceId) : null}
-        {section === "users" || section === "user-detail" ? renderUsers(lookupQuery, setLookupQuery, lookupResults, runLookup, resourceId) : null}
+        {section === "users" || section === "user-detail" ? renderUsers(lookupQuery, setLookupQuery, lookupResults, runLookup, resourceId, userDetail, userDetailLoading) : null}
         {section === "support" || section === "invitations" || section === "access" ? renderSupport(section, support, supportDetail, supportDetailLoading, supportActionLoading, loadSupportInvitationDetail, runSupportInvitationAction, capabilities) : null}
         {section === "verification" || section === "verification-detail" ? renderVerification(verificationQueue, resourceId) : null}
         {section === "probate" || section === "probate-detail" ? renderProbate(probateCases, resourceId) : null}
@@ -1517,8 +1585,9 @@ function renderUsers(
   results: LookupUser[],
   runLookup: (query?: string) => Promise<void>,
   resourceId: string | null,
+  detail: UserOperationalDetail | null,
+  detailLoading: boolean,
 ) {
-  const selected = resourceId ? results.find((item) => item.userId === resourceId) : null;
   return (
     <div style={stackStyle}>
       <section style={toolbarStyle}>
@@ -1527,12 +1596,7 @@ function renderUsers(
         </label>
         <button type="button" onClick={() => void runLookup()}>Search</button>
       </section>
-      {selected ? (
-        <section style={panelStyle}>
-          <h2 style={h2Style}>{selected.displayName}</h2>
-          <p style={mutedStyle}>Privacy-bounded account summary. Secure notes, document contents, storage paths and recovery data are not exposed.</p>
-        </section>
-      ) : null}
+      {resourceId ? renderUserOperationalDetail(detail, detailLoading, resourceId) : null}
       <section style={panelStyle}>
         <h2 style={h2Style}>Safe lookup results</h2>
         <AdminDataTable
@@ -1554,6 +1618,11 @@ function renderUsers(
               render: (item) => `Assets ${item.counts.assets} · Documents ${item.counts.documents} · Contacts ${item.counts.contacts}`,
             },
             { key: "last-sign-in", header: "Last sign-in", render: (item) => formatDate(item.lastSignInAt ?? "") },
+            {
+              key: "actions",
+              header: "Actions",
+              render: (item) => <Link href={`/admin/users/${encodeURIComponent(item.userId)}`} prefetch={false}>View</Link>,
+            },
           ]}
           rows={results}
           getRowKey={(item) => item.userId}
@@ -1561,6 +1630,112 @@ function renderUsers(
         />
       </section>
     </div>
+  );
+}
+
+function renderUserOperationalDetail(detail: UserOperationalDetail | null, loading: boolean, userId: string) {
+  if (loading) {
+    return (
+      <section style={panelStyle} aria-live="polite">
+        <h2 style={h2Style}>Loading user detail</h2>
+        <p style={mutedStyle}>Fetching privacy-bounded operational metadata.</p>
+      </section>
+    );
+  }
+
+  if (!detail) {
+    return (
+      <section style={panelStyle}>
+        <h2 style={h2Style}>User detail unavailable</h2>
+        <p style={mutedStyle}>No safe operational detail is loaded for user `{userId}`. Search for the user or check that the account exists.</p>
+      </section>
+    );
+  }
+
+  return (
+    <section style={panelStyle}>
+      <div style={sectionHeaderStyle}>
+        <div>
+          <h2 style={h2Style}>{detail.displayName}</h2>
+          <p style={mutedStyle}>{detail.email || "No email recorded"} · created {formatDate(detail.createdAt)} · last sign-in {formatDate(detail.lastSignInAt ?? "")}</p>
+        </div>
+        <AdminStatusBadge status={detail.commercial.planStatus} />
+      </div>
+      <p style={mutedStyle}>Privacy-bounded account summary. Secure notes, document contents, storage paths and recovery data are not exposed.</p>
+      <div style={gridStyle}>
+        <Metric label="Assets" value={detail.counts.assets} />
+        <Metric label="Documents" value={detail.counts.documents} />
+        <Metric label="Contacts" value={detail.counts.contacts} />
+        <Metric label="Invitations" value={detail.counts.invitations} />
+        <Metric label="Linked access grants" value={detail.counts.linkedAccessGrants} />
+        <Metric label="Verification requests" value={detail.counts.verificationRequests} />
+      </div>
+      <div style={detailGridStyle}>
+        <Detail label="Account plan" value={detail.commercial.accountPlan.replace(/_/g, " ")} />
+        <Detail label="Plan status" value={detail.commercial.planStatus.replace(/_/g, " ")} />
+        <Detail label="Profile" value={detail.profile.hasProfile ? detail.profile.displayName || "Profile present" : "Profile missing"} />
+        <Detail label="Monthly charge" value={`${detail.commercial.billingCurrency} ${detail.commercial.monthlyCharge}`} />
+      </div>
+      <section style={contextPanelStyle}>
+        <h3 style={h3Style}>Contacts and linked access</h3>
+        <AdminDataTable
+          caption="User contacts and linked access"
+          columns={[
+            { key: "contact", header: "Contact", render: (item) => <>{item.fullName}<small>{item.email || "No email"} · {item.relationship || "Relationship not recorded"}</small></> },
+            { key: "invite", header: "Invite", render: (item) => <AdminStatusBadge status={item.inviteStatus || "not invited"} /> },
+            { key: "verification", header: "Verification", render: (item) => <AdminStatusBadge status={item.verificationStatus || "not started"} /> },
+          ]}
+          rows={detail.contacts}
+          getRowKey={(item) => item.id}
+          emptyState={<AdminEmptyState title="No contacts found">No contact records are linked to this account.</AdminEmptyState>}
+        />
+      </section>
+      <section style={contextPanelStyle}>
+        <h3 style={h3Style}>Invitations</h3>
+        <AdminDataTable
+          caption="User invitations"
+          columns={[
+            { key: "recipient", header: "Recipient", render: (item) => <>{item.contactName}<small>{item.contactEmail || "No email"} · {item.assignedRole.replace(/_/g, " ")}</small></> },
+            { key: "status", header: "Status", render: (item) => <AdminStatusBadge status={item.invitationStatus} /> },
+            { key: "sent", header: "Sent", render: (item) => formatDate(item.sentAt) },
+            { key: "actions", header: "Actions", render: () => <Link href="/admin/support" prefetch={false}>Open support queue</Link> },
+          ]}
+          rows={detail.invitations}
+          getRowKey={(item) => item.id}
+          emptyState={<AdminEmptyState title="No invitations found">No invitations have been created for this account.</AdminEmptyState>}
+        />
+      </section>
+      <section style={contextPanelStyle}>
+        <h3 style={h3Style}>Verification requests</h3>
+        <AdminDataTable
+          caption="User verification requests"
+          columns={[
+            { key: "type", header: "Type", render: (item) => item.requestType.replace(/_/g, " ") },
+            { key: "status", header: "Status", render: (item) => <AdminStatusBadge status={item.requestStatus} /> },
+            { key: "submitted", header: "Submitted", render: (item) => formatDate(item.submittedAt) },
+          ]}
+          rows={detail.verificationRequests}
+          getRowKey={(item) => item.id}
+          emptyState={<AdminEmptyState title="No verification requests">No executor or probate verification requests are linked to this account.</AdminEmptyState>}
+        />
+      </section>
+      <section style={contextPanelStyle}>
+        <h3 style={h3Style}>Unavailable actions</h3>
+        <ul style={eventListStyle}>
+          {detail.unavailableActions.map((item) => (
+            <li key={item.action}>
+              <strong>{item.action}</strong>
+              <small>{item.reason}</small>
+            </li>
+          ))}
+        </ul>
+      </section>
+      <section style={contextPanelStyle}>
+        <h3 style={h3Style}>Audit history</h3>
+        <p style={mutedStyle}>Use the canonical audit page for filtered event review. This detail page records that it was inspected but does not duplicate audit-history retrieval.</p>
+        <Link href="/admin/audit" prefetch={false}>Open audit history</Link>
+      </section>
+    </section>
   );
 }
 
