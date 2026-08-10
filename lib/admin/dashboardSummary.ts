@@ -34,6 +34,7 @@ type CountQuery = PromiseLike<CountResult> & {
   neq: (column: string, value: unknown) => CountQuery;
   in: (column: string, values: unknown[]) => CountQuery;
   lt: (column: string, value: unknown) => CountQuery;
+  not: (column: string, operator: string, value: unknown) => CountQuery;
 };
 
 const FIVE_YEARS_MS = 1000 * 60 * 60 * 24 * 365 * 5;
@@ -114,9 +115,7 @@ async function buildAdminDashboardMetrics(client: AnySupabaseClient, generatedAt
     ),
     safeCount("oldDocuments", "documents", (query) => query.lt("updated_at", staleThresholdIso())),
     countUsersWithoutExecutor(client),
-    safeCount("pendingInvitations", "contact_invitations", (query) =>
-      query.in("invitation_status", ["pending"]),
-    ),
+    safeCount("pendingInvitations", "contact_invitations", (query) => query.eq("invitation_status", "pending").not("sent_at", "is", null)),
     safeCount("failedEmails", "invitation_events", (query) => query.in("event_type", ["failed", "bounced", "delivery_failed"])),
     safeCount("pendingProbateReviews", "probate_cases", (query) => query.in("status", ["submitted", "needs_information", "under_review"])),
     safeCount("openSupportIssues", "support_cases", (query) => query.in("status", ["open", "pending", "escalated"])),

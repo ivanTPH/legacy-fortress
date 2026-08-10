@@ -56,6 +56,7 @@ type ContactInvitationRow = {
   contact_name: string | null;
   contact_email: string | null;
   invitation_status: string;
+  sent_at?: string | null;
   owner_user_id: string;
 };
 
@@ -116,6 +117,7 @@ export type AdminVerificationItem = {
 export type AdminSupportSnapshot = {
   counts: {
     pendingInvitations: number;
+    readyToSendInvitations: number;
     verificationAwaitingReview: number;
     linkedAccountsActive: number;
     invitationIssues: number;
@@ -128,6 +130,7 @@ export type AdminSupportSnapshot = {
     contactEmail: string;
     assignedRole: string;
     invitationStatus: string;
+    sentAt: string | null;
     activationStatus: string;
     issueLabel: string;
   }>;
@@ -190,6 +193,7 @@ export function buildSupportIssueLabel(invitationStatus: string, activationStatu
   const invite = String(invitationStatus ?? "").trim().toLowerCase();
   const activation = String(activationStatus ?? "").trim().toLowerCase();
   if (invite === "pending") return "Invitation still pending";
+  if (invite === "failed" || invite === "delivery_failed") return "Invitation delivery failed";
   if (activation === "verification_submitted") return "Awaiting verification review";
   if (activation === "pending_verification") return "Verification still pending";
   if (activation === "accepted") return "Accepted access awaiting activation";
@@ -767,13 +771,14 @@ export async function applyVerificationAction(
 }
 
 export async function loadSupportSnapshot(client: AnySupabaseClient) {
-  const [pendingInvitations, verificationAwaitingReview, linkedAccountsActive, invitationRowsRes, roleRowsRes, ownerProfilesRes] = await Promise.all([
-    countRows(client, "contact_invitations", "invitation_status", "pending"),
+  const [pendingInvitations, readyToSendInvitations, verificationAwaitingReview, linkedAccountsActive, invitationRowsRes, roleRowsRes, ownerProfilesRes] = await Promise.all([
+    countSentPendingContactInvitations(client),
+    countReadyToSendContactInvitations(client),
     countRowsIn(client, "verification_requests", "request_status", ["pending", "submitted"]),
     countRowsIn(client, "account_access_grants", "activation_status", ["accepted", "verified", "active"]),
     client
       .from("contact_invitations")
-      .select("id,contact_id,contact_name,contact_email,invitation_status,owner_user_id")
+      .select("id,contact_id,contact_name,contact_email,invitation_status,sent_at,owner_user_id")
       .order("updated_at", { ascending: false })
       .limit(40),
     client
@@ -803,16 +808,22 @@ export async function loadSupportSnapshot(client: AnySupabaseClient) {
         contactEmail: invitation.contact_email ?? "",
         assignedRole: role?.assigned_role ?? "professional_advisor",
         invitationStatus: invitation.invitation_status,
+        sentAt: invitation.sent_at ?? null,
         activationStatus: role?.activation_status ?? "invited",
         issueLabel,
       };
     })
-    .filter((item) => item.invitationStatus === "pending" || ["accepted", "pending_verification", "verification_submitted", "rejected"].includes(item.activationStatus))
+    .filter((item) =>
+      (item.invitationStatus === "pending" && Boolean(item.sentAt))
+      || ["failed", "delivery_failed"].includes(item.invitationStatus)
+      || ["accepted", "pending_verification", "verification_submitted", "rejected"].includes(item.activationStatus)
+    )
     .slice(0, 12);
 
   return {
     counts: {
       pendingInvitations,
+      readyToSendInvitations,
       verificationAwaitingReview,
       linkedAccountsActive,
       invitationIssues: issues.length,
@@ -829,6 +840,26 @@ async function countRows(client: AnySupabaseClient, table: string, column: strin
 
 async function countRowsIn(client: AnySupabaseClient, table: string, column: string, values: string[]) {
   const res = await client.from(table).select("id", { count: "exact", head: true }).in(column, values);
+  if (res.error) return 0;
+  return res.count ?? 0;
+}
+
+async function countSentPendingContactInvitations(client: AnySupabaseClient) {
+  const res = await client
+    .from("contact_invitations")
+    .select("id", { count: "exact", head: true })
+    .eq("invitation_status", "pending")
+    .not("sent_at", "is", null);
+  if (res.error) return 0;
+  return res.count ?? 0;
+}
+
+async function countReadyToSendContactInvitations(client: AnySupabaseClient) {
+  const res = await client
+    .from("contact_invitations")
+    .select("id", { count: "exact", head: true })
+    .eq("invitation_status", "pending")
+    .is("sent_at", null);
   if (res.error) return 0;
   return res.count ?? 0;
 }

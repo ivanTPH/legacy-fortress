@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 
 const {
   MASTER_ADMIN_EMAIL,
@@ -47,8 +49,19 @@ test("verification mutation maps approve reject and review actions safely", () =
 
 test("support issue labels stay human-readable", () => {
   assert.equal(buildSupportIssueLabel("pending", "invited"), "Invitation still pending");
+  assert.equal(buildSupportIssueLabel("failed", "invited"), "Invitation delivery failed");
   assert.equal(buildSupportIssueLabel("accepted", "verification_submitted"), "Awaiting verification review");
   assert.equal(buildSupportIssueLabel("accepted", "accepted"), "Accepted access awaiting activation");
+});
+
+test("admin support snapshot distinguishes sent pending invites from saved unsent setups", () => {
+  const source = fs.readFileSync(path.join(process.cwd(), "lib/admin/operations.ts"), "utf8");
+
+  assert.match(source, /countSentPendingContactInvitations/);
+  assert.match(source, /countReadyToSendContactInvitations/);
+  assert.match(source, /\.not\("sent_at", "is", null\)/);
+  assert.match(source, /\.is\("sent_at", null\)/);
+  assert.match(source, /item\.invitationStatus === "pending" && Boolean\(item\.sentAt\)/);
 });
 
 test("admin lifecycle actions are explicitly normalised", () => {

@@ -79,6 +79,7 @@ type AdminVerificationItem = {
 type AdminSupportSnapshot = {
   counts: {
     pendingInvitations: number;
+    readyToSendInvitations?: number;
     verificationAwaitingReview: number;
     linkedAccountsActive: number;
     invitationIssues: number;
@@ -398,6 +399,7 @@ export default function AdminOpsWorkspace() {
     if (!support) return [];
     return [
       { label: "Pending invitations", value: support.counts.pendingInvitations },
+      { label: "Ready to send", value: support.counts.readyToSendInvitations ?? 0 },
       { label: "Verification awaiting review", value: support.counts.verificationAwaitingReview },
       { label: "Active linked accounts", value: support.counts.linkedAccountsActive },
       { label: "Invitation / access issues", value: support.counts.invitationIssues },

@@ -41,6 +41,20 @@ test("Shared invitation sender records delivery failure without deleting saved c
   assert.doesNotMatch(sender, /\.delete\(\)[\s\S]*contact_invitations/);
 });
 
+test("Shared invitation sender does not retain reusable invitation links or token hints in events", () => {
+  const eventWriters = [
+    read("lib/contacts/sendContactInvite.ts"),
+    read("scripts/smoke-contacts-invitations.mjs"),
+    read("scripts/smoke-invitation-linked-access.mjs"),
+  ].join("\n");
+
+  assert.match(eventWriters, /accept_route: "\/invite\/accept"/);
+  assert.match(eventWriters, /channel: "supabase_auth_otp"/);
+  assert.doesNotMatch(eventWriters, /token_hint/);
+  assert.doesNotMatch(eventWriters, /body_text:/);
+  assert.doesNotMatch(eventWriters, /accept_path:/);
+});
+
 test("Trust invite migration supports failed statuses, trustee role, and locked acceptance", () => {
   const migration = read("supabase/migrations/20260710120000_trust_contact_auto_invitation.sql");
 

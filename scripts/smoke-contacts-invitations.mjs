@@ -134,8 +134,8 @@ async function sendAndVerifyInvitation(resend) {
   const afterEvents = await countInvitationEvents(invitationId, resend ? "resent" : "sent");
   assert.equal(afterEvents > beforeEvents, true);
   const event = await latestInvitationEvent(invitationId, resend ? "resent" : "sent");
-  assert.match(String(event?.payload?.body_text ?? ""), /view-only, role-based access/i);
-  acceptPath = String(event?.payload?.accept_path ?? acceptPath);
+  assert.equal(Boolean(event?.payload?.subject), true);
+  assert.equal(event?.payload?.accept_route, "/invite/accept");
   assert.match(acceptPath, /^\/invite\/accept\?/);
 }
 
@@ -256,6 +256,7 @@ async function sendInviteForSmoke(client, input) {
   const token = crypto.randomUUID().replace(/-/g, "");
   const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
   const nextAcceptPath = `/invite/accept?${new URLSearchParams({ invitation: input.invitationId, token }).toString()}`;
+  acceptPath = nextAcceptPath;
 
   const delivery = await client.auth.signInWithOtp({
     email: contactEmailValue,
@@ -303,13 +304,11 @@ async function sendInviteForSmoke(client, input) {
     event_type: input.resend ? "resent" : "sent",
     payload: {
       contact_email: contactEmailValue,
-      token_hint: token.slice(-6),
       subject: `You have been invited as ${input.assignedRole.replace(/_/g, " ")}`,
       preview: "Legacy Fortress trusted access invitation",
-      body_text: deliveryRateLimited
-        ? "Email delivery was rate-limited in smoke test, but this secure invite keeps view-only, role-based access verifiable."
-        : "You have been given view-only, role-based access to review shared estate records and documents.",
-      accept_path: nextAcceptPath,
+      channel: "supabase_auth_otp",
+      accept_route: "/invite/accept",
+      email_redirect_configured: Boolean(input.origin),
       delivery_warning: deliveryRateLimited ? delivery.error.message : null,
     },
   });

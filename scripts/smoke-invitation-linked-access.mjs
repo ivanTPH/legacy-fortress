@@ -106,11 +106,11 @@ try {
   const invitationEvent = await fetchInvitationEvent(ownerUserId, invitationId);
   assert.equal(Boolean(invitationEvent?.payload?.subject), true);
   assert.match(String(invitationEvent?.payload?.subject ?? ""), /You have been invited as/i);
-  assert.match(String(invitationEvent?.payload?.body_text ?? ""), /view-only, role-based access/i);
+  assert.equal(invitationEvent?.payload?.accept_route, "/invite/accept");
 
-  const acceptPath = String(invitationEvent?.payload?.accept_path ?? invitationAcceptPath ?? "");
+  const acceptPath = String(invitationAcceptPath ?? "");
   if (!acceptPath) {
-    throw new Error("Invitation event did not contain an accept path.");
+    throw new Error("Invitation accept path was not captured by the smoke harness.");
   }
   logStep(`accept path ready ${acceptPath}`);
 
@@ -284,16 +284,6 @@ async function generateFallbackInvitation(ownerUserId, existingInvitationId, ema
   const roleLabel = assignedRole.replace(/_/g, " ");
   const subject = `You have been invited as ${roleLabel} for ${accountHolderName}`;
   const preview = `View-only, role-based access has been prepared for ${accountHolderName}'s Legacy Fortress estate record.`;
-  const bodyText = [
-    `You have been invited as ${roleLabel} for ${accountHolderName}.`,
-    "",
-    "Legacy Fortress is a secure estate-record workspace that helps families, executors, trustees, and advisors find the records and documents they need when it matters.",
-    "",
-    "If you accept this invitation, you will receive view-only, role-based access to the records that have been shared with you. You will be able to review records, open attachments, and download documents, but you will not be able to edit or delete anything.",
-    "",
-    `Accept your secure invitation: ${invitationAcceptPath}`,
-  ].join("\n");
-
   const updateRes = await admin
     .from("contact_invitations")
     .update({
@@ -317,11 +307,10 @@ async function generateFallbackInvitation(ownerUserId, existingInvitationId, ema
     event_type: "sent",
     payload: {
       contact_email: email,
-      token_hint: token.slice(-6),
       subject,
       preview,
-      body_text: bodyText,
-      accept_path: invitationAcceptPath,
+      channel: "generated_link_fallback",
+      accept_route: "/invite/accept",
       delivery_mode: "generated_link_fallback",
     },
   });

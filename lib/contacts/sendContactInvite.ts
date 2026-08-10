@@ -156,11 +156,11 @@ export async function sendContactInvite(
     event_type: input.resend ? "resent" : "sent",
     payload: {
       contact_email: contactEmail,
-      token_hint: token.slice(-6),
       subject: emailDraft.subject,
       preview: emailDraft.preview,
-      body_text: emailDraft.bodyText,
-      accept_path: emailDraft.acceptPath,
+      channel: "supabase_auth_otp",
+      accept_route: "/invite/accept",
+      email_redirect_configured: Boolean(input.origin),
     },
   });
 

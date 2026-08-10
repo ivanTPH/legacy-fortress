@@ -174,6 +174,7 @@ type DashboardMetric = {
 type SupportSnapshot = {
   counts: {
     pendingInvitations: number;
+    readyToSendInvitations?: number;
     verificationAwaitingReview: number;
     linkedAccountsActive: number;
     invitationIssues: number;
@@ -749,6 +750,7 @@ function buildPlatformBreadcrumbs(section: AdminControlPlaneSection, resourceId:
 function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | null, verification: VerificationItem[], probate: ProbateCase[]) {
   const cards = [
     { label: "Pending invitations", value: support?.counts.pendingInvitations ?? null, href: "/admin/invitations?status=pending", source: "support snapshot" },
+    { label: "Ready to send", value: support?.counts.readyToSendInvitations ?? null, href: "/admin/invitations?status=ready", source: "saved contact invitations without dispatch" },
     { label: "Verification awaiting review", value: support?.counts.verificationAwaitingReview ?? verification.length, href: "/admin/verification?status=awaiting_review", source: "verification queue" },
     { label: "Probate cases", value: probate.length, href: "/admin/probate", source: "probate cases API" },
     { label: "Access issues", value: support?.counts.invitationIssues ?? null, href: "/admin/access?status=issue", source: "support snapshot" },
@@ -1477,6 +1479,7 @@ function renderSupport(section: AdminControlPlaneSection, support: SupportSnapsh
       <h2 style={h2Style}>{title}</h2>
       <div style={gridStyle}>
         <Metric label="Pending invitations" value={support?.counts.pendingInvitations ?? null} />
+        <Metric label="Ready to send" value={support?.counts.readyToSendInvitations ?? null} />
         <Metric label="Verification awaiting review" value={support?.counts.verificationAwaitingReview ?? null} />
         <Metric label="Active linked accounts" value={support?.counts.linkedAccountsActive ?? null} />
         <Metric label="Invitation/access issues" value={support?.counts.invitationIssues ?? null} />
