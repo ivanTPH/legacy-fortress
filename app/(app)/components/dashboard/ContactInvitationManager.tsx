@@ -728,6 +728,46 @@ export default function ContactInvitationManager({
                 })}
             </div>
           </div>
+          <div style={{ ...inlineActionPanelStyle, gridColumn: "1 / -1" }}>
+            <div style={{ display: "grid", gap: 3 }}>
+              <strong style={{ fontSize: 13, color: "#0f172a" }}>
+                Save this contact setup
+              </strong>
+              <span style={{ color: "#64748b", fontSize: 12 }}>
+                You can add the contact now. Record-level view/edit permissions remain available below for finer control.
+              </span>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                style={primaryBtnStyle}
+                title={editingId ? "Save contact changes" : draftContactId ? "Save this contact setup" : "Add this contact"}
+                disabled={saving}
+                onClick={() => void saveContact()}
+              >
+                <Icon name={(editingId || draftContactId) ? "save" : "person_add"} size={16} />
+                {saving ? "Saving..." : (editingId || draftContactId) ? "Save" : "Add contact"}
+              </button>
+              {!editingId && draftContactId && email.trim() ? (
+                <button type="button" style={ghostBtnStyle} title="Save this contact and send the invite email" disabled={saving} onClick={() => void saveContact({ sendAfterSave: true })}>
+                  <Icon name="send" size={16} />
+                  {saving ? "Saving..." : "Send invite"}
+                </button>
+              ) : null}
+              {editingId && currentEditingRow && canSendInvite(currentEditingRow) ? (
+                <button type="button" style={ghostBtnStyle} title={`Send invite to ${currentEditingRow.contact_email}`} disabled={saving} onClick={() => void sendInvite(currentEditingRow, false)}>
+                  <Icon name="send" size={16} />
+                  Send invite
+                </button>
+              ) : null}
+              {editingId && currentEditingRow && canResendInvite(currentEditingRow) ? (
+                <button type="button" style={ghostBtnStyle} title={`Send invite again to ${currentEditingRow.contact_email}`} disabled={saving} onClick={() => void sendInvite(currentEditingRow, true)}>
+                  <Icon name="forward_to_inbox" size={16} />
+                  Resend invite
+                </button>
+              ) : null}
+            </div>
+          </div>
           {allowedSections.length ? (
             <div style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
               <span style={fieldLabelStyle}>Linked records and document permissions</span>
@@ -1489,6 +1529,17 @@ const walletAllButtonStyle: CSSProperties = {
   alignItems: "center",
   gap: 7,
   width: "fit-content",
+};
+const inlineActionPanelStyle: CSSProperties = {
+  border: "1px solid #dbeafe",
+  background: "#eff6ff",
+  borderRadius: 14,
+  padding: 12,
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 12,
+  flexWrap: "wrap",
 };
 const inputStyle: CSSProperties = {
   width: "100%",
