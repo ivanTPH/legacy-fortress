@@ -95,8 +95,9 @@ test("organisation detail moves administrator invitation into a contextual panel
   assert.match(detail, /setInviteFormOpen\(false\)/);
   assert.match(detail, /supabase\.auth\.signOut\(\)/);
   assert.match(detail, /router\.replace\("\/sign-in"\)/);
-  assert.match(detail, /aria-label="Sign out of Legacy Fortress"/);
-  assert.match(detail, /Personal Vault/);
+  assert.match(detail, /AdminWorkspaceShell/);
+  assert.match(detail, /onSignOut=\{signOut\}/);
+  assert.match(detail, /stagingLabel="STAGING - synthetic test data may be present"/);
 });
 
 test("licence detail exposes canonical edit fields, seat protection messaging and sign-out", () => {
@@ -125,6 +126,46 @@ test("licence detail exposes canonical edit fields, seat protection messaging an
   }
   assert.match(detail, /supabase\.auth\.signOut\(\)/);
   assert.match(detail, /router\.replace\("\/sign-in"\)/);
-  assert.match(detail, /aria-label="Sign out of Legacy Fortress"/);
-  assert.match(detail, /Personal Vault/);
+  assert.match(detail, /AdminWorkspaceShell/);
+  assert.match(detail, /onSignOut=\{signOut\}/);
+  assert.match(detail, /stagingLabel="STAGING - synthetic test data may be present"/);
+});
+
+test("admin dashboard completion uses shared responsive primitives for operational queues", () => {
+  const workspace = read("components/admin/AdminControlPlaneWorkspace.tsx");
+  const audit = read("docs/admin/ADMIN_PRODUCT_AUDIT.md");
+
+  for (const caption of [
+    "Operational metrics",
+    "${title} table",
+    "Verification queue",
+    "Probate review queue",
+    "Admin audit history",
+    "Subsystem checks",
+  ]) {
+    const escaped = caption.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    assert.match(workspace, new RegExp(`caption=(?:"${escaped}|\\{\\\`${escaped})`));
+  }
+  assert.doesNotMatch(workspace, /Review action available in legacy case controls/);
+  assert.match(audit, /Action matrix totals for this phase: working 3, repaired 7, disabled\/deferred 0, blocked 1/);
+  assert.match(audit, /ADMIN-DASH-001/);
+});
+
+test("probate case detail exposes canonical decision controls without bypassing server rules", () => {
+  const workspace = read("components/admin/AdminControlPlaneWorkspace.tsx");
+  const route = read("app/api/internal/admin/probate-cases/[caseId]/actions/route.ts");
+
+  assert.match(workspace, /runProbateCaseAction/);
+  assert.match(workspace, /\/api\/internal\/admin\/probate-cases\/\$\{encodeURIComponent\(caseId\)\}\/actions/);
+  assert.match(workspace, /Decision notes are required before changing a probate case/);
+  assert.match(workspace, /Confirm \$\{action\.replace\(/);
+  assert.match(workspace, /setProbateCases\(\(current\) => current\.map/);
+  assert.match(workspace, /verification:decide/);
+  assert.match(workspace, /Mark under review/);
+  assert.match(workspace, /Request information/);
+  assert.match(workspace, /Approve/);
+  assert.match(workspace, /Reject/);
+  assert.match(route, /requireAdminCapability\(admin\.access, capability\)/);
+  assert.match(route, /Decision notes are required before changing a probate case/);
+  assert.match(route, /recordAdminAuditEvent/);
 });

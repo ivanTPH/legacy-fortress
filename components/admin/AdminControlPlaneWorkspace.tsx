@@ -274,6 +274,8 @@ type ProbateCase = {
   }>;
 };
 
+type ProbateAction = "request_information" | "review" | "approve" | "reject" | "revoke";
+
 type AuditEvent = {
   id: string;
   category: string;
@@ -503,6 +505,8 @@ export default function AdminControlPlaneWorkspace({
   const [supportActionLoading, setSupportActionLoading] = useState("");
   const [verificationQueue, setVerificationQueue] = useState<VerificationItem[]>([]);
   const [probateCases, setProbateCases] = useState<ProbateCase[]>([]);
+  const [probateActionLoading, setProbateActionLoading] = useState("");
+  const [probateDecisionNotes, setProbateDecisionNotes] = useState<Record<string, string>>({});
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
   const [enterprisePortfolio, setEnterprisePortfolio] = useState<EnterprisePortfolio | null>(null);
   const [enterpriseSearch, setEnterpriseSearch] = useState("");
@@ -615,6 +619,7 @@ export default function AdminControlPlaneWorkspace({
     setSupportDetail(null);
     setVerificationQueue([]);
     setProbateCases([]);
+    setProbateDecisionNotes({});
     setAuditEvents([]);
     setEnterprisePortfolio(null);
     setLookupResults([]);
@@ -754,6 +759,38 @@ export default function AdminControlPlaneWorkspace({
     setMessage(action === "revoke" ? "Contact invitation revoked and audit recorded." : "Contact invitation resent and audit recorded.");
   }
 
+  async function runProbateCaseAction(caseId: string, action: ProbateAction) {
+    const reason = (probateDecisionNotes[caseId] ?? "").trim();
+    if (!reason) {
+      setMessage("Decision notes are required before changing a probate case.");
+      return;
+    }
+    const confirmed = ["approve", "reject", "revoke"].includes(action)
+      ? window.confirm(`Confirm ${action.replace(/_/g, " ")} for this probate case?`)
+      : true;
+    if (!confirmed) return;
+
+    setMessage("");
+    setProbateActionLoading(`${caseId}:${action}`);
+    const res = await authFetch(`/api/internal/admin/probate-cases/${encodeURIComponent(caseId)}/actions`, {
+      method: "POST",
+      body: JSON.stringify({ action, reason }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; case?: ProbateCase; message?: string; code?: string };
+    setProbateActionLoading("");
+    if (!res.ok || !json.ok || !json.case) {
+      setMessage(json.message || json.code || "Probate case action was blocked.");
+      return;
+    }
+    setProbateCases((current) => current.map((item) => item.id === json.case?.id ? json.case : item));
+    setProbateDecisionNotes((current) => {
+      const next = { ...current };
+      delete next[caseId];
+      return next;
+    });
+    setMessage(`Probate case ${action.replace(/_/g, " ")} saved and audit recorded.`);
+  }
+
   const visibleNav = useMemo(() => {
     return filterAdminNavigation(PLATFORM_ADMIN_NAVIGATION, capabilities);
   }, [capabilities]);
@@ -838,7 +875,7 @@ export default function AdminControlPlaneWorkspace({
         {section === "users" || section === "user-detail" ? renderUsers(lookupQuery, setLookupQuery, lookupResults, runLookup, resourceId, userDetail, userDetailLoading) : null}
         {section === "support" || section === "invitations" || section === "access" ? renderSupport(section, support, supportDetail, supportDetailLoading, supportActionLoading, loadSupportInvitationDetail, runSupportInvitationAction, capabilities) : null}
         {section === "verification" || section === "verification-detail" ? renderVerification(verificationQueue, resourceId) : null}
-        {section === "probate" || section === "probate-detail" ? renderProbate(probateCases, resourceId) : null}
+        {section === "probate" || section === "probate-detail" ? renderProbate(probateCases, resourceId, capabilities, probateDecisionNotes, setProbateDecisionNotes, probateActionLoading, runProbateCaseAction) : null}
         {section === "audit" ? renderAudit(auditEvents, auditFilter, setAuditFilter) : null}
         {section === "system-health" ? renderSystemHealth(health, metrics, support) : null}
         {section === "settings" ? renderSettings(capabilities) : null}
@@ -930,22 +967,18 @@ function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | n
       </section>
       <section style={panelStyle}>
         <h2 style={h2Style}>Operational metrics</h2>
-        <div style={tableWrapStyle}>
-          <table style={tableStyle}>
-            <thead><tr><th>Metric</th><th>Status</th><th>Value</th><th>Destination</th></tr></thead>
-            <tbody>
-              {metrics.map((metric) => (
-                <tr key={metric.key}>
-                  <td>{metric.label}<small>{metric.definition}</small></td>
-                  <td>{metric.status}</td>
-                  <td>{metric.available ? metric.value?.toLocaleString() : "Unavailable"}</td>
-                  <td><Link href={metricDestination(metric.key)}>Open queue</Link></td>
-                </tr>
-              ))}
-              {metrics.length === 0 ? <tr><td colSpan={4}>No summary metrics are available.</td></tr> : null}
-            </tbody>
-          </table>
-        </div>
+        <AdminDataTable
+          caption="Operational metrics"
+          columns={[
+            { key: "metric", header: "Metric", render: (metric) => <>{metric.label}<small>{metric.definition}</small></> },
+            { key: "status", header: "Status", render: (metric) => <AdminStatusBadge status={metric.status} /> },
+            { key: "value", header: "Value", render: (metric) => metric.available ? metric.value?.toLocaleString() : "Unavailable" },
+            { key: "destination", header: "Destination", render: (metric) => <Link href={metricDestination(metric.key)}>Open queue</Link> },
+          ]}
+          rows={metrics}
+          getRowKey={(metric) => metric.key}
+          emptyState={<AdminEmptyState title="No metrics">No summary metrics are available.</AdminEmptyState>}
+        />
       </section>
     </div>
   );
@@ -1755,40 +1788,36 @@ function renderSupport(
       <section style={panelStyle}>
         <h2 style={h2Style}>{title}</h2>
         <div style={gridStyle}>
-          <Metric label="Pending invitations" value={support?.counts.pendingInvitations ?? null} />
-          <Metric label="Ready to send" value={support?.counts.readyToSendInvitations ?? null} />
-          <Metric label="Verification awaiting review" value={support?.counts.verificationAwaitingReview ?? null} />
-          <Metric label="Active linked accounts" value={support?.counts.linkedAccountsActive ?? null} />
-          <Metric label="Invitation/access issues" value={support?.counts.invitationIssues ?? null} />
+          <AdminMetricCard label="Pending invitations" value={support?.counts.pendingInvitations ?? "Unavailable"} detail="Contact invitations awaiting recipient action" />
+          <AdminMetricCard label="Ready to send" value={support?.counts.readyToSendInvitations ?? "Unavailable"} detail="Saved contact invitations without dispatch" />
+          <AdminMetricCard label="Verification awaiting review" value={support?.counts.verificationAwaitingReview ?? "Unavailable"} detail="Executor verification handoffs" />
+          <AdminMetricCard label="Active linked accounts" value={support?.counts.linkedAccountsActive ?? "Unavailable"} detail="Accepted linked-access relationships" />
+          <AdminMetricCard label="Invitation/access issues" value={support?.counts.invitationIssues ?? "Unavailable"} detail="Operational items requiring follow-up" />
         </div>
-        <div style={tableWrapStyle}>
-          <table style={tableStyle}>
-            <thead><tr><th>Contact</th><th>Owner</th><th>Role</th><th>Status</th><th>Issue</th><th>Actions</th></tr></thead>
-            <tbody>
-              {(support?.issues ?? []).map((item) => (
-                <tr key={item.invitationId}>
-                  <td>{item.contactName || item.contactEmail || "Unknown contact"}<small>{item.contactEmail}</small></td>
-                  <td>{item.ownerName}</td>
-                  <td>{item.assignedRole.replace(/_/g, " ")}</td>
-                  <td><AdminStatusBadge status={item.invitationStatus ?? "pending"} /></td>
-                  <td>{item.issueLabel}</td>
-                  <td>
-                    <div style={actionsCellStyle}>
-                      <button type="button" onClick={() => void loadDetail(item.invitationId)} disabled={detailLoading}>View</button>
-                      {canManageSupport && item.invitationStatus !== "revoked" && item.invitationStatus !== "accepted" ? (
-                        <button type="button" onClick={() => void runAction(item.invitationId, "resend")} disabled={actionLoading === `${item.invitationId}:resend`}>
-                          {actionLoading === `${item.invitationId}:resend` ? "Sending..." : item.sentAt ? "Resend" : "Send"}
-                        </button>
-                      ) : null}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {support && support.issues.length === 0 ? <tr><td colSpan={6}>No support issues match this queue.</td></tr> : null}
-              {!support ? <tr><td colSpan={6}>Support snapshot unavailable for this role or environment.</td></tr> : null}
-            </tbody>
-          </table>
-        </div>
+        <AdminDataTable
+          caption={`${title} table`}
+          description={<p style={mutedStyle}>Rows open the live invitation detail panel. Available resend and revoke actions use the canonical support lifecycle API.</p>}
+          columns={[
+            { key: "contact", header: "Contact", render: (item) => <>{item.contactName || item.contactEmail || "Unknown contact"}<small>{item.contactEmail || "No email recorded"}</small></> },
+            { key: "owner", header: "Owner", render: (item) => item.ownerName },
+            { key: "role", header: "Role", render: (item) => labelise(item.assignedRole) },
+            { key: "status", header: "Status", render: (item) => <AdminStatusBadge status={item.invitationStatus ?? "pending"} /> },
+            { key: "issue", header: "Issue", render: (item) => item.issueLabel },
+            { key: "actions", header: "Actions", render: (item) => (
+              <div style={actionsCellStyle}>
+                <button type="button" onClick={() => void loadDetail(item.invitationId)} disabled={detailLoading}>View</button>
+                {canManageSupport && item.invitationStatus !== "revoked" && item.invitationStatus !== "accepted" ? (
+                  <button type="button" onClick={() => void runAction(item.invitationId, "resend")} disabled={actionLoading === `${item.invitationId}:resend`}>
+                    {actionLoading === `${item.invitationId}:resend` ? "Sending..." : item.sentAt ? "Resend" : "Send"}
+                  </button>
+                ) : null}
+              </div>
+            ) },
+          ]}
+          rows={support?.issues ?? []}
+          getRowKey={(item) => item.invitationId}
+          emptyState={support ? <AdminEmptyState title="No support issues">No support issues match this queue.</AdminEmptyState> : <AdminEmptyState title="Support unavailable">Support snapshot is unavailable for this role or environment.</AdminEmptyState>}
+        />
       </section>
       {detail || detailLoading ? (
         <section style={panelStyle} aria-live="polite">
@@ -1881,72 +1910,81 @@ function renderVerification(queue: VerificationItem[], resourceId: string | null
       ) : null}
       <section style={panelStyle}>
         <h2 style={h2Style}>Verification queue</h2>
-        <div style={tableWrapStyle}>
-          <table style={tableStyle}>
-            <thead><tr><th>Case</th><th>Role</th><th>Status</th><th>Evidence</th><th>Detail</th></tr></thead>
-            <tbody>
-              {queue.map((item) => (
-                <tr key={item.id}>
-                  <td>{item.ownerName}<small>{item.contactName} · {formatDate(item.submittedAt)}</small></td>
-                  <td>{item.assignedRole.replace(/_/g, " ")}</td>
-                  <td>{item.requestStatus.replace(/_/g, " ")} · {item.activationStatus.replace(/_/g, " ")}</td>
-                  <td>{item.evidencePath ? "On file" : "Missing"}</td>
-                  <td><Link href={`/admin/verification/${item.id}`}>Inspect</Link></td>
-                </tr>
-              ))}
-              {queue.length === 0 ? <tr><td colSpan={5}>No verification requests are waiting.</td></tr> : null}
-            </tbody>
-          </table>
-        </div>
+        <AdminDataTable
+          caption="Verification queue"
+          description={<p style={mutedStyle}>Executor verification requests are inspectable here; probate case creation and decisions remain server-authorised.</p>}
+          columns={[
+            { key: "case", header: "Case", render: (item) => <>{item.ownerName}<small>{item.contactName} · {formatDate(item.submittedAt)}</small></> },
+            { key: "role", header: "Role", render: (item) => labelise(item.assignedRole) },
+            { key: "status", header: "Status", render: (item) => <><AdminStatusBadge status={item.requestStatus} /><small>{labelise(item.activationStatus)}</small></> },
+            { key: "evidence", header: "Evidence", render: (item) => item.evidencePath ? "On file" : "Missing" },
+            { key: "detail", header: "Detail", render: (item) => <Link href={`/admin/verification/${item.id}`}>Inspect</Link> },
+          ]}
+          rows={queue}
+          getRowKey={(item) => item.id}
+          emptyState={<AdminEmptyState title="No verification requests">No verification requests are waiting.</AdminEmptyState>}
+        />
       </section>
     </div>
   );
 }
 
-function renderProbate(cases: ProbateCase[], resourceId: string | null) {
+function renderProbate(
+  cases: ProbateCase[],
+  resourceId: string | null,
+  capabilities: string[],
+  decisionNotes: Record<string, string>,
+  setDecisionNotes: (updater: (current: Record<string, string>) => Record<string, string>) => void,
+  actionLoading: string,
+  runAction: (caseId: string, action: ProbateAction) => Promise<void>,
+) {
   const selected = resourceId ? cases.find((item) => item.id === resourceId) : null;
+  const canDecide = capabilities.includes("verification:decide");
   if (resourceId) {
     return (
       <div style={stackStyle}>
         <section style={panelStyle}>
           <Link href="/admin/probate" style={secondaryLinkStyle}>Back to probate queue</Link>
-          {selected ? renderProbateDetail(selected) : <AdminEmptyState title="Probate case unavailable">The selected probate case was not found or is outside your authorised scope.</AdminEmptyState>}
+          {selected ? renderProbateDetail(selected, canDecide, decisionNotes, setDecisionNotes, actionLoading, runAction) : <AdminEmptyState title="Probate case unavailable">The selected probate case was not found or is outside your authorised scope.</AdminEmptyState>}
         </section>
       </div>
     );
   }
   return (
     <div style={stackStyle}>
-      {selected ? renderProbateDetail(selected) : null}
       <section style={panelStyle}>
         <h2 style={h2Style}>Probate queue</h2>
-        <div style={tableWrapStyle}>
-          <table style={tableStyle}>
-            <thead><tr><th>Case</th><th>Status</th><th>Evidence</th><th>Next action</th><th>Detail</th></tr></thead>
-            <tbody>
-              {cases.map((item) => {
-                const actions = getAllowedProbateActions(item.status);
-                return (
-                  <tr key={item.id}>
-                    <td>{item.ownerName}<small>{item.contactName} · {formatDate(item.submittedAt)}</small></td>
-                    <td><AdminStatusBadge status={item.status} /></td>
-                    <td>{item.evidence.length}</td>
-                    <td>{actions.terminal ? "Terminal: inspect only" : "Review action available in legacy case controls"}</td>
-                    <td><Link href={`/admin/probate/${item.id}`}>Inspect</Link></td>
-                  </tr>
-                );
-              })}
-              {cases.length === 0 ? <tr><td colSpan={5}>No probate cases are available.</td></tr> : null}
-            </tbody>
-          </table>
-        </div>
+        <AdminDataTable
+          caption="Probate review queue"
+          description={<p style={mutedStyle}>Open a case before making a terminal decision. Review actions are enforced by the canonical probate case API.</p>}
+          columns={[
+            { key: "case", header: "Case", render: (item) => <><Link href={`/admin/probate/${item.id}`}>{item.ownerName}</Link><small>{item.contactName} · {formatDate(item.submittedAt)}</small></> },
+            { key: "status", header: "Status", render: (item) => <AdminStatusBadge status={item.status} /> },
+            { key: "role", header: "Role", render: (item) => labelise(item.assignedRole) },
+            { key: "evidence", header: "Evidence", render: (item) => `${item.evidence.length} file${item.evidence.length === 1 ? "" : "s"}` },
+            { key: "next", header: "Next action", render: (item) => getAllowedProbateActions(item.status).terminal ? "Terminal: inspect only" : "Open case to review" },
+            { key: "actions", header: "Actions", render: (item) => <Link href={`/admin/probate/${item.id}`}>Review case</Link> },
+          ]}
+          rows={cases}
+          getRowKey={(item) => item.id}
+          emptyState={<AdminEmptyState title="No probate cases">No probate cases are available.</AdminEmptyState>}
+        />
       </section>
     </div>
   );
 }
 
-function renderProbateDetail(item: ProbateCase) {
+function renderProbateDetail(
+  item: ProbateCase,
+  canDecide: boolean,
+  decisionNotes: Record<string, string>,
+  setDecisionNotes: (updater: (current: Record<string, string>) => Record<string, string>) => void,
+  actionLoading: string,
+  runAction: (caseId: string, action: ProbateAction) => Promise<void>,
+) {
   const actions = getAllowedProbateActions(item.status);
+  const notes = decisionNotes[item.id] ?? "";
+  const updateNotes = (value: string) => setDecisionNotes((current) => ({ ...current, [item.id]: value }));
   return (
     <section style={panelStyle}>
       <h2 style={h2Style}>{item.ownerName} / {item.contactName}</h2>
@@ -1957,14 +1995,36 @@ function renderProbateDetail(item: ProbateCase) {
         <div><dt>Evidence count</dt><dd>{item.evidence.length}</dd></div>
       </dl>
       {actions.terminal ? <p style={mutedStyle}>This case is terminal. Approve/reject actions are unavailable; decision history remains inspectable.</p> : null}
+      {!actions.terminal ? (
+        <section style={contextPanelStyle}>
+          <h3 style={h3Style}>Decision controls</h3>
+          {canDecide ? (
+            <>
+              <label style={labelStyle}>Decision notes
+                <textarea value={notes} onChange={(event) => updateNotes(event.target.value)} placeholder="Record the operational reason for this probate case action." rows={3} />
+              </label>
+              <div style={rowStyle}>
+                {actions.canReview ? <button type="button" style={secondaryButtonStyle} onClick={() => void runAction(item.id, "review")} disabled={actionLoading === `${item.id}:review`}>{actionLoading === `${item.id}:review` ? "Saving..." : "Mark under review"}</button> : null}
+                {actions.canRequestInformation ? <button type="button" style={secondaryButtonStyle} onClick={() => void runAction(item.id, "request_information")} disabled={actionLoading === `${item.id}:request_information`}>{actionLoading === `${item.id}:request_information` ? "Saving..." : "Request information"}</button> : null}
+                {actions.canApprove ? <button type="button" style={primaryButtonStyle} onClick={() => void runAction(item.id, "approve")} disabled={actionLoading === `${item.id}:approve`}>{actionLoading === `${item.id}:approve` ? "Approving..." : "Approve"}</button> : null}
+                {actions.canReject ? <button type="button" style={dangerButtonStyle} onClick={() => void runAction(item.id, "reject")} disabled={actionLoading === `${item.id}:reject`}>{actionLoading === `${item.id}:reject` ? "Rejecting..." : "Reject"}</button> : null}
+              </div>
+            </>
+          ) : <p style={mutedStyle}>You can inspect this case but do not have permission to change probate state.</p>}
+        </section>
+      ) : null}
       <h3 style={h3Style}>Evidence metadata</h3>
-      {item.evidence.map((evidence) => (
-        <article key={evidence.id} style={rowStyle}>
-          <strong>{evidence.fileName}</strong>
-          <small>{evidence.evidenceType.replace(/_/g, " ")} · {evidence.mimeType} · {formatDate(evidence.createdAt)}</small>
-        </article>
-      ))}
-      {item.evidence.length === 0 ? <p style={mutedStyle}>No evidence metadata is linked to this case.</p> : null}
+      <AdminDataTable
+        caption="Probate evidence metadata"
+        columns={[
+          { key: "file", header: "File", render: (evidence) => <>{evidence.fileName}<small>{labelise(evidence.evidenceType)}</small></> },
+          { key: "type", header: "MIME type", render: (evidence) => evidence.mimeType },
+          { key: "created", header: "Submitted", render: (evidence) => formatDate(evidence.createdAt) },
+        ]}
+        rows={item.evidence}
+        getRowKey={(evidence) => evidence.id}
+        emptyState={<AdminEmptyState title="No evidence metadata">No evidence metadata is linked to this case.</AdminEmptyState>}
+      />
     </section>
   );
 }
@@ -1982,23 +2042,21 @@ function renderAudit(events: AuditEvent[], filter: string, setFilter: (value: st
         </label>
         <span>{filtered.length} events</span>
       </div>
-      <div style={tableWrapStyle}>
-        <table style={tableStyle}>
-          <thead><tr><th>Action</th><th>Actor</th><th>Target</th><th>Route</th><th>Time</th></tr></thead>
-          <tbody>
-            {filtered.map((item) => (
-              <tr key={item.id}>
-                <td>{item.action}<small>{item.result} · {item.category}</small></td>
-                <td>{item.actorEmail ?? "Unknown"}<small>{item.actorRole ?? "unknown role"}</small></td>
-                <td>{item.resourceType.replace(/_/g, " ")}<small>{item.resourceLabel ?? "No label"}</small></td>
-                <td>{item.route}</td>
-                <td>{formatDate(item.createdAt)}</td>
-              </tr>
-            ))}
-            {filtered.length === 0 ? <tr><td colSpan={5}>No audit events match this filter.</td></tr> : null}
-          </tbody>
-        </table>
-      </div>
+      <AdminDataTable
+        caption="Admin audit history"
+        description={<p style={mutedStyle}>Read-only audit events. Actor, result, target and route are separated so long labels do not run together.</p>}
+        columns={[
+          { key: "action", header: "Action", render: (item) => <>{item.action}<small>{labelise(item.category)}</small></> },
+          { key: "result", header: "Result", render: (item) => <AdminStatusBadge status={item.result} /> },
+          { key: "actor", header: "Actor", render: (item) => <>{item.actorEmail ?? "Unknown"}<small>{item.actorRole ?? "unknown role"}</small></> },
+          { key: "target", header: "Target", render: (item) => <>{labelise(item.resourceType)}<small>{item.resourceLabel ?? "No label"}</small></> },
+          { key: "route", header: "Route", render: (item) => <code>{item.route}</code> },
+          { key: "time", header: "Time", render: (item) => formatDate(item.createdAt) },
+        ]}
+        rows={filtered}
+        getRowKey={(item) => item.id}
+        emptyState={<AdminEmptyState title="No audit events">No audit events match this filter.</AdminEmptyState>}
+      />
     </section>
   );
 }
@@ -2034,22 +2092,18 @@ function renderSystemHealth(health: HealthState, metrics: DashboardMetric[], sup
             <p style={mutedStyle}>Read-only health signals from canonical admin storage and runtime configuration. Counts are aggregate metadata only.</p>
           </div>
         </div>
-        <div style={tableWrapStyle}>
-          <table style={tableStyle}>
-            <thead><tr><th>Subsystem</th><th>Status</th><th>Count</th><th>Detail</th></tr></thead>
-            <tbody>
-              {health.checks.map((check) => (
-                <tr key={check.key}>
-                  <td>{check.label}</td>
-                  <td><AdminStatusBadge status={check.status} /></td>
-                  <td>{typeof check.count === "number" ? check.count.toLocaleString() : "Not counted"}</td>
-                  <td>{check.detail}</td>
-                </tr>
-              ))}
-              {health.checks.length === 0 ? <tr><td colSpan={4}>System health checks are unavailable.</td></tr> : null}
-            </tbody>
-          </table>
-        </div>
+        <AdminDataTable
+          caption="Subsystem checks"
+          columns={[
+            { key: "subsystem", header: "Subsystem", render: (check) => check.label },
+            { key: "status", header: "Status", render: (check) => <AdminStatusBadge status={check.status} /> },
+            { key: "count", header: "Count", render: (check) => typeof check.count === "number" ? check.count.toLocaleString() : "Not counted" },
+            { key: "detail", header: "Detail", render: (check) => check.detail },
+          ]}
+          rows={health.checks}
+          getRowKey={(check) => check.key}
+          emptyState={<AdminEmptyState title="Health unavailable">System health checks are unavailable.</AdminEmptyState>}
+        />
       </section>
     </div>
   );
@@ -2161,8 +2215,6 @@ const gridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minm
 const toolbarStyle = { ...panelStyle, display: "flex", alignItems: "end", justifyContent: "space-between", gap: 12, flexWrap: "wrap" } satisfies CSSProperties;
 const fieldStackStyle = { display: "grid", gap: 6, minWidth: 0, flex: "1 1 260px" } satisfies CSSProperties;
 const formGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 12 } satisfies CSSProperties;
-const tableWrapStyle = { overflowX: "auto" } satisfies CSSProperties;
-const tableStyle = { width: "100%", borderCollapse: "collapse", fontSize: 14 } satisfies CSSProperties;
 const definitionGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 } satisfies CSSProperties;
 const settingsCardStyle = { ...panelStyle, gap: 8 } satisfies CSSProperties;
 const rowStyle = { border: "1px solid #e2e8f0", borderRadius: 8, padding: 12, display: "grid", gap: 4 } satisfies CSSProperties;

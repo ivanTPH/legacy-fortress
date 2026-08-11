@@ -102,6 +102,37 @@ The backend controls from Admin Phases 1-3 remain the authority. This audit focu
 
 Open owner decision: archive or delete the remaining unit-level historical mock helpers once all contract tests have canonical `/api/internal/admin/*` fixtures.
 
+## Admin Dashboard Completion Update
+
+Date: 2026-08-11
+
+Scope: Platform Administration, Enterprise Operations, Probate Review, and the parallel email-UAT blocker.
+
+| Workspace | Route | Control | Intended action | Backend/API | Pre-phase state | Final state | Persistence verified | Role verified | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Platform Administration | `/admin` | Operational metrics | Open live queues from dashboard metrics | `/api/internal/admin/dashboard-summary`, support/probate APIs | Partly shared; metrics table used older inline markup | Repaired to shared responsive table/card layout with separated label/value/status | Read-only | Capability-filtered navigation | repaired |
+| Platform Administration | `/admin/support`, `/admin/invitations`, `/admin/access` | View support issue | Open contact-invitation operational detail | `/api/internal/admin/support/[invitationId]` | Functional but rendered in an older fixed table | Repaired to shared responsive data table/card layout | Detail fetch persists server state | `support:read` | repaired |
+| Platform Administration | `/admin/support`, `/admin/invitations`, `/admin/access` | Send/resend/revoke contact invitation | Contact invitation lifecycle action | `/api/internal/admin/support/[invitationId]` | Functional; email receipt still externally blocked by staging mailer/test mailbox | Still functional, with clearer responsive action placement and terminal-state copy | API refreshes support snapshot after success | `support:manage` | working |
+| Platform Administration | `/admin/audit` | Filter audit | Read-only audit search/filter | `/api/internal/admin/audit-history` | Functional but long actor/result text could visually run together | Repaired to shared responsive table/card layout with separate result badge | Read-only | `audit:read` | repaired |
+| Platform Administration | `/admin/system-health` | Inspect subsystem health | Read-only health/status signals | `/api/internal/admin/system-health` | Functional but used older inline table | Repaired to shared responsive table/card layout | Read-only | `admin.dashboard.read` | repaired |
+| Probate Review | `/admin/probate` | Review case | Open focused probate case detail | `/api/internal/admin/probate-cases` | Queue copied “legacy case controls” wording | Repaired with clear “Review case” entry and shared responsive table/card layout | Read-only list state | `verification:read` | repaired |
+| Probate Review | `/admin/probate/[caseId]` | Mark under review/request information/approve/reject | Server-authorised probate transition with notes | `/api/internal/admin/probate-cases/[caseId]/actions` | API existed but canonical page did not expose actions | Repaired: decision notes, loading state, confirmation for terminal actions, state update after server success | UI updates only from returned case; API has stale/terminal protections | `verification:decide` | repaired |
+| Probate Review | `/admin/probate/[caseId]` | Evidence metadata | Inspect evidence metadata only | `/api/internal/admin/probate-cases` and signed-url route where used | Functional metadata; list used page-local rows | Repaired to shared responsive table/card layout; no new viewer introduced | Read-only | `verification:read` | repaired |
+| Enterprise Operations | `/application/enterprise` | Portfolio, organisation, licence, invitations, reports | Existing enterprise operations | `/api/internal/admin/enterprise` | Functional from prior phases | No backend change in this phase; retained to avoid broad rewrite | Existing tests cover create/update/export paths | Capability/organisation scoped | working |
+| Enterprise Operations | detail routes | Organisation/licence actions | Contextual detail actions | `/api/internal/admin/enterprise` | Functional from prior phases with remaining bulk/enrolment/report follow-ups | No change in this phase | Existing tests cover detail forms | Capability/tenant scoped | working |
+| Email UAT | invitation lifecycle | Email receipt/acceptance | Staging invitation delivery proof | Supabase Auth OTP mailer | Blocked by unavailable reliable staging mailbox/provider and Supabase throttle | Still blocked; no application defect confirmed | Not fully verified | N/A | blocker |
+
+Action matrix totals for this phase: working 3, repaired 7, disabled/deferred 0, blocked 1.
+
+Top remaining P1/P2 items:
+
+| ID | Severity | Area | Blocker |
+| --- | --- | --- | --- |
+| ADMIN-DASH-001 | P1 | Email-UAT | Staging invitation receipt and acceptance cannot receive an unconditional pass until a reliable staging SMTP/provider or test mailbox is available. |
+| ADMIN-DASH-002 | P1 | Enterprise invitations | Bulk invitation duplicate/member/seat validation remains a focused backend follow-up. |
+| ADMIN-DASH-003 | P1 | Enterprise enrolment links | Claim count and seat reservation still need transactional proof. |
+| ADMIN-DASH-004 | P2 | Hosted populated-state UAT | Representative staging organisation/licence/probate data remains limited; broader hosted visual proof should use approved persistent demo fixtures or controlled synthetic data. |
+
 ## Evidence Commands
 
 See the implementation report for exact validation and hosted UAT commands.
