@@ -354,12 +354,20 @@ type UserOperationalDetail = LookupUser & {
 };
 
 type HealthState = {
-  appHealth: number | null;
-  schemaHealth: number | null;
-  versionStatus: number | null;
-  schemaOk: boolean | null;
-  version: string | null;
-  environment: string | null;
+  status: "ok" | "warning" | "unavailable" | null;
+  generatedAt: string | null;
+  deployment: {
+    commitSha: string | null;
+    buildId: string | null;
+    environment: string | null;
+  } | null;
+  checks: Array<{
+    key: string;
+    label: string;
+    status: "ok" | "warning" | "unavailable";
+    detail: string;
+    count?: number | null;
+  }>;
 };
 
 const PAGE_COPY: Record<AdminControlPlaneSection, { title: string; eyebrow: string; description: string }> = {
@@ -524,12 +532,10 @@ export default function AdminControlPlaneWorkspace({
     reason: "",
   });
   const [health, setHealth] = useState<HealthState>({
-    appHealth: null,
-    schemaHealth: null,
-    versionStatus: null,
-    schemaOk: null,
-    version: null,
-    environment: null,
+    status: null,
+    generatedAt: null,
+    deployment: null,
+    checks: [],
   });
 
   const authFetch = useCallback(async (input: string, init?: RequestInit) => {
@@ -579,20 +585,13 @@ export default function AdminControlPlaneWorkspace({
       if (item.key === "enterprise") setEnterprisePortfolio(item.json.portfolio ?? null);
     }
     if (section === "system-health") {
-      const [appHealth, schemaHealth, version] = await Promise.all([
-        fetch("/api/health"),
-        fetch("/api/health/schema"),
-        fetch("/api/version"),
-      ]);
-      const schemaJson = await schemaHealth.json().catch(() => ({}));
-      const versionJson = await version.json().catch(() => ({}));
+      const systemHealth = await authFetch("/api/internal/admin/system-health");
+      const systemHealthJson = await systemHealth.json().catch(() => ({}));
       setHealth({
-        appHealth: appHealth.status,
-        schemaHealth: schemaHealth.status,
-        versionStatus: version.status,
-        schemaOk: schemaJson.ok ?? null,
-        version: versionJson.version ?? null,
-        environment: versionJson.env ?? null,
+        status: systemHealthJson.status ?? (systemHealth.ok ? "ok" : "unavailable"),
+        generatedAt: systemHealthJson.generatedAt ?? null,
+        deployment: systemHealthJson.deployment ?? null,
+        checks: Array.isArray(systemHealthJson.checks) ? systemHealthJson.checks : [],
       });
     }
     setState("ready");
@@ -2005,22 +2004,52 @@ function renderAudit(events: AuditEvent[], filter: string, setFilter: (value: st
 }
 
 function renderSystemHealth(health: HealthState, metrics: DashboardMetric[], support: SupportSnapshot | null) {
+  const counts = {
+    warning: health.checks.filter((check) => check.status === "warning").length,
+    unavailable: health.checks.filter((check) => check.status === "unavailable").length,
+  };
   return (
     <div style={stackStyle}>
       <section style={gridStyle}>
-        <Metric label="Application health" value={health.appHealth} suffix="HTTP" />
-        <Metric label="Schema health" value={health.schemaHealth} suffix={health.schemaOk === false ? "check failed" : "HTTP"} />
-        <Metric label="Version endpoint" value={health.versionStatus} suffix="HTTP" />
+        <AdminMetricCard label="Subsystem checks" value={health.checks.length ? health.checks.length.toLocaleString() : "Unavailable"} detail={health.status ? `Overall: ${labelise(health.status)}` : "Awaiting health response"} />
+        <Metric label="Warnings" value={counts.warning} />
+        <Metric label="Unavailable checks" value={counts.unavailable} />
         <Metric label="Support backlog" value={support?.counts.invitationIssues ?? null} />
       </section>
       <section style={panelStyle}>
         <h2 style={h2Style}>Environment</h2>
         <dl style={definitionGridStyle}>
-          <div><dt>App version</dt><dd>{health.version ?? "Unavailable"}</dd></div>
-          <div><dt>Runtime environment</dt><dd>{health.environment ?? "Unavailable"}</dd></div>
+          <div><dt>Build ID</dt><dd>{health.deployment?.buildId ?? "Unavailable"}</dd></div>
+          <div><dt>Commit SHA</dt><dd>{health.deployment?.commitSha ?? "Unavailable"}</dd></div>
+          <div><dt>Runtime environment</dt><dd>{health.deployment?.environment ?? "Unavailable"}</dd></div>
+          <div><dt>Last checked</dt><dd>{formatDate(health.generatedAt)}</dd></div>
           <div><dt>Metric count</dt><dd>{metrics.length}</dd></div>
           <div><dt>Secret exposure</dt><dd>Connection strings, tokens, and passwords are not displayed.</dd></div>
         </dl>
+      </section>
+      <section style={panelStyle}>
+        <div style={sectionHeaderStyle}>
+          <div>
+            <h2 style={h2Style}>Subsystem checks</h2>
+            <p style={mutedStyle}>Read-only health signals from canonical admin storage and runtime configuration. Counts are aggregate metadata only.</p>
+          </div>
+        </div>
+        <div style={tableWrapStyle}>
+          <table style={tableStyle}>
+            <thead><tr><th>Subsystem</th><th>Status</th><th>Count</th><th>Detail</th></tr></thead>
+            <tbody>
+              {health.checks.map((check) => (
+                <tr key={check.key}>
+                  <td>{check.label}</td>
+                  <td><AdminStatusBadge status={check.status} /></td>
+                  <td>{typeof check.count === "number" ? check.count.toLocaleString() : "Not counted"}</td>
+                  <td>{check.detail}</td>
+                </tr>
+              ))}
+              {health.checks.length === 0 ? <tr><td colSpan={4}>System health checks are unavailable.</td></tr> : null}
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   );

@@ -174,8 +174,7 @@ test("admin control plane splits live admin operations into permission-aware rou
   assert.match(controlPlane, /\/api\/internal\/admin\/verifications/);
   assert.match(controlPlane, /\/api\/internal\/admin\/probate-cases/);
   assert.match(controlPlane, /\/api\/internal\/admin\/audit-history\?limit=50/);
-  assert.match(controlPlane, /\/api\/health\/schema/);
-  assert.match(controlPlane, /\/api\/version/);
+  assert.match(controlPlane, /\/api\/internal\/admin\/system-health/);
   assert.match(controlPlane, /Synthetic staging admin/);
   assert.match(controlPlane, /No summary metrics are available/);
   assert.match(controlPlane, /No audit events match this filter/);
