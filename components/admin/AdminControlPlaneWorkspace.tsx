@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminDataTable, { AdminContextHelp, AdminEmptyState, AdminMetricCard, AdminStatusBadge } from "@/components/admin/AdminPrimitives";
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell";
-import { filterAdminNavigation, PLATFORM_ADMIN_NAVIGATION } from "@/components/admin/adminNavigation";
+import { filterAdminNavigation, PLATFORM_ADMIN_NAVIGATION, PROBATE_REVIEW_NAVIGATION } from "@/components/admin/adminNavigation";
 import { waitForActiveUser } from "@/lib/auth/session";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -792,8 +792,9 @@ export default function AdminControlPlaneWorkspace({
   }
 
   const visibleNav = useMemo(() => {
-    return filterAdminNavigation(PLATFORM_ADMIN_NAVIGATION, capabilities);
-  }, [capabilities]);
+    const baseNavigation = section === "probate" || section === "probate-detail" ? PROBATE_REVIEW_NAVIGATION : PLATFORM_ADMIN_NAVIGATION;
+    return filterAdminNavigation(baseNavigation, capabilities);
+  }, [capabilities, section]);
 
   const page = PAGE_COPY[section];
   const currentPathname = currentHrefForSection(section, resourceId);
@@ -834,7 +835,7 @@ export default function AdminControlPlaneWorkspace({
 
   return (
     <AdminWorkspaceShell
-      workspaceLabel="Platform Administration"
+      workspaceLabel={section === "probate" || section === "probate-detail" ? "Probate Review" : "Platform Administration"}
       eyebrow={page.eyebrow}
       title={page.title}
       description={page.description}

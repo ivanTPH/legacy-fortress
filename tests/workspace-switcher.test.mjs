@@ -30,7 +30,7 @@ test("workspace route map resolves role-aware admin and application workspaces c
   assert.deepEqual(superAdmin.map((workspace) => workspace.href), [
     "/user?role=super_admin&admin=true&prototype=true",
     "/admin",
-    "/internal/admin/probate",
+    "/admin/probate",
   ]);
   assert.equal(
     buildPrototypeWorkspaceUrl("application", { prototype: true, currentRole: "super_admin" }),
@@ -62,6 +62,10 @@ test("workspace route map resolves role-aware admin and application workspaces c
   assert.deepEqual(executor.map((workspace) => workspace.id), ["application", "contact_wallet"]);
   assert.deepEqual(executor.map((workspace) => workspace.label), ["Personal Vault", "Contact Wallet"]);
   assert.equal(buildPrototypeWorkspaceUrl("contact_wallet"), "/contact-wallet");
+  assert.equal(buildPrototypeWorkspaceUrl("probate_admin"), "/admin/probate");
+  assert.equal(getCurrentWorkspaceForPath("/admin/probate"), "probate_admin");
+  assert.equal(getCurrentWorkspaceForPath("/admin/probate/case-1"), "probate_admin");
+  assert.equal(getCurrentWorkspaceForPath("/admin/verification"), "probate_admin");
 });
 
 test("master admin email stays in platform context unless an enterprise role is present", () => {

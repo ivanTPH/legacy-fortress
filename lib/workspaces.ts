@@ -53,7 +53,7 @@ export function buildPrototypeWorkspaceUrl(workspace: WorkspaceId, options: Work
     return "/application/enterprise";
   }
 
-  return "/internal/admin/probate";
+  return "/admin/probate";
 }
 
 export function getPrimaryWorkspaceRole(roles: readonly PlatformRole[]) {
@@ -68,6 +68,8 @@ export function getPrimaryWorkspaceRole(roles: readonly PlatformRole[]) {
 }
 
 export function getCurrentWorkspaceForPath(pathname: string): WorkspaceId {
+  if (pathname === "/admin/probate" || pathname.startsWith("/admin/probate/")) return "probate_admin";
+  if (pathname === "/admin/verification" || pathname.startsWith("/admin/verification/")) return "probate_admin";
   if (pathname === "/admin" || pathname.startsWith("/admin/")) return "super_admin";
   if (pathname === "/internal/admin" || pathname.startsWith("/internal/admin/ops")) return "super_admin";
   if (pathname.startsWith("/internal/admin/prototype/users")) return "super_admin";

@@ -24,7 +24,7 @@ export const PLATFORM_ADMIN_NAVIGATION: AdminNavigationGroup[] = [
     ],
   },
   {
-    label: "Enterprise Administration",
+    label: "Platform Enterprise",
     items: [
       { key: "organisations", label: "Organisations", href: "/admin/organisations", icon: "domain", capability: "organisation:view" },
       { key: "licences", label: "Licences", href: "/admin/licences", icon: "license", capability: "licence:view" },
@@ -32,7 +32,7 @@ export const PLATFORM_ADMIN_NAVIGATION: AdminNavigationGroup[] = [
     ],
   },
   {
-    label: "Probate Review",
+    label: "Platform Probate",
     items: [
       { key: "probate", label: "Probate queue", href: "/admin/probate", icon: "gavel", capability: "probate:read" },
       { key: "verification", label: "Verification", href: "/admin/verification", icon: "fact_check", capability: "verification:read" },
@@ -60,12 +60,15 @@ export const ENTERPRISE_ADMIN_NAVIGATION: AdminNavigationGroup[] = [
       { key: "enterprise-reports", label: "Reports", href: "/application/enterprise?tab=reports", icon: "analytics", capability: "enterprise.report.read" },
     ],
   },
+];
+
+export const PROBATE_REVIEW_NAVIGATION: AdminNavigationGroup[] = [
   {
-    label: "Related Workspaces",
+    label: "Probate Review",
     items: [
-      { key: "platform-admin", label: "Platform Administration", href: "/admin", icon: "admin_panel_settings", capability: "admin.dashboard.read" },
-      { key: "probate", label: "Probate Review", href: "/admin/probate", icon: "gavel", capability: "probate:read" },
-      { key: "audit", label: "Audit", href: "/admin/audit", icon: "history", capability: "audit:read" },
+      { key: "probate", label: "Review queue", href: "/admin/probate", icon: "gavel", capability: "probate:read" },
+      { key: "verification", label: "Verification / evidence", href: "/admin/verification", icon: "fact_check", capability: "verification:read" },
+      { key: "probate-audit", label: "Probate audit", href: "/admin/audit?scope=probate", icon: "history", capability: "audit:read" },
     ],
   },
 ];

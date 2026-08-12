@@ -4,6 +4,7 @@ import { assertOwnerCanSendInvitation, ensureOwnerPlanProfile } from "../account
 import {
   buildCanonicalInvitationProjectionPayload,
 } from "./canonicalContacts";
+import { ACTIVE_CONTACT_INVITATION_STATUSES, getSafeContactInvitationErrorMessage } from "./invitationLifecycle.ts";
 import {
   mapActivationStatusToVerificationStatus,
   savePeopleContact,
@@ -94,7 +95,7 @@ export async function sendContactInvite(
   });
   if (deliveryResult.error) {
     await markInvitationDeliveryFailed(client, input, invitationId, contactEmail, deliveryResult.error.message);
-    throw new Error(deliveryResult.error.message);
+    throw new Error(getSafeContactInvitationErrorMessage(deliveryResult.error));
   }
 
   const activationStatus = input.activationStatus ?? "invited";
@@ -248,6 +249,24 @@ async function resolveContactInvitationId(
     }
     const existingId = String((existingRes.data as Record<string, unknown> | null)?.id ?? "").trim();
     if (existingId) return existingId;
+  }
+
+  const contactEmail = input.contactEmail.trim().toLowerCase();
+  if (contactEmail) {
+    const existingEmailRes = await client
+      .from("contact_invitations")
+      .select("id")
+      .eq("owner_user_id", input.ownerUserId)
+      .eq("contact_email", contactEmail)
+      .in("invitation_status", [...ACTIVE_CONTACT_INVITATION_STATUSES])
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (existingEmailRes.error) {
+      throw new Error(existingEmailRes.error.message);
+    }
+    const existingEmailId = String((existingEmailRes.data as Record<string, unknown> | null)?.id ?? "").trim();
+    if (existingEmailId) return existingEmailId;
   }
 
   const insertRes = await savePeopleInvitationProjection(client, {

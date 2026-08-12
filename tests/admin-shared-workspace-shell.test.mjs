@@ -75,6 +75,7 @@ test("admin navigation is capability-filtered without defining a second role mat
   const source = read("components/admin/adminNavigation.ts");
   assert.match(source, /PLATFORM_ADMIN_NAVIGATION/);
   assert.match(source, /ENTERPRISE_ADMIN_NAVIGATION/);
+  assert.match(source, /PROBATE_REVIEW_NAVIGATION/);
   assert.match(source, /filterAdminNavigation/);
   assert.match(source, /capabilitySet\.has/);
   assert.doesNotMatch(source, /super_admin:/);
@@ -93,7 +94,8 @@ test("platform, enterprise and probate entry surfaces use the shared shell", () 
 
   assert.match(platform, /AdminWorkspaceShell/);
   assert.match(platform, /PLATFORM_ADMIN_NAVIGATION/);
-  assert.match(platform, /workspaceLabel="Platform Administration"/);
+  assert.match(platform, /PROBATE_REVIEW_NAVIGATION/);
+  assert.match(platform, /workspaceLabel=\{section === "probate" \|\| section === "probate-detail" \? "Probate Review" : "Platform Administration"\}/);
   assert.match(enterprise, /AdminWorkspaceShell/);
   assert.match(enterprise, /ENTERPRISE_ADMIN_NAVIGATION/);
   assert.match(enterprise, /workspaceLabel="Enterprise Operations"/);

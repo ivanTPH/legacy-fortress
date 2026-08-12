@@ -57,11 +57,15 @@ test("platform organisation and licence actions do not silently switch to enterp
 
 test("enterprise entry no longer renders a duplicate horizontal workspace tab bar", () => {
   const workspace = read("components/enterprise/EnterpriseOperationsWorkspace.tsx");
+  const navigation = read("components/admin/adminNavigation.ts");
+  const enterpriseBlock = navigation.match(/export const ENTERPRISE_ADMIN_NAVIGATION[\s\S]*?export const PROBATE_REVIEW_NAVIGATION/)?.[0] ?? "";
 
   assert.doesNotMatch(workspace, /<nav aria-label="Enterprise navigation"/);
   assert.doesNotMatch(workspace, /tabListStyle|activeTabStyle|tabStyle/);
   assert.match(workspace, /More filters and saved views/);
   assert.match(workspace, /moreFiltersStyle/);
+  assert.doesNotMatch(enterpriseBlock, /Related Workspaces/);
+  assert.doesNotMatch(enterpriseBlock, /href: "\/admin"/);
 });
 
 test("platform metrics render labels, values and supporting text separately", () => {

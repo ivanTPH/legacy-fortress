@@ -133,6 +133,28 @@ Top remaining P1/P2 items:
 | ADMIN-DASH-003 | P1 | Enterprise enrolment links | Claim count and seat reservation still need transactional proof. |
 | ADMIN-DASH-004 | P2 | Hosted populated-state UAT | Representative staging organisation/licence/probate data remains limited; broader hosted visual proof should use approved persistent demo fixtures or controlled synthetic data. |
 
+## Admin Core Workspace Recovery Update
+
+Date: 2026-08-12
+
+Scope: duplicate contact invitation handling, workspace separation, Platform Administration, Enterprise Operations, and Probate Review.
+
+| Workspace | Route | Control | Intended action | Backend/API | Pre-phase state | Final state | Persistence verified | Role verified | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Personal Vault contacts | `/contacts` | Save contact setup | Create or update contact invitation projection | `contacts`, `contact_invitations`, `role_assignments` canonical contact repository | A second pending invitation for the same owner/email attempted another insert and surfaced the PostgreSQL unique-index error. | Repaired: active pending/accepted owner/email invitations resolve to the existing row, show a safe pending/accepted message, and keep Resend/Revoke/Edit/Cancel available. | Repository path updates existing invitation projection; focused tests prove no duplicate insert path remains. | Owner session required by existing Supabase client flow | repaired |
+| Personal Vault contacts | `/contacts` | Send/resend invite | Send existing invitation by Supabase Auth OTP path | `sendContactInvite`, Supabase Auth OTP | Send fallback could also attempt a duplicate insert when no invitation id was passed. | Repaired: send path resolves active owner/email invitation before insert and maps duplicate database errors to safe copy. | Existing invitation id reused; delivery status remains governed by email provider availability. | Owner plan and session checks preserved | repaired |
+| Platform Administration | `/admin`, `/admin/users`, `/admin/admin-users`, `/admin/support`, `/admin/access`, `/admin/audit`, `/admin/system-health`, `/admin/settings` | Sidebar navigation | Operate platform control-plane routes | Shared `AdminWorkspaceShell`, `PLATFORM_ADMIN_NAVIGATION` | Platform sidebar also labelled Enterprise/Probate as if they were interchangeable workspaces. | Repaired: platform navigation uses platform-operational groups only; enterprise/probate switching is handled by workspace selector. | Read/navigation state only | Capability-filtered navigation | repaired |
+| Enterprise Operations | `/application/enterprise` and detail routes | Sidebar navigation | Operate enterprise portfolio, organisations, licences, seats, invitations and enterprise audit | `/api/internal/admin/enterprise` | Enterprise sidebar included “Related Workspaces” links back into Platform/Probate. | Repaired: enterprise navigation contains only enterprise operations; cross-workspace changes use the workspace selector. | Existing enterprise API refresh patterns preserved | Enterprise capability and org scope | repaired |
+| Probate Review | `/admin/probate`, `/admin/probate/[caseId]`, `/admin/verification` | Sidebar navigation | Review probate/verification queue and evidence context | `/api/internal/admin/probate-cases`, verification APIs | Probate routes were detected as Platform Administration and reused the full platform sidebar. | Repaired: probate route is recognised as Probate Review workspace and renders a probate-focused navigation set. | Existing case action state refresh preserved | Probate/verification capabilities | repaired |
+| Platform Administration | `/admin/admin-users` | Admin lifecycle actions | Invite, resend, revoke, activate/deactivate, role change | `/api/internal/admin/admin-users` | Functional from previous lifecycle phases. | Working; not changed in this phase. | Existing lifecycle tests cover persistence/safeguards | Admin lifecycle capabilities | working |
+| Platform Administration | `/admin/users` | User lookup | Privacy-bounded user search/detail | `/api/internal/admin/users` | Functional, no private vault content exposed. | Working; not changed in this phase. | Existing API re-fetch/detail route | `users:lookup` | working |
+| Enterprise Operations | `/application/enterprise` | Create/open organisation | Enterprise organisation workflow | `/api/internal/admin/enterprise` | Functional from previous enterprise phases. | Working; navigation context now stays enterprise-only. | Existing enterprise tests cover create/update flow | Enterprise capability and org scope | working |
+| Probate Review | `/admin/probate/[caseId]` | Approve/reject/review case | Probate decision workflow | `/api/internal/admin/probate-cases/[caseId]/actions` | Functional from previous probate phase. | Working; now presented inside Probate Review context. | Existing probate tests cover terminal protections | `verification:decide` | working |
+
+Action matrix totals for recovery: working 4, repaired 5, disabled/removed 0, remaining P1 1.
+
+Remaining P1: staging email receipt/acceptance UAT still requires a reliable staging SMTP/provider or mailbox; no application email defect is proven by the current environment evidence.
+
 ## Evidence Commands
 
 See the implementation report for exact validation and hosted UAT commands.

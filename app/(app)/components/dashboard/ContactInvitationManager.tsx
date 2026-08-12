@@ -27,6 +27,7 @@ import {
   type CanonicalContactRow,
 } from "../../../../lib/contacts/contactRepository";
 import { buildContactsWorkspaceHref, buildLinkedContactRecordHref } from "../../../../lib/contacts/contactRouting";
+import { getExistingContactInvitationNotice, getSafeContactInvitationErrorMessage } from "../../../../lib/contacts/invitationLifecycle.ts";
 import { sendContactInvite } from "../../../../lib/contacts/sendContactInvite";
 import { resolveInvitationBadgeState, type InvitationStatus } from "../../../../lib/contacts/invitationStatus";
 import { useVaultPreferences } from "../../../../components/vault/VaultPreferencesContext";
@@ -249,11 +250,10 @@ export default function ContactInvitationManager({
       const userId = userData.user.id;
       const now = new Date().toISOString();
       const currentEditingRow = editingId ? rows.find((row) => row.id === editingId) ?? null : null;
-      const existingDraftInvitation = !currentEditingRow && draftContactId
+      const existingDraftInvitation = !currentEditingRow
         ? await loadExistingInvitationForContact(userId, {
-            contactId: draftContactId,
+            contactId: draftContactId ?? null,
             contactEmail: emailTrim,
-            assignedRole: role,
           })
         : null;
       const managedInvitation = currentEditingRow ?? existingDraftInvitation;
@@ -393,11 +393,11 @@ export default function ContactInvitationManager({
       setAllowedRecordIds([]);
       setEditableAssetIds([]);
       setEditableRecordIds([]);
-      setStatus("✅ Contact saved.");
+      setStatus(`✅ ${managedInvitation ? getExistingContactInvitationNotice(managedInvitation.invitation_status) : "Contact saved."}`);
       await loadRows();
       notifyContactsUpdated();
     } catch (error) {
-      setStatus(`❌ Save failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      setStatus(`❌ Save failed: ${getSafeContactInvitationErrorMessage(error)}`);
     } finally {
       setSaving(false);
     }
@@ -436,7 +436,7 @@ export default function ContactInvitationManager({
       await loadRows();
       notifyContactsUpdated();
     } catch (error) {
-      setStatus(`❌ Could not ${resend ? "resend" : "send"} invitation: ${error instanceof Error ? error.message : "Unknown error"}`);
+      setStatus(`❌ Could not ${resend ? "resend" : "send"} invitation: ${getSafeContactInvitationErrorMessage(error)}`);
     }
   }
 
@@ -539,29 +539,28 @@ export default function ContactInvitationManager({
     {
       contactId,
       contactEmail,
-      assignedRole,
     }: {
-      contactId: string;
+      contactId: string | null;
       contactEmail: string;
-      assignedRole: CollaboratorRole;
     },
   ): Promise<InvitationRow | null> {
-    let invitationRes = await supabase
-      .from("contact_invitations")
-      .select("id,contact_id,contact_name,contact_email,assigned_role,invitation_status,invited_at,sent_at")
-      .eq("owner_user_id", ownerUserId)
-      .eq("contact_id", contactId)
-      .neq("invitation_status", "revoked")
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    let invitationRes = contactId
+      ? await supabase
+        .from("contact_invitations")
+        .select("id,contact_id,contact_name,contact_email,assigned_role,invitation_status,invited_at,sent_at")
+        .eq("owner_user_id", ownerUserId)
+        .eq("contact_id", contactId)
+        .neq("invitation_status", "revoked")
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      : { data: null, error: null };
     if (!invitationRes.data && contactEmail) {
       invitationRes = await supabase
         .from("contact_invitations")
         .select("id,contact_id,contact_name,contact_email,assigned_role,invitation_status,invited_at,sent_at")
         .eq("owner_user_id", ownerUserId)
         .eq("contact_email", contactEmail)
-        .eq("assigned_role", assignedRole)
         .in("invitation_status", ["pending", "accepted"])
         .order("updated_at", { ascending: false })
         .limit(1)

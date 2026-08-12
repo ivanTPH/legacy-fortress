@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { ACTIVE_CONTACT_INVITATION_STATUSES } from "./invitationLifecycle.ts";
 
 type AnySupabaseClient = SupabaseClient;
 
@@ -783,6 +784,43 @@ export async function upsertCanonicalContactInvitationProjection(
     if (assignRes.error) throw new Error(assignRes.error.message);
 
     return { id: invitationId };
+  }
+
+  const contactEmail = String(contact.email ?? "").trim().toLowerCase();
+  if (contactEmail && ACTIVE_CONTACT_INVITATION_STATUSES.includes(invitationStatus as "pending" | "accepted")) {
+    const existingRes = await client
+      .from("contact_invitations")
+      .select("id")
+      .eq("owner_user_id", ownerUserId)
+      .eq("contact_email", contactEmail)
+      .in("invitation_status", [...ACTIVE_CONTACT_INVITATION_STATUSES])
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (existingRes.error) throw new Error(existingRes.error.message);
+
+    const existingInvitationId = String((existingRes.data as Record<string, unknown> | null)?.id ?? "").trim();
+    if (existingInvitationId) {
+      const updateRes = await client
+        .from("contact_invitations")
+        .update(projection.invitation)
+        .eq("id", existingInvitationId)
+        .eq("owner_user_id", ownerUserId);
+      if (updateRes.error) throw new Error(updateRes.error.message);
+
+      const assignRes = await client
+        .from("role_assignments")
+        .upsert(
+          {
+            invitation_id: existingInvitationId,
+            ...projection.roleAssignment,
+          },
+          { onConflict: "invitation_id" },
+        );
+      if (assignRes.error) throw new Error(assignRes.error.message);
+
+      return { id: existingInvitationId, existing: true };
+    }
   }
 
   const insertRes = await client
