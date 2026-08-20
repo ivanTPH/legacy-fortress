@@ -63,3 +63,22 @@ Production release must not be described as ready until all applicable checks pa
 19. envelope/key-management implementation, key separation and recovery-material coverage are security-reviewed before production claims are made
 20. partner communications enforce purpose, channel, frequency, objection and suppression rules and do not expose unrestricted identity lists where closed-loop delivery is intended
 21. production biometric/IDV provider and model licences/assurance have been formally approved before production activation
+
+## Hosted staging source of truth — updated 20 August 2026
+
+The current hosted staging path is Coolify/custom-domain based:
+
+- Staging app: `https://test.mylegacyfortress.com`
+- Staging app label recorded in prior audit: `Legacy Fortress Staging`
+- Staging Supabase/API origin: `https://supabase-test.mylegacyfortress.com`
+- Current read-only `/api/version` evidence: commit `42f67238dae3721c1b2d181f01caddbcfb0abe02`
+
+Older README/Vercel Preview notes are historical for the current staging gate. Do not pull Vercel Production or Preview environment variables for Phase 1 hosted UAT unless the owner explicitly re-verifies Vercel as the active staging system.
+
+The approved recovery path is:
+
+1. Restore `COOLIFY_BASE_URL` and `COOLIFY_API_TOKEN` through the operator's secure local mechanism.
+2. Verify the Coolify application is `Legacy Fortress Staging`, uses `test.mylegacyfortress.com`, and is deployed from `hosted-uat-preparation-20260715` at the expected SHA.
+3. Restore ignored `.env.staging.local` from Coolify/operator secret records with staging-only `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DB_URL`, `NEXT_PUBLIC_APP_URL`, `BASE_URL` and `PLAYWRIGHT_BASE_URL`.
+4. Confirm `NEXT_PUBLIC_SUPABASE_URL` resolves to `https://supabase-test.mylegacyfortress.com` only after operator metadata proves it is the staging Supabase/API origin.
+5. Run `npm run uat:validate` before hosted migration inspection or synthetic UAT.

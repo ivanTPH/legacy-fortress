@@ -81,6 +81,8 @@ The platform requires operational support for:
 - verify staging before hosted mutations;
 - never treat production as the development target.
 
+Current hosted staging source-of-truth details are maintained in `docs/STAGING_ENVIRONMENT_SETUP.md` and `docs/HOSTED_STAGING_READINESS_PLAN.md`; as of 20 August 2026 the active evidence points to the Coolify/custom-domain staging path, not older Vercel Preview assumptions.
+
 ## Current known architectural concern
 Contacts/invitations historically existed across multiple paths. Recent work indicates movement toward a shared `/contacts` workspace, but the effective persisted contact/invitation/verification permission model must be re-audited in current repo truth before further contact-adjacent development.
 

@@ -1,20 +1,30 @@
 # Hosted Staging Readiness, Deployment Safety, and Canonical Contact Plan
 
 Date: 2026-07-04
-Status: Partially ready for hosted staging UAT, with named blockers
+Status: Partially ready for hosted staging UAT, with named blockers. Updated 2026-08-20 for current hosting source-of-truth reconciliation.
 Scope: staging deployment readiness, migration safety, hosted browser/RLS proof plan, and canonical contact architecture.
 Related docs: [BUILD_AND_RELEASE.md](./BUILD_AND_RELEASE.md), [UAT_REMEDIATION_TODO.md](./UAT_REMEDIATION_TODO.md), [KNOWN_TECH_DEBT.md](./KNOWN_TECH_DEBT.md), [ADMIN_BACKOFFICE_DELIVERY_PLAN.md](./ADMIN_BACKOFFICE_DELIVERY_PLAN.md), [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md), [ATTACHMENT_AND_DOCUMENT_ARCHITECTURE.md](./ATTACHMENT_AND_DOCUMENT_ARCHITECTURE.md).
 
 ## Executive Summary
 
-Legacy Fortress has enough local evidence to continue controlled internal UAT, but hosted staging is not yet proven. No hosted staging deployment, hosted migration, hosted browser test, hosted Supabase access, Vercel access, Stripe access, production data access, live-user access, commit, push or deployment was performed for this phase.
+Legacy Fortress has enough local evidence to continue controlled internal UAT, and current hosted staging hostnames are now identified. Hosted migration and Phase 1 synthetic UAT remain blocked until staging credentials, migration access, backup and rollback ownership are restored through the approved secure mechanism.
 
-The hosted staging release gate remains blocked until a separate staging Supabase/Vercel environment is supplied through secure local configuration, verified as isolated from production, backed up, migrated in order, and independently re-proven with synthetic accounts.
+The current hosted staging release gate uses the Coolify/custom-domain staging path recorded below. Older Vercel Preview references in repository history are superseded for the current hosted staging gate unless the owner explicitly re-verifies Vercel as the active staging platform.
+
+Current safe staging identifiers as of 20 August 2026:
+
+- Staging application: `https://test.mylegacyfortress.com`
+- Staging application name recorded in prior audit: `Legacy Fortress Staging`
+- Staging Supabase/API origin: `https://supabase-test.mylegacyfortress.com`
+- Current staging `/api/version` read-only evidence: commit `42f67238dae3721c1b2d181f01caddbcfb0abe02`
+- Supabase API gateway evidence: `supabase-test.mylegacyfortress.com` responds as a Kong-backed Supabase-style API endpoint and rejects unauthenticated REST requests.
+
+The underlying staging Supabase project/service id, DB URL, service-role key, backup owner and rollback owner are not available in the current shell and must be recovered from Coolify/operator records or the approved secret store before mutation.
 
 | Environment | Current decision | Reason |
 |---|---|---|
 | Local internal UAT | Suitable for controlled internal UAT | Local browser, API, RLS, lint and build proof exists for the current remediation stack. |
-| Hosted staging | Partially ready, with named blockers | Documentation, packaging guidance and migration plan are ready; no hosted staging target was available or tested in this phase. |
+| Hosted staging | Partially ready, with named blockers | App/API hostnames and current deployed SHA are identified; credentials, migration history, backup and Phase 1 synthetic UAT remain blocked. |
 | External pilot | Not ready | Requires hosted staging proof, rollback owner, security review and synthetic hosted UAT evidence. |
 | Production | Not ready | Requires staging pass, production release gate, rollback plan, privacy/security review and explicit deployment approval. |
 
@@ -24,12 +34,12 @@ The hosted staging release gate remains blocked until a separate staging Supabas
 |---|---|---|---|
 | Package manager | Use npm and `package-lock.json`; do not switch package managers. | `package.json`, `package-lock.json`. | Ready |
 | Framework/build | Next.js app; use `npm run build` and `npm run lint`. | `package.json` scripts use `next build --webpack` and `eslint`. | Ready |
-| Hosted environment | Separate staging Vercel project or Preview deployment, never production. | No hosted target contacted in this phase. | Blocked |
-| Supabase project | Separate staging Supabase project with distinct API URL, database, storage and auth. | Local config uses isolated UAT ports; hosted values must come from secure env only. | Blocked |
+| Hosted environment | Separate Coolify staging application, never production. | `Legacy Fortress Staging` / `test.mylegacyfortress.com` was recorded in prior audit; `/api/version` now reports the approved Phase 1 SHA. | Identified, credentials blocked |
+| Supabase project | Separate staging Supabase service with distinct API URL, database, storage and auth. | `supabase-test.mylegacyfortress.com` is a Supabase-style API origin; underlying project/service id and DB access remain unavailable locally. | Identified, credentials blocked |
 | Environment files | Commit only safe templates; put secrets in `.env.staging.local` or platform env store. | `.env.staging.example` is safe template only. `.env*` secret files remain ignored. | Ready with discipline |
 | Supabase public client | `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` must point to staging. | Names documented; values must not be committed or printed. | Awaiting secure values |
 | Server admin key | `SUPABASE_SERVICE_ROLE_KEY` must be staging-only and server-only. | Server code expects service-role access for health/admin routes. | Awaiting secure value |
-| App URL/redirects | `NEXT_PUBLIC_APP_URL`, auth callback and reset URLs must use exact staging origin. | Local config contains local and production redirect examples; staging redirects must be configured separately. | Blocked |
+| App URL/redirects | `NEXT_PUBLIC_APP_URL`, auth callback and reset URLs must use exact staging origin. | Current staging origin is `https://test.mylegacyfortress.com`; auth redirects must be confirmed in staging Supabase/Coolify settings. | Identified, config proof blocked |
 | CSP | Production/Preview CSP must not allow arbitrary HTTP origins. Staging Supabase HTTPS origin is covered by `connect-src https:`. | Local-only `127.0.0.1:55421` allowance is development-only. | Ready, verify after deploy |
 | Email | Sign-up and password-reset emails must work in staging with synthetic users. | Local Mailpit proof exists; hosted provider/rate limits not proven. | Blocked |
 | Storage | Private `vault-docs` and avatar storage must exist with signed access only. | Local storage proof exists; hosted buckets/policies must be checked after migrations/config. | Blocked |
@@ -62,7 +72,7 @@ Files and patterns requiring exclusion or separate review:
 | Local seed scripts or generated seed data | Do not deploy as production data | Synthetic UAT data must remain local or staging-only. |
 | Storage objects/dumps/backups | Never commit | Could contain documents or sensitive metadata. |
 
-The current local UAT setup uses local Supabase and mail ports only. Those values must not be copied into Vercel or hosted Supabase configuration.
+The current local UAT setup uses local Supabase and mail ports only. Those values must not be copied into Coolify, Vercel or hosted Supabase configuration.
 
 ## Migration Readiness Checklist
 
@@ -95,6 +105,7 @@ Before applying any hosted migration:
 | `20260630170000_admin_phase1_foundation.sql` | Admin roles and append-only audit events | Verify `audit_events` RLS, indexes, insert allowed, update/delete rejected. | Restore checkpoint; do not delete audit evidence without approval. |
 | `20260701193000_admin_phase2b_probate_cases.sql` | Probate cases and case evidence | Verify role denial, evidence signed access and audit timeline. | Restore checkpoint. |
 | `20260703153000_linked_access_scope_enforcement.sql` | Tight scoped linked-access RLS for records/documents/storage | Security-critical. Must be applied before hosted linked-access UAT or pilot. | Restore checkpoint immediately if unrelated owner data is visible or revoked access persists. |
+| `20260820120000_phase1_verified_access_policy_foundation.sql` | Phase 1 identity assurance, vault lifecycle, invitation activation, verified linked-access and storage/RLS hardening | Security-critical. Must be inspected/applied on staging before Phase 1 hosted UAT can pass. | Restore checkpoint or owner-approved forward fix if protected access or owner access regresses. |
 
 ## Hosted Browser, API, and RLS UAT Plan
 
@@ -182,9 +193,9 @@ Canonical contact release acceptance criteria:
 
 ## Known Hosted Staging Blockers
 
-1. No secure hosted staging environment values were available in this phase.
-2. No hosted migration history was inspected in this phase.
-3. No hosted backup/checkpoint or rollback owner was confirmed in this phase.
+1. No secure hosted staging environment values are available in the current shell.
+2. No hosted migration history can be inspected until staging DB access is restored.
+3. No hosted backup/checkpoint or rollback owner has been confirmed for the Phase 1 migration.
 4. No hosted auth/email/storage proof was run in this phase.
 5. `supabase/config.toml` remains local-UAT-specific and must not be used as hosted staging configuration without review.
 6. `tsconfig.json` remains review-sensitive from prior packaging audit.
@@ -194,7 +205,7 @@ Canonical contact release acceptance criteria:
 
 Hosted staging rollback must include:
 
-- Vercel rollback to the previous Preview/staging deployment.
+- Coolify rollback to the previous staging deployment.
 - Supabase database restore from pre-migration checkpoint for failed schema/security migrations.
 - Storage cleanup of synthetic staging files if safe and approved.
 - Audit preservation unless a full staging restore is approved.
@@ -202,7 +213,7 @@ Hosted staging rollback must include:
 
 ## Current Evidence
 
-Local evidence exists in [UAT_REMEDIATION_TODO.md](./UAT_REMEDIATION_TODO.md) for Phases 1-4 and local release package review. This document does not claim hosted evidence. Hosted staging must be independently proven.
+Local evidence exists in [UAT_REMEDIATION_TODO.md](./UAT_REMEDIATION_TODO.md) for Phases 1-4 and local release package review. Current hosted app/API identifiers are known, but hosted Phase 1 migration and UAT evidence must still be independently proven.
 
 2026-07-04 documentation/readiness verification:
 
