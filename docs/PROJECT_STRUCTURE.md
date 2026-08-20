@@ -1,244 +1,94 @@
-# Project Structure
+# Legacy Fortress — Project Structure
 
-This file describes the current repository structure based on the code in this repo today.
+Status: working project reference created from the latest Codex report and the documents already attached to this project. This is a stabilisation note, not a full repo crawl.
 
-## Top-level folders
+## Confirmed key application areas
 
-- `app/`
-  Next.js App Router routes, layouts, public auth pages, in-app pages, API routes, and some app-scoped UI.
-- `components/`
-  Shared UI and workspace components used across routes.
-- `lib/`
-  Shared data, canonical asset mapping, Supabase access, auth/session helpers, dashboard summaries, profile helpers, validation, and document/storage helpers.
-- `supabase/`
-  Supabase CLI config and SQL migrations.
-- `tests/`
-  Node tests, Playwright E2E tests, and helper loaders.
-- `scripts/`
-  Route audits, env validation, link crawling, smoke scripts, and canonical bank verification scripts.
-- `public/`
-  Static assets such as logos, icons, and brand assets.
-- `.github/workflows/`
-  CI workflow.
+### Canonical/shared record system
+- `components/records/UniversalRecordWorkspace.tsx`
+- `components/documents/DocumentsWorkspace.tsx`
+- `components/documents/AttachmentGallery.tsx`
 
-## App routes
+These are the confirmed shared/canonical attachment surfaces now in use.
 
-## Public/auth routes
+### Legacy section system still in use
+- `components/sections/SectionWorkspace.tsx`
+- `app/(app)/personal/page.tsx`
 
-- `app/page.tsx`
-- `app/sign-in/page.tsx`
-- `app/sign-up/page.tsx`
-- `app/signin/page.tsx`
-  Alias route that redirects to `/sign-in`.
-- `app/signup/page.tsx`
-  Legacy sign-up route implementation still present.
-- `app/forgot-password/page.tsx`
-- `app/reset-password/page.tsx`
-- `app/auth/callback/page.tsx`
-- `app/auth/complete/route.ts`
-- `app/auth/reset-password/page.tsx`
-- `app/onboarding/page.tsx`
+The legacy section system is still active in parts of the product and has now been upgraded to support multi-attachment behaviour instead of only a single `file_path` pattern.
 
-## In-app routes under `app/(app)`
+### Contact-related split areas
+- `app/(app)/personal/page.tsx` — next of kin via legacy `SectionWorkspace`
+- `app/(app)/trust/page.tsx` — executors / trusted contacts via canonical asset records
+- `ContactInvitationManager.tsx` — invite status handling
 
-- Dashboard and shell:
-  - `app/(app)/layout.tsx`
-  - `app/(app)/dashboard/page.tsx`
-- Core sections:
-  - `app/(app)/profile/page.tsx`
-  - `app/(app)/finances/*`
-  - `app/(app)/property/*`
-  - `app/(app)/business/page.tsx`
-  - `app/(app)/personal/*`
-  - `app/(app)/legal/*`
-  - `app/(app)/trust/page.tsx`
-  - `app/(app)/employment/page.tsx`
-  - `app/(app)/cars-transport/page.tsx`
-  - `app/(app)/support/page.tsx`
-- Vault/older section routes still present:
-  - `app/(app)/vault/*`
+## Confirmed structural observations
+- Attachment UI has been centralised into one reusable shared component.
+- Canonical record/document workspaces are now using the shared in-app preview approach.
+- Legacy section pages still exist and still use `section_entries`, even though attachment handling has improved.
+- Contacts are still fragmented across multiple systems and are not yet one canonical reusable entity.
 
-## Shared component folders
+## Confirmed files changed in the latest pass
+- `components/documents/AttachmentGallery.tsx`
+- `components/records/UniversalRecordWorkspace.tsx`
+- `components/documents/DocumentsWorkspace.tsx`
+- `components/sections/SectionWorkspace.tsx`
 
-- `components/forms/asset/`
-  Shared form controls and config-driven asset field rendering.
-- `components/records/`
-  Canonical workspace UI. Main file: [UniversalRecordWorkspace.tsx](/Users/ivan-imac/legacy-fortress-web/components/records/UniversalRecordWorkspace.tsx)
-- `components/sections/`
-  Legacy section-entry workspace. Main file: [SectionWorkspace.tsx](/Users/ivan-imac/legacy-fortress-web/components/sections/SectionWorkspace.tsx)
-- `components/documents/`
-  Shared attachment/document UI:
-  - [DocumentsWorkspace.tsx](/Users/ivan-imac/legacy-fortress-web/components/documents/DocumentsWorkspace.tsx)
-  - [AttachmentGallery.tsx](/Users/ivan-imac/legacy-fortress-web/components/documents/AttachmentGallery.tsx)
-- `components/contacts/`
-  Shared contacts network UI:
-  - [ContactsNetworkWorkspace.tsx](/Users/ivan-imac/legacy-fortress-web/components/contacts/ContactsNetworkWorkspace.tsx)
-- `components/auth/`, `components/assets/`, `components/onboarding/`, `components/ui/`
-  Shared auth, modal, onboarding, and primitive UI.
+## Current architecture summary
 
-## Canonical workspace pattern
+### Shared attachment layer
+A shared gallery/viewer now provides:
+- image thumbnail cards
+- document file cards
+- in-app preview modal
+- download
+- print for PDF/images
+- remove
 
-Canonical asset/workspace behavior currently centers on:
+### Compatibility approach
+Legacy section pages now use `details.attachments[]` for multiple files, while still backfilling old `file_path` values for compatibility.
 
-- [UniversalRecordWorkspace.tsx](/Users/ivan-imac/legacy-fortress-web/components/records/UniversalRecordWorkspace.tsx)
-- [fieldDictionary.ts](/Users/ivan-imac/legacy-fortress-web/lib/assets/fieldDictionary.ts)
-- Canonical asset readers/normalizers in `lib/assets/*Asset.ts`
-- Shared create/update path in [createAsset.ts](/Users/ivan-imac/legacy-fortress-web/lib/assets/createAsset.ts)
-- Canonical fetch path in [fetchCanonicalAssets.ts](/Users/ivan-imac/legacy-fortress-web/lib/assets/fetchCanonicalAssets.ts)
-- Sensitive metadata path in [canonicalPersistence.ts](/Users/ivan-imac/legacy-fortress-web/lib/canonicalPersistence.ts)
-
-This pattern is used for current canonical sections such as:
-
-- Bank
-- Investments
-- Pensions
-- Insurance
-- Debts
-- Property
-- Business interests
-- Digital assets
-- Beneficiaries
-- Executors
-- Tasks
-- Many legal category pages via `UniversalRecordWorkspace`
-
-## Legacy workspace pattern still in use
-
-Legacy `section_entries` pattern still exists in:
-
-- [SectionWorkspace.tsx](/Users/ivan-imac/legacy-fortress-web/components/sections/SectionWorkspace.tsx)
-- Routes currently using it:
-  - `app/(app)/employment/page.tsx`
-  - `app/(app)/cars-transport/page.tsx`
-  - `app/(app)/support/page.tsx`
-  - `app/(app)/personal/wishes/page.tsx`
-
-These pages still use `public.section_entries` instead of canonical `assets`.
-
-## Data and access layers in `lib/`
-
-- Auth/session:
-  - `lib/auth/*`
-  - `lib/supabaseClient.ts`
-  - `lib/supabaseAdmin.ts`
-- Canonical assets:
-  - `lib/assets/*`
-- Canonical persistence and secure payload handling:
-  - `lib/canonicalPersistence.ts`
-  - `lib/assets/sensitiveHydration.ts`
-- Profile:
-- `lib/profile/workspace.ts`
-  - `lib/profile/avatarTrace.ts`
-- Contacts:
-  - `lib/contacts/canonicalContacts.ts`
-- Dashboard:
-  - `lib/dashboard/*`
-- Discovery/filtering:
-  - `lib/records/discovery.ts`
-- Validation:
-  - `lib/validation/*`
-
-## Document and attachment handling
-
-Current document/attachment handling lives in:
-
-- [lib/assets/documentLinks.ts](/Users/ivan-imac/legacy-fortress-web/lib/assets/documentLinks.ts)
-- [components/documents/DocumentsWorkspace.tsx](/Users/ivan-imac/legacy-fortress-web/components/documents/DocumentsWorkspace.tsx)
-- [components/documents/AttachmentGallery.tsx](/Users/ivan-imac/legacy-fortress-web/components/documents/AttachmentGallery.tsx)
-- [components/records/UniversalRecordWorkspace.tsx](/Users/ivan-imac/legacy-fortress-web/components/records/UniversalRecordWorkspace.tsx)
-- [components/sections/SectionWorkspace.tsx](/Users/ivan-imac/legacy-fortress-web/components/sections/SectionWorkspace.tsx)
-
-Current canonical contacts handling lives in:
-
-- [lib/contacts/canonicalContacts.ts](/Users/ivan-imac/legacy-fortress-web/lib/contacts/canonicalContacts.ts)
-- [components/contacts/ContactsNetworkWorkspace.tsx](/Users/ivan-imac/legacy-fortress-web/components/contacts/ContactsNetworkWorkspace.tsx)
-- [app/(app)/personal/contacts/page.tsx](/Users/ivan-imac/legacy-fortress-web/app/(app)/personal/contacts/page.tsx)
-- [app/(app)/components/dashboard/ContactInvitationManager.tsx](/Users/ivan-imac/legacy-fortress-web/app/(app)/components/dashboard/ContactInvitationManager.tsx)
-
-## Tests and test files
-
-Node tests:
-
-- `tests/menu-key-actions.test.mjs`
-- `tests/menu-state.test.mjs`
-- `tests/route-parity.test.mjs`
-- `tests/auth-and-schema-guards.test.mjs`
-- `tests/recovery-flow.test.mjs`
-- `tests/asset-live-sync.test.mjs`
-- `tests/bank-create-canonical-metadata.test.mjs`
-- `tests/canonical-sensitive-hydration.test.mjs`
-- `tests/dashboard-canonical-finance-summary.test.mjs`
-- `tests/profile-avatar-source.test.mjs`
-- `tests/property-rental-schema.test.mjs`
-
-E2E:
-
-- `tests/e2e/auth-and-nav.spec.ts`
-- `tests/e2e/helpers/auth.ts`
-
-Helper:
-
-- `tests/helpers/ts-extension-loader.mjs`
-
-## Build and deploy config files
-
-- `package.json`
-- `next.config.ts`
-- `tsconfig.json`
-- `eslint.config.mjs`
-- `playwright.config.ts`
-- `supabase/config.toml`
-- `.github/workflows/ci.yml`
+## Known structural gaps
+- Full route inventory is not yet documented here.
+- Full lib/data/service layer inventory is not yet documented here.
+- Test directory and build config inventory still need a repo-level pass.
+- Contact persistence is still split and not normalised.
 
 ## Rules for future prompts
+- Reuse `AttachmentGallery` instead of creating page-level attachment UIs.
+- Do not introduce new single-file `file_path`-only patterns where multi-attachment support exists.
+- Prefer canonical/shared workspaces before extending legacy section flows.
+- Do not create a new contact model in one page without checking the broader cross-app contact architecture first.
 
-- Prefer [UniversalRecordWorkspace.tsx](/Users/ivan-imac/legacy-fortress-web/components/records/UniversalRecordWorkspace.tsx) over adding new page-local CRUD UIs when a category already has canonical asset support.
-- Prefer [ConfigDrivenAssetFields.tsx](/Users/ivan-imac/legacy-fortress-web/components/forms/asset/ConfigDrivenAssetFields.tsx) and [fieldDictionary.ts](/Users/ivan-imac/legacy-fortress-web/lib/assets/fieldDictionary.ts) over hardcoded form fields when a canonical config exists.
-- Do not introduce new page-level attachment widgets when [AttachmentGallery.tsx](/Users/ivan-imac/legacy-fortress-web/components/documents/AttachmentGallery.tsx) or [DocumentsWorkspace.tsx](/Users/ivan-imac/legacy-fortress-web/components/documents/DocumentsWorkspace.tsx) already covers the need.
-- Do not add new `SectionWorkspace` routes for categories that can live in canonical `assets`.
-- Do not add another read/write path for Bank, Profile avatar, or canonical documents if a shared helper already exists.
+## Governance architecture target — 20 August 2026
+New authoritative project references:
+- `PROJECT_CONTEXT.md`
+- `LEGACY_FORTRESS_DATA_PROTECTION_GOVERNANCE.md`
 
-## Phase 2 stabilisation map
+Canonical service/domain targets that must be found or created through safe remediation rather than page-local duplication:
+- People & Access / canonical contact entity
+- Invitation lifecycle service
+- Identity verification provider abstraction
+- Permission-resolution service enforced server-side/RLS
+- Immutable document/version provenance
+- Estate access request/review service
+- Organisation/licence/sponsored-entitlement domain
+- Privacy rights case-management service
+- Retention/deletion/anonymisation service
+- Consent/marketing preference service
+- Append-only audit/event service
 
-Phase 2 dirty-file and reproducibility evidence now lives in:
+These are architectural targets, not assertions that the current repo already implements them.
+## Required security/domain services — target architecture 20 August 2026
+Future repo structure should converge on shared canonical services/interfaces rather than page-local implementations for:
+- `IdentityVerificationProvider` — replaceable internal-UAT/commercial IDV adapter;
+- identity assurance / step-up policy — Level 1 authenticated, Level 2 identity verified, Level 3 presence re-verified;
+- vault lifecycle/state service — owner active, death reported, protective lock, estate locked, disputed/recovery;
+- estate claimant/representative access service — independent from vault state;
+- immutable Estate Administration record/provenance service;
+- policy/consent/communication preference service including per-partner purpose/channel/frequency;
+- closed-loop partner cohort/activation service;
+- key-management/recovery interface supporting envelope encryption and separately protected wrapped recovery material;
+- security/privacy audit service.
 
-- [PHASE2_BASELINE_INVENTORY.md](/Users/ivan-imac/legacy-fortress-web/docs/stabilisation/PHASE2_BASELINE_INVENTORY.md)
-- [DIRTY_FILE_REGISTER.md](/Users/ivan-imac/legacy-fortress-web/docs/stabilisation/DIRTY_FILE_REGISTER.md)
-
-Additional current structure notes:
-
-- Admin foundation routes now use `/admin` as the canonical application dashboard landing route and `/admin/access-denied` as the denial page.
-- Internal admin APIs are under `app/api/internal/admin/*` and must continue to use shared admin capability helpers from `lib/admin/*`.
-- Probate case APIs are currently under `app/api/internal/admin/probate-cases/*`; treat them as capability-gated operational APIs, not page-local mock routes.
-- Local review/proof E2E specs are under `tests/e2e/*local*.spec.ts` and require the local app at `http://127.0.0.1:3012` plus local Supabase at `127.0.0.1:55421`.
-- `npm test` now runs deterministic unit/stabilisation/admin-doc checks. Local-Supabase/browser proofs are explicitly named as `npm run test:uat:local` and `npm run test:uat:admin`.
-- `npm run uat:validate` validates UAT/staging/local-UAT environment categories without printing secret values; see `scripts/validate-uat-environment.mjs` and `tests/uat-environment-validation.test.mjs`.
-- Phase 4D release evidence and controlled commit planning live under `docs/release/PHASE4D_*.md`.
-
-## Phase 3 product and dashboard refinement structure
-
-Phase 3 refinement planning now lives in:
-
-- [OWNER_REVIEW_BACKLOG.md](/Users/ivan-imac/legacy-fortress-web/docs/product/OWNER_REVIEW_BACKLOG.md)
-- [DASHBOARD_BOUNDARIES_AND_PRIVACY.md](/Users/ivan-imac/legacy-fortress-web/docs/product/DASHBOARD_BOUNDARIES_AND_PRIVACY.md)
-- [DASHBOARD_COMPONENT_STANDARD.md](/Users/ivan-imac/legacy-fortress-web/docs/architecture/DASHBOARD_COMPONENT_STANDARD.md)
-- [PHASE3_SELECTED_SLICE.md](/Users/ivan-imac/legacy-fortress-web/docs/product/PHASE3_SELECTED_SLICE.md)
-
-Local-only deterministic fixture definitions live in:
-
-- [phase3SyntheticFixturePack.mjs](/Users/ivan-imac/legacy-fortress-web/tests/fixtures/phase3SyntheticFixturePack.mjs)
-
-The first Phase 3 implementation slice keeps customer category dashboard cards on the shared `DashboardAssetSummaryCard` pattern. Future dashboard work should extend the documented metric/service boundaries before adding new UI.
-
-## Phase 4A customer dashboard structure
-
-Phase 4A adds:
-
-- [CanonicalAssetOverviewGrid.tsx](/Users/ivan-imac/legacy-fortress-web/app/(app)/components/dashboard/CanonicalAssetOverviewGrid.tsx)
-- [CUSTOMER_DASHBOARD_ROUTE_AND_DATA_INVENTORY.md](/Users/ivan-imac/legacy-fortress-web/docs/architecture/CUSTOMER_DASHBOARD_ROUTE_AND_DATA_INVENTORY.md)
-- [PHASE4A_SELECTED_SCOPE.md](/Users/ivan-imac/legacy-fortress-web/docs/product/PHASE4A_SELECTED_SCOPE.md)
-- [phase4aSyntheticFixturePack.mjs](/Users/ivan-imac/legacy-fortress-web/tests/fixtures/phase4aSyntheticFixturePack.mjs)
-- [phase4a-customer-dashboard-data-proof.test.mjs](/Users/ivan-imac/legacy-fortress-web/tests/phase4a-customer-dashboard-data-proof.test.mjs)
-- [phase4a-customer-dashboard-consistency.spec.ts](/Users/ivan-imac/legacy-fortress-web/tests/e2e/phase4a-customer-dashboard-consistency.spec.ts)
-
-Selected canonical overview pages are `/property`, `/business`, `/vault/digital`, and `/vault/personal`. These pages read canonical `assets` through shared helpers and render count-only summaries through `DashboardAssetSummaryCard`.
+Do not implement these rules independently inside Personal Vault, Admin and Enterprise pages. Shared server-side domain policies must be reused by all UI surfaces.
