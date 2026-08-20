@@ -6,6 +6,18 @@ import {
   type CollaboratorRole,
   type SectionKey,
 } from "./roles.ts";
+import {
+  ACTIVE_PROTECTED_GRANT_STATUSES,
+  CONTACT_WALLET_GRANT_STATUSES,
+  LF_IDENTITY_LEVEL_1_AUTHENTICATED,
+  type ExplicitAccessPermission,
+  type IdentityAssuranceLevel,
+  type VaultLifecycleState,
+  hasExplicitPermission,
+  isProtectedGrantActive,
+  normalizeIdentityAssuranceLevel,
+  vaultAllowsOwnerMutation,
+} from "./securityPolicy.ts";
 
 type AnySupabaseClient = SupabaseClient;
 
@@ -21,6 +33,8 @@ export type AccountAccessGrantRow = {
   relationship: string | null;
   activation_status: AccessActivationStatus;
   permissions_override: Record<string, unknown> | null;
+  required_identity_level?: number | null;
+  vault_lifecycle_state?: VaultLifecycleState | string | null;
   last_accessed_at: string | null;
   updated_at: string;
 };
@@ -37,6 +51,9 @@ export type ViewerAccessState = {
   activationStatus: AccessActivationStatus;
   readOnly: boolean;
   canUpgradeToOwnAccount: boolean;
+  identityAssuranceLevel: IdentityAssuranceLevel;
+  requiredIdentityLevel: IdentityAssuranceLevel;
+  vaultLifecycleState: VaultLifecycleState;
   permissionsOverride: ViewerPermissionsOverride;
   assignedAssetIds: string[];
   assignedRecordIds: string[];
@@ -52,6 +69,7 @@ export type ViewerPermissionsOverride = {
   recordIds: string[];
   editableAssetIds: string[];
   editableRecordIds: string[];
+  explicitPermissions: ExplicitAccessPermission[];
   ownerNotes?: string;
 };
 
@@ -95,7 +113,7 @@ export async function hasLinkedAccountAccess(client: AnySupabaseClient, userId: 
     .from("account_access_grants")
     .select("id")
     .eq("linked_user_id", userId)
-    .in("activation_status", ["accepted", "verified", "active"])
+    .in("activation_status", ACTIVE_PROTECTED_GRANT_STATUSES)
     .limit(1);
 
   if (res.error) return false;
@@ -108,16 +126,19 @@ export async function loadViewerAccessState(
   {
     preferredGrantId,
     fallbackDisplayName = "Secure Account",
+    includePreVerificationGrants = false,
   }: {
     preferredGrantId?: string | null;
     fallbackDisplayName?: string;
+    includePreVerificationGrants?: boolean;
   } = {},
 ): Promise<ViewerAccessState> {
+  const allowedGrantStatuses = includePreVerificationGrants ? CONTACT_WALLET_GRANT_STATUSES : ACTIVE_PROTECTED_GRANT_STATUSES;
   const grantsRes = await client
     .from("account_access_grants")
-    .select("id,owner_user_id,linked_user_id,contact_id,invitation_id,assigned_role,relationship,activation_status,permissions_override,last_accessed_at,updated_at")
+    .select("id,owner_user_id,linked_user_id,contact_id,invitation_id,assigned_role,relationship,activation_status,permissions_override,required_identity_level,vault_lifecycle_state,last_accessed_at,updated_at")
     .eq("linked_user_id", sessionUserId)
-    .in("activation_status", ["accepted", "verified", "active"])
+    .in("activation_status", allowedGrantStatuses)
     .order("updated_at", { ascending: false });
 
   const grants = ((grantsRes.data ?? []) as AccountAccessGrantRow[]).filter(Boolean);
@@ -139,6 +160,9 @@ export async function loadViewerAccessState(
       activationStatus: "active",
       readOnly: false,
       canUpgradeToOwnAccount: false,
+      identityAssuranceLevel: LF_IDENTITY_LEVEL_1_AUTHENTICATED,
+      requiredIdentityLevel: LF_IDENTITY_LEVEL_1_AUTHENTICATED,
+      vaultLifecycleState: "OWNER_ACTIVE",
       permissionsOverride: EMPTY_VIEWER_PERMISSIONS_OVERRIDE,
       assignedAssetIds: [],
       assignedRecordIds: [],
@@ -149,6 +173,9 @@ export async function loadViewerAccessState(
   }
 
   const permissionsOverride = normalizePermissionsOverride(selectedGrant.permissions_override);
+  const identityAssuranceLevel = await loadIdentityAssuranceLevel(client, sessionUserId);
+  const requiredIdentityLevel = normalizeIdentityAssuranceLevel(selectedGrant.required_identity_level ?? 2);
+  const vaultLifecycleState = normalizeVaultLifecycleState(selectedGrant.vault_lifecycle_state);
 
   const [contactRes, profileRes, legacyProfileRes, assetLinksRes, recordLinksRes] = await Promise.all([
     selectedGrant.contact_id
@@ -222,6 +249,9 @@ export async function loadViewerAccessState(
     activationStatus: selectedGrant.activation_status,
     readOnly: permissionsOverride.readOnly ?? true,
     canUpgradeToOwnAccount: true,
+    identityAssuranceLevel,
+    requiredIdentityLevel,
+    vaultLifecycleState,
     permissionsOverride,
     assignedAssetIds: Array.from(new Set([...permissionsOverride.assetIds, ...linkedAssetIds])),
     assignedRecordIds: Array.from(new Set([...permissionsOverride.recordIds, ...linkedRecordIds])),
@@ -248,6 +278,8 @@ export function mapPathnameToSectionKey(pathname: string): SectionKey | null {
 }
 
 export function canViewPath(pathname: string, viewer: ViewerAccessState) {
+  if (viewer.mode === "linked" && pathname.startsWith("/contact-wallet")) return true;
+  if (viewer.mode === "linked" && !isProtectedGrantActive(viewer.activationStatus)) return false;
   const section = mapPathnameToSectionKey(pathname);
   if (!section) return true;
   if (!canAccessSection(viewer.viewerRole, section, "view", viewer.activationStatus)) return false;
@@ -300,14 +332,27 @@ export function canEditAssetForViewer(assetId: string | null | undefined, viewer
   const normalizedId = String(assetId ?? "").trim();
   if (!normalizedId) return false;
   if (viewer.mode !== "linked") return true;
-  return viewer.editableAssetIds.includes(normalizedId);
+  return false;
 }
 
 export function canEditRecordForViewer(recordId: string | null | undefined, viewer: ViewerAccessState) {
   const normalizedId = String(recordId ?? "").trim();
   if (!normalizedId) return false;
   if (viewer.mode !== "linked") return true;
-  return viewer.editableRecordIds.includes(normalizedId);
+  return false;
+}
+
+export function canContributeDocumentForViewer(assetId: string | null | undefined, viewer: ViewerAccessState) {
+  const normalizedId = String(assetId ?? "").trim();
+  if (!normalizedId) return false;
+  if (viewer.mode !== "linked") return vaultAllowsOwnerMutation(viewer.vaultLifecycleState);
+  if (!viewer.assignedAssetIds.includes(normalizedId)) return false;
+  return (
+    isProtectedGrantActive(viewer.activationStatus)
+    && viewer.identityAssuranceLevel >= viewer.requiredIdentityLevel
+    && hasExplicitPermission({ explicit_permissions: viewer.permissionsOverride.explicitPermissions }, "contribute_document")
+    && vaultAllowsOwnerMutation(viewer.vaultLifecycleState)
+  );
 }
 
 const EMPTY_VIEWER_PERMISSIONS_OVERRIDE: ViewerPermissionsOverride = {
@@ -316,6 +361,7 @@ const EMPTY_VIEWER_PERMISSIONS_OVERRIDE: ViewerPermissionsOverride = {
   recordIds: [],
   editableAssetIds: [],
   editableRecordIds: [],
+  explicitPermissions: [],
 };
 
 const sectionPathMap: Record<SectionKey, string> = {
@@ -339,8 +385,22 @@ function normalizePermissionsOverride(value: Record<string, unknown> | null): Vi
     recordIds: normalizeStringArray(source["record_ids"]),
     editableAssetIds: normalizeStringArray(source["editable_asset_ids"]),
     editableRecordIds: normalizeStringArray(source["editable_record_ids"]),
+    explicitPermissions: normalizeExplicitPermissions(source["permissions"] ?? source["explicit_permissions"]),
     ownerNotes: typeof source["owner_notes"] === "string" ? source["owner_notes"].trim() : undefined,
   };
+}
+
+function normalizeExplicitPermissions(value: unknown): ExplicitAccessPermission[] {
+  const allowed = new Set<ExplicitAccessPermission>([
+    "view",
+    "view_summary",
+    "view_detail",
+    "download",
+    "contribute_document",
+    "manage_access",
+    "high_risk_access_change",
+  ]);
+  return normalizeStringArray(value).filter((item): item is ExplicitAccessPermission => allowed.has(item as ExplicitAccessPermission));
 }
 
 function readOptionalBoolean(value: unknown) {
@@ -371,6 +431,30 @@ function normalizeSectionKey(value: unknown): SectionKey | null {
     return normalized as SectionKey;
   }
   return null;
+}
+
+function normalizeVaultLifecycleState(value: unknown): VaultLifecycleState {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  if (
+    normalized === "DEATH_REPORTED"
+    || normalized === "PROTECTIVE_LOCK"
+    || normalized === "ESTATE_LOCKED"
+    || normalized === "DEATH_STATUS_DISPUTED"
+    || normalized === "OWNER_RECOVERY"
+  ) {
+    return normalized;
+  }
+  return "OWNER_ACTIVE";
+}
+
+async function loadIdentityAssuranceLevel(client: AnySupabaseClient, userId: string): Promise<IdentityAssuranceLevel> {
+  const result = await client
+    .from("identity_assurance_states")
+    .select("identity_level")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (result.error) return LF_IDENTITY_LEVEL_1_AUTHENTICATED;
+  return normalizeIdentityAssuranceLevel((result.data as { identity_level?: number | null } | null)?.identity_level);
 }
 
 async function loadRecordSectionKeys(client: AnySupabaseClient, ownerUserId: string, recordIds: string[]) {

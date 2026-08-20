@@ -2937,6 +2937,10 @@ export default function UniversalRecordWorkspace({
   }
 
   async function removeAttachment(item: RecordAttachment) {
+    if (viewer.mode === "linked") {
+      setStatus("Linked users cannot remove owner attachments. Document contribution must preserve the original.");
+      return;
+    }
     if (!canEditWorkspaceRow(item.record_id)) {
       setStatus("This shared view is read-only. The vault owner controls changes.");
       return;
@@ -2978,6 +2982,10 @@ export default function UniversalRecordWorkspace({
   }
 
   async function replaceAttachment(item: RecordAttachment, file: File) {
+    if (viewer.mode === "linked") {
+      setStatus("Linked users cannot replace owner attachments. Upload a new contribution when that permission is available.");
+      return;
+    }
     if (!canEditWorkspaceRow(item.record_id)) {
       setStatus("This shared view is read-only. The vault owner controls changes.");
       return;
@@ -4785,7 +4793,7 @@ export default function UniversalRecordWorkspace({
                 onResolvePreviewUrl={(entry) => getAttachmentSignedUrl(entry.attachment, 120)}
                 onDownload={(entry) => void downloadAttachment(entry.attachment)}
                 onPrint={(entry) => void printAttachment(entry.attachment)}
-                onRemove={viewer.readOnly ? undefined : (entry) => void removeAttachment(entry.attachment)}
+                onRemove={viewer.mode === "linked" || viewer.readOnly ? undefined : (entry) => void removeAttachment(entry.attachment)}
               />
             )}
           </div>

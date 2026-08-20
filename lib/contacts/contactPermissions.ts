@@ -1,4 +1,6 @@
 import type { SectionKey } from "../access-control/roles";
+import type { ExplicitAccessPermission } from "../access-control/securityPolicy.ts";
+import { roleCanReceiveDocumentContribution } from "../access-control/securityPolicy.ts";
 
 export type ContactAccessMode = "view_only" | "view_edit";
 
@@ -9,6 +11,7 @@ export type ContactPermissionsOverride = {
   record_ids: string[];
   editable_asset_ids: string[];
   editable_record_ids: string[];
+  explicit_permissions: ExplicitAccessPermission[];
   owner_notes: string;
 };
 
@@ -21,6 +24,7 @@ export function normalizeContactPermissionsOverride(value: Record<string, unknow
     record_ids: normalizeStringArray(source["record_ids"]),
     editable_asset_ids: normalizeStringArray(source["editable_asset_ids"]),
     editable_record_ids: normalizeStringArray(source["editable_record_ids"]),
+    explicit_permissions: normalizeExplicitPermissions(source["explicit_permissions"] ?? source["permissions"]),
     owner_notes: typeof source["owner_notes"] === "string" ? source["owner_notes"] : "",
   };
 }
@@ -29,9 +33,9 @@ export function buildScopedPermissionPayload({
   allowedSections,
   assetIds,
   recordIds,
-  editableAssetIds,
-  editableRecordIds,
   ownerNotes,
+  assignedRole,
+  allowDocumentContribution = false,
 }: {
   allowedSections: SectionKey[];
   assetIds: string[];
@@ -39,18 +43,26 @@ export function buildScopedPermissionPayload({
   editableAssetIds: string[];
   editableRecordIds: string[];
   ownerNotes: string;
+  assignedRole?: string | null;
+  allowDocumentContribution?: boolean;
 }) {
   const uniqueAssetIds = uniqueStrings(assetIds);
   const uniqueRecordIds = uniqueStrings(recordIds);
-  const uniqueEditableAssetIds = uniqueStrings(editableAssetIds).filter((id) => uniqueAssetIds.includes(id));
-  const uniqueEditableRecordIds = uniqueStrings(editableRecordIds).filter((id) => uniqueRecordIds.includes(id));
+  const explicitPermissions: ExplicitAccessPermission[] = ["view", "view_summary"];
+  if (uniqueAssetIds.length > 0 || uniqueRecordIds.length > 0) {
+    explicitPermissions.push("view_detail", "download");
+  }
+  if (allowDocumentContribution && roleCanReceiveDocumentContribution(assignedRole)) {
+    explicitPermissions.push("contribute_document");
+  }
   return {
-    read_only: uniqueEditableAssetIds.length === 0 && uniqueEditableRecordIds.length === 0,
+    read_only: true,
     allowed_sections: uniqueStrings(allowedSections),
     asset_ids: uniqueAssetIds,
     record_ids: uniqueRecordIds,
-    editable_asset_ids: uniqueEditableAssetIds,
-    editable_record_ids: uniqueEditableRecordIds,
+    editable_asset_ids: [],
+    editable_record_ids: [],
+    explicit_permissions: Array.from(new Set(explicitPermissions)),
     owner_notes: ownerNotes.trim() || null,
   };
 }
@@ -65,4 +77,17 @@ function normalizeStringArray(value: unknown) {
 
 function uniqueStrings<T extends string>(values: T[]) {
   return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean))) as T[];
+}
+
+function normalizeExplicitPermissions(value: unknown): ExplicitAccessPermission[] {
+  const allowed = new Set<ExplicitAccessPermission>([
+    "view",
+    "view_summary",
+    "view_detail",
+    "download",
+    "contribute_document",
+    "manage_access",
+    "high_risk_access_change",
+  ]);
+  return normalizeStringArray(value).filter((item): item is ExplicitAccessPermission => allowed.has(item as ExplicitAccessPermission));
 }

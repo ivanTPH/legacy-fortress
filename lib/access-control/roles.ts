@@ -6,7 +6,10 @@ export type AccessAction =
   | "edit"
   | "delete"
   | "download"
-  | "invite";
+  | "invite"
+  | "contribute_document"
+  | "manage_access"
+  | "high_risk_access_change";
 
 export type SectionKey =
   | "dashboard"
@@ -76,7 +79,7 @@ export const ROLE_RULES: Record<CollaboratorRole, RoleRule> = {
     allowedSections: ["dashboard", "financial", "legal", "property", "business", "settings"],
     allowedActions: ["view", "view_summary", "view_detail", "download"],
     obscuredSections: ["personal", "digital", "profile"],
-    requiresVerifiedActivation: false,
+    requiresVerifiedActivation: true,
   },
   accountant: {
     role: "accountant",
@@ -84,7 +87,7 @@ export const ROLE_RULES: Record<CollaboratorRole, RoleRule> = {
     allowedSections: ["dashboard", "financial"],
     allowedActions: ["view", "view_summary", "view_detail", "download"],
     obscuredSections: ["profile", "personal", "legal", "property", "business", "digital"],
-    requiresVerifiedActivation: false,
+    requiresVerifiedActivation: true,
   },
   financial_advisor: {
     role: "financial_advisor",
@@ -92,7 +95,7 @@ export const ROLE_RULES: Record<CollaboratorRole, RoleRule> = {
     allowedSections: ["dashboard", "financial", "legal", "property", "business"],
     allowedActions: ["view", "view_summary", "view_detail", "download"],
     obscuredSections: ["profile", "personal", "digital"],
-    requiresVerifiedActivation: false,
+    requiresVerifiedActivation: true,
   },
   lawyer: {
     role: "lawyer",
@@ -100,7 +103,7 @@ export const ROLE_RULES: Record<CollaboratorRole, RoleRule> = {
     allowedSections: ["dashboard", "legal"],
     allowedActions: ["view", "view_summary", "view_detail", "download"],
     obscuredSections: ["profile", "personal", "financial", "property", "business", "digital"],
-    requiresVerifiedActivation: false,
+    requiresVerifiedActivation: true,
   },
   trustee: {
     role: "trustee",
@@ -108,7 +111,7 @@ export const ROLE_RULES: Record<CollaboratorRole, RoleRule> = {
     allowedSections: ["dashboard", "legal"],
     allowedActions: ["view", "view_summary"],
     obscuredSections: ["profile", "personal", "financial", "property", "business", "digital"],
-    requiresVerifiedActivation: false,
+    requiresVerifiedActivation: true,
   },
   executor: {
     role: "executor",
@@ -116,7 +119,7 @@ export const ROLE_RULES: Record<CollaboratorRole, RoleRule> = {
     allowedSections: ["dashboard", "profile", "personal", "financial", "legal", "property", "business", "digital"],
     allowedActions: ["view", "view_summary", "view_detail", "download"],
     obscuredSections: [],
-    requiresVerifiedActivation: false,
+    requiresVerifiedActivation: true,
   },
   power_of_attorney: {
     role: "power_of_attorney",
@@ -124,7 +127,7 @@ export const ROLE_RULES: Record<CollaboratorRole, RoleRule> = {
     allowedSections: ["dashboard", "profile", "personal", "financial", "legal", "property", "business", "digital"],
     allowedActions: ["view", "view_summary", "view_detail", "download"],
     obscuredSections: [],
-    requiresVerifiedActivation: false,
+    requiresVerifiedActivation: true,
   },
   friend_or_family: {
     role: "friend_or_family",
@@ -132,7 +135,7 @@ export const ROLE_RULES: Record<CollaboratorRole, RoleRule> = {
     allowedSections: ["dashboard", "profile", "personal", "financial", "legal", "property", "business", "digital"],
     allowedActions: ["view", "view_summary", "view_detail", "download"],
     obscuredSections: [],
-    requiresVerifiedActivation: false,
+    requiresVerifiedActivation: true,
   },
 };
 
@@ -157,7 +160,7 @@ export function canAccessSection(
   if (!rule.allowedSections.includes(section)) return false;
   if (!rule.allowedActions.includes(action)) return false;
 
-  if (rule.requiresVerifiedActivation && ["view_detail", "download"].includes(action)) {
+  if (role !== "owner" && ["view_detail", "download", "contribute_document", "manage_access", "high_risk_access_change"].includes(action)) {
     return isActivationGranted(activationStatus);
   }
 
@@ -171,7 +174,7 @@ export function shouldObscureSection(
 ) {
   const rule = resolveRoleRule(role);
 
-  if (rule.requiresVerifiedActivation && !isActivationGranted(activationStatus)) {
+  if (role !== "owner" && !isActivationGranted(activationStatus)) {
     return ["financial", "property", "business", "digital", "legal"].includes(section);
   }
 

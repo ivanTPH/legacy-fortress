@@ -477,6 +477,10 @@ export default function SectionWorkspace({
   }
 
   async function removeAttachment(rowId: string, item: SectionAttachment) {
+    if (viewer.mode === "linked") {
+      setStatus("Linked users cannot remove owner attachments. Document contribution must preserve the original.");
+      return;
+    }
     if (!canEditRow(rowId)) {
       setStatus("This shared view is read-only. The vault owner controls changes.");
       return;
@@ -522,6 +526,10 @@ export default function SectionWorkspace({
   }
 
   async function replaceLegacyAttachment(rowId: string, item: SectionAttachment, file: File) {
+    if (viewer.mode === "linked") {
+      setStatus("Linked users cannot replace owner attachments. Upload a new contribution when that permission is available.");
+      return;
+    }
     if (!canEditRow(rowId)) {
       setStatus("This shared view is read-only. The vault owner controls changes.");
       return;

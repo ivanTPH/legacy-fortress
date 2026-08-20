@@ -24,7 +24,7 @@ test("invitation email draft includes role, account holder, and secure accept pa
   assert.equal(draft.acceptPath, "/invite/accept?invitation=invite-123&token=token-456");
 });
 
-test("executors can view all core linked-account routes", () => {
+test("accepted executors can open Contact Wallet but not protected linked-account routes", () => {
   const viewer = {
     mode: "linked",
     grantId: "grant-1",
@@ -37,17 +37,23 @@ test("executors can view all core linked-account routes", () => {
     activationStatus: "accepted",
     readOnly: true,
     canUpgradeToOwnAccount: true,
-    permissionsOverride: { allowedSections: [], assetIds: [], recordIds: [] },
+    identityAssuranceLevel: 1,
+    requiredIdentityLevel: 2,
+    vaultLifecycleState: "OWNER_ACTIVE",
+    permissionsOverride: { allowedSections: [], assetIds: [], recordIds: [], explicitPermissions: [] },
     assignedAssetIds: [],
     assignedRecordIds: [],
+    editableAssetIds: [],
+    editableRecordIds: [],
     assignedSectionKeys: [],
   };
 
-  assert.equal(canViewPath("/dashboard", viewer), true);
-  assert.equal(canViewPath("/profile", viewer), true);
-  assert.equal(canViewPath("/finances/bank", viewer), true);
-  assert.equal(canViewPath("/legal/wills", viewer), true);
-  assert.equal(canViewPath("/vault/property", viewer), true);
+  assert.equal(canViewPath("/contact-wallet", viewer), true);
+  assert.equal(canViewPath("/dashboard", viewer), false);
+  assert.equal(canViewPath("/profile", viewer), false);
+  assert.equal(canViewPath("/finances/bank", viewer), false);
+  assert.equal(canViewPath("/legal/wills", viewer), false);
+  assert.equal(canViewPath("/vault/property", viewer), false);
 });
 
 test("accountants stay out of personal routes while keeping financial visibility", () => {
@@ -60,12 +66,17 @@ test("accountants stay out of personal routes while keeping financial visibility
     linkedContactId: "contact-2",
     linkedContactName: "Naomi Reed",
     viewerRole: "accountant",
-    activationStatus: "accepted",
+    activationStatus: "active",
     readOnly: true,
     canUpgradeToOwnAccount: true,
-    permissionsOverride: { allowedSections: ["financial"], assetIds: ["asset-1"], recordIds: [] },
+    identityAssuranceLevel: 2,
+    requiredIdentityLevel: 2,
+    vaultLifecycleState: "OWNER_ACTIVE",
+    permissionsOverride: { allowedSections: ["financial"], assetIds: ["asset-1"], recordIds: [], explicitPermissions: ["view", "view_detail", "download"] },
     assignedAssetIds: ["asset-1"],
     assignedRecordIds: [],
+    editableAssetIds: [],
+    editableRecordIds: [],
     assignedSectionKeys: ["financial"],
   };
 
@@ -90,9 +101,14 @@ test("linked viewers only keep assigned asset rows in shared loaders", () => {
     activationStatus: "active",
     readOnly: false,
     canUpgradeToOwnAccount: true,
-    permissionsOverride: { allowedSections: ["financial"], assetIds: ["asset-keep"], recordIds: [] },
+    identityAssuranceLevel: 2,
+    requiredIdentityLevel: 2,
+    vaultLifecycleState: "OWNER_ACTIVE",
+    permissionsOverride: { allowedSections: ["financial"], assetIds: ["asset-keep"], recordIds: [], explicitPermissions: ["view", "view_detail", "download"] },
     assignedAssetIds: ["asset-keep"],
     assignedRecordIds: [],
+    editableAssetIds: [],
+    editableRecordIds: [],
     assignedSectionKeys: ["financial"],
   };
 
@@ -112,8 +128,9 @@ test("invitation acceptance routes accepted linked users into Contact Wallet", (
   assert.match(acceptPage, /router\.replace\("\/contact-wallet"\)/);
   assert.match(acceptPage, /does not create a paid subscription/);
   assert.match(acceptPage, /does not unlock unrelated private records/);
-  assert.match(walletPage, /Verified Contact Wallet/);
+  assert.match(walletPage, /Contact Wallet/);
   assert.match(walletPage, /People you support/);
   assert.match(walletPage, /paid personal subscription/);
   assert.match(walletPage, /loadViewerAccessState/);
+  assert.match(walletPage, /includePreVerificationGrants: true/);
 });

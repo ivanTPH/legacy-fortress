@@ -30,7 +30,7 @@ import {
 } from "../../lib/records/discovery";
 import Icon from "../ui/Icon";
 import { useViewerAccess } from "../access/ViewerAccessContext";
-import { canEditAssetForViewer, filterAssetIdsForViewer } from "../../lib/access-control/viewerAccess";
+import { canContributeDocumentForViewer, filterAssetIdsForViewer } from "../../lib/access-control/viewerAccess";
 import InfoTip from "../ui/InfoTip";
 
 type DocumentsWorkspaceProps = {
@@ -58,7 +58,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
   const [documentSectionFilter, setDocumentSectionFilter] = useState<"all" | SupportedDocumentSectionKey>(
     sectionFilter ?? "all",
   );
-  const canManageAnyDocuments = viewer.mode !== "linked" || viewer.editableAssetIds.length > 0;
+  const canManageAnyDocuments = viewer.mode !== "linked" || viewer.assignedAssetIds.some((assetId) => canContributeDocumentForViewer(assetId, viewer));
 
   useEffect(() => {
     let mounted = true;
@@ -145,8 +145,8 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
   }
 
   async function handleUpload() {
-    if (!canEditAssetForViewer(selectedAssetId, viewer)) {
-      setFormError("This shared view is read-only. The vault owner controls changes.");
+    if (!canContributeDocumentForViewer(selectedAssetId, viewer)) {
+      setFormError("This linked access does not include document contribution permission for that record.");
       return;
     }
     setFormError("");
@@ -181,7 +181,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
     const resolvedContext = asset
       ? await resolveCanonicalAssetDocumentContext(supabase, {
           assetId: asset.id,
-          ownerUserId: user.id,
+          ownerUserId: viewer.targetOwnerUserId || user.id,
         })
       : null;
 
@@ -290,8 +290,8 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
   }
 
   async function removeDocument(item: CanonicalDocumentWorkspaceItem) {
-    if (!canEditAssetForViewer(item.assetId, viewer)) {
-      setStatus("This shared view is read-only. The vault owner controls changes.");
+    if (viewer.mode === "linked") {
+      setStatus("Linked users cannot remove owner documents. Document contribution must preserve the original.");
       return;
     }
     const confirmed = window.confirm(`Remove "${item.fileName}" from ${item.parentLabel}?`);
@@ -317,8 +317,8 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
   }
 
   async function replaceDocument(item: CanonicalDocumentWorkspaceItem, file: File) {
-    if (!canEditAssetForViewer(item.assetId, viewer)) {
-      setStatus("This shared view is read-only. The vault owner controls changes.");
+    if (viewer.mode === "linked") {
+      setStatus("Linked users cannot replace owner documents. Upload a new contribution when that permission is available.");
       return;
     }
     const kind = file.type.toLowerCase().startsWith("image/") ? "photo" : "document";
@@ -335,7 +335,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
     if (!user) return;
     const context = await resolveCanonicalAssetDocumentContext(supabase, {
       assetId: item.assetId,
-      ownerUserId: user.id,
+      ownerUserId: viewer.targetOwnerUserId || user.id,
     });
     if (!context) {
       setStatus("Replace paused: choose a saved record first so the file is stored with the right item.");
@@ -546,12 +546,9 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
             })}
             onDownload={(entry) => void downloadDocument(entry.document)}
             onPrint={(entry) => void printDocument(entry.document)}
-            onReplace={(entry, file) => void replaceDocument(entry.document, file)}
+            onReplace={viewer.mode === "linked" ? undefined : (entry, file) => void replaceDocument(entry.document, file)}
             replaceAccept={DOCUMENT_UPLOAD_ACCEPT}
-            onRemove={(entry) => {
-              if (!canEditAssetForViewer(entry.document.assetId, viewer)) return;
-              void removeDocument(entry.document);
-            }}
+            onRemove={viewer.mode === "linked" ? undefined : (entry) => void removeDocument(entry.document)}
             onOpenRelated={(entry) => router.push(getAssetWorkspaceHref(entry.document.sectionKey, entry.document.categoryKey))}
             openRelatedLabel="Open asset"
           />

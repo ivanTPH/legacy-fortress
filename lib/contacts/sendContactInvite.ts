@@ -59,6 +59,7 @@ export async function sendContactInvite(
   }
 
   const now = new Date().toISOString();
+  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
   const invitationId = await resolveContactInvitationId(client, input, now);
   const token = crypto.randomUUID().replace(/-/g, "");
   const tokenHash = await sha256(token);
@@ -120,6 +121,8 @@ export async function sendContactInvite(
         activationStatus,
       }).invitation,
       invite_token_hash: tokenHash,
+      expires_at: expiresAt,
+      token_consumed_at: null,
       last_sent_at: now,
     })
     .eq("id", invitationId)

@@ -50,6 +50,7 @@ export default function ContactWalletPage() {
         const access = await loadViewerAccessState(supabase, user.id, {
           preferredGrantId: getStoredLinkedGrantId(),
           fallbackDisplayName: String(user.user_metadata?.full_name ?? user.email ?? "Secure account"),
+          includePreVerificationGrants: true,
         });
         if (!mounted) return;
         if (access.mode !== "linked") {
@@ -116,7 +117,7 @@ export default function ContactWalletPage() {
       <section className="lf-page-card">
         <div className="lf-page-header">
           <div>
-            <p className="lf-eyebrow">Verified Contact Wallet</p>
+            <p className="lf-eyebrow">Contact Wallet</p>
             <h1>People you support</h1>
             <p className="lf-muted-note">
               Your Contact Wallet is a free, limited workspace for responsibilities accepted through Legacy Fortress invitations.
