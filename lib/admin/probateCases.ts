@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getVaultLifecycleState, recordEstateEvent, transitionVaultLifecycle } from "../estate-lifecycle/service.ts";
 
 type AnySupabaseClient = SupabaseClient;
 
@@ -319,6 +320,9 @@ export async function applyProbateCaseAction(
 
   let accessGrantId = current.accessGrantId;
   if (action === "approve") {
+    if (current.caseType === "probate_access") {
+      await transitionProbateCaseToEstateLock(client, current, reviewerUserId, trimmedReason);
+    }
     accessGrantId = await activateCaseAccessGrant(client, current, now);
     update.access_grant_id = accessGrantId;
   }
@@ -333,6 +337,18 @@ export async function applyProbateCaseAction(
     });
   }
   if (action === "revoke") {
+    await recordEstateEvent(client, {
+      ownerUserId: current.ownerUserId,
+      actorUserId: reviewerUserId,
+      actorType: "admin",
+      eventType: "estate_access_revoked",
+      reason: trimmedReason,
+      metadata: {
+        probate_case_id: current.id,
+        access_grant_id_present: Boolean(current.accessGrantId),
+        vault_unlock_performed: false,
+      },
+    });
     await updateLinkedVerificationModels(client, current, {
       roleStatus: "revoked",
       grantStatus: "revoked",
@@ -366,6 +382,28 @@ export async function applyProbateCaseAction(
     });
   }
   return getProbateCase(client, caseId);
+}
+
+async function transitionProbateCaseToEstateLock(client: AnySupabaseClient, probateCase: ProbateCaseItem, reviewerUserId: string, reason: string) {
+  const currentVaultState = await getVaultLifecycleState(client, probateCase.ownerUserId);
+  if (currentVaultState === "OWNER_ACTIVE") {
+    await transitionVaultLifecycle(client, probateCase.ownerUserId, "DEATH_REPORTED", reviewerUserId, reason, null, "admin");
+    await transitionVaultLifecycle(client, probateCase.ownerUserId, "PROTECTIVE_LOCK", reviewerUserId, reason, null, "admin");
+    await transitionVaultLifecycle(client, probateCase.ownerUserId, "ESTATE_LOCKED", reviewerUserId, reason, null, "admin");
+    return;
+  }
+  if (currentVaultState === "DEATH_REPORTED") {
+    await transitionVaultLifecycle(client, probateCase.ownerUserId, "PROTECTIVE_LOCK", reviewerUserId, reason, null, "admin");
+    await transitionVaultLifecycle(client, probateCase.ownerUserId, "ESTATE_LOCKED", reviewerUserId, reason, null, "admin");
+    return;
+  }
+  if (currentVaultState === "PROTECTIVE_LOCK") {
+    await transitionVaultLifecycle(client, probateCase.ownerUserId, "ESTATE_LOCKED", reviewerUserId, reason, null, "admin");
+    return;
+  }
+  if (currentVaultState !== "ESTATE_LOCKED") {
+    throw new Error(`probate_estate_lock_invalid_vault_state:${currentVaultState}`);
+  }
 }
 
 export async function addProbateCaseEvidence(
