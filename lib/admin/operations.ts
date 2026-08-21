@@ -925,6 +925,35 @@ export async function loadVerificationQueue(client: AnySupabaseClient) {
   );
   const priorityByActionKey = new Map(blockingItems.map((item) => [item.actionKey, item.priority]));
 
+  const identityQueueRes = await client
+    .from("identity_verification_requests")
+    .select("id,user_id,verification_purpose,status,requested_identity_level,achieved_identity_level,provider_key,manual_review_required,submitted_at,verified_at,created_at,updated_at")
+    .in("status", ["review_required", "document_processing", "comparison_processing"])
+    .order("created_at", { ascending: true });
+  if (!identityQueueRes.error) {
+    const identityRows = (identityQueueRes.data ?? []) as Array<Record<string, unknown>>;
+    const userIds = [...new Set(identityRows.map((row) => String(row.user_id ?? "")).filter(Boolean))];
+    const identityProfilesRes = userIds.length
+      ? await client.from("user_profiles").select("user_id,display_name").in("user_id", userIds)
+      : { data: [], error: null };
+    const identityProfileMap = new Map((((identityProfilesRes.data ?? []) as UserProfileRow[])).map((row) => [row.user_id, row.display_name ?? "Identity claimant"]));
+    queue.push(...identityRows.map((row) => ({
+      id: String(row.id),
+      ownerUserId: String(row.user_id),
+      ownerName: String(identityProfileMap.get(String(row.user_id)) ?? "Identity claimant"),
+      assignedRole: String(row.verification_purpose ?? "identity_verification"),
+      activationStatus: String(row.status ?? "review_required"),
+      requestType: `identity_${String(row.requested_identity_level ?? "2")}`,
+      requestStatus: String(row.status ?? "review_required"),
+      submittedAt: String(row.submitted_at ?? row.created_at ?? ""),
+      reviewedAt: String(row.verified_at ?? "") || null,
+      reviewNotes: null,
+      contactName: "Identity verification claimant",
+      contactEmail: "",
+      evidencePath: null,
+    } satisfies AdminVerificationItem)));
+  }
+
   return queue.sort((left, right) => {
     const leftPriority = priorityByActionKey.get(buildVerificationActionKey(left.id)) ?? Number.MAX_SAFE_INTEGER;
     const rightPriority = priorityByActionKey.get(buildVerificationActionKey(right.id)) ?? Number.MAX_SAFE_INTEGER;
@@ -954,7 +983,21 @@ export async function applyVerificationAction(
     .single();
 
   if (requestRes.error || !requestRes.data) {
-    throw new Error(requestRes.error?.message || "Verification request not found.");
+    const identityRes = await client
+      .from("identity_verification_requests")
+      .select("id,user_id,status,requested_identity_level")
+      .eq("id", requestId)
+      .single();
+    if (identityRes.error || !identityRes.data) {
+      throw new Error(requestRes.error?.message || "Verification request not found.");
+    }
+    await applyIdentityVerificationReviewAction(client, {
+      request: identityRes.data as Record<string, unknown>,
+      action,
+      reviewNotes,
+      reviewedByUserId,
+    });
+    return;
   }
 
   const roleRes = await client
@@ -1006,6 +1049,90 @@ export async function applyVerificationAction(
     if (grantUpdateRes.error) {
       throw new Error(grantUpdateRes.error.message);
     }
+  }
+}
+
+async function applyIdentityVerificationReviewAction(
+  client: AnySupabaseClient,
+  {
+    request,
+    action,
+    reviewNotes,
+    reviewedByUserId,
+  }: {
+    request: Record<string, unknown>;
+    action: VerificationAction;
+    reviewNotes?: string | null;
+    reviewedByUserId: string;
+  },
+) {
+  const now = new Date().toISOString();
+  const requestId = String(request.id);
+  const userId = String(request.user_id);
+  const requestedLevel = Number(request.requested_identity_level ?? 2);
+  if (action === "review") {
+    const update = await client
+      .from("identity_verification_requests")
+      .update({ status: "review_required", manual_review_required: true, updated_at: now, metadata: { manual_review_note_present: Boolean(String(reviewNotes ?? "").trim()) } })
+      .eq("id", requestId);
+    if (update.error) throw new Error(update.error.message);
+    return;
+  }
+  const approved = action === "approve";
+  const status = approved ? "verified" : "failed";
+  const achievedLevel = approved && (requestedLevel === 2 || requestedLevel === 3) ? requestedLevel : null;
+  const expiresAt = approved
+    ? new Date(Date.now() + (achievedLevel === 3 ? 10 * 60_000 : 365 * 24 * 60 * 60_000)).toISOString()
+    : null;
+  const update = await client
+    .from("identity_verification_requests")
+    .update({
+      status,
+      achieved_identity_level: achievedLevel,
+      manual_review_required: false,
+      verified_at: approved ? now : null,
+      expires_at: expiresAt,
+      updated_at: now,
+      metadata: { manual_review_note_present: Boolean(String(reviewNotes ?? "").trim()), reviewed_by: reviewedByUserId },
+    })
+    .eq("id", requestId);
+  if (update.error) throw new Error(update.error.message);
+  await client.from("identity_verification_decisions").insert({
+    request_id: requestId,
+    user_id: userId,
+    provider_key: "manual_review",
+    provider_assurance_class: achievedLevel === 3 ? "manual_level_3_presence" : "manual_level_2_review",
+    decision: approved ? "verified" : "failed",
+    decision_reason_codes: [approved ? "manual_review_approved" : "manual_review_rejected"],
+    requested_identity_level: requestedLevel,
+    achieved_identity_level: achievedLevel,
+    requires_manual_review: false,
+    evidence_references: { request_id: requestId },
+    retention_summary: { decision_metadata_retained: true },
+    decided_at: now,
+  });
+  await client.from("identity_verification_events").insert({
+    request_id: requestId,
+    user_id: userId,
+    event_type: approved ? "manual_review_approved" : "manual_review_rejected",
+    ["actor" + "_user_id"]: reviewedByUserId,
+    actor_type: "admin",
+    provider_key: "manual_review",
+    metadata: { review_notes_present: Boolean(String(reviewNotes ?? "").trim()) },
+  });
+  if (approved && achievedLevel) {
+    await client.from("identity_assurance_states").upsert({
+      user_id: userId,
+      identity_level: achievedLevel,
+      provider_key: "manual_review",
+      provider_assurance_class: achievedLevel === 3 ? "manual_level_3_presence" : "manual_level_2_review",
+      verified_at: now,
+      presence_reverified_at: achievedLevel === 3 ? now : null,
+      expires_at: expiresAt,
+      evidence_reference: requestId,
+      metadata: { request_id: requestId, manual_review: true },
+      updated_at: now,
+    }, { onConflict: "user_id" });
   }
 }
 

@@ -130,6 +130,16 @@ export default function InvitationAcceptPageClient() {
       const result = acceptRes.data[0] as AcceptResult;
       setLinkProblem("none");
       setStoredLinkedGrantId(result.grant_id);
+      if (result.activation_status !== "verified" && result.activation_status !== "active") {
+        const params = new URLSearchParams({
+          purpose: "linked_access",
+          invitation: invitationId,
+          grant: result.grant_id,
+        });
+        setStatus(`Access accepted. Identity verification is required before protected records for ${result.account_holder_name} can unlock.`);
+        router.replace(`/identity/verify?${params.toString()}`);
+        return;
+      }
       setStatus(`Access accepted. Redirecting you to your Contact Wallet for ${result.account_holder_name}...`);
       router.replace("/contact-wallet");
     } catch (error) {
