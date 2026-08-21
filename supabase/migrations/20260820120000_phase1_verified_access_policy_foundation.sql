@@ -177,7 +177,22 @@ STABLE
 SET search_path = public
 AS $$
   SELECT
-    p_grant.activation_status = ANY(ARRAY['verified','active'])
+    p_grant.linked_user_id = auth.uid()
+    AND p_grant.activation_status = ANY(ARRAY['verified','active'])
+    AND public.lf_identity_assurance_level(p_grant.linked_user_id) >= COALESCE(p_grant.required_identity_level, 2)
+    AND public.lf_vault_lifecycle_state(p_grant.owner_user_id) = 'OWNER_ACTIVE';
+$$;
+
+CREATE OR REPLACE FUNCTION public.lf_probate_evidence_grant_satisfies_identity(p_grant public.account_access_grants)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT
+    p_grant.linked_user_id = auth.uid()
+    AND p_grant.activation_status = ANY(ARRAY['verified','active'])
     AND public.lf_identity_assurance_level(p_grant.linked_user_id) >= COALESCE(p_grant.required_identity_level, 2);
 $$;
 
@@ -312,8 +327,7 @@ AS $$
         AND evidence.deleted_at IS NULL
         AND probate_case.status = 'approved'
         AND g.owner_user_id = p_owner_user_id
-        AND g.linked_user_id = auth.uid()
-        AND public.lf_linked_grant_satisfies_identity(g)
+        AND public.lf_probate_evidence_grant_satisfies_identity(g)
         AND (
           evidence.document_id = p_document_id
           OR (
@@ -388,8 +402,7 @@ BEGIN
       AND evidence.storage_path = p_object_name
       AND evidence.deleted_at IS NULL
       AND probate_case.status = 'approved'
-      AND g.linked_user_id = auth.uid()
-      AND public.lf_linked_grant_satisfies_identity(g)
+      AND public.lf_probate_evidence_grant_satisfies_identity(g)
   );
 END;
 $$;
@@ -729,6 +742,7 @@ REVOKE ALL ON FUNCTION public.lf_identity_assurance_level(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.lf_vault_lifecycle_state(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.lf_vault_allows_owner_mutation(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.lf_linked_grant_satisfies_identity(public.account_access_grants) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.lf_probate_evidence_grant_satisfies_identity(public.account_access_grants) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.has_linked_account_access(uuid, text[]) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.linked_grant_allows_asset(uuid, uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.linked_grant_allows_record(uuid, uuid) FROM PUBLIC;
@@ -742,14 +756,15 @@ REVOKE ALL ON FUNCTION public.accept_contact_invitation(uuid, text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.lf_identity_assurance_level(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.lf_vault_lifecycle_state(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.lf_vault_allows_owner_mutation(uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.lf_linked_grant_satisfies_identity(public.account_access_grants) TO authenticated, anon;
-GRANT EXECUTE ON FUNCTION public.has_linked_account_access(uuid, text[]) TO authenticated, anon;
-GRANT EXECUTE ON FUNCTION public.linked_grant_allows_asset(uuid, uuid) TO authenticated, anon;
-GRANT EXECUTE ON FUNCTION public.linked_grant_allows_record(uuid, uuid) TO authenticated, anon;
-GRANT EXECUTE ON FUNCTION public.linked_grant_allows_section_entry(uuid, uuid, text) TO authenticated, anon;
-GRANT EXECUTE ON FUNCTION public.linked_grant_allows_document(uuid, uuid, uuid, text, text) TO authenticated, anon;
-GRANT EXECUTE ON FUNCTION public.linked_grant_allows_storage_object(text, text) TO authenticated, anon;
-GRANT EXECUTE ON FUNCTION public.can_read_linked_vault_object(text) TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION public.lf_linked_grant_satisfies_identity(public.account_access_grants) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.lf_probate_evidence_grant_satisfies_identity(public.account_access_grants) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.has_linked_account_access(uuid, text[]) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.linked_grant_allows_asset(uuid, uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.linked_grant_allows_record(uuid, uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.linked_grant_allows_section_entry(uuid, uuid, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.linked_grant_allows_document(uuid, uuid, uuid, text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.linked_grant_allows_storage_object(text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.can_read_linked_vault_object(text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_public_contact_invitation(uuid, text) TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION public.accept_contact_invitation(uuid, text) TO authenticated;
 
