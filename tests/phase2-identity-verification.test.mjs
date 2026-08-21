@@ -10,6 +10,8 @@ const migration = read("supabase/migrations/20260821150000_phase2_identity_verif
 const types = read("lib/identity-verification/types.ts");
 const provider = read("lib/identity-verification/internalExperimentalProvider.ts");
 const service = read("lib/identity-verification/service.ts");
+const stepUpRoute = read("app/api/identity-verification/step-up/route.ts");
+const stepUpMigration = read("supabase/migrations/20260821162000_phase2_step_up_presence_preserves_level2.sql");
 const acceptPage = read("app/invite/accept/InvitationAcceptPageClient.tsx");
 const verifyPage = read("app/identity/verify/IdentityVerificationPageClient.tsx");
 const adminOps = read("lib/admin/operations.ts");
@@ -37,6 +39,17 @@ test("Phase 2 preserves separate lifecycle state machines", () => {
   assert.match(migration, /status IN \([\s\S]*'document_required'[\s\S]*'camera_required'[\s\S]*'review_required'[\s\S]*'verified'/);
   assert.match(migration, /identity_level >= 3[\s\S]*expires_at[\s\S]*15 minutes/);
   assert.match(migration, /account_access_grants_activation_status_check[\s\S]*'identity_required'/);
+});
+
+test("Level 3 step-up preserves durable Level 2 assurance", () => {
+  assert.match(stepUpRoute, /getCurrentIdentityAssuranceLevel/);
+  assert.match(stepUpRoute, /level_2_required_for_step_up/);
+  assert.match(service, /presence_identity_level: 3/);
+  assert.match(service, /presence_expires_at: decision\.expiresAt/);
+  assert.match(service, /identity_level: isPresenceStepUp \? Math\.max\(existingLevel, 2\) : decision\.identityLevel/);
+  assert.match(service, /expires_at: isPresenceStepUp \? \(existing\?\.expires_at \?\? null\) : decision\.expiresAt/);
+  assert.match(stepUpMigration, /s\.identity_level >= 2/);
+  assert.match(stepUpMigration, /metadata ->> 'presence_expires_at'/);
 });
 
 test("Provider abstraction is replaceable and provider-neutral", () => {

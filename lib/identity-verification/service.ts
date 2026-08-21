@@ -83,6 +83,19 @@ export async function startIdentityVerification(
   return request;
 }
 
+export async function getCurrentIdentityAssuranceLevel(client: AnySupabaseClient, userId: string) {
+  const res = await client
+    .from("identity_assurance_states")
+    .select("identity_level,expires_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (res.error) throw new Error(res.error.message);
+  const row = res.data as { identity_level?: number | null; expires_at?: string | null } | null;
+  if (!row) return 1;
+  if (row.expires_at && Date.parse(row.expires_at) <= Date.now()) return 1;
+  return Number(row.identity_level ?? 1) || 1;
+}
+
 export async function getOwnedVerificationRequest(client: AnySupabaseClient, requestId: string, userId: string) {
   const res = await client
     .from("identity_verification_requests")
@@ -356,20 +369,49 @@ async function persistDecision(client: AnySupabaseClient, request: IdentityVerif
 
 async function upsertIdentityAssurance(client: AnySupabaseClient, request: IdentityVerificationRequestRow, decision: Awaited<ReturnType<IdentityVerificationProvider["completeVerification"]>>) {
   const now = new Date().toISOString();
+  const existingRes = await client
+    .from("identity_assurance_states")
+    .select("identity_level,provider_key,provider_assurance_class,verified_at,expires_at,evidence_reference,metadata")
+    .eq("user_id", request.user_id)
+    .maybeSingle();
+  if (existingRes.error) throw new Error(existingRes.error.message);
+  const existing = existingRes.data as {
+    identity_level?: number | null;
+    provider_key?: string | null;
+    provider_assurance_class?: string | null;
+    verified_at?: string | null;
+    expires_at?: string | null;
+    evidence_reference?: string | null;
+    metadata?: Record<string, unknown> | null;
+  } | null;
+  const existingLevel = Number(existing?.identity_level ?? 1) || 1;
+  const existingActive = !existing?.expires_at || Date.parse(existing.expires_at) > Date.now();
+  if (decision.identityLevel === 3 && (!existingActive || existingLevel < 2)) {
+    throw new Error("level_2_required_for_step_up");
+  }
+  const isPresenceStepUp = decision.identityLevel === 3;
   await client.from("identity_assurance_states").upsert({
     user_id: request.user_id,
-    identity_level: decision.identityLevel,
-    provider_key: decision.providerKey,
-    provider_assurance_class: decision.providerAssuranceClass,
-    verified_at: decision.identityLevel === 2 ? decision.completedAt : now,
+    identity_level: isPresenceStepUp ? Math.max(existingLevel, 2) : decision.identityLevel,
+    provider_key: isPresenceStepUp ? (existing?.provider_key ?? decision.providerKey) : decision.providerKey,
+    provider_assurance_class: isPresenceStepUp ? (existing?.provider_assurance_class ?? "level_2_with_recent_presence") : decision.providerAssuranceClass,
+    verified_at: isPresenceStepUp ? (existing?.verified_at ?? now) : decision.completedAt,
     presence_reverified_at: decision.identityLevel === 3 ? now : null,
-    expires_at: decision.expiresAt,
-    evidence_reference: request.provider_reference,
+    expires_at: isPresenceStepUp ? (existing?.expires_at ?? null) : decision.expiresAt,
+    evidence_reference: isPresenceStepUp ? (existing?.evidence_reference ?? request.provider_reference) : request.provider_reference,
     metadata: {
+      ...(existing?.metadata ?? {}),
       request_id: request.id,
       decision: decision.decision,
       reason_codes: decision.reasonCodes,
       experimental_provider: decision.providerKey === INTERNAL_EXPERIMENTAL_PROVIDER_KEY,
+      ...(isPresenceStepUp ? {
+        presence_identity_level: 3,
+        presence_provider_key: decision.providerKey,
+        presence_provider_assurance_class: decision.providerAssuranceClass,
+        presence_request_id: request.id,
+        presence_expires_at: decision.expiresAt,
+      } : {}),
     },
     updated_at: now,
   }, { onConflict: "user_id" });
