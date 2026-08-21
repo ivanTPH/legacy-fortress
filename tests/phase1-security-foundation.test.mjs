@@ -130,6 +130,7 @@ test("Phase 1 SECURITY DEFINER grants keep ordinary linked helpers authenticated
     "public.can_read_linked_vault_object(text)",
   ]) {
     assert.match(migration, new RegExp(`GRANT EXECUTE ON FUNCTION ${signature.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} TO authenticated;`));
+    assert.match(migration, new RegExp(`REVOKE ALL ON FUNCTION ${signature.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} FROM anon;`));
     assert.doesNotMatch(migration, new RegExp(`GRANT EXECUTE ON FUNCTION ${signature.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} TO authenticated, anon;`));
   }
 

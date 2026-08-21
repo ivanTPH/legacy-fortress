@@ -753,6 +753,16 @@ REVOKE ALL ON FUNCTION public.can_read_linked_vault_object(text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.get_public_contact_invitation(uuid, text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.accept_contact_invitation(uuid, text) FROM PUBLIC;
 
+REVOKE ALL ON FUNCTION public.lf_linked_grant_satisfies_identity(public.account_access_grants) FROM anon;
+REVOKE ALL ON FUNCTION public.lf_probate_evidence_grant_satisfies_identity(public.account_access_grants) FROM anon;
+REVOKE ALL ON FUNCTION public.has_linked_account_access(uuid, text[]) FROM anon;
+REVOKE ALL ON FUNCTION public.linked_grant_allows_asset(uuid, uuid) FROM anon;
+REVOKE ALL ON FUNCTION public.linked_grant_allows_record(uuid, uuid) FROM anon;
+REVOKE ALL ON FUNCTION public.linked_grant_allows_section_entry(uuid, uuid, text) FROM anon;
+REVOKE ALL ON FUNCTION public.linked_grant_allows_document(uuid, uuid, uuid, text, text) FROM anon;
+REVOKE ALL ON FUNCTION public.linked_grant_allows_storage_object(text, text) FROM anon;
+REVOKE ALL ON FUNCTION public.can_read_linked_vault_object(text) FROM anon;
+
 GRANT EXECUTE ON FUNCTION public.lf_identity_assurance_level(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.lf_vault_lifecycle_state(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.lf_vault_allows_owner_mutation(uuid) TO authenticated;
