@@ -8,7 +8,7 @@ export async function GET(request: Request, context: { params: Promise<{ exportI
     const { exportId } = await context.params;
     const exportRow = await access.admin
       .from("privacy_data_exports")
-      .select("id,subject_user_id,storage_bucket,storage_path,status,expires_at")
+      .select("id,case_id,subject_user_id,storage_bucket,storage_path,status,expires_at")
       .eq("id", exportId)
       .maybeSingle();
     if (exportRow.error || !exportRow.data || exportRow.data.subject_user_id !== access.user.id) {
@@ -21,6 +21,15 @@ export async function GET(request: Request, context: { params: Promise<{ exportI
       .from(exportRow.data.storage_bucket)
       .createSignedUrl(exportRow.data.storage_path, 300);
     if (signed.error || !signed.data?.signedUrl) throw new Error("privacy_export_signed_url_failed");
+    if (exportRow.data.case_id) {
+      await access.admin.from("privacy_case_events").insert({
+        case_id: exportRow.data.case_id,
+        actor_user_id: access.user.id,
+        event_type: "data_export_downloaded",
+        result: "success",
+        metadata: { export_id: exportId },
+      });
+    }
     return NextResponse.json({ ok: true, exportId, expiresAt: exportRow.data.expires_at, signedUrl: signed.data.signedUrl });
   } catch (error) {
     return identityErrorResponse(error);
