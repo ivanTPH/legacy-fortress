@@ -35,6 +35,14 @@ export type AdminCapability =
   | "estate_recovery_request"
   | "estate_recovery_approve"
   | "estate_recovery_execute"
+  | "privacy.case.review"
+  | "privacy.case.manage"
+  | "privacy.retention.manage"
+  | "privacy.export.review"
+  | "privacy.incident.manage"
+  | "partner.campaign.read"
+  | "partner.campaign.manage"
+  | "partner.cohort.evaluate"
   | "audit:read"
   | "audit:write"
   | "prototype:view"
@@ -85,6 +93,14 @@ const ADMIN_ROLE_CAPABILITIES: Record<AdminRole, AdminCapability[]> = {
     "estate_recovery_request",
     "estate_recovery_approve",
     "estate_recovery_execute",
+    "privacy.case.review",
+    "privacy.case.manage",
+    "privacy.retention.manage",
+    "privacy.export.review",
+    "privacy.incident.manage",
+    "partner.campaign.read",
+    "partner.campaign.manage",
+    "partner.cohort.evaluate",
     "audit:read",
     "audit:write",
     "prototype:view",
@@ -127,6 +143,7 @@ const ADMIN_ROLE_CAPABILITIES: Record<AdminRole, AdminCapability[]> = {
     "verification:read",
     "verification:review",
     "estate_case_review",
+    "privacy.case.review",
     "audit:write",
   ],
   probate_reviewer: [
@@ -143,6 +160,8 @@ const ADMIN_ROLE_CAPABILITIES: Record<AdminRole, AdminCapability[]> = {
     "estate_security_suspend",
     "estate_recovery_request",
     "estate_recovery_approve",
+    "privacy.case.review",
+    "privacy.retention.manage",
     "audit:write",
   ],
   auditor: [
@@ -153,6 +172,9 @@ const ADMIN_ROLE_CAPABILITIES: Record<AdminRole, AdminCapability[]> = {
     "audit:read",
     "organisation:view",
     "enterprise.report.read",
+    "privacy.case.review",
+    "privacy.export.review",
+    "partner.campaign.read",
     "licence:view",
     "licence:audit",
     "enterprise.membership.read",
@@ -179,6 +201,9 @@ const ADMIN_ROLE_CAPABILITIES: Record<AdminRole, AdminCapability[]> = {
     "enterprise.licence.manage",
     "enterprise.report.read",
     "enterprise.export.request",
+    "partner.campaign.read",
+    "partner.campaign.manage",
+    "partner.cohort.evaluate",
     "audit:write",
   ],
 };

@@ -83,6 +83,9 @@ const ENTERPRISE_MUTATION_CAPABILITIES_BY_ROLE: Record<string, AdminCapability[]
     "enterprise.enrolment_link.manage",
     "enterprise.report.read",
     "licence:audit",
+    "partner.campaign.read",
+    "partner.campaign.manage",
+    "partner.cohort.evaluate",
   ],
   organisation_licence_manager: [
     "organisation:view",
@@ -120,10 +123,10 @@ const ENTERPRISE_MUTATION_CAPABILITIES_BY_ROLE: Record<string, AdminCapability[]
     "enterprise.invitation.manage",
     "enterprise.enrolment_link.manage",
   ],
-  organisation_reporting_viewer: ["organisation:view", "licence:view", "enterprise.membership.read", "enterprise.report.read"],
-  reporting_viewer: ["organisation:view", "licence:view", "enterprise.membership.read", "enterprise.report.read"],
-  organisation_auditor: ["organisation:view", "licence:view", "enterprise.membership.read", "enterprise.report.read", "licence:audit"],
-  read_only_auditor: ["organisation:view", "licence:view", "enterprise.membership.read", "enterprise.report.read", "licence:audit"],
+  organisation_reporting_viewer: ["organisation:view", "licence:view", "enterprise.membership.read", "enterprise.report.read", "partner.campaign.read"],
+  reporting_viewer: ["organisation:view", "licence:view", "enterprise.membership.read", "enterprise.report.read", "partner.campaign.read"],
+  organisation_auditor: ["organisation:view", "licence:view", "enterprise.membership.read", "enterprise.report.read", "licence:audit", "partner.campaign.read"],
+  read_only_auditor: ["organisation:view", "licence:view", "enterprise.membership.read", "enterprise.report.read", "licence:audit", "partner.campaign.read"],
 };
 
 const ADMIN_ROLE_OVERRIDE_COOKIE = "lf_admin_role_override";

@@ -17,7 +17,19 @@ export type AuditEventCategory =
   | "report_export_attempt"
   | "restricted_action_blocked"
   | "billing_licence_placeholder"
-  | "campaign_outreach_blocked";
+  | "campaign_outreach_blocked"
+  | "privacy_request_created"
+  | "privacy_request_completed"
+  | "marketing_objected"
+  | "data_export_created"
+  | "legal_hold_created"
+  | "retention_job_completed"
+  | "vault_key_created"
+  | "vault_key_wrapped"
+  | "recovery_validation_completed"
+  | "partner_cohort_requested"
+  | "partner_cohort_evaluated"
+  | "partner_campaign_suppressed";
 
 export type AuditEventResult = "success" | "pending" | "rejected" | "blocked" | "disabled" | "preview_only";
 
@@ -34,7 +46,12 @@ export type AuditResourceType =
   | "organisation"
   | "licence"
   | "campaign"
-  | "access_policy";
+  | "access_policy"
+  | "privacy_case"
+  | "data_export"
+  | "retention_item"
+  | "vault_key"
+  | "security_incident";
 
 export type AuditGovernanceMetadata = {
   consentChecked?: boolean;
@@ -112,6 +129,18 @@ export const AUDIT_EVENT_CATEGORIES: AuditEventCategory[] = [
   "restricted_action_blocked",
   "billing_licence_placeholder",
   "campaign_outreach_blocked",
+  "privacy_request_created",
+  "privacy_request_completed",
+  "marketing_objected",
+  "data_export_created",
+  "legal_hold_created",
+  "retention_job_completed",
+  "vault_key_created",
+  "vault_key_wrapped",
+  "recovery_validation_completed",
+  "partner_cohort_requested",
+  "partner_cohort_evaluated",
+  "partner_campaign_suppressed",
 ];
 
 export const auditPersistenceReadiness = {
