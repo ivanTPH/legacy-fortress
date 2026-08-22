@@ -281,7 +281,7 @@ CREATE POLICY estate_access_decisions_claimant_owner_select ON public.estate_acc
 DROP POLICY IF EXISTS estate_admin_documents_estate_claim_select ON public.estate_administration_documents;
 CREATE POLICY estate_admin_documents_estate_claim_select ON public.estate_administration_documents
   FOR SELECT USING (
-    auth.uid() = uploaded_by_user_id
+    auth.uid() = owner_user_id
     OR EXISTS (
       SELECT 1
       FROM public.estate_access_claims claim
