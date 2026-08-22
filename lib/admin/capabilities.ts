@@ -29,6 +29,12 @@ export type AdminCapability =
   | "verification:read"
   | "verification:review"
   | "verification:decide"
+  | "estate_case_review"
+  | "estate_access_manage"
+  | "estate_security_suspend"
+  | "estate_recovery_request"
+  | "estate_recovery_approve"
+  | "estate_recovery_execute"
   | "audit:read"
   | "audit:write"
   | "prototype:view"
@@ -73,6 +79,12 @@ const ADMIN_ROLE_CAPABILITIES: Record<AdminRole, AdminCapability[]> = {
     "verification:read",
     "verification:review",
     "verification:decide",
+    "estate_case_review",
+    "estate_access_manage",
+    "estate_security_suspend",
+    "estate_recovery_request",
+    "estate_recovery_approve",
+    "estate_recovery_execute",
     "audit:read",
     "audit:write",
     "prototype:view",
@@ -114,6 +126,7 @@ const ADMIN_ROLE_CAPABILITIES: Record<AdminRole, AdminCapability[]> = {
     "admin_shell:view",
     "verification:read",
     "verification:review",
+    "estate_case_review",
     "audit:write",
   ],
   probate_reviewer: [
@@ -125,6 +138,11 @@ const ADMIN_ROLE_CAPABILITIES: Record<AdminRole, AdminCapability[]> = {
     "verification:read",
     "verification:review",
     "verification:decide",
+    "estate_case_review",
+    "estate_access_manage",
+    "estate_security_suspend",
+    "estate_recovery_request",
+    "estate_recovery_approve",
     "audit:write",
   ],
   auditor: [
