@@ -60,6 +60,18 @@ export async function createPrivacyExport(client: AnySupabaseClient, input: {
     synthetic_run_marker: input.syntheticRunMarker ?? null,
   }).select("id,storage_bucket,storage_path,expires_at,manifest").single();
   if (insert.error || !insert.data) throw new Error(insert.error?.message || "privacy_export_create_failed");
+  const packageBody = Buffer.from(JSON.stringify({
+    exportId: insert.data.id,
+    generatedAt: new Date().toISOString(),
+    manifest: insert.data.manifest,
+  }));
+  const upload = await client.storage
+    .from(insert.data.storage_bucket)
+    .upload(insert.data.storage_path, packageBody, { contentType: "application/json", upsert: false });
+  if (upload.error) {
+    await client.from("privacy_data_exports").delete().eq("id", insert.data.id);
+    throw new Error(`privacy_export_package_failed:${upload.error.message}`);
+  }
   if (input.caseId) await recordPrivacyCaseEvent(client, input.caseId, input.requestedByUserId, "data_export_created", "success", { export_type: input.exportType ?? "portability" });
   return insert.data;
 }

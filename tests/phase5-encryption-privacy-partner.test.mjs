@@ -80,7 +80,7 @@ test("Marketing objection is durable suppression and consent history is append-b
   assert.match(migration, /suppression_survives_erasure/);
   assert.match(migration, /global_objection/);
   assert.match(migration, /partner_opt_out/);
-  assert.doesNotMatch(privacy, /delete\(\).*marketing_suppressions/s);
+  assert.doesNotMatch(privacy, /from\("marketing_suppressions"\)\.delete/);
 });
 
 test("Partner cohort model is closed-loop, aggregate-only and rejects vault-sensitive filters", () => {
@@ -97,12 +97,16 @@ test("Partner cohort model is closed-loop, aggregate-only and rejects vault-sens
 test("Phase 5 API surfaces avoid exposing key material and raw audience lists", () => {
   const encryptionRoute = fs.readFileSync(path.join(root, "app/api/privacy/encryption/route.ts"), "utf8");
   const exportRoute = fs.readFileSync(path.join(root, "app/api/privacy/exports/route.ts"), "utf8");
+  const exportDownloadRoute = fs.readFileSync(path.join(root, "app/api/privacy/exports/[exportId]/route.ts"), "utf8");
   const partnerRoute = fs.readFileSync(path.join(root, "app/api/internal/admin/partner-campaigns/route.ts"), "utf8");
   const privacyRoute = fs.readFileSync(path.join(root, "app/api/privacy/data-rights/route.ts"), "utf8");
   assert.match(encryptionRoute, /keyMaterialReturned: false/);
   assert.doesNotMatch(encryptionRoute, /wrapped_dek|recovery_wrapped_dek|plaintextDek/);
   assert.match(exportRoute, /key_material/);
   assert.doesNotMatch(exportRoute, /service_role|raw_keys/);
+  assert.match(privacy, /storage[\s\S]*\.upload\(/);
+  assert.match(exportDownloadRoute, /createSignedUrl/);
+  assert.match(exportDownloadRoute, /subject_user_id !== access\.user\.id/);
   assert.match(partnerRoute, /Raw audience-list APIs are disabled/);
   assert.match(partnerRoute, /rawAudienceListReturned: false/);
   assert.match(privacyRoute, /requesterUserId: access\.user\.id/);
