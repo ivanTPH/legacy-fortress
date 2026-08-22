@@ -463,8 +463,10 @@ CREATE POLICY estate_evidence_owner_service_select ON storage.objects
   FOR SELECT USING (
     bucket_id = 'estate-administration-evidence'
     AND (
-      split_part(name, '/', 1) = 'users'
-      AND split_part(name, '/', 2) = auth.uid()::text
+      (
+        split_part(name, '/', 1) = 'users'
+        AND split_part(name, '/', 2) = auth.uid()::text
+      )
       OR public.lf_estate_claim_allows_storage_object(bucket_id, name)
     )
   );
@@ -482,6 +484,7 @@ GRANT EXECUTE ON FUNCTION public.lf_valid_vault_lifecycle_transition(text, text)
 
 REVOKE ALL ON FUNCTION public.lf_transition_vault_lifecycle(uuid, text, uuid, text, uuid, jsonb) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.lf_transition_vault_lifecycle(uuid, text, uuid, text, uuid, jsonb) FROM anon;
+REVOKE ALL ON FUNCTION public.lf_transition_vault_lifecycle(uuid, text, uuid, text, uuid, jsonb) FROM authenticated;
 GRANT EXECUTE ON FUNCTION public.lf_transition_vault_lifecycle(uuid, text, uuid, text, uuid, jsonb) TO service_role;
 
 REVOKE ALL ON FUNCTION public.lf_estate_claim_allows_document(uuid) FROM PUBLIC;

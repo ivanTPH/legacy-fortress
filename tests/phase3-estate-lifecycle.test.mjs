@@ -7,6 +7,7 @@ const root = process.cwd();
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 
 const migration = read("supabase/migrations/20260822100000_phase3_death_lock_estate_lifecycle.sql");
+const rpcRestrictionMigration = read("supabase/migrations/20260822103000_phase3_restrict_vault_transition_rpc.sql");
 const service = read("lib/estate-lifecycle/service.ts");
 const probate = read("lib/admin/probateCases.ts");
 const deathApi = read("app/api/estate/death-reports/route.ts");
@@ -41,7 +42,10 @@ test("Vault lifecycle transitions are explicit and audited", () => {
   assert.doesNotMatch(migration, /\('ESTATE_LOCKED', 'OWNER_ACTIVE'\)/);
   assert.match(migration, /invalid_vault_lifecycle_transition/);
   assert.match(migration, /INSERT INTO public\.estate_security_actions/);
+  assert.match(migration, /REVOKE ALL ON FUNCTION public\.lf_transition_vault_lifecycle\(uuid, text, uuid, text, uuid, jsonb\) FROM authenticated/);
   assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.lf_transition_vault_lifecycle[\s\S]*TO service_role/);
+  assert.match(rpcRestrictionMigration, /REVOKE ALL ON FUNCTION public\.lf_transition_vault_lifecycle\(uuid, text, uuid, text, uuid, jsonb\) FROM authenticated/);
+  assert.doesNotMatch(rpcRestrictionMigration, /TO authenticated/);
 });
 
 test("Death report submission requires Level 3 and does not grant access", () => {
