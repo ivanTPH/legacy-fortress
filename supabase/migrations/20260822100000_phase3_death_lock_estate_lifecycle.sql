@@ -289,7 +289,7 @@ CREATE POLICY estate_admin_documents_estate_claim_select ON public.estate_admini
         AND claim.claimant_user_id = auth.uid()
         AND claim.status = 'active'
         AND public.lf_identity_assurance_level(claim.claimant_user_id) >= claim.required_identity_level
-        AND COALESCE(claim.permissions -> 'estate_document_ids', '[]'::jsonb) ? id::text
+        AND COALESCE(claim.permissions -> 'estate_document_ids', '[]'::jsonb) ? estate_administration_documents.id::text
     )
   );
 

@@ -1,6 +1,6 @@
--- Phase 3 correction: estate-administration document reads must honor claimant
--- suspension/revocation. Uploader provenance does not by itself authorize
--- future reads or downloads.
+-- Phase 3 correction: qualify the outer estate document id in the SELECT
+-- policy so explicit estate_document_ids permissions match the document, not
+-- the inner estate claim row.
 
 DROP POLICY IF EXISTS estate_admin_documents_estate_claim_select ON public.estate_administration_documents;
 CREATE POLICY estate_admin_documents_estate_claim_select ON public.estate_administration_documents

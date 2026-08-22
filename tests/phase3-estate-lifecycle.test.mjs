@@ -9,6 +9,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 const migration = read("supabase/migrations/20260822100000_phase3_death_lock_estate_lifecycle.sql");
 const rpcRestrictionMigration = read("supabase/migrations/20260822103000_phase3_restrict_vault_transition_rpc.sql");
 const estateDocumentSuspensionMigration = read("supabase/migrations/20260822104500_phase3_estate_document_suspension_rls.sql");
+const estateDocumentPolicyIdMigration = read("supabase/migrations/20260822110000_phase3_qualify_estate_document_policy_id.sql");
 const service = read("lib/estate-lifecycle/service.ts");
 const probate = read("lib/admin/probateCases.ts");
 const deathApi = read("app/api/estate/death-reports/route.ts");
@@ -70,9 +71,11 @@ test("Estate administration document reads honor suspension and revocation", () 
   const policy = migration.match(/CREATE POLICY estate_admin_documents_estate_claim_select[\s\S]*?\n  \);/)?.[0] ?? "";
   assert.match(policy, /auth\.uid\(\) = owner_user_id/);
   assert.match(policy, /claim\.status = 'active'/);
+  assert.match(policy, /estate_administration_documents\.id::text/);
   assert.doesNotMatch(policy, /auth\.uid\(\) = uploaded_by_user_id/);
   assert.match(estateDocumentSuspensionMigration, /claim\.status = 'active'/);
   assert.doesNotMatch(estateDocumentSuspensionMigration, /auth\.uid\(\) = uploaded_by_user_id/);
+  assert.match(estateDocumentPolicyIdMigration, /estate_administration_documents\.id::text/);
 });
 
 test("Ordinary vault and storage access remain state gated", () => {
