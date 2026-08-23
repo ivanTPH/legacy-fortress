@@ -40,6 +40,13 @@ export const ACCESS_MODEL_ROUTES: AccessModelRoute[] = [
   },
   {
     area: "enterprise_admin",
+    routePrefix: "/enterprise",
+    visibility: "authorised_role_only",
+    landing: "/enterprise",
+    description: "Canonical enterprise operations entry point; access remains organisation and capability controlled.",
+  },
+  {
+    area: "enterprise_admin",
     routePrefix: "/application/enterprise",
     visibility: "authorised_role_only",
     landing: "/application/enterprise",
@@ -85,13 +92,16 @@ export function isInternalAccessRoute(pathname: string) {
     || pathname.startsWith("/internal/admin")
     || pathname.startsWith("/internal/test-login")
     || pathname.startsWith("/application/admin")
-    || pathname.startsWith("/application/enterprise");
+    || pathname.startsWith("/application/enterprise")
+    || pathname === "/enterprise"
+    || pathname.startsWith("/enterprise/");
 }
 
 export function getAccessAreaForPath(pathname: string): AccessArea {
   if (pathname.startsWith("/internal/test-login")) return "test_preview";
   if (pathname === "/admin" || pathname.startsWith("/admin/")) return "probate_admin";
   if (pathname.startsWith("/application/enterprise")) return "enterprise_admin";
+  if (pathname === "/enterprise" || pathname.startsWith("/enterprise/")) return "enterprise_admin";
   if (pathname.startsWith("/application/admin")) return "probate_admin";
   if (pathname.startsWith("/internal/admin/prototype")) return "test_preview";
   if (pathname.startsWith("/internal/admin")) return "probate_admin";

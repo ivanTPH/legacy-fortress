@@ -37,20 +37,18 @@ const ENTERPRISE_WORKSPACE_ROLES = new Set<PlatformRole>([
 
 export function buildPrototypeWorkspaceUrl(workspace: WorkspaceId, options: WorkspaceRouteOptions = {}) {
   if (workspace === "application") {
-    if (options.prototype && options.currentRole) {
-      return withPrototypeParams("/user", options.currentRole);
-    }
-    return "/user";
+    if (options.prototype && options.currentRole) return withPrototypeParams("/dashboard", options.currentRole);
+    return "/dashboard";
   }
 
-  if (workspace === "contact_wallet") return "/contact-wallet";
+  if (workspace === "contact_wallet") return "/access";
 
   if (workspace === "super_admin") {
     return "/admin";
   }
 
   if (workspace === "enterprise_admin") {
-    return "/application/enterprise";
+    return "/enterprise";
   }
 
   return "/admin/probate";
@@ -79,7 +77,9 @@ export function getCurrentWorkspaceForPath(pathname: string): WorkspaceId {
   if (pathname.startsWith("/internal/admin/prototype/reports")) return "enterprise_admin";
   if (pathname.startsWith("/internal/admin/prototype/campaigns")) return "enterprise_admin";
   if (pathname.startsWith("/application/enterprise")) return "enterprise_admin";
+  if (pathname === "/enterprise" || pathname.startsWith("/enterprise/")) return "enterprise_admin";
   if (pathname.startsWith("/application/admin")) return "super_admin";
+  if (pathname === "/access" || pathname.startsWith("/access/")) return "contact_wallet";
   if (pathname.startsWith("/internal/admin/probate")) return "probate_admin";
   if (pathname.startsWith("/user")) return "application";
   if (pathname.startsWith("/internal/admin/prototype")) return "probate_admin";

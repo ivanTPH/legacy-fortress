@@ -11,6 +11,16 @@ Legacy Fortress is the controller of the personal vault service where it determi
 
 Partner access must be purpose-limited, role-based and server-enforced. Sponsorship, analytics access, data sharing and direct marketing are separate processing purposes and must not be collapsed into one generic permission or Terms & Conditions acceptance.
 
+## 1.1 Canonical data domains and route boundaries
+
+The application separates three logical domains:
+
+- **Identity**: authentication, account identity, contact details and assurance state.
+- **Vault**: private assets, records, documents, estate records and owner content.
+- **Intelligence**: pseudonymous eligibility, aggregate reporting, campaign state and service metrics.
+
+The Intelligence domain must not query raw Vault tables for partner analytics. Partner-facing routes are organisation-scoped and return controlled aggregate results by default. Canonical user-facing areas are `/` for Personal Vault, `/access` for estate/access workflows, `/enterprise` for organisation operations and `/admin` for system administration. Legacy internal aliases remain compatibility paths and must retain the same server-side capability checks.
+
 ## 2. Data protection by design and default
 
 Every new feature handling personal data must identify before implementation:
@@ -218,6 +228,18 @@ Admin tooling must provide:
 Deletion of an application record and destruction of an evidential/original document are separate operations and must not be conflated.
 
 ## 11. Audit and accountability
+
+## 12. Actual Phase 6 dependency inventory
+
+The repository currently uses Supabase for authentication, database and private storage, and Coolify for the confirmed staging application deployment. The staging application is hosted at `test.mylegacyfortress.com` and uses `supabase-test.mylegacyfortress.com`. The codebase contains Stripe billing readiness metadata, but no enabled payment event should be inferred from that readiness layer. No analytics tag, marketing pixel, error-monitoring SDK, email delivery provider, IDV commercial provider or production KMS/HSM integration is treated as enabled by this inventory without separate deployment configuration and approval.
+
+Browser persistence found in the application is limited to authentication/session mechanisms and functional local/session storage for preferences, test-only persona state and development diagnostics. Any future non-essential analytics or marketing tracker requires a consent-management decision and an updated cookie inventory. Local/test persona and diagnostic storage must remain disabled or unavailable in production.
+
+Subprocessor and transfer records remain an operational pre-production gate. Before production, record the actual provider, purpose, data categories, environment, contract/DPA status, transfer mechanism and replacement seam for each enabled hosting, database, messaging, IDV, KMS, AI/OCR, analytics, monitoring and campaign-delivery dependency.
+
+## 13. Accountability limitations
+
+These requirements and application controls support privacy-by-design and auditable operations. They do not by themselves establish UK GDPR compliance, a lawful basis, a DPIA outcome, an approved international transfer, legal retention duration, or a certified biometric service. Those decisions require the designated privacy, legal, security and operational owners.
 
 Use one canonical append-only audit/event service for security, privacy and access events.
 

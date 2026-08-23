@@ -94,7 +94,8 @@ function resolvePrototypeQueryRole(
   const { pathname, searchParams } = request.nextUrl;
   if (!pathname.startsWith("/internal/admin/prototype")
     && !pathname.startsWith("/application/admin")
-    && !pathname.startsWith("/application/enterprise")) return null;
+    && !pathname.startsWith("/application/enterprise")
+    && !pathname.startsWith("/enterprise")) return null;
   if (searchParams.get("admin") !== "true" || searchParams.get("prototype") !== "true") return null;
   return normalizePlatformRole(searchParams.get("role"));
 }

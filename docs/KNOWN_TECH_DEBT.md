@@ -2,7 +2,30 @@
 
 Status: confirmed from the latest Codex review.
 
-## High priority
+## Phase 6 release-gate classification
+
+### Blocker before production
+
+- Production KMS/HSM or an approved production key provider is not configured by this repository; the internal staging key provider must not be promoted.
+- Production IDV/commercial provider approval, biometric DPIA, lawful-basis/special-category review and manual-review operations remain required.
+- Legal/public policy documents, ROPA, DPAs/subprocessor approvals, transfer review and retention schedule require owner approval.
+- Production backups/restore drills, infrastructure monitoring, notification delivery and campaign delivery assurance require operational evidence.
+
+### High
+
+- Canonical contact/person data remains mixed with legacy `section_entries` in selected pages.
+- Full populated-account and browser journey coverage is still less complete than the route/security test coverage.
+
+### Medium
+
+- Office-style attachment preview remains download-only for unsupported formats.
+- Enterprise nested detail links retain compatibility paths while the `/enterprise` entry route is canonical.
+
+### Future commercial integration
+
+- Approved commercial IDV provider, production KMS/HSM, real notification delivery and external campaign delivery remain replaceable-provider seams rather than enabled production dependencies.
+
+## Existing architecture debt
 
 ### Fragmented contacts / people model
 Confirmed split:

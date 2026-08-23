@@ -94,7 +94,7 @@ export function canShowAdminViewSwitcher(context: TrustedRoleClaimContext) {
 
 export function getDefaultLandingForRoles(roles: readonly PlatformRole[]) {
   if (roles.includes("super_admin")) return "/admin";
-  if (canAccessEnterpriseOperations(roles)) return "/application/enterprise";
+  if (canAccessEnterpriseOperations(roles)) return "/enterprise";
   if (canAccessProbateOperations(roles)) return "/internal/admin/probate";
   if (hasPlatformCapability(roles, "executor_view")) return "/contact-wallet";
   return "/dashboard";

@@ -69,7 +69,7 @@ test("enterprise workspace replaces disabled prototype with functional controls"
   assert.match(workspace, /setPortfolio\(EMPTY_PORTFOLIO\)/);
   assert.match(workspace, /router\.replace\("\/sign-in"\)/);
   assert.match(workspace, /router\.refresh\(\)/);
-  assert.match(switcher, /return "\/application\/enterprise"/);
+  assert.match(switcher, /return "\/enterprise"/);
 });
 
 test("enterprise organisation Phase 1 migration adds lifecycle fields without vault leakage", () => {

@@ -28,13 +28,13 @@ test("workspace route map resolves role-aware admin and application workspaces c
     "Probate Review",
   ]);
   assert.deepEqual(superAdmin.map((workspace) => workspace.href), [
-    "/user?role=super_admin&admin=true&prototype=true",
+    "/dashboard?role=super_admin&admin=true&prototype=true",
     "/admin",
     "/admin/probate",
   ]);
   assert.equal(
     buildPrototypeWorkspaceUrl("application", { prototype: true, currentRole: "super_admin" }),
-    "/user?role=super_admin&admin=true&prototype=true",
+    "/dashboard?role=super_admin&admin=true&prototype=true",
   );
   assert.equal(
     buildPrototypeWorkspaceUrl("super_admin"),
@@ -61,7 +61,7 @@ test("workspace route map resolves role-aware admin and application workspaces c
   const executor = getAvailableWorkspaces(["executor"], { prototype: true });
   assert.deepEqual(executor.map((workspace) => workspace.id), ["application", "contact_wallet"]);
   assert.deepEqual(executor.map((workspace) => workspace.label), ["Personal Vault", "Contact Wallet"]);
-  assert.equal(buildPrototypeWorkspaceUrl("contact_wallet"), "/contact-wallet");
+  assert.equal(buildPrototypeWorkspaceUrl("contact_wallet"), "/access");
   assert.equal(buildPrototypeWorkspaceUrl("probate_admin"), "/admin/probate");
   assert.equal(getCurrentWorkspaceForPath("/admin/probate"), "probate_admin");
   assert.equal(getCurrentWorkspaceForPath("/admin/probate/case-1"), "probate_admin");
