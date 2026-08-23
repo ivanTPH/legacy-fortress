@@ -14,7 +14,7 @@ const routes = [
   { name: "sign-in", pathname: "/sign-in", patterns: [/Legacy Fortress/i, /Secure access/i, /Email \*/i] },
   { name: "sign-up", pathname: "/sign-up", patterns: [/Legacy Fortress/i, /Create account/i] },
   { name: "auth-callback-invalid", pathname: "/auth/callback?token_hash=invalid&type=signup", patterns: [/Authentication/i, /Go to sign in/i] },
-  { name: "dashboard", pathname: "/app/dashboard", patterns: [/Overview/i, /Bill Smith/i] },
+  { name: "dashboard", pathname: "/dashboard", patterns: [/Overview/i, /Bill Smith/i] },
   { name: "bank", pathname: "/finances/bank", patterns: [/HSBC/i, /attachment/i] },
   { name: "contacts", pathname: "/personal/contacts", patterns: [/Contacts in place/i, /Executors/i] },
   { name: "admin", pathname: "/internal/admin/prototype/enterprise?role=enterprise_admin&admin=true&prototype=true", patterns: [/Access denied/i, /Admin access is restricted/i] },
@@ -74,7 +74,7 @@ try {
 async function verifyRoute(page, route) {
   await page.goto(route.pathname, { waitUntil: "networkidle" });
   if (/\/app\/onboarding/.test(page.url())) {
-    await page.goto("/app/dashboard", { waitUntil: "networkidle" });
+    await page.goto("/dashboard", { waitUntil: "networkidle" });
   }
 
   for (const pattern of route.patterns) {

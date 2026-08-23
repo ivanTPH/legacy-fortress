@@ -69,7 +69,7 @@ try {
     adminBlocked: true,
     routesChecked: [
       "/demo",
-      "/app/dashboard",
+      "/dashboard",
       "/finances/bank",
       "/legal",
       "/legal/wills",
@@ -110,7 +110,7 @@ async function openLinkedRoute(page, pathname) {
     }
     await page.waitForLoadState("networkidle");
     if (!/\/app\/onboarding/.test(page.url())) return;
-    await page.goto("/app/dashboard");
+    await page.goto("/dashboard");
     await page.getByText(/Viewing Bill Smith's estate records/i).waitFor();
   }
   throw new Error(`Linked route ${pathname} redirected to onboarding twice.`);

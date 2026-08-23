@@ -137,10 +137,10 @@ try {
       linkedContext: row.linked_context ?? [],
     })),
     documents: [],
-    assetHref: () => "/app/dashboard",
+    assetHref: () => "/dashboard",
     assetIcon: () => "folder",
     contactHref: () => "/personal/contacts",
-    documentHref: () => "/app/dashboard",
+    documentHref: () => "/dashboard",
     extraLinks: [],
   });
   assert.equal(dashboardDiscovery.some((row) => row.kind === "contact" && row.label === contactName), true);
@@ -165,14 +165,14 @@ async function signIn(page, email, password) {
   await page.getByLabel(/email/i).fill(email);
   await page.getByLabel(/^password/i).fill(password);
   await page.getByRole("button", { name: /sign in/i }).click();
-  await page.waitForURL(/\/app\/dashboard|\/app\/onboarding|\/account\/terms/, { timeout: 30000 });
-  if (page.url().includes("/app/onboarding")) {
+  await page.waitForURL(/\/dashboard|\/onboarding|\/account\/terms/, { timeout: 30000 });
+  if (page.url().includes("/onboarding")) {
     const terms = page.getByLabel(/i accept the terms and conditions/i);
     if (await terms.count()) {
       await terms.check();
       await page.getByRole("button", { name: /continue into your secure record|go to dashboard/i }).click();
     }
-    await page.waitForURL(/\/profile|\/app\/dashboard|\/account\/terms/, { timeout: 30000 });
+    await page.waitForURL(/\/profile|\/dashboard|\/account\/terms/, { timeout: 30000 });
   }
   if (page.url().includes("/account/terms")) {
     const acceptButton = page.getByRole("button", { name: /accept terms and continue/i });
@@ -181,27 +181,27 @@ async function signIn(page, email, password) {
     } else {
       await page.getByRole("link", { name: /return to the dashboard/i }).click();
     }
-    await page.waitForURL(/\/app\/dashboard/, { timeout: 30000 });
+    await page.waitForURL(/\/dashboard/, { timeout: 30000 });
   }
 }
 
 async function ensureOwnerReady(page) {
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    await page.goto("/app/dashboard").catch(() => null);
-    await page.waitForURL(/\/app\/dashboard|\/app\/onboarding|\/account\/terms|\/profile/, { timeout: 30000 });
-    if (page.url().includes("/app/onboarding")) {
+    await page.goto("/dashboard").catch(() => null);
+    await page.waitForURL(/\/dashboard|\/onboarding|\/account\/terms|\/profile/, { timeout: 30000 });
+    if (page.url().includes("/onboarding")) {
       try {
-        await page.waitForURL(/\/app\/dashboard|\/profile|\/account\/terms/, { timeout: 4000 });
+        await page.waitForURL(/\/dashboard|\/profile|\/account\/terms/, { timeout: 4000 });
       } catch {
         // Fall through to manual completion when the client-side redirect does not happen automatically.
       }
-      if (page.url().includes("/app/dashboard") || page.url().includes("/profile")) return;
+      if (page.url().includes("/dashboard") || page.url().includes("/profile")) return;
       if (page.url().includes("/account/terms")) {
         const acceptButton = page.getByRole("button", { name: /accept terms and continue/i });
         if (await acceptButton.count()) {
           await acceptButton.click();
-          await page.waitForURL(/\/app\/dashboard|\/profile/, { timeout: 30000 });
-          if (page.url().includes("/app/dashboard") || page.url().includes("/profile")) return;
+          await page.waitForURL(/\/dashboard|\/profile/, { timeout: 30000 });
+          if (page.url().includes("/dashboard") || page.url().includes("/profile")) return;
         }
       }
       const checkbox = page.getByLabel(/i accept the terms and conditions/i);
@@ -212,7 +212,7 @@ async function ensureOwnerReady(page) {
       if (await continueButton.count()) {
         await continueButton.click();
       }
-      await page.waitForURL(/\/app\/dashboard|\/profile|\/account\/terms/, { timeout: 30000 }).catch(() => null);
+      await page.waitForURL(/\/dashboard|\/profile|\/account\/terms/, { timeout: 30000 }).catch(() => null);
       continue;
     }
     if (page.url().includes("/account/terms")) {
@@ -222,10 +222,10 @@ async function ensureOwnerReady(page) {
       } else {
         await page.getByRole("link", { name: /return to the dashboard/i }).click();
       }
-      await page.waitForURL(/\/app\/dashboard|\/profile/, { timeout: 30000 }).catch(() => null);
+      await page.waitForURL(/\/dashboard|\/profile/, { timeout: 30000 }).catch(() => null);
       continue;
     }
-    if (page.url().includes("/app/dashboard") || page.url().includes("/profile")) return;
+    if (page.url().includes("/dashboard") || page.url().includes("/profile")) return;
   }
   throw new Error(`Owner bootstrap did not settle on dashboard. url=${page.url()}`);
 }

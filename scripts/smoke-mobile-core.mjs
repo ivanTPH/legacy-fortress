@@ -26,7 +26,7 @@ try {
   const demoReady = await waitForDemoDashboardOrUnavailable(page);
 
   const dashboard = demoReady
-    ? await verifyMobileRoute(page, "/app/dashboard", [
+    ? await verifyMobileRoute(page, "/dashboard", [
         /Overview/i,
         /Bill Smith/i,
       ])
@@ -142,7 +142,7 @@ async function openLinkedRoute(page, pathname) {
     }
     await page.waitForLoadState("networkidle");
     if (!/\/app\/onboarding/.test(page.url())) return;
-    await page.goto("/app/dashboard");
+    await page.goto("/dashboard");
     await page.getByText(/Viewing Bill Smith's estate records/i).waitFor();
   }
   throw new Error(`Linked route ${pathname} redirected to onboarding twice.`);

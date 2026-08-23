@@ -8,11 +8,11 @@ async function run() {
   const page = await browser.newPage();
 
   try {
-    await page.goto(`${baseUrl}/app/dashboard?lf_dev_smoke=1&lf_dev_variant=fixture`, {
+    await page.goto(`${baseUrl}/dashboard?lf_dev_smoke=1&lf_dev_variant=fixture`, {
       waitUntil: "networkidle",
       timeout: 30000,
     });
-    assert.ok(page.url().includes("/app/dashboard"), "dashboard route did not load");
+    assert.ok(page.url().includes("/dashboard"), "dashboard route did not load");
     const dashboardText = await page.content();
     assert.ok(!/Could not load dashboard: Wallet resolution failed/i.test(dashboardText), "legacy dashboard wallet failure still rendered");
     assert.ok(/Dashboard|Finances|Profile summary/i.test(dashboardText), "dashboard shell did not render");

@@ -75,8 +75,8 @@ try {
   ownerPage.setDefaultNavigationTimeout(30000);
   await signInThroughApp(ownerPage, OWNER_EMAIL, OWNER_PASSWORD);
   logStep("owner signed in");
-  if (!ownerPage.url().includes("/app/dashboard")) {
-    await ownerPage.goto("/app/dashboard");
+  if (!ownerPage.url().includes("/dashboard")) {
+    await ownerPage.goto("/dashboard");
   }
   logStep("owner dashboard ready");
   await ownerPage.getByLabel("Name").fill(invitedName);
@@ -129,14 +129,14 @@ try {
   await recipientSubmit.waitFor({ state: "visible", timeout: 10000 });
   await waitForEnabled(recipientSubmit, 10000);
   await recipientSubmit.click();
-  await recipientPage.waitForURL(/\/invite\/accept|\/(?:app\/)?dashboard/, { timeout: 30000 });
+  await recipientPage.waitForURL(/\/invite\/accept|\/dashboard/, { timeout: 30000 });
   if (!recipientPage.url().includes("/invite/accept")) {
     await recipientPage.goto(acceptPath);
   }
   logStep("recipient signed in");
   await recipientPage.getByRole("button", { name: /accept and continue/i }).click();
   try {
-    await recipientPage.waitForURL(/\/(?:app\/)?dashboard/, { timeout: 30000 });
+    await recipientPage.waitForURL(/\/dashboard/, { timeout: 30000 });
   } catch (error) {
     const acceptStatus = await readAlertText(recipientPage);
     const bodyText = await recipientPage.locator("body").innerText();
@@ -193,14 +193,14 @@ async function signInThroughApp(page, email, password) {
   await submit.waitFor({ state: "visible", timeout: 10000 });
   await waitForEnabled(submit, 10000);
   await submit.click();
-  await page.waitForURL(/\/(?:app\/)?dashboard|\/(?:app\/)?onboarding|\/account\/terms/, { timeout: 30000 });
+  await page.waitForURL(/\/dashboard|\/onboarding|\/account\/terms/, { timeout: 30000 });
   if (page.url().includes("/onboarding")) {
     const terms = page.getByLabel(/i accept the terms and conditions/i);
     if (await terms.count()) {
       await terms.check();
       await page.getByRole("button", { name: /continue into your secure record|go to dashboard/i }).click();
     }
-    await page.waitForURL(/\/profile|\/(?:app\/)?dashboard|\/account\/terms/, { timeout: 30000 });
+    await page.waitForURL(/\/profile|\/dashboard|\/account\/terms/, { timeout: 30000 });
   }
   if (page.url().includes("/account/terms")) {
     const acceptButton = page.getByRole("button", { name: /accept terms and continue/i });
@@ -209,7 +209,7 @@ async function signInThroughApp(page, email, password) {
     } else {
       await page.getByRole("link", { name: /return to the dashboard/i }).click();
     }
-    await page.waitForURL(/\/(?:app\/)?dashboard/, { timeout: 30000 });
+    await page.waitForURL(/\/dashboard/, { timeout: 30000 });
   }
 }
 
@@ -399,8 +399,8 @@ async function fetchOwnerSideState(ownerUserId, email, linkedUserId) {
 }
 
 async function assertLinkVisibility(page) {
-  if (!page.url().includes("/app/dashboard")) {
-    await page.goto("/app/dashboard");
+  if (!page.url().includes("/dashboard")) {
+    await page.goto("/dashboard");
   }
   await page.waitForLoadState("networkidle");
   assert.equal(await page.locator('a[href="/finances"]').count() > 0, true);

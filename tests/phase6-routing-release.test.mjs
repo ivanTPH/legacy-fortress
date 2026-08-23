@@ -41,6 +41,23 @@ test("Phase 6 route authorization keeps admin and enterprise boundaries server-s
   assert.equal(canRoleAccessPath(["executor"], "/access"), true);
 });
 
+test("Phase 6 hosted smoke harnesses use canonical routes", () => {
+  const contactSmoke = readFileSync(`${root}/scripts/smoke-contact-consistency.mjs`, "utf8");
+  const invitationSmoke = readFileSync(`${root}/scripts/smoke-invitation-linked-access.mjs`, "utf8");
+  const mobileCore = readFileSync(`${root}/scripts/smoke-mobile-core.mjs`, "utf8");
+  const mobilePolish = readFileSync(`${root}/scripts/smoke-mobile-polish.mjs`, "utf8");
+  const demoAccess = readFileSync(`${root}/scripts/smoke-demo-access.mjs`, "utf8");
+  const dashboardBank = readFileSync(`${root}/scripts/smoke-dashboard-bank-dev.mjs`, "utf8");
+  assert.doesNotMatch(contactSmoke, /\/app\/(?:dashboard|onboarding)/);
+  assert.doesNotMatch(invitationSmoke, /\/app\/(?:dashboard|onboarding)/);
+  assert.doesNotMatch(mobileCore, /\/app\/dashboard/);
+  assert.doesNotMatch(mobilePolish, /\/app\/dashboard/);
+  assert.doesNotMatch(demoAccess, /\/app\/dashboard/);
+  assert.doesNotMatch(dashboardBank, /\/app\/dashboard/);
+  assert.match(contactSmoke, /"\/dashboard"/);
+  assert.match(invitationSmoke, /"\/dashboard"/);
+});
+
 test("Phase 6 governance docs record policy matrix and production gate", () => {
   const governance = readFileSync(`${root}/LEGACY_FORTRESS_DATA_PROTECTION_GOVERNANCE.md`, "utf8");
   const policy = readFileSync(`${root}/LEGACY_FORTRESS_LEGAL_POLICY_REQUIREMENTS.md`, "utf8");
