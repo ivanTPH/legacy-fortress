@@ -82,6 +82,10 @@ try {
     await ownerPage.goto("/dashboard");
   }
   logStep("owner dashboard ready");
+  const addExecutor = ownerPage.getByRole("button", { name: /add executor/i }).first();
+  if (await addExecutor.count()) {
+    await addExecutor.click();
+  }
   await ownerPage.getByLabel("Name").fill(invitedName);
   await ownerPage.getByLabel("Email").fill(invitedEmail);
   await ownerPage.getByLabel("Role").selectOption(INVITED_ROLE);
