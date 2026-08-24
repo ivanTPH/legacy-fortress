@@ -74,6 +74,11 @@ test("Phase 6 invitation smoke proves accepted-but-unverified denial", () => {
   assert.match(invitationSmoke, /activation_status.*active/);
 });
 
+test("Phase 6 contacts form exposes one primary add-contact action", () => {
+  const manager = readFileSync(`${root}/app/(app)/components/dashboard/ContactInvitationManager.tsx`, "utf8");
+  assert.equal((manager.match(/title=\{editingId \? "Save contact changes"/g) ?? []).length, 1);
+});
+
 test("Phase 6 governance docs record policy matrix and production gate", () => {
   const governance = readFileSync(`${root}/LEGACY_FORTRESS_DATA_PROTECTION_GOVERNANCE.md`, "utf8");
   const policy = readFileSync(`${root}/LEGACY_FORTRESS_LEGAL_POLICY_REQUIREMENTS.md`, "utf8");
