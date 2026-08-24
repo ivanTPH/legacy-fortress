@@ -58,6 +58,22 @@ test("Phase 6 hosted smoke harnesses use canonical routes", () => {
   assert.match(invitationSmoke, /"\/dashboard"/);
 });
 
+test("Phase 6 Auth deletion does not mutate append-only audit rows", () => {
+  const migration = readFileSync(
+    `${root}/supabase/migrations/20260824090000_phase6_auth_lifecycle_audit_fk.sql`,
+    "utf8",
+  );
+  assert.match(migration, /DROP CONSTRAINT IF EXISTS audit_events_actor_user_id_fkey/);
+  assert.match(migration, /append-only/);
+});
+
+test("Phase 6 invitation smoke proves accepted-but-unverified denial", () => {
+  const invitationSmoke = readFileSync(`${root}/scripts/smoke-invitation-linked-access.mjs`, "utf8");
+  assert.match(invitationSmoke, /Accepted-but-unverified user read protected records/);
+  assert.match(invitationSmoke, /Accepted-but-unverified user obtained a signed URL/);
+  assert.match(invitationSmoke, /activation_status.*active/);
+});
+
 test("Phase 6 governance docs record policy matrix and production gate", () => {
   const governance = readFileSync(`${root}/LEGACY_FORTRESS_DATA_PROTECTION_GOVERNANCE.md`, "utf8");
   const policy = readFileSync(`${root}/LEGACY_FORTRESS_LEGAL_POLICY_REQUIREMENTS.md`, "utf8");

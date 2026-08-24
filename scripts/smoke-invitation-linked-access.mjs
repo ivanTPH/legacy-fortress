@@ -28,6 +28,9 @@ const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 const ownerClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
+const recipientClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { autoRefreshToken: false, persistSession: false },
+});
 
 const uniqueTag = `${Date.now()}`;
 const invitedEmail = process.env.SMOKE_INVITED_EMAIL || `ivanyardley+lf-linked-${uniqueTag}@me.com`;
@@ -136,7 +139,7 @@ try {
   logStep("recipient signed in");
   await recipientPage.getByRole("button", { name: /accept and continue/i }).click();
   try {
-    await recipientPage.waitForURL(/\/dashboard/, { timeout: 30000 });
+    await recipientPage.waitForURL(/\/identity\/verify|\/dashboard|\/contact-wallet/, { timeout: 30000 });
   } catch (error) {
     const acceptStatus = await readAlertText(recipientPage);
     const bodyText = await recipientPage.locator("body").innerText();
@@ -145,16 +148,38 @@ try {
       { cause: error },
     );
   }
-  await recipientPage.getByText(/Viewing .* estate records/i).waitFor({ timeout: 20000 });
-  await recipientPage.getByText(/view-only/i).waitFor({ timeout: 20000 });
   logStep("recipient accepted invitation");
 
-  await assertLinkVisibility(recipientPage);
-  logStep("recipient navigation verified");
-  await verifyBankReadOnlyExperience(recipientPage);
-  logStep("recipient bank read-only verified");
-  await verifySharedAttachmentReadOnlyExperience(recipientPage);
-  logStep("recipient attachment access verified");
+  const recipientAuth = await recipientClient.auth.signInWithPassword({
+    email: invitedEmail,
+    password: invitedPassword,
+  });
+  if (recipientAuth.error || !recipientAuth.data.user) {
+    throw new Error(recipientAuth.error?.message || "Recipient API auth failed.");
+  }
+  const protectedRead = await recipientClient
+    .from("records")
+    .select("id")
+    .eq("owner_user_id", ownerUserId)
+    .limit(1);
+  const protectedDocumentRead = await recipientClient
+    .from("documents")
+    .select("id")
+    .eq("owner_user_id", ownerUserId)
+    .limit(1);
+  const protectedMutation = await recipientClient
+    .from("records")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("owner_user_id", ownerUserId)
+    .select("id");
+  const signedUrlAttempt = await recipientClient.storage
+    .from("vault-docs")
+    .createSignedUrl(`users/${ownerUserId}/phase6-unauthorized.txt`, 60);
+  assert.equal((protectedRead.data ?? []).length, 0, "Accepted-but-unverified user read protected records.");
+  assert.equal((protectedDocumentRead.data ?? []).length, 0, "Accepted-but-unverified user read protected documents.");
+  assert.equal((protectedMutation.data ?? []).length, 0, "Accepted-but-unverified user mutated protected records.");
+  assert.equal(Boolean(signedUrlAttempt.data?.signedUrl), false, "Accepted-but-unverified user obtained a signed URL.");
+  logStep("accepted-but-unverified protected reads, mutation, and signed URL denied");
 
   await ownerPage.reload({ waitUntil: "networkidle" });
   const ownerRowAfterAccept = ownerPage.locator(".lf-contact-invitations-row").filter({ hasText: invitedEmail }).first();
@@ -172,12 +197,11 @@ try {
     recipientUserId,
     ownerVerification: ownerState,
     linkedUi: {
-      dashboardBanner: true,
-      viewOnlyRoleLabel: true,
-      restrictedSectionsHidden: true,
-      bankReadOnly: true,
-      attachmentPreviewWorked: true,
-      attachmentDownloadWorked: true,
+      accepted: true,
+      protectedReadDenied: true,
+      protectedDocumentDenied: true,
+      protectedMutationDenied: true,
+      signedUrlDenied: true,
     },
   }, null, 2));
 } finally {
@@ -389,6 +413,8 @@ async function fetchOwnerSideState(ownerUserId, email, linkedUserId) {
   assert.equal(String(contacts[0]?.linked_user_id ?? ""), linkedUserId);
   assert.equal(String(invitations[0]?.accepted_user_id ?? ""), linkedUserId);
   assert.equal(String(grants[0]?.linked_user_id ?? ""), linkedUserId);
+  assert.notEqual(String(grants[0]?.activation_status ?? ""), "active");
+  assert.notEqual(String(grants[0]?.activation_status ?? ""), "verified");
 
   return {
     contacts,
