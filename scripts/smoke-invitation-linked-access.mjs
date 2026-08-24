@@ -86,6 +86,17 @@ try {
   if (await addExecutor.count()) {
     await addExecutor.click();
   }
+  if (!(await ownerPage.getByLabel("Name").count())) {
+    const openContacts = ownerPage.getByRole("button", { name: /open contacts/i }).last();
+    if (await openContacts.count()) {
+      await openContacts.click();
+      await ownerPage.waitForURL(/\/contacts/, { timeout: 20000 });
+      const contactsAddExecutor = ownerPage.getByRole("button", { name: /add executor/i }).last();
+      if (await contactsAddExecutor.count()) {
+        await contactsAddExecutor.click();
+      }
+    }
+  }
   await ownerPage.getByLabel("Name").fill(invitedName);
   await ownerPage.getByLabel("Email").fill(invitedEmail);
   await ownerPage.getByLabel("Role").selectOption(INVITED_ROLE);
