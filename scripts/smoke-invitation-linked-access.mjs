@@ -87,14 +87,11 @@ try {
     await addExecutor.click();
   }
   if (!(await ownerPage.getByLabel("Name").count())) {
-    const openContacts = ownerPage.getByRole("button", { name: /open contacts/i }).last();
-    if (await openContacts.count()) {
-      await openContacts.click();
-      await ownerPage.waitForURL(/\/contacts/, { timeout: 20000 });
-      const contactsAddExecutor = ownerPage.getByRole("button", { name: /add executor/i }).last();
-      if (await contactsAddExecutor.count()) {
-        await contactsAddExecutor.click();
-      }
+    await ownerPage.goto("/contacts?group=executors");
+    await ownerPage.waitForLoadState("networkidle");
+    const contactsAddExecutor = ownerPage.getByRole("button", { name: /add executor/i }).last();
+    if (await contactsAddExecutor.count()) {
+      await contactsAddExecutor.click();
     }
   }
   await ownerPage.getByLabel("Name").fill(invitedName);
