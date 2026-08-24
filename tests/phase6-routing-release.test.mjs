@@ -72,6 +72,17 @@ test("Phase 6 invitation smoke proves accepted-but-unverified denial", () => {
   assert.match(invitationSmoke, /Accepted-but-unverified user read protected records/);
   assert.match(invitationSmoke, /Accepted-but-unverified user obtained a signed URL/);
   assert.match(invitationSmoke, /activation_status.*active/);
+  assert.match(invitationSmoke, /admin\.auth\.admin\.generateLink/);
+  assert.match(invitationSmoke, /email transport unavailable/);
+});
+
+test("Phase 6 invitation summary migration uses the canonical profile table", () => {
+  const migration = readFileSync(
+    `${root}/supabase/migrations/20260824143000_phase6_contact_invitation_profile_reference.sql`,
+    "utf8",
+  );
+  assert.match(migration, /LEFT JOIN public\.user_profiles/);
+  assert.doesNotMatch(migration, /public\.profiles/);
 });
 
 test("Phase 6 contacts form exposes one primary add-contact action", () => {

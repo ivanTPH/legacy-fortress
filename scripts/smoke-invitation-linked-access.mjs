@@ -41,6 +41,7 @@ let recipientUserId = "";
 let invitationId = "";
 let contactId = "";
 let invitationAcceptPath = "";
+let stagingAuthActionLink = "";
 
 const browser = await webkit.launch();
 let ownerPage = null;
@@ -107,7 +108,7 @@ try {
   if (ownerStatusAfterSend) {
     logStep(`owner status after send: ${ownerStatusAfterSend}`);
   }
-  const invitation = await waitForInvitationSent(ownerUserId, invitedEmail, 30000, {
+  const invitation = await waitForInvitationSent(ownerUserId, invitedEmail, 5000, {
     rowId: await inviteRow.getAttribute("data-invitation-id"),
     assignedRole: INVITED_ROLE,
     ownerUserId,
@@ -116,6 +117,7 @@ try {
   });
   invitationId = invitation.id;
   contactId = String(invitation.contact_id ?? "");
+  stagingAuthActionLink = String(invitation.uat_auth_action_link ?? "");
   logStep("owner invitation sent");
 
   const invitationEvent = await fetchInvitationEvent(ownerUserId, invitationId);
@@ -133,10 +135,35 @@ try {
   recipientPage = await recipientContext.newPage();
   recipientPage.setDefaultTimeout(20000);
   recipientPage.setDefaultNavigationTimeout(30000);
-  await recipientPage.goto(acceptPath);
+  try {
+    await recipientPage.goto(stagingAuthActionLink || acceptPath, { waitUntil: "domcontentloaded", timeout: 30000 });
+  } catch (error) {
+    const diagnostic = {
+      url: recipientPage.url(),
+      body: (await recipientPage.locator("body").innerText().catch(() => "")).slice(0, 500),
+      storageKeys: await recipientPage.evaluate(() => Object.keys(localStorage)),
+    };
+    throw new Error(`Staging auth action did not complete: ${JSON.stringify(diagnostic)}`, { cause: error });
+  }
+  if (stagingAuthActionLink) {
+    logStep(`staging auth action completed at ${new URL(recipientPage.url()).pathname}`);
+    const authHash = new URL(recipientPage.url()).hash;
+    if (authHash) await recipientPage.goto(`${BASE_URL}/auth/callback${authHash}`, { waitUntil: "domcontentloaded" });
+    await recipientPage.waitForFunction(() => Object.keys(localStorage).some((key) => key.startsWith("sb-") && key.endsWith("-auth-token")), null, { timeout: 15000 });
+    if (!recipientPage.url().includes("/invite/accept")) await recipientPage.goto(acceptPath);
+  }
   logStep("recipient opened accept link");
   await recipientPage.getByRole("heading", { name: /accept invitation/i }).waitFor({ timeout: 20000 });
-  await recipientPage.getByText(new RegExp(`You have been invited as`, "i")).waitFor({ timeout: 20000 });
+  try {
+    await recipientPage.getByText(new RegExp(`You have been invited as`, "i")).waitFor({ timeout: 20000 });
+  } catch (error) {
+    const diagnostic = {
+      url: recipientPage.url(),
+      body: (await recipientPage.locator("body").innerText().catch(() => "")).slice(0, 800),
+      storageKeys: await recipientPage.evaluate(() => Object.keys(localStorage)),
+    };
+    throw new Error(`Invitation summary did not load: ${JSON.stringify(diagnostic)}`, { cause: error });
+  }
   await recipientPage.getByRole("link", { name: /sign in to accept/i }).click();
   await typeLikeUser(recipientPage.locator('input[type="email"]').first(), invitedEmail);
   await typeLikeUser(recipientPage.locator('input[autocomplete="current-password"]').first(), invitedPassword);
@@ -273,11 +300,31 @@ async function waitForInvitationSent(ownerUserId, email, timeoutMs, fallback) {
     }
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  if (String(fallback?.ownerStatusAfterSend ?? "").toLowerCase().includes("email rate limit exceeded")) {
-    logStep("email delivery rate-limited, generating secure invite link fallback");
-    return await generateFallbackInvitation(fallback.ownerUserId, invitationId || fallback.rowId || "", email, fallback.assignedRole, fallback.accountHolderName);
+  logStep("email transport unavailable, generating staging-only authentication action");
+  const invitation = await generateFallbackInvitation(fallback.ownerUserId, invitationId || fallback.rowId || "", email, fallback.assignedRole, fallback.accountHolderName);
+  const action = await admin.auth.admin.generateLink({
+    type: "magiclink",
+    email,
+    options: {
+      redirectTo: `${BASE_URL}/auth/callback?next=${encodeURIComponent(invitationAcceptPath)}`,
+    },
+  });
+  if (action.error || !action.data?.properties?.action_link) {
+    throw new Error(action.error?.message || "Could not generate staging authentication action.");
   }
-  throw new Error("Timed out waiting for the invitation to be marked as sent.");
+  const actionUrl = new URL(action.data.properties.action_link);
+  if (!/^(supabase-kong|localhost|127\.0\.0\.1)$/i.test(actionUrl.hostname)) {
+    throw new Error("Unexpected staging auth action host.");
+  }
+  const publicSupabaseUrl = new URL(SUPABASE_URL);
+  actionUrl.protocol = publicSupabaseUrl.protocol;
+  actionUrl.host = publicSupabaseUrl.host;
+  actionUrl.port = publicSupabaseUrl.port;
+  actionUrl.searchParams.set(
+    "redirect_to",
+    `${BASE_URL}/auth/callback?next=${encodeURIComponent(invitationAcceptPath)}`,
+  );
+  return { ...invitation, uat_auth_action_link: actionUrl.toString() };
 }
 
 async function readInvitationManagerStatus(page) {
@@ -317,6 +364,7 @@ async function generateFallbackInvitation(ownerUserId, existingInvitationId, ema
   const tokenHash = createTokenHash(token);
   invitationAcceptPath = `/invite/accept?invitation=${invitation.id}&token=${token}`;
   const now = new Date().toISOString();
+  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
   const roleLabel = assignedRole.replace(/_/g, " ");
   const subject = `You have been invited as ${roleLabel} for ${accountHolderName}`;
   const preview = `View-only, role-based access has been prepared for ${accountHolderName}'s Legacy Fortress estate record.`;
@@ -327,6 +375,7 @@ async function generateFallbackInvitation(ownerUserId, existingInvitationId, ema
       invitation_status: "pending",
       sent_at: now,
       last_sent_at: now,
+      expires_at: expiresAt,
       updated_at: now,
     })
     .eq("id", invitation.id)
