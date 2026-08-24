@@ -16,7 +16,7 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const OWNER_EMAIL = process.env.E2E_USER_EMAIL || "";
 const OWNER_PASSWORD = process.env.E2E_USER_PASSWORD || "";
 const OWNER_DISPLAY_NAME = process.env.SMOKE_OWNER_DISPLAY_NAME || "Bill Smith";
-const INVITED_ROLE = process.env.SMOKE_INVITED_ROLE || "professional_advisor";
+const INVITED_ROLE = process.env.SMOKE_INVITED_ROLE || "executor";
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY || !OWNER_EMAIL || !OWNER_PASSWORD) {
   throw new Error("Missing required env for linked-access smoke.");
@@ -98,10 +98,10 @@ try {
   await ownerPage.getByLabel("Email").fill(invitedEmail);
   await ownerPage.getByLabel("Role").selectOption(INVITED_ROLE);
   await ownerPage.getByTitle("Add this contact").last().click();
-  const inviteRow = ownerPage.locator(".lf-contact-invitations-row").filter({ hasText: invitedEmail }).first();
+  const inviteRow = ownerPage.locator(".lf-contact-row").filter({ hasText: invitedEmail }).first();
   await inviteRow.waitFor({ state: "visible", timeout: 20000 });
   logStep("owner contact created");
-  await inviteRow.getByRole("button", { name: /^Send$/ }).click();
+  await inviteRow.getByRole("button", { name: /send invite|resend invite/i }).click();
   await ownerPage.waitForTimeout(1500);
   const ownerStatusAfterSend = await readInvitationManagerStatus(ownerPage);
   if (ownerStatusAfterSend) {
@@ -194,7 +194,7 @@ try {
   logStep("accepted-but-unverified protected reads, mutation, and signed URL denied");
 
   await ownerPage.reload({ waitUntil: "networkidle" });
-  const ownerRowAfterAccept = ownerPage.locator(".lf-contact-invitations-row").filter({ hasText: invitedEmail }).first();
+  const ownerRowAfterAccept = ownerPage.locator(".lf-contact-row").filter({ hasText: invitedEmail }).first();
   await ownerRowAfterAccept.waitFor({ state: "visible", timeout: 20000 });
   await waitForOwnerAcceptedStatus(ownerRowAfterAccept, 20000);
 
