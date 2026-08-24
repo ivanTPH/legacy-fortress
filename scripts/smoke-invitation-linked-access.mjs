@@ -97,7 +97,7 @@ try {
   await ownerPage.getByLabel("Name").fill(invitedName);
   await ownerPage.getByLabel("Email").fill(invitedEmail);
   await ownerPage.getByLabel("Role").selectOption(INVITED_ROLE);
-  await ownerPage.getByTitle("Add this contact").first().click();
+  await ownerPage.getByTitle("Add this contact").last().click();
   const inviteRow = ownerPage.locator(".lf-contact-invitations-row").filter({ hasText: invitedEmail }).first();
   await inviteRow.waitFor({ state: "visible", timeout: 20000 });
   logStep("owner contact created");
