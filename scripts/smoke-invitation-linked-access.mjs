@@ -164,18 +164,23 @@ try {
     };
     throw new Error(`Invitation summary did not load: ${JSON.stringify(diagnostic)}`, { cause: error });
   }
-  await recipientPage.getByRole("link", { name: /sign in to accept/i }).click();
-  await typeLikeUser(recipientPage.locator('input[type="email"]').first(), invitedEmail);
-  await typeLikeUser(recipientPage.locator('input[autocomplete="current-password"]').first(), invitedPassword);
-  const recipientSubmit = recipientPage.locator('button[type="submit"]').first();
-  await recipientSubmit.waitFor({ state: "visible", timeout: 10000 });
-  await waitForEnabled(recipientSubmit, 10000);
-  await recipientSubmit.click();
-  await recipientPage.waitForURL(/\/invite\/accept|\/dashboard/, { timeout: 30000 });
-  if (!recipientPage.url().includes("/invite/accept")) {
-    await recipientPage.goto(acceptPath);
+  const signInLink = recipientPage.getByRole("link", { name: /sign in to accept/i });
+  if (await signInLink.count()) {
+    await signInLink.click();
+    await typeLikeUser(recipientPage.locator('input[type="email"]').first(), invitedEmail);
+    await typeLikeUser(recipientPage.locator('input[autocomplete="current-password"]').first(), invitedPassword);
+    const recipientSubmit = recipientPage.locator('button[type="submit"]').first();
+    await recipientSubmit.waitFor({ state: "visible", timeout: 10000 });
+    await waitForEnabled(recipientSubmit, 10000);
+    await recipientSubmit.click();
+    await recipientPage.waitForURL(/\/invite\/accept|\/dashboard/, { timeout: 30000 });
+    if (!recipientPage.url().includes("/invite/accept")) {
+      await recipientPage.goto(acceptPath);
+    }
+    logStep("recipient signed in");
+  } else {
+    logStep("recipient session already established by staging auth bridge");
   }
-  logStep("recipient signed in");
   await recipientPage.getByRole("button", { name: /accept and continue/i }).click();
   try {
     await recipientPage.waitForURL(/\/identity\/verify|\/dashboard|\/contact-wallet/, { timeout: 30000 });
