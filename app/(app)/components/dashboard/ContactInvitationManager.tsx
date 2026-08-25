@@ -727,6 +727,25 @@ export default function ContactInvitationManager({
                 })}
             </div>
           </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              style={primaryBtnStyle}
+              title={editingId ? "Save contact changes" : draftContactId ? "Save this contact setup" : "Add this contact"}
+              disabled={saving}
+              onClick={() => void saveContact()}
+            >
+              <Icon name={(editingId || draftContactId) ? "save" : "person_add"} size={16} />
+              {saving ? "Saving..." : (editingId || draftContactId) ? "Save" : "Add contact"}
+            </button>
+            {!editingId && draftContactId && email.trim() ? (
+              <button type="button" style={ghostBtnStyle} title="Save this contact and send the invite email" disabled={saving} onClick={() => void saveContact({ sendAfterSave: true })}>
+                <Icon name="send" size={16} />
+                {saving ? "Saving..." : "Send invite"}
+              </button>
+            ) : null}
+          </div>
+
           {allowedSections.length ? (
             <div style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
               <span style={fieldLabelStyle}>Linked records and document permissions</span>
@@ -804,22 +823,6 @@ export default function ContactInvitationManager({
         </div>
 
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button
-            type="button"
-            style={primaryBtnStyle}
-            title={editingId ? "Save contact changes" : draftContactId ? "Save this contact setup" : "Add this contact"}
-            disabled={saving}
-            onClick={() => void saveContact()}
-          >
-            <Icon name={(editingId || draftContactId) ? "save" : "person_add"} size={16} />
-            {saving ? "Saving..." : (editingId || draftContactId) ? "Save" : "Add contact"}
-          </button>
-          {!editingId && draftContactId && email.trim() ? (
-            <button type="button" style={ghostBtnStyle} title="Save this contact and send the invite email" disabled={saving} onClick={() => void saveContact({ sendAfterSave: true })}>
-              <Icon name="send" size={16} />
-              {saving ? "Saving..." : "Send invite"}
-            </button>
-          ) : null}
           {!editingId && draftContactId ? (
             <button type="button" style={dangerBtnStyle} title="Remove this contact and any linked invite access" disabled={saving} onClick={() => void removeSelectedDraftContact()}>
               <Icon name="delete" size={16} />
