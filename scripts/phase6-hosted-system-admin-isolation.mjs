@@ -33,7 +33,7 @@ try {
   const systemResponse = await api("/api/internal/admin/session", await bearer(systemSession.client));
   const systemBody = await systemResponse.json().catch(() => ({}));
   assertion(assertions, "System Admin session remains authenticated as the same principal", systemResponse.ok && systemBody.admin?.role === "super_admin" && systemBody.admin?.email === systemAdmin.email);
-  assertion(assertions, "System Admin context is not silently converted to enterprise context", systemResponse.ok && systemBody.admin?.enterpriseScope == null);
+  assertion(assertions, "System Admin remains in unscoped platform context while enterprise metadata is reviewable", systemResponse.ok && systemBody.admin?.enterpriseScope?.organisationScoped === false && Array.isArray(systemBody.admin?.enterpriseScope?.organisationIds) && systemBody.admin.enterpriseScope.organisationIds.length === 0);
 } finally {
   const { admin } = clients();
   for (const id of adminRows) await admin.from("admin_users").delete().eq("id", id);

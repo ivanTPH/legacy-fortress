@@ -25,7 +25,12 @@ test("Phase 6 hosted runner is staging-only and never embeds production/cloud ta
 test("child failures are classified conservatively and child classifications are supported", () => {
   assert.match(runner, /UNCLASSIFIED FAILURE — INVESTIGATION REQUIRED/);
   assert.match(runner, /parseChildClassification/);
-  assert.doesNotMatch(runner, /HARNESS DEFECT/);
+  assert.match(runner, /document fixture failed\|fixture .*failed/);
+});
+
+test("parent propagates the canonical Supabase URL to children", () => {
+  assert.match(runner, /NEXT_PUBLIC_SUPABASE_URL:\s*SUPABASE_URL/);
+  assert.doesNotMatch(runner, /\{\s*BASE_URL,\s*NEXT_PUBLIC_SUPABASE_URL\s*\}/);
 });
 
 test("remaining hosted batches are executable through repository-local hooks", () => {

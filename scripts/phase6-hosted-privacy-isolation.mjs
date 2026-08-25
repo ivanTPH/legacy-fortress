@@ -33,7 +33,7 @@ try {
   }
   const directForeign = await otherSession.client.from("privacy_data_exports").select("id").eq("subject_user_id", owner.id);
   assertion(assertions, "Wrong user cannot enumerate Owner exports", !directForeign.error && directForeign.data.length === 0);
-  const grant = await admin.from("account_access_grants").insert({ owner_user_id: owner.id, linked_user_id: recipient.id, activation_status: "active", required_identity_level: 2, vault_lifecycle_state: "OWNER_ACTIVE", permissions: { allowed_sections: ["financial"] }, synthetic_run_marker: marker }).select("id").single();
+  const grant = await admin.from("account_access_grants").insert({ owner_user_id: owner.id, linked_user_id: recipient.id, assigned_role: "executor", activation_status: "active", required_identity_level: 2, vault_lifecycle_state: "OWNER_ACTIVE", permissions_override: { allowed_sections: ["financial"] } }).select("id,linked_user_id,assigned_role").single();
   assertion(assertions, "Synthetic linked grant exists for revocation test", !grant.error && Boolean(grant.data?.id));
   if (grant.data?.id) {
     const revoked = await admin.from("account_access_grants").update({ activation_status: "revoked", revoked_at: new Date().toISOString() }).eq("id", grant.data.id).select("activation_status").single();

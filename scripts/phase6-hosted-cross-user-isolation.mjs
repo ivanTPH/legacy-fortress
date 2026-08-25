@@ -16,11 +16,12 @@ try {
 
   const recordB = await admin.from("records").insert({ owner_user_id: ownerB.id, section_key: "financial", category_key: "bank", title: `${marker} B record` }).select("id").single();
   const assetB = await admin.from("assets").insert({ organisation_id: contextB.organisationId, wallet_id: contextB.walletId, owner_user_id: ownerB.id, section_key: "property", category_key: "property", title: `${marker} B asset` }).select("id").single();
-  const documentPath = `${ownerB.id}/${marker}-document.txt`;
-  const documentUpload = await admin.storage.from("vault-docs").upload(documentPath, Buffer.from(marker), { contentType: "text/plain", upsert: false });
+  const documentPath = `${ownerB.id}/${marker}-document.png`;
+  const tinyPng = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9WlH0wAAAABJRU5ErkJggg==", "base64");
+  const documentUpload = await admin.storage.from("vault-docs").upload(documentPath, tinyPng, { contentType: "image/png", upsert: false });
   if (documentUpload.error) throw new Error(`document fixture failed: ${documentUpload.error.message}`);
   storage.push({ bucket: "vault-docs", path: documentPath });
-  const documentB = await admin.from("documents").insert({ organisation_id: contextB.organisationId, wallet_id: contextB.walletId, asset_id: assetB.data.id, owner_user_id: ownerB.id, storage_bucket: "vault-docs", storage_path: documentPath, file_name: `${marker}.txt`, mime_type: "text/plain", size_bytes: marker.length }).select("id").single();
+  const documentB = await admin.from("documents").insert({ organisation_id: contextB.organisationId, wallet_id: contextB.walletId, asset_id: assetB.data.id, owner_user_id: ownerB.id, storage_bucket: "vault-docs", storage_path: documentPath, file_name: `${marker}.png`, mime_type: "image/png", size_bytes: tinyPng.length }).select("id").single();
   const contactB = await admin.from("contacts").insert({ owner_user_id: ownerB.id, full_name: `${marker} B contact`, email: `${marker}-b@example.test`, email_normalized: `${marker}-b@example.test`, contact_role: "executor" }).select("id").single();
   if (recordB.error || assetB.error || documentB.error || contactB.error) throw new Error("cross-user fixture creation failed");
 

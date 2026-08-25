@@ -34,6 +34,7 @@ function requireStaging() {
 function classifyFailure(output) {
   const text = output.toLowerCase();
   if (/executable doesn't exist|browsertype\.launch|playwright install|cannot find module|missing .*environment|econnrefused|enotfound|timeout.*connect/i.test(text)) return "TEST-ENVIRONMENT DEFECT";
+  if (/document fixture failed|fixture .*failed|mime type .*not supported|synthetic fixture/i.test(text)) return "HARNESS DEFECT";
   if (/smtp|mailbox|commercial idv|production idv|kms|hsm|penetration|dpa|commercial provider/i.test(text)) return "PRE-PRODUCTION BLOCKER";
   return "UNCLASSIFIED FAILURE — INVESTIGATION REQUIRED";
 }
@@ -101,7 +102,7 @@ async function runConfiguredBatch(batch, assertion) {
     record(batch, assertion, "BLOCKED", "TEST-ENVIRONMENT DEFECT", { reason: `No hosted ${batch} script configured. Set PHASE6_${batch.replace("Batch ", "")}_SCRIPT to a repository-local script.` });
     return false;
   }
-  return (await runChild(batch, script, { BASE_URL, NEXT_PUBLIC_SUPABASE_URL })).ok;
+  return (await runChild(batch, script, { BASE_URL, NEXT_PUBLIC_SUPABASE_URL: SUPABASE_URL })).ok;
 }
 
 async function main() {
@@ -118,10 +119,10 @@ async function main() {
   record("Batch A", "invitation acceptance and accepted-but-unverified denial", "PASS", "", { source: "accepted prior hosted evidence" });
   record("Batch A", "authenticated Level 1 does not activate protected access", "PASS", "", { source: "accepted prior hosted evidence" });
   const configuredA = scriptFor("Batch A");
-  if (configuredA) await runChild("Batch A", configuredA, { BASE_URL, NEXT_PUBLIC_SUPABASE_URL });
+  if (configuredA) await runChild("Batch A", configuredA, { BASE_URL, NEXT_PUBLIC_SUPABASE_URL: SUPABASE_URL });
 
   const configuredB = scriptFor("Batch B");
-  if (configuredB) await runChild("Batch B", configuredB, { BASE_URL, NEXT_PUBLIC_SUPABASE_URL });
+  if (configuredB) await runChild("Batch B", configuredB, { BASE_URL, NEXT_PUBLIC_SUPABASE_URL: SUPABASE_URL });
   else await runConfiguredBatch("Batch B", "cross-user isolation, UUID substitution, signed URL and mutation denial");
 
   for (const [batch, assertion] of [
@@ -131,7 +132,8 @@ async function main() {
     ["Batch F", "Privacy export, wrong-user denial and revocation"],
   ]) await runConfiguredBatch(batch, assertion);
 
-  await runChild("Batch G", path.resolve(process.cwd(), "scripts/smoke-contacts-invitations.mjs"), { BASE_URL, NEXT_PUBLIC_SUPABASE_URL });
+  const browserReady = await runChild("Batch G", path.resolve(process.cwd(), "scripts/phase6-hosted-playwright-preflight.mjs"), { BASE_URL, NEXT_PUBLIC_SUPABASE_URL: SUPABASE_URL });
+  if (browserReady.ok) await runChild("Batch G", path.resolve(process.cwd(), "scripts/smoke-contacts-invitations.mjs"), { BASE_URL, NEXT_PUBLIC_SUPABASE_URL: SUPABASE_URL });
 
   const failures = evidence.filter((item) => item.result === "FAIL" || item.result === "BLOCKED");
   fs.writeFileSync(evidencePath, JSON.stringify({ generatedAt: new Date().toISOString(), batches, evidence }, null, 2), { mode: 0o600 });

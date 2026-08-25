@@ -39,3 +39,10 @@ test("hosted fixture helper rejects production and Supabase Cloud targets", () =
   assert.match(source, /supabase-test\.mylegacyfortress\.com/);
   assert.match(source, /production|supabase\\\.co|legacy-fortress\\\.vercel\\\.app/);
 });
+
+test("Batch G browser preflight reports the exact staging remediation", () => {
+  const source = fs.readFileSync(path.join(root, "scripts/phase6-hosted-playwright-preflight.mjs"), "utf8");
+  assert.match(source, /Chromium executable does not exist/);
+  assert.match(source, /npx playwright install --with-deps chromium/);
+  assert.match(source, /TEST-ENVIRONMENT DEFECT/);
+});
