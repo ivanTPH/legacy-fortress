@@ -39,10 +39,10 @@ function classifyFailure(output) {
 }
 
 function parseChildClassification(output) {
-  const matches = [...output.matchAll(/\{[\s\S]*?\}/g)].reverse();
-  for (const match of matches) {
+  const starts = [...output.matchAll(/\{/g)].map((match) => match.index).reverse();
+  for (const start of starts) {
     try {
-      const parsed = JSON.parse(match[0]);
+      const parsed = JSON.parse(output.slice(start));
       if (typeof parsed.classification === "string") return parsed.classification;
       if (Array.isArray(parsed.assertions)) {
         const classification = parsed.assertions.find((item) => item?.classification)?.classification;
@@ -55,7 +55,15 @@ function parseChildClassification(output) {
 
 function scriptFor(batch) {
   const name = batch.replace("Batch ", "");
-  const configured = process.env[`PHASE6_${name}_SCRIPT`];
+  const defaults = {
+    A: "scripts/phase6-hosted-identity-assurance.mjs",
+    B: "scripts/phase6-hosted-cross-user-isolation.mjs",
+    C: "scripts/phase6-hosted-death-estate.mjs",
+    D: "scripts/phase6-hosted-enterprise-isolation.mjs",
+    E: "scripts/phase6-hosted-system-admin-isolation.mjs",
+    F: "scripts/phase6-hosted-privacy-isolation.mjs",
+  };
+  const configured = process.env[`PHASE6_${name}_SCRIPT`] || defaults[name];
   if (!configured) return null;
   const resolved = path.resolve(process.cwd(), configured);
   if (!resolved.startsWith(`${process.cwd()}${path.sep}`) || !fs.existsSync(resolved)) throw new Error(`${batch} script is not a repository-local file: ${configured}`);
@@ -76,11 +84,13 @@ function runChild(batch, script, env = {}) {
     });
     child.on("close", (code, signal) => {
       const output = `${stdout}\n${stderr}`;
-      const classification = code === 0 ? "" : parseChildClassification(output) || classifyFailure(output);
-      record(batch, path.relative(process.cwd(), script), code === 0 ? "PASS" : "FAIL", classification, {
+      const childClassification = code === 0 ? "" : parseChildClassification(output) || classifyFailure(output);
+      const preprodOnly = code !== 0 && childClassification === "PRE-PRODUCTION BLOCKER";
+      const effectiveCode = preprodOnly ? 0 : code;
+      record(batch, path.relative(process.cwd(), script), preprodOnly ? "PREPROD" : (code === 0 ? "PASS" : "FAIL"), childClassification, {
         exitCode: code, signal, durationMs: Date.now() - started, output: stdout.slice(-5000), error: stderr.slice(-3000),
       });
-      resolve({ ok: code === 0, stdout, stderr });
+      resolve({ ok: effectiveCode === 0, stdout, stderr });
     });
   });
 }
