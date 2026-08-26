@@ -46,3 +46,12 @@ test("Batch G browser preflight reports the exact staging remediation", () => {
   assert.match(source, /npx playwright install --with-deps chromium/);
   assert.match(source, /TEST-ENVIRONMENT DEFECT/);
 });
+
+test("Batch F uses the canonical grant revocation state and checks persistence", () => {
+  const source = fs.readFileSync(path.join(root, "scripts/phase6-hosted-privacy-isolation.mjs"), "utf8");
+  assert.match(source, /update\(\{ activation_status: "revoked", updated_at:/);
+  assert.match(source, /Revoked grant remains auditable/);
+  assert.match(source, /Unrelated grant remains active/);
+  assert.match(source, /Revoked recipient cannot regain linked access/);
+  assert.doesNotMatch(source, /update\(\{[^}]*revoked_at:/s);
+});

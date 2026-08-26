@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { assertion, clients, cleanup, createSyntheticUser, finish, marker } from "./phase6-hosted-fixtures.mjs";
+import { assertion, clients, cleanup, createSyntheticUser, finish, marker, signIn } from "./phase6-hosted-fixtures.mjs";
 
 const assertions = [];
 const users = [];
@@ -18,8 +18,8 @@ try {
   const other = await createSyntheticUser(admin, "privacy-other");
   const recipient = await createSyntheticUser(admin, "privacy-recipient");
   users.push(owner.id, other.id, recipient.id);
-  const ownerSession = await (await import("./phase6-hosted-fixtures.mjs")).signIn(null, owner);
-  const otherSession = await (await import("./phase6-hosted-fixtures.mjs")).signIn(null, other);
+  const ownerSession = await signIn(null, owner);
+  const otherSession = await signIn(null, other);
   const privacyCase = await admin.from("privacy_data_rights_cases").insert({ requester_user_id: owner.id, subject_user_id: owner.id, request_type: "portability", status: "received", identity_verification_status: "not_required", synthetic_run_marker: marker }).select("id").single();
   const ownResponse = await postExport(ownerSession.client, privacyCase.data?.id);
   const ownBody = await ownResponse.json().catch(() => ({}));
@@ -33,12 +33,22 @@ try {
   }
   const directForeign = await otherSession.client.from("privacy_data_exports").select("id").eq("subject_user_id", owner.id);
   assertion(assertions, "Wrong user cannot enumerate Owner exports", !directForeign.error && directForeign.data.length === 0);
-  const grant = await admin.from("account_access_grants").insert({ owner_user_id: owner.id, linked_user_id: recipient.id, assigned_role: "executor", activation_status: "active", required_identity_level: 2, vault_lifecycle_state: "OWNER_ACTIVE", permissions_override: { allowed_sections: ["financial"] } }).select("id,linked_user_id,assigned_role").single();
-  assertion(assertions, "Synthetic linked grant exists for revocation test", !grant.error && Boolean(grant.data?.id));
+  const grant = await admin.from("account_access_grants").insert({ owner_user_id: owner.id, linked_user_id: recipient.id, assigned_role: "executor", activation_status: "active", required_identity_level: 2, vault_lifecycle_state: "OWNER_ACTIVE", permissions_override: { allowed_sections: ["financial"] } }).select("id,owner_user_id,linked_user_id,assigned_role,activation_status,permissions_override,updated_at").single();
+  assertion(assertions, "Active synthetic linked grant exists for revocation test", !grant.error && grant.data?.owner_user_id === owner.id && grant.data?.linked_user_id === recipient.id && grant.data?.assigned_role === "executor" && grant.data?.activation_status === "active");
+  const unrelatedGrant = await admin.from("account_access_grants").insert({ owner_user_id: other.id, linked_user_id: recipient.id, assigned_role: "executor", activation_status: "active", required_identity_level: 2, vault_lifecycle_state: "OWNER_ACTIVE", permissions_override: { allowed_sections: ["financial"] } }).select("id,activation_status").single();
+  assertion(assertions, "Unrelated active grant exists before revocation", !unrelatedGrant.error && unrelatedGrant.data?.activation_status === "active");
   if (grant.data?.id) {
-    const revoked = await admin.from("account_access_grants").update({ activation_status: "revoked", revoked_at: new Date().toISOString() }).eq("id", grant.data.id).select("activation_status").single();
-    assertion(assertions, "Revocation persists on linked grant", !revoked.error && revoked.data?.activation_status === "revoked");
-    const recipientClient = await (await import("./phase6-hosted-fixtures.mjs")).signIn(null, recipient);
+    const recipientClient = await signIn(null, recipient);
+    const activeAccess = await recipientClient.client.rpc("has_linked_account_access", { p_owner_user_id: owner.id });
+    assertion(assertions, "Active grant is effective before revocation", !activeAccess.error && activeAccess.data === true);
+    const revoked = await admin.from("account_access_grants").update({ activation_status: "revoked", updated_at: new Date().toISOString() }).eq("id", grant.data.id).select("id,owner_user_id,linked_user_id,assigned_role,activation_status,permissions_override,updated_at").single();
+    assertion(assertions, "Canonical revocation persists on linked grant", !revoked.error && revoked.data?.id === grant.data.id && revoked.data?.activation_status === "revoked" && revoked.data?.owner_user_id === owner.id && revoked.data?.linked_user_id === recipient.id);
+    const persisted = await admin.from("account_access_grants").select("id,activation_status,updated_at").eq("id", grant.data.id).single();
+    assertion(assertions, "Revoked grant remains auditable", !persisted.error && persisted.data?.id === grant.data.id && persisted.data?.activation_status === "revoked" && Boolean(persisted.data?.updated_at));
+    const unrelatedAfter = await admin.from("account_access_grants").select("id,activation_status").eq("id", unrelatedGrant.data?.id).single();
+    assertion(assertions, "Unrelated grant remains active", !unrelatedAfter.error && unrelatedAfter.data?.activation_status === "active");
+    const revokedAccess = await recipientClient.client.rpc("has_linked_account_access", { p_owner_user_id: owner.id });
+    assertion(assertions, "Revoked recipient cannot regain linked access", !revokedAccess.error && revokedAccess.data === false);
     const afterRevoke = await recipientClient.client.from("records").select("id").eq("owner_user_id", owner.id);
     assertion(assertions, "Revoked recipient cannot read Owner records", !afterRevoke.error && afterRevoke.data.length === 0);
   }
