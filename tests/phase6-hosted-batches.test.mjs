@@ -65,6 +65,14 @@ test("invitation smoke treats Supabase auth cooldowns as generated-link fallback
   assert.match(source, /if \(delivery\.error && !deliveryRateLimited\) throw/);
 });
 
+test("invitation smoke owns one marked recipient and refuses Auth-user collisions", () => {
+  const source = fs.readFileSync(path.join(root, "scripts/smoke-contacts-invitations.mjs"), "utf8");
+  assert.match(source, /createSyntheticRecipientUser\(\)/);
+  assert.match(source, /synthetic_run_marker/);
+  assert.match(source, /refusing to adopt an existing Auth user/);
+  assert.match(source, /Synthetic recipient was not provisioned before invitation delivery/);
+});
+
 test("Batch F calls linked-access RPC with explicit allowed statuses and valid assurance prerequisites", () => {
   const source = fs.readFileSync(path.join(root, "scripts/phase6-hosted-privacy-isolation.mjs"), "utf8");
   assert.match(source, /ownerContext\(admin, owner\.id/);

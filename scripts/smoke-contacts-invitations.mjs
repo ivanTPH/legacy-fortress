@@ -29,7 +29,7 @@ const uniqueTag = Date.now();
 const ownerEmail = process.env.SMOKE_CONTACTS_OWNER_EMAIL || `ivanyardley+lf-contacts-owner-${uniqueTag}@me.com`;
 const ownerPassword = process.env.SMOKE_CONTACTS_OWNER_PASSWORD || "ContactsSmoke123!";
 const contactName = `Contacts Invite ${uniqueTag}`;
-const recipientEmail = process.env.SMOKE_CONTACTS_RECIPIENT_EMAIL || `ivanyardley+lf-contacts-recipient-${uniqueTag}@me.com`;
+const recipientEmail = process.env.SMOKE_CONTACTS_RECIPIENT_EMAIL || `ivanyardley+lf-contacts-recipient-${uniqueTag}-${crypto.randomUUID().slice(0, 8)}@me.com`;
 const recipientPassword = process.env.SMOKE_CONTACTS_RECIPIENT_PASSWORD || "ContactsRecipient123!";
 const contactEmail = recipientEmail;
 const limitEmail = process.env.SMOKE_CONTACTS_LIMIT_EMAIL || `ivanyardley+lf-contacts-limit-${uniqueTag}@me.com`;
@@ -51,6 +51,7 @@ const browser = await chromium.launch({ headless: true });
 try {
   const owner = await ensureOwnerUser(ownerEmail, ownerPassword);
   ownerUserId = owner.id;
+  await createSyntheticRecipientUser();
   await ensureOwnerBootstrapState(ownerUserId);
   await ensureBillingProfile(ownerUserId, { invitationLimit: 5 });
 
@@ -151,14 +152,7 @@ async function verifyContactsUiSentState(page) {
 }
 
 async function acceptInvitationAsRecipient() {
-  const created = await admin.auth.admin.createUser({
-    email: recipientEmail,
-    password: recipientPassword,
-    email_confirm: true,
-    user_metadata: { full_name: "Contacts Recipient Smoke" },
-  });
-  if (created.error || !created.data.user) throw created.error || new Error("Could not create recipient user.");
-  recipientUserId = created.data.user.id;
+  if (!recipientUserId) throw new Error("Synthetic recipient was not provisioned before invitation delivery.");
 
   const context = await browser.newContext({ baseURL: BASE_URL });
   const page = await context.newPage();
@@ -181,6 +175,25 @@ async function acceptInvitationAsRecipient() {
 
   const accepted = await waitForAcceptedInvitation();
   assert.equal(accepted.accepted_user_id, recipientUserId);
+}
+
+async function createSyntheticRecipientUser() {
+  const created = await admin.auth.admin.createUser({
+    email: recipientEmail,
+    password: recipientPassword,
+    email_confirm: true,
+    user_metadata: {
+      full_name: "Contacts Recipient Smoke",
+      synthetic_run_marker: `phase6-contacts-${uniqueTag}`,
+    },
+  });
+  if (created.error || !created.data.user) {
+    if (/already been registered|email_exists/i.test(created.error?.message || "")) {
+      throw new Error("Synthetic recipient email collision; refusing to adopt an existing Auth user.");
+    }
+    throw created.error || new Error("Could not create recipient user.");
+  }
+  recipientUserId = created.data.user.id;
 }
 
 async function verifyAcceptedStateInContacts(page) {
