@@ -273,8 +273,9 @@ async function sendInviteForSmoke(client, input) {
       },
     },
   });
-  const deliveryRateLimited = delivery.error && /rate limit/i.test(delivery.error.message);
+  const deliveryRateLimited = delivery.error && isAuthRateLimitError(delivery.error.message);
   if (delivery.error && !deliveryRateLimited) throw new Error(delivery.error.message);
+  if (deliveryRateLimited) logStep(`Auth delivery rate-limited; using the staging generated-link fallback (${delivery.error.message})`);
 
   const invitationUpdate = await client.from("contact_invitations").update({
     contact_id: input.contactId,
@@ -335,6 +336,10 @@ async function countActiveInvitations(client, userId) {
     .neq("invitation_status", "revoked");
   if (result.error) throw result.error;
   return Number(result.count ?? 0);
+}
+
+function isAuthRateLimitError(message) {
+  return /rate limit|for security purposes[\s\S]*after\s+\d+\s+seconds/i.test(String(message ?? ""));
 }
 
 async function signInThroughApp(page, email, password) {

@@ -39,7 +39,7 @@ try {
   assertion(assertions, "Unrelated active grant exists before revocation", !unrelatedGrant.error && unrelatedGrant.data?.activation_status === "active");
   if (grant.data?.id) {
     const recipientClient = await signIn(null, recipient);
-    const activeAccess = await recipientClient.client.rpc("has_linked_account_access", { p_owner_user_id: owner.id });
+    const activeAccess = await recipientClient.client.rpc("has_linked_account_access", { p_owner_user_id: owner.id, p_allowed_statuses: ["accepted", "verified", "active"] });
     assertion(assertions, "Active grant is effective before revocation", !activeAccess.error && activeAccess.data === true);
     const revoked = await admin.from("account_access_grants").update({ activation_status: "revoked", updated_at: new Date().toISOString() }).eq("id", grant.data.id).select("id,owner_user_id,linked_user_id,assigned_role,activation_status,permissions_override,updated_at").single();
     assertion(assertions, "Canonical revocation persists on linked grant", !revoked.error && revoked.data?.id === grant.data.id && revoked.data?.activation_status === "revoked" && revoked.data?.owner_user_id === owner.id && revoked.data?.linked_user_id === recipient.id);
@@ -47,8 +47,10 @@ try {
     assertion(assertions, "Revoked grant remains auditable", !persisted.error && persisted.data?.id === grant.data.id && persisted.data?.activation_status === "revoked" && Boolean(persisted.data?.updated_at));
     const unrelatedAfter = await admin.from("account_access_grants").select("id,activation_status").eq("id", unrelatedGrant.data?.id).single();
     assertion(assertions, "Unrelated grant remains active", !unrelatedAfter.error && unrelatedAfter.data?.activation_status === "active");
-    const revokedAccess = await recipientClient.client.rpc("has_linked_account_access", { p_owner_user_id: owner.id });
+    const revokedAccess = await recipientClient.client.rpc("has_linked_account_access", { p_owner_user_id: owner.id, p_allowed_statuses: ["accepted", "verified", "active"] });
     assertion(assertions, "Revoked recipient cannot regain linked access", !revokedAccess.error && revokedAccess.data === false);
+    const unrelatedAccess = await recipientClient.client.rpc("has_linked_account_access", { p_owner_user_id: other.id, p_allowed_statuses: ["accepted", "verified", "active"] });
+    assertion(assertions, "Unrelated active grant remains effective", !unrelatedAccess.error && unrelatedAccess.data === true);
     const afterRevoke = await recipientClient.client.from("records").select("id").eq("owner_user_id", owner.id);
     assertion(assertions, "Revoked recipient cannot read Owner records", !afterRevoke.error && afterRevoke.data.length === 0);
   }

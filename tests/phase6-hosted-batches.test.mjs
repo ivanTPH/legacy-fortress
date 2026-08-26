@@ -55,3 +55,10 @@ test("Batch F uses the canonical grant revocation state and checks persistence",
   assert.match(source, /Revoked recipient cannot regain linked access/);
   assert.doesNotMatch(source, /update\(\{[^}]*revoked_at:/s);
 });
+
+test("invitation smoke treats Supabase auth cooldowns as generated-link fallback", () => {
+  const source = fs.readFileSync(path.join(root, "scripts/smoke-contacts-invitations.mjs"), "utf8");
+  assert.match(source, /isAuthRateLimitError/);
+  assert.match(source, /generated-link fallback/);
+  assert.match(source, /for security purposes/);
+});
