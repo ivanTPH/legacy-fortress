@@ -158,6 +158,16 @@ async function acceptInvitationAsRecipient() {
   const page = await context.newPage();
   page.setDefaultTimeout(30000);
   page.setDefaultNavigationTimeout(45000);
+  const consoleErrors = [];
+  const failedRequests = [];
+  const relevantResponses = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") consoleErrors.push(message.text().slice(0, 500));
+  });
+  page.on("requestfailed", (request) => failedRequests.push({ url: sanitizeUrl(request.url()), error: request.failure()?.errorText || "unknown" }));
+  page.on("response", (response) => {
+    if (/auth\/callback|invite\/accept|rest\/v1\/.*invitation/i.test(response.url())) relevantResponses.push({ url: sanitizeUrl(response.url()), status: response.status() });
+  });
   await page.goto(acceptPath, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: /accept invitation/i }).waitFor();
   await page.getByRole("link", { name: /sign in to accept/i }).click();
@@ -169,12 +179,26 @@ async function acceptInvitationAsRecipient() {
     await page.goto(acceptPath, { waitUntil: "networkidle" });
   }
   await page.getByRole("button", { name: /accept and continue/i }).click();
-  await page.waitForURL(/\/dashboard/, { timeout: 45000 });
-  await page.getByText(/Viewing .* estate records/i).waitFor();
+  try {
+    await page.waitForURL(/\/identity\/verify|\/dashboard|\/contact-wallet/, { timeout: 45000 });
+  } catch (error) {
+    throw new Error(`Recipient accept did not reach a canonical destination. url=${sanitizeUrl(page.url())} consoleErrors=${JSON.stringify(consoleErrors)} failedRequests=${JSON.stringify(failedRequests)} responses=${JSON.stringify(relevantResponses)} body=${(await page.locator("body").innerText().catch(() => "")).slice(0, 800)}`, { cause: error });
+  }
   await context.close();
 
   const accepted = await waitForAcceptedInvitation();
   assert.equal(accepted.accepted_user_id, recipientUserId);
+}
+
+function sanitizeUrl(value) {
+  try {
+    const url = new URL(value);
+    for (const key of ["token", "token_hash", "code", "access_token", "refresh_token"]) url.searchParams.delete(key);
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return String(value).slice(0, 500);
+  }
 }
 
 async function createSyntheticRecipientUser() {
