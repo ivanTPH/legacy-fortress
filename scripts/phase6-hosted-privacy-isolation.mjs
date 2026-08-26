@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { assertion, clients, cleanup, createSyntheticUser, finish, marker, signIn } from "./phase6-hosted-fixtures.mjs";
+import { assertion, clients, cleanup, createSyntheticUser, finish, marker, ownerContext, signIn } from "./phase6-hosted-fixtures.mjs";
 
 const assertions = [];
 const users = [];
@@ -20,6 +20,10 @@ try {
   users.push(owner.id, other.id, recipient.id);
   const ownerSession = await signIn(null, owner);
   const otherSession = await signIn(null, other);
+  await ownerContext(admin, owner.id, "Privacy owner");
+  await ownerContext(admin, other.id, "Privacy other");
+  const assurance = await admin.from("identity_assurance_states").upsert({ user_id: recipient.id, identity_level: 2, provider_key: "lf_staging_internal", provider_assurance_class: "staging_uat_only", verified_at: new Date().toISOString(), expires_at: new Date(Date.now() + 3600000).toISOString(), metadata: { synthetic_run_marker: marker } }, { onConflict: "user_id" });
+  if (assurance.error) throw assurance.error;
   const privacyCase = await admin.from("privacy_data_rights_cases").insert({ requester_user_id: owner.id, subject_user_id: owner.id, request_type: "portability", status: "received", identity_verification_status: "not_required", synthetic_run_marker: marker }).select("id").single();
   const ownResponse = await postExport(ownerSession.client, privacyCase.data?.id);
   const ownBody = await ownResponse.json().catch(() => ({}));

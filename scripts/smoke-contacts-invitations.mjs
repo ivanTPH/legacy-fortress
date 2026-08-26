@@ -42,6 +42,10 @@ let contactId = "";
 let invitationId = "";
 let acceptPath = "";
 
+function logStep(message) {
+  console.log(`[smoke] ${message}`);
+}
+
 const browser = await chromium.launch({ headless: true });
 
 try {

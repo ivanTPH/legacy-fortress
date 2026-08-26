@@ -61,4 +61,14 @@ test("invitation smoke treats Supabase auth cooldowns as generated-link fallback
   assert.match(source, /isAuthRateLimitError/);
   assert.match(source, /generated-link fallback/);
   assert.match(source, /for security purposes/);
+  assert.match(source, /function logStep\(message\)/);
+  assert.match(source, /if \(delivery\.error && !deliveryRateLimited\) throw/);
+});
+
+test("Batch F calls linked-access RPC with explicit allowed statuses and valid assurance prerequisites", () => {
+  const source = fs.readFileSync(path.join(root, "scripts/phase6-hosted-privacy-isolation.mjs"), "utf8");
+  assert.match(source, /ownerContext\(admin, owner\.id/);
+  assert.match(source, /identity_level: 2/);
+  assert.match(source, /p_allowed_statuses: \["accepted", "verified", "active"\]/);
+  assert.match(source, /Unrelated active grant remains effective/);
 });
