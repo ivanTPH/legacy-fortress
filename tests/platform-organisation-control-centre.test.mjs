@@ -71,6 +71,9 @@ test("dialogs have labelled keyboard and pointer dismissal behavior", () => {
   assert.match(controlCentre, /aria-modal="true"/);
   assert.match(controlCentre, /aria-labelledby="platform-dialog-title"/);
   assert.match(controlCentre, /tabIndex=\{-1\}/);
+  assert.match(controlCentre, /dialogRef\.current\?\.focus\(\)/);
+  assert.match(controlCentre, /commercial action could not be reached/);
+  assert.match(controlCentre, /nextYearDate\(\)/);
 });
 
 test("platform handoff does not change principal or expose vault content", () => {

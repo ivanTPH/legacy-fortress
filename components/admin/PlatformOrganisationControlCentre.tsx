@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { waitForActiveUser } from "@/lib/auth/session";
@@ -91,7 +91,7 @@ export default function PlatformOrganisationControlCentre({ organisationId }: { 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [confirmState, setConfirmState] = useState<"suspend" | "reactivate" | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [licenceForm, setLicenceForm] = useState({ licencePlan: "starter", startDate: TODAY, renewalDate: "", purchasedSeats: "10", licenceStatus: "pending_approval", billingStatus: "not_configured" });
+  const [licenceForm, setLicenceForm] = useState({ licencePlan: "starter", startDate: TODAY, renewalDate: nextYearDate(), purchasedSeats: "10", licenceStatus: "pending_approval", billingStatus: "not_configured" });
   const [inviteForm, setInviteForm] = useState({ email: "", fullName: "", expiryDays: "14", requireMfa: true });
   const [saving, setSaving] = useState(false);
 
@@ -105,18 +105,23 @@ export default function PlatformOrganisationControlCentre({ organisationId }: { 
 
   const load = useCallback(async () => {
     setState("checking");
-    const user = await waitForActiveUser(supabase, { attempts: 4, delayMs: 100 });
-    if (!user) { setState("denied"); return; }
-    const sessionRes = await authFetch("/api/internal/admin/session");
-    const sessionJson = await sessionRes.json().catch(() => ({})) as { ok?: boolean; admin?: Session };
-    if (!sessionRes.ok || !sessionJson.ok || !sessionJson.admin) { setState(sessionRes.status === 403 ? "denied" : "error"); return; }
-    setSession(sessionJson.admin);
-    const endpoint = organisationId ? `/api/internal/admin/enterprise?organisationId=${encodeURIComponent(organisationId)}` : "/api/internal/admin/enterprise";
-    const dataRes = await authFetch(endpoint);
-    const dataJson = await dataRes.json().catch(() => ({})) as { portfolio?: Portfolio; detail?: Detail; message?: string };
-    if (!dataRes.ok) { setMessage(dataJson.message || "The organisation data could not be loaded."); setState(dataRes.status === 403 ? "denied" : "error"); return; }
-    if (organisationId) setDetail(dataJson.detail ?? null); else setPortfolio(dataJson.portfolio ?? null);
-    setState("ready");
+    try {
+      const user = await waitForActiveUser(supabase, { attempts: 4, delayMs: 100 });
+      if (!user) { setState("denied"); return; }
+      const sessionRes = await authFetch("/api/internal/admin/session");
+      const sessionJson = await sessionRes.json().catch(() => ({})) as { ok?: boolean; admin?: Session };
+      if (!sessionRes.ok || !sessionJson.ok || !sessionJson.admin) { setState(sessionRes.status === 403 ? "denied" : "error"); return; }
+      setSession(sessionJson.admin);
+      const endpoint = organisationId ? `/api/internal/admin/enterprise?organisationId=${encodeURIComponent(organisationId)}` : "/api/internal/admin/enterprise";
+      const dataRes = await authFetch(endpoint);
+      const dataJson = await dataRes.json().catch(() => ({})) as { portfolio?: Portfolio; detail?: Detail; message?: string };
+      if (!dataRes.ok) { setMessage(dataJson.message || "The organisation data could not be loaded."); setState(dataRes.status === 403 ? "denied" : "error"); return; }
+      if (organisationId) setDetail(dataJson.detail ?? null); else setPortfolio(dataJson.portfolio ?? null);
+      setState("ready");
+    } catch {
+      setMessage("The commercial service could not be reached. Try again.");
+      setState("error");
+    }
   }, [authFetch, organisationId]);
 
   useEffect(() => { void load(); }, [load]);
@@ -132,11 +137,17 @@ export default function PlatformOrganisationControlCentre({ organisationId }: { 
 
   async function runAction(action: string, payload: Record<string, unknown>): Promise<Record<string, unknown> | false> {
     setSaving(true); setMessage("");
-    const response = await authFetch("/api/internal/admin/enterprise", { method: "POST", body: JSON.stringify({ action, ...payload }) });
-    const json = await response.json().catch(() => ({})) as Record<string, unknown>;
-    setSaving(false);
-    if (!response.ok || json.ok !== true) { setMessage(String(json.message || "The commercial action was blocked.")); return false; }
-    closeDialogs(); await load(); setMessage("Commercial action completed and audit recorded."); return json;
+    try {
+      const response = await authFetch("/api/internal/admin/enterprise", { method: "POST", body: JSON.stringify({ action, ...payload }) });
+      const json = await response.json().catch(() => ({})) as Record<string, unknown>;
+      if (!response.ok || json.ok !== true) { setMessage(String(json.message || "The commercial action was blocked.")); return false; }
+      closeDialogs(); await load(); setMessage("Commercial action completed and audit recorded."); return json;
+    } catch {
+      setMessage("The commercial action could not be reached. No change was confirmed.");
+      return false;
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function submitOrganisation(event: FormEvent) {
@@ -220,7 +231,9 @@ export default function PlatformOrganisationControlCentre({ organisationId }: { 
 }
 
 function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
-  return <div style={modalBackdropStyle} onPointerDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><div role="dialog" aria-modal="true" aria-labelledby="platform-dialog-title" tabIndex={-1} style={modalStyle}><h2 id="platform-dialog-title" style={h2Style}>{title}</h2>{children}</div></div>;
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => { dialogRef.current?.focus(); }, []);
+  return <div style={modalBackdropStyle} onPointerDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="platform-dialog-title" tabIndex={-1} style={modalStyle}>{children ? <h2 id="platform-dialog-title" style={h2Style}>{title}</h2> : null}{children}</div></div>;
 }
 
 function OrganisationForm({ value, onChange, onSubmit, onCancel, saving, submitLabel = "Create organisation" }: { value: typeof EMPTY_FORM; onChange: (value: typeof EMPTY_FORM) => void; onSubmit: (event: FormEvent) => void; onCancel: () => void; saving: boolean; submitLabel?: string }) {
@@ -248,6 +261,7 @@ function renewalFor(org: Organisation, licences: Licence[]) { return licences.fi
 function availableFor(org: Organisation, licences: Licence[]) { return licences.find((licence) => licence.organisationId === org.id)?.availableSeats || 0; }
 function labelise(value: string) { return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }
 function formatDate(value: string) { if (!value) return "Not available"; return new Date(value).toLocaleDateString("en-GB"); }
+function nextYearDate() { const next = new Date(); next.setFullYear(next.getFullYear() + 1); return next.toISOString().slice(0, 10); }
 function badgeStatus(value: string): "Active" | "Suspended" | "Pending" | "Restricted" | "Blocked" | "High" | "Urgent" | "Normal" | "Review" {
   if (value === "active") return "Active";
   if (value === "suspended") return "Suspended";
