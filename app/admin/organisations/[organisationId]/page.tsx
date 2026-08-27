@@ -1,6 +1,6 @@
-import AdminControlPlaneWorkspace from "@/components/admin/AdminControlPlaneWorkspace";
+import PlatformOrganisationControlCentre from "@/components/admin/PlatformOrganisationControlCentre";
 
 export default async function AdminOrganisationDetailPage({ params }: { params: Promise<{ organisationId: string }> }) {
   const { organisationId } = await params;
-  return <AdminControlPlaneWorkspace section="organisation-detail" resourceId={organisationId} />;
+  return <PlatformOrganisationControlCentre organisationId={organisationId} />;
 }

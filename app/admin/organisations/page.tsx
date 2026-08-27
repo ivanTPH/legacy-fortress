@@ -1,5 +1,5 @@
-import AdminControlPlaneWorkspace from "@/components/admin/AdminControlPlaneWorkspace";
+import PlatformOrganisationControlCentre from "@/components/admin/PlatformOrganisationControlCentre";
 
 export default function AdminOrganisationsPage() {
-  return <AdminControlPlaneWorkspace section="organisations" />;
+  return <PlatformOrganisationControlCentre />;
 }
