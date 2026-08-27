@@ -123,7 +123,12 @@ test("Phase 3 UI exposes operational invitations, users, seats, enrolment links 
     "Users and seats",
     "Invite organisation user",
     "Create enrolment link",
-    "Bulk CSV validation",
+    "Bulk invitations",
+    "Invitation lifecycle action",
+    "Membership lifecycle action",
+    "Confirm invitation action",
+    "Confirm membership action",
+    "Terminal state",
     "Purchased seats",
     "Active seats",
     "Invited/reserved seats",
@@ -144,4 +149,30 @@ test("Phase 3 UI exposes operational invitations, users, seats, enrolment links 
   assert.match(acceptClient, /organisationTermsAccepted/);
   assert.match(acceptClient, /marketingConsent/);
   assert.match(acceptClient, /Private vault|private vault/i);
+  assert.match(workspace, /registration-links/);
+  assert.match(workspace, /Create registration link/);
+  assert.match(workspace, /Available registration links/);
+});
+
+test("enterprise invitation and membership lifecycle controls require reasoned audited actions", () => {
+  const workspace = read("components/enterprise/EnterpriseOperationsWorkspace.tsx");
+  const route = read("app/api/internal/admin/enterprise/route.ts");
+  const service = read("lib/admin/enterpriseOperations.ts");
+
+  assert.match(workspace, /Enterprise invitation lifecycle action completed, seat counters refreshed, and audit recorded/);
+  assert.match(workspace, /Enterprise membership lifecycle action completed, seat counters refreshed, and audit recorded/);
+  assert.match(workspace, /reason: lifecycleForm\.reason/);
+  assert.match(workspace, /disabled=\{requiresReason && !lifecycleForm\.reason\.trim\(\)\}/);
+  assert.match(workspace, /disabled=\{!lifecycleForm\.reason\.trim\(\)/);
+  assert.match(workspace, /getInvitationLifecycleOptions/);
+  assert.match(workspace, /getMembershipLifecycleOptions/);
+  assert.match(workspace, /releases its reserved seat/);
+  assert.match(workspace, /does not delete the user's personal Legacy Fortress account or vault/);
+  assert.match(route, /updateEnterpriseInvitationStatus\([\s\S]*body\.reason/);
+  assert.match(route, /reason_present: Boolean\(String\(body\.reason/);
+  assert.match(service, /isValidInvitationTransition/);
+  assert.match(service, /invalid_invitation_transition/);
+  assert.match(service, /appendReason\(current\.failure_reason, operatorReason/);
+  assert.match(service, /releaseEnterpriseSeat\(client, current\.seat_id, "invitation_release"\)/);
+  assert.match(service, /releaseEnterpriseSeat\(client, current\.seat_id, optionalText\(reason\)/);
 });

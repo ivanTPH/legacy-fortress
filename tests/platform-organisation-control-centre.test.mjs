@@ -85,3 +85,12 @@ test("platform handoff does not change principal or expose vault content", () =>
   assert.match(controlCentre, /financial values are excluded/);
   assert.match(controlCentre, /canEnterpriseHandoff/);
 });
+
+test("organisation detail exposes commercial setup, administrator and registration workflow state", () => {
+  const controlCentre = read("components/admin/PlatformOrganisationControlCentre.tsx");
+  assert.match(controlCentre, /Commercial setup/);
+  assert.match(controlCentre, /Manage administrators/);
+  assert.match(controlCentre, /Registration and enrolment/);
+  assert.match(controlCentre, /registration-links/);
+  assert.match(controlCentre, /activeRegistrationLinks/);
+});

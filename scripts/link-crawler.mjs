@@ -52,6 +52,7 @@ if (unresolved.length) {
 }
 
 function normalize(route) {
+  route = route.split(/[?#]/, 1)[0];
   if (route === "/") return "/";
   return route.endsWith("/") ? route.slice(0, -1) : route;
 }

@@ -287,6 +287,20 @@ type EnterpriseInviteForm = {
   requireMfa: boolean;
 };
 
+type EnterpriseInvitationLifecycleForm = {
+  invitationId: string;
+  status: string;
+  reason: string;
+};
+
+type EnterpriseMembershipLifecycleForm = {
+  membershipId: string;
+  status: string;
+  reason: string;
+};
+
+type EnterpriseTab = "overview" | "organisations" | "licences" | "users" | "invitations" | "registration-links" | "adoption" | "reports" | "consent" | "renewals" | "settings";
+
 const EMPTY_PORTFOLIO: EnterprisePortfolio = {
   summary: {
     organisations: 0,
@@ -330,7 +344,7 @@ export default function EnterpriseOperationsWorkspace() {
   const [identity, setIdentity] = useState({ label: "Enterprise user", detail: "" });
   const [navigationCapabilities, setNavigationCapabilities] = useState<string[]>([]);
   const [portfolio, setPortfolio] = useState<EnterprisePortfolio>(EMPTY_PORTFOLIO);
-  const [activeTab, setActiveTab] = useState<"overview" | "organisations" | "licences" | "users" | "invitations" | "adoption" | "reports" | "consent" | "renewals" | "settings">("overview");
+  const [activeTab, setActiveTab] = useState<EnterpriseTab>("overview");
   const [filters, setFilters] = useState({
     organisation: "",
     status: "",
@@ -427,6 +441,9 @@ export default function EnterpriseOperationsWorkspace() {
   const [reportType, setReportType] = useState("portfolio");
   const [organisationFormOpen, setOrganisationFormOpen] = useState(false);
   const [licenceFormOpen, setLicenceFormOpen] = useState(false);
+  const [invitationLifecycleForm, setInvitationLifecycleForm] = useState<EnterpriseInvitationLifecycleForm>({ invitationId: "", status: "sent", reason: "" });
+  const [membershipLifecycleForm, setMembershipLifecycleForm] = useState<EnterpriseMembershipLifecycleForm>({ membershipId: "", status: "suspended", reason: "" });
+  const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
 
   const authFetch = useCallback(async (input: string, init?: RequestInit) => {
     const sessionRes = await supabase.auth.getSession();
@@ -500,7 +517,29 @@ export default function EnterpriseOperationsWorkspace() {
       return;
     }
     if (json.portfolio) setPortfolio(json.portfolio);
-    setMessage(action === "export_report" ? "Governed export job accepted." : "Enterprise action completed.");
+    if (action === "update_invitation") setInvitationLifecycleForm({ invitationId: "", status: "sent", reason: "" });
+    if (action === "transition_membership") setMembershipLifecycleForm({ membershipId: "", status: "suspended", reason: "" });
+    setMessage(action === "export_report"
+      ? "Governed export job accepted."
+      : action === "update_invitation"
+        ? "Enterprise invitation lifecycle action completed, seat counters refreshed, and audit recorded."
+        : action === "transition_membership"
+          ? "Enterprise membership lifecycle action completed, seat counters refreshed, and audit recorded."
+          : "Enterprise action completed.");
+  }
+
+  async function copyRegistrationLink(link: EnterpriseEnrolmentLink) {
+    if (!link.stagingClaimPath || !navigator.clipboard) {
+      setMessage("This registration link is not available to copy in the current environment.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(link.stagingClaimPath);
+      setCopiedLinkId(link.id);
+      setMessage("Registration link copied.");
+    } catch {
+      setMessage("The registration link could not be copied. Select the displayed link and copy it manually.");
+    }
   }
 
   const filteredOrganisations = useMemo(() => {
@@ -626,8 +665,9 @@ export default function EnterpriseOperationsWorkspace() {
         await runAction("create_licence", licenceForm);
         setLicenceFormOpen(false);
       }, licenceFormOpen, setLicenceFormOpen) : null}
-      {activeTab === "users" ? renderUsersAndSeats({ ...portfolio, memberships: filteredMemberships }, runAction) : null}
-      {activeTab === "invitations" ? renderInvitations(filteredInvitations, portfolio, inviteForm, setInviteForm, enrolmentForm, setEnrolmentForm, bulkRows, setBulkRows, runAction) : null}
+      {activeTab === "users" ? renderUsersAndSeats({ ...portfolio, memberships: filteredMemberships }, runAction, membershipLifecycleForm, setMembershipLifecycleForm) : null}
+      {activeTab === "invitations" ? renderInvitations(filteredInvitations, portfolio, inviteForm, setInviteForm, enrolmentForm, setEnrolmentForm, bulkRows, setBulkRows, runAction, invitationLifecycleForm, setInvitationLifecycleForm, false) : null}
+      {activeTab === "registration-links" ? renderRegistrationLinks(portfolio, enrolmentForm, setEnrolmentForm, runAction, copiedLinkId, copyRegistrationLink) : null}
       {activeTab === "adoption" ? renderAdoption(portfolio, filteredOrganisations) : null}
       {activeTab === "reports" ? renderReports(portfolio, reportType, setReportType, () => runAction("export_report", { reportType, filters })) : null}
       {activeTab === "consent" ? renderConsent(portfolio, filteredOrganisations) : null}
@@ -642,7 +682,7 @@ function renderOverview(
   organisations: EnterpriseOrganisation[],
   licences: EnterpriseLicence[],
   invitations: EnterpriseInvitation[],
-  setActiveTab: (tab: "overview" | "organisations" | "licences" | "users" | "invitations" | "adoption" | "reports" | "consent" | "renewals" | "settings") => void,
+  setActiveTab: (tab: EnterpriseTab) => void,
   setFilters: (filters: EnterpriseFilters) => void,
 ) {
   const baseFilters: EnterpriseFilters = { organisation: "", status: "", type: "", licence: "", licencePlan: "", billingStatus: "", renewal: "", utilisation: "", invitation: "", adoption: "", consent: "", risk: "", country: "", accountOwner: "", onboarding: "", membership: "", role: "", dateRange: "", synthetic: "" };
@@ -892,9 +932,14 @@ function renderInvitations(
   bulkRows: string,
   setBulkRows: (value: string) => void,
   runAction: (action: string, payload: Record<string, unknown>) => void,
+  lifecycleForm: EnterpriseInvitationLifecycleForm,
+  setLifecycleForm: (value: EnterpriseInvitationLifecycleForm) => void,
+  showLinks = true,
 ) {
   const orgLicences = portfolio.licences.filter((licence) => licence.organisationId === form.organisationId);
   const linkLicences = portfolio.licences.filter((licence) => licence.organisationId === enrolmentForm.organisationId);
+  const selectedInvitation = portfolio.invitations.find((item) => item.id === lifecycleForm.invitationId) ?? null;
+  const requiresReason = ["revoked", "expired", "failed"].includes(lifecycleForm.status);
   return (
     <div style={twoColumnStyle}>
       <section style={panelStyle}>
@@ -953,12 +998,48 @@ function renderInvitations(
         <FormInput label="Expiry days" type="number" value={String(enrolmentForm.expiryDays)} onChange={(value) => setEnrolmentForm({ ...enrolmentForm, expiryDays: Number(value) })} />
         <FormInput label="Allowed email domain" value={enrolmentForm.allowedEmailDomain} onChange={(allowedEmailDomain) => setEnrolmentForm({ ...enrolmentForm, allowedEmailDomain })} />
         <button type="button" style={primaryButtonStyle} onClick={() => runAction("create_enrolment_link", enrolmentForm)}>Create enrolment link</button>
-        <h2 style={h2Style}>Bulk CSV validation</h2>
+        <h2 style={h2Style}>Bulk invitations</h2>
+        <p style={privacyStyle}>Bulk dispatch is not available in this workflow yet. You can validate a CSV before a future governed send operation.</p>
         <textarea aria-label="Bulk invitation CSV" style={{ minHeight: 120 }} value={bulkRows} onChange={(event) => setBulkRows(event.target.value)} />
         <button type="button" style={secondaryButtonStyle} onClick={() => runAction("validate_bulk_invitations", { rows: parseBulkRows(bulkRows) })}>Validate CSV</button>
       </section>
       <section style={panelStyle}>
         <h2 style={h2Style}>Invitations</h2>
+        {selectedInvitation ? (
+          <section style={contextPanelStyle} aria-label="Invitation lifecycle action">
+            <h3 style={h3Style}>Invitation lifecycle action</h3>
+            <dl style={definitionGridStyle}>
+              <div><dt>Recipient</dt><dd>{selectedInvitation.fullName || selectedInvitation.email}</dd></div>
+              <div><dt>Current status</dt><dd><AdminStatusBadge status={selectedInvitation.status} /></dd></div>
+              <div><dt>Seat</dt><dd>{selectedInvitation.seatId ? "Reserved" : "Not reserved"}</dd></div>
+              <div><dt>Resends</dt><dd>{selectedInvitation.resendCount}</dd></div>
+            </dl>
+            <label style={labelStyle}>Action
+              <select value={lifecycleForm.status} onChange={(event) => setLifecycleForm({ ...lifecycleForm, status: event.target.value })}>
+                {getInvitationLifecycleOptions(selectedInvitation.status).map((option) => <option key={option.status} value={option.status}>{option.label}</option>)}
+              </select>
+            </label>
+            <label style={labelStyle}>Reason {requiresReason ? "*" : ""}
+              <input value={lifecycleForm.reason} onChange={(event) => setLifecycleForm({ ...lifecycleForm, reason: event.target.value })} placeholder={requiresReason ? "Required for revoke, expire, or failure." : "Optional note for audit context."} />
+            </label>
+            <p style={privacyStyle}>{invitationLifecycleConsequence(lifecycleForm.status, selectedInvitation)}</p>
+            <div style={actionsCellStyle}>
+              <button
+                type="button"
+                style={primaryButtonStyle}
+                disabled={requiresReason && !lifecycleForm.reason.trim()}
+                onClick={() => runAction("update_invitation", {
+                  invitationId: lifecycleForm.invitationId,
+                  status: lifecycleForm.status,
+                  reason: lifecycleForm.reason,
+                })}
+              >
+                Confirm invitation action
+              </button>
+              <button type="button" style={secondaryButtonStyle} onClick={() => setLifecycleForm({ invitationId: "", status: "sent", reason: "" })}>Cancel</button>
+            </div>
+          </section>
+        ) : null}
         <div style={tableWrapStyle}>
           <table style={tableStyle}>
             <thead><tr><th>Recipient</th><th>Role</th><th>Status</th><th>Seat</th><th>Expires</th><th>Actions</th></tr></thead>
@@ -971,9 +1052,13 @@ function renderInvitations(
                   <td>{item.seatId ? "Reserved" : "Not reserved"}</td>
                   <td>{formatDate(item.expiresAt)}</td>
                   <td style={actionsCellStyle}>
-                    <button type="button" onClick={() => runAction("update_invitation", { invitationId: item.id, status: "sent" })}>Resend</button>
-                    <button type="button" onClick={() => runAction("update_invitation", { invitationId: item.id, status: "revoked" })}>Revoke</button>
-                    <button type="button" onClick={() => runAction("update_invitation", { invitationId: item.id, status: "expired" })}>Expire</button>
+                    {getInvitationLifecycleOptions(item.status).length ? (
+                      <>
+                        <button type="button" onClick={() => setLifecycleForm({ invitationId: item.id, status: "sent", reason: "" })}>Resend</button>
+                        <button type="button" onClick={() => setLifecycleForm({ invitationId: item.id, status: "revoked", reason: "" })}>Revoke</button>
+                        <button type="button" onClick={() => setLifecycleForm({ invitationId: item.id, status: "expired", reason: "" })}>Expire</button>
+                      </>
+                    ) : <span style={mutedInlineStyle}>Terminal state</span>}
                   </td>
                 </tr>
               ))}
@@ -981,7 +1066,9 @@ function renderInvitations(
             </tbody>
           </table>
         </div>
-        <h2 style={h2Style}>Enrolment links</h2>
+        {showLinks ? <>
+        <h2 style={h2Style}>Registration links</h2>
+        <p style={privacyStyle}>Create and manage organisation enrolment links here. Sharing a link starts enterprise registration; it does not grant access to private vault content.</p>
         <table style={tableStyle}>
           <thead><tr><th>Name</th><th>Status</th><th>Claims</th><th>Domain</th><th>Actions</th></tr></thead>
           <tbody>
@@ -991,13 +1078,57 @@ function renderInvitations(
             {portfolio.enrolmentLinks.length === 0 ? <tr><td colSpan={5}>No enrolment links have been created.</td></tr> : null}
           </tbody>
         </table>
+        </> : null}
       </section>
     </div>
   );
 }
 
-function renderUsersAndSeats(portfolio: EnterprisePortfolio, runAction: (action: string, payload: Record<string, unknown>) => void) {
+function renderRegistrationLinks(
+  portfolio: EnterprisePortfolio,
+  form: { organisationId: string; licenceId: string; displayName: string; expiryDays: number; maxClaims: number; allowedEmailDomain: string; defaultRole: string },
+  setForm: (value: typeof form) => void,
+  runAction: (action: string, payload: Record<string, unknown>) => void,
+  copiedLinkId: string | null,
+  copyLink: (link: EnterpriseEnrolmentLink) => void | Promise<void>,
+) {
+  const licences = portfolio.licences.filter((item) => item.organisationId === form.organisationId);
+  return <div style={stackStyle}>
+    <section style={panelStyle}>
+      <div style={sectionHeaderStyle}><div><h2 style={h2Style}>Registration links</h2><p style={mutedStyle}>Create and monitor organisation enrolment links. Claims are limited by the selected licence and link policy.</p></div><span style={privacyStyle}>Enterprise Operations</span></div>
+      <div style={twoColumnStyle}>
+        <section style={contextPanelStyle} aria-label="Create registration link">
+          <h3 style={h3Style}>Create registration link</h3>
+          <label style={labelStyle}>Organisation<select value={form.organisationId} onChange={(event) => setForm({ ...form, organisationId: event.target.value, licenceId: "" })}><option value="">Select organisation</option>{portfolio.organisations.map((org) => <option key={org.id} value={org.id}>{org.name}</option>)}</select></label>
+          <label style={labelStyle}>Licence<select value={form.licenceId} onChange={(event) => setForm({ ...form, licenceId: event.target.value })}><option value="">Select licence</option>{licences.map((licence) => <option key={licence.id} value={licence.id}>{licence.plan} · {licence.availableSeats} available</option>)}</select></label>
+          <FormInput label="Link name" required value={form.displayName} onChange={(displayName) => setForm({ ...form, displayName })} />
+          <FormInput label="Maximum claims" type="number" value={String(form.maxClaims)} onChange={(value) => setForm({ ...form, maxClaims: Number(value) })} />
+          <FormInput label="Expiry days" type="number" value={String(form.expiryDays)} onChange={(value) => setForm({ ...form, expiryDays: Number(value) })} />
+          <FormInput label="Allowed email domain" value={form.allowedEmailDomain} onChange={(allowedEmailDomain) => setForm({ ...form, allowedEmailDomain })} />
+          <button type="button" style={primaryButtonStyle} disabled={!form.organisationId || !form.licenceId || !form.displayName.trim()} onClick={() => runAction("create_enrolment_link", form)}>Create registration link</button>
+        </section>
+        <section style={contextPanelStyle}>
+          <h3 style={h3Style}>How registration is progressing</h3>
+          <div style={gridStyle}><AdminMetricCard label="Links" value={portfolio.enrolmentLinks.length} detail="Created for the current enterprise scope" /><AdminMetricCard label="Claims used" value={portfolio.enrolmentLinks.reduce((sum, item) => sum + item.claimsUsed, 0)} detail="Accepted enrolment claims" /><AdminMetricCard label="Active links" value={portfolio.enrolmentLinks.filter((item) => item.status === "active").length} detail="Links currently available to claim" /></div>
+          <p style={privacyStyle}>Registration status is operational metadata. Engagement analytics and Personal Vault adoption are not measured here.</p>
+        </section>
+      </div>
+    </section>
+    <section style={panelStyle}>
+      <h2 style={h2Style}>Available registration links</h2>
+      <div style={tableWrapStyle}><table style={tableStyle}><caption>Organisation registration links</caption><thead><tr><th>Link</th><th>Organisation</th><th>Status</th><th>Claims</th><th>Expires</th><th>Action</th></tr></thead><tbody>{portfolio.enrolmentLinks.map((link) => <tr key={link.id}><td><strong>{link.displayName}</strong><small>{link.allowedEmailDomain || "Any email domain"}</small>{link.stagingClaimPath ? <code style={linkCodeStyle}>{link.stagingClaimPath}</code> : null}</td><td>{portfolio.organisations.find((org) => org.id === link.organisationId)?.name || "Unknown organisation"}</td><td><AdminStatusBadge status={link.status} /></td><td>{link.claimsUsed} / {link.maxClaims}</td><td>{formatDate(link.expiresAt)}</td><td style={actionsCellStyle}>{link.stagingClaimPath ? <button type="button" onClick={() => void copyLink(link)}>{copiedLinkId === link.id ? "Copied" : "Copy link"}</button> : null}{["active", "paused"].includes(link.status) ? <button type="button" onClick={() => runAction("update_enrolment_link", { enrolmentLinkId: link.id, status: link.status === "active" ? "paused" : "active" })}>{link.status === "active" ? "Pause" : "Reactivate"}</button> : <span style={mutedInlineStyle}>No lifecycle action</span>}</td></tr>)}{portfolio.enrolmentLinks.length === 0 ? <tr><td colSpan={6}>No registration links have been created yet.</td></tr> : null}</tbody></table></div>
+    </section>
+  </div>;
+}
+
+function renderUsersAndSeats(
+  portfolio: EnterprisePortfolio,
+  runAction: (action: string, payload: Record<string, unknown>) => void,
+  lifecycleForm: EnterpriseMembershipLifecycleForm,
+  setLifecycleForm: (value: EnterpriseMembershipLifecycleForm) => void,
+) {
   const seats = portfolio.summary.seats;
+  const selectedMember = portfolio.memberships.find((item) => item.id === lifecycleForm.membershipId) ?? null;
   return (
     <div style={stackStyle}>
       <section style={gridStyle}>
@@ -1011,6 +1142,41 @@ function renderUsersAndSeats(portfolio: EnterprisePortfolio, runAction: (action:
       </section>
       <section style={panelStyle}>
         <h2 style={h2Style}>Users and seats</h2>
+        {selectedMember ? (
+          <section style={contextPanelStyle} aria-label="Membership lifecycle action">
+            <h3 style={h3Style}>Membership lifecycle action</h3>
+            <dl style={definitionGridStyle}>
+              <div><dt>Member</dt><dd>{selectedMember.fullName || selectedMember.email}</dd></div>
+              <div><dt>Current status</dt><dd><AdminStatusBadge status={selectedMember.status} /></dd></div>
+              <div><dt>Role</dt><dd>{labelise(selectedMember.organisationRole)}</dd></div>
+              <div><dt>Seat</dt><dd>{selectedMember.seatId ? "Assigned" : "No seat"}</dd></div>
+            </dl>
+            <label style={labelStyle}>Action
+              <select value={lifecycleForm.status} onChange={(event) => setLifecycleForm({ ...lifecycleForm, status: event.target.value })}>
+                {getMembershipLifecycleOptions(selectedMember.status).map((option) => <option key={option.status} value={option.status}>{option.label}</option>)}
+              </select>
+            </label>
+            <label style={labelStyle}>Reason *
+              <input value={lifecycleForm.reason} onChange={(event) => setLifecycleForm({ ...lifecycleForm, reason: event.target.value })} placeholder="Required before changing organisation access." />
+            </label>
+            <p style={privacyStyle}>{membershipLifecycleConsequence(lifecycleForm.status, selectedMember)}</p>
+            <div style={actionsCellStyle}>
+              <button
+                type="button"
+                style={primaryButtonStyle}
+                disabled={!lifecycleForm.reason.trim() || getMembershipLifecycleOptions(selectedMember.status).length === 0}
+                onClick={() => runAction("transition_membership", {
+                  membershipId: lifecycleForm.membershipId,
+                  status: lifecycleForm.status,
+                  reason: lifecycleForm.reason,
+                })}
+              >
+                Confirm membership action
+              </button>
+              <button type="button" style={secondaryButtonStyle} onClick={() => setLifecycleForm({ membershipId: "", status: "suspended", reason: "" })}>Cancel</button>
+            </div>
+          </section>
+        ) : null}
         <div style={tableWrapStyle}>
           <table style={tableStyle}>
             <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Membership</th><th>Seat</th><th>Onboarding</th><th>Consent</th><th>Actions</th></tr></thead>
@@ -1025,8 +1191,12 @@ function renderUsersAndSeats(portfolio: EnterprisePortfolio, runAction: (action:
                   <td>{labelise(member.onboardingStatus)}</td>
                   <td><AdminStatusBadge status={member.consentStatus} /></td>
                   <td style={actionsCellStyle}>
-                    <button type="button" onClick={() => runAction("transition_membership", { membershipId: member.id, status: member.status === "suspended" ? "active" : "suspended", reason: "Operator lifecycle change" })}>{member.status === "suspended" ? "Reactivate" : "Suspend"}</button>
-                    <button type="button" onClick={() => runAction("transition_membership", { membershipId: member.id, status: "removed", reason: "Operator removal" })}>Remove</button>
+                    {getMembershipLifecycleOptions(member.status).length ? (
+                      <>
+                        <button type="button" onClick={() => setLifecycleForm({ membershipId: member.id, status: member.status === "suspended" ? "active" : "suspended", reason: "" })}>{member.status === "suspended" ? "Reactivate" : "Suspend"}</button>
+                        <button type="button" onClick={() => setLifecycleForm({ membershipId: member.id, status: "removed", reason: "" })}>Remove</button>
+                      </>
+                    ) : <span style={mutedInlineStyle}>Terminal state</span>}
                   </td>
                 </tr>
               ))}
@@ -1546,6 +1716,53 @@ function utilisationBand(licence: EnterpriseLicence) {
   return "91_100";
 }
 
+function getInvitationLifecycleOptions(status: string) {
+  const normalized = String(status || "").toLowerCase();
+  if (["accepted", "revoked", "expired"].includes(normalized)) return [];
+  return [
+    { status: "sent", label: "Resend invitation" },
+    { status: "revoked", label: "Revoke invitation" },
+    { status: "expired", label: "Expire invitation" },
+  ];
+}
+
+function invitationLifecycleConsequence(status: string, invitation: EnterpriseInvitation) {
+  if (status === "sent") return "Resending keeps any existing reserved seat and increments the resend count.";
+  if (status === "revoked") return invitation.seatId
+    ? "Revoking cancels the invitation and releases its reserved seat. It does not delete the recipient's personal account."
+    : "Revoking cancels the invitation. No seat is currently reserved.";
+  if (status === "expired") return invitation.seatId
+    ? "Expiring makes the invitation unclaimable and releases its reserved seat."
+    : "Expiring makes the invitation unclaimable. No seat is currently reserved.";
+  return "This action updates invitation lifecycle state through the audited enterprise API.";
+}
+
+function getMembershipLifecycleOptions(status: string) {
+  const normalized = String(status || "").toLowerCase();
+  if (normalized === "active") return [
+    { status: "suspended", label: "Suspend access" },
+    { status: "removed", label: "Remove access" },
+  ];
+  if (normalized === "suspended") return [
+    { status: "active", label: "Reactivate access" },
+    { status: "removed", label: "Remove access" },
+  ];
+  if (normalized === "invited" || normalized === "pending") return [
+    { status: "active", label: "Activate membership" },
+    { status: "removed", label: "Remove access" },
+  ];
+  return [];
+}
+
+function membershipLifecycleConsequence(status: string, member: EnterpriseMembership) {
+  if (status === "active") return member.seatId ? "Reactivation restores the assigned seat to active usage." : "Reactivation restores membership access without assigning a seat.";
+  if (status === "suspended") return member.seatId ? "Suspension keeps the seat reserved but marks it unavailable." : "Suspension blocks organisation access without changing seat counts.";
+  if (status === "removed") return member.seatId
+    ? "Removal releases the organisation seat and does not delete the user's personal Legacy Fortress account or vault."
+    : "Removal ends organisation access and does not delete the user's personal Legacy Fortress account or vault.";
+  return "This action updates organisation access through the audited enterprise API.";
+}
+
 function FormInput({ label, value, onChange, required = false, type = "text" }: { label: string; value: string; onChange: (value: string) => void; required?: boolean; type?: string }) {
   return (
     <label style={labelStyle}>{label}{required ? " *" : ""}
@@ -1568,8 +1785,8 @@ function labelise(value: string) {
   return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function normalizeEnterpriseTab(value: string | null): "overview" | "organisations" | "licences" | "users" | "invitations" | "adoption" | "reports" | "consent" | "renewals" | "settings" | null {
-  if (value === "overview" || value === "organisations" || value === "licences" || value === "users" || value === "invitations" || value === "adoption" || value === "reports" || value === "consent" || value === "renewals" || value === "settings") return value;
+function normalizeEnterpriseTab(value: string | null): EnterpriseTab | null {
+  if (value === "overview" || value === "organisations" || value === "licences" || value === "users" || value === "invitations" || value === "registration-links" || value === "adoption" || value === "reports" || value === "consent" || value === "renewals" || value === "settings") return value;
   return null;
 }
 
@@ -1612,9 +1829,11 @@ const mutedInlineStyle: CSSProperties = { color: "#64748b", fontSize: 13 };
 const gridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 };
 const stackStyle: CSSProperties = { display: "grid", gap: 16 };
 const twoColumnStyle: CSSProperties = { display: "grid", gridTemplateColumns: "minmax(280px, 420px) minmax(0, 1fr)", gap: 16, alignItems: "start" };
+const definitionGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 10 };
 const labelStyle: CSSProperties = { display: "grid", gap: 5, fontWeight: 700, color: "#334155", fontSize: 13 };
 const checkboxStyle: CSSProperties = { display: "flex", gap: 8, alignItems: "center", color: "#334155", fontWeight: 700 };
 const fieldsetStyle: CSSProperties = { border: "1px solid #dbe3ef", borderRadius: 8, padding: 12, display: "grid", gap: 10 };
 const tableWrapStyle: CSSProperties = { overflowX: "auto" };
 const tableStyle: CSSProperties = { width: "100%", borderCollapse: "collapse", fontSize: 14 };
 const actionsCellStyle: CSSProperties = { display: "flex", gap: 8, flexWrap: "wrap" };
+const linkCodeStyle: CSSProperties = { display: "block", maxWidth: 360, overflowWrap: "anywhere", color: "#475569", fontSize: 12, marginTop: 5 };
