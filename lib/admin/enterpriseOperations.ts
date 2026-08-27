@@ -620,13 +620,16 @@ export async function getEnterpriseLicenceDetail(client: AnySupabaseClient, lice
   if (licenceRes.error) throw new EnterpriseOperationError("licence_query_failed", licenceRes.error.message, 500);
   if (!licenceRes.data) throw new EnterpriseOperationError("licence_not_found", "Licence not found.", 404);
   const licence = mapLicence(licenceRes.data as EnterpriseLicenceRow);
-  const [orgRes, seatsRes, renewalsRes, auditRes] = await Promise.all([
+  const [orgRes, seatsRes, renewalsRes, invitationsRes, membershipsRes, enrolmentLinksRes, auditRes] = await Promise.all([
     client.from("enterprise_organisations").select(ORGANISATION_SELECT).eq("id", licence.organisationId).maybeSingle(),
     client.from("enterprise_seats").select("id,organisation_id,licence_id,user_id,invitee_email_normalized,seat_status,assigned_at,activated_at,suspended_at,released_at").eq("licence_id", licenceId).order("assigned_at", { ascending: false }),
     client.from("enterprise_licence_renewals").select("id,organisation_id,licence_id,previous_renewal_date,new_renewal_date,previous_purchased_seats,new_purchased_seats,previous_plan,new_plan,contract_reference,billing_reference,notes,synthetic_run_marker,created_at").eq("licence_id", licenceId).order("created_at", { ascending: false }),
+    client.from("enterprise_invitations").select(INVITATION_SELECT).eq("licence_id", licenceId).order("created_at", { ascending: false }),
+    client.from("enterprise_memberships").select(MEMBERSHIP_SELECT).eq("licence_id", licenceId).order("created_at", { ascending: false }),
+    client.from("enterprise_enrolment_links").select(ENROLMENT_LINK_SELECT).eq("licence_id", licenceId).order("created_at", { ascending: false }),
     client.from("audit_events").select("id,action,result,actor_email_normalized,actor_role,resource_type,resource_id,resource_label,policy_decision,metadata,created_at").eq("resource_type", "licence").eq("resource_id", licenceId).order("created_at", { ascending: false }).limit(50),
   ]);
-  for (const result of [seatsRes, renewalsRes, auditRes]) {
+  for (const result of [seatsRes, renewalsRes, invitationsRes, membershipsRes, enrolmentLinksRes, auditRes]) {
     if (result.error) throw new EnterpriseOperationError("licence_detail_failed", result.error.message, 500);
   }
   if (orgRes.error) throw new EnterpriseOperationError("licence_detail_failed", orgRes.error.message, 500);
@@ -635,6 +638,9 @@ export async function getEnterpriseLicenceDetail(client: AnySupabaseClient, lice
     organisation: orgRes.data ? mapOrganisation(orgRes.data as EnterpriseOrganisationRow) : null,
     seats: seatsRes.data ?? [],
     renewals: renewalsRes.data ?? [],
+    invitations: ((invitationsRes.data ?? []) as EnterpriseInvitationRow[]).map(mapInvitation),
+    memberships: ((membershipsRes.data ?? []) as EnterpriseMembershipRow[]).map(mapMembership),
+    enrolmentLinks: ((enrolmentLinksRes.data ?? []) as EnterpriseEnrolmentLinkRow[]).map(mapEnrolmentLink),
     auditEvents: auditRes.data ?? [],
     privacyBoundary: {
       vaultContentExcluded: true,

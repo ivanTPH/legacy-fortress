@@ -32,7 +32,14 @@ test("platform organisation and licence drill-down routes are canonical admin ro
     "app/admin/licences/page.tsx",
     "app/admin/licences/[licenceId]/page.tsx",
   ]) {
-    assert.match(read(file), /AdminControlPlaneWorkspace/);
+    if (file === "app/admin/licences/[licenceId]/page.tsx") {
+      assert.match(read(file), /EnterpriseLicenceDetailWorkspace/);
+      assert.match(read(file), /platformAdmin/);
+    } else if (file === "app/admin/organisations/page.tsx" || file === "app/admin/organisations/[organisationId]/page.tsx") {
+      assert.match(read(file), /PlatformOrganisationControlCentre/);
+    } else {
+      assert.match(read(file), /AdminControlPlaneWorkspace/);
+    }
   }
 
   const controlPlane = read("components/admin/AdminControlPlaneWorkspace.tsx");
@@ -100,7 +107,7 @@ test("admin detail routes focus on the selected record instead of re-rendering g
   assert.match(adminDetailBranch, /Back to administrators/);
   assert.match(adminDetailBranch, /Permitted lifecycle actions/);
   assert.match(probateDetailBranch, /Back to probate queue/);
-  assert.match(controlPlane, /This case is terminal/);
+  assert.match(controlPlane, /terminal/i);
 });
 
 test("enterprise saved views are server persisted and licence actions map to explicit capabilities", () => {

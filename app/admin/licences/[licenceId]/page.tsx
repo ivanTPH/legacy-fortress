@@ -1,6 +1,6 @@
-import AdminControlPlaneWorkspace from "@/components/admin/AdminControlPlaneWorkspace";
+import EnterpriseLicenceDetailWorkspace from "@/components/enterprise/EnterpriseLicenceDetailWorkspace";
 
 export default async function AdminLicenceDetailPage({ params }: { params: Promise<{ licenceId: string }> }) {
   const { licenceId } = await params;
-  return <AdminControlPlaneWorkspace section="licence-detail" resourceId={licenceId} />;
+  return <EnterpriseLicenceDetailWorkspace licenceId={licenceId} platformAdmin />;
 }
