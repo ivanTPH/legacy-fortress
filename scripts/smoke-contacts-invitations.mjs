@@ -41,6 +41,7 @@ let limitUserId = "";
 let contactId = "";
 let invitationId = "";
 let acceptPath = "";
+let acceptTokenHash = "";
 
 function logStep(message) {
   console.log(`[smoke] ${message}`);
@@ -161,12 +162,19 @@ async function acceptInvitationAsRecipient() {
   const consoleErrors = [];
   const failedRequests = [];
   const relevantResponses = [];
+  const rpcBodies = [];
+  const responseBodyReads = [];
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text().slice(0, 500));
   });
   page.on("requestfailed", (request) => failedRequests.push({ url: sanitizeUrl(request.url()), error: request.failure()?.errorText || "unknown" }));
   page.on("response", (response) => {
-    if (/auth\/callback|invite\/accept|rest\/v1\/.*invitation/i.test(response.url())) relevantResponses.push({ url: sanitizeUrl(response.url()), status: response.status() });
+    if (/auth\/callback|invite\/accept|rest\/v1\/.*invitation/i.test(response.url())) {
+      relevantResponses.push({ url: sanitizeUrl(response.url()), status: response.status() });
+      if (/rest\/v1\/rpc\/accept_contact_invitation/i.test(response.url())) {
+        responseBodyReads.push(response.text().then((body) => rpcBodies.push({ status: response.status(), body: sanitizeResponseBody(body) })).catch(() => {}));
+      }
+    }
   });
   await page.goto(acceptPath, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: /accept invitation/i }).waitFor();
@@ -182,7 +190,8 @@ async function acceptInvitationAsRecipient() {
   try {
     await page.waitForURL(/\/identity\/verify|\/dashboard|\/contact-wallet/, { timeout: 45000 });
   } catch (error) {
-    throw new Error(`Recipient accept did not reach a canonical destination. url=${sanitizeUrl(page.url())} consoleErrors=${JSON.stringify(consoleErrors)} failedRequests=${JSON.stringify(failedRequests)} responses=${JSON.stringify(relevantResponses)} body=${(await page.locator("body").innerText().catch(() => "")).slice(0, 800)}`, { cause: error });
+    await Promise.all(responseBodyReads);
+    throw new Error(`Recipient accept did not reach a canonical destination. url=${sanitizeUrl(page.url())} invitation=${JSON.stringify(await readInvitationDiagnostics())} responses=${JSON.stringify(relevantResponses)} rpcBodies=${JSON.stringify(rpcBodies)} consoleErrors=${JSON.stringify(consoleErrors)} failedRequests=${JSON.stringify(failedRequests)} body=${(await page.locator("body").innerText().catch(() => "")).slice(0, 800)}`, { cause: error });
   }
   await context.close();
 
@@ -199,6 +208,27 @@ function sanitizeUrl(value) {
   } catch {
     return String(value).slice(0, 500);
   }
+}
+
+function sanitizeResponseBody(value) {
+  return String(value)
+    .replace(/("?(?:token|token_hash|access_token|refresh_token|password)"?\s*:\s*")([^\"]+)(")/gi, "$1[redacted]$3")
+    .slice(0, 1200);
+}
+
+async function readInvitationDiagnostics() {
+  if (!invitationId) return { invitation: null, grant: null, roleAssignment: null };
+  const [invitation, grant, roleAssignment] = await Promise.all([
+    admin.from("contact_invitations").select("id,contact_id,owner_user_id,contact_email,invitation_status,activation_status,expires_at,accepted_at,revoked_at,token_consumed_at,assigned_role,permissions_override,synthetic_run_marker,invite_token_hash").eq("id", invitationId).maybeSingle(),
+    admin.from("account_access_grants").select("id,owner_user_id,linked_user_id,contact_id,invitation_id,assigned_role,activation_status,required_identity_level,permissions_override,vault_lifecycle_state").eq("invitation_id", invitationId).maybeSingle(),
+    admin.from("role_assignments").select("id,owner_user_id,invitation_id,assigned_role,activation_status,permissions_override").eq("invitation_id", invitationId).maybeSingle(),
+  ]);
+  return {
+    invitation: invitation.data ? { ...invitation.data, invite_token_hash: invitation.data.invite_token_hash === acceptTokenHash ? "matches_generated_token" : "does_not_match_generated_token" } : null,
+    grant: grant.data,
+    roleAssignment: roleAssignment.data,
+    errors: [invitation.error, grant.error, roleAssignment.error].filter(Boolean).map((item) => item.message),
+  };
 }
 
 async function createSyntheticRecipientUser() {
@@ -296,6 +326,7 @@ async function sendInviteForSmoke(client, input) {
   const now = new Date().toISOString();
   const token = crypto.randomUUID().replace(/-/g, "");
   const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  acceptTokenHash = tokenHash;
   const nextAcceptPath = `/invite/accept?${new URLSearchParams({ invitation: input.invitationId, token }).toString()}`;
   acceptPath = nextAcceptPath;
 
@@ -325,6 +356,8 @@ async function sendInviteForSmoke(client, input) {
     assigned_role: input.assignedRole,
     invitation_status: "pending",
     invite_token_hash: tokenHash,
+    expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    token_consumed_at: null,
     sent_at: now,
     last_sent_at: now,
     updated_at: now,
