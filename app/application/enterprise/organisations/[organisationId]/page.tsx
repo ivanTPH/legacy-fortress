@@ -1,6 +1,6 @@
-import EnterpriseOrganisationDetailWorkspace from "@/components/enterprise/EnterpriseOrganisationDetailWorkspace";
+import { redirect } from "next/navigation";
 
 export default async function EnterpriseOrganisationDetailPage({ params }: { params: Promise<{ organisationId: string }> }) {
   const { organisationId } = await params;
-  return <EnterpriseOrganisationDetailWorkspace organisationId={organisationId} />;
+  redirect(`/enterprise/organisations/${encodeURIComponent(organisationId)}`);
 }

@@ -1,6 +1,6 @@
-import EnterpriseLicenceDetailWorkspace from "@/components/enterprise/EnterpriseLicenceDetailWorkspace";
+import { redirect } from "next/navigation";
 
 export default async function EnterpriseLicenceDetailPage({ params }: { params: Promise<{ licenceId: string }> }) {
   const { licenceId } = await params;
-  return <EnterpriseLicenceDetailWorkspace licenceId={licenceId} />;
+  redirect(`/enterprise/licences/${encodeURIComponent(licenceId)}`);
 }

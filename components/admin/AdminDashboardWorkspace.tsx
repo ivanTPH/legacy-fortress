@@ -193,7 +193,7 @@ export default function AdminDashboardWorkspace() {
             <div className="lf-admin-placeholder-grid">
               <AdminWorkspaceLink title="Admin operations" text="Open user lookup, support signals, verifications, probate cases, and audit history backed by protected admin APIs." href="/internal/admin" />
               <AdminWorkspaceLink title="Probate review" text="Open the real probate review workspace. Actions remain capability-protected and audited by the server APIs." href="/internal/admin/probate" />
-              <AdminWorkspaceLink title="Enterprise and licences" text="Blocked until tenant-scoped organisation and licence persistence is implemented. No mock enterprise metrics are exposed." href="/application/enterprise" />
+              <AdminWorkspaceLink title="Enterprise and licences" text="Blocked until tenant-scoped organisation and licence persistence is implemented. No mock enterprise metrics are exposed." href="/enterprise" />
             </div>
           </section>
         </>

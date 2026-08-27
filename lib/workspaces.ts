@@ -137,9 +137,9 @@ export function getAvailableWorkspaces(
     },
     {
       id: "probate_admin",
-      label: "Probate Review",
-      shortLabel: "Probate",
-      description: "Probate cases, verification queues, users, access, and audit.",
+      label: "Platform Probate Review",
+      shortLabel: "Platform Probate",
+      description: "Platform-side probate cases, verification queues, access, and audit.",
       href: buildPrototypeWorkspaceUrl("probate_admin", options),
       enabled: canAccessProbateOperations(roles),
       requiredRole: "probate_admin, verification_reviewer, or super_admin",

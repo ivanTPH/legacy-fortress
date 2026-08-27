@@ -835,7 +835,7 @@ export default function AdminControlPlaneWorkspace({
 
   return (
     <AdminWorkspaceShell
-      workspaceLabel={section === "probate" || section === "probate-detail" ? "Probate Review" : "Platform Administration"}
+      workspaceLabel={section === "probate" || section === "probate-detail" ? "Platform Probate Review" : "Platform Administration"}
       eyebrow={page.eyebrow}
       title={page.title}
       description={page.description}

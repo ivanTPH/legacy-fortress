@@ -100,9 +100,10 @@ export default function AdminWorkspaceShell({
     });
   }
 
+  const workspaceHome = workspaceLabel === "Enterprise Operations" ? "/enterprise" : workspaceLabel === "Platform Probate Review" ? "/admin/probate" : "/admin";
   const sidebar = (
     <aside className="lf-admin-shell-sidebar" aria-label={`${workspaceLabel} navigation`}>
-      <Link href="/admin" className="lf-admin-shell-brand" prefetch={false}>
+      <Link href={workspaceHome} className="lf-admin-shell-brand" prefetch={false}>
         <span className="lf-admin-shell-brand-mark">LF</span>
         <span>
           <strong>Legacy Fortress</strong>
@@ -253,7 +254,7 @@ function isActivePath(currentPathname: string, href: string) {
   const [currentPath, currentQuery = ""] = currentPathname.split("?");
   if (hrefQuery) return currentPath === hrefPath && currentQuery.includes(hrefQuery);
   if (hrefPath === "/admin") return currentPath === "/admin";
-  if (hrefPath === "/application/enterprise") return currentPath === "/application/enterprise" && !currentQuery;
+  if (hrefPath === "/enterprise") return currentPath === "/enterprise" && !currentQuery;
   return currentPath === hrefPath || currentPath.startsWith(`${hrefPath}/`);
 }
 

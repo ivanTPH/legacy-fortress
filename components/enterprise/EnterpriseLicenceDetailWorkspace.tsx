@@ -85,7 +85,7 @@ export default function EnterpriseLicenceDetailWorkspace({ licenceId }: { licenc
   const load = useCallback(async () => {
     const user = await waitForActiveUser(supabase, { attempts: 4, delayMs: 120 });
     if (!user) {
-      router.replace(`/sign-in?next=${encodeURIComponent(`/application/enterprise/licences/${licenceId}`)}`);
+      router.replace(`/sign-in?next=${encodeURIComponent(`/enterprise/licences/${licenceId}`)}`);
       return;
     }
     const res = await authFetch(`/api/internal/admin/enterprise?licenceId=${encodeURIComponent(licenceId)}`);
@@ -143,7 +143,7 @@ export default function EnterpriseLicenceDetailWorkspace({ licenceId }: { licenc
   }
 
   if (state === "checking") return <main style={pageStyle}><section style={panelStyle}><h1>Checking licence access</h1><p>Confirming your signed-in session and role permissions.</p></section></main>;
-  if (state !== "ready" || !detail) return <main style={pageStyle}><section style={panelStyle}><h1>{state === "denied" ? "Access denied" : "Licence unavailable"}</h1><p>{message}</p><Link href="/application/enterprise">Back to Enterprise Operations</Link></section></main>;
+  if (state !== "ready" || !detail) return <main style={pageStyle}><section style={panelStyle}><h1>{state === "denied" ? "Access denied" : "Licence unavailable"}</h1><p>{message}</p><Link href="/enterprise">Back to Enterprise Operations</Link></section></main>;
 
   const licence = detail.licence;
   const navigation = filterAdminNavigation(ENTERPRISE_ADMIN_NAVIGATION, navigationCapabilities);
@@ -153,15 +153,15 @@ export default function EnterpriseLicenceDetailWorkspace({ licenceId }: { licenc
       eyebrow="Legacy Fortress Enterprise"
       title={licence.plan === "custom" ? licence.customPlanName || "Custom licence" : labelise(licence.plan)}
       description={`${detail.organisation?.name ?? "Unknown organisation"} · ${labelise(licence.status)} · ${licence.availableSeats} seats available`}
-      currentPathname={`/application/enterprise/licences/${licenceId}`}
+      currentPathname={`/enterprise/licences/${licenceId}`}
       navigation={navigation}
       onSignOut={signOut}
       identityLabel={identity.label}
       identityDetail={identity.detail}
       breadcrumbs={[
-        { label: "Enterprise Operations", href: "/application/enterprise" },
-        { label: "Licences", href: "/application/enterprise?tab=licences" },
-        ...(detail.organisation ? [{ label: detail.organisation.name, href: `/application/enterprise/organisations/${detail.organisation.id}` }] : []),
+        { label: "Enterprise Operations", href: "/enterprise" },
+        { label: "Licences", href: "/enterprise?tab=licences" },
+        ...(detail.organisation ? [{ label: detail.organisation.name, href: `/enterprise/organisations/${detail.organisation.id}` }] : []),
         { label: licence.plan === "custom" ? licence.customPlanName || "Custom licence" : labelise(licence.plan) },
       ]}
       stagingLabel="STAGING - synthetic test data may be present"

@@ -127,6 +127,7 @@ export default function WorkspaceSwitcher({
     ?? workspaces.find((workspace) => workspace.id === "application")
     ?? workspaces[0];
   const hasMultipleContexts = workspaces.length > 1;
+  const activeRole = activeWorkspace?.roleContext ?? primaryRole;
 
   useEffect(() => {
     queueMicrotask(() => setOpen(false));
@@ -174,7 +175,7 @@ export default function WorkspaceSwitcher({
   if (!session || (!hasMultipleContexts && !alwaysShow)) return null;
 
   return (
-    <section ref={menuRef} className={compact ? "lf-workspace-switcher compact" : "lf-workspace-switcher"} aria-label="Workspace switcher">
+    <section ref={menuRef} className={compact ? "lf-workspace-switcher compact" : "lf-workspace-switcher"} aria-label="Switch workspace">
       <div className="lf-workspace-menu">
         <button
           ref={triggerRef}
@@ -199,6 +200,10 @@ export default function WorkspaceSwitcher({
             <div className="lf-workspace-menu-heading">
               <span>Switch workspace</span>
               <small>{workspaces.length} available</small>
+            </div>
+            <div className="lf-workspace-session-summary">
+              <span>Signed in as <strong>{session.displayName}</strong></span>
+              <span>Role: <strong>{formatRole(activeRole)}</strong></span>
             </div>
             {workspaces.map((workspace) => (
               <Link
@@ -251,6 +256,11 @@ function formatSource(source: WorkspaceSession["source"]) {
   if (source === "test_persona") return "Prototype persona";
   if (source === "query_prototype") return "Local prototype query context";
   return "Anonymous";
+}
+
+function formatRole(role: PlatformRole | null) {
+  if (!role) return "Personal Vault user";
+  return role.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 async function loadAdminPermissionRoles(token: string): Promise<PlatformRole[]> {

@@ -25,7 +25,7 @@ test("workspace route map resolves role-aware admin and application workspaces c
   assert.deepEqual(superAdmin.map((workspace) => workspace.label), [
     "Personal Vault",
     "Platform Administration",
-    "Probate Review",
+    "Platform Probate Review",
   ]);
   assert.deepEqual(superAdmin.map((workspace) => workspace.href), [
     "/dashboard?role=super_admin&admin=true&prototype=true",
@@ -143,6 +143,20 @@ test("workspace switcher uses controlled dismissal instead of sticky native deta
   assert.match(globals, /\.lf-workspace-current \{\n  border: 0;\n  background: transparent;/);
 });
 
+test("workspace switcher exposes explicit identity and role context without changing authorization", () => {
+  const switcher = fs.readFileSync(path.join(root, "components/navigation/WorkspaceSwitcher.tsx"), "utf8");
+  const shell = fs.readFileSync(path.join(root, "components/admin/AdminWorkspaceShell.tsx"), "utf8");
+  const workspaces = fs.readFileSync(path.join(root, "lib/workspaces.ts"), "utf8");
+
+  assert.match(switcher, /aria-label="Switch workspace"/);
+  assert.match(switcher, /Signed in as/);
+  assert.match(switcher, /formatRole\(activeRole\)/);
+  assert.match(switcher, /aria-current=\{workspace\.id === currentWorkspace \? "page"/);
+  assert.match(workspaces, /label: "Platform Probate Review"/);
+  assert.match(shell, /workspaceHome = workspaceLabel === "Enterprise Operations" \? "\/enterprise"/);
+  assert.doesNotMatch(switcher, /auth\.signOut|router\.(push|replace)/);
+});
+
 test("current workspace detection recognises enterprise, probate, executor, and application routes", () => {
   assert.equal(getCurrentWorkspaceForPath("/admin"), "super_admin");
   assert.equal(getCurrentWorkspaceForPath("/admin/admin-users"), "super_admin");
@@ -151,6 +165,7 @@ test("current workspace detection recognises enterprise, probate, executor, and 
   assert.equal(getCurrentWorkspaceForPath("/internal/admin/prototype/users"), "super_admin");
   assert.equal(getCurrentWorkspaceForPath("/internal/admin/prototype/enterprise"), "enterprise_admin");
   assert.equal(getCurrentWorkspaceForPath("/application/enterprise"), "enterprise_admin");
+  assert.equal(getCurrentWorkspaceForPath("/enterprise"), "enterprise_admin");
   assert.equal(getCurrentWorkspaceForPath("/internal/admin/prototype/cases"), "probate_admin");
   assert.equal(getCurrentWorkspaceForPath("/application/admin"), "super_admin");
   assert.equal(getCurrentWorkspaceForPath("/internal/admin/probate"), "probate_admin");

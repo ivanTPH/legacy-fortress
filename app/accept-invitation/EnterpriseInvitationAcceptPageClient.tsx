@@ -108,7 +108,7 @@ export default function EnterpriseInvitationAcceptPageClient() {
       return;
     }
     setMessage("Access accepted. Redirecting to Enterprise Operations...");
-    router.replace("/application/enterprise");
+    router.replace("/enterprise");
   }
 
   return (

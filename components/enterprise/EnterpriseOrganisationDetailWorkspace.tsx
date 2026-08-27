@@ -147,7 +147,7 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
   const load = useCallback(async () => {
     const user = await waitForActiveUser(supabase, { attempts: 4, delayMs: 120 });
     if (!user) {
-      router.replace(`/sign-in?next=${encodeURIComponent(`/application/enterprise/organisations/${organisationId}`)}`);
+      router.replace(`/sign-in?next=${encodeURIComponent(`/enterprise/organisations/${organisationId}`)}`);
       return;
     }
     const res = await authFetch(`/api/internal/admin/enterprise?organisationId=${encodeURIComponent(organisationId)}`);
@@ -189,7 +189,7 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
     }
     setMessage(action === "delete_or_archive_organisation" ? "Organisation archived or deleted." : action.includes("licence") ? "Licence action completed." : "Organisation updated.");
     if (action === "delete_or_archive_organisation" && json.mode === "deleted") {
-      router.replace("/application/enterprise");
+      router.replace("/enterprise");
       return;
     }
     await load();
@@ -204,7 +204,7 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
   }
 
   if (state === "checking") return <main style={pageStyle}><section style={panelStyle}><h1>Checking organisation access</h1><p>Confirming your signed-in session and role permissions.</p></section></main>;
-  if (state !== "ready" || !detail || !form) return <main style={pageStyle}><section style={panelStyle}><h1>{state === "denied" ? "Access denied" : "Organisation unavailable"}</h1><p>{message}</p><Link href="/application/enterprise">Back to Enterprise Operations</Link></section></main>;
+  if (state !== "ready" || !detail || !form) return <main style={pageStyle}><section style={panelStyle}><h1>{state === "denied" ? "Access denied" : "Organisation unavailable"}</h1><p>{message}</p><Link href="/enterprise">Back to Enterprise Operations</Link></section></main>;
 
   const org = detail.organisation;
   const navigation = filterAdminNavigation(ENTERPRISE_ADMIN_NAVIGATION, navigationCapabilities);
@@ -214,12 +214,12 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
       eyebrow="Legacy Fortress Enterprise"
       title={org.name}
       description={`${labelise(org.status)} · ${labelise(org.risk)} · ${org.accountOwner || "No account owner"}`}
-      currentPathname={`/application/enterprise/organisations/${organisationId}`}
+      currentPathname={`/enterprise/organisations/${organisationId}`}
       navigation={navigation}
       onSignOut={signOut}
       identityLabel={identity.label}
       identityDetail={identity.detail}
-      breadcrumbs={[{ label: "Enterprise Operations", href: "/application/enterprise" }, { label: "Organisations", href: "/application/enterprise?tab=organisations" }, { label: org.name }]}
+      breadcrumbs={[{ label: "Enterprise Operations", href: "/enterprise" }, { label: "Organisations", href: "/enterprise?tab=organisations" }, { label: org.name }]}
       stagingLabel="STAGING - synthetic test data may be present"
     >
       {message ? <section style={alertStyle}>{message}</section> : null}
@@ -232,7 +232,7 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
         <section style={panelStyle}>
           <div style={rowStyle}>
             <button type="button" style={primaryButtonStyle} onClick={() => setTab("licence")}>{detail.licences.length ? "View licence" : "Configure licence"}</button>
-            {detail.licences[0] ? <Link style={secondaryLinkStyle} href={`/application/enterprise/licences/${detail.licences[0].id}`}>Manage seats</Link> : null}
+            {detail.licences[0] ? <Link style={secondaryLinkStyle} href={`/enterprise/licences/${detail.licences[0].id}`}>Manage seats</Link> : null}
           </div>
           <h2>Overview</h2>
           <dl style={detailsGridStyle}>
@@ -267,7 +267,7 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
                       <td>{labelise(licence.billingStatus)}</td>
                       <td>{licence.activeSeats + licence.invitedSeats + licence.suspendedSeats}/{licence.purchasedSeats}<small>{licence.availableSeats} available</small></td>
                       <td>{formatDate(licence.renewalDate)}</td>
-                      <td><Link href={`/application/enterprise/licences/${licence.id}`}>View licence</Link></td>
+                      <td><Link href={`/enterprise/licences/${licence.id}`}>View licence</Link></td>
                     </tr>
                   ))}
                 </tbody>

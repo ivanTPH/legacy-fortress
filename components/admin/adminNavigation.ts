@@ -52,12 +52,12 @@ export const ENTERPRISE_ADMIN_NAVIGATION: AdminNavigationGroup[] = [
   {
     label: "Enterprise Operations",
     items: [
-      { key: "enterprise-overview", label: "Overview", href: "/application/enterprise", icon: "space_dashboard", capability: "enterprise.workspace.access" },
-      { key: "enterprise-organisations", label: "Organisations", href: "/application/enterprise?tab=organisations", icon: "domain", capability: "organisation:view" },
-      { key: "enterprise-licences", label: "Licences", href: "/application/enterprise?tab=licences", icon: "license", capability: "licence:view" },
-      { key: "enterprise-users", label: "Users and seats", href: "/application/enterprise?tab=users", icon: "groups", capability: "enterprise.membership.read" },
-      { key: "enterprise-invitations", label: "Invitations", href: "/application/enterprise?tab=invitations", icon: "forward_to_inbox", capability: "enterprise.invitation.manage" },
-      { key: "enterprise-reports", label: "Reports", href: "/application/enterprise?tab=reports", icon: "analytics", capability: "enterprise.report.read" },
+      { key: "enterprise-overview", label: "Overview", href: "/enterprise", icon: "space_dashboard", capability: "enterprise.workspace.access" },
+      { key: "enterprise-organisations", label: "Organisations", href: "/enterprise?tab=organisations", icon: "domain", capability: "organisation:view" },
+      { key: "enterprise-licences", label: "Licences", href: "/enterprise?tab=licences", icon: "license", capability: "licence:view" },
+      { key: "enterprise-users", label: "Users and seats", href: "/enterprise?tab=users", icon: "groups", capability: "enterprise.membership.read" },
+      { key: "enterprise-invitations", label: "Invitations", href: "/enterprise?tab=invitations", icon: "forward_to_inbox", capability: "enterprise.invitation.manage" },
+      { key: "enterprise-reports", label: "Reports", href: "/enterprise?tab=reports", icon: "analytics", capability: "enterprise.report.read" },
     ],
   },
 ];

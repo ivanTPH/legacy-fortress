@@ -441,7 +441,7 @@ export default function EnterpriseOperationsWorkspace() {
     setState("checking");
     const user = await waitForActiveUser(supabase, { attempts: 4, delayMs: 120 });
     if (!user) {
-      router.replace("/sign-in?next=%2Fapplication%2Fenterprise");
+      router.replace("/sign-in?next=%2Fenterprise");
       return;
     }
     setIdentity({
@@ -548,7 +548,7 @@ export default function EnterpriseOperationsWorkspace() {
     if (filters.consent === "reportable" && membership.consentStatus !== "accepted") return false;
     return true;
   });
-  const currentPathname = `/application/enterprise${activeTab === "overview" ? "" : `?tab=${activeTab}`}`;
+  const currentPathname = `/enterprise${activeTab === "overview" ? "" : `?tab=${activeTab}`}`;
   const visibleNavigation = useMemo(() => filterAdminNavigation(ENTERPRISE_ADMIN_NAVIGATION, navigationCapabilities), [navigationCapabilities]);
 
   if (state === "checking") {
@@ -572,7 +572,7 @@ export default function EnterpriseOperationsWorkspace() {
           <p style={mutedStyle}>{message}</p>
           <div style={rowStyle}>
             <Link style={secondaryLinkStyle} href="/dashboard">Personal Vault</Link>
-            <Link style={secondaryLinkStyle} href="/admin">Admin Operations</Link>
+          <Link style={secondaryLinkStyle} href="/admin">Platform Administration</Link>
           </div>
         </section>
       </main>
@@ -590,7 +590,7 @@ export default function EnterpriseOperationsWorkspace() {
       onSignOut={signOut}
       identityLabel={identity.label}
       identityDetail={identity.detail}
-      breadcrumbs={[{ label: "Enterprise Operations", href: "/application/enterprise" }, { label: labelise(activeTab) }]}
+      breadcrumbs={[{ label: "Enterprise Operations", href: "/enterprise" }, { label: labelise(activeTab) }]}
       stagingLabel="STAGING — synthetic test data may be present"
     >
 
@@ -1059,7 +1059,7 @@ function renderAdoption(portfolio: EnterprisePortfolio, organisations: Enterpris
                 <td>{row.seatUtilisation}%</td>
                 <td>{row.consentRestricted ? "Restricted" : "Reportable"}</td>
                 <td>{portfolio.risk.find((risk) => risk.organisationId === row.organisationId)?.reasons.join(" ") || "No current risk triggers."}</td>
-                <td><Link href={`/application/enterprise/organisations/${row.organisationId}`}>View organisation</Link></td>
+                <td><Link href={`/enterprise/organisations/${row.organisationId}`}>View organisation</Link></td>
               </tr>
             ))}
             {rows.length === 0 ? <tr><td colSpan={7}>No adoption rows match this view.</td></tr> : null}
@@ -1139,7 +1139,7 @@ function renderConsent(portfolio: EnterprisePortfolio, organisations: Enterprise
                   <td>{consent?.exportPermission ? "Permitted" : "Blocked"}</td>
                   <td>{consent?.minimumReportingCohort ?? portfolio.privacyBoundary.reportingMinimumCohort}</td>
                   <td>{eligible ? "Report/export eligible" : "Consent or threshold restricted"}</td>
-                  <td><Link href={`/application/enterprise/organisations/${org.id}#audit`}>View audit history</Link></td>
+                <td><Link href={`/enterprise/organisations/${org.id}#audit`}>View audit history</Link></td>
                 </tr>
               );
             })}
@@ -1171,7 +1171,7 @@ function renderRenewals(licences: EnterpriseLicence[], portfolio: EnterprisePort
                 <td>{formatDate(licence.renewalDate)}</td>
                 <td>{labelise(licence.renewalRisk)}</td>
                 <td>{licence.accountOwner ?? "Unassigned"}</td>
-                <td><Link href={`/application/enterprise/licences/${licence.id}#renewals`}>Start renewal</Link></td>
+                <td><Link href={`/enterprise/licences/${licence.id}#renewals`}>Start renewal</Link></td>
               </tr>
             ))}
             {renewalRows.length === 0 ? <tr><td colSpan={7}>No licences are currently due for renewal.</td></tr> : null}
@@ -1441,14 +1441,14 @@ function renderOrganisationTable(organisations: EnterpriseOrganisation[], portfo
                 <td>{labelise(org.onboardingStatus ?? "not_started")}</td>
                 <td>{labelise(org.risk)}</td>
                 <td style={actionsCellStyle}>
-                  <Link href={`/application/enterprise/organisations/${org.id}`}>View</Link>
-                  <Link href={`/application/enterprise/organisations/${org.id}#settings`}>Edit</Link>
-                  {orgLicences[0] ? <Link href={`/application/enterprise/licences/${orgLicences[0].id}`}>Manage licence</Link> : <button type="button" disabled={!configureLicence} onClick={() => configureLicence?.(org.id)}>Configure licence</button>}
-                  <Link href={`/application/enterprise/organisations/${org.id}#users`}>Manage users</Link>
-                  <Link href={`/application/enterprise/organisations/${org.id}#invitations`}>Invite administrator</Link>
+                  <Link href={`/enterprise/organisations/${org.id}`}>View</Link>
+                  <Link href={`/enterprise/organisations/${org.id}#settings`}>Edit</Link>
+                  {orgLicences[0] ? <Link href={`/enterprise/licences/${orgLicences[0].id}`}>Manage licence</Link> : <button type="button" disabled={!configureLicence} onClick={() => configureLicence?.(org.id)}>Configure licence</button>}
+                  <Link href={`/enterprise/organisations/${org.id}#users`}>Manage users</Link>
+                  <Link href={`/enterprise/organisations/${org.id}#invitations`}>Invite administrator</Link>
                   <button type="button" disabled={!runAction} onClick={() => runAction?.("transition_organisation", { organisationId: org.id, status: org.status === "suspended" ? "active" : "suspended", reason: "Updated from organisation list" })}>{org.status === "suspended" ? "Reactivate" : "Suspend"}</button>
                   <button type="button" disabled={!runAction} onClick={() => runAction?.("delete_or_archive_organisation", { organisationId: org.id, reason: "Archived from organisation list" })}>Archive/delete</button>
-                  <Link href={`/application/enterprise/organisations/${org.id}#audit`}>View audit history</Link>
+                  <Link href={`/enterprise/organisations/${org.id}#audit`}>View audit history</Link>
                 </td>
               </tr>
             );
@@ -1516,15 +1516,15 @@ function renderLicenceTable(licences: EnterpriseLicence[], portfolio: Enterprise
               <td>{formatDate(licence.renewalDate)}<small>{labelise(licence.renewalRisk)}</small></td>
               <td>{licence.accountOwner ?? "Unassigned"}</td>
               <td style={actionsCellStyle}>
-                <Link href={`/application/enterprise/licences/${licence.id}`}>View</Link>
-                <Link href={`/application/enterprise/licences/${licence.id}#settings`}>Edit</Link>
-                <Link href={`/application/enterprise/licences/${licence.id}#seats`}>Increase seats</Link>
-                <Link href={`/application/enterprise/licences/${licence.id}#seats`}>Reduce seats</Link>
-                <Link href={`/application/enterprise/licences/${licence.id}#renewals`}>Renew</Link>
-                <Link href={`/application/enterprise/licences/${licence.id}#settings`}>{licence.status === "suspended" ? "Reactivate" : "Suspend"}</Link>
-                <Link href={`/application/enterprise/licences/${licence.id}#settings`}>Cancel</Link>
-                <Link href={`/application/enterprise/licences/${licence.id}#seats`}>View users and seats</Link>
-                <Link href={`/application/enterprise/licences/${licence.id}#audit`}>View audit history</Link>
+                <Link href={`/enterprise/licences/${licence.id}`}>View</Link>
+                <Link href={`/enterprise/licences/${licence.id}#settings`}>Edit</Link>
+                <Link href={`/enterprise/licences/${licence.id}#seats`}>Increase seats</Link>
+                <Link href={`/enterprise/licences/${licence.id}#seats`}>Reduce seats</Link>
+                <Link href={`/enterprise/licences/${licence.id}#renewals`}>Renew</Link>
+                <Link href={`/enterprise/licences/${licence.id}#settings`}>{licence.status === "suspended" ? "Reactivate" : "Suspend"}</Link>
+                <Link href={`/enterprise/licences/${licence.id}#settings`}>Cancel</Link>
+                <Link href={`/enterprise/licences/${licence.id}#seats`}>View users and seats</Link>
+                <Link href={`/enterprise/licences/${licence.id}#audit`}>View audit history</Link>
               </td>
             </tr>
           ))}

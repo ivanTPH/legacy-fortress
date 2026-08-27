@@ -95,7 +95,7 @@ test("platform, enterprise and probate entry surfaces use the shared shell", () 
   assert.match(platform, /AdminWorkspaceShell/);
   assert.match(platform, /PLATFORM_ADMIN_NAVIGATION/);
   assert.match(platform, /PROBATE_REVIEW_NAVIGATION/);
-  assert.match(platform, /workspaceLabel=\{section === "probate" \|\| section === "probate-detail" \? "Probate Review" : "Platform Administration"\}/);
+  assert.match(platform, /workspaceLabel=\{section === "probate" \|\| section === "probate-detail" \? "Platform Probate Review" : "Platform Administration"\}/);
   assert.match(enterprise, /AdminWorkspaceShell/);
   assert.match(enterprise, /ENTERPRISE_ADMIN_NAVIGATION/);
   assert.match(enterprise, /workspaceLabel="Enterprise Operations"/);
@@ -136,12 +136,17 @@ test("shared admin data table supports toolbar and mobile card rows", () => {
 
 test("enterprise shared navigation tab links are safe query-state links", () => {
   const enterprise = read("components/enterprise/EnterpriseOperationsWorkspace.tsx");
-  const enterprisePage = read("app/application/enterprise/page.tsx");
+  const enterprisePage = read("app/enterprise/page.tsx");
+  const compatibilityPage = read("app/application/enterprise/page.tsx");
   assert.match(enterprise, /useSearchParams/);
   assert.match(enterprise, /normalizeEnterpriseTab/);
   assert.match(enterprise, /setActiveTab\(tab\)/);
   assert.match(enterprisePage, /Suspense/);
   assert.match(enterprisePage, /EnterpriseOperationsWorkspace/);
+  assert.match(compatibilityPage, /redirect/);
+  assert.match(compatibilityPage, /tab/);
+  assert.doesNotMatch(compatibilityPage, /EnterpriseOperationsWorkspace/);
+  assert.doesNotMatch(enterprise, /\/application\/enterprise/);
   assert.doesNotMatch(enterprise, /window\.location/);
   assert.doesNotMatch(enterprise, /dangerouslySetInnerHTML/);
 });

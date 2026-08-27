@@ -51,11 +51,13 @@ test("enterprise API enforces admin access, audit, seat limits and privacy exclu
 });
 
 test("enterprise workspace replaces disabled prototype with functional controls", () => {
-  const page = fs.readFileSync(path.join(root, "app/application/enterprise/page.tsx"), "utf8");
+  const page = fs.readFileSync(path.join(root, "app/enterprise/page.tsx"), "utf8");
+  const compatibilityPage = fs.readFileSync(path.join(root, "app/application/enterprise/page.tsx"), "utf8");
   const workspace = fs.readFileSync(path.join(root, "components/enterprise/EnterpriseOperationsWorkspace.tsx"), "utf8");
   const switcher = fs.readFileSync(path.join(root, "lib/workspaces.ts"), "utf8");
 
   assert.match(page, /EnterpriseOperationsWorkspace/);
+  assert.match(compatibilityPage, /redirect\(validTabs\.has\(tab\) \? `\/enterprise\?tab=/);
   assert.doesNotMatch(page, /workspace not yet enabled|blocked in hosted UAT/i);
   assert.match(workspace, /Create organisation/);
   assert.match(workspace, /Add organisation/);
@@ -122,7 +124,8 @@ test("enterprise organisation API supports view, edit, lifecycle, delete/archive
 test("enterprise organisation UI exposes operational navigation, create form and detail route", () => {
   const workspace = fs.readFileSync(path.join(root, "components/enterprise/EnterpriseOperationsWorkspace.tsx"), "utf8");
   const detail = fs.readFileSync(path.join(root, "components/enterprise/EnterpriseOrganisationDetailWorkspace.tsx"), "utf8");
-  const route = fs.readFileSync(path.join(root, "app/application/enterprise/organisations/[organisationId]/page.tsx"), "utf8");
+  const route = fs.readFileSync(path.join(root, "app/enterprise/organisations/[organisationId]/page.tsx"), "utf8");
+  const compatibilityRoute = fs.readFileSync(path.join(root, "app/application/enterprise/organisations/[organisationId]/page.tsx"), "utf8");
 
   for (const label of [
     "Users and seats",
@@ -138,6 +141,7 @@ test("enterprise organisation UI exposes operational navigation, create form and
   }
 
   assert.match(route, /EnterpriseOrganisationDetailWorkspace/);
+  assert.match(compatibilityRoute, /redirect\(`\/enterprise\/organisations/);
   assert.match(detail, /Edit organisation/);
   assert.match(detail, /Save organisation/);
   assert.match(detail, /Suspend/);
