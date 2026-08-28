@@ -1,7 +1,10 @@
 import { adminHasCapability, requireAdminAccess, requireAdminCapability } from "@/lib/admin/access";
 import { recordAdminAuditEvent } from "@/lib/admin/audit";
 import {
+  addAccessOperationsCaseNote,
+  createAccessOperationsCase,
   loadSupportInvitationDetail,
+  mutateAccessOperationsCase,
   resendSupportInvitation,
   revokeSupportInvitation,
 } from "@/lib/admin/operations";
@@ -39,7 +42,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ in
   }
   const denied = requireAdminCapability(admin.access, "support:manage");
   const { invitationId } = await params;
-  const body = (await request.json().catch(() => ({}))) as { action?: string; reason?: string | null };
+  const body = (await request.json().catch(() => ({}))) as { action?: string; reason?: string | null; caseId?: string; note?: string; priority?: string; resolutionCode?: string; assignedAdminUserId?: string | null };
   const action = String(body.action ?? "").trim();
 
   if (denied) {
@@ -61,7 +64,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ in
     return noStoreJson({ ok: false, code: "ADMIN_PERMISSION_DENIED", message: denied.message, capability: denied.capability }, { status: denied.status });
   }
 
-  if (action !== "resend" && action !== "revoke") {
+  const caseAction = ["assign_to_me", "reassign", "escalate", "resolve", "close", "reopen", "add_note"].includes(action);
+  if (!caseAction && action !== "resend" && action !== "revoke") {
     return safeAdminErrorResponse(adminLifecycleError("ADMIN_INVALID_STATUS", "invalid_support_invitation_action"));
   }
 
@@ -77,13 +81,27 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ in
 
   try {
     const origin = new URL(request.url).origin;
-    const detail = action === "resend"
-      ? await resendSupportInvitation(admin.adminClient, invitationId, origin)
-      : await revokeSupportInvitation(admin.adminClient, invitationId, body.reason ?? null);
+    let detail;
+    if (caseAction) {
+      const current = await loadSupportInvitationDetail(admin.adminClient, invitationId);
+      if (!current.case) throw adminLifecycleError("ADMIN_OPERATION_CONFLICT", "access_operations_case_required");
+      if (action === "add_note") {
+        if (!body.note?.trim()) throw adminLifecycleError("ADMIN_INVALID_STATUS", "support_note_required");
+        await addAccessOperationsCaseNote(admin.adminClient, { caseId: current.case.id, actorUserId: admin.access.user.id, note: body.note });
+      } else {
+        if (action === "resolve" && !body.resolutionCode?.trim()) throw adminLifecycleError("ADMIN_INVALID_STATUS", "resolution_code_required");
+        await mutateAccessOperationsCase(admin.adminClient, { caseId: current.case.id, actorUserId: admin.access.user.id, action, priority: body.priority, resolutionCode: body.resolutionCode, assignedAdminUserId: body.assignedAdminUserId });
+      }
+      detail = await loadSupportInvitationDetail(admin.adminClient, invitationId);
+    } else {
+      detail = action === "resend"
+        ? await resendSupportInvitation(admin.adminClient, invitationId, origin)
+        : await revokeSupportInvitation(admin.adminClient, invitationId, body.reason ?? null);
+    }
 
     await recordAdminAuditEvent(admin.adminClient, admin.access, {
       category: "admin_approval",
-      action: action === "resend" ? "Contact invitation resent" : "Contact invitation revoked",
+      action: caseAction ? `Access operations case ${action}` : action === "resend" ? "Contact invitation resent" : "Contact invitation revoked",
       result: "success",
       resourceType: "access_policy",
       resourceId: invitationId,
@@ -112,6 +130,24 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ in
         reason_code: error instanceof Error ? error.message : "support_invitation_lifecycle_failed",
       },
     }).catch(() => undefined);
+    return safeAdminErrorResponse(error);
+  }
+}
+
+export async function POST(request: Request, { params }: { params: Promise<{ invitationId: string }> }) {
+  const admin = await requireAdminAccess(request);
+  if (!admin.ok) return noStoreJson({ ok: false, code: "ADMIN_PERMISSION_DENIED", message: admin.message }, { status: admin.status });
+  const denied = requireAdminCapability(admin.access, "support:manage");
+  if (denied) return noStoreJson({ ok: false, code: "ADMIN_PERMISSION_DENIED", message: denied.message }, { status: denied.status });
+  const { invitationId } = await params;
+  const body = (await request.json().catch(() => ({}))) as { priority?: string; reasonCode?: string | null; reasonSummary?: string | null };
+  try {
+    const detail = await loadSupportInvitationDetail(admin.adminClient, invitationId);
+    if (detail.case) return noStoreJson({ ok: true, detail, created: false });
+    const createdCase = await createAccessOperationsCase(admin.adminClient, { invitationId, actorUserId: admin.access.user.id, priority: body.priority, reasonCode: body.reasonCode ?? detail.invitation.issueLabel, reasonSummary: body.reasonSummary ?? detail.invitation.issueLabel });
+    await recordAdminAuditEvent(admin.adminClient, admin.access, { category: "admin_approval", action: "Access operations case created", result: "success", resourceType: "access_policy", resourceId: createdCase.id, resourceLabel: detail.invitation.contactEmail || detail.invitation.contactName, route: "/api/internal/admin/support/[invitationId]", metadata: { invitation_id: invitationId } });
+    return noStoreJson({ ok: true, detail: await loadSupportInvitationDetail(admin.adminClient, invitationId), created: true });
+  } catch (error) {
     return safeAdminErrorResponse(error);
   }
 }

@@ -44,7 +44,7 @@ test("support queue UI exposes inspect and permission-aware lifecycle actions", 
   assert.match(workspace, /loadSupportInvitationDetail/);
   assert.match(workspace, /runSupportInvitationAction/);
   assert.match(workspace, /SupportInvitationDetail/);
-  assert.match(workspace, />View<\/button>/);
+  assert.match(workspace, />View case<\/button>/);
   assert.match(workspace, /canManageSupport/);
   assert.match(workspace, /Resend invitation/);
   assert.match(workspace, /Revoke invitation/);
@@ -64,4 +64,21 @@ test("access support distinguishes terminal security state from operational next
   assert.match(workspace, /Open verification review queue/);
   assert.match(workspace, /security history cannot be reopened or manually activated/);
   assert.doesNotMatch(workspace, /approve anyway|Manually activate access|Override IDV/i);
+});
+
+test("access operations cases are separate, append-only support records", () => {
+  const migration = read("supabase/migrations/20260828100000_access_operations_case_management.sql");
+  const route = read("app/api/internal/admin/support/[invitationId]/route.ts");
+  const operations = read("lib/admin/operations.ts");
+
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.access_operations_cases/);
+  assert.match(migration, /REFERENCES public\.contact_invitations\(id\) ON DELETE RESTRICT/);
+  assert.match(migration, /access_operations_case_notes/);
+  assert.match(migration, /REVOKE ALL ON public\.access_operations_cases FROM PUBLIC, anon, authenticated/);
+  assert.match(route, /createAccessOperationsCase/);
+  assert.match(route, /addAccessOperationsCaseNote/);
+  assert.match(route, /mutateAccessOperationsCase/);
+  assert.match(operations, /access_case_must_be_resolved_before_close/);
+  assert.match(operations, /support_note_must_be_between_1_and_4000_characters/);
+  assert.doesNotMatch(route, /activation_status.*active|approve.*access/i);
 });

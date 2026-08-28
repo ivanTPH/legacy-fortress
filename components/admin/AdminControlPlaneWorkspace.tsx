@@ -191,10 +191,29 @@ type SupportSnapshot = {
     sentAt?: string | null;
     activationStatus?: string;
     issueLabel: string;
+    caseId?: string | null;
+    caseStatus?: string | null;
+    casePriority?: string | null;
+    assignedAdminUserId?: string | null;
   }>;
 };
 
 type SupportInvitationDetail = {
+  case: {
+    id: string;
+    invitationId: string;
+    status: string;
+    priority: string;
+    assignedAdminUserId: string | null;
+    reasonCode: string | null;
+    reasonSummary: string | null;
+    resolutionCode: string | null;
+    resolvedAt: string | null;
+    closedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+    notes: Array<{ id: string; note: string; createdBy: string; createdAt: string }>;
+  } | null;
   invitation: {
     id: string;
     ownerUserId: string;
@@ -760,6 +779,52 @@ export default function AdminControlPlaneWorkspace({
     setMessage(action === "revoke" ? "Contact invitation revoked and audit recorded." : "Contact invitation resent and audit recorded.");
   }
 
+  async function createSupportCase(invitationId: string) {
+    setSupportActionLoading(`${invitationId}:create_case`);
+    const res = await authFetch(`/api/internal/admin/support/${encodeURIComponent(invitationId)}`, { method: "POST", body: JSON.stringify({}) });
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; detail?: SupportInvitationDetail; message?: string; code?: string };
+    setSupportActionLoading("");
+    if (!res.ok || !json.ok || !json.detail) {
+      setMessage(json.message || json.code || "Could not open the operations case.");
+      return;
+    }
+    setSupportDetail(json.detail);
+    setMessage("Operations case opened and audit recorded.");
+  }
+
+  async function runSupportCaseAction(invitationId: string, action: "assign_to_me" | "escalate" | "resolve" | "close" | "reopen") {
+    const caseDetail = supportDetail?.case;
+    if (!caseDetail) return;
+    const resolutionCode = action === "resolve" ? window.prompt("Resolution reason", "Security denial confirmed")?.trim() : undefined;
+    if (action === "resolve" && !resolutionCode) return;
+    if (action === "close" && !window.confirm("Close this resolved operations case?")) return;
+    setSupportActionLoading(`${invitationId}:${action}`);
+    const res = await authFetch(`/api/internal/admin/support/${encodeURIComponent(invitationId)}`, { method: "PATCH", body: JSON.stringify({ action, caseId: caseDetail.id, resolutionCode, priority: action === "escalate" ? "high" : undefined }) });
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; detail?: SupportInvitationDetail; message?: string; code?: string };
+    setSupportActionLoading("");
+    if (!res.ok || !json.ok || !json.detail) {
+      setMessage(json.message || json.code || "Operations case action was blocked.");
+      return;
+    }
+    setSupportDetail(json.detail);
+    setMessage(`Operations case ${action.replace(/_/g, " ")} completed and audit recorded.`);
+  }
+
+  async function addSupportCaseNote(invitationId: string) {
+    if (!supportDetail?.case || !supportCaseNote.trim()) return;
+    setSupportActionLoading(`${invitationId}:add_note`);
+    const res = await authFetch(`/api/internal/admin/support/${encodeURIComponent(invitationId)}`, { method: "PATCH", body: JSON.stringify({ action: "add_note", caseId: supportDetail.case.id, note: supportCaseNote }) });
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; detail?: SupportInvitationDetail; message?: string; code?: string };
+    setSupportActionLoading("");
+    if (!res.ok || !json.ok || !json.detail) {
+      setMessage(json.message || json.code || "Support note could not be saved.");
+      return;
+    }
+    setSupportDetail(json.detail);
+    setSupportCaseNote("");
+    setMessage("Support note added.");
+  }
+
   async function runProbateCaseAction(caseId: string, action: ProbateAction) {
     const reason = (probateDecisionNotes[caseId] ?? "").trim();
     if (!reason) {
@@ -875,7 +940,7 @@ export default function AdminControlPlaneWorkspace({
         {section === "licence-detail" ? renderPlatformLicenceDetail(resourceId, enterprisePortfolio) : null}
         {section === "admin-users" || section === "admin-user-detail" ? renderAdminUsers(admins, adminInvitations, adminFilter, setAdminFilter, adminInviteForm, setAdminInviteForm, sendAdminInvitation, adminInviteOpen, setAdminInviteOpen, adminLifecycleForm, setAdminLifecycleForm, runAdminLifecycle, runAdminInvitationLifecycle, resourceId) : null}
         {section === "users" || section === "user-detail" ? renderUsers(lookupQuery, setLookupQuery, lookupResults, runLookup, resourceId, userDetail, userDetailLoading) : null}
-        {section === "support" || section === "invitations" || section === "access" ? renderSupport(section, support, supportDetail, supportDetailLoading, supportActionLoading, loadSupportInvitationDetail, runSupportInvitationAction, capabilities) : null}
+        {section === "support" || section === "invitations" || section === "access" ? renderSupport(section, support, supportDetail, supportDetailLoading, supportActionLoading, supportCaseNote, setSupportCaseNote, loadSupportInvitationDetail, runSupportInvitationAction, createSupportCase, runSupportCaseAction, addSupportCaseNote, capabilities) : null}
         {section === "verification" || section === "verification-detail" ? renderVerification(verificationQueue, resourceId) : null}
         {section === "probate" || section === "probate-detail" ? renderProbate(probateCases, resourceId, capabilities, probateDecisionNotes, setProbateDecisionNotes, probateActionLoading, runProbateCaseAction) : null}
         {section === "audit" ? renderAudit(auditEvents, auditFilter, setAuditFilter) : null}
@@ -1779,8 +1844,13 @@ function renderSupport(
   detail: SupportInvitationDetail | null,
   detailLoading: boolean,
   actionLoading: string,
+  caseNote: string,
+  setCaseNote: (value: string) => void,
   loadDetail: (invitationId: string) => Promise<void>,
   runAction: (invitationId: string, action: "resend" | "revoke") => Promise<void>,
+  createCase: (invitationId: string) => Promise<void>,
+  runCaseAction: (invitationId: string, action: "assign_to_me" | "escalate" | "resolve" | "close" | "reopen") => Promise<void>,
+  addCaseNote: (invitationId: string) => Promise<void>,
   capabilities: string[],
 ) {
   const title = section === "invitations" ? "Invitation issues" : section === "access" ? "Linked-access issues" : "Support issues";
@@ -1805,10 +1875,11 @@ function renderSupport(
             { key: "role", header: "Role", render: (item) => labelise(item.assignedRole) },
             { key: "status", header: "Access state", render: (item) => <><AdminStatusBadge status={item.activationStatus ?? "invited"} /><small>Invitation: {labelise(item.invitationStatus ?? "unknown")}</small></> },
             { key: "issue", header: "Issue", render: (item) => item.issueLabel },
+            { key: "case", header: "Case", render: (item) => <><AdminStatusBadge status={item.caseStatus ?? "not opened"} /><small>{item.casePriority ? `Priority: ${item.casePriority}` : "No operational case"}</small></> },
             { key: "next", header: "Next step", render: (item) => getSupportNextStep(item.invitationStatus ?? "", item.activationStatus ?? "") },
             { key: "actions", header: "Actions", render: (item) => (
               <div style={actionsCellStyle}>
-                <button type="button" onClick={() => void loadDetail(item.invitationId)} disabled={detailLoading}>View</button>
+                <button type="button" onClick={() => void loadDetail(item.invitationId)} disabled={detailLoading}>View case</button>
                 {getSupportOperationalState(item.invitationStatus ?? "", item.activationStatus ?? "") === "verification_required" ? <Link href="/admin/verification" prefetch={false}>Verification queue</Link> : null}
                 {canManageSupport && item.invitationStatus !== "revoked" && item.invitationStatus !== "accepted" ? (
                   <button type="button" onClick={() => void runAction(item.invitationId, "resend")} disabled={actionLoading === `${item.invitationId}:resend`}>
@@ -1826,7 +1897,7 @@ function renderSupport(
       {detail || detailLoading ? (
         <section style={panelStyle} aria-live="polite">
           {detailLoading ? <p style={mutedStyle}>Loading invitation detail...</p> : null}
-          {detail ? renderSupportInvitationDetail(detail, canManageSupport, actionLoading, runAction) : null}
+          {detail ? renderSupportInvitationDetail(detail, canManageSupport, actionLoading, caseNote, setCaseNote, runAction, createCase, runCaseAction, addCaseNote) : null}
         </section>
       ) : null}
     </div>
@@ -1837,9 +1908,15 @@ function renderSupportInvitationDetail(
   detail: SupportInvitationDetail,
   canManageSupport: boolean,
   actionLoading: string,
+  caseNote: string,
+  setCaseNote: (value: string) => void,
   runAction: (invitationId: string, action: "resend" | "revoke") => Promise<void>,
+  createCase: (invitationId: string) => Promise<void>,
+  runCaseAction: (invitationId: string, action: "assign_to_me" | "escalate" | "resolve" | "close" | "reopen") => Promise<void>,
+  addCaseNote: (invitationId: string) => Promise<void>,
 ) {
   const invitation = detail.invitation;
+  const operationsCase = detail.case;
   return (
     <div style={stackStyle}>
       <div style={sectionHeaderStyle}>

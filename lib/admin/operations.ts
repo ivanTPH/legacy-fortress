@@ -184,10 +184,15 @@ export type AdminSupportSnapshot = {
     sentAt: string | null;
     activationStatus: string;
     issueLabel: string;
+    caseId: string | null;
+    caseStatus: string | null;
+    casePriority: string | null;
+    assignedAdminUserId: string | null;
   }>;
 };
 
 export type AdminSupportInvitationDetail = {
+  case: AdminAccessOperationsCase | null;
   invitation: {
     id: string;
     ownerUserId: string;
@@ -232,6 +237,24 @@ export type AdminSupportInvitationDetail = {
     createdAt: string;
     payload: Record<string, unknown>;
   }>;
+};
+
+export type AdminAccessOperationsCase = {
+  id: string;
+  invitationId: string;
+  status: string;
+  priority: string;
+  assignedAdminUserId: string | null;
+  reasonCode: string | null;
+  reasonSummary: string | null;
+  resolutionCode: string | null;
+  createdBy: string;
+  updatedBy: string;
+  resolvedAt: string | null;
+  closedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  notes: Array<{ id: string; note: string; createdBy: string; createdAt: string }>;
 };
 
 export type SupportOperationalState = "needs_attention" | "verification_required" | "terminal";
@@ -314,6 +337,88 @@ export function getSupportNextStep(invitationStatus: string, activationStatus: s
   if (state === "terminal") return "Review lifecycle; create a new invitation through the owner's canonical Contacts workflow if another attempt is required.";
   if (state === "verification_required") return "Open the verification queue; access remains gated until the canonical verification workflow completes.";
   return "Review the invitation detail and resend or revoke when the invitation state permits.";
+}
+
+const ACCESS_CASE_SELECT = "id,invitation_id,case_type,status,priority,assigned_admin_user_id,reason_code,reason_summary,resolution_code,created_by,updated_by,resolved_at,closed_at,created_at,updated_at";
+
+function mapAccessOperationsCase(row: Record<string, unknown>, notes: Array<Record<string, unknown>> = []): AdminAccessOperationsCase {
+  return {
+    id: String(row.id ?? ""),
+    invitationId: String(row.invitation_id ?? ""),
+    status: String(row.status ?? "open"),
+    priority: String(row.priority ?? "normal"),
+    assignedAdminUserId: typeof row.assigned_admin_user_id === "string" ? row.assigned_admin_user_id : null,
+    reasonCode: typeof row.reason_code === "string" ? row.reason_code : null,
+    reasonSummary: typeof row.reason_summary === "string" ? row.reason_summary : null,
+    resolutionCode: typeof row.resolution_code === "string" ? row.resolution_code : null,
+    createdBy: String(row.created_by ?? ""),
+    updatedBy: String(row.updated_by ?? ""),
+    resolvedAt: typeof row.resolved_at === "string" ? row.resolved_at : null,
+    closedAt: typeof row.closed_at === "string" ? row.closed_at : null,
+    createdAt: String(row.created_at ?? ""),
+    updatedAt: String(row.updated_at ?? ""),
+    notes: notes.map((note) => ({
+      id: String(note.id ?? ""),
+      note: String(note.note ?? ""),
+      createdBy: String(note.created_by ?? ""),
+      createdAt: String(note.created_at ?? ""),
+    })),
+  };
+}
+
+export async function loadAccessOperationsCase(client: AnySupabaseClient, invitationId: string) {
+  const caseRes = await client.from("access_operations_cases").select(ACCESS_CASE_SELECT).eq("invitation_id", invitationId).maybeSingle() as AdminRowResponse;
+  if (caseRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", caseRes.error.message);
+  if (!caseRes.data) return null;
+  const notesRes = await client.from("access_operations_case_notes").select("id,note,created_by,created_at").eq("case_id", String(caseRes.data.id)).order("created_at", { ascending: false }).limit(100);
+  if (notesRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", notesRes.error.message);
+  return mapAccessOperationsCase(caseRes.data, (notesRes.data ?? []) as Array<Record<string, unknown>>);
+}
+
+async function loadAccessOperationsCaseById(client: AnySupabaseClient, caseId: string) {
+  const caseRes = await client.from("access_operations_cases").select(ACCESS_CASE_SELECT).eq("id", caseId).maybeSingle() as AdminRowResponse;
+  if (caseRes.error || !caseRes.data) throw adminLifecycleError("ADMIN_OPERATION_CONFLICT", "access_operations_case_not_found");
+  const notesRes = await client.from("access_operations_case_notes").select("id,note,created_by,created_at").eq("case_id", caseId).order("created_at", { ascending: false }).limit(100);
+  if (notesRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", notesRes.error.message);
+  return mapAccessOperationsCase(caseRes.data, (notesRes.data ?? []) as Array<Record<string, unknown>>);
+}
+
+export async function createAccessOperationsCase(client: AnySupabaseClient, input: { invitationId: string; actorUserId: string; priority?: string; reasonCode?: string | null; reasonSummary?: string | null }) {
+  const result = await client.from("access_operations_cases").insert({
+    invitation_id: input.invitationId,
+    priority: input.priority ?? "normal",
+    reason_code: input.reasonCode ?? null,
+    reason_summary: input.reasonSummary ?? null,
+    created_by: input.actorUserId,
+    updated_by: input.actorUserId,
+  }).select(ACCESS_CASE_SELECT).single() as AdminRowResponse;
+  if (result.error || !result.data) throw adminLifecycleError("ADMIN_OPERATION_CONFLICT", result.error?.message ?? "access_operations_case_create_failed");
+  return mapAccessOperationsCase(result.data);
+}
+
+export async function mutateAccessOperationsCase(client: AnySupabaseClient, input: { caseId: string; actorUserId: string; action: string; priority?: string; resolutionCode?: string; assignedAdminUserId?: string | null }) {
+  const current = await client.from("access_operations_cases").select(ACCESS_CASE_SELECT).eq("id", input.caseId).maybeSingle() as AdminRowResponse;
+  if (current.error || !current.data) throw adminLifecycleError("ADMIN_OPERATION_CONFLICT", "access_operations_case_not_found");
+  const now = new Date().toISOString();
+  const patch: Record<string, unknown> = { updated_by: input.actorUserId, updated_at: now };
+  if (input.action === "assign_to_me") patch.assigned_admin_user_id = input.actorUserId;
+  else if (input.action === "reassign") patch.assigned_admin_user_id = input.assignedAdminUserId ?? null;
+  else if (input.action === "escalate") { patch.status = "escalated"; patch.priority = input.priority ?? "high"; }
+  else if (input.action === "resolve") { patch.status = "resolved"; patch.resolution_code = input.resolutionCode ?? null; patch.resolved_at = now; }
+  else if (input.action === "close") { if (String(current.data.status) !== "resolved") throw adminLifecycleError("ADMIN_OPERATION_CONFLICT", "access_case_must_be_resolved_before_close"); patch.status = "closed"; patch.closed_at = now; }
+  else if (input.action === "reopen") { patch.status = "open"; patch.closed_at = null; patch.resolved_at = null; patch.resolution_code = null; }
+  else throw adminLifecycleError("ADMIN_INVALID_STATUS", "invalid_access_case_action");
+  const result = await client.from("access_operations_cases").update(patch).eq("id", input.caseId).select(ACCESS_CASE_SELECT).single() as AdminRowResponse;
+  if (result.error || !result.data) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", result.error?.message ?? "access_operations_case_update_failed");
+  return loadAccessOperationsCaseById(client, input.caseId);
+}
+
+export async function addAccessOperationsCaseNote(client: AnySupabaseClient, input: { caseId: string; actorUserId: string; note: string }) {
+  const note = input.note.trim();
+  if (!note || note.length > 4000) throw adminLifecycleError("ADMIN_INVALID_STATUS", "support_note_must_be_between_1_and_4000_characters");
+  const result = await client.from("access_operations_case_notes").insert({ case_id: input.caseId, note, created_by: input.actorUserId }).select("id,note,created_by,created_at").single();
+  if (result.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", result.error.message);
+  return loadAccessOperationsCaseById(client, input.caseId);
 }
 
 export async function listAdminUsers(client: AnySupabaseClient) {
@@ -1154,7 +1259,7 @@ async function applyIdentityVerificationReviewAction(
 }
 
 export async function loadSupportSnapshot(client: AnySupabaseClient) {
-  const [pendingInvitations, readyToSendInvitations, verificationAwaitingReview, linkedAccountsActive, invitationRowsRes, roleRowsRes, ownerProfilesRes] = await Promise.all([
+  const [pendingInvitations, readyToSendInvitations, verificationAwaitingReview, linkedAccountsActive, invitationRowsRes, roleRowsRes, ownerProfilesRes, casesRes] = await Promise.all([
     countSentPendingContactInvitations(client),
     countReadyToSendContactInvitations(client),
     countRowsIn(client, "verification_requests", "request_status", ["pending", "submitted"]),
@@ -1170,14 +1275,17 @@ export async function loadSupportSnapshot(client: AnySupabaseClient) {
       .order("updated_at", { ascending: false })
       .limit(40),
     client.from("user_profiles").select("user_id,display_name"),
+    client.from("access_operations_cases").select("id,invitation_id,status,priority,assigned_admin_user_id"),
   ]);
 
   if (invitationRowsRes.error) throw new Error(invitationRowsRes.error.message);
   if (roleRowsRes.error) throw new Error(roleRowsRes.error.message);
   if (ownerProfilesRes.error) throw new Error(ownerProfilesRes.error.message);
+  if (casesRes.error) throw new Error(casesRes.error.message);
 
   const roleMap = new Map(((roleRowsRes.data ?? []) as RoleAssignmentRow[]).map((row) => [row.invitation_id, row]));
   const profileMap = new Map((((ownerProfilesRes.data ?? []) as UserProfileRow[])).map((row) => [row.user_id, row.display_name ?? "Secure Account"]));
+  const caseMap = new Map(((casesRes.data ?? []) as Array<Record<string, unknown>>).map((row) => [String(row.invitation_id ?? ""), row]));
 
   const issues = ((invitationRowsRes.data ?? []) as ContactInvitationRow[])
     .map((invitation) => {
@@ -1194,6 +1302,10 @@ export async function loadSupportSnapshot(client: AnySupabaseClient) {
         sentAt: invitation.sent_at ?? null,
         activationStatus: role?.activation_status ?? "invited",
         issueLabel,
+        caseId: typeof caseMap.get(invitation.id)?.id === "string" ? String(caseMap.get(invitation.id)?.id) : null,
+        caseStatus: typeof caseMap.get(invitation.id)?.status === "string" ? String(caseMap.get(invitation.id)?.status) : null,
+        casePriority: typeof caseMap.get(invitation.id)?.priority === "string" ? String(caseMap.get(invitation.id)?.priority) : null,
+        assignedAdminUserId: typeof caseMap.get(invitation.id)?.assigned_admin_user_id === "string" ? String(caseMap.get(invitation.id)?.assigned_admin_user_id) : null,
       };
     })
     .filter((item) =>
@@ -1228,7 +1340,7 @@ export async function loadSupportInvitationDetail(client: AnySupabaseClient, inv
   if (!invitationRes.data) throw adminLifecycleError("ADMIN_OPERATION_CONFLICT", "contact_invitation_not_found");
 
   const invitation = invitationRes.data as ContactInvitationRow;
-  const [ownerProfileRes, contactRes, roleRes, grantRes, eventsRes, ownerAuthRes] = await Promise.all([
+  const [ownerProfileRes, contactRes, roleRes, grantRes, eventsRes, ownerAuthRes, operationsCase] = await Promise.all([
     client.from("user_profiles").select("user_id,display_name").eq("user_id", invitation.owner_user_id).maybeSingle(),
     invitation.contact_id
       ? client.from("contacts").select("id,full_name,email,relationship").eq("id", invitation.contact_id).maybeSingle()
@@ -1237,6 +1349,7 @@ export async function loadSupportInvitationDetail(client: AnySupabaseClient, inv
     client.from("account_access_grants").select("id,activation_status,updated_at").eq("invitation_id", id).maybeSingle(),
     client.from("invitation_events").select("id,event_type,created_at,payload").eq("invitation_id", id).order("created_at", { ascending: false }).limit(20),
     client.auth.admin.getUserById(invitation.owner_user_id).catch((error: unknown) => ({ data: { user: null }, error })),
+    loadAccessOperationsCase(client, id),
   ]);
 
   if (ownerProfileRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", ownerProfileRes.error.message);
@@ -1252,6 +1365,7 @@ export async function loadSupportInvitationDetail(client: AnySupabaseClient, inv
   const activationStatus = String(role?.activation_status ?? "invited");
 
   return {
+    case: operationsCase,
     invitation: {
       id: invitation.id,
       ownerUserId: invitation.owner_user_id,
