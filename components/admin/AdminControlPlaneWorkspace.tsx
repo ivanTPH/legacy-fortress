@@ -523,6 +523,7 @@ export default function AdminControlPlaneWorkspace({
   const [supportDetail, setSupportDetail] = useState<SupportInvitationDetail | null>(null);
   const [supportDetailLoading, setSupportDetailLoading] = useState(false);
   const [supportActionLoading, setSupportActionLoading] = useState("");
+  const [supportCaseNote, setSupportCaseNote] = useState("");
   const [verificationQueue, setVerificationQueue] = useState<VerificationItem[]>([]);
   const [probateCases, setProbateCases] = useState<ProbateCase[]>([]);
   const [probateActionLoading, setProbateActionLoading] = useState("");
