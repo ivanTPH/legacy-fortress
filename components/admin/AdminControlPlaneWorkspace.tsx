@@ -9,6 +9,7 @@ import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell";
 import { filterAdminNavigation, PLATFORM_ADMIN_NAVIGATION, PROBATE_REVIEW_NAVIGATION } from "@/components/admin/adminNavigation";
 import { waitForActiveUser } from "@/lib/auth/session";
 import { supabase } from "@/lib/supabaseClient";
+import { getSupportNextStep, getSupportOperationalState } from "@/lib/admin/operations";
 
 type AdminControlPlaneSection =
   | "overview"
@@ -1802,11 +1803,13 @@ function renderSupport(
             { key: "contact", header: "Contact", render: (item) => <>{item.contactName || item.contactEmail || "Unknown contact"}<small>{item.contactEmail || "No email recorded"}</small></> },
             { key: "owner", header: "Owner", render: (item) => item.ownerName },
             { key: "role", header: "Role", render: (item) => labelise(item.assignedRole) },
-            { key: "status", header: "Status", render: (item) => <AdminStatusBadge status={item.invitationStatus ?? "pending"} /> },
+            { key: "status", header: "Access state", render: (item) => <><AdminStatusBadge status={item.activationStatus ?? "invited"} /><small>Invitation: {labelise(item.invitationStatus ?? "unknown")}</small></> },
             { key: "issue", header: "Issue", render: (item) => item.issueLabel },
+            { key: "next", header: "Next step", render: (item) => getSupportNextStep(item.invitationStatus ?? "", item.activationStatus ?? "") },
             { key: "actions", header: "Actions", render: (item) => (
               <div style={actionsCellStyle}>
                 <button type="button" onClick={() => void loadDetail(item.invitationId)} disabled={detailLoading}>View</button>
+                {getSupportOperationalState(item.invitationStatus ?? "", item.activationStatus ?? "") === "verification_required" ? <Link href="/admin/verification" prefetch={false}>Verification queue</Link> : null}
                 {canManageSupport && item.invitationStatus !== "revoked" && item.invitationStatus !== "accepted" ? (
                   <button type="button" onClick={() => void runAction(item.invitationId, "resend")} disabled={actionLoading === `${item.invitationId}:resend`}>
                     {actionLoading === `${item.invitationId}:resend` ? "Sending..." : item.sentAt ? "Resend" : "Send"}
@@ -1865,7 +1868,14 @@ function renderSupportInvitationDetail(
         </section>
       ) : null}
       <section style={contextPanelStyle}>
-        <h3 style={h3Style}>Permitted actions</h3>
+        <h3 style={h3Style}>Issue and next step</h3>
+        <p><strong>Reason</strong><br />{invitation.issueLabel || "Reason unavailable - review lifecycle events."}</p>
+        <p><strong>Operational status</strong><br />{labelise(getSupportOperationalState(invitation.invitationStatus, invitation.activationStatus))}</p>
+        <p style={mutedStyle}>{getSupportNextStep(invitation.invitationStatus, invitation.activationStatus)}</p>
+        {getSupportOperationalState(invitation.invitationStatus, invitation.activationStatus) === "verification_required" ? <Link href="/admin/verification" prefetch={false}>Open verification review queue</Link> : null}
+      </section>
+      <section style={contextPanelStyle}>
+        <h3 style={h3Style}>Permitted invitation actions</h3>
         <div style={rowStyle}>
           {canManageSupport && invitation.availableActions.includes("resend") ? (
             <button type="button" onClick={() => void runAction(invitation.id, "resend")} disabled={actionLoading === `${invitation.id}:resend`} style={primaryButtonStyle}>
@@ -1878,7 +1888,7 @@ function renderSupportInvitationDetail(
             </button>
           ) : null}
           {!canManageSupport ? <span style={mutedInlineStyle}>You can inspect this invitation but cannot mutate it.</span> : null}
-          {canManageSupport && invitation.availableActions.length === 0 ? <span style={mutedInlineStyle}>No action is available for this terminal state.</span> : null}
+          {canManageSupport && invitation.availableActions.length === 0 ? <span style={mutedInlineStyle}>This access record is terminal or has no invitation mutation available. Its security history cannot be reopened or manually activated. Use the lifecycle above and the canonical Contacts or verification workflow for the next supported step.</span> : null}
         </div>
       </section>
       <section style={contextPanelStyle}>

@@ -51,3 +51,17 @@ test("support queue UI exposes inspect and permission-aware lifecycle actions", 
   assert.match(workspace, /operational metadata only, not private vault contents/);
   assert.match(workspace, /You can inspect this invitation but cannot mutate it/);
 });
+
+test("access support distinguishes terminal security state from operational next steps", () => {
+  const operations = read("lib/admin/operations.ts");
+  const workspace = read("components/admin/AdminControlPlaneWorkspace.tsx");
+
+  assert.match(operations, /getSupportOperationalState/);
+  assert.match(operations, /getSupportNextStep/);
+  assert.match(operations, /canonical Contacts workflow/);
+  assert.match(workspace, /Issue and next step/);
+  assert.match(workspace, /Operational status/);
+  assert.match(workspace, /Open verification review queue/);
+  assert.match(workspace, /security history cannot be reopened or manually activated/);
+  assert.doesNotMatch(workspace, /approve anyway|Manually activate access|Override IDV/i);
+});

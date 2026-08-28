@@ -234,6 +234,8 @@ export type AdminSupportInvitationDetail = {
   }>;
 };
 
+export type SupportOperationalState = "needs_attention" | "verification_required" | "terminal";
+
 export type AdminAuditHistoryItem = {
   id: string;
   category: string;
@@ -297,6 +299,21 @@ export function buildSupportIssueLabel(invitationStatus: string, activationStatu
   if (activation === "accepted") return "Accepted access awaiting activation";
   if (activation === "rejected") return "Rejected access requires follow-up";
   return "Needs support review";
+}
+
+export function getSupportOperationalState(invitationStatus: string, activationStatus: string): SupportOperationalState {
+  const invite = String(invitationStatus ?? "").trim().toLowerCase();
+  const activation = String(activationStatus ?? "").trim().toLowerCase();
+  if (["revoked", "expired"].includes(invite) || ["rejected", "revoked"].includes(activation)) return "terminal";
+  if (["pending_verification", "verification_submitted"].includes(activation)) return "verification_required";
+  return "needs_attention";
+}
+
+export function getSupportNextStep(invitationStatus: string, activationStatus: string) {
+  const state = getSupportOperationalState(invitationStatus, activationStatus);
+  if (state === "terminal") return "Review lifecycle; create a new invitation through the owner's canonical Contacts workflow if another attempt is required.";
+  if (state === "verification_required") return "Open the verification queue; access remains gated until the canonical verification workflow completes.";
+  return "Review the invitation detail and resend or revoke when the invitation state permits.";
 }
 
 export async function listAdminUsers(client: AnySupabaseClient) {
