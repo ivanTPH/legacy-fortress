@@ -396,13 +396,20 @@ export async function createAccessOperationsCase(client: AnySupabaseClient, inpu
   return mapAccessOperationsCase(result.data);
 }
 
-export async function mutateAccessOperationsCase(client: AnySupabaseClient, input: { caseId: string; actorUserId: string; action: string; priority?: string; resolutionCode?: string; assignedAdminUserId?: string | null }) {
+export async function mutateAccessOperationsCase(client: AnySupabaseClient, input: { caseId: string; invitationId: string; actorUserId: string; action: string; priority?: string; resolutionCode?: string; assignedAdminUserId?: string | null }) {
   const current = await client.from("access_operations_cases").select(ACCESS_CASE_SELECT).eq("id", input.caseId).maybeSingle() as AdminRowResponse;
   if (current.error || !current.data) throw adminLifecycleError("ADMIN_OPERATION_CONFLICT", "access_operations_case_not_found");
+  if (String(current.data.invitation_id ?? "") !== input.invitationId) throw adminLifecycleError("ADMIN_OPERATION_CONFLICT", "access_operations_case_scope_mismatch");
   const now = new Date().toISOString();
   const patch: Record<string, unknown> = { updated_by: input.actorUserId, updated_at: now };
   if (input.action === "assign_to_me") patch.assigned_admin_user_id = input.actorUserId;
-  else if (input.action === "reassign") patch.assigned_admin_user_id = input.assignedAdminUserId ?? null;
+  else if (input.action === "reassign") {
+    if (input.assignedAdminUserId) {
+      const adminRes = await client.from("admin_users").select("user_id,status").eq("user_id", input.assignedAdminUserId).eq("status", "active").maybeSingle();
+      if (adminRes.error || !adminRes.data) throw adminLifecycleError("ADMIN_OPERATION_CONFLICT", "access_case_assignee_not_authorised");
+    }
+    patch.assigned_admin_user_id = input.assignedAdminUserId ?? null;
+  }
   else if (input.action === "escalate") { patch.status = "escalated"; patch.priority = input.priority ?? "high"; }
   else if (input.action === "resolve") { patch.status = "resolved"; patch.resolution_code = input.resolutionCode ?? null; patch.resolved_at = now; }
   else if (input.action === "close") { if (String(current.data.status) !== "resolved") throw adminLifecycleError("ADMIN_OPERATION_CONFLICT", "access_case_must_be_resolved_before_close"); patch.status = "closed"; patch.closed_at = now; }

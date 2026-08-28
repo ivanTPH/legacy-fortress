@@ -79,6 +79,8 @@ test("access operations cases are separate, append-only support records", () => 
   assert.match(route, /addAccessOperationsCaseNote/);
   assert.match(route, /mutateAccessOperationsCase/);
   assert.match(operations, /access_case_must_be_resolved_before_close/);
+  assert.match(operations, /access_operations_case_scope_mismatch/);
+  assert.match(operations, /access_case_assignee_not_authorised/);
   assert.match(operations, /support_note_must_be_between_1_and_4000_characters/);
   assert.doesNotMatch(route, /activation_status.*active|approve.*access/i);
 });

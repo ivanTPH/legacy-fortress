@@ -90,7 +90,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ in
         await addAccessOperationsCaseNote(admin.adminClient, { caseId: current.case.id, actorUserId: admin.access.user.id, note: body.note });
       } else {
         if (action === "resolve" && !body.resolutionCode?.trim()) throw adminLifecycleError("ADMIN_INVALID_STATUS", "resolution_code_required");
-        await mutateAccessOperationsCase(admin.adminClient, { caseId: current.case.id, actorUserId: admin.access.user.id, action, priority: body.priority, resolutionCode: body.resolutionCode, assignedAdminUserId: body.assignedAdminUserId });
+        await mutateAccessOperationsCase(admin.adminClient, { caseId: current.case.id, invitationId, actorUserId: admin.access.user.id, action, priority: body.priority, resolutionCode: body.resolutionCode, assignedAdminUserId: body.assignedAdminUserId });
       }
       detail = await loadSupportInvitationDetail(admin.adminClient, invitationId);
     } else {
