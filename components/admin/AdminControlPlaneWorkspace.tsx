@@ -1946,6 +1946,40 @@ function renderSupportInvitationDetail(
         </section>
       ) : null}
       <section style={contextPanelStyle}>
+        <h3 style={h3Style}>Operations case</h3>
+        {operationsCase ? <>
+          <div className="lf-admin-detail-grid">
+            <Detail label="Case ID" value={operationsCase.id} />
+            <Detail label="Case status" value={labelise(operationsCase.status)} />
+            <Detail label="Priority" value={labelise(operationsCase.priority)} />
+            <Detail label="Assigned to" value={operationsCase.assignedAdminUserId ? "Assigned administrator" : "Unassigned"} />
+            <Detail label="Created" value={formatDate(operationsCase.createdAt)} />
+            <Detail label="Last updated" value={formatDate(operationsCase.updatedAt)} />
+            <Detail label="Resolved" value={formatDate(operationsCase.resolvedAt)} />
+            <Detail label="Closed" value={formatDate(operationsCase.closedAt)} />
+          </div>
+          {canManageSupport ? <div style={rowStyle}>
+            {operationsCase.status !== "closed" ? <button type="button" onClick={() => void runCaseAction(invitation.id, "assign_to_me")} disabled={actionLoading === `${invitation.id}:assign_to_me`}>Assign to me</button> : null}
+            {operationsCase.status !== "closed" && operationsCase.status !== "escalated" ? <button type="button" onClick={() => void runCaseAction(invitation.id, "escalate")} disabled={actionLoading === `${invitation.id}:escalate`}>Escalate</button> : null}
+            {operationsCase.status === "open" || operationsCase.status === "needs_attention" || operationsCase.status === "escalated" ? <button type="button" onClick={() => void runCaseAction(invitation.id, "resolve")} disabled={actionLoading === `${invitation.id}:resolve`}>Mark resolved</button> : null}
+            {operationsCase.status === "resolved" ? <button type="button" onClick={() => void runCaseAction(invitation.id, "close")} disabled={actionLoading === `${invitation.id}:close`}>Close case</button> : null}
+            {operationsCase.status === "closed" ? <button type="button" onClick={() => void runCaseAction(invitation.id, "reopen")} disabled={actionLoading === `${invitation.id}:reopen`}>Reopen case</button> : null}
+          </div> : <p style={mutedStyle}>This case is read-only for your administrator role.</p>}
+        </> : <>
+          <p style={mutedStyle}>No operations case is open for this access issue.</p>
+          {canManageSupport ? <button type="button" style={primaryButtonStyle} onClick={() => void createCase(invitation.id)} disabled={actionLoading === `${invitation.id}:create_case`}>{actionLoading === `${invitation.id}:create_case` ? "Opening..." : "Open operations case"}</button> : null}
+        </>}
+      </section>
+      {operationsCase ? <section style={contextPanelStyle}>
+        <h3 style={h3Style}>Support notes</h3>
+        <p style={mutedStyle}>Add operational context only. Do not enter Personal Vault, financial, identity-document, or biometric information.</p>
+        {canManageSupport ? <>
+          <textarea value={caseNote} onChange={(event) => setCaseNote(event.target.value)} placeholder="Record the operational next step" maxLength={4000} rows={3} aria-label="Support note" />
+          <button type="button" onClick={() => void addCaseNote(invitation.id)} disabled={!caseNote.trim() || actionLoading === `${invitation.id}:add_note`}>Add note</button>
+        </> : null}
+        {operationsCase.notes.length ? <ul style={eventListStyle}>{operationsCase.notes.map((note) => <li key={note.id}><strong>{formatDate(note.createdAt)}</strong><span>Platform administrator</span><small>{note.note}</small></li>)}</ul> : <p style={mutedStyle}>No operational notes recorded.</p>}
+      </section> : null}
+      <section style={contextPanelStyle}>
         <h3 style={h3Style}>Issue and next step</h3>
         <p><strong>Reason</strong><br />{invitation.issueLabel || "Reason unavailable - review lifecycle events."}</p>
         <p><strong>Operational status</strong><br />{labelise(getSupportOperationalState(invitation.invitationStatus, invitation.activationStatus))}</p>
