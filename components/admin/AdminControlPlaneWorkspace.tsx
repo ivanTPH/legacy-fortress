@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import type { CSSProperties } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import type { CSSProperties, FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminDataTable, { AdminContextHelp, AdminEmptyState, AdminMetricCard, AdminStatusBadge } from "@/components/admin/AdminPrimitives";
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell";
+import InfoTip from "@/components/ui/InfoTip";
 import { filterAdminNavigation, PLATFORM_ADMIN_NAVIGATION, PROBATE_REVIEW_NAVIGATION } from "@/components/admin/adminNavigation";
 import { waitForActiveUser } from "@/lib/auth/session";
 import { supabase } from "@/lib/supabaseClient";
@@ -523,7 +524,6 @@ export default function AdminControlPlaneWorkspace({
   const [supportDetail, setSupportDetail] = useState<SupportInvitationDetail | null>(null);
   const [supportDetailLoading, setSupportDetailLoading] = useState(false);
   const [supportActionLoading, setSupportActionLoading] = useState("");
-  const [supportCaseNote, setSupportCaseNote] = useState("");
   const [verificationQueue, setVerificationQueue] = useState<VerificationItem[]>([]);
   const [probateCases, setProbateCases] = useState<ProbateCase[]>([]);
   const [probateActionLoading, setProbateActionLoading] = useState("");
@@ -941,7 +941,7 @@ export default function AdminControlPlaneWorkspace({
         {section === "licence-detail" ? renderPlatformLicenceDetail(resourceId, enterprisePortfolio) : null}
         {section === "admin-users" || section === "admin-user-detail" ? renderAdminUsers(admins, adminInvitations, adminFilter, setAdminFilter, adminInviteForm, setAdminInviteForm, sendAdminInvitation, adminInviteOpen, setAdminInviteOpen, adminLifecycleForm, setAdminLifecycleForm, runAdminLifecycle, runAdminInvitationLifecycle, resourceId) : null}
         {section === "users" || section === "user-detail" ? renderUsers(lookupQuery, setLookupQuery, lookupResults, runLookup, resourceId, userDetail, userDetailLoading) : null}
-        {section === "support" || section === "invitations" || section === "access" ? renderSupport(section, support, supportDetail, supportDetailLoading, supportActionLoading, supportCaseNote, setSupportCaseNote, loadSupportInvitationDetail, runSupportInvitationAction, createSupportCase, runSupportCaseAction, addSupportCaseNote, capabilities) : null}
+        {section === "support" || section === "invitations" || section === "access" ? renderSupport(section, support, supportDetail, supportDetailLoading, supportActionLoading, loadSupportInvitationDetail, runSupportInvitationAction, createSupportCase, runSupportCaseAction, addSupportCaseNote, capabilities) : null}
         {section === "verification" || section === "verification-detail" ? renderVerification(verificationQueue, resourceId) : null}
         {section === "probate" || section === "probate-detail" ? renderProbate(probateCases, resourceId, capabilities, probateDecisionNotes, setProbateDecisionNotes, probateActionLoading, runProbateCaseAction) : null}
         {section === "audit" ? renderAudit(auditEvents, auditFilter, setAuditFilter) : null}
@@ -1898,7 +1898,7 @@ function renderSupport(
       {detail || detailLoading ? (
         <section style={panelStyle} aria-live="polite">
           {detailLoading ? <p style={mutedStyle}>Loading invitation detail...</p> : null}
-          {detail ? renderSupportInvitationDetail(detail, canManageSupport, actionLoading, caseNote, setCaseNote, runAction, createCase, runCaseAction, addCaseNote) : null}
+          {detail ? renderSupportInvitationDetail(detail, canManageSupport, actionLoading, runAction, createCase, runCaseAction, addCaseNote) : null}
         </section>
       ) : null}
     </div>
@@ -1909,75 +1909,70 @@ function renderSupportInvitationDetail(
   detail: SupportInvitationDetail,
   canManageSupport: boolean,
   actionLoading: string,
-  caseNote: string,
-  setCaseNote: (value: string) => void,
   runAction: (invitationId: string, action: "resend" | "revoke") => Promise<void>,
   createCase: (invitationId: string) => Promise<void>,
-  runCaseAction: (invitationId: string, action: "assign_to_me" | "escalate" | "resolve" | "close" | "reopen") => Promise<void>,
-  addCaseNote: (invitationId: string) => Promise<void>,
+  runCaseAction: (invitationId: string, action: "assign_to_me" | "escalate" | "resolve" | "close" | "reopen", resolutionCode?: string) => Promise<void>,
+  addCaseNote: (invitationId: string, note: string) => Promise<void>,
 ) {
   const invitation = detail.invitation;
   const operationsCase = detail.case;
   return (
     <div style={stackStyle}>
-      <div style={sectionHeaderStyle}>
+      <div style={caseHeaderStyle}>
         <div>
-          <h2 style={h2Style}>{invitation.contactName || invitation.contactEmail || "Contact invitation"}</h2>
-          <p style={mutedStyle}>Invitation detail for {invitation.ownerName}. This view shows operational metadata only, not private vault contents.</p>
+          <p style={eyebrowStyle}>Access Operations</p>
+          <h2 style={h2Style}>{operationsCase ? `Case ${operationsCase.id.slice(0, 8)}` : "Access issue"}</h2>
+          <p style={mutedStyle}>{invitation.contactName || invitation.contactEmail || "Contact invitation"} · {invitation.ownerName}</p>
         </div>
-        <AdminStatusBadge status={invitation.invitationStatus} />
+        <div style={actionRowStyle}>
+          {operationsCase ? <AdminStatusBadge status={operationsCase.status} /> : <AdminStatusBadge status={invitation.invitationStatus} />}
+          {operationsCase ? <AdminStatusBadge status={operationsCase.priority} /> : null}
+        </div>
       </div>
-      <div style={detailGridStyle}>
-        <Detail label="Recipient" value={invitation.contactEmail || "No email recorded"} />
-        <Detail label="Owner" value={invitation.ownerEmail ? `${invitation.ownerName} (${invitation.ownerEmail})` : invitation.ownerName} />
-        <Detail label="Role" value={invitation.assignedRole.replace(/_/g, " ")} />
-        <Detail label="Access state" value={invitation.activationStatus.replace(/_/g, " ")} />
-        <Detail label="Invited" value={formatDate(invitation.invitedAt)} />
-        <Detail label="Sent" value={formatDate(invitation.sentAt)} />
-        <Detail label="Last sent" value={formatDate(invitation.lastSentAt)} />
-        <Detail label="Accepted" value={formatDate(invitation.acceptedAt)} />
-        <Detail label="Revoked" value={formatDate(invitation.revokedAt)} />
-        <Detail label="Linked account" value={invitation.linkedAccountUserId ? "Linked" : "Not linked"} />
-      </div>
-      {detail.contact ? (
-        <section style={contextPanelStyle}>
-          <h3 style={h3Style}>Contact record</h3>
-          <p style={mutedStyle}>{detail.contact.fullName} · {detail.contact.relationship || "Relationship not recorded"}</p>
-        </section>
-      ) : null}
+      {operationsCase ? <div style={caseActionBarStyle}>
+        {canManageSupport && operationsCase.status !== "closed" ? <button type="button" style={secondaryButtonStyle} onClick={() => void runCaseAction(invitation.id, "assign_to_me")} disabled={actionLoading === `${invitation.id}:assign_to_me`}>{actionLoading === `${invitation.id}:assign_to_me` ? "Assigning..." : "Assign to me"}</button> : null}
+        {canManageSupport && (operationsCase.status === "open" || operationsCase.status === "needs_attention" || operationsCase.status === "escalated") ? <ResolveCaseDialog loading={actionLoading === `${invitation.id}:resolve`} onResolve={(value) => void runCaseAction(invitation.id, "resolve", value)} /> : null}
+        {canManageSupport && operationsCase.status !== "closed" && operationsCase.status !== "escalated" ? <button type="button" style={secondaryButtonStyle} onClick={() => void runCaseAction(invitation.id, "escalate")} disabled={actionLoading === `${invitation.id}:escalate`}>More actions: Escalate</button> : null}
+        {canManageSupport && operationsCase.status === "resolved" ? <button type="button" style={secondaryButtonStyle} onClick={() => void runCaseAction(invitation.id, "close")} disabled={actionLoading === `${invitation.id}:close`}>Close case</button> : null}
+        {canManageSupport && operationsCase.status === "closed" ? <button type="button" style={secondaryButtonStyle} onClick={() => void runCaseAction(invitation.id, "reopen")} disabled={actionLoading === `${invitation.id}:reopen`}>Reopen case</button> : null}
+      </div> : null}
+      {!operationsCase ? <section style={emptyCaseStyle}>
+        <div><h3 style={h3Style}>No operations case opened</h3><p style={mutedStyle}>Open a support case to assign ownership and record the next step. This does not alter access, verification or invitation security state.</p></div>
+        {canManageSupport ? <button type="button" style={primaryButtonStyle} onClick={() => void createCase(invitation.id)} disabled={actionLoading === `${invitation.id}:create_case`}>{actionLoading === `${invitation.id}:create_case` ? "Opening..." : "Open operations case"}</button> : <span style={mutedInlineStyle}>Read-only for this administrator role.</span>}
+      </section> : null}
+      <div style={twoColumnDetailStyle}>
       <section style={contextPanelStyle}>
-        <h3 style={h3Style}>Operations case</h3>
+        <h3 style={h3Style}>Security state <InfoTip label="Access state information" tone="security" message="This is the security decision and cannot be manually edited by Platform administrators." /></h3>
+        <p style={mutedStyle}>Read only. Support-case actions never grant or remove vault authority.</p>
+        <div style={compactDetailGridStyle}>
+          <Detail label="Recipient" value={invitation.contactEmail || "No email recorded"} />
+          <Detail label="Owner" value={invitation.ownerEmail ? `${invitation.ownerName} (${invitation.ownerEmail})` : invitation.ownerName} />
+          <Detail label="Role" value={invitation.assignedRole.replace(/_/g, " ")} />
+          <Detail label="Invitation" value={labelise(invitation.invitationStatus)} />
+          <Detail label="Access" value={labelise(invitation.activationStatus)} />
+          <Detail label="Verification" value={invitation.linkedAccountUserId ? "Linked account" : "Not linked"} />
+          <Detail label="Accepted" value={formatDate(invitation.acceptedAt)} />
+          <Detail label="Revoked" value={formatDate(invitation.revokedAt)} />
+        </div>
+      </section>
+      <section style={contextPanelStyle}>
+        <h3 style={h3Style}>Operations case <InfoTip label="Operations case information" message="This tracks support activity. It does not grant or remove vault authority." /></h3>
         {operationsCase ? <>
-          <div className="lf-admin-detail-grid">
-            <Detail label="Case ID" value={operationsCase.id} />
-            <Detail label="Case status" value={labelise(operationsCase.status)} />
+          <div style={compactDetailGridStyle}>
+            <Detail label="Status" value={labelise(operationsCase.status)} />
             <Detail label="Priority" value={labelise(operationsCase.priority)} />
             <Detail label="Assigned to" value={operationsCase.assignedAdminUserId ? "Assigned administrator" : "Unassigned"} />
             <Detail label="Created" value={formatDate(operationsCase.createdAt)} />
-            <Detail label="Last updated" value={formatDate(operationsCase.updatedAt)} />
+            <Detail label="Updated" value={formatDate(operationsCase.updatedAt)} />
             <Detail label="Resolved" value={formatDate(operationsCase.resolvedAt)} />
             <Detail label="Closed" value={formatDate(operationsCase.closedAt)} />
           </div>
-          {canManageSupport ? <div style={rowStyle}>
-            {operationsCase.status !== "closed" ? <button type="button" onClick={() => void runCaseAction(invitation.id, "assign_to_me")} disabled={actionLoading === `${invitation.id}:assign_to_me`}>Assign to me</button> : null}
-            {operationsCase.status !== "closed" && operationsCase.status !== "escalated" ? <button type="button" onClick={() => void runCaseAction(invitation.id, "escalate")} disabled={actionLoading === `${invitation.id}:escalate`}>Escalate</button> : null}
-            {operationsCase.status === "open" || operationsCase.status === "needs_attention" || operationsCase.status === "escalated" ? <button type="button" onClick={() => void runCaseAction(invitation.id, "resolve")} disabled={actionLoading === `${invitation.id}:resolve`}>Mark resolved</button> : null}
-            {operationsCase.status === "resolved" ? <button type="button" onClick={() => void runCaseAction(invitation.id, "close")} disabled={actionLoading === `${invitation.id}:close`}>Close case</button> : null}
-            {operationsCase.status === "closed" ? <button type="button" onClick={() => void runCaseAction(invitation.id, "reopen")} disabled={actionLoading === `${invitation.id}:reopen`}>Reopen case</button> : null}
-          </div> : <p style={mutedStyle}>This case is read-only for your administrator role.</p>}
-        </> : <>
-          <p style={mutedStyle}>No operations case is open for this access issue.</p>
-          {canManageSupport ? <button type="button" style={primaryButtonStyle} onClick={() => void createCase(invitation.id)} disabled={actionLoading === `${invitation.id}:create_case`}>{actionLoading === `${invitation.id}:create_case` ? "Opening..." : "Open operations case"}</button> : null}
-        </>}
+          <p style={mutedStyle}>{operationsCase.resolutionCode ? `Outcome: ${operationsCase.resolutionCode}` : "Choose an outcome after reviewing the issue."}</p>
+        </> : <p style={mutedStyle}>Open the case to begin operational follow-up.</p>}
       </section>
+      </div>
       {operationsCase ? <section style={contextPanelStyle}>
-        <h3 style={h3Style}>Support notes</h3>
-        <p style={mutedStyle}>Add operational context only. Do not enter Personal Vault, financial, identity-document, or biometric information.</p>
-        {canManageSupport ? <>
-          <textarea value={caseNote} onChange={(event) => setCaseNote(event.target.value)} placeholder="Record the operational next step" maxLength={4000} rows={3} aria-label="Support note" />
-          <button type="button" onClick={() => void addCaseNote(invitation.id)} disabled={!caseNote.trim() || actionLoading === `${invitation.id}:add_note`}>Add note</button>
-        </> : null}
-        {operationsCase.notes.length ? <ul style={eventListStyle}>{operationsCase.notes.map((note) => <li key={note.id}><strong>{formatDate(note.createdAt)}</strong><span>Platform administrator</span><small>{note.note}</small></li>)}</ul> : <p style={mutedStyle}>No operational notes recorded.</p>}
+        <SupportNotes notes={operationsCase.notes} canManage={canManageSupport} loading={actionLoading === `${invitation.id}:add_note`} onSave={(note) => addCaseNote(invitation.id, note)} />
       </section> : null}
       <section style={contextPanelStyle}>
         <h3 style={h3Style}>Issue and next step</h3>
@@ -2019,6 +2014,80 @@ function renderSupportInvitationDetail(
       </section>
     </div>
   );
+}
+
+function ResolveCaseDialog({ loading, onResolve }: { loading: boolean; onResolve: (resolutionCode: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [outcome, setOutcome] = useState("Security denial confirmed");
+  const [note, setNote] = useState("");
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    dialogRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    onResolve(note.trim() ? `${outcome}: ${note.trim()}` : outcome);
+    setOpen(false);
+    setNote("");
+  }
+
+  return <>
+    <button type="button" style={primaryButtonStyle} onClick={() => setOpen(true)} disabled={loading}>{loading ? "Resolving..." : "Resolve case"}</button>
+    {open ? <div style={modalBackdropStyle} role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="resolve-case-title" tabIndex={-1} style={modalStyle}>
+        <h2 id="resolve-case-title" style={h2Style}>Resolve case</h2>
+        <p style={mutedStyle}>Resolving this support case does not change the underlying access decision.</p>
+        <form onSubmit={submit} style={formGridStyle}>
+          <label style={labelStyle}>Outcome
+            <select value={outcome} onChange={(event) => setOutcome(event.target.value)}>
+              <option>Security denial confirmed</option>
+              <option>Verification completed</option>
+              <option>Replacement workflow required</option>
+              <option>User no longer requires access</option>
+              <option>Duplicate request</option>
+            </select>
+          </label>
+          <label style={labelStyle}>Resolution note
+            <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} placeholder="Add operational context (optional)" />
+          </label>
+          <div style={actionRowStyle}><button type="button" style={secondaryButtonStyle} onClick={() => setOpen(false)}>Cancel</button><button type="submit" style={primaryButtonStyle} disabled={loading}>Resolve case</button></div>
+        </form>
+      </div>
+    </div> : null}
+  </>;
+}
+
+function SupportNotes({ notes, canManage, loading, onSave }: { notes: Array<{ id: string; note: string; createdAt: string }>; canManage: boolean; loading: boolean; onSave: (note: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [note, setNote] = useState("");
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        setNote("");
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+  return <>
+    <div style={sectionHeaderStyle}><div><h3 style={h3Style}>Notes</h3><p style={mutedStyle}>Compact operational history. Previous notes cannot be edited.</p></div>{canManage ? <button type="button" style={secondaryButtonStyle} onClick={() => setOpen(true)}>Add note</button> : null}</div>
+    {open ? <div style={noteComposerStyle} role="dialog" aria-label="Add support note">
+      <p style={mutedStyle}>Do not enter Personal Vault contents, financial information, identity-document details or biometric information.</p>
+      <textarea autoFocus value={note} onChange={(event) => setNote(event.target.value)} placeholder="Add a support note" maxLength={4000} rows={3} aria-label="Support note" />
+      <div style={actionRowStyle}><button type="button" style={secondaryButtonStyle} onClick={() => { setOpen(false); setNote(""); }}>Cancel</button><button type="button" style={primaryButtonStyle} onClick={() => { onSave(note.trim()); setOpen(false); setNote(""); }} disabled={!note.trim() || loading}>{loading ? "Saving..." : "Save note"}</button></div>
+    </div> : null}
+    {notes.length ? <ul style={eventListStyle}>{notes.map((item) => <li key={item.id}><strong>{formatDate(item.createdAt)}</strong><span>Platform administrator</span><small>{item.note}</small></li>)}</ul> : <p style={mutedStyle}>No notes yet.</p>}
+  </>;
 }
 
 function renderVerification(queue: VerificationItem[], resourceId: string | null) {
@@ -2354,6 +2423,14 @@ const dangerButtonStyle = { ...primaryButtonStyle, background: "#991b1b" } satis
 const checkboxLineStyle = { display: "flex", gap: 8, alignItems: "center", fontWeight: 700 } satisfies CSSProperties;
 const permissionSummaryStyle = { border: "1px solid #bfdbfe", borderRadius: 8, padding: 12, background: "#eff6ff", color: "#1e3a8a", display: "grid", gap: 4 } satisfies CSSProperties;
 const sectionHeaderStyle = { display: "flex", justifyContent: "space-between", alignItems: "start", gap: 12, flexWrap: "wrap" } satisfies CSSProperties;
+const caseHeaderStyle = { ...sectionHeaderStyle, padding: "4px 0 10px", borderBottom: "1px solid #e2e8f0" } satisfies CSSProperties;
+const caseActionBarStyle = { display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", padding: "0 0 4px" } satisfies CSSProperties;
+const twoColumnDetailStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 14 } satisfies CSSProperties;
+const compactDetailGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8 } satisfies CSSProperties;
+const emptyCaseStyle = { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 14, flexWrap: "wrap", border: "1px dashed #94a3b8", borderRadius: 8, padding: 14, background: "#f8fafc" } satisfies CSSProperties;
+const noteComposerStyle = { display: "grid", gap: 10, padding: 12, border: "1px solid #bfdbfe", borderRadius: 8, background: "#eff6ff" } satisfies CSSProperties;
+const modalBackdropStyle = { position: "fixed", inset: 0, zIndex: 50, display: "grid", placeItems: "center", padding: 20, background: "rgba(15, 23, 42, 0.52)" } satisfies CSSProperties;
+const modalStyle = { width: "min(100%, 520px)", maxHeight: "calc(100dvh - 40px)", overflowY: "auto", display: "grid", gap: 14, padding: 20, borderRadius: 10, background: "#fff", boxShadow: "0 20px 60px rgba(15, 23, 42, 0.25)" } satisfies CSSProperties;
 const contextPanelStyle = { border: "1px solid #cbd5e1", borderRadius: 8, padding: 14, display: "grid", gap: 12, background: "#f8fafc" } satisfies CSSProperties;
 const actionsCellStyle = { display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" } satisfies CSSProperties;
 const actionRowStyle = { display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" } satisfies CSSProperties;
