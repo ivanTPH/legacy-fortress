@@ -50,6 +50,15 @@ test("support queue UI exposes inspect and permission-aware lifecycle actions", 
   assert.match(workspace, /Revoke invitation/);
   assert.match(workspace, /operational metadata only, not private vault contents/);
   assert.match(workspace, /You can inspect this invitation but cannot mutate it/);
+  assert.match(workspace, /Operations case/);
+  assert.match(workspace, /Open operations case/);
+  assert.match(workspace, /Assign to me/);
+  assert.match(workspace, /Add note/);
+  assert.match(workspace, /Escalate/);
+  assert.match(workspace, /Mark resolved/);
+  assert.match(workspace, /Close case/);
+  assert.match(workspace, /Reopen case/);
+  assert.match(workspace, /Do not enter Personal Vault/);
 });
 
 test("access support distinguishes terminal security state from operational next steps", () => {
