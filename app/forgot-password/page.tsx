@@ -28,12 +28,15 @@ export default function ForgotPasswordPage() {
     const { error } = await recoveryClient.auth.resetPasswordForEmail(email.trim(), { redirectTo });
     setSending(false);
     if (error) {
-      setStatus(`Reset request failed: ${error.message}. Check the email address and try again, or contact support if the account should exist.`);
+      const message = error.message.toLowerCase();
+      setStatus(message.includes("security purposes") || message.includes("rate limit")
+        ? "Please wait before requesting another reset email. If an account exists, the request will remain private."
+        : "We could not complete the reset request. If an account exists, please try again later or contact support.");
       return;
     }
 
     setIsSuccess(true);
-    setStatus("Password reset link sent. Please check your email.");
+    setStatus("Password reset requested. If an account exists and email delivery succeeds, check your inbox.");
   }
 
   return (

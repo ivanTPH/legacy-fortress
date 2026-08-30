@@ -17,6 +17,9 @@ test("ephemeral auth clients use purpose-specific storage keys instead of duplic
   assert.doesNotMatch(signUp, /isLocalSupabaseUrl/);
   assert.doesNotMatch(signUp, /publicEnv/);
   assert.match(forgotPassword, /createEphemeralBrowserAuthClient\("password-reset"\)/);
+  assert.match(forgotPassword, /Password reset requested\. If an account exists and email delivery succeeds/);
+  assert.match(forgotPassword, /security purposes/);
+  assert.doesNotMatch(forgotPassword, /Password reset link sent/);
   assert.doesNotMatch(signUp, /createClient\(publicEnv\.NEXT_PUBLIC_SUPABASE_URL/);
   assert.doesNotMatch(forgotPassword, /createClient\(publicEnv\.NEXT_PUBLIC_SUPABASE_URL/);
 });
