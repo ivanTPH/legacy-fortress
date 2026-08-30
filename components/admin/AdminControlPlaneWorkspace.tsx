@@ -811,10 +811,10 @@ export default function AdminControlPlaneWorkspace({
     setMessage(`Operations case ${action.replace(/_/g, " ")} completed and audit recorded.`);
   }
 
-  async function addSupportCaseNote(invitationId: string) {
-    if (!supportDetail?.case || !supportCaseNote.trim()) return;
+  async function addSupportCaseNote(invitationId: string, note: string) {
+    if (!supportDetail?.case || !note.trim()) return;
     setSupportActionLoading(`${invitationId}:add_note`);
-    const res = await authFetch(`/api/internal/admin/support/${encodeURIComponent(invitationId)}`, { method: "PATCH", body: JSON.stringify({ action: "add_note", caseId: supportDetail.case.id, note: supportCaseNote }) });
+    const res = await authFetch(`/api/internal/admin/support/${encodeURIComponent(invitationId)}`, { method: "PATCH", body: JSON.stringify({ action: "add_note", caseId: supportDetail.case.id, note }) });
     const json = (await res.json().catch(() => ({}))) as { ok?: boolean; detail?: SupportInvitationDetail; message?: string; code?: string };
     setSupportActionLoading("");
     if (!res.ok || !json.ok || !json.detail) {
@@ -822,7 +822,6 @@ export default function AdminControlPlaneWorkspace({
       return;
     }
     setSupportDetail(json.detail);
-    setSupportCaseNote("");
     setMessage("Support note added.");
   }
 
@@ -1845,13 +1844,11 @@ function renderSupport(
   detail: SupportInvitationDetail | null,
   detailLoading: boolean,
   actionLoading: string,
-  caseNote: string,
-  setCaseNote: (value: string) => void,
   loadDetail: (invitationId: string) => Promise<void>,
   runAction: (invitationId: string, action: "resend" | "revoke") => Promise<void>,
   createCase: (invitationId: string) => Promise<void>,
-  runCaseAction: (invitationId: string, action: "assign_to_me" | "escalate" | "resolve" | "close" | "reopen") => Promise<void>,
-  addCaseNote: (invitationId: string) => Promise<void>,
+  runCaseAction: (invitationId: string, action: "assign_to_me" | "escalate" | "resolve" | "close" | "reopen", resolutionCode?: string) => Promise<void>,
+  addCaseNote: (invitationId: string, note: string) => Promise<void>,
   capabilities: string[],
 ) {
   const title = section === "invitations" ? "Invitation issues" : section === "access" ? "Linked-access issues" : "Support issues";
