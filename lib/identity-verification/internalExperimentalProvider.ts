@@ -35,6 +35,8 @@ export class InternalExperimentalIdentityProvider implements IdentityVerificatio
     sizeBytes: number;
   }): Promise<ProviderDocumentExtraction> {
     const lowerName = input.fileName.toLowerCase();
+    if (lowerName.includes("provider-error")) throw new Error("experimental_provider_error");
+    if (lowerName.includes("provider-timeout")) throw new Error("experimental_provider_timeout");
     const documentType = lowerName.includes("passport")
       ? "passport"
       : lowerName.includes("licence") || lowerName.includes("license")
@@ -48,8 +50,9 @@ export class InternalExperimentalIdentityProvider implements IdentityVerificatio
     if (input.sizeBytes < 24) warnings.push("document_too_small_for_processing");
     if (lowerName.includes("expired")) warnings.push("document_appears_expired");
     if (lowerName.includes("blur")) warnings.push("document_blur_warning");
+    if (lowerName.includes("document-failed")) warnings.push("document_authenticity_failed");
 
-    const failed = warnings.includes("unsupported_mime_type") || warnings.includes("document_too_small_for_processing");
+    const failed = warnings.includes("unsupported_mime_type") || warnings.includes("document_too_small_for_processing") || warnings.includes("document_authenticity_failed");
     return {
       status: failed ? "failed" : "extracted",
       documentType,
@@ -82,7 +85,8 @@ export class InternalExperimentalIdentityProvider implements IdentityVerificatio
     if (!input.mimeType.startsWith("image/")) reasonCodes.push("camera_capture_not_image");
     if (input.sizeBytes < 24) reasonCodes.push("camera_capture_too_small");
     if (input.captureHash.endsWith("0000")) reasonCodes.push("synthetic_liveness_low_confidence");
-    const result: LivenessResult = reasonCodes.length ? "review_required" : "passed";
+    if (input.captureHash.includes("liveness-fail")) reasonCodes.push("synthetic_liveness_failed");
+    const result: LivenessResult = reasonCodes.includes("synthetic_liveness_failed") ? "failed" : reasonCodes.length ? "review_required" : "passed";
     return { result, confidence: result === "passed" ? 0.91 : 0.58, reasonCodes };
   }
 

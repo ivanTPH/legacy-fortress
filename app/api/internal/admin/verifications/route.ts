@@ -31,10 +31,10 @@ export async function POST(request: Request) {
 
   const requestId = String(body.requestId ?? "").trim();
   const action = body.action;
-  if (!requestId || !action || !["approve", "reject", "review"].includes(action)) {
+  if (!requestId || !action || !["approve", "reject", "review", "retry", "assign_to_me", "add_note"].includes(action)) {
     return NextResponse.json({ ok: false, message: "A valid verification action is required." }, { status: 400 });
   }
-  const capability = action === "review" ? "verification:review" : "verification:decide";
+  const capability = ["review", "retry", "assign_to_me", "add_note"].includes(action) ? "verification:review" : "verification:decide";
   const denied = requireAdminCapability(admin.access, capability);
   if (denied) {
     return NextResponse.json({ ok: false, message: denied.message, capability: denied.capability }, { status: denied.status });
@@ -42,12 +42,16 @@ export async function POST(request: Request) {
   if (["approve", "reject"].includes(action) && !String(body.reviewNotes ?? "").trim()) {
     return NextResponse.json({ ok: false, message: "Decision notes are required before approving or rejecting verification." }, { status: 400 });
   }
+  if (action === "add_note" && !String(body.reviewNotes ?? "").trim()) {
+    return NextResponse.json({ ok: false, message: "A review note is required." }, { status: 400 });
+  }
 
   await applyVerificationAction(admin.adminClient, {
     requestId,
     action,
     reviewNotes: body.reviewNotes ?? null,
     reviewedByUserId: admin.access.user.id,
+    note: body.reviewNotes ?? null,
   });
   await recordAdminAuditEvent(admin.adminClient, admin.access, {
     category: action === "approve" ? "admin_approval" : "admin_review",

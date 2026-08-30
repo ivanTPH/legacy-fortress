@@ -46,6 +46,8 @@ export default function IdentityVerificationPageClient() {
   const [challengeId, setChallengeId] = useState("");
   const [status, setStatus] = useState("Preparing identity verification...");
   const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [documentType, setDocumentType] = useState("passport");
+  const [scenario, setScenario] = useState("success");
   const [cameraBlob, setCameraBlob] = useState<Blob | null>(null);
   const [cameraError, setCameraError] = useState("");
   const [decision, setDecision] = useState<VerificationResponse["decision"] | null>(null);
@@ -107,7 +109,8 @@ export default function IdentityVerificationPageClient() {
     setStatus("Uploading and extracting document data...");
     try {
       const form = new FormData();
-      form.set("file", documentFile);
+      const syntheticName = `${documentType}-${scenario}-${documentFile.name}`;
+      form.set("file", new File([documentFile], syntheticName, { type: documentFile.type }));
       form.set("side", "front");
       const res = await api(`/api/identity-verification/${verificationId}/document`, { method: "POST", body: form });
       if (!res.ok) throw new Error(res.error ?? "Document upload failed.");
@@ -169,7 +172,7 @@ export default function IdentityVerificationPageClient() {
     try {
       const form = new FormData();
       form.set("challengeId", challengeId);
-      form.set("file", new File([cameraBlob], "live-camera-capture.png", { type: "image/png" }));
+      form.set("file", new File([cameraBlob], `live-camera-${scenario}.png`, { type: "image/png" }));
       const res = await api(`/api/identity-verification/${verificationId}/camera`, { method: "POST", body: form });
       if (!res.ok) throw new Error(res.error ?? "Camera capture failed.");
       setStatus("Liveness evaluated. Completing provider decision...");
@@ -232,7 +235,27 @@ export default function IdentityVerificationPageClient() {
           {verificationId && !challengeId ? (
             <section style={panelStyle}>
               <strong>Document capture</strong>
-              <span>Use a passport or photo driving licence. For staging/UAT, use generated synthetic ID imagery only.</span>
+              <span>Staging verification — test results only. Use generated synthetic identity imagery; this does not establish genuine biometric identity.</span>
+              <label style={{ display: "grid", gap: 6 }}>
+                Document type
+                <select value={documentType} onChange={(event) => setDocumentType(event.target.value)} disabled={busy}>
+                  <option value="passport">Passport</option>
+                  <option value="driving_licence">Driving licence</option>
+                  <option value="national_identity_document">National identity document</option>
+                </select>
+              </label>
+              <label style={{ display: "grid", gap: 6 }}>
+                Staging test scenario
+                <select value={scenario} onChange={(event) => setScenario(event.target.value)} disabled={busy}>
+                  <option value="success">Successful checks</option>
+                  <option value="expired">Expired document</option>
+                  <option value="document-failed">Document authenticity failure</option>
+                  <option value="blur">Document quality review</option>
+                  <option value="mismatch">Face comparison mismatch</option>
+                  <option value="low-confidence">Liveness review</option>
+                  <option value="liveness-fail">Liveness failure</option>
+                </select>
+              </label>
               <input
                 aria-label="Upload identity document"
                 type="file"

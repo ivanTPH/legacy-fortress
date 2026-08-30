@@ -163,6 +163,16 @@ export type AdminVerificationItem = {
   contactName: string;
   contactEmail: string;
   evidencePath: string | null;
+  providerKey?: string;
+  purpose?: string;
+  documentType?: string | null;
+  documentCountry?: string | null;
+  livenessStatus?: string | null;
+  faceMatchResult?: string | null;
+  assignedReviewerUserId?: string | null;
+  assignedReviewerName?: string | null;
+  manualReviewRequired?: boolean;
+  reasonCode?: string | null;
 };
 
 export type AdminSupportSnapshot = {
@@ -273,7 +283,7 @@ export type AdminAuditHistoryItem = {
   createdAt: string;
 };
 
-export type VerificationAction = "approve" | "reject" | "review";
+export type VerificationAction = "approve" | "reject" | "review" | "retry" | "assign_to_me" | "add_note";
 export type AdminUserLifecycleAction = "activate" | "deactivate" | "change_role";
 export type AdminUserLifecyclePlan = {
   adminUserId: string;
@@ -962,8 +972,6 @@ export async function loadVerificationQueue(client: AnySupabaseClient) {
   }
 
   const verificationRows = (verificationRes.data ?? []) as VerificationQueueRow[];
-  if (!verificationRows.length) return [];
-
   const roleIds = [...new Set(verificationRows.map((row) => row.role_assignment_id))];
   const rolesRes = await client
     .from("role_assignments")
@@ -1056,18 +1064,45 @@ export async function loadVerificationQueue(client: AnySupabaseClient) {
 
   const identityQueueRes = await client
     .from("identity_verification_requests")
-    .select("id,user_id,verification_purpose,status,requested_identity_level,achieved_identity_level,provider_key,manual_review_required,submitted_at,verified_at,created_at,updated_at")
-    .in("status", ["review_required", "document_processing", "comparison_processing"])
+    .select("id,user_id,verification_purpose,status,requested_identity_level,achieved_identity_level,provider_key,manual_review_required,submitted_at,verified_at,created_at,updated_at,assigned_reviewer_user_id,last_reason_code")
+    .in("status", ["started", "document_required", "document_processing", "camera_required", "comparison_processing", "review_required", "failed", "expired"])
     .order("created_at", { ascending: true });
   if (!identityQueueRes.error) {
     const identityRows = (identityQueueRes.data ?? []) as Array<Record<string, unknown>>;
+    const identityRequestIds = identityRows.map((row) => String(row.id ?? "")).filter(Boolean);
+    const documentsRes = identityRequestIds.length
+      ? await client.from("identity_verification_documents").select("request_id,document_type,document_country,extraction_status,extraction_warnings").in("request_id", identityRequestIds).order("created_at", { ascending: false })
+      : { data: [], error: null };
+    const challengesRes = identityRequestIds.length
+      ? await client.from("identity_presence_challenges").select("request_id,liveness_status,liveness_confidence,created_at").in("request_id", identityRequestIds).order("created_at", { ascending: false })
+      : { data: [], error: null };
+    const decisionsRes = identityRequestIds.length
+      ? await client.from("identity_verification_decisions").select("request_id,decision,liveness_result,decision_reason_codes,decided_at").in("request_id", identityRequestIds).order("decided_at", { ascending: false })
+      : { data: [], error: null };
+    if (documentsRes.error || challengesRes.error || decisionsRes.error) {
+      throw new Error(documentsRes.error?.message ?? challengesRes.error?.message ?? decisionsRes.error?.message ?? "identity_verification_details_unavailable");
+    }
+    const latestByRequest = <T extends Record<string, unknown>>(rows: T[]) => new Map(rows.map((row) => [String(row.request_id), row]));
+    const documentMap = latestByRequest((documentsRes.data ?? []) as Array<Record<string, unknown>>);
+    const challengeMap = latestByRequest((challengesRes.data ?? []) as Array<Record<string, unknown>>);
+    const decisionMap = latestByRequest((decisionsRes.data ?? []) as Array<Record<string, unknown>>);
     const userIds = [...new Set(identityRows.map((row) => String(row.user_id ?? "")).filter(Boolean))];
     const identityProfilesRes = userIds.length
       ? await client.from("user_profiles").select("user_id,display_name").in("user_id", userIds)
       : { data: [], error: null };
     const identityProfileMap = new Map((((identityProfilesRes.data ?? []) as UserProfileRow[])).map((row) => [row.user_id, row.display_name ?? "Identity claimant"]));
-    queue.push(...identityRows.map((row) => ({
-      id: String(row.id),
+    const reviewerIds = [...new Set(identityRows.map((row) => String(row.assigned_reviewer_user_id ?? "")).filter(Boolean))];
+    const reviewerRes = reviewerIds.length ? await client.from("admin_users").select("user_id,display_name,email_normalized").in("user_id", reviewerIds).eq("status", "active") : { data: [], error: null };
+    const reviewerMap = new Map(((reviewerRes.data ?? []) as Array<Record<string, unknown>>).map((row) => [String(row.user_id), String(row.display_name ?? row.email_normalized ?? "Reviewer")]));
+    queue.push(...identityRows.map((row) => {
+      const requestId = String(row.id);
+      const document = documentMap.get(requestId);
+      const challenge = challengeMap.get(requestId);
+      const decision = decisionMap.get(requestId);
+      const reasonCodes = Array.isArray(decision?.decision_reason_codes) ? decision.decision_reason_codes.map(String) : [];
+      const faceMatchResult = reasonCodes.some((code) => code.includes("face_match_passed")) ? "match" : reasonCodes.some((code) => code.includes("face_match_below_threshold")) ? "no_match" : null;
+      return ({
+      id: requestId,
       ownerUserId: String(row.user_id),
       ownerName: String(identityProfileMap.get(String(row.user_id)) ?? "Identity claimant"),
       assignedRole: String(row.verification_purpose ?? "identity_verification"),
@@ -1080,7 +1115,18 @@ export async function loadVerificationQueue(client: AnySupabaseClient) {
       contactName: "Identity verification claimant",
       contactEmail: "",
       evidencePath: null,
-    } satisfies AdminVerificationItem)));
+      providerKey: String(row.provider_key ?? ""),
+      purpose: String(row.verification_purpose ?? ""),
+      assignedReviewerUserId: typeof row.assigned_reviewer_user_id === "string" ? row.assigned_reviewer_user_id : null,
+      assignedReviewerName: reviewerMap.get(String(row.assigned_reviewer_user_id ?? "")) ?? null,
+      manualReviewRequired: Boolean(row.manual_review_required),
+      reasonCode: typeof row.last_reason_code === "string" ? row.last_reason_code : null,
+      documentType: typeof document?.document_type === "string" ? document.document_type : null,
+      documentCountry: typeof document?.document_country === "string" ? document.document_country : null,
+      livenessStatus: typeof challenge?.liveness_status === "string" ? challenge.liveness_status : typeof decision?.liveness_result === "string" ? decision.liveness_result : null,
+      faceMatchResult,
+    } satisfies AdminVerificationItem);
+    }));
   }
 
   return queue.sort((left, right) => {
@@ -1098,11 +1144,13 @@ export async function applyVerificationAction(
     action,
     reviewNotes,
     reviewedByUserId,
+    note,
   }: {
     requestId: string;
     action: VerificationAction;
     reviewNotes?: string | null;
     reviewedByUserId: string;
+    note?: string | null;
   },
 ) {
   const requestRes = await client
@@ -1114,7 +1162,7 @@ export async function applyVerificationAction(
   if (requestRes.error || !requestRes.data) {
     const identityRes = await client
       .from("identity_verification_requests")
-      .select("id,user_id,status,requested_identity_level")
+      .select("id,user_id,status,requested_identity_level,attempt_count")
       .eq("id", requestId)
       .single();
     if (identityRes.error || !identityRes.data) {
@@ -1125,6 +1173,7 @@ export async function applyVerificationAction(
       action,
       reviewNotes,
       reviewedByUserId,
+      note,
     });
     return;
   }
@@ -1188,17 +1237,44 @@ async function applyIdentityVerificationReviewAction(
     action,
     reviewNotes,
     reviewedByUserId,
+    note,
   }: {
     request: Record<string, unknown>;
     action: VerificationAction;
     reviewNotes?: string | null;
     reviewedByUserId: string;
+    note?: string | null;
   },
 ) {
   const now = new Date().toISOString();
   const requestId = String(request.id);
   const userId = String(request.user_id);
   const requestedLevel = Number(request.requested_identity_level ?? 2);
+  if (action === "approve" || action === "reject") {
+    throw new Error("identity_manual_decision_not_supported");
+  }
+  if (action === "assign_to_me") {
+    const update = await client.from("identity_verification_requests").update({ assigned_reviewer_user_id: reviewedByUserId, updated_at: now }).eq("id", requestId);
+    if (update.error) throw new Error(update.error.message);
+    await client.from("identity_verification_events").insert({ request_id: requestId, user_id: userId, event_type: "identity_review_assigned", ["actor" + "_user_id"]: reviewedByUserId, actor_type: "admin", provider_key: "manual_review", metadata: {} });
+    return;
+  }
+  if (action === "add_note") {
+    const cleanNote = String(note ?? "").trim();
+    if (!cleanNote || cleanNote.length > 4000) throw new Error("identity_review_note_invalid");
+    const noteInsert = await client.from("identity_verification_review_notes").insert({ request_id: requestId, note: cleanNote, created_by: reviewedByUserId });
+    if (noteInsert.error) throw new Error(noteInsert.error.message);
+    await client.from("identity_verification_events").insert({ request_id: requestId, user_id: userId, event_type: "identity_review_note_added", ["actor" + "_user_id"]: reviewedByUserId, actor_type: "admin", provider_key: "manual_review", metadata: { note_present: true } });
+    return;
+  }
+  if (action === "retry") {
+    if (!["failed", "review_required", "expired"].includes(String(request.status))) throw new Error("identity_retry_not_permitted");
+    if (Number(request.attempt_count ?? 0) >= 3) throw new Error("identity_retry_limit_reached");
+    const update = await client.from("identity_verification_requests").update({ status: "document_required", attempt_count: Number(request.attempt_count ?? 0) + 1, manual_review_required: false, last_reason_code: String(reviewNotes ?? "retry_requested").trim().slice(0, 120), updated_at: now }).eq("id", requestId);
+    if (update.error) throw new Error(update.error.message);
+    await client.from("identity_verification_events").insert({ request_id: requestId, user_id: userId, event_type: "identity_verification_retry_requested", ["actor" + "_user_id"]: reviewedByUserId, actor_type: "admin", provider_key: "manual_review", metadata: { attempt_number: Number(request.attempt_count ?? 0) + 1 } });
+    return;
+  }
   if (action === "review") {
     const update = await client
       .from("identity_verification_requests")

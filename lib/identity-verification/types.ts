@@ -20,6 +20,8 @@ export type IdentityVerificationStatus =
   | "expired"
   | "cancelled";
 
+export type IdentityDocumentType = "passport" | "driving_licence" | "national_identity_document";
+
 export type IdentityVerificationDecision = "verified" | "failed" | "review_required";
 export type IdentityDocumentSide = "front" | "back";
 export type LivenessResult = "passed" | "failed" | "review_required";
@@ -90,7 +92,7 @@ export type ProviderStartInput = {
 
 export type ProviderDocumentExtraction = {
   status: "extracted" | "failed";
-  documentType: "passport" | "driving_licence" | "national_identity_document" | "unknown";
+  documentType: IdentityDocumentType | "unknown";
   documentCountry: string | null;
   fields: {
     fullName?: string;

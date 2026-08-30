@@ -511,15 +511,17 @@ export async function recordIdentityEvent(
   actorType: "user" | "admin" | "system" | "provider",
   metadata: Record<string, unknown> = {},
 ) {
-  await client.from("identity_verification_events").insert({
+  const insert = await client.from("identity_verification_events").insert({
     request_id: requestId,
     user_id: userId,
     event_type: eventType,
     actor_user_id: actorType === "user" || actorType === "admin" ? userId : null,
     actor_type: actorType,
     provider_key: metadata.provider_key ?? INTERNAL_EXPERIMENTAL_PROVIDER_KEY,
+    provider_event_id: typeof metadata.provider_event_id === "string" ? metadata.provider_event_id : null,
     metadata: sanitizeIdentityMetadata(metadata),
   });
+  if (insert.error && !/duplicate key|unique constraint/i.test(insert.error.message)) throw new Error(insert.error.message);
 }
 
 function sanitizeIdentityMetadata(metadata: Record<string, unknown>) {

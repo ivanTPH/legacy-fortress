@@ -272,6 +272,16 @@ type VerificationItem = {
   activationStatus: string;
   submittedAt: string;
   evidencePath: string | null;
+  providerKey?: string;
+  purpose?: string;
+  documentType?: string | null;
+  documentCountry?: string | null;
+  livenessStatus?: string | null;
+  faceMatchResult?: string | null;
+  assignedReviewerUserId?: string | null;
+  assignedReviewerName?: string | null;
+  manualReviewRequired?: boolean;
+  reasonCode?: string | null;
 };
 
 type ProbateCase = {
@@ -525,6 +535,8 @@ export default function AdminControlPlaneWorkspace({
   const [supportDetailLoading, setSupportDetailLoading] = useState(false);
   const [supportActionLoading, setSupportActionLoading] = useState("");
   const [verificationQueue, setVerificationQueue] = useState<VerificationItem[]>([]);
+  const [verificationActionLoading, setVerificationActionLoading] = useState("");
+  const [verificationReviewNote, setVerificationReviewNote] = useState("");
   const [probateCases, setProbateCases] = useState<ProbateCase[]>([]);
   const [probateActionLoading, setProbateActionLoading] = useState("");
   const [probateDecisionNotes, setProbateDecisionNotes] = useState<Record<string, string>>({});
@@ -811,6 +823,24 @@ export default function AdminControlPlaneWorkspace({
     setMessage(`Operations case ${action.replace(/_/g, " ")} completed and audit recorded.`);
   }
 
+  async function runVerificationAction(requestId: string, action: "retry" | "assign_to_me" | "add_note") {
+    if (action === "add_note" && !verificationReviewNote.trim()) return;
+    setVerificationActionLoading(`${requestId}:${action}`);
+    const res = await authFetch("/api/internal/admin/verifications", {
+      method: "POST",
+      body: JSON.stringify({ requestId, action, reviewNotes: action === "add_note" || action === "retry" ? verificationReviewNote.trim() : null }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; queue?: VerificationItem[]; message?: string; capability?: string };
+    setVerificationActionLoading("");
+    if (!res.ok || !json.ok) {
+      setMessage(json.message || json.capability || "Verification action was blocked.");
+      return;
+    }
+    setVerificationQueue(json.queue ?? []);
+    if (action === "add_note" || action === "retry") setVerificationReviewNote("");
+    setMessage(`Verification ${action.replace(/_/g, " ")} completed and audit recorded.`);
+  }
+
   async function addSupportCaseNote(invitationId: string, note: string) {
     if (!supportDetail?.case || !note.trim()) return;
     setSupportActionLoading(`${invitationId}:add_note`);
@@ -941,8 +971,8 @@ export default function AdminControlPlaneWorkspace({
         {section === "admin-users" || section === "admin-user-detail" ? renderAdminUsers(admins, adminInvitations, adminFilter, setAdminFilter, adminInviteForm, setAdminInviteForm, sendAdminInvitation, adminInviteOpen, setAdminInviteOpen, adminLifecycleForm, setAdminLifecycleForm, runAdminLifecycle, runAdminInvitationLifecycle, resourceId) : null}
         {section === "users" || section === "user-detail" ? renderUsers(lookupQuery, setLookupQuery, lookupResults, runLookup, resourceId, userDetail, userDetailLoading) : null}
         {section === "support" || section === "invitations" || section === "access" ? renderSupport(section, support, supportDetail, supportDetailLoading, supportActionLoading, loadSupportInvitationDetail, runSupportInvitationAction, createSupportCase, runSupportCaseAction, addSupportCaseNote, capabilities) : null}
-        {section === "verification" || section === "verification-detail" ? renderVerification(verificationQueue, resourceId) : null}
         {section === "probate" || section === "probate-detail" ? renderProbate(probateCases, resourceId, capabilities, probateDecisionNotes, setProbateDecisionNotes, probateActionLoading, runProbateCaseAction) : null}
+        {section === "verification" || section === "verification-detail" ? renderVerification(verificationQueue, resourceId, capabilities, verificationActionLoading, verificationReviewNote, setVerificationReviewNote, runVerificationAction) : null}
         {section === "audit" ? renderAudit(auditEvents, auditFilter, setAuditFilter) : null}
         {section === "system-health" ? renderSystemHealth(health, metrics, support) : null}
         {section === "settings" ? renderSettings(capabilities) : null}
@@ -2087,26 +2117,61 @@ function SupportNotes({ notes, canManage, loading, onSave }: { notes: Array<{ id
   </>;
 }
 
-function renderVerification(queue: VerificationItem[], resourceId: string | null) {
+function renderVerification(
+  queue: VerificationItem[],
+  resourceId: string | null,
+  capabilities: string[],
+  actionLoading: string,
+  reviewNote: string,
+  setReviewNote: (value: string) => void,
+  runAction: (requestId: string, action: "retry" | "assign_to_me" | "add_note") => Promise<void>,
+) {
   const selected = resourceId ? queue.find((item) => item.id === resourceId) : null;
+  const canReview = capabilities.includes("verification:review");
   return (
     <div style={stackStyle}>
       {selected ? (
         <section style={panelStyle}>
-          <h2 style={h2Style}>{selected.ownerName} / {selected.contactName}</h2>
-          <p style={mutedStyle}>Evidence: {selected.evidencePath ? "metadata present" : "not linked"}. Opening evidence remains case-authorised through the existing server route.</p>
+          <div style={sectionHeaderStyle}>
+            <div><p style={eyebrowStyle}>Platform identity review</p><h2 style={h2Style}>{selected.ownerName}</h2><p style={mutedStyle}>Verification reference {selected.id.slice(0, 8)} · {labelise(selected.purpose ?? selected.requestType)}</p></div>
+            <AdminStatusBadge status={selected.requestStatus} />
+          </div>
+          <p style={mutedStyle}>Status metadata only. Raw identity documents, selfies, biometric templates and unrestricted provider payloads are not available here.</p>
+          <div style={compactDetailGridStyle}>
+            <Detail label="Subject" value={selected.ownerName} />
+            <Detail label="Purpose" value={labelise(selected.purpose ?? selected.requestType)} />
+            <Detail label="Provider" value={selected.providerKey ?? "Unavailable"} />
+            <Detail label="Document" value={selected.documentType ? labelise(selected.documentType) : "Not processed"} />
+            <Detail label="Liveness" value={selected.livenessStatus ? labelise(selected.livenessStatus) : "Not processed"} />
+            <Detail label="Review reason" value={selected.reasonCode ? labelise(selected.reasonCode) : "Not recorded"} />
+            <Detail label="Assigned reviewer" value={selected.assignedReviewerName ?? "Unassigned"} />
+            <Detail label="Started" value={formatDate(selected.submittedAt)} />
+          </div>
+          {canReview ? <section style={contextPanelStyle}>
+            <h3 style={h3Style}>Review actions</h3>
+            <p style={mutedStyle}>These actions manage the verification workflow only. They cannot activate access or override identity policy.</p>
+            <label style={labelStyle}>Operational note or retry reason
+              <textarea value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} rows={3} placeholder="Do not enter document numbers, vault contents or biometric evidence." />
+            </label>
+            <div style={rowStyle}>
+              {!selected.assignedReviewerUserId ? <button type="button" style={secondaryButtonStyle} onClick={() => void runAction(selected.id, "assign_to_me")} disabled={actionLoading === `${selected.id}:assign_to_me`}>{actionLoading === `${selected.id}:assign_to_me` ? "Assigning..." : "Assign to me"}</button> : null}
+              {selected.requestStatus === "failed" || selected.requestStatus === "expired" || selected.requestStatus === "review_required" ? <button type="button" style={secondaryButtonStyle} onClick={() => void runAction(selected.id, "retry")} disabled={!reviewNote.trim() || actionLoading === `${selected.id}:retry`}>{actionLoading === `${selected.id}:retry` ? "Requesting..." : "Request retry"}</button> : null}
+              <button type="button" style={secondaryButtonStyle} onClick={() => void runAction(selected.id, "add_note")} disabled={!reviewNote.trim() || actionLoading === `${selected.id}:add_note`}>{actionLoading === `${selected.id}:add_note` ? "Saving..." : "Add review note"}</button>
+            </div>
+          </section> : null}
         </section>
       ) : null}
       <section style={panelStyle}>
         <h2 style={h2Style}>Verification queue</h2>
         <AdminDataTable
           caption="Verification queue"
-          description={<p style={mutedStyle}>Executor verification requests are inspectable here; probate case creation and decisions remain server-authorised.</p>}
+          description={<p style={mutedStyle}>Identity verification requests are shown as status metadata only. Raw documents and biometric evidence are excluded.</p>}
           columns={[
             { key: "case", header: "Case", render: (item) => <>{item.ownerName}<small>{item.contactName} · {formatDate(item.submittedAt)}</small></> },
             { key: "role", header: "Role", render: (item) => labelise(item.assignedRole) },
-            { key: "status", header: "Status", render: (item) => <><AdminStatusBadge status={item.requestStatus} /><small>{labelise(item.activationStatus)}</small></> },
-            { key: "evidence", header: "Evidence", render: (item) => item.evidencePath ? "On file" : "Missing" },
+            { key: "status", header: "Status", render: (item) => <><AdminStatusBadge status={item.requestStatus} /><small>{item.manualReviewRequired ? "Review required" : labelise(item.activationStatus)}</small></> },
+            { key: "checks", header: "Checks", render: (item) => <><small>Document: {item.documentType ? labelise(item.documentType) : "Pending"}</small><small>Liveness: {item.livenessStatus ? labelise(item.livenessStatus) : "Pending"}</small></> },
+            { key: "assigned", header: "Reviewer", render: (item) => item.assignedReviewerName ?? "Unassigned" },
             { key: "detail", header: "Detail", render: (item) => <Link href={`/admin/verification/${item.id}`}>Inspect</Link> },
           ]}
           rows={queue}
