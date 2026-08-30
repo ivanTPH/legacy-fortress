@@ -1087,6 +1087,36 @@
   display: none;
 }
 
+.lf-platform-organisation-cards {
+  display: none;
+}
+
+.lf-platform-organisation-card {
+  background: #fff;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.lf-platform-organisation-card > div {
+  display: grid;
+  gap: 3px;
+}
+
+.lf-platform-organisation-card > div > span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.lf-platform-organisation-card small {
+  color: #64748b;
+  display: block;
+}
+
 .lf-admin-empty-state {
   background: #f8fafc;
   border: 1px dashed #cbd5e1;
@@ -1262,6 +1292,11 @@
     display: grid;
     gap: 10px;
     min-width: 0;
+  }
+
+  .lf-platform-organisation-cards {
+    display: grid;
+    gap: 10px;
   }
 
   .lf-admin-data-toolbar {

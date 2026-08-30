@@ -867,7 +867,7 @@ function renderLicences(
         <label style={labelStyle}>Organisation
           <select value={String(form.organisationId)} onChange={(event) => setForm({ ...form, organisationId: event.target.value })}>
             <option value="">Select organisation</option>
-            {portfolio.organisations.map((org) => <option key={org.id} value={org.id}>{org.name}</option>)}
+            {portfolio.organisations.map((org) => <option key={org.id} value={org.id}>{organisationOptionLabel(org)}</option>)}
           </select>
         </label>
         <label style={labelStyle}>Licence plan
@@ -947,7 +947,7 @@ function renderInvitations(
         <label style={labelStyle}>Organisation
           <select value={String(form.organisationId)} onChange={(event) => setForm({ ...form, organisationId: event.target.value, licenceId: "" })}>
             <option value="">Select organisation</option>
-            {portfolio.organisations.map((org) => <option key={org.id} value={org.id}>{org.name}</option>)}
+            {portfolio.organisations.map((org) => <option key={org.id} value={org.id}>{organisationOptionLabel(org)}</option>)}
           </select>
         </label>
         <label style={labelStyle}>Licence
@@ -984,7 +984,7 @@ function renderInvitations(
         <label style={labelStyle}>Organisation
           <select value={enrolmentForm.organisationId} onChange={(event) => setEnrolmentForm({ ...enrolmentForm, organisationId: event.target.value, licenceId: "" })}>
             <option value="">Select organisation</option>
-            {portfolio.organisations.map((org) => <option key={org.id} value={org.id}>{org.name}</option>)}
+            {portfolio.organisations.map((org) => <option key={org.id} value={org.id}>{organisationOptionLabel(org)}</option>)}
           </select>
         </label>
         <label style={labelStyle}>Licence
@@ -1099,7 +1099,7 @@ function renderRegistrationLinks(
       <div style={twoColumnStyle}>
         <section style={contextPanelStyle} aria-label="Create registration link">
           <h3 style={h3Style}>Create registration link</h3>
-          <label style={labelStyle}>Organisation<select value={form.organisationId} onChange={(event) => setForm({ ...form, organisationId: event.target.value, licenceId: "" })}><option value="">Select organisation</option>{portfolio.organisations.map((org) => <option key={org.id} value={org.id}>{org.name}</option>)}</select></label>
+          <label style={labelStyle}>Organisation<select value={form.organisationId} onChange={(event) => setForm({ ...form, organisationId: event.target.value, licenceId: "" })}><option value="">Select organisation</option>{portfolio.organisations.map((org) => <option key={org.id} value={org.id}>{organisationOptionLabel(org)}</option>)}</select></label>
           <label style={labelStyle}>Licence<select value={form.licenceId} onChange={(event) => setForm({ ...form, licenceId: event.target.value })}><option value="">Select licence</option>{licences.map((licence) => <option key={licence.id} value={licence.id}>{licence.plan} · {licence.availableSeats} available</option>)}</select></label>
           <FormInput label="Link name" required value={form.displayName} onChange={(displayName) => setForm({ ...form, displayName })} />
           <FormInput label="Maximum claims" type="number" value={String(form.maxClaims)} onChange={(value) => setForm({ ...form, maxClaims: Number(value) })} />
@@ -1783,6 +1783,11 @@ function nextYearInput() {
 
 function labelise(value: string) {
   return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function organisationOptionLabel(org: EnterpriseOrganisation) {
+  const reference = org.customerReference || org.registrationNumber || org.contractReference;
+  return reference ? `${org.name} · ${reference}` : `${org.name} · ${org.id.slice(0, 8)}`;
 }
 
 function normalizeEnterpriseTab(value: string | null): EnterpriseTab | null {

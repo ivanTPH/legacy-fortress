@@ -176,3 +176,10 @@ test("enterprise invitation and membership lifecycle controls require reasoned a
   assert.match(service, /releaseEnterpriseSeat\(client, current\.seat_id, "invitation_release"\)/);
   assert.match(service, /releaseEnterpriseSeat\(client, current\.seat_id, optionalText\(reason\)/);
 });
+
+test("registration organisation pickers disambiguate duplicate display names", () => {
+  const workspace = read("components/enterprise/EnterpriseOperationsWorkspace.tsx");
+  assert.match(workspace, /function organisationOptionLabel/);
+  assert.match(workspace, /customerReference \|\| org\.registrationNumber \|\| org\.contractReference/);
+  assert.match(workspace, /organisationOptionLabel\(org\)/);
+});

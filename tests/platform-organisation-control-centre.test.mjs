@@ -97,4 +97,6 @@ test("organisation detail exposes commercial setup, administrator and registrati
   assert.match(controlCentre, /activeRegistrationLinks/);
   assert.match(controlCentre, /customerReference: org\.customerReference/);
   assert.match(controlCentre, /initialStatus: org\.status/);
+  assert.match(controlCentre, /lf-platform-organisation-cards/);
+  assert.match(controlCentre, /Platform totals/);
 });

@@ -275,8 +275,11 @@ async function loadAdminPermissionRoles(token: string): Promise<PlatformRole[]> 
     admin?: { isMasterAdmin?: boolean; role?: string; capabilities?: string[] };
   } | null;
   if (!payload?.ok || !payload.admin) return [];
-  if (payload.admin.isMasterAdmin) return ["super_admin"];
-  if (payload.admin.role === "enterprise_admin" || payload.admin.capabilities?.includes("organisation:manage")) return ["enterprise_admin"];
-  if (payload.admin.role === "probate_reviewer" || payload.admin.role === "verification_reviewer") return ["probate_admin"];
-  return [];
+  const roles: PlatformRole[] = [];
+  if (payload.admin.isMasterAdmin) roles.push("super_admin");
+  if (payload.admin.role === "enterprise_admin" || payload.admin.capabilities?.some((capability) => ["organisation:manage", "enterprise.workspace.access", "enterprise_dashboard", "enterprise_reports"].includes(capability))) {
+    roles.push("enterprise_admin");
+  }
+  if (payload.admin.role === "probate_reviewer" || payload.admin.role === "verification_reviewer" || payload.admin.capabilities?.includes("probate_operations")) roles.push("probate_admin");
+  return [...new Set(roles)];
 }

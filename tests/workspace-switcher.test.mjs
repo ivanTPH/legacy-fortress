@@ -174,3 +174,10 @@ test("current workspace detection recognises enterprise, probate, executor, and 
   assert.equal(getCurrentWorkspaceForPath("/user"), "application");
   assert.equal(getCurrentWorkspaceForPath("/dashboard"), "application");
 });
+
+test("enterprise-capable platform sessions retain Enterprise Operations in the switcher", () => {
+  const switcher = fs.readFileSync(path.join(root, "components/navigation/WorkspaceSwitcher.tsx"), "utf8");
+  assert.match(switcher, /enterprise\.workspace\.access/);
+  assert.match(switcher, /enterprise_dashboard/);
+  assert.match(switcher, /roles\.push\("enterprise_admin"\)/);
+});
