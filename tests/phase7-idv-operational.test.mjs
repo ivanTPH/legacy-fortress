@@ -12,6 +12,9 @@ const userPage = read("app/identity/verify/IdentityVerificationPageClient.tsx");
 const adminPage = read("components/admin/AdminControlPlaneWorkspace.tsx");
 const adminOps = read("lib/admin/operations.ts");
 const callback = read("app/api/identity-verification/callback/route.ts");
+const documentRoute = read("app/api/identity-verification/[requestId]/document/route.ts");
+const cameraRoute = read("app/api/identity-verification/[requestId]/camera/route.ts");
+const startRoute = read("app/api/identity-verification/route.ts");
 
 test("operational migration isolates review notes and adds reviewer/idempotency fields", () => {
   assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.identity_verification_review_notes/);
@@ -32,10 +35,25 @@ test("staging simulator is explicit and has deterministic safe scenarios", () =>
 });
 
 test("user journey exposes document selection and labels synthetic results", () => {
-  assert.match(userPage, /Staging verification — test results only/);
+  assert.match(userPage, /STAGING IDENTITY SIMULATOR/);
+  assert.match(userPage, /No genuine identity or biometric verification is performed/);
   assert.match(userPage, /national_identity_document/);
-  assert.match(userPage, /Staging test scenario/);
+  assert.match(userPage, /STAGING IDENTITY SIMULATOR/);
+  assert.match(userPage, /Use synthetic test document/);
+  assert.match(userPage, /Use synthetic live-person capture/);
+  assert.doesNotMatch(userPage, /type="file"/);
   assert.doesNotMatch(userPage, /localStorage|sessionStorage/);
+});
+
+test("synthetic operations use server-side metadata-only paths", () => {
+  assert.match(documentRoute, /body\.synthetic/);
+  assert.match(documentRoute, /generateSyntheticDocumentEvidence/);
+  assert.match(cameraRoute, /body\.synthetic/);
+  assert.match(cameraRoute, /generateSyntheticCameraEvidence/);
+  assert.match(service, /storage_bucket: "synthetic"/);
+  assert.match(service, /storage_path: null/);
+  assert.match(startRoute, /simulatorScenario/);
+  assert.match(service, /linked_access_context_required/);
 });
 
 test("identity admin workflow is limited to review-safe actions", () => {

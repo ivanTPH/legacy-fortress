@@ -90,12 +90,12 @@ test("Invitation acceptance sends insufficient-assurance users to identity verif
   assert.match(acceptPage, /purpose: "linked_access"/);
 });
 
-test("Browser capture uses real camera APIs with explicit capture and track cleanup", () => {
-  assert.match(verifyPage, /navigator\.mediaDevices\.getUserMedia/);
-  assert.match(verifyPage, /videoRef/);
-  assert.match(verifyPage, /toBlob/);
-  assert.match(verifyPage, /getTracks\(\)\.forEach\(\(track\) => track\.stop\(\)\)/);
-  assert.match(verifyPage, /UAT upload fallback/);
+test("Staging verification uses metadata-only synthetic capture", () => {
+  assert.match(verifyPage, /STAGING IDENTITY SIMULATOR/);
+  assert.match(verifyPage, /Use synthetic test document/);
+  assert.match(verifyPage, /Use synthetic live-person capture/);
+  assert.doesNotMatch(verifyPage, /type="file"/);
+  assert.doesNotMatch(verifyPage, /getUserMedia/);
   assert.doesNotMatch(verifyPage, /mark verified|set verified|bypass/i);
 });
 

@@ -1065,7 +1065,7 @@ export async function loadVerificationQueue(client: AnySupabaseClient) {
   const identityQueueRes = await client
     .from("identity_verification_requests")
     .select("id,user_id,verification_purpose,status,requested_identity_level,achieved_identity_level,provider_key,manual_review_required,submitted_at,verified_at,created_at,updated_at,assigned_reviewer_user_id,last_reason_code")
-    .in("status", ["started", "document_required", "document_processing", "camera_required", "comparison_processing", "review_required", "failed", "expired"])
+    .in("status", ["started", "document_required", "document_processing", "camera_required", "comparison_processing", "review_required", "failed", "expired", "verified"])
     .order("created_at", { ascending: true });
   if (!identityQueueRes.error) {
     const identityRows = (identityQueueRes.data ?? []) as Array<Record<string, unknown>>;

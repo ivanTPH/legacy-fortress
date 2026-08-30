@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import BrandMark from "../../(app)/components/BrandMark";
 import Icon from "../../../components/ui/Icon";
@@ -45,21 +45,12 @@ export default function IdentityVerificationPageClient() {
   const [verificationId, setVerificationId] = useState(params.get("request") ?? "");
   const [challengeId, setChallengeId] = useState("");
   const [status, setStatus] = useState("Preparing identity verification...");
-  const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [documentType, setDocumentType] = useState("passport");
   const [scenario, setScenario] = useState("success");
-  const [cameraBlob, setCameraBlob] = useState<Blob | null>(null);
-  const [cameraError, setCameraError] = useState("");
   const [decision, setDecision] = useState<VerificationResponse["decision"] | null>(null);
   const [busy, setBusy] = useState(false);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-
-  const stopCamera = useCallback(() => {
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-    streamRef.current = null;
-  }, []);
-
+  const purpose = params.get("purpose") === "step_up_presence" ? "step_up_presence" : "linked_access";
+  const hasLinkedContext = Boolean(params.get("grant") || params.get("invitation"));
   useEffect(() => {
     let mounted = true;
     supabase.auth.getSession().then(({ data }) => {
@@ -68,11 +59,8 @@ export default function IdentityVerificationPageClient() {
       setToken(accessToken);
       if (!accessToken) setStatus("Sign in to continue identity verification.");
     });
-    return () => {
-      mounted = false;
-      stopCamera();
-    };
-  }, [stopCamera]);
+    return () => { mounted = false; };
+  }, []);
 
   async function start() {
     if (!token) {
@@ -82,7 +70,6 @@ export default function IdentityVerificationPageClient() {
     setBusy(true);
     setStatus("Starting verification...");
     try {
-      const purpose = params.get("purpose") === "step_up_presence" ? "step_up_presence" : "linked_access";
       const res = await api("/api/identity-verification", {
         method: "POST",
         body: JSON.stringify({
@@ -90,11 +77,12 @@ export default function IdentityVerificationPageClient() {
           requestedIdentityLevel: purpose === "step_up_presence" ? 3 : 2,
           accessGrantId: params.get("grant"),
           invitationId: params.get("invitation"),
+          simulatorScenario: scenario,
         }),
       });
       if (!res.verification?.id) throw new Error(res.error ?? "Could not start verification.");
       setVerificationId(res.verification.id);
-      setStatus(purpose === "step_up_presence" ? "Fresh presence check required." : "Upload a synthetic UAT identity document to continue.");
+      setStatus(purpose === "step_up_presence" ? "Fresh presence check required." : "Use the synthetic test document to continue.");
       if (purpose === "step_up_presence") await createChallenge(res.verification.id);
     } catch (error) {
       setStatus(readError(error));
@@ -103,17 +91,17 @@ export default function IdentityVerificationPageClient() {
     }
   }
 
-  async function uploadDocument() {
-    if (!verificationId || !documentFile) return;
+  async function submitSyntheticDocument() {
+    if (!verificationId) return;
     setBusy(true);
     setStatus("Uploading and extracting document data...");
     try {
-      const form = new FormData();
-      const syntheticName = `${documentType}-${scenario}-${documentFile.name}`;
-      form.set("file", new File([documentFile], syntheticName, { type: documentFile.type }));
-      form.set("side", "front");
-      const res = await api(`/api/identity-verification/${verificationId}/document`, { method: "POST", body: form });
+      const res = await api(`/api/identity-verification/${verificationId}/document`, { method: "POST", body: JSON.stringify({ synthetic: true, documentType, side: "front" }) });
       if (!res.ok) throw new Error(res.error ?? "Document upload failed.");
+      if (res.document?.extractionStatus === "failed") {
+        setStatus("The synthetic document check failed. Your verification requires review or another attempt.");
+        return;
+      }
       setStatus(res.document?.extractionWarnings?.length ? "Document extracted with warnings. Continue to camera capture." : "Document extracted. Continue to camera capture.");
       await createChallenge(verificationId);
     } catch (error) {
@@ -130,50 +118,12 @@ export default function IdentityVerificationPageClient() {
     setStatus(res.challenge.prompt);
   }
 
-  async function openCamera() {
-    setCameraError("");
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" },
-        audio: false,
-      });
-      streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
-      setStatus("Camera ready. Capture only when your face is aligned with the challenge.");
-    } catch {
-      setCameraError("Camera is unavailable or permission was denied. Use the upload fallback for controlled UAT.");
-    }
-  }
-
-  function captureFrame() {
-    const video = videoRef.current;
-    if (!video || !video.videoWidth || !video.videoHeight) {
-      setCameraError("Camera frame is not ready yet.");
-      return;
-    }
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d");
-    ctx?.drawImage(video, 0, 0);
-    canvas.toBlob((blob) => {
-      if (blob) {
-        setCameraBlob(blob);
-        stopCamera();
-        setStatus("Camera capture staged. Submit it for liveness and 1:1 comparison.");
-      }
-    }, "image/png");
-  }
-
-  async function submitCamera() {
-    if (!verificationId || !challengeId || !cameraBlob) return;
+  async function submitSyntheticLivePersonCapture() {
+    if (!verificationId || !challengeId) return;
     setBusy(true);
-    setStatus("Submitting live capture...");
+    setStatus("Running synthetic liveness and face comparison...");
     try {
-      const form = new FormData();
-      form.set("challengeId", challengeId);
-      form.set("file", new File([cameraBlob], `live-camera-${scenario}.png`, { type: "image/png" }));
-      const res = await api(`/api/identity-verification/${verificationId}/camera`, { method: "POST", body: form });
+      const res = await api(`/api/identity-verification/${verificationId}/camera`, { method: "POST", body: JSON.stringify({ synthetic: true, challengeId }) });
       if (!res.ok) throw new Error(res.error ?? "Camera capture failed.");
       setStatus("Liveness evaluated. Completing provider decision...");
       const final = await api(`/api/identity-verification/${verificationId}/complete`, { method: "POST" });
@@ -212,7 +162,7 @@ export default function IdentityVerificationPageClient() {
         </div>
         <div className="lf-auth-art-copy">
           <h2>Verify identity before protected access.</h2>
-          <p>This controlled flow compares your supplied identity document portrait with a fresh camera capture. It does not search across people.</p>
+          <p>This controlled flow uses a staging-only synthetic document and live-person result. It does not require real identity or biometric evidence.</p>
         </div>
       </section>
 
@@ -225,78 +175,61 @@ export default function IdentityVerificationPageClient() {
 
           <div className="lf-muted-note" role="status">{status}</div>
 
+          <section style={panelStyle}>
+            <strong>STAGING IDENTITY SIMULATOR</strong>
+            <span>No genuine identity or biometric verification is performed. Use synthetic data only.</span>
+            <label style={{ display: "grid", gap: 6 }}>
+              Document type
+              <select value={documentType} onChange={(event) => setDocumentType(event.target.value)} disabled={busy || Boolean(verificationId)}>
+                <option value="passport">Passport</option>
+                <option value="driving_licence">Driving licence</option>
+                <option value="national_identity_document">National identity document</option>
+              </select>
+            </label>
+            <label style={{ display: "grid", gap: 6 }}>
+              Test outcome scenario
+              <select value={scenario} onChange={(event) => setScenario(event.target.value)} disabled={busy || Boolean(verificationId)}>
+                <option value="success">Successful verification</option>
+                <option value="expired">Expired document</option>
+                <option value="document-failed">Document authenticity failure</option>
+                <option value="blur">Document quality review</option>
+                <option value="mismatch">Face mismatch</option>
+                <option value="low-confidence">Liveness review</option>
+                <option value="liveness-fail">Liveness failure</option>
+                <option value="provider-timeout">Provider timeout</option>
+                <option value="provider-error">Provider error</option>
+              </select>
+            </label>
+          </section>
+
           {!verificationId ? (
-            <button className="lf-primary-btn" type="button" onClick={() => void start()} disabled={busy || !token}>
+            <>
+              {!hasLinkedContext && purpose !== "step_up_presence" ? <p role="note">Open this check from an accepted linked-access request. A linked-access verification cannot be started from an unbound URL.</p> : null}
+            <button className="lf-primary-btn" type="button" onClick={() => void start()} disabled={busy || !token || (purpose !== "step_up_presence" && !hasLinkedContext)}>
               <Icon name="verified_user" size={16} />
               Start verification
             </button>
+            </>
           ) : null}
 
           {verificationId && !challengeId ? (
             <section style={panelStyle}>
               <strong>Document capture</strong>
-              <span>Staging verification — test results only. Use generated synthetic identity imagery; this does not establish genuine biometric identity.</span>
-              <label style={{ display: "grid", gap: 6 }}>
-                Document type
-                <select value={documentType} onChange={(event) => setDocumentType(event.target.value)} disabled={busy}>
-                  <option value="passport">Passport</option>
-                  <option value="driving_licence">Driving licence</option>
-                  <option value="national_identity_document">National identity document</option>
-                </select>
-              </label>
-              <label style={{ display: "grid", gap: 6 }}>
-                Staging test scenario
-                <select value={scenario} onChange={(event) => setScenario(event.target.value)} disabled={busy}>
-                  <option value="success">Successful checks</option>
-                  <option value="expired">Expired document</option>
-                  <option value="document-failed">Document authenticity failure</option>
-                  <option value="blur">Document quality review</option>
-                  <option value="mismatch">Face comparison mismatch</option>
-                  <option value="low-confidence">Liveness review</option>
-                  <option value="liveness-fail">Liveness failure</option>
-                </select>
-              </label>
-              <input
-                aria-label="Upload identity document"
-                type="file"
-                accept="image/png,image/jpeg,application/pdf"
-                onChange={(event) => setDocumentFile(event.currentTarget.files?.[0] ?? null)}
-              />
-              <button className="lf-primary-btn" type="button" onClick={() => void uploadDocument()} disabled={busy || !documentFile}>
-                <Icon name="upload" size={16} />
-                Upload document
+              <span>Use a generated synthetic document payload. No passport, driving licence or national ID image is uploaded or stored.</span>
+              <button className="lf-primary-btn" type="button" onClick={() => void submitSyntheticDocument()} disabled={busy}>
+                <Icon name="description" size={16} />
+                Use synthetic test document
               </button>
             </section>
           ) : null}
 
           {challengeId ? (
             <section style={panelStyle}>
-              <strong>Live camera capture</strong>
-              <span>Camera access starts only when requested and stops after capture or when you leave this page.</span>
-              <video ref={videoRef} autoPlay muted playsInline style={{ width: "100%", borderRadius: 8, background: "#0f172a", aspectRatio: "16 / 9" }} />
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button className="lf-link-btn" type="button" onClick={() => void openCamera()}>
-                  <Icon name="photo_camera" size={16} />
-                  Open camera
-                </button>
-                <button className="lf-link-btn" type="button" onClick={captureFrame}>
-                  <Icon name="center_focus_strong" size={16} />
-                  Capture
-                </button>
-              </div>
-              {cameraError ? <div className="lf-muted-note" role="alert">{cameraError}</div> : null}
-              <label style={{ display: "grid", gap: 6 }}>
-                UAT upload fallback
-                <input
-                  aria-label="Upload live capture fallback"
-                  type="file"
-                  accept="image/png,image/jpeg"
-                  onChange={(event) => setCameraBlob(event.currentTarget.files?.[0] ?? null)}
-                />
-              </label>
-              <button className="lf-primary-btn" type="button" onClick={() => void submitCamera()} disabled={busy || !cameraBlob}>
+              <strong>Live-person check</strong>
+              <span>Staging simulator only. No camera permission, selfie or biometric image is required.</span>
+              <button className="lf-primary-btn" type="button" onClick={() => void submitSyntheticLivePersonCapture()} disabled={busy}>
                 <Icon name="check_circle" size={16} />
-                Submit capture
+                Use synthetic live-person capture
               </button>
             </section>
           ) : null}
@@ -306,7 +239,7 @@ export default function IdentityVerificationPageClient() {
               <strong>Decision: {decision.status.replace(/_/g, " ")}</strong>
               <span>Identity level: {decision.identityLevel ?? "not granted"}</span>
               <span>Reason codes: {decision.reasonCodes.join(", ")}</span>
-              {decision.status === "verified" ? <span>Protected access activation is now server-side eligible and remains scoped by Phase 1 RLS.</span> : null}
+              {decision.status === "verified" ? <span>Your identity requirement has been satisfied. Access remains subject to invitation, authority and security-policy requirements.</span> : null}
             </section>
           ) : null}
         </div>
@@ -316,7 +249,14 @@ export default function IdentityVerificationPageClient() {
 }
 
 function readError(error: unknown) {
-  return error instanceof Error ? error.message : "Identity verification failed.";
+  const message = error instanceof Error ? error.message : "identity_verification_error";
+  if (message === "linked_access_context_required" || message.includes("context_invalid") || message.includes("context_terminal")) return "This identity check is no longer available for the linked access request.";
+  if (message.includes("linked_invitation_context") || message.includes("linked_grant_context")) return "This identity check is not linked to an eligible access request.";
+  if (message === "experimental_provider_timeout") return "The staging test provider timed out. You can request another attempt.";
+  if (message === "experimental_provider_error") return "The staging test provider is unavailable. Try again later.";
+  if (message === "synthetic_provider_not_enabled") return "Synthetic staging verification is not enabled for this environment.";
+  if (message === "invalid_simulator_scenario" || message.includes("provider") || message.includes("verification_")) return "Identity verification could not continue. Review the current request and try again.";
+  return message === "identity_verification_error" ? "Identity verification could not continue." : "Identity verification could not continue. Try again or contact support.";
 }
 
 function statusForDecision(status: string) {

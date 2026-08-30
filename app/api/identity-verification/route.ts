@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { identityErrorResponse, requireIdentityApiAccess } from "@/lib/identity-verification/api";
-import { startIdentityVerification } from "@/lib/identity-verification/service";
+import { isInternalExperimentalProviderAllowed, startIdentityVerification, validateSimulatorScenario } from "@/lib/identity-verification/service";
 import type { IdentityVerificationPurpose } from "@/lib/identity-verification/types";
 
 const PURPOSES = new Set(["linked_access", "registration_required", "step_up_presence", "admin_review"]);
@@ -27,6 +27,7 @@ export async function POST(request: Request) {
       requestedIdentityLevel?: number;
       invitationId?: string | null;
       accessGrantId?: string | null;
+      simulatorScenario?: string | null;
     };
     const purpose = String(body.purpose ?? "linked_access");
     if (!PURPOSES.has(purpose)) {
@@ -36,12 +37,17 @@ export async function POST(request: Request) {
     if (requestedIdentityLevel !== 2 && requestedIdentityLevel !== 3) {
       return NextResponse.json({ ok: false, error: "invalid_identity_level" }, { status: 400 });
     }
+    const simulatorScenario = body.simulatorScenario == null ? null : validateSimulatorScenario(body.simulatorScenario);
+    if (body.simulatorScenario != null && (!isInternalExperimentalProviderAllowed() || !simulatorScenario)) {
+      return NextResponse.json({ ok: false, error: "invalid_simulator_scenario" }, { status: 400 });
+    }
     const verification = await startIdentityVerification(access.admin, {
       userId: access.user.id,
       purpose: purpose as IdentityVerificationPurpose,
       requestedIdentityLevel,
       invitationId: body.invitationId ?? null,
       accessGrantId: body.accessGrantId ?? null,
+      simulatorScenario,
     });
     return NextResponse.json({
       ok: true,

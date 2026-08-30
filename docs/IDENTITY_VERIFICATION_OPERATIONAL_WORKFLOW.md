@@ -6,7 +6,7 @@ Phase 7 adds an operational staging journey around the existing identity-verific
 
 ## User journey
 
-Authenticated users start a verification for a server-validated purpose. The staging screen lets a tester select passport, driving licence, or national identity document metadata and a deterministic synthetic scenario. Document upload, camera permission/capture, liveness, comparison, processing, and the final decision remain server/provider operations. Browser input cannot submit a trusted decision.
+Authenticated users start a verification for a server-validated purpose. The staging screen lets a tester select passport, driving licence, or national identity document metadata and a deterministic synthetic scenario. Synthetic document and live-person actions create metadata-only test events; no file upload, camera permission, selfie, or biometric image is required. Commercial-provider capture remains a future provider concern. Browser input cannot submit a trusted decision.
 
 Supported staging scenarios include successful checks, expired or failed documents, document-quality review, face mismatch, liveness review/failure, and provider failure/timeout. Synthetic results are labelled as staging test results.
 

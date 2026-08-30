@@ -15,6 +15,18 @@ type AnySupabaseClient = SupabaseClient;
 
 export const IDENTITY_EVIDENCE_BUCKET = "identity-verification-evidence";
 export const LEVEL_3_TTL_MINUTES = Number.parseInt(process.env.IDENTITY_LEVEL3_TTL_MINUTES ?? "10", 10) || 10;
+export const INTERNAL_SIMULATOR_SCENARIOS = [
+  "success",
+  "expired",
+  "document-failed",
+  "blur",
+  "mismatch",
+  "low-confidence",
+  "liveness-fail",
+  "provider-timeout",
+  "provider-error",
+] as const;
+export type InternalSimulatorScenario = (typeof INTERNAL_SIMULATOR_SCENARIOS)[number];
 
 export function getIdentityVerificationProvider(): IdentityVerificationProvider {
   if (!isInternalExperimentalProviderAllowed()) {
@@ -52,9 +64,11 @@ export async function startIdentityVerification(
     requestedIdentityLevel: 2 | 3;
     invitationId?: string | null;
     accessGrantId?: string | null;
+    simulatorScenario?: InternalSimulatorScenario | null;
   },
 ) {
   const provider = getIdentityVerificationProvider();
+  await validateVerificationContext(client, input);
   const started = await provider.startVerification(input);
   const now = new Date().toISOString();
   const insert = await client
@@ -71,6 +85,7 @@ export async function startIdentityVerification(
       evidence_retention_until: new Date(Date.now() + 24 * 60 * 60_000).toISOString(),
       metadata: {
         provider_experimental: provider.experimental,
+        simulator_scenario: input.simulatorScenario ?? null,
         product_notice: "Internal experimental provider for controlled staging/UAT only.",
       },
       created_at: now,
@@ -89,6 +104,31 @@ export async function startIdentityVerification(
     await markLinkedAccessIdentityRequired(client, input.userId, input.accessGrantId ?? null);
   }
   return request;
+}
+
+async function validateVerificationContext(client: AnySupabaseClient, input: { userId: string; purpose: IdentityVerificationPurpose; requestedIdentityLevel: 2 | 3; invitationId?: string | null; accessGrantId?: string | null }) {
+  if (input.purpose === "step_up_presence") {
+    if (input.requestedIdentityLevel !== 3 || input.invitationId || input.accessGrantId) throw new Error("invalid_step_up_context");
+    return;
+  }
+  if (input.purpose !== "linked_access") return;
+  if (!input.invitationId && !input.accessGrantId) throw new Error("linked_access_context_required");
+  if (input.accessGrantId) {
+    const grant = await client.from("account_access_grants").select("id,linked_user_id,invitation_id,activation_status").eq("id", input.accessGrantId).maybeSingle();
+    if (grant.error || !grant.data || String(grant.data.linked_user_id) !== input.userId) throw new Error("linked_access_context_invalid");
+    if (["rejected", "revoked"].includes(String(grant.data.activation_status))) throw new Error("linked_access_context_terminal");
+    if (input.invitationId && String(grant.data.invitation_id ?? "") !== input.invitationId) throw new Error("linked_access_context_mismatch");
+  }
+  if (input.invitationId) {
+    const invitation = await client.from("contact_invitations").select("id,accepted_user_id,invitation_status").eq("id", input.invitationId).maybeSingle();
+    if (invitation.error || !invitation.data || String(invitation.data.accepted_user_id ?? "") !== input.userId) throw new Error("linked_invitation_context_invalid");
+    if (["rejected", "revoked", "expired"].includes(String(invitation.data.invitation_status))) throw new Error("linked_invitation_context_terminal");
+  }
+}
+
+export function validateSimulatorScenario(value: unknown): InternalSimulatorScenario | null {
+  const scenario = String(value ?? "").trim();
+  return (INTERNAL_SIMULATOR_SCENARIOS as readonly string[]).includes(scenario) ? scenario as InternalSimulatorScenario : null;
 }
 
 export async function getCurrentIdentityAssuranceLevel(client: AnySupabaseClient, userId: string) {
@@ -219,6 +259,55 @@ export async function uploadDocumentEvidence(
   return doc.data as IdentityVerificationDocumentRow;
 }
 
+export async function generateSyntheticDocumentEvidence(
+  client: AnySupabaseClient,
+  input: { userId: string; requestId: string; documentSide: "front" | "back"; documentType: "passport" | "driving_licence" | "national_identity_document" },
+) {
+  const request = await getOwnedVerificationRequest(client, input.requestId, input.userId);
+  assertTransition(request.status, ["document_required", "document_uploaded", "document_extracted", "started"]);
+  const provider = getIdentityVerificationProvider();
+  const scenario = validateSimulatorScenario(request.metadata?.simulator_scenario) ?? "success";
+  const extraction = await provider.extractDocumentData({
+    requestId: input.requestId,
+    userId: input.userId,
+    fileName: `${input.documentType}-${scenario}-synthetic.png`,
+    mimeType: "image/png",
+    sha256Hash: sha256(`synthetic-document:${input.requestId}:${input.documentType}:${scenario}`),
+    sizeBytes: 256,
+  });
+  const now = new Date().toISOString();
+  const doc = await client.from("identity_verification_documents").insert({
+    request_id: input.requestId,
+    user_id: input.userId,
+    document_side: input.documentSide,
+    document_type: input.documentType,
+    document_country: extraction.documentCountry,
+    storage_bucket: "synthetic",
+    storage_path: `synthetic/${input.requestId}/document-${input.documentSide}`,
+    mime_type: "application/octet-stream",
+    size_bytes: 0,
+    sha256_hash: sha256(`synthetic-document:${input.requestId}:${input.documentType}:${scenario}`),
+    extraction_status: extraction.status,
+    extracted_fields: extraction.fields,
+    extraction_confidence: extraction.confidence,
+    extraction_warnings: extraction.warnings,
+    portrait_reference: extraction.portraitReference ?? null,
+    retention_until: now,
+    created_at: now,
+    updated_at: now,
+  }).select("*").single();
+  if (doc.error || !doc.data) throw new Error(doc.error?.message || "synthetic_document_record_failed");
+  await client.from("identity_verification_requests").update({
+    status: extraction.status === "extracted" ? "document_extracted" : "review_required",
+    attempt_count: Number(request.attempt_count ?? 0) + 1,
+    manual_review_required: extraction.status !== "extracted" || extraction.warnings.length > 0,
+    submitted_at: now,
+    updated_at: now,
+  }).eq("id", input.requestId);
+  await recordIdentityEvent(client, input.requestId, input.userId, extraction.status === "extracted" ? "document_processed" : "document_extraction_failed", "provider", { document_type: input.documentType, synthetic: true, confidence: extraction.confidence, warning_count: extraction.warnings.length });
+  return doc.data as IdentityVerificationDocumentRow;
+}
+
 export async function createPresenceChallenge(client: AnySupabaseClient, requestId: string, userId: string) {
   const request = await getOwnedVerificationRequest(client, requestId, userId);
   assertTransition(request.status, ["document_extracted", "camera_required", "started"]);
@@ -300,6 +389,25 @@ export async function uploadCameraEvidence(
     reason_codes: liveness.reasonCodes,
   });
   return { captureHash: hash, liveness };
+}
+
+export async function generateSyntheticCameraEvidence(client: AnySupabaseClient, input: { userId: string; requestId: string; challengeId: string }) {
+  const request = await getOwnedVerificationRequest(client, input.requestId, input.userId);
+  assertTransition(request.status, ["camera_required", "camera_captured", "comparison_processing"]);
+  const challengeRes = await client.from("identity_presence_challenges").select("*").eq("id", input.challengeId).eq("request_id", input.requestId).eq("user_id", input.userId).single();
+  if (challengeRes.error || !challengeRes.data) throw new Error(challengeRes.error?.message || "challenge_not_found");
+  const challenge = challengeRes.data as IdentityPresenceChallengeRow;
+  if (Date.parse(challenge.expires_at) <= Date.now()) throw new Error("presence_challenge_expired");
+  const scenario = validateSimulatorScenario(request.metadata?.simulator_scenario) ?? "success";
+  const captureHash = syntheticCaptureHash(`live-camera-${scenario}.png`, sha256(`synthetic-camera:${input.requestId}:${input.challengeId}:${scenario}`));
+  const provider = getIdentityVerificationProvider();
+  const liveness = await provider.evaluateLiveness({ challenge, captureHash, mimeType: "image/png", sizeBytes: 256 });
+  const now = new Date().toISOString();
+  await client.from("identity_presence_challenges").update({ status: liveness.result === "passed" ? "passed" : "failed", storage_bucket: "synthetic", storage_path: null, liveness_status: liveness.result, liveness_confidence: liveness.confidence, captured_at: now, retention_until: now, updated_at: now, metadata: { ...challenge.metadata, capture_hash: captureHash, synthetic: true, liveness_reason_codes: liveness.reasonCodes } }).eq("id", input.challengeId);
+  await client.from("identity_verification_requests").update({ status: "camera_captured", updated_at: now }).eq("id", input.requestId);
+  await recordIdentityEvent(client, input.requestId, input.userId, "camera_captured", "user", { challenge_id: input.challengeId, synthetic: true });
+  await recordIdentityEvent(client, input.requestId, input.userId, liveness.result === "passed" ? "liveness_passed" : "liveness_failed", "provider", { synthetic: true, confidence: liveness.confidence, reason_codes: liveness.reasonCodes });
+  return { captureHash, liveness };
 }
 
 export async function completeIdentityVerification(client: AnySupabaseClient, requestId: string, userId: string) {
