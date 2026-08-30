@@ -39,6 +39,8 @@ export class InternalExperimentalIdentityProvider implements IdentityVerificatio
       ? "passport"
       : lowerName.includes("licence") || lowerName.includes("license")
         ? "driving_licence"
+        : lowerName.includes("national") || lowerName.includes("identity") || lowerName.includes("id-card")
+          ? "national_identity_document"
         : "unknown";
     const warnings: string[] = [];
     if (documentType === "unknown") warnings.push("document_type_uncertain");

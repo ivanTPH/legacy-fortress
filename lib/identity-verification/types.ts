@@ -90,7 +90,7 @@ export type ProviderStartInput = {
 
 export type ProviderDocumentExtraction = {
   status: "extracted" | "failed";
-  documentType: "passport" | "driving_licence" | "unknown";
+  documentType: "passport" | "driving_licence" | "national_identity_document" | "unknown";
   documentCountry: string | null;
   fields: {
     fullName?: string;

@@ -24,16 +24,24 @@ export function getIdentityVerificationProvider(): IdentityVerificationProvider 
 }
 
 export function isInternalExperimentalProviderAllowed() {
-  const url = String(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "");
-  const appUrl = String(process.env.NEXT_PUBLIC_APP_URL || process.env.BASE_URL || "");
-  return (
-    process.env.IDENTITY_VERIFICATION_PROVIDER === INTERNAL_EXPERIMENTAL_PROVIDER_KEY
-    || process.env.LEGACY_FORTRESS_ENV === "staging"
-    || url.includes("supabase-test.mylegacyfortress.com")
-    || url.includes("127.0.0.1")
-    || url.includes("localhost")
-    || appUrl.includes("test.mylegacyfortress.com")
-  );
+  const configuredProvider = String(process.env.IDENTITY_VERIFICATION_PROVIDER ?? "").trim();
+  const environment = String(process.env.LEGACY_FORTRESS_ENV ?? "").trim().toLowerCase();
+  const target = [
+    process.env.SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_APP_URL,
+    process.env.BASE_URL,
+  ].filter(Boolean).join(" ").toLowerCase();
+  const knownProductionTarget = target.includes("legacy-fortress.vercel.app");
+  const knownNonProductionTarget = ["local", "development", "test", "staging"].includes(environment)
+    || target.includes("supabase-test.mylegacyfortress.com")
+    || target.includes("test.mylegacyfortress.com")
+    || target.includes("127.0.0.1")
+    || target.includes("localhost");
+
+  return configuredProvider === INTERNAL_EXPERIMENTAL_PROVIDER_KEY
+    && knownNonProductionTarget
+    && !knownProductionTarget;
 }
 
 export async function startIdentityVerification(
@@ -94,6 +102,26 @@ export async function getCurrentIdentityAssuranceLevel(client: AnySupabaseClient
   if (!row) return 1;
   if (row.expires_at && Date.parse(row.expires_at) <= Date.now()) return 1;
   return Number(row.identity_level ?? 1) || 1;
+}
+
+/**
+ * Central server-side assurance gate for future protected operations.
+ * Identity assurance never replaces relationship, legal-authority, or access policy checks.
+ */
+export async function requireIdentityAssurance(
+  client: AnySupabaseClient,
+  input: { userId: string; purpose: IdentityVerificationPurpose; level: 2 | 3 },
+) {
+  if (input.level === 3 || input.purpose === "step_up_presence") {
+    const presence = await client.rpc("lf_identity_presence_level", { p_user_id: input.userId });
+    if (presence.error) throw new Error(presence.error.message);
+    if (Number(presence.data ?? 0) < 3) throw new Error("identity_presence_required");
+    return { satisfied: true as const, level: 3 as const, purpose: input.purpose };
+  }
+
+  const level = await getCurrentIdentityAssuranceLevel(client, input.userId);
+  if (level < 2) throw new Error("identity_assurance_required");
+  return { satisfied: true as const, level: 2 as const, purpose: input.purpose };
 }
 
 export async function getOwnedVerificationRequest(client: AnySupabaseClient, requestId: string, userId: string) {
