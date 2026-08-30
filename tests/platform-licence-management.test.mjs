@@ -17,14 +17,16 @@ test("Platform Admin licence detail uses the canonical enterprise API in platfor
   assert.doesNotMatch(workspace, /SUPABASE_SERVICE_ROLE_KEY|service_role/);
 });
 
-test("seat changes use canonical formulas, confirmation and server-side action", () => {
+test("seat changes use canonical formulas, in-app confirmation and server-side action", () => {
   const workspace = read("components/enterprise/EnterpriseLicenceDetailWorkspace.tsx");
   const service = read("lib/admin/enterpriseOperations.ts");
   const route = read("app/api/internal/admin/enterprise/route.ts");
 
   assert.match(workspace, /committedSeats/);
   assert.match(workspace, /Allocation cannot be reduced below currently committed seats/);
-  assert.match(workspace, /window\.confirm/);
+  assert.match(workspace, /Change licence allocation/);
+  assert.match(workspace, /Confirm allocation/);
+  assert.doesNotMatch(workspace, /window\.confirm/);
   assert.match(workspace, /change_licence_seats/);
   assert.match(service, /committedSeatsForRow/);
   assert.match(service, /seat_entitlement_exceeded/);

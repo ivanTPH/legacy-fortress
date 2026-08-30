@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell";
 import { ENTERPRISE_ADMIN_NAVIGATION, PLATFORM_ADMIN_NAVIGATION, filterAdminNavigation } from "@/components/admin/adminNavigation";
 import { waitForActiveUser } from "@/lib/auth/session";
@@ -45,6 +45,11 @@ type Detail = {
   auditEvents: Array<{ id: string; action: string; result: string; actor_role: string | null; created_at: string }>;
 };
 
+type ConfirmAction =
+  | { kind: "seat"; quantity: number; direction: string }
+  | { kind: "renew"; date: string; quantity: number }
+  | { kind: "transition"; status: string };
+
 export default function EnterpriseLicenceDetailWorkspace({ licenceId, platformAdmin = false }: { licenceId: string; platformAdmin?: boolean }) {
   const router = useRouter();
   const [state, setState] = useState<"checking" | "ready" | "denied" | "error">("checking");
@@ -59,6 +64,8 @@ export default function EnterpriseLicenceDetailWorkspace({ licenceId, platformAd
   const [renewalDate, setRenewalDate] = useState(nextYearInput());
   const [renewalSeats, setRenewalSeats] = useState(25);
   const [editOpen, setEditOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
   const [licenceForm, setLicenceForm] = useState({
     licencePlan: "starter",
     customPlanName: "",
@@ -122,19 +129,28 @@ export default function EnterpriseLicenceDetailWorkspace({ licenceId, platformAd
     return () => window.clearTimeout(timer);
   }, [load]);
 
-  async function runAction(action: string, payload: Record<string, unknown>) {
+  async function runAction(action: string, payload: Record<string, unknown>): Promise<boolean> {
+    setActionLoading(true);
     setMessage("");
-    const res = await authFetch("/api/internal/admin/enterprise", {
-      method: "POST",
-      body: JSON.stringify({ action, licenceId, ...payload }),
-    });
-    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string; code?: string };
-    if (!res.ok || !json.ok) {
-      setMessage(json.message || json.code || "The licence action was blocked.");
-      return;
+    try {
+      const res = await authFetch("/api/internal/admin/enterprise", {
+        method: "POST",
+        body: JSON.stringify({ action, licenceId, ...payload }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string; code?: string };
+      if (!res.ok || !json.ok) {
+        setMessage(json.message || json.code || "The licence action was blocked.");
+        return false;
+      }
+      setMessage("Licence action completed.");
+      await load();
+      return true;
+    } catch {
+      setMessage("The licence action could not be reached. No change was confirmed.");
+      return false;
+    } finally {
+      setActionLoading(false);
     }
-    setMessage("Licence action completed.");
-    await load();
   }
 
   function submitSeatChange() {
@@ -142,10 +158,15 @@ export default function EnterpriseLicenceDetailWorkspace({ licenceId, platformAd
     if (seatQuantity < detail!.licence.committedSeats) { setMessage(`Allocation cannot be reduced below currently committed seats (${detail!.licence.committedSeats}).`); return; }
     if (seatQuantity === detail!.licence.purchasedSeats) { setMessage("Enter a different purchased-seat quantity."); return; }
     const direction = seatQuantity > detail!.licence.purchasedSeats ? "increase" : "reduce";
-    if (window.confirm(`${direction === "increase" ? "Increase" : "Reduce"} purchased allocation from ${detail!.licence.purchasedSeats} to ${seatQuantity}?`)) {
-      void runAction("change_licence_seats", { newPurchasedSeats: seatQuantity, reason });
-    }
+    setConfirmAction({ kind: "seat", quantity: seatQuantity, direction });
   }
+
+  function changeSeatQuantity(value: number) {
+    setSeatQuantity(value);
+    if (detail && Number.isInteger(value) && value >= detail.licence.committedSeats && value !== detail.licence.purchasedSeats) setMessage("");
+  }
+
+  function closeConfirmation() { setConfirmAction(null); setMessage(""); }
 
   async function signOut() {
     setDetail(null);
@@ -182,6 +203,18 @@ export default function EnterpriseLicenceDetailWorkspace({ licenceId, platformAd
       stagingLabel="STAGING - synthetic test data may be present"
     >
       {message ? <section style={alertStyle}>{message}</section> : null}
+      {confirmAction ? <ActionDialog title={confirmAction.kind === "seat" ? "Change licence allocation" : confirmAction.kind === "renew" ? "Renew licence" : "Change licence status"} onClose={closeConfirmation} onConfirm={async () => {
+        let ok = false;
+        if (confirmAction.kind === "seat") ok = await runAction("change_licence_seats", { newPurchasedSeats: confirmAction.quantity, reason });
+        if (confirmAction.kind === "renew") ok = await runAction("renew_licence", { newRenewalDate: confirmAction.date, renewedSeatQuantity: confirmAction.quantity, renewalNotes: reason });
+        if (confirmAction.kind === "transition") ok = await runAction("transition_licence", { status: confirmAction.status, reason });
+        if (ok) setConfirmAction(null);
+      }} confirmLabel={confirmAction.kind === "seat" ? "Confirm allocation" : confirmAction.kind === "renew" ? "Confirm renewal" : "Confirm change"} loading={actionLoading}>
+        {confirmAction.kind === "seat" ? <>
+          <p>Current allocation: {licence.purchasedSeats}</p><p>New allocation: {confirmAction.quantity}</p><p>Committed: {licence.committedSeats} · Available now: {licence.availableSeats}</p>
+          <p style={mutedStyle}>{confirmAction.direction === "increase" ? `After this change, ${confirmAction.quantity - licence.committedSeats} licences will be available.` : `This will leave ${confirmAction.quantity - licence.committedSeats} licences available.`}</p>
+        </> : confirmAction.kind === "renew" ? <p>Renew this licence through {formatDate(confirmAction.date)} with {confirmAction.quantity} purchased seats?</p> : <p>{confirmAction.status === "suspended" ? "Suspending this licence stops normal commercial operations until it is reactivated." : confirmAction.status === "expiring" ? "Mark this licence as expiring for follow-up." : "Reactivate this licence and restore normal commercial operations."}</p>}
+      </ActionDialog> : null}
       <nav aria-label="Licence detail navigation" style={tabListStyle}>
         {["overview", "seats", "invitations", "renewals", "audit", "settings"].map((item) => (
           <button key={item} type="button" style={tab === item ? activeTabStyle : tabStyle} onClick={() => setTab(item as typeof tab)}>{labelise(item === "seats" ? "seat_usage" : item)}</button>
@@ -227,9 +260,9 @@ export default function EnterpriseLicenceDetailWorkspace({ licenceId, platformAd
             <Info label="Available" value={String(licence.availableSeats)} />
           </div>
           <h3>Change entitlement</h3>
-          <FormInput label="New purchased seats" type="number" value={String(seatQuantity)} onChange={(value) => setSeatQuantity(Number(value))} />
+          <FormInput label="New purchased seats" type="number" value={String(seatQuantity)} onChange={(value) => changeSeatQuantity(Number(value))} />
           <FormInput label="Reason" value={reason} onChange={setReason} />
-          <button type="button" style={primaryButtonStyle} onClick={submitSeatChange}>Save seat entitlement</button>
+          <button type="button" style={primaryButtonStyle} onClick={submitSeatChange} disabled={actionLoading}>Save seat entitlement</button>
           <h3>Controlled Phase 2 seat reservation</h3>
           <p style={mutedStyle}>This creates a seat reservation record only. Full user invitation acceptance is Phase 3.</p>
           <FormInput label="Reservation email" value={seatEmail} onChange={setSeatEmail} />
@@ -246,7 +279,7 @@ export default function EnterpriseLicenceDetailWorkspace({ licenceId, platformAd
           <FormInput label="New renewal date" type="date" value={renewalDate} onChange={setRenewalDate} />
           <FormInput label="Renewed seat quantity" type="number" value={String(renewalSeats)} onChange={(value) => setRenewalSeats(Number(value))} />
           <FormInput label="Renewal notes" value={reason} onChange={setReason} />
-          <button type="button" style={primaryButtonStyle} onClick={() => { if (window.confirm(`Renew this licence through ${renewalDate} with ${renewalSeats} purchased seats?`)) void runAction("renew_licence", { newRenewalDate: renewalDate, renewedSeatQuantity: renewalSeats, renewalNotes: reason }); }}>Complete renewal</button>
+          <button type="button" style={primaryButtonStyle} onClick={() => setConfirmAction({ kind: "renew", date: renewalDate, quantity: renewalSeats })} disabled={actionLoading}>Complete renewal</button>
           <table style={tableStyle}><thead><tr><th>Previous renewal</th><th>New renewal</th><th>Seats</th><th>Plan</th></tr></thead><tbody>
             {detail.renewals.map((renewal) => <tr key={renewal.id}><td>{formatDate(renewal.previous_renewal_date)}</td><td>{formatDate(renewal.new_renewal_date)}</td><td>{renewal.previous_purchased_seats} to {renewal.new_purchased_seats}</td><td>{labelise(renewal.previous_plan)} to {labelise(renewal.new_plan)}</td></tr>)}
             {detail.renewals.length === 0 ? <tr><td colSpan={4}>No renewal history yet.</td></tr> : null}
@@ -280,7 +313,7 @@ export default function EnterpriseLicenceDetailWorkspace({ licenceId, platformAd
               <label style={checkboxStyle}><input type="checkbox" checked={licenceForm.autoRenew} onChange={(event) => setLicenceForm({ ...licenceForm, autoRenew: event.target.checked })} /> Auto-renew</label>
               <label style={labelStyle}>Renewal notes<textarea value={licenceForm.renewalNotes} onChange={(event) => setLicenceForm({ ...licenceForm, renewalNotes: event.target.value })} /></label>
               <div style={rowStyle}>
-                <button type="button" style={primaryButtonStyle} onClick={() => runAction("update_licence", licenceForm).then(() => setEditOpen(false))}>Save licence</button>
+                <button type="button" style={primaryButtonStyle} onClick={() => void runAction("update_licence", licenceForm).then((ok) => { if (ok) setEditOpen(false); })} disabled={actionLoading}>Save licence</button>
                 <button type="button" style={secondaryButtonStyle} onClick={() => { setLicenceForm(toLicenceForm(licence)); setEditOpen(false); }}>Cancel</button>
               </div>
             </section>
@@ -288,8 +321,8 @@ export default function EnterpriseLicenceDetailWorkspace({ licenceId, platformAd
           <h2>Lifecycle</h2>
           <FormInput label="Reason" value={reason} onChange={setReason} />
           <div style={rowStyle}>
-            {(["active", "expiring"].includes(licence.status) || licence.status === "suspended") ? <button type="button" style={secondaryButtonStyle} onClick={() => { const nextStatus = licence.status === "suspended" ? "active" : "suspended"; if (window.confirm(`${nextStatus === "suspended" ? "Suspend" : "Reactivate"} this licence?`)) void runAction("transition_licence", { status: nextStatus, reason }); }}>{licence.status === "suspended" ? "Reactivate" : "Suspend"}</button> : null}
-            {licence.status === "active" ? <button type="button" style={secondaryButtonStyle} onClick={() => { if (window.confirm("Mark this licence as expiring?")) void runAction("transition_licence", { status: "expiring", reason }); }}>Mark expiring</button> : null}
+            {(["active", "expiring"].includes(licence.status) || licence.status === "suspended") ? <button type="button" style={secondaryButtonStyle} onClick={() => setConfirmAction({ kind: "transition", status: licence.status === "suspended" ? "active" : "suspended" })} disabled={actionLoading}>{licence.status === "suspended" ? "Reactivate" : "Suspend"}</button> : null}
+            {licence.status === "active" ? <button type="button" style={secondaryButtonStyle} onClick={() => setConfirmAction({ kind: "transition", status: "expiring" })} disabled={actionLoading}>Mark expiring</button> : null}
           </div>
         </section>
       ) : null}
@@ -353,6 +386,17 @@ function FormInput({ label, value, onChange, required = false, type = "text" }: 
   return <label style={labelStyle}>{label}{required ? " *" : ""}<input type={type} value={value} required={required} onChange={(event) => onChange(event.target.value)} /></label>;
 }
 
+function ActionDialog({ title, children, confirmLabel, loading, onClose, onConfirm }: { title: string; children: ReactNode; confirmLabel: string; loading: boolean; onClose: () => void; onConfirm: () => Promise<void> }) {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    dialogRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape" && !loading) onClose(); };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [loading, onClose]);
+  return <div style={modalBackdropStyle} role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget && !loading) onClose(); }}><div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="licence-action-dialog-title" tabIndex={-1} style={modalStyle}><h2 id="licence-action-dialog-title">{title}</h2><div style={dialogBodyStyle}>{children}</div><div style={actionRowStyle}><button type="button" style={secondaryButtonStyle} onClick={onClose} disabled={loading}>Cancel</button><button type="button" style={primaryButtonStyle} onClick={() => void onConfirm()} disabled={loading}>{loading ? "Saving..." : confirmLabel}</button></div></div></div>;
+}
+
 function Info({ label, value }: { label: string; value: string }) {
   return <div><dt>{label}</dt><dd>{value}</dd></div>;
 }
@@ -385,7 +429,11 @@ const activeTabStyle: CSSProperties = { ...tabStyle, background: "#111827", colo
 const labelStyle: CSSProperties = { display: "grid", gap: 5, fontWeight: 700, color: "#334155", fontSize: 13 };
 const checkboxStyle: CSSProperties = { display: "flex", gap: 8, alignItems: "center", color: "#334155", fontWeight: 700 };
 const rowStyle: CSSProperties = { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 };
+const actionRowStyle: CSSProperties = { display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" };
 const sectionHeaderStyle: CSSProperties = { display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" };
 const contextPanelStyle: CSSProperties = { border: "1px solid #cbd5e1", borderRadius: 8, padding: 14, display: "grid", gap: 12, background: "#f8fafc" };
 const detailsGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 };
 const tableStyle: CSSProperties = { width: "100%", borderCollapse: "collapse", fontSize: 14 };
+const modalBackdropStyle: CSSProperties = { position: "fixed", inset: 0, zIndex: 50, display: "grid", placeItems: "center", padding: 18, background: "rgba(15,23,42,.48)" };
+const modalStyle: CSSProperties = { width: "min(520px, 100%)", maxHeight: "calc(100dvh - 36px)", overflow: "auto", background: "#fff", borderRadius: 8, padding: 20, boxShadow: "0 20px 60px rgba(15,23,42,.25)", display: "grid", gap: 14 };
+const dialogBodyStyle: CSSProperties = { display: "grid", gap: 8 };

@@ -21,6 +21,7 @@ type Organisation = {
   primaryContactName: string | null;
   primaryContactEmail: string | null;
   accountOwner: string | null;
+  customerReference: string | null;
   nominatedAdminName: string | null;
   nominatedAdminEmail: string | null;
   onboardingStatus: string;
@@ -236,7 +237,7 @@ export default function PlatformOrganisationControlCentre({ organisationId }: { 
 function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
   const dialogRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => { dialogRef.current?.focus(); }, []);
-  return <div style={modalBackdropStyle} onPointerDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="platform-dialog-title" tabIndex={-1} style={modalStyle}>{children ? <h2 id="platform-dialog-title" style={h2Style}>{title}</h2> : null}{children}</div></div>;
+  return <div style={modalBackdropStyle} role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="platform-dialog-title" tabIndex={-1} style={modalStyle}><h2 id="platform-dialog-title" style={h2Style}>{title}</h2>{children}</div></div>;
 }
 
 function OrganisationForm({ value, onChange, onSubmit, onCancel, saving, submitLabel = "Create organisation" }: { value: typeof EMPTY_FORM; onChange: (value: typeof EMPTY_FORM) => void; onSubmit: (event: FormEvent) => void; onCancel: () => void; saving: boolean; submitLabel?: string }) {
@@ -260,7 +261,7 @@ function Field({ label, value, onChange, required = false, type = "text" }: { la
 function Metric({ label, value }: { label: string; value: string }) { return <section style={metricStyle}><span>{label}</span><strong>{value}</strong></section>; }
 function SetupStep({ complete, label, detail }: { complete: boolean; label: string; detail: string }) { return <div style={setupStepStyle}><strong>{complete ? "✓" : "!"} {label}</strong><span>{detail}</span></div>; }
 function Info({ label, value }: { label: string; value: string }) { return <div><dt>{label}</dt><dd>{value}</dd></div>; }
-function toForm(org: Organisation) { return { ...EMPTY_FORM, legalName: org.legalName, tradingName: org.tradingName || "", organisationType: org.type, country: org.country, primaryContactName: org.primaryContactName || "", primaryContactEmail: org.primaryContactEmail || "", internalAccountOwner: org.accountOwner || "", registrationNumber: org.registrationNumber || "" }; }
+function toForm(org: Organisation) { return { ...EMPTY_FORM, legalName: org.legalName, tradingName: org.tradingName || "", organisationType: org.type, country: org.country, primaryContactName: org.primaryContactName || "", primaryContactEmail: org.primaryContactEmail || "", internalAccountOwner: org.accountOwner || "", registrationNumber: org.registrationNumber || "", customerReference: org.customerReference || "", initialStatus: org.status, riskStatus: org.risk }; }
 function renewalFor(org: Organisation, licences: Licence[]) { return licences.find((licence) => licence.organisationId === org.id)?.renewalDate || ""; }
 function availableFor(org: Organisation, licences: Licence[]) { return licences.find((licence) => licence.organisationId === org.id)?.availableSeats || 0; }
 function labelise(value: string) { return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }

@@ -74,6 +74,8 @@ test("dialogs have labelled keyboard and pointer dismissal behavior", () => {
   assert.match(controlCentre, /dialogRef\.current\?\.focus\(\)/);
   assert.match(controlCentre, /commercial action could not be reached/);
   assert.match(controlCentre, /nextYearDate\(\)/);
+  assert.match(controlCentre, /<h2 id="platform-dialog-title"/);
+  assert.doesNotMatch(controlCentre, /<h2 id="platform-dialog-title"[^>]*>\{children\}/);
 });
 
 test("platform handoff does not change principal or expose vault content", () => {
@@ -93,4 +95,6 @@ test("organisation detail exposes commercial setup, administrator and registrati
   assert.match(controlCentre, /Registration and enrolment/);
   assert.match(controlCentre, /registration-links/);
   assert.match(controlCentre, /activeRegistrationLinks/);
+  assert.match(controlCentre, /customerReference: org\.customerReference/);
+  assert.match(controlCentre, /initialStatus: org\.status/);
 });
