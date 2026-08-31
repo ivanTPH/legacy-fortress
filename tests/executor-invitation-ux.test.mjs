@@ -15,14 +15,33 @@ test("executor contacts use a guided person, role, access and review flow", () =
   assert.match(manager, /Review and send/);
   assert.match(manager, /Save and send later/);
   assert.match(manager, /Send invitation/);
+  assert.match(manager, /RecentInvitationCard/);
+  assert.match(manager, /Add another person/);
+  assert.match(manager, /View status/);
 });
 
 test("executor access choices are explicit checkboxes with progressive detail", () => {
-  assert.match(manager, /Information this Executor may eventually access/);
   assert.match(manager, /type="checkbox" checked=\{checked\}/);
   assert.match(manager, /<summary>Customize access<\/summary>/);
   assert.match(manager, /edit access is never granted automatically/);
   assert.match(manager, /Phone number[\s\S]*optional/);
+  assert.match(manager, /Information this person may eventually be able to VIEW|Information this Executor may eventually access/);
+  assert.match(manager, /View only/);
+});
+
+test("executor role selection uses the canonical role catalog without duplicating the person", () => {
+  assert.match(manager, /roleOptions\.map/);
+  assert.match(manager, /name="executor-invite-role"/);
+  assert.match(manager, /getRoleDescription/);
+  assert.match(manager, /initialRole/);
+});
+
+test("executor creation hides the legacy editor while guided mode is active", () => {
+  assert.match(contacts, /addContactGroupKey === "executors" \? null :/);
+  assert.match(manager, /!isDashboardMode && guidedExecutor && !editingId && !draftContactId/);
+  assert.match(manager, /!isDashboardMode && !guidedExecutor/);
+  assert.match(manager, /Invitation sent/);
+  assert.match(manager, /Invitation prepared/);
 });
 
 test("save and dispatch remain separate canonical operations with truthful status", () => {

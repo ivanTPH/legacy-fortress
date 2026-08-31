@@ -584,7 +584,7 @@ export default function ContactsNetworkWorkspace() {
               title="Add a contact and choose their wallet access"
             >
               <Icon name="person_add" size={16} />
-              Add contact
+              Add person
             </button>
           ) : null}
           <Link href="/personal" style={linkPillStyle}>Review personal records</Link>
@@ -592,7 +592,8 @@ export default function ContactsNetworkWorkspace() {
       </section>
 
       {!viewer.readOnly && addContactGroupKey ? (
-        <section style={addContactPanelStyle} aria-label="Add contact and permissions">
+        <section style={addContactGroupKey === "executors" ? { display: "grid", gap: 12 } : addContactPanelStyle} aria-label={addContactGroupKey === "executors" ? "Invite an Executor" : "Add contact and permissions"}>
+          {addContactGroupKey === "executors" ? null : (
           <div style={{ display: "grid", gap: 4 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
               <h2 style={{ margin: 0, fontSize: 18 }}>{isNextOfKinAddMode ? "Add Next of Kin" : "Add contact"}</h2>
@@ -607,6 +608,7 @@ export default function ContactsNetworkWorkspace() {
                 : "The role preset comes from the selected contact group. You can still change the role, tick categories, use My wallet - all, and set view/edit permissions before sending the invite."}
             </p>
           </div>
+          )}
           {isNextOfKinAddMode ? (
             <NextOfKinContactForm
               draft={nextOfKinDraft}
@@ -1128,7 +1130,7 @@ function getPrimaryActionIcon(contact: ContactRow) {
 
 function getAddContactPreset(groupKey: string): { role: CollaboratorRole; sections: SectionKey[] } {
   if (groupKey === "executors") {
-    return { role: "executor", sections: ["profile", "personal", "financial", "legal", "property", "business", "digital"] };
+    return { role: "executor", sections: [] };
   }
   if (groupKey === "advisors") {
     return { role: "professional_advisor", sections: ["financial", "legal", "property", "business"] };

@@ -68,6 +68,14 @@ type ScopedResourceGroup = {
   items: ScopeItem[];
 };
 
+type RecentInvitation = {
+  id: string;
+  contactId: string;
+  name: string;
+  email: string;
+  outcome: "prepared" | "sent";
+};
+
 const ACCESS_SCOPE_OPTIONS: Array<{ key: SectionKey; label: string }> = [
   { key: "financial", label: "Finances" },
   { key: "legal", label: "Legal" },
@@ -115,6 +123,7 @@ export default function ContactInvitationManager({
   const [editableRecordIds, setEditableRecordIds] = useState<string[]>([]);
   const [scopeItems, setScopeItems] = useState<ScopeItem[]>([]);
   const [guidedStep, setGuidedStep] = useState<"person" | "role" | "access" | "review">("person");
+  const [recentInvitation, setRecentInvitation] = useState<RecentInvitation | null>(null);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftContactId, setDraftContactId] = useState<string | null>(null);
@@ -391,6 +400,15 @@ export default function ContactInvitationManager({
           }
           return;
         }
+        if (guidedExecutor) {
+          setRecentInvitation({
+            id: String(insertRes.id),
+            contactId: canonicalContact.id,
+            name: nameTrim,
+            email: emailTrim,
+            outcome: "prepared",
+          });
+        }
       }
 
       setEditingId(null);
@@ -445,6 +463,15 @@ export default function ContactInvitationManager({
         setStatus(`✅ Invitation email ${resend ? "resent" : "sent"} to ${row.contact_email}.`);
       }
       markRecentlySent(row.id);
+      if (guidedExecutor) {
+        setRecentInvitation({
+          id: row.id,
+          contactId: row.contact_id ?? "",
+          name: row.contact_name,
+          email: row.contact_email,
+          outcome: "sent",
+        });
+      }
       await loadRows();
       notifyContactsUpdated();
       return true;
@@ -628,7 +655,7 @@ export default function ContactInvitationManager({
       style={panelStyle}
       aria-label="Contact invitation management"
     >
-      <div style={panelHeaderStyle}>
+      {!guidedExecutor ? <div style={panelHeaderStyle}>
         <div style={{ display: "grid", gap: 4 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={sectionIconStyle}>
@@ -648,22 +675,33 @@ export default function ContactInvitationManager({
             Open Contacts
           </Link>
         ) : null}
-      </div>
+      </div> : null}
 
       {!isDashboardMode && guidedExecutor && !editingId && !draftContactId ? (
-        <GuidedExecutorFlow
+        recentInvitation ? (
+          <RecentInvitationCard
+            invitation={recentInvitation}
+            onViewStatus={() => router.push(buildContactsWorkspaceHref(recentInvitation.contactId))}
+            onAddAnother={() => {
+              setRecentInvitation(null);
+              resetEditor();
+            }}
+          />
+        ) : <GuidedExecutorFlow
           step={guidedStep}
           name={name}
           email={email}
           phone={phone}
           role={role}
+          roleOptions={roleOptions}
           allowedSections={allowedSections}
-          sections={getVisibleAccessScopeOptions(preferences, "executor")}
+          sections={getVisibleAccessScopeOptions(preferences, role)}
           saving={saving}
           status={status}
           onNameChange={setName}
           onEmailChange={setEmail}
           onPhoneChange={setPhone}
+          onRoleChange={setRole}
           onStepChange={setGuidedStep}
           onToggleSection={(section) => setAllowedSections((current) => current.includes(section) ? current.filter((item) => item !== section) : [...current, section])}
           onSaveLater={() => void saveContact()}
@@ -671,6 +709,8 @@ export default function ContactInvitationManager({
           onCancel={resetEditor}
         />
       ) : null}
+
+      {!isDashboardMode && currentEditingRow ? <InvitationStatusPanel row={currentEditingRow} /> : null}
 
       {!isDashboardMode && !guidedExecutor ? (
       <div style={summaryGridStyle}>
@@ -1158,6 +1198,7 @@ function GuidedExecutorFlow({
   email,
   phone,
   role,
+  roleOptions,
   allowedSections,
   sections,
   saving,
@@ -1165,6 +1206,7 @@ function GuidedExecutorFlow({
   onNameChange,
   onEmailChange,
   onPhoneChange,
+  onRoleChange,
   onStepChange,
   onToggleSection,
   onSaveLater,
@@ -1176,6 +1218,7 @@ function GuidedExecutorFlow({
   email: string;
   phone: string;
   role: CollaboratorRole;
+  roleOptions: Array<{ value: CollaboratorRole; label: string }>;
   allowedSections: SectionKey[];
   sections: Array<{ key: SectionKey; label: string }>;
   saving: boolean;
@@ -1183,6 +1226,7 @@ function GuidedExecutorFlow({
   onNameChange: (value: string) => void;
   onEmailChange: (value: string) => void;
   onPhoneChange: (value: string) => void;
+  onRoleChange: (value: CollaboratorRole) => void;
   onStepChange: (step: "person" | "role" | "access" | "review") => void;
   onToggleSection: (section: SectionKey) => void;
   onSaveLater: () => void;
@@ -1257,13 +1301,20 @@ function GuidedExecutorFlow({
         <div style={{ display: "grid", gap: 14 }}>
           <div>
             <p style={guidedLabelStyle}>Role</p>
-            <label style={roleCardStyle}>
-              <input type="radio" checked={role === "executor"} readOnly aria-label="Executor" />
-              <span style={{ display: "grid", gap: 4 }}>
-                <strong>Executor</strong>
-                <span style={guidedHelpStyle}>Someone you have chosen to help deal with your estate after your death.</span>
-              </span>
-            </label>
+            <div role="radiogroup" aria-label="Choose a role" style={{ display: "grid", gap: 10 }}>
+              {roleOptions.map((option) => {
+                const selected = role === option.value;
+                return (
+                  <label key={option.value} style={selected ? selectedRoleCardStyle : roleCardStyle}>
+                    <input type="radio" name="executor-invite-role" checked={selected} onChange={() => onRoleChange(option.value)} />
+                    <span style={{ display: "grid", gap: 4 }}>
+                      <strong>{option.label}</strong>
+                      <span style={guidedHelpStyle}>{getRoleDescription(option.value)}</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
             <p style={guidedNoticeStyle}>Naming an Executor does not itself create legal authority or give immediate access to protected records.</p>
           </div>
           <div style={guidedActionBarStyle}>
@@ -1276,9 +1327,9 @@ function GuidedExecutorFlow({
       {step === "access" ? (
         <div style={{ display: "grid", gap: 14 }}>
           <div>
-            <p style={guidedLabelStyle}>Information this Executor may eventually access</p>
+            <p style={guidedLabelStyle}>Information this person may eventually be able to VIEW</p>
             <p style={{ margin: "4px 0 12px", color: "#475569", fontSize: 14 }}>
-              Choose the parts of Legacy Fortress they may eventually be able to view. Access remains subject to your instructions and estate-access controls.
+              These choices describe what this person may eventually be allowed to view. Access remains subject to your instructions, their accepted role and estate-access controls.
             </p>
             <div style={categoryGridStyle}>
               {sections.map((section) => {
@@ -1309,7 +1360,7 @@ function GuidedExecutorFlow({
             <strong>Invite {name || "this person"} as your Executor</strong>
             <div><span style={reviewLabelStyle}>Person</span>{name} · {email}</div>
             <div><span style={reviewLabelStyle}>Role</span>Executor</div>
-            <div><span style={reviewLabelStyle}>Access selected</span>{allowedSections.length ? allowedSections.map((section) => accessLabel(section)).join(", ") : "No categories selected yet"}</div>
+            <div><span style={reviewLabelStyle}>Access selected</span>{allowedSections.length ? allowedSections.map((section) => `${accessLabel(section)} — View only`).join(", ") : "No categories selected yet"}</div>
           </div>
           <p style={guidedNoticeStyle}>They will receive an invitation to create or sign in to Legacy Fortress and accept the Executor role. Identity verification will be required before protected access can be considered. Sending an invitation does not establish legal authority or guarantee access.</p>
           <div style={guidedActionBarStyle}>
@@ -1323,6 +1374,85 @@ function GuidedExecutorFlow({
   );
 }
 
+function RecentInvitationCard({
+  invitation,
+  onViewStatus,
+  onAddAnother,
+}: {
+  invitation: RecentInvitation;
+  onViewStatus: () => void;
+  onAddAnother: () => void;
+}) {
+  const sent = invitation.outcome === "sent";
+  return (
+    <div style={recentInvitationStyle} role="status" aria-live="polite">
+      <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+        <Icon name={sent ? "mark_email_read" : "schedule"} size={24} />
+        <div style={{ display: "grid", gap: 5 }}>
+          <strong style={{ fontSize: 19 }}>{sent ? "Invitation sent" : "Invitation prepared"}</strong>
+          <span style={{ fontSize: 14 }}>
+            {sent
+              ? `We've sent an invitation to ${invitation.name} to become your Executor.`
+              : `${invitation.name} is ready to invite. The invitation has not been sent.`}
+          </span>
+          <span style={guidedHelpStyle}>
+            {sent ? "We'll show you here when they accept and complete identity verification." : "Send it later from the invitation status actions."}
+          </span>
+        </div>
+      </div>
+      <div style={guidedActionBarStyle}>
+        <button type="button" style={guidedSecondaryButtonStyle} onClick={onAddAnother}>Add another person</button>
+        {invitation.contactId ? <button type="button" style={guidedPrimaryButtonStyle} onClick={onViewStatus}>View status</button> : null}
+      </div>
+    </div>
+  );
+}
+
+function InvitationStatusPanel({ row }: { row: InvitationRow }) {
+  const accepted = row.invitation_status === "accepted"
+    || ["accepted", "pending_verification", "verification_submitted", "verified", "active"].includes(row.activation_status);
+  const identityState = row.activation_status === "verified" || row.activation_status === "active"
+    ? "Verified"
+    : row.activation_status === "pending_verification" || row.activation_status === "verification_submitted"
+      ? "Required"
+      : "Not started";
+  const accessState = row.activation_status === "active" ? "Active" : row.activation_status === "revoked" ? "Revoked" : "Not currently available";
+  const steps = [
+    { label: "Invitation prepared", complete: Boolean(row.invited_at), detail: row.invited_at },
+    { label: "Invitation sent", complete: Boolean(row.sent_at), detail: row.sent_at },
+    { label: "Invitation opened", complete: false, detail: "Not recorded" },
+    { label: "Role accepted", complete: accepted, detail: accepted ? "Accepted" : "Pending" },
+    { label: "Identity verification", complete: identityState === "Verified", detail: identityState },
+    { label: "Authority / access", complete: accessState === "Active", detail: accessState },
+  ];
+
+  return (
+    <section style={statusPanelStyle} aria-label="Invitation and role status">
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline", flexWrap: "wrap" }}>
+        <div>
+          <p style={eyebrowStyle}>Role status</p>
+          <h3 style={{ margin: 0, fontSize: 18, color: "#0f172a" }}>{row.contact_name}</h3>
+        </div>
+        <span style={statusPanelRoleStyle}>{ROLE_RULES[row.assigned_role].label}</span>
+      </div>
+      <div style={statusPanelGridStyle}>
+        {steps.map((step) => (
+          <div key={step.label} style={statusPanelStepStyle}>
+            <span aria-hidden="true" style={step.complete ? statusCheckStyle : statusPendingStyle}>{step.complete ? "✓" : "○"}</span>
+            <span style={{ display: "grid", gap: 2 }}>
+              <strong style={{ fontSize: 13 }}>{step.label}</strong>
+              <span style={guidedHelpStyle}>{step.detail ? (step.detail === "Not recorded" ? step.detail : formatShortDateTime(step.detail)) : "Pending"}</span>
+            </span>
+          </div>
+        ))}
+      </div>
+      <p style={{ margin: 0, color: "#475569", fontSize: 13 }}>
+        Role, identity, authority and access are separate decisions. Identity verification does not establish legal authority or guarantee access.
+      </p>
+    </section>
+  );
+}
+
 function formatShortDate(input: string) {
   try {
     return new Intl.DateTimeFormat("en-GB", {
@@ -1330,6 +1460,14 @@ function formatShortDate(input: string) {
       month: "2-digit",
       year: "2-digit",
     }).format(new Date(input));
+  } catch {
+    return input;
+  }
+}
+
+function formatShortDateTime(input: string) {
+  try {
+    return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(input));
   } catch {
     return input;
   }
@@ -1364,6 +1502,19 @@ function mapRowToCanonicalInviteStatus(row: InvitationRow) {
     return "accepted" as const;
   }
   return row.sent_at ? "invite_sent" as const : "not_invited" as const;
+}
+
+function getRoleDescription(role: CollaboratorRole) {
+  const descriptions: Partial<Record<CollaboratorRole, string>> = {
+    executor: "Someone you have chosen to help deal with your estate after your death.",
+    trustee: "Someone appointed to help administer a trust under the relevant arrangements.",
+    accountant: "A financial professional who may review the information you choose to share.",
+    lawyer: "A legal professional who may review the legal information you choose to share.",
+    power_of_attorney: "A person appointed to act for you where the relevant authority permits it.",
+    friend_or_family: "Someone you trust to help with practical matters and important records.",
+    professional_advisor: "A professional adviser who may review the information you choose to share.",
+  };
+  return descriptions[role] ?? "A person with a defined role in the information you choose to share.";
 }
 
 function loadPermissionsOverride(row: InvitationRow) {
@@ -1677,6 +1828,7 @@ const guidedActionBarStyle: CSSProperties = { display: "flex", justifyContent: "
 const guidedPrimaryButtonStyle: CSSProperties = { border: "1px solid #111827", background: "#111827", color: "#fff", borderRadius: 8, minHeight: 44, padding: "10px 16px", fontWeight: 700, cursor: "pointer" };
 const guidedSecondaryButtonStyle: CSSProperties = { border: "1px solid #cbd5e1", background: "#fff", color: "#0f172a", borderRadius: 8, minHeight: 44, padding: "10px 14px", fontWeight: 700, cursor: "pointer" };
 const roleCardStyle: CSSProperties = { display: "flex", alignItems: "flex-start", gap: 10, padding: 14, border: "2px solid #0f172a", borderRadius: 10, background: "#f8fafc", cursor: "default" };
+const selectedRoleCardStyle: CSSProperties = { ...roleCardStyle, background: "#e2e8f0" };
 const guidedNoticeStyle: CSSProperties = { margin: 0, padding: 12, borderLeft: "3px solid #64748b", background: "#f8fafc", color: "#475569", fontSize: 13, lineHeight: 1.5 };
 const categoryGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 10 };
 const categoryStyle: CSSProperties = { display: "flex", alignItems: "center", gap: 10, minHeight: 48, padding: "8px 10px", border: "1px solid #cbd5e1", borderRadius: 8, background: "#fff", color: "#0f172a", cursor: "pointer" };
@@ -1684,6 +1836,13 @@ const selectedCategoryStyle: CSSProperties = { ...categoryStyle, borderColor: "#
 const customizeDetailsStyle: CSSProperties = { marginTop: 14, padding: 12, border: "1px solid #e2e8f0", borderRadius: 8, color: "#334155" };
 const reviewSummaryStyle: CSSProperties = { display: "grid", gap: 10, padding: 14, border: "1px solid #cbd5e1", borderRadius: 10, background: "#f8fafc", color: "#0f172a" };
 const reviewLabelStyle: CSSProperties = { display: "inline-block", minWidth: 120, color: "#64748b", fontSize: 12, fontWeight: 700 };
+const recentInvitationStyle: CSSProperties = { border: "1px solid #86efac", borderRadius: 12, background: "#f0fdf4", color: "#166534", padding: 18, display: "grid", gap: 16 };
+const statusPanelStyle: CSSProperties = { border: "1px solid #cbd5e1", borderRadius: 10, background: "#f8fafc", padding: 14, display: "grid", gap: 14 };
+const statusPanelRoleStyle: CSSProperties = { border: "1px solid #cbd5e1", borderRadius: 999, padding: "5px 9px", color: "#334155", fontSize: 12, fontWeight: 700 };
+const statusPanelGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8 };
+const statusPanelStepStyle: CSSProperties = { display: "flex", alignItems: "flex-start", gap: 8, padding: 9, border: "1px solid #e2e8f0", borderRadius: 8, background: "#fff" };
+const statusCheckStyle: CSSProperties = { color: "#166534", fontWeight: 800, fontSize: 17 };
+const statusPendingStyle: CSSProperties = { color: "#64748b", fontWeight: 800, fontSize: 17 };
 
 const contactLinkStyle: CSSProperties = {
   fontWeight: 700,
