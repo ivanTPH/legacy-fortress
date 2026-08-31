@@ -22,7 +22,9 @@ test("executor contacts use a guided person, role, access and review flow", () =
 
 test("executor access choices are explicit checkboxes with progressive detail", () => {
   assert.match(manager, /type="checkbox" checked=\{checked\}/);
-  assert.match(manager, /<summary>Customize access<\/summary>/);
+  assert.match(manager, /Select all view categories/);
+  assert.match(manager, /Clear all/);
+  assert.match(manager, /<summary>Advanced permissions<\/summary>/);
   assert.match(manager, /edit access is never granted automatically/);
   assert.match(manager, /Phone number[\s\S]*optional/);
   assert.match(manager, /Information this person may eventually be able to VIEW|Information this Executor may eventually access/);
@@ -39,9 +41,23 @@ test("executor role selection uses the canonical role catalog without duplicatin
 test("executor creation hides the legacy editor while guided mode is active", () => {
   assert.match(contacts, /addContactGroupKey === "executors" \? null :/);
   assert.match(manager, /!isDashboardMode && guidedExecutor && !editingId && !draftContactId/);
-  assert.match(manager, /!isDashboardMode && !guidedExecutor/);
+  assert.match(manager, /!isDashboardMode && !guidedExecutor \? \(\s*<div style=\{sectionBlockStyle\}/);
+  const guidedStart = manager.indexOf("function GuidedExecutorFlow");
+  const guidedEnd = manager.indexOf("function RecentInvitationCard");
+  assert.ok(guidedStart >= 0 && guidedEnd > guidedStart);
+  const guidedSource = manager.slice(guidedStart, guidedEnd);
+  assert.doesNotMatch(guidedSource, /My wallet - all|Owner notes|Linked records and document permissions/);
+  assert.match(manager, /only one canonical interaction|Invitation sent/);
+  assert.match(manager, /setRecentInvitation/);
   assert.match(manager, /Invitation sent/);
   assert.match(manager, /Invitation prepared/);
+});
+
+test("post-send state does not immediately re-render the Person step", () => {
+  assert.match(manager, /recentInvitation \? \(\s*<RecentInvitationCard/);
+  assert.match(manager, /onAddAnother=\{\(\) => \{/);
+  assert.match(manager, /setRecentInvitation\(null\)/);
+  assert.match(manager, /onViewStatus=\{\(\) => router\.push/);
 });
 
 test("save and dispatch remain separate canonical operations with truthful status", () => {

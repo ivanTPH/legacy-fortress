@@ -704,6 +704,8 @@ export default function ContactInvitationManager({
           onRoleChange={setRole}
           onStepChange={setGuidedStep}
           onToggleSection={(section) => setAllowedSections((current) => current.includes(section) ? current.filter((item) => item !== section) : [...current, section])}
+          onSelectAll={() => setAllowedSections(getVisibleAccessScopeOptions(preferences, role).map((option) => option.key))}
+          onClearAll={() => setAllowedSections([])}
           onSaveLater={() => void saveContact()}
           onSend={() => void saveContact({ sendAfterSave: true })}
           onCancel={resetEditor}
@@ -737,7 +739,7 @@ export default function ContactInvitationManager({
       </div>
       ) : null}
 
-      {!isDashboardMode ? (
+      {!isDashboardMode && !guidedExecutor ? (
       <div style={sectionBlockStyle}>
         <div style={sectionHeaderStyle}>
           <div>
@@ -1209,6 +1211,8 @@ function GuidedExecutorFlow({
   onRoleChange,
   onStepChange,
   onToggleSection,
+  onSelectAll,
+  onClearAll,
   onSaveLater,
   onSend,
   onCancel,
@@ -1229,6 +1233,8 @@ function GuidedExecutorFlow({
   onRoleChange: (value: CollaboratorRole) => void;
   onStepChange: (step: "person" | "role" | "access" | "review") => void;
   onToggleSection: (section: SectionKey) => void;
+  onSelectAll: () => void;
+  onClearAll: () => void;
   onSaveLater: () => void;
   onSend: () => void;
   onCancel: () => void;
@@ -1342,9 +1348,13 @@ function GuidedExecutorFlow({
                 );
               })}
             </div>
+            <div style={categoryActionStyle}>
+              <button type="button" style={guidedTextButtonStyle} onClick={onSelectAll}>Select all view categories</button>
+              <button type="button" style={guidedTextButtonStyle} onClick={onClearAll}>Clear all</button>
+            </div>
             <details style={customizeDetailsStyle}>
-              <summary>Customize access</summary>
-              <p style={guidedHelpStyle}>Detailed record permissions can be managed after this invitation is saved. Selected categories start as view only; edit access is never granted automatically.</p>
+              <summary>Advanced permissions</summary>
+              <p style={guidedHelpStyle}>Choose individual records or allow editing where this role permits it. Selected categories start as view only; edit access is never granted automatically.</p>
             </details>
           </div>
           <div style={guidedActionBarStyle}>
@@ -1833,6 +1843,8 @@ const guidedNoticeStyle: CSSProperties = { margin: 0, padding: 12, borderLeft: "
 const categoryGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 10 };
 const categoryStyle: CSSProperties = { display: "flex", alignItems: "center", gap: 10, minHeight: 48, padding: "8px 10px", border: "1px solid #cbd5e1", borderRadius: 8, background: "#fff", color: "#0f172a", cursor: "pointer" };
 const selectedCategoryStyle: CSSProperties = { ...categoryStyle, borderColor: "#0f172a", background: "#f1f5f9", fontWeight: 700 };
+const categoryActionStyle: CSSProperties = { display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 };
+const guidedTextButtonStyle: CSSProperties = { border: "1px solid #cbd5e1", background: "#fff", color: "#334155", borderRadius: 8, minHeight: 40, padding: "8px 11px", fontSize: 13, fontWeight: 700, cursor: "pointer" };
 const customizeDetailsStyle: CSSProperties = { marginTop: 14, padding: 12, border: "1px solid #e2e8f0", borderRadius: 8, color: "#334155" };
 const reviewSummaryStyle: CSSProperties = { display: "grid", gap: 10, padding: 14, border: "1px solid #cbd5e1", borderRadius: 10, background: "#f8fafc", color: "#0f172a" };
 const reviewLabelStyle: CSSProperties = { display: "inline-block", minWidth: 120, color: "#64748b", fontSize: 12, fontWeight: 700 };
