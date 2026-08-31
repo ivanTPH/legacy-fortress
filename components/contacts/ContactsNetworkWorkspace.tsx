@@ -617,6 +617,7 @@ export default function ContactsNetworkWorkspace() {
           ) : (
             <ContactInvitationManager
               mode="full"
+              guidedExecutor={addContactGroupKey === "executors"}
               initialRole={getAddContactPreset(addContactGroupKey).role}
               initialAllowedSections={getAddContactPreset(addContactGroupKey).sections}
             />
@@ -856,6 +857,7 @@ export default function ContactsNetworkWorkspace() {
                               </div>
                               <ContactInvitationManager
                                 mode="full"
+                                guidedExecutor={false}
                                 selectedContactId={selectedContactId}
                                 selectedContactProfile={selectedContact}
                               />

@@ -82,12 +82,14 @@ const DEFAULT_INITIAL_ALLOWED_SECTIONS: SectionKey[] = [];
 
 export default function ContactInvitationManager({
   mode = "full",
+  guidedExecutor = false,
   selectedContactId = "",
   selectedContactProfile = null,
   initialRole,
   initialAllowedSections = DEFAULT_INITIAL_ALLOWED_SECTIONS,
 }: {
   mode?: "full" | "dashboard";
+  guidedExecutor?: boolean;
   selectedContactId?: string;
   selectedContactProfile?: Pick<CanonicalContactRow, "id" | "full_name" | "email" | "contact_role" | "linked_context"> | null;
   initialRole?: CollaboratorRole;
@@ -103,6 +105,7 @@ export default function ContactInvitationManager({
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [role, setRole] = useState<CollaboratorRole>("professional_advisor");
   const [ownerNotes, setOwnerNotes] = useState("");
   const [allowedSections, setAllowedSections] = useState<SectionKey[]>([]);
@@ -111,6 +114,7 @@ export default function ContactInvitationManager({
   const [editableAssetIds, setEditableAssetIds] = useState<string[]>([]);
   const [editableRecordIds, setEditableRecordIds] = useState<string[]>([]);
   const [scopeItems, setScopeItems] = useState<ScopeItem[]>([]);
+  const [guidedStep, setGuidedStep] = useState<"person" | "role" | "access" | "review">("person");
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftContactId, setDraftContactId] = useState<string | null>(null);
@@ -196,6 +200,7 @@ export default function ContactInvitationManager({
       const allowedByRole = new Set(ROLE_RULES[nextRole].allowedSections);
       setRole(nextRole);
       setAllowedSections(initialAllowedSections.filter((section) => allowedByRole.has(section)));
+      if (guidedExecutor) setGuidedStep("person");
       return;
     }
     const selectedRow = rows.find((row) => row.contact_id === normalizedContactId || row.id === normalizedContactId);
@@ -215,7 +220,7 @@ export default function ContactInvitationManager({
     setAllowedRecordIds([]);
     setEditableAssetIds([]);
     setEditableRecordIds([]);
-  }, [initialAllowedSections, initialRole, isDashboardMode, rows, selectedContactId, selectedContactProfile]);
+  }, [guidedExecutor, initialAllowedSections, initialRole, isDashboardMode, rows, selectedContactId, selectedContactProfile]);
 
   useEffect(() => {
     setAllowedSections((current) => current.filter((section) => ROLE_RULES[role].allowedSections.includes(section)));
@@ -277,6 +282,7 @@ export default function ContactInvitationManager({
         existingContactId: managedInvitation?.contact_id ?? draftContactId ?? null,
         fullName: nameTrim,
         email: emailTrim,
+        phone: phone.trim() || undefined,
         contactRole: role,
         sourceType: "invitation",
         inviteStatus: currentInviteStatus,
@@ -302,6 +308,7 @@ export default function ContactInvitationManager({
           existingContactId: canonicalContact.id,
           fullName: nameTrim,
           email: emailTrim,
+          phone: phone.trim() || undefined,
           contactRole: role,
           sourceType: "invitation",
           inviteStatus: currentInviteStatus,
@@ -341,6 +348,7 @@ export default function ContactInvitationManager({
           existingContactId: canonicalContact.id,
           fullName: nameTrim,
           email: emailTrim,
+          phone: phone.trim() || undefined,
           contactRole: role,
           sourceType: "invitation",
           inviteStatus: "not_invited",
@@ -365,7 +373,7 @@ export default function ContactInvitationManager({
         });
 
         if (sendAfterSave) {
-          await sendInvite({
+          const sent = await sendInvite({
             id: String(insertRes.id),
             contact_id: canonicalContact.id,
             contact_name: nameTrim,
@@ -378,6 +386,9 @@ export default function ContactInvitationManager({
             permissions_override: permissionsOverride,
             linked_context: selectedContactProfile?.linked_context ?? [],
           }, false);
+          if (sent) {
+            resetEditor();
+          }
           return;
         }
       }
@@ -386,6 +397,7 @@ export default function ContactInvitationManager({
       setDraftContactId(null);
       setName("");
       setEmail("");
+      setPhone("");
       setRole("professional_advisor");
       setOwnerNotes("");
       setAllowedSections([]);
@@ -393,7 +405,7 @@ export default function ContactInvitationManager({
       setAllowedRecordIds([]);
       setEditableAssetIds([]);
       setEditableRecordIds([]);
-      setStatus(`✅ ${managedInvitation ? getExistingContactInvitationNotice(managedInvitation.invitation_status) : "Contact saved."}`);
+      setStatus(`✅ ${managedInvitation ? getExistingContactInvitationNotice(managedInvitation.invitation_status) : "Invitation prepared — ready to send."}`);
       await loadRows();
       notifyContactsUpdated();
     } catch (error) {
@@ -408,7 +420,7 @@ export default function ContactInvitationManager({
     const { data: userData, error: authError } = await getSafeUserData(supabase);
     if (authError || !userData.user) {
       router.replace("/sign-in");
-      return;
+      return false;
     }
 
     try {
@@ -435,9 +447,26 @@ export default function ContactInvitationManager({
       markRecentlySent(row.id);
       await loadRows();
       notifyContactsUpdated();
+      return true;
     } catch (error) {
       setStatus(`❌ Could not ${resend ? "resend" : "send"} invitation: ${getSafeContactInvitationErrorMessage(error)}`);
+      return false;
     }
+  }
+
+  function resetEditor() {
+    setEditingId(null);
+    setDraftContactId(null);
+    setName("");
+    setEmail("");
+    setRole("professional_advisor");
+    setOwnerNotes("");
+    setAllowedSections([]);
+    setAllowedAssetIds([]);
+    setAllowedRecordIds([]);
+    setEditableAssetIds([]);
+    setEditableRecordIds([]);
+    setGuidedStep("person");
   }
 
   function startEdit(row: InvitationRow) {
@@ -446,6 +475,7 @@ export default function ContactInvitationManager({
     setDraftContactId(row.contact_id ?? null);
     setName(row.contact_name);
     setEmail(row.contact_email);
+    setPhone("");
     setRole(row.assigned_role);
     setOwnerNotes(permissions.owner_notes);
     setAllowedSections(permissions.allowed_sections);
@@ -620,7 +650,29 @@ export default function ContactInvitationManager({
         ) : null}
       </div>
 
-      {!isDashboardMode ? (
+      {!isDashboardMode && guidedExecutor && !editingId && !draftContactId ? (
+        <GuidedExecutorFlow
+          step={guidedStep}
+          name={name}
+          email={email}
+          phone={phone}
+          role={role}
+          allowedSections={allowedSections}
+          sections={getVisibleAccessScopeOptions(preferences, "executor")}
+          saving={saving}
+          status={status}
+          onNameChange={setName}
+          onEmailChange={setEmail}
+          onPhoneChange={setPhone}
+          onStepChange={setGuidedStep}
+          onToggleSection={(section) => setAllowedSections((current) => current.includes(section) ? current.filter((item) => item !== section) : [...current, section])}
+          onSaveLater={() => void saveContact()}
+          onSend={() => void saveContact({ sendAfterSave: true })}
+          onCancel={resetEditor}
+        />
+      ) : null}
+
+      {!isDashboardMode && !guidedExecutor ? (
       <div style={summaryGridStyle}>
         <div style={summaryCardStyle}>
           <span style={summaryLabelStyle}>Contacts</span>
@@ -892,7 +944,7 @@ export default function ContactInvitationManager({
       </div>
       ) : null}
 
-      {status ? (
+      {status && !guidedExecutor ? (
         <div style={statusAction ? planLimitStatusStyle : statusMessageStyle}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <Icon name={status.startsWith("✅") ? "check_circle" : statusAction ? "error" : "info"} size={16} />
@@ -1097,6 +1149,177 @@ export default function ContactInvitationManager({
       </div>
       ) : null}
     </section>
+  );
+}
+
+function GuidedExecutorFlow({
+  step,
+  name,
+  email,
+  phone,
+  role,
+  allowedSections,
+  sections,
+  saving,
+  status,
+  onNameChange,
+  onEmailChange,
+  onPhoneChange,
+  onStepChange,
+  onToggleSection,
+  onSaveLater,
+  onSend,
+  onCancel,
+}: {
+  step: "person" | "role" | "access" | "review";
+  name: string;
+  email: string;
+  phone: string;
+  role: CollaboratorRole;
+  allowedSections: SectionKey[];
+  sections: Array<{ key: SectionKey; label: string }>;
+  saving: boolean;
+  status: string;
+  onNameChange: (value: string) => void;
+  onEmailChange: (value: string) => void;
+  onPhoneChange: (value: string) => void;
+  onStepChange: (step: "person" | "role" | "access" | "review") => void;
+  onToggleSection: (section: SectionKey) => void;
+  onSaveLater: () => void;
+  onSend: () => void;
+  onCancel: () => void;
+}) {
+  const steps = ["Person", "Role", "Access", "Review and send"];
+  const stepIndex = ["person", "role", "access", "review"].indexOf(step);
+  const accessLabel = (key: SectionKey) => ({
+    financial: "Financial information",
+    legal: "Legal documents",
+    property: "Property",
+    business: "Business",
+    digital: "Digital assets",
+    personal: "Personal wishes",
+    profile: "Profile",
+  } as Record<string, string>)[key];
+
+  function continueFromPerson() {
+    if (!name.trim() || !email.trim()) return;
+    onStepChange("role");
+  }
+
+  return (
+    <div className="lf-executor-invite-flow" style={guidedFlowStyle} aria-label="Invite an Executor">
+      <div style={{ display: "grid", gap: 5 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
+          <div>
+            <p style={eyebrowStyle}>Executor invitation</p>
+            <h3 style={{ margin: 0, color: "#0f172a", fontSize: 22 }}>Invite an Executor</h3>
+          </div>
+          <button type="button" style={guidedSecondaryButtonStyle} onClick={onCancel}>Cancel</button>
+        </div>
+        <p style={{ margin: 0, color: "#475569", fontSize: 14 }}>
+          Set up the person first, then choose a role and the information they may eventually be able to view.
+        </p>
+        {status ? <div style={statusMessageStyle} role="status">{status}</div> : null}
+      </div>
+
+      <ol style={stepperStyle} aria-label="Invitation steps">
+        {steps.map((label, index) => (
+          <li key={label} style={index === stepIndex ? activeStepStyle : completedStepStyle}>
+            <span style={stepNumberStyle}>{index + 1}</span>
+            <span>{label}</span>
+          </li>
+        ))}
+      </ol>
+
+      {step === "person" ? (
+        <div style={guidedFormGridStyle}>
+          <label style={guidedFieldStyle}>
+            <span style={guidedLabelStyle}>Name</span>
+            <input autoFocus value={name} onChange={(event) => onNameChange(event.target.value)} style={guidedInputStyle} placeholder="Full name" />
+          </label>
+          <label style={guidedFieldStyle}>
+            <span style={guidedLabelStyle}>Email</span>
+            <input value={email} onChange={(event) => onEmailChange(event.target.value)} style={guidedInputStyle} type="email" placeholder="name@example.com" />
+          </label>
+          <label style={guidedFieldStyle}>
+            <span style={guidedLabelStyle}>Phone number <span style={{ color: "#64748b", fontWeight: 400 }}>(optional)</span></span>
+            <input value={phone} onChange={(event) => onPhoneChange(event.target.value)} style={guidedInputStyle} type="tel" placeholder="Phone number" aria-describedby="executor-phone-help" />
+            <span id="executor-phone-help" style={guidedHelpStyle}>You can add this later in contact details.</span>
+          </label>
+          <div style={guidedActionBarStyle}>
+            <span style={guidedHelpStyle}>A valid name and email are needed to continue.</span>
+            <button type="button" style={guidedPrimaryButtonStyle} onClick={continueFromPerson} disabled={!name.trim() || !email.trim()}>Continue</button>
+          </div>
+        </div>
+      ) : null}
+
+      {step === "role" ? (
+        <div style={{ display: "grid", gap: 14 }}>
+          <div>
+            <p style={guidedLabelStyle}>Role</p>
+            <label style={roleCardStyle}>
+              <input type="radio" checked={role === "executor"} readOnly aria-label="Executor" />
+              <span style={{ display: "grid", gap: 4 }}>
+                <strong>Executor</strong>
+                <span style={guidedHelpStyle}>Someone you have chosen to help deal with your estate after your death.</span>
+              </span>
+            </label>
+            <p style={guidedNoticeStyle}>Naming an Executor does not itself create legal authority or give immediate access to protected records.</p>
+          </div>
+          <div style={guidedActionBarStyle}>
+            <button type="button" style={guidedSecondaryButtonStyle} onClick={() => onStepChange("person")}>Back</button>
+            <button type="button" style={guidedPrimaryButtonStyle} onClick={() => onStepChange("access")}>Continue</button>
+          </div>
+        </div>
+      ) : null}
+
+      {step === "access" ? (
+        <div style={{ display: "grid", gap: 14 }}>
+          <div>
+            <p style={guidedLabelStyle}>Information this Executor may eventually access</p>
+            <p style={{ margin: "4px 0 12px", color: "#475569", fontSize: 14 }}>
+              Choose the parts of Legacy Fortress they may eventually be able to view. Access remains subject to your instructions and estate-access controls.
+            </p>
+            <div style={categoryGridStyle}>
+              {sections.map((section) => {
+                const checked = allowedSections.includes(section.key);
+                return (
+                  <label key={section.key} style={checked ? selectedCategoryStyle : categoryStyle}>
+                    <input type="checkbox" checked={checked} onChange={() => onToggleSection(section.key)} />
+                    <span>{accessLabel(section.key) || section.label}</span>
+                  </label>
+                );
+              })}
+            </div>
+            <details style={customizeDetailsStyle}>
+              <summary>Customize access</summary>
+              <p style={guidedHelpStyle}>Detailed record permissions can be managed after this invitation is saved. Selected categories start as view only; edit access is never granted automatically.</p>
+            </details>
+          </div>
+          <div style={guidedActionBarStyle}>
+            <button type="button" style={guidedSecondaryButtonStyle} onClick={() => onStepChange("role")}>Back</button>
+            <button type="button" style={guidedPrimaryButtonStyle} onClick={() => onStepChange("review")}>Review invitation</button>
+          </div>
+        </div>
+      ) : null}
+
+      {step === "review" ? (
+        <div style={{ display: "grid", gap: 14 }}>
+          <div style={reviewSummaryStyle}>
+            <strong>Invite {name || "this person"} as your Executor</strong>
+            <div><span style={reviewLabelStyle}>Person</span>{name} · {email}</div>
+            <div><span style={reviewLabelStyle}>Role</span>Executor</div>
+            <div><span style={reviewLabelStyle}>Access selected</span>{allowedSections.length ? allowedSections.map((section) => accessLabel(section)).join(", ") : "No categories selected yet"}</div>
+          </div>
+          <p style={guidedNoticeStyle}>They will receive an invitation to create or sign in to Legacy Fortress and accept the Executor role. Identity verification will be required before protected access can be considered. Sending an invitation does not establish legal authority or guarantee access.</p>
+          <div style={guidedActionBarStyle}>
+            <button type="button" style={guidedSecondaryButtonStyle} onClick={() => onStepChange("access")} disabled={saving}>Back</button>
+            <button type="button" style={guidedSecondaryButtonStyle} onClick={onSaveLater} disabled={saving}>{saving ? "Saving..." : "Save and send later"}</button>
+            <button type="button" style={guidedPrimaryButtonStyle} onClick={onSend} disabled={saving}>{saving ? "Sending..." : "Send invitation"}</button>
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -1398,6 +1621,69 @@ const sectionIntroStyle: CSSProperties = {
   color: "#64748b",
   fontSize: 13,
 };
+
+const guidedFlowStyle: CSSProperties = {
+  border: "1px solid #cbd5e1",
+  borderRadius: 12,
+  background: "#ffffff",
+  padding: 18,
+  display: "grid",
+  gap: 18,
+};
+const eyebrowStyle: CSSProperties = {
+  margin: 0,
+  color: "#475569",
+  fontSize: 12,
+  fontWeight: 700,
+  letterSpacing: "0.04em",
+  textTransform: "uppercase",
+};
+const stepperStyle: CSSProperties = {
+  listStyle: "none",
+  margin: 0,
+  padding: 0,
+  display: "grid",
+  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+  gap: 8,
+};
+const activeStepStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 7,
+  color: "#0f172a",
+  fontWeight: 700,
+  fontSize: 12,
+  borderBottom: "2px solid #0f172a",
+  padding: "7px 2px",
+};
+const completedStepStyle: CSSProperties = { ...activeStepStyle, color: "#64748b", fontWeight: 500, borderBottomColor: "#e2e8f0" };
+const stepNumberStyle: CSSProperties = {
+  width: 24,
+  height: 24,
+  borderRadius: "50%",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  background: "#f1f5f9",
+  border: "1px solid #cbd5e1",
+  flex: "0 0 auto",
+};
+const guidedFormGridStyle: CSSProperties = { display: "grid", gap: 14, maxWidth: 620 };
+const guidedFieldStyle: CSSProperties = { display: "grid", gap: 6 };
+const guidedLabelStyle: CSSProperties = { color: "#334155", fontSize: 13, fontWeight: 700 };
+const guidedInputStyle: CSSProperties = { width: "100%", minHeight: 44, boxSizing: "border-box", padding: 10, borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff" };
+const guidedHelpStyle: CSSProperties = { color: "#64748b", fontSize: 13, lineHeight: 1.45 };
+const guidedActionBarStyle: CSSProperties = { display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 4 };
+const guidedPrimaryButtonStyle: CSSProperties = { border: "1px solid #111827", background: "#111827", color: "#fff", borderRadius: 8, minHeight: 44, padding: "10px 16px", fontWeight: 700, cursor: "pointer" };
+const guidedSecondaryButtonStyle: CSSProperties = { border: "1px solid #cbd5e1", background: "#fff", color: "#0f172a", borderRadius: 8, minHeight: 44, padding: "10px 14px", fontWeight: 700, cursor: "pointer" };
+const roleCardStyle: CSSProperties = { display: "flex", alignItems: "flex-start", gap: 10, padding: 14, border: "2px solid #0f172a", borderRadius: 10, background: "#f8fafc", cursor: "default" };
+const guidedNoticeStyle: CSSProperties = { margin: 0, padding: 12, borderLeft: "3px solid #64748b", background: "#f8fafc", color: "#475569", fontSize: 13, lineHeight: 1.5 };
+const categoryGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 10 };
+const categoryStyle: CSSProperties = { display: "flex", alignItems: "center", gap: 10, minHeight: 48, padding: "8px 10px", border: "1px solid #cbd5e1", borderRadius: 8, background: "#fff", color: "#0f172a", cursor: "pointer" };
+const selectedCategoryStyle: CSSProperties = { ...categoryStyle, borderColor: "#0f172a", background: "#f1f5f9", fontWeight: 700 };
+const customizeDetailsStyle: CSSProperties = { marginTop: 14, padding: 12, border: "1px solid #e2e8f0", borderRadius: 8, color: "#334155" };
+const reviewSummaryStyle: CSSProperties = { display: "grid", gap: 10, padding: 14, border: "1px solid #cbd5e1", borderRadius: 10, background: "#f8fafc", color: "#0f172a" };
+const reviewLabelStyle: CSSProperties = { display: "inline-block", minWidth: 120, color: "#64748b", fontSize: 12, fontWeight: 700 };
 
 const contactLinkStyle: CSSProperties = {
   fontWeight: 700,
