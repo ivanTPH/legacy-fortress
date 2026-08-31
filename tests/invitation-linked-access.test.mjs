@@ -126,6 +126,9 @@ test("invitation acceptance routes accepted linked users into Contact Wallet", (
   const walletPage = fs.readFileSync(path.join(root, "app/(app)/contact-wallet/page.tsx"), "utf8");
 
   assert.match(acceptPage, /router\.replace\("\/contact-wallet"\)/);
+  assert.match(acceptPage, /Accept \$\{getRoleLabel\(summary\.assigned_role as never\)\} role and continue/);
+  assert.match(acceptPage, /owner: result\.account_holder_name/);
+  assert.match(acceptPage, /role: result\.assigned_role/);
   assert.match(acceptPage, /does not create a paid subscription/);
   assert.match(acceptPage, /does not unlock unrelated private records/);
   assert.match(walletPage, /Contact Wallet/);
@@ -133,4 +136,13 @@ test("invitation acceptance routes accepted linked users into Contact Wallet", (
   assert.match(walletPage, /paid personal subscription/);
   assert.match(walletPage, /loadViewerAccessState/);
   assert.match(walletPage, /includePreVerificationGrants: true/);
+});
+
+test("executor IDV completion keeps identity separate from authority and offers a role handoff", () => {
+  const verifyPage = fs.readFileSync(path.join(root, "app/identity/verify/IdentityVerificationPageClient.tsx"), "utf8");
+  assert.match(verifyPage, /Your identity has been verified/);
+  assert.match(verifyPage, /Continue to \{labelise\(invitedRole\)\} role/);
+  assert.match(verifyPage, /Authority and estate-access requirements are assessed separately/);
+  assert.match(verifyPage, /Set up my Personal Vault later/);
+  assert.doesNotMatch(verifyPage, /Verified Executor/);
 });

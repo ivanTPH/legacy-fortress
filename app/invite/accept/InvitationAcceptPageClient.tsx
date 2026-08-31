@@ -135,8 +135,10 @@ export default function InvitationAcceptPageClient() {
           purpose: "linked_access",
           invitation: invitationId,
           grant: result.grant_id,
+          owner: result.account_holder_name,
+          role: result.assigned_role,
         });
-        setStatus(`Access accepted. Identity verification is required before protected records for ${result.account_holder_name} can unlock.`);
+        setStatus(`${getRoleLabel(result.assigned_role as never)} role accepted. Identity verification is required before protected records for ${result.account_holder_name} can unlock.`);
         router.replace(`/identity/verify?${params.toString()}`);
         return;
       }
@@ -225,7 +227,7 @@ export default function InvitationAcceptPageClient() {
               {sessionUserId ? (
                 <button className="lf-primary-btn" type="button" onClick={() => void acceptInvitation()} disabled={accepting}>
                   <Icon name="verified_user" size={16} />
-                  {accepting ? "Accepting..." : "Accept and continue"}
+                  {accepting ? "Accepting..." : `Accept ${getRoleLabel(summary.assigned_role as never)} role and continue`}
                 </button>
               ) : (
                 <div style={{ display: "grid", gap: 8 }}>

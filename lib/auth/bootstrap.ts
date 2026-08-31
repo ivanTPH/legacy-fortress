@@ -1,9 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ensureWalletContext, type WalletContext } from "../canonicalPersistence";
 import { getOrCreateOnboardingState, getTermsAcceptanceState, isCurrentTermsAcceptance } from "../onboarding";
-import { toSafeInternalPath } from "./session";
 import { hasLinkedAccountAccess } from "../access-control/viewerAccess";
-import { resolveBootstrapDestination } from "./bootstrapRules";
+import { isInvitationAcceptPath, resolveBootstrapDestination } from "./bootstrapRules";
 import { ensureOwnerPlanProfile } from "../accountPlan";
 import { getDefaultLandingForRoles, type PlatformRole } from "./platformRoles";
 
@@ -51,9 +50,4 @@ export async function bootstrapAuthenticatedUser(
     onboardingComplete: access.onboardingComplete,
     destination: access.destination,
   };
-}
-
-function isInvitationAcceptPath(nextPath: string | null | undefined) {
-  const safe = toSafeInternalPath(nextPath, "");
-  return safe.startsWith("/invite/accept");
 }

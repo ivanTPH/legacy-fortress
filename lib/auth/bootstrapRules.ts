@@ -43,6 +43,11 @@ export function resolveBootstrapDestination({
   };
 }
 
+export function isInvitationAcceptPath(nextPath: string | null | undefined) {
+  const safe = toSafeInternalPath(nextPath, "");
+  return safe.startsWith("/invite/accept") || safe.startsWith("/accept-invitation");
+}
+
 function resolveAuthorizedDestination(
   nextPath: string | null | undefined,
   completedDestination: string,

@@ -51,6 +51,8 @@ export default function IdentityVerificationPageClient() {
   const [busy, setBusy] = useState(false);
   const purpose = params.get("purpose") === "step_up_presence" ? "step_up_presence" : "linked_access";
   const hasLinkedContext = Boolean(params.get("grant") || params.get("invitation"));
+  const ownerName = params.get("owner") || "the account holder";
+  const invitedRole = params.get("role") || "linked role";
   useEffect(() => {
     let mounted = true;
     supabase.auth.getSession().then(({ data }) => {
@@ -239,7 +241,22 @@ export default function IdentityVerificationPageClient() {
               <strong>Decision: {decision.status.replace(/_/g, " ")}</strong>
               <span>Identity level: {decision.identityLevel ?? "not granted"}</span>
               <span>Reason codes: {decision.reasonCodes.join(", ")}</span>
-              {decision.status === "verified" ? <span>Your identity requirement has been satisfied. Access remains subject to invitation, authority and security-policy requirements.</span> : null}
+              {decision.status === "verified" ? (
+                <section style={confirmationStyle} aria-label="Identity verification complete">
+                  <strong>Your identity has been verified</strong>
+                  <span>You can now continue to your {labelise(invitedRole)} role for {ownerName}.</span>
+                  <span>Your identity check is complete. Authority and estate-access requirements are assessed separately, and access remains subject to the invitation and security policy.</span>
+                  <span>Your own Legacy Fortress Personal Vault is separate from this role and can be set up later.</span>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button className="lf-primary-btn" type="button" onClick={() => router.replace(`/contact-wallet?grant=${encodeURIComponent(params.get("grant") ?? "")}`)}>
+                      Continue to {labelise(invitedRole)} role
+                    </button>
+                    <button className="lf-link-btn" type="button" onClick={() => router.replace("/account/billing")}>
+                      Set up my Personal Vault later
+                    </button>
+                  </div>
+                </section>
+              ) : null}
             </section>
           ) : null}
         </div>
@@ -265,6 +282,10 @@ function statusForDecision(status: string) {
   return "Verification failed. Protected access remains inactive.";
 }
 
+function labelise(value: string) {
+  return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 const panelStyle = {
   border: "1px solid #e2e8f0",
   background: "#f8fafc",
@@ -272,4 +293,13 @@ const panelStyle = {
   padding: 14,
   display: "grid",
   gap: 10,
+} as const;
+
+const confirmationStyle = {
+  border: "1px solid #bbf7d0",
+  background: "#f0fdf4",
+  borderRadius: 8,
+  padding: 12,
+  display: "grid",
+  gap: 8,
 } as const;

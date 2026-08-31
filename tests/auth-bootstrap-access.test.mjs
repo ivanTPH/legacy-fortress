@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-const { resolveBootstrapDestination } = await import("../lib/auth/bootstrapRules.ts");
+const { resolveBootstrapDestination, isInvitationAcceptPath } = await import("../lib/auth/bootstrapRules.ts");
 const {
   getMasterAdminRolesForEmail,
   mergePlatformRoles,
@@ -62,6 +62,13 @@ test("linked or invited viewers bypass owner onboarding and terms gating", () =>
 
   assert.equal(result.onboardingComplete, true);
   assert.equal(result.destination, "/finances/bank");
+});
+
+test("contact and enterprise invitation return paths bypass generic owner onboarding", () => {
+  assert.equal(isInvitationAcceptPath("/invite/accept?invitation=synthetic&token=token"), true);
+  assert.equal(isInvitationAcceptPath("/accept-invitation?type=enterprise&token=token"), true);
+  assert.equal(isInvitationAcceptPath("https://example.test/accept-invitation"), false);
+  assert.equal(isInvitationAcceptPath("/onboarding?required=1"), false);
 });
 
 test("admin next paths are honoured only for matching trusted role claims", () => {
