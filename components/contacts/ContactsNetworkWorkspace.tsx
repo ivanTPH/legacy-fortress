@@ -541,7 +541,7 @@ export default function ContactsNetworkWorkspace() {
   return (
     <section style={{ display: "grid", gap: 14 }}>
       <div style={buildCheckMarkerStyle}>CONTACTS BUILD CHECK - DOCUMENT DRAWER V2</div>
-      <div style={{ display: "grid", gap: 6 }}>
+      {!addContactGroupKey ? <div style={{ display: "grid", gap: 6 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
             Use grouped contacts to manage role-linked people, invite state, access scope, and missing record associations without duplicating the same workflow elsewhere.
@@ -554,9 +554,9 @@ export default function ContactsNetworkWorkspace() {
         <p style={{ margin: "6px 0 0", color: "#64748b", fontSize: 13 }}>
           Each person appears once in their main role group, with invite state, association health, and the next action shown on the row.
         </p>
-      </div>
+      </div> : null}
 
-      <section style={panelStyle}>
+      {!addContactGroupKey ? <section style={panelStyle}>
         <div className="lf-contacts-metrics" style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
           <Metric label="Contacts in place" value={String(completeness.total)} />
           <Metric label="With email" value={String(completeness.withEmail)} />
@@ -589,7 +589,7 @@ export default function ContactsNetworkWorkspace() {
           ) : null}
           <Link href="/personal" style={linkPillStyle}>Review personal records</Link>
         </div>
-      </section>
+      </section> : null}
 
       {!viewer.readOnly && addContactGroupKey ? (
         <section style={addContactGroupKey === "executors" ? { display: "grid", gap: 12 } : addContactPanelStyle} aria-label={addContactGroupKey === "executors" ? "Invite an Executor" : "Add contact and permissions"}>
@@ -627,7 +627,7 @@ export default function ContactsNetworkWorkspace() {
         </section>
       ) : null}
 
-      {associationAlerts.length ? (
+      {!addContactGroupKey && associationAlerts.length ? (
         <section style={alertPanelStyle}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <strong style={{ fontSize: 14 }}>Association alerts</strong>
@@ -647,7 +647,7 @@ export default function ContactsNetworkWorkspace() {
       {status ? <div style={{ color: "#b91c1c", fontSize: 13 }}>{status}</div> : null}
       {loading ? <div style={{ color: "#64748b" }}>Loading contacts network...</div> : null}
 
-      {!loading ? (
+      {!loading && !addContactGroupKey ? (
         <div style={{ display: "grid", gap: 12 }}>
           {GROUPS.map((group) => {
             const rows = groupedContacts.get(group.key) ?? [];

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch, type SetStateAction } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Icon from "../../../../components/ui/Icon";
@@ -1239,6 +1239,7 @@ function GuidedExecutorFlow({
   onSend: () => void;
   onCancel: () => void;
 }) {
+  const masterCheckboxRef = useRef<HTMLInputElement>(null);
   const steps = ["Person", "Role", "Access", "Review and send"];
   const stepIndex = ["person", "role", "access", "review"].indexOf(step);
   const accessLabel = (key: SectionKey) => ({
@@ -1250,6 +1251,12 @@ function GuidedExecutorFlow({
     personal: "Personal wishes",
     profile: "Profile",
   } as Record<string, string>)[key];
+  const allCategoriesSelected = sections.length > 0 && sections.every((section) => allowedSections.includes(section.key));
+  const someCategoriesSelected = allowedSections.length > 0 && !allCategoriesSelected;
+
+  useEffect(() => {
+    if (masterCheckboxRef.current) masterCheckboxRef.current.indeterminate = someCategoriesSelected;
+  }, [someCategoriesSelected]);
 
   function continueFromPerson() {
     if (!name.trim() || !email.trim()) return;
@@ -1306,20 +1313,15 @@ function GuidedExecutorFlow({
       {step === "role" ? (
         <div style={{ display: "grid", gap: 14 }}>
           <div>
-            <p style={guidedLabelStyle}>Role</p>
-            <div role="radiogroup" aria-label="Choose a role" style={{ display: "grid", gap: 10 }}>
-              {roleOptions.map((option) => {
-                const selected = role === option.value;
-                return (
-                  <label key={option.value} style={selected ? selectedRoleCardStyle : roleCardStyle}>
-                    <input type="radio" name="executor-invite-role" checked={selected} onChange={() => onRoleChange(option.value)} />
-                    <span style={{ display: "grid", gap: 4 }}>
-                      <strong>{option.label}</strong>
-                      <span style={guidedHelpStyle}>{getRoleDescription(option.value)}</span>
-                    </span>
-                  </label>
-                );
-              })}
+            <label style={guidedFieldStyle}>
+              <span style={guidedLabelStyle}>Role</span>
+              <select aria-label="Choose a role" value={role} onChange={(event) => onRoleChange(event.target.value as CollaboratorRole)} style={guidedInputStyle}>
+                {roleOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </label>
+            <div style={roleExplanationStyle}>
+              <strong>{roleOptions.find((option) => option.value === role)?.label ?? "Selected role"}</strong>
+              <p style={{ ...guidedHelpStyle, margin: "4px 0 0" }}>{getRoleDescription(role)}</p>
             </div>
             <p style={guidedNoticeStyle}>Naming an Executor does not itself create legal authority or give immediate access to protected records.</p>
           </div>
@@ -1348,13 +1350,16 @@ function GuidedExecutorFlow({
                 );
               })}
             </div>
+            <label style={masterCheckboxStyle}>
+              <input ref={masterCheckboxRef} type="checkbox" checked={allCategoriesSelected} onChange={() => allCategoriesSelected ? onClearAll() : onSelectAll()} aria-label="Select all categories (view only)" />
+              <span>Select all categories <span style={guidedHelpStyle}>(view only)</span></span>
+            </label>
             <div style={categoryActionStyle}>
-              <button type="button" style={guidedTextButtonStyle} onClick={onSelectAll}>Select all view categories</button>
               <button type="button" style={guidedTextButtonStyle} onClick={onClearAll}>Clear all</button>
             </div>
             <details style={customizeDetailsStyle}>
-              <summary>Advanced permissions</summary>
-              <p style={guidedHelpStyle}>Choose individual records or allow editing where this role permits it. Selected categories start as view only; edit access is never granted automatically.</p>
+              <summary>Record-level permissions (optional)</summary>
+              <p style={guidedHelpStyle}>Selected categories are normally view-only. Use this if you want to limit access to particular records or allow another permission where this role permits it.</p>
             </details>
           </div>
           <div style={guidedActionBarStyle}>
@@ -1366,16 +1371,15 @@ function GuidedExecutorFlow({
 
       {step === "review" ? (
         <div style={{ display: "grid", gap: 14 }}>
-          <div style={reviewSummaryStyle}>
-            <strong>Invite {name || "this person"} as your Executor</strong>
-            <div><span style={reviewLabelStyle}>Person</span>{name} · {email}</div>
-            <div><span style={reviewLabelStyle}>Role</span>Executor</div>
-            <div><span style={reviewLabelStyle}>Access selected</span>{allowedSections.length ? allowedSections.map((section) => `${accessLabel(section)} — View only`).join(", ") : "No categories selected yet"}</div>
-          </div>
-          <p style={guidedNoticeStyle}>They will receive an invitation to create or sign in to Legacy Fortress and accept the Executor role. Identity verification will be required before protected access can be considered. Sending an invitation does not establish legal authority or guarantee access.</p>
+          <h3 style={{ margin: 0, color: "#0f172a", fontSize: 20 }}>Review invitation</h3>
+          <div style={reviewSectionStyle}><strong>PERSON</strong><span>{name || "Not provided"}</span><span>{email || "Not provided"}</span>{phone ? <span>{phone}</span> : null}</div>
+          <div style={reviewSectionStyle}><strong>ROLE</strong><span>{roleOptions.find((option) => option.value === role)?.label ?? "Selected role"}</span><span style={guidedHelpStyle}>{getRoleDescription(role)}</span></div>
+          <div style={reviewSectionStyle}><strong>INFORMATION THEY MAY EVENTUALLY VIEW</strong>{allowedSections.length ? allowedSections.map((section) => <span key={section}>{accessLabel(section)} — View only</span>) : <span>No categories selected</span>}</div>
+          <div style={reviewSectionStyle}><strong>WHAT HAPPENS NEXT</strong><ol style={{ margin: 0, paddingLeft: 20 }}><li>Legacy Fortress prepares and dispatches the invitation.</li><li>They sign in or create an account and accept the role.</li><li>They complete identity verification.</li><li>Legal authority and estate access remain separate.</li></ol></div>
+          <p style={guidedNoticeStyle}>Sending this invitation does not give legal authority or immediate access to protected information.</p>
           <div style={guidedActionBarStyle}>
             <button type="button" style={guidedSecondaryButtonStyle} onClick={() => onStepChange("access")} disabled={saving}>Back</button>
-            <button type="button" style={guidedSecondaryButtonStyle} onClick={onSaveLater} disabled={saving}>{saving ? "Saving..." : "Save and send later"}</button>
+            <button type="button" style={guidedSecondaryButtonStyle} onClick={onSaveLater} disabled={saving}>{saving ? "Saving..." : "Save for later"}</button>
             <button type="button" style={guidedPrimaryButtonStyle} onClick={onSend} disabled={saving}>{saving ? "Sending..." : "Send invitation"}</button>
           </div>
         </div>
@@ -1399,10 +1403,10 @@ function RecentInvitationCard({
       <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
         <Icon name={sent ? "mark_email_read" : "schedule"} size={24} />
         <div style={{ display: "grid", gap: 5 }}>
-          <strong style={{ fontSize: 19 }}>{sent ? "Invitation sent" : "Invitation prepared"}</strong>
+          <strong style={{ fontSize: 19 }}>{sent ? "Invitation dispatch attempted" : "Invitation prepared"}</strong>
           <span style={{ fontSize: 14 }}>
             {sent
-              ? `We've sent an invitation to ${invitation.name} to become your Executor.`
+              ? `The invitation for ${invitation.name} to become your Executor was accepted by the configured dispatch service.`
               : `${invitation.name} is ready to invite. The invitation has not been sent.`}
           </span>
           <span style={guidedHelpStyle}>
@@ -1837,8 +1841,8 @@ const guidedHelpStyle: CSSProperties = { color: "#64748b", fontSize: 13, lineHei
 const guidedActionBarStyle: CSSProperties = { display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 4 };
 const guidedPrimaryButtonStyle: CSSProperties = { border: "1px solid #111827", background: "#111827", color: "#fff", borderRadius: 8, minHeight: 44, padding: "10px 16px", fontWeight: 700, cursor: "pointer" };
 const guidedSecondaryButtonStyle: CSSProperties = { border: "1px solid #cbd5e1", background: "#fff", color: "#0f172a", borderRadius: 8, minHeight: 44, padding: "10px 14px", fontWeight: 700, cursor: "pointer" };
-const roleCardStyle: CSSProperties = { display: "flex", alignItems: "flex-start", gap: 10, padding: 14, border: "2px solid #0f172a", borderRadius: 10, background: "#f8fafc", cursor: "default" };
-const selectedRoleCardStyle: CSSProperties = { ...roleCardStyle, background: "#e2e8f0" };
+const roleExplanationStyle: CSSProperties = { display: "grid", gap: 2, marginTop: 10, padding: 12, border: "1px solid #cbd5e1", borderRadius: 8, background: "#f8fafc", color: "#0f172a" };
+const masterCheckboxStyle: CSSProperties = { display: "flex", alignItems: "center", gap: 10, minHeight: 48, padding: "8px 10px", border: "1px solid #cbd5e1", borderRadius: 8, background: "#f8fafc", color: "#0f172a", fontWeight: 700 };
 const guidedNoticeStyle: CSSProperties = { margin: 0, padding: 12, borderLeft: "3px solid #64748b", background: "#f8fafc", color: "#475569", fontSize: 13, lineHeight: 1.5 };
 const categoryGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 10 };
 const categoryStyle: CSSProperties = { display: "flex", alignItems: "center", gap: 10, minHeight: 48, padding: "8px 10px", border: "1px solid #cbd5e1", borderRadius: 8, background: "#fff", color: "#0f172a", cursor: "pointer" };
@@ -1846,8 +1850,7 @@ const selectedCategoryStyle: CSSProperties = { ...categoryStyle, borderColor: "#
 const categoryActionStyle: CSSProperties = { display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 };
 const guidedTextButtonStyle: CSSProperties = { border: "1px solid #cbd5e1", background: "#fff", color: "#334155", borderRadius: 8, minHeight: 40, padding: "8px 11px", fontSize: 13, fontWeight: 700, cursor: "pointer" };
 const customizeDetailsStyle: CSSProperties = { marginTop: 14, padding: 12, border: "1px solid #e2e8f0", borderRadius: 8, color: "#334155" };
-const reviewSummaryStyle: CSSProperties = { display: "grid", gap: 10, padding: 14, border: "1px solid #cbd5e1", borderRadius: 10, background: "#f8fafc", color: "#0f172a" };
-const reviewLabelStyle: CSSProperties = { display: "inline-block", minWidth: 120, color: "#64748b", fontSize: 12, fontWeight: 700 };
+const reviewSectionStyle: CSSProperties = { display: "grid", gap: 5, padding: 14, border: "1px solid #e2e8f0", borderRadius: 8, background: "#fff", color: "#0f172a" };
 const recentInvitationStyle: CSSProperties = { border: "1px solid #86efac", borderRadius: 12, background: "#f0fdf4", color: "#166534", padding: 18, display: "grid", gap: 16 };
 const statusPanelStyle: CSSProperties = { border: "1px solid #cbd5e1", borderRadius: 10, background: "#f8fafc", padding: 14, display: "grid", gap: 14 };
 const statusPanelRoleStyle: CSSProperties = { border: "1px solid #cbd5e1", borderRadius: 999, padding: "5px 9px", color: "#334155", fontSize: 12, fontWeight: 700 };
