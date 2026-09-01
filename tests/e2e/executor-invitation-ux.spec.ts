@@ -33,4 +33,9 @@ test("executor invitation wizard is a single browser workflow", async ({ page })
   await expect(page.getByLabel("Select all categories (view only)")).not.toBeChecked();
   await page.getByRole("button", { name: "Review invitation" }).click();
   await expect(page.getByRole("heading", { name: "Review invitation" })).toBeVisible();
+  await page.getByRole("button", { name: "Send invitation" }).click();
+  await expect(page.getByText(/Invitation (dispatch attempted|prepared)/i)).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("heading", { name: /Invite an executor/i })).toHaveCount(0);
+  await page.getByRole("button", { name: "View status" }).click();
+  await expect(page.getByRole("region", { name: /Invitation and role status/i })).toBeVisible();
 });
