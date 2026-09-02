@@ -55,6 +55,7 @@ test("executor creation hides the legacy editor while guided mode is active", ()
   assert.match(manager, /Invitation dispatch attempted/);
   assert.match(manager, /Invitation prepared/);
   assert.match(manager, /window\.setTimeout\(onViewStatus, 2500\)/);
+  assert.match(manager, /if \(sent\) \{\s*clearInvitationForm\(\)/);
 });
 
 test("post-send state does not immediately re-render the Person step", () => {
@@ -67,7 +68,7 @@ test("post-send state does not immediately re-render the Person step", () => {
 test("save and dispatch remain separate canonical operations with truthful status", () => {
   assert.match(manager, /Invitation prepared — ready to send/);
   assert.match(manager, /sendContactInvite\(supabase/);
-  assert.match(manager, /if \(sent\) \{[\s\S]*resetEditor\(\)/);
+  assert.match(manager, /if \(sent\) \{\s*clearInvitationForm\(\)/);
   assert.match(manager, /Invitation email \$\{resend \? "resent" : "sent"\}/);
 });
 

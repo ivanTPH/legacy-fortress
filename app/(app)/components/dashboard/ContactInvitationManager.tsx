@@ -396,7 +396,7 @@ export default function ContactInvitationManager({
             linked_context: selectedContactProfile?.linked_context ?? [],
           }, false);
           if (sent) {
-            resetEditor();
+            clearInvitationForm();
           }
           return;
         }
@@ -481,7 +481,7 @@ export default function ContactInvitationManager({
     }
   }
 
-  function resetEditor() {
+  function clearInvitationForm() {
     setEditingId(null);
     setDraftContactId(null);
     setName("");
@@ -493,6 +493,10 @@ export default function ContactInvitationManager({
     setAllowedRecordIds([]);
     setEditableAssetIds([]);
     setEditableRecordIds([]);
+  }
+
+  function resetEditor() {
+    clearInvitationForm();
     setGuidedStep("person");
   }
 
