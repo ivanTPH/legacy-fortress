@@ -54,6 +54,7 @@ test("executor creation hides the legacy editor while guided mode is active", ()
   assert.match(manager, /setRecentInvitation/);
   assert.match(manager, /Invitation dispatch attempted/);
   assert.match(manager, /Invitation prepared/);
+  assert.match(manager, /window\.setTimeout\(onViewStatus, 2500\)/);
 });
 
 test("post-send state does not immediately re-render the Person step", () => {

@@ -1398,6 +1398,13 @@ function RecentInvitationCard({
   onAddAnother: () => void;
 }) {
   const sent = invitation.outcome === "sent";
+
+  useEffect(() => {
+    if (!invitation.contactId) return undefined;
+    const transitionTimer = window.setTimeout(onViewStatus, 2500);
+    return () => window.clearTimeout(transitionTimer);
+  }, [invitation.contactId, onViewStatus]);
+
   return (
     <div style={recentInvitationStyle} role="status" aria-live="polite">
       <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
@@ -1412,6 +1419,7 @@ function RecentInvitationCard({
           <span style={guidedHelpStyle}>
             {sent ? "We'll show you here when they accept and complete identity verification." : "Send it later from the invitation status actions."}
           </span>
+          <span style={guidedHelpStyle}>This confirmation will open the invitation status in about 3 seconds.</span>
         </div>
       </div>
       <div style={guidedActionBarStyle}>
