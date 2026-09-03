@@ -155,19 +155,26 @@ export default function ContactWalletPage() {
 
       <PlatformSection
         icon="person_pin"
-        title="Supported person"
-        detail="Relationship context for the active Contact Wallet workspace."
+        title="Executor workspace"
+        detail="Identity, authority and access are separate decisions for this relationship."
         emphasis="primary"
       >
         {supportedPerson ? (
           <div className="lf-dashboard-grid">
-            <PlatformInfoTile label="Supporting" value={supportedPerson.accountHolderName} />
-            <PlatformInfoTile label="Your role" value={getRoleLabel(supportedPerson.role)} />
-            <PlatformInfoTile label="Status" value={supportedPerson.activationStatus.replace(/_/g, " ")} />
+            <PlatformInfoTile label="Acting for" value={supportedPerson.accountHolderName} />
+            <PlatformInfoTile label="Role" value={getRoleLabel(supportedPerson.role)} />
+            <PlatformInfoTile label="Role acceptance" value={supportedPerson.activationStatus === "invited" ? "Pending" : "Accepted"} />
+            <PlatformInfoTile label="Identity" value={viewer.identityAssuranceLevel >= 2 ? "Verified" : "Required"} />
+            <PlatformInfoTile label="Authority" value="Not established / pending" />
+            <PlatformInfoTile label="Access" value={supportedPerson.activationStatus === "active" ? "Active" : "Unavailable / pending policy"} />
             <PlatformInfoTile label="Permitted sections" value={supportedPerson.allowedSections.length ? supportedPerson.allowedSections.join(", ") : "Grant scoped"} />
           </div>
         ) : null}
       </PlatformSection>
+
+      <PlatformNotice icon="arrow_forward">
+        <strong>Next step:</strong> complete any required security, identity or authority review. Identity verification alone does not establish legal authority or activate estate access.
+      </PlatformNotice>
 
       <PlatformSection
         icon="task_alt"

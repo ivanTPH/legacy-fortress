@@ -15,6 +15,7 @@ const callback = read("app/api/identity-verification/callback/route.ts");
 const documentRoute = read("app/api/identity-verification/[requestId]/document/route.ts");
 const cameraRoute = read("app/api/identity-verification/[requestId]/camera/route.ts");
 const startRoute = read("app/api/identity-verification/route.ts");
+const contactWallet = read("app/(app)/contact-wallet/page.tsx");
 
 test("operational migration isolates review notes and adds reviewer/idempotency fields", () => {
   assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.identity_verification_review_notes/);
@@ -82,4 +83,14 @@ test("provider callback verifies signed, bounded, idempotent events", () => {
   assert.match(callback, /provider_event_id/);
   assert.match(callback, /identity_callback_reference_unknown/);
   assert.match(callback, /safeMetadata/);
+});
+
+test("executor workspace keeps identity, authority, and access visibly separate", () => {
+  assert.match(contactWallet, /label="Acting for"/);
+  assert.match(contactWallet, /label="Role acceptance"/);
+  assert.match(contactWallet, /label="Identity"/);
+  assert.match(contactWallet, /label="Authority"/);
+  assert.match(contactWallet, /label="Access"/);
+  assert.match(contactWallet, /Next step/);
+  assert.match(contactWallet, /does not establish legal authority or activate estate access/);
 });
