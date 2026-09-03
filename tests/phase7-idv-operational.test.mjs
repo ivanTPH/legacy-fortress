@@ -41,6 +41,14 @@ test("user journey exposes document selection and labels synthetic results", () 
   assert.match(userPage, /STAGING IDENTITY SIMULATOR/);
   assert.match(userPage, /Use synthetic test document/);
   assert.match(userPage, /Use synthetic live-person capture/);
+  assert.match(userPage, /How would you provide your document/);
+  assert.match(userPage, /Take a photo/);
+  assert.match(userPage, /Choose from Photo Library/);
+  assert.match(userPage, /Choose a file/);
+  assert.match(userPage, /STAGING SIMULATION/);
+  assert.match(userPage, /Document check/);
+  assert.match(userPage, /Live check/);
+  assert.match(userPage, /lf-trust-journey/);
   assert.doesNotMatch(userPage, /type="file"/);
   assert.doesNotMatch(userPage, /localStorage|sessionStorage/);
 });

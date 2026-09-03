@@ -162,7 +162,7 @@ export default function InvitationAcceptPageClient() {
   );
 
   return (
-    <main className="lf-auth">
+    <main className="lf-auth lf-trust-journey">
       <section className="lf-auth-art">
         <div className="lf-auth-brand-card">
           <BrandMark size={38} />

@@ -1973,6 +1973,148 @@ textarea {
   font-size: 30px;
 }
 
+/* Focused trust journeys keep security tasks central and readable. */
+.lf-trust-journey {
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  justify-items: center;
+  gap: 18px;
+  padding: 32px 20px 48px;
+  background: #f8fafc;
+}
+
+.lf-trust-header,
+.lf-trust-progress,
+.lf-trust-card {
+  width: min(100%, 760px);
+}
+
+.lf-trust-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.lf-trust-header .lf-auth-brand-card {
+  background: #fff;
+  border-color: var(--lf-border);
+  color: var(--lf-text);
+}
+
+.lf-trust-header .lf-auth-brand-sub,
+.lf-trust-header-copy span {
+  color: var(--lf-text-soft);
+}
+
+.lf-trust-header-copy {
+  display: grid;
+  gap: 4px;
+  text-align: right;
+}
+
+.lf-trust-progress {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.lf-trust-progress-step {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--lf-text-soft);
+  font-size: 13px;
+}
+
+.lf-trust-progress-step span {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #cbd5e1;
+  border-radius: 50%;
+  background: #fff;
+  font-weight: 700;
+}
+
+.lf-trust-progress-step.complete {
+  color: var(--lf-text);
+}
+
+.lf-trust-progress-step.complete span {
+  border-color: #15803d;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.lf-trust-card {
+  max-width: 760px;
+}
+
+.lf-trust-context {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--lf-border);
+}
+
+.lf-trust-context div {
+  display: grid;
+  gap: 3px;
+}
+
+.lf-trust-context span {
+  color: var(--lf-text-soft);
+  font-size: 12px;
+}
+
+.lf-trust-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.lf-trust-choice-grid button {
+  min-height: 64px;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.lf-live-instructions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  color: var(--lf-text-soft);
+  font-size: 13px;
+}
+
+.lf-live-instructions span {
+  padding: 10px;
+  border: 1px solid var(--lf-border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.lf-trust-entry {
+  grid-template-columns: minmax(0, 1fr);
+  background: #f8fafc;
+}
+
+.lf-trust-entry .lf-entry-art {
+  display: none;
+}
+
+.lf-trust-entry .lf-entry-panel-wrap {
+  width: min(100%, 760px);
+  justify-self: center;
+}
+
+.lf-trust-entry .lf-entry-panel {
+  max-width: 760px;
+}
+
 .lf-onboarding-main {
   grid-template-columns: minmax(0, 1fr);
 }
@@ -4861,6 +5003,35 @@ textarea {
     grid-template-columns: minmax(0, 1fr) !important;
     background: #fbfaf8 !important;
     overflow-x: hidden;
+  }
+
+  .lf-trust-journey {
+    padding: 18px 12px 32px;
+    gap: 14px;
+  }
+
+  .lf-trust-header {
+    align-items: flex-start;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .lf-trust-header-copy {
+    text-align: left;
+  }
+
+  .lf-trust-progress {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .lf-trust-context,
+  .lf-trust-choice-grid,
+  .lf-live-instructions {
+    grid-template-columns: 1fr;
+  }
+
+  .lf-trust-card {
+    padding: 18px;
   }
 
   .lf-entry-art {

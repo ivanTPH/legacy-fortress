@@ -83,7 +83,7 @@ export default function PublicAuthEntry({
   }, [nextPath, router]);
 
   return (
-    <main className="lf-entry-shell">
+    <main className="lf-entry-shell lf-trust-entry">
       <section className="lf-entry-art">
         <div className="lf-auth-brand-card">
           <BrandMark size={40} />

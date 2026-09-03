@@ -47,6 +47,7 @@ export default function IdentityVerificationPageClient() {
   const [status, setStatus] = useState("Preparing identity verification...");
   const [documentType, setDocumentType] = useState("passport");
   const [scenario, setScenario] = useState("success");
+  const [captureSource, setCaptureSource] = useState<"camera" | "library" | "file" | null>(null);
   const [decision, setDecision] = useState<VerificationResponse["decision"] | null>(null);
   const [busy, setBusy] = useState(false);
   const purpose = params.get("purpose") === "step_up_presence" ? "step_up_presence" : "linked_access";
@@ -84,7 +85,7 @@ export default function IdentityVerificationPageClient() {
       });
       if (!res.verification?.id) throw new Error(res.error ?? "Could not start verification.");
       setVerificationId(res.verification.id);
-      setStatus(purpose === "step_up_presence" ? "Fresh presence check required." : "Use the synthetic test document to continue.");
+      setStatus(purpose === "step_up_presence" ? "Fresh presence check required." : "Choose how you would provide your document.");
       if (purpose === "step_up_presence") await createChallenge(res.verification.id);
     } catch (error) {
       setStatus(readError(error));
@@ -153,8 +154,8 @@ export default function IdentityVerificationPageClient() {
   }
 
   return (
-    <main className="lf-auth">
-      <section className="lf-auth-art">
+    <main className="lf-auth lf-trust-journey">
+      <header className="lf-trust-header">
         <div className="lf-auth-brand-card">
           <BrandMark size={38} />
           <div>
@@ -162,18 +163,33 @@ export default function IdentityVerificationPageClient() {
             <div className="lf-auth-brand-sub">Identity verification</div>
           </div>
         </div>
-        <div className="lf-auth-art-copy">
-          <h2>Verify identity before protected access.</h2>
-          <p>This controlled flow uses a staging-only synthetic document and live-person result. It does not require real identity or biometric evidence.</p>
+        <div className="lf-trust-header-copy">
+          <strong>{purpose === "linked_access" ? `Executor access for ${ownerName}` : "Identity security check"}</strong>
+          <span>Verify your identity before protected access can be considered.</span>
         </div>
+      </header>
+
+      <section className="lf-trust-progress" aria-label="Identity verification progress">
+        {[
+          ["Document", Boolean(verificationId)],
+          ["Document check", Boolean(challengeId)],
+          ["Live check", Boolean(decision)],
+          ["Result", Boolean(decision)],
+        ].map(([label, complete], index) => (
+          <div className={complete ? "lf-trust-progress-step complete" : "lf-trust-progress-step"} key={String(label)}>
+            <span>{complete ? "✓" : index + 1}</span>{label}
+          </div>
+        ))}
       </section>
 
-      <section className="lf-auth-form-side">
-        <div className="lf-auth-card" style={{ maxWidth: 620 }}>
-          <h1>Identity verification</h1>
-          <p className="lf-auth-subtext">
-            Legacy Fortress needs Level 2 identity assurance before protected linked access. High-risk actions require a fresh Level 3 presence check.
-          </p>
+      <section className="lf-auth-card lf-trust-card">
+        <div className="lf-trust-context" aria-label="Verification context">
+          <div><span>Owner</span><strong>{ownerName}</strong></div>
+          <div><span>Role</span><strong>{labelise(invitedRole)}</strong></div>
+          <div><span>Access</span><strong>Not available yet</strong></div>
+        </div>
+        <h1>Verify your identity</h1>
+        <p className="lf-auth-subtext">To protect {ownerName}'s information, we need to confirm you are the person accepting this role. Identity verification does not establish legal authority or grant access by itself.</p>
 
           <div className="lf-muted-note" role="status">{status}</div>
 
@@ -214,13 +230,29 @@ export default function IdentityVerificationPageClient() {
             </>
           ) : null}
 
-          {verificationId && !challengeId ? (
+          {verificationId && !challengeId && !captureSource ? (
             <section style={panelStyle}>
-              <strong>Document capture</strong>
-              <span>Use a generated synthetic document payload. No passport, driving licence or national ID image is uploaded or stored.</span>
-              <button className="lf-primary-btn" type="button" onClick={() => void submitSyntheticDocument()} disabled={busy}>
+              <strong>How would you provide your document?</strong>
+              <span>In production this would use your device. In this staging simulation, nothing from your device is opened or uploaded.</span>
+              <div className="lf-trust-choice-grid">
+                {([["camera", "Take a photo"], ["library", "Choose from Photo Library"], ["file", "Choose a file"]] as const).map(([value, label]) => (
+                  <button className="lf-secondary-btn" type="button" key={value} onClick={() => { setCaptureSource(value); setStatus("STAGING SIMULATION — no device capture will be used."); }} disabled={busy}>
+                    <Icon name={value === "camera" ? "photo_camera" : value === "library" ? "photo_library" : "upload_file"} size={18} />
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <span className="lf-muted-note">STAGING SIMULATION: a generated synthetic {labelise(documentType)} will be used instead.</span>
+            </section>
+          ) : null}
+
+          {verificationId && !challengeId && captureSource ? (
+            <section style={panelStyle}>
+              <strong>STAGING SIMULATION</strong>
+              <span>In production, {captureSource === "camera" ? "the camera" : captureSource === "library" ? "your photo library" : "a file chooser"} would provide the document. For this UAT, a generated synthetic identity document is used instead. Nothing from your device will be uploaded.</span>
+              <button className="lf-primary-btn" type="button" aria-label="Use synthetic test document" onClick={() => void submitSyntheticDocument()} disabled={busy}>
                 <Icon name="description" size={16} />
-                Use synthetic test document
+                Use synthetic {labelise(documentType)}
               </button>
             </section>
           ) : null}
@@ -228,19 +260,21 @@ export default function IdentityVerificationPageClient() {
           {challengeId ? (
             <section style={panelStyle}>
               <strong>Live-person check</strong>
-              <span>Staging simulator only. No camera permission, selfie or biometric image is required.</span>
-              <button className="lf-primary-btn" type="button" onClick={() => void submitSyntheticLivePersonCapture()} disabled={busy}>
+              <span>In production this would use the camera to confirm a real person is present. Staging simulator only: no camera permission, selfie or biometric image is required.</span>
+              <div className="lf-live-instructions" aria-label="Live-person instructions">
+                <span>Centre your face</span><span>Use good lighting</span><span>Look directly ahead</span>
+              </div>
+              <button className="lf-primary-btn" type="button" aria-label="Use synthetic live-person capture" onClick={() => void submitSyntheticLivePersonCapture()} disabled={busy}>
                 <Icon name="check_circle" size={16} />
-                Use synthetic live-person capture
+                Simulate live camera capture
               </button>
             </section>
           ) : null}
 
           {decision ? (
             <section style={panelStyle}>
-              <strong>Decision: {decision.status.replace(/_/g, " ")}</strong>
-              <span>Identity level: {decision.identityLevel ?? "not granted"}</span>
-              <span>Reason codes: {decision.reasonCodes.join(", ")}</span>
+              <strong>Result: {decision.status === "verified" ? "Identity verified" : decision.status === "review_required" ? "Review required" : "We couldn't verify your identity"}</strong>
+              <span>{statusForDecision(decision.status)}</span>
               {decision.status === "verified" ? (
                 <section style={confirmationStyle} aria-label="Identity verification complete">
                   <strong>Your identity has been verified</strong>
@@ -259,7 +293,6 @@ export default function IdentityVerificationPageClient() {
               ) : null}
             </section>
           ) : null}
-        </div>
       </section>
     </main>
   );
