@@ -46,6 +46,7 @@ export default function InvitationAcceptPageClient() {
   const [linkProblem, setLinkProblem] = useState<"none" | "incomplete" | "invalid">("none");
   const [summary, setSummary] = useState<InvitationSummary | null>(null);
   const [sessionUserId, setSessionUserId] = useState("");
+  const [sessionUserEmail, setSessionUserEmail] = useState("");
 
   const nextAuthPath = useMemo(() => {
     const params = new URLSearchParams({
@@ -90,6 +91,7 @@ export default function InvitationAcceptPageClient() {
       }
 
       setSessionUserId(user?.id ?? "");
+      setSessionUserEmail(user?.email?.trim().toLowerCase() ?? "");
       setLoading(false);
     }
 
@@ -123,6 +125,7 @@ export default function InvitationAcceptPageClient() {
 
       if (acceptRes.error || !(acceptRes.data?.[0])) {
         setLinkProblem("invalid");
+        setSummary(null);
         setStatus(getInvitationValidationMessage(acceptRes.error));
         return;
       }
@@ -145,11 +148,18 @@ export default function InvitationAcceptPageClient() {
       setStatus(`Access accepted. Redirecting you to your Contact Wallet for ${result.account_holder_name}...`);
       router.replace("/contact-wallet");
     } catch (error) {
+      setLinkProblem("invalid");
+      setSummary(null);
       setStatus(getInvitationValidationMessage(error));
     } finally {
       setAccepting(false);
     }
   }
+
+  const wrongAccount = Boolean(
+    summary && sessionUserId && sessionUserEmail &&
+    sessionUserEmail !== summary.contact_email.trim().toLowerCase(),
+  );
 
   return (
     <main className="lf-auth">
@@ -179,7 +189,7 @@ export default function InvitationAcceptPageClient() {
 
           {loading ? <div className="lf-muted-note">Checking invitation...</div> : null}
 
-          {!loading && linkProblem !== "none" ? (
+          {!loading && linkProblem !== "none" && !summary ? (
             <section style={recoveryPanelStyle} aria-label="Invitation recovery options">
               <div style={{ display: "grid", gap: 4 }}>
                 <strong>{linkProblem === "incomplete" ? "The invitation link is incomplete." : "This invitation cannot be opened."}</strong>
@@ -204,7 +214,7 @@ export default function InvitationAcceptPageClient() {
             </section>
           ) : null}
 
-          {!loading && summary ? (
+          {!loading && summary && linkProblem === "none" ? (
             <section style={{ display: "grid", gap: 12 }}>
               <div style={invitePanelStyle}>
                 <div style={{ fontWeight: 700 }}>{summary.account_holder_name}</div>
@@ -224,7 +234,21 @@ export default function InvitationAcceptPageClient() {
                 ) : null}
               </div>
 
-              {sessionUserId ? (
+              {wrongAccount ? (
+                <section style={recoveryPanelStyle} aria-label="Wrong account">
+                  <strong>This invitation was sent to: {maskEmail(summary.contact_email)}</strong>
+                  <span>You are currently signed in as: {maskEmail(sessionUserEmail)}</span>
+                  <button
+                    className="lf-primary-btn"
+                    type="button"
+                    onClick={() => void switchAccount(router, nextAuthPath)}
+                  >
+                    <Icon name="logout" size={16} />
+                    Sign in with another account
+                  </button>
+                  <Link className="lf-link-btn" href="/dashboard">Cancel</Link>
+                </section>
+              ) : sessionUserId ? (
                 <button className="lf-primary-btn" type="button" onClick={() => void acceptInvitation()} disabled={accepting}>
                   <Icon name="verified_user" size={16} />
                   {accepting ? "Accepting..." : `Accept ${getRoleLabel(summary.assigned_role as never)} role and continue`}
@@ -287,4 +311,15 @@ function getInvitationValidationMessage(error: unknown) {
     return "This invitation could not be opened with the current account. Sign in with the invited email address or ask the account holder to resend it.";
   }
   return "This invitation could not be opened. Ask the account holder to resend it from Contacts.";
+}
+
+function maskEmail(email: string) {
+  const [local, domain] = email.split("@");
+  if (!local || !domain) return email;
+  return `${local.slice(0, 1)}***@${domain}`;
+}
+
+async function switchAccount(router: ReturnType<typeof useRouter>, nextPath: string) {
+  await supabase.auth.signOut();
+  router.replace(`/sign-in?next=${encodeURIComponent(nextPath)}`);
 }

@@ -47,6 +47,7 @@ export default function SignInForm({
         { supabase },
         { waitForActiveUser },
         { bootstrapAuthenticatedUser },
+        { findPendingInvitationDestination },
         { getMasterAdminRolesForEmail, mergePlatformRoles },
         { extractPlatformRolesFromMetadata },
         { resolvePermissionedAdminDestination },
@@ -54,6 +55,7 @@ export default function SignInForm({
         import("../../lib/supabaseClient"),
         import("../../lib/auth/session"),
         import("../../lib/auth/bootstrap"),
+        import("../../lib/auth/pendingInvitations"),
         import("../../lib/auth/adminRoles"),
         import("../../lib/auth/platformRoles"),
         import("../../lib/auth/adminDestination"),
@@ -79,12 +81,13 @@ export default function SignInForm({
         extractPlatformRolesFromMetadata(confirmedUser.user_metadata),
         getMasterAdminRolesForEmail(confirmedUser.email),
       );
+      const pendingDestination = await findPendingInvitationDestination(supabase, nextPath);
       const bootstrap = await bootstrapAuthenticatedUser(supabase, {
         userId: confirmedUser.id,
         nextPath: nextPath ?? undefined,
         roles,
       });
-      const destination = await resolvePermissionedAdminDestination(supabase, {
+      const destination = pendingDestination ?? await resolvePermissionedAdminDestination(supabase, {
         nextPath,
         fallbackDestination: bootstrap.destination,
         roles,

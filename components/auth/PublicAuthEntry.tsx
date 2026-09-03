@@ -39,6 +39,7 @@ export default function PublicAuthEntry({
           { supabase },
           { waitForActiveUser },
           { bootstrapAuthenticatedUser },
+          { findPendingInvitationDestination },
           { getMasterAdminRolesForEmail, mergePlatformRoles },
           { extractPlatformRolesFromMetadata },
           { resolvePermissionedAdminDestination },
@@ -46,6 +47,7 @@ export default function PublicAuthEntry({
           import("../../lib/supabaseClient"),
           import("../../lib/auth/session"),
           import("../../lib/auth/bootstrap"),
+          import("../../lib/auth/pendingInvitations"),
           import("../../lib/auth/adminRoles"),
           import("../../lib/auth/platformRoles"),
           import("../../lib/auth/adminDestination"),
@@ -58,12 +60,13 @@ export default function PublicAuthEntry({
           extractPlatformRolesFromMetadata(sessionUser.user_metadata),
           getMasterAdminRolesForEmail(sessionUser.email),
         );
+        const pendingDestination = await findPendingInvitationDestination(supabase, nextPath);
         const bootstrap = await bootstrapAuthenticatedUser(supabase, {
           userId: sessionUser.id,
           nextPath,
           roles,
         });
-        const destination = await resolvePermissionedAdminDestination(supabase, {
+        const destination = pendingDestination ?? await resolvePermissionedAdminDestination(supabase, {
           nextPath,
           fallbackDestination: bootstrap.destination,
           roles,
@@ -153,7 +156,7 @@ export default function PublicAuthEntry({
               initialStatus={resetSuccess ? "Password updated successfully. Please sign in with your new password." : ""}
             />
           ) : (
-            <SignUpForm nextPath={nextPath || "/onboarding"} compact />
+            <SignUpForm nextPath={nextPath} compact />
           )}
 
           <div className="lf-entry-footnote">

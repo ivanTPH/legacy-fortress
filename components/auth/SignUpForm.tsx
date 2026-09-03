@@ -10,10 +10,10 @@ const OAuthButtons = dynamic(() => import("./OAuthButtons"), {
 });
 
 export default function SignUpForm({
-  nextPath = "/onboarding",
+  nextPath,
   compact = false,
 }: {
-  nextPath?: string;
+  nextPath?: string | null;
   compact?: boolean;
 }) {
   const router = useRouter();
@@ -40,12 +40,14 @@ export default function SignUpForm({
     setStatus("Creating account...");
 
     try {
-      const [{ createEphemeralBrowserAuthClient }, { supabase }, { bootstrapAuthenticatedUser }] = await Promise.all([
+      const [{ createEphemeralBrowserAuthClient }, { supabase }, { bootstrapAuthenticatedUser }, { findPendingInvitationDestination }] = await Promise.all([
         import("../../lib/auth/browserAuthClient"),
         import("../../lib/supabaseClient"),
         import("../../lib/auth/bootstrap"),
+        import("../../lib/auth/pendingInvitations"),
       ]);
-      const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}` : undefined;
+      const safeNextPath = nextPath || "/onboarding";
+      const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNextPath)}` : undefined;
       const authClient = createEphemeralBrowserAuthClient("signup");
       const { data, error } = await authClient.auth.signUp({
         email,
@@ -62,8 +64,9 @@ export default function SignUpForm({
       }
 
       if (data.user?.id && data.session) {
-        const bootstrap = await bootstrapAuthenticatedUser(supabase, { userId: data.user.id, nextPath });
-        router.replace(bootstrap.destination);
+        const pendingDestination = await findPendingInvitationDestination(supabase, nextPath);
+        const bootstrap = await bootstrapAuthenticatedUser(supabase, { userId: data.user.id, nextPath: nextPath ?? undefined });
+        router.replace(pendingDestination ?? bootstrap.destination);
         return;
       }
 
@@ -139,7 +142,7 @@ export default function SignUpForm({
         <span style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
       </div>
 
-      <OAuthButtons nextPath={nextPath} />
+      <OAuthButtons nextPath={nextPath || "/onboarding"} />
 
       {status ? <div className="lf-muted-note">{status}</div> : null}
     </div>

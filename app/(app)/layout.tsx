@@ -16,6 +16,7 @@ import { trackClientEvent } from "../../lib/observability/clientEvents";
 import { getFlyoutMenuKeyAction, getTopMenuKeyAction } from "../../lib/navigation/menuKeyActions";
 import { initialMenuState, menuReducer, type MenuCloseReason } from "../../lib/navigation/menuState";
 import { bootstrapAuthenticatedUser } from "../../lib/auth/bootstrap";
+import { findPendingInvitationDestination } from "../../lib/auth/pendingInvitations";
 import { buildProtectedSignInRedirect, isFinalSignedOutAuthEvent, waitForActiveUser } from "../../lib/auth/session";
 import { appendDevBankRequestTrace, isDevBankTraceEnabled } from "../../lib/devSmoke";
 import { appendProfileAvatarTrace, maskAvatarUrl } from "../../lib/profile/avatarTrace";
@@ -392,6 +393,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         let bootstrapDestination = "/onboarding?required=1";
         let onboardingCompleted = true;
+        const pendingInvitationDestination = await findPendingInvitationDestination(supabase);
+        if (pendingInvitationDestination && !pathname.startsWith("/invite/accept") && pathname !== "/pending-invitations") {
+          setAuthState("redirecting");
+          router.replace(pendingInvitationDestination);
+          return;
+        }
         try {
           const bootstrap = await bootstrapAuthenticatedUser(supabase, { userId: user.id });
           bootstrapDestination = bootstrap.destination;
