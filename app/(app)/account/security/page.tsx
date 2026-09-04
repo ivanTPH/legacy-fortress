@@ -15,6 +15,7 @@ import { waitForActiveUser } from "../../../../lib/auth/session";
 import { getBrowserAuthRedirect } from "../../../../lib/auth/redirects";
 import { supabase } from "../../../../lib/supabaseClient";
 import { normalizePhone } from "../../../../lib/validation/profile";
+import { enrollPasskey, getPasskeyCapability, isPasskeyEnrollmentEnabled, supportsPasskeyBrowser } from "../../../../lib/auth/passkeys";
 
 export default function SecurityPage() {
   const router = useRouter();
@@ -25,6 +26,8 @@ export default function SecurityPage() {
   const [verified, setVerified] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [passkeyStatus, setPasskeyStatus] = useState("");
+  const [passkeyBusy, setPasskeyBusy] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -161,6 +164,20 @@ export default function SecurityPage() {
     setStatus("✅ Password changed.");
   };
 
+  const addPasskey = async () => {
+    setPasskeyBusy(true);
+    setPasskeyStatus("");
+    try {
+      const result = await enrollPasskey(supabase, "This device");
+      if (result.error) throw result.error;
+      setPasskeyStatus("Passkey added. Your device keeps its biometric or PIN verification; Legacy Fortress receives only the public credential needed for authentication.");
+    } catch (error) {
+      setPasskeyStatus(error instanceof Error ? error.message : "Passkey could not be added.");
+    } finally {
+      setPasskeyBusy(false);
+    }
+  };
+
   return (
     <SettingsPageShell
       title="Security"
@@ -223,6 +240,20 @@ export default function SecurityPage() {
           </div>
         </div>
       </SettingsCard>
+
+      {isPasskeyEnrollmentEnabled() ? (
+        <SettingsCard title="Passkeys" description="Use a device passkey for a faster, phishing-resistant step-up. Passkeys are separate from government-ID verification.">
+          <p style={{ color: "#475569", fontSize: 13, margin: 0 }}>
+            Use your device's passkey, such as Face ID, fingerprint, Windows Hello or a device PIN. Legacy Fortress does not receive or store your biometric template.
+          </p>
+          <button type="button" style={primaryBtn} onClick={() => void addPasskey()} disabled={passkeyBusy || !supportsPasskeyBrowser()}>
+            {passkeyBusy ? "Adding passkey..." : "Add passkey"}
+          </button>
+          {!supportsPasskeyBrowser() ? <StatusNote message="This browser does not support passkeys." /> : null}
+          <StatusNote message={passkeyStatus} />
+          <div style={{ color: "#6b7280", fontSize: 13 }}>Current client capability: {getPasskeyCapability().passwordlessSignIn ? "passwordless sign-in" : "enrollment and future step-up only"}.</div>
+        </SettingsCard>
+      ) : null}
     </SettingsPageShell>
   );
 }

@@ -95,3 +95,19 @@ test("auth callback supports direct Supabase email token verification links", ()
   assert.match(callback, /No active session found after authentication/);
   assert.match(callback, /Go to sign in/);
 });
+
+test("an existing personal session does not silently redirect from sign-in", () => {
+  const entry = fs.readFileSync(path.join(process.cwd(), "components/auth/PublicAuthEntry.tsx"), "utf8");
+  assert.match(entry, /existing personal session should not make \/sign-in silently jump/);
+  assert.match(entry, /if \(!nextPath\)/);
+  assert.match(entry, /if \(pendingDestination\) router\.replace\(pendingDestination\)/);
+  assert.match(entry, /return;/);
+});
+
+test("passkey enrollment is explicitly non-production and does not claim passwordless sign-in", () => {
+  const passkeys = fs.readFileSync(path.join(process.cwd(), "lib/auth/passkeys.ts"), "utf8");
+  assert.match(passkeys, /NEXT_PUBLIC_PASSKEYS_ENABLED/);
+  assert.match(passkeys, /NON_PRODUCTION_ENVS/);
+  assert.match(passkeys, /passwordlessSignIn: false/);
+  assert.match(passkeys, /auth\.mfa\.webauthn\.register/);
+});

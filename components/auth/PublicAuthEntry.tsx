@@ -55,18 +55,25 @@ export default function PublicAuthEntry({
         const { data: sessionData } = await supabase.auth.getSession();
         const sessionUser = sessionData.session?.user ?? (await waitForActiveUser(supabase, { attempts: 3, delayMs: 120 }));
         if (!mounted || !sessionUser) return;
+        // An existing personal session should not make /sign-in silently jump
+        // to the dashboard. Only an actionable invitation needs an automatic
+        // recovery redirect; otherwise leave the auth choice visible.
+        if (!nextPath) {
+          const pendingDestination = await findPendingInvitationDestination(supabase);
+          if (pendingDestination) router.replace(pendingDestination);
+          return;
+        }
         const roles = mergePlatformRoles(
           extractPlatformRolesFromMetadata(sessionUser.app_metadata),
           extractPlatformRolesFromMetadata(sessionUser.user_metadata),
           getMasterAdminRolesForEmail(sessionUser.email),
         );
-        const pendingDestination = await findPendingInvitationDestination(supabase, nextPath);
         const bootstrap = await bootstrapAuthenticatedUser(supabase, {
           userId: sessionUser.id,
           nextPath,
           roles,
         });
-        const destination = pendingDestination ?? await resolvePermissionedAdminDestination(supabase, {
+        const destination = await resolvePermissionedAdminDestination(supabase, {
           nextPath,
           fallbackDestination: bootstrap.destination,
           roles,
