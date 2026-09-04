@@ -1,29 +1,19 @@
 # Legacy Fortress — Build and Release Notes
 
-Status: Phase 6 release source of truth for staging; production remains gated.
+Status: this file is intentionally conservative. The latest Codex report pasted into chat did not include a fresh repo-truth build/deploy inventory, so only confirmed guidance is recorded here.
 
-## Confirmed build/release position
-- branch: `hosted-uat-preparation-20260715`
-- staging app: `https://test.mylegacyfortress.com`
-- staging Supabase/API: `https://supabase-test.mylegacyfortress.com`
-- staging control plane: Coolify, not Vercel
-- production: `https://legacy-fortress.vercel.app`, strictly out of scope
-- a passing staging gate is not production approval
+## Confirmed build/release position from the latest pass
+- final status reported: `NOT FIXED`
+- no claim should be made yet that the application is production-stable
 
-## Canonical commands
-
-Local browser review uses `http://127.0.0.1:3012` and local Supabase uses `127.0.0.1:55421`.
-
-```text
-PORT=3012 npm run dev
-npm run lint
-npx tsc --noEmit --pretty false
-npm test
-npm run build
-npm run release:check
-```
-
-Hosted staging deployment is performed only through the authenticated Coolify application for Legacy Fortress Staging. Confirm the branch and `/api/version` SHA before hosted UAT; never copy production secrets or deploy the production Vercel app.
+## Confirmed documentation gap
+The following still need a direct repo audit before this file can be treated as authoritative:
+- exact local run commands
+- exact test commands
+- exact build command
+- env file expectations
+- deployment file inventory
+- CI or hosting-specific sensitivities
 
 ## Interim operating rules
 Until a direct repo build audit is completed:
@@ -31,15 +21,6 @@ Until a direct repo build audit is completed:
 - do not assume attachment-system improvements mean the whole app is release-ready
 - require explicit checks on create, edit, preview, remove, and persistence behaviour in both canonical and legacy flows
 - require verification for dashboard consistency and cross-page record consistency
-
-## Phase 6 route source of truth
-
-- `/` — public authentication entry; authenticated normal users resolve to the Personal Vault dashboard.
-- `/access` — canonical estate/access entry; `/access-requests`, `/contact-wallet` and historical estate links remain compatibility routes with the same authorization model.
-- `/enterprise` — canonical organisation operations entry; `/application/enterprise` remains a compatibility route for existing nested enterprise links.
-- `/admin` — canonical system administration shell; `/internal/admin` and `/application/admin` are compatibility redirects/guards only.
-
-The URL is never the authorization boundary. Server-side role/capability checks, ownership/organisation/case checks, identity assurance, vault state and RLS remain authoritative.
 
 ## Minimum release gate checklist
 Before any production release is described as stable, confirm all of the following in the real repo:
@@ -57,47 +38,3 @@ Before any production release is described as stable, confirm all of the followi
 - Require “Exact files changed” and “Whether build passes” in every implementation report.
 - Do not mark work complete unless both functional behaviour and build behaviour are explicitly verified.
 - When a prompt changes shared architecture, require regression checks on both canonical and legacy pages.
-
-## Privacy/security release gates — added 20 August 2026
-Production release must not be described as ready until all applicable checks pass:
-1. staging environment positively identified before hosted mutations
-2. protected invitee access is blocked until required identity verification succeeds
-3. role/permission enforcement is proven at API/database/RLS level
-4. biometric recognition DPIA and lawful-basis/special-category condition are approved before production processing
-5. privacy notice/T&C/consent versions reflect actual processing
-6. partner tenant isolation and data minimisation are tested
-7. SAR/rectification/erasure/restriction/portability/objection administration works on persisted data
-8. retention/deletion/anonymisation controls and audit evidence are tested
-9. document originals cannot be silently overwritten by third parties
-10. estate-access approval does not enable deletion/overwrite of historical originals
-11. audit events exist for material access, sharing, permission, identity, estate, privacy-rights and disposal actions
-## Additional security release gates — approved 20 August 2026
-12. high-risk permission changes require the configured step-up identity level server-side
-13. internal/UAT identity verifications are clearly segregated from production-grade assurance and cannot silently activate production protected access
-14. death reporting can enter `PROTECTIVE_LOCK` without granting estate access
-15. confirmed death/estate transition produces an immutable `ESTATE_LOCKED` historical vault
-16. post-death additions are stored separately with provenance and cannot rewrite deceased-owner history
-17. compromised estate representative access can be suspended/revoked while the deceased vault remains locked
-18. false/malicious death-report recovery requires high-assurance owner re-verification and dual authorised approval
-19. envelope/key-management implementation, key separation and recovery-material coverage are security-reviewed before production claims are made
-20. partner communications enforce purpose, channel, frequency, objection and suppression rules and do not expose unrestricted identity lists where closed-loop delivery is intended
-21. production biometric/IDV provider and model licences/assurance have been formally approved before production activation
-
-## Hosted staging source of truth — updated 20 August 2026
-
-The current hosted staging path is Coolify/custom-domain based:
-
-- Staging app: `https://test.mylegacyfortress.com`
-- Staging app label recorded in prior audit: `Legacy Fortress Staging`
-- Staging Supabase/API origin: `https://supabase-test.mylegacyfortress.com`
-- Current `/api/version` evidence must be checked against the exact commit being deployed; never rely on a documentation-only SHA.
-
-Older README/Vercel Preview notes are historical for the current staging gate. Do not pull Vercel Production or Preview environment variables for Phase 1 hosted UAT unless the owner explicitly re-verifies Vercel as the active staging system.
-
-The approved recovery path is:
-
-1. Restore `COOLIFY_BASE_URL` and `COOLIFY_API_TOKEN` through the operator's secure local mechanism.
-2. Verify the Coolify application is `Legacy Fortress Staging`, uses `test.mylegacyfortress.com`, and is deployed from `hosted-uat-preparation-20260715` at the expected SHA.
-3. Restore ignored `.env.staging.local` from Coolify/operator secret records with staging-only `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DB_URL`, `NEXT_PUBLIC_APP_URL`, `BASE_URL` and `PLAYWRIGHT_BASE_URL`.
-4. Confirm `NEXT_PUBLIC_SUPABASE_URL` resolves to `https://supabase-test.mylegacyfortress.com` only after operator metadata proves it is the staging Supabase/API origin.
-5. Run `npm run uat:validate` before hosted migration inspection or synthetic UAT.
