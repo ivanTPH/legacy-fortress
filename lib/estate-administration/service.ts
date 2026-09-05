@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ESTATE_EVIDENCE_BUCKET, getIdentityPresenceLevel, getVaultLifecycleState, recordEstateEvent } from "../estate-lifecycle/service.ts";
 import type { EstateCaseRow, EstateParticipantRole, EstateParticipantRow, EstatePermission } from "./types.ts";
+import { assertIndependentApproval } from "./quorum.ts";
 
 type AnySupabaseClient = SupabaseClient;
 
@@ -299,6 +300,9 @@ export async function approveSensitiveEstateAction(client: AnySupabaseClient, in
   const request = response.data as SensitiveActionRequestRow;
   if (request.status !== "pending_approval") throw new Error(`sensitive_action_not_pending:${request.status}`);
   if (new Date(request.expires_at).getTime() <= Date.now()) throw new Error("sensitive_action_expired");
+  const existing = await client.from("sensitive_action_approvals").select("approver_user_id,decision,revoked_at").eq("request_id", input.requestId);
+  if (existing.error) throw new Error(existing.error.message);
+  assertIndependentApproval({ approverUserId: input.approverUserId, requesterUserId: request.requester_user_id, ownerUserId: request.owner_user_id, existingApprovals: (existing.data ?? []).map((row) => ({ approverUserId: row.approver_user_id, decision: row.decision, revokedAt: row.revoked_at })), caseOpen: request.status === "pending_approval" });
   await requireEstatePermission(client, request.estate_case_id, input.approverUserId, "approve_sensitive_action");
   const presence = await getIdentityPresenceLevel(client, input.approverUserId);
   if (presence < 3) throw new Error("level_3_required_for_sensitive_action_approval");
@@ -309,6 +313,23 @@ export async function approveSensitiveEstateAction(client: AnySupabaseClient, in
   if (quorum.data === true) await client.from("sensitive_action_requests").update({ status: "approved", updated_at: new Date().toISOString() }).eq("id", input.requestId);
   await recordEstateEvent(client, { ownerUserId: request.owner_user_id, actorUserId: input.approverUserId, actorType: "admin", eventType: "sensitive_action_approved", reason: input.reason, metadata: { request_id: input.requestId, quorum_met: quorum.data === true } });
   return { id: input.requestId, quorumMet: quorum.data === true };
+}
+
+export async function getSensitiveActionQuorum(client: AnySupabaseClient, requestId: string) {
+  const result = await client.rpc("lf_sensitive_action_quorum_summary", { p_request_id: requestId });
+  if (result.error) throw new Error(result.error.message);
+  return result.data as { required: number; approved: number; remaining: number; expired: boolean } | null;
+}
+
+export async function revokeSensitiveEstateApproval(client: AnySupabaseClient, input: { approvalId: string; actorUserId: string; reason: string }) {
+  const reason = input.reason.trim();
+  if (!reason) throw new Error("estate_action_reason_required");
+  const approval = await client.from("sensitive_action_approvals").select("id,request_id,decision").eq("id", input.approvalId).single();
+  if (approval.error || !approval.data) throw new Error(approval.error?.message || "sensitive_action_approval_not_found");
+  if (approval.data.decision !== "approved") throw new Error("sensitive_action_approval_not_active");
+  const result = await client.from("sensitive_action_approvals").update({ decision: "revoked", revoked_at: new Date().toISOString(), revoked_by_user_id: input.actorUserId, revoked_reason: reason }).eq("id", input.approvalId).eq("decision", "approved").select("id,request_id,decision").single();
+  if (result.error || !result.data) throw new Error(result.error?.message || "sensitive_action_approval_revoke_failed");
+  return result.data;
 }
 
 export async function closeEstateCase(client: AnySupabaseClient, input: { estateCaseId: string; actorUserId: string; reason: string }) {

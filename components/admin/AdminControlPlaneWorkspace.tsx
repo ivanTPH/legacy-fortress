@@ -312,6 +312,32 @@ type ProbateCase = {
   }>;
 };
 
+type EstateOperations = {
+  deathReports: Array<{
+    id: string;
+    ownerUserId: string;
+    claimantUserId: string;
+    claimantRole: string;
+    status: string;
+    dateOfDeath: string | null;
+    submittedAt: string | null;
+    reviewedAt: string | null;
+    vaultStateAtReport: string;
+  }>;
+  estateClaims: Array<{
+    id: string;
+    deathReportId: string | null;
+    ownerUserId: string;
+    claimantUserId: string;
+    roleClaimed: string;
+    status: string;
+    authorityEvidenceStatus: string;
+    approvedAt: string | null;
+    suspendedAt: string | null;
+    revokedAt: string | null;
+  }>;
+};
+
 type ProbateAction = "request_information" | "review" | "approve" | "reject" | "revoke";
 
 type AuditEvent = {
@@ -545,6 +571,7 @@ export default function AdminControlPlaneWorkspace({
   const [verificationActionLoading, setVerificationActionLoading] = useState("");
   const [verificationReviewNote, setVerificationReviewNote] = useState("");
   const [probateCases, setProbateCases] = useState<ProbateCase[]>([]);
+  const [estateOperations, setEstateOperations] = useState<EstateOperations | null>(null);
   const [probateActionLoading, setProbateActionLoading] = useState("");
   const [probateDecisionNotes, setProbateDecisionNotes] = useState<Record<string, string>>({});
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
@@ -664,6 +691,7 @@ export default function AdminControlPlaneWorkspace({
     setSupportDetail(null);
     setVerificationQueue([]);
     setProbateCases([]);
+    setEstateOperations(null);
     setProbateDecisionNotes({});
     setAuditEvents([]);
     setEnterprisePortfolio(null);
@@ -936,6 +964,20 @@ export default function AdminControlPlaneWorkspace({
     setMessage(`Probate case ${action.replace(/_/g, " ")} saved and audit recorded.`);
   }
 
+  async function openProbateEvidence(caseId: string, evidenceId: string) {
+    setMessage("");
+    setProbateEvidenceLoading(`${caseId}:${evidenceId}`);
+    const res = await authFetch(`/api/internal/admin/probate-cases/${encodeURIComponent(caseId)}/evidence/${encodeURIComponent(evidenceId)}/signed-url`);
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; signedUrl?: string; message?: string; code?: string };
+    setProbateEvidenceLoading("");
+    if (!res.ok || !json.ok || !json.signedUrl) {
+      setMessage(json.message || json.code || "Evidence link could not be created.");
+      return;
+    }
+    window.open(json.signedUrl, "_blank", "noopener,noreferrer");
+    setMessage("Evidence opened with a short-lived case-scoped link and audit recorded.");
+  }
+
   const visibleNav = useMemo(() => {
     const baseNavigation = section === "probate" || section === "probate-detail" ? PROBATE_REVIEW_NAVIGATION : PLATFORM_ADMIN_NAVIGATION;
     return filterAdminNavigation(baseNavigation, capabilities);
@@ -1022,7 +1064,7 @@ export default function AdminControlPlaneWorkspace({
         {section === "users" || section === "user-detail" ? renderUsers(lookupQuery, setLookupQuery, lookupResults, runLookup, resourceId, userDetail, userDetailLoading) : null}
         {section === "support" || section === "invitations" ? renderSupport(section, support, supportDetail, supportDetailLoading, supportActionLoading, loadSupportInvitationDetail, runSupportInvitationAction, createSupportCase, runSupportCaseAction, addSupportCaseNote, capabilities) : null}
         {section === "verification" || section === "verification-detail" ? renderVerification(verificationQueue, resourceId, capabilities, verificationActionLoading, verificationReviewNote, setVerificationReviewNote, runVerificationAction) : null}
-        {section === "access" || section === "probate" || section === "probate-detail" ? renderProbate(probateCases, resourceId, capabilities, probateDecisionNotes, setProbateDecisionNotes, probateActionLoading, probateEvidenceLoading, runProbateCaseAction, openProbateEvidence, section === "access" ? "Access and estate cases" : "Probate queue") : null}
+        {section === "access" || section === "probate" || section === "probate-detail" ? renderProbate(probateCases, estateOperations, resourceId, capabilities, probateDecisionNotes, setProbateDecisionNotes, probateActionLoading, probateEvidenceLoading, runProbateCaseAction, openProbateEvidence, section === "access" ? "Access and estate cases" : "Probate queue") : null}
         {section === "audit" ? renderAudit(auditEvents, auditFilter, setAuditFilter) : null}
         {section === "system-health" ? renderSystemHealth(health, metrics, support) : null}
         {section === "settings" ? renderSettings(capabilities) : null}
@@ -1041,6 +1083,9 @@ function requestsForSection(section: AdminControlPlaneSection, capabilities: str
   }
   if (["probate", "probate-detail", "overview"].includes(section) && capabilities.includes("verification:read")) {
     requests.push({ key: "probate", url: "/api/internal/admin/probate-cases" });
+  }
+  if (["access", "probate", "probate-detail", "overview"].includes(section) && capabilities.includes("verification:read")) {
+    requests.push({ key: "estate", url: "/api/internal/admin/estate-cases" });
   }
   if (["audit", "admin-user-detail"].includes(section) && capabilities.includes("audit:read")) {
     requests.push({ key: "audit", url: "/api/internal/admin/audit-history?limit=50" });
@@ -2290,6 +2335,7 @@ function renderVerification(
 
 function renderProbate(
   cases: ProbateCase[],
+  estate: EstateOperations | null,
   resourceId: string | null,
   capabilities: string[],
   decisionNotes: Record<string, string>,
@@ -2314,6 +2360,7 @@ function renderProbate(
   }
   return (
     <div style={stackStyle}>
+      {estate ? renderEstateOperations(estate) : null}
       <section style={panelStyle}>
         <h2 style={h2Style}>{heading}</h2>
         <p style={mutedStyle}>Identity, authority, evidence, quorum, estate state, and access remain separate decisions. Use the case record and audited actions for the next required step.</p>
@@ -2334,6 +2381,40 @@ function renderProbate(
         />
       </section>
     </div>
+  );
+}
+
+function renderEstateOperations(estate: EstateOperations) {
+  return (
+    <section style={panelStyle} aria-labelledby="estate-operations-title">
+      <h2 id="estate-operations-title" style={h2Style}>Death and estate-state queue</h2>
+      <p style={mutedStyle}>Death reports and estate claims are operational signals only. A report, certificate, or verified identity does not establish authority or activate access.</p>
+      <AdminDataTable
+        caption="Death report operations"
+        columns={[
+          { key: "report", header: "Report", render: (item) => <><code>{item.id.slice(0, 8)}</code><small>Owner {item.ownerUserId.slice(0, 8)}</small></> },
+          { key: "status", header: "Report status", render: (item) => <AdminStatusBadge status={item.status} /> },
+          { key: "estate", header: "Estate state", render: (item) => <AdminStatusBadge status={item.vaultStateAtReport} /> },
+          { key: "evidence", header: "Evidence / next action", render: (item) => item.status === "submitted" || item.status === "under_review" ? "Review evidence and consider protective lock" : item.status === "protective_lock_applied" ? "Review evidence before confirming death" : "No automatic authority or access" },
+        ]}
+        rows={estate.deathReports}
+        getRowKey={(item) => item.id}
+        emptyState={<AdminEmptyState title="No death reports">No death reports are recorded.</AdminEmptyState>}
+      />
+      <AdminDataTable
+        caption="Estate authority claims"
+        columns={[
+          { key: "claim", header: "Claim", render: (item) => <><code>{item.id.slice(0, 8)}</code><small>Owner {item.ownerUserId.slice(0, 8)}</small></> },
+          { key: "role", header: "Role", render: (item) => labelise(item.roleClaimed) },
+          { key: "authority", header: "Authority", render: (item) => <AdminStatusBadge status={item.status} /> },
+          { key: "evidence", header: "Evidence", render: (item) => labelise(item.authorityEvidenceStatus) },
+          { key: "access", header: "Access", render: (item) => item.status === "active" ? "Policy-gated active claim" : "Unavailable / pending" },
+        ]}
+        rows={estate.estateClaims}
+        getRowKey={(item) => item.id}
+        emptyState={<AdminEmptyState title="No estate claims">No estate authority claims are recorded.</AdminEmptyState>}
+      />
+    </section>
   );
 }
 

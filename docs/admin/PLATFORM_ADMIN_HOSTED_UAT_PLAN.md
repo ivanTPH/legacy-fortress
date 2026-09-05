@@ -32,6 +32,15 @@ Target staging only: `https://test.mylegacyfortress.com`. Confirm the matching s
 - Attempt self-approval and duplicate approval through the authorised API/test harness; both must be rejected and audited.
 - Confirm assignment, notes, decision history, escalation, terminal denial/revocation, and access-gate outcomes persist after refresh.
 
+## Prompt 39 quorum and death-state scenarios
+
+- Use marked staging cases only. A requester and owner cannot satisfy an independent quorum; the same approver cannot be counted twice.
+- For a request requiring two approvals, verify the first valid approval leaves one remaining and a second distinct eligible approval satisfies quorum.
+- Revoke one approval and confirm the valid count decreases; rejected, expired, and revoked approvals do not count.
+- Confirm death report, protective lock, and estate lock are distinct operational states. A death report or certificate never creates authority or unlocks protected access.
+- Confirm authority without quorum and quorum without authority leave access unavailable. Terminal denial/revocation cannot be bypassed, and concurrent approval submissions produce one auditable approval per approver.
+- Review the death/protective-lock queue for owner, reporter, evidence state, lifecycle state, age, and next action. No generic Unlock or Force access action may appear.
+
 ## Responsive and safety checks
 
 - Repeat the primary queue/detail path at desktop, tablet, and mobile widths.
