@@ -36,6 +36,13 @@ type AdminControlPlaneSection =
   | "system-health"
   | "settings";
 
+type AdminConfirmation = {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  onConfirm: () => void | Promise<void>;
+};
+
 type AdminSessionPayload = {
   ok?: boolean;
   admin?: {
@@ -574,6 +581,7 @@ export default function AdminControlPlaneWorkspace({
     deployment: null,
     checks: [],
   });
+  const [confirmation, setConfirmation] = useState<AdminConfirmation | null>(null);
 
   const authFetch = useCallback(async (input: string, init?: RequestInit) => {
     const sessionRes = await supabase.auth.getSession();
@@ -585,6 +593,10 @@ export default function AdminControlPlaneWorkspace({
   }, []);
 
   const capabilities = useMemo(() => admin?.capabilities ?? [], [admin?.capabilities]);
+
+  function requestConfirmation(input: Omit<AdminConfirmation, "onConfirm">, onConfirm: AdminConfirmation["onConfirm"]) {
+    setConfirmation({ ...input, onConfirm });
+  }
 
   const loadAll = useCallback(async () => {
     setState("checking");
@@ -720,17 +732,26 @@ export default function AdminControlPlaneWorkspace({
 
   async function runAdminLifecycle() {
     setMessage("");
+    if (!adminLifecycleForm.adminUserId) {
+      setMessage("Select an administrator before confirming a lifecycle action.");
+      return;
+    }
+    if (!adminLifecycleForm.reason.trim()) {
+      setMessage("Reason is required before confirming an administrator lifecycle action.");
+      return;
+    }
     const res = await authFetch("/api/internal/admin/admin-users", {
       method: "PATCH",
       body: JSON.stringify(adminLifecycleForm),
     });
-    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; admins?: AdminUser[]; message?: string; code?: string };
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; admins?: AdminUser[]; invitations?: AdminInvitation[]; message?: string; code?: string };
     if (!res.ok || !json.ok) {
       setMessage(json.message || json.code || "Admin lifecycle action was blocked.");
       return;
     }
     setAdmins(json.admins ?? []);
-    setAdminLifecycleForm({ adminUserId: "", action: "activate", role: "support_agent", reason: "" });
+    if (json.invitations) setAdminInvitations(json.invitations);
+    setAdminLifecycleForm({ adminUserId: "", action: "activate", role: "support_agent", reason: "", expectedUpdatedAt: "" });
     setMessage("Admin lifecycle action completed and audit recorded.");
   }
 
@@ -769,10 +790,18 @@ export default function AdminControlPlaneWorkspace({
   }
 
   async function runSupportInvitationAction(invitationId: string, action: "resend" | "revoke") {
-    const confirmed = action === "revoke"
-      ? window.confirm("Revoke this contact invitation? The recipient will not gain access from this invitation.")
-      : true;
-    if (!confirmed) return;
+    if (action === "revoke") {
+      requestConfirmation({
+        title: "Revoke invitation",
+        message: "The recipient will not gain access from this invitation after it is revoked.",
+        confirmLabel: "Revoke invitation",
+      }, () => runSupportInvitationActionConfirmed(invitationId, action));
+      return;
+    }
+    await runSupportInvitationActionConfirmed(invitationId, action);
+  }
+
+  async function runSupportInvitationActionConfirmed(invitationId: string, action: "resend" | "revoke") {
     setMessage("");
     setSupportActionLoading(`${invitationId}:${action}`);
     const res = await authFetch(`/api/internal/admin/support/${encodeURIComponent(invitationId)}`, {
@@ -805,12 +834,24 @@ export default function AdminControlPlaneWorkspace({
     setMessage("Operations case opened and audit recorded.");
   }
 
-  async function runSupportCaseAction(invitationId: string, action: "assign_to_me" | "escalate" | "resolve" | "close" | "reopen") {
+  async function runSupportCaseAction(invitationId: string, action: "assign_to_me" | "escalate" | "resolve" | "close" | "reopen", resolutionCode?: string) {
     const caseDetail = supportDetail?.case;
     if (!caseDetail) return;
-    const resolutionCode = action === "resolve" ? window.prompt("Resolution reason", "Security denial confirmed")?.trim() : undefined;
     if (action === "resolve" && !resolutionCode) return;
-    if (action === "close" && !window.confirm("Close this resolved operations case?")) return;
+    if (action === "close") {
+      requestConfirmation({
+        title: "Close operations case",
+        message: "Only close this case after its resolution has been reviewed.",
+        confirmLabel: "Close case",
+      }, () => runSupportCaseActionConfirmed(invitationId, action, resolutionCode));
+      return;
+    }
+    await runSupportCaseActionConfirmed(invitationId, action, resolutionCode);
+  }
+
+  async function runSupportCaseActionConfirmed(invitationId: string, action: "assign_to_me" | "escalate" | "resolve" | "close" | "reopen", resolutionCode?: string) {
+    const caseDetail = supportDetail?.case;
+    if (!caseDetail) return;
     setSupportActionLoading(`${invitationId}:${action}`);
     const res = await authFetch(`/api/internal/admin/support/${encodeURIComponent(invitationId)}`, { method: "PATCH", body: JSON.stringify({ action, caseId: caseDetail.id, resolutionCode, priority: action === "escalate" ? "high" : undefined }) });
     const json = (await res.json().catch(() => ({}))) as { ok?: boolean; detail?: SupportInvitationDetail; message?: string; code?: string };
@@ -861,10 +902,18 @@ export default function AdminControlPlaneWorkspace({
       setMessage("Decision notes are required before changing a probate case.");
       return;
     }
-    const confirmed = ["approve", "reject", "revoke"].includes(action)
-      ? window.confirm(`Confirm ${action.replace(/_/g, " ")} for this probate case?`)
-      : true;
-    if (!confirmed) return;
+    if (["approve", "reject", "revoke"].includes(action)) {
+      requestConfirmation({
+        title: `Confirm ${action.replace(/_/g, " ")}`,
+        message: "This decision is recorded in the probate audit trail and does not override identity verification or access policy.",
+        confirmLabel: labelise(action),
+      }, () => runProbateCaseActionConfirmed(caseId, action, reason));
+      return;
+    }
+    await runProbateCaseActionConfirmed(caseId, action, reason);
+  }
+
+  async function runProbateCaseActionConfirmed(caseId: string, action: ProbateAction, reason: string) {
 
     setMessage("");
     setProbateActionLoading(`${caseId}:${action}`);
@@ -943,6 +992,7 @@ export default function AdminControlPlaneWorkspace({
       breadcrumbs={buildPlatformBreadcrumbs(section, resourceId, enterprisePortfolio, page.title)}
     >
         {message ? <section style={alertStyle}>{message}</section> : null}
+        {confirmation ? <AdminConfirmationDialog confirmation={confirmation} onCancel={() => setConfirmation(null)} onConfirm={() => { const action = confirmation.onConfirm; setConfirmation(null); void action(); }} /> : null}
 
         {section === "overview" ? renderOverview(metrics, support, verificationQueue, probateCases) : null}
         {section === "organisations" ? renderPlatformOrganisations(enterpriseViews, {
@@ -968,11 +1018,11 @@ export default function AdminControlPlaneWorkspace({
         {section === "organisation-detail" || section === "organisation-users" || section === "organisation-invitations" || section === "organisation-licences" ? renderPlatformOrganisationDetail(section, resourceId, enterprisePortfolio) : null}
         {section === "licences" ? renderPlatformLicences(enterpriseViews) : null}
         {section === "licence-detail" ? renderPlatformLicenceDetail(resourceId, enterprisePortfolio) : null}
-        {section === "admin-users" || section === "admin-user-detail" ? renderAdminUsers(admins, adminInvitations, adminFilter, setAdminFilter, adminInviteForm, setAdminInviteForm, sendAdminInvitation, adminInviteOpen, setAdminInviteOpen, adminLifecycleForm, setAdminLifecycleForm, runAdminLifecycle, runAdminInvitationLifecycle, resourceId) : null}
+        {section === "admin-users" || section === "admin-user-detail" ? renderAdminUsers(admins, adminInvitations, adminFilter, setAdminFilter, adminInviteForm, setAdminInviteForm, sendAdminInvitation, adminInviteOpen, setAdminInviteOpen, adminLifecycleForm, setAdminLifecycleForm, runAdminLifecycle, runAdminInvitationLifecycle, (input, onConfirm) => requestConfirmation(input, onConfirm), resourceId) : null}
         {section === "users" || section === "user-detail" ? renderUsers(lookupQuery, setLookupQuery, lookupResults, runLookup, resourceId, userDetail, userDetailLoading) : null}
         {section === "support" || section === "invitations" || section === "access" ? renderSupport(section, support, supportDetail, supportDetailLoading, supportActionLoading, loadSupportInvitationDetail, runSupportInvitationAction, createSupportCase, runSupportCaseAction, addSupportCaseNote, capabilities) : null}
-        {section === "probate" || section === "probate-detail" ? renderProbate(probateCases, resourceId, capabilities, probateDecisionNotes, setProbateDecisionNotes, probateActionLoading, runProbateCaseAction) : null}
         {section === "verification" || section === "verification-detail" ? renderVerification(verificationQueue, resourceId, capabilities, verificationActionLoading, verificationReviewNote, setVerificationReviewNote, runVerificationAction) : null}
+        {section === "probate" || section === "probate-detail" ? renderProbate(probateCases, resourceId, capabilities, probateDecisionNotes, setProbateDecisionNotes, probateActionLoading, probateEvidenceLoading, runProbateCaseAction, openProbateEvidence) : null}
         {section === "audit" ? renderAudit(auditEvents, auditFilter, setAuditFilter) : null}
         {section === "system-health" ? renderSystemHealth(health, metrics, support) : null}
         {section === "settings" ? renderSettings(capabilities) : null}
@@ -1447,15 +1497,18 @@ function renderAdminUsers(
     action: string;
     role: string;
     reason: string;
+    expectedUpdatedAt: string;
   },
   setLifecycleForm: (value: {
     adminUserId: string;
     action: string;
     role: string;
     reason: string;
+    expectedUpdatedAt: string;
   }) => void,
   runAdminLifecycle: () => Promise<void>,
   runAdminInvitationLifecycle: (invitationId: string, action: "resend_invitation" | "revoke_invitation") => Promise<void>,
+  requestConfirmation: (input: Omit<AdminConfirmation, "onConfirm">, onConfirm: AdminConfirmation["onConfirm"]) => void,
   resourceId: string | null,
 ) {
   const filtered = admins.filter((item) => {
@@ -1479,7 +1532,7 @@ function renderAdminUsers(
             <p style={mutedStyle}>Lifecycle mutations use the canonical admin-user API and remain subject to self-action, stale-state and last-super-admin safeguards.</p>
             <div style={formGridStyle}>
               <label>Action
-                <select value={lifecycleForm.adminUserId === selected.id ? lifecycleForm.action : ""} onChange={(event) => setLifecycleForm({ ...lifecycleForm, adminUserId: selected.id, action: event.target.value })}>
+                <select value={lifecycleForm.adminUserId === selected.id ? lifecycleForm.action : ""} onChange={(event) => setLifecycleForm({ ...lifecycleForm, adminUserId: selected.id, action: event.target.value, role: selected.role ?? lifecycleForm.role, expectedUpdatedAt: selected.updated_at })}>
                   <option value="">Select action</option>
                   <option value="activate">Reactivate access</option>
                   <option value="deactivate">Suspend access</option>
@@ -1499,7 +1552,11 @@ function renderAdminUsers(
                 <input value={lifecycleForm.adminUserId === selected.id ? lifecycleForm.reason : ""} onChange={(event) => setLifecycleForm({ ...lifecycleForm, adminUserId: selected.id, reason: event.target.value })} />
               </label>
             </div>
-            <button type="button" onClick={() => void runAdminLifecycle()} disabled={lifecycleForm.adminUserId !== selected.id || !lifecycleForm.action} style={primaryButtonStyle}>Confirm lifecycle action</button>
+            <section style={permissionSummaryStyle}>
+              <strong>Stale-update protection</strong>
+              <span>This action will only apply if the administrator row still matches the currently loaded version from {formatDate(selected.updated_at)}.</span>
+            </section>
+            <button type="button" onClick={() => void runAdminLifecycle()} disabled={lifecycleForm.adminUserId !== selected.id || !lifecycleForm.action || !lifecycleForm.reason.trim()} style={primaryButtonStyle}>Confirm lifecycle action</button>
           </section>
         ) : null}
       </div>
@@ -1589,7 +1646,7 @@ function renderAdminUsers(
               render: (item) => (
                 <div style={actionsCellStyle}>
                   {["draft", "pending", "sent", "delivered", "failed"].includes(item.status) ? <button type="button" onClick={() => void runAdminInvitationLifecycle(item.id, "resend_invitation")}>Resend</button> : null}
-                  {["draft", "pending", "sent", "delivered", "failed"].includes(item.status) ? <button type="button" onClick={() => window.confirm("Revoke this pending administrator invitation? The recipient will not become active and no authentication account is deleted.") && void runAdminInvitationLifecycle(item.id, "revoke_invitation")}>Revoke</button> : null}
+                  {["draft", "pending", "sent", "delivered", "failed"].includes(item.status) ? <button type="button" onClick={() => requestConfirmation({ title: "Revoke admin invitation", message: "The recipient will not become active and no authentication account will be deleted.", confirmLabel: "Revoke invitation" }, () => runAdminInvitationLifecycle(item.id, "revoke_invitation"))}>Revoke</button> : null}
                   {["accepted", "revoked", "expired"].includes(item.status) ? <span style={mutedInlineStyle}>No pending action</span> : null}
                 </div>
               ),
@@ -1632,8 +1689,8 @@ function renderAdminUsers(
               render: (item) => (
                 <div style={actionsCellStyle}>
                   <Link href={`/admin/admin-users/${item.id}`}>Inspect</Link>
-                  <button type="button" onClick={() => setLifecycleForm({ ...lifecycleForm, adminUserId: item.id, action: item.status === "active" ? "deactivate" : "activate" })}>{item.status === "active" ? "Suspend access" : "Reactivate access"}</button>
-                  <button type="button" onClick={() => setLifecycleForm({ ...lifecycleForm, adminUserId: item.id, action: "change_role", role: item.role ?? "support_agent" })}>Edit role</button>
+                  <button type="button" onClick={() => setLifecycleForm({ ...lifecycleForm, adminUserId: item.id, action: item.status === "active" ? "deactivate" : "activate", role: item.role ?? "support_agent", reason: "", expectedUpdatedAt: item.updated_at })}>{item.status === "active" ? "Suspend access" : "Reactivate access"}</button>
+                  <button type="button" onClick={() => setLifecycleForm({ ...lifecycleForm, adminUserId: item.id, action: "change_role", role: item.role ?? "support_agent", reason: "", expectedUpdatedAt: item.updated_at })}>Edit role</button>
                 </div>
               ),
             },
@@ -1648,7 +1705,15 @@ function renderAdminUsers(
         <p style={mutedStyle}>Role change, activation, deactivation, final-master protection, self-lockout protection, and audit recording are served by the canonical admin lifecycle API.</p>
         <div style={formGridStyle}>
           <label>Selected administrator
-            <select value={lifecycleForm.adminUserId} onChange={(event) => setLifecycleForm({ ...lifecycleForm, adminUserId: event.target.value })}>
+            <select value={lifecycleForm.adminUserId} onChange={(event) => {
+              const nextAdmin = admins.find((item) => item.id === event.target.value);
+              setLifecycleForm({
+                ...lifecycleForm,
+                adminUserId: event.target.value,
+                role: nextAdmin?.role ?? lifecycleForm.role,
+                expectedUpdatedAt: nextAdmin?.updated_at ?? "",
+              });
+            }}>
               <option value="">Select administrator</option>
               {admins.map((item) => <option key={item.id} value={item.id}>{item.display_name || item.email_normalized}</option>)}
             </select>
@@ -1676,8 +1741,9 @@ function renderAdminUsers(
         <section style={permissionSummaryStyle}>
           <strong>Consequence</strong>
           <span>{lifecycleForm.action === "deactivate" ? "Suspends platform administrator access only. It does not delete the person’s authentication account or personal vault." : lifecycleForm.action === "change_role" ? "Changes the platform role after server-side final-super-admin and self-lockout checks." : "Restores administrator access if the account is eligible."}</span>
+          {lifecycleForm.expectedUpdatedAt ? <span>Loaded admin row version: {formatDate(lifecycleForm.expectedUpdatedAt)}.</span> : null}
         </section>
-        <button type="button" onClick={() => void runAdminLifecycle()} disabled={!lifecycleForm.adminUserId} style={primaryButtonStyle}>Confirm lifecycle action</button>
+        <button type="button" onClick={() => void runAdminLifecycle()} disabled={!lifecycleForm.adminUserId || !lifecycleForm.reason.trim()} style={primaryButtonStyle}>Confirm lifecycle action</button>
       </section>
     </div>
   );
@@ -2043,6 +2109,40 @@ function renderSupportInvitationDetail(
   );
 }
 
+function AdminConfirmationDialog({
+  confirmation,
+  onCancel,
+  onConfirm,
+}: {
+  confirmation: AdminConfirmation;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    dialogRef.current?.focus();
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onCancel();
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [onCancel]);
+
+  return (
+    <div style={modalBackdropStyle} role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) onCancel(); }}>
+      <div ref={dialogRef} role="alertdialog" aria-modal="true" aria-labelledby="admin-confirmation-title" tabIndex={-1} style={modalStyle}>
+        <h2 id="admin-confirmation-title" style={h2Style}>{confirmation.title}</h2>
+        <p style={mutedStyle}>{confirmation.message}</p>
+        <div style={actionRowStyle}>
+          <button type="button" style={secondaryButtonStyle} onClick={onCancel}>Cancel</button>
+          <button type="button" style={confirmation.confirmLabel.toLowerCase().includes("revoke") ? dangerButtonStyle : primaryButtonStyle} onClick={onConfirm}>{confirmation.confirmLabel}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ResolveCaseDialog({ loading, onResolve }: { loading: boolean; onResolve: (resolutionCode: string) => void }) {
   const [open, setOpen] = useState(false);
   const [outcome, setOutcome] = useState("Security denial confirmed");
@@ -2143,6 +2243,7 @@ function renderVerification(
             <Detail label="Provider" value={selected.providerKey ?? "Unavailable"} />
             <Detail label="Document" value={selected.documentType ? labelise(selected.documentType) : "Not processed"} />
             <Detail label="Liveness" value={selected.livenessStatus ? labelise(selected.livenessStatus) : "Not processed"} />
+            <Detail label="Face match" value={selected.faceMatchResult ? labelise(selected.faceMatchResult) : "Not processed"} />
             <Detail label="Review reason" value={selected.reasonCode ? labelise(selected.reasonCode) : "Not recorded"} />
             <Detail label="Assigned reviewer" value={selected.assignedReviewerName ?? "Unassigned"} />
             <Detail label="Started" value={formatDate(selected.submittedAt)} />
@@ -2170,7 +2271,7 @@ function renderVerification(
             { key: "case", header: "Case", render: (item) => <>{item.ownerName}<small>{item.contactName} · {formatDate(item.submittedAt)}</small></> },
             { key: "role", header: "Role", render: (item) => labelise(item.assignedRole) },
             { key: "status", header: "Status", render: (item) => <><AdminStatusBadge status={item.requestStatus} /><small>{item.manualReviewRequired ? "Review required" : labelise(item.activationStatus)}</small></> },
-            { key: "checks", header: "Checks", render: (item) => <><small>Document: {item.documentType ? labelise(item.documentType) : "Pending"}</small><small>Liveness: {item.livenessStatus ? labelise(item.livenessStatus) : "Pending"}</small></> },
+            { key: "checks", header: "Checks", render: (item) => <><small>Document: {item.documentType ? labelise(item.documentType) : "Pending"}</small><small>Liveness: {item.livenessStatus ? labelise(item.livenessStatus) : "Pending"}</small><small>Face match: {item.faceMatchResult ? labelise(item.faceMatchResult) : "Pending"}</small></> },
             { key: "assigned", header: "Reviewer", render: (item) => item.assignedReviewerName ?? "Unassigned" },
             { key: "detail", header: "Detail", render: (item) => <Link href={`/admin/verification/${item.id}`}>Inspect</Link> },
           ]}
@@ -2190,7 +2291,9 @@ function renderProbate(
   decisionNotes: Record<string, string>,
   setDecisionNotes: (updater: (current: Record<string, string>) => Record<string, string>) => void,
   actionLoading: string,
+  evidenceLoading: string,
   runAction: (caseId: string, action: ProbateAction) => Promise<void>,
+  openEvidence: (caseId: string, evidenceId: string) => Promise<void>,
 ) {
   const selected = resourceId ? cases.find((item) => item.id === resourceId) : null;
   const canDecide = capabilities.includes("verification:decide");
@@ -2199,7 +2302,7 @@ function renderProbate(
       <div style={stackStyle}>
         <section style={panelStyle}>
           <Link href="/admin/probate" style={secondaryLinkStyle}>Back to probate queue</Link>
-          {selected ? renderProbateDetail(selected, canDecide, decisionNotes, setDecisionNotes, actionLoading, runAction) : <AdminEmptyState title="Probate case unavailable">The selected probate case was not found or is outside your authorised scope.</AdminEmptyState>}
+          {selected ? renderProbateDetail(selected, canDecide, decisionNotes, setDecisionNotes, actionLoading, evidenceLoading, runAction, openEvidence) : <AdminEmptyState title="Probate case unavailable">The selected probate case was not found or is outside your authorised scope.</AdminEmptyState>}
         </section>
       </div>
     );
@@ -2234,11 +2337,14 @@ function renderProbateDetail(
   decisionNotes: Record<string, string>,
   setDecisionNotes: (updater: (current: Record<string, string>) => Record<string, string>) => void,
   actionLoading: string,
+  evidenceLoading: string,
   runAction: (caseId: string, action: ProbateAction) => Promise<void>,
+  openEvidence: (caseId: string, evidenceId: string) => Promise<void>,
 ) {
   const actions = getAllowedProbateActions(item.status);
   const notes = decisionNotes[item.id] ?? "";
   const updateNotes = (value: string) => setDecisionNotes((current) => ({ ...current, [item.id]: value }));
+  const history = buildProbateHistory(item);
   return (
     <section style={panelStyle}>
       <h2 style={h2Style}>{item.ownerName} / {item.contactName}</h2>
@@ -2247,8 +2353,25 @@ function renderProbateDetail(
         <div><dt>Applicant</dt><dd>{item.contactEmail ?? "No email"}</dd></div>
         <div><dt>Role</dt><dd>{item.assignedRole.replace(/_/g, " ")}</dd></div>
         <div><dt>Evidence count</dt><dd>{item.evidence.length}</dd></div>
+        <div><dt>Case type</dt><dd>{labelise(item.caseType)}</dd></div>
+        <div><dt>Applicant message</dt><dd>{item.applicantStatusMessage || "Not available"}</dd></div>
       </dl>
-      {actions.terminal ? <p style={mutedStyle}>This case is terminal. Approve/reject actions are unavailable; decision history remains inspectable.</p> : null}
+      {actions.terminal ? (
+        <section style={contextPanelStyle}>
+          <h3 style={h3Style}>Terminal state</h3>
+          <p style={mutedStyle}>This case is {labelise(item.status)}. Terminal approve/reject actions are unavailable; evidence and history remain inspectable.</p>
+          {actions.canRevoke && canDecide ? (
+            <>
+              <label style={labelStyle}>Revocation notes
+                <textarea value={notes} onChange={(event) => updateNotes(event.target.value)} placeholder="Record the operational reason before revoking access." rows={3} />
+              </label>
+              <button type="button" style={dangerButtonStyle} onClick={() => void runAction(item.id, "revoke")} disabled={actionLoading === `${item.id}:revoke`}>
+                {actionLoading === `${item.id}:revoke` ? "Revoking..." : "Revoke access"}
+              </button>
+            </>
+          ) : null}
+        </section>
+      ) : null}
       {!actions.terminal ? (
         <section style={contextPanelStyle}>
           <h3 style={h3Style}>Decision controls</h3>
@@ -2267,18 +2390,41 @@ function renderProbateDetail(
           ) : <p style={mutedStyle}>You can inspect this case but do not have permission to change probate state.</p>}
         </section>
       ) : null}
-      <h3 style={h3Style}>Evidence metadata</h3>
+      <h3 style={h3Style}>Evidence review</h3>
       <AdminDataTable
-        caption="Probate evidence metadata"
+        caption="Probate evidence review"
+        description={<p style={mutedStyle}>Open files through audited, short-lived signed links. Evidence remains case-scoped and is never exposed as a public bucket URL.</p>}
         columns={[
           { key: "file", header: "File", render: (evidence) => <>{evidence.fileName}<small>{labelise(evidence.evidenceType)}</small></> },
-          { key: "type", header: "MIME type", render: (evidence) => evidence.mimeType },
+          { key: "status", header: "Review status", render: (evidence) => <AdminStatusBadge status={evidence.reviewStatus ?? "submitted"} /> },
+          { key: "type", header: "Type", render: (evidence) => <>{evidence.mimeType}<small>{formatFileSize(evidence.sizeBytes ?? 0)}</small></> },
           { key: "created", header: "Submitted", render: (evidence) => formatDate(evidence.createdAt) },
+          {
+            key: "open",
+            header: "Action",
+            render: (evidence) => canDecide ? (
+              <button type="button" style={secondaryButtonStyle} onClick={() => void openEvidence(item.id, evidence.id)} disabled={evidenceLoading === `${item.id}:${evidence.id}`}>
+                {evidenceLoading === `${item.id}:${evidence.id}` ? "Opening..." : "Open evidence"}
+              </button>
+            ) : <span style={mutedInlineStyle}>Review permission required</span>,
+          },
         ]}
         rows={item.evidence}
         getRowKey={(evidence) => evidence.id}
         emptyState={<AdminEmptyState title="No evidence metadata">No evidence metadata is linked to this case.</AdminEmptyState>}
       />
+      <section style={contextPanelStyle}>
+        <h3 style={h3Style}>Case history</h3>
+        <ol style={eventListStyle}>
+          {history.map((entry) => (
+            <li key={entry.key}>
+              <strong>{entry.label}</strong>
+              <span>{entry.detail}</span>
+              <small>{formatDate(entry.at)}</small>
+            </li>
+          ))}
+        </ol>
+      </section>
     </section>
   );
 }
@@ -2439,6 +2585,41 @@ function formatEventPayload(payload: Record<string, unknown>) {
     .slice(0, 4)
     .map(([key, value]) => `${labelise(key)}: ${String(value)}`);
   return entries.length ? entries.join(" · ") : "No additional metadata";
+}
+
+function formatFileSize(bytes: number) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "Size not recorded";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function buildProbateHistory(item: ProbateCase) {
+  const history = [
+    {
+      key: "submitted",
+      label: "Case submitted",
+      detail: `${item.contactName} submitted ${labelise(item.caseType)} evidence for ${item.ownerName}.`,
+      at: item.submittedAt,
+    },
+  ];
+  if (item.evidence.length) {
+    history.push({
+      key: "evidence",
+      label: "Evidence attached",
+      detail: `${item.evidence.length} evidence file${item.evidence.length === 1 ? "" : "s"} available for review.`,
+      at: item.evidence[0]?.createdAt ?? item.submittedAt,
+    });
+  }
+  if (item.decisionReason || item.decidedAt) {
+    history.push({
+      key: "decision",
+      label: `Case ${labelise(item.status)}`,
+      detail: item.decisionReason || item.applicantStatusMessage || "Decision recorded.",
+      at: item.decidedAt ?? item.submittedAt,
+    });
+  }
+  return history;
 }
 
 function getAllowedProbateActions(status: string) {

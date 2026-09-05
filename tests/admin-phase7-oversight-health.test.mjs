@@ -56,3 +56,15 @@ test("audit history remains read-only and uses the canonical audit endpoint", ()
   assert.match(workspace, /\/api\/internal\/admin\/audit-history\?limit=50/);
   assert.match(workspace, /No audit events match this filter/);
 });
+
+test("admin destructive actions use accessible in-app confirmations instead of native browser dialogs", () => {
+  const controlPlane = read("components/admin/AdminControlPlaneWorkspace.tsx");
+  const legacyOps = read("components/admin/AdminOpsWorkspace.tsx");
+
+  assert.doesNotMatch(controlPlane, /window\.(confirm|prompt|alert)/);
+  assert.doesNotMatch(legacyOps, /window\.(confirm|prompt|alert)/);
+  assert.match(controlPlane, /role="alertdialog"/);
+  assert.match(controlPlane, /requestConfirmation/);
+  assert.match(legacyOps, /AdminReasonDialog/);
+  assert.match(legacyOps, /role="dialog"/);
+});

@@ -174,10 +174,18 @@ function getAllowedProbateActions(status: ProbateCaseStatus) {
 
 type LoadState = "checking" | "ready" | "denied";
 
+type AdminReasonDialogState = {
+  adminUserId: string;
+  action: "deactivate" | "change_role";
+  role?: string | null;
+};
+
 export default function AdminOpsWorkspace() {
   const router = useRouter();
   const [state, setState] = useState<LoadState>("checking");
   const [status, setStatus] = useState("");
+  const [reasonDialog, setReasonDialog] = useState<AdminReasonDialogState | null>(null);
+  const [reasonDraft, setReasonDraft] = useState("");
   const [adminInfo, setAdminInfo] = useState<AdminSessionPayload["admin"] | null>(null);
   const [admins, setAdmins] = useState<NonNullable<AdminSessionPayload["admins"]>>([]);
   const [lookupQuery, setLookupQuery] = useState("");
@@ -297,21 +305,15 @@ export default function AdminOpsWorkspace() {
       setStatus(getAdminActionMessage("ADMIN_PROTECTED_ACCOUNT"));
       return;
     }
-    const reason =
-      action === "activate"
-        ? ""
-        : window.prompt(
-          action === "change_role"
-            ? "Reason for changing this admin role"
-            : "Reason for deactivating this admin user",
-        );
-    if (action !== "activate" && !String(reason ?? "").trim()) {
-      setStatus("A reason is required before changing admin access.");
+    if (action !== "activate") {
+      setReasonDraft("");
+      setReasonDialog({ adminUserId, action, role });
       return;
     }
-    if (action !== "activate" && !window.confirm("Apply this admin access change? The server will record an audit event before changing access.")) {
-      return;
-    }
+    await applyAdminUserAction(adminUserId, action, role, "");
+  }
+
+  async function applyAdminUserAction(adminUserId: string, action: "activate" | "deactivate" | "change_role", role?: string | null, reason = "") {
     setActingAdminUserId(adminUserId);
     setStatus("");
     const res = await authFetch("/api/internal/admin/admin-users", {
@@ -426,6 +428,7 @@ export default function AdminOpsWorkspace() {
 
   return (
     <main style={pageStyle}>
+      {reasonDialog ? <AdminReasonDialog action={reasonDialog.action} reason={reasonDraft} setReason={setReasonDraft} onCancel={() => setReasonDialog(null)} onSubmit={() => { const dialog = reasonDialog; setReasonDialog(null); void applyAdminUserAction(dialog.adminUserId, dialog.action, dialog.role, reasonDraft.trim()); }} /> : null}
       <section style={panelStyle}>
         <div style={{ display: "grid", gap: 4 }}>
           <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#64748b" }}>
@@ -785,12 +788,64 @@ function supportCardHref(label: string) {
   return "#support-tools";
 }
 
+function AdminReasonDialog({
+  action,
+  reason,
+  setReason,
+  onCancel,
+  onSubmit,
+}: {
+  action: "deactivate" | "change_role";
+  reason: string;
+  setReason: (value: string) => void;
+  onCancel: () => void;
+  onSubmit: () => void;
+}) {
+  const title = action === "change_role" ? "Change administrator role" : "Suspend administrator access";
+  return (
+    <div style={modalBackdropStyle} role="presentation">
+      <div role="dialog" aria-modal="true" aria-labelledby="admin-reason-title" style={modalStyle}>
+        <h2 id="admin-reason-title" style={{ margin: 0, fontSize: 20 }}>{title}</h2>
+        <p style={{ margin: 0, color: "#64748b", lineHeight: 1.45 }}>The server will record this action in the admin audit trail. A reason is required.</p>
+        <label style={{ display: "grid", gap: 6, fontWeight: 700 }}>
+          Reason
+          <textarea autoFocus value={reason} onChange={(event) => setReason(event.target.value)} rows={4} maxLength={1000} />
+        </label>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button type="button" style={ghostBtnStyle} onClick={onCancel}>Cancel</button>
+          <button type="button" style={action === "deactivate" ? dangerBtnStyle : primaryBtnStyle} onClick={onSubmit} disabled={!reason.trim()}>Confirm</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const pageStyle: CSSProperties = {
   minHeight: "100dvh",
   background: "#f4f5f7",
   padding: 24,
   display: "grid",
   gap: 16,
+};
+
+const modalBackdropStyle: CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  zIndex: 50,
+  display: "grid",
+  placeItems: "center",
+  padding: 20,
+  background: "rgba(15, 23, 42, 0.52)",
+};
+
+const modalStyle: CSSProperties = {
+  width: "min(100%, 520px)",
+  display: "grid",
+  gap: 14,
+  padding: 20,
+  borderRadius: 12,
+  background: "#fff",
+  boxShadow: "0 20px 60px rgba(15, 23, 42, 0.25)",
 };
 
 const gridStyle: CSSProperties = {

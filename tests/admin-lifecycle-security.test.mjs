@@ -488,7 +488,7 @@ test("admin lifecycle UI mirrors protected account and safe-error rules", () => 
 
   assert.match(workspace, /isProtectedMasterAdmin/);
   assert.match(workspace, /Protected master admin/);
-  assert.match(workspace, /window\.confirm/);
+  assert.match(workspace, /AdminReasonDialog/);
   assert.match(workspace, /getAdminActionMessage\(json\.code/);
   assert.match(workspace, /ADMIN_RATE_LIMITED/);
   assert.match(workspace, /ADMIN_AUDIT_FAILED/);
