@@ -1100,6 +1100,10 @@ function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | n
   ];
   return (
     <div style={stackStyle}>
+      <section style={panelStyle} aria-labelledby="admin-action-centre-title">
+        <h2 id="admin-action-centre-title" style={h2Style}>Action centre</h2>
+        <p style={mutedStyle}>Start with queues that need an operational decision. Counts are taken from the live admin summaries below; unavailable sources are labelled rather than treated as empty.</p>
+      </section>
       <section style={gridStyle}>
         {cards.map((card) => (
           <AdminMetricCard

@@ -68,3 +68,14 @@ test("admin destructive actions use accessible in-app confirmations instead of n
   assert.match(legacyOps, /AdminReasonDialog/);
   assert.match(legacyOps, /role="dialog"/);
 });
+
+test("admin overview makes action-required queues explicit without fabricating unavailable metrics", () => {
+  const workspace = read("components/admin/AdminControlPlaneWorkspace.tsx");
+
+  assert.match(workspace, /id="admin-action-centre-title"/);
+  assert.match(workspace, />Action centre</);
+  assert.match(workspace, /Counts are taken from the live admin summaries/);
+  assert.match(workspace, /value=\{card\.value === null \? "Unavailable"/);
+  assert.match(workspace, /href: "\/admin\/verification\?status=awaiting_review"/);
+  assert.match(workspace, /href: "\/admin\/invitations\?status=pending"/);
+});
