@@ -24,6 +24,14 @@ Target staging only: `https://test.mylegacyfortress.com`. Confirm the matching s
 11. `/admin/system-health`: confirm configured, unconfigured, unavailable, and staging-only states are truthful; do not treat missing email, commercial IDV, jobs, or backups as healthy.
 12. `/admin/settings`: confirm safe readiness state only and no secret values.
 
+## Access and estate case scenarios
+
+- `/admin/access` and `/admin/probate` must use the same canonical case records; confirm the access route is not a second invitation-only case engine.
+- Exercise death reported only, protective lock, evidence pending, identity verified/authority pending, authority approved/quorum pending, insufficient quorum, successful quorum, denied authority, and revoked access fixtures.
+- Confirm the UI keeps death, identity, evidence, authority, quorum, and access states separate and never offers a generic unlock action.
+- Attempt self-approval and duplicate approval through the authorised API/test harness; both must be rejected and audited.
+- Confirm assignment, notes, decision history, escalation, terminal denial/revocation, and access-gate outcomes persist after refresh.
+
 ## Responsive and safety checks
 
 - Repeat the primary queue/detail path at desktop, tablet, and mobile widths.

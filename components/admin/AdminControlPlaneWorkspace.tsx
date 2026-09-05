@@ -1020,9 +1020,9 @@ export default function AdminControlPlaneWorkspace({
         {section === "licence-detail" ? renderPlatformLicenceDetail(resourceId, enterprisePortfolio) : null}
         {section === "admin-users" || section === "admin-user-detail" ? renderAdminUsers(admins, adminInvitations, adminFilter, setAdminFilter, adminInviteForm, setAdminInviteForm, sendAdminInvitation, adminInviteOpen, setAdminInviteOpen, adminLifecycleForm, setAdminLifecycleForm, runAdminLifecycle, runAdminInvitationLifecycle, (input, onConfirm) => requestConfirmation(input, onConfirm), resourceId) : null}
         {section === "users" || section === "user-detail" ? renderUsers(lookupQuery, setLookupQuery, lookupResults, runLookup, resourceId, userDetail, userDetailLoading) : null}
-        {section === "support" || section === "invitations" || section === "access" ? renderSupport(section, support, supportDetail, supportDetailLoading, supportActionLoading, loadSupportInvitationDetail, runSupportInvitationAction, createSupportCase, runSupportCaseAction, addSupportCaseNote, capabilities) : null}
+        {section === "support" || section === "invitations" ? renderSupport(section, support, supportDetail, supportDetailLoading, supportActionLoading, loadSupportInvitationDetail, runSupportInvitationAction, createSupportCase, runSupportCaseAction, addSupportCaseNote, capabilities) : null}
         {section === "verification" || section === "verification-detail" ? renderVerification(verificationQueue, resourceId, capabilities, verificationActionLoading, verificationReviewNote, setVerificationReviewNote, runVerificationAction) : null}
-        {section === "probate" || section === "probate-detail" ? renderProbate(probateCases, resourceId, capabilities, probateDecisionNotes, setProbateDecisionNotes, probateActionLoading, probateEvidenceLoading, runProbateCaseAction, openProbateEvidence) : null}
+        {section === "access" || section === "probate" || section === "probate-detail" ? renderProbate(probateCases, resourceId, capabilities, probateDecisionNotes, setProbateDecisionNotes, probateActionLoading, probateEvidenceLoading, runProbateCaseAction, openProbateEvidence, section === "access" ? "Access and estate cases" : "Probate queue") : null}
         {section === "audit" ? renderAudit(auditEvents, auditFilter, setAuditFilter) : null}
         {section === "system-health" ? renderSystemHealth(health, metrics, support) : null}
         {section === "settings" ? renderSettings(capabilities) : null}
@@ -2298,6 +2298,7 @@ function renderProbate(
   evidenceLoading: string,
   runAction: (caseId: string, action: ProbateAction) => Promise<void>,
   openEvidence: (caseId: string, evidenceId: string) => Promise<void>,
+  heading = "Probate queue",
 ) {
   const selected = resourceId ? cases.find((item) => item.id === resourceId) : null;
   const canDecide = capabilities.includes("verification:decide");
@@ -2306,7 +2307,7 @@ function renderProbate(
       <div style={stackStyle}>
         <section style={panelStyle}>
           <Link href="/admin/probate" style={secondaryLinkStyle}>Back to probate queue</Link>
-          {selected ? renderProbateDetail(selected, canDecide, decisionNotes, setDecisionNotes, actionLoading, evidenceLoading, runAction, openEvidence) : <AdminEmptyState title="Probate case unavailable">The selected probate case was not found or is outside your authorised scope.</AdminEmptyState>}
+          {selected ? renderProbateDetail(selected, canDecide, decisionNotes, setDecisionNotes, actionLoading, evidenceLoading, runAction, openEvidence) : <AdminEmptyState title="Case unavailable">The selected case was not found or is outside your authorised scope.</AdminEmptyState>}
         </section>
       </div>
     );
@@ -2314,7 +2315,8 @@ function renderProbate(
   return (
     <div style={stackStyle}>
       <section style={panelStyle}>
-        <h2 style={h2Style}>Probate queue</h2>
+        <h2 style={h2Style}>{heading}</h2>
+        <p style={mutedStyle}>Identity, authority, evidence, quorum, estate state, and access remain separate decisions. Use the case record and audited actions for the next required step.</p>
         <AdminDataTable
           caption="Probate review queue"
           description={<p style={mutedStyle}>Open a case before making a terminal decision. Review actions are enforced by the canonical probate case API.</p>}

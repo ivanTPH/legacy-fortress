@@ -104,6 +104,30 @@ test("Phase 2B workspace exposes live cases without adding prototype-only contro
   assert.doesNotMatch(workspace, /Static mock data|Prototype session/);
 });
 
+test("canonical probate detail opens evidence through signed links and shows case history", () => {
+  const workspace = fs.readFileSync(path.join(root, "components/admin/AdminControlPlaneWorkspace.tsx"), "utf8");
+
+  assert.match(workspace, /Evidence review/);
+  assert.match(workspace, /Open evidence/);
+  assert.match(workspace, /openProbateEvidence/);
+  assert.match(workspace, /\/api\/internal\/admin\/probate-cases\/\$\{encodeURIComponent\(caseId\)\}\/evidence\/\$\{encodeURIComponent\(evidenceId\)\}\/signed-url/);
+  assert.match(workspace, /Case history/);
+  assert.match(workspace, /buildProbateHistory/);
+  assert.match(workspace, /Terminal state/);
+  assert.match(workspace, /Revoke access/);
+  assert.match(workspace, /Evidence opened with a short-lived case-scoped link and audit recorded/);
+  assert.doesNotMatch(workspace, /publicUrl|getPublicUrl|window\.location\.href = json\.signedUrl/);
+});
+
+test("access administration reuses the canonical probate case queue", () => {
+  const workspace = fs.readFileSync(path.join(root, "components/admin/AdminControlPlaneWorkspace.tsx"), "utf8");
+
+  assert.match(workspace, /section === "access" \|\| section === "probate"/);
+  assert.match(workspace, /section === "access" \? "Access and estate cases"/);
+  assert.match(workspace, /Identity, authority, evidence, quorum, estate state, and access remain separate decisions/);
+  assert.doesNotMatch(workspace, /section === "support" \|\| section === "invitations" \|\| section === "access" \? renderSupport/);
+});
+
 test("Phase 2B action route returns stable conflict response for invalid transitions", () => {
   const actionRoute = fs.readFileSync(path.join(root, "app/api/internal/admin/probate-cases/[caseId]/actions/route.ts"), "utf8");
 
