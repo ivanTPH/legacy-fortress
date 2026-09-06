@@ -5,7 +5,6 @@ import { createClient } from "@supabase/supabase-js";
 
 const STAGING_APP = "https://test.mylegacyfortress.com";
 const STAGING_SUPABASE = "https://supabase-test.mylegacyfortress.com";
-const MIGRATION_VERSION = "20260905120000";
 const KEEP_FIXTURE = process.env.KEEP_STAGING_ACCEPTANCE_FIXTURE === "true";
 const marker = `phase7-quorum-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 
@@ -155,10 +154,8 @@ async function main() {
   const requester = await createUser(admin, "requester");
   const approver1 = await createUser(admin, "approver1");
   const approver2 = await createUser(admin, "approver2");
-  await addAdminRow(admin, owner);
-  await addAdminRow(admin, requester);
-  await addAdminRow(admin, approver1);
-  await addAdminRow(admin, approver2);
+  const platformAdmin = await createUser(admin, "platform-admin");
+  await addAdminRow(admin, platformAdmin);
 
   const organisation = await insertOrThrow(admin.from("organisations").insert({ owner_user_id: owner.id, name: `${marker} organisation` }).select("id").single(), "organisation");
   ids.organisationId = organisation.id;
@@ -188,10 +185,10 @@ async function main() {
     const transition = await admin.rpc("lf_transition_vault_lifecycle", {
       p_owner_user_id: owner.id,
       p_to_state: state,
-      p_actor_user_id: owner.id,
+      p_actor_user_id: platformAdmin.id,
       p_reason: `${marker} ${state}`,
       p_death_report_id: death.id,
-      p_context: { actor_type: "system", synthetic_run_marker: marker },
+      p_context: { actor_type: "admin", synthetic_run_marker: marker },
     });
     if (transition.error || transition.data !== state) throw transition.error || new Error(`Could not reach ${state}`);
   }
@@ -219,35 +216,40 @@ async function main() {
 
   const approver1Token = await bearer(anon, approver1);
   const approver2Token = await bearer(anon, approver2);
-  const approve1 = await api(appUrl, `/api/internal/admin/estate-cases/sensitive-actions/${requestId}/approve`, approver1Token, { reason: `${marker} first approval` });
+  const approve1 = await api(appUrl, `/api/estate/cases/${estate.id}/sensitive-actions/${requestId}/approve`, approver1Token, { reason: `${marker} first approval` });
   if (approve1.response.status !== 200) throw new Error(`Approver 1 failed: ${JSON.stringify(approve1.json)}`);
   pass("first distinct eligible approver accepted");
   await assertQuorum(admin, requestId, { required: 2, approved: 1, remaining: 1, expired: false }, "first approval leaves one remaining");
 
-  const approve2 = await api(appUrl, `/api/internal/admin/estate-cases/sensitive-actions/${requestId}/approve`, approver2Token, { reason: `${marker} second approval` });
+  const approve2 = await api(appUrl, `/api/estate/cases/${estate.id}/sensitive-actions/${requestId}/approve`, approver2Token, { reason: `${marker} second approval` });
   if (approve2.response.status !== 200) throw new Error(`Approver 2 failed: ${JSON.stringify(approve2.json)}`);
   pass("second distinct eligible approver accepted");
   await assertQuorum(admin, requestId, { required: 2, approved: 2, remaining: 0, expired: false }, "second approval completes quorum");
   if (!approve2.json.result?.quorumMet) fail("quorum_met", "Application did not report quorum completion.");
   pass("quorum_met is true");
 
-  const duplicate = await api(appUrl, `/api/internal/admin/estate-cases/sensitive-actions/${requestId}/approve`, approver1Token, { reason: `${marker} duplicate approval` });
+  const duplicate = await api(appUrl, `/api/estate/cases/${estate.id}/sensitive-actions/${requestId}/approve`, approver1Token, { reason: `${marker} duplicate approval` });
   if (duplicate.response.ok) fail("duplicate approval denied", "Duplicate approval unexpectedly succeeded.");
   if ((await countApprovals(admin, requestId, approver1.id)).length !== 1) fail("duplicate approval count", "Approver 1 has more than one row.");
   pass("duplicate approval is rejected without count inflation", { status: duplicate.response.status });
 
   const raceRequest = await insertOrThrow(admin.from("sensitive_action_requests").insert({ estate_case_id: estate.id, owner_user_id: owner.id, requester_user_id: requester.id, action_type: "race_test", target_type: "estate_case", target_id: estate.id, status: "pending_approval", justification: `${marker} concurrency`, required_approvals: 2, expires_at: new Date(Date.now() + 3600000).toISOString(), metadata: { synthetic_run_marker: marker } }).select("id").single(), "race request");
   ids.requestIds.push(raceRequest.id);
-  const race = await Promise.all([admin.from("sensitive_action_approvals").insert({ request_id: raceRequest.id, approver_user_id: approver1.id, decision: "approved", reason: `${marker} race A` }).select("id").maybeSingle(), admin.from("sensitive_action_approvals").insert({ request_id: raceRequest.id, approver_user_id: approver1.id, decision: "approved", reason: `${marker} race B` }).select("id").maybeSingle()]);
+  const race = await Promise.all([api(appUrl, `/api/estate/cases/${estate.id}/sensitive-actions/${raceRequest.id}/approve`, approver1Token, { reason: `${marker} race A` }), api(appUrl, `/api/estate/cases/${estate.id}/sensitive-actions/${raceRequest.id}/approve`, approver1Token, { reason: `${marker} race B` })]);
   const raceRows = await countApprovals(admin, raceRequest.id, approver1.id);
-  if (raceRows.length !== 1 || race.filter((item) => !item.error).length !== 1) fail("concurrent duplicate race", "Concurrent submissions did not resolve to exactly one persisted approval.");
+  if (raceRows.length !== 1 || race.filter((item) => item.response.ok).length !== 1) fail("concurrent duplicate race", "Concurrent submissions did not resolve to exactly one persisted approval.");
   pass("concurrent duplicate race persists one approval");
 
   for (const [label, user, expected] of [["requester self-approval", requester, "requester"], ["owner self-approval", owner, "owner"]]) {
     const token = await bearer(anon, user);
-    const attempt = await api(appUrl, `/api/internal/admin/estate-cases/sensitive-actions/${requestId}/approve`, token, { reason: `${marker} ${expected} self approval` });
+    const attempt = await api(appUrl, `/api/estate/cases/${estate.id}/sensitive-actions/${requestId}/approve`, token, { reason: `${marker} ${expected} self approval` });
     if (attempt.response.ok) fail(label, "Self-approval unexpectedly succeeded.");
     pass(`${label} denied`, { status: attempt.response.status });
+  }
+  for (const [label, user] of [["requester self-approval trigger", requester], ["owner self-approval trigger", owner]]) {
+    const triggerAttempt = await admin.from("sensitive_action_approvals").insert({ request_id: requestId, approver_user_id: user.id, decision: "approved", reason: `${marker} ${label}` });
+    if (!triggerAttempt.error || !/self_approval_denied/i.test(triggerAttempt.error.message)) fail(label, "Database self-approval trigger did not reject the insert.");
+    pass(`${label} denied by database trigger`);
   }
 
   const rejectRequest = await insertOrThrow(admin.from("sensitive_action_requests").insert({ estate_case_id: estate.id, owner_user_id: owner.id, requester_user_id: requester.id, action_type: "rejection_test", target_type: "estate_case", status: "pending_approval", justification: `${marker} rejection`, required_approvals: 2, expires_at: new Date(Date.now() + 3600000).toISOString(), metadata: { synthetic_run_marker: marker } }).select("id").single(), "rejection request");
@@ -261,7 +263,8 @@ async function main() {
   const approvalToRevoke = await insertOrThrow(admin.from("sensitive_action_approvals").insert({ request_id: revokeRequest.id, approver_user_id: approver1.id, decision: "approved", reason: `${marker} revoke me` }).select("id").single(), "approval to revoke");
   ids.approvalIds.push(approvalToRevoke.id);
   await assertQuorum(admin, revokeRequest.id, { required: 2, approved: 1, remaining: 1, expired: false }, "revocation starts with one approval");
-  const revoke = await api(appUrl, `/api/internal/admin/estate-cases/sensitive-actions/approvals/${approvalToRevoke.id}/revoke`, approver2Token, { reason: `${marker} revoke approval` });
+  const platformAdminToken = await bearer(anon, platformAdmin);
+  const revoke = await api(appUrl, `/api/internal/admin/estate-cases/sensitive-actions/approvals/${approvalToRevoke.id}/revoke`, platformAdminToken, { reason: `${marker} revoke approval` });
   if (!revoke.response.ok) throw new Error(`Revocation failed: ${JSON.stringify(revoke.json)}`);
   const revoked = await admin.from("sensitive_action_approvals").select("decision,revoked_at,revoked_by_user_id,revoked_reason").eq("id", approvalToRevoke.id).single();
   if (revoked.error || revoked.data.decision !== "revoked" || !revoked.data.revoked_at || revoked.data.revoked_by_user_id !== approver2.id || !revoked.data.revoked_reason) throw revoked.error || new Error("Revocation metadata incomplete");
@@ -283,10 +286,11 @@ async function main() {
   if (access.data.length || claims.data.length) fail("quorum does not grant access", "Synthetic quorum flow created an access/claim record unexpectedly.");
   pass("quorum completion remains separate from identity, authority, and access");
 
-  const events = await admin.from("estate_security_actions").select("action_type").eq("owner_user_id", owner.id).eq("metadata->>synthetic_run_marker", marker);
+  const events = await admin.from("estate_security_actions").select("action_type,actor_user_id,actor_type").eq("owner_user_id", owner.id).eq("metadata->>synthetic_run_marker", marker);
   const deathEvents = await admin.from("death_report_events").select("event_type").eq("death_report_id", death.id);
   if (events.error || deathEvents.error) throw events.error || deathEvents.error;
   if (deathEvents.data.length < 3) fail("estate audit evidence", "Expected death-state audit events were not found.");
+  if (events.data.some((event) => event.actor_user_id !== platformAdmin.id || event.actor_type !== "admin")) fail("audit actor integrity", "A lifecycle event actor did not match the authenticated administrative operation.");
   pass("estate/death audit events collected", { estateSecurityEvents: events.data.length, deathEvents: deathEvents.data.length });
 
   console.log(JSON.stringify({

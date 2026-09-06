@@ -12,6 +12,12 @@ test("staging acceptance harness fails closed outside explicit staging", () => {
   assert.match(script, /Refusing to run/);
   assert.match(script, /legacy-fortress/);
   assert.match(script, /supabase\\.co/);
+  assert.match(script, /const platformAdmin = await createUser/);
+  assert.match(script, /await addAdminRow\(admin, platformAdmin\)/);
+  assert.doesNotMatch(script, /await addAdminRow\(admin, owner\)/);
+  assert.doesNotMatch(script, /await addAdminRow\(admin, requester\)/);
+  assert.doesNotMatch(script, /await addAdminRow\(admin, approver1\)/);
+  assert.doesNotMatch(script, /await addAdminRow\(admin, approver2\)/);
 });
 
 test("harness uses synthetic-only prefixes and staging endpoints", () => {
@@ -28,6 +34,7 @@ test("harness asserts quorum, duplicate, self-approval, revocation and expiry in
     "duplicate approval",
     "requester self-approval",
     "owner self-approval",
+    "self-approval trigger",
     "concurrent duplicate race",
     "revoked_at",
     "expired request",
@@ -35,10 +42,19 @@ test("harness asserts quorum, duplicate, self-approval, revocation and expiry in
   ]) assert.match(script, new RegExp(fragment.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 });
 
+test("estate approval route authenticates the participant and binds request to case", () => {
+  const route = fs.readFileSync("app/api/estate/cases/[caseId]/sensitive-actions/[requestId]/approve/route.ts", "utf8");
+  assert.match(route, /requireIdentityApiAccess/);
+  assert.match(route, /eq\("estate_case_id", caseId\)/);
+  assert.match(route, /approveSensitiveEstateAction/);
+  assert.doesNotMatch(route, /requireAdminAccess/);
+});
+
 test("harness cleanup removes mutable fixtures and supports explicit retention", () => {
   assert.match(script, /KEEP_STAGING_ACCEPTANCE_FIXTURE/);
   assert.match(script, /mutable fixtures removed/);
   assert.match(script, /append-only audit history retained/);
+  assert.match(script, /cleanup failed/);
 });
 
 test("migration-history repair is staging-only, idempotent and refuses unknown conventions", () => {
