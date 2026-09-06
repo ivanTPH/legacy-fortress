@@ -44,7 +44,11 @@ test("canonical admin users page owns invitation and lifecycle controls without 
   assert.match(workspace, /Suspend access/);
   assert.match(workspace, /Reactivate access/);
   assert.match(workspace, /Edit role/);
-  assert.match(workspace, /window\.confirm\("Revoke this pending administrator invitation/);
+  assert.doesNotMatch(workspace, /window\.confirm\(/);
+  assert.match(workspace, /function AdminConfirmationDialog/);
+  assert.match(workspace, /role="alertdialog"/);
+  assert.match(workspace, /aria-modal="true"/);
+  assert.match(workspace, />Cancel<\/button>/);
   assert.doesNotMatch(workspace, /Open legacy lifecycle controls/);
   assert.doesNotMatch(workspace, /href="\/internal\/admin"/);
 });
