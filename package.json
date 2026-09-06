@@ -31,7 +31,9 @@
     "smoke:production:strict": "SMOKE_PERFORMANCE_BUDGET_STRICT=true node scripts/smoke-production-core.mjs",
     "smoke:local:dashboard-bank": "node scripts/smoke-dashboard-bank-dev.mjs",
     "smoke:owner:launch": "node scripts/smoke-owner-launch-uat.mjs",
-    "uat:validate": "node scripts/validate-uat-environment.mjs"
+    "uat:validate": "node scripts/validate-uat-environment.mjs",
+    "staging:acceptance:probate-quorum": "node scripts/staging/run-probate-quorum-acceptance.mjs",
+    "staging:reconcile:phase7-history": "bash scripts/staging/reconcile-phase7-migration-history.sh"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.98.0",
