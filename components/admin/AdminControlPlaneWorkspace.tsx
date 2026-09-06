@@ -601,6 +601,7 @@ export default function AdminControlPlaneWorkspace({
     action: "activate",
     role: "support_agent",
     reason: "",
+    expectedUpdatedAt: "",
   });
   const [health, setHealth] = useState<HealthState>({
     status: null,
