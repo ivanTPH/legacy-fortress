@@ -307,7 +307,10 @@ type ProbateCase = {
     id: string;
     fileName: string;
     evidenceType: string;
+    source?: string;
     mimeType: string;
+    sizeBytes?: number;
+    reviewStatus?: string;
     createdAt: string;
   }>;
 };
@@ -573,6 +576,7 @@ export default function AdminControlPlaneWorkspace({
   const [probateCases, setProbateCases] = useState<ProbateCase[]>([]);
   const [estateOperations, setEstateOperations] = useState<EstateOperations | null>(null);
   const [probateActionLoading, setProbateActionLoading] = useState("");
+  const [probateEvidenceLoading, setProbateEvidenceLoading] = useState("");
   const [probateDecisionNotes, setProbateDecisionNotes] = useState<Record<string, string>>({});
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
   const [enterprisePortfolio, setEnterprisePortfolio] = useState<EnterprisePortfolio | null>(null);
@@ -968,15 +972,20 @@ export default function AdminControlPlaneWorkspace({
   async function openProbateEvidence(caseId: string, evidenceId: string) {
     setMessage("");
     setProbateEvidenceLoading(`${caseId}:${evidenceId}`);
-    const res = await authFetch(`/api/internal/admin/probate-cases/${encodeURIComponent(caseId)}/evidence/${encodeURIComponent(evidenceId)}/signed-url`);
-    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; signedUrl?: string; message?: string; code?: string };
-    setProbateEvidenceLoading("");
-    if (!res.ok || !json.ok || !json.signedUrl) {
-      setMessage(json.message || json.code || "Evidence link could not be created.");
-      return;
+    try {
+      const res = await authFetch(`/api/internal/admin/probate-cases/${encodeURIComponent(caseId)}/evidence/${encodeURIComponent(evidenceId)}/signed-url`);
+      const json = (await res.json().catch(() => ({}))) as { ok?: boolean; signedUrl?: string; message?: string; code?: string };
+      if (!res.ok || !json.ok || !json.signedUrl) {
+        setMessage(json.message || json.code || "Evidence link could not be created.");
+        return;
+      }
+      window.open(json.signedUrl, "_blank", "noopener,noreferrer");
+      setMessage("Evidence opened with a short-lived case-scoped link and audit recorded.");
+    } catch {
+      setMessage("Evidence link could not be created.");
+    } finally {
+      setProbateEvidenceLoading("");
     }
-    window.open(json.signedUrl, "_blank", "noopener,noreferrer");
-    setMessage("Evidence opened with a short-lived case-scoped link and audit recorded.");
   }
 
   const visibleNav = useMemo(() => {
