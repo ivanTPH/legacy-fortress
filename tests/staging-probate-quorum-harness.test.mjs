@@ -90,3 +90,9 @@ test("participant approval service enforces estate eligibility and independent a
   assert.match(quorum, /ownerUserId/);
   assert.match(quorum, /sensitive_action_duplicate_approval_denied/);
 });
+
+test("harness stores estate participant permissions in the canonical capabilities shape", () => {
+  assert.match(script, /permissions: \{ capabilities: permissions \}/);
+  assert.match(script, /canonical participant permission fixtures verified/);
+  assert.match(script, /participantRows\.data\.some\(\(row\) => row\.user_id === platformAdmin\.id\)/);
+});

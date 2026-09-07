@@ -202,10 +202,27 @@ async function main() {
 
   const estate = await insertOrThrow(admin.from("estate_cases").insert({ owner_user_id: owner.id, death_report_id: death.id, case_reference: `EST-${marker.slice(-12).toUpperCase()}`, status: "open", vault_state_at_open: "ESTATE_LOCKED", opened_by_user_id: requester.id, metadata: { synthetic_run_marker: marker } }).select("id").single(), "estate case");
   ids.estateCaseId = estate.id;
-  for (const [user, role, permissions] of [[requester, "executor", ["request_sensitive_action"]], [approver1, "administrator", ["approve_sensitive_action"]], [approver2, "co_executor", ["approve_sensitive_action"]], [owner, "executor", []]]) {
-    await insertOrThrow(admin.from("estate_participants").insert({ estate_case_id: estate.id, user_id: user.id, participant_role: role, status: "active", required_identity_level: 2, permissions, added_by_user_id: owner.id, metadata: { synthetic_run_marker: marker } }).select("id").single(), "estate participant");
+  const participantFixtures = [
+    [requester, "executor", ["request_sensitive_action"]],
+    [approver1, "administrator", ["approve_sensitive_action"]],
+    [approver2, "co_executor", ["approve_sensitive_action"]],
+    [owner, "executor", []],
+  ];
+  for (const [user, role, permissions] of participantFixtures) {
+    await insertOrThrow(admin.from("estate_participants").insert({ estate_case_id: estate.id, user_id: user.id, participant_role: role, status: "active", required_identity_level: 2, permissions: { capabilities: permissions }, added_by_user_id: owner.id, metadata: { synthetic_run_marker: marker } }).select("id").single(), "estate participant");
     await insertOrThrow(admin.from("identity_assurance_states").upsert({ user_id: user.id, identity_level: 3, verified_at: new Date().toISOString(), presence_reverified_at: new Date().toISOString(), provider_key: "lf_internal_experimental_v1", metadata: { synthetic_run_marker: marker } }, { onConflict: "user_id" }).select("user_id").single(), "identity fixture");
   }
+  const participantRows = await admin.from("estate_participants").select("user_id,participant_role,status,required_identity_level,permissions").eq("estate_case_id", estate.id).order("created_at", { ascending: true });
+  if (participantRows.error) throw participantRows.error;
+  for (const [user, role, intended] of participantFixtures) {
+    const row = participantRows.data.find((candidate) => candidate.user_id === user.id);
+    const capabilities = Array.isArray(row?.permissions?.capabilities) ? row.permissions.capabilities.map(String) : [];
+    if (!row || row.status !== "active" || row.participant_role !== role || row.required_identity_level !== 2 || JSON.stringify([...capabilities].sort()) !== JSON.stringify([...intended].sort())) {
+      fail("canonical participant permission fixture", `Unexpected stored permissions for ${role}.`);
+    }
+  }
+  if (participantRows.data.some((row) => row.user_id === platformAdmin.id) || approver1.id === approver2.id) fail("participant privilege separation", "Platform Admin or duplicate approver entered the estate participant set.");
+  pass("canonical participant permission fixtures verified", { requester: ["request_sensitive_action"], approver1: ["approve_sensitive_action"], approver2: ["approve_sensitive_action"], owner: [] });
 
   const requesterToken = await bearer(anon, requester);
   const requestResult = await api(appUrl, `/api/estate/cases/${estate.id}/sensitive-actions`, requesterToken, { actionType: "distribution_approve", targetType: "estate_case", targetId: estate.id, justification: `${marker} controlled quorum request`, requiredApprovals: 2 });
