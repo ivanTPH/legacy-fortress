@@ -229,7 +229,9 @@ async function main() {
   if (requestResult.response.status !== 201 || !requestResult.json.request?.id) throw new Error(`Request creation failed: ${JSON.stringify(requestResult.json)}`);
   const requestId = requestResult.json.request.id;
   ids.requestIds.push(requestId);
-  pass("sensitive-action request created", { requestId, requiredApprovals: requestResult.json.request.required_approvals, requesterId: requester.id, ownerId: owner.id, expiresAtPresent: Boolean(requestResult.json.request.expires_at) });
+  const expiresAt = requestResult.json.request.expires_at;
+  if (!expiresAt || !Number.isFinite(Date.parse(expiresAt)) || Date.parse(expiresAt) <= Date.now()) fail("sensitive-action expiry", "Created sensitive-action request did not return a bounded future expiry.");
+  pass("sensitive-action request created", { requestId, requiredApprovals: requestResult.json.request.required_approvals, requesterId: requester.id, ownerId: owner.id, expiresAt });
 
   const approver1Token = await bearer(anon, approver1);
   const approver2Token = await bearer(anon, approver2);

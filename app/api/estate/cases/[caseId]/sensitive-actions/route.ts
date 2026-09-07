@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { identityErrorResponse, requireIdentityApiAccess } from "@/lib/identity-verification/api";
+import { requireIdentityApiAccess } from "@/lib/identity-verification/api";
+import { sensitiveActionErrorResponse } from "@/lib/estate-administration/api";
 import { requestSensitiveEstateAction } from "@/lib/estate-administration/service";
 
 export async function POST(request: Request, { params }: { params: Promise<{ caseId: string }> }) {
@@ -19,6 +20,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ cas
     });
     return NextResponse.json({ ok: true, request: requestRow }, { status: 201 });
   } catch (error) {
-    return identityErrorResponse(error);
+    return sensitiveActionErrorResponse(error);
   }
 }

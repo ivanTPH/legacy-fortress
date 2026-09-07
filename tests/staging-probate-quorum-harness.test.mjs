@@ -96,3 +96,24 @@ test("harness stores estate participant permissions in the canonical capabilitie
   assert.match(script, /canonical participant permission fixtures verified/);
   assert.match(script, /participantRows\.data\.some\(\(row\) => row\.user_id === platformAdmin\.id\)/);
 });
+
+test("sensitive-action requests expose and verify bounded expiry", () => {
+  assert.match(script, /request\.expires_at/);
+  assert.match(script, /Date\.parse\(expiresAt\) <= Date\.now\(\)/);
+  const service = fs.readFileSync("lib/estate-administration/service.ts", "utf8");
+  assert.match(service, /select\("id,status,required_approvals,expires_at"\)/);
+});
+
+test("known sensitive-action denials use safe non-500 HTTP statuses", () => {
+  const api = fs.readFileSync("lib/estate-administration/api.ts", "utf8");
+  assert.match(api, /sensitive_action_duplicate_approval_denied/);
+  assert.match(api, /sensitive_action_self_approval_denied/);
+  assert.match(api, /expired" \? 410/);
+  assert.match(api, /\? 409/);
+  assert.match(api, /\? 403/);
+  assert.match(api, /sensitive_action_error/);
+  for (const route of [
+    fs.readFileSync("app/api/estate/cases/[caseId]/sensitive-actions/route.ts", "utf8"),
+    fs.readFileSync("app/api/estate/cases/[caseId]/sensitive-actions/[requestId]/approve/route.ts", "utf8"),
+  ]) assert.match(route, /sensitiveActionErrorResponse/);
+});
