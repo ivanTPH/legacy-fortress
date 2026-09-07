@@ -11,81 +11,53 @@ NAME="phase7_probate_quorum_completion"
 container_name="$(docker inspect --format '{{.Name}}' "$CONTAINER" 2>/dev/null || true)"
 [[ "$container_name" == "/$CONTAINER" ]] || { echo "REFUSED: verified staging database container was not found" >&2; exit 1; }
 
-docker exec "$CONTAINER" psql -v ON_ERROR_STOP=1 -U "$USER" -d "$DB" \
-  -v migration_version="$VERSION" -v migration_name="$NAME" <<'SQL'
-SELECT current_database() AS database_name, current_user AS database_user;
+psql_staging() {
+  docker exec "$CONTAINER" psql -v ON_ERROR_STOP=1 -U "$USER" -d "$DB" "$@"
+}
 
-SELECT column_name, data_type, is_nullable, column_default
-FROM information_schema.columns
-WHERE table_schema = 'supabase_migrations' AND table_name = 'schema_migrations'
-ORDER BY ordinal_position;
+table_exists="$(psql_staging -Atqc "SELECT to_regclass('supabase_migrations.schema_migrations') IS NOT NULL")"
+[[ "$table_exists" == "t" ]] || { echo "REFUSED: expected migration history table is missing" >&2; exit 1; }
 
-SELECT *
-FROM supabase_migrations.schema_migrations
-ORDER BY version DESC
-LIMIT 5;
+echo "Verified database: $DB ($USER)"
+echo "Migration-history columns:"
+psql_staging -c "SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns WHERE table_schema = 'supabase_migrations' AND table_name = 'schema_migrations' ORDER BY ordinal_position;"
+echo "Recent migration-history rows:"
+psql_staging -c "SELECT * FROM supabase_migrations.schema_migrations ORDER BY version DESC LIMIT 5;"
 
-DO $$
-DECLARE
-  existing_count integer;
-  has_name boolean;
-  has_statements boolean;
-  has_hash boolean;
-  unknown_required integer;
-BEGIN
-  IF to_regclass('supabase_migrations.schema_migrations') IS NULL THEN
-    RAISE EXCEPTION 'Expected migration history table is missing';
-  END IF;
+existing_count="$(psql_staging -Atv migration_version="$VERSION" -c "SELECT count(*) FROM supabase_migrations.schema_migrations WHERE version = :'migration_version';")"
+case "$existing_count" in
+  1)
+    echo "PASS: migration version $VERSION already exists exactly once; no mutation performed"
+    exit 0
+    ;;
+  0) ;;
+  *)
+    echo "FAIL: migration version $VERSION appears $existing_count times" >&2
+    exit 1
+    ;;
+esac
 
-  SELECT count(*) INTO existing_count
-  FROM supabase_migrations.schema_migrations
-  WHERE version = :'migration_version';
+required_unknown="$(psql_staging -Atqc "SELECT count(*) FROM information_schema.columns WHERE table_schema = 'supabase_migrations' AND table_name = 'schema_migrations' AND is_nullable = 'NO' AND column_default IS NULL AND column_name NOT IN ('version', 'name', 'statements');")"
+has_hash="$(psql_staging -Atqc "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'supabase_migrations' AND table_name = 'schema_migrations' AND column_name = 'hash')")"
+has_name="$(psql_staging -Atqc "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'supabase_migrations' AND table_name = 'schema_migrations' AND column_name = 'name')")"
+has_statements="$(psql_staging -Atqc "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'supabase_migrations' AND table_name = 'schema_migrations' AND column_name = 'statements')")"
 
-  IF existing_count > 1 THEN
-    RAISE EXCEPTION 'Migration version appears more than once';
-  ELSIF existing_count = 1 THEN
-    RAISE NOTICE 'Migration version already exists exactly once; no insert performed';
-    RETURN;
-  END IF;
+if [[ "$has_hash" == "t" || "$required_unknown" != "0" ]]; then
+  echo "Unexpected migration-history convention: refusing to fabricate fields" >&2
+  exit 1
+fi
 
-  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'supabase_migrations' AND table_name = 'schema_migrations' AND column_name = 'name') INTO has_name;
-  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'supabase_migrations' AND table_name = 'schema_migrations' AND column_name = 'statements') INTO has_statements;
-  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'supabase_migrations' AND table_name = 'schema_migrations' AND column_name = 'hash') INTO has_hash;
+# Insert with ordinary SQL after schema validation. No psql variables are used
+# inside a dollar-quoted PL/pgSQL block, and migration SQL is never re-run.
+if [[ "$has_name" == "t" && "$has_statements" == "t" ]]; then
+  psql_staging -v migration_version="$VERSION" -v migration_name="$NAME" -c "INSERT INTO supabase_migrations.schema_migrations(version, name, statements) VALUES (:'migration_version', :'migration_name', ARRAY[]::text[]);"
+elif [[ "$has_name" == "t" ]]; then
+  psql_staging -v migration_version="$VERSION" -v migration_name="$NAME" -c "INSERT INTO supabase_migrations.schema_migrations(version, name) VALUES (:'migration_version', :'migration_name');"
+else
+  psql_staging -v migration_version="$VERSION" -c "INSERT INTO supabase_migrations.schema_migrations(version) VALUES (:'migration_version');"
+fi
 
-  SELECT count(*) INTO unknown_required
-  FROM information_schema.columns
-  WHERE table_schema = 'supabase_migrations'
-    AND table_name = 'schema_migrations'
-    AND is_nullable = 'NO'
-    AND column_default IS NULL
-    AND column_name NOT IN ('version', 'name', 'statements');
-
-  IF has_hash OR unknown_required > 0 THEN
-    RAISE EXCEPTION 'Unexpected migration-history convention; refusing to fabricate fields';
-  END IF;
-
-  IF has_name AND has_statements THEN
-    INSERT INTO supabase_migrations.schema_migrations(version, name, statements)
-    VALUES (:'migration_version', :'migration_name', ARRAY[]::text[]);
-  ELSIF has_name THEN
-    INSERT INTO supabase_migrations.schema_migrations(version, name)
-    VALUES (:'migration_version', :'migration_name');
-  ELSE
-    INSERT INTO supabase_migrations.schema_migrations(version)
-    VALUES (:'migration_version');
-  END IF;
-END $$;
-
-SELECT version, name
-FROM supabase_migrations.schema_migrations
-WHERE version = :'migration_version';
-
-DO $$
-BEGIN
-  IF (SELECT count(*) FROM supabase_migrations.schema_migrations WHERE version = :'migration_version') <> 1 THEN
-    RAISE EXCEPTION 'Migration history verification failed';
-  END IF;
-END $$;
-SQL
-
+verified_count="$(psql_staging -Atv migration_version="$VERSION" -c "SELECT count(*) FROM supabase_migrations.schema_migrations WHERE version = :'migration_version';")"
+[[ "$verified_count" == "1" ]] || { echo "FAIL: migration history verification returned $verified_count rows" >&2; exit 1; }
+psql_staging -v migration_version="$VERSION" -c "SELECT * FROM supabase_migrations.schema_migrations WHERE version = :'migration_version';"
 echo "PASS: staging migration history contains $VERSION exactly once"

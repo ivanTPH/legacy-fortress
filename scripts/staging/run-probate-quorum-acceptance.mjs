@@ -267,7 +267,10 @@ async function main() {
   const revoke = await api(appUrl, `/api/internal/admin/estate-cases/sensitive-actions/approvals/${approvalToRevoke.id}/revoke`, platformAdminToken, { reason: `${marker} revoke approval` });
   if (!revoke.response.ok) throw new Error(`Revocation failed: ${JSON.stringify(revoke.json)}`);
   const revoked = await admin.from("sensitive_action_approvals").select("decision,revoked_at,revoked_by_user_id,revoked_reason").eq("id", approvalToRevoke.id).single();
-  if (revoked.error || revoked.data.decision !== "revoked" || !revoked.data.revoked_at || revoked.data.revoked_by_user_id !== approver2.id || !revoked.data.revoked_reason) throw revoked.error || new Error("Revocation metadata incomplete");
+  if (revoked.error || revoked.data.decision !== "revoked" || !revoked.data.revoked_at || revoked.data.revoked_by_user_id !== platformAdmin.id || !revoked.data.revoked_reason) throw revoked.error || new Error("Revocation metadata incomplete");
+  const revokeAudit = await admin.from("audit_events").select("actor_user_id,metadata").eq("resource_id", revokeRequest.id).eq("action", "Sensitive estate approval revoked").order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (revokeAudit.error) throw revokeAudit.error;
+  if (revokeAudit.data && revokeAudit.data.actor_user_id !== platformAdmin.id) fail("revocation audit actor", "Approval revocation was audited under a different actor.");
   await assertQuorum(admin, revokeRequest.id, { required: 2, approved: 0, remaining: 2, expired: false }, "revocation reduces quorum");
   pass("approval revocation is recorded and reduces quorum");
 

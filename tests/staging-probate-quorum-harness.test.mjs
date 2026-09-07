@@ -59,9 +59,34 @@ test("harness cleanup removes mutable fixtures and supports explicit retention",
 
 test("migration-history repair is staging-only, idempotent and refuses unknown conventions", () => {
   assert.match(historyScript, /supabase-db-wdf2fyo7hrewev6hnqypd2vc/);
-  assert.match(historyScript, /existing_count > 1/);
+  assert.match(historyScript, /appears \$existing_count times/);
   assert.match(historyScript, /already exists exactly once/);
   assert.match(historyScript, /Unexpected migration-history convention/);
   assert.match(historyScript, /20260905120000/);
   assert.doesNotMatch(historyScript, /DROP|ALTER TABLE|CREATE TABLE/);
+  for (const match of historyScript.matchAll(/DO\s+\$\$(.*?)\$\$/gis)) {
+    assert.doesNotMatch(match[1], /:'migration_(?:version|name)'/);
+  }
+  assert.doesNotMatch(historyScript, /DO\s+\$\$/i);
+  assert.match(historyScript, /INSERT INTO supabase_migrations\.schema_migrations/);
+  assert.match(historyScript, /verified_count/);
+});
+
+test("revocation records the authenticated Platform Admin actor", () => {
+  assert.match(script, /revoked_by_user_id !== platformAdmin\.id/);
+  assert.match(script, /Sensitive estate approval revoked/);
+  assert.match(script, /revokeAudit\.data\.actor_user_id !== platformAdmin\.id/);
+});
+
+test("participant approval service enforces estate eligibility and independent approval", () => {
+  const service = fs.readFileSync("lib/estate-administration/service.ts", "utf8");
+  assert.match(service, /requireEstatePermission\(client, request\.estate_case_id, input\.approverUserId, "approve_sensitive_action"\)/);
+  assert.match(service, /getIdentityPresenceLevel\(client, input\.approverUserId\)/);
+  assert.match(service, /assertIndependentApproval/);
+  assert.match(service, /request\.expires_at/);
+  assert.match(service, /sensitive_action_not_pending/);
+  const quorum = fs.readFileSync("lib/estate-administration/quorum.ts", "utf8");
+  assert.match(quorum, /requesterUserId/);
+  assert.match(quorum, /ownerUserId/);
+  assert.match(quorum, /sensitive_action_duplicate_approval_denied/);
 });
