@@ -64,6 +64,15 @@ test("rejects invalid, stale, replayed and production events", () => {
 
 test("rejects unsafe redirect and unsupported email actions", () => {
   assert.throws(() => validateStagingRedirect("https://legacy-fortress.vercel.app/reset-password"), /invalid_staging_redirect/);
+  assert.equal(
+    validateStagingRedirect("https://test.mylegacyfortress.com/reset-password/"),
+    "https://test.mylegacyfortress.com/reset-password/",
+  );
+  assert.equal(
+    validateStagingRedirect("https://test.mylegacyfortress.com/auth/callback/?next=%2Freset-password"),
+    "https://test.mylegacyfortress.com/auth/callback/?next=%2Freset-password",
+  );
+  assert.throws(() => validateStagingRedirect("https://test.mylegacyfortress.com/reset-password/extra"), /invalid_staging_redirect/);
   const body = payload("email_change");
   const request = signedRequest(body, secret);
   assert.throws(() => parseAndVerifyHook(body, request.headers, env), /invalid_email_event/);

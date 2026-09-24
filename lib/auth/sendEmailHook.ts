@@ -105,7 +105,8 @@ export function buildVerificationUrl(supabaseOrigin: string, tokenHash: string, 
 
 export function validateStagingRedirect(value: string) {
   const redirect = new URL(value);
-  if (redirect.origin !== STAGING_APP_ORIGIN || !ALLOWED_REDIRECT_PATHS.has(redirect.pathname)) {
+  const normalizedPath = redirect.pathname.replace(/\/+$/, "") || "/";
+  if (redirect.origin !== STAGING_APP_ORIGIN || !ALLOWED_REDIRECT_PATHS.has(normalizedPath)) {
     throw new Error("invalid_staging_redirect");
   }
   return redirect.toString();
