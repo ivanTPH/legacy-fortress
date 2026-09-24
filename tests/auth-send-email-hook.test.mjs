@@ -89,6 +89,13 @@ test("classifies rejected redirects without exposing their values", () => {
   assert.equal(classifyStagingRedirect("not-a-url").parseable, false);
 });
 
+test("rejects a non-staging site root instead of widening the redirect allowlist", () => {
+  assert.throws(
+    () => validateStagingRedirect("https://supabase-test.mylegacyfortress.com/"),
+    /invalid_staging_redirect/,
+  );
+});
+
 test("rejects malformed payloads and non-staging senders", () => {
   const body = "{";
   const request = signedRequest(body, secret, { id: "evt_malformed" });
