@@ -38,6 +38,16 @@ export type ResendConfig = {
 
 export type DeliveryResult = { providerId: string | null };
 
+export type RedirectDiagnostic = {
+  parseable: boolean;
+  protocol: "https" | "http" | "other" | "none";
+  origin: "staging" | "production" | "other" | "none";
+  path: "reset-password" | "auth-callback" | "root" | "other" | "none";
+  trailingSlash: boolean;
+  hasQuery: boolean;
+  hasHash: boolean;
+};
+
 const seenWebhookIds = new Map<string, number>();
 
 function headerValue(headers: HookHeaders, name: string) {
@@ -55,6 +65,36 @@ function decodeSecret(secret: string) {
 
 function safeEqual(left: Buffer, right: Buffer) {
   return left.length === right.length && timingSafeEqual(left, right);
+}
+
+export function classifyStagingRedirect(value: string): RedirectDiagnostic {
+  try {
+    const redirect = new URL(value);
+    const normalizedPath = redirect.pathname.replace(/\/+$/, "") || "/";
+    return {
+      parseable: true,
+      protocol: redirect.protocol === "https:" ? "https" : redirect.protocol === "http:" ? "http" : "other",
+      origin: redirect.origin === STAGING_APP_ORIGIN
+        ? "staging"
+        : redirect.origin === "https://legacy-fortress.vercel.app" ? "production" : "other",
+      path: normalizedPath === "/reset-password" ? "reset-password"
+        : normalizedPath === "/auth/callback" ? "auth-callback"
+          : normalizedPath === "/" ? "root" : "other",
+      trailingSlash: redirect.pathname.length > 1 && redirect.pathname.endsWith("/"),
+      hasQuery: Boolean(redirect.search),
+      hasHash: Boolean(redirect.hash),
+    };
+  } catch {
+    return {
+      parseable: false,
+      protocol: "none",
+      origin: "none",
+      path: "none",
+      trailingSlash: false,
+      hasQuery: false,
+      hasHash: false,
+    };
+  }
 }
 
 function verifySignature(body: string, headers: HookHeaders, secret: string, nowSeconds: number) {
@@ -136,7 +176,14 @@ export function parseAndVerifyHook(
   const actionType = typeof payload.email_data?.email_action_type === "string" ? payload.email_data.email_action_type.trim() : "";
   if (!recipient || !tokenHash || !redirectTo || !SEND_EMAIL_ACTIONS.has(actionType)) throw new Error("invalid_email_event");
 
-  const verifiedRedirect = validateStagingRedirect(redirectTo);
+  let verifiedRedirect: string;
+  try {
+    verifiedRedirect = validateStagingRedirect(redirectTo);
+  } catch {
+    const error = new Error("invalid_staging_redirect") as Error & { redirectDiagnostic?: RedirectDiagnostic };
+    error.redirectDiagnostic = classifyStagingRedirect(redirectTo);
+    throw error;
+  }
   return {
     eventId,
     actionType: actionType as VerifiedEmailEvent["actionType"],

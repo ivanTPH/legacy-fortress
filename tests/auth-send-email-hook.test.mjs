@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { createHmac, randomBytes } from "node:crypto";
 import {
   buildVerificationUrl,
+  classifyStagingRedirect,
   deliverWithResend,
   parseAndVerifyHook,
   renderAuthEmail,
@@ -76,6 +77,16 @@ test("rejects unsafe redirect and unsupported email actions", () => {
   const body = payload("email_change");
   const request = signedRequest(body, secret);
   assert.throws(() => parseAndVerifyHook(body, request.headers, env), /invalid_email_event/);
+});
+
+test("classifies rejected redirects without exposing their values", () => {
+  assert.deepEqual(classifyStagingRedirect("https://test.mylegacyfortress.com/reset-password?code=opaque"), {
+    parseable: true, protocol: "https", origin: "staging", path: "reset-password", trailingSlash: false, hasQuery: true, hasHash: false,
+  });
+  assert.deepEqual(classifyStagingRedirect("https://legacy-fortress.vercel.app/reset-password"), {
+    parseable: true, protocol: "https", origin: "production", path: "reset-password", trailingSlash: false, hasQuery: false, hasHash: false,
+  });
+  assert.equal(classifyStagingRedirect("not-a-url").parseable, false);
 });
 
 test("rejects malformed payloads and non-staging senders", () => {
