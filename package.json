@@ -34,6 +34,7 @@
     "smoke:owner:launch": "node scripts/smoke-owner-launch-uat.mjs",
     "uat:validate": "node scripts/validate-uat-environment.mjs",
     "staging:acceptance:probate-quorum": "node scripts/staging/run-probate-quorum-acceptance.mjs",
+    "staging:acceptance:idv": "node scripts/staging/run-invitation-idv-acceptance.mjs",
     "staging:reconcile:phase7-history": "bash scripts/staging/reconcile-phase7-migration-history.sh"
   },
   "dependencies": {
