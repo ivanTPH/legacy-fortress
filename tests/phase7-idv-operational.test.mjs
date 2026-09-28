@@ -65,6 +65,14 @@ test("synthetic operations use server-side metadata-only paths", () => {
   assert.match(service, /linked_access_context_required/);
 });
 
+test("identity verification requires explicit consent at UI and server boundaries", () => {
+  assert.match(startRoute, /consentAcknowledged/);
+  assert.match(service, /identity_consent_required/);
+  assert.match(service, /consent_accepted_at/);
+  assert.match(userPage, /I consent to this identity check/);
+  assert.match(userPage, /!consentAcknowledged/);
+});
+
 test("identity admin workflow is limited to review-safe actions", () => {
   const verificationUi = adminPage.slice(adminPage.indexOf("function renderVerification"), adminPage.indexOf("function renderProbate"));
   assert.match(adminPage, /Assign to me/);

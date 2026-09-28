@@ -47,6 +47,7 @@ export default function IdentityVerificationPageClient() {
   const [status, setStatus] = useState("Preparing identity verification...");
   const [documentType, setDocumentType] = useState("passport");
   const [scenario, setScenario] = useState("success");
+  const [consentAcknowledged, setConsentAcknowledged] = useState(false);
   const [captureSource, setCaptureSource] = useState<"camera" | "library" | "file" | null>(null);
   const [decision, setDecision] = useState<VerificationResponse["decision"] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -81,6 +82,7 @@ export default function IdentityVerificationPageClient() {
           accessGrantId: params.get("grant"),
           invitationId: params.get("invitation"),
           simulatorScenario: scenario,
+          consentAcknowledged,
         }),
       });
       if (!res.verification?.id) throw new Error(res.error ?? "Could not start verification.");
@@ -189,7 +191,17 @@ export default function IdentityVerificationPageClient() {
           <div><span>Access</span><strong>Not available yet</strong></div>
         </div>
         <h1>Verify your identity</h1>
-        <p className="lf-auth-subtext">To protect {ownerName}'s information, we need to confirm you are the person accepting this role. Identity verification does not establish legal authority or grant access by itself.</p>
+        <p className="lf-auth-subtext">To protect {ownerName}&apos;s information, we need to confirm you are the person accepting this role. Identity verification does not establish legal authority or grant access by itself.</p>
+
+        <label style={consentStyle}>
+          <input
+            type="checkbox"
+            checked={consentAcknowledged}
+            onChange={(event) => setConsentAcknowledged(event.target.checked)}
+            disabled={busy || Boolean(verificationId)}
+          />
+          <span>I consent to this identity check and understand that verification evidence is handled separately from vault content and access authority.</span>
+        </label>
 
           <div className="lf-muted-note" role="status">{status}</div>
 
@@ -223,7 +235,7 @@ export default function IdentityVerificationPageClient() {
           {!verificationId ? (
             <>
               {!hasLinkedContext && purpose !== "step_up_presence" ? <p role="note">Open this check from an accepted linked-access request. A linked-access verification cannot be started from an unbound URL.</p> : null}
-            <button className="lf-primary-btn" type="button" onClick={() => void start()} disabled={busy || !token || (purpose !== "step_up_presence" && !hasLinkedContext)}>
+            <button className="lf-primary-btn" type="button" onClick={() => void start()} disabled={busy || !token || !consentAcknowledged || (purpose !== "step_up_presence" && !hasLinkedContext)}>
               <Icon name="verified_user" size={16} />
               Start verification
             </button>
@@ -335,4 +347,13 @@ const confirmationStyle = {
   padding: 12,
   display: "grid",
   gap: 8,
+} as const;
+
+const consentStyle = {
+  display: "flex",
+  alignItems: "flex-start",
+  gap: 10,
+  margin: "16px 0",
+  fontSize: 14,
+  lineHeight: 1.45,
 } as const;

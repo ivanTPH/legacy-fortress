@@ -14,10 +14,13 @@ export async function POST(request: Request) {
   const access = await requireIdentityApiAccess(request);
   if (!access.ok) return access.response;
   try {
-    const body = (await request.json().catch(() => ({}))) as { action?: string };
+    const body = (await request.json().catch(() => ({}))) as { action?: string; consentAcknowledged?: boolean };
     const action = String(body.action ?? "").trim();
     if (!HIGH_RISK_ACTIONS.has(action)) {
       return NextResponse.json({ ok: false, error: "unsupported_high_risk_action" }, { status: 400 });
+    }
+    if (body.consentAcknowledged !== true) {
+      return NextResponse.json({ ok: false, error: "identity_consent_required" }, { status: 400 });
     }
     const currentLevel = await getCurrentIdentityAssuranceLevel(access.admin, access.user.id);
     if (currentLevel < 2) {
@@ -27,6 +30,7 @@ export async function POST(request: Request) {
       userId: access.user.id,
       purpose: "step_up_presence",
       requestedIdentityLevel: 3,
+      consentAcknowledged: true,
     });
     return NextResponse.json({
       ok: true,

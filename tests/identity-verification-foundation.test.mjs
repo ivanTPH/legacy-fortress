@@ -42,3 +42,19 @@ test("foundation documents callback, retention, and authority boundaries", () =>
   assert.match(foundation, /legal authority/);
   assert.match(foundation, /scheduled cleanup/);
 });
+
+test("identity completion and cleanup fail closed on durable write errors", () => {
+  assert.match(service, /assertMutationSucceeded\(decisionInsert, "identity_decision_persist_failed"\)/);
+  assert.match(service, /assertMutationSucceeded\(requestUpdate, "identity_request_update_failed"\)/);
+  assert.match(service, /assertMutationSucceeded\(assuranceUpsert, "identity_assurance_persist_failed"\)/);
+  assert.match(service, /assertMutationSucceeded\(grantUpdate, "linked_access_activation_failed"\)/);
+  assert.match(service, /assertMutationSucceeded\(roleUpdate, "role_assignment_activation_failed"\)/);
+  assert.match(service, /identity_evidence_metadata_cleanup_failed/);
+  assert.match(service, /identity_challenge_update_failed/);
+  assert.match(service, /linked_access_requirement_update_failed/);
+});
+
+test("presence challenges are single-use and cannot be replayed after capture", () => {
+  assert.match(service, /challenge\.status !== "issued"/);
+  assert.match(service, /presence_challenge_not_reusable/);
+});

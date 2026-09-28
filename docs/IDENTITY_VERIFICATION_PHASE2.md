@@ -54,6 +54,7 @@ High-risk action requests start a Level 3 `step_up_presence` verification. Fresh
 - No client-supplied verification score or decision is trusted.
 - No linked user access to another user’s identity evidence.
 - No raw document numbers, biometric templates, JWTs, passwords, or signed evidence URLs in audit metadata.
+- Verification cannot start without explicit user consent. The consent timestamp is retained in request metadata and the verification-start event; consent does not grant authority or access.
 
 ## Known Limitation
 

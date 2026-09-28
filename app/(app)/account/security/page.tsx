@@ -244,7 +244,7 @@ export default function SecurityPage() {
       {isPasskeyEnrollmentEnabled() ? (
         <SettingsCard title="Passkeys" description="Use a device passkey for a faster, phishing-resistant step-up. Passkeys are separate from government-ID verification.">
           <p style={{ color: "#475569", fontSize: 13, margin: 0 }}>
-            Use your device's passkey, such as Face ID, fingerprint, Windows Hello or a device PIN. Legacy Fortress does not receive or store your biometric template.
+            Use your device&apos;s passkey, such as Face ID, fingerprint, Windows Hello or a device PIN. Legacy Fortress does not receive or store your biometric template.
           </p>
           <button type="button" style={primaryBtn} onClick={() => void addPasskey()} disabled={passkeyBusy || !supportsPasskeyBrowser()}>
             {passkeyBusy ? "Adding passkey..." : "Add passkey"}

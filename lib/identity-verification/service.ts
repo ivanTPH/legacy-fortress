@@ -65,9 +65,11 @@ export async function startIdentityVerification(
     invitationId?: string | null;
     accessGrantId?: string | null;
     simulatorScenario?: InternalSimulatorScenario | null;
+    consentAcknowledged?: boolean;
   },
 ) {
   const provider = getIdentityVerificationProvider();
+  if (input.consentAcknowledged !== true) throw new Error("identity_consent_required");
   await validateVerificationContext(client, input);
   const started = await provider.startVerification(input);
   const now = new Date().toISOString();
@@ -86,6 +88,7 @@ export async function startIdentityVerification(
       metadata: {
         provider_experimental: provider.experimental,
         simulator_scenario: input.simulatorScenario ?? null,
+        consent_accepted_at: now,
         product_notice: "Internal experimental provider for controlled staging/UAT only.",
       },
       created_at: now,
@@ -99,6 +102,7 @@ export async function startIdentityVerification(
     purpose: input.purpose,
     requested_identity_level: input.requestedIdentityLevel,
     provider_key: provider.providerKey,
+    consent_accepted: true,
   });
   if (input.purpose === "linked_access") {
     await markLinkedAccessIdentityRequired(client, input.userId, input.accessGrantId ?? null);
@@ -244,13 +248,14 @@ export async function uploadDocumentEvidence(
     .select("*")
     .single();
   if (doc.error || !doc.data) throw new Error(doc.error?.message || "document_record_failed");
-  await client.from("identity_verification_requests").update({
+  const requestUpdate = await client.from("identity_verification_requests").update({
     status: extraction.status === "extracted" ? "document_extracted" : "review_required",
     attempt_count: Number(request.attempt_count ?? 0) + 1,
     manual_review_required: extraction.status !== "extracted" || extraction.warnings.length > 0,
     submitted_at: now,
     updated_at: now,
   }).eq("id", input.requestId);
+  assertMutationSucceeded(requestUpdate, "identity_request_update_failed");
   await recordIdentityEvent(client, input.requestId, input.userId, extraction.status === "extracted" ? "document_processed" : "document_extraction_failed", "provider", {
     document_type: extraction.documentType,
     confidence: extraction.confidence,
@@ -297,13 +302,14 @@ export async function generateSyntheticDocumentEvidence(
     updated_at: now,
   }).select("*").single();
   if (doc.error || !doc.data) throw new Error(doc.error?.message || "synthetic_document_record_failed");
-  await client.from("identity_verification_requests").update({
+  const requestUpdate = await client.from("identity_verification_requests").update({
     status: extraction.status === "extracted" ? "document_extracted" : "review_required",
     attempt_count: Number(request.attempt_count ?? 0) + 1,
     manual_review_required: extraction.status !== "extracted" || extraction.warnings.length > 0,
     submitted_at: now,
     updated_at: now,
   }).eq("id", input.requestId);
+  assertMutationSucceeded(requestUpdate, "identity_request_update_failed");
   await recordIdentityEvent(client, input.requestId, input.userId, extraction.status === "extracted" ? "document_processed" : "document_extraction_failed", "provider", { document_type: input.documentType, synthetic: true, confidence: extraction.confidence, warning_count: extraction.warnings.length });
   return doc.data as IdentityVerificationDocumentRow;
 }
@@ -333,7 +339,8 @@ export async function createPresenceChallenge(client: AnySupabaseClient, request
     .select("*")
     .single();
   if (insert.error || !insert.data) throw new Error(insert.error?.message || "challenge_create_failed");
-  await client.from("identity_verification_requests").update({ status: "camera_required", updated_at: new Date().toISOString() }).eq("id", requestId);
+  const requestUpdate = await client.from("identity_verification_requests").update({ status: "camera_required", updated_at: new Date().toISOString() }).eq("id", requestId);
+  assertMutationSucceeded(requestUpdate, "identity_request_update_failed");
   await recordIdentityEvent(client, requestId, userId, "camera_started", "user", { challenge_type: challenge.challengeType });
   return { challenge: insert.data as IdentityPresenceChallengeRow, nonce: challenge.nonce };
 }
@@ -354,6 +361,7 @@ export async function uploadCameraEvidence(
     .single();
   if (challengeRes.error || !challengeRes.data) throw new Error(challengeRes.error?.message || "challenge_not_found");
   const challenge = challengeRes.data as IdentityPresenceChallengeRow;
+  if (challenge.status !== "issued") throw new Error("presence_challenge_not_reusable");
   if (Date.parse(challenge.expires_at) <= Date.now()) throw new Error("presence_challenge_expired");
   const buffer = Buffer.from(await input.file.arrayBuffer());
   const hash = syntheticCaptureHash(input.file.name, sha256(buffer));
@@ -372,7 +380,7 @@ export async function uploadCameraEvidence(
     sizeBytes: input.file.size,
   });
   const now = new Date().toISOString();
-  await client.from("identity_presence_challenges").update({
+  const challengeUpdate = await client.from("identity_presence_challenges").update({
     status: liveness.result === "passed" ? "passed" : "failed",
     storage_path: path,
     liveness_status: liveness.result,
@@ -382,7 +390,9 @@ export async function uploadCameraEvidence(
     updated_at: now,
     metadata: { ...challenge.metadata, capture_hash: hash, liveness_reason_codes: liveness.reasonCodes },
   }).eq("id", input.challengeId);
-  await client.from("identity_verification_requests").update({ status: "camera_captured", updated_at: now }).eq("id", input.requestId);
+  assertMutationSucceeded(challengeUpdate, "identity_challenge_update_failed");
+  const requestUpdate = await client.from("identity_verification_requests").update({ status: "camera_captured", updated_at: now }).eq("id", input.requestId);
+  assertMutationSucceeded(requestUpdate, "identity_request_update_failed");
   await recordIdentityEvent(client, input.requestId, input.userId, "camera_captured", "user", { challenge_id: input.challengeId });
   await recordIdentityEvent(client, input.requestId, input.userId, liveness.result === "passed" ? "liveness_passed" : "liveness_failed", "provider", {
     confidence: liveness.confidence,
@@ -397,14 +407,17 @@ export async function generateSyntheticCameraEvidence(client: AnySupabaseClient,
   const challengeRes = await client.from("identity_presence_challenges").select("*").eq("id", input.challengeId).eq("request_id", input.requestId).eq("user_id", input.userId).single();
   if (challengeRes.error || !challengeRes.data) throw new Error(challengeRes.error?.message || "challenge_not_found");
   const challenge = challengeRes.data as IdentityPresenceChallengeRow;
+  if (challenge.status !== "issued") throw new Error("presence_challenge_not_reusable");
   if (Date.parse(challenge.expires_at) <= Date.now()) throw new Error("presence_challenge_expired");
   const scenario = validateSimulatorScenario(request.metadata?.simulator_scenario) ?? "success";
   const captureHash = syntheticCaptureHash(`live-camera-${scenario}.png`, sha256(`synthetic-camera:${input.requestId}:${input.challengeId}:${scenario}`));
   const provider = getIdentityVerificationProvider();
   const liveness = await provider.evaluateLiveness({ challenge, captureHash, mimeType: "image/png", sizeBytes: 256 });
   const now = new Date().toISOString();
-  await client.from("identity_presence_challenges").update({ status: liveness.result === "passed" ? "passed" : "failed", storage_bucket: "synthetic", storage_path: null, liveness_status: liveness.result, liveness_confidence: liveness.confidence, captured_at: now, retention_until: now, updated_at: now, metadata: { ...challenge.metadata, capture_hash: captureHash, synthetic: true, liveness_reason_codes: liveness.reasonCodes } }).eq("id", input.challengeId);
-  await client.from("identity_verification_requests").update({ status: "camera_captured", updated_at: now }).eq("id", input.requestId);
+  const challengeUpdate = await client.from("identity_presence_challenges").update({ status: liveness.result === "passed" ? "passed" : "failed", storage_bucket: "synthetic", storage_path: null, liveness_status: liveness.result, liveness_confidence: liveness.confidence, captured_at: now, retention_until: now, updated_at: now, metadata: { ...challenge.metadata, capture_hash: captureHash, synthetic: true, liveness_reason_codes: liveness.reasonCodes } }).eq("id", input.challengeId);
+  assertMutationSucceeded(challengeUpdate, "identity_challenge_update_failed");
+  const requestUpdate = await client.from("identity_verification_requests").update({ status: "camera_captured", updated_at: now }).eq("id", input.requestId);
+  assertMutationSucceeded(requestUpdate, "identity_request_update_failed");
   await recordIdentityEvent(client, input.requestId, input.userId, "camera_captured", "user", { challenge_id: input.challengeId, synthetic: true });
   await recordIdentityEvent(client, input.requestId, input.userId, liveness.result === "passed" ? "liveness_passed" : "liveness_failed", "provider", { synthetic: true, confidence: liveness.confidence, reason_codes: liveness.reasonCodes });
   return { captureHash, liveness };
@@ -443,9 +456,11 @@ export async function cleanupExpiredIdentityEvidence(client: AnySupabaseClient, 
     ...((challenges.data ?? []) as Array<{ storage_path?: string | null }>).map((row) => row.storage_path),
   ].filter(Boolean) as string[];
   if (paths.length) {
-    await client.storage.from(IDENTITY_EVIDENCE_BUCKET).remove(paths);
+    const removeResult = await client.storage.from(IDENTITY_EVIDENCE_BUCKET).remove(paths);
+    if (removeResult.error) throw new Error(removeResult.error.message || "identity_evidence_cleanup_failed");
   }
-  await client.from("identity_verification_documents").update({ extraction_status: "deleted", updated_at: new Date().toISOString() }).eq("request_id", requestId).eq("user_id", userId);
+  const documentUpdate = await client.from("identity_verification_documents").update({ extraction_status: "deleted", updated_at: new Date().toISOString() }).eq("request_id", requestId).eq("user_id", userId);
+  assertMutationSucceeded(documentUpdate, "identity_evidence_metadata_cleanup_failed");
   await recordIdentityEvent(client, requestId, userId, "evidence_deleted", "system", {
     deleted_object_count: paths.length,
     decision_metadata_retained: true,
@@ -456,7 +471,7 @@ export async function cleanupExpiredIdentityEvidence(client: AnySupabaseClient, 
 
 async function persistDecision(client: AnySupabaseClient, request: IdentityVerificationRequestRow, decision: Awaited<ReturnType<IdentityVerificationProvider["completeVerification"]>>) {
   const now = new Date().toISOString();
-  await client.from("identity_verification_decisions").insert({
+  const decisionInsert = await client.from("identity_verification_decisions").insert({
     request_id: request.id,
     user_id: request.user_id,
     provider_key: decision.providerKey,
@@ -474,7 +489,8 @@ async function persistDecision(client: AnySupabaseClient, request: IdentityVerif
     retention_summary: decision.retentionSummary,
     decided_at: decision.completedAt,
   });
-  await client.from("identity_verification_requests").update({
+  assertMutationSucceeded(decisionInsert, "identity_decision_persist_failed");
+  const requestUpdate = await client.from("identity_verification_requests").update({
     status: decision.decision === "verified" ? "verified" : decision.decision,
     achieved_identity_level: decision.identityLevel,
     manual_review_required: decision.requiresManualReview,
@@ -482,6 +498,7 @@ async function persistDecision(client: AnySupabaseClient, request: IdentityVerif
     expires_at: decision.expiresAt,
     updated_at: now,
   }).eq("id", request.id);
+  assertMutationSucceeded(requestUpdate, "identity_request_update_failed");
 
   await recordIdentityEvent(client, request.id, request.user_id, eventForDecision(decision.decision), "provider", {
     provider_key: decision.providerKey,
@@ -526,7 +543,7 @@ async function upsertIdentityAssurance(client: AnySupabaseClient, request: Ident
     throw new Error("level_2_required_for_step_up");
   }
   const isPresenceStepUp = decision.identityLevel === 3;
-  await client.from("identity_assurance_states").upsert({
+  const assuranceUpsert = await client.from("identity_assurance_states").upsert({
     user_id: request.user_id,
     identity_level: isPresenceStepUp ? Math.max(existingLevel, 2) : decision.identityLevel,
     provider_key: isPresenceStepUp ? (existing?.provider_key ?? decision.providerKey) : decision.providerKey,
@@ -551,6 +568,7 @@ async function upsertIdentityAssurance(client: AnySupabaseClient, request: Ident
     },
     updated_at: now,
   }, { onConflict: "user_id" });
+  assertMutationSucceeded(assuranceUpsert, "identity_assurance_persist_failed");
   await recordIdentityEvent(client, request.id, request.user_id, decision.identityLevel === 3 ? "presence_reverified" : "identity_level_changed", "system", {
     identity_level: decision.identityLevel,
     expires_at: decision.expiresAt,
@@ -564,15 +582,17 @@ async function activateEligibleLinkedAccess(client: AnySupabaseClient, userId: s
     .eq("linked_user_id", userId)
     .in("activation_status", ["accepted", "pending_verification", "identity_required", "verification_submitted"]);
   if (accessGrantId) query = query.eq("id", accessGrantId);
-  await query;
+  const grantUpdate = await query;
+  assertMutationSucceeded(grantUpdate, "linked_access_activation_failed");
   if (accessGrantId) {
     const grant = await client.from("account_access_grants").select("invitation_id").eq("id", accessGrantId).maybeSingle();
     if (grant.data?.invitation_id) {
-      await client
+      const roleUpdate = await client
         .from("role_assignments")
         .update({ activation_status: "verified", updated_at: new Date().toISOString() })
         .eq("invitation_id", grant.data.invitation_id)
         .in("activation_status", ["accepted", "pending_verification", "identity_required", "verification_submitted"]);
+      assertMutationSucceeded(roleUpdate, "role_assignment_activation_failed");
     }
   }
 }
@@ -584,7 +604,8 @@ async function markLinkedAccessIdentityRequired(client: AnySupabaseClient, userI
     .eq("linked_user_id", userId)
     .in("activation_status", ["accepted", "pending_verification", "verification_submitted"]);
   if (accessGrantId) query = query.eq("id", accessGrantId);
-  await query;
+  const grantUpdate = await query;
+  assertMutationSucceeded(grantUpdate, "linked_access_requirement_update_failed");
 }
 
 async function latestDocument(client: AnySupabaseClient, requestId: string, userId: string) {
@@ -635,6 +656,10 @@ export async function recordIdentityEvent(
 function sanitizeIdentityMetadata(metadata: Record<string, unknown>) {
   const blocked = new Set(["token", "jwt", "password", "signedUrl", "document_number", "raw_image", "face_template"]);
   return Object.fromEntries(Object.entries(metadata).filter(([key]) => !blocked.has(key)));
+}
+
+function assertMutationSucceeded(result: { error?: { message?: string } | null }, fallback: string) {
+  if (result.error) throw new Error(result.error.message || fallback);
 }
 
 function assertTransition(status: IdentityVerificationStatus, allowed: IdentityVerificationStatus[]) {

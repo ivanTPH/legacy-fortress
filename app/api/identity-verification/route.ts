@@ -28,6 +28,7 @@ export async function POST(request: Request) {
       invitationId?: string | null;
       accessGrantId?: string | null;
       simulatorScenario?: string | null;
+      consentAcknowledged?: boolean;
     };
     const purpose = String(body.purpose ?? "linked_access");
     if (!PURPOSES.has(purpose)) {
@@ -48,6 +49,7 @@ export async function POST(request: Request) {
       invitationId: body.invitationId ?? null,
       accessGrantId: body.accessGrantId ?? null,
       simulatorScenario,
+      consentAcknowledged: body.consentAcknowledged === true,
     });
     return NextResponse.json({
       ok: true,
