@@ -1,0 +1,50 @@
+name: Legacy Fortress staging release
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Exact commit SHA to deploy and accept
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: legacy-fortress-staging
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: legacy-fortress-staging
+    steps:
+      - name: Check out requested commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.expected_sha }}
+          fetch-depth: 1
+
+      - name: Confirm checked-out commit
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Deploy, verify and run hosted IDV acceptance
+        env:
+          COOLIFY_BASE_URL: ${{ secrets.COOLIFY_BASE_URL }}
+          COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+          BASE_URL: https://test.mylegacyfortress.com
+          NEXT_PUBLIC_SUPABASE_URL: https://supabase-test.mylegacyfortress.com
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+          LEGACY_FORTRESS_ALLOW_STAGING_ACCEPTANCE: "true"
+          APP_ENV: staging
+          LEGACY_FORTRESS_ENV: staging
+          EXPECTED_STAGING_SHA: ${{ inputs.expected_sha }}
+          STAGING_DEPLOY_APPROVED: "true"
+        run: npm run staging:ops -- release
