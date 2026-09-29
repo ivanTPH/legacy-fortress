@@ -32,3 +32,9 @@ test("workflow verifies the requested SHA before deployment", () => {
   assert.match(workflow, /expected_sha/);
   assert.match(source, /staging_sha_not_live/);
 });
+
+test("release skips Coolify mutation when the exact staging SHA is already live", () => {
+  assert.match(source, /async function ensureDeployment\(expectedSha\)/);
+  assert.match(source, /if \(current\.commitSha === expectedSha\)/);
+  assert.match(source, /if \(command === "release"\) await ensureDeployment\(expectedSha\)/);
+});

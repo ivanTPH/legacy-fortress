@@ -109,6 +109,20 @@ async function waitForSha(expectedSha) {
   throw new Error(`staging_sha_not_live:${last?.commitSha ?? last?.error ?? "unknown"}`);
 }
 
+async function ensureDeployment(expectedSha) {
+  try {
+    const current = await liveVersion();
+    if (current.commitSha === expectedSha) {
+      reportVersion(current);
+      return;
+    }
+  } catch {
+    // A deployment may still be starting; the guarded Coolify request below is the recovery path.
+  }
+  await deploy(expectedSha);
+  await waitForSha(expectedSha);
+}
+
 function runAcceptance(expectedSha) {
   assertStagingEnvironment();
   assertExact("EXPECTED_STAGING_SHA", required("EXPECTED_STAGING_SHA"), expectedSha);
@@ -128,9 +142,10 @@ async function main() {
   if (!["status", "deploy", "verify", "acceptance", "release"].includes(command)) throw new Error("unsupported_staging_operation");
   const expectedSha = required("EXPECTED_STAGING_SHA");
   if (command === "status") return status();
-  if (command === "deploy" || command === "release") await deploy(expectedSha);
+  if (command === "deploy") await deploy(expectedSha);
   if (command === "deploy") return;
-  if (command === "verify" || command === "release") await waitForSha(expectedSha);
+  if (command === "release") await ensureDeployment(expectedSha);
+  if (command === "verify") await waitForSha(expectedSha);
   if (command === "acceptance" || command === "release") return runAcceptance(expectedSha);
 }
 

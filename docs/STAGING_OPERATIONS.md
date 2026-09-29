@@ -11,7 +11,7 @@ This is the supported path for deploying and accepting the Legacy Fortress stagi
 
 `.github/workflows/staging-release.yml` is a manually dispatched GitHub Actions workflow protected by the `legacy-fortress-staging` environment. It checks out the requested commit, installs dependencies, requests deployment through the Coolify API, waits for the public staging `/api/version` endpoint to report the exact SHA, and then runs `npm run staging:acceptance:idv`.
 
-The repository script `scripts/staging/operations.mjs` is the single allowlisted entry point. It refuses other application UUIDs, branches, origins, production-looking control-plane URLs, non-staging environment markers, and SHA mismatches. Deployment additionally requires the workflow approval gate `STAGING_DEPLOY_APPROVED=true`.
+The repository script `scripts/staging/operations.mjs` is the single allowlisted entry point. It refuses other application UUIDs, branches, origins, production-looking control-plane URLs, non-staging environment markers, and SHA mismatches. A release first checks whether the exact SHA is already live and avoids a redundant Coolify mutation; it uses the guarded Coolify API only when deployment is needed. Deployment additionally requires the workflow approval gate `STAGING_DEPLOY_APPROVED=true`.
 
 The Coolify API token is used only in memory for the fixed staging application. Acceptance credentials are supplied as protected GitHub environment secrets and are passed to the harness process; they are never written to the repository or printed. The service-role key is not fetched from Coolify by this workflow.
 
