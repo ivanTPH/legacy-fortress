@@ -9,18 +9,18 @@ This is the supported path for deploying and accepting the Legacy Fortress stagi
 
 ## Architecture
 
-`.github/workflows/staging-release.yml` is a manually dispatched GitHub Actions workflow protected by the `legacy-fortress-staging` environment. It checks out the requested commit, installs dependencies, requests deployment through the Coolify API, waits for the public staging `/api/version` endpoint to report the exact SHA, and then runs `npm run staging:acceptance:idv`.
+`.github/workflows/staging-release.yml` is a manually dispatched GitHub Actions workflow protected by the `legacy-fortress-staging` environment. It checks out the requested commit, installs dependencies, triggers the existing resource-scoped Coolify deploy webhook, waits for the public staging `/api/version` endpoint to report the exact SHA, and then runs `npm run staging:acceptance:idv`.
 
 The repository script `scripts/staging/operations.mjs` is the single allowlisted entry point. It refuses other application UUIDs, branches, origins, production-looking control-plane URLs, non-staging environment markers, and SHA mismatches. A release first checks whether the exact SHA is already live and avoids a redundant Coolify mutation; it uses the guarded Coolify API only when deployment is needed. Deployment additionally requires the workflow approval gate `STAGING_DEPLOY_APPROVED=true`.
 
-The Coolify API token is used only in memory for the fixed staging application. Acceptance credentials are supplied as protected GitHub environment secrets and are passed to the harness process; they are never written to the repository or printed. The service-role key is not fetched from Coolify by this workflow.
+The Coolify deploy webhook URL and deploy-only token are used only in memory. The webhook must contain the fixed staging application UUID. Acceptance credentials are supplied as protected GitHub environment secrets and are passed to the harness process; they are never written to the repository or printed. The service-role key is not fetched from Coolify by this workflow.
 
 ## Required protected secrets
 
 Configure these in the GitHub `legacy-fortress-staging` environment, not as repository files:
 
-- `COOLIFY_BASE_URL`
-- `COOLIFY_API_TOKEN`, scoped to the staging application if the Coolify installation supports application-level tokens
+- `COOLIFY_DEPLOY_WEBHOOK`, copied from the staging application's **Configuration → Webhooks → Deploy Webhook (auth required)**
+- `COOLIFY_DEPLOY_TOKEN`, a Coolify token with only the `deploy` permission
 - `STAGING_SUPABASE_ANON_KEY`
 - `STAGING_SUPABASE_SERVICE_ROLE_KEY`
 
@@ -50,11 +50,11 @@ For verification without deployment:
 EXPECTED_STAGING_SHA=<commit> npm run staging:ops -- verify
 ```
 
-The workflow is preferred because it keeps acceptance secrets in GitHub's protected environment. Local operators should not copy those secrets into a developer terminal.
+The workflow is preferred because it keeps deployment and acceptance secrets in GitHub's protected environment. Local operators should not copy those secrets into a developer terminal. The old `COOLIFY_BASE_URL` and `COOLIFY_API_TOKEN` secrets are no longer used by this workflow.
 
 ## Failure and rollback
 
-The workflow fails closed when Coolify identity, branch, staging origin, environment markers, or live SHA do not match. It never restarts Docker, prunes resources, touches Supabase services, or deploys production.
+The workflow fails closed when the webhook is not HTTPS, does not contain the fixed staging application UUID, or when staging origin, environment markers, or live SHA do not match. It never exposes the Coolify control plane, restarts Docker, prunes resources, touches Supabase services, or deploys production.
 
 If the new staging build is unhealthy, stop acceptance. Use the Coolify staging application's existing deployment history to roll back only that application to the last known-good staging commit, then run the workflow again with that exact rollback SHA. Do not delete images/volumes or use host-wide recovery commands.
 

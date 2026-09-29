@@ -15,9 +15,9 @@ test("staging operations are allowlisted to the Legacy Fortress staging targets"
 
 test("deployment requires explicit approval and exact Coolify identity/branch", () => {
   assert.match(source, /STAGING_DEPLOY_APPROVED.*true/);
-  assert.match(source, /coolify_application_uuid/);
-  assert.match(source, /coolify_application_branch/);
-  assert.match(source, /coolify.*deploy.*POST/s);
+  assert.match(source, /COOLIFY_DEPLOY_WEBHOOK/);
+  assert.match(source, /coolify_deploy_webhook_application_mismatch/);
+  assert.match(source, /Authorization: `Bearer \$\{process\.env\.COOLIFY_DEPLOY_TOKEN\}`/);
 });
 
 test("workflow keeps acceptance secrets in the protected staging environment", () => {

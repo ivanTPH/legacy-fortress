@@ -10,7 +10,6 @@ const STAGING = Object.freeze({
   supabaseUrl: "https://supabase-test.mylegacyfortress.com",
 });
 
-const COOLIFY_API_PREFIX = "/api/v1";
 const command = process.argv[2] ?? "status";
 
 function required(name) {
@@ -31,23 +30,27 @@ function assertStagingEnvironment() {
   assertExact("LEGACY_FORTRESS_ALLOW_STAGING_ACCEPTANCE", required("LEGACY_FORTRESS_ALLOW_STAGING_ACCEPTANCE"), "true");
 }
 
-function assertCoolifyTarget() {
-  const base = required("COOLIFY_BASE_URL").replace(/\/$/, "");
-  if (!/^https:\/\//i.test(base) || /production|prod|live/i.test(base)) {
-    throw new Error("coolify_target_is_not_an_approved_control_plane");
+function assertDeployWebhook() {
+  const raw = required("COOLIFY_DEPLOY_WEBHOOK");
+  let url;
+  try { url = new URL(raw); } catch { throw new Error("coolify_deploy_webhook_invalid"); }
+  if (url.protocol !== "https:" || /production|prod|live/i.test(url.hostname)) {
+    throw new Error("coolify_deploy_webhook_must_be_secure");
   }
-  required("COOLIFY_API_TOKEN");
-  return base;
+  if (url.searchParams.get("uuid") !== STAGING.appUuid) {
+    throw new Error("coolify_deploy_webhook_application_mismatch");
+  }
+  required("COOLIFY_DEPLOY_TOKEN");
+  return url;
 }
 
-async function coolify(path, options = {}) {
-  const base = assertCoolifyTarget();
-  const response = await fetch(`${base}${COOLIFY_API_PREFIX}${path}`, {
-    ...options,
+async function deployWebhook() {
+  const url = assertDeployWebhook();
+  const response = await fetch(url, {
+    method: "GET",
     headers: {
       Accept: "application/json",
-      Authorization: `Bearer ${process.env.COOLIFY_API_TOKEN}`,
-      ...(options.headers ?? {}),
+      Authorization: `Bearer ${process.env.COOLIFY_DEPLOY_TOKEN}`,
     },
   });
   const text = await response.text();
@@ -70,24 +73,17 @@ function reportVersion(version) {
 }
 
 async function status() {
-  const app = await coolify(`/applications/${STAGING.appUuid}`);
-  assertExact("coolify_application_uuid", app.uuid, STAGING.appUuid);
-  assertExact("coolify_application_branch", app.git_branch, STAGING.branch);
   const version = await liveVersion();
   console.log(JSON.stringify({
     application: STAGING.appUuid,
-    branch: app.git_branch,
-    coolifyStatus: app.status ?? "unknown",
+    branch: STAGING.branch,
     staging: { env: version.env, commitSha: version.commitSha },
   }, null, 2));
 }
 
 async function deploy(expectedSha) {
   if (process.env.STAGING_DEPLOY_APPROVED !== "true") throw new Error("staging_deploy_approval_missing");
-  const app = await coolify(`/applications/${STAGING.appUuid}`);
-  assertExact("coolify_application_uuid", app.uuid, STAGING.appUuid);
-  assertExact("coolify_application_branch", app.git_branch, STAGING.branch);
-  await coolify(`/deploy?uuid=${encodeURIComponent(STAGING.appUuid)}`, { method: "POST" });
+  await deployWebhook();
   console.log(JSON.stringify({ deployment: "requested", application: STAGING.appUuid, expectedSha }, null, 2));
 }
 
