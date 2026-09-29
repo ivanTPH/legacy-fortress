@@ -21,8 +21,16 @@ function redactId(value) {
 }
 
 function safeError(error) {
-  const message = error instanceof Error ? error.message : String(error ?? "error");
-  return message.replace(/https?:\/\/\S+/gi, "[url]").replace(/[\w.+-]+@[\w.-]+/g, "[email]").slice(0, 240);
+  const source = error && typeof error === "object" ? error : { message: String(error ?? "error") };
+  const fields = ["code", "message", "details", "hint"]
+    .map((field) => [field, source[field]])
+    .filter(([, value]) => value != null && String(value).trim() !== "");
+  const text = fields.length ? fields.map(([field, value]) => `${field}=${String(value)}`).join("; ") : "database_error";
+  return text
+    .replace(/https?:\/\/\S+/gi, "[url]")
+    .replace(/[\w.+-]+@[\w.-]+/g, "[email]")
+    .replace(/(token|secret|password|api[_-]?key|authorization)\s*[=:]\s*[^;\s]+/gi, "$1=[redacted]")
+    .slice(0, 600);
 }
 
 function assertStagingUrl(name, value, expected) {
@@ -154,7 +162,7 @@ async function main() {
     email: recipient.email,
     email_normalized: recipient.email,
     contact_role: "executor",
-    invite_status: "invited",
+    invite_status: "invite_sent",
     verification_status: "not_verified",
     source_type: "invitation",
     linked_context: [],
@@ -177,7 +185,6 @@ async function main() {
     last_sent_at: now,
     expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
     permissions_override: { allowed_sections: ["property"], asset_ids: [] },
-    synthetic_run_marker: run,
     updated_at: now,
   }).select("id").single(), "invitation");
   created.invitations.push(invitation.id);

@@ -39,6 +39,14 @@ test("IDV runner drives the application boundary and does not seed terminal stat
   assert.match(runner, /callbackReplay/);
 });
 
+test("contact fixture matches the canonical contact status schema and exposes safe DB diagnostics", () => {
+  assert.match(runner, /invite_status: "invite_sent"/);
+  assert.doesNotMatch(runner, /invite_status: "invited"/);
+  assert.match(runner, /\["code", "message", "details", "hint"\]/);
+  assert.match(runner, /database_error/);
+  assert.doesNotMatch(runner, /const message = error instanceof Error/);
+});
+
 test("cleanup checks mutable deletes and retains audit history", () => {
   assert.match(runner, /if \(result\.error\) failures\.push/);
   assert.match(runner, /audit_history: "retained"/);
