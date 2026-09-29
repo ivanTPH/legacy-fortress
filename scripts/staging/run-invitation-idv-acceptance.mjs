@@ -269,6 +269,12 @@ try {
     console.error(JSON.stringify({ cleanup: "FAILED", failures }));
     process.exitCode = 1;
   } else if (admin) {
-    console.error(JSON.stringify({ cleanup: "mutable_synthetic_fixtures_removed", audit_history: "retained" }));
+    console.error(JSON.stringify({
+      cleanup: "synthetic_fixture_cleanup_complete",
+      evidence: "cleaned",
+      grants_and_invitations: "revoked",
+      auth_users_and_contact_rows: "retained_for_audit_integrity",
+      audit_history: "retained",
+    }));
   }
 }

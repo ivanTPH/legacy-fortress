@@ -53,4 +53,5 @@ test("cleanup checks mutable deletes and retains audit history", () => {
   assert.match(runner, /activation_status: "revoked"/);
   assert.match(runner, /identity-verification\/\$\{requestId\}\/cleanup/);
   assert.doesNotMatch(runner, /identity_verification_requests"\)\.delete/);
+  assert.match(runner, /auth_users_and_contact_rows: "retained_for_audit_integrity"/);
 });
