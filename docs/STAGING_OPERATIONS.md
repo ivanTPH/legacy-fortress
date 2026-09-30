@@ -64,6 +64,12 @@ The token is read only from the process environment and is never printed or stor
 
 The dispatcher passes the exact SHA to the existing `workflow_dispatch`, waits for the matching run, and reports only run metadata and failed step names. The workflow still owns protected-environment approval, Coolify deployment, exact `/api/version` verification, hosted acceptance, and cleanup.
 
+## Release warnings
+
+`npm audit` currently reports five dependency findings: one moderate transitive `@humanfs/node`, three high findings involving `brace-expansion`, `js-yaml`, and `sharp`, and one critical direct `next` finding. These are not changed by the staging dispatcher; do not run an unreviewed `npm audit fix`. The Next.js and image-processing upgrades require a separate compatibility review and release validation.
+
+GitHub also reports the existing `actions/checkout@v4` Node 20 deprecation warning. It is retained in this bounded change because changing action runtime versions is independent of dispatch authorization and should be upgraded in a dedicated workflow-maintenance change.
+
 ## Failure and rollback
 
 The workflow fails closed when the webhook is not HTTPS, does not contain the fixed staging application UUID, or when staging origin, environment markers, or live SHA do not match. It never exposes the Coolify control plane, restarts Docker, prunes resources, touches Supabase services, or deploys production.
