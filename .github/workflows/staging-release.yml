@@ -20,6 +20,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: legacy-fortress-staging
     steps:
+      - name: Confirm staging branch
+        run: test "${GITHUB_REF_NAME}" = "hosted-uat-preparation-20260715"
+
       - name: Check out requested commit
         uses: actions/checkout@v4
         with:
@@ -29,7 +32,11 @@ jobs:
       - name: Confirm checked-out commit
         env:
           EXPECTED_SHA: ${{ inputs.expected_sha }}
-        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          EXPECTED_BRANCH: hosted-uat-preparation-20260715
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          git fetch --no-tags origin "refs/heads/${EXPECTED_BRANCH}:refs/remotes/origin/${EXPECTED_BRANCH}"
+          test "$(git rev-parse "refs/remotes/origin/${EXPECTED_BRANCH}")" = "$EXPECTED_SHA"
 
       - name: Install dependencies
         run: npm ci

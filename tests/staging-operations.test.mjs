@@ -28,7 +28,10 @@ test("workflow keeps acceptance secrets in the protected staging environment", (
 });
 
 test("workflow verifies the requested SHA before deployment", () => {
+  assert.match(workflow, /GITHUB_REF_NAME.*hosted-uat-preparation-20260715/);
   assert.match(workflow, /git rev-parse HEAD/);
+  assert.match(workflow, /git fetch --no-tags origin/);
+  assert.match(workflow, /refs\/remotes\/origin\/\$\{EXPECTED_BRANCH\}/);
   assert.match(workflow, /expected_sha/);
   assert.match(source, /staging_sha_not_live/);
 });

@@ -52,6 +52,18 @@ EXPECTED_STAGING_SHA=<commit> npm run staging:ops -- verify
 
 The workflow is preferred because it keeps deployment and acceptance secrets in GitHub's protected environment. Local operators should not copy those secrets into a developer terminal. The old `COOLIFY_BASE_URL` and `COOLIFY_API_TOKEN` secrets are no longer used by this workflow.
 
+## Automated local dispatch
+
+After committing and pushing the exact staging-branch HEAD, an authorized development environment can dispatch and monitor the protected workflow without using the GitHub Actions UI:
+
+```bash
+EXPECTED_STAGING_SHA=<full-40-character-commit> GITHUB_TOKEN=<protected-token> npm run staging:release
+```
+
+The token is read only from the process environment and is never printed or stored by the script. Use a repository-scoped fine-grained GitHub token with `Actions: Read and write` and `Contents: Read` for `ivanTPH/legacy-fortress`; no Coolify, server, production, or repository-write permission is required for dispatch. Store it in the developer machine's protected credential store or CI secret manager, not in `.env` or the repository. `--validate` runs the local branch/HEAD/origin checks without making a GitHub request.
+
+The dispatcher passes the exact SHA to the existing `workflow_dispatch`, waits for the matching run, and reports only run metadata and failed step names. The workflow still owns protected-environment approval, Coolify deployment, exact `/api/version` verification, hosted acceptance, and cleanup.
+
 ## Failure and rollback
 
 The workflow fails closed when the webhook is not HTTPS, does not contain the fixed staging application UUID, or when staging origin, environment markers, or live SHA do not match. It never exposes the Coolify control plane, restarts Docker, prunes resources, touches Supabase services, or deploys production.
