@@ -56,3 +56,21 @@ Canonical organisation-scoped enterprise role source: `enterprise_memberships.or
 - Organisation-scoped roles are limited to their `enterprise_memberships.organisation_id` set.
 - Hidden UI controls are never the authority; server APIs remain authoritative.
 - Private vault records, documents, legal contents, financial values and private notes are excluded from admin and enterprise operational payloads.
+
+## Contextual Resource Matrix
+
+This matrix describes the authoritative outcome for the principal product contexts. `Denied` means the action must be rejected by the server even when a UI control is hidden. `Conditional` requires the listed grant, assurance, estate, organisation, or quorum gate.
+
+| Context / action | Platform/System Admin | Enterprise Organisation Admin | Enterprise authorised user/professional | Personal Vault owner | Trusted contact/delegate | Executor/probate participant | Invited/unaccepted user |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| View platform administration | Allowed by platform capability | Denied | Denied | Denied | Denied | Denied | Denied |
+| View organisation resources | Allowed by `organisation:view` and scope | Conditional: own organisation | Conditional: assigned organisation scope | Denied | Denied | Denied unless separately assigned | Denied |
+| Create/edit own vault records | Denied through admin APIs | Denied through enterprise APIs | Denied unless a separate delegated grant exists | Allowed | Conditional: explicit write grant | Denied for historic estate originals | Denied |
+| Invite a contact/member | Platform capability for platform resources; enterprise scope for enterprise invites | Allowed within own organisation | Denied unless delegated | Allowed for own vault | Denied | Conditional: governed estate workflow | Denied |
+| Revoke invitation/access | Platform capability and target scope | Own organisation invitations/memberships | Denied unless delegated | Own invitations/grants | Conditional: server grant and context | Conditional: estate authority and audit | Denied |
+| Approve sensitive estate action | Conditional: explicit estate capability, presence and quorum policy | Denied | Denied | Denied | Denied unless estate participant | Conditional: distinct eligible approver, identity and quorum | Denied |
+| Access sensitive vault information | Denied by default for platform admin views | Denied by enterprise payload boundary | Conditional: organisation policy and assigned resource | Allowed for own vault | Conditional: active bound grant and assurance | Conditional: active estate grant, authority, estate state and assurance | Denied |
+| Administer users/licences | Platform capability | Own organisation scope | Denied | Denied | Denied | Denied unless separately granted | Denied |
+| Grant access directly | Never from UI alone; server policy/RPC required | Organisation membership only | Denied | Nominate/request only; activation is server-side | Denied | Conditional governed workflow | Denied |
+
+Authoritative enforcement is layered: session/authentication, server capability or organisation scope, relationship/access grant, identity assurance, estate/death-state policy, quorum where applicable, and database/RLS/RPC controls. No row in this matrix authorises raw document, biometric, token, password, or service-role access.

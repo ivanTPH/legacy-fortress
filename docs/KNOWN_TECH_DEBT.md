@@ -58,6 +58,12 @@ Impact:
 - architecture remains mixed between canonical and legacy systems
 - future features risk being implemented twice
 
+Pass 2 disposition:
+- Personal next-of-kin, employment, cars/transport and wishes keep `SectionWorkspace` temporarily because those routes still depend on its data and upload behaviour.
+- Support also keeps its compatibility path temporarily.
+- New people/contact features must use `contacts`, `contact_links`, and `contact_invitations`.
+- Migration to canonical `records`/`assets`/`documents` requires a per-section data backfill, route parity, and rollback plan; no destructive conversion is approved in this pass.
+
 ## Medium priority
 
 ### Missing synthetic populated-account coverage
@@ -79,6 +85,12 @@ Impact:
 Impact:
 - preview is shared for supported formats, but unsupported office-style files still require download
 
+### Administration shell consolidation
+
+The canonical target is `/admin` for Platform/System Administration, `/enterprise` for organisation-scoped Enterprise Operations, and `/dashboard` for Personal Vault. `/internal/admin/prototype/*` remains explicitly prototype/static and is not a second authorization system. Existing prototype routes are retained only while their references and replacement coverage are completed.
+
+The platform probate navigation capability binding was corrected in Pass 2 to use the canonical `admin.probate.summary.read` capability. This was a navigation defect only; server authorization was already capability-based.
+
 ## Canonical contact design target identified, not yet implemented
 - `id`
 - `full_name`
@@ -93,7 +105,7 @@ Impact:
 
 ## Current verdict
 - NOT FIXED
-- architecture is mapped and one proven IDV schema-drift defect is corrected, but contacts, compatibility persistence, prototype admin surfaces and hosted Phase 3 proof remain incomplete
+- architecture is mapped, IDV schema drift is corrected, and the platform probate navigation binding is aligned; contacts, compatibility persistence, prototype retirement and hosted Phase 3 proof remain incomplete
 
 ## Rules for future prompts
 - Prioritise contact unification before adding more contact-adjacent features.
