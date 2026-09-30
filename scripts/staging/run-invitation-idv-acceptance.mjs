@@ -203,6 +203,29 @@ async function main() {
   const wrongUser = await expectedDenied(config, attackerSession.token, "/api/identity-verification", { purpose: "linked_access", requestedIdentityLevel: 2, invitationId: invitation.id, accessGrantId: grantId, consentAcknowledged: true }, "cross_user_context");
   const wrongContext = await expectedDenied(config, recipientSession.token, "/api/identity-verification", { purpose: "linked_access", requestedIdentityLevel: 2, invitationId: invitation.id, accessGrantId: crypto.randomUUID(), consentAcknowledged: true }, "wrong_invitation_context");
 
+  const failedStart = await hostedJson(config, recipientSession.token, "/api/identity-verification", { purpose: "linked_access", requestedIdentityLevel: 2, invitationId: invitation.id, accessGrantId: grantId, simulatorScenario: "document-failed", consentAcknowledged: true }, 201);
+  const failedRequestId = failedStart.payload.verification?.id;
+  if (!failedRequestId) throw new Error("failed_verification_request_id_missing");
+  created.requests.push(failedRequestId);
+  await hostedJson(config, recipientSession.token, `/api/identity-verification/${failedRequestId}/document`, { synthetic: true, documentType: "passport" }, 200);
+  const failedComplete = await hostedJson(config, recipientSession.token, `/api/identity-verification/${failedRequestId}/complete`, {}, 200);
+  assert.equal(failedComplete.payload.decision?.status, "review_required");
+  const failedRequest = await readSingle(admin, "identity_verification_requests", "id,status,manual_review_required,achieved_identity_level", "id", failedRequestId);
+  assert.equal(failedRequest.status, "review_required");
+  assert.equal(failedRequest.manual_review_required, true);
+  assert.equal(failedRequest.achieved_identity_level, null);
+  const grantAfterReview = await readSingle(admin, "account_access_grants", "activation_status", "id", grantId);
+  assert.equal(grantAfterReview.activation_status, "pending_verification");
+  const assuranceAfterReview = await readSingle(admin, "identity_assurance_states", "user_id,identity_level", "user_id", recipient.id);
+  assert.ok(!assuranceAfterReview || Number(assuranceAfterReview.identity_level) < 2);
+  const reviewDecision = await readSingle(admin, "identity_verification_decisions", "request_id,decision,achieved_identity_level,requires_manual_review", "request_id", failedRequestId);
+  assert.equal(reviewDecision.decision, "review_required");
+  assert.equal(reviewDecision.achieved_identity_level, null);
+  assert.equal(reviewDecision.requires_manual_review, true);
+  const reviewEvents = await admin.from("identity_verification_events").select("event_type").eq("request_id", failedRequestId);
+  if (reviewEvents.error) throw reviewEvents.error;
+  assert.ok((reviewEvents.data ?? []).some((event) => event.event_type === "review_required"));
+
   const started = await hostedJson(config, recipientSession.token, "/api/identity-verification", { purpose: "linked_access", requestedIdentityLevel: 2, invitationId: invitation.id, accessGrantId: grantId, simulatorScenario: "success", consentAcknowledged: true }, 201);
   const requestId = started.payload.verification?.id;
   if (!requestId) throw new Error("verification_request_id_missing");
@@ -235,16 +258,6 @@ async function main() {
   if (events.error) throw events.error;
   assert.ok((events.data ?? []).length > 0);
 
-  const failedStart = await hostedJson(config, recipientSession.token, "/api/identity-verification", { purpose: "linked_access", requestedIdentityLevel: 2, invitationId: invitation.id, accessGrantId: grantId, simulatorScenario: "document-failed", consentAcknowledged: true }, 201);
-  const failedRequestId = failedStart.payload.verification?.id;
-  if (!failedRequestId) throw new Error("failed_verification_request_id_missing");
-  created.requests.push(failedRequestId);
-  await hostedJson(config, recipientSession.token, `/api/identity-verification/${failedRequestId}/document`, { synthetic: true, documentType: "passport" }, 200);
-  const failedComplete = await hostedJson(config, recipientSession.token, `/api/identity-verification/${failedRequestId}/complete`, {}, 200);
-  assert.equal(failedComplete.payload.decision?.status, "failed");
-  const grantAfterFailure = await readSingle(admin, "account_access_grants", "activation_status", "id", grantId);
-  assert.ok(["verified", "active"].includes(grantAfterFailure.activation_status));
-
   const staleUpdate = await admin.from("identity_assurance_states").update({ expires_at: new Date(Date.now() - 1000).toISOString() }).eq("user_id", recipient.id);
   if (staleUpdate.error) throw staleUpdate.error;
   const stalePresence = await expectedDenied(config, recipientSession.token, "/api/identity-verification/step-up", { action: "security_control_change", consentAcknowledged: true }, "stale_level_3_presence");
@@ -254,7 +267,7 @@ async function main() {
     sha: config.version.commitSha,
     environment: config.version.env,
     successfulJourney: { invitation: "accepted", consent: "recorded", document: "synthetic_provider", challenge: "consumed_once", decision: "verified", grant: finalGrant.activation_status, assurance: assurance.identity_level },
-    negative: { missingConsent, premature, wrongUser, wrongContext, wrongRequestOwner, replay, failedVerification: "denied_without_grant_demotion", stalePresence, callbackReplay: "not_applicable_internal_provider_has_no_callback_event" },
+    negative: { missingConsent, premature, wrongUser, wrongContext, wrongRequestOwner, replay, failedVerification: "review_required_without_grant_activation", stalePresence, callbackReplay: "not_applicable_internal_provider_has_no_callback_event" },
     redactedIds: { owner: redactId(owner.id), recipient: redactId(recipient.id), invitation: redactId(invitation.id), request: redactId(requestId), grant: redactId(grantId) },
   }));
 }
