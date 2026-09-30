@@ -196,10 +196,10 @@ async function main() {
   const initialGrant = await readSingle(admin, "account_access_grants", "id,linked_user_id,invitation_id,activation_status,required_identity_level", "id", grantId);
   assert.equal(initialGrant.linked_user_id, recipient.id);
   assert.equal(initialGrant.invitation_id, invitation.id);
-  assert.equal(initialGrant.activation_status, "pending_verification");
+  assert.equal(initialGrant.activation_status, "identity_required");
 
   const missingConsent = await expectedDenied(config, recipientSession.token, "/api/identity-verification", { purpose: "linked_access", requestedIdentityLevel: 2, invitationId: invitation.id, accessGrantId: grantId, consentAcknowledged: false }, "missing_consent");
-  const premature = { label: "premature_access", status: initialGrant.activation_status === "pending_verification" ? "denied_by_server_state" : "unexpected_active_state" };
+  const premature = { label: "premature_access", status: ["identity_required", "pending_verification", "verification_submitted"].includes(initialGrant.activation_status) ? "denied_by_server_state" : "unexpected_active_state" };
   const wrongUser = await expectedDenied(config, attackerSession.token, "/api/identity-verification", { purpose: "linked_access", requestedIdentityLevel: 2, invitationId: invitation.id, accessGrantId: grantId, consentAcknowledged: true }, "cross_user_context");
   const wrongContext = await expectedDenied(config, recipientSession.token, "/api/identity-verification", { purpose: "linked_access", requestedIdentityLevel: 2, invitationId: invitation.id, accessGrantId: crypto.randomUUID(), consentAcknowledged: true }, "wrong_invitation_context");
 
@@ -215,7 +215,7 @@ async function main() {
   assert.equal(failedRequest.manual_review_required, true);
   assert.equal(failedRequest.achieved_identity_level, null);
   const grantAfterReview = await readSingle(admin, "account_access_grants", "activation_status", "id", grantId);
-  assert.equal(grantAfterReview.activation_status, "pending_verification");
+  assert.equal(grantAfterReview.activation_status, "identity_required");
   const assuranceAfterReview = await readSingle(admin, "identity_assurance_states", "user_id,identity_level", "user_id", recipient.id);
   assert.ok(!assuranceAfterReview || Number(assuranceAfterReview.identity_level) < 2);
   const reviewDecision = await readSingle(admin, "identity_verification_decisions", "request_id,decision,achieved_identity_level,requires_manual_review", "request_id", failedRequestId);

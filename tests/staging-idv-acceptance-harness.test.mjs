@@ -67,8 +67,13 @@ test("decision persistence assertions use the canonical achieved identity level"
 test("document-failed scenario preserves manual-review semantics and fail-closed access", () => {
   assert.match(runner, /simulatorScenario: "document-failed"/);
   assert.match(runner, /failedComplete\.payload\.decision\?\.status, "review_required"/);
-  assert.match(runner, /grantAfterReview\.activation_status, "pending_verification"/);
+  assert.match(runner, /grantAfterReview\.activation_status, "identity_required"/);
   assert.match(runner, /reviewDecision\.decision, "review_required"/);
   assert.match(runner, /reviewDecision\.requires_manual_review, true/);
   assert.match(runner, /review_required_without_grant_activation/);
+});
+
+test("linked access remains identity-gated before verification starts", () => {
+  assert.match(runner, /initialGrant\.activation_status, "identity_required"/);
+  assert.match(runner, /\["identity_required", "pending_verification", "verification_submitted"\]\.includes\(initialGrant\.activation_status\)/);
 });
