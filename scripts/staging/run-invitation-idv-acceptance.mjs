@@ -228,8 +228,9 @@ async function main() {
   assert.equal(finalInvitation.accepted_user_id, recipient.id);
   const assurance = await readSingle(admin, "identity_assurance_states", "user_id,identity_level,presence_reverified_at", "user_id", recipient.id);
   assert.ok(Number(assurance?.identity_level) >= 2);
-  const decision = await readSingle(admin, "identity_verification_decisions", "request_id,decision,identity_level", "request_id", requestId);
-  assert.equal(decision?.decision, "approved");
+  const decision = await readSingle(admin, "identity_verification_decisions", "request_id,decision,requested_identity_level,achieved_identity_level", "request_id", requestId);
+  assert.equal(decision?.decision, "verified");
+  assert.ok(Number(decision?.achieved_identity_level) >= 2);
   const events = await admin.from("identity_verification_events").select("event_type").eq("request_id", requestId);
   if (events.error) throw events.error;
   assert.ok((events.data ?? []).length > 0);

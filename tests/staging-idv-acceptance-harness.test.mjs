@@ -55,3 +55,11 @@ test("cleanup checks mutable deletes and retains audit history", () => {
   assert.doesNotMatch(runner, /identity_verification_requests"\)\.delete/);
   assert.match(runner, /auth_users_and_contact_rows: "retained_for_audit_integrity"/);
 });
+
+test("decision persistence assertions use the canonical achieved identity level", () => {
+  assert.match(runner, /requested_identity_level,achieved_identity_level/);
+  assert.match(runner, /decision\?\.decision, "verified"/);
+  assert.match(runner, /decision\?\.achieved_identity_level/);
+  assert.doesNotMatch(runner, /identity_verification_decisions", "request_id,decision,identity_level/);
+  assert.doesNotMatch(runner, /decision\?\.decision, "approved"/);
+});
