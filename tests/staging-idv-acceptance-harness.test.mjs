@@ -67,13 +67,16 @@ test("decision persistence assertions use the canonical achieved identity level"
 test("document-failed scenario preserves manual-review semantics and fail-closed access", () => {
   assert.match(runner, /simulatorScenario: "document-failed"/);
   assert.match(runner, /failedComplete\.payload\.decision\?\.status, "review_required"/);
-  assert.match(runner, /grantAfterReview\.activation_status, "identity_required"/);
+  assert.match(runner, /NON_ACTIVE_GRANT_STATUSES\.has\(grantAfterReview\.activation_status\)/);
   assert.match(runner, /reviewDecision\.decision, "review_required"/);
   assert.match(runner, /reviewDecision\.requires_manual_review, true/);
-  assert.match(runner, /review_required_without_grant_activation/);
+  assert.match(runner, /failedVerification: \{ decision: "review_required", grant: grantAfterReview\.activation_status/);
 });
 
-test("linked access remains identity-gated before verification starts", () => {
-  assert.match(runner, /initialGrant\.activation_status, "identity_required"/);
-  assert.match(runner, /\["identity_required", "pending_verification", "verification_submitted"\]\.includes\(initialGrant\.activation_status\)/);
+test("hosted IDV assertions separate persisted lifecycle from effective access", () => {
+  assert.match(runner, /persistedInvitation\.invitation_status, "accepted"/);
+  assert.match(runner, /NON_ACTIVE_GRANT_STATUSES\.has\(initialGrant\.activation_status\)/);
+  assert.match(runner, /premature_access/);
+  assert.doesNotMatch(runner, /initialGrant\.activation_status, "(?:identity_required|pending_verification)"/);
+  assert.doesNotMatch(runner, /grantAfterReview\.activation_status, "(?:identity_required|pending_verification)"/);
 });

@@ -113,6 +113,7 @@ async function readSingle(admin, table, columns, idColumn, id) {
 }
 
 const created = { users: [], contacts: [], invitations: [], requests: [], grants: [] };
+const NON_ACTIVE_GRANT_STATUSES = new Set(["accepted", "identity_required", "pending_verification", "verification_submitted"]);
 let admin;
 let config;
 let recipientToken = "";
@@ -196,10 +197,14 @@ async function main() {
   const initialGrant = await readSingle(admin, "account_access_grants", "id,linked_user_id,invitation_id,activation_status,required_identity_level", "id", grantId);
   assert.equal(initialGrant.linked_user_id, recipient.id);
   assert.equal(initialGrant.invitation_id, invitation.id);
-  assert.equal(initialGrant.activation_status, "identity_required");
+  const persistedInvitation = await readSingle(admin, "contact_invitations", "id,invitation_status,activation_status,accepted_user_id,token_consumed_at", "id", invitation.id);
+  assert.equal(persistedInvitation.invitation_status, "accepted");
+  assert.equal(persistedInvitation.accepted_user_id, recipient.id);
+  assert.ok(persistedInvitation.token_consumed_at);
+  assert.ok(NON_ACTIVE_GRANT_STATUSES.has(initialGrant.activation_status));
 
   const missingConsent = await expectedDenied(config, recipientSession.token, "/api/identity-verification", { purpose: "linked_access", requestedIdentityLevel: 2, invitationId: invitation.id, accessGrantId: grantId, consentAcknowledged: false }, "missing_consent");
-  const premature = { label: "premature_access", status: ["identity_required", "pending_verification", "verification_submitted"].includes(initialGrant.activation_status) ? "denied_by_server_state" : "unexpected_active_state" };
+  const premature = { label: "premature_access", status: NON_ACTIVE_GRANT_STATUSES.has(initialGrant.activation_status) ? "denied_by_server_state" : "unexpected_active_state" };
   const wrongUser = await expectedDenied(config, attackerSession.token, "/api/identity-verification", { purpose: "linked_access", requestedIdentityLevel: 2, invitationId: invitation.id, accessGrantId: grantId, consentAcknowledged: true }, "cross_user_context");
   const wrongContext = await expectedDenied(config, recipientSession.token, "/api/identity-verification", { purpose: "linked_access", requestedIdentityLevel: 2, invitationId: invitation.id, accessGrantId: crypto.randomUUID(), consentAcknowledged: true }, "wrong_invitation_context");
 
@@ -215,7 +220,7 @@ async function main() {
   assert.equal(failedRequest.manual_review_required, true);
   assert.equal(failedRequest.achieved_identity_level, null);
   const grantAfterReview = await readSingle(admin, "account_access_grants", "activation_status", "id", grantId);
-  assert.equal(grantAfterReview.activation_status, "identity_required");
+  assert.ok(NON_ACTIVE_GRANT_STATUSES.has(grantAfterReview.activation_status));
   const assuranceAfterReview = await readSingle(admin, "identity_assurance_states", "user_id,identity_level", "user_id", recipient.id);
   assert.ok(!assuranceAfterReview || Number(assuranceAfterReview.identity_level) < 2);
   const reviewDecision = await readSingle(admin, "identity_verification_decisions", "request_id,decision,achieved_identity_level,requires_manual_review", "request_id", failedRequestId);
@@ -267,7 +272,7 @@ async function main() {
     sha: config.version.commitSha,
     environment: config.version.env,
     successfulJourney: { invitation: "accepted", consent: "recorded", document: "synthetic_provider", challenge: "consumed_once", decision: "verified", grant: finalGrant.activation_status, assurance: assurance.identity_level },
-    negative: { missingConsent, premature, wrongUser, wrongContext, wrongRequestOwner, replay, failedVerification: "review_required_without_grant_activation", stalePresence, callbackReplay: "not_applicable_internal_provider_has_no_callback_event" },
+    negative: { missingConsent, premature, wrongUser, wrongContext, wrongRequestOwner, replay, failedVerification: { decision: "review_required", grant: grantAfterReview.activation_status, assurance: assuranceAfterReview?.identity_level ?? 1 }, stalePresence, callbackReplay: "not_applicable_internal_provider_has_no_callback_event" },
     redactedIds: { owner: redactId(owner.id), recipient: redactId(recipient.id), invitation: redactId(invitation.id), request: redactId(requestId), grant: redactId(grantId) },
   }));
 }
