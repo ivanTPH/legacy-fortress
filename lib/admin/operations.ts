@@ -84,6 +84,19 @@ type BillingProfileRow = {
   billing_currency?: string | null;
 };
 
+type EnterpriseMembershipContextRow = {
+  user_id: string;
+  organisation_id: string;
+  organisation_role: string;
+  membership_status: string;
+};
+
+type EnterpriseOrganisationContextRow = {
+  id: string;
+  name: string;
+  status: string;
+};
+
 export type AdminLookupResult = {
   userId: string;
   email: string;
@@ -105,6 +118,12 @@ export type AdminLookupResult = {
     monthlyCharge: number;
     billingCurrency: string;
   };
+  organisations: Array<{
+    id: string;
+    name: string;
+    role: string;
+    status: string;
+  }>;
 };
 
 export type AdminUserOperationalDetail = AdminLookupResult & {
@@ -774,6 +793,20 @@ export async function lookupUsers(client: AnySupabaseClient, query: string) {
     throw new Error(billingRes.error.message);
   }
   const billingByUserId = new Map(((billingRes.data ?? []) as BillingProfileRow[]).map((row) => [row.user_id, row]));
+  const membershipRes = userIds.length
+    ? await client.from("enterprise_memberships").select("user_id,organisation_id,organisation_role,membership_status").in("user_id", userIds)
+    : { data: [], error: null };
+  if (membershipRes.error) throw new Error(membershipRes.error.message);
+  const memberships = (membershipRes.data ?? []) as EnterpriseMembershipContextRow[];
+  const organisationIds = [...new Set(memberships.map((row) => row.organisation_id))];
+  const organisationRes = organisationIds.length
+    ? await client.from("enterprise_organisations").select("id,name,status").in("id", organisationIds)
+    : { data: [], error: null };
+  if (organisationRes.error) throw new Error(organisationRes.error.message);
+  const organisations = new Map((organisationRes.data ?? []).map((row) => {
+    const item = row as EnterpriseOrganisationContextRow;
+    return [item.id, item];
+  }));
 
   const results = await Promise.all(
     users.map(async (user) => {
@@ -812,6 +845,12 @@ export async function lookupUsers(client: AnySupabaseClient, query: string) {
           monthlyCharge: Number(billing?.monthly_charge ?? 0),
           billingCurrency: String(billing?.billing_currency ?? "GBP"),
         },
+        organisations: memberships.filter((membership) => membership.user_id === user.id).map((membership) => ({
+          id: membership.organisation_id,
+          name: organisations.get(membership.organisation_id)?.name ?? "Organisation unavailable",
+          role: membership.organisation_role,
+          status: membership.membership_status,
+        })),
       } satisfies AdminLookupResult;
     }),
   );
@@ -836,6 +875,7 @@ export async function loadUserOperationalDetail(client: AnySupabaseClient, userI
     invitationsRes,
     grantsRes,
     verificationRes,
+    membershipsRes,
     assets,
     documents,
   ] = await Promise.all([
@@ -865,6 +905,11 @@ export async function loadUserOperationalDetail(client: AnySupabaseClient, userI
       .eq("owner_user_id", id)
       .order("submitted_at", { ascending: false })
       .limit(20),
+    client
+      .from("enterprise_memberships")
+      .select("user_id,organisation_id,organisation_role,membership_status")
+      .eq("user_id", id)
+      .order("updated_at", { ascending: false }),
     countRows(client, "assets", "owner_user_id", id),
     countRows(client, "documents", "owner_user_id", id),
   ]);
@@ -875,6 +920,7 @@ export async function loadUserOperationalDetail(client: AnySupabaseClient, userI
   if (invitationsRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", invitationsRes.error.message);
   if (grantsRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", grantsRes.error.message);
   if (verificationRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", verificationRes.error.message);
+  if (membershipsRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", membershipsRes.error.message);
 
   const profile = profileRes.data as UserProfileRow | null;
   const billing = billingRes.data as BillingProfileRow | null;
@@ -882,6 +928,16 @@ export async function loadUserOperationalDetail(client: AnySupabaseClient, userI
   const invitations = (invitationsRes.data ?? []) as ContactInvitationRow[];
   const grants = (grantsRes.data ?? []) as Array<Record<string, unknown>>;
   const verifications = (verificationRes.data ?? []) as Array<Record<string, unknown>>;
+  const memberships = (membershipsRes.data ?? []) as EnterpriseMembershipContextRow[];
+  const organisationIds = [...new Set(memberships.map((row) => row.organisation_id))];
+  const organisationRes = organisationIds.length
+    ? await client.from("enterprise_organisations").select("id,name,status").in("id", organisationIds)
+    : { data: [], error: null };
+  if (organisationRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", organisationRes.error.message);
+  const organisations = new Map((organisationRes.data ?? []).map((row) => {
+    const item = row as EnterpriseOrganisationContextRow;
+    return [item.id, item];
+  }));
   const displayName =
     String(profile?.display_name ?? "").trim()
     || String(user.user_metadata?.display_name ?? user.user_metadata?.full_name ?? "").trim()
@@ -912,6 +968,12 @@ export async function loadUserOperationalDetail(client: AnySupabaseClient, userI
       monthlyCharge: Number(billing?.monthly_charge ?? 0),
       billingCurrency: String(billing?.billing_currency ?? "GBP"),
     },
+    organisations: memberships.map((membership) => ({
+      id: membership.organisation_id,
+      name: organisations.get(membership.organisation_id)?.name ?? "Organisation unavailable",
+      role: membership.organisation_role,
+      status: membership.membership_status,
+    })),
     contacts: contacts.map((row) => ({
       id: row.id,
       fullName: row.full_name,

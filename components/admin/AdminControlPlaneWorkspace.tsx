@@ -154,6 +154,10 @@ type EnterpriseInvitation = {
   expiresAt: string;
   acceptedAt: string | null;
   revokedAt: string | null;
+  sentAt?: string | null;
+  createdAt?: string;
+  failedAt?: string | null;
+  failureReason?: string | null;
 };
 
 type EnterpriseMembership = {
@@ -378,6 +382,7 @@ type LookupUser = {
     linkedAccessGrants: number;
     verificationRequests: number;
   };
+  organisations: Array<{ id: string; name: string; role: string; status: string }>;
 };
 
 type UserOperationalDetail = LookupUser & {
@@ -1072,7 +1077,7 @@ export default function AdminControlPlaneWorkspace({
         {section === "licence-detail" ? renderPlatformLicenceDetail(resourceId, enterprisePortfolio) : null}
         {section === "admin-users" || section === "admin-user-detail" ? renderAdminUsers(admins, adminInvitations, adminFilter, setAdminFilter, adminInviteForm, setAdminInviteForm, sendAdminInvitation, adminInviteOpen, setAdminInviteOpen, adminLifecycleForm, setAdminLifecycleForm, runAdminLifecycle, runAdminInvitationLifecycle, (input, onConfirm) => requestConfirmation(input, onConfirm), resourceId) : null}
         {section === "users" || section === "user-detail" ? renderUsers(lookupQuery, setLookupQuery, lookupResults, runLookup, resourceId, userDetail, userDetailLoading) : null}
-        {section === "support" || section === "invitations" ? renderSupport(section, support, supportDetail, supportDetailLoading, supportActionLoading, loadSupportInvitationDetail, runSupportInvitationAction, createSupportCase, runSupportCaseAction, addSupportCaseNote, capabilities) : null}
+        {section === "support" || section === "invitations" ? renderSupport(section, support, supportDetail, supportDetailLoading, supportActionLoading, loadSupportInvitationDetail, runSupportInvitationAction, createSupportCase, runSupportCaseAction, addSupportCaseNote, capabilities, enterprisePortfolio) : null}
         {section === "verification" || section === "verification-detail" ? renderVerification(verificationQueue, resourceId, capabilities, verificationActionLoading, verificationReviewNote, setVerificationReviewNote, runVerificationAction) : null}
         {section === "access" || section === "probate" || section === "probate-detail" ? renderProbate(probateCases, estateOperations, resourceId, capabilities, probateDecisionNotes, setProbateDecisionNotes, probateActionLoading, probateEvidenceLoading, runProbateCaseAction, openProbateEvidence, section === "access" ? "Access and estate cases" : "Probate queue") : null}
         {section === "audit" ? renderAudit(auditEvents, auditFilter, setAuditFilter) : null}
@@ -1100,7 +1105,7 @@ function requestsForSection(section: AdminControlPlaneSection, capabilities: str
   if (["audit", "admin-user-detail"].includes(section) && capabilities.includes("audit:read")) {
     requests.push({ key: "audit", url: "/api/internal/admin/audit-history?limit=50" });
   }
-  if (["organisations", "organisation-detail", "organisation-users", "organisation-invitations", "organisation-licences", "licences", "licence-detail", "overview"].includes(section) && capabilities.includes("organisation:view")) {
+  if (["organisations", "organisation-detail", "organisation-users", "organisation-invitations", "organisation-licences", "licences", "licence-detail", "overview", "invitations"].includes(section) && capabilities.includes("organisation:view")) {
     requests.push({ key: "enterprise", url: "/api/internal/admin/enterprise" });
   }
   return requests;
@@ -1891,6 +1896,11 @@ function renderUsers(
               render: (item) => <>{item.displayName}<small>{item.email ?? "No email"} · {item.hasProfile ? "Profile present" : "Profile missing"}</small></>,
             },
             {
+              key: "organisations",
+              header: "Organisation context",
+              render: (item) => item.organisations.length ? <>{item.organisations.map((organisation) => <Link key={organisation.id} href={`/admin/organisations/${organisation.id}`} prefetch={false}>{organisation.name}<small>{labelise(organisation.role)} · {labelise(organisation.status)}</small></Link>)}</> : "No organisation membership",
+            },
+            {
               key: "plan",
               header: "Plan",
               render: (item) => `${item.commercial.accountPlan.replace(/_/g, " ")} · ${item.commercial.planStatus.replace(/_/g, " ")}`,
@@ -1959,6 +1969,11 @@ function renderUserOperationalDetail(detail: UserOperationalDetail | null, loadi
         <Detail label="Profile" value={detail.profile.hasProfile ? detail.profile.displayName || "Profile present" : "Profile missing"} />
         <Detail label="Monthly charge" value={`${detail.commercial.billingCurrency} ${detail.commercial.monthlyCharge}`} />
       </div>
+      <section style={contextPanelStyle}>
+        <h3 style={h3Style}>Organisation context</h3>
+        <p style={mutedStyle}>Membership context is operational metadata only. Opening an organisation remains inside Platform Administration.</p>
+        {detail.organisations.length ? <div style={eventListStyle}>{detail.organisations.map((organisation) => <div key={organisation.id}><Link href={`/admin/organisations/${organisation.id}`} prefetch={false}>{organisation.name}</Link><small>{labelise(organisation.role)} · {labelise(organisation.status)}</small></div>)}</div> : <AdminEmptyState title="No organisation membership">This user is not linked to an enterprise organisation.</AdminEmptyState>}
+      </section>
       <section style={contextPanelStyle}>
         <h3 style={h3Style}>Contacts and linked access</h3>
         <AdminDataTable
@@ -2034,11 +2049,13 @@ function renderSupport(
   runCaseAction: (invitationId: string, action: "assign_to_me" | "escalate" | "resolve" | "close" | "reopen", resolutionCode?: string) => Promise<void>,
   addCaseNote: (invitationId: string, note: string) => Promise<void>,
   capabilities: string[],
+  enterprisePortfolio: EnterprisePortfolio | null,
 ) {
   const title = section === "invitations" ? "Invitation issues" : section === "access" ? "Linked-access issues" : "Support issues";
   const canManageSupport = capabilities.includes("support:manage");
   return (
     <div style={stackStyle}>
+      {section === "invitations" ? renderPlatformInvitationRegister(enterprisePortfolio) : null}
       <section style={panelStyle}>
         <h2 style={h2Style}>{title}</h2>
         <div style={gridStyle}>
@@ -2083,6 +2100,37 @@ function renderSupport(
         </section>
       ) : null}
     </div>
+  );
+}
+
+function renderPlatformInvitationRegister(portfolio: EnterprisePortfolio | null) {
+  const invitations = portfolio?.invitations ?? [];
+  const organisations = portfolio?.organisations ?? [];
+  return (
+    <section style={panelStyle} aria-labelledby="platform-invitation-register-title">
+      <div style={sectionHeaderStyle}>
+        <div>
+          <p style={eyebrowStyle}>Platform resources</p>
+          <h2 id="platform-invitation-register-title" style={h2Style}>Organisation invitations</h2>
+          <p style={mutedStyle}>Lifecycle register for enterprise invitations. Tokens and private identity evidence are never displayed.</p>
+        </div>
+        <AdminContextHelp label="Invitation boundary">Acceptance remains bound to the canonical invitation flow. Resend and revoke actions are available only through their audited lifecycle surfaces.</AdminContextHelp>
+      </div>
+      <AdminDataTable
+        caption="Organisation invitation lifecycle"
+        columns={[
+          { key: "recipient", header: "Recipient", render: (item) => <>{item.fullName || item.email}<small>{item.email} · {labelise(item.roleTemplate)}</small></> },
+          { key: "organisation", header: "Organisation", render: (item) => { const organisation = organisations.find((candidate) => candidate.id === item.organisationId); return organisation ? <Link href={`/admin/organisations/${organisation.id}`} prefetch={false}>{organisation.name}</Link> : "Organisation unavailable"; } },
+          { key: "status", header: "Lifecycle", render: (item) => <AdminStatusBadge status={item.status} /> },
+          { key: "created", header: "Created", render: (item) => formatDate(item.createdAt ?? "") },
+          { key: "sent", header: "Sent", render: (item) => formatDate(item.sentAt ?? "") },
+          { key: "accepted", header: "Accepted", render: (item) => formatDate(item.acceptedAt ?? "") },
+        ]}
+        rows={invitations}
+        getRowKey={(item) => item.id}
+        emptyState={<AdminEmptyState title="No organisation invitations">No enterprise invitation records are available for this platform scope.</AdminEmptyState>}
+      />
+    </section>
   );
 }
 

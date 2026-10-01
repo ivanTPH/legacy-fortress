@@ -121,6 +121,20 @@ test("platform overview exposes capability-filtered resources without entering e
   assert.match(source, /Enterprise operations remain organisation-scoped at \/enterprise/);
 });
 
+test("users and invitations expose safe organisation context and lifecycle data", () => {
+  const workspace = read("components/admin/AdminControlPlaneWorkspace.tsx");
+  const operations = read("lib/admin/operations.ts");
+  assert.match(operations, /from\("enterprise_memberships"\)/);
+  assert.match(operations, /from\("enterprise_organisations"\)/);
+  assert.match(workspace, /Organisation context/);
+  assert.match(workspace, /href=\{`\/admin\/organisations\/\$\{organisation\.id\}`\}/);
+  assert.match(workspace, /platform-invitation-register-title/);
+  assert.match(workspace, /Organisation invitation lifecycle/);
+  assert.match(workspace, /Tokens and private identity evidence are never displayed/);
+  assert.match(workspace, /item\.sentAt/);
+  assert.match(workspace, /item\.acceptedAt/);
+});
+
 test("shared admin shell constrains long content and tables on small screens", () => {
   const source = read("components/admin/AdminWorkspaceShell.tsx");
   const globalCss = read("app/globals.css");
