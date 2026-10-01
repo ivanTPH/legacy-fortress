@@ -1046,7 +1046,7 @@ export default function AdminControlPlaneWorkspace({
         {message ? <section style={alertStyle}>{message}</section> : null}
         {confirmation ? <AdminConfirmationDialog confirmation={confirmation} onCancel={() => setConfirmation(null)} onConfirm={() => { const action = confirmation.onConfirm; setConfirmation(null); void action(); }} /> : null}
 
-        {section === "overview" ? renderOverview(metrics, support, verificationQueue, probateCases) : null}
+        {section === "overview" ? renderOverview(metrics, support, verificationQueue, probateCases, capabilities) : null}
         {section === "organisations" ? renderPlatformOrganisations(enterpriseViews, {
           search: enterpriseSearch,
           status: enterpriseStatusFilter,
@@ -1145,7 +1145,7 @@ function buildPlatformBreadcrumbs(section: AdminControlPlaneSection, resourceId:
   return crumbs;
 }
 
-function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | null, verification: VerificationItem[], probate: ProbateCase[]) {
+function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | null, verification: VerificationItem[], probate: ProbateCase[], capabilities: string[]) {
   const cards = [
     { label: "Pending invitations", value: support?.counts.pendingInvitations ?? null, href: "/admin/invitations?status=pending", source: "support snapshot" },
     { label: "Ready to send", value: support?.counts.readyToSendInvitations ?? null, href: "/admin/invitations?status=ready", source: "saved contact invitations without dispatch" },
@@ -1186,7 +1186,36 @@ function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | n
           emptyState={<AdminEmptyState title="No metrics">No summary metrics are available.</AdminEmptyState>}
         />
       </section>
+      {renderPlatformControlMap(capabilities)}
     </div>
+  );
+}
+
+function renderPlatformControlMap(capabilities: string[]) {
+  const resources = [
+    { label: "Organisations", detail: "Inspect organisation status, licences and administrator lifecycle.", href: "/admin/organisations", capability: "organisation:view" },
+    { label: "Users", detail: "Find platform users and review safe account state.", href: "/admin/users", capability: "users:lookup" },
+    { label: "Invitations", detail: "Review platform invitation and access lifecycle queues.", href: "/admin/invitations", capability: "support:read" },
+    { label: "Licences", detail: "Review organisation entitlement and seat position.", href: "/admin/licences", capability: "licence:view" },
+    { label: "Verification", detail: "Review verification operations without exposing evidence.", href: "/admin/verification", capability: "verification:read" },
+  ].filter((resource) => capabilities.includes(resource.capability));
+
+  return (
+    <section style={panelStyle} aria-labelledby="platform-control-map-title">
+      <div style={sectionHeaderStyle}>
+        <div>
+          <p style={eyebrowStyle}>Platform resources</p>
+          <h2 id="platform-control-map-title" style={h2Style}>Control plane</h2>
+          <p style={mutedStyle}>Manage platform resources from the System Admin workspace. Opening an organisation keeps this administrator context and does not enter a customer workspace.</p>
+        </div>
+        <AdminContextHelp label="System Admin boundary">Enterprise operations remain organisation-scoped at /enterprise. These platform resource links do not impersonate or switch the current administrator.</AdminContextHelp>
+      </div>
+      <div style={gridStyle}>
+        {resources.map((resource) => (
+          <AdminMetricCard key={resource.href} label={resource.label} value="Open" detail={resource.detail} actionLabel="View resource" href={resource.href} />
+        ))}
+      </div>
+    </section>
   );
 }
 

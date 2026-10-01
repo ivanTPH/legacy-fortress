@@ -108,6 +108,19 @@ test("platform, enterprise and probate entry surfaces use the shared shell", () 
   assert.match(probatePage, /section="probate"/);
 });
 
+test("platform overview exposes capability-filtered resources without entering enterprise context", () => {
+  const source = read("components/admin/AdminControlPlaneWorkspace.tsx");
+  assert.match(source, /platform-control-map-title/);
+  assert.match(source, /System Admin boundary/);
+  assert.match(source, /\/admin\/organisations/);
+  assert.match(source, /\/admin\/users/);
+  assert.match(source, /\/admin\/invitations/);
+  assert.match(source, /\/admin\/licences/);
+  assert.match(source, /\/admin\/verification/);
+  assert.match(source, /capabilities\.includes\(resource\.capability\)/);
+  assert.match(source, /Enterprise operations remain organisation-scoped at \/enterprise/);
+});
+
 test("shared admin shell constrains long content and tables on small screens", () => {
   const source = read("components/admin/AdminWorkspaceShell.tsx");
   const globalCss = read("app/globals.css");
