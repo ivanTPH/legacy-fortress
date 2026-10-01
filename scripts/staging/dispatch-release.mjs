@@ -2,6 +2,7 @@
 
 /* Dispatch the existing protected staging workflow; deployment remains in GitHub Actions. */
 import { execFileSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
 const OWNER = "ivanTPH";
 const REPOSITORY = "legacy-fortress";
@@ -21,14 +22,25 @@ function git(...args) {
   return execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 }
 
-function assertRepository(expectedSha) {
-  if (git("rev-parse", "--show-toplevel") !== process.cwd()) throw new Error("repository_root_mismatch");
-  if (git("config", "--get", "remote.origin.url") !== `https://github.com/${OWNER}/${REPOSITORY}.git`) throw new Error("repository_remote_mismatch");
-  if (git("branch", "--show-current") !== BRANCH) throw new Error("staging_branch_required");
-  const head = git("rev-parse", "HEAD");
+export function validateReleaseState({ repositoryRoot, remoteUrl, currentBranch, head, worktree, originSha, expectedSha }) {
+  if (repositoryRoot !== process.cwd()) throw new Error("repository_root_mismatch");
+  if (remoteUrl !== `https://github.com/${OWNER}/${REPOSITORY}.git`) throw new Error("repository_remote_mismatch");
+  if (currentBranch && currentBranch !== BRANCH) throw new Error("staging_branch_required");
   if (!/^[0-9a-f]{40}$/.test(expectedSha) || head !== expectedSha) throw new Error("expected_sha_must_equal_committed_head");
-  if (git("status", "--porcelain")) throw new Error("clean_worktree_required");
-  if (git("rev-parse", `origin/${BRANCH}`) !== expectedSha) throw new Error("expected_sha_must_be_pushed_to_origin");
+  if (worktree) throw new Error("clean_worktree_required");
+  if (originSha !== expectedSha) throw new Error("expected_sha_must_be_pushed_to_origin");
+}
+
+function assertRepository(expectedSha) {
+  validateReleaseState({
+    repositoryRoot: git("rev-parse", "--show-toplevel"),
+    remoteUrl: git("config", "--get", "remote.origin.url"),
+    currentBranch: git("branch", "--show-current"),
+    head: git("rev-parse", "HEAD"),
+    worktree: git("status", "--porcelain"),
+    originSha: git("rev-parse", `origin/${BRANCH}`),
+    expectedSha,
+  });
 }
 
 function token() {
@@ -104,7 +116,9 @@ async function main() {
   await waitForRun(expectedSha, startedAfter);
 }
 
-main().catch((error) => {
-  console.error(`staging_release_dispatch_failed:${error instanceof Error ? error.message : "unknown"}`);
-  process.exitCode = 1;
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error(`staging_release_dispatch_failed:${error instanceof Error ? error.message : "unknown"}`);
+    process.exitCode = 1;
+  });
+}
