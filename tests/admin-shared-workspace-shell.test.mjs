@@ -108,6 +108,19 @@ test("platform, enterprise and probate entry surfaces use the shared shell", () 
   assert.match(probatePage, /section="probate"/);
 });
 
+test("Personal Vault uses the same account-menu dismissal contract with explicit personal context", () => {
+  const layout = read("app/(app)/layout.tsx");
+  assert.match(layout, /Open account menu for/);
+  assert.match(layout, /Personal Vault/);
+  assert.match(layout, /role="menu"/);
+  assert.match(layout, /Account security/);
+  assert.match(layout, /setAccountMenuOpen\(false\)/);
+  assert.match(layout, /document\.addEventListener\("pointerdown", onPointerDown\)/);
+  assert.match(layout, /event\.key !== "Escape"/);
+  assert.match(layout, /className="lf-admin-shell-account-signout"/);
+  assert.doesNotMatch(layout, /className="lf-signout" onClick=\{signOut\}/);
+});
+
 test("platform overview exposes capability-filtered resources without entering enterprise context", () => {
   const source = read("components/admin/AdminControlPlaneWorkspace.tsx");
   assert.match(source, /platform-control-map-title/);
@@ -133,6 +146,11 @@ test("users and invitations expose safe organisation context and lifecycle data"
   assert.match(workspace, /Tokens and private identity evidence are never displayed/);
   assert.match(workspace, /item\.sentAt/);
   assert.match(workspace, /item\.acceptedAt/);
+  assert.match(workspace, /action: "update_invitation"/);
+  assert.match(workspace, /status: action === "revoke" \? "revoked" : "sent"/);
+  assert.match(workspace, /enterprise\.invitation\.manage/);
+  assert.match(workspace, /Terminal invitation states cannot be changed here/);
+  assert.match(workspace, /Organisation invitation revoked and audit recorded/);
 });
 
 test("shared admin shell constrains long content and tables on small screens", () => {

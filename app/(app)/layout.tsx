@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import React, { useCallback, useEffect, useId, useMemo, useReducer, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import BrandMark from "./components/BrandMark";
@@ -103,6 +103,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const [menuState, dispatchMenu] = useReducer(menuReducer, initialMenuState);
   const navWrapRef = useRef<HTMLDivElement | null>(null);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement | null>(null);
+  const accountTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const accountMenuId = useId();
 
   useEffect(() => {
     if (!effectiveAvatarUrl) {
@@ -609,12 +613,37 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     function onEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") closeNavigationState("escape");
+      if (event.key !== "Escape") return;
+      closeNavigationState("escape");
+      if (accountMenuOpen) {
+        setAccountMenuOpen(false);
+        accountTriggerRef.current?.focus();
+      }
     }
 
     document.addEventListener("keydown", onEscape);
     return () => document.removeEventListener("keydown", onEscape);
-  }, [closeNavigationState]);
+  }, [accountMenuOpen, closeNavigationState]);
+
+  useEffect(() => {
+    if (!accountMenuOpen) return;
+    function onPointerDown(event: PointerEvent) {
+      if (!accountMenuRef.current?.contains(event.target as Node)) setAccountMenuOpen(false);
+    }
+    function onOtherMenuOpen(event: Event) {
+      if ((event as CustomEvent).detail?.source !== accountMenuId) setAccountMenuOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("lf-admin-menu-open", onOtherMenuOpen);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("lf-admin-menu-open", onOtherMenuOpen);
+    };
+  }, [accountMenuId, accountMenuOpen]);
+
+  useEffect(() => {
+    queueMicrotask(() => setAccountMenuOpen(false));
+  }, [pathname]);
 
   function resolveFlyoutTop(anchorEl: HTMLElement | undefined, itemCount: number) {
     if (!anchorEl || !navWrapRef.current || !window) return null;
@@ -778,6 +807,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const topbarBreadcrumbs = normalizedPathname === "/dashboard" ? [] : breadcrumbs.slice(0, -1);
   const showBackButton = normalizedPathname !== "/dashboard";
 
+  function toggleAccountMenu() {
+    setAccountMenuOpen((current) => {
+      const next = !current;
+      if (next) window.dispatchEvent(new CustomEvent("lf-admin-menu-open", { detail: { source: accountMenuId } }));
+      return next;
+    });
+  }
+
   if (effectiveAuthState !== "ready") {
     const sessionTitle = effectiveAuthState === "error"
       ? "Session needs attention"
@@ -898,10 +935,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               })}
             </nav>
 
-            <div className="lf-sidebar-actions">
-              <button className="lf-signout" onClick={signOut} type="button">
-                Sign out
-              </button>
+            <div className="lf-sidebar-actions" aria-label="Account controls">
+              <Link href="/profile" className="lf-account-link" onClick={() => closeNavigationState("item_select")}>Profile and account</Link>
             </div>
           </div>
         </aside>
@@ -976,7 +1011,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          <div className="lf-topbar-actions">
+            <div className="lf-topbar-actions">
             <WorkspaceSwitcher
               currentPathname={pathname}
               compact
@@ -997,24 +1032,34 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             >
               <Icon name={resolvedViewerAccess.mode === "linked" ? "visibility_lock" : "verified_user"} size={16} />
             </div>
-            <Link href="/profile" className="lf-topbar-user" aria-label={`Edit account details for ${effectiveDisplayName}`} title={effectiveDisplayName}>
-              <div className="lf-topbar-user-copy">
-                <div className="lf-topbar-user-greeting">Hello</div>
-                <div className="lf-topbar-user-name">{effectiveDisplayName}</div>
-              </div>
-              <span
-                className="lf-topbar-user-avatar"
-                aria-label={`Signed-in account picture for ${effectiveDisplayName}`}
-                role="img"
-                data-avatar-ready={renderedAvatarUrl ? "true" : "false"}
-              >
-                {renderedAvatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img className="lf-topbar-user-avatar-img" src={renderedAvatarUrl} alt="" aria-hidden="true" />
-                ) : null}
-                <span className="lf-topbar-user-avatar-fallback">{effectiveInitials || "LF"}</span>
-              </span>
-            </Link>
+            <div ref={accountMenuRef} className="lf-admin-shell-account-menu lf-personal-account-menu">
+              <button ref={accountTriggerRef} type="button" className="lf-admin-shell-account-trigger" aria-label={`Open account menu for ${effectiveDisplayName}`} aria-expanded={accountMenuOpen} aria-controls={accountMenuId} aria-haspopup="menu" onClick={toggleAccountMenu}>
+                <span className="lf-admin-shell-avatar" aria-hidden="true">
+                  {renderedAvatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img className="lf-topbar-user-avatar-img" src={renderedAvatarUrl} alt="" />
+                  ) : null}
+                  <span className="lf-topbar-user-avatar-fallback">{effectiveInitials || "LF"}</span>
+                </span>
+                <span className="lf-admin-shell-account-copy"><strong>{effectiveDisplayName}</strong><small>Personal Vault</small></span>
+                <Icon name="expand_more" size={18} />
+              </button>
+              {accountMenuOpen ? (
+                <div id={accountMenuId} className="lf-admin-shell-account-popover" role="menu" aria-label="Account menu">
+                  <div className="lf-admin-shell-account-summary">
+                    <span className="lf-admin-shell-avatar" aria-hidden="true">{effectiveInitials || "LF"}</span>
+                    <div className="lf-admin-shell-account-summary-copy"><strong>{effectiveDisplayName}</strong><span className="lf-admin-shell-account-email">{effectiveEmail || "Signed in"}</span><span className="lf-admin-shell-account-role">Personal Vault</span></div>
+                  </div>
+                  <div className="lf-admin-shell-account-menu-section" role="none">
+                    <Link href="/profile" role="menuitem" onClick={() => setAccountMenuOpen(false)} prefetch={false}><Icon name="account_circle" size={17} /><span>Profile</span></Link>
+                    <Link href="/account/security" role="menuitem" onClick={() => setAccountMenuOpen(false)} prefetch={false}><Icon name="shield_lock" size={17} /><span>Account security</span></Link>
+                  </div>
+                  <div className="lf-admin-shell-account-menu-section" role="none">
+                    <button type="button" role="menuitem" className="lf-admin-shell-account-signout" onClick={() => { setAccountMenuOpen(false); void signOut(); }}><Icon name="logout" size={17} /><span>Sign out</span></button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </div>
         </header>
 
@@ -1087,9 +1132,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     <div className="lf-user-name">{effectiveDisplayName}</div>
                     <div className="lf-user-email">{effectiveEmail || "Signed in"}</div>
                   </div>
-                  <button className="lf-signout" onClick={signOut} type="button">
-                    Sign out
-                  </button>
                 </div>
               </div>
             </aside>

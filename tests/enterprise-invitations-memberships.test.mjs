@@ -173,7 +173,7 @@ test("enterprise invitation and membership lifecycle controls require reasoned a
   assert.match(service, /isValidInvitationTransition/);
   assert.match(service, /invalid_invitation_transition/);
   assert.match(service, /appendReason\(current\.failure_reason, operatorReason/);
-  assert.match(service, /releaseEnterpriseSeat\(client, current\.seat_id, "invitation_release"\)/);
+  assert.match(service, /releaseEnterpriseSeat\(client, current\.seat_id, optionalText\(operatorReason\) \?\? "invitation_release"\)/);
   assert.match(service, /releaseEnterpriseSeat\(client, current\.seat_id, optionalText\(reason\)/);
 });
 

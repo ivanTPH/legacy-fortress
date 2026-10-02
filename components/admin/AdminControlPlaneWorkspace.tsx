@@ -585,6 +585,7 @@ export default function AdminControlPlaneWorkspace({
   const [probateDecisionNotes, setProbateDecisionNotes] = useState<Record<string, string>>({});
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
   const [enterprisePortfolio, setEnterprisePortfolio] = useState<EnterprisePortfolio | null>(null);
+  const [enterpriseInvitationActionLoading, setEnterpriseInvitationActionLoading] = useState("");
   const [enterpriseSearch, setEnterpriseSearch] = useState("");
   const [enterpriseStatusFilter, setEnterpriseStatusFilter] = useState("");
   const [enterpriseTypeFilter, setEnterpriseTypeFilter] = useState("");
@@ -812,6 +813,39 @@ export default function AdminControlPlaneWorkspace({
     if (json.admins) setAdmins(json.admins);
     if (json.invitations) setAdminInvitations(json.invitations);
     setMessage(action === "revoke_invitation" ? "Admin invitation revoked and audit recorded." : "Admin invitation resent and audit recorded.");
+  }
+
+  async function runEnterpriseInvitationAction(invitationId: string, action: "resend" | "revoke") {
+    if (action === "revoke") {
+      requestConfirmation({
+        title: "Revoke organisation invitation",
+        message: "The invitation will become unusable and any reserved organisation seat will be released by the canonical service.",
+        confirmLabel: "Revoke invitation",
+      }, () => runEnterpriseInvitationActionConfirmed(invitationId, action));
+      return;
+    }
+    await runEnterpriseInvitationActionConfirmed(invitationId, action);
+  }
+
+  async function runEnterpriseInvitationActionConfirmed(invitationId: string, action: "resend" | "revoke") {
+    setMessage("");
+    setEnterpriseInvitationActionLoading(`${invitationId}:${action}`);
+    const res = await authFetch("/api/internal/admin/enterprise", {
+      method: "POST",
+      body: JSON.stringify({
+        action: "update_invitation",
+        invitationId,
+        status: action === "revoke" ? "revoked" : "sent",
+      }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; portfolio?: EnterprisePortfolio; message?: string; capability?: string };
+    setEnterpriseInvitationActionLoading("");
+    if (!res.ok || !json.ok || !json.portfolio) {
+      setMessage(json.message || json.capability || "Organisation invitation action was blocked.");
+      return;
+    }
+    setEnterprisePortfolio(json.portfolio);
+    setMessage(action === "revoke" ? "Organisation invitation revoked and audit recorded." : "Organisation invitation marked for resend and audit recorded.");
   }
 
   async function loadSupportInvitationDetail(invitationId: string) {
@@ -1077,7 +1111,7 @@ export default function AdminControlPlaneWorkspace({
         {section === "licence-detail" ? renderPlatformLicenceDetail(resourceId, enterprisePortfolio) : null}
         {section === "admin-users" || section === "admin-user-detail" ? renderAdminUsers(admins, adminInvitations, adminFilter, setAdminFilter, adminInviteForm, setAdminInviteForm, sendAdminInvitation, adminInviteOpen, setAdminInviteOpen, adminLifecycleForm, setAdminLifecycleForm, runAdminLifecycle, runAdminInvitationLifecycle, (input, onConfirm) => requestConfirmation(input, onConfirm), resourceId) : null}
         {section === "users" || section === "user-detail" ? renderUsers(lookupQuery, setLookupQuery, lookupResults, runLookup, resourceId, userDetail, userDetailLoading) : null}
-        {section === "support" || section === "invitations" ? renderSupport(section, support, supportDetail, supportDetailLoading, supportActionLoading, loadSupportInvitationDetail, runSupportInvitationAction, createSupportCase, runSupportCaseAction, addSupportCaseNote, capabilities, enterprisePortfolio) : null}
+        {section === "support" || section === "invitations" ? renderSupport(section, support, supportDetail, supportDetailLoading, supportActionLoading, loadSupportInvitationDetail, runSupportInvitationAction, createSupportCase, runSupportCaseAction, addSupportCaseNote, capabilities, enterprisePortfolio, enterpriseInvitationActionLoading, runEnterpriseInvitationAction) : null}
         {section === "verification" || section === "verification-detail" ? renderVerification(verificationQueue, resourceId, capabilities, verificationActionLoading, verificationReviewNote, setVerificationReviewNote, runVerificationAction) : null}
         {section === "access" || section === "probate" || section === "probate-detail" ? renderProbate(probateCases, estateOperations, resourceId, capabilities, probateDecisionNotes, setProbateDecisionNotes, probateActionLoading, probateEvidenceLoading, runProbateCaseAction, openProbateEvidence, section === "access" ? "Access and estate cases" : "Probate queue") : null}
         {section === "audit" ? renderAudit(auditEvents, auditFilter, setAuditFilter) : null}
@@ -2050,12 +2084,14 @@ function renderSupport(
   addCaseNote: (invitationId: string, note: string) => Promise<void>,
   capabilities: string[],
   enterprisePortfolio: EnterprisePortfolio | null,
+  enterpriseInvitationActionLoading: string,
+  runEnterpriseInvitationAction: (invitationId: string, action: "resend" | "revoke") => Promise<void>,
 ) {
   const title = section === "invitations" ? "Invitation issues" : section === "access" ? "Linked-access issues" : "Support issues";
   const canManageSupport = capabilities.includes("support:manage");
   return (
     <div style={stackStyle}>
-      {section === "invitations" ? renderPlatformInvitationRegister(enterprisePortfolio) : null}
+      {section === "invitations" ? renderPlatformInvitationRegister(enterprisePortfolio, capabilities, enterpriseInvitationActionLoading, runEnterpriseInvitationAction) : null}
       <section style={panelStyle}>
         <h2 style={h2Style}>{title}</h2>
         <div style={gridStyle}>
@@ -2103,9 +2139,15 @@ function renderSupport(
   );
 }
 
-function renderPlatformInvitationRegister(portfolio: EnterprisePortfolio | null) {
+function renderPlatformInvitationRegister(
+  portfolio: EnterprisePortfolio | null,
+  capabilities: string[],
+  actionLoading: string,
+  runAction: (invitationId: string, action: "resend" | "revoke") => Promise<void>,
+) {
   const invitations = portfolio?.invitations ?? [];
   const organisations = portfolio?.organisations ?? [];
+  const canManage = capabilities.includes("enterprise.invitation.manage");
   return (
     <section style={panelStyle} aria-labelledby="platform-invitation-register-title">
       <div style={sectionHeaderStyle}>
@@ -2125,6 +2167,21 @@ function renderPlatformInvitationRegister(portfolio: EnterprisePortfolio | null)
           { key: "created", header: "Created", render: (item) => formatDate(item.createdAt ?? "") },
           { key: "sent", header: "Sent", render: (item) => formatDate(item.sentAt ?? "") },
           { key: "accepted", header: "Accepted", render: (item) => formatDate(item.acceptedAt ?? "") },
+          { key: "actions", header: "Actions", render: (item) => {
+            const terminal = ["accepted", "expired", "revoked"].includes(item.status);
+            if (!canManage) return <span title="This administrator has read-only invitation access.">Read only</span>;
+            if (terminal) return <span title="Terminal invitation states cannot be changed here.">No actions</span>;
+            return (
+              <div style={actionsCellStyle}>
+                <button type="button" aria-label={`Resend invitation to ${item.email}`} onClick={() => void runAction(item.id, "resend")} disabled={actionLoading === `${item.id}:resend`}>
+                  {actionLoading === `${item.id}:resend` ? "Sending..." : "Resend"}
+                </button>
+                <button type="button" aria-label={`Revoke invitation for ${item.email}`} onClick={() => void runAction(item.id, "revoke")} disabled={actionLoading === `${item.id}:revoke`}>
+                  {actionLoading === `${item.id}:revoke` ? "Revoking..." : "Revoke"}
+                </button>
+              </div>
+            );
+          } },
         ]}
         rows={invitations}
         getRowKey={(item) => item.id}

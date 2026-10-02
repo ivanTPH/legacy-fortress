@@ -26,7 +26,8 @@ test.describe("Auth and navigation regressions", () => {
     await page.reload();
     await expect(page).toHaveURL(/\/dashboard/);
 
-    await page.getByRole("button", { name: /sign out/i }).click();
+    await page.getByRole("button", { name: /Open account menu/i }).click();
+    await page.getByRole("menuitem", { name: /Sign out/i }).click();
     await expect(page).toHaveURL(/\/sign-in/);
   });
 

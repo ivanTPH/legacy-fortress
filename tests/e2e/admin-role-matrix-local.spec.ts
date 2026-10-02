@@ -292,6 +292,28 @@ test.describe.serial("admin role matrix local proof", () => {
     await expect(page).toHaveURL(/\/admin\/access-denied|\/sign-in/);
   });
 
+  test("platform admin browser acceptance keeps resource and account context stable", async ({ page }) => {
+    await signInViaBrowser(page, "uat.superadmin@local.test");
+
+    await page.goto(`${BASE_URL}/admin/users`, { waitUntil: "networkidle" });
+    await expect(page.getByRole("heading", { name: "Customer users" })).toBeVisible();
+    await expect(page.getByText("Safe lookup results")).toBeVisible();
+
+    await page.goto(`${BASE_URL}/admin/invitations`, { waitUntil: "networkidle" });
+    await expect(page.getByRole("heading", { name: "Organisation invitations" })).toBeVisible();
+    await expect(page.getByText("Platform Administration").first()).toBeVisible();
+    await expect(page).not.toHaveURL(/\/enterprise/);
+
+    const accountTrigger = page.getByRole("button", { name: /Open account menu for UAT Super Admin/i });
+    await accountTrigger.click();
+    await expect(page.getByRole("menu", { name: "Account menu" })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("menu", { name: "Account menu" })).toHaveCount(0);
+    await accountTrigger.click();
+    await page.getByRole("heading", { name: "Organisation invitations" }).click();
+    await expect(page.getByRole("menu", { name: "Account menu" })).toHaveCount(0);
+  });
+
   test("invalid admin role fails closed at the database and server boundary", async () => {
     const invalidUserId = userIds.get("uat.invalidrole@local.test");
     expect(invalidUserId).toBeTruthy();

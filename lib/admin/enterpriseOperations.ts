@@ -866,9 +866,12 @@ export async function createEnterpriseInvitation(
   return { ...mapInvitation(insert.data as EnterpriseInvitationRow), stagingAcceptPath: buildEnterpriseInvitationAcceptPath(token) };
 }
 
-export async function updateEnterpriseInvitationStatus(client: AnySupabaseClient, id: string, status: string) {
+export async function updateEnterpriseInvitationStatus(client: AnySupabaseClient, id: string, status: string, operatorReason: unknown = null) {
   const normalized = normalizeChoice(status, ENTERPRISE_INVITATION_STATUSES, "Choose a valid invitation status.");
   const current = await getInvitationRow(client, id);
+  if (!isValidInvitationTransition(current.status, normalized)) {
+    throw new EnterpriseOperationError("invalid_invitation_transition", `Cannot move invitation from ${current.status} to ${normalized}.`, 409);
+  }
   const patch: Record<string, unknown> = { status: normalized, updated_at: new Date().toISOString() };
   if (normalized === "revoked") patch.revoked_at = new Date().toISOString();
   if (normalized === "sent") {
@@ -877,6 +880,7 @@ export async function updateEnterpriseInvitationStatus(client: AnySupabaseClient
     patch.resend_count = Number(current.resend_count ?? 0) + 1;
   }
   if (normalized === "expired") patch.failure_reason = appendReason(current.failure_reason, "Expired by administrator");
+  if (normalized === "revoked") patch.failure_reason = appendReason(current.failure_reason, operatorReason);
   const update = await client
     .from("enterprise_invitations")
     .update(patch)
@@ -885,9 +889,16 @@ export async function updateEnterpriseInvitationStatus(client: AnySupabaseClient
     .single();
   if (update.error || !update.data) throw new EnterpriseOperationError("invitation_update_failed", update.error?.message ?? "Could not update invitation.", 500);
   if (["revoked", "expired", "failed"].includes(normalized) && current.seat_id) {
-    await releaseEnterpriseSeat(client, current.seat_id, "invitation_release");
+    await releaseEnterpriseSeat(client, current.seat_id, optionalText(operatorReason) ?? "invitation_release");
   }
   return mapInvitation(update.data as EnterpriseInvitationRow);
+}
+
+export function isValidInvitationTransition(currentStatus: string, nextStatus: string) {
+  const current = String(currentStatus ?? "").trim().toLowerCase();
+  const next = String(nextStatus ?? "").trim().toLowerCase();
+  if (["accepted", "expired", "revoked"].includes(current)) return false;
+  return ["sent", "expired", "revoked"].includes(next);
 }
 
 export async function getEnterpriseInvitationPreview(client: AnySupabaseClient, token: string) {
