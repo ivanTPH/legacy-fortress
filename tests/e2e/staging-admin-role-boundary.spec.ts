@@ -98,7 +98,7 @@ test("enterprise admin is organisation-scoped and cannot use platform administra
   await expect(page.getByText(/Enterprise Operations/i).first()).toBeVisible();
   await assertAccountMenu(page);
   await page.goto(`${BASE_URL}/admin`, { waitUntil: "networkidle" });
-  await expect(page).toHaveURL(/\/admin\/access-denied|\/sign-in/);
+  await expect(page.getByRole("heading", { name: "Admin access is restricted" })).toBeVisible();
   const response = await request.get(`${BASE_URL}/api/internal/admin/admin-users`);
   expect(response.status()).toBe(403);
 });
@@ -107,9 +107,9 @@ test("personal user cannot enter administrative workspaces", async ({ page }) =>
   await signIn(page, users[2].email, "/dashboard");
   await assertAccountMenu(page);
   await page.goto(`${BASE_URL}/admin`, { waitUntil: "networkidle" });
-  await expect(page).toHaveURL(/\/admin\/access-denied|\/sign-in/);
+  await expect(page.getByRole("heading", { name: "Admin access is restricted" })).toBeVisible();
   await page.goto(`${BASE_URL}/enterprise`, { waitUntil: "networkidle" });
-  await expect(page).toHaveURL(/\/enterprise\/access-denied|\/sign-in|\/dashboard/);
+  await expect(page.getByRole("heading", { name: "Access denied" })).toBeVisible();
 });
 
 async function createUser(role: string) {
