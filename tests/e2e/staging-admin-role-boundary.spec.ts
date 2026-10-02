@@ -127,6 +127,15 @@ async function signIn(page: Page, email: string, next: string) {
   await page.getByLabel(/Email/i).fill(email);
   await page.getByRole("textbox", { name: /Password/i }).fill(PASSWORD);
   await page.getByRole("button", { name: /^Sign in$/i }).click();
+  await page.waitForURL(/\/(admin|dashboard|onboarding|app\/dashboard|app\/onboarding|profile|account\/terms)/, { timeout: 15_000 });
+  if (page.url().includes("/onboarding")) {
+    const terms = page.getByLabel(/i accept the terms and conditions/i);
+    if (await terms.count()) {
+      await terms.check();
+      await page.getByRole("button", { name: /go to dashboard/i }).click();
+    }
+    await expect(page).toHaveURL(/\/(app\/dashboard|dashboard)/);
+  }
   await page.waitForLoadState("networkidle");
 }
 
