@@ -123,25 +123,19 @@ async function createUser(role: string) {
 }
 
 async function signIn(page: Page, email: string, next: string) {
+  const authClient = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+  const auth = await authClient.auth.signInWithPassword({ email, password: PASSWORD });
+  if (auth.error || !auth.data.session) throw auth.error ?? new Error("staging_browser_authentication_failed");
   await page.context().clearCookies();
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
   await page.evaluate(() => {
     window.localStorage.clear();
     window.sessionStorage.clear();
   });
-  await page.goto(`${BASE_URL}/sign-in?next=${encodeURIComponent(next)}`, { waitUntil: "networkidle" });
-  await page.getByLabel(/Email/i).fill(email);
-  await page.getByRole("textbox", { name: /Password/i }).fill(PASSWORD);
-  await page.getByRole("button", { name: /^Sign in$/i }).click();
-  await page.waitForURL(/\/(admin|dashboard|onboarding|app\/dashboard|app\/onboarding|profile|account\/terms)/, { timeout: 15_000 });
-  if (page.url().includes("/onboarding")) {
-    const terms = page.getByLabel(/i accept the terms and conditions/i);
-    if (await terms.count()) {
-      await terms.check();
-      await page.getByRole("button", { name: /go to dashboard/i }).click();
-    }
-    await expect(page).toHaveURL(/\/(app\/dashboard|dashboard)/);
-  }
+  await page.evaluate((session) => {
+    window.localStorage.setItem("sb-supabase-test-auth-token", JSON.stringify(session));
+  }, auth.data.session);
+  await page.goto(`${BASE_URL}${next}`, { waitUntil: "networkidle" });
   await page.waitForLoadState("networkidle");
 }
 
