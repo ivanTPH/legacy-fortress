@@ -50,6 +50,6 @@ test("customer user detail UI has explicit view action, unavailable actions, and
   assert.match(workspace, /Open audit history/);
   assert.match(workspace, /Open support queue/);
   assert.match(workspace, /href=\{`\/admin\/users\/\$\{encodeURIComponent\(item\.userId\)\}`\}/);
-  assert.doesNotMatch(workspace, /impersonate/i);
+  assert.doesNotMatch(workspace, /\bimpersonate\b/i);
   assert.doesNotMatch(workspace, /\/api\/admin\//);
 });

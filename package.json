@@ -22,6 +22,7 @@
     "test:uat:admin": "PLAYWRIGHT_BASE_URL=http://127.0.0.1:3012 playwright test tests/e2e/admin-role-matrix-local.spec.ts --project=desktop-chromium",
     "release:check": "node scripts/release-gate.mjs",
     "test:e2e": "playwright test",
+    "test:e2e:staging-admin": "playwright test tests/e2e/staging-admin-role-boundary.spec.ts --project=desktop-chromium",
     "smoke:auth:reliability": "node scripts/smoke-auth-reliability.mjs",
     "smoke:contacts:invitations": "node scripts/smoke-contacts-invitations.mjs",
     "smoke:error:recovery": "node scripts/smoke-error-recovery.mjs",

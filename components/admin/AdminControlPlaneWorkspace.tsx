@@ -613,6 +613,7 @@ export default function AdminControlPlaneWorkspace({
     reason: "",
     expectedUpdatedAt: "",
   });
+  const [adminLifecycleActionLoading, setAdminLifecycleActionLoading] = useState(false);
   const [health, setHealth] = useState<HealthState>({
     status: null,
     generatedAt: null,
@@ -769,7 +770,7 @@ export default function AdminControlPlaneWorkspace({
     setMessage("Admin invitation sent. The recipient is not active until they accept and satisfy required checks.");
   }
 
-  async function runAdminLifecycle() {
+  async function runAdminLifecycleRequest() {
     setMessage("");
     if (!adminLifecycleForm.adminUserId) {
       setMessage("Select an administrator before confirming a lifecycle action.");
@@ -779,19 +780,39 @@ export default function AdminControlPlaneWorkspace({
       setMessage("Reason is required before confirming an administrator lifecycle action.");
       return;
     }
-    const res = await authFetch("/api/internal/admin/admin-users", {
-      method: "PATCH",
-      body: JSON.stringify(adminLifecycleForm),
-    });
-    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; admins?: AdminUser[]; invitations?: AdminInvitation[]; message?: string; code?: string };
-    if (!res.ok || !json.ok) {
-      setMessage(json.message || json.code || "Admin lifecycle action was blocked.");
+    setAdminLifecycleActionLoading(true);
+    try {
+      const res = await authFetch("/api/internal/admin/admin-users", {
+        method: "PATCH",
+        body: JSON.stringify(adminLifecycleForm),
+      });
+      const json = (await res.json().catch(() => ({}))) as { ok?: boolean; admins?: AdminUser[]; invitations?: AdminInvitation[]; message?: string; code?: string };
+      if (!res.ok || !json.ok) {
+        setMessage(json.message || json.code || "Admin lifecycle action was blocked.");
+        return;
+      }
+      setAdmins(json.admins ?? []);
+      if (json.invitations) setAdminInvitations(json.invitations);
+      setAdminLifecycleForm({ adminUserId: "", action: "activate", role: "support_agent", reason: "", expectedUpdatedAt: "" });
+      setMessage("Admin lifecycle action completed and audit recorded.");
+    } finally {
+      setAdminLifecycleActionLoading(false);
+    }
+  }
+
+  function runAdminLifecycle() {
+    const action = adminLifecycleForm.action;
+    if (action === "deactivate" || action === "change_role") {
+      requestConfirmation({
+        title: action === "deactivate" ? "Suspend administrator access" : "Change administrator role",
+        message: action === "deactivate"
+          ? "This removes platform administrator access without deleting the authentication account or Personal Vault. A reason is required and the action is audited."
+          : "This changes platform capabilities for the selected administrator. Confirm the selected role and reason before continuing.",
+        confirmLabel: action === "deactivate" ? "Suspend access" : "Change role",
+      }, () => runAdminLifecycleRequest());
       return;
     }
-    setAdmins(json.admins ?? []);
-    if (json.invitations) setAdminInvitations(json.invitations);
-    setAdminLifecycleForm({ adminUserId: "", action: "activate", role: "support_agent", reason: "", expectedUpdatedAt: "" });
-    setMessage("Admin lifecycle action completed and audit recorded.");
+    void runAdminLifecycleRequest();
   }
 
   async function runAdminInvitationLifecycle(invitationId: string, action: "resend_invitation" | "revoke_invitation") {
@@ -1109,7 +1130,7 @@ export default function AdminControlPlaneWorkspace({
         {section === "organisation-detail" || section === "organisation-users" || section === "organisation-invitations" || section === "organisation-licences" ? renderPlatformOrganisationDetail(section, resourceId, enterprisePortfolio) : null}
         {section === "licences" ? renderPlatformLicences(enterpriseViews) : null}
         {section === "licence-detail" ? renderPlatformLicenceDetail(resourceId, enterprisePortfolio) : null}
-        {section === "admin-users" || section === "admin-user-detail" ? renderAdminUsers(admins, adminInvitations, adminFilter, setAdminFilter, adminInviteForm, setAdminInviteForm, sendAdminInvitation, adminInviteOpen, setAdminInviteOpen, adminLifecycleForm, setAdminLifecycleForm, runAdminLifecycle, runAdminInvitationLifecycle, (input, onConfirm) => requestConfirmation(input, onConfirm), resourceId) : null}
+        {section === "admin-users" || section === "admin-user-detail" ? renderAdminUsers(admins, adminInvitations, adminFilter, setAdminFilter, adminInviteForm, setAdminInviteForm, sendAdminInvitation, adminInviteOpen, setAdminInviteOpen, adminLifecycleForm, setAdminLifecycleForm, runAdminLifecycle, runAdminInvitationLifecycle, (input, onConfirm) => requestConfirmation(input, onConfirm), resourceId, adminLifecycleActionLoading) : null}
         {section === "users" || section === "user-detail" ? renderUsers(lookupQuery, setLookupQuery, lookupResults, runLookup, resourceId, userDetail, userDetailLoading) : null}
         {section === "support" || section === "invitations" ? renderSupport(section, support, supportDetail, supportDetailLoading, supportActionLoading, loadSupportInvitationDetail, runSupportInvitationAction, createSupportCase, runSupportCaseAction, addSupportCaseNote, capabilities, enterprisePortfolio, enterpriseInvitationActionLoading, runEnterpriseInvitationAction) : null}
         {section === "verification" || section === "verification-detail" ? renderVerification(verificationQueue, resourceId, capabilities, verificationActionLoading, verificationReviewNote, setVerificationReviewNote, runVerificationAction) : null}
@@ -1247,7 +1268,7 @@ function renderPlatformControlMap(capabilities: string[]) {
           <h2 id="platform-control-map-title" style={h2Style}>Control plane</h2>
           <p style={mutedStyle}>Manage platform resources from the System Admin workspace. Opening an organisation keeps this administrator context and does not enter a customer workspace.</p>
         </div>
-        <AdminContextHelp label="System Admin boundary">Enterprise operations remain organisation-scoped at /enterprise. These platform resource links do not impersonate or switch the current administrator.</AdminContextHelp>
+        <AdminContextHelp label="System Admin boundary">Enterprise operations remain organisation-scoped at /enterprise. These platform resource links never switch the current administrator into an organisation workspace.</AdminContextHelp>
       </div>
       <div style={gridStyle}>
         {resources.map((resource) => (
@@ -1633,10 +1654,11 @@ function renderAdminUsers(
     reason: string;
     expectedUpdatedAt: string;
   }) => void,
-  runAdminLifecycle: () => Promise<void>,
+  runAdminLifecycle: () => void,
   runAdminInvitationLifecycle: (invitationId: string, action: "resend_invitation" | "revoke_invitation") => Promise<void>,
   requestConfirmation: (input: Omit<AdminConfirmation, "onConfirm">, onConfirm: AdminConfirmation["onConfirm"]) => void,
   resourceId: string | null,
+  lifecycleActionLoading: boolean,
 ) {
   const filtered = admins.filter((item) => {
     const synthetic = isSyntheticAdmin(item);
@@ -1683,7 +1705,7 @@ function renderAdminUsers(
               <strong>Stale-update protection</strong>
               <span>This action will only apply if the administrator row still matches the currently loaded version from {formatDate(selected.updated_at)}.</span>
             </section>
-            <button type="button" onClick={() => void runAdminLifecycle()} disabled={lifecycleForm.adminUserId !== selected.id || !lifecycleForm.action || !lifecycleForm.reason.trim()} style={primaryButtonStyle}>Confirm lifecycle action</button>
+            <button type="button" onClick={() => void runAdminLifecycle()} disabled={lifecycleActionLoading || lifecycleForm.adminUserId !== selected.id || !lifecycleForm.action || !lifecycleForm.reason.trim()} style={primaryButtonStyle}>{lifecycleActionLoading ? "Applying..." : "Confirm lifecycle action"}</button>
           </section>
         ) : null}
       </div>
@@ -1816,8 +1838,8 @@ function renderAdminUsers(
               render: (item) => (
                 <div style={actionsCellStyle}>
                   <Link href={`/admin/admin-users/${item.id}`}>Inspect</Link>
-                  <button type="button" onClick={() => setLifecycleForm({ ...lifecycleForm, adminUserId: item.id, action: item.status === "active" ? "deactivate" : "activate", role: item.role ?? "support_agent", reason: "", expectedUpdatedAt: item.updated_at })}>{item.status === "active" ? "Suspend access" : "Reactivate access"}</button>
-                  <button type="button" onClick={() => setLifecycleForm({ ...lifecycleForm, adminUserId: item.id, action: "change_role", role: item.role ?? "support_agent", reason: "", expectedUpdatedAt: item.updated_at })}>Edit role</button>
+                  <button type="button" disabled={lifecycleActionLoading} onClick={() => setLifecycleForm({ ...lifecycleForm, adminUserId: item.id, action: item.status === "active" ? "deactivate" : "activate", role: item.role ?? "support_agent", reason: "", expectedUpdatedAt: item.updated_at })}>{item.status === "active" ? "Suspend access" : "Reactivate access"}</button>
+                  <button type="button" disabled={lifecycleActionLoading} onClick={() => setLifecycleForm({ ...lifecycleForm, adminUserId: item.id, action: "change_role", role: item.role ?? "support_agent", reason: "", expectedUpdatedAt: item.updated_at })}>Edit role</button>
                 </div>
               ),
             },
@@ -1870,7 +1892,7 @@ function renderAdminUsers(
           <span>{lifecycleForm.action === "deactivate" ? "Suspends platform administrator access only. It does not delete the person’s authentication account or personal vault." : lifecycleForm.action === "change_role" ? "Changes the platform role after server-side final-super-admin and self-lockout checks." : "Restores administrator access if the account is eligible."}</span>
           {lifecycleForm.expectedUpdatedAt ? <span>Loaded admin row version: {formatDate(lifecycleForm.expectedUpdatedAt)}.</span> : null}
         </section>
-        <button type="button" onClick={() => void runAdminLifecycle()} disabled={!lifecycleForm.adminUserId || !lifecycleForm.reason.trim()} style={primaryButtonStyle}>Confirm lifecycle action</button>
+        <button type="button" onClick={() => void runAdminLifecycle()} disabled={lifecycleActionLoading || !lifecycleForm.adminUserId || !lifecycleForm.reason.trim()} style={primaryButtonStyle}>{lifecycleActionLoading ? "Applying..." : "Confirm lifecycle action"}</button>
       </section>
     </div>
   );

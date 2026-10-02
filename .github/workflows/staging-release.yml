@@ -55,3 +55,15 @@ jobs:
           EXPECTED_STAGING_SHA: ${{ inputs.expected_sha }}
           STAGING_DEPLOY_APPROVED: "true"
         run: npm run staging:ops -- release
+
+      - name: Run hosted admin role-boundary browser acceptance
+        env:
+          PLAYWRIGHT_BASE_URL: https://test.mylegacyfortress.com
+          NEXT_PUBLIC_SUPABASE_URL: https://supabase-test.mylegacyfortress.com
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+          LEGACY_FORTRESS_ALLOW_STAGING_BROWSER: "true"
+          EXPECTED_STAGING_SHA: ${{ inputs.expected_sha }}
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:e2e:staging-admin
