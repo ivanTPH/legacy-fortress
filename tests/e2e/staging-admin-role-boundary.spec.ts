@@ -123,6 +123,12 @@ async function createUser(role: string) {
 }
 
 async function signIn(page: Page, email: string, next: string) {
+  await page.context().clearCookies();
+  await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => {
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+  });
   await page.goto(`${BASE_URL}/sign-in?next=${encodeURIComponent(next)}`, { waitUntil: "networkidle" });
   await page.getByLabel(/Email/i).fill(email);
   await page.getByRole("textbox", { name: /Password/i }).fill(PASSWORD);
