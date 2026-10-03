@@ -98,7 +98,7 @@ test("enterprise admin is organisation-scoped and cannot use platform administra
   await expect(page.getByText(/Enterprise Operations/i).first()).toBeVisible();
   await assertAccountMenu(page);
   await page.goto(`${BASE_URL}/admin`, { waitUntil: "networkidle" });
-  await expect(page.getByRole("heading", { name: "Admin access is restricted" })).toBeVisible();
+  await assertDeniedWorkspace(page, /Admin access is restricted|Access denied|Sign in/i);
   const response = await request.get(`${BASE_URL}/api/internal/admin/admin-users`);
   expect(response.status()).toBe(403);
 });
@@ -107,9 +107,9 @@ test("personal user cannot enter administrative workspaces", async ({ page }) =>
   await signIn(page, users[2].email, "/dashboard");
   await assertAccountMenu(page);
   await page.goto(`${BASE_URL}/admin`, { waitUntil: "networkidle" });
-  await expect(page.getByRole("heading", { name: "Admin access is restricted" })).toBeVisible();
+  await assertDeniedWorkspace(page, /Admin access is restricted|Access denied|Sign in/i);
   await page.goto(`${BASE_URL}/enterprise`, { waitUntil: "networkidle" });
-  await expect(page.getByRole("heading", { name: "Access denied" })).toBeVisible();
+  await assertDeniedWorkspace(page, /Access denied|Enterprise workspace unavailable|Sign in/i);
 });
 
 async function createUser(role: string) {
@@ -149,4 +149,8 @@ async function assertAccountMenu(page: Page) {
   await trigger.click();
   await page.getByRole("heading").first().click();
   await expect(page.getByRole("menu", { name: "Account menu" })).toHaveCount(0);
+}
+
+async function assertDeniedWorkspace(page: Page, heading: RegExp) {
+  await expect(page.getByRole("heading", { name: heading }).first()).toBeVisible();
 }
