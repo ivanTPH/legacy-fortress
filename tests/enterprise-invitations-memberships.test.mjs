@@ -179,6 +179,19 @@ test("enterprise invitation and membership lifecycle controls require reasoned a
   assert.match(service, /releaseEnterpriseSeat\(client, current\.seat_id, optionalText\(reason\)/);
 });
 
+test("enterprise workspace makes organisation context and capability boundaries visible", () => {
+  const workspace = read("components/enterprise/EnterpriseOperationsWorkspace.tsx");
+
+  assert.match(workspace, /Authorised organisation context/);
+  assert.match(workspace, /Organisation: \$\{scopedOrganisation\.name\}/);
+  assert.match(workspace, /Organisation creation is restricted to platform administrators/);
+  assert.match(workspace, /Invitation management is restricted to authorised organisation administrators/);
+  assert.match(workspace, /can\("enterprise\.membership\.manage"\)/);
+  assert.match(workspace, /can\("enterprise\.invitation\.manage"\)/);
+  assert.match(workspace, /setInviteForm\(\(current\) => \(\{ \.\.\.current, organisationId/);
+  assert.match(workspace, /Private vault content excluded/);
+});
+
 test("registration organisation pickers disambiguate duplicate display names", () => {
   const workspace = read("components/enterprise/EnterpriseOperationsWorkspace.tsx");
   assert.match(workspace, /function organisationOptionLabel/);

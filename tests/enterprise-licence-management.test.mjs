@@ -84,7 +84,8 @@ test("licence UI has operational create, entitlement, renewal and lifecycle surf
   const portfolio = fs.readFileSync(path.join(root, "components/enterprise/EnterpriseOperationsWorkspace.tsx"), "utf8");
   const orgDetail = fs.readFileSync(path.join(root, "components/enterprise/EnterpriseOrganisationDetailWorkspace.tsx"), "utf8");
   const licenceDetail = fs.readFileSync(path.join(root, "components/enterprise/EnterpriseLicenceDetailWorkspace.tsx"), "utf8");
-  const route = fs.readFileSync(path.join(root, "app/application/enterprise/licences/[licenceId]/page.tsx"), "utf8");
+  const route = fs.readFileSync(path.join(root, "app/enterprise/licences/[licenceId]/page.tsx"), "utf8");
+  const compatibilityRoute = fs.readFileSync(path.join(root, "app/application/enterprise/licences/[licenceId]/page.tsx"), "utf8");
 
   for (const text of [
     "Create licence",
@@ -101,6 +102,7 @@ test("licence UI has operational create, entitlement, renewal and lifecycle surf
   assert.match(orgDetail, /Configure licence/);
   assert.match(orgDetail, /create_licence/);
   assert.match(route, /EnterpriseLicenceDetailWorkspace/);
+  assert.match(compatibilityRoute, /redirect\(`\/enterprise\/licences/);
 
   for (const text of [
     "Seat usage",

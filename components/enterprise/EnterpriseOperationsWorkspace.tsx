@@ -473,6 +473,18 @@ export default function EnterpriseOperationsWorkspace() {
       return;
     }
     setPortfolio(json.portfolio);
+    const scopedOrganisation = json.portfolio.organisations.length === 1 ? json.portfolio.organisations[0] : null;
+    const scopeLabel = scopedOrganisation
+      ? `Organisation: ${scopedOrganisation.name}`
+      : json.portfolio.organisations.length > 1
+        ? `${json.portfolio.organisations.length} authorised organisations`
+        : "No organisation assigned";
+    setIdentity((current) => ({ ...current, detail: `${user.email ?? current.detail} · ${scopeLabel}` }));
+    if (scopedOrganisation) {
+      setInviteForm((current) => ({ ...current, organisationId: current.organisationId || scopedOrganisation.id }));
+      setEnrolmentForm((current) => ({ ...current, organisationId: current.organisationId || scopedOrganisation.id }));
+      setLicenceForm((current) => ({ ...current, organisationId: current.organisationId || scopedOrganisation.id }));
+    }
     const sessionRes = await authFetch("/api/internal/admin/session");
     const sessionJson = await sessionRes.json().catch(() => ({})) as { admin?: { capabilities?: string[] } };
     setNavigationCapabilities(sessionRes.ok && sessionJson.admin?.capabilities?.length
@@ -589,6 +601,7 @@ export default function EnterpriseOperationsWorkspace() {
   });
   const currentPathname = `/enterprise${activeTab === "overview" ? "" : `?tab=${activeTab}`}`;
   const visibleNavigation = useMemo(() => filterAdminNavigation(ENTERPRISE_ADMIN_NAVIGATION, navigationCapabilities), [navigationCapabilities]);
+  const can = useCallback((capability: string) => navigationCapabilities.includes(capability), [navigationCapabilities]);
 
   if (state === "checking") {
     return (
@@ -635,6 +648,8 @@ export default function EnterpriseOperationsWorkspace() {
 
       {message ? <section style={alertStyle}>{message}</section> : null}
 
+      {renderEnterpriseContext(portfolio)}
+
       {renderFilterBar(
         filters,
         setFilters,
@@ -660,13 +675,13 @@ export default function EnterpriseOperationsWorkspace() {
         setLicenceForm({ ...licenceForm, organisationId });
         setLicenceFormOpen(true);
         setActiveTab("licences");
-      }) : null}
+      }, can("organisation:manage")) : null}
       {activeTab === "licences" ? renderLicences(filteredLicences, portfolio, licenceForm, setLicenceForm, async () => {
         await runAction("create_licence", licenceForm);
         setLicenceFormOpen(false);
       }, licenceFormOpen, setLicenceFormOpen) : null}
-      {activeTab === "users" ? renderUsersAndSeats({ ...portfolio, memberships: filteredMemberships }, runAction, membershipLifecycleForm, setMembershipLifecycleForm) : null}
-      {activeTab === "invitations" ? renderInvitations(filteredInvitations, portfolio, inviteForm, setInviteForm, enrolmentForm, setEnrolmentForm, bulkRows, setBulkRows, runAction, invitationLifecycleForm, setInvitationLifecycleForm, false) : null}
+      {activeTab === "users" ? renderUsersAndSeats({ ...portfolio, memberships: filteredMemberships }, runAction, membershipLifecycleForm, setMembershipLifecycleForm, can("enterprise.membership.manage")) : null}
+      {activeTab === "invitations" ? renderInvitations(filteredInvitations, portfolio, inviteForm, setInviteForm, enrolmentForm, setEnrolmentForm, bulkRows, setBulkRows, runAction, invitationLifecycleForm, setInvitationLifecycleForm, false, can("enterprise.invitation.manage")) : null}
       {activeTab === "registration-links" ? renderRegistrationLinks(portfolio, enrolmentForm, setEnrolmentForm, runAction, copiedLinkId, copyRegistrationLink) : null}
       {activeTab === "adoption" ? renderAdoption(portfolio, filteredOrganisations) : null}
       {activeTab === "reports" ? renderReports(portfolio, reportType, setReportType, () => runAction("export_report", { reportType, filters })) : null}
@@ -723,6 +738,33 @@ function renderOverview(
   );
 }
 
+function renderEnterpriseContext(portfolio: EnterprisePortfolio) {
+  const organisations = portfolio.organisations;
+  const primary = organisations.length === 1 ? organisations[0] : null;
+  return (
+    <section style={contextPanelStyle} aria-label="Current enterprise organisation context">
+      <div style={sectionHeaderStyle}>
+        <div>
+          <p style={eyebrowStyle}>Authorised organisation context</p>
+          <h2 style={h2Style}>{primary ? primary.name : organisations.length ? `${organisations.length} authorised organisations` : "No organisation assigned"}</h2>
+          <p style={mutedStyle}>
+            {primary
+              ? `${labelise(primary.status)} organisation · ${labelise(primary.onboardingStatus)} onboarding`
+              : "Every record in this workspace is filtered by the organisation scope granted to your account."}
+          </p>
+        </div>
+        <span style={privacyStyle}>Private vault content excluded</span>
+      </div>
+      <div style={contextSummaryGridStyle}>
+        <div><strong>{portfolio.summary.seats.active}/{portfolio.summary.seats.purchased}</strong><span>active seats</span></div>
+        <div><strong>{portfolio.summary.seats.available ?? 0}</strong><span>available seats</span></div>
+        <div><strong>{portfolio.summary.pendingInvitations}</strong><span>pending invitations</span></div>
+        <div><strong>{portfolio.summary.atRiskOrganisations}</strong><span>at-risk organisations</span></div>
+      </div>
+    </section>
+  );
+}
+
 function coerceSavedFilters(value: Record<string, unknown>) {
   const allowed: Array<keyof EnterpriseFilters> = ["organisation", "status", "type", "licence", "licencePlan", "billingStatus", "renewal", "utilisation", "invitation", "adoption", "consent", "risk", "country", "accountOwner", "onboarding", "membership", "role", "dateRange", "synthetic"];
   return Object.fromEntries(allowed
@@ -740,6 +782,7 @@ function renderOrganisations(
   formOpen: boolean,
   setFormOpen: (value: boolean) => void,
   configureLicence: (organisationId: string) => void,
+  canManage: boolean,
 ) {
   return (
     <div style={stackStyle}>
@@ -749,13 +792,13 @@ function renderOrganisations(
             <h2 style={h2Style}>Organisations</h2>
             <p style={mutedStyle}>Create, inspect and manage real organisation records. No customer vault data is requested or shown.</p>
           </div>
-          <button type="button" style={primaryButtonStyle} onClick={() => setFormOpen(true)}>
+          {canManage ? <button type="button" style={primaryButtonStyle} onClick={() => setFormOpen(true)}>
             Add organisation
-          </button>
+          </button> : <span style={privacyStyle}>Organisation creation is restricted to platform administrators.</span>}
         </div>
         {renderOrganisationTable(organisations, portfolio, runAction, configureLicence)}
       </section>
-      {formOpen ? (
+      {formOpen && canManage ? (
       <section style={contextPanelStyle} aria-label="Add organisation form">
         <h2 id="add-organisation-form" style={h2Style}>Add organisation</h2>
         <h3 style={h3Style}>1. Organisation identity</h3>
@@ -935,6 +978,7 @@ function renderInvitations(
   lifecycleForm: EnterpriseInvitationLifecycleForm,
   setLifecycleForm: (value: EnterpriseInvitationLifecycleForm) => void,
   showLinks = true,
+  canManage = false,
 ) {
   const orgLicences = portfolio.licences.filter((licence) => licence.organisationId === form.organisationId);
   const linkLicences = portfolio.licences.filter((licence) => licence.organisationId === enrolmentForm.organisationId);
@@ -944,6 +988,8 @@ function renderInvitations(
     <div style={twoColumnStyle}>
       <section style={panelStyle}>
         <h2 style={h2Style}>Invite organisation user</h2>
+        {!canManage ? <p style={privacyStyle}>Invitation management is restricted to authorised organisation administrators.</p> : null}
+        {canManage ? <>
         <label style={labelStyle}>Organisation
           <select value={String(form.organisationId)} onChange={(event) => setForm({ ...form, organisationId: event.target.value, licenceId: "" })}>
             <option value="">Select organisation</option>
@@ -1002,10 +1048,11 @@ function renderInvitations(
         <p style={privacyStyle}>Bulk dispatch is not available in this workflow yet. You can validate a CSV before a future governed send operation.</p>
         <textarea aria-label="Bulk invitation CSV" style={{ minHeight: 120 }} value={bulkRows} onChange={(event) => setBulkRows(event.target.value)} />
         <button type="button" style={secondaryButtonStyle} onClick={() => runAction("validate_bulk_invitations", { rows: parseBulkRows(bulkRows) })}>Validate CSV</button>
+        </> : null}
       </section>
       <section style={panelStyle}>
         <h2 style={h2Style}>Invitations</h2>
-        {selectedInvitation ? (
+        {selectedInvitation && canManage ? (
           <section style={contextPanelStyle} aria-label="Invitation lifecycle action">
             <h3 style={h3Style}>Invitation lifecycle action</h3>
             <dl style={definitionGridStyle}>
@@ -1052,7 +1099,7 @@ function renderInvitations(
                   <td>{item.seatId ? "Reserved" : "Not reserved"}</td>
                   <td>{formatDate(item.expiresAt)}</td>
                   <td style={actionsCellStyle}>
-                    {getInvitationLifecycleOptions(item.status).length ? (
+                    {canManage && getInvitationLifecycleOptions(item.status).length ? (
                       <>
                         <button type="button" onClick={() => setLifecycleForm({ invitationId: item.id, status: "sent", reason: "" })}>Resend</button>
                         <button type="button" onClick={() => setLifecycleForm({ invitationId: item.id, status: "revoked", reason: "" })}>Revoke</button>
@@ -1126,6 +1173,7 @@ function renderUsersAndSeats(
   runAction: (action: string, payload: Record<string, unknown>) => void,
   lifecycleForm: EnterpriseMembershipLifecycleForm,
   setLifecycleForm: (value: EnterpriseMembershipLifecycleForm) => void,
+  canManage: boolean,
 ) {
   const seats = portfolio.summary.seats;
   const selectedMember = portfolio.memberships.find((item) => item.id === lifecycleForm.membershipId) ?? null;
@@ -1142,7 +1190,7 @@ function renderUsersAndSeats(
       </section>
       <section style={panelStyle}>
         <h2 style={h2Style}>Users and seats</h2>
-        {selectedMember ? (
+        {selectedMember && canManage ? (
           <section style={contextPanelStyle} aria-label="Membership lifecycle action">
             <h3 style={h3Style}>Membership lifecycle action</h3>
             <dl style={definitionGridStyle}>
@@ -1191,7 +1239,7 @@ function renderUsersAndSeats(
                   <td>{labelise(member.onboardingStatus)}</td>
                   <td><AdminStatusBadge status={member.consentStatus} /></td>
                   <td style={actionsCellStyle}>
-                    {getMembershipLifecycleOptions(member.status).length ? (
+                    {canManage && getMembershipLifecycleOptions(member.status).length ? (
                       <>
                         <button type="button" onClick={() => setLifecycleForm({ membershipId: member.id, status: member.status === "suspended" ? "active" : "suspended", reason: "" })}>{member.status === "suspended" ? "Reactivate" : "Suspend"}</button>
                         <button type="button" onClick={() => setLifecycleForm({ membershipId: member.id, status: "removed", reason: "" })}>Remove</button>
@@ -1820,6 +1868,7 @@ const privacyStyle: CSSProperties = { color: "#334155", background: "#f1f5f9", b
 const rowStyle: CSSProperties = { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 };
 const sectionHeaderStyle: CSSProperties = { display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 12 };
 const contextPanelStyle: CSSProperties = { border: "1px solid #cbd5e1", borderRadius: 8, padding: 14, display: "grid", gap: 12, background: "#f8fafc" };
+const contextSummaryGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 };
 const secondaryLinkStyle: CSSProperties = { color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 6, padding: "9px 12px", textDecoration: "none", background: "#fff", fontWeight: 700 };
 const secondaryButtonStyle: CSSProperties = { color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 6, padding: "9px 12px", background: "#fff", fontWeight: 700 };
 const primaryButtonStyle: CSSProperties = { border: 0, borderRadius: 6, padding: "10px 14px", background: "#111827", color: "#fff", fontWeight: 800 };
