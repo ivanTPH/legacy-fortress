@@ -94,21 +94,25 @@ test("platform admin remains in admin context while using users, invitations, or
 });
 
 test("enterprise admin is organisation-scoped and cannot use platform administration", async ({ page }) => {
-  await signIn(page, users[1].email, "/enterprise");
+  const session = await signIn(page, users[1].email, "/enterprise");
   await expect(page.getByText(/Enterprise Operations/i).first()).toBeVisible();
   await assertAccountMenu(page);
   await page.goto(`${BASE_URL}/admin`, { waitUntil: "networkidle" });
   await assertDeniedWorkspace(page, /Admin access is restricted|Access denied|Sign in/i);
-  const responseStatus = await page.evaluate(async () => (await fetch("/api/internal/admin/admin-users")).status);
+  const responseStatus = await page.evaluate(async (accessToken) => (await fetch("/api/internal/admin/admin-users", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })).status, session.access_token);
   expect(responseStatus).toBe(403);
 });
 
 test("personal user cannot enter administrative workspaces", async ({ page }) => {
-  await signIn(page, users[2].email, "/dashboard");
+  const session = await signIn(page, users[2].email, "/dashboard");
   await assertAccountMenu(page);
   await page.goto(`${BASE_URL}/admin`, { waitUntil: "networkidle" });
   await assertDeniedWorkspace(page, /Admin access is restricted|Access denied|Sign in/i);
-  const adminResponseStatus = await page.evaluate(async () => (await fetch("/api/internal/admin/admin-users")).status);
+  const adminResponseStatus = await page.evaluate(async (accessToken) => (await fetch("/api/internal/admin/admin-users", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })).status, session.access_token);
   expect(adminResponseStatus).toBe(403);
   await page.goto(`${BASE_URL}/enterprise`, { waitUntil: "networkidle" });
   await assertDeniedWorkspace(page, /Access denied|Enterprise workspace unavailable|Sign in/i);
@@ -139,6 +143,7 @@ async function signIn(page: Page, email: string, next: string) {
   }, auth.data.session);
   await page.goto(`${BASE_URL}${next}`, { waitUntil: "networkidle" });
   await page.waitForLoadState("networkidle");
+  return auth.data.session;
 }
 
 async function assertAccountMenu(page: Page) {
