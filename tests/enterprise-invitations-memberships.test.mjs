@@ -95,7 +95,8 @@ test("enterprise API has separate Phase 3 permission gates and audit actions", (
   assert.doesNotMatch(access, /organisation_member["\s,\]]+:[\s\S]*enterprise\.membership\.manage/);
   assert.match(route, /requireEnterpriseAccess\(request\)/);
   assert.match(route, /assertEnterpriseActionScope/);
-  assert.match(sessionRoute, /requireEnterpriseAccess\(request\)/);
+  assert.match(sessionRoute, /requireAdminAccess\(request\)/);
+  assert.doesNotMatch(sessionRoute, /requireEnterpriseAccess\(request\)/);
 });
 
 test("Phase 3B capability resolver keeps organisation-scoped access separate from platform admin", () => {
@@ -110,7 +111,8 @@ test("Phase 3B capability resolver keeps organisation-scoped access separate fro
   assert.match(access, /adminHasCapability\(access: AdminAccessState, capability: AdminCapability\)[\s\S]*access\.capabilities\.includes\(capability\)/);
   assert.match(access, /id: `enterprise-membership:\$\{firstMembershipId\}`/);
   assert.match(access, /granted_by_user_id: null/);
-  assert.match(sessionRoute, /enterpriseScope: admin\.access\.enterpriseScope/);
+  assert.doesNotMatch(sessionRoute, /enterpriseScope: admin\.access\.enterpriseScope/);
+  assert.match(sessionRoute, /requireAdminAccess\(request\)/);
   assert.match(switcher, /payload\.admin\.role === "enterprise_admin"/);
 });
 
