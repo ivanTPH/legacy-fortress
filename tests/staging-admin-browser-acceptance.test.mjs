@@ -27,3 +27,11 @@ test("browser acceptance covers platform, enterprise and personal boundaries", (
     assert.match(spec, new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"));
   }
 });
+
+test("personal browser fixture completes the real onboarding gate", () => {
+  assert.match(spec, /seedCompletedPersonalOnboarding\(personal\.id\)/);
+  assert.match(spec, /current_step: "complete"/);
+  assert.match(spec, /terms_version: "legacy-fortress-2026-03"/);
+  assert.match(spec, /is_completed: true/);
+  assert.match(spec, /terms_accepted: true/);
+});

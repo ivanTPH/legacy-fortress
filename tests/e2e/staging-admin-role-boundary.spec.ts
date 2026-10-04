@@ -33,7 +33,8 @@ test.beforeAll(async () => {
   adminClient = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
   const platform = await createUser("platform");
   const enterprise = await createUser("enterprise");
-  await createUser("personal");
+  const personal = await createUser("personal");
+  await seedCompletedPersonalOnboarding(personal.id);
 
   const adminRow = await adminClient.from("admin_users").insert({
     email_normalized: platform.email,
@@ -126,6 +127,29 @@ async function createUser(role: string) {
   const profile = await adminClient.from("user_profiles").insert({ user_id: result.data.user.id, display_name: `Staging ${role === "personal" ? "Personal User" : `${role[0].toUpperCase()}${role.slice(1)} Admin`}` });
   if (profile.error) throw profile.error;
   return { id: result.data.user.id, email };
+}
+
+async function seedCompletedPersonalOnboarding(userId: string) {
+  const now = new Date().toISOString();
+  const onboarding = await adminClient.from("user_onboarding_state").upsert({
+    user_id: userId,
+    current_step: "complete",
+    completed_steps: ["identity", "verification", "consent", "personal_details", "vault_categories", "complete"],
+    is_completed: true,
+    terms_accepted: true,
+    marketing_opt_in: false,
+    tour_opt_in: false,
+  }, { onConflict: "user_id" });
+  if (onboarding.error) throw onboarding.error;
+
+  const terms = await adminClient.from("terms_acceptances").upsert({
+    user_id: userId,
+    terms_version: "legacy-fortress-2026-03",
+    accepted: true,
+    accepted_at: now,
+    source: "staging_browser_acceptance",
+  }, { onConflict: "user_id" });
+  if (terms.error) throw terms.error;
 }
 
 async function signIn(page: Page, email: string, next: string) {
