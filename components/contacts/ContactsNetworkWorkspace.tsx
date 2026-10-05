@@ -347,7 +347,8 @@ export default function ContactsNetworkWorkspace() {
 
   const selectedContactId = String(searchParams.get("contact") ?? "").trim();
   const selectedGroup = normalizeContactGroupKey(searchParams.get("group"));
-  const isNextOfKinAddMode = selectedGroup === "family" && searchParams.get("add") === "1";
+  const isContactAddMode = Boolean(selectedGroup && searchParams.get("add") === "1");
+  const isNextOfKinAddMode = selectedGroup === "family" && isContactAddMode;
   const selectedContact = useMemo(() => {
     const match = contacts.find((item) => item.id === selectedContactId);
     if (!match) return null;
@@ -377,10 +378,10 @@ export default function ContactsNetworkWorkspace() {
       : openGroupKey ?? preferredOpenGroup;
 
   useEffect(() => {
-    if (!isNextOfKinAddMode || viewer.readOnly) return;
-    setOpenGroupKey("family");
-    setAddContactGroupKey("family");
-  }, [isNextOfKinAddMode, viewer.readOnly]);
+    if (!isContactAddMode || !selectedGroup || viewer.readOnly) return;
+    setOpenGroupKey(selectedGroup);
+    setAddContactGroupKey(selectedGroup);
+  }, [isContactAddMode, selectedGroup, viewer.readOnly]);
 
   useEffect(() => {
     if (!documentPreview) return;

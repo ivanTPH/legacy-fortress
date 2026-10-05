@@ -2308,6 +2308,104 @@ textarea {
   gap: 14px;
 }
 
+.lf-add-to-fortress-panel {
+  border: 1px solid #d8e1ed;
+  border-radius: 16px;
+  background: #fff;
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.lf-add-to-fortress-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.lf-add-to-fortress-heading h2 {
+  margin: 0;
+  color: #172b4d;
+  font-size: 19px;
+}
+
+.lf-add-to-fortress-intro {
+  margin: 0;
+  color: #52627a;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.lf-add-to-fortress-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.lf-add-to-fortress-group {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.lf-add-to-fortress-group h3 {
+  margin: 0;
+  color: #334155;
+  font-size: 13px;
+}
+
+.lf-add-to-fortress-choices {
+  display: grid;
+  gap: 6px;
+}
+
+.lf-add-to-fortress-choice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px;
+  border-radius: 8px;
+  color: #1e293b;
+  text-decoration: none;
+}
+
+.lf-add-to-fortress-choice:hover,
+.lf-add-to-fortress-choice:focus-visible {
+  background: #eaf1f8;
+  outline: none;
+}
+
+.lf-add-to-fortress-choice-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: #e5edf7;
+  color: #315d8f;
+}
+
+.lf-add-to-fortress-choice span:nth-child(2) {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lf-add-to-fortress-choice small {
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.lf-add-to-fortress-choice > svg {
+  color: #64748b;
+}
+
 .lf-legacy-guidance-heading {
   display: flex;
   align-items: flex-start;
@@ -2405,6 +2503,10 @@ textarea {
 }
 
 @media (max-width: 820px) {
+  .lf-add-to-fortress-groups {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .lf-legacy-guidance-item {
     grid-template-columns: minmax(0, 1fr);
   }

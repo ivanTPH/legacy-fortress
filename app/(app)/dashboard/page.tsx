@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import DashboardAssetSummaryCard from "../components/dashboard/DashboardAssetSummaryCard";
 import ActionQueuePanel, { type ActionCentreContext, type ActionCentreTask } from "../components/dashboard/ActionQueuePanel";
 import LegacyGuidancePanel from "../components/dashboard/LegacyGuidancePanel";
+import AddToFortressPanel from "../components/dashboard/AddToFortressPanel";
 import Icon from "../../../components/ui/Icon";
 import InfoTip from "../../../components/ui/InfoTip";
 import AttachmentGallery, { type AttachmentGalleryItem } from "../../../components/documents/AttachmentGallery";
@@ -1720,6 +1721,7 @@ const legalSummary = useMemo(() => {
       </section>
 
       <ActionQueuePanel items={dashboardState.actions.items} context={dashboardState.actions.context} onAction={handleAction} />
+      <AddToFortressPanel />
       <LegacyGuidancePanel
         items={guidanceItems}
         ownerActionsEnabled={viewer.mode !== "linked"}

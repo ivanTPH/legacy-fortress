@@ -28,6 +28,15 @@ test("recorded evidence resolves guidance without inventing a readiness score", 
   assert.ok(items.some((item) => item.key === "digital_life"));
 });
 
+test("recorded Will and capacity information create contextual people next actions", () => {
+  const items = buildGuidanceItems({ ...emptyEvidence, willCount: 1 });
+  assert.equal(items.some((item) => item.key === "will"), false);
+  assert.equal(items.find((item) => item.key === "executor_after_will")?.href, "/contacts?group=executors");
+
+  const capacityItems = buildGuidanceItems({ ...emptyEvidence, powerOfAttorneyCount: 1 });
+  assert.equal(capacityItems.find((item) => item.key === "attorney_after_capacity")?.href, "/contacts?group=trusted-contacts");
+});
+
 test("onboarding self-report does not claim a record exists without evidence", () => {
   const preferences = normalizeVaultPreferences({ applicability: { will: "recorded" } });
   assert.equal(buildGuidanceItems(emptyEvidence, preferences).find((item) => item.key === "will")?.state, "needs_review");
