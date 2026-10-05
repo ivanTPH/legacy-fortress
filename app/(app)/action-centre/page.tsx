@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import DashboardPage from "../dashboard/page";
 
 export default function ActionCentrePage() {
-  redirect("/dashboard?view=action-centre#action-centre");
+  return <DashboardPage />;
 }

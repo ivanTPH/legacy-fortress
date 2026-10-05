@@ -3101,6 +3101,129 @@ textarea {
   text-decoration: underline;
 }
 
+.lf-action-entry-prompt {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid #e2d1c4;
+  border-radius: 14px;
+  background: #fffaf6;
+}
+
+.lf-action-entry-prompt-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 10px;
+  background: #8f5d3b;
+  color: #fff;
+}
+
+.lf-action-entry-prompt-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.lf-action-entry-prompt-eyebrow,
+.lf-action-centre-page-eyebrow {
+  margin: 0;
+  color: #8f5d3b;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.lf-action-entry-prompt-copy h2,
+.lf-action-entry-prompt-copy p,
+.lf-action-centre-page-header h1,
+.lf-action-centre-page-header p {
+  margin: 0;
+}
+
+.lf-action-entry-prompt-copy h2 {
+  color: #211914;
+  font-size: 16px;
+}
+
+.lf-action-entry-prompt-copy p,
+.lf-action-centre-page-header p {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.lf-action-entry-prompt-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.lf-action-entry-prompt-actions button,
+.lf-action-centre-follow-up button {
+  min-height: 38px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lf-action-entry-prompt-primary,
+.lf-action-centre-follow-up button {
+  border: 1px solid #6f432c;
+  background: #8f5d3b;
+  color: #fff;
+}
+
+.lf-action-entry-prompt-secondary {
+  border: 1px solid #d8c8bd;
+  background: #fff;
+  color: #553522;
+}
+
+.lf-action-centre-page-header,
+.lf-action-centre-follow-up {
+  display: grid;
+  gap: 6px;
+  padding: 18px;
+  border: 1px solid #e8e1dc;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.lf-action-centre-page-header h1 {
+  color: #211914;
+  font-size: 24px;
+}
+
+.lf-action-centre-follow-up p {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+@media (max-width: 700px) {
+  .lf-action-entry-prompt {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .lf-action-entry-prompt-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
+  .lf-action-entry-prompt-actions button {
+    min-height: 44px;
+  }
+}
+
 .lf-nav-item:hover {
   background: #f8f5f2;
   color: #15110f;

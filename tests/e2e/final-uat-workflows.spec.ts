@@ -125,6 +125,14 @@ test.describe("Final selector-specific workflow UAT", () => {
     await signIn(page);
   });
 
+  test("Action Centre sidebar opens the dedicated full inbox", async ({ page }) => {
+    await page.goto("/dashboard");
+    await page.getByRole("link", { name: /Action Centre/i }).first().click();
+    await expect(page).toHaveURL(/\/action-centre(?:\?.*)?$/);
+    await expect(page.getByRole("heading", { name: "Action Centre", exact: true })).toBeVisible();
+    await expect(page.locator("#action-centre")).toBeVisible();
+  });
+
   for (const route of routes) {
     test(`${route.name}: create, refresh, search, edit, and delete`, async ({ page }) => {
       const token = `${route.tokenPrefix} ${runId}`;

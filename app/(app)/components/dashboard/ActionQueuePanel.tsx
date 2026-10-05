@@ -69,6 +69,10 @@ export type ActionCentrePreviewItem = {
   href: string;
   blockerLabel: string;
   priorityLevel: ActionPriorityLevel;
+  source: "readiness" | "workflow" | "task";
+  dismissible: boolean;
+  snoozable: boolean;
+  eligibleChannels: Array<"in_app" | "login" | "email" | "push">;
 };
 
 type ActionCentreStatus = "Required" | "Recommended" | "Pending" | "Complete" | "Failed" | "Plan limit reached";
@@ -456,13 +460,17 @@ export function buildActionCentrePreview(
 ): ActionCentrePreviewItem[] {
   return getActiveActionRows(items, context ? { ...context, guidanceItems } : undefined)
     .slice(0, limit)
-    .map(({ key, title, actionKey, href, blockerLabel, priorityLevel }) => ({
+    .map(({ key, title, actionKey, href, blockerLabel, priorityLevel, guidanceItem, taskType }) => ({
       key,
       title,
       actionKey,
       href,
       blockerLabel,
       priorityLevel,
+      source: guidanceItem ? "readiness" : taskType ? "task" : "workflow",
+      dismissible: Boolean(guidanceItem),
+      snoozable: Boolean(guidanceItem),
+      eligibleChannels: guidanceItem ? ["in_app", "login", "email", "push"] : ["in_app", "login"],
     }));
 }
 

@@ -1268,17 +1268,17 @@ function GuidedExecutorFlow({
   }
 
   return (
-    <div className="lf-executor-invite-flow" style={guidedFlowStyle} aria-label="Invite an Executor">
+    <div className="lf-executor-invite-flow" style={guidedFlowStyle} aria-label="Add an executor">
       <div style={{ display: "grid", gap: 5 }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
           <div>
-            <p style={eyebrowStyle}>Executor invitation</p>
-            <h3 style={{ margin: 0, color: "#0f172a", fontSize: 22 }}>Invite an Executor</h3>
+            <p style={eyebrowStyle}>People I Trust · Executor</p>
+            <h3 style={{ margin: 0, color: "#0f172a", fontSize: 22 }}>Add an executor</h3>
           </div>
           <button type="button" style={guidedSecondaryButtonStyle} onClick={onCancel}>Cancel</button>
         </div>
         <p style={{ margin: 0, color: "#475569", fontSize: 14 }}>
-          Set up the person first, then choose a role and the information they may eventually be able to view.
+          Add this person to People I Trust first. You can decide separately whether to invite them to connect with your Fortress.
         </p>
         {status ? <div style={statusMessageStyle} role="status">{status}</div> : null}
       </div>
@@ -1414,11 +1414,11 @@ function RecentInvitationCard({
       <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
         <Icon name={sent ? "mark_email_read" : "schedule"} size={24} />
         <div style={{ display: "grid", gap: 5 }}>
-          <strong style={{ fontSize: 19 }}>{sent ? "Invitation dispatch attempted" : "Invitation prepared"}</strong>
+          <strong style={{ fontSize: 19 }}>{sent ? "Invitation sent" : "Person saved"}</strong>
           <span style={{ fontSize: 14 }}>
             {sent
-              ? `The invitation for ${invitation.name} to become your Executor was accepted by the configured dispatch service.`
-              : `${invitation.name} is ready to invite. The invitation has not been sent.`}
+              ? `${invitation.name} will receive an email explaining how to securely connect with your Legacy Fortress.`
+              : `${invitation.name} is saved in People I Trust. The invitation has not been sent.`}
           </span>
           <span style={guidedHelpStyle}>
             {sent ? "We'll show you here when they accept and complete identity verification." : "Send it later from the invitation status actions."}

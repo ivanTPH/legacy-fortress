@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import DashboardAssetSummaryCard from "../components/dashboard/DashboardAssetSummaryCard";
-import ActionQueuePanel, { getActionCentreActionCount, type ActionCentreContext, type ActionCentreTask } from "../components/dashboard/ActionQueuePanel";
+import ActionQueuePanel, { buildActionCentrePreview, getActionCentreActionCount, type ActionCentreContext, type ActionCentreTask } from "../components/dashboard/ActionQueuePanel";
 import DashboardActionSummary from "../components/dashboard/DashboardActionSummary";
+import ActionCentreEntryPrompt from "../components/dashboard/ActionCentreEntryPrompt";
 import Icon from "../../../components/ui/Icon";
 import InfoTip from "../../../components/ui/InfoTip";
 import AttachmentGallery, { type AttachmentGalleryItem } from "../../../components/documents/AttachmentGallery";
@@ -404,7 +405,9 @@ type DashboardState = {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
+  const actionCentreOnly = pathname === "/action-centre";
   const { viewer } = useViewerAccess();
   const { preferences, setPreferences } = useVaultPreferences();
 
@@ -866,13 +869,26 @@ const legalSummary = useMemo(() => {
     () => getActionCentreActionCount(dashboardState.actions.items, dashboardState.actions.context, guidanceItems),
     [dashboardState.actions.context, dashboardState.actions.items, guidanceItems],
   );
-  const showFullActionCentre = searchParams.get("view") === "action-centre";
+  const actionCentrePreview = useMemo(
+    () => buildActionCentrePreview(dashboardState.actions.items, dashboardState.actions.context, guidanceItems, 1)[0] ?? null,
+    [dashboardState.actions.context, dashboardState.actions.items, guidanceItems],
+  );
+  const [entryPromptVisible, setEntryPromptVisible] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.sessionStorage.setItem("lf:action-centre-count", String(actionCentreCount));
     window.dispatchEvent(new CustomEvent("lf-action-centre-count", { detail: { count: actionCentreCount } }));
   }, [actionCentreCount]);
+
+  useEffect(() => {
+    if (actionCentreOnly || viewer.mode === "linked" || !actionCentrePreview) return;
+    if (typeof window === "undefined") return;
+    const promptKey = "lf:action-centre-entry-prompt:session";
+    if (window.sessionStorage.getItem(promptKey) === "shown") return;
+    window.sessionStorage.setItem(promptKey, "shown");
+    setEntryPromptVisible(true);
+  }, [actionCentreOnly, actionCentrePreview, viewer.mode]);
   const markDashboardTaskComplete = useCallback(async (taskId: string) => {
     const task = assetRows.find((row) => row.id === taskId && String(row.category_key ?? "") === "tasks");
     if (!task) {
@@ -911,6 +927,13 @@ const legalSummary = useMemo(() => {
       const item = guidanceItems.find((candidate) => candidate.key === guidanceKey);
       if (item) router.push(item.href);
       return;
+    }
+    if (actionCentreOnly) {
+      const action = dashboardState.actions.items.find((candidate) => candidate.actionKey === actionKey);
+      if (action?.href) {
+        router.push(action.href);
+        return;
+      }
     }
     if (actionKey.startsWith("task:complete:")) {
       void markDashboardTaskComplete(actionKey.replace("task:complete:", ""));
@@ -966,7 +989,7 @@ const legalSummary = useMemo(() => {
       return;
     }
     setReviewPanel(buildReviewPanelFromAction(item.actionKey, item.stageName, item.blockerLabel));
-  }, [dashboardState.actions.items, guidanceItems, markDashboardTaskComplete, router]);
+  }, [actionCentreOnly, dashboardState.actions.items, guidanceItems, markDashboardTaskComplete, router]);
 
   const handleGuidanceDecision = useCallback(async (
     item: GuidanceItem,
@@ -1512,6 +1535,27 @@ const legalSummary = useMemo(() => {
     );
   }
 
+  if (actionCentreOnly) {
+    return (
+      <div className="lf-action-centre-page" style={{ display: "grid", gap: 14 }}>
+        <section className="lf-action-centre-page-header" aria-labelledby="action-centre-page-title">
+          <p className="lf-action-centre-page-eyebrow">Your next useful steps</p>
+          <h1 id="action-centre-page-title">Action Centre</h1>
+          <p>Review the small steps that can make your Fortress easier to understand and maintain.</p>
+        </section>
+        <ActionQueuePanel
+          items={dashboardState.actions.items}
+          context={dashboardState.actions.context}
+          guidanceItems={guidanceItems}
+          guidanceBusyKey={guidanceBusyKey}
+          onAction={handleAction}
+          onGuidanceDecision={viewer.mode === "linked" ? undefined : (item, action) => void handleGuidanceDecision(item, action)}
+        />
+        {reviewPanel ? <section className="lf-action-centre-follow-up" role="status"><strong>{reviewPanel.title}</strong><p>{reviewPanel.description}</p><button type="button" onClick={() => router.push(reviewPanel.href)}>{reviewPanel.ctaLabel}</button></section> : null}
+      </div>
+    );
+  }
+
   return (
     <div className="lf-dashboard-shell" style={{ display: "grid", gap: 14 }}>
       {status ? (
@@ -1529,6 +1573,16 @@ const legalSummary = useMemo(() => {
         ) : (
           <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div>
         )
+      ) : null}
+      {entryPromptVisible && actionCentrePreview ? (
+        <ActionCentreEntryPrompt
+          item={actionCentrePreview}
+          onAction={(actionKey) => {
+            setEntryPromptVisible(false);
+            handleAction(actionKey);
+          }}
+          onDismiss={() => setEntryPromptVisible(false)}
+        />
       ) : null}
       {loading ? <div style={{ color: "#6b7280" }}>Loading dashboard summary...</div> : null}
       {searchQuery ? (
@@ -1613,7 +1667,7 @@ const legalSummary = useMemo(() => {
             <div style={overviewIconStyle}>
               <Icon name="dashboard" size={16} />
             </div>
-            <h2 style={{ margin: 0, fontSize: 18 }}>Your Fortress at a glance</h2>
+            <h2 style={{ margin: 0, fontSize: 18 }}>Your Fortress Records</h2>
             <InfoTip
               className="lf-panel-help"
               label="Explain dashboard overview"
@@ -1737,23 +1791,12 @@ const legalSummary = useMemo(() => {
         )}
       </section>
 
-      {showFullActionCentre ? (
-        <ActionQueuePanel
-          items={dashboardState.actions.items}
-          context={dashboardState.actions.context}
-          guidanceItems={guidanceItems}
-          guidanceBusyKey={guidanceBusyKey}
-          onAction={handleAction}
-          onGuidanceDecision={viewer.mode === "linked" ? undefined : (item, action) => void handleGuidanceDecision(item, action)}
-        />
-      ) : (
-        <DashboardActionSummary
-          items={dashboardState.actions.items}
-          context={dashboardState.actions.context}
-          guidanceItems={guidanceItems}
-          onAction={handleAction}
-        />
-      )}
+      <DashboardActionSummary
+        items={dashboardState.actions.items}
+        context={dashboardState.actions.context}
+        guidanceItems={guidanceItems}
+        onAction={handleAction}
+      />
       {reviewPanel ? (
         <section className="lf-dashboard-review-panel" style={reviewPanelStyle(reviewPanel.tone)} aria-live="polite" aria-label="Dashboard review panel">
           <div style={commandCardHeaderStyle}>

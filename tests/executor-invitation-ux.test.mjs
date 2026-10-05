@@ -10,7 +10,8 @@ const contacts = fs.readFileSync(path.join(root, "components/contacts/ContactsNe
 test("executor contacts use a guided person, role, access and review flow", () => {
   assert.match(contacts, /guidedExecutor=\{addContactGroupKey === "executors"\}/);
   assert.match(manager, /guidedExecutor\?: boolean/);
-  assert.match(manager, /Invite an Executor/);
+  assert.match(manager, /People I Trust/);
+  assert.match(manager, /Add an executor/);
   assert.match(manager, /Invitation steps/);
   assert.match(manager, /Review and send/);
   assert.match(manager, /Save for later/);
@@ -52,7 +53,7 @@ test("executor creation hides the legacy editor while guided mode is active", ()
   assert.doesNotMatch(guidedSource, /My wallet - all|Owner notes|Linked records and document permissions/);
   assert.match(manager, /only one canonical interaction|Invitation sent/);
   assert.match(manager, /setRecentInvitation/);
-  assert.match(manager, /Invitation dispatch attempted/);
+  assert.match(manager, /Invitation sent/);
   assert.match(manager, /Invitation prepared/);
   assert.match(manager, /window\.setTimeout\(onViewStatus, 2500\)/);
   assert.match(manager, /if \(sent\) \{\s*clearInvitationForm\(\)/);
