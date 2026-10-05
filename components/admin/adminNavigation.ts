@@ -59,6 +59,7 @@ export const ENTERPRISE_ADMIN_NAVIGATION: AdminNavigationGroup[] = [
       { key: "enterprise-invitations", label: "Invitations", href: "/enterprise?tab=invitations", icon: "forward_to_inbox", capability: "enterprise.invitation.manage" },
       { key: "enterprise-registration-links", label: "Registration links", href: "/enterprise?tab=registration-links", icon: "link", capability: "enterprise.enrolment_link.manage" },
       { key: "enterprise-reports", label: "Reports", href: "/enterprise?tab=reports", icon: "analytics", capability: "enterprise.report.read" },
+      { key: "enterprise-settings", label: "Organisation settings", href: "/enterprise?tab=settings", icon: "settings", capability: "enterprise.workspace.access" },
     ],
   },
 ];

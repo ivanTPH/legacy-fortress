@@ -131,7 +131,7 @@ test("enterprise organisation UI exposes operational navigation, create form and
     "Users and seats",
     "Consent and compliance",
     "Renewals",
-    "Account settings",
+    "Organisation settings",
     "STAGING — synthetic test data may be present",
     "No licence configured",
     "Prepare administrator invitation",

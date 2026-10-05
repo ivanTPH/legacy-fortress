@@ -192,6 +192,19 @@ test("enterprise workspace makes organisation context and capability boundaries 
   assert.match(workspace, /Private vault content excluded/);
 });
 
+test("enterprise settings are organisation-scoped and licence creation is capability-gated", () => {
+  const workspace = read("components/enterprise/EnterpriseOperationsWorkspace.tsx");
+  const navigation = read("components/admin/adminNavigation.ts");
+
+  assert.match(navigation, /Organisation settings/);
+  assert.match(workspace, /renderEnterpriseSettings\(portfolio/);
+  assert.match(workspace, /Save organisation settings/);
+  assert.match(workspace, /These settings apply to this organisation only/);
+  assert.match(workspace, /can\("licence:create"\)/);
+  assert.match(workspace, /Licence changes are restricted to authorised licence managers/);
+  assert.match(workspace, /expectedUpdatedAt: form\.expectedUpdatedAt/);
+});
+
 test("registration organisation pickers disambiguate duplicate display names", () => {
   const workspace = read("components/enterprise/EnterpriseOperationsWorkspace.tsx");
   assert.match(workspace, /function organisationOptionLabel/);

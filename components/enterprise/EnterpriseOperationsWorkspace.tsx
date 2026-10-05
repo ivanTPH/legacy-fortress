@@ -274,6 +274,17 @@ type EnterpriseLicenceForm = {
   accountOwner: string;
 };
 
+type EnterpriseSettingsForm = {
+  organisationId: string;
+  expectedUpdatedAt: string;
+  tradingName: string;
+  website: string;
+  primaryContactName: string;
+  primaryContactEmail: string;
+  primaryContactTelephone: string;
+  onboardingNotes: string;
+};
+
 type EnterpriseInviteForm = {
   organisationId: string;
   licenceId: string;
@@ -441,6 +452,16 @@ export default function EnterpriseOperationsWorkspace() {
   const [reportType, setReportType] = useState("portfolio");
   const [organisationFormOpen, setOrganisationFormOpen] = useState(false);
   const [licenceFormOpen, setLicenceFormOpen] = useState(false);
+  const [settingsForm, setSettingsForm] = useState<EnterpriseSettingsForm>({
+    organisationId: "",
+    expectedUpdatedAt: "",
+    tradingName: "",
+    website: "",
+    primaryContactName: "",
+    primaryContactEmail: "",
+    primaryContactTelephone: "",
+    onboardingNotes: "",
+  });
   const [invitationLifecycleForm, setInvitationLifecycleForm] = useState<EnterpriseInvitationLifecycleForm>({ invitationId: "", status: "sent", reason: "" });
   const [membershipLifecycleForm, setMembershipLifecycleForm] = useState<EnterpriseMembershipLifecycleForm>({ membershipId: "", status: "suspended", reason: "" });
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
@@ -484,6 +505,16 @@ export default function EnterpriseOperationsWorkspace() {
       setInviteForm((current) => ({ ...current, organisationId: current.organisationId || scopedOrganisation.id }));
       setEnrolmentForm((current) => ({ ...current, organisationId: current.organisationId || scopedOrganisation.id }));
       setLicenceForm((current) => ({ ...current, organisationId: current.organisationId || scopedOrganisation.id }));
+      setSettingsForm({
+        organisationId: scopedOrganisation.id,
+        expectedUpdatedAt: scopedOrganisation.updatedAt,
+        tradingName: scopedOrganisation.tradingName ?? "",
+        website: scopedOrganisation.website ?? "",
+        primaryContactName: scopedOrganisation.primaryContactName ?? "",
+        primaryContactEmail: scopedOrganisation.primaryContactEmail ?? "",
+        primaryContactTelephone: scopedOrganisation.primaryContactTelephone ?? "",
+        onboardingNotes: scopedOrganisation.onboardingNotes ?? "",
+      });
     }
     const sessionRes = await authFetch("/api/internal/admin/session");
     const sessionJson = await sessionRes.json().catch(() => ({})) as { admin?: { capabilities?: string[] } };
@@ -528,7 +559,24 @@ export default function EnterpriseOperationsWorkspace() {
       if (json.portfolio) setPortfolio(json.portfolio);
       return;
     }
-    if (json.portfolio) setPortfolio(json.portfolio);
+    if (json.portfolio) {
+      setPortfolio(json.portfolio);
+      if (action === "update_organisation") {
+        const updated = json.portfolio.organisations.find((item) => item.id === String(payload.organisationId ?? ""));
+        if (updated) {
+          setSettingsForm({
+            organisationId: updated.id,
+            expectedUpdatedAt: updated.updatedAt,
+            tradingName: updated.tradingName ?? "",
+            website: updated.website ?? "",
+            primaryContactName: updated.primaryContactName ?? "",
+            primaryContactEmail: updated.primaryContactEmail ?? "",
+            primaryContactTelephone: updated.primaryContactTelephone ?? "",
+            onboardingNotes: updated.onboardingNotes ?? "",
+          });
+        }
+      }
+    }
     if (action === "update_invitation") setInvitationLifecycleForm({ invitationId: "", status: "sent", reason: "" });
     if (action === "transition_membership") setMembershipLifecycleForm({ membershipId: "", status: "suspended", reason: "" });
     setMessage(action === "export_report"
@@ -679,7 +727,7 @@ export default function EnterpriseOperationsWorkspace() {
       {activeTab === "licences" ? renderLicences(filteredLicences, portfolio, licenceForm, setLicenceForm, async () => {
         await runAction("create_licence", licenceForm);
         setLicenceFormOpen(false);
-      }, licenceFormOpen, setLicenceFormOpen) : null}
+      }, licenceFormOpen, setLicenceFormOpen, can("licence:create")) : null}
       {activeTab === "users" ? renderUsersAndSeats({ ...portfolio, memberships: filteredMemberships }, runAction, membershipLifecycleForm, setMembershipLifecycleForm, can("enterprise.membership.manage")) : null}
       {activeTab === "invitations" ? renderInvitations(filteredInvitations, portfolio, inviteForm, setInviteForm, enrolmentForm, setEnrolmentForm, bulkRows, setBulkRows, runAction, invitationLifecycleForm, setInvitationLifecycleForm, false, can("enterprise.invitation.manage")) : null}
       {activeTab === "registration-links" ? renderRegistrationLinks(portfolio, enrolmentForm, setEnrolmentForm, runAction, copiedLinkId, copyRegistrationLink) : null}
@@ -687,7 +735,7 @@ export default function EnterpriseOperationsWorkspace() {
       {activeTab === "reports" ? renderReports(portfolio, reportType, setReportType, () => runAction("export_report", { reportType, filters })) : null}
       {activeTab === "consent" ? renderConsent(portfolio, filteredOrganisations) : null}
       {activeTab === "renewals" ? renderRenewals(filteredLicences, portfolio) : null}
-      {activeTab === "settings" ? renderPhasePlaceholder("Account settings", "Enterprise account settings are staged for later phases. Organisation settings are available from each organisation detail workspace.") : null}
+      {activeTab === "settings" ? renderEnterpriseSettings(portfolio, settingsForm, setSettingsForm, runAction, can("organisation:manage")) : null}
     </AdminWorkspaceShell>
   );
 }
@@ -886,6 +934,7 @@ function renderLicences(
   submit: () => void | Promise<void>,
   formOpen: boolean,
   setFormOpen: (value: boolean) => void,
+  canManage: boolean,
 ) {
   const committedSeats = Math.max(Number(form.allocatedSeats ?? 0), 0);
   const availableSeats = Math.max(Number(form.purchasedSeats ?? 0) - committedSeats, 0);
@@ -897,13 +946,13 @@ function renderLicences(
             <h2 style={h2Style}>Licences</h2>
             <p style={mutedStyle}>Configure and inspect real licence entitlements. Committed seats are active + invited + suspended reservations.</p>
           </div>
-          <button type="button" style={primaryButtonStyle} onClick={() => setFormOpen(true)}>
+          {canManage ? <button type="button" style={primaryButtonStyle} onClick={() => setFormOpen(true)}>
             Create licence
-          </button>
+          </button> : <span style={privacyStyle}>Licence changes are restricted to authorised licence managers.</span>}
         </div>
         {renderLicenceTable(licences, portfolio)}
       </section>
-      {formOpen ? (
+      {formOpen && canManage ? (
       <section style={contextPanelStyle} aria-label="Create licence form">
         <h2 id="create-licence-form" style={h2Style}>Create licence</h2>
         <h3 style={h3Style}>1. Plan</h3>
@@ -961,6 +1010,67 @@ function renderLicences(
         </div>
       </section>
       ) : null}
+    </div>
+  );
+}
+
+function renderEnterpriseSettings(
+  portfolio: EnterprisePortfolio,
+  form: EnterpriseSettingsForm,
+  setForm: (value: EnterpriseSettingsForm) => void,
+  runAction: (action: string, payload: Record<string, unknown>) => void,
+  canManage: boolean,
+) {
+  const organisation = portfolio.organisations.find((item) => item.id === form.organisationId) ?? portfolio.organisations[0];
+  if (!organisation) {
+    return (
+      <section style={panelStyle}>
+        <h2 style={h2Style}>Organisation settings</h2>
+        <p style={mutedStyle}>No authorised organisation is available for settings.</p>
+      </section>
+    );
+  }
+
+  const save = () => runAction("update_organisation", {
+    organisationId: organisation.id,
+    expectedUpdatedAt: form.expectedUpdatedAt || organisation.updatedAt,
+    tradingName: form.tradingName,
+    website: form.website,
+    primaryContactName: form.primaryContactName,
+    primaryContactEmail: form.primaryContactEmail,
+    primaryContactTelephone: form.primaryContactTelephone,
+    onboardingNotes: form.onboardingNotes,
+  });
+
+  return (
+    <div style={stackStyle}>
+      <section style={contextPanelStyle} aria-label="Organisation settings context">
+        <p style={eyebrowStyle}>Organisation settings</p>
+        <h2 style={h2Style}>{organisation.name}</h2>
+        <p style={mutedStyle}>These settings apply to this organisation only. Platform-owned licence, role and security controls remain governed by their dedicated capabilities.</p>
+        <div style={definitionGridStyle}>
+          <div><dt>Legal name</dt><dd>{organisation.legalName}</dd></div>
+          <div><dt>Country</dt><dd>{organisation.country}</dd></div>
+          <div><dt>Organisation status</dt><dd><AdminStatusBadge status={organisation.status} /></dd></div>
+          <div><dt>Onboarding</dt><dd><AdminStatusBadge status={organisation.onboardingStatus} /></dd></div>
+        </div>
+      </section>
+      <section style={panelStyle}>
+        <h2 style={h2Style}>Organisation contact and onboarding</h2>
+        <p style={mutedStyle}>Keep the organisation record current without exposing personal vault content or changing platform security policy.</p>
+        <fieldset disabled={!canManage} style={fieldsetStyle}>
+          <legend>Manageable organisation details</legend>
+          <FormInput label="Trading name" value={form.tradingName} onChange={(tradingName) => setForm({ ...form, tradingName })} />
+          <FormInput label="Website" type="url" value={form.website} onChange={(website) => setForm({ ...form, website })} />
+          <FormInput label="Primary contact name" value={form.primaryContactName} onChange={(primaryContactName) => setForm({ ...form, primaryContactName })} />
+          <FormInput label="Primary contact email" type="email" required value={form.primaryContactEmail} onChange={(primaryContactEmail) => setForm({ ...form, primaryContactEmail })} />
+          <FormInput label="Primary contact telephone" value={form.primaryContactTelephone} onChange={(primaryContactTelephone) => setForm({ ...form, primaryContactTelephone })} />
+          <label style={labelStyle}>Onboarding notes
+            <textarea value={form.onboardingNotes} onChange={(event) => setForm({ ...form, onboardingNotes: event.target.value })} />
+          </label>
+        </fieldset>
+        {canManage ? <button type="button" style={primaryButtonStyle} onClick={save}>Save organisation settings</button> : <p style={privacyStyle}>You have view-only access to this organisation. Settings changes are restricted to organisation administrators.</p>}
+      </section>
     </div>
   );
 }
@@ -1675,16 +1785,6 @@ function renderOrganisationTable(organisations: EnterpriseOrganisation[], portfo
         </tbody>
       </table>
     </div>
-  );
-}
-
-function renderPhasePlaceholder(title: string, message: string) {
-  return (
-    <section style={panelStyle}>
-      <h2 style={h2Style}>{title}</h2>
-      <p style={mutedStyle}>{message}</p>
-      <p style={privacyStyle}>This staged section does not display fabricated operational data.</p>
-    </section>
   );
 }
 
