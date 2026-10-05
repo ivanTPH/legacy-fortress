@@ -24,15 +24,16 @@ test("dashboard overview cards use compact shared summary cards with icon-only r
   assert.doesNotMatch(dashboardPage, /value=\{propertySummary\.valueText\}/);
   assert.doesNotMatch(dashboardPage, /value=\{businessSummary\.valueText\}/);
   assert.match(dashboardPage, /function useDashboardState\(input: DashboardStateInput\): DashboardState/);
-  assert.match(dashboardPage, /<ActionQueuePanel items=\{dashboardState\.actions\.items\} context=\{dashboardState\.actions\.context\} onAction=\{handleAction\} \/>/);
+  assert.match(dashboardPage, /<ActionQueuePanel[\s\S]*guidanceItems=\{guidanceItems\}[\s\S]*onGuidanceDecision/);
   assert.match(dashboardPage, /className="lf-dashboard-shell"/);
   assert.match(dashboardPage, /className="lf-dashboard-overview-panel"/);
   assert.match(dashboardPage, /className="lf-content-grid lf-dashboard-overview-grid"/);
-  assert.match(dashboardPage, /className="lf-dashboard-readiness-summary"/);
-  assert.match(dashboardPage, /className="lf-dashboard-readiness-heading"/);
-  assert.match(dashboardPage, /className="lf-dashboard-readiness-card"/);
-  assert.match(dashboardPage, /className="lf-dashboard-readiness-task-list"/);
-  assert.match(dashboardPage, /className="lf-dashboard-readiness-task"/);
+  assert.match(dashboardPage, /className="lf-dashboard-fortress-summary"/);
+  assert.match(dashboardPage, /Your Fortress at a glance/);
+  assert.match(dashboardPage, /Review Action Centre/);
+  assert.match(dashboardPage, /Add to my Fortress/);
+  assert.doesNotMatch(dashboardPage, /<LegacyGuidancePanel/);
+  assert.doesNotMatch(dashboardPage, /<AddToFortressPanel/);
   assert.match(dashboardPage, /className="lf-dashboard-review-panel"/);
   assert.match(dashboardPage, /function filterConsumerDashboardBlockers/);
   assert.match(dashboardPage, /requiredRole !== "admin"/);
@@ -65,7 +66,7 @@ test("dashboard overview cards use compact shared summary cards with icon-only r
   assert.match(dashboardPage, /return "At risk"/);
   assert.match(dashboardPage, /return "Ready"/);
   assert.match(dashboardPage, /legalReadiness: \{/);
-  assert.match(dashboardPage, /Estate Readiness/);
+  assert.match(dashboardPage, /legalReadiness/);
   assert.match(dashboardPage, /ReadinessSnapshot/);
   assert.match(dashboardPage, /ReadinessUploadAction/);
   assert.match(dashboardPage, /executorSummary/);
@@ -83,13 +84,7 @@ test("dashboard overview cards use compact shared summary cards with icon-only r
   assert.match(dashboardPage, /row\.asset_id && willAssetIds\.has\(row\.asset_id\) && hasStoredDocumentFile\(row\)/);
   assert.match(dashboardPage, /row\.record_id && willAssetIds\.has\(row\.record_id\) && hasStoredAttachmentFile\(row\)/);
   assert.match(dashboardPage, /legacyWillFile = willAssetIds\.size === 0/);
-  assert.match(dashboardPage, /const requiredReadinessTasks = dashboardState\.legalReadiness\.items\.filter\(\(item\) => !item\.complete\)/);
-  assert.match(dashboardPage, /Required estate readiness tasks/);
-  assert.match(dashboardPage, /Required tasks/);
-  assert.match(dashboardPage, /Open task/);
-  assert.match(dashboardPage, /router\.push\(dashboardState\.legalReadiness\.nextAction\.href\)/);
-  assert.match(dashboardPage, /router\.push\(item\.href\)/);
-  assert.match(dashboardPage, /readinessTaskButtonStyle/);
+  assert.match(dashboardPage, /const guidanceItems = useMemo/);
   assert.doesNotMatch(dashboardPage, /buildReviewPanelFromReadinessItem/);
   assert.match(dashboardPage, /Full contact management/);
   assert.match(dashboardPage, /Upload identity document/);
@@ -193,9 +188,10 @@ test("dashboard overview cards use compact shared summary cards with icon-only r
   assert.match(dashboardPage, /No dashboard records, contacts, documents, or destinations match this search/);
   assert.match(dashboardPage, /dashboard records, linked documents, contacts, and key destinations/);
   assert.match(fs.readFileSync(path.join(root, "app/(app)/layout.tsx"), "utf8"), /placeholder="Search dashboard records"/);
-  assert.match(dashboardRender, /<h2 style=\{\{ margin: 0, fontSize: 18 \}\}>Overview<\/h2>/);
-  assert.match(dashboardRender, /<ActionQueuePanel items=\{dashboardState\.actions\.items\} context=\{dashboardState\.actions\.context\} onAction=\{handleAction\} \/>/);
-  assert.match(dashboardRender, /aria-label="Estate readiness summary"/);
+  assert.match(dashboardRender, /Your Fortress at a glance/);
+  assert.match(dashboardRender, /guidanceItems=\{guidanceItems\}/);
+  assert.match(dashboardRender, /aria-label="Your Fortress summary"/);
+  assert.doesNotMatch(dashboardRender, /aria-label="Estate readiness summary"/);
   assert.doesNotMatch(dashboardRender, /Get started with your vault/);
   assert.doesNotMatch(dashboardRender, /<h2 style=\{\{ margin: 0, fontSize: 18 \}\}>Next steps<\/h2>/);
   assert.doesNotMatch(dashboardRender, /People you trust/);
@@ -203,8 +199,8 @@ test("dashboard overview cards use compact shared summary cards with icon-only r
   assert.doesNotMatch(dashboardRender, /aria-label="Recent documents"/);
   assert.doesNotMatch(dashboardRender, /setupStepsGridStyle|completenessGridStyle|documentCategoryGridStyle|readinessGridStyle/);
   assert.doesNotMatch(dashboardRender, /<ReadinessSnapshot|<ReadinessUploadAction|<AttachmentGallerySummary|<AttachmentGallery\s/);
-  assert.ok(dashboardRender.indexOf(">Overview<") < dashboardRender.indexOf("<ActionQueuePanel"));
-  assert.ok(dashboardRender.indexOf("<ActionQueuePanel") < dashboardRender.indexOf('aria-label="Estate readiness summary"'));
+  assert.ok(dashboardRender.indexOf("Your Fortress at a glance") < dashboardRender.indexOf("<ActionQueuePanel"));
+  assert.ok(dashboardRender.indexOf("<ActionQueuePanel") < dashboardRender.indexOf('aria-label="Your Fortress summary"'));
 });
 
 test("contacts keeps the fuller invitation management view while dashboard stays compact", () => {
@@ -226,7 +222,7 @@ test("contacts keeps the fuller invitation management view while dashboard stays
   assert.match(invitationManager, /function canResendInvite/);
   assert.match(contactGrouping, /normalized === "family" \|\| normalized === "next-of-kin"/);
   assert.match(dashboardPage, /\/contacts\?group=next-of-kin&add=1/);
-  assert.match(contactsWorkspace, /const isNextOfKinAddMode = selectedGroup === "family" && searchParams\.get\("add"\) === "1"/);
+  assert.match(contactsWorkspace, /const isNextOfKinAddMode = selectedGroup === "family" && isContactAddMode/);
   assert.match(contactsWorkspace, /<NextOfKinContactForm/);
   assert.match(contactsWorkspace, /contactRole: "next_of_kin"/);
   assert.match(contactsWorkspace, /sourceType: "next_of_kin"/);
@@ -355,8 +351,8 @@ test("dashboard profile chip signs the avatar through the authenticated server r
   assert.doesNotMatch(layout, /recoverSidebarAvatar/);
   assert.doesNotMatch(layout, /setFailedAvatarUrl\(renderedAvatarUrl\)/);
   assert.match(layout, /className="lf-topbar-user-avatar-img"/);
-  assert.match(layout, /aria-label=\{`Edit account details for \$\{effectiveDisplayName\}`\}/);
-  assert.match(layout, /title=\{effectiveDisplayName\}/);
+  assert.match(layout, /aria-label=\{`Open account menu for \$\{effectiveDisplayName\}`\}/);
+  assert.match(layout, /<strong>\{effectiveDisplayName\}<\/strong>/);
   assert.match(layout, /src=\{renderedAvatarUrl\}/);
   assert.match(layout, /const \[confirmedAvatarUrl, setConfirmedAvatarUrl\] = useState\(""\)/);
   assert.match(layout, /const image = new Image\(\)/);

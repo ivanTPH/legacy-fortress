@@ -5,11 +5,15 @@ import Icon from "../../../../components/ui/Icon";
 import InfoTip from "../../../../components/ui/InfoTip";
 import type { BlockingItem } from "../../../../lib/workflow/blockingModel";
 import { getWorkflowRequiredRoleLabel } from "../../../../lib/workflow/blockingModel";
+import type { GuidanceAction, GuidanceItem } from "../../../../lib/readiness/guidance";
 
 type ActionQueuePanelProps = {
   items: BlockingItem[];
   onAction: (actionKey: string) => void;
   context?: ActionCentreContext;
+  guidanceItems?: GuidanceItem[];
+  onGuidanceDecision?: (item: GuidanceItem, action: Exclude<GuidanceAction, "add" | "learn_more">) => void;
+  guidanceBusyKey?: string | null;
 };
 
 export type ActionCentreContext = {
@@ -18,6 +22,7 @@ export type ActionCentreContext = {
   documentCount: number;
   profileIncomplete: boolean;
   tasks?: ActionCentreTask[];
+  guidanceItems?: GuidanceItem[];
   estateReadiness?: {
     executorAssigned: boolean;
     willUploaded: boolean;
@@ -54,6 +59,7 @@ type ActionCentreRow = {
   priorityLevel: ActionPriorityLevel;
   taskType?: ActionCentreTask["type"];
   relatedEntity?: string;
+  guidanceItem?: GuidanceItem;
 };
 
 type ActionCentreStatus = "Required" | "Recommended" | "Pending" | "Complete" | "Failed" | "Plan limit reached";
@@ -77,8 +83,11 @@ type DashboardActionSeed = Pick<
   "key" | "title" | "stageName" | "blockerLabel" | "whyItMatters" | "status" | "actionKey" | "href" | "requiredRole" | "primaryActionLabel" | "secondaryActionLabel"
 >;
 
-function ActionQueuePanel({ items, onAction, context }: ActionQueuePanelProps) {
-  const sections = useMemo(() => buildActionCentreSections(items, context), [items, context]);
+function ActionQueuePanel({ items, onAction, context, guidanceItems, onGuidanceDecision, guidanceBusyKey }: ActionQueuePanelProps) {
+  const sections = useMemo(
+    () => buildActionCentreSections(items, context ? { ...context, guidanceItems } : undefined),
+    [context, guidanceItems, items],
+  );
   const activeBlockerCount = sections
     .filter((section) => section.key !== "completed" && section.key !== "clear")
     .reduce((sum, section) => sum + section.count, 0);
@@ -95,7 +104,7 @@ function ActionQueuePanel({ items, onAction, context }: ActionQueuePanelProps) {
   }, [initialOpenSectionKey]);
 
   return (
-    <section className="lf-action-centre" style={panelStyle} aria-label="Action centre">
+    <section id="action-centre" className="lf-action-centre" style={panelStyle} aria-label="Action centre">
       <div style={{ display: "grid", gap: 4 }}>
         <div className="lf-action-centre-header" style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
           <div style={iconWrapStyle}>
@@ -201,9 +210,18 @@ function ActionQueuePanel({ items, onAction, context }: ActionQueuePanelProps) {
                               {item.primaryActionLabel}
                             </button>
                             {item.secondaryActionLabel ? (
-                              <a href={item.href} style={secondaryActionStyle} title={`${item.secondaryActionLabel}: ${item.title}`}>
+                              <a href={item.guidanceItem?.learnMoreHref ?? item.href} style={secondaryActionStyle} title={`${item.secondaryActionLabel}: ${item.title}`}>
                                 {item.secondaryActionLabel}
                               </a>
+                            ) : null}
+                            {item.guidanceItem && onGuidanceDecision ? (
+                              <>
+                                <button type="button" style={secondaryActionStyle} disabled={guidanceBusyKey === item.guidanceItem.key} onClick={() => onGuidanceDecision(item.guidanceItem!, "already_done")}>Already done</button>
+                                <button type="button" style={secondaryActionStyle} disabled={guidanceBusyKey === item.guidanceItem.key} onClick={() => onGuidanceDecision(item.guidanceItem!, "not_relevant")}>Not relevant</button>
+                                <button type="button" style={secondaryActionStyle} disabled={guidanceBusyKey === item.guidanceItem.key} onClick={() => onGuidanceDecision(item.guidanceItem!, "remind_later")}>
+                                  {guidanceBusyKey === item.guidanceItem.key ? "Saving..." : "Remind me later"}
+                                </button>
+                              </>
                             ) : null}
                           </div>
                         </div>
@@ -402,8 +420,29 @@ function buildActionRows(items: BlockingItem[], context?: ActionCentreContext): 
     });
   }
 
-  return dedupeRows([...buildDashboardActionRows(context), ...rows])
-    .sort((left, right) => left.priority - right.priority || left.title.localeCompare(right.title));
+  return dedupeRows([...buildDashboardActionRows(context), ...rows, ...buildGuidanceActionRows(context?.guidanceItems ?? [])])
+    .sort((left, right) => left.priority - right.priority || left.title.localeCompare(right.title))
+    .slice(0, 6);
+}
+
+function buildGuidanceActionRows(items: GuidanceItem[]): ActionCentreRow[] {
+  return items.map((item) => ({
+    key: `guidance-${item.key}`,
+    title: item.title,
+    stageName: item.category,
+    blockerLabel: item.description,
+    whyItMatters: "A small, optional next step based on what you have recorded so far.",
+    status: item.priority === "high" ? "Required" : "Recommended",
+    actionKey: `guidance:${item.key}`,
+    href: item.href,
+    requiredRole: "owner",
+    primaryActionLabel: item.actionLabel,
+    secondaryActionLabel: item.learnMoreHref ? "Learn more" : undefined,
+    totalItems: 1,
+    priority: item.priority === "high" ? 25 : item.priority === "medium" ? 55 : 75,
+    priorityLevel: item.priority === "high" ? "High" : item.priority === "medium" ? "Medium" : "Low",
+    guidanceItem: item,
+  }));
 }
 
 function getActionTitle(item: BlockingItem) {

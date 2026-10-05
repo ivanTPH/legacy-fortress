@@ -27,6 +27,8 @@ type DashboardAssetSummaryCardProps = {
   inlineSummary?: boolean;
   actionLabel?: string;
   actionIcon?: string;
+  addHref?: string;
+  addLabel?: string;
   hideItems?: boolean;
   emptyState?: boolean;
 };
@@ -47,6 +49,8 @@ export default function DashboardAssetSummaryCard({
   inlineSummary = false,
   actionLabel,
   actionIcon = "open_in_new",
+  addHref,
+  addLabel,
   hideItems = false,
   emptyState = false,
 }: DashboardAssetSummaryCardProps) {
@@ -81,20 +85,38 @@ export default function DashboardAssetSummaryCard({
             <span className="lf-dashboard-summary-title" style={titleStyle}>{title}</span>
           </div>
           {!emptyState ? (
-            <IconButton
-              icon={actionIcon}
-              label={actionLabel ?? `Open ${title}`}
-              style={{ width: 40, height: 40 }}
-              onPointerDown={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-              }}
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                router.push(href);
-              }}
-            />
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              {addHref ? (
+                <IconButton
+                  icon="add"
+                  label={addLabel ?? `Add ${title.toLowerCase()}`}
+                  style={{ width: 40, height: 40 }}
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                  }}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    router.push(addHref);
+                  }}
+                />
+              ) : null}
+              <IconButton
+                icon={actionIcon}
+                label={actionLabel ?? `Open ${title}`}
+                style={{ width: 40, height: 40 }}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                }}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  router.push(href);
+                }}
+              />
+            </span>
           ) : onEmptyActionClick ? (
             <button
               type="button"

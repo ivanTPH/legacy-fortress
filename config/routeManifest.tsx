@@ -12,6 +12,7 @@ import {
   SettingsIcon,
   WalletIcon,
 } from "../app/(app)/components/NavIcons";
+import Icon from "../components/ui/Icon";
 import type { VaultCategoryGroupKey, VaultSubsectionKey } from "../lib/vaultPreferences";
 
 export type AppRouteNode = {
@@ -35,6 +36,22 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     path: "/dashboard",
     description: "Overview",
     icon: <DashboardIcon />,
+    enabled: on,
+  },
+  {
+    id: "add-to-fortress",
+    label: "Add to my Fortress",
+    path: "/add-to-fortress",
+    description: "Add a record to your vault",
+    icon: <Icon name="add_circle" size={18} />,
+    enabled: on,
+  },
+  {
+    id: "action-centre",
+    label: "Action Centre",
+    path: "/action-centre",
+    description: "Review useful next actions",
+    icon: <Icon name="task_alt" size={18} />,
     enabled: on,
   },
   {
@@ -111,7 +128,7 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
   },
   {
     id: "people-contacts",
-    label: "Contacts",
+    label: "People I Trust",
     path: "/contacts",
     icon: <ContactsIcon />,
     enabled: on,

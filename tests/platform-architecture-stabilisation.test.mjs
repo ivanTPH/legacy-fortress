@@ -155,7 +155,7 @@ test("implementation keeps shared documents and contacts canonical while known c
   assert.match(documentsWorkspace, /AttachmentGallery/);
   assert.match(documentsWorkspace, /loadCanonicalDocumentWorkspaceData/);
   assert.match(documentsWorkspace, /createCanonicalAssetDocument/);
-  assert.match(dashboard, /<ActionQueuePanel items=\{dashboardState\.actions\.items\}/);
+  assert.match(dashboard, /<ActionQueuePanel[\s\S]*guidanceItems=\{guidanceItems\}/);
   assert.doesNotMatch(dashboard, /title="Tasks"/);
   assert.doesNotMatch(routeManifest, /\/internal\/admin|\/internal\/test-login/);
 

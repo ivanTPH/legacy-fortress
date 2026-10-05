@@ -4,8 +4,6 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "r
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardAssetSummaryCard from "../components/dashboard/DashboardAssetSummaryCard";
 import ActionQueuePanel, { type ActionCentreContext, type ActionCentreTask } from "../components/dashboard/ActionQueuePanel";
-import LegacyGuidancePanel from "../components/dashboard/LegacyGuidancePanel";
-import AddToFortressPanel from "../components/dashboard/AddToFortressPanel";
 import Icon from "../../../components/ui/Icon";
 import InfoTip from "../../../components/ui/InfoTip";
 import AttachmentGallery, { type AttachmentGalleryItem } from "../../../components/documents/AttachmentGallery";
@@ -863,8 +861,6 @@ const legalSummary = useMemo(() => {
     }, preferences),
     [contactRows.length, digitalRecordCount, financeRecordCount, possessionsRecordCount, preferences, powerOfAttorneyCount, willRecordCount, wishesCount],
   );
-  const requiredReadinessTasks = dashboardState.legalReadiness.items.filter((item) => !item.complete);
-
   const markDashboardTaskComplete = useCallback(async (taskId: string) => {
     const task = assetRows.find((row) => row.id === taskId && String(row.category_key ?? "") === "tasks");
     if (!task) {
@@ -898,6 +894,12 @@ const legalSummary = useMemo(() => {
   }, [assetRows]);
 
   const handleAction = useCallback((actionKey: string) => {
+    if (actionKey.startsWith("guidance:")) {
+      const guidanceKey = actionKey.slice("guidance:".length);
+      const item = guidanceItems.find((candidate) => candidate.key === guidanceKey);
+      if (item) router.push(item.href);
+      return;
+    }
     if (actionKey.startsWith("task:complete:")) {
       void markDashboardTaskComplete(actionKey.replace("task:complete:", ""));
       return;
@@ -952,7 +954,7 @@ const legalSummary = useMemo(() => {
       return;
     }
     setReviewPanel(buildReviewPanelFromAction(item.actionKey, item.stageName, item.blockerLabel));
-  }, [dashboardState.actions.items, markDashboardTaskComplete, router]);
+  }, [dashboardState.actions.items, guidanceItems, markDashboardTaskComplete, router]);
 
   const handleGuidanceDecision = useCallback(async (
     item: GuidanceItem,
@@ -981,10 +983,6 @@ const legalSummary = useMemo(() => {
       setGuidanceBusyKey(null);
     }
   }, [preferences, setPreferences, viewer.mode]);
-
-  const handleGuidanceOpen = useCallback((item: GuidanceItem) => {
-    router.push(item.href);
-  }, [router]);
 
   async function handleDashboardInviteAction(contact: ContactDiscoveryRow, invite: ContactInviteDisplay) {
     if (invite.action === "disabled" || invite.action === "status") {
@@ -1603,16 +1601,16 @@ const legalSummary = useMemo(() => {
             <div style={overviewIconStyle}>
               <Icon name="dashboard" size={16} />
             </div>
-            <h2 style={{ margin: 0, fontSize: 18 }}>Overview</h2>
+            <h2 style={{ margin: 0, fontSize: 18 }}>Your Fortress at a glance</h2>
             <InfoTip
               className="lf-panel-help"
               label="Explain dashboard overview"
               title="Dashboard overview"
-              message="These cards summarise the main areas of your vault. Open a card to review or add records in that section."
+              message="These cards show what you have recorded. Open a category to review it, or use the plus button to add another record."
             />
           </div>
         <div className="lf-dashboard-overview-copy" style={{ color: "#64748b", fontSize: 13 }}>
-          Review the main areas of your secure legacy vault.
+          See what you have recorded and add another record whenever you are ready.
         </div>
         </div>
         {showFinancialCard || showLegalCard || showPropertyCard || showBusinessCard || showDigitalCard || showPossessionsCard ? (
@@ -1630,6 +1628,8 @@ const legalSummary = useMemo(() => {
               hideItems
               actionLabel="Open finance records"
               actionIcon="open_in_new"
+              addHref="/finances/bank?add=1"
+              addLabel="Add bank account"
             />
           ) : null}
 
@@ -1646,6 +1646,8 @@ const legalSummary = useMemo(() => {
               hideItems
               actionLabel="Open legal records"
               actionIcon="open_in_new"
+              addHref="/legal/wills?add=1"
+              addLabel="Add legal record"
             />
           ) : null}
 
@@ -1662,6 +1664,8 @@ const legalSummary = useMemo(() => {
               hideItems
               actionLabel="Open property records"
               actionIcon="open_in_new"
+              addHref="/property?add=1"
+              addLabel="Add property"
             />
           ) : null}
 
@@ -1678,6 +1682,8 @@ const legalSummary = useMemo(() => {
               hideItems
               actionLabel="Open business records"
               actionIcon="open_in_new"
+              addHref="/business?add=1"
+              addLabel="Add business interest"
             />
           ) : null}
 
@@ -1694,6 +1700,8 @@ const legalSummary = useMemo(() => {
               hideItems
               actionLabel="Open digital records"
               actionIcon="open_in_new"
+              addHref="/vault/digital/records?add=1&digitalType=__other"
+              addLabel="Add digital account"
             />
           ) : null}
 
@@ -1709,6 +1717,8 @@ const legalSummary = useMemo(() => {
               hideItems
               actionLabel="Open possessions"
               actionIcon="open_in_new"
+              addHref="/vault/personal/records?add=1&possessionCategory=other"
+              addLabel="Add possession"
             />
           ) : null}
 
@@ -1720,97 +1730,29 @@ const legalSummary = useMemo(() => {
         )}
       </section>
 
-      <ActionQueuePanel items={dashboardState.actions.items} context={dashboardState.actions.context} onAction={handleAction} />
-      <AddToFortressPanel />
-      <LegacyGuidancePanel
-        items={guidanceItems}
-        ownerActionsEnabled={viewer.mode !== "linked"}
-        busyKey={guidanceBusyKey}
-        onOpen={handleGuidanceOpen}
-        onDecision={(item, action) => void handleGuidanceDecision(item, action)}
+      <ActionQueuePanel
+        items={dashboardState.actions.items}
+        context={dashboardState.actions.context}
+        guidanceItems={guidanceItems}
+        guidanceBusyKey={guidanceBusyKey}
+        onAction={handleAction}
+        onGuidanceDecision={viewer.mode === "linked" ? undefined : (item, action) => void handleGuidanceDecision(item, action)}
       />
-      <section className="lf-dashboard-readiness-summary" style={readinessPanelStyle} aria-label="Estate readiness summary">
+      <section className="lf-dashboard-fortress-summary" style={readinessPanelStyle} aria-label="Your Fortress summary">
         <div className="lf-dashboard-readiness-heading" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", width: "100%" }}>
-          <div style={overviewIconStyle}>
-            <Icon name="verified_user" size={16} />
-          </div>
-          <h2 style={{ margin: 0, fontSize: 18 }}>Estate Readiness</h2>
-          <span style={readinessStatusBadgeStyle(dashboardState.legalReadiness.statusLevel)}>{dashboardState.legalReadiness.statusLevel}</span>
-          <span style={setupProgressPillStyle}>{dashboardState.legalReadiness.statusSummary}</span>
-          <InfoTip
-            className="lf-panel-help"
-            label="Explain estate readiness"
-            title="Estate readiness"
-            tone="security"
-            message="This is a practical checklist for executors and trusted people. It highlights missing records, contacts, and documents without giving legal advice."
-          />
+          <div style={overviewIconStyle}><Icon name="shield" size={16} /></div>
+          <h2 style={{ margin: 0, fontSize: 18 }}>Your Fortress</h2>
+          <span style={{ color: "#64748b", fontSize: 13 }}>A calm snapshot of what you have recorded.</span>
         </div>
-        <button
-          className="lf-dashboard-readiness-card"
-          type="button"
-          style={readinessSummaryCardStyle(dashboardState.legalReadiness.statusLevel)}
-          onClick={() => {
-            if (dashboardState.legalReadiness.nextAction) {
-              router.push(dashboardState.legalReadiness.nextAction.href);
-              return;
-            }
-            setReviewPanel({
-              key: "readiness-review",
-              title: "Review estate readiness",
-              description: dashboardState.legalReadiness.explanation,
-              href: "/legal",
-              ctaLabel: "Open Legal",
-              icon: "verified_user",
-              helperText: "The full readiness checklist opens here as a focused dashboard panel when you need it.",
-              tone: dashboardState.legalReadiness.statusLevel === "Ready" ? "success" : "default",
-              readinessKey: "reviewDetails",
-            });
-          }}
-          aria-label={
-            dashboardState.legalReadiness.nextAction
-              ? `Open required readiness task: ${dashboardState.legalReadiness.nextAction.nextAction}`
-              : "Open estate readiness review panel"
-          }
-        >
-          <span style={commandIconStyle(dashboardState.legalReadiness.statusLevel === "Ready" ? "success" : "warning")}>
-            <Icon name={dashboardState.legalReadiness.statusLevel === "Ready" ? "task_alt" : "assignment_late"} size={18} />
-          </span>
-          <span style={{ display: "grid", gap: 3, minWidth: 0, textAlign: "left" }}>
-            <strong style={{ color: "#1f1712" }}>
-              {dashboardState.legalReadiness.completedCount} of {dashboardState.legalReadiness.totalCount} readiness checks complete
-            </strong>
-            <span style={{ color: "#64748b", fontSize: 13 }}>
-              {dashboardState.legalReadiness.nextAction
-                ? `Next: ${dashboardState.legalReadiness.nextAction.nextAction}`
-                : "Core executor and legal readiness checks are complete."}
-            </span>
-          </span>
-          <Icon name="arrow_forward" size={16} />
-        </button>
-        {requiredReadinessTasks.length ? (
-          <div className="lf-dashboard-readiness-task-list" style={readinessTaskListStyle} aria-label="Required estate readiness tasks">
-            <div style={{ color: "#64748b", fontSize: 12, fontWeight: 800, textTransform: "uppercase" }}>Required tasks</div>
-            {requiredReadinessTasks.slice(0, 4).map((item) => (
-              <button
-                key={item.key}
-                className="lf-dashboard-readiness-task"
-                type="button"
-                style={readinessTaskButtonStyle}
-                onClick={() => router.push(item.href)}
-                aria-label={`Open task: ${item.nextAction}`}
-              >
-                <span style={readinessItemIconStyle(false)}>
-                  <Icon name={item.key === "reviewDetails" ? "event_repeat" : "assignment_late"} size={15} />
-                </span>
-                <span style={{ display: "grid", gap: 2, minWidth: 0, textAlign: "left" }}>
-                  <strong style={{ color: "#1f1712", fontSize: 13 }}>{item.label}</strong>
-                  <span style={{ color: "#64748b", fontSize: 12 }}>{item.nextAction}</span>
-                </span>
-                <span style={statusBadgeStyle("warning", "button")}>Open task</span>
-              </button>
-            ))}
-          </div>
-        ) : null}
+        <div className="lf-dashboard-fortress-summary-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
+          <div style={summaryMetricStyle}><strong>{financeRecordCount + legalRecordCount + propertyRecordCount + businessRecordCount + digitalRecordCount + possessionsRecordCount}</strong><span>records in your Fortress</span></div>
+          <div style={summaryMetricStyle}><strong>{contactRows.length}</strong><span>people recorded</span></div>
+          <div style={summaryMetricStyle}><strong>{guidanceItems.length}</strong><span>things worth considering</span></div>
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+          <a href="#action-centre" style={secondaryActionLinkStyle}>Review Action Centre</a>
+          <a href="/add-to-fortress" style={secondaryActionLinkStyle}>Add to my Fortress</a>
+        </div>
       </section>
       {reviewPanel ? (
         <section className="lf-dashboard-review-panel" style={reviewPanelStyle(reviewPanel.tone)} aria-live="polite" aria-label="Dashboard review panel">
@@ -3548,17 +3490,6 @@ const overviewIconStyle = {
   flexShrink: 0,
 } satisfies CSSProperties;
 
-const setupProgressPillStyle = {
-  border: "1px solid #e7ded7",
-  borderRadius: 999,
-  background: "#f8f5f2",
-  color: "#4b3a31",
-  padding: "5px 10px",
-  fontSize: 12,
-  fontWeight: 750,
-  whiteSpace: "nowrap",
-} satisfies CSSProperties;
-
 const planLimitStatusButtonStyle = {
   border: "1px solid #fed7aa",
   borderRadius: 12,
@@ -3764,60 +3695,27 @@ const readinessPanelStyle = {
   background: "#fffefd",
 } satisfies CSSProperties;
 
-function readinessStatusBadgeStyle(statusLevel: ExecutorLegalReadinessStatusLevel): CSSProperties {
-  const palette = statusLevel === "Ready"
-    ? { border: "#bbf7d0", background: "#f0fdf4", color: "#166534" }
-    : statusLevel === "At risk"
-      ? { border: "#fed7aa", background: "#fff7ed", color: "#9a3412" }
-      : { border: "#e8e1dc", background: "#f8f6f4", color: "#5f5852" };
-  return {
-    border: `1px solid ${palette.border}`,
-    background: palette.background,
-    color: palette.color,
-    borderRadius: 999,
-    padding: "5px 10px",
-    fontSize: 12,
-    fontWeight: 800,
-    whiteSpace: "nowrap",
-  };
-}
-
-function readinessSummaryCardStyle(statusLevel: ExecutorLegalReadinessStatusLevel): CSSProperties {
-  const complete = statusLevel === "Ready";
-  return {
-    border: complete ? "1px solid #bbf7d0" : "1px solid #fed7aa",
-    borderRadius: 14,
-    background: complete ? "#f7fbf7" : "#fffaf4",
-    padding: 14,
-    display: "grid",
-    gridTemplateColumns: "auto minmax(0, 1fr) auto",
-    alignItems: "center",
-    gap: 12,
-    cursor: "pointer",
-    textAlign: "left",
-    font: "inherit",
-  };
-}
-
-const readinessTaskListStyle = {
+const summaryMetricStyle = {
   display: "grid",
-  gap: 8,
-} satisfies CSSProperties;
+  gap: 3,
+  border: "1px solid #eee8e3",
+  borderRadius: 10,
+  padding: "10px 12px",
+  background: "#fffefd",
+} as const;
 
-const readinessTaskButtonStyle = {
-  border: "1px solid #ece5df",
-  borderRadius: 12,
-  background: "#fff",
-  padding: 10,
-  color: "#1f1712",
-  display: "grid",
-  gridTemplateColumns: "auto minmax(0, 1fr) auto",
+const secondaryActionLinkStyle = {
+  display: "inline-flex",
   alignItems: "center",
-  gap: 10,
-  cursor: "pointer",
-  textAlign: "left",
-  font: "inherit",
-} satisfies CSSProperties;
+  minHeight: 38,
+  padding: "8px 12px",
+  border: "1px solid #d7c8c0",
+  borderRadius: 8,
+  color: "#4b2e22",
+  fontSize: 13,
+  fontWeight: 700,
+  textDecoration: "none",
+} as const;
 
 const readinessSnapshotGridStyle = {
   display: "grid",

@@ -1,6 +1,7 @@
 "use client";
 
 import Icon from "../../../../components/ui/Icon";
+import { useViewerAccess } from "../../../../components/access/ViewerAccessContext";
 
 type AddChoice = { label: string; description: string; href: string; icon: string };
 type AddGroup = { title: string; choices: AddChoice[] };
@@ -42,6 +43,23 @@ const ADD_GROUPS: AddGroup[] = [
 ];
 
 export default function AddToFortressPanel() {
+  const { viewer } = useViewerAccess();
+
+  if (viewer.mode === "linked") {
+    return (
+      <section className="lf-add-to-fortress-panel" aria-labelledby="add-to-fortress-title">
+        <div className="lf-add-to-fortress-heading">
+          <span className="lf-legacy-guidance-icon"><Icon name="lock" size={18} /></span>
+          <span>
+            <span className="lf-legacy-guidance-eyebrow">Read-only access</span>
+            <h2 id="add-to-fortress-title">Add to my Fortress</h2>
+          </span>
+        </div>
+        <p className="lf-add-to-fortress-intro">Only the Fortress owner can add or change estate records.</p>
+      </section>
+    );
+  }
+
   return (
     <section className="lf-add-to-fortress-panel" aria-labelledby="add-to-fortress-title">
       <div className="lf-add-to-fortress-heading">

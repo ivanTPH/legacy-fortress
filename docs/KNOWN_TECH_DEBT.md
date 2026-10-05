@@ -66,6 +66,11 @@ Pass 2 disposition:
 
 ## Medium priority
 
+### Action Centre delivery channels
+The Personal Vault dashboard now treats the Action Centre as the single customer-facing delivery surface for readiness and record follow-ups. Guidance items keep real deep-link destinations and owner-controlled snooze/not-relevant state. There is no separate notification model or outbound reminder job yet.
+
+Future monthly check-ins should consume the same Action Centre item contract rather than create a second reminder system. The owner must control enablement, channel and frequency; email/push delivery must never create invitations, grants or other access changes automatically.
+
 ### Missing synthetic populated-account coverage
 Not yet added for:
 - profile
