@@ -5,7 +5,7 @@ import type { ActionCentrePreviewItem } from "./ActionQueuePanel";
 
 type ActionCentreEntryPromptProps = {
   item: ActionCentrePreviewItem;
-  onAction: (actionKey: string) => void;
+  onAction: (actionKey: string, href: string) => void;
   onDismiss: () => void;
 };
 
@@ -19,7 +19,7 @@ export default function ActionCentreEntryPrompt({ item, onAction, onDismiss }: A
         <p>{item.blockerLabel}</p>
       </div>
       <div className="lf-action-entry-prompt-actions">
-        <button type="button" className="lf-action-entry-prompt-primary" onClick={() => onAction(item.actionKey)}>{item.title}</button>
+        <button type="button" className="lf-action-entry-prompt-primary" onClick={() => onAction(item.actionKey, item.href)}>{item.title}</button>
         <button type="button" className="lf-action-entry-prompt-secondary" onClick={onDismiss}>Not now</button>
       </div>
     </section>

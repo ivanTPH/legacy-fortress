@@ -133,6 +133,14 @@ test.describe("Final selector-specific workflow UAT", () => {
     await expect(page.locator("#action-centre")).toBeVisible();
   });
 
+  test("Action Centre primary Will action goes directly to the canonical journey", async ({ page }) => {
+    await page.goto("/action-centre");
+    const willAction = page.getByRole("button", { name: /Add details|Upload Will/i }).first();
+    await expect(willAction).toBeVisible();
+    await willAction.click();
+    await expect(page).toHaveURL(/\/legal\/wills(?:\?.*)?$/);
+  });
+
   for (const route of routes) {
     test(`${route.name}: create, refresh, search, edit, and delete`, async ({ page }) => {
       const token = `${route.tokenPrefix} ${runId}`;

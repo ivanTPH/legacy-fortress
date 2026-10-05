@@ -116,7 +116,7 @@ test("dashboard overview cards use compact shared summary cards with one add act
   assert.match(dashboardPage, /type: "missing_financial_records"/);
   assert.match(dashboardPage, /type: "missing_documents"/);
   assert.match(dashboardPage, /type: "review_overdue"/);
-  assert.match(dashboardPage, /const handleAction = useCallback\(\(actionKey: string\)/);
+  assert.match(dashboardPage, /const handleAction = useCallback\(\(actionKey: string, destination\?: string\)/);
   assert.match(dashboardPage, /deriveBlockingState\(/);
   assert.match(dashboardPage, /inlineSummary/);
   assert.match(dashboardPage, /hideItems/);
@@ -172,11 +172,12 @@ test("dashboard overview cards use compact shared summary cards with one add act
   assert.match(actionQueue, /return "will"/);
   assert.match(actionQueue, /return "key-documents"/);
   assert.match(actionQueue, /priorityPillStyle/);
-  assert.match(actionQueue, /aria-expanded=\{isOpen\}/);
-  assert.match(actionQueue, /useState<ActionCentreSection\["key"\] \| null \| undefined>\(undefined\)/);
-  assert.match(actionQueue, /effectiveOpenSectionKey = openSectionKey === undefined \? initialOpenSectionKey : openSectionKey/);
-  assert.match(actionQueue, /toggleSection\(section\.key\)/);
+  assert.doesNotMatch(actionQueue, /aria-expanded=\{isOpen\}/);
+  assert.doesNotMatch(actionQueue, /useState<ActionCentreSection/);
+  assert.match(actionQueue, /const visibleSections = sections\.filter/);
+  assert.match(actionQueue, /className="lf-action-centre-section-header"/);
   assert.match(actionQueue, /onAction\(item.actionKey\)/);
+  assert.doesNotMatch(actionQueue, />Review invite<|>Review will<|>Open Contacts<|>Open Legal</);
   assert.doesNotMatch(actionQueue, /supportingLegalInfoPresent|powerOfAttorneyPresent/);
   assert.doesNotMatch(dashboardPage, /ContactInvitationManager mode="dashboard"/);
   assert.doesNotMatch(dashboardPage, /overallVaultProgress/);
