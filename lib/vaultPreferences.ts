@@ -41,9 +41,25 @@ export type VaultSubsectionKey =
 
 export type VaultPreferenceKey = VaultCategoryGroupKey | VaultSubsectionKey;
 
+export type VaultApplicabilityState =
+  | "unknown"
+  | "recorded"
+  | "missing"
+  | "not_relevant"
+  | "incomplete"
+  | "needs_review";
+
+export type VaultGuidanceDecision = {
+  state: VaultApplicabilityState;
+  snoozedUntil: string | null;
+  updatedAt: string;
+};
+
 export type VaultPreferences = {
   groups: Record<VaultCategoryGroupKey, boolean>;
   subsections: Record<VaultSubsectionKey, boolean>;
+  applicability: Record<string, VaultApplicabilityState>;
+  guidance: Record<string, VaultGuidanceDecision>;
 };
 
 export type VaultCategoryDefinition = {
@@ -177,6 +193,8 @@ export function getDefaultVaultPreferences(): VaultPreferences {
       next[definition.key] = true;
       return next;
     }, {} as Record<VaultSubsectionKey, boolean>),
+    applicability: {},
+    guidance: {},
   };
 }
 
@@ -191,6 +209,20 @@ export function normalizeVaultPreferences(input: unknown): VaultPreferences {
   const rawSubsections = record.subsections && typeof record.subsections === "object"
     ? (record.subsections as Record<string, unknown>)
     : record;
+  const rawApplicability = record.applicability && typeof record.applicability === "object"
+    ? (record.applicability as Record<string, unknown>)
+    : {};
+  const rawGuidance = record.guidance && typeof record.guidance === "object"
+    ? (record.guidance as Record<string, unknown>)
+    : {};
+  const validApplicability = new Set<VaultApplicabilityState>([
+    "unknown",
+    "recorded",
+    "missing",
+    "not_relevant",
+    "incomplete",
+    "needs_review",
+  ]);
 
   return {
     groups: VAULT_CATEGORY_DEFINITIONS.reduce<Record<VaultCategoryGroupKey, boolean>>((next, definition) => {
@@ -201,6 +233,24 @@ export function normalizeVaultPreferences(input: unknown): VaultPreferences {
       next[definition.key] = rawSubsections[definition.key] === false ? false : defaults.subsections[definition.key];
       return next;
     }, { ...defaults.subsections }),
+    applicability: Object.entries(rawApplicability).reduce<Record<string, VaultApplicabilityState>>((next, [key, value]) => {
+      if (typeof value === "string" && validApplicability.has(value as VaultApplicabilityState)) {
+        next[key] = value as VaultApplicabilityState;
+      }
+      return next;
+    }, {}),
+    guidance: Object.entries(rawGuidance).reduce<Record<string, VaultGuidanceDecision>>((next, [key, value]) => {
+      if (!value || typeof value !== "object") return next;
+      const decision = value as Record<string, unknown>;
+      const state = decision.state;
+      if (typeof state !== "string" || !validApplicability.has(state as VaultApplicabilityState)) return next;
+      next[key] = {
+        state: state as VaultApplicabilityState,
+        snoozedUntil: typeof decision.snoozedUntil === "string" ? decision.snoozedUntil : null,
+        updatedAt: typeof decision.updatedAt === "string" ? decision.updatedAt : new Date(0).toISOString(),
+      };
+      return next;
+    }, {}),
   };
 }
 

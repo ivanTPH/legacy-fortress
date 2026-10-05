@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "r
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardAssetSummaryCard from "../components/dashboard/DashboardAssetSummaryCard";
 import ActionQueuePanel, { type ActionCentreContext, type ActionCentreTask } from "../components/dashboard/ActionQueuePanel";
+import LegacyGuidancePanel from "../components/dashboard/LegacyGuidancePanel";
 import Icon from "../../../components/ui/Icon";
 import InfoTip from "../../../components/ui/InfoTip";
 import AttachmentGallery, { type AttachmentGalleryItem } from "../../../components/documents/AttachmentGallery";
@@ -53,7 +54,8 @@ import {
 } from "../../../lib/devSmoke";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
 import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
-import { isVaultCategoryEnabled, isVaultSubsectionEnabled } from "../../../lib/vaultPreferences";
+import { applyGuidanceAction, buildGuidanceItems, type GuidanceItem } from "../../../lib/readiness/guidance";
+import { isVaultCategoryEnabled, isVaultSubsectionEnabled, saveVaultPreferences } from "../../../lib/vaultPreferences";
 import {
   deriveBlockingState,
   resolveWorkflowActionHref,
@@ -404,7 +406,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { viewer } = useViewerAccess();
-  const { preferences } = useVaultPreferences();
+  const { preferences, setPreferences } = useVaultPreferences();
 
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState("");
@@ -447,6 +449,7 @@ export default function DashboardPage() {
     hasAddress: false,
     hasContact: false,
   });
+  const [guidanceBusyKey, setGuidanceBusyKey] = useState<string | null>(null);
 
   const viewerRole: CollaboratorRole = viewer.viewerRole;
   const viewerActivation: AccessActivationStatus = viewer.activationStatus;
@@ -482,6 +485,20 @@ export default function DashboardPage() {
   const willRecordCount = useMemo(
     () => legalAssets.filter(isWillAsset).length + legalDocuments.filter(isWillDocument).length,
     [legalAssets, legalDocuments],
+  );
+  const powerOfAttorneyCount = useMemo(
+    () => legalAssets.filter((row) => {
+      const value = `${row.category_key ?? ""} ${row.subtype_key ?? ""} ${row.title ?? ""}`.toLowerCase();
+      return value.includes("power") || value.includes("attorney") || value.includes("lpa");
+    }).length,
+    [legalAssets],
+  );
+  const wishesCount = useMemo(
+    () => assetRows.filter((row) => {
+      const value = `${row.section_key ?? ""} ${row.category_key ?? ""} ${row.subtype_key ?? ""} ${row.title ?? ""}`.toLowerCase();
+      return value.includes("wish") || value.includes("funeral") || value.includes("instruction");
+    }).length,
+    [assetRows],
   );
   const executorContactCount = useMemo(
     () => contactRows.filter(isExecutorContact).length + assetRows.filter(isExecutorAsset).length,
@@ -833,6 +850,18 @@ const legalSummary = useMemo(() => {
     loading,
     viewerMode: viewer.mode,
   });
+  const guidanceItems = useMemo(
+    () => buildGuidanceItems({
+      willCount: willRecordCount,
+      powerOfAttorneyCount,
+      trustedPeopleCount: contactRows.length,
+      digitalRecordCount,
+      possessionCount: possessionsRecordCount,
+      wishesCount,
+      financeRecordCount,
+    }, preferences),
+    [contactRows.length, digitalRecordCount, financeRecordCount, possessionsRecordCount, preferences, powerOfAttorneyCount, willRecordCount, wishesCount],
+  );
   const requiredReadinessTasks = dashboardState.legalReadiness.items.filter((item) => !item.complete);
 
   const markDashboardTaskComplete = useCallback(async (taskId: string) => {
@@ -923,6 +952,38 @@ const legalSummary = useMemo(() => {
     }
     setReviewPanel(buildReviewPanelFromAction(item.actionKey, item.stageName, item.blockerLabel));
   }, [dashboardState.actions.items, markDashboardTaskComplete, router]);
+
+  const handleGuidanceDecision = useCallback(async (
+    item: GuidanceItem,
+    action: "already_done" | "not_relevant" | "remind_later",
+  ) => {
+    if (viewer.mode === "linked") return;
+    setGuidanceBusyKey(item.key);
+    try {
+      const user = await waitForActiveUser(supabase, { attempts: 4, delayMs: 120 });
+      if (!user) {
+        setStatus("⚠️ Sign in again to update your guidance choices.");
+        return;
+      }
+      const nextPreferences = applyGuidanceAction(preferences, item.key, action);
+      const savedPreferences = await saveVaultPreferences(supabase, user.id, nextPreferences);
+      setPreferences(savedPreferences);
+      setStatus(action === "not_relevant"
+        ? "✅ We will keep this out of your current focus."
+        : action === "remind_later"
+          ? "✅ We will bring this suggestion back later."
+          : "✅ Noted. You can review this again from your Vault.");
+      setRefreshToken((current) => current + 1);
+    } catch (error) {
+      setStatus(`⚠️ Could not save that choice: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setGuidanceBusyKey(null);
+    }
+  }, [preferences, setPreferences, viewer.mode]);
+
+  const handleGuidanceOpen = useCallback((item: GuidanceItem) => {
+    router.push(item.href);
+  }, [router]);
 
   async function handleDashboardInviteAction(contact: ContactDiscoveryRow, invite: ContactInviteDisplay) {
     if (invite.action === "disabled" || invite.action === "status") {
@@ -1659,6 +1720,13 @@ const legalSummary = useMemo(() => {
       </section>
 
       <ActionQueuePanel items={dashboardState.actions.items} context={dashboardState.actions.context} onAction={handleAction} />
+      <LegacyGuidancePanel
+        items={guidanceItems}
+        ownerActionsEnabled={viewer.mode !== "linked"}
+        busyKey={guidanceBusyKey}
+        onOpen={handleGuidanceOpen}
+        onDecision={(item, action) => void handleGuidanceDecision(item, action)}
+      />
       <section className="lf-dashboard-readiness-summary" style={readinessPanelStyle} aria-label="Estate readiness summary">
         <div className="lf-dashboard-readiness-heading" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", width: "100%" }}>
           <div style={overviewIconStyle}>

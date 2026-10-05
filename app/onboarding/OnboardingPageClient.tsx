@@ -13,6 +13,7 @@ import {
   getVaultSubsectionsForGroup,
   loadVaultPreferences,
   saveVaultPreferences,
+  type VaultApplicabilityState,
   type VaultPreferences,
   type VaultSubsectionKey,
 } from "../../lib/vaultPreferences";
@@ -20,6 +21,19 @@ import {
   PlatformNotice,
   PlatformSection,
 } from "../../components/ui/PlatformPrimitives";
+
+const ADAPTIVE_ONBOARDING_AREAS: Array<{
+  key: string;
+  label: string;
+  description: string;
+}> = [
+  { key: "will", label: "A Will", description: "A Will or related legal record." },
+  { key: "capacity_arrangements", label: "Capacity arrangements", description: "A power of attorney or similar arrangement." },
+  { key: "people_i_trust", label: "People I trust", description: "People you may want to involve later." },
+  { key: "digital_life", label: "Digital life", description: "Email, social media and online services." },
+  { key: "personal_possessions", label: "Meaningful possessions", description: "Jewellery, collections, heirlooms or other keepsakes." },
+  { key: "wishes", label: "Wishes and instructions", description: "Personal, funeral, charitable or pet-care wishes." },
+];
 
 export default function OnboardingPageClient() {
   const router = useRouter();
@@ -113,6 +127,27 @@ export default function OnboardingPageClient() {
       subsections: {
         ...current.subsections,
         [key]: !current.subsections[key],
+      },
+    } : current);
+  }
+
+  function setApplicability(key: string, value: VaultApplicabilityState) {
+    setVaultPreferences((current) => current ? {
+      ...current,
+      groups: {
+        ...current.groups,
+        ...(key === "digital_life" ? { digital: value !== "not_relevant" } : {}),
+      },
+      subsections: {
+        ...current.subsections,
+        ...(key === "will" ? { legal_wills: value !== "not_relevant" } : {}),
+        ...(key === "capacity_arrangements" ? { legal_power_of_attorney: value !== "not_relevant" } : {}),
+        ...(key === "personal_possessions" ? { personal_possessions: value !== "not_relevant" } : {}),
+        ...(key === "wishes" ? { personal_wishes: value !== "not_relevant" } : {}),
+      },
+      applicability: {
+        ...current.applicability,
+        [key]: value,
       },
     } : current);
   }
@@ -274,6 +309,37 @@ export default function OnboardingPageClient() {
                         ))}
                       </span>
                     ) : null}
+                  </label>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {vaultPreferences ? (
+            <section className="lf-onboarding-adaptive-panel" aria-labelledby="adaptive-onboarding-title">
+              <div style={{ display: "grid", gap: 4 }}>
+                <div id="adaptive-onboarding-title" style={{ fontWeight: 700 }}>What matters to you right now?</div>
+                <div style={{ color: "#475569", fontSize: 14 }}>
+                  This helps your Vault suggest useful next steps without assuming that every area applies to you. You can change these choices later.
+                </div>
+              </div>
+              <div className="lf-onboarding-adaptive-grid">
+                {ADAPTIVE_ONBOARDING_AREAS.map((area) => (
+                  <label key={area.key} className="lf-onboarding-adaptive-row">
+                    <span style={{ display: "grid", gap: 3, minWidth: 0 }}>
+                      <strong>{area.label}</strong>
+                      <span>{area.description}</span>
+                    </span>
+                    <select
+                      aria-label={`What applies for ${area.label}`}
+                      value={vaultPreferences.applicability[area.key] ?? "unknown"}
+                      onChange={(event) => setApplicability(area.key, event.target.value as VaultApplicabilityState)}
+                    >
+                      <option value="unknown">I&apos;ll decide later</option>
+                      <option value="recorded">I have this</option>
+                      <option value="missing">I want to add this</option>
+                      <option value="not_relevant">Not relevant</option>
+                    </select>
                   </label>
                 ))}
               </div>
