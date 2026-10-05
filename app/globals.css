@@ -3209,6 +3209,35 @@ textarea {
   font-size: 13px;
 }
 
+.lf-action-centre-more-options {
+  position: relative;
+}
+
+.lf-action-centre-more-options summary {
+  color: #5f5852;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  list-style: none;
+  padding: 9px 4px;
+}
+
+.lf-action-centre-more-options summary::-webkit-details-marker {
+  display: none;
+}
+
+.lf-action-centre-more-options summary::after {
+  content: "v";
+  margin-left: 5px;
+}
+
+.lf-action-centre-more-options-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 4px;
+}
+
 @media (max-width: 700px) {
   .lf-action-entry-prompt {
     grid-template-columns: auto minmax(0, 1fr);

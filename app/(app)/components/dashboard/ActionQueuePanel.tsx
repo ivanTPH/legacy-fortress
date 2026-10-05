@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useMemo, useState, type CSSProperties } from "react";
+import { memo, useMemo, type CSSProperties } from "react";
 import Icon from "../../../../components/ui/Icon";
 import InfoTip from "../../../../components/ui/InfoTip";
 import type { BlockingItem } from "../../../../lib/workflow/blockingModel";
@@ -104,17 +104,7 @@ function ActionQueuePanel({ items, onAction, context, guidanceItems, onGuidanceD
   const activeBlockerCount = sections
     .filter((section) => section.key !== "completed" && section.key !== "clear")
     .reduce((sum, section) => sum + section.count, 0);
-  const visibleRowCount = sections.reduce((sum, section) => sum + section.count, 0);
-  const initialOpenSectionKey = sections.find((section) => section.rows.some((row) => row.priorityLevel === "Critical"))?.key ?? null;
-  const [openSectionKey, setOpenSectionKey] = useState<ActionCentreSection["key"] | null | undefined>(undefined);
-  const effectiveOpenSectionKey = openSectionKey === undefined ? initialOpenSectionKey : openSectionKey;
-
-  const toggleSection = useCallback((sectionKey: ActionCentreSection["key"]) => {
-    setOpenSectionKey((current) => {
-      const currentSectionKey = current === undefined ? initialOpenSectionKey : current;
-      return currentSectionKey === sectionKey ? null : sectionKey;
-    });
-  }, [initialOpenSectionKey]);
+  const visibleSections = sections.filter((section) => section.key !== "completed" && section.key !== "clear" && section.rows.length > 0);
 
   return (
     <section id="action-centre" className="lf-action-centre" style={panelStyle} aria-label="Action centre">
@@ -141,7 +131,7 @@ function ActionQueuePanel({ items, onAction, context, guidanceItems, onGuidanceD
         </div>
       </div>
 
-      {visibleRowCount === 0 ? (
+      {activeBlockerCount === 0 ? (
         <section style={clearStateStyle}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <Icon name="verified" size={22} />
@@ -153,18 +143,9 @@ function ActionQueuePanel({ items, onAction, context, guidanceItems, onGuidanceD
         </section>
       ) : (
         <div className="lf-action-centre-sections" style={{ display: "grid", gap: 8 }}>
-          {sections.map((section) => {
-            const isOpen = section.key === effectiveOpenSectionKey;
-            return (
+          {visibleSections.map((section) => (
               <section key={section.key} className="lf-action-centre-section" style={sectionCardStyle(section.tone)} aria-label={section.title}>
-                <button
-                  className="lf-action-centre-section-button"
-                  type="button"
-                  style={sectionHeaderButtonStyle}
-                  onClick={() => toggleSection(section.key)}
-                  aria-expanded={isOpen}
-                  title={`${isOpen ? "Collapse" : "Expand"} ${section.title}`}
-                >
+                <div className="lf-action-centre-section-header" style={sectionHeaderStyle}>
                   <div style={{ display: "grid", gap: 4, textAlign: "left", minWidth: 0 }}>
                     <div className="lf-action-centre-section-title-row" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", minWidth: 0 }}>
                       <span style={sectionIconStyle(section.tone)} aria-hidden>
@@ -174,23 +155,14 @@ function ActionQueuePanel({ items, onAction, context, guidanceItems, onGuidanceD
                       <span style={sectionPillStyle(section.tone)}>
                         {section.count}
                       </span>
-                      {section.rows.length ? (
-                        <span className="lf-action-centre-priority-pill" style={priorityPillStyle(section.priorityLevel)}>
-                          {section.priorityLevel} priority
-                        </span>
-                      ) : null}
                     </div>
                     <div className="lf-action-centre-section-summary" style={sectionSummaryStyle}>
                       {section.summary}
                     </div>
                   </div>
-                  <span style={accordionIconStyle(isOpen)} aria-hidden>
-                    <Icon name={isOpen ? "expand_more" : "chevron_right"} size={16} />
-                  </span>
-                </button>
-                {isOpen && section.rows.length ? (
-                  <div style={{ display: "grid", gap: 8 }}>
-                    {section.rows.map((item) => (
+                </div>
+                <div style={{ display: "grid", gap: 8 }}>
+                  {section.rows.map((item) => (
                       <article
                         key={item.actionKey}
                         className="lf-action-centre-row"
@@ -222,29 +194,30 @@ function ActionQueuePanel({ items, onAction, context, guidanceItems, onGuidanceD
                             >
                               {item.primaryActionLabel}
                             </button>
-                            {item.secondaryActionLabel ? (
-                              <a href={item.guidanceItem?.learnMoreHref ?? item.href} style={secondaryActionStyle} title={`${item.secondaryActionLabel}: ${item.title}`}>
-                                {item.secondaryActionLabel}
+                            {item.guidanceItem?.learnMoreHref ? (
+                              <a href={item.guidanceItem.learnMoreHref} style={secondaryActionStyle} title={`Learn more: ${item.title}`}>
+                                Learn more
                               </a>
                             ) : null}
                             {item.guidanceItem && onGuidanceDecision ? (
-                              <>
-                                <button type="button" style={secondaryActionStyle} disabled={guidanceBusyKey === item.guidanceItem.key} onClick={() => onGuidanceDecision(item.guidanceItem!, "already_done")}>Already done</button>
-                                <button type="button" style={secondaryActionStyle} disabled={guidanceBusyKey === item.guidanceItem.key} onClick={() => onGuidanceDecision(item.guidanceItem!, "not_relevant")}>Not relevant</button>
-                                <button type="button" style={secondaryActionStyle} disabled={guidanceBusyKey === item.guidanceItem.key} onClick={() => onGuidanceDecision(item.guidanceItem!, "remind_later")}>
-                                  {guidanceBusyKey === item.guidanceItem.key ? "Saving..." : "Remind me later"}
-                                </button>
-                              </>
+                              <details className="lf-action-centre-more-options">
+                                <summary>More options</summary>
+                                <div className="lf-action-centre-more-options-list">
+                                  <button type="button" style={secondaryActionStyle} disabled={guidanceBusyKey === item.guidanceItem.key} onClick={() => onGuidanceDecision(item.guidanceItem!, "already_done")}>Already done</button>
+                                  <button type="button" style={secondaryActionStyle} disabled={guidanceBusyKey === item.guidanceItem.key} onClick={() => onGuidanceDecision(item.guidanceItem!, "not_relevant")}>Not relevant</button>
+                                  <button type="button" style={secondaryActionStyle} disabled={guidanceBusyKey === item.guidanceItem.key} onClick={() => onGuidanceDecision(item.guidanceItem!, "remind_later")}>
+                                    {guidanceBusyKey === item.guidanceItem.key ? "Saving..." : "Remind me later"}
+                                  </button>
+                                </div>
+                              </details>
                             ) : null}
                           </div>
                         </div>
                       </article>
-                    ))}
-                  </div>
-                ) : null}
+                  ))}
+                </div>
               </section>
-            );
-          })}
+            ))}
         </div>
       )}
     </section>
@@ -384,7 +357,7 @@ function buildActionRows(items: BlockingItem[], context?: ActionCentreContext): 
       actionKey: pendingInvitationItems[0].actionKey,
       href: pendingInvitationItems[0].href,
       requiredRole: pendingInvitationItems[0].requiredRole,
-      primaryActionLabel: "Review invites",
+      primaryActionLabel: "View invitations",
       secondaryActionLabel: "Open Contacts",
       totalItems: pendingInvitationItems.length,
       priority: pendingInvitationItems[0].priority,
@@ -396,7 +369,7 @@ function buildActionRows(items: BlockingItem[], context?: ActionCentreContext): 
   if (readyInviteItems.length > 1) {
     rows.push({
       key: "contacts-ready-group",
-      title: "Send invite",
+      title: "Invite trusted people",
       stageName: "Contacts",
       blockerLabel: `${readyInviteItems.length} contacts are ready for invite emails.`,
       whyItMatters: "Invites help trusted people confirm their role before access is ever needed.",
@@ -404,7 +377,7 @@ function buildActionRows(items: BlockingItem[], context?: ActionCentreContext): 
       actionKey: readyInviteItems[0].actionKey,
       href: readyInviteItems[0].href,
       requiredRole: readyInviteItems[0].requiredRole,
-      primaryActionLabel: "Review invite",
+      primaryActionLabel: "Send invitations",
       secondaryActionLabel: "Open Contacts",
       totalItems: readyInviteItems.length,
       priority: readyInviteItems[0].priority,
@@ -477,7 +450,7 @@ export function buildActionCentrePreview(
 function buildGuidanceActionRows(items: GuidanceItem[]): ActionCentreRow[] {
   return items.map((item) => ({
     key: `guidance-${item.key}`,
-    title: item.title,
+    title: getGuidanceActionTitle(item),
     stageName: item.category,
     blockerLabel: item.description,
     whyItMatters: "A small, optional next step based on what you have recorded so far.",
@@ -485,7 +458,7 @@ function buildGuidanceActionRows(items: GuidanceItem[]): ActionCentreRow[] {
     actionKey: `guidance:${item.key}`,
     href: item.href,
     requiredRole: "owner",
-    primaryActionLabel: item.actionLabel,
+    primaryActionLabel: getGuidanceActionLabel(item),
     secondaryActionLabel: item.learnMoreHref ? "Learn more" : undefined,
     totalItems: 1,
     priority: item.priority === "high" ? 25 : item.priority === "medium" ? 55 : 75,
@@ -494,14 +467,29 @@ function buildGuidanceActionRows(items: GuidanceItem[]): ActionCentreRow[] {
   }));
 }
 
+function getGuidanceActionTitle(item: GuidanceItem) {
+  if (item.key === "will") return "Add your Will details";
+  if (item.key === "capacity_arrangements") return "Add a capacity arrangement";
+  if (item.key === "executor_after_will") return "Add the executors named in your Will";
+  if (item.key === "attorney_after_capacity") return "Add an attorney to People I Trust";
+  return item.title;
+}
+
+function getGuidanceActionLabel(item: GuidanceItem) {
+  if (item.key === "will") return "Add details";
+  if (item.key === "executor_after_will") return "Add executor";
+  if (item.key === "attorney_after_capacity") return "Add person";
+  return item.actionLabel;
+}
+
 function getActionTitle(item: BlockingItem) {
   const label = item.blockerLabel.toLowerCase();
   if (item.stageKey === "profile") return "Complete profile";
-  if (item.stageKey === "contacts" && label.includes("ready for an invite")) return "Send invite";
-  if (item.stageKey === "contacts" && label.includes("accept")) return "Check invitation status";
-  if (item.stageKey === "contacts" && label.includes("failed")) return "Resolve failed invitation";
+  if (item.stageKey === "contacts" && label.includes("ready for an invite")) return "Invite person";
+  if (item.stageKey === "contacts" && label.includes("accept")) return "View invitation";
+  if (item.stageKey === "contacts" && label.includes("failed")) return "Resolve invitation";
   if (item.stageKey === "financial") return "Add financial record";
-  if (item.stageKey === "legal") return "Review will information";
+  if (item.stageKey === "legal") return label.includes("upload") ? "Upload Will" : "Review Will";
   if (item.stageKey === "property") return "Add property record";
   if (item.stageKey === "business") return "Add business record";
   if (item.stageKey === "digital") return "Add digital record";
@@ -584,7 +572,7 @@ function buildDashboardActionRows(context?: ActionCentreContext): ActionCentreRo
   if (context.estateReadiness && !context.estateReadiness.willUploaded) {
     seeds.push({
       key: "dashboard-upload-will",
-      title: "Upload will",
+      title: "Upload your Will",
       stageName: "Legal readiness",
       blockerLabel: "Upload your will or add will information so trusted people can find the record when needed.",
       whyItMatters: "Will information is a core readiness signal. Legacy Fortress records whether it exists, but does not validate legal authenticity.",
@@ -592,7 +580,7 @@ function buildDashboardActionRows(context?: ActionCentreContext): ActionCentreRo
       actionKey: "dashboard:review-will",
       href: "/legal/wills",
       requiredRole: "owner",
-      primaryActionLabel: "Review will",
+      primaryActionLabel: "Upload Will",
       secondaryActionLabel: "Open Legal",
     });
   }
@@ -742,20 +730,20 @@ function getPrimaryActionLabel(item: BlockingItem) {
   const status = getActionStatus(item);
   if (status === "Plan limit reached") return "Review subscription";
   if (status === "Failed") return "Resolve issue";
-  if (item.stageKey === "contacts") return "Review invite";
+  if (item.stageKey === "contacts") return item.blockerLabel.toLowerCase().includes("accept") ? "View invitation" : "Send invitation";
   if (item.stageKey === "verification") return "Review request";
-  return "Review task";
+  return "View details";
 }
 
 function getSecondaryActionLabel(item: BlockingItem) {
-  if (item.stageKey === "profile") return "Open Profile";
-  if (item.stageKey === "contacts") return "Open Contacts";
-  if (item.stageKey === "financial") return "Open Finances";
-  if (item.stageKey === "legal") return "Open Legal";
-  if (item.stageKey === "property") return "Open Property";
-  if (item.stageKey === "business") return "Open Business";
-  if (item.stageKey === "digital") return "Open Digital";
-  if (item.stageKey === "personal") return "Open Personal";
+  if (item.stageKey === "profile") return "Complete profile";
+  if (item.stageKey === "contacts") return "View details";
+  if (item.stageKey === "financial") return "View finances";
+  if (item.stageKey === "legal") return "View legal records";
+  if (item.stageKey === "property") return "Continue setup";
+  if (item.stageKey === "business") return "View business records";
+  if (item.stageKey === "digital") return "View digital records";
+  if (item.stageKey === "personal") return "View personal records";
   return undefined;
 }
 
@@ -823,15 +811,9 @@ const clearStateStyle = {
   gap: 4,
 } satisfies CSSProperties;
 
-const sectionHeaderButtonStyle = {
-  border: "none",
-  background: "transparent",
-  padding: 0,
+const sectionHeaderStyle = {
   display: "grid",
-  gridTemplateColumns: "1fr auto",
-  gap: 10,
-  alignItems: "center",
-  cursor: "pointer",
+  gap: 8,
 } satisfies CSSProperties;
 
 function sectionCardStyle(tone: ActionCentreSection["tone"]): CSSProperties {
@@ -895,21 +877,6 @@ const itemRowStyle = {
   display: "grid",
   gap: 10,
 } satisfies CSSProperties;
-
-function accordionIconStyle(isOpen: boolean): CSSProperties {
-  return {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    border: "1px solid #e2e8f0",
-    background: "#fff",
-    color: "#0f172a",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    transform: isOpen ? "rotate(0deg)" : "none",
-  };
-}
 
 const sectionTitleStyle = {
   color: "#0f172a",

@@ -14,7 +14,7 @@ type DashboardActionSummaryProps = {
   items: BlockingItem[];
   context?: ActionCentreContext;
   guidanceItems: GuidanceItem[];
-  onAction: (actionKey: string) => void;
+  onAction: (actionKey: string, href: string) => void;
 };
 
 export default function DashboardActionSummary({ items, context, guidanceItems, onAction }: DashboardActionSummaryProps) {
@@ -34,7 +34,7 @@ export default function DashboardActionSummary({ items, context, guidanceItems, 
       </div>
       <div className="lf-dashboard-action-summary-list">
         {preview.map((item) => (
-          <button key={item.key} type="button" className="lf-dashboard-action-summary-item" onClick={() => onAction(item.actionKey)}>
+          <button key={item.key} type="button" className="lf-dashboard-action-summary-item" onClick={() => onAction(item.actionKey, item.href)}>
             <span>
               <strong>{item.title}</strong>
               <small>{item.blockerLabel}</small>

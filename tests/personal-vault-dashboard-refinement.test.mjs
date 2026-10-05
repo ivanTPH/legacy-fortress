@@ -83,6 +83,22 @@ test("dashboard uses customer-facing records wording and keeps full actions on t
   assert.match(dashboard, /<ActionQueuePanel/);
 });
 
+test("Action Centre is a direct inbox with action-specific CTAs and no empty bucket furniture", () => {
+  const queue = read("app/(app)/components/dashboard/ActionQueuePanel.tsx");
+  const summary = read("app/(app)/components/dashboard/DashboardActionSummary.tsx");
+  const prompt = read("app/(app)/components/dashboard/ActionCentreEntryPrompt.tsx");
+
+  assert.match(queue, /const visibleSections = sections\.filter\(\(section\) => section\.key !== "completed" && section\.key !== "clear" && section\.rows\.length > 0\)/);
+  assert.match(queue, /primaryActionLabel: "Upload Will"/);
+  assert.match(queue, /return item\.blockerLabel\.toLowerCase\(\)\.includes\("accept"\) \? "View invitation" : "Send invitation"/);
+  assert.match(queue, /return "Continue setup"/);
+  assert.match(queue, /return "View details"/);
+  assert.doesNotMatch(queue, /aria-expanded=\{isOpen\}/);
+  assert.doesNotMatch(queue, />Review invite<|>Open Contacts<|>Open Legal</);
+  assert.match(summary, /onAction\(item\.actionKey, item\.href\)/);
+  assert.match(prompt, /onAction\(item\.actionKey, item\.href\)/);
+});
+
 test("dashboard keeps multiple-record creation and linked viewers read-only", () => {
   const dashboard = read("app/(app)/dashboard/page.tsx");
   const createAsset = read("lib/assets/createAsset.ts");

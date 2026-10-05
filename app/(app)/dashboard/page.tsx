@@ -921,7 +921,11 @@ const legalSummary = useMemo(() => {
     }
   }, [assetRows]);
 
-  const handleAction = useCallback((actionKey: string) => {
+  const handleAction = useCallback((actionKey: string, destination?: string) => {
+    if (destination) {
+      router.push(destination);
+      return;
+    }
     if (actionKey.startsWith("guidance:")) {
       const guidanceKey = actionKey.slice("guidance:".length);
       const item = guidanceItems.find((candidate) => candidate.key === guidanceKey);
@@ -1577,9 +1581,9 @@ const legalSummary = useMemo(() => {
       {entryPromptVisible && actionCentrePreview ? (
         <ActionCentreEntryPrompt
           item={actionCentrePreview}
-          onAction={(actionKey) => {
+          onAction={(actionKey, href) => {
             setEntryPromptVisible(false);
-            handleAction(actionKey);
+            handleAction(actionKey, href);
           }}
           onDismiss={() => setEntryPromptVisible(false)}
         />
