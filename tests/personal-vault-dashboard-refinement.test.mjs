@@ -93,6 +93,8 @@ test("Action Centre is a direct inbox with action-specific CTAs and no empty buc
   assert.match(queue, /return item\.blockerLabel\.toLowerCase\(\)\.includes\("accept"\) \? "View invitation" : "Send invitation"/);
   assert.match(queue, /return "Continue setup"/);
   assert.match(queue, /return "View details"/);
+  assert.match(queue, /label\.includes\("failed"\)\) return "High"/);
+  assert.match(queue, /if \(item\.stageKey === "contacts"\) return "Medium"/);
   assert.doesNotMatch(queue, /aria-expanded=\{isOpen\}/);
   assert.doesNotMatch(queue, />Review invite<|>Open Contacts<|>Open Legal</);
   assert.match(summary, /onAction\(item\.actionKey, item\.href\)/);

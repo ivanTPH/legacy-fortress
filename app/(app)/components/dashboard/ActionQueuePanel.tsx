@@ -700,8 +700,9 @@ function getSeedPriorityLevel(seed: DashboardActionSeed): ActionPriorityLevel {
 
 function getActionPriorityLevel(item: BlockingItem): ActionPriorityLevel {
   const label = item.blockerLabel.toLowerCase();
-  if (item.stageKey === "contacts" && label.includes("executor")) return "Critical";
-  if (item.stageKey === "contacts") return "High";
+  if (item.stageKey === "contacts" && label.includes("executor") && !label.includes("invitation")) return "Critical";
+  if (item.stageKey === "contacts" && label.includes("failed")) return "High";
+  if (item.stageKey === "contacts") return "Medium";
   if (item.stageKey === "profile") return "Medium";
   return "Low";
 }
