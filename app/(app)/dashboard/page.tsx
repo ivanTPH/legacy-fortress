@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardAssetSummaryCard from "../components/dashboard/DashboardAssetSummaryCard";
-import ActionQueuePanel, { type ActionCentreContext, type ActionCentreTask } from "../components/dashboard/ActionQueuePanel";
+import ActionQueuePanel, { getActionCentreActionCount, type ActionCentreContext, type ActionCentreTask } from "../components/dashboard/ActionQueuePanel";
+import DashboardActionSummary from "../components/dashboard/DashboardActionSummary";
 import Icon from "../../../components/ui/Icon";
 import InfoTip from "../../../components/ui/InfoTip";
 import AttachmentGallery, { type AttachmentGalleryItem } from "../../../components/documents/AttachmentGallery";
@@ -861,6 +862,17 @@ const legalSummary = useMemo(() => {
     }, preferences),
     [contactRows.length, digitalRecordCount, financeRecordCount, possessionsRecordCount, preferences, powerOfAttorneyCount, willRecordCount, wishesCount],
   );
+  const actionCentreCount = useMemo(
+    () => getActionCentreActionCount(dashboardState.actions.items, dashboardState.actions.context, guidanceItems),
+    [dashboardState.actions.context, dashboardState.actions.items, guidanceItems],
+  );
+  const showFullActionCentre = searchParams.get("view") === "action-centre";
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.sessionStorage.setItem("lf:action-centre-count", String(actionCentreCount));
+    window.dispatchEvent(new CustomEvent("lf-action-centre-count", { detail: { count: actionCentreCount } }));
+  }, [actionCentreCount]);
   const markDashboardTaskComplete = useCallback(async (taskId: string) => {
     const task = assetRows.find((row) => row.id === taskId && String(row.category_key ?? "") === "tasks");
     if (!task) {
@@ -1612,13 +1624,20 @@ const legalSummary = useMemo(() => {
         <div className="lf-dashboard-overview-copy" style={{ color: "#64748b", fontSize: 13 }}>
           See what you have recorded and add another record whenever you are ready.
         </div>
+        <div className="lf-dashboard-overview-summary" aria-label="Fortress summary">
+          <strong>{financeRecordCount + legalRecordCount + propertyRecordCount + businessRecordCount + digitalRecordCount + possessionsRecordCount} records</strong>
+          <span aria-hidden="true">·</span>
+          <strong>{contactRows.length} {contactRows.length === 1 ? "person" : "people"}</strong>
+          <span aria-hidden="true">·</span>
+          <strong>{actionCentreCount ? `${actionCentreCount} things worth your attention` : "Nothing needs your attention right now"}</strong>
+        </div>
         </div>
         {showFinancialCard || showLegalCard || showPropertyCard || showBusinessCard || showDigitalCard || showPossessionsCard ? (
         <div className="lf-content-grid lf-dashboard-overview-grid">
           {showFinancialCard ? (
             <DashboardAssetSummaryCard
               icon={<Icon name="account_balance" size={22} />}
-              title="All finances"
+              title="Finances"
               href="/finances"
               addedAt={financialSummary.addedAt}
               value={String(financeRecordCount)}
@@ -1626,8 +1645,6 @@ const legalSummary = useMemo(() => {
               obscured={shouldObscureSection(viewerRole, "financial", viewerActivation)}
               inlineSummary
               hideItems
-              actionLabel="Open finance records"
-              actionIcon="open_in_new"
               addHref="/finances/bank?add=1"
               addLabel="Add bank account"
             />
@@ -1644,8 +1661,6 @@ const legalSummary = useMemo(() => {
               obscured={shouldObscureSection(viewerRole, "legal", viewerActivation)}
               inlineSummary
               hideItems
-              actionLabel="Open legal records"
-              actionIcon="open_in_new"
               addHref="/legal/wills?add=1"
               addLabel="Add legal record"
             />
@@ -1662,8 +1677,6 @@ const legalSummary = useMemo(() => {
               obscured={shouldObscureSection(viewerRole, "property", viewerActivation)}
               inlineSummary
               hideItems
-              actionLabel="Open property records"
-              actionIcon="open_in_new"
               addHref="/property?add=1"
               addLabel="Add property"
             />
@@ -1680,8 +1693,6 @@ const legalSummary = useMemo(() => {
               obscured={shouldObscureSection(viewerRole, "business", viewerActivation)}
               inlineSummary
               hideItems
-              actionLabel="Open business records"
-              actionIcon="open_in_new"
               addHref="/business?add=1"
               addLabel="Add business interest"
             />
@@ -1698,8 +1709,6 @@ const legalSummary = useMemo(() => {
               obscured={shouldObscureSection(viewerRole, "digital", viewerActivation)}
               inlineSummary
               hideItems
-              actionLabel="Open digital records"
-              actionIcon="open_in_new"
               addHref="/vault/digital/records?add=1&digitalType=__other"
               addLabel="Add digital account"
             />
@@ -1715,8 +1724,6 @@ const legalSummary = useMemo(() => {
               detail={`possession record${possessionsRecordCount === 1 ? "" : "s"}`}
               inlineSummary
               hideItems
-              actionLabel="Open possessions"
-              actionIcon="open_in_new"
               addHref="/vault/personal/records?add=1&possessionCategory=other"
               addLabel="Add possession"
             />
@@ -1730,30 +1737,23 @@ const legalSummary = useMemo(() => {
         )}
       </section>
 
-      <ActionQueuePanel
-        items={dashboardState.actions.items}
-        context={dashboardState.actions.context}
-        guidanceItems={guidanceItems}
-        guidanceBusyKey={guidanceBusyKey}
-        onAction={handleAction}
-        onGuidanceDecision={viewer.mode === "linked" ? undefined : (item, action) => void handleGuidanceDecision(item, action)}
-      />
-      <section className="lf-dashboard-fortress-summary" style={readinessPanelStyle} aria-label="Your Fortress summary">
-        <div className="lf-dashboard-readiness-heading" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", width: "100%" }}>
-          <div style={overviewIconStyle}><Icon name="shield" size={16} /></div>
-          <h2 style={{ margin: 0, fontSize: 18 }}>Your Fortress</h2>
-          <span style={{ color: "#64748b", fontSize: 13 }}>A calm snapshot of what you have recorded.</span>
-        </div>
-        <div className="lf-dashboard-fortress-summary-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
-          <div style={summaryMetricStyle}><strong>{financeRecordCount + legalRecordCount + propertyRecordCount + businessRecordCount + digitalRecordCount + possessionsRecordCount}</strong><span>records in your Fortress</span></div>
-          <div style={summaryMetricStyle}><strong>{contactRows.length}</strong><span>people recorded</span></div>
-          <div style={summaryMetricStyle}><strong>{guidanceItems.length}</strong><span>things worth considering</span></div>
-        </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-          <a href="#action-centre" style={secondaryActionLinkStyle}>Review Action Centre</a>
-          <a href="/add-to-fortress" style={secondaryActionLinkStyle}>Add to my Fortress</a>
-        </div>
-      </section>
+      {showFullActionCentre ? (
+        <ActionQueuePanel
+          items={dashboardState.actions.items}
+          context={dashboardState.actions.context}
+          guidanceItems={guidanceItems}
+          guidanceBusyKey={guidanceBusyKey}
+          onAction={handleAction}
+          onGuidanceDecision={viewer.mode === "linked" ? undefined : (item, action) => void handleGuidanceDecision(item, action)}
+        />
+      ) : (
+        <DashboardActionSummary
+          items={dashboardState.actions.items}
+          context={dashboardState.actions.context}
+          guidanceItems={guidanceItems}
+          onAction={handleAction}
+        />
+      )}
       {reviewPanel ? (
         <section className="lf-dashboard-review-panel" style={reviewPanelStyle(reviewPanel.tone)} aria-live="polite" aria-label="Dashboard review panel">
           <div style={commandCardHeaderStyle}>
@@ -3680,42 +3680,6 @@ function reviewPanelStyle(tone: DashboardReviewPanel["tone"] = "default"): CSSPr
     gap: 12,
   };
 }
-
-const completenessPanelStyle = {
-  border: "1px solid #e8e1dc",
-  borderRadius: 16,
-  background: "#fff",
-  padding: 18,
-  display: "grid",
-  gap: 14,
-} satisfies CSSProperties;
-
-const readinessPanelStyle = {
-  ...completenessPanelStyle,
-  background: "#fffefd",
-} satisfies CSSProperties;
-
-const summaryMetricStyle = {
-  display: "grid",
-  gap: 3,
-  border: "1px solid #eee8e3",
-  borderRadius: 10,
-  padding: "10px 12px",
-  background: "#fffefd",
-} as const;
-
-const secondaryActionLinkStyle = {
-  display: "inline-flex",
-  alignItems: "center",
-  minHeight: 38,
-  padding: "8px 12px",
-  border: "1px solid #d7c8c0",
-  borderRadius: 8,
-  color: "#4b2e22",
-  fontSize: 13,
-  fontWeight: 700,
-  textDecoration: "none",
-} as const;
 
 const readinessSnapshotGridStyle = {
   display: "grid",

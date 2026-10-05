@@ -29,6 +29,7 @@ export default function MobileNavTree({
               <Link href={item.path} className="lf-mobile-tree-link" onClick={onNavigate}>
                 <span className="lf-nav-icon">{item.icon}</span>
                 <span>{item.label}</span>
+                {item.badge ? <span className="lf-nav-badge" aria-label={`${item.badge} actionable items`}>{item.badge}</span> : null}
               </Link>
               {hasChildren ? (
                 <button type="button" className="lf-mobile-expand" onClick={() => onToggle(item.id)}>

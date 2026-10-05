@@ -242,7 +242,7 @@ test.describe("Final selector-specific workflow UAT", () => {
     test.setTimeout(240_000);
     const checkedRoutes = routes.filter((route) => ["Finances bank", "Property", "Business"].includes(route.name));
     const cards = {
-      "Finances bank": /All finances summary/i,
+      "Finances bank": /Finances summary/i,
       Property: /Property summary/i,
       Business: /Business summary/i,
     } as const;
@@ -300,7 +300,7 @@ test.describe("Final selector-specific workflow UAT", () => {
     if (!bankRoute || !transportRoute) throw new Error("Mobile smoke routes are missing.");
 
     await page.goto("/dashboard");
-    await expect(page.getByRole("link", { name: /All finances summary/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Finances summary/i })).toBeVisible();
     await page.goto(bankRoute.path);
     await page.getByRole("button", { name: bankRoute.add }).first().click();
     await page.getByRole("button", { name: bankRoute.save }).first().click();

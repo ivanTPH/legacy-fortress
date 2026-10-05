@@ -62,6 +62,15 @@ type ActionCentreRow = {
   guidanceItem?: GuidanceItem;
 };
 
+export type ActionCentrePreviewItem = {
+  key: string;
+  title: string;
+  actionKey: string;
+  href: string;
+  blockerLabel: string;
+  priorityLevel: ActionPriorityLevel;
+};
+
 type ActionCentreStatus = "Required" | "Recommended" | "Pending" | "Complete" | "Failed" | "Plan limit reached";
 type ActionPriorityLevel = "Critical" | "High" | "Medium" | "Low";
 type ActionCentreTaskType = "user_created" | "system_generated" | "reminder";
@@ -421,8 +430,40 @@ function buildActionRows(items: BlockingItem[], context?: ActionCentreContext): 
   }
 
   return dedupeRows([...buildDashboardActionRows(context), ...rows, ...buildGuidanceActionRows(context?.guidanceItems ?? [])])
-    .sort((left, right) => left.priority - right.priority || left.title.localeCompare(right.title))
-    .slice(0, 6);
+    .sort((left, right) => left.priority - right.priority || left.title.localeCompare(right.title));
+}
+
+function getActiveActionRows(items: BlockingItem[], context?: ActionCentreContext) {
+  return buildActionCentreSections(items, context)
+    .filter((section) => section.key !== "completed" && section.key !== "clear")
+    .flatMap((section) => section.rows)
+    .sort((left, right) => left.priority - right.priority || left.title.localeCompare(right.title));
+}
+
+export function getActionCentreActionCount(
+  items: BlockingItem[],
+  context?: ActionCentreContext,
+  guidanceItems: GuidanceItem[] = [],
+) {
+  return getActiveActionRows(items, context ? { ...context, guidanceItems } : undefined).length;
+}
+
+export function buildActionCentrePreview(
+  items: BlockingItem[],
+  context?: ActionCentreContext,
+  guidanceItems: GuidanceItem[] = [],
+  limit = 3,
+): ActionCentrePreviewItem[] {
+  return getActiveActionRows(items, context ? { ...context, guidanceItems } : undefined)
+    .slice(0, limit)
+    .map(({ key, title, actionKey, href, blockerLabel, priorityLevel }) => ({
+      key,
+      title,
+      actionKey,
+      href,
+      blockerLabel,
+      priorityLevel,
+    }));
 }
 
 function buildGuidanceActionRows(items: GuidanceItem[]): ActionCentreRow[] {

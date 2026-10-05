@@ -41,6 +41,7 @@ export default function SidebarPrimary({
           >
             <span className="lf-nav-icon">{item.icon}</span>
             <span className="lf-nav-label">{item.label}</span>
+            {item.badge ? <span className="lf-nav-badge" aria-label={`${item.badge} actionable items`}>{item.badge}</span> : null}
             {item.children?.length ? <span className="lf-nav-chevron">›</span> : null}
           </Link>
         );

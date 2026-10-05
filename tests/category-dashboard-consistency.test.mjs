@@ -84,7 +84,7 @@ test("empty dashboard cards use a single primary add action", () => {
   assert.match(files.summaryCard, /color: "#7f8794"/);
   assert.match(files.summaryCard, /style=\{emptyState \? emptyFooterStyle : footerWrapStyle\}/);
   assert.match(files.summaryCard, /minHeight: 62/);
-  assert.match(files.globals, /\.lf-finance-summary-tile \{\s*display: grid;\s*gap: 4px;\s*height: 100%;\s*grid-template-rows: auto 1fr;/);
+  assert.match(files.globals, /\.lf-dashboard-action-summary/);
 });
 
 test("digital and possession starter tiles map to known form types", () => {

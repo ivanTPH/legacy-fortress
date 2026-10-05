@@ -13,6 +13,7 @@ export type NavNode = {
   rolesAllowed?: string[];
   vaultCategoryKey?: VaultCategoryGroupKey;
   vaultSubsectionKey?: VaultSubsectionKey;
+  badge?: string;
   children?: NavNode[];
 };
 

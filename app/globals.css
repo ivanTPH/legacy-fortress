@@ -2969,6 +2969,138 @@ textarea {
     box-shadow 140ms ease;
 }
 
+.lf-nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  margin-left: auto;
+  border-radius: 999px;
+  background: #8f5d3b;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.lf-dashboard-overview-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.lf-dashboard-overview-summary strong {
+  color: #43352f;
+  font-weight: 650;
+}
+
+.lf-dashboard-action-summary {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #e8e1dc;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.lf-dashboard-action-summary-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.lf-dashboard-action-summary-eyebrow {
+  margin: 0 0 3px;
+  color: #8f5d3b;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.lf-dashboard-action-summary h2 {
+  margin: 0;
+  color: #211914;
+  font-size: 18px;
+}
+
+.lf-dashboard-action-summary-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #8f5d3b;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.lf-dashboard-action-summary-list {
+  display: grid;
+  gap: 6px;
+}
+
+.lf-dashboard-action-summary-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #ede6e1;
+  border-radius: 10px;
+  background: #fff;
+  color: #31251f;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lf-dashboard-action-summary-item:hover,
+.lf-dashboard-action-summary-item:focus-visible {
+  border-color: #b98b68;
+  background: #fcfaf8;
+}
+
+.lf-dashboard-action-summary-item > span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.lf-dashboard-action-summary-item small {
+  overflow: hidden;
+  color: #64748b;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lf-dashboard-action-summary-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  justify-self: start;
+  color: #7b4d32;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.lf-dashboard-action-summary-link:hover,
+.lf-dashboard-action-summary-link:focus-visible {
+  text-decoration: underline;
+}
+
 .lf-nav-item:hover {
   background: #f8f5f2;
   color: #15110f;

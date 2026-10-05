@@ -56,7 +56,7 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
   },
   {
     id: "finances",
-    label: "All finances",
+    label: "Finances",
     path: "/finances",
     icon: <WalletIcon />,
     vaultCategoryKey: "finances",

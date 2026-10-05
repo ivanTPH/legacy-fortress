@@ -107,6 +107,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
   const accountTriggerRef = useRef<HTMLButtonElement | null>(null);
   const accountMenuId = useId();
+  const [actionCentreCount, setActionCentreCount] = useState(0);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const readCount = () => {
+      const stored = Number(window.sessionStorage.getItem("lf:action-centre-count") ?? 0);
+      setActionCentreCount(Number.isFinite(stored) && stored > 0 ? stored : 0);
+    };
+    const handleCountChange = (event: Event) => {
+      const count = Number((event as CustomEvent<{ count?: number }>).detail?.count ?? 0);
+      setActionCentreCount(Number.isFinite(count) && count > 0 ? count : 0);
+    };
+    readCount();
+    window.addEventListener("lf-action-centre-count", handleCountChange);
+    window.addEventListener("storage", readCount);
+    return () => {
+      window.removeEventListener("lf-action-centre-count", handleCountChange);
+      window.removeEventListener("storage", readCount);
+    };
+  }, []);
 
   useEffect(() => {
     if (!effectiveAvatarUrl) {
@@ -190,8 +210,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     [baseTopLevelItems, resolvedViewerAccess, vaultPreferences],
   );
   const dashboardNavigationItems = useMemo(
-    () => stripNavigationChildren(topLevelItems),
-    [topLevelItems],
+    () => stripNavigationChildren(topLevelItems).map((item) => item.id === "action-centre"
+      ? { ...item, badge: actionCentreCount > 0 ? String(actionCentreCount) : undefined }
+      : item),
+    [actionCentreCount, topLevelItems],
   );
   const accountItems = useMemo(
     () => filterNodesByVaultPreferences(filterNavigationTreeForViewer(baseAccountItems, resolvedViewerAccess), vaultPreferences),

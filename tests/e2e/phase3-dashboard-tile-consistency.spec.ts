@@ -23,7 +23,7 @@ test.describe.serial("Phase 3 customer dashboard tile consistency", () => {
   test("empty finance dashboard tiles show a single Add record action and open the add form", async ({ page }) => {
     await signIn(page);
     await page.goto(`${BASE_URL}/finances`, { waitUntil: "networkidle" });
-    await expect(page.getByRole("banner").getByText("All finances")).toBeVisible();
+    await expect(page.getByRole("banner").getByText("Finances")).toBeVisible();
     await expect(page.getByRole("link", { name: /Pensions summary/i })).toBeVisible();
     await expect(page.getByRole("link", { name: "Add record" }).first()).toBeVisible();
 
@@ -36,7 +36,7 @@ test.describe.serial("Phase 3 customer dashboard tile consistency", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await signIn(page);
     await page.goto(`${BASE_URL}/finances`, { waitUntil: "networkidle" });
-    await expect(page.getByRole("banner").getByText("All finances")).toBeVisible();
+    await expect(page.getByRole("banner").getByText("Finances")).toBeVisible();
     await expect(page.getByRole("link", { name: /Pensions summary/i })).toBeVisible();
     await expect(page.getByRole("link", { name: "Add record" }).first()).toBeVisible();
   });

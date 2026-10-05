@@ -8,9 +8,10 @@ import { getAssetCategoryFormConfig } from "../lib/assets/fieldDictionary.ts";
 
 const root = process.cwd();
 
-test("dashboard overview cards use compact shared summary cards with icon-only review actions", () => {
+test("dashboard overview cards use compact shared summary cards with one add action", () => {
   const dashboardPage = fs.readFileSync(path.join(root, "app/(app)/dashboard/page.tsx"), "utf8");
   const summaryCard = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/DashboardAssetSummaryCard.tsx"), "utf8");
+  const actionSummary = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/DashboardActionSummary.tsx"), "utf8");
   const actionQueue = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/ActionQueuePanel.tsx"), "utf8");
   const dashboardRender = dashboardPage.slice(
     dashboardPage.indexOf('return (\n    <div className="lf-dashboard-shell" style={{ display: "grid", gap: 14 }}>'),
@@ -28,10 +29,11 @@ test("dashboard overview cards use compact shared summary cards with icon-only r
   assert.match(dashboardPage, /className="lf-dashboard-shell"/);
   assert.match(dashboardPage, /className="lf-dashboard-overview-panel"/);
   assert.match(dashboardPage, /className="lf-content-grid lf-dashboard-overview-grid"/);
-  assert.match(dashboardPage, /className="lf-dashboard-fortress-summary"/);
+  assert.match(actionSummary, /className="lf-dashboard-action-summary"/);
   assert.match(dashboardPage, /Your Fortress at a glance/);
-  assert.match(dashboardPage, /Review Action Centre/);
-  assert.match(dashboardPage, /Add to my Fortress/);
+  assert.match(dashboardPage, /showFullActionCentre/);
+  assert.match(dashboardPage, /actionCentreCount/);
+  assert.doesNotMatch(summaryCard, /icon=\{actionIcon\}/);
   assert.doesNotMatch(dashboardPage, /<LegacyGuidancePanel/);
   assert.doesNotMatch(dashboardPage, /<AddToFortressPanel/);
   assert.match(dashboardPage, /className="lf-dashboard-review-panel"/);
@@ -118,9 +120,8 @@ test("dashboard overview cards use compact shared summary cards with icon-only r
   assert.match(dashboardPage, /deriveBlockingState\(/);
   assert.match(dashboardPage, /inlineSummary/);
   assert.match(dashboardPage, /hideItems/);
-  assert.match(dashboardPage, /actionIcon="open_in_new"/);
   assert.match(summaryCard, /<IconButton/);
-  assert.match(summaryCard, /actionIcon = "open_in_new"/);
+  assert.doesNotMatch(summaryCard, /actionIcon/);
   assert.match(summaryCard, /className="lf-dashboard-summary-value" style=\{valueStyle\}/);
   assert.match(summaryCard, /className="lf-dashboard-summary-detail" style=\{detailStyle\}/);
   assert.match(actionQueue, /Action Centre/);
@@ -190,7 +191,7 @@ test("dashboard overview cards use compact shared summary cards with icon-only r
   assert.match(fs.readFileSync(path.join(root, "app/(app)/layout.tsx"), "utf8"), /placeholder="Search dashboard records"/);
   assert.match(dashboardRender, /Your Fortress at a glance/);
   assert.match(dashboardRender, /guidanceItems=\{guidanceItems\}/);
-  assert.match(dashboardRender, /aria-label="Your Fortress summary"/);
+  assert.match(dashboardRender, /aria-label="Fortress summary"/);
   assert.doesNotMatch(dashboardRender, /aria-label="Estate readiness summary"/);
   assert.doesNotMatch(dashboardRender, /Get started with your vault/);
   assert.doesNotMatch(dashboardRender, /<h2 style=\{\{ margin: 0, fontSize: 18 \}\}>Next steps<\/h2>/);
@@ -199,8 +200,8 @@ test("dashboard overview cards use compact shared summary cards with icon-only r
   assert.doesNotMatch(dashboardRender, /aria-label="Recent documents"/);
   assert.doesNotMatch(dashboardRender, /setupStepsGridStyle|completenessGridStyle|documentCategoryGridStyle|readinessGridStyle/);
   assert.doesNotMatch(dashboardRender, /<ReadinessSnapshot|<ReadinessUploadAction|<AttachmentGallerySummary|<AttachmentGallery\s/);
-  assert.ok(dashboardRender.indexOf("Your Fortress at a glance") < dashboardRender.indexOf("<ActionQueuePanel"));
-  assert.ok(dashboardRender.indexOf("<ActionQueuePanel") < dashboardRender.indexOf('aria-label="Your Fortress summary"'));
+  assert.ok(dashboardRender.indexOf("Your Fortress at a glance") < dashboardRender.indexOf("<DashboardActionSummary"));
+  assert.ok(dashboardRender.indexOf("<DashboardActionSummary") < dashboardRender.indexOf('aria-label="Dashboard review panel"'));
 });
 
 test("contacts keeps the fuller invitation management view while dashboard stays compact", () => {

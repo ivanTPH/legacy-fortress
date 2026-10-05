@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from "react";
+import type { CSSProperties, MouseEvent, ReactNode } from "react";
 import Icon from "../../../../components/ui/Icon";
 import { IconButton } from "../../../../components/ui/IconButton";
 
@@ -25,8 +25,6 @@ type DashboardAssetSummaryCardProps = {
   className?: string;
   overview?: ReactNode;
   inlineSummary?: boolean;
-  actionLabel?: string;
-  actionIcon?: string;
   addHref?: string;
   addLabel?: string;
   hideItems?: boolean;
@@ -47,8 +45,6 @@ export default function DashboardAssetSummaryCard({
   className = "",
   overview,
   inlineSummary = false,
-  actionLabel,
-  actionIcon = "open_in_new",
   addHref,
   addLabel,
   hideItems = false,
@@ -62,35 +58,32 @@ export default function DashboardAssetSummaryCard({
     router.push(href);
   }
 
-  function onCardKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    router.push(href);
-  }
-
   return (
     <div
       className={`lf-dashboard-summary-card ${className}`.trim()}
       style={cardStyle}
-      role="link"
-      tabIndex={0}
+      role="group"
       onClick={onCardClick}
-      onKeyDown={onCardKeyDown}
       aria-label={`${title} summary`}
     >
       <div className="lf-dashboard-summary-main" style={summaryLinkStyle}>
         <div className="lf-dashboard-summary-header" style={headerStyle}>
-          <div className="lf-dashboard-summary-title-wrap" style={{ display: "grid", gridTemplateColumns: "40px minmax(0, 1fr)", alignItems: "start", gap: 8, minWidth: 0 }}>
+          <Link
+            href={href}
+            className="lf-dashboard-summary-title-wrap"
+            aria-label={`Open ${title}`}
+            style={{ display: "grid", gridTemplateColumns: "40px minmax(0, 1fr)", alignItems: "start", gap: 8, minWidth: 0, color: "inherit", textDecoration: "none" }}
+          >
             <span className="lf-dashboard-summary-icon" style={iconStyle}>{icon}</span>
             <span className="lf-dashboard-summary-title" style={titleStyle}>{title}</span>
-          </div>
+          </Link>
           {!emptyState ? (
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
               {addHref ? (
                 <IconButton
                   icon="add"
                   label={addLabel ?? `Add ${title.toLowerCase()}`}
-                  style={{ width: 40, height: 40 }}
+                  style={{ width: 38, height: 38 }}
                   onPointerDown={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
@@ -102,20 +95,6 @@ export default function DashboardAssetSummaryCard({
                   }}
                 />
               ) : null}
-              <IconButton
-                icon={actionIcon}
-                label={actionLabel ?? `Open ${title}`}
-                style={{ width: 40, height: 40 }}
-                onPointerDown={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                }}
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  router.push(href);
-                }}
-              />
             </span>
           ) : onEmptyActionClick ? (
             <button
