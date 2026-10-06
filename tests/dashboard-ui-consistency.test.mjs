@@ -168,7 +168,7 @@ test("dashboard overview cards use compact shared summary cards with one add act
   assert.match(actionQueue, /estateReadiness/);
   assert.match(actionQueue, /dashboard-upload-will/);
   assert.match(actionQueue, /dashboard-add-key-documents/);
-  assert.match(actionQueue, /Will information is a core readiness signal/);
+  assert.match(actionQueue, /A small, optional next step based on what you have recorded so far/);
   assert.match(actionQueue, /return "will"/);
   assert.match(actionQueue, /return "key-documents"/);
   assert.match(actionQueue, /priorityPillStyle/);

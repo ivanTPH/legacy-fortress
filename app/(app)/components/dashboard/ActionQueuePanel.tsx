@@ -6,6 +6,7 @@ import InfoTip from "../../../../components/ui/InfoTip";
 import type { BlockingItem } from "../../../../lib/workflow/blockingModel";
 import { getWorkflowRequiredRoleLabel } from "../../../../lib/workflow/blockingModel";
 import type { GuidanceAction, GuidanceItem } from "../../../../lib/readiness/guidance";
+import type { VaultApplicabilityState } from "../../../../lib/vaultPreferences";
 
 type ActionQueuePanelProps = {
   items: BlockingItem[];
@@ -13,6 +14,7 @@ type ActionQueuePanelProps = {
   context?: ActionCentreContext;
   guidanceItems?: GuidanceItem[];
   onGuidanceDecision?: (item: GuidanceItem, action: Exclude<GuidanceAction, "add" | "learn_more">) => void;
+  onGuidanceApplicability?: (item: GuidanceItem, state: Extract<VaultApplicabilityState, "yes" | "no" | "unsure">) => void;
   guidanceBusyKey?: string | null;
 };
 
@@ -73,6 +75,8 @@ export type ActionCentrePreviewItem = {
   dismissible: boolean;
   snoozable: boolean;
   eligibleChannels: Array<"in_app" | "login" | "email" | "push">;
+  guidanceKey?: GuidanceItem["key"];
+  guidanceState?: VaultApplicabilityState;
 };
 
 type ActionCentreStatus = "Required" | "Recommended" | "Pending" | "Complete" | "Failed" | "Plan limit reached";
@@ -96,7 +100,7 @@ type DashboardActionSeed = Pick<
   "key" | "title" | "stageName" | "blockerLabel" | "whyItMatters" | "status" | "actionKey" | "href" | "requiredRole" | "primaryActionLabel" | "secondaryActionLabel"
 >;
 
-function ActionQueuePanel({ items, onAction, context, guidanceItems, onGuidanceDecision, guidanceBusyKey }: ActionQueuePanelProps) {
+function ActionQueuePanel({ items, onAction, context, guidanceItems, onGuidanceDecision, onGuidanceApplicability, guidanceBusyKey }: ActionQueuePanelProps) {
   const sections = useMemo(
     () => buildActionCentreSections(items, context ? { ...context, guidanceItems } : undefined),
     [context, guidanceItems, items],
@@ -186,14 +190,22 @@ function ActionQueuePanel({ items, onAction, context, guidanceItems, onGuidanceD
                           <div style={rowLabelStyle}>{item.blockerLabel}</div>
                           <div style={rowReasonStyle}>{item.whyItMatters}</div>
                           <div className="lf-action-centre-row-actions" style={rowActionsStyle}>
-                            <button
-                              type="button"
-                              style={primaryActionStyle}
-                              onClick={() => onAction(item.actionKey)}
-                              title={`${item.primaryActionLabel}: ${item.title}`}
-                            >
-                              {item.primaryActionLabel}
-                            </button>
+                            {item.guidanceItem?.key === "will" && item.guidanceItem.state === "unknown" && onGuidanceApplicability ? (
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }} aria-label="Will applicability choices">
+                                <button type="button" style={primaryActionStyle} onClick={() => onGuidanceApplicability(item.guidanceItem!, "yes")}>Yes, I have a Will</button>
+                                <button type="button" style={secondaryActionStyle} onClick={() => onGuidanceApplicability(item.guidanceItem!, "no")}>No, I don&apos;t have one</button>
+                                <button type="button" style={secondaryActionStyle} onClick={() => onGuidanceApplicability(item.guidanceItem!, "unsure")}>I&apos;m not sure</button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                style={primaryActionStyle}
+                                onClick={() => onAction(item.actionKey)}
+                                title={`${item.primaryActionLabel}: ${item.title}`}
+                              >
+                                {item.primaryActionLabel}
+                              </button>
+                            )}
                             {item.guidanceItem?.learnMoreHref ? (
                               <a href={item.guidanceItem.learnMoreHref} style={secondaryActionStyle} title={`Learn more: ${item.title}`}>
                                 Learn more
@@ -447,6 +459,8 @@ export function buildActionCentrePreview(
       dismissible: Boolean(guidanceItem),
       snoozable: Boolean(guidanceItem),
       eligibleChannels: guidanceItem ? ["in_app", "login", "email", "push"] : ["in_app", "login"],
+      guidanceKey: guidanceItem?.key,
+      guidanceState: guidanceItem?.state,
     }));
 }
 
@@ -471,7 +485,10 @@ function buildGuidanceActionRows(items: GuidanceItem[]): ActionCentreRow[] {
 }
 
 function getGuidanceActionTitle(item: GuidanceItem) {
-  if (item.key === "will") return "Add your Will details";
+  if (item.key === "will" && item.state === "unknown") return "Do you have a Will?";
+  if (item.key === "will" && item.state === "no") return "Would you like help understanding your options for making a Will?";
+  if (item.key === "will" && item.state === "unsure") return "Would you like to understand what a Will does?";
+  if (item.key === "will") return "How would you like to record your Will?";
   if (item.key === "capacity_arrangements") return "Add a capacity arrangement";
   if (item.key === "executor_after_will") return "Add the executors named in your Will";
   if (item.key === "attorney_after_capacity") return "Add an attorney to People I Trust";
@@ -479,7 +496,10 @@ function getGuidanceActionTitle(item: GuidanceItem) {
 }
 
 function getGuidanceActionLabel(item: GuidanceItem) {
-  if (item.key === "will") return "Add details";
+  if (item.key === "will" && item.state === "unknown") return "Choose an option";
+  if (item.key === "will" && item.state === "no") return "Explore my options";
+  if (item.key === "will" && item.state === "unsure") return "Learn about Wills";
+  if (item.key === "will") return "Record my Will";
   if (item.key === "executor_after_will") return "Add executor";
   if (item.key === "attorney_after_capacity") return "Add person";
   return item.actionLabel;
@@ -520,7 +540,7 @@ function buildDashboardActionRows(context?: ActionCentreContext): ActionCentreRo
   if (!context) return [];
   const seeds: DashboardActionSeed[] = [];
 
-  if (!context.hasExecutor) {
+  if (context.estateReadiness?.willUploaded && !context.hasExecutor) {
     seeds.push({
       key: "dashboard-add-executor",
       title: "Add executor",
@@ -570,22 +590,6 @@ function buildDashboardActionRows(context?: ActionCentreContext): ActionCentreRo
       secondaryActionLabel: "Open Documents",
     });
     }
-  }
-
-  if (context.estateReadiness && !context.estateReadiness.willUploaded) {
-    seeds.push({
-      key: "dashboard-upload-will",
-      title: "Upload your Will",
-      stageName: "Legal readiness",
-      blockerLabel: "Upload your will or add will information so trusted people can find the record when needed.",
-      whyItMatters: "Will information is a core readiness signal. Legacy Fortress records whether it exists, but does not validate legal authenticity.",
-      status: "Recommended",
-      actionKey: "dashboard:review-will",
-      href: "/legal/wills",
-      requiredRole: "owner",
-      primaryActionLabel: "Upload Will",
-      secondaryActionLabel: "Open Legal",
-    });
   }
 
   if (context.estateReadiness && !context.estateReadiness.keyDocumentsPresent) {

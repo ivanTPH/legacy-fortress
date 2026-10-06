@@ -10,6 +10,7 @@ export type GuidanceEvidence = {
   willCount: number;
   powerOfAttorneyCount: number;
   trustedPeopleCount: number;
+  executorCount: number;
   digitalRecordCount: number;
   possessionCount: number;
   wishesCount: number;
@@ -51,14 +52,14 @@ export const GUIDANCE_RULES: GuidanceRule[] = [
     key: "will",
     category: "Legal",
     priority: "high",
-    title: "Have you thought about your Will?",
-    description: "A Will can help make your wishes clearer. You can record what you have or note what you still want to arrange.",
+    title: "Do you have a Will?",
+    description: "A Will can help record how you want your estate dealt with and who should deal with it.",
     actionLabel: "Add my Will",
-    href: "/legal/wills",
-    learnMoreHref: "/legal/wills",
+    href: "/legal/wills?add=1",
+    learnMoreHref: "/support?topic=will",
     applies: () => true,
     evidence: (evidence) => evidence.willCount > 0,
-    defaultState: "missing",
+    defaultState: "unknown",
   },
   {
     key: "capacity_arrangements",
@@ -141,8 +142,8 @@ export const GUIDANCE_RULES: GuidanceRule[] = [
     description: "You have recorded Will information. Adding the people named to act can make the next step easier to review later.",
     actionLabel: "Add an executor",
     href: "/contacts?group=executors",
-    applies: (evidence) => evidence.willCount > 0 && evidence.trustedPeopleCount === 0,
-    evidence: (evidence) => evidence.trustedPeopleCount > 0,
+    applies: (evidence) => evidence.willCount > 0 && evidence.executorCount === 0,
+    evidence: (evidence) => evidence.executorCount > 0,
     defaultState: "missing",
   },
   {
@@ -175,17 +176,52 @@ export function buildGuidanceItems(
     .map((rule) => {
       const decision = guidance[rule.key];
       const selectedState = applicability[rule.key];
-      const state = decision?.state ?? (
-        rule.evidence(evidence)
-          ? "recorded"
-          : selectedState === "recorded"
-            ? "needs_review"
-            : selectedState ?? rule.defaultState
-      );
-      return { ...rule, state, snoozedUntil: decision?.snoozedUntil ?? null };
+      const state = rule.evidence(evidence)
+        ? "recorded"
+        : decision?.state ?? (
+            selectedState === "recorded"
+              ? "needs_review"
+              : selectedState ?? rule.defaultState
+          );
+      const contextualRule = rule.key === "will" ? getWillGuidanceRule(rule, state) : rule;
+      return { ...contextualRule, state, snoozedUntil: decision?.snoozedUntil ?? null };
     })
     .filter((item) => item.state !== "recorded" && item.state !== "not_relevant")
     .filter((item) => !isSnoozed(guidance[item.key], now));
+}
+
+function getWillGuidanceRule(rule: GuidanceRule, state: VaultApplicabilityState): GuidanceRule {
+  if (state === "no") {
+    return {
+      ...rule,
+      title: "Would you like help understanding your options for making a Will?",
+      description: "You can explore calm, general information and decide whether professional support would be useful.",
+      actionLabel: "Explore my options",
+      href: "/support?topic=will",
+      learnMoreHref: "/support?topic=will",
+    };
+  }
+  if (state === "unsure") {
+    return {
+      ...rule,
+      title: "Would you like to understand what a Will does?",
+      description: "Take a little time to understand the purpose of a Will before deciding what you want to record.",
+      actionLabel: "Learn about Wills",
+      href: "/support?topic=will",
+      learnMoreHref: "/support?topic=will",
+    };
+  }
+  if (state === "yes") {
+    return {
+      ...rule,
+      title: "How would you like to record your Will?",
+      description: "Record the details now or add the document when you are ready. You can add executors afterwards.",
+      actionLabel: "Record my Will",
+      href: "/legal/wills?add=1",
+      learnMoreHref: "/support?topic=will",
+    };
+  }
+  return rule;
 }
 
 export function applyGuidanceAction(

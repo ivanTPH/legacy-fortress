@@ -2,12 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 const { applyGuidanceAction, buildGuidanceItems } = await import("../lib/readiness/guidance.ts");
-const { getDefaultVaultPreferences, normalizeVaultPreferences } = await import("../lib/vaultPreferences.ts");
+const { getDefaultVaultPreferences, normalizeVaultPreferences, setVaultApplicability } = await import("../lib/vaultPreferences.ts");
 
 const emptyEvidence = {
   willCount: 0,
   powerOfAttorneyCount: 0,
   trustedPeopleCount: 0,
+  executorCount: 0,
   digitalRecordCount: 0,
   possessionCount: 0,
   wishesCount: 0,
@@ -16,9 +17,22 @@ const emptyEvidence = {
 
 test("guidance is generated from structured evidence with calm, actionable states", () => {
   const items = buildGuidanceItems(emptyEvidence, getDefaultVaultPreferences());
-  assert.ok(items.some((item) => item.key === "will" && item.state === "missing"));
+  assert.ok(items.some((item) => item.key === "will" && item.title === "Do you have a Will?"));
   assert.ok(items.some((item) => item.key === "capacity_arrangements"));
   assert.ok(items.every((item) => !item.title.toUpperCase().startsWith("MISSING")));
+});
+
+test("Will applicability answers change the journey without claiming a record exists", () => {
+  const noWill = buildGuidanceItems(emptyEvidence, setVaultApplicability(getDefaultVaultPreferences(), "will", "no"));
+  assert.equal(noWill.find((item) => item.key === "will")?.actionLabel, "Explore my options");
+  assert.equal(noWill.find((item) => item.key === "will")?.href, "/support?topic=will");
+
+  const unsure = buildGuidanceItems(emptyEvidence, setVaultApplicability(getDefaultVaultPreferences(), "will", "unsure"));
+  assert.equal(unsure.find((item) => item.key === "will")?.actionLabel, "Learn about Wills");
+
+  const yes = buildGuidanceItems(emptyEvidence, setVaultApplicability(getDefaultVaultPreferences(), "will", "yes"));
+  assert.equal(yes.find((item) => item.key === "will")?.href, "/legal/wills?add=1");
+  assert.notEqual(yes.find((item) => item.key === "will")?.state, "recorded");
 });
 
 test("recorded evidence resolves guidance without inventing a readiness score", () => {
@@ -35,6 +49,13 @@ test("recorded Will and capacity information create contextual people next actio
 
   const capacityItems = buildGuidanceItems({ ...emptyEvidence, powerOfAttorneyCount: 1 });
   assert.equal(capacityItems.find((item) => item.key === "attorney_after_capacity")?.href, "/contacts?group=trusted-contacts");
+});
+
+test("executor evidence resolves the executor journey without treating any trusted person as an executor", () => {
+  const items = buildGuidanceItems({ ...emptyEvidence, willCount: 1, trustedPeopleCount: 1 });
+  assert.ok(items.some((item) => item.key === "executor_after_will"));
+  const resolved = buildGuidanceItems({ ...emptyEvidence, willCount: 1, executorCount: 1 });
+  assert.equal(resolved.some((item) => item.key === "executor_after_will"), false);
 });
 
 test("onboarding self-report does not claim a record exists without evidence", () => {

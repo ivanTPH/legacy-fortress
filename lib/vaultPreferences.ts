@@ -43,6 +43,9 @@ export type VaultPreferenceKey = VaultCategoryGroupKey | VaultSubsectionKey;
 
 export type VaultApplicabilityState =
   | "unknown"
+  | "yes"
+  | "no"
+  | "unsure"
   | "recorded"
   | "missing"
   | "not_relevant"
@@ -217,6 +220,9 @@ export function normalizeVaultPreferences(input: unknown): VaultPreferences {
     : {};
   const validApplicability = new Set<VaultApplicabilityState>([
     "unknown",
+    "yes",
+    "no",
+    "unsure",
     "recorded",
     "missing",
     "not_relevant",
@@ -251,6 +257,26 @@ export function normalizeVaultPreferences(input: unknown): VaultPreferences {
       };
       return next;
     }, {}),
+  };
+}
+
+export function setVaultApplicability(
+  preferences: VaultPreferences,
+  key: string,
+  state: Extract<VaultApplicabilityState, "unknown" | "yes" | "no" | "unsure" | "not_relevant">,
+): VaultPreferences {
+  return {
+    ...preferences,
+    applicability: { ...preferences.applicability, [key]: state },
+    guidance: {
+      ...preferences.guidance,
+      [key]: {
+        ...(preferences.guidance[key] ?? { snoozedUntil: null }),
+        state,
+        snoozedUntil: null,
+        updatedAt: new Date().toISOString(),
+      },
+    },
   };
 }
 

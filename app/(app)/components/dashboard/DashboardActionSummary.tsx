@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { BlockingItem } from "../../../../lib/workflow/blockingModel";
 import type { GuidanceItem } from "../../../../lib/readiness/guidance";
+import type { VaultApplicabilityState } from "../../../../lib/vaultPreferences";
 import Icon from "../../../../components/ui/Icon";
 import {
   buildActionCentrePreview,
@@ -15,10 +16,11 @@ type DashboardActionSummaryProps = {
   context?: ActionCentreContext;
   guidanceItems: GuidanceItem[];
   onAction: (actionKey: string, href: string) => void;
+  onGuidanceApplicability?: (item: GuidanceItem, state: Extract<VaultApplicabilityState, "yes" | "no" | "unsure">) => void;
   excludedActionKeys?: readonly string[];
 };
 
-export default function DashboardActionSummary({ items, context, guidanceItems, onAction, excludedActionKeys = [] }: DashboardActionSummaryProps) {
+export default function DashboardActionSummary({ items, context, guidanceItems, onAction, onGuidanceApplicability, excludedActionKeys = [] }: DashboardActionSummaryProps) {
   const count = getActionCentreActionCount(items, context, guidanceItems);
   if (!count) return null;
 
@@ -35,15 +37,30 @@ export default function DashboardActionSummary({ items, context, guidanceItems, 
         <span className="lf-dashboard-action-summary-count" aria-label={`${count} actionable items`}>{count}</span>
       </div>
       <div className="lf-dashboard-action-summary-list">
-        {preview.map((item) => (
-          <button key={item.key} type="button" className="lf-dashboard-action-summary-item" onClick={() => onAction(item.actionKey, item.href)}>
-            <span>
-              <strong>{item.title}</strong>
-              <small>{item.blockerLabel}</small>
-            </span>
-            <Icon name="arrow_forward" size={18} aria-hidden />
-          </button>
-        ))}
+        {preview.map((item) => {
+          const guidance = guidanceItems.find((candidate) => candidate.key === item.guidanceKey);
+          return item.guidanceKey === "will" && item.guidanceState === "unknown" && guidance && onGuidanceApplicability ? (
+            <div key={item.key} className="lf-dashboard-action-summary-item" role="group" aria-label="Will applicability choices">
+              <span>
+                <strong>{item.title}</strong>
+                <small>{item.blockerLabel}</small>
+              </span>
+              <span style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "flex-end" }}>
+                <button type="button" onClick={() => onGuidanceApplicability(guidance, "yes")}>Yes</button>
+                <button type="button" onClick={() => onGuidanceApplicability(guidance, "no")}>No</button>
+                <button type="button" onClick={() => onGuidanceApplicability(guidance, "unsure")}>Not sure</button>
+              </span>
+            </div>
+          ) : (
+            <button key={item.key} type="button" className="lf-dashboard-action-summary-item" onClick={() => onAction(item.actionKey, item.href)}>
+              <span>
+                <strong>{item.title}</strong>
+                <small>{item.blockerLabel}</small>
+              </span>
+              <Icon name="arrow_forward" size={18} aria-hidden />
+            </button>
+          );
+        })}
       </div>
       <Link className="lf-dashboard-action-summary-link" href="/action-centre">
         View {count > 3 ? `all ${count}` : "Action Centre"}

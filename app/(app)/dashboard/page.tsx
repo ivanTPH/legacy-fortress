@@ -56,7 +56,7 @@ import {
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
 import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
 import { applyGuidanceAction, buildGuidanceItems, type GuidanceItem } from "../../../lib/readiness/guidance";
-import { isVaultCategoryEnabled, isVaultSubsectionEnabled, saveVaultPreferences } from "../../../lib/vaultPreferences";
+import { isVaultCategoryEnabled, isVaultSubsectionEnabled, saveVaultPreferences, setVaultApplicability } from "../../../lib/vaultPreferences";
 import {
   deriveBlockingState,
   resolveWorkflowActionHref,
@@ -858,12 +858,13 @@ const legalSummary = useMemo(() => {
       willCount: willRecordCount,
       powerOfAttorneyCount,
       trustedPeopleCount: contactRows.length,
+      executorCount: executorContactCount,
       digitalRecordCount,
       possessionCount: possessionsRecordCount,
       wishesCount,
       financeRecordCount,
     }, preferences),
-    [contactRows.length, digitalRecordCount, financeRecordCount, possessionsRecordCount, preferences, powerOfAttorneyCount, willRecordCount, wishesCount],
+    [contactRows.length, digitalRecordCount, executorContactCount, financeRecordCount, possessionsRecordCount, preferences, powerOfAttorneyCount, willRecordCount, wishesCount],
   );
   const actionCentreCount = useMemo(
     () => getActionCentreActionCount(dashboardState.actions.items, dashboardState.actions.context, guidanceItems),
@@ -1024,6 +1025,30 @@ const legalSummary = useMemo(() => {
       setGuidanceBusyKey(null);
     }
   }, [preferences, setPreferences, viewer.mode]);
+
+  const handleGuidanceApplicability = useCallback(async (
+    item: GuidanceItem,
+    state: "yes" | "no" | "unsure",
+  ) => {
+    if (viewer.mode === "linked") return;
+    setGuidanceBusyKey(item.key);
+    try {
+      const user = await waitForActiveUser(supabase, { attempts: 4, delayMs: 120 });
+      if (!user) {
+        setStatus("⚠️ Sign in again to save that choice.");
+        return;
+      }
+      const savedPreferences = await saveVaultPreferences(supabase, user.id, setVaultApplicability(preferences, item.key, state));
+      setPreferences(savedPreferences);
+      setStatus("✅ Thanks. We will tailor the next step to your answer.");
+      setRefreshToken((current) => current + 1);
+      setEntryPromptVisible(false);
+    } catch (error) {
+      setStatus(`⚠️ Could not save that choice: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setGuidanceBusyKey(null);
+    }
+  }, [preferences, setEntryPromptVisible, setPreferences, viewer.mode]);
 
   async function handleDashboardInviteAction(contact: ContactDiscoveryRow, invite: ContactInviteDisplay) {
     if (invite.action === "disabled" || invite.action === "status") {
@@ -1556,6 +1581,7 @@ const legalSummary = useMemo(() => {
           guidanceBusyKey={guidanceBusyKey}
           onAction={handleAction}
           onGuidanceDecision={viewer.mode === "linked" ? undefined : (item, action) => void handleGuidanceDecision(item, action)}
+          onGuidanceApplicability={viewer.mode === "linked" ? undefined : (item, state) => void handleGuidanceApplicability(item, state)}
         />
         {reviewPanel ? <section className="lf-action-centre-follow-up" role="status"><strong>{reviewPanel.title}</strong><p>{reviewPanel.description}</p><button type="button" onClick={() => router.push(reviewPanel.href)}>{reviewPanel.ctaLabel}</button></section> : null}
       </div>
@@ -1586,6 +1612,10 @@ const legalSummary = useMemo(() => {
           onAction={(actionKey, href) => {
             setEntryPromptVisible(false);
             handleAction(actionKey, href);
+          }}
+          onGuidanceApplicability={(state) => {
+            const item = guidanceItems.find((candidate) => candidate.key === actionCentrePreview.guidanceKey);
+            if (item) void handleGuidanceApplicability(item, state);
           }}
           onDismiss={() => setEntryPromptVisible(false)}
         />
@@ -1802,6 +1832,7 @@ const legalSummary = useMemo(() => {
         context={dashboardState.actions.context}
         guidanceItems={guidanceItems}
         onAction={handleAction}
+        onGuidanceApplicability={(item, state) => void handleGuidanceApplicability(item, state)}
         excludedActionKeys={entryPromptActionKey ? [entryPromptActionKey] : []}
       />
       {reviewPanel ? (
