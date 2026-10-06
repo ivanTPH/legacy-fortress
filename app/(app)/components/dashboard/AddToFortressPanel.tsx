@@ -2,6 +2,7 @@
 
 import Icon from "../../../../components/ui/Icon";
 import { useViewerAccess } from "../../../../components/access/ViewerAccessContext";
+import { FINANCE_CATEGORY_CHOICE } from "../../../../lib/vault/addRecordTypes";
 
 type AddChoice = { label: string; description: string; href: string; icon: string };
 type AddGroup = { title: string; choices: AddChoice[] };
@@ -11,9 +12,7 @@ const ADD_GROUPS: AddGroup[] = [
     title: "Money & property",
     choices: [
       { label: "Property", description: "Home, ownership and supporting records.", href: "/property?add=1", icon: "home" },
-      { label: "Bank account", description: "Institution and a useful description, never a password.", href: "/finances/bank?add=1", icon: "account_balance" },
-      { label: "Savings or investments", description: "Start with the provider and account context.", href: "/finances/investments?add=1", icon: "savings" },
-      { label: "Pension or insurance", description: "Keep the provider and policy context findable.", href: "/finances/pensions?add=1", icon: "shield" },
+      FINANCE_CATEGORY_CHOICE,
     ],
   },
   {

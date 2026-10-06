@@ -96,7 +96,7 @@ export default function CanonicalAssetOverviewGrid({ tiles, emptyMessage }: Cano
           }),
         );
         const isEmpty = rows.length === 0;
-        const href = isEmpty ? tile.addHref : tile.href;
+        const href = tile.href;
 
         return (
           <div key={tile.key} className="lf-finance-summary-tile">
@@ -104,11 +104,12 @@ export default function CanonicalAssetOverviewGrid({ tiles, emptyMessage }: Cano
               icon={<Icon name={tile.icon} size={13} />}
               title={tile.title}
               href={href}
+              addHref={tile.addHref}
               addedAt={latestTimestamp(rows.map((row) => row.updated_at ?? row.created_at))}
-              value={state.status === "loading" ? "Loading" : isEmpty ? "Add record" : String(rows.length)}
+              value={state.status === "loading" ? "Loading" : isEmpty ? "Not yet added" : String(rows.length)}
               detail={state.status === "loading" ? "Checking saved records" : isEmpty ? tile.description : `${rows.length} active record${rows.length === 1 ? "" : "s"}`}
               items={[]}
-              emptyActionLabel="Add record"
+              emptyActionLabel={`Add ${tile.title.toLowerCase()}`}
               emptyState={isEmpty}
               hideItems
               onEmptyActionClick={() => router.push(tile.addHref)}
