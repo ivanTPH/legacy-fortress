@@ -77,26 +77,24 @@ export default function DashboardAssetSummaryCard({
             <span className="lf-dashboard-summary-icon" style={iconStyle}>{icon}</span>
             <span className="lf-dashboard-summary-title" style={titleStyle}>{title}</span>
           </Link>
-          {!emptyState ? (
+          {addHref ? (
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              {addHref ? (
-                <IconButton
-                  icon="add"
-                  label={addLabel ?? `Add ${title.toLowerCase()}`}
-                  style={{ width: 38, height: 38 }}
-                  onPointerDown={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                  }}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    router.push(addHref);
-                  }}
-                />
-              ) : null}
+              <IconButton
+                icon="add"
+                label={addLabel ?? `Add ${title.toLowerCase()}`}
+                style={{ width: 38, height: 38 }}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                }}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  router.push(addHref);
+                }}
+              />
             </span>
-          ) : onEmptyActionClick ? (
+          ) : !emptyState && onEmptyActionClick ? (
             <button
               type="button"
               aria-label={emptyActionLabel}
@@ -138,7 +136,7 @@ export default function DashboardAssetSummaryCard({
             <div className="lf-dashboard-summary-value" style={valueStyle}>{obscured ? "Restricted" : value}</div>
             <div className="lf-dashboard-summary-detail" style={detailStyle}>{obscured ? "Detail hidden for this role" : detail}</div>
           </>
-        ) : onEmptyActionClick ? (
+        ) : addHref ? null : onEmptyActionClick ? (
           <button
             type="button"
             style={emptyPrimaryActionStyle}
@@ -154,11 +152,11 @@ export default function DashboardAssetSummaryCard({
           >
             <span style={emptyPrimaryLabelStyle}>{emptyActionLabel}</span>
           </button>
-        ) : (
+        ) : !emptyState ? (
           <Link href={href} style={emptyPrimaryActionStyle}>
             <span style={emptyPrimaryLabelStyle}>{emptyActionLabel}</span>
           </Link>
-        )}
+        ) : null}
         {overview ? <div style={overviewWrapStyle}>{overview}</div> : null}
       </div>
 

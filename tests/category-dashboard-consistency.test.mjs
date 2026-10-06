@@ -49,7 +49,7 @@ test("sidebar launches top-level dashboards instead of submenu flyouts", () => {
 test("record workspaces open the add form from add=1 query links", () => {
   assert.match(files.finances, /\$\{section\.href\}\?add=1/);
   assert.match(files.finances, /emptyState=\{isEmpty\}/);
-  assert.match(files.finances, /emptyActionLabel="Add record"/);
+  assert.match(files.finances, /addLabel=\{`Add \$\{section\.title\.toLowerCase\(\)\}`\}/);
   assert.match(files.legal, /\$\{href\}\?add=1/);
   assert.match(files.legal, /emptyState=\{!hasRecords\}/);
   assert.match(files.property, /\$\{item\.href\}\?add=1/);

@@ -430,8 +430,11 @@ export function buildActionCentrePreview(
   context?: ActionCentreContext,
   guidanceItems: GuidanceItem[] = [],
   limit = 3,
+  excludedActionKeys: readonly string[] = [],
 ): ActionCentrePreviewItem[] {
+  const excluded = new Set(excludedActionKeys);
   return getActiveActionRows(items, context ? { ...context, guidanceItems } : undefined)
+    .filter((row) => !excluded.has(row.actionKey))
     .slice(0, limit)
     .map(({ key, title, actionKey, href, blockerLabel, priorityLevel, guidanceItem, taskType }) => ({
       key,

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import DashboardAssetSummaryCard from "../components/dashboard/DashboardAssetSummaryCard";
 import Icon from "../../../components/ui/Icon";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
@@ -21,6 +21,7 @@ import {
   shouldRefreshDashboardForAssetMutation,
   subscribeToCanonicalAssetMutation,
 } from "../../../lib/assets/liveSync";
+import { FINANCE_RECORD_CHOICES } from "../../../lib/vault/addRecordTypes";
 
 type FinanceSectionCard = {
   key: FinanceCategoryKey;
@@ -41,6 +42,7 @@ const FINANCE_SECTION_CARDS: FinanceSectionCard[] = [
 
 export default function FinancesOverviewPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { viewer } = useViewerAccess();
   const { preferences } = useVaultPreferences();
   const [loading, setLoading] = useState(true);
@@ -48,6 +50,20 @@ export default function FinancesOverviewPage() {
   const [refreshToken, setRefreshToken] = useState(0);
   const [currency, setCurrency] = useState("GBP");
   const [assetRows, setAssetRows] = useState<DashboardAssetRow[]>([]);
+  const chooserOpen = searchParams.get("add") === "1";
+
+  useEffect(() => {
+    if (!chooserOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") router.replace("/finances");
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [chooserOpen, router]);
+
+  function closeChooser() {
+    router.replace("/finances");
+  }
 
   useEffect(() => {
     return subscribeToCanonicalAssetMutation((detail) => {
@@ -126,13 +142,13 @@ export default function FinancesOverviewPage() {
   );
   const recommendedFinanceAction = bankRecordCount === 0
     ? {
-        href: "/finances/bank",
+        href: "/finances?add=1",
         label: "Add your first account",
         description: "Start with a bank account so your financial picture has a clear foundation.",
       }
     : assetRows.length === 0
       ? {
-          href: summaries[0]?.href ?? "/finances/bank",
+          href: "/finances?add=1",
           label: "Add your first finance record",
           description: "Choose one financial area and add what you know now.",
         }
@@ -140,6 +156,29 @@ export default function FinancesOverviewPage() {
 
   return (
     <section style={{ display: "grid", gap: 14 }}>
+      {chooserOpen ? (
+        <div role="dialog" aria-modal="true" aria-labelledby="finance-add-heading" style={chooserStyle}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "start" }}>
+            <div style={{ display: "grid", gap: 4 }}>
+              <h2 id="finance-add-heading" style={{ margin: 0, color: "#1f1712", fontSize: 19 }}>Add to Finances</h2>
+              <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}>Choose the type of financial record you want to add.</p>
+            </div>
+            <button type="button" onClick={closeChooser} aria-label="Close finance record chooser" style={closeButtonStyle}>×</button>
+          </div>
+          <div style={chooserGridStyle}>
+            {FINANCE_RECORD_CHOICES.map((choice) => (
+              <button key={choice.key} type="button" onClick={() => router.push(choice.href)} aria-label={choice.ariaLabel} style={choiceStyle}>
+                <Icon name={choice.icon} size={18} />
+                <span style={{ display: "grid", gap: 2, textAlign: "left" }}>
+                  <strong>{choice.label}</strong>
+                  <small style={{ color: "#64748b" }}>{choice.description}</small>
+                </span>
+              </button>
+            ))}
+          </div>
+          <button type="button" onClick={closeChooser} style={cancelButtonStyle}>Cancel</button>
+        </div>
+      ) : null}
       <div style={{ display: "grid", gap: 6 }}>
         <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
           Record your bank accounts, savings, pensions, and policies so your estate has a clear financial picture.
@@ -167,7 +206,7 @@ export default function FinancesOverviewPage() {
       <div className="lf-content-grid">
         {summaries.map((section) => {
           const isEmpty = !section.summary.items.length;
-          const cardHref = isEmpty ? `${section.href}?add=1` : section.href;
+          const cardHref = section.href;
           return (
             <div key={section.href} className="lf-finance-summary-tile">
               <DashboardAssetSummaryCard
@@ -178,7 +217,9 @@ export default function FinancesOverviewPage() {
                 value={section.summary.valueText}
                 detail={isEmpty ? section.description : section.summary.detailText}
                 items={section.summary.items}
-                emptyActionLabel="Add record"
+                addHref={`${section.href}?add=1`}
+                addLabel={`Add ${section.title.toLowerCase()}`}
+                emptyActionLabel={`Add ${section.title.toLowerCase()}`}
                 emptyState={isEmpty}
               />
             </div>
@@ -223,3 +264,17 @@ const recommendedIconStyle = {
   justifyContent: "center",
   flexShrink: 0,
 } as const;
+
+const chooserStyle = {
+  display: "grid",
+  gap: 16,
+  border: "1px solid #e3d9d1",
+  borderRadius: 16,
+  background: "#fffefd",
+  padding: 18,
+  boxShadow: "0 16px 40px rgba(33,17,13,0.12)",
+} as const;
+const chooserGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 } as const;
+const choiceStyle = { display: "flex", alignItems: "center", gap: 10, border: "1px solid #e3d9d1", borderRadius: 12, background: "#fff", padding: 12, color: "#1f1712", cursor: "pointer" } as const;
+const closeButtonStyle = { border: 0, background: "transparent", color: "#64748b", fontSize: 24, lineHeight: 1, cursor: "pointer" } as const;
+const cancelButtonStyle = { justifySelf: "start", border: "1px solid #d8cbc2", borderRadius: 10, background: "#fff", padding: "8px 12px", color: "#1f1712", cursor: "pointer" } as const;

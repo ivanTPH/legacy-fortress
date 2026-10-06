@@ -15,13 +15,15 @@ type DashboardActionSummaryProps = {
   context?: ActionCentreContext;
   guidanceItems: GuidanceItem[];
   onAction: (actionKey: string, href: string) => void;
+  excludedActionKeys?: readonly string[];
 };
 
-export default function DashboardActionSummary({ items, context, guidanceItems, onAction }: DashboardActionSummaryProps) {
+export default function DashboardActionSummary({ items, context, guidanceItems, onAction, excludedActionKeys = [] }: DashboardActionSummaryProps) {
   const count = getActionCentreActionCount(items, context, guidanceItems);
   if (!count) return null;
 
-  const preview = buildActionCentrePreview(items, context, guidanceItems, 3);
+  const preview = buildActionCentrePreview(items, context, guidanceItems, 3, excludedActionKeys);
+  if (!preview.length) return null;
 
   return (
     <section id="action-centre" className="lf-dashboard-action-summary" aria-label="Things worth your attention">

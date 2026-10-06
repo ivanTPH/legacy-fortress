@@ -327,7 +327,7 @@ const CATEGORY_FORM_CONFIGS: AssetCategoryFormConfig[] = [
       field({ key: "account_type", label: "Account type", iconName: "category", inputType: "select", required: true, options: ACCOUNT_TYPE_OPTIONS, supportsOther: true, otherKey: "account_type_other" }),
       field({ key: "account_nickname", label: "Account nickname", iconName: "label", inputType: "text", required: false, placeholder: "e.g. Household bills" }),
       field({ key: "account_holder", label: "Account holder", iconName: "person", inputType: "text", required: true, placeholder: "e.g. Jane Doe" }),
-      field({ key: "account_number", label: "Account number", iconName: "pin", inputType: "text", required: true, placeholder: "e.g. 12345678", sensitive: true }),
+      field({ key: "account_number", label: "Account number", iconName: "pin", inputType: "text", required: false, placeholder: "Add it later if you have it", sensitive: true }),
       field({ key: "sort_code", label: "Sort code", iconName: "tag", inputType: "text", required: false, placeholder: "e.g. 10-20-30", sensitive: true }),
       field({ key: "iban", label: "IBAN", iconName: "badge", inputType: "text", required: false, sensitive: true }),
       field({ key: "country", label: "Country", iconName: "public", inputType: "select", required: true, options: COUNTRY_OPTIONS, supportsOther: true, otherKey: "country_other" }),

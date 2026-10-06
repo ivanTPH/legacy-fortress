@@ -874,6 +874,7 @@ const legalSummary = useMemo(() => {
     [dashboardState.actions.context, dashboardState.actions.items, guidanceItems],
   );
   const [entryPromptVisible, setEntryPromptVisible] = useState(false);
+  const [entryPromptActionKey, setEntryPromptActionKey] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -887,6 +888,7 @@ const legalSummary = useMemo(() => {
     const promptKey = "lf:action-centre-entry-prompt:session";
     if (window.sessionStorage.getItem(promptKey) === "shown") return;
     window.sessionStorage.setItem(promptKey, "shown");
+    setEntryPromptActionKey(actionCentrePreview.actionKey);
     setEntryPromptVisible(true);
   }, [actionCentreOnly, actionCentrePreview, viewer.mode]);
   const markDashboardTaskComplete = useCallback(async (taskId: string) => {
@@ -1703,8 +1705,8 @@ const legalSummary = useMemo(() => {
               obscured={shouldObscureSection(viewerRole, "financial", viewerActivation)}
               inlineSummary
               hideItems
-              addHref="/finances/bank?add=1"
-              addLabel="Add bank account"
+              addHref="/finances?add=1"
+              addLabel="Add financial record"
             />
           ) : null}
 
@@ -1800,6 +1802,7 @@ const legalSummary = useMemo(() => {
         context={dashboardState.actions.context}
         guidanceItems={guidanceItems}
         onAction={handleAction}
+        excludedActionKeys={entryPromptActionKey ? [entryPromptActionKey] : []}
       />
       {reviewPanel ? (
         <section className="lf-dashboard-review-panel" style={reviewPanelStyle(reviewPanel.tone)} aria-live="polite" aria-label="Dashboard review panel">
