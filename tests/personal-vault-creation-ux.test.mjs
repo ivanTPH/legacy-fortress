@@ -10,11 +10,11 @@ const chooser = read("lib/vault/addRecordTypes.ts");
 const addToFortress = read("app/(app)/components/dashboard/AddToFortressPanel.tsx");
 const overviewGrid = read("app/(app)/components/dashboard/CanonicalAssetOverviewGrid.tsx");
 
-test("parent finance plus opens a shared record-type chooser", () => {
-  assert.match(dashboard, /addHref="\/finances\?add=1"/);
-  assert.match(finances, /FINANCE_RECORD_CHOICES/);
-  assert.match(finances, /role="dialog"/);
-  assert.match(finances, /Add to Finances/);
+test("parent finance plus opens the canonical finance category without a duplicate chooser", () => {
+  assert.match(dashboard, /addHref="\/finances"/);
+  assert.doesNotMatch(finances, /FINANCE_RECORD_CHOICES/);
+  assert.doesNotMatch(finances, /role="dialog"/);
+  assert.doesNotMatch(finances, /Add to Finances/);
   for (const path of ["\/finances\/bank\?add=1", "\/finances\/pensions\?add=1", "\/finances\/investments\?add=1", "\/finances\/insurance\?add=1", "\/finances\/debts\?add=1"]) {
     assert.match(chooser, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
@@ -29,9 +29,9 @@ test("finance subcategory cards retain an exact-type plus for empty and populate
   assert.match(overviewGrid, /addHref=\{tile\.addHref\}/);
 });
 
-test("Add to my Fortress enters the same finance chooser", () => {
+test("Add to my Fortress enters the same canonical finance category", () => {
   assert.match(addToFortress, /FINANCE_CATEGORY_CHOICE/);
-  assert.match(chooser, /href: "\/finances\?add=1"/);
+  assert.match(chooser, /href: "\/finances"/);
 });
 
 test("session prompt action is excluded from dashboard preview without changing the full count", () => {

@@ -214,9 +214,9 @@ function getWillGuidanceRule(rule: GuidanceRule, state: VaultApplicabilityState)
   if (state === "yes") {
     return {
       ...rule,
-      title: "How would you like to record your Will?",
-      description: "Record the details now or add the document when you are ready. You can add executors afterwards.",
-      actionLabel: "Record my Will",
+      title: "Would you like to add your Will to your Fortress?",
+      description: "Add the document or record its details when you are ready. You can add executors afterwards.",
+      actionLabel: "Add my Will",
       href: "/legal/wills?add=1",
       learnMoreHref: "/support?topic=will",
     };

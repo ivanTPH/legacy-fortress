@@ -23,15 +23,15 @@ export function buildInvitationEmailDraft({
   const safeAccountHolderName = accountHolderName.trim() || "the account holder";
   const acceptPath = buildInvitationAcceptPath(invitationId, token);
   const subject = `You have been invited as ${roleLabel} for ${safeAccountHolderName}`;
-  const preview = `View-only, role-based access has been prepared for ${safeAccountHolderName}'s Legacy Fortress estate record.`;
+  const preview = `${safeAccountHolderName} has invited you to securely connect to their Legacy Fortress.`;
   const bodyText = [
-    `You have been invited as ${roleLabel} for ${safeAccountHolderName}.`,
+    `${safeAccountHolderName} has invited you to Legacy Fortress as ${roleLabel.toLowerCase()}.`,
     "",
-    "Legacy Fortress is a secure estate-record workspace that helps families, executors, trustees, and advisors find the records and documents they need when it matters.",
+    "Legacy Fortress is a secure digital vault that helps people organise important information about assets, documents, wishes and the people who may need that information in the future.",
     "",
-    "If you accept this invitation, Legacy Fortress records that you accept the named role. Acceptance does not by itself unlock the account holder's private vault, Trust documents, storage links, previews, downloads, or edit rights.",
+    `Accepting confirms your connection as ${roleLabel.toLowerCase()}. It does not automatically give you access to ${safeAccountHolderName}'s private Vault while they are alive.`,
     "",
-    "Any future vault or document access remains separate and must follow the account holder's permissions and the required verification or unlock process.",
+    "Any future estate access remains a separate decision and must follow the required permissions, verification and authority process.",
     "",
     "For your security, invitation links can expire. If this link no longer works, ask the account holder to resend the invitation from Legacy Fortress.",
     "",

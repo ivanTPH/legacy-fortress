@@ -1735,7 +1735,7 @@ const legalSummary = useMemo(() => {
               obscured={shouldObscureSection(viewerRole, "financial", viewerActivation)}
               inlineSummary
               hideItems
-              addHref="/finances?add=1"
+              addHref="/finances"
               addLabel="Add financial record"
             />
           ) : null}

@@ -23,6 +23,6 @@ export function getAddRecordChoices(category: string) {
 export const FINANCE_CATEGORY_CHOICE = {
   label: "Finances",
   description: "Bank accounts, pensions, investments, insurance and debts.",
-  href: "/finances?add=1",
+  href: "/finances",
   icon: "account_balance",
 };

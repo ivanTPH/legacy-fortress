@@ -145,7 +145,7 @@ export default function InvitationAcceptPageClient() {
         router.replace(`/identity/verify?${params.toString()}`);
         return;
       }
-      setStatus(`Access accepted. Redirecting you to your Contact Wallet for ${result.account_holder_name}...`);
+      setStatus(`Invitation accepted. Opening your Contact Wallet for ${result.account_holder_name}...`);
       router.replace("/contact-wallet");
     } catch (error) {
       setLinkProblem("invalid");
@@ -174,7 +174,7 @@ export default function InvitationAcceptPageClient() {
 
         <div className="lf-auth-art-copy">
           <h2>Secure access for a trusted role.</h2>
-          <p>Review the role you have been invited to, then sign in or create an account to open a protected Contact Wallet for this responsibility.</p>
+          <p>Review why you have been invited, then sign in or create an account to securely connect to this responsibility.</p>
         </div>
       </section>
 
@@ -222,7 +222,7 @@ export default function InvitationAcceptPageClient() {
                   Role: {getRoleLabel(summary.assigned_role as never)}
                 </div>
                 <div style={{ color: "#475569", fontSize: 13 }}>
-                  Access: Contact Wallet first; protected records and documents require explicit permission and verification
+                  Connection: Contact Wallet first; protected records and documents require separate permission and verification
                 </div>
                 <div style={{ color: "#475569", fontSize: 13 }}>
                   Email: {summary.contact_email}
@@ -269,7 +269,7 @@ export default function InvitationAcceptPageClient() {
               <div className="lf-muted-note" style={{ display: "grid", gap: 4 }}>
                 <div>Your Contact Wallet will show who you support, your role, required actions, and any explicitly authorised documents.</div>
                 <div>Accepting does not create a paid subscription and does not unlock unrelated private records.</div>
-                <div>If you later want your own private vault, you can activate it from the same identity without affecting this invitation.</div>
+                <div>If you later want your own Personal Vault, you can start one from the same Legacy Fortress identity without affecting this relationship.</div>
               </div>
             </section>
           ) : null}

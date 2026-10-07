@@ -488,7 +488,7 @@ function getGuidanceActionTitle(item: GuidanceItem) {
   if (item.key === "will" && item.state === "unknown") return "Do you have a Will?";
   if (item.key === "will" && item.state === "no") return "Would you like help understanding your options for making a Will?";
   if (item.key === "will" && item.state === "unsure") return "Would you like to understand what a Will does?";
-  if (item.key === "will") return "How would you like to record your Will?";
+  if (item.key === "will") return "Would you like to add your Will to your Fortress?";
   if (item.key === "capacity_arrangements") return "Add a capacity arrangement";
   if (item.key === "executor_after_will") return "Add the executors named in your Will";
   if (item.key === "attorney_after_capacity") return "Add an attorney to People I Trust";
@@ -499,7 +499,7 @@ function getGuidanceActionLabel(item: GuidanceItem) {
   if (item.key === "will" && item.state === "unknown") return "Choose an option";
   if (item.key === "will" && item.state === "no") return "Explore my options";
   if (item.key === "will" && item.state === "unsure") return "Learn about Wills";
-  if (item.key === "will") return "Record my Will";
+  if (item.key === "will") return "Add my Will";
   if (item.key === "executor_after_will") return "Add executor";
   if (item.key === "attorney_after_capacity") return "Add person";
   return item.actionLabel;
