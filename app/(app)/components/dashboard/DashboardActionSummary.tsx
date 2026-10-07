@@ -34,7 +34,6 @@ export default function DashboardActionSummary({ items, context, guidanceItems, 
           <p className="lf-dashboard-action-summary-eyebrow">Next useful steps</p>
           <h2>Things worth your attention</h2>
         </div>
-        <span className="lf-dashboard-action-summary-count" aria-label={`${count} actionable items`}>{count}</span>
       </div>
       <div className="lf-dashboard-action-summary-list">
         {preview.map((item) => {
@@ -63,7 +62,7 @@ export default function DashboardActionSummary({ items, context, guidanceItems, 
         })}
       </div>
       <Link className="lf-dashboard-action-summary-link" href="/action-centre">
-        View {count > 3 ? `all ${count}` : "Action Centre"}
+        View Action Centre
         <Icon name="arrow_forward" size={16} aria-hidden />
       </Link>
     </section>

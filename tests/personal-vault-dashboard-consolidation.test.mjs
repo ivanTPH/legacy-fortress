@@ -31,8 +31,8 @@ test("category summaries separate opening a category from adding another record"
   assert.match(summaryCard, /label=\{addLabel \?\? `Add/);
   assert.match(dashboard, /addHref="\/property\?add=1"/);
   assert.match(dashboard, /addLabel="Add property"/);
-  assert.match(dashboard, /addHref="\/finances\/bank\?add=1"/);
-  assert.match(dashboard, /addLabel="Add bank account"/);
+  assert.match(dashboard, /addHref="\/finances"/);
+  assert.match(dashboard, /addLabel="Add financial record"/);
   assert.match(dashboard, /addHref="\/vault\/personal\/records\?add=1&possessionCategory=other"/);
 });
 
@@ -50,7 +50,7 @@ test("customer action routes remain deep-linkable and owner controls stay option
   const guidance = read("lib/readiness/guidance.ts");
   const actionQueue = read("app/(app)/components/dashboard/ActionQueuePanel.tsx");
 
-  assert.match(guidance, /href: "\/legal\/wills"/);
+  assert.match(guidance, /href: "\/legal\/wills\?add=1"/);
   assert.match(guidance, /href: "\/contacts\?group=executors"/);
   assert.match(actionQueue, /item\.href/);
   assert.match(actionQueue, /requiredRole: "owner"/);

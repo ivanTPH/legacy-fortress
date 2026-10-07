@@ -3238,6 +3238,63 @@ textarea {
   padding-top: 4px;
 }
 
+.lf-action-centre-row-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #7c4a35;
+  box-shadow: 0 0 0 3px #f5e9e1;
+}
+
+.lf-action-centre-row-indicator.is-read {
+  background: #d6cbc3;
+  box-shadow: none;
+}
+
+.lf-action-centre-row-summary:focus-visible,
+.lf-action-centre-resolved summary:focus-visible {
+  outline: 3px solid rgba(124, 74, 53, 0.35);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
+.lf-action-centre-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(31, 23, 18, 0.28);
+  padding: 16px;
+}
+
+.lf-action-centre-drawer {
+  width: min(440px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  border: 1px solid #e3d9d1;
+  border-radius: 12px;
+  background: #fffefd;
+  padding: 20px;
+  box-shadow: 0 18px 50px rgba(33, 17, 13, 0.2);
+}
+
+@media (max-width: 700px) {
+  .lf-action-centre-drawer-backdrop {
+    align-items: flex-end;
+    padding: 8px;
+  }
+
+  .lf-action-centre-drawer {
+    width: 100%;
+    max-height: min(78vh, 680px);
+    border-radius: 12px;
+  }
+}
+
 @media (max-width: 700px) {
   .lf-action-entry-prompt {
     grid-template-columns: auto minmax(0, 1fr);

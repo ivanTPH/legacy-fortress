@@ -28,8 +28,8 @@ test("dashboard uses a compact preview while Action Centre retains the full list
   const route = read("app/(app)/action-centre/page.tsx");
 
   assert.match(dashboard, /<DashboardActionSummary/);
-  assert.match(summary, /buildActionCentrePreview\([\s\S]*, 3\)/);
-  assert.match(summary, /View \{count > 3 \? `all \$\{count\}` : "Action Centre"\}/);
+  assert.match(summary, /buildActionCentrePreview\([\s\S]*, 3, excludedActionKeys\)/);
+  assert.match(summary, /View Action Centre/);
   assert.doesNotMatch(dashboard, /lf-dashboard-fortress-summary/);
   assert.doesNotMatch(dashboard, /<LegacyGuidancePanel|<AddToFortressPanel/);
   assert.match(queue, /getActionCentreActionCount/);
@@ -88,11 +88,11 @@ test("Action Centre is a direct inbox with action-specific CTAs and no empty buc
   const summary = read("app/(app)/components/dashboard/DashboardActionSummary.tsx");
   const prompt = read("app/(app)/components/dashboard/ActionCentreEntryPrompt.tsx");
 
-  assert.match(queue, /const visibleSections = sections\.filter\(\(section\) => section\.key !== "completed" && section\.key !== "clear" && section\.rows\.length > 0\)/);
-  assert.match(queue, /primaryActionLabel: "Upload Will"/);
+  assert.match(queue, /function ActionCentreInbox/);
+  assert.match(queue, /Add a copy of your Will/);
   assert.match(queue, /return item\.blockerLabel\.toLowerCase\(\)\.includes\("accept"\) \? "View invitation" : "Send invitation"/);
   assert.match(queue, /return "Continue setup"/);
-  assert.match(queue, /return "View details"/);
+  assert.match(queue, /return "See what to do next"/);
   assert.match(queue, /label\.includes\("failed"\)\) return "High"/);
   assert.match(queue, /if \(item\.stageKey === "contacts"\) return "Medium"/);
   assert.doesNotMatch(queue, /aria-expanded=\{isOpen\}/);

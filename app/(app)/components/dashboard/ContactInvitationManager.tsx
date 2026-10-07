@@ -1437,19 +1437,14 @@ function RecentInvitationCard({
 function InvitationStatusPanel({ row }: { row: InvitationRow }) {
   const accepted = row.invitation_status === "accepted"
     || ["accepted", "pending_verification", "verification_submitted", "verified", "active"].includes(row.activation_status);
-  const identityState = row.activation_status === "verified" || row.activation_status === "active"
-    ? "Verified"
-    : row.activation_status === "pending_verification" || row.activation_status === "verification_submitted"
-      ? "Required"
-      : "Not started";
-  const accessState = row.activation_status === "active" ? "Active" : row.activation_status === "revoked" ? "Revoked" : "Not currently available";
+  const identityVerified = row.activation_status === "verified" || row.activation_status === "active";
+  const linked = row.activation_status === "active";
   const steps = [
-    { label: "Invitation prepared", complete: Boolean(row.invited_at), detail: row.invited_at },
-    { label: "Invitation sent", complete: Boolean(row.sent_at), detail: row.sent_at },
-    { label: "Invitation opened", complete: false, detail: "Not recorded" },
-    { label: "Role accepted", complete: accepted, detail: accepted ? "Accepted" : "Pending" },
-    { label: "Identity verification", complete: identityState === "Verified", detail: identityState },
-    { label: "Authority / access", complete: accessState === "Active", detail: accessState },
+    { label: "Prepared", complete: Boolean(row.invited_at), detail: row.invited_at },
+    { label: "Sent", complete: Boolean(row.sent_at), detail: row.sent_at },
+    { label: "Accepted", complete: accepted, detail: accepted ? "Accepted" : "Awaiting acceptance" },
+    { label: "Identity verified", complete: identityVerified, detail: identityVerified ? "Verified" : "Not yet verified" },
+    { label: "Linked", complete: linked, detail: linked ? "Linked" : "Not linked" },
   ];
 
   return (
@@ -1473,7 +1468,7 @@ function InvitationStatusPanel({ row }: { row: InvitationRow }) {
         ))}
       </div>
       <p style={{ margin: 0, color: "#475569", fontSize: 13 }}>
-        Role, identity, authority and access are separate decisions. Identity verification does not establish legal authority or guarantee access.
+        Being linked does not automatically give this person access to your private Vault while you are alive. Identity verification does not establish legal authority or guarantee access.
       </p>
     </section>
   );

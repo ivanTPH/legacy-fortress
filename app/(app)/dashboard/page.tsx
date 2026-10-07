@@ -1572,7 +1572,7 @@ const legalSummary = useMemo(() => {
         <section className="lf-action-centre-page-header" aria-labelledby="action-centre-page-title">
           <p className="lf-action-centre-page-eyebrow">Your next useful steps</p>
           <h1 id="action-centre-page-title">Action Centre</h1>
-          <p>Review the small steps that can make your Fortress easier to understand and maintain.</p>
+          <p>Open an item to understand why it is here and choose what to do next.</p>
         </section>
         <ActionQueuePanel
           items={dashboardState.actions.items}
@@ -1712,14 +1712,12 @@ const legalSummary = useMemo(() => {
             />
           </div>
         <div className="lf-dashboard-overview-copy" style={{ color: "#64748b", fontSize: 13 }}>
-          See what you have recorded and add another record whenever you are ready.
+          Your recorded information, in one place.
         </div>
         <div className="lf-dashboard-overview-summary" aria-label="Fortress summary">
           <strong>{financeRecordCount + legalRecordCount + propertyRecordCount + businessRecordCount + digitalRecordCount + possessionsRecordCount} records</strong>
           <span aria-hidden="true">·</span>
           <strong>{contactRows.length} {contactRows.length === 1 ? "person" : "people"}</strong>
-          <span aria-hidden="true">·</span>
-          <strong>{actionCentreCount ? `${actionCentreCount} things worth your attention` : "Nothing needs your attention right now"}</strong>
         </div>
         </div>
         {showFinancialCard || showLegalCard || showPropertyCard || showBusinessCard || showDigitalCard || showPossessionsCard ? (

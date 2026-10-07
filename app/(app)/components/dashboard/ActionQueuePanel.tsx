@@ -1,10 +1,7 @@
 "use client";
 
-import { memo, useMemo, type CSSProperties } from "react";
-import Icon from "../../../../components/ui/Icon";
-import InfoTip from "../../../../components/ui/InfoTip";
+import { memo, useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { BlockingItem } from "../../../../lib/workflow/blockingModel";
-import { getWorkflowRequiredRoleLabel } from "../../../../lib/workflow/blockingModel";
 import type { GuidanceAction, GuidanceItem } from "../../../../lib/readiness/guidance";
 import type { VaultApplicabilityState } from "../../../../lib/vaultPreferences";
 
@@ -101,6 +98,10 @@ type DashboardActionSeed = Pick<
 >;
 
 function ActionQueuePanel({ items, onAction, context, guidanceItems, onGuidanceDecision, onGuidanceApplicability, guidanceBusyKey }: ActionQueuePanelProps) {
+  return <ActionCentreInbox {...{ items, onAction, context, guidanceItems, onGuidanceDecision, onGuidanceApplicability, guidanceBusyKey }} />;
+
+  /* Legacy grouping retained below for the existing action builders. */
+  /*
   const sections = useMemo(
     () => buildActionCentreSections(items, context ? { ...context, guidanceItems } : undefined),
     [context, guidanceItems, items],
@@ -232,6 +233,129 @@ function ActionQueuePanel({ items, onAction, context, guidanceItems, onGuidanceD
             ))}
         </div>
       )}
+    </section>
+  );
+  */
+}
+
+function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidanceDecision, onGuidanceApplicability, guidanceBusyKey }: ActionQueuePanelProps) {
+  const rows = useMemo(
+    () => getActiveActionRows(items, context ? { ...context, guidanceItems } : undefined),
+    [context, guidanceItems, items],
+  );
+  const completedRows = useMemo(
+    () => buildActionCentreSections(items, context ? { ...context, guidanceItems } : undefined)
+      .find((section) => section.key === "completed")?.rows ?? [],
+    [context, guidanceItems, items],
+  );
+  const [selectedActionKey, setSelectedActionKey] = useState<string | null>(null);
+  const [readActionKeys, setReadActionKeys] = useState<Set<string>>(new Set());
+  const selectedRow = rows.find((row) => row.actionKey === selectedActionKey) ?? null;
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.sessionStorage.getItem("lf:action-centre-read");
+    if (!stored) return;
+    try {
+      const parsed: unknown = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        setReadActionKeys(new Set(parsed.filter((value): value is string => typeof value === "string")));
+      }
+    } catch {
+      window.sessionStorage.removeItem("lf:action-centre-read");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedActionKey && !rows.some((row) => row.actionKey === selectedActionKey)) setSelectedActionKey(null);
+  }, [rows, selectedActionKey]);
+
+  useEffect(() => {
+    if (!selectedActionKey) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setSelectedActionKey(null);
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedActionKey]);
+
+  function openRow(row: ActionCentreRow) {
+    const next = new Set(readActionKeys).add(row.actionKey);
+    setReadActionKeys(next);
+    window.sessionStorage.setItem("lf:action-centre-read", JSON.stringify([...next]));
+    setSelectedActionKey(row.actionKey);
+  }
+
+  return (
+    <section id="action-centre" className="lf-action-centre" style={panelStyle} aria-label="Action centre">
+      <div className="lf-action-centre-inbox" style={{ display: "grid", gap: 2 }}>
+        {rows.length === 0 ? (
+          <section style={clearStateStyle}>
+            <strong>Nothing needs your attention right now.</strong>
+            <span style={{ color: "#166534", fontSize: 13 }}>You can add or review records whenever you are ready.</span>
+          </section>
+        ) : rows.map((item) => {
+          const isRead = readActionKeys.has(item.actionKey);
+          return (
+            <article key={item.actionKey} className={`lf-action-centre-row${isRead ? " is-read" : " is-new"}`} style={inboxRowStyle}>
+              <button type="button" className="lf-action-centre-row-summary" style={rowSummaryButtonStyle} onClick={() => openRow(item)} aria-label={`Show details for ${item.title}`}>
+                <span className={`lf-action-centre-row-indicator${isRead ? " is-read" : ""}`} aria-hidden="true" />
+                <span style={{ display: "grid", gap: 3, minWidth: 0, textAlign: "left" }}>
+                  <strong style={rowTitleStyle}>{item.title}</strong>
+                  <span style={rowReasonStyle}>{item.blockerLabel}</span>
+                </span>
+                <span style={inboxRowMetaStyle}>{isRead ? "Read" : "New"}</span>
+              </button>
+              <div className="lf-action-centre-row-actions" style={rowActionsStyle}>
+                <button type="button" style={primaryActionStyle} onClick={() => openRow(item)}>{item.primaryActionLabel}</button>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+      {completedRows.length ? (
+        <details className="lf-action-centre-resolved">
+          <summary>Recently resolved</summary>
+          <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
+            {completedRows.map((item) => <div key={item.actionKey} style={resolvedRowStyle}><span>{item.title}</span><small>Resolved</small></div>)}
+          </div>
+        </details>
+      ) : null}
+      {selectedRow ? (
+        <div className="lf-action-centre-drawer-backdrop" role="presentation" onClick={() => setSelectedActionKey(null)}>
+          <section className="lf-action-centre-drawer" role="dialog" aria-modal="true" aria-labelledby="action-centre-drawer-title" onClick={(event) => event.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "start" }}>
+              <div style={{ display: "grid", gap: 4 }}>
+                <span style={drawerEyebrowStyle}>What you can do next</span>
+                <h2 id="action-centre-drawer-title" style={{ margin: 0, fontSize: 20 }}>{selectedRow.title}</h2>
+              </div>
+              <button type="button" style={closeButtonStyle} onClick={() => setSelectedActionKey(null)} aria-label="Close action details">×</button>
+            </div>
+            <p style={{ margin: 0, color: "#475569", lineHeight: 1.55 }}>{selectedRow.whyItMatters}</p>
+            <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}>{selectedRow.blockerLabel}</p>
+            {selectedRow.guidanceItem?.key === "will" && selectedRow.guidanceItem.state === "unknown" && onGuidanceApplicability ? (
+              <div style={drawerChoiceStyle} aria-label="Will applicability choices">
+                <strong>Have you already made a Will?</strong>
+                <button type="button" style={primaryActionStyle} onClick={() => { onGuidanceApplicability(selectedRow.guidanceItem!, "yes"); setSelectedActionKey(null); }}>Yes, I have a Will</button>
+                <button type="button" style={secondaryActionStyle} onClick={() => { onGuidanceApplicability(selectedRow.guidanceItem!, "no"); setSelectedActionKey(null); }}>No, I don&apos;t have one</button>
+                <button type="button" style={secondaryActionStyle} onClick={() => { onGuidanceApplicability(selectedRow.guidanceItem!, "unsure"); setSelectedActionKey(null); }}>I&apos;m not sure</button>
+              </div>
+            ) : (
+              <button type="button" style={primaryActionStyle} onClick={() => onAction(selectedRow.actionKey)}>{selectedRow.primaryActionLabel}</button>
+            )}
+            {selectedRow.guidanceItem?.learnMoreHref ? <a href={selectedRow.guidanceItem.learnMoreHref} style={secondaryActionStyle}>Learn more</a> : null}
+            {selectedRow.guidanceItem && onGuidanceDecision ? (
+              <details className="lf-action-centre-more-options">
+                <summary>Remind me later or change this suggestion</summary>
+                <div className="lf-action-centre-more-options-list">
+                  <button type="button" style={secondaryActionStyle} disabled={guidanceBusyKey === selectedRow.guidanceItem.key} onClick={() => onGuidanceDecision(selectedRow.guidanceItem!, "remind_later")}>{guidanceBusyKey === selectedRow.guidanceItem.key ? "Saving..." : "Remind me later"}</button>
+                  <button type="button" style={secondaryActionStyle} disabled={guidanceBusyKey === selectedRow.guidanceItem.key} onClick={() => onGuidanceDecision(selectedRow.guidanceItem!, "not_relevant")}>Not relevant</button>
+                </div>
+              </details>
+            ) : null}
+          </section>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -489,7 +613,7 @@ function getGuidanceActionTitle(item: GuidanceItem) {
   if (item.key === "will" && item.state === "no") return "Would you like help understanding your options for making a Will?";
   if (item.key === "will" && item.state === "unsure") return "Would you like to understand what a Will does?";
   if (item.key === "will") return "Would you like to add your Will to your Fortress?";
-  if (item.key === "capacity_arrangements") return "Add a capacity arrangement";
+  if (item.key === "capacity_arrangements") return "Do you have a Lasting Power of Attorney?";
   if (item.key === "executor_after_will") return "Add the executors named in your Will";
   if (item.key === "attorney_after_capacity") return "Add an attorney to People I Trust";
   return item.title;
@@ -507,25 +631,25 @@ function getGuidanceActionLabel(item: GuidanceItem) {
 
 function getActionTitle(item: BlockingItem) {
   const label = item.blockerLabel.toLowerCase();
-  if (item.stageKey === "profile") return "Complete profile";
-  if (item.stageKey === "contacts" && label.includes("ready for an invite")) return "Invite person";
-  if (item.stageKey === "contacts" && label.includes("accept")) return "View invitation";
-  if (item.stageKey === "contacts" && label.includes("failed")) return "Resolve invitation";
-  if (item.stageKey === "financial") return "Add financial record";
-  if (item.stageKey === "legal") return label.includes("upload") ? "Upload Will" : "Review Will";
-  if (item.stageKey === "property") return "Add property record";
-  if (item.stageKey === "business") return "Add business record";
-  if (item.stageKey === "digital") return "Add digital record";
-  if (item.stageKey === "personal") return "Add personal record";
+  if (item.stageKey === "profile") return label.includes("address") ? "Add your home address" : "Add your contact details";
+  if (item.stageKey === "contacts" && label.includes("ready for an invite")) return `Invite ${item.blockerLabel.split(" is ready")[0]}`;
+  if (item.stageKey === "contacts" && label.includes("accept")) return `Check ${item.blockerLabel.split(" still needs")[0]}'s invitation`;
+  if (item.stageKey === "contacts" && label.includes("failed")) return "Resolve the invitation";
+  if (item.stageKey === "financial") return "Add your financial details";
+  if (item.stageKey === "legal") return label.includes("upload") ? "Add a copy of your Will" : "Review your legal records";
+  if (item.stageKey === "property") return "Add your property details";
+  if (item.stageKey === "business") return "Add your business details";
+  if (item.stageKey === "digital") return "Add your digital details";
+  if (item.stageKey === "personal") return "Add your personal details";
   if (item.stageKey === "verification") return "Review verification";
   return item.stageName;
 }
 
 function getActionReason(item: BlockingItem) {
   const label = item.blockerLabel.toLowerCase();
-  if (item.stageKey === "profile") return "Your profile helps trusted people verify your identity and contact details.";
-  if (item.stageKey === "contacts" && label.includes("ready for an invite")) return "The contact is ready, but they need an invitation before they can accept their role.";
-  if (item.stageKey === "contacts" && label.includes("accept")) return "Access is not ready until the invitation has been accepted.";
+  if (item.stageKey === "profile") return "Your contact details help people reach you and keep your account information current.";
+  if (item.stageKey === "contacts" && label.includes("ready for an invite")) return "This person is ready to receive a secure invitation.";
+  if (item.stageKey === "contacts" && label.includes("accept")) return "This person is waiting to accept the invitation.";
   if (item.stageKey === "financial") return "Financial records help your executor understand accounts and assets quickly.";
   if (item.stageKey === "legal") return "Legal information, including wills and key documents, is central to estate decisions.";
   if (item.stageKey === "property") return "Property details help others understand ownership, value, and responsibilities.";
@@ -739,8 +863,10 @@ function getPrimaryActionLabel(item: BlockingItem) {
   if (status === "Plan limit reached") return "Review subscription";
   if (status === "Failed") return "Resolve issue";
   if (item.stageKey === "contacts") return item.blockerLabel.toLowerCase().includes("accept") ? "View invitation" : "Send invitation";
-  if (item.stageKey === "verification") return "Review request";
-  return "View details";
+  if (item.stageKey === "verification") return "Review verification";
+  if (item.stageKey === "property") return "Continue setup";
+  if (item.stageKey === "legal") return "Review your records";
+  return "See what to do next";
 }
 
 function getSecondaryActionLabel(item: BlockingItem) {
@@ -775,6 +901,71 @@ const panelStyle = {
   padding: 22,
   display: "grid",
   gap: 14,
+} satisfies CSSProperties;
+
+const inboxRowStyle = {
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) auto",
+  gap: 12,
+  alignItems: "center",
+  borderBottom: "1px solid #eee8e3",
+  padding: "13px 2px",
+} satisfies CSSProperties;
+
+const rowSummaryButtonStyle = {
+  minWidth: 0,
+  border: 0,
+  background: "transparent",
+  padding: 0,
+  display: "grid",
+  gridTemplateColumns: "10px minmax(0, 1fr) auto",
+  alignItems: "center",
+  gap: 10,
+  textAlign: "left",
+  cursor: "pointer",
+} satisfies CSSProperties;
+
+const inboxRowMetaStyle = {
+  color: "#7c7068",
+  fontSize: 11,
+  whiteSpace: "nowrap",
+} satisfies CSSProperties;
+
+const resolvedRowStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 12,
+  color: "#475569",
+  fontSize: 13,
+  padding: "8px 0",
+} satisfies CSSProperties;
+
+const drawerEyebrowStyle = {
+  color: "#7c4a35",
+  fontSize: 11,
+  fontWeight: 800,
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+} satisfies CSSProperties;
+
+const drawerChoiceStyle = {
+  display: "grid",
+  gap: 8,
+  borderTop: "1px solid #eee8e3",
+  borderBottom: "1px solid #eee8e3",
+  padding: "12px 0",
+} satisfies CSSProperties;
+
+const closeButtonStyle = {
+  border: "1px solid #ded6cf",
+  borderRadius: 8,
+  background: "#fff",
+  color: "#3a2118",
+  width: 36,
+  height: 36,
+  fontSize: 22,
+  lineHeight: 1,
+  cursor: "pointer",
 } satisfies CSSProperties;
 
 const iconWrapStyle = {

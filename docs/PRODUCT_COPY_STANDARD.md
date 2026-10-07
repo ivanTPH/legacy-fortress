@@ -42,6 +42,19 @@ The Action Centre answers `What should I do next?`. Give each item one clear
 verb and a canonical destination. The Readiness Engine determines relevance;
 copy explains the action and does not determine eligibility.
 
+Use familiar interaction language consistently:
+
+- **Inbox** is the place for actions and follow-up that may need attention.
+- **Remind me later** and **Follow up** postpone an action without resolving it.
+- A **drawer** reveals why an item is shown and the next available action.
+- Use a specific direct verb such as `Add my Will`, `Invite Bill` or `Review
+  Barclays` when the destination is known. Avoid generic `Open` or `Review`
+  labels when a more useful verb is available.
+- A **tracker** shows only factual, authoritative invitation or relationship
+  stages. Do not invent delivery or open events.
+- **Automatic resolution** means the underlying canonical condition is
+  satisfied; opening an item alone does not resolve it.
+
 ## Professional Help
 
 Offer general information and an explicit choice to explore help. Do not

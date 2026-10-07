@@ -337,14 +337,6 @@ export default function ContactsNetworkWorkspace() {
     return map;
   }, [contacts, search]);
 
-  const completeness = useMemo(() => {
-    const total = contacts.length;
-    const withEmail = contacts.filter((item) => item.email).length;
-    const withPhone = contacts.filter((item) => item.phone).length;
-    const linkedContextCount = contacts.reduce((sum, item) => sum + (item.linked_context?.length ?? 0), 0);
-    return { total, withEmail, withPhone, linkedContextCount };
-  }, [contacts]);
-
   const selectedContactId = String(searchParams.get("contact") ?? "").trim();
   const selectedGroup = normalizeContactGroupKey(searchParams.get("group"));
   const isContactAddMode = Boolean(selectedGroup && searchParams.get("add") === "1");
@@ -541,11 +533,10 @@ export default function ContactsNetworkWorkspace() {
 
   return (
     <section style={{ display: "grid", gap: 14 }}>
-      <div style={buildCheckMarkerStyle}>CONTACTS BUILD CHECK - DOCUMENT DRAWER V2</div>
       {!addContactGroupKey ? <div style={{ display: "grid", gap: 6 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
-            Use grouped contacts to manage role-linked people, invite state, access scope, and missing record associations without duplicating the same workflow elsewhere.
+            Keep the people who may matter to your Fortress in one understandable place.
           </p>
           <InfoTip
             label="Explain the Contacts section"
@@ -553,17 +544,11 @@ export default function ContactsNetworkWorkspace() {
           />
         </div>
         <p style={{ margin: "6px 0 0", color: "#64748b", fontSize: 13 }}>
-          Each person appears once in their main role group, with invite state, association health, and the next action shown on the row.
+          You can record a relationship first and decide separately whether to invite someone.
         </p>
       </div> : null}
 
       {!addContactGroupKey ? <section style={panelStyle}>
-        <div className="lf-contacts-metrics" style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-          <Metric label="Contacts in place" value={String(completeness.total)} />
-          <Metric label="With email" value={String(completeness.withEmail)} />
-          <Metric label="With phone" value={String(completeness.withPhone)} />
-          <Metric label="Linked roles" value={String(completeness.linkedContextCount)} />
-        </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <label style={contactSearchFieldStyle}>
             <span style={contactSearchLabelStyle}>
@@ -858,12 +843,34 @@ export default function ContactsNetworkWorkspace() {
                                   {getAssociationState(contact, validationSourceText).label}
                                 </span>
                               </div>
-                              <ContactInvitationManager
-                                mode="full"
-                                guidedExecutor={false}
-                                selectedContactId={selectedContactId}
-                                selectedContactProfile={selectedContact}
-                              />
+                              <section style={personSummaryStyle} aria-label={`Relationship summary for ${contact.full_name || "person"}`}>
+                                <div style={{ display: "grid", gap: 3 }}>
+                                  <strong style={{ fontSize: 18, color: "#1f1712" }}>{contact.full_name || "Unnamed person"}</strong>
+                                  <span style={{ color: "#475569", fontSize: 13 }}>{formatContactRoleLine(contact)}</span>
+                                  <span style={{ color: "#64748b", fontSize: 13 }}>{getInviteState(contact).label}</span>
+                                  {contact.email ? <span style={{ color: "#64748b", fontSize: 13 }}>{contact.email}</span> : null}
+                                </div>
+                                {(contact.linked_context ?? []).length ? (
+                                  <div style={{ display: "grid", gap: 4 }}>
+                                    <span style={personSummaryLabelStyle}>Related to</span>
+                                    <span style={{ color: "#475569", fontSize: 13 }}>{(contact.linked_context ?? []).slice(0, 3).map((context) => context.label || describeLinkedDocumentContext(context)).join(" · ")}</span>
+                                  </div>
+                                ) : null}
+                                <div style={{ color: "#64748b", fontSize: 13 }}>
+                                  Being recorded or linked does not by itself give this person access to your private Vault.
+                                </div>
+                              </section>
+                              {!viewer.readOnly ? (
+                                <details className="lf-contact-management-details">
+                                  <summary>Manage relationship and invitation</summary>
+                                  <ContactInvitationManager
+                                    mode="full"
+                                    guidedExecutor={false}
+                                    selectedContactId={selectedContactId}
+                                    selectedContactProfile={selectedContact}
+                                  />
+                                </details>
+                              ) : null}
                             </section>
                           ) : null}
                         </div>
@@ -1219,15 +1226,6 @@ function NextOfKinContactForm({
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ display: "grid", gap: 2 }}>
-      <div style={{ fontSize: 12, color: "#64748b" }}>{label}</div>
-      <div style={{ fontSize: 20, fontWeight: 700 }}>{value}</div>
-    </div>
-  );
-}
-
 function StatusPill({ label, tone }: { label: string; tone: "neutral" | "success" | "warning" | "danger" }) {
   const iconName = tone === "success" ? "verified" : tone === "warning" ? "warning" : tone === "danger" ? "error" : "info";
 
@@ -1463,6 +1461,23 @@ const selectedActionChipStyle: CSSProperties = {
   gap: 6,
 };
 
+const personSummaryStyle: CSSProperties = {
+  display: "grid",
+  gap: 10,
+  border: "1px solid #e8e1dc",
+  borderRadius: 10,
+  background: "#fffefd",
+  padding: 14,
+};
+
+const personSummaryLabelStyle: CSSProperties = {
+  color: "#7c4a35",
+  fontSize: 11,
+  fontWeight: 800,
+  letterSpacing: "0.06em",
+  textTransform: "uppercase",
+};
+
 const linkedDocumentWrapStyle: CSSProperties = {
   display: "flex",
   flexWrap: "wrap",
@@ -1494,16 +1509,6 @@ const unavailableLinkedDocumentStyle: CSSProperties = {
 
 const linkedDocumentIconLabelStyle: CSSProperties = {
   lineHeight: 1,
-};
-
-const buildCheckMarkerStyle: CSSProperties = {
-  borderRadius: 10,
-  padding: "10px 12px",
-  background: "#dbeafe",
-  color: "#1d4ed8",
-  fontSize: 13,
-  fontWeight: 800,
-  letterSpacing: 0.2,
 };
 
 const contactSearchFieldStyle: CSSProperties = {
