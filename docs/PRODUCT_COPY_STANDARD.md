@@ -66,3 +66,14 @@ or imply that a signal is a legal or tax conclusion.
 Use calm, accurate language for death, incapacity, probate and authority.
 Never reduce a protected post-death process to a single upload or imply that
 an invitation, link or identity check alone grants estate access.
+
+## Progressive Disclosure
+
+For people, invitations and other relationship-heavy surfaces, use:
+
+`Summary → Drawer → Action`
+
+Show the person, relationship, current status and one useful next step first.
+Reveal explanations in the drawer and management controls only when the
+customer asks for them. Keep `recorded`, `invited`, `accepted`, `verified`,
+`linked` and `access` distinct in both copy and behaviour.

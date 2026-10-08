@@ -37,10 +37,11 @@ test("People view removes development UI and keeps relationship details progress
   const contacts = read("components/contacts/ContactsNetworkWorkspace.tsx");
 
   assert.doesNotMatch(contacts, /CONTACTS BUILD CHECK/);
-  assert.match(contacts, /Relationship summary for/);
-  assert.match(contacts, /Being recorded or linked does not by itself give this person access/);
-  assert.match(contacts, /Manage relationship and invitation/);
-  assert.match(contacts, /<details className="lf-contact-management-details">/);
+  assert.match(contacts, /PersonDetailDrawer/);
+  assert.match(contacts, /InvitationProgressTracker/);
+  assert.match(contacts, /do not have access to your private Vault merely because they are linked/i);
+  assert.match(contacts, /Manage relationship/);
+  assert.match(contacts, /<details className="lf-person-more-details"/);
 });
 
 test("Invitation tracker exposes only authoritative stages", () => {

@@ -211,7 +211,7 @@ test("contacts keeps the fuller invitation management view while dashboard stays
   const contactGrouping = fs.readFileSync(path.join(root, "lib/contacts/contactGrouping.ts"), "utf8");
   const dashboardPage = fs.readFileSync(path.join(root, "app/(app)/dashboard/page.tsx"), "utf8");
 
-  assert.match(contactsWorkspace, /<ContactInvitationManager[\s\S]*mode="full"[\s\S]*selectedContactId=\{selectedContactId\}[\s\S]*selectedContactProfile=\{selectedContact\}[\s\S]*\/>/);
+  assert.match(contactsWorkspace, /<ContactInvitationManager[\s\S]*mode="full"[\s\S]*selectedContactId=\{contact\.id\}[\s\S]*selectedContactProfile=\{selectedProfile\}[\s\S]*\/>/);
   assert.match(invitationManager, /mode\?: "full" \| "dashboard"/);
   assert.match(invitationManager, /selectedContactId\?: string/);
   assert.match(invitationManager, /Owner notes/);

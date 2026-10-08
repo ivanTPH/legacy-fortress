@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import Link from "next/link";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 import { waitForActiveUser } from "../../lib/auth/session";
@@ -9,6 +8,7 @@ import {
   loadCanonicalContactsForOwner,
   loadCanonicalContactInvitationsForOwner,
   syncCanonicalContact,
+  type CanonicalContactRow,
   type CanonicalContactContext,
   type CanonicalContactInviteStatus,
   type CanonicalContactSourceType,
@@ -16,7 +16,7 @@ import {
 } from "../../lib/contacts/canonicalContacts";
 import { normalizeContactGroupKey, resolveContactGroupKey } from "../../lib/contacts/contactGrouping";
 import { buildContactLinkValidationKey, evaluateContactLinkValidation, flattenSearchableValue } from "../../lib/contacts/contactLinkValidation";
-import { buildContactsWorkspaceHref, buildLinkedContactRecordHref } from "../../lib/contacts/contactRouting";
+import { buildLinkedContactRecordHref } from "../../lib/contacts/contactRouting";
 import {
   groupLinkedDocumentSources,
   resolveLinkedPreviewTargets,
@@ -30,7 +30,6 @@ import { getStoredFileSignedUrl } from "../../lib/assets/documentLinks";
 import ContactInvitationManager from "../../app/(app)/components/dashboard/ContactInvitationManager";
 import { useViewerAccess } from "../access/ViewerAccessContext";
 import Icon from "../ui/Icon";
-import InfoTip from "../ui/InfoTip";
 import DocumentPreviewDialog, { type DocumentPreviewDialogItem } from "../documents/DocumentPreviewDialog";
 import { type CollaboratorRole, type SectionKey } from "../../lib/access-control/roles";
 
@@ -78,13 +77,14 @@ export default function ContactsNetworkWorkspace() {
   const [contacts, setContacts] = useState<ContactRow[]>([]);
   const [search, setSearch] = useState("");
   const [validationSourceText, setValidationSourceText] = useState<Record<string, string>>({});
-  const [confirmingValidationKey, setConfirmingValidationKey] = useState("");
-  const [associationAlerts, setAssociationAlerts] = useState<string[]>([]);
-  const [openGroupKey, setOpenGroupKey] = useState<string | null>(null);
+  const [, setConfirmingValidationKey] = useState("");
+  const [, setAssociationAlerts] = useState<string[]>([]);
   const [addContactGroupKey, setAddContactGroupKey] = useState<string | null>(null);
+  const [menuContactId, setMenuContactId] = useState<string | null>(null);
+  const [manageContactId, setManageContactId] = useState<string | null>(null);
   const [documentPreview, setDocumentPreview] = useState<LinkedDocumentPreview | null>(null);
   const [previewTargetsByContextKey, setPreviewTargetsByContextKey] = useState<Map<string, LinkedDocumentSourceItem[]>>(new Map());
-  const [openingDocumentKey, setOpeningDocumentKey] = useState("");
+  const [, setOpeningDocumentKey] = useState("");
   const [nextOfKinDraft, setNextOfKinDraft] = useState({ fullName: "", relationship: "", email: "", phone: "" });
   const [savingNextOfKin, setSavingNextOfKin] = useState(false);
 
@@ -357,21 +357,13 @@ export default function ContactsNetworkWorkspace() {
     };
   }, [contacts, selectedContactId]);
 
-  const preferredOpenGroup =
-    selectedGroup
-    || (selectedContactId ? resolveContactGroupKey(contacts.find((item) => item.id === selectedContactId) ?? {}) : "")
-    || GROUPS.find((group) => (groupedContacts.get(group.key)?.length ?? 0) > 0)?.key
-    || GROUPS[0]?.key
-    || null;
-  const effectiveOpenGroupKey = search.trim()
-    ? preferredOpenGroup
-    : (selectedGroup || selectedContactId)
-      ? preferredOpenGroup
-      : openGroupKey ?? preferredOpenGroup;
+  const selectedContactRow = useMemo(
+    () => contacts.find((item) => item.id === selectedContactId) ?? null,
+    [contacts, selectedContactId],
+  );
 
   useEffect(() => {
     if (!isContactAddMode || !selectedGroup || viewer.readOnly) return;
-    setOpenGroupKey(selectedGroup);
     setAddContactGroupKey(selectedGroup);
   }, [isContactAddMode, selectedGroup, viewer.readOnly]);
 
@@ -432,15 +424,12 @@ export default function ContactsNetworkWorkspace() {
     params.set("contact", contactId);
     if (groupKey) params.set("group", groupKey);
     router.replace(`/contacts?${params.toString()}`);
+    setMenuContactId(null);
   }
 
-  function toggleGroup(groupKey: string) {
-    setOpenGroupKey((current) => (current === groupKey ? null : groupKey));
-  }
 
   function startAddContact(groupKey = "trusted_contacts") {
     setAddContactGroupKey(groupKey);
-    setOpenGroupKey(groupKey);
     router.replace(groupKey ? `/contacts?group=${groupKey}` : "/contacts");
   }
 
@@ -533,21 +522,7 @@ export default function ContactsNetworkWorkspace() {
 
   return (
     <section style={{ display: "grid", gap: 14 }}>
-      {!addContactGroupKey ? <div style={{ display: "grid", gap: 6 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
-            Keep the people who may matter to your Fortress in one understandable place.
-          </p>
-          <InfoTip
-            label="Explain the Contacts section"
-            message="Use Contacts to invite trusted people, set what they can review or edit, keep internal notes, and jump directly to the linked records that explain why they matter."
-          />
-        </div>
-        <p style={{ margin: "6px 0 0", color: "#64748b", fontSize: 13 }}>
-          You can record a relationship first and decide separately whether to invite someone.
-        </p>
-      </div> : null}
-
+      {!addContactGroupKey ? <h1 style={{ margin: 0, fontSize: 28, color: "#1f1712" }}>People I Trust</h1> : null}
       {!addContactGroupKey ? <section style={panelStyle}>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <label style={contactSearchFieldStyle}>
@@ -566,14 +541,13 @@ export default function ContactsNetworkWorkspace() {
             <button
               type="button"
               style={primaryMenuActionStyle}
-              onClick={() => startAddContact(selectedGroup || openGroupKey || "trusted_contacts")}
+              onClick={() => startAddContact(selectedGroup || "trusted_contacts")}
               title="Add a contact and choose their wallet access"
             >
               <Icon name="person_add" size={16} />
               Add person
             </button>
           ) : null}
-          <Link href="/personal" style={linkPillStyle}>Review personal records</Link>
         </div>
       </section> : null}
 
@@ -613,275 +587,83 @@ export default function ContactsNetworkWorkspace() {
         </section>
       ) : null}
 
-      {!addContactGroupKey && associationAlerts.length ? (
-        <section style={alertPanelStyle}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <strong style={{ fontSize: 14 }}>Association alerts</strong>
-            <InfoTip
-              label="Explain missing associations"
-              message="These alerts highlight important records that exist in the vault but are not yet linked to a person who can explain, act on, or review them."
-            />
-          </div>
-          <div style={{ display: "grid", gap: 6 }}>
-            {associationAlerts.map((alert) => (
-              <div key={alert} style={{ color: "#92400e", fontSize: 13 }}>{alert}</div>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
       {status ? <div style={{ color: "#b91c1c", fontSize: 13 }}>{status}</div> : null}
       {loading ? <div style={{ color: "#64748b" }}>Loading contacts network...</div> : null}
 
       {!loading && !addContactGroupKey ? (
-        <div style={{ display: "grid", gap: 12 }}>
-          {GROUPS.map((group) => {
-            const rows = groupedContacts.get(group.key) ?? [];
-            const isOpen = search.trim() ? rows.length > 0 : effectiveOpenGroupKey === group.key;
-            const groupSummary = summarizeGroupRows(rows, validationSourceText);
-
+        <div style={{ display: "grid", gap: 18 }}>
+          {Array.from(groupedContacts.entries()).filter(([, rows]) => rows.length > 0).map(([groupKey, rows]) => {
+            const group = GROUPS.find((item) => item.key === groupKey) ?? GROUPS[0];
             return (
-              <section key={group.key} style={panelStyle}>
-                <button
-                  type="button"
-                  style={groupHeaderButtonStyle}
-                  onClick={() => toggleGroup(group.key)}
-                  aria-expanded={isOpen}
-                >
-                  <div style={{ display: "grid", gap: 4, textAlign: "left" }}>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                      <div style={{ fontSize: 18, fontWeight: 700 }}>{group.label}</div>
-                      <span style={groupCountStyle}>{rows.length}</span>
-                      {groupSummary.warningCount > 0 ? (
-                        <span style={groupWarningStyle}>{groupSummary.warningCount} need linking</span>
-                      ) : null}
-                    </div>
-                    <div style={{ color: "#64748b", fontSize: 13 }}>
-                      {groupSummary.statusSummary || group.description}
-                    </div>
-                  </div>
-                  <Icon name={isOpen ? "expand_more" : "chevron_right"} size={18} />
-                </button>
-
-                {!isOpen ? null : rows.length === 0 ? (
-                  <div style={emptyGroupStyle}>
-                    <div style={{ color: "#64748b", fontSize: 13 }}>No contacts in this group yet.</div>
-                    {!viewer.readOnly ? (
-                      <button type="button" style={rowSecondaryActionStyle} onClick={() => startAddContact(group.key)}>
-                        <Icon name="person_add" size={16} />
-                        Add {group.label.toLowerCase().replace(/s$/, "")}
-                      </button>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div style={{ display: "grid", gap: 6 }}>
-                    {rows.map((contact) => {
-                      const inviteState = getInviteState(contact);
-                      const associationState = getAssociationState(contact, validationSourceText);
-                      const linkedContexts = (contact.linked_context ?? []).slice(0, 4);
-                      const previewableContexts = linkedContexts.filter((context) => getPreviewableTargetsForContext(context).length > 0);
-                      const unresolvedContexts = linkedContexts.filter((context) => getPreviewableTargetsForContext(context).length === 0);
-                      const hasLinkedDocuments = previewableContexts.length > 0;
-                      const isSelected = contact.id === selectedContactId;
-
-                      return (
-                        <div key={contact.id} style={isSelected ? selectedContactStackStyle : undefined}>
-                          <div
-                            style={isSelected ? selectedContactRowStyle : contactRowStyle}
-                            className="lf-contact-row"
-                            data-contact-id={contact.id}
+              <section key={groupKey} aria-labelledby={`people-group-${groupKey}`}>
+                <div style={simpleGroupHeadingStyle}>
+                  <h2 id={`people-group-${groupKey}`} style={{ margin: 0, fontSize: 16 }}>{group.label}</h2>
+                  <span style={groupCountStyle}>{rows.length}</span>
+                </div>
+                <div style={{ display: "grid", gap: 8 }}>
+                  {rows.map((contact) => {
+                    const inviteState = getInviteState(contact);
+                    const isMenuOpen = menuContactId === contact.id;
+                    return (
+                      <article key={contact.id} className="lf-contact-row lf-contact-summary-row" style={contactSummaryRowStyle}>
+                        <button
+                          type="button"
+                          className="lf-contact-summary-button"
+                          style={contactSummaryButtonStyle}
+                          onClick={() => openContact(contact.id, groupKey)}
+                          aria-label={`Open ${contact.full_name || "person"}`}
+                        >
+                          <span style={{ display: "grid", gap: 3, minWidth: 0, textAlign: "left" }}>
+                            <strong style={contactSummaryNameStyle}>{contact.full_name || "Unnamed person"}</strong>
+                            <span style={contactSummaryRelationshipStyle}>{formatContactRoleLine(contact)}</span>
+                          </span>
+                          <span style={contactSummaryStatusStyle} data-tone={inviteState.tone}>{getContactSummaryStatus(contact)}</span>
+                          <InvitationProgressTracker contact={contact} compact />
+                        </button>
+                        <div className="lf-contact-summary-action" style={contactSummaryActionStyle}>
+                          {getPrimaryContactAction(contact) ? <span className="lf-contact-next-action" style={contactNextActionStyle}>{getPrimaryContactAction(contact)}</span> : null}
+                          <button
+                            type="button"
+                            style={overflowButtonStyle}
+                            aria-label={`More actions for ${contact.full_name || "person"}`}
+                            aria-haspopup="menu"
+                            aria-expanded={isMenuOpen}
+                            onClick={() => setMenuContactId((current) => current === contact.id ? null : contact.id)}
                           >
-                            <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
-                              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                                <Link href={buildContactsWorkspaceHref(contact.id)} style={contactTitleLinkStyle}>
-                                  {contact.full_name || "Unnamed contact"}
-                                </Link>
-                                <StatusPill {...inviteState} />
-                                <StatusPill {...associationState} />
-                              </div>
-                              <div style={{ color: "#475569", fontSize: 13 }}>
-                                {formatContactRoleLine(contact)}
-                              </div>
-                              <div style={{ color: "#64748b", fontSize: 12 }}>
-                                {formatContactSupportLine(contact)}
-                              </div>
-                              {linkedContexts.length ? (
-                                <div style={linkedDocumentWrapStyle}>
-                                  {previewableContexts.map((context, index) => {
-                                    const label = context.label || formatContextLabel(context);
-                                    const previewTarget = getPreviewableTargetsForContext(context)[0];
-                                    return (
-                                      <button
-                                        key={`${contact.id}-${index}`}
-                                        type="button"
-                                        style={linkedDocumentIconButtonStyle}
-                                        title={`View document: ${label}`}
-                                        aria-label={`View document: ${label}`}
-                                        onClick={() => void openLinkedDocument(contact, context)}
-                                        disabled={!previewTarget || openingDocumentKey === previewTarget.id}
-                                      >
-                                        <Icon name={getLinkedDocumentIcon(context)} size={14} />
-                                        <span style={linkedDocumentIconLabelStyle}>{describeLinkedDocumentContext(context)}</span>
-                                      </button>
-                                    );
-                                  })}
-                                  {unresolvedContexts.map((context, index) => (
-                                    <span
-                                      key={`${contact.id}-unresolved-${index}`}
-                                      style={unavailableLinkedDocumentStyle}
-                                      title={`No previewable document is available yet for ${context.label || formatContextLabel(context)}`}
-                                      aria-label={`Document unavailable for ${context.label || formatContextLabel(context)}`}
-                                    >
-                                      <Icon name="link_off" size={14} />
-                                      <span style={linkedDocumentIconLabelStyle}>Unavailable</span>
-                                    </span>
-                                  ))}
-                                  {(contact.linked_context?.length ?? 0) > 4 ? (
-                                    <span style={moreLinksStyle}>+{(contact.linked_context?.length ?? 0) - 4} more</span>
-                                  ) : null}
-                                </div>
-                              ) : null}
+                            <span aria-hidden="true">•••</span>
+                          </button>
+                          {isMenuOpen ? (
+                            <div className="lf-contact-overflow-menu" role="menu">
+                              <button type="button" role="menuitem" onClick={() => openContact(contact.id, groupKey)}>View details</button>
+                              {!viewer.readOnly ? <button type="button" role="menuitem" onClick={() => { setManageContactId(contact.id); openContact(contact.id, groupKey); }}>Manage relationship</button> : null}
                             </div>
-
-                            <div style={rowActionsStyle}>
-                              <button
-                                type="button"
-                                style={rowPrimaryActionStyle}
-                                title={`${getPrimaryActionLabel(contact)} for ${contact.full_name || "contact"}`}
-                                onClick={() => openContact(contact.id, group.key)}
-                              >
-                                <Icon name={getPrimaryActionIcon(contact)} size={16} />
-                                {getPrimaryActionLabel(contact)}
-                              </button>
-                              {hasLinkedDocuments ? (
-                                <button
-                                  type="button"
-                                  style={rowSecondaryActionStyle}
-                                  title={`Review linked documents for ${contact.full_name || "contact"}`}
-                                  onClick={() => {
-                                    const firstContext = previewableContexts[0];
-                                    if (firstContext) void openLinkedDocument(contact, firstContext);
-                                  }}
-                                >
-                                  <Icon name="visibility" size={16} />
-                                  Review documents
-                                </button>
-                              ) : null}
-                              <button
-                                type="button"
-                                style={rowSecondaryActionStyle}
-                                title={`Manage ${contact.full_name || "contact"}`}
-                                onClick={() => openContact(contact.id, group.key)}
-                              >
-                                <Icon name="edit" size={16} />
-                                Manage
-                              </button>
-                              {(contact.linked_context ?? []).map((context, index) => {
-                                const validationKey = buildContactLinkValidationKey({
-                                  source_kind: context.source_kind === "asset" || context.source_kind === "invitation" ? context.source_kind : "record",
-                                  source_id: String(context.source_id ?? ""),
-                                });
-                                const manuallyConfirmed = contact.validation_overrides?.[validationKey]?.manually_confirmed === true;
-                                const validation = (context.source_kind === "asset" || context.source_kind === "record")
-                                  ? evaluateContactLinkValidation({
-                                      contactName: contact.full_name,
-                                      sourceText: [
-                                        validationSourceText[validationKey],
-                                        context.label,
-                                        context.role,
-                                      ].filter(Boolean).join(" "),
-                                      manuallyConfirmed,
-                                    })
-                                  : null;
-
-                                return validation?.state === "warning" && selectedContactId === contact.id && !viewer.readOnly ? (
-                                  <button
-                                    key={`${contact.id}-${index}-confirm`}
-                                    type="button"
-                                    style={rowTertiaryActionStyle}
-                                    title={`Confirm ${context.label || formatContextLabel(context)} is the correct record for ${contact.full_name}`}
-                                    onClick={() => void confirmLinkedRecord(contact, context)}
-                                    disabled={confirmingValidationKey === validationKey}
-                                  >
-                                    <Icon name="verified" size={16} />
-                                    Confirm link
-                                  </button>
-                                ) : null;
-                              })}
-                              {isSelected ? (
-                                <button
-                                  type="button"
-                                  style={rowTertiaryActionStyle}
-                                  title={`Cancel ${contact.full_name || "contact"} selection`}
-                                  onClick={() => router.replace(selectedGroup ? `/contacts?group=${selectedGroup}` : "/contacts")}
-                                >
-                                  <Icon name="close" size={16} />
-                                  Cancel
-                                </button>
-                              ) : null}
-                            </div>
-                          </div>
-                          {!viewer.readOnly && isSelected ? (
-                            <section style={selectedAdminStyle} aria-label={`Manage selected contact: ${contact.full_name || "contact"}`}>
-                              <div style={{ display: "grid", gap: 3 }}>
-                                <div style={{ fontSize: 16, fontWeight: 700 }}>Manage selected contact</div>
-                                <div style={{ color: "#64748b", fontSize: 13 }}>
-                                  Edit, replace, resend, remove, review linked documents, update permissions, and confirm linked-record associations right here beside the selected row.
-                                </div>
-                              </div>
-                              <div style={selectedActionSummaryStyle}>
-                                <span style={selectedActionChipStyle}>
-                                  <Icon name={getPrimaryActionIcon(contact)} size={14} />
-                                  {getPrimaryActionLabel(contact)}
-                                </span>
-                                <span style={selectedActionChipStyle}>
-                                  <Icon name="info" size={14} />
-                                  {getInviteState(contact).label}
-                                </span>
-                                <span style={selectedActionChipStyle}>
-                                  <Icon name={getAssociationState(contact, validationSourceText).tone === "warning" ? "warning" : "verified"} size={14} />
-                                  {getAssociationState(contact, validationSourceText).label}
-                                </span>
-                              </div>
-                              <section style={personSummaryStyle} aria-label={`Relationship summary for ${contact.full_name || "person"}`}>
-                                <div style={{ display: "grid", gap: 3 }}>
-                                  <strong style={{ fontSize: 18, color: "#1f1712" }}>{contact.full_name || "Unnamed person"}</strong>
-                                  <span style={{ color: "#475569", fontSize: 13 }}>{formatContactRoleLine(contact)}</span>
-                                  <span style={{ color: "#64748b", fontSize: 13 }}>{getInviteState(contact).label}</span>
-                                  {contact.email ? <span style={{ color: "#64748b", fontSize: 13 }}>{contact.email}</span> : null}
-                                </div>
-                                {(contact.linked_context ?? []).length ? (
-                                  <div style={{ display: "grid", gap: 4 }}>
-                                    <span style={personSummaryLabelStyle}>Related to</span>
-                                    <span style={{ color: "#475569", fontSize: 13 }}>{(contact.linked_context ?? []).slice(0, 3).map((context) => context.label || describeLinkedDocumentContext(context)).join(" · ")}</span>
-                                  </div>
-                                ) : null}
-                                <div style={{ color: "#64748b", fontSize: 13 }}>
-                                  Being recorded or linked does not by itself give this person access to your private Vault.
-                                </div>
-                              </section>
-                              {!viewer.readOnly ? (
-                                <details className="lf-contact-management-details">
-                                  <summary>Manage relationship and invitation</summary>
-                                  <ContactInvitationManager
-                                    mode="full"
-                                    guidedExecutor={false}
-                                    selectedContactId={selectedContactId}
-                                    selectedContactProfile={selectedContact}
-                                  />
-                                </details>
-                              ) : null}
-                            </section>
                           ) : null}
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
+                      </article>
+                    );
+                  })}
+                </div>
               </section>
             );
           })}
+          {!contacts.length ? (
+            <section style={emptyPeopleStyle} aria-label="No people recorded">
+              <strong>No people recorded yet.</strong>
+              <span>Add someone when you are ready to keep their relationship to your Fortress clear.</span>
+              {!viewer.readOnly ? <button type="button" style={rowPrimaryActionStyle} onClick={() => startAddContact("trusted_contacts")}><Icon name="person_add" size={16} />Add person</button> : null}
+            </section>
+          ) : null}
         </div>
+      ) : null}
+      {selectedContactRow ? (
+        <PersonDetailDrawer
+          contact={selectedContactRow}
+          readOnly={viewer.readOnly}
+          manageOpen={manageContactId === selectedContactId}
+          selectedProfile={selectedContact}
+          onClose={() => { setManageContactId(null); router.replace(selectedGroup ? `/contacts?group=${selectedGroup}` : "/contacts"); }}
+          onManage={() => setManageContactId(selectedContactId)}
+        />
       ) : null}
       {documentPreview ? (
         <DocumentPreviewDialog
@@ -890,6 +672,144 @@ export default function ContactsNetworkWorkspace() {
         />
       ) : null}
     </section>
+  );
+}
+
+function getContactSummaryStatus(contact: ContactRow) {
+  if (contact.verification_status === "active") return "Linked";
+  if (["accepted", "pending_verification", "verification_submitted", "verified"].includes(contact.verification_status)) return "Invitation accepted";
+  if (contact.invite_status === "invite_sent") return "Invitation awaiting acceptance";
+  if (contact.email) return "Invitation not sent";
+  return "Recorded";
+}
+
+function getPrimaryContactAction(contact: ContactRow) {
+  if (contact.invite_status === "invite_sent") return "Follow up when needed";
+  if (contact.invite_status === "not_invited" && contact.email) return "Send invitation";
+  return "";
+}
+
+function InvitationProgressTracker({ contact, compact = false }: { contact: ContactRow; compact?: boolean }) {
+  const hasInvitation = contact.invite_status !== "not_invited"
+    || contact.source_type === "invitation"
+    || contact.verification_status !== "not_verified";
+  if (!hasInvitation) return null;
+
+  const accepted = ["accepted", "pending_verification", "verification_submitted", "verified", "active"].includes(contact.verification_status);
+  const linked = contact.verification_status === "active";
+  const verificationRequired = ["pending_verification", "verification_submitted", "verified", "active"].includes(contact.verification_status);
+  const stages = [
+    { label: "Prepared", complete: true },
+    { label: "Sent", complete: contact.invite_status === "invite_sent" || accepted || linked },
+    { label: "Accepted", complete: accepted || linked },
+    ...(verificationRequired ? [{ label: "Verified", complete: ["verified", "active"].includes(contact.verification_status) }] : []),
+    { label: "Linked", complete: linked },
+  ];
+  const currentIndex = stages.reduce((index, stage, candidateIndex) => stage.complete ? candidateIndex : index, -1);
+  const accessibleState = stages.map((stage, index) => `${stage.label} ${stage.complete && index <= currentIndex ? "complete" : "pending"}`).join(", ");
+
+  return (
+    <div className={`lf-invitation-tracker${compact ? " is-compact" : ""}`} aria-label={`Invitation progress: ${accessibleState}`}>
+      <div className="lf-invitation-tracker-line" aria-hidden="true">
+        {stages.map((stage, index) => (
+          <span key={stage.label} className="lf-invitation-tracker-stage-wrap">
+            <span className={`lf-invitation-tracker-dot${stage.complete && index <= currentIndex ? " is-complete" : ""}${index === currentIndex ? " is-current" : ""}`} />
+            {index < stages.length - 1 ? <span className={`lf-invitation-tracker-segment${index < currentIndex ? " is-complete" : ""}`} /> : null}
+          </span>
+        ))}
+      </div>
+      <div className="lf-invitation-tracker-labels">
+        {stages.map((stage) => <span key={stage.label}>{stage.label}</span>)}
+      </div>
+    </div>
+  );
+}
+
+function PersonDetailDrawer({
+  contact,
+  readOnly,
+  manageOpen,
+  selectedProfile,
+  onClose,
+  onManage,
+}: {
+  contact: ContactRow;
+  readOnly: boolean;
+  manageOpen: boolean;
+  selectedProfile: Pick<CanonicalContactRow, "id" | "full_name" | "email" | "contact_role" | "linked_context"> | null;
+  onClose: () => void;
+  onManage: () => void;
+}) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const relatedContexts = (contact.linked_context ?? []).filter((context) => context.source_kind !== "invitation");
+  const status = getContactSummaryStatus(contact);
+  const inviteState = getInviteState(contact);
+
+  useEffect(() => {
+    closeRef.current?.focus();
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  return (
+    <div className="lf-person-drawer-backdrop" role="presentation" onClick={onClose}>
+      <aside className="lf-person-drawer" role="dialog" aria-modal="true" aria-labelledby="person-drawer-title" onClick={(event) => event.stopPropagation()}>
+        <div className="lf-person-drawer-header">
+          <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
+            <h2 id="person-drawer-title" style={{ margin: 0, fontSize: 22 }}>{contact.full_name || "Unnamed person"}</h2>
+            <span style={contactSummaryRelationshipStyle}>{formatContactRoleLine(contact)}</span>
+          </div>
+          <button ref={closeRef} type="button" className="lf-person-drawer-close" aria-label="Close person details" onClick={onClose}>×</button>
+        </div>
+
+        <div className="lf-person-drawer-content">
+          {contact.email ? <div style={drawerContactLineStyle}>{contact.email}</div> : null}
+          <div style={contactSummaryStatusStyle} data-tone={inviteState.tone}>{status}</div>
+          {contact.invite_status === "invite_sent" ? <p style={drawerExplanationStyle}>You invited this person to connect with your Fortress. Their response is still outstanding.</p> : null}
+          {contact.invite_status === "not_invited" && contact.email ? <p style={drawerExplanationStyle}>This person is recorded in People I Trust. You can decide separately whether to invite them.</p> : null}
+
+          <InvitationProgressTracker contact={contact} />
+
+          {relatedContexts.length ? (
+            <section style={drawerSectionStyle} aria-labelledby="person-related-heading">
+              <span id="person-related-heading" style={drawerSectionLabelStyle}>Related to</span>
+              <div style={{ display: "grid", gap: 6 }}>
+                {relatedContexts.slice(0, 3).map((context, index) => <span key={`${context.source_id}-${index}`} style={drawerRelatedItemStyle}>{context.label || describeLinkedDocumentContext(context)}</span>)}
+              </div>
+            </section>
+          ) : null}
+
+          {(status === "Linked" || contact.verification_status === "active") ? (
+            <p style={drawerExplanationStyle}>This person is securely linked as a relationship. They do not have access to your private Vault merely because they are linked.</p>
+          ) : null}
+
+          {!readOnly && (contact.invite_status === "invite_sent" || contact.invite_status === "not_invited") ? (
+            <button type="button" style={rowPrimaryActionStyle} onClick={onManage}>
+              <Icon name={contact.invite_status === "invite_sent" ? "mail" : "send"} size={16} />
+              {contact.invite_status === "invite_sent" ? "Manage invitation" : "Send invitation"}
+            </button>
+          ) : null}
+
+          {!readOnly ? (
+            <details className="lf-person-more-details" open={manageOpen}>
+              <summary className="lf-person-more-summary">••• More</summary>
+              <div className="lf-person-management-panel">
+                <p style={drawerExplanationStyle}>Edit details, invitation state and access settings only when you need to manage them.</p>
+                <ContactInvitationManager
+                  mode="full"
+                  guidedExecutor={contact.contact_role === "executor"}
+                  selectedContactId={contact.id}
+                  selectedContactProfile={selectedProfile}
+                />
+              </div>
+            </details>
+          ) : null}
+        </div>
+      </aside>
+    </div>
   );
 }
 
@@ -1106,14 +1026,32 @@ function getAssociationState(contact: ContactRow, validationSourceText: Record<s
   }
 
   if (contexts.length === 1) {
-    return { label: "Linked to record", tone: "success" as const };
+    return { label: "Related record", tone: "success" as const };
   }
 
-  return { label: `Linked to ${contexts.length} records`, tone: "success" as const };
+  return { label: `${contexts.length} related records`, tone: "success" as const };
 }
 
 function formatContactRoleLine(contact: ContactRow) {
-  return [contact.relationship, contact.contact_role].filter(Boolean).join(" · ") || "Role or relationship not set";
+  const relationship = humanizeContactTerm(contact.relationship);
+  const role = humanizeContactTerm(contact.contact_role);
+  return [relationship, role && role !== relationship ? role : ""].filter(Boolean).join(" · ") || "Relationship not set";
+}
+
+function humanizeContactTerm(value: string | null | undefined) {
+  const key = String(value ?? "").trim().toLowerCase();
+  const labels: Record<string, string> = {
+    friend_or_family: "Friend or family",
+    trusted_contact: "Trusted contact",
+    next_of_kin: "Next of kin",
+    executor: "Executor",
+    attorney: "Attorney",
+    beneficiary: "Beneficiary",
+    financial_adviser: "Financial adviser",
+    solicitor: "Solicitor",
+    professional_support: "Professional support",
+  };
+  return labels[key] || (key ? key.replace(/[_-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) : "");
 }
 
 function formatContactSupportLine(contact: ContactRow) {
@@ -1476,6 +1414,124 @@ const personSummaryLabelStyle: CSSProperties = {
   fontWeight: 800,
   letterSpacing: "0.06em",
   textTransform: "uppercase",
+};
+
+const simpleGroupHeadingStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  marginBottom: 8,
+};
+
+const contactSummaryRowStyle: CSSProperties = {
+  position: "relative",
+  display: "grid",
+  gridTemplateColumns: "minmax(150px, 0.9fr) minmax(180px, 1fr) minmax(190px, 1.3fr) auto",
+  gap: 14,
+  alignItems: "center",
+  border: "1px solid #e8e1dc",
+  borderRadius: 12,
+  background: "#fffefd",
+  padding: "12px 14px",
+};
+
+const contactSummaryButtonStyle: CSSProperties = {
+  minWidth: 0,
+  border: 0,
+  background: "transparent",
+  padding: 0,
+  cursor: "pointer",
+  display: "grid",
+  gap: 3,
+  textAlign: "left",
+};
+
+const contactSummaryNameStyle: CSSProperties = {
+  color: "#1f1712",
+  fontSize: 15,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+};
+
+const contactSummaryRelationshipStyle: CSSProperties = {
+  color: "#64748b",
+  fontSize: 13,
+};
+
+const contactSummaryStatusStyle: CSSProperties = {
+  color: "#475569",
+  fontSize: 13,
+  fontWeight: 650,
+};
+
+const contactSummaryActionStyle: CSSProperties = {
+  position: "relative",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "flex-end",
+  gap: 8,
+  minWidth: 0,
+};
+
+const contactNextActionStyle: CSSProperties = {
+  color: "#7c4a35",
+  fontSize: 12,
+  fontWeight: 700,
+  whiteSpace: "nowrap",
+};
+
+const overflowButtonStyle: CSSProperties = {
+  border: "1px solid #e8e1dc",
+  borderRadius: 999,
+  background: "#fff",
+  color: "#475569",
+  minWidth: 40,
+  minHeight: 40,
+  cursor: "pointer",
+  letterSpacing: 2,
+};
+
+const emptyPeopleStyle: CSSProperties = {
+  display: "grid",
+  gap: 8,
+  justifyItems: "start",
+  border: "1px dashed #d7cec7",
+  borderRadius: 12,
+  padding: 20,
+  color: "#475569",
+};
+
+const drawerContactLineStyle: CSSProperties = {
+  color: "#475569",
+  fontSize: 14,
+};
+
+const drawerExplanationStyle: CSSProperties = {
+  margin: 0,
+  color: "#64748b",
+  fontSize: 13,
+  lineHeight: 1.55,
+};
+
+const drawerSectionStyle: CSSProperties = {
+  display: "grid",
+  gap: 7,
+  borderTop: "1px solid #eee8e3",
+  paddingTop: 14,
+};
+
+const drawerSectionLabelStyle: CSSProperties = {
+  color: "#7c4a35",
+  fontSize: 11,
+  fontWeight: 800,
+  letterSpacing: "0.06em",
+  textTransform: "uppercase",
+};
+
+const drawerRelatedItemStyle: CSSProperties = {
+  color: "#1f2937",
+  fontSize: 14,
 };
 
 const linkedDocumentWrapStyle: CSSProperties = {
