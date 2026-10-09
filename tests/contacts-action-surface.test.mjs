@@ -12,6 +12,11 @@ test("People I Trust uses compact rows with progressive person details", () => {
   assert.match(contactsWorkspace, /PersonDetailDrawer/);
   assert.match(contactsWorkspace, /lf-person-drawer/);
   assert.match(contactsWorkspace, /InvitationProgressTracker/);
+  assert.doesNotMatch(contactsWorkspace, /<InvitationProgressTracker contact=\{contact\} compact \/>/);
+  assert.match(contactsWorkspace, /setDismissedContactId/);
+  assert.match(contactsWorkspace, /document\.body\.style\.overflow/);
+  assert.match(contactsWorkspace, /event\.key === "Escape"/);
+  assert.match(contactsWorkspace, /onClose=\{closeContact\}/);
   assert.match(contactsWorkspace, /aria-label=\{`More actions for/);
   assert.doesNotMatch(contactsWorkspace, /CONTACTS BUILD CHECK/);
   assert.doesNotMatch(contactsWorkspace, /Linked to record/);
@@ -19,6 +24,9 @@ test("People I Trust uses compact rows with progressive person details", () => {
   assert.match(contactsWorkspace, /Friend or family/);
   assert.match(contactsWorkspace, /startAddContact/);
   assert.match(contactsWorkspace, /Add contact/);
+  assert.match(contactsWorkspace, /Edit relationship/);
+  assert.match(contactsWorkspace, /Changing a relationship does not grant Vault access/);
+  assert.match(contactsWorkspace, /RELATIONSHIP_ROLE_OPTIONS/);
   assert.match(contactsWorkspace, /getAddContactPreset/);
   assert.match(contactsWorkspace, /Cancel/);
   assert.match(contactsWorkspace, /<ContactInvitationManager[\s\S]*mode="full"/);

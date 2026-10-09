@@ -3412,7 +3412,8 @@ textarea {
 
 .lf-person-back-button:focus-visible,
 .lf-person-danger-button:focus-visible,
-.lf-person-edit-form input:focus-visible {
+.lf-person-edit-form input:focus-visible,
+.lf-person-edit-form select:focus-visible {
   outline: 3px solid rgba(124, 74, 53, 0.24);
   outline-offset: 2px;
 }
@@ -3432,6 +3433,16 @@ textarea {
 }
 
 .lf-person-edit-form input {
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid #d8d0ca;
+  border-radius: 8px;
+  background: #fff;
+  color: #1f1712;
+  font: inherit;
+}
+
+.lf-person-edit-form select {
   min-height: 42px;
   padding: 8px 10px;
   border: 1px solid #d8d0ca;
