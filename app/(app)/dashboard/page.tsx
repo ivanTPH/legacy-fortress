@@ -1105,7 +1105,7 @@ const legalSummary = useMemo(() => {
             : row,
         ),
       );
-      setStatus(`✅ Invitation ${resend ? "resent" : "sent"} to ${contactName}.`);
+      setStatus(`✅ Invitation request ${resend ? "resubmitted" : "submitted"} for ${contactName}.`);
       window.setTimeout(() => {
         setDashboardInviteState((current) => ({ ...current, [contact.id]: "pending" }));
       }, 1800);

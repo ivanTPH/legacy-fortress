@@ -975,7 +975,7 @@ function PersonManagementPanel({
         resend: true,
         origin: typeof window === "undefined" ? null : window.location.origin,
       });
-      setStatus(`Invitation sent again to ${contact.email}.`);
+      setStatus(`Invitation request submitted for ${contact.email}.`);
       onSaved();
     } catch {
       setStatus("Could not resend this invitation.");

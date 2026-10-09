@@ -4,6 +4,7 @@ import { useMemo, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import Icon from "../ui/Icon";
+import { toSafeInternalPath } from "../../lib/auth/session";
 
 const OAuthButtons = dynamic(() => import("./OAuthButtons"), {
   loading: () => <div className="lf-muted-note">Loading sign-in providers...</div>,
@@ -26,6 +27,7 @@ export default function SignUpForm({
   const canSubmit = useMemo(() => /\S+@\S+\.\S+/.test(email) && password.length >= 8 && !submitting, [email, password, submitting]);
 
   async function signUp() {
+    let accountCreated = false;
     setError("");
     if (!/\S+@\S+\.\S+/.test(email)) {
       setError("Enter a valid email address.");
@@ -46,7 +48,7 @@ export default function SignUpForm({
         import("../../lib/auth/bootstrap"),
         import("../../lib/auth/pendingInvitations"),
       ]);
-      const safeNextPath = nextPath || "/onboarding";
+      const safeNextPath = toSafeInternalPath(nextPath, "/onboarding");
       const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNextPath)}` : undefined;
       const authClient = createEphemeralBrowserAuthClient("signup");
       const { data, error } = await authClient.auth.signUp({
@@ -58,21 +60,32 @@ export default function SignUpForm({
       });
 
       if (error) {
-        setError(error.message);
+        setError(toSafeSignupError(error.message));
         setStatus("");
         return;
       }
 
+      accountCreated = Boolean(data.user?.id);
       if (data.user?.id && data.session) {
-        const pendingDestination = await findPendingInvitationDestination(supabase, nextPath);
-        const bootstrap = await bootstrapAuthenticatedUser(supabase, { userId: data.user.id, nextPath: nextPath ?? undefined });
+        // The signup client deliberately does not persist sessions. Transfer
+        // the returned session before bootstrap/acceptance recovery uses the
+        // canonical browser client.
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        });
+        if (sessionError) throw sessionError;
+        const pendingDestination = await findPendingInvitationDestination(supabase, safeNextPath);
+        const bootstrap = await bootstrapAuthenticatedUser(supabase, { userId: data.user.id, nextPath: safeNextPath });
         router.replace(pendingDestination ?? bootstrap.destination);
         return;
       }
 
       setStatus("Account created. Verify your email from the link sent, then sign in to continue onboarding.");
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Could not create account.");
+      setError(accountCreated
+        ? "Your account was created, but we could not continue to the invitation. Sign in with this email to continue."
+        : toSafeSignupError(submitError instanceof Error ? submitError.message : ""));
       setStatus("");
     } finally {
       setSubmitting(false);
@@ -147,6 +160,20 @@ export default function SignUpForm({
       {status ? <div className="lf-muted-note">{status}</div> : null}
     </div>
   );
+}
+
+function toSafeSignupError(raw: string) {
+  const message = raw.toLowerCase();
+  if (message.includes("already registered") || message.includes("already exists")) {
+    return "An account with this email already exists. Sign in to continue.";
+  }
+  if (message.includes("password") || message.includes("weak")) {
+    return "Choose a stronger password and try again.";
+  }
+  if (message.includes("rate limit") || message.includes("too many")) {
+    return "Too many attempts. Please wait a moment and try again.";
+  }
+  return "We could not create your account. Check your details and try again.";
 }
 
 const passwordToggleStyle: CSSProperties = {

@@ -73,7 +73,7 @@ type RecentInvitation = {
   contactId: string;
   name: string;
   email: string;
-  outcome: "prepared" | "sent";
+  outcome: "prepared" | "submitted";
 };
 
 const ACCESS_SCOPE_OPTIONS: Array<{ key: SectionKey; label: string }> = [
@@ -458,9 +458,9 @@ export default function ContactInvitationManager({
       });
 
       if (result.eventWarning) {
-        setStatus(`⚠️ Invitation email sent, but event log failed: ${result.eventWarning}`);
+        setStatus(`⚠️ Invitation request submitted, but event log failed: ${result.eventWarning}`);
       } else {
-        setStatus(`✅ Invitation email ${resend ? "resent" : "sent"} to ${row.contact_email}.`);
+        setStatus(`✅ Invitation request ${resend ? "resubmitted" : "submitted"} for ${row.contact_email}.`);
       }
       markRecentlySent(row.id);
       if (guidedExecutor) {
@@ -469,7 +469,7 @@ export default function ContactInvitationManager({
           contactId: row.contact_id ?? "",
           name: row.contact_name,
           email: row.contact_email,
-          outcome: "sent",
+          outcome: "submitted",
         });
       }
       await loadRows();
@@ -1401,7 +1401,7 @@ function RecentInvitationCard({
   onViewStatus: () => void;
   onAddAnother: () => void;
 }) {
-  const sent = invitation.outcome === "sent";
+  const sent = invitation.outcome === "submitted";
 
   useEffect(() => {
     if (!invitation.contactId) return undefined;
@@ -1414,10 +1414,10 @@ function RecentInvitationCard({
       <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
         <Icon name={sent ? "mark_email_read" : "schedule"} size={24} />
         <div style={{ display: "grid", gap: 5 }}>
-          <strong style={{ fontSize: 19 }}>{sent ? "Invitation sent" : "Person saved"}</strong>
+          <strong style={{ fontSize: 19 }}>{sent ? "Invitation request submitted" : "Person saved"}</strong>
           <span style={{ fontSize: 14 }}>
             {sent
-              ? `${invitation.name} will receive an email explaining how to securely connect with your Legacy Fortress.`
+              ? `Legacy Fortress has accepted the request to send ${invitation.name} an invitation email.`
               : `${invitation.name} is saved in People I Trust. The invitation has not been sent.`}
           </span>
           <span style={guidedHelpStyle}>

@@ -43,7 +43,7 @@ export default function PublicSignUpEntry() {
               <div className="lf-entry-panel-kicker">Create account</div>
               <h2>Set up access</h2>
             </div>
-            <Link href="/sign-in" className="lf-entry-demo-link">Sign in</Link>
+            <Link href={nextPath === "/onboarding" ? "/sign-in" : `/sign-in?next=${encodeURIComponent(nextPath)}`} className="lf-entry-demo-link">Sign in</Link>
           </div>
 
           <p className="lf-entry-panel-subtext">

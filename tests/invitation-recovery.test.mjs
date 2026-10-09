@@ -33,6 +33,34 @@ test("authenticated bootstrap recovers actionable invitations without a return p
   assert.match(route, /\.is\("accepted_user_id", null\)/);
 });
 
+test("new-user signup transfers the ephemeral session before invitation bootstrap", () => {
+  const signUp = fs.readFileSync(path.join(root, "components/auth/SignUpForm.tsx"), "utf8");
+
+  assert.match(signUp, /toSafeInternalPath\(nextPath, "\/onboarding"\)/);
+  assert.match(signUp, /const \{ error: sessionError \} = await supabase\.auth\.setSession/);
+  assert.match(signUp, /access_token: data\.session\.access_token/);
+  assert.match(signUp, /refresh_token: data\.session\.refresh_token/);
+  assert.match(signUp, /findPendingInvitationDestination\(supabase, safeNextPath\)/);
+  assert.match(signUp, /bootstrapAuthenticatedUser\(supabase, \{ userId: data\.user\.id, nextPath: safeNextPath \}\)/);
+  assert.match(signUp, /account was created, but we could not continue to the invitation/);
+  assert.match(signUp, /toSafeSignupError/);
+  const signUpEntry = fs.readFileSync(path.join(root, "components/auth/PublicSignUpEntry.tsx"), "utf8");
+  assert.match(signUpEntry, /sign-in\?next=\$\{encodeURIComponent\(nextPath\)\}/);
+});
+
+test("invitation acceptance remains the first post-registration relationship mutation", () => {
+  const acceptPage = fs.readFileSync(path.join(root, "app/invite/accept/InvitationAcceptPageClient.tsx"), "utf8");
+  const acceptMigration = fs.readFileSync(path.join(root, "supabase/migrations/20260324114000_fix_accept_contact_invitation_function.sql"), "utf8");
+
+  assert.match(acceptPage, /supabase\.rpc\("accept_contact_invitation"/);
+  assert.match(acceptPage, /waitForActiveUser/);
+  assert.match(acceptMigration, /p_invitation_id/);
+  assert.match(acceptMigration, /p_token/);
+  assert.match(acceptMigration, /accepted_user_id/);
+  assert.match(acceptMigration, /role_assignments/);
+  assert.match(acceptMigration, /account_access_grants/);
+});
+
 test("invitation acceptance states are mutually exclusive and reject the wrong account", () => {
   const acceptPage = fs.readFileSync(path.join(root, "app/invite/accept/InvitationAcceptPageClient.tsx"), "utf8");
 

@@ -33,6 +33,7 @@ export type SendContactInviteInput = {
 
 export type SendContactInviteResult = {
   invitationId: string;
+  deliveryState: "auth_request_accepted";
   eventWarning?: string | null;
 };
 
@@ -157,12 +158,14 @@ export async function sendContactInvite(
   const eventRes = await client.from("invitation_events").insert({
     owner_user_id: input.ownerUserId,
     invitation_id: invitationId,
-    event_type: input.resend ? "resent" : "sent",
+    event_type: "auth_request_accepted",
     payload: {
       contact_email: contactEmail,
       subject: emailDraft.subject,
       preview: emailDraft.preview,
       channel: "supabase_auth_otp",
+      delivery_state: "auth_request_accepted",
+      provider_acceptance_confirmed: false,
       accept_route: "/invite/accept",
       email_redirect_configured: Boolean(input.origin),
     },
@@ -170,6 +173,7 @@ export async function sendContactInvite(
 
   return {
     invitationId,
+    deliveryState: "auth_request_accepted",
     eventWarning: eventRes.error?.message ?? null,
   };
 }

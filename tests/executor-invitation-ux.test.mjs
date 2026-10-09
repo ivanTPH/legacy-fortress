@@ -51,9 +51,9 @@ test("executor creation hides the legacy editor while guided mode is active", ()
   assert.ok(guidedStart >= 0 && guidedEnd > guidedStart);
   const guidedSource = manager.slice(guidedStart, guidedEnd);
   assert.doesNotMatch(guidedSource, /My wallet - all|Owner notes|Linked records and document permissions/);
-  assert.match(manager, /only one canonical interaction|Invitation sent/);
+  assert.match(manager, /only one canonical interaction|Invitation request submitted/);
   assert.match(manager, /setRecentInvitation/);
-  assert.match(manager, /Invitation sent/);
+  assert.match(manager, /Invitation request submitted/);
   assert.match(manager, /Invitation prepared/);
   assert.match(manager, /window\.setTimeout\(onViewStatus, 2500\)/);
   assert.match(manager, /if \(sent\) \{\s*clearInvitationForm\(\)/);
@@ -70,7 +70,7 @@ test("save and dispatch remain separate canonical operations with truthful statu
   assert.match(manager, /Invitation prepared — ready to send/);
   assert.match(manager, /sendContactInvite\(supabase/);
   assert.match(manager, /if \(sent\) \{\s*clearInvitationForm\(\)/);
-  assert.match(manager, /Invitation email \$\{resend \? "resent" : "sent"\}/);
+  assert.match(manager, /Invitation request \$\{resend \? "resubmitted" : "submitted"\}/);
 });
 
 test("executor invitation copy preserves role, identity and authority boundaries", () => {
