@@ -72,7 +72,29 @@ const GROUPS = [
   { key: "trusted_contacts", label: "Trusted contacts", description: "Other important people linked to live records, providers, or practical next steps." },
 ] as const;
 
-const RELATIONSHIP_ROLE_OPTIONS = Object.values(ROLE_RULES).filter((rule) => rule.role !== "owner");
+const RELATIONSHIP_ROLE_GROUPS = [
+  {
+    label: "Personal",
+    options: [{ value: "friend_or_family", label: "Friend or family" }],
+  },
+  {
+    label: "Estate and legal",
+    options: [
+      { value: "executor", label: "Executor" },
+      { value: "power_of_attorney", label: "Attorney / Power of Attorney" },
+      { value: "trustee", label: "Trustee" },
+    ],
+  },
+  {
+    label: "Professional",
+    options: [
+      { value: "lawyer", label: "Solicitor / lawyer" },
+      { value: "accountant", label: "Accountant" },
+      { value: "financial_advisor", label: "Financial adviser" },
+      { value: "professional_advisor", label: "Professional adviser" },
+    ],
+  },
+] as const;
 
 export default function ContactsNetworkWorkspace() {
   const router = useRouter();
@@ -732,6 +754,82 @@ function InvitationProgressTracker({ contact, compact = false }: { contact: Cont
   );
 }
 
+function PersonVaultAccessSummary({
+  contact,
+  ownerUserId,
+  onManage,
+}: {
+  contact: ContactRow;
+  ownerUserId: string | null;
+  onManage: () => void;
+}) {
+  const [state, setState] = useState<"hidden" | "checking" | "pending" | "verification" | "executor" | "none" | "shared" | "error">("checking");
+  const [sharedCount, setSharedCount] = useState(0);
+
+  useEffect(() => {
+    if (contact.invite_status === "not_invited") {
+      setState("hidden");
+      return;
+    }
+    if (contact.contact_role === "executor") {
+      setState("executor");
+      return;
+    }
+    if (contact.invite_status === "invite_sent") {
+      setState("pending");
+      return;
+    }
+    if (!["verified", "active"].includes(contact.verification_status)) {
+      setState("verification");
+      return;
+    }
+
+    let cancelled = false;
+    async function loadSummary() {
+      const user = await waitForActiveUser(supabase, { attempts: 5, delayMs: 120 });
+      const ownerId = ownerUserId || user?.id;
+      if (!ownerId) {
+        if (!cancelled) setState("error");
+        return;
+      }
+      const result = await supabase
+        .from("account_access_grants")
+        .select("permissions_override")
+        .eq("owner_user_id", ownerId)
+        .eq("contact_id", contact.id)
+        .in("activation_status", ["accepted", "pending_verification", "verification_submitted", "verified", "active"])
+        .limit(1)
+        .maybeSingle();
+      if (cancelled) return;
+      if (result.error) {
+        setState("error");
+        return;
+      }
+      const permissions = normalizeContactPermissionsOverride((result.data as { permissions_override?: Record<string, unknown> | null } | null)?.permissions_override);
+      const count = permissions.asset_ids.length + permissions.record_ids.length;
+      setSharedCount(count);
+      setState(count ? "shared" : "none");
+    }
+    void loadSummary();
+    return () => { cancelled = true; };
+  }, [contact.contact_role, contact.id, contact.invite_status, contact.verification_status, ownerUserId]);
+
+  if (state === "hidden") return null;
+
+  return (
+    <section style={drawerSectionStyle} aria-labelledby="person-access-heading">
+      <span id="person-access-heading" style={drawerSectionLabelStyle}>Vault access</span>
+      {state === "checking" ? <span style={drawerExplanationStyle}>Checking current access…</span> : null}
+      {state === "pending" ? <><strong>None</strong><span style={drawerExplanationStyle}>This person must accept your invitation before Vault records can be shared.</span></> : null}
+      {state === "verification" ? <><strong>Not available yet</strong><span style={drawerExplanationStyle}>This person must finish securely connecting before Vault records can be shared.</span></> : null}
+      {state === "executor" ? <><strong>None</strong><span style={drawerExplanationStyle}>Being recorded as an executor does not give this person access to your private Vault while you are alive.</span></> : null}
+      {state === "error" ? <span style={drawerExplanationStyle}>Access details are not available right now.</span> : null}
+      {state === "none" ? <><strong>None</strong><button type="button" style={rowPrimaryActionStyle} onClick={onManage}>Give access</button></> : null}
+      {state === "shared" ? <><strong>{sharedCount} {sharedCount === 1 ? "record" : "records"} shared · View only</strong><button type="button" style={rowPrimaryActionStyle} onClick={onManage}>Manage access</button></> : null}
+    </section>
+  );
+}
+
 function PersonDetailDrawer({
   contact,
   readOnly,
@@ -794,9 +892,7 @@ function PersonDetailDrawer({
             </section>
           ) : null}
 
-          {(status === "Linked" || contact.verification_status === "active") ? (
-            <p style={drawerExplanationStyle}>This person is securely linked as a relationship. They do not have access to your private Vault merely because they are linked.</p>
-          ) : null}
+          <PersonVaultAccessSummary contact={contact} ownerUserId={ownerUserId} onManage={() => setManagementView("access")} />
 
           {!readOnly && (contact.invite_status === "invite_sent" || contact.invite_status === "not_invited") ? (
             <button type="button" style={rowPrimaryActionStyle} onClick={() => setManagementView("invitation")}>
@@ -1155,7 +1251,7 @@ function PersonManagementPanel({
       ) : null}
       {view === "relationship" ? (
         <div className="lf-person-edit-form">
-          <label><span>Role</span><select value={role} onChange={(event) => setRole(event.target.value)}>{RELATIONSHIP_ROLE_OPTIONS.map((option) => <option key={option.role} value={option.role}>{option.label}</option>)}</select></label>
+          <label><span>Role</span><select value={role} onChange={(event) => setRole(event.target.value)}>{RELATIONSHIP_ROLE_GROUPS.map((group) => <optgroup key={group.label} label={group.label}>{group.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</optgroup>)}</select></label>
           <label><span>Relationship</span><input value={relationship} onChange={(event) => setRelationship(event.target.value)} placeholder="For example, friend or family" /></label>
           <span style={drawerExplanationStyle}>Changing a relationship does not grant Vault access. Sharing records remains a separate owner decision.</span>
           <button type="button" style={rowPrimaryActionStyle} disabled={saving} onClick={() => void saveRelationship()}>Save relationship</button>
@@ -1616,9 +1712,9 @@ const primaryMenuActionStyle: CSSProperties = {
 };
 
 const addPersonActionStyle: CSSProperties = {
-  border: "1px solid #cbd5e1",
-  background: "#fff",
-  color: "#0f172a",
+  border: 0,
+  background: "#f7f2ee",
+  color: "#7c4a35",
   borderRadius: 8,
   padding: "8px 11px",
   minHeight: 40,

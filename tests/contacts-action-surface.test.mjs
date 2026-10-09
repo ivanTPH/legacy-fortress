@@ -26,7 +26,12 @@ test("People I Trust uses compact rows with progressive person details", () => {
   assert.match(contactsWorkspace, /Add contact/);
   assert.match(contactsWorkspace, /Edit relationship/);
   assert.match(contactsWorkspace, /Changing a relationship does not grant Vault access/);
-  assert.match(contactsWorkspace, /RELATIONSHIP_ROLE_OPTIONS/);
+  assert.match(contactsWorkspace, /RELATIONSHIP_ROLE_GROUPS/);
+  assert.match(contactsWorkspace, /<optgroup/);
+  assert.doesNotMatch(contactsWorkspace, /label: "Advisor"/);
+  assert.match(contactsWorkspace, /PersonVaultAccessSummary/);
+  assert.match(contactsWorkspace, /Give access/);
+  assert.match(contactsWorkspace, /Manage access/);
   assert.match(contactsWorkspace, /getAddContactPreset/);
   assert.match(contactsWorkspace, /Cancel/);
   assert.match(contactsWorkspace, /<ContactInvitationManager[\s\S]*mode="full"/);
@@ -53,7 +58,8 @@ test("person presentation keeps relationship, invitation and access distinct", (
 
   assert.match(contactsWorkspace, /Recorded/);
   assert.match(contactsWorkspace, /Invitation awaiting acceptance/);
-  assert.match(contactsWorkspace, /do not have access to your private Vault merely because they are linked/i);
+  assert.match(contactsWorkspace, /Being recorded as an executor does not give this person access/i);
+  assert.match(contactsWorkspace, /This person must accept your invitation before Vault records can be shared/i);
   assert.match(contactsWorkspace, /source_kind !== "invitation"/);
   assert.match(invitationManager, /Being linked does not automatically give this person access/);
   assert.match(invitationManager, /Identity verification does not establish legal authority/);
