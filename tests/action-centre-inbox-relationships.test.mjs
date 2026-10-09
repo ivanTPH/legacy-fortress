@@ -41,7 +41,12 @@ test("People view removes development UI and keeps relationship details progress
   assert.match(contacts, /InvitationProgressTracker/);
   assert.match(contacts, /do not have access to your private Vault merely because they are linked/i);
   assert.match(contacts, /Manage relationship/);
-  assert.match(contacts, /<details className="lf-person-more-details"/);
+  assert.match(contacts, /className="lf-person-more-menu"/);
+  assert.match(contacts, /Edit details/);
+  assert.match(contacts, /Manage invitation/);
+  assert.match(contacts, /Manage access/);
+  assert.match(contacts, /Remove person/);
+  assert.doesNotMatch(contacts, /<details className="lf-person-more-details"/);
 });
 
 test("Invitation tracker exposes only authoritative stages", () => {

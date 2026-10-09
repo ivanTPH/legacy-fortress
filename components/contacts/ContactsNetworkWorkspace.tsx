@@ -8,7 +8,6 @@ import {
   loadCanonicalContactsForOwner,
   loadCanonicalContactInvitationsForOwner,
   syncCanonicalContact,
-  type CanonicalContactRow,
   type CanonicalContactContext,
   type CanonicalContactInviteStatus,
   type CanonicalContactSourceType,
@@ -27,6 +26,8 @@ import { fetchCanonicalAssets } from "../../lib/assets/fetchCanonicalAssets";
 import { resolveWalletContextForRead } from "../../lib/canonicalPersistence";
 import { getLegalLinkedContactDefinition, resolveLegalCategoryForAsset } from "../../lib/legalCategories";
 import { getStoredFileSignedUrl } from "../../lib/assets/documentLinks";
+import { removePeopleContact } from "../../lib/contacts/contactRepository";
+import { sendContactInvite } from "../../lib/contacts/sendContactInvite";
 import ContactInvitationManager from "../../app/(app)/components/dashboard/ContactInvitationManager";
 import { useViewerAccess } from "../access/ViewerAccessContext";
 import Icon from "../ui/Icon";
@@ -81,7 +82,6 @@ export default function ContactsNetworkWorkspace() {
   const [, setAssociationAlerts] = useState<string[]>([]);
   const [addContactGroupKey, setAddContactGroupKey] = useState<string | null>(null);
   const [menuContactId, setMenuContactId] = useState<string | null>(null);
-  const [manageContactId, setManageContactId] = useState<string | null>(null);
   const [documentPreview, setDocumentPreview] = useState<LinkedDocumentPreview | null>(null);
   const [previewTargetsByContextKey, setPreviewTargetsByContextKey] = useState<Map<string, LinkedDocumentSourceItem[]>>(new Map());
   const [, setOpeningDocumentKey] = useState("");
@@ -341,22 +341,6 @@ export default function ContactsNetworkWorkspace() {
   const selectedGroup = normalizeContactGroupKey(searchParams.get("group"));
   const isContactAddMode = Boolean(selectedGroup && searchParams.get("add") === "1");
   const isNextOfKinAddMode = selectedGroup === "family" && isContactAddMode;
-  const selectedContact = useMemo(() => {
-    const match = contacts.find((item) => item.id === selectedContactId);
-    if (!match) return null;
-    return {
-      id: match.id,
-      full_name: match.full_name,
-      email: match.email,
-      contact_role: match.contact_role,
-      linked_context: (match.linked_context ?? []).filter(
-        (context): context is CanonicalContactContext =>
-          (context?.source_kind === "asset" || context?.source_kind === "record" || context?.source_kind === "invitation") &&
-          Boolean(context?.source_id),
-      ),
-    };
-  }, [contacts, selectedContactId]);
-
   const selectedContactRow = useMemo(
     () => contacts.find((item) => item.id === selectedContactId) ?? null,
     [contacts, selectedContactId],
@@ -635,7 +619,7 @@ export default function ContactsNetworkWorkspace() {
                           {isMenuOpen ? (
                             <div className="lf-contact-overflow-menu" role="menu">
                               <button type="button" role="menuitem" onClick={() => openContact(contact.id, groupKey)}>View details</button>
-                              {!viewer.readOnly ? <button type="button" role="menuitem" onClick={() => { setManageContactId(contact.id); openContact(contact.id, groupKey); }}>Manage relationship</button> : null}
+                              {!viewer.readOnly ? <button type="button" role="menuitem" onClick={() => openContact(contact.id, groupKey)}>Manage relationship</button> : null}
                             </div>
                           ) : null}
                         </div>
@@ -659,10 +643,9 @@ export default function ContactsNetworkWorkspace() {
         <PersonDetailDrawer
           contact={selectedContactRow}
           readOnly={viewer.readOnly}
-          manageOpen={manageContactId === selectedContactId}
-          selectedProfile={selectedContact}
-          onClose={() => { setManageContactId(null); router.replace(selectedGroup ? `/contacts?group=${selectedGroup}` : "/contacts"); }}
-          onManage={() => setManageContactId(selectedContactId)}
+          ownerUserId={viewer.targetOwnerUserId || null}
+          onSaved={() => { window.dispatchEvent(new CustomEvent("lf:contacts-updated")); void loadContacts(); }}
+          onClose={() => router.replace(selectedGroup ? `/contacts?group=${selectedGroup}` : "/contacts")}
         />
       ) : null}
       {documentPreview ? (
@@ -728,19 +711,19 @@ function InvitationProgressTracker({ contact, compact = false }: { contact: Cont
 function PersonDetailDrawer({
   contact,
   readOnly,
-  manageOpen,
-  selectedProfile,
+  ownerUserId,
+  onSaved,
   onClose,
-  onManage,
 }: {
   contact: ContactRow;
   readOnly: boolean;
-  manageOpen: boolean;
-  selectedProfile: Pick<CanonicalContactRow, "id" | "full_name" | "email" | "contact_role" | "linked_context"> | null;
+  ownerUserId: string | null;
+  onSaved: () => void;
   onClose: () => void;
-  onManage: () => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [managementView, setManagementView] = useState<"edit" | "invitation" | "access" | "remove" | null>(null);
   const relatedContexts = (contact.linked_context ?? []).filter((context) => context.source_kind !== "invitation");
   const status = getContactSummaryStatus(contact);
   const inviteState = getInviteState(contact);
@@ -787,30 +770,252 @@ function PersonDetailDrawer({
           ) : null}
 
           {!readOnly && (contact.invite_status === "invite_sent" || contact.invite_status === "not_invited") ? (
-            <button type="button" style={rowPrimaryActionStyle} onClick={onManage}>
+            <button type="button" style={rowPrimaryActionStyle} onClick={() => setManagementView("invitation")}>
               <Icon name={contact.invite_status === "invite_sent" ? "mail" : "send"} size={16} />
               {contact.invite_status === "invite_sent" ? "Manage invitation" : "Send invitation"}
             </button>
           ) : null}
 
           {!readOnly ? (
-            <details className="lf-person-more-details" open={manageOpen}>
-              <summary className="lf-person-more-summary">••• More</summary>
-              <div className="lf-person-management-panel">
-                <p style={drawerExplanationStyle}>Edit details, invitation state and access settings only when you need to manage them.</p>
-                <ContactInvitationManager
-                  mode="full"
-                  guidedExecutor={contact.contact_role === "executor"}
-                  selectedContactId={contact.id}
-                  selectedContactProfile={selectedProfile}
-                />
-              </div>
-            </details>
+            <div className="lf-person-more-details">
+              <button type="button" className="lf-person-more-summary" aria-haspopup="menu" aria-expanded={moreOpen} onClick={() => setMoreOpen((current) => !current)}>••• More</button>
+              {moreOpen ? (
+                <div className="lf-person-more-menu" role="menu">
+                  <button type="button" role="menuitem" onClick={() => { setMoreOpen(false); setManagementView("edit"); }}>Edit details</button>
+                  {(contact.invite_status === "invite_sent" || contact.invite_status === "not_invited") ? <button type="button" role="menuitem" onClick={() => { setMoreOpen(false); setManagementView("invitation"); }}>Manage invitation</button> : null}
+                  <button type="button" role="menuitem" onClick={() => { setMoreOpen(false); setManagementView("access"); }}>Manage access</button>
+                  <button type="button" role="menuitem" className="is-danger" onClick={() => { setMoreOpen(false); setManagementView("remove"); }}>Remove person</button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {managementView ? (
+            <PersonManagementPanel
+              contact={contact}
+              view={managementView}
+              ownerUserId={ownerUserId}
+              onBack={() => setManagementView(null)}
+              onSaved={onSaved}
+              readOnly={readOnly}
+            />
           ) : null}
         </div>
       </aside>
     </div>
   );
+}
+
+function PersonManagementPanel({
+  contact,
+  view,
+  ownerUserId,
+  readOnly,
+  onBack,
+  onSaved,
+}: {
+  contact: ContactRow;
+  view: "edit" | "invitation" | "access" | "remove";
+  ownerUserId: string | null;
+  readOnly: boolean;
+  onBack: () => void;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState(contact.full_name);
+  const [email, setEmail] = useState(contact.email ?? "");
+  const [phone, setPhone] = useState(contact.phone ?? "");
+  const [relationship, setRelationship] = useState(contact.relationship ?? "");
+  const [status, setStatus] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [accessSummary, setAccessSummary] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    if (view !== "access") return;
+    let cancelled = false;
+    async function loadAccess() {
+      const user = await waitForActiveUser(supabase, { attempts: 5, delayMs: 120 });
+      const ownerId = ownerUserId || user?.id;
+      if (!ownerId) return;
+      const result = await supabase
+        .from("account_access_grants")
+        .select("activation_status,permissions_override")
+        .eq("owner_user_id", ownerId)
+        .eq("contact_id", contact.id)
+        .in("activation_status", ["verified", "active"]);
+      if (cancelled) return;
+      if (result.error) {
+        setStatus("Access details are not available right now.");
+        setAccessSummary([]);
+        return;
+      }
+      const grants = (result.data ?? []) as Array<{ permissions_override?: Record<string, unknown> | null }>;
+      const scopes = grants
+        .flatMap((grant) => {
+          const permissions = grant.permissions_override ?? {};
+          const allowedSections = Array.isArray(permissions.allowed_sections) ? permissions.allowed_sections : [];
+          const assetIds = Array.isArray(permissions.asset_ids) ? permissions.asset_ids : [];
+          const recordIds = Array.isArray(permissions.record_ids) ? permissions.record_ids : [];
+          return [
+            ...allowedSections.map((value) => String(value)),
+            ...(assetIds.length || recordIds.length ? ["Selected records"] : []),
+          ];
+        });
+      setAccessSummary(Array.from(new Set(scopes.length ? scopes : grants.length ? ["Selected records"] : [])));
+    }
+    void loadAccess();
+    return () => { cancelled = true; };
+  }, [contact.id, ownerUserId, view]);
+
+  async function resolveOwner() {
+    const user = await waitForActiveUser(supabase, { attempts: 5, delayMs: 120 });
+    return { user, ownerId: ownerUserId || user?.id || "" };
+  }
+
+  async function saveDetails() {
+    if (readOnly) return;
+    setSaving(true);
+    setStatus("");
+    const { ownerId } = await resolveOwner();
+    if (!ownerId) {
+      setStatus("Your session has expired. Please sign in again.");
+      setSaving(false);
+      return;
+    }
+    const result = await supabase
+      .from("contacts")
+      .update({
+        full_name: name.trim(),
+        email: email.trim() || null,
+        phone: phone.trim() || null,
+        relationship: relationship.trim() || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("owner_user_id", ownerId)
+      .eq("id", contact.id);
+    setSaving(false);
+    if (result.error) {
+      setStatus("Could not save these details.");
+      return;
+    }
+    setStatus("Details saved.");
+    onSaved();
+  }
+
+  async function updateInvitation(nextStatus: "revoked") {
+    if (readOnly) return;
+    const invitationId = contact.linked_context.find((context) => context.source_kind === "invitation")?.source_id;
+    const { ownerId } = await resolveOwner();
+    if (!ownerId || !invitationId) {
+      setStatus("This invitation cannot be changed from here.");
+      return;
+    }
+    setSaving(true);
+    const result = await supabase
+      .from("contact_invitations")
+      .update({ invitation_status: nextStatus, updated_at: new Date().toISOString() })
+      .eq("owner_user_id", ownerId)
+      .eq("id", invitationId);
+    if (!result.error) {
+      await supabase.from("contacts").update({ invite_status: nextStatus, verification_status: nextStatus, updated_at: new Date().toISOString() }).eq("owner_user_id", ownerId).eq("id", contact.id);
+      await supabase.from("invitation_events").insert({ owner_user_id: ownerId, invitation_id: invitationId, event_type: nextStatus, payload: { source: "people_drawer" } });
+    }
+    setSaving(false);
+    setStatus(result.error ? "Could not cancel this invitation." : "Invitation cancelled. The person remains in People I Trust.");
+    if (!result.error) onSaved();
+  }
+
+  async function resendInvitation() {
+    if (readOnly) return;
+    const invitationId = contact.linked_context.find((context) => context.source_kind === "invitation")?.source_id;
+    const { user, ownerId } = await resolveOwner();
+    if (!ownerId || !invitationId || !user) {
+      setStatus("This invitation cannot be resent from here.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await sendContactInvite(supabase, {
+        ownerUserId: ownerId,
+        ownerEmail: user.email,
+        contactId: contact.id,
+        contactName: contact.full_name,
+        contactEmail: contact.email ?? "",
+        contactRelationship: contact.relationship,
+        assignedRole: toCollaboratorRole(contact.contact_role),
+        invitationId,
+        invitedAt: new Date().toISOString(),
+        activationStatus: contact.verification_status as never,
+        resend: true,
+        origin: typeof window === "undefined" ? null : window.location.origin,
+      });
+      setStatus(`Invitation sent again to ${contact.email}.`);
+      onSaved();
+    } catch {
+      setStatus("Could not resend this invitation.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function removePerson() {
+    if (readOnly) return;
+    const { ownerId } = await resolveOwner();
+    if (!ownerId || !window.confirm(`Remove ${contact.full_name || "this person"}? Existing audit history will be retained.`)) return;
+    setSaving(true);
+    try {
+      await removePeopleContact(supabase, { ownerUserId: ownerId, contactId: contact.id });
+      onSaved();
+      onBack();
+    } catch {
+      setStatus("Could not remove this person.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const title = view === "edit" ? `Edit ${contact.full_name || "person"}` : view === "invitation" ? `${contact.full_name || "Person"}'s invitation` : view === "access" ? `${contact.full_name || "Person"}'s Vault access` : `Remove ${contact.full_name || "person"}`;
+
+  return (
+    <section className="lf-person-management-panel" aria-label={title}>
+      <button type="button" className="lf-person-back-button" onClick={onBack}>← Back to {contact.full_name || "person"}</button>
+      <h3 style={{ margin: 0, fontSize: 18 }}>{title}</h3>
+      {view === "edit" ? (
+        <div className="lf-person-edit-form">
+          <label><span>Name</span><input value={name} onChange={(event) => setName(event.target.value)} /></label>
+          <label><span>Email</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label>
+          <label><span>Phone</span><input value={phone} onChange={(event) => setPhone(event.target.value)} /></label>
+          <label><span>Relationship</span><input value={relationship} onChange={(event) => setRelationship(event.target.value)} /></label>
+          <button type="button" style={rowPrimaryActionStyle} disabled={saving || !name.trim()} onClick={() => void saveDetails()}>Save changes</button>
+        </div>
+      ) : null}
+      {view === "invitation" ? (
+        <div className="lf-person-focused-panel">
+          <span style={drawerExplanationStyle}>{contact.invite_status === "invite_sent" ? "Status: Awaiting response" : "This person is recorded but has not been invited."}</span>
+          {contact.email ? <span style={drawerContactLineStyle}>{contact.email}</span> : <span style={drawerExplanationStyle}>Add an email address in Edit details before sending an invitation.</span>}
+          {contact.invite_status === "invite_sent" ? <button type="button" style={rowPrimaryActionStyle} disabled={saving} onClick={() => void resendInvitation()}>Resend invitation</button> : null}
+          {contact.invite_status === "invite_sent" ? <button type="button" style={rowSecondaryActionStyle} disabled={saving} onClick={() => void updateInvitation("revoked")}>Cancel invitation</button> : null}
+        </div>
+      ) : null}
+      {view === "access" ? (
+        <div className="lf-person-focused-panel">
+          <strong>Vault access</strong>
+          {accessSummary === null ? <span style={drawerExplanationStyle}>Checking current access…</span> : accessSummary.length ? <><span style={drawerExplanationStyle}>This person currently has access to selected records.</span>{accessSummary.map((scope) => <span key={scope} style={drawerRelatedItemStyle}>{humanizeContactTerm(scope)}</span>)}</> : <><strong>None</strong><span style={drawerExplanationStyle}>{contact.full_name || "This person"} does not currently have access to your private Vault.</span></>}
+        </div>
+      ) : null}
+      {view === "remove" ? (
+        <div className="lf-person-focused-panel">
+          <p style={drawerExplanationStyle}>This removes the person from People I Trust. Existing audit history is retained. Any invitation or access relationship is handled by the canonical contact service.</p>
+          <button type="button" className="lf-person-danger-button" disabled={saving} onClick={() => void removePerson()}>Remove person</button>
+        </div>
+      ) : null}
+      {status ? <span role="status" style={drawerExplanationStyle}>{status}</span> : null}
+    </section>
+  );
+}
+
+function toCollaboratorRole(value: string | null): CollaboratorRole {
+  const allowed: CollaboratorRole[] = ["executor", "professional_advisor", "accountant", "financial_advisor", "lawyer", "friend_or_family"];
+  return allowed.includes(value as CollaboratorRole) ? value as CollaboratorRole : "friend_or_family";
 }
 
 function formatContextLabel(context: ContactRow["linked_context"][number]) {

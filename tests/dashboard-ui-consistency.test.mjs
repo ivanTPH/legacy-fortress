@@ -205,13 +205,18 @@ test("dashboard overview cards use compact shared summary cards with one add act
   assert.ok(dashboardRender.indexOf("<DashboardActionSummary") < dashboardRender.indexOf('aria-label="Dashboard review panel"'));
 });
 
-test("contacts keeps the fuller invitation management view while dashboard stays compact", () => {
+test("contacts keeps legacy invitation management only for add-person setup while person details stay focused", () => {
   const contactsWorkspace = fs.readFileSync(path.join(root, "components/contacts/ContactsNetworkWorkspace.tsx"), "utf8");
   const invitationManager = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/ContactInvitationManager.tsx"), "utf8");
   const contactGrouping = fs.readFileSync(path.join(root, "lib/contacts/contactGrouping.ts"), "utf8");
   const dashboardPage = fs.readFileSync(path.join(root, "app/(app)/dashboard/page.tsx"), "utf8");
 
-  assert.match(contactsWorkspace, /<ContactInvitationManager[\s\S]*mode="full"[\s\S]*selectedContactId=\{contact\.id\}[\s\S]*selectedContactProfile=\{selectedProfile\}[\s\S]*\/>/);
+  assert.match(contactsWorkspace, /<ContactInvitationManager[\s\S]*mode="full"[\s\S]*initialRole=\{getAddContactPreset\(addContactGroupKey\)\.role\}/);
+  assert.match(contactsWorkspace, /function PersonManagementPanel/);
+  assert.match(contactsWorkspace, /account_access_grants/);
+  assert.match(contactsWorkspace, /removePeopleContact/);
+  assert.doesNotMatch(contactsWorkspace, /selectedContactProfile=\{selectedProfile\}/);
+  assert.doesNotMatch(contactsWorkspace, /guidedExecutor=\{contact\.contact_role === "executor"\}/);
   assert.match(invitationManager, /mode\?: "full" \| "dashboard"/);
   assert.match(invitationManager, /selectedContactId\?: string/);
   assert.match(invitationManager, /Owner notes/);
