@@ -259,7 +259,7 @@ export default function InvitationAcceptPageClient() {
                     <Icon name="login" size={16} />
                     Sign in to accept
                   </Link>
-                  <Link className="lf-link-btn" href={`/sign-up?next=${encodeURIComponent(nextAuthPath)}`}>
+                  <Link className="lf-link-btn" href={`/sign-up?next=${encodeURIComponent(nextAuthPath)}&email=${encodeURIComponent(summary.contact_email)}`}>
                     <Icon name="person_add" size={16} />
                     Create account to accept
                   </Link>

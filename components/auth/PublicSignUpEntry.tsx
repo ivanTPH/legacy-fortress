@@ -9,6 +9,7 @@ import SignUpForm from "./SignUpForm";
 export default function PublicSignUpEntry() {
   const searchParams = useSearchParams();
   const nextPath = searchParams.get("next") || "/onboarding";
+  const invitedEmail = searchParams.get("email");
 
   return (
     <main className="lf-entry-shell">
@@ -50,7 +51,7 @@ export default function PublicSignUpEntry() {
             Use your own email and a strong password. You will verify your email before your vault is fully active.
           </p>
 
-          <SignUpForm nextPath={nextPath} compact />
+          <SignUpForm nextPath={nextPath} expectedEmail={invitedEmail} compact />
 
           <div className="lf-entry-footnote">
             <span><Icon name="lock" size={14} /> Private workspace</span>

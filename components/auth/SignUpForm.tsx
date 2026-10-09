@@ -12,13 +12,16 @@ const OAuthButtons = dynamic(() => import("./OAuthButtons"), {
 
 export default function SignUpForm({
   nextPath,
+  expectedEmail,
   compact = false,
 }: {
   nextPath?: string | null;
+  expectedEmail?: string | null;
   compact?: boolean;
 }) {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const invitedEmail = (expectedEmail ?? "").trim().toLowerCase();
+  const [email, setEmail] = useState(invitedEmail);
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
@@ -31,6 +34,10 @@ export default function SignUpForm({
     setError("");
     if (!/\S+@\S+\.\S+/.test(email)) {
       setError("Enter a valid email address.");
+      return;
+    }
+    if (invitedEmail && email.trim().toLowerCase() !== invitedEmail) {
+      setError("Use the email address that received this invitation.");
       return;
     }
     if (password.length < 8) {
@@ -99,6 +106,7 @@ export default function SignUpForm({
         <input
           className="lf-input"
           value={email}
+          readOnly={Boolean(invitedEmail)}
           onChange={(e) => {
             setEmail(e.target.value);
             setError("");
