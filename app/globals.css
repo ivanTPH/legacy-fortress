@@ -3453,6 +3453,27 @@ textarea {
   cursor: pointer;
 }
 
+.lf-person-access-actions,
+.lf-person-access-chooser {
+  display: grid;
+  gap: 8px;
+}
+
+.lf-person-access-chooser {
+  padding: 12px;
+  border: 1px solid #e8e1dc;
+  border-radius: 8px;
+  background: #faf8f6;
+}
+
+.lf-person-access-chooser label {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  color: #334155;
+  font-size: 13px;
+}
+
 .lf-person-management-panel {
   display: grid;
   gap: 12px;

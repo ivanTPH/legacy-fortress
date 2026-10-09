@@ -50,3 +50,20 @@ test("person presentation keeps relationship, invitation and access distinct", (
   assert.match(invitationManager, /Being linked does not automatically give this person access/);
   assert.match(invitationManager, /Identity verification does not establish legal authority/);
 });
+
+test("focused People I Trust actions use canonical invitation and scoped access persistence", () => {
+  const contactsWorkspace = fs.readFileSync(path.join(root, "components/contacts/ContactsNetworkWorkspace.tsx"), "utf8");
+
+  assert.match(contactsWorkspace, /toAccessActivationStatus\(contact\.verification_status\)/);
+  assert.match(contactsWorkspace, /revoked_at: new Date\(\)\.toISOString\(\)/);
+  assert.match(contactsWorkspace, /sendContactInvite\(supabase/);
+  assert.match(contactsWorkspace, /buildScopedPermissionPayload/);
+  assert.match(contactsWorkspace, /loadPeopleScopeResourcesForOwner/);
+  assert.match(contactsWorkspace, /account_access_grants.*update|from\("account_access_grants"\)/s);
+  assert.match(contactsWorkspace, /role_assignments.*update|from\("role_assignments"\)/s);
+  assert.match(contactsWorkspace, /access_updated/);
+  assert.match(contactsWorkspace, /access_revoked/);
+  assert.match(contactsWorkspace, /Add access/);
+  assert.match(contactsWorkspace, /Remove access/);
+  assert.doesNotMatch(contactsWorkspace, /Delivered|Opened/);
+});

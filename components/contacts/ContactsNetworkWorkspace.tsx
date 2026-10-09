@@ -26,13 +26,14 @@ import { fetchCanonicalAssets } from "../../lib/assets/fetchCanonicalAssets";
 import { resolveWalletContextForRead } from "../../lib/canonicalPersistence";
 import { getLegalLinkedContactDefinition, resolveLegalCategoryForAsset } from "../../lib/legalCategories";
 import { getStoredFileSignedUrl } from "../../lib/assets/documentLinks";
-import { removePeopleContact } from "../../lib/contacts/contactRepository";
+import { loadPeopleScopeResourcesForOwner, removePeopleContact } from "../../lib/contacts/contactRepository";
 import { sendContactInvite } from "../../lib/contacts/sendContactInvite";
+import { buildScopedPermissionPayload, normalizeContactPermissionsOverride } from "../../lib/contacts/contactPermissions";
 import ContactInvitationManager from "../../app/(app)/components/dashboard/ContactInvitationManager";
 import { useViewerAccess } from "../access/ViewerAccessContext";
 import Icon from "../ui/Icon";
 import DocumentPreviewDialog, { type DocumentPreviewDialogItem } from "../documents/DocumentPreviewDialog";
-import { type CollaboratorRole, type SectionKey } from "../../lib/access-control/roles";
+import { ROLE_RULES, type AccessActivationStatus, type CollaboratorRole, type SectionKey } from "../../lib/access-control/roles";
 
 type ContactRow = {
   id: string;
@@ -828,6 +829,12 @@ function PersonManagementPanel({
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
   const [accessSummary, setAccessSummary] = useState<string[] | null>(null);
+  const [accessOptions, setAccessOptions] = useState<Array<{ sourceKind: "asset" | "record"; sourceId: string; label: string; sectionKey: string | null }>>([]);
+  const [selectedAccessKeys, setSelectedAccessKeys] = useState<string[]>([]);
+  const [accessEditOpen, setAccessEditOpen] = useState(false);
+  const [accessGrantId, setAccessGrantId] = useState<string | null>(null);
+  const [accessInvitationId, setAccessInvitationId] = useState<string | null>(null);
+  const [accessCanConfigure, setAccessCanConfigure] = useState(false);
 
   useEffect(() => {
     if (view !== "access") return;
@@ -838,7 +845,7 @@ function PersonManagementPanel({
       if (!ownerId) return;
       const result = await supabase
         .from("account_access_grants")
-        .select("activation_status,permissions_override")
+        .select("id,invitation_id,linked_user_id,activation_status,permissions_override")
         .eq("owner_user_id", ownerId)
         .eq("contact_id", contact.id)
         .in("activation_status", ["verified", "active"]);
@@ -848,19 +855,39 @@ function PersonManagementPanel({
         setAccessSummary([]);
         return;
       }
-      const grants = (result.data ?? []) as Array<{ permissions_override?: Record<string, unknown> | null }>;
+      const grants = (result.data ?? []) as Array<{ id: string; invitation_id?: string | null; linked_user_id?: string | null; permissions_override?: Record<string, unknown> | null }>;
+      const grant = grants[0] ?? null;
+      const permissions = normalizeContactPermissionsOverride(grant?.permissions_override);
+      setAccessGrantId(grant?.id ?? null);
+      setAccessInvitationId(grant?.invitation_id ?? contact.linked_context.find((context) => context.source_kind === "invitation")?.source_id ?? null);
+      setSelectedAccessKeys([
+        ...permissions.asset_ids.map((id) => `asset:${id}`),
+        ...permissions.record_ids.map((id) => `record:${id}`),
+      ]);
+      setAccessCanConfigure(Boolean(grant?.linked_user_id));
       const scopes = grants
         .flatMap((grant) => {
-          const permissions = grant.permissions_override ?? {};
-          const allowedSections = Array.isArray(permissions.allowed_sections) ? permissions.allowed_sections : [];
-          const assetIds = Array.isArray(permissions.asset_ids) ? permissions.asset_ids : [];
-          const recordIds = Array.isArray(permissions.record_ids) ? permissions.record_ids : [];
+          const grantPermissions = normalizeContactPermissionsOverride(grant.permissions_override);
           return [
-            ...allowedSections.map((value) => String(value)),
-            ...(assetIds.length || recordIds.length ? ["Selected records"] : []),
+            ...grantPermissions.allowed_sections,
+            ...(grantPermissions.asset_ids.length || grantPermissions.record_ids.length ? ["Selected records"] : []),
           ];
         });
       setAccessSummary(Array.from(new Set(scopes.length ? scopes : grants.length ? ["Selected records"] : [])));
+      if (grant?.linked_user_id) {
+        const resources = await loadPeopleScopeResourcesForOwner(supabase, ownerId);
+        if (cancelled) return;
+        const allowedSections = new Set(getAccessSectionsForRole(contact.contact_role));
+        setAccessOptions(resources
+          .map((resource) => ({ ...resource, normalizedSectionKey: normalizeAccessSectionKey(resource.section_key) }))
+          .filter((resource) => !resource.normalizedSectionKey || allowedSections.has(resource.normalizedSectionKey))
+          .map((resource) => ({
+            sourceKind: resource.source_kind,
+            sourceId: resource.id,
+            label: resource.title || (resource.source_kind === "asset" ? resource.provider_name : resource.summary) || "Unnamed record",
+            sectionKey: resource.normalizedSectionKey,
+          })));
+      }
     }
     void loadAccess();
     return () => { cancelled = true; };
@@ -912,7 +939,7 @@ function PersonManagementPanel({
     setSaving(true);
     const result = await supabase
       .from("contact_invitations")
-      .update({ invitation_status: nextStatus, updated_at: new Date().toISOString() })
+      .update({ invitation_status: nextStatus, revoked_at: new Date().toISOString(), updated_at: new Date().toISOString() })
       .eq("owner_user_id", ownerId)
       .eq("id", invitationId);
     if (!result.error) {
@@ -944,7 +971,7 @@ function PersonManagementPanel({
         assignedRole: toCollaboratorRole(contact.contact_role),
         invitationId,
         invitedAt: new Date().toISOString(),
-        activationStatus: contact.verification_status as never,
+        activationStatus: toAccessActivationStatus(contact.verification_status),
         resend: true,
         origin: typeof window === "undefined" ? null : window.location.origin,
       });
@@ -955,6 +982,40 @@ function PersonManagementPanel({
     } finally {
       setSaving(false);
     }
+  }
+
+  async function saveAccess(nextKeys: string[]) {
+    if (readOnly || !accessGrantId || !accessCanConfigure) return;
+    const { ownerId } = await resolveOwner();
+    if (!ownerId) return;
+    setSaving(true);
+    const allowedSections = Array.from(new Set(nextKeys
+      .map((key) => accessOptions.find((option) => `${option.sourceKind}:${option.sourceId}` === key)?.sectionKey)
+      .filter((value): value is SectionKey => Boolean(value))));
+    const payload = buildScopedPermissionPayload({
+      allowedSections,
+      assetIds: nextKeys.filter((key) => key.startsWith("asset:")).map((key) => key.slice(6)),
+      recordIds: nextKeys.filter((key) => key.startsWith("record:")).map((key) => key.slice(7)),
+      editableAssetIds: [],
+      editableRecordIds: [],
+      ownerNotes: "",
+    });
+    const grantUpdate = await supabase.from("account_access_grants").update({ permissions_override: payload, updated_at: new Date().toISOString() }).eq("owner_user_id", ownerId).eq("id", accessGrantId);
+    if (!grantUpdate.error) {
+      if (accessInvitationId) {
+      await supabase.from("role_assignments").update({ permissions_override: payload, updated_at: new Date().toISOString() }).eq("owner_user_id", ownerId).eq("invitation_id", accessInvitationId);
+      await supabase.from("contact_invitations").update({ permissions_override: payload, updated_at: new Date().toISOString() }).eq("owner_user_id", ownerId).eq("id", accessInvitationId);
+      await supabase.from("invitation_events").insert({ owner_user_id: ownerId, invitation_id: accessInvitationId, event_type: nextKeys.length ? "access_updated" : "access_revoked", payload: { source: "people_drawer", scope_count: nextKeys.length } });
+      }
+      setSelectedAccessKeys(nextKeys);
+      setAccessSummary(nextKeys.length ? ["Selected records"] : []);
+      setAccessEditOpen(false);
+      setStatus(nextKeys.length ? "Access updated." : "Access removed. The person remains in People I Trust.");
+      onSaved();
+    } else {
+      setStatus("Could not update access.");
+    }
+    setSaving(false);
   }
 
   async function removePerson() {
@@ -999,7 +1060,8 @@ function PersonManagementPanel({
       {view === "access" ? (
         <div className="lf-person-focused-panel">
           <strong>Vault access</strong>
-          {accessSummary === null ? <span style={drawerExplanationStyle}>Checking current access…</span> : accessSummary.length ? <><span style={drawerExplanationStyle}>This person currently has access to selected records.</span>{accessSummary.map((scope) => <span key={scope} style={drawerRelatedItemStyle}>{humanizeContactTerm(scope)}</span>)}</> : <><strong>None</strong><span style={drawerExplanationStyle}>{contact.full_name || "This person"} does not currently have access to your private Vault.</span></>}
+          {accessSummary === null ? <span style={drawerExplanationStyle}>Checking current access…</span> : accessSummary.length ? <><span style={drawerExplanationStyle}>This person currently has access to selected records.</span>{accessSummary.map((scope) => <span key={scope} style={drawerRelatedItemStyle}>{humanizeContactTerm(scope)}</span>)}{accessCanConfigure ? <div className="lf-person-access-actions"><button type="button" style={rowPrimaryActionStyle} onClick={() => setAccessEditOpen((current) => !current)}>{accessEditOpen ? "Close access choices" : "Change access"}</button><button type="button" style={rowSecondaryActionStyle} disabled={saving} onClick={() => { if (window.confirm(`Remove ${contact.full_name || "this person's"} Vault access?`)) void saveAccess([]); }}>Remove access</button></div> : null}</> : <><strong>None</strong><span style={drawerExplanationStyle}>{contact.full_name || "This person"} does not currently have access to your private Vault.</span>{accessCanConfigure ? <button type="button" style={rowPrimaryActionStyle} onClick={() => setAccessEditOpen((current) => !current)}>{accessEditOpen ? "Close access choices" : "Add access"}</button> : null}</>}
+          {accessEditOpen && accessCanConfigure ? <div className="lf-person-access-chooser"><strong>Choose what {contact.full_name || "this person"} can access</strong>{accessOptions.length ? accessOptions.map((option) => { const key = `${option.sourceKind}:${option.sourceId}`; return <label key={key}><input type="checkbox" checked={selectedAccessKeys.includes(key)} onChange={() => setSelectedAccessKeys((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key])} />{option.label}</label>; }) : <span style={drawerExplanationStyle}>There are no eligible records to share.</span>}<span style={drawerExplanationStyle}>Permission: Can view</span><button type="button" style={rowPrimaryActionStyle} disabled={saving || !accessOptions.length} onClick={() => void saveAccess(selectedAccessKeys)}>Save access</button></div> : null}
         </div>
       ) : null}
       {view === "remove" ? (
@@ -1016,6 +1078,23 @@ function PersonManagementPanel({
 function toCollaboratorRole(value: string | null): CollaboratorRole {
   const allowed: CollaboratorRole[] = ["executor", "professional_advisor", "accountant", "financial_advisor", "lawyer", "friend_or_family"];
   return allowed.includes(value as CollaboratorRole) ? value as CollaboratorRole : "friend_or_family";
+}
+
+function toAccessActivationStatus(value: string | null): AccessActivationStatus {
+  const allowed: AccessActivationStatus[] = ["invited", "accepted", "pending_verification", "verification_submitted", "verified", "active", "rejected", "revoked"];
+  return allowed.includes(value as AccessActivationStatus) ? value as AccessActivationStatus : "invited";
+}
+
+function getAccessSectionsForRole(value: string | null): SectionKey[] {
+  const role = toCollaboratorRole(value);
+  return ["dashboard", ...ROLE_RULES[role].allowedSections] as SectionKey[];
+}
+
+function normalizeAccessSectionKey(value: string | null): SectionKey | null {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized === "finances") return "financial";
+  if (["dashboard", "profile", "personal", "financial", "legal", "property", "business", "digital", "settings"].includes(normalized)) return normalized as SectionKey;
+  return null;
 }
 
 function formatContextLabel(context: ContactRow["linked_context"][number]) {
