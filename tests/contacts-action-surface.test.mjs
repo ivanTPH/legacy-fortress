@@ -63,7 +63,7 @@ test("focused People I Trust actions use canonical invitation and scoped access 
   assert.match(contactsWorkspace, /role_assignments.*update|from\("role_assignments"\)/s);
   assert.match(contactsWorkspace, /access_updated/);
   assert.match(contactsWorkspace, /access_revoked/);
-  assert.match(contactsWorkspace, /Add access/);
+  assert.match(contactsWorkspace, /Give access/);
   assert.match(contactsWorkspace, /Remove access/);
   assert.doesNotMatch(contactsWorkspace, /Delivered|Opened/);
 });

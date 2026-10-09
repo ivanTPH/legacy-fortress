@@ -29,6 +29,7 @@ import { getStoredFileSignedUrl } from "../../lib/assets/documentLinks";
 import { loadPeopleScopeResourcesForOwner, removePeopleContact } from "../../lib/contacts/contactRepository";
 import { sendContactInvite } from "../../lib/contacts/sendContactInvite";
 import { buildScopedPermissionPayload, normalizeContactPermissionsOverride } from "../../lib/contacts/contactPermissions";
+import { resolveOwnerAccessEligibility, type OwnerAccessEligibility } from "../../lib/contacts/accessEligibility";
 import ContactInvitationManager from "../../app/(app)/components/dashboard/ContactInvitationManager";
 import { useViewerAccess } from "../access/ViewerAccessContext";
 import Icon from "../ui/Icon";
@@ -797,6 +798,7 @@ function PersonDetailDrawer({
               view={managementView}
               ownerUserId={ownerUserId}
               onBack={() => setManagementView(null)}
+              onNavigate={setManagementView}
               onSaved={onSaved}
               readOnly={readOnly}
             />
@@ -813,6 +815,7 @@ function PersonManagementPanel({
   ownerUserId,
   readOnly,
   onBack,
+  onNavigate,
   onSaved,
 }: {
   contact: ContactRow;
@@ -820,6 +823,7 @@ function PersonManagementPanel({
   ownerUserId: string | null;
   readOnly: boolean;
   onBack: () => void;
+  onNavigate: (view: "edit" | "invitation" | "access" | "remove") => void;
   onSaved: () => void;
 }) {
   const [name, setName] = useState(contact.full_name);
@@ -835,6 +839,8 @@ function PersonManagementPanel({
   const [accessGrantId, setAccessGrantId] = useState<string | null>(null);
   const [accessInvitationId, setAccessInvitationId] = useState<string | null>(null);
   const [accessCanConfigure, setAccessCanConfigure] = useState(false);
+  const [accessEligibility, setAccessEligibility] = useState<OwnerAccessEligibility | null>(null);
+  const [accessPermissionLabel, setAccessPermissionLabel] = useState("View only");
 
   useEffect(() => {
     if (view !== "access") return;
@@ -848,23 +854,31 @@ function PersonManagementPanel({
         .select("id,invitation_id,linked_user_id,activation_status,permissions_override")
         .eq("owner_user_id", ownerId)
         .eq("contact_id", contact.id)
-        .in("activation_status", ["verified", "active"]);
+        .in("activation_status", ["accepted", "pending_verification", "verification_submitted", "verified", "active"]);
       if (cancelled) return;
       if (result.error) {
         setStatus("Access details are not available right now.");
         setAccessSummary([]);
         return;
       }
-      const grants = (result.data ?? []) as Array<{ id: string; invitation_id?: string | null; linked_user_id?: string | null; permissions_override?: Record<string, unknown> | null }>;
+      const grants = (result.data ?? []) as Array<{ id: string; invitation_id?: string | null; linked_user_id?: string | null; activation_status?: string | null; permissions_override?: Record<string, unknown> | null }>;
       const grant = grants[0] ?? null;
       const permissions = normalizeContactPermissionsOverride(grant?.permissions_override);
+      const eligibility = resolveOwnerAccessEligibility({
+        invitationStatus: contact.invite_status,
+        activationStatus: grant?.activation_status ?? contact.verification_status,
+        linkedUserId: grant?.linked_user_id,
+        assignedRole: contact.contact_role,
+      });
       setAccessGrantId(grant?.id ?? null);
       setAccessInvitationId(grant?.invitation_id ?? contact.linked_context.find((context) => context.source_kind === "invitation")?.source_id ?? null);
+      setAccessEligibility(eligibility);
+      setAccessPermissionLabel(permissions.read_only === false ? "Can edit" : "View only");
       setSelectedAccessKeys([
         ...permissions.asset_ids.map((id) => `asset:${id}`),
         ...permissions.record_ids.map((id) => `record:${id}`),
       ]);
-      setAccessCanConfigure(Boolean(grant?.linked_user_id));
+      setAccessCanConfigure(eligibility === "eligible" && Boolean(grant?.id));
       const scopes = grants
         .flatMap((grant) => {
           const grantPermissions = normalizeContactPermissionsOverride(grant.permissions_override);
@@ -873,12 +887,12 @@ function PersonManagementPanel({
             ...(grantPermissions.asset_ids.length || grantPermissions.record_ids.length ? ["Selected records"] : []),
           ];
         });
-      setAccessSummary(Array.from(new Set(scopes.length ? scopes : grants.length ? ["Selected records"] : [])));
+      setAccessSummary(Array.from(new Set(scopes)));
       if (grant?.linked_user_id) {
         const resources = await loadPeopleScopeResourcesForOwner(supabase, ownerId);
         if (cancelled) return;
         const allowedSections = new Set(getAccessSectionsForRole(contact.contact_role));
-        setAccessOptions(resources
+        const options = resources
           .map((resource) => ({ ...resource, normalizedSectionKey: normalizeAccessSectionKey(resource.section_key) }))
           .filter((resource) => !resource.normalizedSectionKey || allowedSections.has(resource.normalizedSectionKey))
           .map((resource) => ({
@@ -886,7 +900,16 @@ function PersonManagementPanel({
             sourceId: resource.id,
             label: resource.title || (resource.source_kind === "asset" ? resource.provider_name : resource.summary) || "Unnamed record",
             sectionKey: resource.normalizedSectionKey,
-          })));
+          }));
+        setAccessOptions(options);
+        const selectedKeys = [
+          ...permissions.asset_ids.map((id) => `asset:${id}`),
+          ...permissions.record_ids.map((id) => `record:${id}`),
+        ];
+        const selectedLabels = options
+          .filter((option) => selectedKeys.includes(`${option.sourceKind}:${option.sourceId}`))
+          .map((option) => option.label);
+        if (selectedLabels.length) setAccessSummary(selectedLabels);
       }
     }
     void loadAccess();
@@ -1060,7 +1083,7 @@ function PersonManagementPanel({
       {view === "access" ? (
         <div className="lf-person-focused-panel">
           <strong>Vault access</strong>
-          {accessSummary === null ? <span style={drawerExplanationStyle}>Checking current access…</span> : accessSummary.length ? <><span style={drawerExplanationStyle}>This person currently has access to selected records.</span>{accessSummary.map((scope) => <span key={scope} style={drawerRelatedItemStyle}>{humanizeContactTerm(scope)}</span>)}{accessCanConfigure ? <div className="lf-person-access-actions"><button type="button" style={rowPrimaryActionStyle} onClick={() => setAccessEditOpen((current) => !current)}>{accessEditOpen ? "Close access choices" : "Change access"}</button><button type="button" style={rowSecondaryActionStyle} disabled={saving} onClick={() => { if (window.confirm(`Remove ${contact.full_name || "this person's"} Vault access?`)) void saveAccess([]); }}>Remove access</button></div> : null}</> : <><strong>None</strong><span style={drawerExplanationStyle}>{contact.full_name || "This person"} does not currently have access to your private Vault.</span>{accessCanConfigure ? <button type="button" style={rowPrimaryActionStyle} onClick={() => setAccessEditOpen((current) => !current)}>{accessEditOpen ? "Close access choices" : "Add access"}</button> : null}</>}
+          {accessSummary === null ? <span style={drawerExplanationStyle}>Checking current access…</span> : accessSummary.length ? <><span style={drawerExplanationStyle}>{accessSummary.length} {accessSummary.length === 1 ? "record" : "records"} shared · {accessPermissionLabel}</span>{accessSummary.map((scope) => <span key={scope} style={drawerRelatedItemStyle}>{humanizeContactTerm(scope)}</span>)}{accessCanConfigure ? <div className="lf-person-access-actions"><button type="button" style={rowPrimaryActionStyle} onClick={() => setAccessEditOpen((current) => !current)}>{accessEditOpen ? "Close access choices" : "Edit access"}</button><button type="button" style={rowSecondaryActionStyle} disabled={saving} onClick={() => { if (window.confirm(`Remove ${contact.full_name || "this person's"} Vault access?`)) void saveAccess([]); }}>Remove access</button></div> : null}</> : <><strong>None</strong>{accessEligibility === "invitation_pending" ? <><span style={drawerExplanationStyle}>{contact.full_name || "This person"} must accept your invitation before you can share Vault records.</span><button type="button" style={rowPrimaryActionStyle} onClick={() => onNavigate("invitation")}>Manage invitation</button></> : accessEligibility === "not_invited" ? <><span style={drawerExplanationStyle}>Invite this person and wait for them to connect before sharing Vault records.</span><button type="button" style={rowPrimaryActionStyle} onClick={() => onNavigate("invitation")}>Invite this person</button></> : accessEligibility === "verification_required" ? <span style={drawerExplanationStyle}>This person is connected, but needs to complete the required verification before Vault records can be shared.</span> : accessEligibility === "executor_restricted" ? <span style={drawerExplanationStyle}>Being recorded as an executor does not give this person access to your private Vault while you are alive.</span> : accessEligibility === "link_required" ? <span style={drawerExplanationStyle}>This person must finish connecting their Legacy Fortress account before Vault records can be shared.</span> : <><span style={drawerExplanationStyle}>{contact.full_name || "This person"} does not currently have access to your private Vault.</span>{accessCanConfigure ? <button type="button" style={rowPrimaryActionStyle} onClick={() => setAccessEditOpen((current) => !current)}>{accessEditOpen ? "Close access choices" : "Give access"}</button> : null}</>}</>}
           {accessEditOpen && accessCanConfigure ? <div className="lf-person-access-chooser"><strong>Choose what {contact.full_name || "this person"} can access</strong>{accessOptions.length ? accessOptions.map((option) => { const key = `${option.sourceKind}:${option.sourceId}`; return <label key={key}><input type="checkbox" checked={selectedAccessKeys.includes(key)} onChange={() => setSelectedAccessKeys((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key])} />{option.label}</label>; }) : <span style={drawerExplanationStyle}>There are no eligible records to share.</span>}<span style={drawerExplanationStyle}>Permission: Can view</span><button type="button" style={rowPrimaryActionStyle} disabled={saving || !accessOptions.length} onClick={() => void saveAccess(selectedAccessKeys)}>Save access</button></div> : null}
         </div>
       ) : null}
