@@ -25,6 +25,7 @@ export default function PublicAuthEntry({
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [resetSuccess, setResetSuccess] = useState(false);
   const nextPath = searchParams.get("next");
+  const invitedEmail = searchParams.get("email");
   const requestedMode = searchParams.get("mode");
   const activeMode = useMemo<AuthMode>(
     () => requestedMode === "sign-in" || requestedMode === "sign-up" ? requestedMode : mode,
@@ -159,11 +160,12 @@ export default function PublicAuthEntry({
           {activeMode === "sign-in" ? (
             <SignInForm
               nextPath={nextPath}
+              initialEmail={invitedEmail}
               compact
               initialStatus={resetSuccess ? "Password updated successfully. Please sign in with your new password." : ""}
             />
           ) : (
-            <SignUpForm nextPath={nextPath} compact />
+            <SignUpForm nextPath={nextPath} expectedEmail={invitedEmail} compact />
           )}
 
           <div className="lf-entry-footnote">

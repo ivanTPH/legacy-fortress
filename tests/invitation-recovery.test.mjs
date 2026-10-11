@@ -46,6 +46,15 @@ test("new-user signup transfers the ephemeral session before invitation bootstra
   assert.match(signUp, /toSafeSignupError/);
   const signUpEntry = fs.readFileSync(path.join(root, "components/auth/PublicSignUpEntry.tsx"), "utf8");
   assert.match(signUpEntry, /sign-in\?next=\$\{encodeURIComponent\(nextPath\)\}/);
+  assert.match(signUp, /Your invitation will still be waiting when you return/);
+});
+
+test("invitation sign-in and create-account paths retain the invited email", () => {
+  const acceptPage = fs.readFileSync(path.join(root, "app/invite/accept/InvitationAcceptPageClient.tsx"), "utf8");
+  const authEntry = fs.readFileSync(path.join(root, "components/auth/PublicAuthEntry.tsx"), "utf8");
+  assert.match(acceptPage, /sign-in\?next=\$\{encodeURIComponent\(nextAuthPath\)\}&email=\$\{encodeURIComponent\(summary\.contact_email\)\}/);
+  assert.match(authEntry, /expectedEmail=\{invitedEmail\}/);
+  assert.match(authEntry, /initialEmail=\{invitedEmail\}/);
 });
 
 test("invitation acceptance remains the first post-registration relationship mutation", () => {

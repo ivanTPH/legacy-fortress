@@ -23,6 +23,7 @@ export type SendEmailHookPayload = {
 export type VerifiedEmailEvent = {
   eventId: string;
   actionType: "signup" | "recovery" | "invite" | "magiclink";
+  invitation: boolean;
   recipient: string;
   tokenHash: string;
   redirectTo: string;
@@ -133,6 +134,15 @@ function requireStagingEnvironment(env: NodeJS.ProcessEnv) {
   }
 }
 
+function hasInvitationContinuation(redirectTo: string) {
+  try {
+    const next = new URL(redirectTo).searchParams.get("next") ?? "";
+    return next === "/invite/accept" || next.startsWith("/invite/accept?");
+  } catch {
+    return false;
+  }
+}
+
 export function buildVerificationUrl(supabaseOrigin: string, tokenHash: string, actionType: string, redirectTo: string) {
   const origin = new URL(supabaseOrigin);
   if (origin.protocol !== "https:") throw new Error("invalid_auth_origin");
@@ -187,6 +197,7 @@ export function parseAndVerifyHook(
   return {
     eventId,
     actionType: actionType as VerifiedEmailEvent["actionType"],
+    invitation: actionType === "invite" || hasInvitationContinuation(verifiedRedirect),
     recipient,
     tokenHash,
     redirectTo: verifiedRedirect,
@@ -207,11 +218,15 @@ export function renderAuthEmail(event: VerifiedEmailEvent, senderName = "Legacy 
     invite: "Use the secure link below to accept your invitation.",
     magiclink: "Use the secure link below to sign in.",
   };
+  const subject = event.invitation ? "You have been invited to Legacy Fortress" : subjects[event.actionType];
+  const body = event.invitation
+    ? "Someone has invited you to connect with their Legacy Fortress. If you do not already have an account, create one with this email address before reviewing the invitation. If you already have an account, sign in to continue."
+    : actionText[event.actionType];
   const escapedUrl = event.verificationUrl.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
   return {
-    subject: subjects[event.actionType],
-    text: `${actionText[event.actionType]}\n\n${event.verificationUrl}\n\nIf you did not request this, you can ignore this email.`,
-    html: `<p>${actionText[event.actionType]}</p><p><a href="${escapedUrl}">Continue to Legacy Fortress</a></p><p>If you did not request this, you can ignore this email.</p><p>${senderName}</p>`,
+    subject,
+    text: `${body}\n\nAccepting the invitation does not by itself give you access to the owner's private Vault while they are alive.\n\n${event.verificationUrl}\n\nIf you did not expect this invitation, you can ignore this email.`,
+    html: `<p>${body}</p><p>Accepting the invitation does not by itself give you access to the owner's private Vault while they are alive.</p><p><a href="${escapedUrl}">Review invitation</a></p><p>If you did not expect this invitation, you can ignore this email.</p><p>${senderName}</p>`,
   };
 }
 

@@ -255,7 +255,7 @@ export default function InvitationAcceptPageClient() {
                 </button>
               ) : (
                 <div style={{ display: "grid", gap: 8 }}>
-                  <Link className="lf-primary-btn" href={`/sign-in?next=${encodeURIComponent(nextAuthPath)}`}>
+                  <Link className="lf-primary-btn" href={`/sign-in?next=${encodeURIComponent(nextAuthPath)}&email=${encodeURIComponent(summary.contact_email)}`}>
                     <Icon name="login" size={16} />
                     Sign in to accept
                   </Link>

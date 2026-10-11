@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import Icon from "../ui/Icon";
 import { toSafeInternalPath } from "../../lib/auth/session";
@@ -88,7 +89,9 @@ export default function SignUpForm({
         return;
       }
 
-      setStatus("Account created. Verify your email from the link sent, then sign in to continue onboarding.");
+      setStatus(safeNextPath.startsWith("/invite/accept")
+        ? "Account created. Check your email to verify your account. Your invitation will still be waiting when you return."
+        : "Account created. Verify your email from the link sent, then sign in to continue onboarding.");
     } catch (submitError) {
       setError(accountCreated
         ? "Your account was created, but we could not continue to the invitation. Sign in with this email to continue."
@@ -165,7 +168,16 @@ export default function SignUpForm({
 
       <OAuthButtons nextPath={nextPath || "/onboarding"} />
 
-      {status ? <div className="lf-muted-note">{status}</div> : null}
+      {status ? (
+        <div className="lf-muted-note" style={{ display: "grid", gap: 6 }}>
+          <div>{status}</div>
+          {nextPath?.startsWith("/invite/accept") ? (
+            <Link className="lf-inline-link" href={`/sign-in?next=${encodeURIComponent(toSafeInternalPath(nextPath, "/onboarding"))}`}>
+              Sign in after verification
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

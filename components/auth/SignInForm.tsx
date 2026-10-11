@@ -25,13 +25,15 @@ export default function SignInForm({
   nextPath,
   compact = false,
   initialStatus = "",
+  initialEmail = "",
 }: {
   nextPath?: string | null;
   compact?: boolean;
   initialStatus?: string;
+  initialEmail?: string | null;
 }) {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail ?? "");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState(initialStatus);
   const [showPassword, setShowPassword] = useState(false);

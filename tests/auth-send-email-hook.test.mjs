@@ -35,6 +35,17 @@ function payload(action = "recovery") {
   });
 }
 
+function invitationPayload(action = "magiclink") {
+  return JSON.stringify({
+    user: { id: "00000000-0000-4000-8000-000000000002", email: "invitee@example.test" },
+    email_data: {
+      token_hash: "opaque-invitation-token-hash",
+      redirect_to: "https://test.mylegacyfortress.com/auth/callback?next=%2Finvite%2Faccept%3Finvitation%3Dinvite-1%26token%3Dopaque-token",
+      email_action_type: action,
+    },
+  });
+}
+
 const secret = `v1,whsec_${Buffer.from("0123456789abcdef0123456789abcdef").toString("base64")}`;
 const env = { APP_ENV: "staging", LEGACY_FORTRESS_ENV: "staging", SEND_EMAIL_HOOK_SECRET: secret };
 
@@ -47,6 +58,18 @@ test("accepts a valid signed staging recovery event", () => {
   assert.match(event.verificationUrl, /^https:\/\/supabase-test\.mylegacyfortress\.com\/auth\/v1\/verify\?/);
   assert.match(event.verificationUrl, /type=recovery/);
   assert.match(event.verificationUrl, /redirect_to=https%3A%2F%2Ftest\.mylegacyfortress\.com%2Freset-password/);
+});
+
+test("classifies an OTP with an invitation continuation as invitation email copy", () => {
+  const body = invitationPayload();
+  const request = signedRequest(body, secret);
+  const event = parseAndVerifyHook(body, request.headers, env);
+  assert.equal(event.actionType, "magiclink");
+  assert.equal(event.invitation, true);
+  const email = renderAuthEmail(event);
+  assert.match(email.subject, /invited/i);
+  assert.match(email.text, /create one with this email address/i);
+  assert.match(email.text, /does not by itself give you access/i);
 });
 
 test("rejects invalid, stale, replayed and production events", () => {
