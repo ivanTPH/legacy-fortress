@@ -9,7 +9,8 @@ const contacts = fs.readFileSync(path.join(root, "components/contacts/ContactsNe
 const manager = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/ContactInvitationManager.tsx"), "utf8");
 
 test("contact invitation records Auth request acceptance rather than provider delivery", () => {
-  assert.match(sender, /client\.auth\.signInWithOtp/);
+assert.match(sender, /invitationAuthClient\.auth\.signInWithOtp/);
+assert.match(sender, /different[\s\S]*owner's PKCE verifier/);
   assert.match(sender, /deliveryState: "auth_request_accepted"/);
   assert.match(sender, /event_type: "auth_request_accepted"/);
   assert.match(sender, /delivery_state: "auth_request_accepted"/);

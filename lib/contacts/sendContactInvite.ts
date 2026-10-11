@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AccessActivationStatus, CollaboratorRole } from "../access-control/roles";
+import { createEphemeralBrowserAuthClient } from "../auth/browserAuthClient";
 import { assertOwnerCanSendInvitation, ensureOwnerPlanProfile } from "../accountPlan";
 import {
   buildCanonicalInvitationProjectionPayload,
@@ -80,7 +81,11 @@ export async function sendContactInvite(
     accountHolderName,
   });
 
-  const deliveryResult = await client.auth.signInWithOtp({
+  // Invitation links are opened by the recipient, often from a different
+  // browser or device than the owner's. Do not bind the Auth verification
+  // code to the owner's PKCE verifier or persisted session.
+  const invitationAuthClient = createEphemeralBrowserAuthClient("invitation-delivery");
+  const deliveryResult = await invitationAuthClient.auth.signInWithOtp({
     email: contactEmail,
     options: {
       shouldCreateUser: true,

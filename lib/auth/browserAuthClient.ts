@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { publicEnv } from "../env";
 
-export type EphemeralAuthClientPurpose = "signup" | "password-reset";
+export type EphemeralAuthClientPurpose = "signup" | "password-reset" | "invitation-delivery";
 
 export function createEphemeralBrowserAuthClient(purpose: EphemeralAuthClientPurpose) {
   return createClient(publicEnv.NEXT_PUBLIC_SUPABASE_URL, publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY, {

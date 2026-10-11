@@ -11,6 +11,8 @@ test("ephemeral auth clients use purpose-specific storage keys instead of duplic
   const forgotPassword = fs.readFileSync(path.join(root, "app/forgot-password/page.tsx"), "utf8");
 
   assert.match(helper, /storageKey: `legacy-fortress-\$\{purpose\}-ephemeral-auth`/);
+  assert.match(helper, /"invitation-delivery"/);
+  assert.match(helper, /flowType: "implicit"/);
   assert.match(helper, /persistSession: false/);
   assert.match(helper, /detectSessionInUrl: false/);
   assert.match(signUp, /createEphemeralBrowserAuthClient\("signup"\)/);
@@ -18,6 +20,9 @@ test("ephemeral auth clients use purpose-specific storage keys instead of duplic
   assert.doesNotMatch(signUp, /publicEnv/);
   assert.match(forgotPassword, /createEphemeralBrowserAuthClient\("password-reset"\)/);
   assert.match(forgotPassword, /Password reset requested\. If an account exists and email delivery succeeds/);
+  const sender = fs.readFileSync(path.join(root, "lib/contacts/sendContactInvite.ts"), "utf8");
+  assert.match(sender, /createEphemeralBrowserAuthClient\("invitation-delivery"\)/);
+  assert.match(sender, /invitationAuthClient\.auth\.signInWithOtp/);
   assert.match(forgotPassword, /security purposes/);
   assert.doesNotMatch(forgotPassword, /Password reset link sent/);
   assert.doesNotMatch(signUp, /createClient\(publicEnv\.NEXT_PUBLIC_SUPABASE_URL/);
