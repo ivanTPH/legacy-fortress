@@ -70,6 +70,10 @@ test("Provider abstraction is replaceable and provider-neutral", () => {
   assert.match(provider, /lf_internal_experimental_v1/);
   assert.match(provider, /experimental = true/);
   assert.doesNotMatch(provider, /certified|government-document validation|1:N|population face/i);
+  assert.match(types, /IdentityVerificationProviderCapabilities/);
+  assert.match(provider, /mode = "synthetic"/);
+  assert.match(provider, /hostedCapture: false/);
+  assert.match(service, /getIdentityVerificationProviderStatus/);
 });
 
 test("Decision service writes assurance only server-side and activates eligible grants after verification", () => {
