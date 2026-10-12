@@ -55,6 +55,21 @@ copy explains the action and does not determine eligibility.
   when canonical grants permit it. Do not call another person's records
   `Your Fortress Records`.
 
+## Interaction language
+
+- Use the same structure for the same object type: record or relationship,
+  current status, then the relevant edit or action control.
+- Keep the action consistent when the action is consistent. Security should
+  change which actions are available, not make the interface behave like a
+  different product.
+- A locked state explains why it is locked and, where appropriate, provides
+  a safe route to request authorised access. Do not describe evidence upload
+  as an unlock.
+- Use small information controls sparingly for security, legal or product
+  concepts such as view-only sharing, identity verification or estate access.
+  They must remain usable by keyboard and touch and must not replace the
+  primary action or plain-language label.
+
 ## Premium and limits
 
 Keep Plus functionality understandable and visible without making Free

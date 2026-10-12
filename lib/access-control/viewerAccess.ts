@@ -47,6 +47,7 @@ export type ViewerAccessState = {
   accountHolderName: string;
   linkedContactId: string | null;
   linkedContactName: string;
+  relationship: string | null;
   viewerRole: CollaboratorRole;
   activationStatus: AccessActivationStatus;
   readOnly: boolean;
@@ -77,6 +78,7 @@ export type LinkedFortressSummary = {
   grantId: string;
   ownerUserId: string;
   ownerName: string;
+  relationship: string | null;
   role: CollaboratorRole;
   activationStatus: AccessActivationStatus;
   identityAssuranceLevel: IdentityAssuranceLevel;
@@ -176,6 +178,7 @@ export async function loadViewerAccessState(
       accountHolderName: fallbackDisplayName,
       linkedContactId: null,
       linkedContactName: "",
+      relationship: null,
       viewerRole: "owner",
       activationStatus: "active",
       readOnly: false,
@@ -201,7 +204,7 @@ export async function loadViewerAccessState(
     selectedGrant.contact_id
       ? client
           .from("contacts")
-          .select("id,full_name")
+          .select("id,full_name,relationship")
           .eq("owner_user_id", selectedGrant.owner_user_id)
           .eq("id", selectedGrant.contact_id)
           .maybeSingle()
@@ -238,7 +241,8 @@ export async function loadViewerAccessState(
     || String((legacyProfileRes as { data?: { display_name?: string | null } | null }).data?.display_name ?? "").trim()
     || fallbackDisplayName;
 
-  const linkedContactName = String((contactRes as { data?: { full_name?: string | null } | null }).data?.full_name ?? "").trim();
+  const linkedContact = (contactRes as { data?: { full_name?: string | null; relationship?: string | null } | null }).data;
+  const linkedContactName = String(linkedContact?.full_name ?? "").trim();
   const linkedAssetIds = ((assetLinksRes as { data?: Array<{ source_id?: string | null }> | null }).data ?? [])
     .map((row) => String(row.source_id ?? "").trim())
     .filter(Boolean);
@@ -265,6 +269,7 @@ export async function loadViewerAccessState(
     accountHolderName,
     linkedContactId: selectedGrant.contact_id ?? null,
     linkedContactName,
+    relationship: selectedGrant.relationship ?? (String(linkedContact?.relationship ?? "").trim() || null),
     viewerRole: selectedGrant.assigned_role,
     activationStatus: selectedGrant.activation_status,
     readOnly: permissionsOverride.readOnly ?? true,
@@ -312,6 +317,7 @@ export async function loadLinkedFortressSummaries(client: AnySupabaseClient, ses
         grantId: viewer.grantId,
         ownerUserId: viewer.targetOwnerUserId,
         ownerName: viewer.accountHolderName,
+        relationship: viewer.relationship,
         role: viewer.viewerRole,
         activationStatus: viewer.activationStatus,
         identityAssuranceLevel: viewer.identityAssuranceLevel,

@@ -215,6 +215,7 @@ export type CanonicalContactContext = {
 export type CanonicalContactRow = {
   id: string;
   owner_user_id: string;
+  linked_user_id: string | null;
   full_name: string;
   email: string | null;
   email_normalized: string | null;
@@ -1484,6 +1485,7 @@ function normalizeCanonicalContactRow(row: Record<string, unknown>): CanonicalCo
   return {
     id: String(row.id ?? ""),
     owner_user_id: String(row.owner_user_id ?? ""),
+    linked_user_id: normalizeText(row.linked_user_id) || null,
     full_name: normalizeText(row.full_name) || "Contact",
     email: normalizeText(row.email) || null,
     email_normalized: normalizeText(row.email_normalized) || null,
@@ -1577,4 +1579,4 @@ function normalizeText(value: unknown) {
 }
 
 const CONTACT_SELECT =
-  "id,owner_user_id,full_name,email,email_normalized,phone,contact_role,relationship,linked_context,invite_status,verification_status,source_type,validation_overrides,created_at,updated_at";
+  "id,owner_user_id,linked_user_id,full_name,email,email_normalized,phone,contact_role,relationship,linked_context,invite_status,verification_status,source_type,validation_overrides,created_at,updated_at";

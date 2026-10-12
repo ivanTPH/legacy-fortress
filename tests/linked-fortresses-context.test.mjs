@@ -42,7 +42,8 @@ test("linked Fortress surfaces preserve relationship and access separation", () 
   assert.match(linkedList, /Your linked relationships/);
   assert.match(linkedDetail, /Being linked does not by itself give you access/);
   assert.match(linkedDetail, /No estate records are currently available to you/);
-  assert.match(linkedDetail, /Report a death \/ begin estate access request/);
+  assert.match(linkedDetail, /Begin estate access request/);
+  assert.match(linkedDetail, /How executor access works/);
   assert.match(linkedDetail, /Estate access remains locked/);
   assert.match(deathReportApi, /account_access_grants/);
   assert.match(deathReportApi, /estate_relationship_required/);

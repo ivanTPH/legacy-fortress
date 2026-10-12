@@ -34,11 +34,13 @@ import { resolveOwnerAccessEligibility, type OwnerAccessEligibility } from "../.
 import ContactInvitationManager from "../../app/(app)/components/dashboard/ContactInvitationManager";
 import { useViewerAccess } from "../access/ViewerAccessContext";
 import Icon from "../ui/Icon";
+import InfoTip from "../ui/InfoTip";
 import DocumentPreviewDialog, { type DocumentPreviewDialogItem } from "../documents/DocumentPreviewDialog";
 import { ROLE_RULES, type AccessActivationStatus, type CollaboratorRole, type SectionKey } from "../../lib/access-control/roles";
 
 type ContactRow = {
   id: string;
+  linked_user_id: string | null;
   full_name: string;
   email: string | null;
   phone: string | null;
@@ -700,7 +702,7 @@ export default function ContactsNetworkWorkspace() {
 }
 
 function getContactSummaryStatus(contact: ContactRow) {
-  if (contact.verification_status === "active") return "Linked";
+  if (contact.linked_user_id || contact.verification_status === "active") return "Linked";
   if (["accepted", "pending_verification", "verification_submitted", "verified"].includes(contact.verification_status)) return "Invitation accepted";
   if (contact.invite_status === "invite_sent") return "Invitation awaiting acceptance";
   if (contact.email) return "Invitation not sent";
@@ -725,7 +727,7 @@ function InvitationProgressTracker({ contact, compact = false }: { contact: Cont
   if (!hasInvitation) return null;
 
   const accepted = ["accepted", "pending_verification", "verification_submitted", "verified", "active"].includes(contact.verification_status);
-  const linked = contact.verification_status === "active";
+  const linked = Boolean(contact.linked_user_id) || contact.verification_status === "active";
   const verificationRequired = ["pending_verification", "verification_submitted", "verified", "active"].includes(contact.verification_status);
   const stages = [
     { label: "Prepared", complete: true },
@@ -972,6 +974,14 @@ function PersonManagementPanel({
   const [accessCanConfigure, setAccessCanConfigure] = useState(false);
   const [accessEligibility, setAccessEligibility] = useState<OwnerAccessEligibility | null>(null);
   const [accessPermissionLabel, setAccessPermissionLabel] = useState("View only");
+  const accessGroups = useMemo(() => {
+    const groups = new Map<string, typeof accessOptions>();
+    for (const option of accessOptions) {
+      const key = option.sectionKey || "other";
+      groups.set(key, [...(groups.get(key) ?? []), option]);
+    }
+    return Array.from(groups.entries());
+  }, [accessOptions]);
 
   useEffect(() => {
     if (view !== "access") return;
@@ -1215,7 +1225,7 @@ function PersonManagementPanel({
       await supabase.from("invitation_events").insert({ owner_user_id: ownerId, invitation_id: accessInvitationId, event_type: nextKeys.length ? "access_updated" : "access_revoked", payload: { source: "people_drawer", scope_count: nextKeys.length } });
       }
       setSelectedAccessKeys(nextKeys);
-      setAccessSummary(nextKeys.length ? ["Selected records"] : []);
+      setAccessSummary(nextKeys.length ? selectedAccessLabels(accessOptions, nextKeys) : []);
       setAccessEditOpen(false);
       setStatus(nextKeys.length ? "Access updated." : "Access removed. The person remains in People I Trust.");
       onSaved();
@@ -1273,9 +1283,16 @@ function PersonManagementPanel({
       ) : null}
       {view === "access" ? (
         <div className="lf-person-focused-panel">
-          <strong>Vault access</strong>
-          {accessSummary === null ? <span style={drawerExplanationStyle}>Checking current access…</span> : accessSummary.length ? <><span style={drawerExplanationStyle}>{accessSummary.length} {accessSummary.length === 1 ? "record" : "records"} shared · {accessPermissionLabel}</span>{accessSummary.map((scope) => <span key={scope} style={drawerRelatedItemStyle}>{humanizeContactTerm(scope)}</span>)}{accessCanConfigure ? <div className="lf-person-access-actions"><button type="button" style={rowPrimaryActionStyle} onClick={() => setAccessEditOpen((current) => !current)}>{accessEditOpen ? "Close access choices" : "Edit access"}</button><button type="button" style={rowSecondaryActionStyle} disabled={saving} onClick={() => { if (window.confirm(`Remove ${contact.full_name || "this person's"} Vault access?`)) void saveAccess([]); }}>Remove access</button></div> : null}</> : <><strong>None</strong>{accessEligibility === "invitation_pending" ? <><span style={drawerExplanationStyle}>{contact.full_name || "This person"} must accept your invitation before you can share Vault records.</span><button type="button" style={rowPrimaryActionStyle} onClick={() => onNavigate("invitation")}>Manage invitation</button></> : accessEligibility === "not_invited" ? <><span style={drawerExplanationStyle}>Invite this person and wait for them to connect before sharing Vault records.</span><button type="button" style={rowPrimaryActionStyle} onClick={() => onNavigate("invitation")}>Invite this person</button></> : accessEligibility === "verification_required" ? <span style={drawerExplanationStyle}>This person is connected, but needs to complete the required verification before Vault records can be shared.</span> : accessEligibility === "executor_restricted" ? <span style={drawerExplanationStyle}>Being recorded as an executor does not give this person access to your private Vault while you are alive.</span> : accessEligibility === "link_required" ? <span style={drawerExplanationStyle}>This person must finish connecting their Legacy Fortress account before Vault records can be shared.</span> : <><span style={drawerExplanationStyle}>{contact.full_name || "This person"} does not currently have access to your private Vault.</span>{accessCanConfigure ? <button type="button" style={rowPrimaryActionStyle} onClick={() => setAccessEditOpen((current) => !current)}>{accessEditOpen ? "Close access choices" : "Give access"}</button> : null}</>}</>}
-          {accessEditOpen && accessCanConfigure ? <div className="lf-person-access-chooser"><strong>Choose what {contact.full_name || "this person"} can access</strong>{accessOptions.length ? accessOptions.map((option) => { const key = `${option.sourceKind}:${option.sourceId}`; return <label key={key}><input type="checkbox" checked={selectedAccessKeys.includes(key)} onChange={() => setSelectedAccessKeys((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key])} />{option.label}</label>; }) : <span style={drawerExplanationStyle}>There are no eligible records to share.</span>}<span style={drawerExplanationStyle}>Permission: Can view</span><button type="button" style={rowPrimaryActionStyle} disabled={saving || !accessOptions.length} onClick={() => void saveAccess(selectedAccessKeys)}>Save access</button></div> : null}
+          <strong>Manage shared access</strong>
+          {accessSummary === null ? <span style={drawerExplanationStyle}>Checking current access…</span> : accessSummary.length ? <>
+            <span style={drawerExplanationStyle}>{selectedAccessKeys.length} {selectedAccessKeys.length === 1 ? "record" : "records"} shared · {accessPermissionLabel} <InfoTip label="Explain view-only access" tone="security" message={`${contact.full_name || "This person"} can view information you share but cannot change or delete your records.`} /></span>
+            <div className="lf-person-access-summary-list">{accessSummary.map((scope) => <span key={scope} style={drawerRelatedItemStyle}>{scope}</span>)}</div>
+            {accessCanConfigure ? <div className="lf-person-access-actions"><button type="button" style={rowPrimaryActionStyle} onClick={() => setAccessEditOpen((current) => !current)}>{accessEditOpen ? "Close access choices" : "Edit access"}</button><button type="button" style={rowSecondaryActionStyle} disabled={saving} onClick={() => { if (window.confirm(`Remove ${contact.full_name || "this person's"} Vault access?`)) void saveAccess([]); }}>Remove access</button></div> : null}
+          </> : <>
+            <strong>No records currently shared</strong>
+            {accessEligibility === "invitation_pending" ? <><span style={drawerExplanationStyle}>{contact.full_name || "This person"} must accept your invitation before you can share Vault records.</span><button type="button" style={rowPrimaryActionStyle} onClick={() => onNavigate("invitation")}>Manage invitation</button></> : accessEligibility === "not_invited" ? <><span style={drawerExplanationStyle}>Invite this person and wait for them to connect before sharing Vault records.</span><button type="button" style={rowPrimaryActionStyle} onClick={() => onNavigate("invitation")}>Invite this person</button></> : accessEligibility === "verification_required" ? <span style={drawerExplanationStyle}>This person is connected, but needs to complete the required verification before Vault records can be shared.</span> : accessEligibility === "executor_restricted" ? <span style={drawerExplanationStyle}>Being recorded as an executor does not give this person access to your private Vault while you are alive.</span> : accessEligibility === "link_required" ? <span style={drawerExplanationStyle}>This person must finish connecting their Legacy Fortress account before Vault records can be shared.</span> : <><span style={drawerExplanationStyle}>{contact.full_name || "This person"} does not currently have access to your private Vault.</span>{accessCanConfigure ? <button type="button" style={rowPrimaryActionStyle} onClick={() => setAccessEditOpen((current) => !current)}>{accessEditOpen ? "Close access choices" : "Give access"}</button> : null}</>}
+          </>}
+          {accessEditOpen && accessCanConfigure ? <div className="lf-person-access-chooser"><strong>Choose what {contact.full_name || "this person"} can see</strong><span style={drawerExplanationStyle}>View only <InfoTip label="Explain view-only sharing" message="Sharing lets this person view the records you select. It does not let them change or delete your records." /></span><div className="lf-person-access-scope-note">This relationship currently supports selected existing records. Sharing every current or future record is not available, so new records are never added silently.</div>{accessGroups.length ? accessGroups.map(([sectionKey, options]) => <fieldset key={sectionKey} className="lf-person-access-group"><legend>{accessSectionLabel(sectionKey)} <span className="lf-person-access-count">{options.filter((option) => selectedAccessKeys.includes(`${option.sourceKind}:${option.sourceId}`)).length} of {options.length} selected</span></legend>{options.map((option) => { const key = `${option.sourceKind}:${option.sourceId}`; return <label key={key}><input type="checkbox" checked={selectedAccessKeys.includes(key)} onChange={() => setSelectedAccessKeys((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key])} />{option.label}</label>; })}</fieldset>) : <span style={drawerExplanationStyle}>There are no eligible records to share.</span>}<button type="button" style={rowPrimaryActionStyle} disabled={saving || !accessOptions.length} onClick={() => void saveAccess(selectedAccessKeys)}>Save shared access</button></div> : null}
         </div>
       ) : null}
       {view === "remove" ? (
@@ -1309,6 +1326,27 @@ function normalizeAccessSectionKey(value: string | null): SectionKey | null {
   if (normalized === "finances") return "financial";
   if (["dashboard", "profile", "personal", "financial", "legal", "property", "business", "digital", "settings"].includes(normalized)) return normalized as SectionKey;
   return null;
+}
+
+function accessSectionLabel(value: string) {
+  const labels: Record<string, string> = {
+    financial: "Finances",
+    legal: "Legal",
+    property: "Property",
+    business: "Business",
+    digital: "Digital",
+    personal: "Personal",
+    other: "Other eligible records",
+  };
+  return labels[value] ?? humanizeContactTerm(value);
+}
+
+function selectedAccessLabels(
+  options: Array<{ sourceKind: "asset" | "record"; sourceId: string; label: string }>,
+  keys: string[],
+) {
+  const selected = new Set(keys);
+  return options.filter((option) => selected.has(`${option.sourceKind}:${option.sourceId}`)).map((option) => option.label);
 }
 
 function formatContextLabel(context: ContactRow["linked_context"][number]) {
@@ -1383,6 +1421,7 @@ function mergeContactsWithInvitations(
 
     mergedById.set(mergedId, {
       id: mergedId,
+      linked_user_id: null,
       full_name: row.contact_name || "Unnamed contact",
       email: row.contact_email || null,
       phone: null,

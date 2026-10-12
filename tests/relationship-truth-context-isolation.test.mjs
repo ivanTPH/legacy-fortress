@@ -12,6 +12,21 @@ test("owner relationship projection derives accepted and linked state from canon
   assert.match(contacts, /invitationStatus === "accepted"/);
   assert.match(contacts, /activationStatus\)/);
   assert.match(contacts, /InvitationProgressTracker contact=\{contact\}/);
+  assert.match(contacts, /linked_user_id \|\| contact\.verification_status === "active"/);
+  assert.match(contacts, /const linked = Boolean\(contact\.linked_user_id\)/);
+  assert.doesNotMatch(contacts, /Your response is still outstanding/);
+});
+
+test("shared access remains explicit, selected and view-only", () => {
+  const contacts = read("components/contacts/ContactsNetworkWorkspace.tsx");
+  const permissions = read("lib/contacts/contactPermissions.ts");
+  assert.match(contacts, /Manage shared access/);
+  assert.match(contacts, /selected existing records/);
+  assert.match(contacts, /View only/);
+  assert.match(contacts, /Save shared access/);
+  assert.match(contacts, /Remove access/);
+  assert.match(permissions, /read_only: true/);
+  assert.doesNotMatch(contacts, /All existing and future records/);
 });
 
 test("linked context cannot present personal Action Centre or owner-only routes", () => {

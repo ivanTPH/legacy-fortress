@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PlatformChip, PlatformEmptyState, PlatformInfoTile, PlatformNotice, PlatformSection } from "../../../../components/ui/PlatformPrimitives";
+import InfoTip from "../../../../components/ui/InfoTip";
 import { waitForActiveUser } from "../../../../lib/auth/session";
 import { getLinkedFortressAccessLabel, getRoleLabel, loadLinkedFortressSummaries, setStoredLinkedGrantId, type LinkedFortressSummary } from "../../../../lib/access-control/viewerAccess";
 import { supabase } from "../../../../lib/supabaseClient";
@@ -82,7 +83,7 @@ export default function LinkedFortressDetailPage() {
           <div>
             <p className="lf-eyebrow">Linked Fortress</p>
             <h1>{fortress.ownerName}&apos;s Legacy Fortress</h1>
-            <p className="lf-muted-note">You are securely linked through a {getRoleLabel(fortress.role)} relationship. Your Personal Vault remains separate.</p>
+            <p className="lf-muted-note">You are securely linked{fortress.relationship ? ` as ${fortress.relationship}` : ""} through a {getRoleLabel(fortress.role)} relationship. Your Personal Vault remains separate.</p>
           </div>
           <PlatformChip tone={fortress.accessState === "estate_locked" ? "warning" : "default"}>{getLinkedFortressAccessLabel(fortress)}</PlatformChip>
         </div>
@@ -106,7 +107,8 @@ export default function LinkedFortressDetailPage() {
           <Link className="lf-primary-btn" href={`/contact-wallet?grant=${encodeURIComponent(fortress.grantId)}`} onClick={() => setStoredLinkedGrantId(fortress.grantId)}>View shared records</Link>
         </PlatformSection>
       ) : (
-        <PlatformSection icon="lock" title="Estate records locked" detail="No estate records are currently available to you.">
+        <PlatformSection icon="lock" title="Estate access" detail="No estate records are currently available to you.">
+          {fortress.accessState === "estate_locked" ? <details className="lf-disclosure"><summary>How executor access works <InfoTip label="Explain locked estate access" tone="security" message="Being linked or verified does not establish legal authority or unlock estate information." /></summary><ol className="lf-muted-note"><li>Report the death and begin an estate access request.</li><li>Provide the requested evidence.</li><li>Legacy Fortress checks identity, relationship and authority.</li><li>Existing probate, quorum and administrative controls decide whether access can be authorised.</li></ol></details> : null}
           {canStartEstateRequest ? (
             requestState === "submitted" ? <p className="lf-muted-note" role="status">{requestMessage}</p> : requestState === "confirming" ? (
               <div style={{ display: "grid", gap: 10 }}>
@@ -120,7 +122,7 @@ export default function LinkedFortressDetailPage() {
               <div style={{ display: "grid", gap: 8 }}>
                 {requestMessage ? <p className="lf-muted-note" role="alert">{requestMessage}</p> : null}
                 <button className="lf-primary-btn" type="button" disabled={requestState === "submitting"} onClick={() => setRequestState("confirming")}>
-                  {requestState === "submitting" ? "Submitting request..." : "Report a death / begin estate access request"}
+                  {requestState === "submitting" ? "Submitting request..." : "Begin estate access request"}
                 </button>
               </div>
             )
