@@ -20,8 +20,8 @@ Phase 4A records which customer-facing dashboard routes can be safely proven wit
 The Phase 4A prompt referenced these files, but they were not present in the repository during inspection:
 
 - `README_PROJECT_OPERATING_RULES_SNIPPET.md`
-- `Legacy_Fortress_Inclusion_Exclusion_Specification.docx`
-- `Legacy_Fortress_UX_Data_Capture_Interaction_Standards.docx`
+- `docs/specifications/Legacy_Fortress_Inclusion_Exclusion_Specification.docx`
+- `docs/specifications/Legacy_Fortress_UX_Data_Capture_Interaction_Standards.docx`
 
 Existing repo documentation was used instead, especially `docs/product/DASHBOARD_BOUNDARIES_AND_PRIVACY.md`, `docs/architecture/DASHBOARD_COMPONENT_STANDARD.md`, and `docs/CODEX_HANDOVER.md`.
 
