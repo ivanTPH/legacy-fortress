@@ -35,6 +35,28 @@ export function getIdentityVerificationProvider(): IdentityVerificationProvider 
   return new InternalExperimentalIdentityProvider();
 }
 
+export function getIdentityVerificationProviderStatus() {
+  if (isInternalExperimentalProviderAllowed()) {
+    const provider = new InternalExperimentalIdentityProvider();
+    return {
+      configured: true,
+      providerKey: provider.providerKey,
+      providerLabel: provider.providerLabel,
+      mode: provider.mode,
+      experimental: provider.experimental,
+      capabilities: provider.capabilities,
+    };
+  }
+  return {
+    configured: false,
+    providerKey: null,
+    providerLabel: null,
+    mode: null,
+    experimental: false,
+    capabilities: null,
+  } as const;
+}
+
 export function isInternalExperimentalProviderAllowed() {
   const configuredProvider = String(process.env.IDENTITY_VERIFICATION_PROVIDER ?? "").trim();
   const environment = String(process.env.LEGACY_FORTRESS_ENV ?? "").trim().toLowerCase();

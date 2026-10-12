@@ -20,6 +20,15 @@ export class InternalExperimentalIdentityProvider implements IdentityVerificatio
   readonly providerKey = INTERNAL_EXPERIMENTAL_PROVIDER_KEY;
   readonly providerLabel = "Legacy Fortress internal experimental provider";
   readonly experimental = true;
+  readonly mode = "synthetic" as const;
+  readonly capabilities = {
+    documentCapture: false,
+    documentAuthenticity: false,
+    liveness: false,
+    faceComparison: false,
+    signedCallbacks: true,
+    hostedCapture: false,
+  } as const;
 
   async startVerification(input: ProviderStartInput) {
     return {

@@ -25,6 +25,16 @@ export type IdentityDocumentType = "passport" | "driving_licence" | "national_id
 export type IdentityVerificationDecision = "verified" | "failed" | "review_required";
 export type IdentityDocumentSide = "front" | "back";
 export type LivenessResult = "passed" | "failed" | "review_required";
+export type IdentityVerificationProviderMode = "synthetic" | "commercial";
+
+export type IdentityVerificationProviderCapabilities = {
+  documentCapture: boolean;
+  documentAuthenticity: boolean;
+  liveness: boolean;
+  faceComparison: boolean;
+  signedCallbacks: boolean;
+  hostedCapture: boolean;
+};
 
 export type IdentityVerificationRequestRow = {
   id: string;
@@ -154,6 +164,8 @@ export interface IdentityVerificationProvider {
   readonly providerKey: string;
   readonly providerLabel: string;
   readonly experimental: boolean;
+  readonly mode: IdentityVerificationProviderMode;
+  readonly capabilities: IdentityVerificationProviderCapabilities;
   startVerification(input: ProviderStartInput): Promise<{ providerReference: string; status: IdentityVerificationStatus }>;
   extractDocumentData(input: { requestId: string; userId: string; fileName: string; mimeType: string; sha256Hash: string; sizeBytes: number }): Promise<ProviderDocumentExtraction>;
   capturePresenceChallenge(input: { requestId: string; userId: string; requestedIdentityLevel: 2 | 3 }): Promise<ProviderPresenceChallenge>;

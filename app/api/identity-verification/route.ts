@@ -67,6 +67,7 @@ function publicRequest(row: Record<string, unknown>) {
     providerKey: row.provider_key,
     status: row.status,
     requestedIdentityLevel: row.requested_identity_level,
+    providerExperimental: row.metadata && typeof row.metadata === "object" && (row.metadata as Record<string, unknown>).provider_experimental === true,
     achievedIdentityLevel: row.achieved_identity_level,
     manualReviewRequired: row.manual_review_required,
     expiresAt: row.expires_at,

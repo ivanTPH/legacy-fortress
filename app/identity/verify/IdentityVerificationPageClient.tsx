@@ -13,6 +13,7 @@ type VerificationResponse = {
     status: string;
     requestedIdentityLevel: number;
     purpose: string;
+    providerExperimental?: boolean;
   };
   document?: {
     extractionStatus: string;
@@ -54,7 +55,8 @@ export default function IdentityVerificationPageClient() {
   const purpose = params.get("purpose") === "step_up_presence" ? "step_up_presence" : "linked_access";
   const hasLinkedContext = Boolean(params.get("grant") || params.get("invitation"));
   const ownerName = params.get("owner") || "the account holder";
-  const invitedRole = params.get("role") || "linked role";
+  const invitedRole = params.get("role") || "linked relationship";
+  const relationshipLabel = labelise(invitedRole);
   useEffect(() => {
     let mounted = true;
     supabase.auth.getSession().then(({ data }) => {
@@ -166,8 +168,8 @@ export default function IdentityVerificationPageClient() {
           </div>
         </div>
         <div className="lf-trust-header-copy">
-          <strong>{purpose === "linked_access" ? `Executor access for ${ownerName}` : "Identity security check"}</strong>
-          <span>Verify your identity before protected access can be considered.</span>
+          <strong>{purpose === "linked_access" ? `${relationshipLabel} with ${ownerName}` : "Identity security check"}</strong>
+          <span>Verify your identity before this relationship or protected access can continue.</span>
         </div>
       </header>
 
@@ -191,7 +193,7 @@ export default function IdentityVerificationPageClient() {
           <div><span>Access</span><strong>Not available yet</strong></div>
         </div>
         <h1>Verify your identity</h1>
-        <p className="lf-auth-subtext">To protect {ownerName}&apos;s information, we need to confirm you are the person accepting this role. Identity verification does not establish legal authority or grant access by itself.</p>
+        <p className="lf-auth-subtext">Before we securely link you to {ownerName}&apos;s Legacy Fortress, we need to confirm you are the person accepting this relationship. Identity verification does not establish legal authority or grant access by itself.</p>
 
         <label style={consentStyle}>
           <input
