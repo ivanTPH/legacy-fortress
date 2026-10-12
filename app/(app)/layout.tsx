@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useId, useMemo, useReducer, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import BrandMark from "./components/BrandMark";
 import Icon from "../../components/ui/Icon";
 import Breadcrumbs from "./components/navigation/Breadcrumbs";
@@ -63,7 +63,9 @@ type AuthState = "checking" | "ready" | "redirecting" | "none" | "error";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
+  const requestedGrantId = searchParams.get("grant") ?? "";
 
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("Secure Account");
@@ -366,10 +368,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       if (!mounted) return;
       try {
         const nextViewer = await loadViewerAccessState(supabase, userId, {
-          preferredGrantId: getStoredLinkedGrantId(),
+          preferredGrantId: requestedGrantId || getStoredLinkedGrantId(),
           fallbackDisplayName: nextEmail.split("@")[0] || "Secure Account",
         });
         if (!mounted) return;
+        if (requestedGrantId && nextViewer.mode === "linked" && nextViewer.grantId === requestedGrantId) {
+          setStoredLinkedGrantId(requestedGrantId);
+        }
         setViewerAccess(nextViewer);
       } catch {
         if (!mounted) return;
@@ -491,7 +496,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       mounted = false;
       sub.subscription.unsubscribe();
     };
-  }, [devSmokeMode, router, setFreshAvatarUrl]);
+  }, [devSmokeMode, pathname, requestedGrantId, router, setFreshAvatarUrl]);
 
   useEffect(() => {
     if (effectiveAuthState === "none" && !devSmokeMode) {
@@ -563,7 +568,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => {
       mounted = false;
     };
-  }, [devSmokeMode, effectiveAuthState]);
+  }, [devSmokeMode, effectiveAuthState, requestedGrantId]);
 
   useEffect(() => {
     if (effectiveAuthState !== "ready" || !viewerAccess || viewerAccess.mode !== "linked") return;
@@ -1213,7 +1218,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     Signed-in reviewer: {resolvedViewerAccess.linkedContactName || effectiveDisplayName} · Role: {getRoleLabel(resolvedViewerAccess.viewerRole)} · View-only unless the owner grants specific edit access.
                   </div>
                   <div style={{ color: "#64748b", fontSize: 13 }}>
-                    This linked view does not replace your own account. If you want your own private estate record, you can start one separately at any time.
+                    This linked view is separate from your own account. Set up your own Personal Vault whenever you are ready.
                   </div>
                 </div>
               </div>
@@ -1221,8 +1226,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <button type="button" className="lf-link-btn" onClick={() => viewerContextValue.clearLinkedGrant()}>
                   Return to my own account
                 </button>
-                <Link href="/onboarding" className="lf-primary-btn">
-                  Start your own secure account
+                <Link href="/onboarding" className="lf-primary-btn" onClick={() => viewerContextValue.clearLinkedGrant()}>
+                  Set up my Personal Vault
                 </Link>
               </div>
             </section>

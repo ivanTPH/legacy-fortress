@@ -133,7 +133,7 @@ test("invitation acceptance routes accepted linked users into Contact Wallet", (
   assert.match(acceptPage, /does not unlock unrelated private records/);
   assert.match(walletPage, /Contact Wallet/);
   assert.match(walletPage, /People you support/);
-  assert.match(walletPage, /paid personal subscription/);
+  assert.match(walletPage, /Personal Vault is separate/);
   assert.match(walletPage, /loadViewerAccessState/);
   assert.match(walletPage, /includePreVerificationGrants: true/);
 });

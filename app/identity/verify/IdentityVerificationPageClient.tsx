@@ -166,7 +166,7 @@ export default function IdentityVerificationPageClient() {
           </div>
         </div>
         <div className="lf-trust-header-copy">
-          <strong>{purpose === "linked_access" ? `Executor access for ${ownerName}` : "Identity security check"}</strong>
+          <strong>{purpose === "linked_access" ? `${labelise(invitedRole)} relationship with ${ownerName}` : "Identity security check"}</strong>
           <span>Verify your identity before protected access can be considered.</span>
         </div>
       </header>

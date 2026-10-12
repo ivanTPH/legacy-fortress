@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   PlatformActionRow,
   PlatformChip,
@@ -15,8 +16,10 @@ import { supabase } from "../../../lib/supabaseClient";
 import { waitForActiveUser } from "../../../lib/auth/session";
 import {
   getRoleLabel,
+  clearStoredLinkedGrantId,
   getStoredLinkedGrantId,
   loadViewerAccessState,
+  setStoredLinkedGrantId,
   type ViewerAccessState,
 } from "../../../lib/access-control/viewerAccess";
 import {
@@ -28,6 +31,7 @@ import {
 } from "../../../lib/contactWallet";
 
 export default function ContactWalletPage() {
+  const searchParams = useSearchParams();
   const [state, setState] = useState<"loading" | "ready" | "empty" | "error">("loading");
   const [viewer, setViewer] = useState<ViewerAccessState | null>(null);
   const [message, setMessage] = useState("");
@@ -48,7 +52,7 @@ export default function ContactWalletPage() {
 
       try {
         const access = await loadViewerAccessState(supabase, user.id, {
-          preferredGrantId: getStoredLinkedGrantId(),
+          preferredGrantId: searchParams.get("grant") || getStoredLinkedGrantId(),
           fallbackDisplayName: String(user.user_metadata?.full_name ?? user.email ?? "Secure account"),
           includePreVerificationGrants: true,
         });
@@ -59,6 +63,7 @@ export default function ContactWalletPage() {
           setMessage("No active supporting relationships are linked to this identity yet.");
           return;
         }
+        if (access.grantId) setStoredLinkedGrantId(access.grantId);
         setViewer(access);
         setState("ready");
       } catch (error) {
@@ -72,7 +77,7 @@ export default function ContactWalletPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [searchParams]);
 
   const assuranceLevel = useMemo(() => getContactWalletAssuranceLevel({
     emailVerified: true,
@@ -155,8 +160,8 @@ export default function ContactWalletPage() {
 
       <PlatformSection
         icon="person_pin"
-        title="Executor workspace"
-        detail="Identity, authority and access are separate decisions for this relationship."
+        title={`Your relationship with ${supportedPerson?.accountHolderName ?? "this person"}`}
+        detail="Your relationship, identity checks and access to records are separate decisions."
         emphasis="primary"
       >
         {supportedPerson ? (
@@ -208,11 +213,11 @@ export default function ContactWalletPage() {
       <PlatformSection
         icon="workspace_premium"
         title="Optional personal vault"
-        detail="Creating your own Legacy Fortress vault is separate from the free Contact Wallet duties shown above."
-        action={<Link className="lf-link-btn" href="/account/billing">Review personal vault options</Link>}
+        detail="Your Personal Vault is separate from the supporting relationships shown above."
+        action={<Link className="lf-link-btn" href="/onboarding" onClick={() => clearStoredLinkedGrantId()}>Set up my Personal Vault</Link>}
       >
         <PlatformNotice>
-          You can continue required supporting tasks without activating a paid personal subscription. Existing supporting relationships stay attached to the same identity if you later subscribe.
+          Your supporting relationships stay attached to this Legacy Fortress identity. Set up your own Personal Vault separately when you are ready.
         </PlatformNotice>
       </PlatformSection>
     </main>

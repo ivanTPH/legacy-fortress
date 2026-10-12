@@ -114,11 +114,11 @@ test("workspace switcher is present in admin shell, application shell, sign-in, 
   assert.match(switcher, /mergePlatformRoles\(metadataRoles, adminRoles, masterAdminRoles\)/);
   assert.match(switcher, /getAvailableWorkspaces/);
   assert.match(switcher, /alwaysShow/);
-  assert.match(switcher, /!hasMultipleContexts && !alwaysShow/);
+  assert.match(switcher, /!hasMultipleContexts && linkedFortresses\.length === 0 && !alwaysShow/);
   assert.match(switcher, /lf-workspace-menu/);
   assert.match(switcher, /aria-haspopup="menu"/);
   assert.match(switcher, /aria-expanded=\{open\}/);
-  assert.match(switcher, /Switch workspace/);
+  assert.match(switcher, /Switch context/);
   assert.match(switcher, /lf-workspace-route-meta/);
   assert.match(switcher, /Workspace/);
   assert.match(globals, /--lf-shell-sidebar-width: 286px/);
