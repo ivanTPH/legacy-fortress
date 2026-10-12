@@ -854,6 +854,12 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     }),
     [effectiveDisplayName, resolvedViewerAccess, router],
   );
+
+  useEffect(() => {
+    if (resolvedViewerAccess.mode !== "linked" || !isPersonalOnlyPath(pathname)) return;
+    viewerContextValue.clearLinkedGrant();
+  }, [pathname, resolvedViewerAccess.mode, viewerContextValue]);
+
   const normalizedPathname = normalizePath(pathname);
   const topbarTitle = normalizedPathname === "/dashboard"
     ? "Dashboard"
@@ -1246,6 +1252,11 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     </AccessibilityPreferencesProvider>
     </ViewerAccessProvider>
   );
+}
+
+function isPersonalOnlyPath(pathname: string) {
+  return ["/action-centre", "/contacts", "/profile", "/add-to-fortress", "/account", "/settings"]
+    .some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
 
 function makeInitials(email: string) {

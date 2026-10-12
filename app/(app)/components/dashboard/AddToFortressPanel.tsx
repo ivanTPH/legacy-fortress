@@ -1,6 +1,7 @@
 "use client";
 
 import Icon from "../../../../components/ui/Icon";
+import { useRouter } from "next/navigation";
 import { useViewerAccess } from "../../../../components/access/ViewerAccessContext";
 import { FINANCE_CATEGORY_CHOICE } from "../../../../lib/vault/addRecordTypes";
 
@@ -43,6 +44,7 @@ const ADD_GROUPS: AddGroup[] = [
 
 export default function AddToFortressPanel() {
   const { viewer } = useViewerAccess();
+  const router = useRouter();
 
   if (viewer.mode === "linked") {
     return (
@@ -51,10 +53,11 @@ export default function AddToFortressPanel() {
           <span className="lf-legacy-guidance-icon"><Icon name="lock" size={18} /></span>
           <span>
             <span className="lf-legacy-guidance-eyebrow">Read-only access</span>
-            <h2 id="add-to-fortress-title">Add to my Fortress</h2>
-          </span>
-        </div>
-        <p className="lf-add-to-fortress-intro">Only the Fortress owner can add or change estate records.</p>
+          <h2 id="add-to-fortress-title">My Fortress only</h2>
+        </span>
+      </div>
+        <p className="lf-add-to-fortress-intro">You are viewing another person&apos;s linked context. Return to My Fortress before adding or changing your own records.</p>
+        <button className="lf-link-btn" type="button" onClick={() => router.push("/dashboard")}>Return to My Fortress</button>
       </section>
     );
   }

@@ -883,11 +883,17 @@ function PersonDetailDrawer({
 
           <InvitationProgressTracker contact={contact} />
 
+          <section style={drawerSectionStyle} aria-labelledby="person-relationship-heading">
+            <span id="person-relationship-heading" style={drawerSectionLabelStyle}>Relationship</span>
+            <span style={drawerRelatedItemStyle}>{humanizeContactTerm(contact.relationship) || "Not specified"}</span>
+            {humanizeContactTerm(contact.contact_role) && humanizeContactTerm(contact.contact_role) !== humanizeContactTerm(contact.relationship) ? <span style={drawerRelatedItemStyle}>Role: {humanizeContactTerm(contact.contact_role)}</span> : null}
+          </section>
+
           {relatedContexts.length ? (
             <section style={drawerSectionStyle} aria-labelledby="person-related-heading">
               <span id="person-related-heading" style={drawerSectionLabelStyle}>Related to</span>
               <div style={{ display: "grid", gap: 6 }}>
-                {relatedContexts.slice(0, 3).map((context, index) => <span key={`${context.source_id}-${index}`} style={drawerRelatedItemStyle}>{context.label || describeLinkedDocumentContext(context)}</span>)}
+                {relatedContexts.slice(0, 3).map((context, index) => <span key={`${context.source_id}-${index}`} style={drawerRelatedItemStyle}>{context.role ? `${humanizeContactTerm(context.role)} · ` : ""}{context.label || describeLinkedDocumentContext(context)}</span>)}
               </div>
             </section>
           ) : null}
@@ -1366,7 +1372,7 @@ function mergeContactsWithInvitations(
         full_name: row.contact_name || existing.full_name || "Unnamed contact",
         email: row.contact_email || existing.email,
         contact_role: row.assigned_role || existing.contact_role,
-        invite_status: row.sent_at ? "invite_sent" : existing.invite_status,
+        invite_status: resolveInvitationProjectionStatus(row, existing.invite_status),
         verification_status: mapInvitationActivationStatus(row.activation_status),
         source_type: existing.source_type === "manual" ? "invitation" : existing.source_type,
         linked_context: mergeLinkedContexts([...normalizeContactContexts(existing.linked_context ?? []), ...linkedContext]),
@@ -1382,7 +1388,7 @@ function mergeContactsWithInvitations(
       phone: null,
       contact_role: row.assigned_role || "trusted_contact",
       relationship: null,
-      invite_status: row.sent_at ? "invite_sent" : "not_invited",
+      invite_status: resolveInvitationProjectionStatus(row, "not_invited"),
       verification_status: mapInvitationActivationStatus(row.activation_status),
       source_type: "invitation",
       linked_context: linkedContext,
@@ -1392,6 +1398,18 @@ function mergeContactsWithInvitations(
   }
 
   return Array.from(mergedById.values());
+}
+
+function resolveInvitationProjectionStatus(
+  row: { invitation_status: string; sent_at: string | null; activation_status: string },
+  fallback: ContactRow["invite_status"],
+): ContactRow["invite_status"] {
+  const invitationStatus = String(row.invitation_status ?? "").trim().toLowerCase();
+  const activationStatus = String(row.activation_status ?? "").trim().toLowerCase();
+  if (["revoked", "rejected"].includes(invitationStatus) || ["revoked", "rejected"].includes(activationStatus)) return "revoked";
+  if (invitationStatus === "accepted" || ["accepted", "pending_verification", "verification_submitted", "verified", "active"].includes(activationStatus)) return "accepted";
+  if (row.sent_at || ["pending", "sent"].includes(invitationStatus) || ["invited", "pending_verification"].includes(activationStatus)) return "invite_sent";
+  return fallback;
 }
 
 function mergeLinkedContexts(contexts: CanonicalContactContext[]) {

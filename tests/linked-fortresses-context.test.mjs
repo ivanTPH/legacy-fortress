@@ -23,7 +23,7 @@ test("personal context clears the selected linked grant before own-vault setup",
 test("linked context selection uses canonical grants and preserves multiple owners", () => {
   assert.match(viewerAccess, /from\("account_access_grants"\)/);
   assert.match(viewerAccess, /eq\("linked_user_id", sessionUserId\)/);
-  assert.match(switcher, /People I support/);
+  assert.match(switcher, /Linked Fortresses/);
   assert.match(switcher, /contact-wallet\?grant=/);
   assert.match(switcher, /getLinkedFortressAccessLabel/);
   assert.match(viewerAccess, /No records shared/);
@@ -39,7 +39,7 @@ test("contact wallet and identity verification use relationship context without 
 
 test("linked Fortress surfaces preserve relationship and access separation", () => {
   assert.match(linkedList, /Linked Fortresses/);
-  assert.match(linkedList, /People I support/);
+  assert.match(linkedList, /Your linked relationships/);
   assert.match(linkedDetail, /Being linked does not by itself give you access/);
   assert.match(linkedDetail, /No estate records are currently available to you/);
   assert.match(linkedDetail, /Report a death \/ begin estate access request/);

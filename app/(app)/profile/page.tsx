@@ -108,6 +108,11 @@ export default function ProfilePage() {
       setLoading(true);
       setStatus("");
 
+      if (viewer.mode === "linked") {
+        setLoading(false);
+        return;
+      }
+
       try {
         const user = await waitForActiveUser(supabase, { attempts: 6, delayMs: 130 });
         appendProfileAvatarTrace(`[profile-load] session=${user ? "present" : "missing"} user=${user?.id ?? "<none>"}`);
@@ -118,7 +123,7 @@ export default function ProfilePage() {
 
         const loaded = await loadProfileWorkspace(supabase, {
           userId: viewer.targetOwnerUserId || user.id,
-          baseEmail: viewer.mode === "linked" ? "" : user.email ?? "",
+          baseEmail: user.email ?? "",
         });
         if (!mounted) return;
         setForm(loaded.form);
@@ -454,6 +459,21 @@ export default function ProfilePage() {
     const { error } = await supabase.auth.resetPasswordForEmail(form.primary_email, { redirectTo });
     setStatus(error ? `Password reset failed: ${error.message}` : "Password reset email sent.");
   };
+
+  if (viewer.mode === "linked") {
+    return (
+      <SettingsPageShell title={`About ${viewer.accountHolderName}`} subtitle="Relationship information is read-only and separate from your own profile settings.">
+        <SettingsCard title={`About ${viewer.accountHolderName}`} description="Only relationship-safe information is shown in a linked Fortress context.">
+          <div style={{ display: "grid", gap: 8 }}>
+            <strong>Your relationship: {viewer.viewerRole === "owner" ? "Linked relationship" : viewer.viewerRole.replace(/_/g, " ")}</strong>
+            <span style={{ color: "#64748b" }}>Connection: Linked</span>
+            <span style={{ color: "#64748b" }}>Private profile details remain with the Fortress owner.</span>
+            {viewer.grantId ? <Link href={`/linked-fortresses/${viewer.grantId}`} className="lf-link-btn">Relationship details</Link> : null}
+          </div>
+        </SettingsCard>
+      </SettingsPageShell>
+    );
+  }
 
   return (
     <SettingsPageShell

@@ -108,6 +108,6 @@ test("dashboard keeps multiple-record creation and linked viewers read-only", ()
 
   assert.match(createAsset, /\.insert\(/);
   assert.doesNotMatch(createAsset, /\.upsert\(/);
-  assert.match(dashboard, /viewer\.mode === "linked" \? undefined/);
+  assert.match(dashboard, /showAddAction=\{viewer\.mode !== "linked"\}/);
   assert.match(card, /addHref\?: string/);
 });

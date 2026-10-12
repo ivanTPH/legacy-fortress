@@ -408,8 +408,12 @@ export default function DashboardPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const actionCentreOnly = pathname === "/action-centre";
-  const { viewer } = useViewerAccess();
+  const { viewer, clearLinkedGrant } = useViewerAccess();
   const { preferences, setPreferences } = useVaultPreferences();
+
+  useEffect(() => {
+    if (actionCentreOnly && viewer.mode === "linked") clearLinkedGrant();
+  }, [actionCentreOnly, clearLinkedGrant, viewer.mode]);
 
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState("");
@@ -485,6 +489,7 @@ export default function DashboardPage() {
   const possessionsRows = assetBuckets.possessions;
   const possessionsRecordCount = possessionsRows.length;
   const legalRecordCount = legalAssets.length + legalDocuments.length;
+  const hasVisibleOverviewCard = viewer.mode !== "linked" || financeRecordCount > 0 || legalRecordCount > 0 || propertyRecordCount > 0 || businessRecordCount > 0 || digitalRecordCount > 0 || possessionsRecordCount > 0;
   const willRecordCount = useMemo(
     () => legalAssets.filter(isWillAsset).length + legalDocuments.filter(isWillDocument).length,
     [legalAssets, legalDocuments],
@@ -1567,6 +1572,9 @@ const legalSummary = useMemo(() => {
   }
 
   if (actionCentreOnly) {
+    if (viewer.mode === "linked") {
+      return <div className="lf-action-centre-page" role="status">Returning you to My Fortress before opening your personal Action Centre...</div>;
+    }
     return (
       <div className="lf-action-centre-page" style={{ display: "grid", gap: 14 }}>
         <section className="lf-action-centre-page-header" aria-labelledby="action-centre-page-title">
@@ -1580,8 +1588,8 @@ const legalSummary = useMemo(() => {
           guidanceItems={guidanceItems}
           guidanceBusyKey={guidanceBusyKey}
           onAction={handleAction}
-          onGuidanceDecision={viewer.mode === "linked" ? undefined : (item, action) => void handleGuidanceDecision(item, action)}
-          onGuidanceApplicability={viewer.mode === "linked" ? undefined : (item, state) => void handleGuidanceApplicability(item, state)}
+          onGuidanceDecision={(item, action) => void handleGuidanceDecision(item, action)}
+          onGuidanceApplicability={(item, state) => void handleGuidanceApplicability(item, state)}
         />
         {reviewPanel ? <section className="lf-action-centre-follow-up" role="status"><strong>{reviewPanel.title}</strong><p>{reviewPanel.description}</p><button type="button" onClick={() => router.push(reviewPanel.href)}>{reviewPanel.ctaLabel}</button></section> : null}
       </div>
@@ -1703,7 +1711,7 @@ const legalSummary = useMemo(() => {
             <div style={overviewIconStyle}>
               <Icon name="dashboard" size={16} />
             </div>
-            <h2 style={{ margin: 0, fontSize: 18 }}>{viewer.mode === "linked" ? `${viewer.accountHolderName}'s Fortress Records` : "Your Fortress Records"}</h2>
+            <h2 style={{ margin: 0, fontSize: 18 }}>{viewer.mode === "linked" ? "Shared information" : "Your Fortress Records"}</h2>
             <InfoTip
               className="lf-panel-help"
               label="Explain dashboard overview"
@@ -1712,17 +1720,17 @@ const legalSummary = useMemo(() => {
             />
           </div>
         <div className="lf-dashboard-overview-copy" style={{ color: "#64748b", fontSize: 13 }}>
-          {viewer.mode === "linked" ? "Only records authorised through this relationship are shown." : "Your recorded information, in one place."}
+          {viewer.mode === "linked" ? "Only information explicitly shared through this relationship is shown." : "Your recorded information, in one place."}
         </div>
-        <div className="lf-dashboard-overview-summary" aria-label="Fortress summary">
+        {viewer.mode !== "linked" ? <div className="lf-dashboard-overview-summary" aria-label="Fortress summary">
           <strong>{financeRecordCount + legalRecordCount + propertyRecordCount + businessRecordCount + digitalRecordCount + possessionsRecordCount} records</strong>
           <span aria-hidden="true">·</span>
           <strong>{contactRows.length} {contactRows.length === 1 ? "person" : "people"}</strong>
+        </div> : null}
         </div>
-        </div>
-        {showFinancialCard || showLegalCard || showPropertyCard || showBusinessCard || showDigitalCard || showPossessionsCard ? (
+        {hasVisibleOverviewCard && (showFinancialCard || showLegalCard || showPropertyCard || showBusinessCard || showDigitalCard || showPossessionsCard) ? (
         <div className="lf-content-grid lf-dashboard-overview-grid">
-          {showFinancialCard ? (
+          {showFinancialCard && (viewer.mode !== "linked" || financeRecordCount > 0) ? (
             <DashboardAssetSummaryCard
               icon={<Icon name="account_balance" size={22} />}
               title="Finances"
@@ -1739,7 +1747,7 @@ const legalSummary = useMemo(() => {
             />
           ) : null}
 
-          {showLegalCard ? (
+          {showLegalCard && (viewer.mode !== "linked" || legalRecordCount > 0) ? (
             <DashboardAssetSummaryCard
               icon={<Icon name="description" size={22} />}
               title="Legal"
@@ -1756,7 +1764,7 @@ const legalSummary = useMemo(() => {
             />
           ) : null}
 
-          {showPropertyCard ? (
+          {showPropertyCard && (viewer.mode !== "linked" || propertyRecordCount > 0) ? (
             <DashboardAssetSummaryCard
               icon={<Icon name="home" size={22} />}
               title="Property"
@@ -1773,7 +1781,7 @@ const legalSummary = useMemo(() => {
             />
           ) : null}
 
-          {showBusinessCard ? (
+          {showBusinessCard && (viewer.mode !== "linked" || businessRecordCount > 0) ? (
             <DashboardAssetSummaryCard
               icon={<Icon name="business_center" size={22} />}
               title="Business"
@@ -1790,7 +1798,7 @@ const legalSummary = useMemo(() => {
             />
           ) : null}
 
-          {showDigitalCard ? (
+          {showDigitalCard && (viewer.mode !== "linked" || digitalRecordCount > 0) ? (
             <DashboardAssetSummaryCard
               icon={<Icon name="devices" size={22} />}
               title="Digital"
@@ -1807,7 +1815,7 @@ const legalSummary = useMemo(() => {
             />
           ) : null}
 
-          {showPossessionsCard ? (
+          {showPossessionsCard && (viewer.mode !== "linked" || possessionsRecordCount > 0) ? (
             <DashboardAssetSummaryCard
               icon={<Icon name="inventory_2" size={22} />}
               title="Possessions"
@@ -1826,7 +1834,7 @@ const legalSummary = useMemo(() => {
         </div>
         ) : (
           <div style={searchEmptyStateStyle}>
-            {viewer.mode === "linked" ? "No estate records are currently available to you." : "Your dashboard overview is currently hidden by My Vault preferences. Re-enable categories or subsections in Account / My Vault at any time."}
+            {viewer.mode === "linked" ? `No Vault information is currently shared with you. You are securely linked to ${viewer.accountHolderName}'s Fortress, but linking does not provide access to private records.` : "Your dashboard overview is currently hidden by My Vault preferences. Re-enable categories or subsections in Account / My Vault at any time."}
           </div>
         )}
       </section>

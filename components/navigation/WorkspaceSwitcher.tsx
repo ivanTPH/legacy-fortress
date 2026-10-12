@@ -138,7 +138,7 @@ export default function WorkspaceSwitcher({
   const activeWorkspace = workspaces.find((workspace) => workspace.id === currentWorkspace)
     ?? workspaces.find((workspace) => workspace.id === "application")
     ?? workspaces[0];
-  const activeLinkedFortress = currentPathname.startsWith("/contact-wallet")
+  const activeLinkedFortress = (currentPathname.startsWith("/contact-wallet") || currentPathname.startsWith("/linked-fortresses/"))
     ? linkedFortresses.find((linked) => linked.grantId === getStoredLinkedGrantId())
     : null;
   const hasMultipleContexts = workspaces.length > 1;
@@ -238,7 +238,7 @@ export default function WorkspaceSwitcher({
             ))}
             {linkedFortresses.length ? (
               <div className="lf-workspace-linked-group">
-                <div className="lf-workspace-menu-heading"><span>People I support</span></div>
+                <div className="lf-workspace-menu-heading"><span>Linked Fortresses</span></div>
                 <Link href="/dashboard" onClick={() => { clearStoredLinkedGrantId(); setOpen(false); }}>
                   <Icon name="home" size={15} />
                   <span><strong>My Fortress</strong><small>My Personal Vault</small></span>

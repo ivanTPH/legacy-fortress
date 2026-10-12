@@ -343,6 +343,7 @@ export function mapPathnameToSectionKey(pathname: string): SectionKey | null {
 
 export function canViewPath(pathname: string, viewer: ViewerAccessState) {
   if (viewer.mode === "linked" && pathname.startsWith("/contact-wallet")) return true;
+  if (viewer.mode === "linked" && ["/action-centre", "/contacts", "/profile", "/add-to-fortress", "/account", "/settings"].some((path) => pathname === path || pathname.startsWith(`${path}/`))) return false;
   if (viewer.mode === "linked" && !isProtectedGrantActive(viewer.activationStatus)) return false;
   const section = mapPathnameToSectionKey(pathname);
   if (!section) return true;

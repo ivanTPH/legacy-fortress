@@ -29,6 +29,7 @@ export default function LinkedFortressDetailPage() {
       const next = (await loadLinkedFortressSummaries(supabase, user.id)).find((item) => item.grantId === grantId) ?? null;
       if (!mounted) return;
       setFortress(next);
+      if (next) setStoredLinkedGrantId(next.grantId);
       setState(next ? "ready" : "empty");
     }
     void load();

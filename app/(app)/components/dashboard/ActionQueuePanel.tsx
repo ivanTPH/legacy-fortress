@@ -286,6 +286,28 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
     setSelectedActionKey(row.actionKey);
   }
 
+  const primaryRows = rows.slice(0, 5);
+  const secondaryRows = rows.slice(5);
+
+  function renderInboxRow(item: ActionCentreRow) {
+    const isRead = readActionKeys.has(item.actionKey);
+    return (
+      <article key={item.actionKey} className={`lf-action-centre-row${isRead ? " is-read" : " is-new"}`} style={inboxRowStyle}>
+        <button type="button" className="lf-action-centre-row-summary" style={rowSummaryButtonStyle} onClick={() => openRow(item)} aria-label={`Show details for ${item.title}`}>
+          <span className={`lf-action-centre-row-indicator${isRead ? " is-read" : ""}`} aria-hidden="true" />
+          <span style={{ display: "grid", gap: 3, minWidth: 0, textAlign: "left" }}>
+            <strong style={rowTitleStyle}>{item.title}</strong>
+            <span style={rowReasonStyle}>{item.blockerLabel}</span>
+          </span>
+          <span style={inboxRowMetaStyle}>{isRead ? "Read" : "New"}</span>
+        </button>
+        <div className="lf-action-centre-row-actions" style={rowActionsStyle}>
+          <button type="button" style={primaryActionStyle} onClick={() => openRow(item)}>{item.primaryActionLabel}</button>
+        </div>
+      </article>
+    );
+  }
+
   return (
     <section id="action-centre" className="lf-action-centre" style={panelStyle} aria-label="Action centre">
       <div className="lf-action-centre-inbox" style={{ display: "grid", gap: 2 }}>
@@ -294,25 +316,16 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
             <strong>Nothing needs your attention right now.</strong>
             <span style={{ color: "#166534", fontSize: 13 }}>You can add or review records whenever you are ready.</span>
           </section>
-        ) : rows.map((item) => {
-          const isRead = readActionKeys.has(item.actionKey);
-          return (
-            <article key={item.actionKey} className={`lf-action-centre-row${isRead ? " is-read" : " is-new"}`} style={inboxRowStyle}>
-              <button type="button" className="lf-action-centre-row-summary" style={rowSummaryButtonStyle} onClick={() => openRow(item)} aria-label={`Show details for ${item.title}`}>
-                <span className={`lf-action-centre-row-indicator${isRead ? " is-read" : ""}`} aria-hidden="true" />
-                <span style={{ display: "grid", gap: 3, minWidth: 0, textAlign: "left" }}>
-                  <strong style={rowTitleStyle}>{item.title}</strong>
-                  <span style={rowReasonStyle}>{item.blockerLabel}</span>
-                </span>
-                <span style={inboxRowMetaStyle}>{isRead ? "Read" : "New"}</span>
-              </button>
-              <div className="lf-action-centre-row-actions" style={rowActionsStyle}>
-                <button type="button" style={primaryActionStyle} onClick={() => openRow(item)}>{item.primaryActionLabel}</button>
-              </div>
-            </article>
-          );
-        })}
+        ) : primaryRows.map(renderInboxRow)}
       </div>
+      {secondaryRows.length ? (
+        <details className="lf-action-centre-more-options">
+          <summary>More things to consider ({secondaryRows.length})</summary>
+          <div className="lf-action-centre-inbox" style={{ display: "grid", gap: 2, marginTop: 6 }}>
+            {secondaryRows.map(renderInboxRow)}
+          </div>
+        </details>
+      ) : null}
       {completedRows.length ? (
         <details className="lf-action-centre-resolved">
           <summary>Recently resolved</summary>

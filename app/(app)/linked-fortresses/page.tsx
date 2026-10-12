@@ -48,7 +48,6 @@ export default function LinkedFortressesPage() {
       <section className="lf-page-card">
         <div className="lf-page-header">
           <div>
-            <p className="lf-eyebrow">People I support</p>
             <h1>Linked Fortresses</h1>
             <p className="lf-muted-note">These are other people&apos;s Fortresses where you have an accepted relationship. A relationship does not by itself provide access to private records.</p>
           </div>
