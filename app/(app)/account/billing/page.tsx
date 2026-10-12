@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { Suspense, useEffect, useState, type CSSProperties } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Field,
@@ -52,6 +52,14 @@ const EMPTY: BillingForm = {
 };
 
 export default function BillingPage() {
+  return (
+    <Suspense fallback={null}>
+      <BillingPageContent />
+    </Suspense>
+  );
+}
+
+function BillingPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);

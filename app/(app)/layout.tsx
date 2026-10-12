@@ -62,6 +62,14 @@ const PROFILE_AVATAR_CACHE_KEY = "lf:profile-avatar:last-good";
 type AuthState = "checking" | "ready" | "redirecting" | "none" | "error";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <React.Suspense fallback={<div className="lf-page-shell" aria-busy="true" role="status">Loading your Fortress...</div>}>
+      <AppLayoutContent>{children}</AppLayoutContent>
+    </React.Suspense>
+  );
+}
+
+function AppLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
