@@ -81,7 +81,7 @@ The platform requires operational support for:
 - verify staging before hosted mutations;
 - never treat production as the development target.
 
-Current hosted staging source-of-truth details are maintained in `docs/STAGING_ENVIRONMENT_SETUP.md` and `docs/HOSTED_STAGING_READINESS_PLAN.md`; as of 20 August 2026 the active evidence points to the Coolify/custom-domain staging path, not older Vercel Preview assumptions.
+Current hosted staging source-of-truth details are maintained in `docs/STAGING_ENVIRONMENT_SETUP.md` and `docs/HOSTED_STAGING_READINESS_PLAN.md`; as of 20 August 2026 the active evidence points to the Coolify/custom-domain staging path, not older Vercel Preview assumptions. The current product roadmap and entitlement direction are maintained in `docs/product/ROADMAP_AND_ENTITLEMENTS.md`; the document map and precedence rules are in `docs/DOCUMENTATION_INDEX.md`.
 
 ## Current known architectural concern
 Contacts/invitations historically existed across multiple paths. Recent work indicates movement toward a shared `/contacts` workspace, but the effective persisted contact/invitation/verification permission model must be re-audited in current repo truth before further contact-adjacent development.
@@ -90,12 +90,13 @@ The current access model must also be audited to prove identity verification is 
 
 ## Documentation precedence
 For future development, use this order where documents conflict:
-1. current approved product decisions in this file;
+1. current approved product decisions in this file and `docs/product/ROADMAP_AND_ENTITLEMENTS.md`;
 2. `LEGACY_FORTRESS_DATA_PROTECTION_GOVERNANCE.md` for privacy/security/data-sharing requirements;
-3. current Inclusion/Exclusion Specification plus its 20 August 2026 addendum;
-4. UX/Data Capture standards plus its 20 August 2026 addendum;
-5. architecture/root notes based on current repo truth;
-6. older MVP assumptions where not superseded.
+3. `docs/PRODUCT_COPY_STANDARD.md` for customer-facing language;
+4. current Inclusion/Exclusion Specification;
+5. UX/Data Capture standards;
+6. architecture/root notes based on current repo truth;
+7. older MVP assumptions and phase/UAT evidence where not superseded.
 ## Security and identity architecture — approved 20 August 2026
 
 ### Progressive consent and communication control

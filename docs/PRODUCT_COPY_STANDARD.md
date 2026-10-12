@@ -42,18 +42,26 @@ The Action Centre answers `What should I do next?`. Give each item one clear
 verb and a canonical destination. The Readiness Engine determines relevance;
 copy explains the action and does not determine eligibility.
 
-Use familiar interaction language consistently:
+## Relationship and context language
 
-- **Inbox** is the place for actions and follow-up that may need attention.
-- **Remind me later** and **Follow up** postpone an action without resolving it.
-- A **drawer** reveals why an item is shown and the next available action.
-- Use a specific direct verb such as `Add my Will`, `Invite Bill` or `Review
-  Barclays` when the destination is known. Avoid generic `Open` or `Review`
-  labels when a more useful verb is available.
-- A **tracker** shows only factual, authoritative invitation or relationship
-  stages. Do not invent delivery or open events.
-- **Automatic resolution** means the underlying canonical condition is
-  satisfied; opening an item alone does not resolve it.
+- `People I Trust` means people connected to the customer's own Fortress.
+- `Linked Fortresses` means other owners whose Fortress the customer is
+  legitimately connected to.
+- Keep relationship, invitation, identity verification, legal authority and
+  Vault access visibly separate.
+- Say `No records shared` or `Estate access locked` when that is the truth;
+  do not imply access from a relationship or role.
+- In a linked context, identify the owner and say `View shared records` only
+  when canonical grants permit it. Do not call another person's records
+  `Your Fortress Records`.
+
+## Premium and limits
+
+Keep Plus functionality understandable and visible without making Free
+customers feel that existing records have disappeared. Explain the feature,
+the reason it is Plus, trial terms, price, renewal and cancellation before a
+commercial choice. Never use a limit message as a security or compliance
+warning.
 
 ## Professional Help
 
@@ -66,14 +74,3 @@ or imply that a signal is a legal or tax conclusion.
 Use calm, accurate language for death, incapacity, probate and authority.
 Never reduce a protected post-death process to a single upload or imply that
 an invitation, link or identity check alone grants estate access.
-
-## Progressive Disclosure
-
-For people, invitations and other relationship-heavy surfaces, use:
-
-`Summary → Drawer → Action`
-
-Show the person, relationship, current status and one useful next step first.
-Reveal explanations in the drawer and management controls only when the
-customer asks for them. Keep `recorded`, `invited`, `accepted`, `verified`,
-`linked` and `access` distinct in both copy and behaviour.
