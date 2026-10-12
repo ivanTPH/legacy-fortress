@@ -33,8 +33,10 @@ import {
   clearStoredLinkedGrantId,
   filterNavigationTreeForViewer,
   getRoleLabel,
+  getLinkedFortressAccessLabel,
   hasLinkedAccountAccess,
   getStoredLinkedGrantId,
+  loadLinkedFortressSummaries,
   loadViewerAccessState,
   setStoredLinkedGrantId,
   type ViewerAccessState,
@@ -83,6 +85,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
   const [authState, setAuthState] = useState<AuthState>("checking");
   const [isDemoExperience, setIsDemoExperience] = useState(false);
   const [viewerAccess, setViewerAccess] = useState<ViewerAccessState | null>(null);
+  const [linkedFortresses, setLinkedFortresses] = useState<import("../../lib/access-control/viewerAccess").LinkedFortressSummary[]>([]);
   const [vaultPreferences, setVaultPreferences] = useState(getDefaultVaultPreferences);
   const [accessibilityPreferences, setAccessibilityPreferences] = useState(getDefaultAccessibilityPreferences);
   const [shellSearchState, setShellSearchState] = useState(() => ({
@@ -215,9 +218,24 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     editableRecordIds: [],
     assignedSectionKeys: [],
   } satisfies ViewerAccessState;
+  const contextualTopLevelItems = useMemo(
+    () => baseTopLevelItems.filter((item) => item.id !== "linked-fortresses" || linkedFortresses.length > 0),
+    [baseTopLevelItems, linkedFortresses.length],
+  );
+  const linkedSharedRecordCount = new Set([
+    ...resolvedViewerAccess.assignedAssetIds,
+    ...resolvedViewerAccess.assignedRecordIds,
+  ]).size;
+  const linkedAccessState = resolvedViewerAccess.vaultLifecycleState !== "OWNER_ACTIVE"
+    ? "estate_locked"
+    : resolvedViewerAccess.identityAssuranceLevel < resolvedViewerAccess.requiredIdentityLevel
+      ? "verification_required"
+      : linkedSharedRecordCount > 0
+        ? "records_shared"
+        : "no_records";
   const topLevelItems = useMemo(
-    () => filterNodesByVaultPreferences(filterNavigationTreeForViewer(baseTopLevelItems, resolvedViewerAccess), vaultPreferences),
-    [baseTopLevelItems, resolvedViewerAccess, vaultPreferences],
+    () => filterNodesByVaultPreferences(filterNavigationTreeForViewer(contextualTopLevelItems, resolvedViewerAccess), vaultPreferences),
+    [contextualTopLevelItems, resolvedViewerAccess, vaultPreferences],
   );
   const dashboardNavigationItems = useMemo(
     () => stripNavigationChildren(topLevelItems).map((item) => item.id === "action-centre"
@@ -383,6 +401,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
         if (requestedGrantId && nextViewer.mode === "linked" && nextViewer.grantId === requestedGrantId) {
           setStoredLinkedGrantId(requestedGrantId);
         }
+        setLinkedFortresses(await loadLinkedFortressSummaries(supabase, userId));
         setViewerAccess(nextViewer);
       } catch {
         if (!mounted) return;
@@ -1195,48 +1214,27 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
           {resolvedViewerAccess.mode === "linked" ? (
             <section
               style={{
-                border: "1px solid #cbd5e1",
+                border: "1px solid #d8e0e8",
                 background: "#f8fafc",
-                borderRadius: 14,
-                padding: 12,
+                borderRadius: 10,
+                padding: "9px 12px",
                 marginBottom: 14,
                 display: "flex",
-                gap: 12,
+                gap: 10,
                 flexWrap: "wrap",
                 alignItems: "center",
                 justifyContent: "space-between",
               }}
             >
-              <div style={{ display: "flex", gap: 12, alignItems: "flex-start", flexWrap: "wrap", minWidth: 0 }}>
-                <span
-                  aria-label={`Estate owner initials for ${resolvedViewerAccess.accountHolderName}`}
-                  role="img"
-                  style={linkedOwnerAvatarStyle}
-                >
-                  {makeInitials(resolvedViewerAccess.accountHolderName)}
+              <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
+                <strong>{resolvedViewerAccess.accountHolderName}&apos;s Fortress</strong>
+                <span style={{ color: "#475569", fontSize: 13 }}>
+                  {getRoleLabel(resolvedViewerAccess.viewerRole)} · {getLinkedFortressAccessLabel({ accessState: linkedAccessState, sharedRecordCount: linkedSharedRecordCount })} 🔒
                 </span>
-                <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: "#475569", textTransform: "uppercase" }}>
-                    Estate owner context
-                  </div>
-                  <div style={{ fontWeight: 700 }}>
-                    Viewing {resolvedViewerAccess.accountHolderName}&apos;s estate records
-                  </div>
-                  <div style={{ color: "#475569", fontSize: 13 }}>
-                    Signed-in reviewer: {resolvedViewerAccess.linkedContactName || effectiveDisplayName} · Role: {getRoleLabel(resolvedViewerAccess.viewerRole)} · View-only unless the owner grants specific edit access.
-                  </div>
-                  <div style={{ color: "#64748b", fontSize: 13 }}>
-                    This linked view is separate from your own account. Set up your own Personal Vault whenever you are ready.
-                  </div>
-                </div>
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button type="button" className="lf-link-btn" onClick={() => viewerContextValue.clearLinkedGrant()}>
-                  Return to my own account
-                </button>
-                <Link href="/onboarding" className="lf-primary-btn" onClick={() => viewerContextValue.clearLinkedGrant()}>
-                  Set up my Personal Vault
-                </Link>
+                {resolvedViewerAccess.grantId ? <Link href={`/linked-fortresses/${resolvedViewerAccess.grantId}`} className="lf-link-btn">Relationship details</Link> : null}
+                <button type="button" className="lf-link-btn" onClick={() => viewerContextValue.clearLinkedGrant()}>Return to My Fortress</button>
               </div>
             </section>
           ) : null}

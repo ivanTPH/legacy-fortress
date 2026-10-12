@@ -23,8 +23,15 @@ import {
   type TestPersona,
 } from "../../lib/testPersonas";
 import { supabase } from "../../lib/supabaseClient";
-import { clearStoredLinkedGrantId, getStoredLinkedGrantId, setStoredLinkedGrantId } from "../../lib/access-control/viewerAccess";
-import { CONTACT_WALLET_GRANT_STATUSES } from "../../lib/access-control/securityPolicy";
+import {
+  clearStoredLinkedGrantId,
+  getRoleLabel,
+  getLinkedFortressAccessLabel,
+  getStoredLinkedGrantId,
+  loadLinkedFortressSummaries,
+  setStoredLinkedGrantId,
+  type LinkedFortressSummary,
+} from "../../lib/access-control/viewerAccess";
 
 type WorkspaceSwitcherProps = {
   currentPathname: string;
@@ -43,13 +50,6 @@ type WorkspaceSession = {
   persona: TestPersona | null;
   adminFlag: boolean;
   prototypeFlag: boolean;
-};
-
-type LinkedFortressSummary = {
-  grantId: string;
-  ownerName: string;
-  role: string;
-  accessSummary: string;
 };
 
 export default function WorkspaceSwitcher({
@@ -101,7 +101,7 @@ export default function WorkspaceSwitcher({
             : [];
 
       if (!mounted) return;
-      setLinkedFortresses(await loadLinkedFortressSummaries(user?.id ?? ""));
+      setLinkedFortresses(await loadLinkedFortressSummaries(supabase, user?.id ?? ""));
       if (!mounted) return;
       setSession({
         displayName: String(user?.user_metadata?.full_name ?? user?.email ?? persona?.label ?? "Secure account"),
@@ -250,7 +250,7 @@ export default function WorkspaceSwitcher({
                     onClick={() => { setStoredLinkedGrantId(linked.grantId); setOpen(false); }}
                   >
                     <Icon name="verified_user" size={15} />
-                    <span><strong>{linked.ownerName}</strong><small>{linked.role} · {linked.accessSummary}</small></span>
+                    <span><strong>{linked.ownerName}</strong><small>{getRoleLabel(linked.role)} · {getLinkedFortressAccessLabel(linked)}</small></span>
                   </Link>
                 ))}
               </div>
@@ -275,41 +275,6 @@ export default function WorkspaceSwitcher({
       ) : null}
     </section>
   );
-}
-
-async function loadLinkedFortressSummaries(sessionUserId: string): Promise<LinkedFortressSummary[]> {
-  if (!sessionUserId) return [];
-  const { data } = await supabase
-    .from("account_access_grants")
-    .select("id,owner_user_id,assigned_role,relationship,activation_status,permissions_override,updated_at")
-    .eq("linked_user_id", sessionUserId)
-    .in("activation_status", CONTACT_WALLET_GRANT_STATUSES)
-    .order("updated_at", { ascending: false });
-  const grants = (data ?? []) as Array<{
-    id?: string;
-    owner_user_id?: string;
-    assigned_role?: string;
-    relationship?: string | null;
-    permissions_override?: { assetIds?: string[]; recordIds?: string[] } | null;
-  }>;
-  const ownerIds = grants.map((grant) => String(grant.owner_user_id ?? "").trim()).filter(Boolean);
-  if (!ownerIds.length) return [];
-  const { data: profiles } = await supabase.from("user_profiles").select("user_id,display_name").in("user_id", ownerIds);
-  const names = new Map((profiles ?? []).map((profile) => [String(profile.user_id), String(profile.display_name ?? "").trim()]));
-  return grants.map((grant) => {
-    const permissions = grant.permissions_override ?? {};
-    const records = new Set([...(permissions.assetIds ?? []), ...(permissions.recordIds ?? [])].filter(Boolean));
-    return {
-      grantId: String(grant.id ?? ""),
-      ownerName: names.get(String(grant.owner_user_id)) || "Linked Fortress",
-      role: humaniseRelationship(grant.relationship || grant.assigned_role || "Linked relationship"),
-      accessSummary: records.size ? `${records.size} record${records.size === 1 ? "" : "s"} shared` : "No records shared",
-    };
-  }).filter((item) => item.grantId);
-}
-
-function humaniseRelationship(value: string) {
-  return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function iconForWorkspace(workspace: WorkspaceId) {

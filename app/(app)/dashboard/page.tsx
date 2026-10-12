@@ -1703,16 +1703,16 @@ const legalSummary = useMemo(() => {
             <div style={overviewIconStyle}>
               <Icon name="dashboard" size={16} />
             </div>
-            <h2 style={{ margin: 0, fontSize: 18 }}>Your Fortress Records</h2>
+            <h2 style={{ margin: 0, fontSize: 18 }}>{viewer.mode === "linked" ? `${viewer.accountHolderName}'s Fortress Records` : "Your Fortress Records"}</h2>
             <InfoTip
               className="lf-panel-help"
               label="Explain dashboard overview"
               title="Dashboard overview"
-              message="These cards show what you have recorded. Open a category to review it, or use the plus button to add another record."
+              message={viewer.mode === "linked" ? "Only records explicitly shared with you are shown here." : "These cards show what you have recorded. Open a category to review it, or use the plus button to add another record."}
             />
           </div>
         <div className="lf-dashboard-overview-copy" style={{ color: "#64748b", fontSize: 13 }}>
-          Your recorded information, in one place.
+          {viewer.mode === "linked" ? "Only records authorised through this relationship are shown." : "Your recorded information, in one place."}
         </div>
         <div className="lf-dashboard-overview-summary" aria-label="Fortress summary">
           <strong>{financeRecordCount + legalRecordCount + propertyRecordCount + businessRecordCount + digitalRecordCount + possessionsRecordCount} records</strong>
@@ -1735,6 +1735,7 @@ const legalSummary = useMemo(() => {
               hideItems
               addHref="/finances"
               addLabel="Add financial record"
+              showAddAction={viewer.mode !== "linked"}
             />
           ) : null}
 
@@ -1751,6 +1752,7 @@ const legalSummary = useMemo(() => {
               hideItems
               addHref="/legal/wills?add=1"
               addLabel="Add legal record"
+              showAddAction={viewer.mode !== "linked"}
             />
           ) : null}
 
@@ -1767,6 +1769,7 @@ const legalSummary = useMemo(() => {
               hideItems
               addHref="/property?add=1"
               addLabel="Add property"
+              showAddAction={viewer.mode !== "linked"}
             />
           ) : null}
 
@@ -1783,6 +1786,7 @@ const legalSummary = useMemo(() => {
               hideItems
               addHref="/business?add=1"
               addLabel="Add business interest"
+              showAddAction={viewer.mode !== "linked"}
             />
           ) : null}
 
@@ -1799,6 +1803,7 @@ const legalSummary = useMemo(() => {
               hideItems
               addHref="/vault/digital/records?add=1&digitalType=__other"
               addLabel="Add digital account"
+              showAddAction={viewer.mode !== "linked"}
             />
           ) : null}
 
@@ -1814,13 +1819,14 @@ const legalSummary = useMemo(() => {
               hideItems
               addHref="/vault/personal/records?add=1&possessionCategory=other"
               addLabel="Add possession"
+              showAddAction={viewer.mode !== "linked"}
             />
           ) : null}
 
         </div>
         ) : (
           <div style={searchEmptyStateStyle}>
-            Your dashboard overview is currently hidden by My Vault preferences. Re-enable categories or subsections in Account / My Vault at any time.
+            {viewer.mode === "linked" ? "No estate records are currently available to you." : "Your dashboard overview is currently hidden by My Vault preferences. Re-enable categories or subsections in Account / My Vault at any time."}
           </div>
         )}
       </section>

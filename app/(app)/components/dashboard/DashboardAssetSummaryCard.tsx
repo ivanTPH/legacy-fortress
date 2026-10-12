@@ -29,6 +29,7 @@ type DashboardAssetSummaryCardProps = {
   addLabel?: string;
   hideItems?: boolean;
   emptyState?: boolean;
+  showAddAction?: boolean;
 };
 
 export default function DashboardAssetSummaryCard({
@@ -49,6 +50,7 @@ export default function DashboardAssetSummaryCard({
   addLabel,
   hideItems = false,
   emptyState = false,
+  showAddAction = true,
 }: DashboardAssetSummaryCardProps) {
   const router = useRouter();
 
@@ -77,7 +79,7 @@ export default function DashboardAssetSummaryCard({
             <span className="lf-dashboard-summary-icon" style={iconStyle}>{icon}</span>
             <span className="lf-dashboard-summary-title" style={titleStyle}>{title}</span>
           </Link>
-          {addHref ? (
+          {showAddAction && addHref ? (
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
               <IconButton
                 icon="add"
@@ -94,7 +96,7 @@ export default function DashboardAssetSummaryCard({
                 }}
               />
             </span>
-          ) : !emptyState && onEmptyActionClick ? (
+          ) : showAddAction && !emptyState && onEmptyActionClick ? (
             <button
               type="button"
               aria-label={emptyActionLabel}
@@ -112,7 +114,7 @@ export default function DashboardAssetSummaryCard({
             >
               <Icon name="add" size={22} />
             </button>
-          ) : (
+          ) : showAddAction ? (
             <Link
               href={href}
               aria-label={emptyActionLabel}
@@ -124,7 +126,7 @@ export default function DashboardAssetSummaryCard({
             >
               <Icon name="add" size={22} />
             </Link>
-          )}
+          ) : null}
         </div>
         {!emptyState && inlineSummary ? (
           <div className="lf-dashboard-summary-count" style={inlineSummaryStyle}>
@@ -136,7 +138,7 @@ export default function DashboardAssetSummaryCard({
             <div className="lf-dashboard-summary-value" style={valueStyle}>{obscured ? "Restricted" : value}</div>
             <div className="lf-dashboard-summary-detail" style={detailStyle}>{obscured ? "Detail hidden for this role" : detail}</div>
           </>
-        ) : addHref ? null : onEmptyActionClick ? (
+        ) : showAddAction && addHref ? null : showAddAction && onEmptyActionClick ? (
           <button
             type="button"
             style={emptyPrimaryActionStyle}
@@ -152,7 +154,7 @@ export default function DashboardAssetSummaryCard({
           >
             <span style={emptyPrimaryLabelStyle}>{emptyActionLabel}</span>
           </button>
-        ) : !emptyState ? (
+        ) : showAddAction && !emptyState ? (
           <Link href={href} style={emptyPrimaryActionStyle}>
             <span style={emptyPrimaryLabelStyle}>{emptyActionLabel}</span>
           </Link>

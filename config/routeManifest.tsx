@@ -134,6 +134,13 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     enabled: on,
   },
   {
+    id: "linked-fortresses",
+    label: "Linked Fortresses",
+    path: "/linked-fortresses",
+    icon: <Icon name="account_tree" size={18} />,
+    enabled: on,
+  },
+  {
     id: "access-requests",
     label: "Access Requests",
     path: "/access-requests",

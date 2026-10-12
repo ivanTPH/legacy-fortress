@@ -73,6 +73,19 @@ export type ViewerPermissionsOverride = {
   ownerNotes?: string;
 };
 
+export type LinkedFortressSummary = {
+  grantId: string;
+  ownerUserId: string;
+  ownerName: string;
+  role: CollaboratorRole;
+  activationStatus: AccessActivationStatus;
+  identityAssuranceLevel: IdentityAssuranceLevel;
+  requiredIdentityLevel: IdentityAssuranceLevel;
+  vaultLifecycleState: VaultLifecycleState;
+  sharedRecordCount: number;
+  accessState: "no_records" | "records_shared" | "verification_required" | "estate_locked";
+};
+
 export function buildInvitationAcceptPath(invitationId: string, token: string) {
   const params = new URLSearchParams({
     invitation: invitationId,
@@ -87,6 +100,13 @@ export function buildInvitationAuthNextPath(invitationId: string, token: string)
 
 export function getRoleLabel(role: CollaboratorRole) {
   return ROLE_RULES[role]?.label ?? role.replace(/_/g, " ");
+}
+
+export function getLinkedFortressAccessLabel(summary: Pick<LinkedFortressSummary, "accessState" | "sharedRecordCount">) {
+  if (summary.accessState === "estate_locked") return "Estate access locked";
+  if (summary.accessState === "verification_required") return "Verification required";
+  if (summary.accessState === "records_shared") return `${summary.sharedRecordCount} record${summary.sharedRecordCount === 1 ? "" : "s"} shared`;
+  return "No records shared";
 }
 
 export function getStoredLinkedGrantId() {
@@ -261,6 +281,50 @@ export async function loadViewerAccessState(
   };
 }
 
+export async function loadLinkedFortressSummaries(client: AnySupabaseClient, sessionUserId: string): Promise<LinkedFortressSummary[]> {
+  if (!sessionUserId) return [];
+  const grantsRes = await client
+    .from("account_access_grants")
+    .select("id,activation_status,updated_at")
+    .eq("linked_user_id", sessionUserId)
+    .in("activation_status", CONTACT_WALLET_GRANT_STATUSES)
+    .order("updated_at", { ascending: false });
+  if (grantsRes.error) return [];
+
+  const summaries = await Promise.all(
+    ((grantsRes.data ?? []) as Array<{ id?: string }>).map(async (grant) => {
+      const grantId = String(grant.id ?? "").trim();
+      if (!grantId) return null;
+      const viewer = await loadViewerAccessState(client, sessionUserId, {
+        preferredGrantId: grantId,
+        includePreVerificationGrants: true,
+      });
+      if (viewer.mode !== "linked" || !viewer.grantId) return null;
+      const sharedRecordCount = new Set([...viewer.assignedAssetIds, ...viewer.assignedRecordIds]).size;
+      const accessState = viewer.vaultLifecycleState !== "OWNER_ACTIVE"
+        ? "estate_locked"
+        : viewer.identityAssuranceLevel < viewer.requiredIdentityLevel
+          ? "verification_required"
+          : sharedRecordCount > 0
+            ? "records_shared"
+            : "no_records";
+      return {
+        grantId: viewer.grantId,
+        ownerUserId: viewer.targetOwnerUserId,
+        ownerName: viewer.accountHolderName,
+        role: viewer.viewerRole,
+        activationStatus: viewer.activationStatus,
+        identityAssuranceLevel: viewer.identityAssuranceLevel,
+        requiredIdentityLevel: viewer.requiredIdentityLevel,
+        vaultLifecycleState: viewer.vaultLifecycleState,
+        sharedRecordCount,
+        accessState,
+      } satisfies LinkedFortressSummary;
+    }),
+  );
+  return summaries.filter((summary): summary is LinkedFortressSummary => Boolean(summary));
+}
+
 export function mapPathnameToSectionKey(pathname: string): SectionKey | null {
   const value = pathname.trim().toLowerCase();
   if (!value) return null;
@@ -285,6 +349,7 @@ export function canViewPath(pathname: string, viewer: ViewerAccessState) {
   if (!canAccessSection(viewer.viewerRole, section, "view", viewer.activationStatus)) return false;
   if (viewer.mode !== "linked") return true;
   if (pathname.startsWith("/account") || pathname.startsWith("/settings")) return false;
+  if (viewer.assignedSectionKeys.length === 0 && section !== "dashboard") return false;
   if (viewer.assignedSectionKeys.length > 0 && section !== "dashboard" && !viewer.assignedSectionKeys.includes(section)) {
     return false;
   }
