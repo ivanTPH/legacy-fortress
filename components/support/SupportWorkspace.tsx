@@ -40,7 +40,7 @@ const HELP_TOPICS = [
   {
     id: "permissions",
     label: "How do permissions work?",
-    answer: "Start by choosing categories in Contacts, then review the linked records listed beneath them. Each record begins as view only and can be switched to editable only where needed.",
+    answer: "Start by choosing the person in People I Trust, then review the current records listed beneath them. Shared living records are view only and can be added or removed explicitly.",
   },
   {
     id: "vault",
@@ -77,7 +77,7 @@ const HELP_WIZARD_FLOWS: WizardFlow[] = [
     steps: [
       "Open the selected contact in Contacts.",
       "Start with the category access that matches their role.",
-      "Switch individual records from View to Edit only where that access is genuinely needed.",
+      "Select the individual records they may view. New records are not shared automatically.",
     ],
   },
   {

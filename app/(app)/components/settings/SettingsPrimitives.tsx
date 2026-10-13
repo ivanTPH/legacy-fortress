@@ -3,7 +3,7 @@ import { LFPageHeader } from "../../../../components/ui/LFDesignSystem";
 
 export function SettingsPageShell({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return (
-    <div style={{ display: "grid", gap: 24, maxWidth: 1080 }}>
+    <div className="lf-settings-page-shell" style={{ display: "grid", gap: 24, maxWidth: 960 }}>
       <LFPageHeader title={title} description={subtitle} />
       {children}
     </div>
@@ -37,13 +37,13 @@ export function StatusNote({ message }: { message: string }) {
 }
 
 export const cardStyle: CSSProperties = {
-  border: "1px solid #e8e1dc",
+  border: "1px solid #EBE4DE",
   borderRadius: 12,
   padding: 22,
   background: "#fff",
   display: "grid",
   gap: 18,
-  boxShadow: "0 1px 2px rgba(33, 17, 13, 0.025)",
+  boxShadow: "none",
 };
 
 export const gridStyle: CSSProperties = {
@@ -55,10 +55,10 @@ export const gridStyle: CSSProperties = {
 export const inputStyle: CSSProperties = {
   width: "100%",
   padding: 12,
-  border: "1px solid #d8d2cc",
-  borderRadius: 10,
+  border: "1px solid #E6DFD9",
+  borderRadius: 8,
   fontSize: 15,
-  background: "#fffefd",
+  background: "#FFFFFF",
 };
 
 export const textAreaStyle: CSSProperties = {
@@ -69,9 +69,10 @@ export const textAreaStyle: CSSProperties = {
 
 export const primaryBtn: CSSProperties = {
   padding: "10px 12px",
-  borderRadius: 10,
-  border: "1px solid #111827",
-  background: "#111827",
+  minHeight: 36,
+  borderRadius: 8,
+  border: "1px solid #2B1714",
+  background: "#2B1714",
   color: "white",
   cursor: "pointer",
   fontSize: 13,
@@ -79,10 +80,11 @@ export const primaryBtn: CSSProperties = {
 
 export const ghostBtn: CSSProperties = {
   padding: "10px 12px",
-  borderRadius: 10,
-  border: "1px solid #e3ded9",
-  background: "#fffefd",
-  color: "#111827",
+  minHeight: 36,
+  borderRadius: 8,
+  border: "1px solid #E6DFD9",
+  background: "#FFFFFF",
+  color: "#2B1714",
   cursor: "pointer",
   fontSize: 13,
 };

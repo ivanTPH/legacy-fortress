@@ -2960,6 +2960,7 @@ textarea {
   .lf-topbar-back { display: none; }
   .lf-topbar-actions { grid-column: 1; grid-row: 1; display: block; justify-self: start; }
   .lf-topbar-actions > .lf-topbar-security, .lf-topbar-actions > .lf-personal-account-menu { display: none; }
+  .lf-topbar-actions > .lf-notification-control { display: inline-flex; }
   .lf-menu-btn { display: inline-flex; }
   .lf-main-content { width: 100%; max-width: none; min-width: 0; padding: 24px 16px 104px; overflow-x: hidden; }
   .lf-main-content h1 { font-size: 34px; line-height: 41px; }
@@ -2969,6 +2970,44 @@ textarea {
   .lf-dashboard-overview-panel { padding: 16px !important; }
   .lf-dashboard-overview-grid { grid-template-columns: minmax(0, 1fr) !important; }
   .lf-dashboard-overview-grid > * { min-width: 0; }
+}
+
+/* Customer event notifications: presentation only, backed by canonical invitation events. */
+.lf-notification-control { position: relative; display: inline-flex; align-items: center; }
+.lf-notification-trigger { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; color: var(--lf-ink); cursor: pointer; }
+.lf-notification-trigger:hover, .lf-notification-trigger:focus-visible { background: var(--lf-tint); outline: none; }
+.lf-notification-trigger:focus-visible { box-shadow: 0 0 0 3px rgba(140,74,50,.22); }
+.lf-notification-trigger:disabled { opacity: .55; cursor: default; }
+.lf-notification-count { position: absolute; top: 1px; right: 0; min-width: 16px; height: 16px; padding: 0 4px; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; background: var(--lf-accent); color: #fff; font-size: 10px; font-weight: 700; line-height: 1; }
+.lf-notification-sheet { position: absolute; top: calc(100% + 10px); right: 0; z-index: 60; width: min(380px, calc(100vw - 32px)); padding: 14px; display: grid; gap: 8px; border: 1px solid var(--lf-border); border-radius: 12px; background: var(--lf-surface); box-shadow: 0 12px 32px rgba(43,23,20,.14); }
+.lf-notification-sheet-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--lf-divider); }
+.lf-notification-sheet-header > div { display: grid; gap: 3px; }
+.lf-notification-sheet-header span { color: var(--lf-text-secondary); font-size: 12px; }
+.lf-notification-event { display: grid; grid-template-columns: 32px minmax(0,1fr) 18px; align-items: center; gap: 10px; min-height: 56px; padding: 8px; border-radius: 8px; color: var(--lf-text); text-decoration: none; }
+.lf-notification-event:hover, .lf-notification-event:focus-visible { background: var(--lf-tint); outline: none; }
+.lf-notification-event-icon { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 9px; background: var(--lf-tint); color: var(--lf-tint-icon); }
+.lf-notification-event > span:nth-child(2) { display: grid; gap: 2px; min-width: 0; }
+.lf-notification-event strong { font-size: 13px; }
+.lf-notification-event small, .lf-notification-event time { color: var(--lf-text-secondary); font-size: 12px; line-height: 1.35; }
+.lf-notification-empty { margin: 6px 2px; color: var(--lf-text-secondary); font-size: 13px; }
+
+.lf-settings-card { color: var(--lf-text); }
+.lf-settings-card h2 { color: var(--lf-text); }
+.lf-settings-card p, .lf-settings-card label > span { color: var(--lf-text-secondary) !important; }
+.lf-settings-card input, .lf-settings-card select, .lf-settings-card textarea { border-color: var(--lf-border-input) !important; color: var(--lf-text); background: var(--lf-surface); }
+.lf-settings-card button { font-family: inherit; }
+.lf-settings-toggle-card { display: grid; gap: 8px; min-height: 96px; padding: 14px; border: 1px solid var(--lf-border); border-radius: 12px; background: var(--lf-surface); cursor: pointer; }
+.lf-settings-toggle-card:hover, .lf-settings-toggle-card:focus-within { border-color: #d6c9c0; box-shadow: 0 2px 8px rgba(43,23,20,.06); }
+.lf-settings-toggle-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.lf-settings-toggle { position: relative; width: 42px; height: 26px; flex: 0 0 auto; }
+.lf-settings-toggle input { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.lf-settings-toggle-track { position: absolute; inset: 0; border-radius: 999px; background: var(--lf-switch-off); transition: background .15s ease; }
+.lf-settings-toggle-track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(43,23,20,.18); transition: transform .15s ease; }
+.lf-settings-toggle input:checked + .lf-settings-toggle-track { background: var(--lf-accent); }
+.lf-settings-toggle input:checked + .lf-settings-toggle-track::after { transform: translateX(16px); }
+.lf-settings-toggle input:focus-visible + .lf-settings-toggle-track { box-shadow: 0 0 0 3px rgba(140,74,50,.22); }
+@media (max-width: 767px) {
+  .lf-notification-sheet { position: fixed; top: auto; right: 12px; bottom: calc(76px + env(safe-area-inset-bottom)); left: 12px; width: auto; max-height: min(70vh, 560px); overflow: auto; }
 }
 
 /* People and access surfaces: the reference uses compact grouped rows and a
@@ -7004,7 +7043,7 @@ textarea {
 .lf-global-search { width: 340px; background: #F7F4F1; border-color: #EBE4DE; border-radius: 9px; }
 .lf-global-search:focus-within { background: #FFFFFF; }
 .lf-topbar-security { width: auto; min-width: 0; height: 30px; padding: 0 10px; gap: 6px; border: 0; border-radius: 15px; background: #E9F3EC; color: #225C3A; font-size: 13px; white-space: nowrap; }
-.lf-topbar-actions { grid-template-columns: auto minmax(84px, 180px); }
+.lf-topbar-actions { grid-template-columns: auto auto minmax(84px, 180px); }
 .lf-topbar-actions > .lf-topbar-security { display: inline-flex; }
 .lf-ui-page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; min-width: 0; }
 .lf-ui-page-header-copy { display: grid; gap: 6px; min-width: 0; }

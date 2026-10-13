@@ -27,6 +27,7 @@ import { ViewerAccessProvider } from "../../components/access/ViewerAccessContex
 import { VaultPreferencesProvider } from "../../components/vault/VaultPreferencesContext";
 import { AccessibilityPreferencesProvider } from "../../components/accessibility/AccessibilityPreferencesContext";
 import WorkspaceSwitcher from "../../components/navigation/WorkspaceSwitcher";
+import NotificationBell from "../../components/notifications/NotificationBell";
 import { DEMO_EXPERIENCE_LABEL, DEMO_EXPERIENCE_SUBLABEL, isDemoSessionUser } from "../../lib/demo/config";
 import {
   canViewPath,
@@ -1127,6 +1128,10 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
               <Icon name={resolvedViewerAccess.mode === "linked" ? "visibility_lock" : "verified_user"} size={16} filled />
               <span>Vault secured</span>
             </div>
+            <NotificationBell
+              ownerUserId={resolvedViewerAccess.mode === "owner" ? (resolvedViewerAccess.targetOwnerUserId || null) : null}
+              disabled={resolvedViewerAccess.mode === "linked"}
+            />
             <div ref={accountMenuRef} className="lf-admin-shell-account-menu lf-personal-account-menu">
               <button ref={accountTriggerRef} type="button" className="lf-admin-shell-account-trigger" aria-label={`Open account menu for ${effectiveDisplayName}`} aria-expanded={accountMenuOpen} aria-controls={accountMenuId} aria-haspopup="menu" onClick={toggleAccountMenu}>
                 <span className="lf-admin-shell-avatar" aria-hidden="true">

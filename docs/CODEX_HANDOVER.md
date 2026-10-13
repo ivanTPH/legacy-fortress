@@ -433,3 +433,13 @@ Date: 2026-09-28.
 - Corrected the existing security-page lint error without changing passkey behavior.
 - Local tests, TypeScript, lint, build, route audit, link crawl and diff checks passed. Release check remains blocked by existing dependency advisories.
 - Staging was confirmed at `0c214b4` before the push; post-push DNS resolution was unavailable, so deployment of `7e8acf2` remains unverified.
+
+## Customer UI consolidation increment
+
+Date: 2026-10-13.
+
+- Added an owner-scoped notification bell backed by existing `invitation_events`; it is presentation-only, session-read state, and is disabled in linked Fortress context.
+- Reworked My Vault category and subsection preferences to use accessible responsive switches while preserving the existing preference loader/saver.
+- Aligned shared settings primitives and support permission guidance with the approved warm LF design tokens and view-only sharing model.
+- No schema, RLS, grant, invitation, IDV, estate, admin, production, or staging changes were made.
+- Validation: TypeScript pass, stabilisation `91/91`, production build pass, route audit pass, link crawl pass, diff check pass. Core remains `57/58` because of the pre-existing local Supabase `site_url` assertion.

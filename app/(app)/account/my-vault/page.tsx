@@ -17,7 +17,6 @@ import {
   SettingsCard,
   SettingsPageShell,
   StatusNote,
-  cardStyle,
   ghostBtn,
   primaryBtn,
 } from "../../components/settings/SettingsPrimitives";
@@ -117,45 +116,46 @@ export default function MyVaultPage() {
           </div>
         </div>
 
-        <div className="lf-content-grid">
+        <div className="lf-content-grid lf-my-vault-settings-grid">
           {VAULT_CATEGORY_DEFINITIONS.map((category) => (
-            <label key={category.key} style={toggleCardStyle}>
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                <input
-                  type="checkbox"
-                  checked={draft.groups[category.key]}
-                  onChange={() => toggleCategory(category.key)}
-                  style={{ marginTop: 3 }}
-                />
-                <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={toggleIconStyle}>
-                      <Icon name={category.icon} size={16} />
-                    </span>
-                    <strong style={{ fontSize: 14 }}>{category.label}</strong>
-                  </div>
-                  <div style={{ color: "#64748b", fontSize: 13 }}>{category.description}</div>
-                  {getVaultSubsectionsForGroup(category.key).length ? (
-                    <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
-                      {getVaultSubsectionsForGroup(category.key).map((subsection) => (
-                        <label key={subsection.key} style={subToggleRowStyle}>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                            <input
-                              type="checkbox"
-                              checked={draft.subsections[subsection.key]}
-                              disabled={!draft.groups[category.key]}
-                              onChange={() => toggleSubsection(subsection.key)}
-                            />
-                            <span style={{ fontWeight: 600, fontSize: 13 }}>{subsection.label}</span>
-                          </span>
-                          <span style={{ color: "#64748b", fontSize: 12 }}>{subsection.description}</span>
-                        </label>
-                      ))}
-                    </div>
-                  ) : null}
+            <section key={category.key} className="lf-settings-toggle-card">
+              <div className="lf-settings-toggle-header">
+                <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                  <span style={toggleIconStyle}><Icon name={category.icon} size={16} /></span>
+                  <strong style={{ fontSize: 15 }}>{category.label}</strong>
                 </div>
+                <label className="lf-settings-toggle" aria-label={`Show ${category.label} in My Vault`}>
+                  <input
+                    type="checkbox"
+                    checked={draft.groups[category.key]}
+                    onChange={() => toggleCategory(category.key)}
+                  />
+                  <span className="lf-settings-toggle-track" aria-hidden="true" />
+                </label>
               </div>
-            </label>
+              <div style={{ color: "#6B5F5A", fontSize: 13, lineHeight: "18px" }}>{category.description}</div>
+              {getVaultSubsectionsForGroup(category.key).length ? (
+                <div style={{ display: "grid", gap: 8, marginTop: 4 }}>
+                  {getVaultSubsectionsForGroup(category.key).map((subsection) => (
+                    <label key={subsection.key} style={subToggleRowStyle}>
+                      <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                        <span style={{ fontWeight: 600, fontSize: 13 }}>{subsection.label}</span>
+                        <span className="lf-settings-toggle" style={{ transform: "scale(.82)", transformOrigin: "right center" }} aria-label={`Show ${subsection.label}`}>
+                          <input
+                            type="checkbox"
+                            checked={draft.subsections[subsection.key]}
+                            disabled={!draft.groups[category.key]}
+                            onChange={() => toggleSubsection(subsection.key)}
+                          />
+                          <span className="lf-settings-toggle-track" aria-hidden="true" />
+                        </span>
+                      </span>
+                      <span style={{ color: "#6B5F5A", fontSize: 12 }}>{subsection.description}</span>
+                    </label>
+                  ))}
+                </div>
+              ) : null}
+            </section>
           ))}
         </div>
 
@@ -178,12 +178,6 @@ export default function MyVaultPage() {
     </SettingsPageShell>
   );
 }
-
-const toggleCardStyle = {
-  ...cardStyle,
-  padding: 14,
-  cursor: "pointer",
-} as const;
 
 const toggleIconStyle = {
   width: 28,
