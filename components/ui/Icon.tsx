@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 
 /** Semantic names used by the application resolve to the approved Material Symbols vocabulary. */
 export const LF_ICON_MAP = {
+  logo: "apps",
   dashboard: "space_dashboard",
   add: "add",
   addCircle: "add_circle",
@@ -22,6 +23,12 @@ export const LF_ICON_MAP = {
   notifications: "notifications",
   edit: "edit",
   open: "chevron_right",
+  chevronRight: "chevron_right",
+  arrowForward: "arrow_forward",
+  arrowBack: "arrow_back",
+  close: "close",
+  expandMore: "expand_more",
+  unfoldMore: "unfold_more",
   lock: "lock",
   identity: "badge",
   document: "description",

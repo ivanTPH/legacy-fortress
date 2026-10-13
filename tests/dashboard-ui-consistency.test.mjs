@@ -242,6 +242,19 @@ test("contacts keeps legacy invitation management only for add-person setup whil
   assert.match(contactsWorkspace, /This designation does not grant vault access/);
 });
 
+test("add-to-fortress uses the page header once and renders grouped creation choices", () => {
+  const page = fs.readFileSync(path.join(root, "app/(app)/add-to-fortress/page.tsx"), "utf8");
+  const panel = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/AddToFortressPanel.tsx"), "utf8");
+  const css = fs.readFileSync(path.join(root, "app/globals.css"), "utf8");
+
+  assert.match(page, /<LFPageHeader title="Add to my Fortress"/);
+  assert.match(panel, /aria-label="Choose what to add"/);
+  assert.match(panel, /className="lf-add-to-fortress-groups"/);
+  assert.doesNotMatch(panel, /Build this at your pace/);
+  assert.doesNotMatch(panel, /<h2 id="add-to-fortress-title">Add to my Fortress<\/h2>/);
+  assert.match(css, /\.lf-add-to-fortress-group \{[\s\S]*border: 1px solid #EBE4DE/);
+});
+
 test("shared attachment gallery uses icon buttons with tooltips instead of ad hoc text action buttons", () => {
   const attachmentGallery = fs.readFileSync(path.join(root, "components/documents/AttachmentGallery.tsx"), "utf8");
   const css = fs.readFileSync(path.join(root, "app/globals.css"), "utf8");

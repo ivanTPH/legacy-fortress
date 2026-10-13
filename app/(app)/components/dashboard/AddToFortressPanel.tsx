@@ -63,15 +63,7 @@ export default function AddToFortressPanel() {
   }
 
   return (
-    <section className="lf-add-to-fortress-panel" aria-labelledby="add-to-fortress-title">
-      <div className="lf-add-to-fortress-heading">
-        <span className="lf-legacy-guidance-icon"><Icon name="add_circle" size={18} /></span>
-        <span>
-          <span className="lf-legacy-guidance-eyebrow">Build this at your pace</span>
-          <h2 id="add-to-fortress-title">Add to my Fortress</h2>
-        </span>
-      </div>
-      <p className="lf-add-to-fortress-intro">Start with one useful record. You can add detail, documents and people later, when it makes sense.</p>
+    <section className="lf-add-to-fortress-panel" aria-label="Choose what to add">
       <div className="lf-add-to-fortress-groups">
         {ADD_GROUPS.map((group) => (
           <div className="lf-add-to-fortress-group" key={group.title}>

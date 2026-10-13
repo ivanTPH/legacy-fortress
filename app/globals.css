@@ -2346,12 +2346,12 @@ textarea {
 }
 
 .lf-add-to-fortress-panel {
-  border: 1px solid #d8e1ed;
-  border-radius: 16px;
-  background: #fff;
-  padding: 18px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
   display: grid;
-  gap: 14px;
+  gap: 16px;
 }
 
 .lf-add-to-fortress-heading {
@@ -2382,16 +2382,18 @@ textarea {
 .lf-add-to-fortress-group {
   display: grid;
   gap: 8px;
-  padding: 12px;
-  border: 1px solid #e2e8f0;
+  padding: 16px;
+  border: 1px solid #EBE4DE;
   border-radius: 12px;
-  background: #f8fafc;
+  background: #FFFFFF;
 }
 
 .lf-add-to-fortress-group h3 {
   margin: 0;
-  color: #334155;
-  font-size: 13px;
+  color: #1F1715;
+  font-size: 17px;
+  line-height: 22px;
+  font-weight: 600;
 }
 
 .lf-add-to-fortress-choices {
@@ -2403,28 +2405,29 @@ textarea {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  min-height: 56px;
   min-width: 0;
-  padding: 8px;
+  padding: 8px 0;
   border-radius: 8px;
-  color: #1e293b;
+  color: #1F1715;
   text-decoration: none;
 }
 
 .lf-add-to-fortress-choice:hover,
 .lf-add-to-fortress-choice:focus-visible {
-  background: #eaf1f8;
+  background: #F3EBE6;
   outline: none;
 }
 
 .lf-add-to-fortress-choice-icon {
   display: inline-grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
-  background: #e5edf7;
-  color: #315d8f;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: #F3EBE6;
+  color: #6E3A28;
 }
 
 .lf-add-to-fortress-choice span:nth-child(2) {
@@ -2434,13 +2437,13 @@ textarea {
 }
 
 .lf-add-to-fortress-choice small {
-  color: #64748b;
-  font-size: 11px;
-  line-height: 1.35;
+  color: #6B5F5A;
+  font-size: 13px;
+  line-height: 18px;
 }
 
-.lf-add-to-fortress-choice > svg {
-  color: #64748b;
+.lf-add-to-fortress-choice > .lf-icon {
+  color: #9A8F8A;
 }
 
 .lf-legacy-guidance-heading {
