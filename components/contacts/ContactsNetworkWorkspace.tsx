@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "../../lib/supabaseClient";
 import { waitForActiveUser } from "../../lib/auth/session";
 import {
@@ -574,6 +575,7 @@ export default function ContactsNetworkWorkspace() {
               Add person
             </button>
           ) : null}
+          {!viewer.readOnly ? <Link href="/access-sharing" className="lf-access-sharing-link">Access &amp; Sharing</Link> : null}
         </div>
       </section> : null}
 
@@ -970,9 +972,9 @@ function PersonManagementPanel({
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
   const [accessSummary, setAccessSummary] = useState<string[] | null>(null);
-  const [accessOptions, setAccessOptions] = useState<Array<{ sourceKind: "asset" | "record"; sourceId: string; label: string; sectionKey: string | null }>>([]);
+  const [accessOptions, setAccessOptions] = useState<Array<{ sourceKind: "asset" | "record"; sourceId: string; label: string; sectionKey: string | null; categoryKey: string | null }>>([]);
   const [selectedAccessKeys, setSelectedAccessKeys] = useState<string[]>([]);
-  const [accessEditOpen, setAccessEditOpen] = useState(false);
+  const [accessEditOpen, setAccessEditOpen] = useState(true);
   const [accessGrantId, setAccessGrantId] = useState<string | null>(null);
   const [accessInvitationId, setAccessInvitationId] = useState<string | null>(null);
   const [accessCanConfigure, setAccessCanConfigure] = useState(false);
@@ -1045,6 +1047,7 @@ function PersonManagementPanel({
             sourceId: resource.id,
             label: resource.title || (resource.source_kind === "asset" ? resource.provider_name : resource.summary) || "Unnamed record",
             sectionKey: resource.normalizedSectionKey,
+            categoryKey: resource.category_key,
           }));
         setAccessOptions(options);
         const selectedKeys = [

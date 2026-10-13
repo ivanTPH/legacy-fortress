@@ -832,6 +832,7 @@ export default function UniversalRecordWorkspace({
   const [assetReviewConfirmed, setAssetReviewConfirmed] = useState(false);
   const [showNarrativeNotes, setShowNarrativeNotes] = useState(false);
   const [savedConfirmation, setSavedConfirmation] = useState("");
+  const [savedRecordId, setSavedRecordId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [recordStatusFilter, setRecordStatusFilter] = useState<"all" | "active" | "archived">("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -2737,6 +2738,7 @@ export default function UniversalRecordWorkspace({
         : "";
     setStatus([savedMessage, uploadWarning, trustInviteMessage].filter(Boolean).join(" "));
     setSavedConfirmation(editingId ? "Changes saved" : "Saved record");
+    setSavedRecordId(recordId);
     pushBankSubmitTrace(`reload started: asset_id="${recordId ?? ""}"`);
     mergeDevBankContextTrace({
       source: "UniversalRecordWorkspace.saveRecord",
@@ -3593,6 +3595,7 @@ export default function UniversalRecordWorkspace({
 
         <div style={recordActionsStyle} className="lf-record-card-actions">
           {canEditWorkspaceRow(row.id) ? <ActionIconButton action="edit" label="Edit record" onClick={() => startEdit(row)} /> : null}
+          {viewer.mode !== "linked" && !isWillsWorkspace && canEditWorkspaceRow(row.id) ? <Link href={`/access-sharing?asset=${encodeURIComponent(row.id)}`} className="lf-icon-only-link" aria-label={`Manage people with access to ${row.title || "this record"}`}><Icon name="people" size={16} /></Link> : null}
           {isPossessions || usesCanonicalAssets ? (
             <ActionIconButton
               action="attachments"
@@ -3982,6 +3985,7 @@ export default function UniversalRecordWorkspace({
               <Icon name="check" size={40} />
             </span>
             <strong>{savedConfirmation}</strong>
+            {savedRecordId && !isWillsWorkspace && viewer.mode !== "linked" ? <Link href={`/access-sharing?asset=${encodeURIComponent(savedRecordId)}`} className="lf-secondary-btn">Choose who can see this</Link> : null}
           </div>
         </div>
       ) : null}

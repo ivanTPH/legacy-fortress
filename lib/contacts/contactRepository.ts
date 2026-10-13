@@ -24,6 +24,7 @@ import {
   type SyncCanonicalContactInput,
 } from "./canonicalContacts.ts";
 import { buildPeopleRelationship, type PeopleRelationship } from "./relationships.ts";
+import { fetchCanonicalAssets } from "../assets/fetchCanonicalAssets.ts";
 
 type AnySupabaseClient = SupabaseClient;
 
@@ -83,6 +84,18 @@ export type PeopleScopeSourceRow = {
   summary?: string | null;
   provider_name?: string | null;
 };
+
+export function normalizePeopleScopeResourceRows(rows: PeopleScopeSourceRow[]) {
+  const seen = new Set<string>();
+  return rows.filter((row) => {
+    const id = String(row.id ?? "").trim();
+    if (!id) return false;
+    const key = `${row.source_kind}:${id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
 
 export type PeopleContactRepository = {
   list(ownerUserId: string): Promise<PeopleContactEntity[]>;
@@ -318,12 +331,10 @@ export function hydratePeopleProjectionRows<T extends PeopleProjectionHydratable
 
 export async function loadPeopleScopeResourcesForOwner(client: AnySupabaseClient, ownerUserId: string) {
   const [assetsRes, recordsRes] = await Promise.all([
-    client
-      .from("assets")
-      .select("id,section_key,category_key,title,provider_name")
-      .eq("owner_user_id", ownerUserId)
-      .is("deleted_at", null)
-      .is("archived_at", null),
+    fetchCanonicalAssets(client, {
+      userId: ownerUserId,
+      select: "id,section_key,category_key,title,provider_name,metadata_json",
+    }),
     client
       .from("section_entries")
       .select("id,section_key,category_key,title,summary")
@@ -347,7 +358,7 @@ export async function loadPeopleScopeResourcesForOwner(client: AnySupabaseClient
     summary: String(row.summary ?? "") || null,
   }));
 
-  return [...assets, ...records] satisfies PeopleScopeSourceRow[];
+  return normalizePeopleScopeResourceRows([...assets, ...records] satisfies PeopleScopeSourceRow[]);
 }
 
 export function createPeopleContactRepository(client: AnySupabaseClient): PeopleContactRepository {

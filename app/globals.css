@@ -3712,6 +3712,86 @@ textarea {
   font-size: 14px;
 }
 
+.lf-access-sharing-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 8px 12px;
+  color: #6f3f22;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.lf-access-sharing-page {
+  display: grid;
+  gap: 18px;
+}
+
+.lf-access-sharing-panel,
+.lf-access-sharing-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid #e8e1dc;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.lf-access-sharing-list {
+  display: grid;
+  gap: 10px;
+}
+
+.lf-access-sharing-card {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+}
+
+.lf-access-sharing-card h2,
+.lf-access-sharing-card p {
+  margin: 0;
+}
+
+.lf-access-sharing-card p,
+.lf-access-sharing-person small,
+.lf-muted-copy {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.lf-access-sharing-person {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 10px 0;
+  border-top: 1px solid #eee7e2;
+}
+
+.lf-access-sharing-person span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lf-access-sharing-person input {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 600px) {
+  .lf-access-sharing-card {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .lf-access-sharing-card strong {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
 .lf-access-request-guidance {
   border: 1px solid #e5e7eb;
   border-radius: 10px;
