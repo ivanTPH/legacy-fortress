@@ -7,6 +7,7 @@ import { formatCurrency } from "../../../../../lib/currency";
 import { supabase } from "../../../../../lib/supabaseClient";
 import { getSafeUserData } from "@/lib/auth/requireActiveUser";
 import AttachmentGallery from "../../../../../components/documents/AttachmentGallery";
+import Icon from "../../../../../components/ui/Icon";
 import { getStoredFileSignedUrl, isPrintableDocumentMimeType } from "../../../../../lib/assets/documentLinks";
 
 type SectionKey = "personal" | "financial" | "legal" | "property" | "business" | "digital";
@@ -246,10 +247,13 @@ export default function VaultAssetDetailPage() {
   }
 
   return (
-    <div style={{ display: "grid", gap: 14, maxWidth: 920 }}>
-      <div>
-        <h1 style={{ margin: 0, fontSize: 28 }}>{displayTitle}</h1>
-        <p style={{ margin: "6px 0 0", color: "#6b7280" }}>{config.label} details and management actions.</p>
+    <div className="lf-record-detail" style={{ display: "grid", gap: 14, maxWidth: 1120 }}>
+      <div className="lf-record-detail-heading">
+        <div>
+          <h1>{displayTitle}</h1>
+          <p>{config.label} · Updated {formatDateTime(String(row?.updated_at || ""))}</p>
+        </div>
+        {!loading && row ? <Link className="lf-ui-button lf-ui-button-primary" href={`${config.basePath}?edit=${id}`}><Icon name="edit" size={18} />Edit</Link> : null}
       </div>
 
       {loading ? <div style={{ color: "#6b7280" }}>Loading...</div> : null}
@@ -263,7 +267,14 @@ export default function VaultAssetDetailPage() {
 
       {!loading && row ? (
         <>
-          <section style={cardStyle}>
+          <nav className="lf-record-detail-tabs" aria-label="Record detail sections">
+            <a className="is-active" href="#overview">Overview</a>
+            <a href="#documents">Documents{section === "legal" && row.file_path ? " · 1" : ""}</a>
+            <a href="#history">History</a>
+            <a href="#access">Access</a>
+          </nav>
+
+          <section id="overview" className="lf-record-detail-card" style={cardStyle}>
             <div style={metaGridStyle}>
               <Meta label="Added" value={formatDateTime(String(row.created_at || ""))} />
               <Meta label="Updated" value={formatDateTime(String(row.updated_at || ""))} />
@@ -290,7 +301,12 @@ export default function VaultAssetDetailPage() {
             </div>
           </section>
 
-          <section style={cardStyle}>
+          <section id="access" className="lf-record-detail-card" style={cardStyle}>
+            <div className="lf-record-detail-card-title"><strong>Who can see this</strong><Link href="/access-sharing">Manage access <Icon name="chevron_right" size={16} /></Link></div>
+            <p className="lf-record-detail-note">Sharing remains view only and is managed through explicit record grants.</p>
+          </section>
+
+          <section id="documents" className="lf-record-detail-card" style={cardStyle}>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <Link href={config.basePath} style={linkBtnStyle}>Back to section</Link>
               <Link href={`${config.basePath}?edit=${id}`} style={linkBtnStyle}>Edit in section</Link>
@@ -314,7 +330,14 @@ export default function VaultAssetDetailPage() {
                 onPrint={() => void printLegalFile()}
               />
             ) : null}
+            {!row.file_path && section === "legal" ? <p className="lf-record-detail-note">No document is attached to this record.</p> : null}
             {status ? <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div> : null}
+          </section>
+
+          <section id="history" className="lf-record-detail-card lf-record-detail-history" style={cardStyle}>
+            <strong>Recent activity</strong>
+            <div><Icon name="radio_button_checked" size={16} /><span>Record created · {formatDateTime(String(row.created_at || ""))}</span></div>
+            {row.updated_at && row.updated_at !== row.created_at ? <div><Icon name="edit" size={16} /><span>Record updated · {formatDateTime(String(row.updated_at || ""))}</span></div> : null}
           </section>
         </>
       ) : null}

@@ -500,3 +500,15 @@ Date: 2026-10-13.
 - The repository contains no checked-in Dockerfile, Nixpacks file, Procfile or Node-version override. The documented staging path remains Node 20, `npm ci`, `next build --webpack`, then `npm run start`.
 - A local production-equivalent `npm run build` succeeds with exit code 0 and generates the expected route output. No evidence establishes whether the hosted trace failure was caused by memory pressure, disk exhaustion, timeout, container termination or another host-side condition.
 - No Coolify setting, Docker resource, dependency, Node version, deployment or production configuration was changed. Owner/operator access to the failed deployment logs and host/container metrics is required before attributing or correcting the failure.
+
+## Mobile responsiveness remediation
+
+Date: 2026-10-13.
+
+- Added explicit viewport metadata in `app/layout.tsx`: device-width, initial scale, and `viewport-fit=cover`.
+- Kept the UAT banner in normal document flow on mobile so it cannot occupy the same top coordinate as the sticky application header.
+- Corrected the final mobile shell clearance in `app/globals.css`; the legacy mobile padding rule now reserves space for the floating bottom navigation and iOS safe-area inset.
+- Added shared mobile wrapping and minimum-width rules for headings, finance sections, record rows, and shell children so content can shrink and wrap without horizontal overflow.
+- At 402px, the local browser measurement reports `scrollWidth=402`, bottom navigation top `800px`, last content bottom `689.5px` at the page end, and no overlap. A geometry sweep at 320, 375, 390, 402, 430, 768, and 1280px reported zero viewport-overflow failures across Dashboard, Finances, Action Centre, People, Settings, and record-detail routes.
+- Local browser smoke remains unauthenticated because the isolated runtime has no Supabase URL; it is geometry evidence only. Real iPhone/WebKit and authenticated hosted acceptance were not run.
+- No Auth, RLS, grant, invitation, IDV, estate, probate, admin, production, or staging deployment behavior changed.

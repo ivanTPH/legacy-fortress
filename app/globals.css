@@ -108,6 +108,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
   color: rgba(255, 255, 255, 0.92);
 }
 
+/* The environment banner is document content, not a second sticky header.
+   Keeping it in normal flow prevents iOS Safari from stacking it over the
+   shell header and clipping the first page title. */
+.lf-uat-environment-banner { position: relative; }
+
 @media (max-width: 720px) {
   .lf-uat-environment-banner {
     align-items: flex-start;
@@ -3062,6 +3067,43 @@ textarea {
 .lf-notification-event strong { font-size: 13px; }
 .lf-notification-event small, .lf-notification-event time { color: var(--lf-text-secondary); font-size: 12px; line-height: 1.35; }
 .lf-notification-empty { margin: 6px 2px; color: var(--lf-text-secondary); font-size: 13px; }
+.lf-notification-view-all { display: flex; align-items: center; justify-content: center; gap: 4px; min-height: 36px; color: var(--lf-link); font-size: 13px; font-weight: 600; text-decoration: none; border-top: 1px solid var(--lf-divider); }
+.lf-notifications-page { display: grid; gap: 18px; max-width: 1080px; }
+.lf-notifications-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.lf-filter-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.lf-filter-chip { min-height: 30px; padding: 0 12px; border: 1px solid var(--lf-border-input); border-radius: 999px; background: var(--lf-surface); color: var(--lf-text); font: inherit; font-size: 13px; cursor: pointer; }
+.lf-filter-chip.is-active { border-color: var(--lf-ink); background: var(--lf-ink); color: #fff; }
+.lf-notifications-layout { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 16px; min-width: 0; }
+.lf-notifications-list, .lf-notification-detail { min-width: 0; border: 1px solid var(--lf-border); border-radius: 12px; background: var(--lf-surface); overflow: hidden; }
+.lf-notification-row { width: 100%; min-height: 74px; padding: 12px 16px; display: grid; grid-template-columns: 36px minmax(0, 1fr) 8px; align-items: center; gap: 12px; border: 0; border-bottom: 1px solid var(--lf-divider); background: transparent; color: var(--lf-text); text-align: left; font: inherit; cursor: pointer; }
+.lf-notification-row:last-child { border-bottom: 0; }
+.lf-notification-row:hover, .lf-notification-row:focus-visible, .lf-notification-row.is-selected { background: var(--lf-tint); outline: none; }
+.lf-notification-row-copy { min-width: 0; display: grid; gap: 2px; }
+.lf-notification-row-copy strong, .lf-notification-row-copy small, .lf-notification-row-copy time { overflow-wrap: anywhere; }
+.lf-notification-row-copy strong { font-size: 14px; font-weight: 400; }
+.lf-notification-row-copy strong.is-unread { font-weight: 600; }
+.lf-notification-row-copy small, .lf-notification-row-copy time { color: var(--lf-text-secondary); font-size: 12px; line-height: 18px; }
+.lf-notification-unread-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lf-accent); }
+.lf-notification-detail { padding: 20px; display: grid; align-content: start; gap: 12px; }
+.lf-notification-detail-icon { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--lf-warn-bg); color: var(--lf-warn); }
+.lf-notification-detail h2 { margin: 0; font-size: 20px; line-height: 26px; }
+.lf-notification-detail p { margin: 0; color: var(--lf-text-secondary); font-size: 14px; line-height: 20px; }
+.lf-notification-detail dl { margin: 4px 0 8px; border: 1px solid var(--lf-divider); border-radius: 10px; overflow: hidden; }
+.lf-notification-detail dl div { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--lf-divider); font-size: 13px; }
+.lf-notification-detail dl div:last-child { border-bottom: 0; }
+.lf-notification-detail dt { color: var(--lf-text-secondary); }
+.lf-notification-detail dd { margin: 0; overflow-wrap: anywhere; }
+.lf-notifications-empty-state { min-height: 220px; display: grid; place-items: center; align-content: center; gap: 8px; border: 1px dashed var(--lf-dashed); border-radius: 12px; color: var(--lf-text-secondary); text-align: center; }
+.lf-notifications-empty-state strong { color: var(--lf-text); }
+@media (max-width: 800px) {
+  .lf-notifications-layout { grid-template-columns: 1fr; }
+  .lf-notification-detail { order: -1; }
+}
+@media (max-width: 520px) {
+  .lf-notifications-toolbar { align-items: flex-start; flex-direction: column; }
+  .lf-filter-chips { width: 100%; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
+  .lf-filter-chip { flex: 0 0 auto; }
+}
 
 .lf-settings-card { color: var(--lf-text); }
 .lf-settings-card h2 { color: var(--lf-text); }
@@ -3112,6 +3154,54 @@ textarea {
   .lf-person-drawer { width: 100vw; max-width: none; }
   .lf-person-drawer-content { padding: 16px; }
   .lf-person-access-chooser { padding: 12px; }
+}
+
+/* Final mobile safety contract. Keep this after legacy compatibility rules so
+   fixed navigation and shell geometry cannot be overridden by older media
+   blocks. */
+@media (max-width: 767px) {
+  html, body { width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; }
+  .lf-content-wrap, .lf-main-content { min-width: 0; max-width: 100%; box-sizing: border-box; }
+  .lf-topbar { top: 0; padding-top: max(10px, env(safe-area-inset-top)); }
+  .lf-main-content { padding-bottom: calc(184px + env(safe-area-inset-bottom)); scroll-padding-bottom: calc(184px + env(safe-area-inset-bottom)); }
+  .lf-ui-page-header, .lf-ui-page-header-copy, .lf-ui-page-header p, .lf-finance-page, .lf-finance-page > * { min-width: 0; max-width: 100%; }
+  .lf-ui-page-header p { overflow-wrap: anywhere; }
+  .lf-finance-section-heading { grid-template-columns: 32px minmax(0, 1fr) auto 32px; gap: 8px; }
+  .lf-finance-section-heading > strong { max-width: 30vw; overflow-wrap: anywhere; white-space: normal; text-align: right; font-size: 15px; }
+  .lf-finance-record-row { gap: 8px; padding-right: 12px; padding-left: 12px; }
+  .lf-finance-record-row > span:last-child { gap: 6px; }
+  .lf-finance-record-row > span:last-child strong { max-width: 38vw; overflow-wrap: anywhere; white-space: normal; text-align: right; }
+  .lf-dashboard-mobile-value-card { padding: 16px; border-radius: 16px; }
+  .lf-dashboard-mobile-value-card > strong { font-size: 28px; line-height: 34px; }
+  .lf-mobile-bottom-nav { bottom: max(12px, env(safe-area-inset-bottom)); }
+}
+
+@media (max-width: 430px) {
+  .lf-main-content { padding-right: 12px; padding-left: 12px; }
+  .lf-ui-page-header h1, .lf-dashboard-mobile-home-heading h1 { font-size: 32px; line-height: 38px; }
+  .lf-ui-page-header .lf-ui-button { align-self: flex-start; }
+  .lf-finance-empty-grid { grid-template-columns: 1fr; }
+  .lf-dashboard-mobile-value-stats { gap: 6px; }
+  .lf-dashboard-mobile-value-stats strong { font-size: 16px; }
+}
+
+.lf-record-detail { min-width: 0; }
+.lf-record-detail-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; min-width: 0; }
+.lf-record-detail-heading > div { min-width: 0; }
+.lf-record-detail-heading h1 { margin: 0; color: var(--lf-text); font-size: 28px; line-height: 34px; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.lf-record-detail-heading p { margin: 6px 0 0; color: var(--lf-text-secondary); font-size: 15px; line-height: 22px; overflow-wrap: anywhere; }
+.lf-record-detail-tabs { display: flex; gap: 24px; overflow-x: auto; border-bottom: 1px solid var(--lf-border); }
+.lf-record-detail-tabs a { flex: 0 0 auto; padding: 0 0 10px; color: var(--lf-text-secondary); font-size: 14px; text-decoration: none; }
+.lf-record-detail-tabs a.is-active { border-bottom: 2px solid var(--lf-ink); color: var(--lf-text); font-weight: 600; }
+.lf-record-detail-card { border-color: var(--lf-border) !important; border-radius: 12px !important; box-shadow: none !important; }
+.lf-record-detail-card-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.lf-record-detail-card-title a { display: inline-flex; align-items: center; gap: 3px; color: var(--lf-link); font-size: 14px; font-weight: 500; text-decoration: none; }
+.lf-record-detail-note { margin: 0; color: var(--lf-text-secondary); font-size: 13px; line-height: 18px; }
+.lf-record-detail-history > div { display: flex; align-items: center; gap: 8px; color: var(--lf-text-secondary); font-size: 13px; }
+@media (max-width: 767px) {
+  .lf-record-detail-heading { align-items: flex-start; flex-direction: column; }
+  .lf-record-detail-heading .lf-ui-button { align-self: flex-start; }
+  .lf-record-detail-tabs { gap: 18px; }
 }
 
 @media (min-width: 768px) and (max-width: 1100px) {
@@ -6655,6 +6745,7 @@ textarea {
 
   .lf-main-content {
     padding: 12px !important;
+    padding-bottom: calc(184px + env(safe-area-inset-bottom)) !important;
   }
 
   .lf-topbar {
@@ -7215,6 +7306,20 @@ textarea {
   .lf-dashboard-reference-tile-icon { width: 30px; height: 30px; border-radius: 7px; }
   .lf-dashboard-reference-tile-title { font-size: 17px; font-weight: 400; }
   .lf-dashboard-reference-tile-footer { display: none; }
+  html, body { width: 100%; max-width: 100%; min-width: 0; overflow-x: hidden; }
+  .lf-content-wrap, .lf-main-content { min-width: 0; max-width: 100%; box-sizing: border-box; }
+  .lf-topbar { top: 0; padding-top: max(10px, env(safe-area-inset-top)); }
+  .lf-main-content { padding-bottom: calc(184px + env(safe-area-inset-bottom)); scroll-padding-bottom: calc(184px + env(safe-area-inset-bottom)); }
+  .lf-ui-page-header, .lf-ui-page-header-copy, .lf-ui-page-header p, .lf-finance-page, .lf-finance-page > * { min-width: 0; max-width: 100%; }
+  .lf-ui-page-header p { overflow-wrap: anywhere; }
+  .lf-finance-section-heading { grid-template-columns: 32px minmax(0, 1fr) auto 32px; gap: 8px; }
+  .lf-finance-section-heading > strong { max-width: 30vw; overflow-wrap: anywhere; white-space: normal; text-align: right; font-size: 15px; }
+  .lf-finance-record-row { gap: 8px; padding-right: 12px; padding-left: 12px; }
+  .lf-finance-record-row > span:last-child { gap: 6px; }
+  .lf-finance-record-row > span:last-child strong { max-width: 38vw; overflow-wrap: anywhere; white-space: normal; text-align: right; }
+  .lf-dashboard-mobile-value-card { padding: 16px; border-radius: 16px; }
+  .lf-dashboard-mobile-value-card > strong { font-size: 28px; line-height: 34px; }
+  .lf-mobile-bottom-nav { bottom: max(12px, env(safe-area-inset-bottom)); }
 }
 
 /* Final People/access cascade. */

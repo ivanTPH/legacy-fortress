@@ -112,6 +112,7 @@ export default function NotificationBell({ ownerUserId, disabled = false }: { ow
               <Icon name="chevron_right" size={18} />
             </Link>;
           }) : null}
+          {!loading && visibleEvents.length ? <Link href="/notifications" className="lf-notification-view-all" onClick={() => setOpen(false)}>View all notifications <Icon name="chevron_right" size={16} /></Link> : null}
         </div>
       ) : null}
     </div>

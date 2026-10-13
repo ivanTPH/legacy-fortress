@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import UatEnvironmentBanner from "../components/internal/UatEnvironmentBanner";
 import TestPersonaBanner from "../components/internal/TestPersonaBanner";
 import { getRobotsPolicy } from "../lib/environment/appEnvironment";
@@ -19,6 +19,12 @@ export const metadata: Metadata = {
     shortcut: ["/brand/favicon.png"],
   },
   robots: getRobotsPolicy(),
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
