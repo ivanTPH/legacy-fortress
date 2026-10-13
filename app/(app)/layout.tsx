@@ -1124,7 +1124,8 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                   : "Private and secure account"
               }
             >
-              <Icon name={resolvedViewerAccess.mode === "linked" ? "visibility_lock" : "verified_user"} size={16} />
+              <Icon name={resolvedViewerAccess.mode === "linked" ? "visibility_lock" : "verified_user"} size={16} filled />
+              <span>Vault secured</span>
             </div>
             <div ref={accountMenuRef} className="lf-admin-shell-account-menu lf-personal-account-menu">
               <button ref={accountTriggerRef} type="button" className="lf-admin-shell-account-trigger" aria-label={`Open account menu for ${effectiveDisplayName}`} aria-expanded={accountMenuOpen} aria-controls={accountMenuId} aria-haspopup="menu" onClick={toggleAccountMenu}>
@@ -1233,6 +1234,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
         ) : null}
 
         <main className="lf-main-content">
+          <div className="lf-page-content">
           {isDemoExperience ? (
             <section
               style={{
@@ -1279,6 +1281,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
             </section>
           ) : null}
           {children}
+          </div>
         </main>
         <nav className="lf-mobile-bottom-nav" aria-label="Primary mobile navigation">
           {[

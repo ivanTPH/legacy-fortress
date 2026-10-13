@@ -31,7 +31,6 @@ export default function DashboardActionSummary({ items, context, guidanceItems, 
     <section id="action-centre" className="lf-dashboard-action-summary" aria-label="Things worth your attention">
       <div className="lf-dashboard-action-summary-heading">
         <div>
-          <p className="lf-dashboard-action-summary-eyebrow">Next useful steps</p>
           <h2>Things worth your attention</h2>
         </div>
       </div>

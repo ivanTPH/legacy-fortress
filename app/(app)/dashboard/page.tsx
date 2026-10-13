@@ -8,6 +8,7 @@ import DashboardActionSummary from "../components/dashboard/DashboardActionSumma
 import ActionCentreEntryPrompt from "../components/dashboard/ActionCentreEntryPrompt";
 import Icon from "../../../components/ui/Icon";
 import InfoTip from "../../../components/ui/InfoTip";
+import { LFPageHeader, LFStatsStrip } from "../../../components/ui/LFDesignSystem";
 import AttachmentGallery, { type AttachmentGalleryItem } from "../../../components/documents/AttachmentGallery";
 import { FormField, NumberInput, TextInput } from "../../../components/forms/asset/AssetFormControls";
 import { formatCurrency } from "../../../lib/currency";
@@ -1598,6 +1599,18 @@ const legalSummary = useMemo(() => {
 
   return (
     <div className="lf-dashboard-shell" style={{ display: "grid", gap: 14 }}>
+      <LFPageHeader
+        title="Dashboard"
+        description="Your recorded information, in one place."
+        action={viewer.mode === "linked" ? undefined : { label: "Add record", href: "/add-to-fortress", icon: "add" }}
+      />
+      {viewer.mode !== "linked" ? (
+        <LFStatsStrip items={[
+          { label: "Records", value: String(financeRecordCount + legalRecordCount + propertyRecordCount + businessRecordCount + digitalRecordCount + possessionsRecordCount) },
+          { label: "People", value: String(contactRows.length) },
+          { label: "Open actions", value: String(getActionCentreActionCount(dashboardState.actions.items, dashboardState.actions.context, guidanceItems)) },
+        ]} />
+      ) : null}
       {status ? (
         isPlanLimitStatus(status) ? (
           <button

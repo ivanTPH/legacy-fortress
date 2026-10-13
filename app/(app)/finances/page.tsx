@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import DashboardAssetSummaryCard from "../components/dashboard/DashboardAssetSummaryCard";
 import Icon from "../../../components/ui/Icon";
+import { LFPageHeader, LFStatsStrip } from "../../../components/ui/LFDesignSystem";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
 import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
 import { waitForActiveUser } from "../../../lib/auth/session";
@@ -12,6 +13,8 @@ import { supabase } from "../../../lib/supabaseClient";
 import { resolveWalletContextForRead } from "../../../lib/canonicalPersistence";
 import {
   buildFinanceCategorySummary,
+  getDashboardAssetValueMajor,
+  latestTimestamp,
   type DashboardAssetRow,
   type FinanceCategoryKey,
 } from "../../../lib/dashboard/summary";
@@ -137,17 +140,27 @@ export default function FinancesOverviewPage() {
           description: "Choose one financial area and add what you know now.",
         }
       : null;
+  const totalRecorded = assetRows.reduce((sum, row) => sum + getDashboardAssetValueMajor(row), 0);
+  const lastUpdated = latestTimestamp(assetRows.map((row) => row.updated_at ?? row.created_at));
+  const formatUpdatedDate = (value: string | null) => value
+    ? new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value))
+    : "Not yet";
 
   return (
     <section style={{ display: "grid", gap: 14 }}>
-      <div style={{ display: "grid", gap: 6 }}>
-        <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
-          Record your bank accounts, savings, pensions, and policies so your estate has a clear financial picture.
-        </p>
-        <div style={progressCueStyle}>
-          {loading ? "Loading your finances..." : `${assetRows.length} finance record${assetRows.length === 1 ? "" : "s"} saved across ${summaries.length} visible area${summaries.length === 1 ? "" : "s"}`}
-        </div>
-      </div>
+      <LFPageHeader
+        title="Finances"
+        description="Record your bank accounts, savings, pensions, and policies so your estate has a clear financial picture."
+        action={{ label: "Add record", href: "/finances/bank?add=1", icon: "add" }}
+      />
+
+      {!loading && assetRows.length ? (
+        <LFStatsStrip items={[
+          { label: "Total recorded", value: new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(totalRecorded) },
+          { label: "Records", value: String(assetRows.length), suffix: `in ${summaries.filter((section) => section.summary.items.length > 0).length} of ${summaries.length} categories` },
+          { label: "Last updated", value: formatUpdatedDate(lastUpdated) },
+        ]} />
+      ) : null}
 
       {status ? <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div> : null}
       {loading ? <div className="lf-loading-note" role="status">Loading your finances...</div> : null}
@@ -195,12 +208,6 @@ export default function FinancesOverviewPage() {
     </section>
   );
 }
-
-const progressCueStyle = {
-  color: "#64748b",
-  fontSize: 12,
-  fontWeight: 600,
-} as const;
 
 const recommendedActionStyle = {
   textDecoration: "none",

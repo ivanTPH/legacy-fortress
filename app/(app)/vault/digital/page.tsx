@@ -1,6 +1,7 @@
 "use client";
 
 import CanonicalAssetOverviewGrid, { metadataToken, type CanonicalAssetOverviewTile } from "../../components/dashboard/CanonicalAssetOverviewGrid";
+import { LFPageHeader } from "../../../../components/ui/LFDesignSystem";
 
 const digitalTiles: CanonicalAssetOverviewTile[] = [
   {
@@ -77,11 +78,11 @@ const digitalTiles: CanonicalAssetOverviewTile[] = [
 export default function DigitalVaultOverviewPage() {
   return (
     <section style={{ display: "grid", gap: 14 }}>
-      <div style={{ display: "grid", gap: 6 }}>
-        <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
-          Keep online accounts, subscriptions, platforms, recovery contacts, and access notes clear for trusted people later.
-        </p>
-      </div>
+      <LFPageHeader
+        title="Digital"
+        description="Keep online accounts, subscriptions, platforms, recovery contacts, and access notes clear for trusted people later."
+        action={{ label: "Add record", href: "/vault/digital/records?add=1&digitalType=__other", icon: "add" }}
+      />
 
       <div className="lf-content-grid">
         <CanonicalAssetOverviewGrid tiles={digitalTiles} />
