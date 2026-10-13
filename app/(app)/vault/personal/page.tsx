@@ -1,6 +1,7 @@
 "use client";
 
 import CanonicalAssetOverviewGrid, { metadataToken, type CanonicalAssetOverviewTile } from "../../components/dashboard/CanonicalAssetOverviewGrid";
+import { LFPageHeader } from "../../../../components/ui/LFDesignSystem";
 
 const possessionTiles: CanonicalAssetOverviewTile[] = [
   {
@@ -77,11 +78,7 @@ const possessionTiles: CanonicalAssetOverviewTile[] = [
 export default function PersonalPossessionsOverviewPage() {
   return (
     <section style={{ display: "grid", gap: 14 }}>
-      <div style={{ display: "grid", gap: 6 }}>
-        <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
-          Capture personal possessions with values, references, locations, attachments, and photos.
-        </p>
-      </div>
+      <LFPageHeader title="Possessions" description="Capture personal possessions with values, references, locations, attachments, and photos." action={{ label: "Add record", href: "/vault/personal/records?add=1", icon: "add" }} />
 
       <div className="lf-content-grid">
         <CanonicalAssetOverviewGrid tiles={possessionTiles} />

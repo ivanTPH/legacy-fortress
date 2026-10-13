@@ -5,6 +5,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../../../lib/supabaseClient";
 import { getSafeUserData } from "../../../../lib/auth/requireActiveUser";
+import { LFPageHeader } from "../../../../components/ui/LFDesignSystem";
 
 type LegalRow = {
   id: string;
@@ -47,12 +48,7 @@ export default function LegalVaultPage() {
 
   return (
     <section style={{ display: "grid", gap: 14 }}>
-      <div>
-        <h1 style={{ margin: 0, fontSize: 28 }}>Legal Vault</h1>
-        <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
-          Review and manage legal records. Use categories for targeted workflows.
-        </p>
-      </div>
+      <LFPageHeader title="Legal" description="Review and manage legal records. Use categories for targeted workflows." action={{ label: "Add record", href: "/legal/wills", icon: "add" }} />
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <Link href="/legal" style={primaryStyle}>Open legal categories</Link>
@@ -138,4 +134,3 @@ const cardStyle: CSSProperties = {
   display: "grid",
   gap: 10,
 };
-

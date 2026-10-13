@@ -15,6 +15,7 @@ import { FileDropzone, FormField } from "../forms/asset/AssetFormControls";
 import { ActionIconButton } from "../ui/IconButton";
 import Icon from "../ui/Icon";
 import InfoTip from "../ui/InfoTip";
+import { LFPageHeader } from "../ui/LFDesignSystem";
 import AttachmentGallery, { AttachmentGallerySummary } from "../documents/AttachmentGallery";
 import { waitForActiveUser } from "../../lib/auth/session";
 import { formatCurrency } from "../../lib/currency";
@@ -3950,13 +3951,8 @@ export default function UniversalRecordWorkspace({
   return (
     <section id={sectionId} style={{ display: "grid", gap: 14 }}>
       <div style={{ display: "grid", gap: 6 }}>
-        {showPageHeading ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <h1 style={{ margin: 0, fontSize: 28 }}>{title}</h1>
-            {helpMessage ? <InfoTip label={`Explain ${title}`} message={helpMessage} /> : null}
-          </div>
-        ) : null}
-        <p style={{ margin: showPageHeading ? "6px 0 0" : 0, color: "#6b7280" }}>{displaySubtitle}</p>
+        {showPageHeading ? <LFPageHeader title={title} description={displaySubtitle} /> : <p style={{ margin: 0, color: "#6b7280" }}>{displaySubtitle}</p>}
+        {showPageHeading && helpMessage ? <InfoTip label={`Explain ${title}`} message={helpMessage} /> : null}
         {viewer.mode === "linked" ? (
           <div style={linkedPanelChipStyle}>
             <Icon name="visibility_lock" size={14} />

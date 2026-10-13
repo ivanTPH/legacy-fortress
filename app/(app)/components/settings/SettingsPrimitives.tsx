@@ -1,9 +1,10 @@
 import type { CSSProperties, ReactNode } from "react";
+import { LFPageHeader } from "../../../../components/ui/LFDesignSystem";
 
 export function SettingsPageShell({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return (
     <div style={{ display: "grid", gap: 24, maxWidth: 1080 }}>
-      <div aria-label={title} style={{ color: "#6b7280" }}>{subtitle}</div>
+      <LFPageHeader title={title} description={subtitle} />
       {children}
     </div>
   );

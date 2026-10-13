@@ -1578,11 +1578,7 @@ const legalSummary = useMemo(() => {
     }
     return (
       <div className="lf-action-centre-page" style={{ display: "grid", gap: 14 }}>
-        <section className="lf-action-centre-page-header" aria-labelledby="action-centre-page-title">
-          <p className="lf-action-centre-page-eyebrow">Your next useful steps</p>
-          <h1 id="action-centre-page-title">Action Centre</h1>
-          <p>Open an item to understand why it is here and choose what to do next.</p>
-        </section>
+        <LFPageHeader title="Action Centre" description="Things worth your attention, with a direct path to each next step." />
         <ActionQueuePanel
           items={dashboardState.actions.items}
           context={dashboardState.actions.context}
