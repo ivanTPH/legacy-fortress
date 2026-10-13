@@ -35,6 +35,7 @@ import { resolveOwnerAccessEligibility, type OwnerAccessEligibility } from "../.
 import ContactInvitationManager from "../../app/(app)/components/dashboard/ContactInvitationManager";
 import { useViewerAccess } from "../access/ViewerAccessContext";
 import Icon from "../ui/Icon";
+import { IconButton } from "../ui/IconButton";
 import InfoTip from "../ui/InfoTip";
 import DocumentPreviewDialog, { type DocumentPreviewDialogItem } from "../documents/DocumentPreviewDialog";
 import { ROLE_RULES, type AccessActivationStatus, type CollaboratorRole, type SectionKey } from "../../lib/access-control/roles";
@@ -118,6 +119,7 @@ export default function ContactsNetworkWorkspace() {
   const [, setOpeningDocumentKey] = useState("");
   const [nextOfKinDraft, setNextOfKinDraft] = useState({ fullName: "", relationship: "", email: "", phone: "" });
   const [savingNextOfKin, setSavingNextOfKin] = useState(false);
+  const [sendingInviteId, setSendingInviteId] = useState<string | null>(null);
 
   const loadContacts = useCallback(async (isMounted: () => boolean = () => true) => {
       setLoading(true);
@@ -155,6 +157,38 @@ export default function ContactsNetworkWorkspace() {
       mounted = false;
     };
   }, [loadContacts]);
+
+  async function sendExistingContactInvite(contact: ContactRow) {
+    if (viewer.readOnly || !contact.email || contact.invite_status !== "not_invited" || sendingInviteId) return;
+    const user = await waitForActiveUser(supabase, { attempts: 5, delayMs: 120 });
+    const ownerId = viewer.targetOwnerUserId || user?.id || "";
+    if (!ownerId || !user) {
+      setStatus("Your session has expired. Please sign in again.");
+      return;
+    }
+    setSendingInviteId(contact.id);
+    setStatus("");
+    try {
+      await sendContactInvite(supabase, {
+        ownerUserId: ownerId,
+        ownerEmail: user.email,
+        contactId: contact.id,
+        contactName: contact.full_name,
+        contactEmail: contact.email,
+        contactRelationship: contact.relationship,
+        assignedRole: toCollaboratorRole(contact.contact_role),
+        invitedAt: new Date().toISOString(),
+        activationStatus: "invited",
+        origin: typeof window === "undefined" ? null : window.location.origin,
+      });
+      setContacts((current) => current.map((item) => item.id === contact.id ? { ...item, invite_status: "invite_sent" } : item));
+      setStatus(`Invitation sent to ${contact.email}.`);
+    } catch {
+      setStatus("Could not send this invitation.");
+    } finally {
+      setSendingInviteId(null);
+    }
+  }
 
   useEffect(() => {
     function handleContactsUpdated() {
@@ -632,31 +666,45 @@ export default function ContactsNetworkWorkspace() {
                   {rows.map((contact) => {
                     const inviteState = getInviteState(contact);
                     return (
-                      <article key={contact.id} className="lf-contact-row lf-contact-summary-row" style={contactSummaryRowStyle}>
-                        <button
-                          type="button"
-                          className="lf-contact-summary-button"
-                          style={contactSummaryButtonStyle}
-                          onClick={(event) => openContact(contact.id, groupKey, event.currentTarget)}
-                          aria-label={`Open ${contact.full_name || "person"}`}
-                        >
+                      <article
+                        key={contact.id}
+                        className="lf-contact-row lf-contact-summary-row"
+                        style={contactSummaryRowStyle}
+                        role="button"
+                        tabIndex={0}
+                        onClick={(event) => openContact(contact.id, groupKey, event.currentTarget)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            openContact(contact.id, groupKey, event.currentTarget);
+                          }
+                        }}
+                        aria-label={`Open ${contact.full_name || "person"}`}
+                      >
                           <span style={{ display: "grid", gap: 3, minWidth: 0, textAlign: "left" }}>
                             <strong style={contactSummaryNameStyle}>{contact.full_name || "Unnamed person"}</strong>
                             <span style={contactSummaryRelationshipStyle}>{formatContactRoleLine(contact)}</span>
                             {getRelationshipDocumentLabel(contact) ? <span className="lf-contact-summary-context">{getRelationshipDocumentLabel(contact)}</span> : null}
                           </span>
-                          <span style={contactSummaryStatusStyle} data-tone={inviteState.tone}>{getContactCardStatus(contact)}</span>
-                        </button>
+                          <span className="lf-people-status-chip" data-tone={getPeopleStatusChip(contact).tone}><Icon name={getPeopleStatusChip(contact).icon} size={14} />{getPeopleStatusChip(contact).label}</span>
                         <div className="lf-contact-summary-action" style={contactSummaryActionStyle}>
-                          {getPrimaryContactAction(contact) ? <span className="lf-contact-next-action" style={contactNextActionStyle}>{getPrimaryContactAction(contact)}</span> : null}
-                          <button
-                            type="button"
+                          {contact.invite_status === "not_invited" && contact.email && !viewer.readOnly ? (
+                            <IconButton
+                              icon="send"
+                              label="Send invitation"
+                              variant="round"
+                              className="lf-contact-send-button"
+                              disabled={sendingInviteId === contact.id}
+                              onClick={(event) => { event.stopPropagation(); void sendExistingContactInvite(contact); }}
+                            />
+                          ) : null}
+                          <IconButton
+                            icon="edit"
+                            label="Edit"
+                            variant="round"
                             className="lf-contact-edit-button"
-                            aria-label={`Edit ${contact.full_name || "person"}`}
-                            onClick={(event) => openContact(contact.id, groupKey, event.currentTarget)}
-                          >
-                            <Icon name="edit" size={16} />
-                          </button>
+                            onClick={(event) => { event.stopPropagation(); openContact(contact.id, groupKey, event.currentTarget); }}
+                          />
                         </div>
                       </article>
                     );
@@ -705,6 +753,16 @@ function getContactCardStatus(contact: ContactRow) {
   const connection = getContactSummaryStatus(contact);
   if (connection === "Linked" && ["verified", "active"].includes(contact.verification_status)) return "Linked · Verified";
   return connection;
+}
+
+function getPeopleStatusChip(contact: ContactRow) {
+  if (contact.linked_user_id || ["verified", "active"].includes(contact.verification_status)) {
+    return { label: "Linked · Verified", icon: "check_circle", tone: "success" as const };
+  }
+  if (contact.invite_status === "invite_sent" || ["accepted", "pending_verification", "verification_submitted"].includes(contact.verification_status)) {
+    return { label: "Awaiting acceptance", icon: "hourglass_top", tone: "warning" as const };
+  }
+  return { label: "Not invited", icon: "schedule_send", tone: "neutral" as const };
 }
 
 function getPrimaryContactAction(contact: ContactRow) {
@@ -910,7 +968,7 @@ function PersonDetailDrawer({
 
           {!readOnly && (contact.invite_status === "invite_sent" || contact.invite_status === "not_invited") ? (
             <button type="button" style={rowPrimaryActionStyle} onClick={() => setManagementView("invitation")}>
-              <Icon name={contact.invite_status === "invite_sent" ? "mail" : "send"} size={16} />
+              <Icon name="send" size={16} />
               {contact.invite_status === "invite_sent" ? "Manage invitation" : "Send invitation"}
             </button>
           ) : null}

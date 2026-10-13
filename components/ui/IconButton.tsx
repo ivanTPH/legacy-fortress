@@ -7,15 +7,16 @@ type IconButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children">
   icon: string;
   label: string;
   danger?: boolean;
+  variant?: "default" | "round";
 };
 
-export function IconButton({ icon, label, danger = false, style, ...props }: IconButtonProps) {
+export function IconButton({ icon, label, danger = false, variant = "default", style, className, ...props }: IconButtonProps) {
   return (
     <button
       type="button"
       aria-label={label}
       title={label}
-      className={danger ? "lf-icon-btn lf-icon-btn-danger" : "lf-icon-btn"}
+      className={`${danger ? "lf-icon-btn lf-icon-btn-danger" : "lf-icon-btn"}${variant === "round" ? " lf-icon-btn-round" : ""}${className ? ` ${className}` : ""}`}
       style={style}
       {...props}
     >
