@@ -9,8 +9,8 @@ const root = process.cwd();
 test("scope projection keeps all eligible finance records, including pensions", () => {
   const rows = normalizePeopleScopeResourceRows([
     { source_kind: "asset", id: "bank-1", section_key: "finances", category_key: "bank", title: "Barclays", provider_name: "Barclays" },
-    { source_kind: "asset", id: "bank-2", section_key: "finances", category_key: "bank", title: "HSBC", provider_name: "HSBC" },
-    { source_kind: "asset", id: "pension-1", section_key: "finances", category_key: "pensions", title: "Provincial", provider_name: "Provincial" },
+    { source_kind: "record", id: "bank-2", section_key: "finances", category_key: "bank", title: "HSBC", provider_name: "HSBC", status: "active" },
+    { source_kind: "record", id: "pension-1", section_key: "finances", category_key: "pension", title: "Provincial", provider_name: "Provincial", status: "active" },
   ]);
   assert.deepEqual(rows.map((row) => row.id), ["bank-1", "bank-2", "pension-1"]);
 });

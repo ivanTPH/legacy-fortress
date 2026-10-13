@@ -83,6 +83,8 @@ export type PeopleScopeSourceRow = {
   title: string | null;
   summary?: string | null;
   provider_name?: string | null;
+  status?: string | null;
+  archived_at?: string | null;
 };
 
 export function normalizePeopleScopeResourceRows(rows: PeopleScopeSourceRow[]) {
@@ -90,6 +92,7 @@ export function normalizePeopleScopeResourceRows(rows: PeopleScopeSourceRow[]) {
   return rows.filter((row) => {
     const id = String(row.id ?? "").trim();
     if (!id) return false;
+    if (String(row.status ?? "").trim().toLowerCase() === "archived" || row.archived_at) return false;
     const key = `${row.source_kind}:${id}`;
     if (seen.has(key)) return false;
     seen.add(key);
@@ -330,11 +333,15 @@ export function hydratePeopleProjectionRows<T extends PeopleProjectionHydratable
 }
 
 export async function loadPeopleScopeResourcesForOwner(client: AnySupabaseClient, ownerUserId: string) {
-  const [assetsRes, recordsRes] = await Promise.all([
+  const [assetsRes, recordsRes, compatibilityRes] = await Promise.all([
     fetchCanonicalAssets(client, {
       userId: ownerUserId,
       select: "id,section_key,category_key,title,provider_name,metadata_json",
     }),
+    client
+      .from("records")
+      .select("id,section_key,category_key,title,provider_name,summary,status,archived_at")
+      .eq("owner_user_id", ownerUserId),
     client
       .from("section_entries")
       .select("id,section_key,category_key,title,summary")
@@ -353,12 +360,31 @@ export async function loadPeopleScopeResourcesForOwner(client: AnySupabaseClient
     source_kind: "record" as const,
     id: String(row.id ?? ""),
     section_key: String(row.section_key ?? "") || null,
-    category_key: String(row.category_key ?? "") || null,
+    category_key: normalizePeopleScopeCategory(row.category_key),
+    title: String(row.title ?? "") || null,
+    provider_name: String(row.provider_name ?? "") || null,
+    summary: String(row.summary ?? "") || null,
+    status: String(row.status ?? "") || null,
+    archived_at: String(row.archived_at ?? "") || null,
+  }));
+  const compatibilityRows = ((compatibilityRes.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+    source_kind: "record" as const,
+    id: String(row.id ?? ""),
+    section_key: String(row.section_key ?? "") || null,
+    category_key: normalizePeopleScopeCategory(row.category_key),
     title: String(row.title ?? "") || null,
     summary: String(row.summary ?? "") || null,
   }));
 
-  return normalizePeopleScopeResourceRows([...assets, ...records] satisfies PeopleScopeSourceRow[]);
+  return normalizePeopleScopeResourceRows([...assets, ...records, ...compatibilityRows] satisfies PeopleScopeSourceRow[]);
+}
+
+function normalizePeopleScopeCategory(value: unknown) {
+  const normalized = String(value ?? "").trim().toLowerCase().replace(/[_\s]+/g, "-");
+  if (normalized === "pension" || normalized === "pensions") return "pensions";
+  if (normalized === "investment") return "investments";
+  if (normalized === "debt" || normalized === "loans-liabilities") return "debts";
+  return normalized || null;
 }
 
 export function createPeopleContactRepository(client: AnySupabaseClient): PeopleContactRepository {
