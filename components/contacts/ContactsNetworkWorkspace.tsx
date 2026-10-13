@@ -1042,6 +1042,7 @@ function PersonManagementPanel({
         const options = resources
           .map((resource) => ({ ...resource, normalizedSectionKey: normalizeAccessSectionKey(resource.section_key) }))
           .filter((resource) => !resource.normalizedSectionKey || allowedSections.has(resource.normalizedSectionKey))
+          .filter((resource) => String(resource.category_key ?? "").trim().toLowerCase() !== "wills")
           .map((resource) => ({
             sourceKind: resource.source_kind,
             sourceId: resource.id,

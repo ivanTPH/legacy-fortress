@@ -37,6 +37,7 @@ export default function AccessSharingWorkspace() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [grants, setGrants] = useState<Grant[]>([]);
   const [recordLabel, setRecordLabel] = useState("");
+  const [recordIsLocked, setRecordIsLocked] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState("");
@@ -50,8 +51,8 @@ export default function AccessSharingWorkspace() {
       const [contactRows, grantResult, assetResult, entryResult] = await Promise.all([
         loadCanonicalContactsForOwner(supabase, user.id),
         supabase.from("account_access_grants").select("id,invitation_id,contact_id,linked_user_id,permissions_override,activation_status").eq("owner_user_id", user.id),
-        recordId ? supabase.from("assets").select("id,title,provider_name").eq("owner_user_id", user.id).eq("id", recordId).maybeSingle() : Promise.resolve({ data: null }),
-        recordId ? supabase.from("section_entries").select("id,title,summary").eq("user_id", user.id).eq("id", recordId).maybeSingle() : Promise.resolve({ data: null }),
+        recordId ? supabase.from("assets").select("id,title,provider_name,category_key").eq("owner_user_id", user.id).eq("id", recordId).maybeSingle() : Promise.resolve({ data: null }),
+        recordId ? supabase.from("section_entries").select("id,title,summary,category_key").eq("user_id", user.id).eq("id", recordId).maybeSingle() : Promise.resolve({ data: null }),
       ]);
       if (cancelled) return;
       const nextContacts = (contactRows ?? []) as Contact[];
@@ -61,6 +62,7 @@ export default function AccessSharingWorkspace() {
       setGrants(nextGrants);
       const row = (assetResult.data ?? entryResult.data) as { title?: unknown; provider_name?: unknown; summary?: unknown } | null;
       setRecordLabel(String(row?.title ?? row?.provider_name ?? row?.summary ?? "Selected record"));
+      setRecordIsLocked(String((row as { category_key?: unknown } | null)?.category_key ?? "").trim().toLowerCase() === "wills");
       if (recordId) {
         setSelected(new Set(nextGrants.filter((grant) => {
           const permissions = normalizeContactPermissionsOverride(grant.permissions_override);
@@ -131,12 +133,16 @@ export default function AccessSharingWorkspace() {
       {recordId ? (
         <section className="lf-access-sharing-panel" aria-labelledby="record-sharing-heading">
           <h2 id="record-sharing-heading">People with access</h2>
-          <p className="lf-muted-copy">View only <InfoTip label="Explain view-only access" message="People can view information you share but cannot change or delete your records." /></p>
+          {recordIsLocked ? <p className="lf-muted-copy">This Will is locked while the owner is living. An executor relationship does not provide living access.</p> : <p className="lf-muted-copy">View only <InfoTip label="Explain view-only access" message="People can view information you share but cannot change or delete your records." /></p>}
+          {recordIsLocked ? null : (
+            <>
           {eligibleContacts.length ? eligibleContacts.map((contact) => {
             const grant = grantByContact.get(contact.id) ?? (contact.linked_user_id ? grantByContact.get(contact.linked_user_id) : undefined);
             if (!grant) return null;
             return <label key={grant.id} className="lf-access-sharing-person"><input type="checkbox" checked={selected.has(grant.id)} disabled={saving === grant.id} onChange={() => void toggleRecordAccess(contact, grant)} /><span><strong>{contact.full_name}</strong><small>{contact.relationship || "Relationship not set"}{contact.contact_role && contact.contact_role !== contact.relationship ? ` · ${contact.contact_role}` : ""}</small></span></label>;
           }) : <p className="lf-muted-copy">No eligible linked people are available for living Vault sharing.</p>}
+            </>
+          )}
         </section>
       ) : (
         <section className="lf-access-sharing-list" aria-label="Current shared access">
