@@ -39,6 +39,7 @@ export default function DashboardActionSummary({ items, context, guidanceItems, 
           const guidance = guidanceItems.find((candidate) => candidate.key === item.guidanceKey);
           return item.guidanceKey === "will" && item.guidanceState === "unknown" && guidance && onGuidanceApplicability ? (
             <div key={item.key} className="lf-dashboard-action-summary-item" role="group" aria-label="Will applicability choices">
+              <span className="lf-dashboard-action-summary-status" aria-hidden="true" />
               <span>
                 <strong>{item.title}</strong>
                 <small>{item.blockerLabel}</small>
@@ -51,6 +52,7 @@ export default function DashboardActionSummary({ items, context, guidanceItems, 
             </div>
           ) : (
             <button key={item.key} type="button" className="lf-dashboard-action-summary-item" onClick={() => onAction(item.actionKey, item.href)}>
+              <span className="lf-dashboard-action-summary-status" aria-hidden="true" />
               <span>
                 <strong>{item.title}</strong>
                 <small>{item.blockerLabel}</small>

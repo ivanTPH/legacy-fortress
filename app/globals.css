@@ -2931,7 +2931,10 @@ textarea {
 .lf-mobile-search-toggle, .lf-mobile-bottom-nav { display: none; }
 
 .lf-main-content {
-  max-width: var(--lf-shell-content-max-width);
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 32px 40px 64px;
   color: var(--lf-text);
 }
@@ -3483,10 +3486,19 @@ textarea {
   background: #fcfaf8;
 }
 
-.lf-dashboard-action-summary-item > span {
+.lf-dashboard-action-summary-item > span:not(.lf-dashboard-action-summary-status) {
   display: grid;
   gap: 3px;
   min-width: 0;
+}
+
+.lf-dashboard-action-summary-status {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+  background: #8C4A32;
+  box-shadow: 0 0 0 3px #F3EBE6;
 }
 
 .lf-dashboard-action-summary-item small {
@@ -4319,10 +4331,10 @@ textarea {
 }
 
 .lf-nav-item.is-active {
-  background: linear-gradient(180deg, var(--lf-bronze) 0%, var(--lf-bronze-strong) 100%);
-  color: #ffffff;
-  border-color: #2b1812;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 8px 18px rgba(33, 17, 13, 0.16);
+  background: #FFFFFF;
+  color: #2B1714;
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .lf-nav-item.is-open:not(.is-active) {
@@ -4331,11 +4343,11 @@ textarea {
 }
 
 .lf-nav-icon {
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
-  border: 1px solid transparent;
-  background: #f3f1ee;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4360,9 +4372,9 @@ textarea {
 }
 
 .lf-nav-item.is-active .lf-nav-icon {
-  border-color: rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.12);
-  color: #ffffff;
+  border-color: transparent;
+  background: transparent;
+  color: #6E3A28;
 }
 
 .lf-sidebar-foot {
@@ -7081,9 +7093,9 @@ textarea {
   .lf-sidebar { background: var(--lf-sidebar); border-right-color: var(--lf-border); }
   .lf-topbar { min-height: 60px; padding-top: 12px; padding-bottom: 12px; background: rgba(250, 248, 246, .96); }
   .lf-topbar-actions .lf-workspace-switcher { display: none; }
-  .lf-main-content { padding: 32px 40px; max-width: 1040px; }
+  .lf-main-content { width: 100%; max-width: none; padding: 32px 40px 64px; }
   .lf-brand-title, .lf-topbar-title { color: var(--lf-text); }
-  .lf-nav-item.is-active { background: var(--lf-tint); color: var(--lf-ink); }
+  .lf-nav-item.is-active { background: #FFFFFF; color: var(--lf-ink); border-color: transparent; box-shadow: none; }
 }
 
 @media (max-width: 760px) {
@@ -7132,7 +7144,7 @@ textarea {
 .lf-topbar-heading .lf-topbar-title { display: block; margin: 0; color: #1F1715; font-size: 17px; font-weight: 600; line-height: 22px; }
 .lf-topbar-actions { grid-column: 3; grid-row: 1; grid-template-columns: 34px minmax(84px, 180px); gap: 12px; }
 .lf-topbar-actions .lf-workspace-switcher { display: none; }
-.lf-main-content { max-width: 960px; padding: 32px 40px 64px; color: #1F1715; }
+.lf-main-content { width: 100%; max-width: none; min-width: 0; box-sizing: border-box; padding: 32px 40px 64px; color: #1F1715; }
 .lf-dashboard-overview-panel { border-color: #EBE4DE !important; border-radius: 12px !important; background: #FFFFFF !important; padding: 20px !important; }
 .lf-dashboard-overview-title-row h2 { font-size: 17px !important; line-height: 22px; }
 .lf-dashboard-overview-copy { font-size: 15px !important; line-height: 22px; }
@@ -7182,6 +7194,7 @@ textarea {
 .lf-dashboard-action-summary h2 { color: #1F1715; font-size: 17px; line-height: 22px; font-weight: 600; }
 .lf-dashboard-action-summary-list { gap: 0; }
 .lf-dashboard-action-summary-item { min-height: 56px; padding: 12px 16px 12px 20px; border: 0; border-top: 1px solid #F3EEEA; border-radius: 0; }
+.lf-dashboard-action-summary-item > span:not(.lf-dashboard-action-summary-status) { flex: 1 1 auto; }
 .lf-dashboard-action-summary-item strong { color: #1F1715; font-size: 15px; font-weight: 600; }
 .lf-dashboard-action-summary-item small { color: #6B5F5A; font-size: 13px; white-space: normal; }
 .lf-dashboard-action-summary-link { margin: 4px 20px 16px; color: #7A3D27; font-size: 14px; font-weight: 500; }
@@ -7253,6 +7266,7 @@ textarea {
 .lf-topbar-heading { display: none; }
 .lf-nav { gap: 2px; }
 .lf-nav-item { min-height: 38px; padding: 6px 10px; color: #2B1714; font-weight: 400; }
+.lf-nav-item.is-active { background: #FFFFFF; color: #2B1714; border-color: transparent; box-shadow: none; }
 .lf-nav-icon { width: 24px; height: 24px; border: 0; border-radius: 6px; background: transparent; }
 .lf-nav-item.is-active .lf-nav-icon { border: 0; background: transparent; color: #6E3A28; }
 .lf-dashboard-overview-title-row > div:first-child { display: none; }
