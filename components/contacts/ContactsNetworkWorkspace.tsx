@@ -110,7 +110,6 @@ export default function ContactsNetworkWorkspace() {
   const [, setConfirmingValidationKey] = useState("");
   const [, setAssociationAlerts] = useState<string[]>([]);
   const [addContactGroupKey, setAddContactGroupKey] = useState<string | null>(null);
-  const [menuContactId, setMenuContactId] = useState<string | null>(null);
   const [dismissedContactId, setDismissedContactId] = useState<string | null>(null);
   const lastContactTriggerRef = useRef<HTMLElement | null>(null);
   const [documentPreview, setDocumentPreview] = useState<LinkedDocumentPreview | null>(null);
@@ -445,7 +444,6 @@ export default function ContactsNetworkWorkspace() {
     params.set("contact", contactId);
     if (groupKey) params.set("group", groupKey);
     router.replace(`/contacts?${params.toString()}`);
-    setMenuContactId(null);
   }
 
   function closeContact() {
@@ -631,7 +629,6 @@ export default function ContactsNetworkWorkspace() {
                 <div style={{ display: "grid", gap: 8 }}>
                   {rows.map((contact) => {
                     const inviteState = getInviteState(contact);
-                    const isMenuOpen = menuContactId === contact.id;
                     return (
                       <article key={contact.id} className="lf-contact-row lf-contact-summary-row" style={contactSummaryRowStyle}>
                         <button
@@ -644,27 +641,20 @@ export default function ContactsNetworkWorkspace() {
                           <span style={{ display: "grid", gap: 3, minWidth: 0, textAlign: "left" }}>
                             <strong style={contactSummaryNameStyle}>{contact.full_name || "Unnamed person"}</strong>
                             <span style={contactSummaryRelationshipStyle}>{formatContactRoleLine(contact)}</span>
+                            {getRelationshipDocumentLabel(contact) ? <span className="lf-contact-summary-context">{getRelationshipDocumentLabel(contact)}</span> : null}
                           </span>
-                          <span style={contactSummaryStatusStyle} data-tone={inviteState.tone}>{getContactSummaryStatus(contact)}</span>
+                          <span style={contactSummaryStatusStyle} data-tone={inviteState.tone}>{getContactCardStatus(contact)}</span>
                         </button>
                         <div className="lf-contact-summary-action" style={contactSummaryActionStyle}>
                           {getPrimaryContactAction(contact) ? <span className="lf-contact-next-action" style={contactNextActionStyle}>{getPrimaryContactAction(contact)}</span> : null}
                           <button
                             type="button"
-                            style={overflowButtonStyle}
-                            aria-label={`More actions for ${contact.full_name || "person"}`}
-                            aria-haspopup="menu"
-                            aria-expanded={isMenuOpen}
-                            onClick={() => setMenuContactId((current) => current === contact.id ? null : contact.id)}
+                            className="lf-contact-edit-button"
+                            aria-label={`Edit ${contact.full_name || "person"}`}
+                            onClick={(event) => openContact(contact.id, groupKey, event.currentTarget)}
                           >
-                            <span aria-hidden="true">•••</span>
+                            <Icon name="edit" size={16} />
                           </button>
-                          {isMenuOpen ? (
-                            <div className="lf-contact-overflow-menu" role="menu">
-                              <button type="button" role="menuitem" onClick={(event) => openContact(contact.id, groupKey, event.currentTarget)}>View details</button>
-                              {!viewer.readOnly ? <button type="button" role="menuitem" onClick={(event) => openContact(contact.id, groupKey, event.currentTarget)}>Manage relationship</button> : null}
-                            </div>
-                          ) : null}
                         </div>
                       </article>
                     );
@@ -707,6 +697,12 @@ function getContactSummaryStatus(contact: ContactRow) {
   if (contact.invite_status === "invite_sent") return "Invitation awaiting acceptance";
   if (contact.email) return "Invitation not sent";
   return "Recorded";
+}
+
+function getContactCardStatus(contact: ContactRow) {
+  const connection = getContactSummaryStatus(contact);
+  if (connection === "Linked" && ["verified", "active"].includes(contact.verification_status)) return "Linked · Verified";
+  return connection;
 }
 
 function getPrimaryContactAction(contact: ContactRow) {
@@ -889,6 +885,14 @@ function PersonDetailDrawer({
             <span id="person-relationship-heading" style={drawerSectionLabelStyle}>Relationship</span>
             <span style={drawerRelatedItemStyle}>{humanizeContactTerm(contact.relationship) || "Not specified"}</span>
             {humanizeContactTerm(contact.contact_role) && humanizeContactTerm(contact.contact_role) !== humanizeContactTerm(contact.relationship) ? <span style={drawerRelatedItemStyle}>Role: {humanizeContactTerm(contact.contact_role)}</span> : null}
+            {getRelationshipDocumentLabel(contact) ? <span style={drawerRelatedItemStyle}>Document: {getRelationshipDocumentLabel(contact)}</span> : null}
+          </section>
+
+          <section style={drawerSectionStyle} aria-labelledby="person-status-heading">
+            <span id="person-status-heading" style={drawerSectionLabelStyle}>Status</span>
+            <span style={drawerRelatedItemStyle}>Connection: {getContactSummaryStatus(contact)}</span>
+            <span style={drawerRelatedItemStyle}>Identity: {contact.verification_status === "verified" || contact.verification_status === "active" ? "Verified" : contact.verification_status === "not_verified" ? "Not verified" : "Verification in progress"}</span>
+            {getRelationshipDocumentLabel(contact) ? <span style={drawerRelatedItemStyle}>Will access: Locked while living</span> : null}
           </section>
 
           {relatedContexts.length ? (
@@ -1292,7 +1296,7 @@ function PersonManagementPanel({
             <strong>No records currently shared</strong>
             {accessEligibility === "invitation_pending" ? <><span style={drawerExplanationStyle}>{contact.full_name || "This person"} must accept your invitation before you can share Vault records.</span><button type="button" style={rowPrimaryActionStyle} onClick={() => onNavigate("invitation")}>Manage invitation</button></> : accessEligibility === "not_invited" ? <><span style={drawerExplanationStyle}>Invite this person and wait for them to connect before sharing Vault records.</span><button type="button" style={rowPrimaryActionStyle} onClick={() => onNavigate("invitation")}>Invite this person</button></> : accessEligibility === "verification_required" ? <span style={drawerExplanationStyle}>This person is connected, but needs to complete the required verification before Vault records can be shared.</span> : accessEligibility === "executor_restricted" ? <span style={drawerExplanationStyle}>Being recorded as an executor does not give this person access to your private Vault while you are alive.</span> : accessEligibility === "link_required" ? <span style={drawerExplanationStyle}>This person must finish connecting their Legacy Fortress account before Vault records can be shared.</span> : <><span style={drawerExplanationStyle}>{contact.full_name || "This person"} does not currently have access to your private Vault.</span>{accessCanConfigure ? <button type="button" style={rowPrimaryActionStyle} onClick={() => setAccessEditOpen((current) => !current)}>{accessEditOpen ? "Close access choices" : "Give access"}</button> : null}</>}
           </>}
-          {accessEditOpen && accessCanConfigure ? <div className="lf-person-access-chooser"><strong>Choose what {contact.full_name || "this person"} can see</strong><span style={drawerExplanationStyle}>View only <InfoTip label="Explain view-only sharing" message="Sharing lets this person view the records you select. It does not let them change or delete your records." /></span><div className="lf-person-access-scope-note">This relationship currently supports selected existing records. Sharing every current or future record is not available, so new records are never added silently.</div>{accessGroups.length ? accessGroups.map(([sectionKey, options]) => <fieldset key={sectionKey} className="lf-person-access-group"><legend>{accessSectionLabel(sectionKey)} <span className="lf-person-access-count">{options.filter((option) => selectedAccessKeys.includes(`${option.sourceKind}:${option.sourceId}`)).length} of {options.length} selected</span></legend>{options.map((option) => { const key = `${option.sourceKind}:${option.sourceId}`; return <label key={key}><input type="checkbox" checked={selectedAccessKeys.includes(key)} onChange={() => setSelectedAccessKeys((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key])} />{option.label}</label>; })}</fieldset>) : <span style={drawerExplanationStyle}>There are no eligible records to share.</span>}<button type="button" style={rowPrimaryActionStyle} disabled={saving || !accessOptions.length} onClick={() => void saveAccess(selectedAccessKeys)}>Save shared access</button></div> : null}
+          {accessEditOpen && accessCanConfigure ? <div className="lf-person-access-chooser"><strong>Choose what {contact.full_name || "this person"} can see</strong><span style={drawerExplanationStyle}>View only <InfoTip label="Explain view-only sharing" message="Sharing lets this person view the records you select. It does not let them change or delete your records." /></span><div className="lf-person-access-scope-note">Select one or more existing records. New records are not shared automatically. <InfoTip label="Explain current-record selection" message="Select all shares the records that exist today. New records are not shared automatically." /></div>{accessGroups.length ? accessGroups.map(([sectionKey, options]) => { const groupKeys = options.map((option) => `${option.sourceKind}:${option.sourceId}`); const selectedInGroup = groupKeys.filter((key) => selectedAccessKeys.includes(key)).length; const allSelected = selectedInGroup === groupKeys.length; return <fieldset key={sectionKey} className="lf-person-access-group"><legend>{accessSectionLabel(sectionKey)} <span className="lf-person-access-count">{selectedInGroup} of {options.length} selected</span></legend>{options.length > 1 ? <label className="lf-person-access-select-all"><input type="checkbox" checked={allSelected} onChange={() => setSelectedAccessKeys((current) => allSelected ? current.filter((key) => !groupKeys.includes(key)) : Array.from(new Set([...current, ...groupKeys])))} />Select all current {accessSectionLabel(sectionKey).toLowerCase()}</label> : null}{options.map((option) => { const key = `${option.sourceKind}:${option.sourceId}`; return <label key={key}><input type="checkbox" checked={selectedAccessKeys.includes(key)} onChange={() => setSelectedAccessKeys((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key])} />{option.label}</label>; })}</fieldset>; }) : <span style={drawerExplanationStyle}>There are no eligible records to share.</span>}<button type="button" style={rowPrimaryActionStyle} disabled={saving || !accessOptions.length} onClick={() => void saveAccess(selectedAccessKeys)}>Save shared access</button></div> : null}
         </div>
       ) : null}
       {view === "remove" ? (
@@ -1585,6 +1589,15 @@ function formatContactRoleLine(contact: ContactRow) {
   const relationship = humanizeContactTerm(contact.relationship);
   const role = humanizeContactTerm(contact.contact_role);
   return [relationship, role && role !== relationship ? role : ""].filter(Boolean).join(" · ") || "Relationship not set";
+}
+
+function getRelationshipDocumentLabel(contact: ContactRow) {
+  const context = (contact.linked_context ?? []).find((item) => {
+    const category = String(item.category_key ?? "").trim().toLowerCase();
+    return category === "wills" || category === "will";
+  });
+  if (!context) return "";
+  return context.label || describeLinkedDocumentContext(context);
 }
 
 function humanizeContactTerm(value: string | null | undefined) {
@@ -2038,17 +2051,6 @@ const contactNextActionStyle: CSSProperties = {
   fontSize: 12,
   fontWeight: 700,
   whiteSpace: "nowrap",
-};
-
-const overflowButtonStyle: CSSProperties = {
-  border: "1px solid #e8e1dc",
-  borderRadius: 999,
-  background: "#fff",
-  color: "#475569",
-  minWidth: 40,
-  minHeight: 40,
-  cursor: "pointer",
-  letterSpacing: 2,
 };
 
 const emptyPeopleStyle: CSSProperties = {

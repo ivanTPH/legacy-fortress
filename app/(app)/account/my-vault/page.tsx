@@ -105,7 +105,7 @@ export default function MyVaultPage() {
   return (
     <SettingsPageShell
       title="My Vault"
-      subtitle="Choose which record groups and subsections stay visible across navigation, the dashboard, onboarding follow-up, and shared empty-state guidance."
+      subtitle="Choose what appears in your Vault. You can turn areas back on at any time without losing your information."
     >
       <SettingsCard
         title="Visible vault categories"
@@ -113,7 +113,7 @@ export default function MyVaultPage() {
       >
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
           <div style={{ fontSize: 13, color: "#64748b" }}>
-            {enabledCount} of {VAULT_CATEGORY_DEFINITIONS.length} category groups visible
+            {enabledCount} of {VAULT_CATEGORY_DEFINITIONS.length} areas shown
           </div>
         </div>
 

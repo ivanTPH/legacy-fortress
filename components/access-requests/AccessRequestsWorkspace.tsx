@@ -342,7 +342,9 @@ export default function AccessRequestsWorkspace() {
 
       {status ? <div style={{ color: "#64748b", fontSize: 13 }}>{status}</div> : null}
 
-      <section style={workflowGridStyle}>
+      <details className="lf-access-request-guidance">
+        <summary>How access requests work</summary>
+        <section style={workflowGridStyle}>
         {[
           ["1. Request received", "An invited person asks to view a category, view a record, add a document, or perform another action they do not currently have."],
           ["2. Owner decision", "You see their name, email, requested access, and can approve or reject the request."],
@@ -354,7 +356,8 @@ export default function AccessRequestsWorkspace() {
             <div style={{ color: "#64748b", fontSize: 13 }}>{description}</div>
           </article>
         ))}
-      </section>
+        </section>
+      </details>
 
       <section style={cardStyle}>
         <div style={{ display: "grid", gap: 4 }}>

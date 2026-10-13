@@ -19,7 +19,7 @@ test("contacts uses grouped collapsible sections as the primary workflow", () =>
   assert.match(contactsWorkspace, /Awaiting acceptance/);
   assert.match(contactsWorkspace, /Invite sent/);
   assert.match(contactsWorkspace, /Missing association/);
-  assert.match(contactsWorkspace, /Manage relationship/);
+  assert.match(contactsWorkspace, /Edit relationship/);
   assert.match(contactsWorkspace, /<ContactInvitationManager[\s\S]*mode="full"[\s\S]*initialRole=\{getAddContactPreset\(addContactGroupKey\)\.role\}/);
   assert.match(contactsWorkspace, /function PersonManagementPanel/);
   assert.match(contactsWorkspace, /className="lf-person-more-menu"/);

@@ -21,12 +21,22 @@ test("shared access remains explicit, selected and view-only", () => {
   const contacts = read("components/contacts/ContactsNetworkWorkspace.tsx");
   const permissions = read("lib/contacts/contactPermissions.ts");
   assert.match(contacts, /Manage shared access/);
-  assert.match(contacts, /selected existing records/);
+  assert.match(contacts, /Select one or more existing records/);
   assert.match(contacts, /View only/);
   assert.match(contacts, /Save shared access/);
+  assert.match(contacts, /Select all current/);
+  assert.match(contacts, /New records are not shared automatically/);
   assert.match(contacts, /Remove access/);
   assert.match(permissions, /read_only: true/);
   assert.doesNotMatch(contacts, /All existing and future records/);
+});
+
+test("relationship cards expose canonical document context without inventing legal roles", () => {
+  const contacts = read("components/contacts/ContactsNetworkWorkspace.tsx");
+  assert.match(contacts, /getRelationshipDocumentLabel/);
+  assert.match(contacts, /Document: \{getRelationshipDocumentLabel/);
+  assert.match(contacts, /Will access: Locked while living/);
+  assert.match(contacts, /Linked · Verified/);
 });
 
 test("linked context cannot present personal Action Centre or owner-only routes", () => {

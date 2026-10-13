@@ -17,7 +17,7 @@ test("People I Trust uses compact rows with progressive person details", () => {
   assert.match(contactsWorkspace, /document\.body\.style\.overflow/);
   assert.match(contactsWorkspace, /event\.key === "Escape"/);
   assert.match(contactsWorkspace, /onClose=\{closeContact\}/);
-  assert.match(contactsWorkspace, /aria-label=\{`More actions for/);
+  assert.match(contactsWorkspace, /aria-label=\{`Edit \$\{contact\.full_name/);
   assert.doesNotMatch(contactsWorkspace, /CONTACTS BUILD CHECK/);
   assert.doesNotMatch(contactsWorkspace, /Linked to record/);
   assert.doesNotMatch(contactsWorkspace, /Manage selected contact/);

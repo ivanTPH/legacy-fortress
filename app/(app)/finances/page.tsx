@@ -145,12 +145,12 @@ export default function FinancesOverviewPage() {
           Record your bank accounts, savings, pensions, and policies so your estate has a clear financial picture.
         </p>
         <div style={progressCueStyle}>
-          {assetRows.length} finance record{assetRows.length === 1 ? "" : "s"} saved across {summaries.length} visible area{summaries.length === 1 ? "" : "s"}
+          {loading ? "Loading your finances..." : `${assetRows.length} finance record${assetRows.length === 1 ? "" : "s"} saved across ${summaries.length} visible area${summaries.length === 1 ? "" : "s"}`}
         </div>
       </div>
 
       {status ? <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div> : null}
-      {loading ? <div style={{ color: "#6b7280" }}>Loading finance summary...</div> : null}
+      {loading ? <div className="lf-loading-note" role="status">Loading your finances...</div> : null}
       {!loading && recommendedFinanceAction ? (
         <Link href={recommendedFinanceAction.href} style={recommendedActionStyle}>
           <span style={recommendedIconStyle}>

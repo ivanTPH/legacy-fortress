@@ -40,7 +40,7 @@ test("People view removes development UI and keeps relationship details progress
   assert.match(contacts, /PersonDetailDrawer/);
   assert.match(contacts, /InvitationProgressTracker/);
   assert.match(contacts, /Changing a relationship does not grant Vault access/i);
-  assert.match(contacts, /Manage relationship/);
+  assert.match(contacts, /Edit relationship/);
   assert.match(contacts, /className="lf-person-more-menu"/);
   assert.match(contacts, /Edit details/);
   assert.match(contacts, /Manage invitation/);
