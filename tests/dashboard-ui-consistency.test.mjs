@@ -212,6 +212,22 @@ test("dashboard overview cards use compact shared summary cards with one add act
   assert.ok(dashboardRender.indexOf("<DashboardActionSummary") < dashboardRender.indexOf('aria-label="Dashboard review panel"'));
 });
 
+test("vault area tiles and sidebar workspace presentation use shared production primitives", () => {
+  const designSystem = fs.readFileSync(path.join(root, "components/ui/LFDesignSystem.tsx"), "utf8");
+  const overview = fs.readFileSync(path.join(root, "components/vault/VaultAreaOverview.tsx"), "utf8");
+  const canonicalGrid = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/CanonicalAssetOverviewGrid.tsx"), "utf8");
+  const layout = fs.readFileSync(path.join(root, "app/(app)/layout.tsx"), "utf8");
+
+  assert.match(designSystem, /export function LFVaultAreaTile/);
+  assert.match(designSystem, /className=\{`lf-vault-area-tile is-\$\{state\}`\}/);
+  assert.match(overview, /<LFVaultAreaTile/);
+  assert.match(canonicalGrid, /<LFVaultAreaTile/);
+  assert.doesNotMatch(overview, /className=\{`lf-vault-area-tile/);
+  assert.doesNotMatch(canonicalGrid, /className=\{`lf-vault-area-tile/);
+  assert.match(layout, /className="lf-sidebar-brand-stack"/);
+  assert.match(layout, /lf-sidebar-brand-stack[\s\S]*lf-sidebar-workspace/);
+});
+
 test("contacts keeps legacy invitation management only for add-person setup while person details stay focused", () => {
   const contactsWorkspace = fs.readFileSync(path.join(root, "components/contacts/ContactsNetworkWorkspace.tsx"), "utf8");
   const invitationManager = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/ContactInvitationManager.tsx"), "utf8");
