@@ -2,6 +2,33 @@
 
 import type { CSSProperties } from "react";
 
+/** Semantic names used by the application resolve to the approved Material Symbols vocabulary. */
+export const LF_ICON_MAP = {
+  dashboard: "space_dashboard",
+  add: "add",
+  actionCentre: "task_alt",
+  finances: "account_balance_wallet",
+  legal: "gavel",
+  property: "home",
+  business: "work",
+  digital: "devices",
+  possessions: "inventory_2",
+  people: "group",
+  accessRequests: "key",
+  support: "help",
+  settings: "settings",
+  search: "search",
+  notifications: "notifications",
+  edit: "edit",
+  open: "chevron_right",
+  lock: "lock",
+  identity: "badge",
+  document: "description",
+  will: "history_edu",
+  trust: "account_tree",
+  powerOfAttorney: "shield_person",
+} as const;
+
 export type MaterialIconName = string;
 
 type IconProps = {
@@ -23,7 +50,7 @@ export default function Icon({
 }: IconProps) {
   return (
     <span
-      className={`lf-icon material-symbols-outlined${className ? ` ${className}` : ""}`}
+      className={`lf-icon material-symbols-rounded${className ? ` ${className}` : ""}`}
       aria-hidden={title ? undefined : true}
       title={title}
       style={{
@@ -34,7 +61,7 @@ export default function Icon({
         ...style,
       }}
     >
-      {name}
+      {LF_ICON_MAP[name as keyof typeof LF_ICON_MAP] ?? name}
     </span>
   );
 }

@@ -9,11 +9,11 @@ function NavIcon({ name, size = 18 }: { name: string; size?: number }) {
 }
 
 export function DashboardIcon({ size = 18 }: IconProps) {
-  return <NavIcon name="dashboard" size={size} />;
+  return <NavIcon name="space_dashboard" size={size} />;
 }
 
 export function PersonIcon({ size = 18 }: IconProps) {
-  return <NavIcon name="person" size={size} />;
+  return <NavIcon name="group" size={size} />;
 }
 
 export function PersonalIcon({ size = 18 }: IconProps) {
@@ -37,11 +37,11 @@ export function WalletIcon({ size = 18 }: IconProps) {
 }
 
 export function DocumentIcon({ size = 18 }: IconProps) {
-  return <NavIcon name="description" size={size} />;
+  return <NavIcon name="gavel" size={size} />;
 }
 
 export function BuildingIcon({ size = 18 }: IconProps) {
-  return <NavIcon name="apartment" size={size} />;
+  return <NavIcon name="home" size={size} />;
 }
 
 export function CarIcon({ size = 18 }: IconProps) {
@@ -49,7 +49,7 @@ export function CarIcon({ size = 18 }: IconProps) {
 }
 
 export function BriefcaseIcon({ size = 18 }: IconProps) {
-  return <NavIcon name="business_center" size={size} />;
+  return <NavIcon name="work" size={size} />;
 }
 
 export function KeyIcon({ size = 18 }: IconProps) {
@@ -65,11 +65,11 @@ export function IdentityIcon({ size = 18 }: IconProps) {
 }
 
 export function AccessRequestsIcon({ size = 18 }: IconProps) {
-  return <NavIcon name="fact_check" size={size} />;
+  return <NavIcon name="key" size={size} />;
 }
 
 export function HelpIcon({ size = 18 }: IconProps) {
-  return <NavIcon name="headphones" size={size} />;
+  return <NavIcon name="help" size={size} />;
 }
 
 export function SettingsIcon({ size = 18 }: IconProps) {

@@ -454,3 +454,12 @@ Date: 2026-10-13.
 - Removed the old desktop dashboard entry prompt and review panel from the rendered presentation; the readiness/action state remains available through the Action Centre and mobile next-step surface.
 - No schema, RLS, grant, invitation, IDV, estate, admin, production, or staging changes were made.
 - Browser smoke screenshots were captured at 1440x960, 402x874 and 375x812 against the local `127.0.0.1:3012` dev-smoke route. Application viewport width matched each viewport with no horizontal overflow.
+
+## Shared icon-system conformance increment
+
+Date: 2026-10-13.
+
+- Centralised customer icon semantics in `components/ui/Icon.tsx` through `LF_ICON_MAP` and switched production instances to the Material Symbols Rounded CSS contract with local asset loading.
+- Aligned customer navigation identifiers with the handoff: `space_dashboard`, `gavel`, `home`, `work`, `group`, `key` and `help`.
+- The repository currently contains only the existing local Material Symbols-compatible TTF, not a separately downloaded Rounded font file; external font retrieval was unavailable, so the local fallback remains an explicit validation limitation.
+- No route, data, grant, Auth, IDV, estate, admin, production or staging behavior changed.
