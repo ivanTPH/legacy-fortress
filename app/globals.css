@@ -7072,6 +7072,28 @@ textarea {
 .lf-ui-empty-tile small { color: #6B5F5A; font-size: 13px; line-height: 18px; }
 .lf-ui-empty-tile > .lf-icon { color: #7A3D27; }
 
+.lf-dashboard-reference-tile { min-width: 0; overflow: hidden; border: 1px solid #EBE4DE; border-radius: 12px; background: #FFFFFF; cursor: pointer; }
+.lf-dashboard-reference-tile:hover { border-color: #D6C9C0; box-shadow: 0 2px 8px rgba(43,23,20,.06); }
+.lf-dashboard-reference-tile-header { display: grid; grid-template-columns: 36px minmax(0,1fr) 20px; align-items: center; gap: 12px; min-height: 66px; padding: 12px 16px; color: #1F1715; text-decoration: none; }
+.lf-dashboard-reference-tile-icon { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border-radius: 9px; background: #F3EBE6; color: #6E3A28; }
+.lf-dashboard-reference-tile-title { min-width: 0; overflow-wrap: anywhere; font-size: 17px; font-weight: 600; }
+.lf-dashboard-reference-tile-header > .lf-icon { color: #9A8F8A; }
+.lf-dashboard-reference-tile-footer { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-height: 48px; padding: 12px 16px; border-top: 1px solid #F3EEEA; color: #6B5F5A; font-size: 13px; }
+.lf-dashboard-reference-tile-footer > span:first-child { color: #1F1715; font-size: 15px; font-weight: 600; }
+.lf-dashboard-reference-tile-footer > .is-obscured { color: #6B5F5A; font-weight: 400; }
+.lf-dashboard-entry-prompt { display: none; }
+.lf-dashboard-mobile-home { display: none; }
+.lf-dashboard-review-panel { display: none !important; }
+.lf-action-entry-prompt-see-all { display: inline-flex; align-items: center; gap: 4px; color: #7A3D27; font-size: 14px; font-weight: 500; text-decoration: none; }
+.lf-nav-item-wrap { display: grid; gap: 4px; }
+.lf-nav-group-label { margin: 12px 12px 2px; color: #6B5F5A; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.lf-topbar-heading { display: none; }
+.lf-nav { gap: 2px; }
+.lf-nav-item { min-height: 38px; padding: 6px 10px; color: #2B1714; font-weight: 400; }
+.lf-nav-icon { width: 24px; height: 24px; border: 0; border-radius: 6px; background: transparent; }
+.lf-nav-item.is-active .lf-nav-icon { border: 0; background: transparent; color: #6E3A28; }
+.lf-dashboard-overview-title-row > div:first-child { display: none; }
+
 @media (max-width: 767px) {
   .lf-page-content { max-width: none; gap: 24px; }
   .lf-topbar { grid-template-columns: 36px minmax(0, 1fr) 36px; padding: 10px 16px; }
@@ -7083,6 +7105,40 @@ textarea {
   .lf-ui-stat { border-left: 0; border-top: 1px solid #F0EBE7; }
   .lf-ui-stat:first-child { border-top: 0; }
   .lf-page-stack { gap: 20px; }
+  .lf-dashboard-entry-prompt { display: block; }
+  .lf-ui-page-header { display: none; }
+  .lf-topbar-heading { display: none; }
+  .lf-dashboard-mobile-home { display: grid; gap: 16px; }
+  .lf-dashboard-mobile-home { order: -1; }
+  .lf-dashboard-mobile-home-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .lf-dashboard-mobile-home-heading h1 { margin: 0; color: #1F1715; font-size: 34px; line-height: 41px; letter-spacing: -.02em; }
+  .lf-dashboard-mobile-add { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; background: #2B1714; color: #FFFFFF; text-decoration: none; }
+  .lf-dashboard-mobile-value-card { display: grid; gap: 5px; padding: 18px; border-radius: 20px; background: #2B1714; color: #FFFFFF; }
+  .lf-dashboard-mobile-value-card > span { color: #F3EBE6; font-size: 13px; }
+  .lf-dashboard-mobile-value-card > strong { color: #FFFFFF; font-size: 30px; line-height: 36px; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .lf-dashboard-mobile-value-card > small { color: #F3EBE6; font-size: 13px; }
+  .lf-dashboard-mobile-value-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 10px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.2); }
+  .lf-dashboard-mobile-value-stats span { display: grid; gap: 2px; color: #F3EBE6; font-size: 12px; }
+  .lf-dashboard-mobile-value-stats strong { color: #FFFFFF; font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .lf-dashboard-shell > .lf-ui-stats-strip { display: none; }
+  .lf-dashboard-overview-panel { margin-top: 0; }
+  .lf-dashboard-overview-title-row .lf-panel-help { display: none; }
+  .lf-dashboard-overview-copy, .lf-dashboard-overview-summary { display: none; }
+  .lf-dashboard-action-summary { margin-top: 0; }
+  .lf-action-entry-prompt { grid-template-columns: 1fr; gap: 8px; padding: 16px; border: 1px solid #EBE4DE; border-radius: 20px; background: #FFFFFF; }
+  .lf-action-entry-prompt-icon { display: none; }
+  .lf-action-entry-prompt-copy { gap: 4px; }
+  .lf-action-entry-prompt-eyebrow { color: #7A3D27; font-size: 13px; letter-spacing: 0; text-transform: none; }
+  .lf-action-entry-prompt-copy h2 { font-size: 17px; line-height: 22px; }
+  .lf-action-entry-prompt-copy p { font-size: 15px; line-height: 22px; }
+  .lf-action-entry-prompt-actions { grid-column: auto; justify-content: flex-start; gap: 8px; }
+  .lf-action-entry-prompt-actions button { min-height: 44px; }
+  .lf-action-entry-prompt-primary { background: #2B1714; border-color: #2B1714; }
+  .lf-action-entry-prompt-secondary { color: #7A3D27; border-color: #E6DFD9; }
+  .lf-dashboard-reference-tile-header { min-height: 48px; grid-template-columns: 30px minmax(0,1fr) 20px; gap: 12px; padding: 0 14px 0 16px; }
+  .lf-dashboard-reference-tile-icon { width: 30px; height: 30px; border-radius: 7px; }
+  .lf-dashboard-reference-tile-title { font-size: 17px; font-weight: 400; }
+  .lf-dashboard-reference-tile-footer { display: none; }
 }
 
 /* Final People/access cascade. */

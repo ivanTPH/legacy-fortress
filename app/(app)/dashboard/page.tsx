@@ -484,6 +484,11 @@ export default function DashboardPage() {
     () => assetBuckets.finance.filter((row) => String(row.category_key ?? "").trim() === "bank").length,
     [assetBuckets.finance],
   );
+  const debtRows = useMemo(
+    () => assetBuckets.finance.filter((row) => `${row.category_key ?? ""} ${row.subtype_key ?? ""} ${row.title ?? ""}`.toLowerCase().includes("debt") || `${row.category_key ?? ""} ${row.subtype_key ?? ""} ${row.title ?? ""}`.toLowerCase().includes("loan")),
+    [assetBuckets.finance],
+  );
+  const debtTotal = debtRows.reduce((sum, row) => sum + getAssetValueMajor(row), 0);
   const propertyRecordCount = assetBuckets.property.length;
   const businessRecordCount = assetBuckets.business.length;
   const digitalRecordCount = assetBuckets.digital.length;
@@ -1624,19 +1629,37 @@ const legalSummary = useMemo(() => {
         )
       ) : null}
       {entryPromptVisible && actionCentrePreview ? (
-        <ActionCentreEntryPrompt
-          item={actionCentrePreview}
-          onAction={(actionKey, href) => {
-            setEntryPromptVisible(false);
-            handleAction(actionKey, href);
-          }}
-          onGuidanceApplicability={(state) => {
-            const item = guidanceItems.find((candidate) => candidate.key === actionCentrePreview.guidanceKey);
-            if (item) void handleGuidanceApplicability(item, state);
-          }}
-          onDismiss={() => setEntryPromptVisible(false)}
-        />
+        <div className="lf-dashboard-entry-prompt">
+          <ActionCentreEntryPrompt
+            item={actionCentrePreview}
+            onAction={(actionKey, href) => {
+              setEntryPromptVisible(false);
+              handleAction(actionKey, href);
+            }}
+            onGuidanceApplicability={(state) => {
+              const item = guidanceItems.find((candidate) => candidate.key === actionCentrePreview.guidanceKey);
+              if (item) void handleGuidanceApplicability(item, state);
+            }}
+            onDismiss={() => setEntryPromptVisible(false)}
+          />
+        </div>
       ) : null}
+      <section className="lf-dashboard-mobile-home" aria-label="Home summary">
+        <div className="lf-dashboard-mobile-home-heading">
+          <h1>Home</h1>
+          <a className="lf-dashboard-mobile-add" href="/add-to-fortress" aria-label="Add record"><Icon name="add" size={22} /></a>
+        </div>
+        <section className="lf-dashboard-mobile-value-card" aria-label="Total recorded value">
+          <span>Total recorded value</span>
+          <strong>{financialSummary.totalMajor > 0 ? formatCurrency(financialSummary.totalMajor, currency) : "No value recorded yet"}</strong>
+          {financialSummary.addedAt ? <small>Updated {new Date(financialSummary.addedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</small> : null}
+          <div className="lf-dashboard-mobile-value-stats">
+            <span><strong>{financeRecordCount + legalRecordCount + propertyRecordCount + businessRecordCount + digitalRecordCount + possessionsRecordCount}</strong>Records</span>
+            <span><strong>{contactRows.length}</strong>People</span>
+            <span><strong>{formatCurrency(debtTotal, currency)}</strong>Debts</span>
+          </div>
+        </section>
+      </section>
       {loading ? <div style={{ color: "#6b7280" }}>Loading dashboard summary...</div> : null}
       {searchQuery ? (
           <section style={searchResultsPanelStyle} aria-label="Vault search results">
@@ -1750,6 +1773,7 @@ const legalSummary = useMemo(() => {
               obscured={shouldObscureSection(viewerRole, "financial", viewerActivation)}
               inlineSummary
               hideItems
+              referenceTile
               addHref="/finances"
               addLabel="Add financial record"
               showAddAction={viewer.mode !== "linked"}
@@ -1767,6 +1791,7 @@ const legalSummary = useMemo(() => {
               obscured={shouldObscureSection(viewerRole, "legal", viewerActivation)}
               inlineSummary
               hideItems
+              referenceTile
               addHref="/legal/wills?add=1"
               addLabel="Add legal record"
               showAddAction={viewer.mode !== "linked"}
@@ -1784,6 +1809,7 @@ const legalSummary = useMemo(() => {
               obscured={shouldObscureSection(viewerRole, "property", viewerActivation)}
               inlineSummary
               hideItems
+              referenceTile
               addHref="/property?add=1"
               addLabel="Add property"
               showAddAction={viewer.mode !== "linked"}
@@ -1801,6 +1827,7 @@ const legalSummary = useMemo(() => {
               obscured={shouldObscureSection(viewerRole, "business", viewerActivation)}
               inlineSummary
               hideItems
+              referenceTile
               addHref="/business?add=1"
               addLabel="Add business interest"
               showAddAction={viewer.mode !== "linked"}
@@ -1818,6 +1845,7 @@ const legalSummary = useMemo(() => {
               obscured={shouldObscureSection(viewerRole, "digital", viewerActivation)}
               inlineSummary
               hideItems
+              referenceTile
               addHref="/vault/digital/records?add=1&digitalType=__other"
               addLabel="Add digital account"
               showAddAction={viewer.mode !== "linked"}
@@ -1834,6 +1862,7 @@ const legalSummary = useMemo(() => {
               detail={`possession record${possessionsRecordCount === 1 ? "" : "s"}`}
               inlineSummary
               hideItems
+              referenceTile
               addHref="/vault/personal/records?add=1&possessionCategory=other"
               addLabel="Add possession"
               showAddAction={viewer.mode !== "linked"}

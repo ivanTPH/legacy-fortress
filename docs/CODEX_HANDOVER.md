@@ -443,3 +443,14 @@ Date: 2026-10-13.
 - Aligned shared settings primitives and support permission guidance with the approved warm LF design tokens and view-only sharing model.
 - No schema, RLS, grant, invitation, IDV, estate, admin, production, or staging changes were made.
 - Validation: TypeScript pass, stabilisation `91/91`, production build pass, route audit pass, link crawl pass, diff check pass. Core remains `57/58` because of the pre-existing local Supabase `site_url` assertion.
+
+## Dashboard visual composition correction
+
+Date: 2026-10-13.
+
+- Replaced the Dashboard's legacy overview card presentation with the approved compact reference-tile composition while retaining canonical asset loaders, counts and routes.
+- Added a mobile Home composition with truthful canonical value, record, people and debt summaries, a single next-step prompt and responsive vault rows.
+- Added approved Vault/Sharing navigation group labels and reduced sidebar density to keep the complete shell visible at desktop widths.
+- Removed the old desktop dashboard entry prompt and review panel from the rendered presentation; the readiness/action state remains available through the Action Centre and mobile next-step surface.
+- No schema, RLS, grant, invitation, IDV, estate, admin, production, or staging changes were made.
+- Browser smoke screenshots were captured at 1440x960, 402x874 and 375x812 against the local `127.0.0.1:3012` dev-smoke route. Application viewport width matched each viewport with no horizontal overflow.

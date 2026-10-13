@@ -30,6 +30,7 @@ type DashboardAssetSummaryCardProps = {
   hideItems?: boolean;
   emptyState?: boolean;
   showAddAction?: boolean;
+  referenceTile?: boolean;
 };
 
 export default function DashboardAssetSummaryCard({
@@ -51,6 +52,7 @@ export default function DashboardAssetSummaryCard({
   hideItems = false,
   emptyState = false,
   showAddAction = true,
+  referenceTile = false,
 }: DashboardAssetSummaryCardProps) {
   const router = useRouter();
 
@@ -61,6 +63,24 @@ export default function DashboardAssetSummaryCard({
   }
 
   return (
+    referenceTile ? (
+      <div
+        className={`lf-dashboard-reference-tile ${className}`.trim()}
+        role="group"
+        onClick={() => router.push(href)}
+        aria-label={`${title} summary`}
+      >
+        <Link href={href} className="lf-dashboard-reference-tile-header" aria-label={`Open ${title}`}>
+          <span className="lf-dashboard-reference-tile-icon">{icon}</span>
+          <span className="lf-dashboard-reference-tile-title">{title}</span>
+          <Icon name="chevron_right" size={20} />
+        </Link>
+        <div className="lf-dashboard-reference-tile-footer">
+          <span className={obscured ? "is-obscured" : ""}>{obscured ? "Restricted" : Number(value) === 0 ? "Nothing yet" : `${value} ${detail}`}</span>
+          <span>{addedAt ? `Updated ${formatDateStamp(addedAt)}` : "Add first record"}</span>
+        </div>
+      </div>
+    ) : (
     <div
       className={`lf-dashboard-summary-card ${className}`.trim()}
       style={cardStyle}
@@ -207,6 +227,7 @@ export default function DashboardAssetSummaryCard({
         ) : null}
       </div>
     </div>
+    )
   );
 }
 

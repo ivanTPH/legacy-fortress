@@ -1,6 +1,7 @@
 "use client";
 
 import Icon from "../../../../components/ui/Icon";
+import Link from "next/link";
 import type { ActionCentrePreviewItem } from "./ActionQueuePanel";
 import type { VaultApplicabilityState } from "../../../../lib/vaultPreferences";
 
@@ -32,6 +33,7 @@ export default function ActionCentreEntryPrompt({ item, onAction, onDismiss, onG
           <button type="button" className="lf-action-entry-prompt-primary" onClick={() => onAction(item.actionKey, item.href)}>{item.title}</button>
         )}
         <button type="button" className="lf-action-entry-prompt-secondary" onClick={onDismiss}>Remind me later</button>
+        <Link className="lf-action-entry-prompt-see-all" href="/action-centre">See all <Icon name="arrow_forward" size={16} aria-hidden /></Link>
       </div>
     </section>
   );
