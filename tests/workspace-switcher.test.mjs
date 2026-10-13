@@ -121,8 +121,8 @@ test("workspace switcher is present in admin shell, application shell, sign-in, 
   assert.match(switcher, /Switch context/);
   assert.match(switcher, /lf-workspace-route-meta/);
   assert.match(switcher, /Workspace/);
-  assert.match(globals, /--lf-shell-sidebar-width: 286px/);
-  assert.match(globals, /--lf-shell-header-min-height: 76px/);
+  assert.match(globals, /--lf-shell-sidebar-width: 264px/);
+  assert.match(globals, /--lf-shell-header-min-height: 60px/);
   assert.match(globals, /max-width: 700px\)[\s\S]*\.lf-mobile-drawer \.lf-workspace-switcher[\s\S]*display: block/);
 });
 

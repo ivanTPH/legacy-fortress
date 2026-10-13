@@ -1630,23 +1630,23 @@ const legalSummary = useMemo(() => {
       ) : null}
       {loading ? <div style={{ color: "#6b7280" }}>Loading dashboard summary...</div> : null}
       {searchQuery ? (
-        <section style={searchResultsPanelStyle} aria-label="Dashboard search results">
+          <section style={searchResultsPanelStyle} aria-label="Vault search results">
           <div style={{ display: "grid", gap: 4 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={overviewIconStyle}>
                 <Icon name="search" size={16} />
               </div>
-              <h2 style={{ margin: 0, fontSize: 18 }}>Dashboard search results</h2>
+              <h2 style={{ margin: 0, fontSize: 18 }}>Search your vault</h2>
             </div>
             <div style={{ color: "#64748b", fontSize: 13 }}>
-              Results for <strong>{searchQuery}</strong> from your dashboard records, linked documents, contacts, and key destinations.
+              Results for <strong>{searchQuery}</strong> across your permitted records, documents, contacts, and destinations.
             </div>
             <button type="button" onClick={() => router.push("/dashboard")} style={searchResetButtonStyle}>
-              Clear dashboard search
+              Clear search
             </button>
           </div>
           {discoveryResults.length === 0 ? (
-            <div style={searchEmptyStateStyle}>No dashboard records, contacts, documents, or destinations match this search. Clear the search to return to the full dashboard.</div>
+            <div style={searchEmptyStateStyle}>No permitted records, contacts, documents, or destinations match this search. Clear the search to return to your dashboard.</div>
           ) : (
             <div style={{ display: "grid", gap: 10 }}>
               {discoveryResults.map((result) => (
@@ -1711,7 +1711,7 @@ const legalSummary = useMemo(() => {
             <div style={overviewIconStyle}>
               <Icon name="dashboard" size={16} />
             </div>
-            <h2 style={{ margin: 0, fontSize: 18 }}>{viewer.mode === "linked" ? "Shared information" : "Your Fortress Records"}</h2>
+            <h2 style={{ margin: 0, fontSize: 18 }}>{viewer.mode === "linked" ? "Shared information" : "Your Vault"}</h2>
             <InfoTip
               className="lf-panel-help"
               label="Explain dashboard overview"

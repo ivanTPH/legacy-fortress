@@ -30,7 +30,7 @@ test("dashboard overview cards use compact shared summary cards with one add act
   assert.match(dashboardPage, /className="lf-dashboard-overview-panel"/);
   assert.match(dashboardPage, /className="lf-content-grid lf-dashboard-overview-grid"/);
   assert.match(actionSummary, /className="lf-dashboard-action-summary"/);
-  assert.match(dashboardPage, /Your Fortress Records/);
+  assert.match(dashboardPage, /Your Vault/);
   assert.doesNotMatch(dashboardPage, /showFullActionCentre/);
   assert.match(dashboardPage, /actionCentreCount/);
   assert.doesNotMatch(summaryCard, /icon=\{actionIcon\}/);
@@ -184,13 +184,13 @@ test("dashboard overview cards use compact shared summary cards with one add act
   assert.doesNotMatch(dashboardPage, /progressTrackStyle/);
   assert.doesNotMatch(dashboardPage, /% ready|% complete/);
   assert.match(dashboardPage, /storedDocumentCount/);
-  assert.match(dashboardPage, /aria-label="Dashboard search results"/);
-  assert.match(dashboardPage, />Dashboard search results<\/h2>/);
-  assert.match(dashboardPage, /Clear dashboard search/);
-  assert.match(dashboardPage, /No dashboard records, contacts, documents, or destinations match this search/);
-  assert.match(dashboardPage, /dashboard records, linked documents, contacts, and key destinations/);
-  assert.match(fs.readFileSync(path.join(root, "app/(app)/layout.tsx"), "utf8"), /placeholder="Search dashboard records"/);
-  assert.match(dashboardRender, /Your Fortress Records/);
+  assert.match(dashboardPage, /aria-label="Vault search results"/);
+  assert.match(dashboardPage, />Search your vault<\/h2>/);
+  assert.match(dashboardPage, /Clear search/);
+  assert.match(dashboardPage, /No permitted records, contacts, documents, or destinations match this search/);
+  assert.match(dashboardPage, /permitted records, documents, contacts, and destinations/);
+  assert.match(fs.readFileSync(path.join(root, "app/(app)/layout.tsx"), "utf8"), /placeholder="Search your vault"/);
+  assert.match(dashboardRender, /Your Vault/);
   assert.match(dashboardRender, /guidanceItems=\{guidanceItems\}/);
   assert.match(dashboardRender, /aria-label="Fortress summary"/);
   assert.doesNotMatch(dashboardRender, /aria-label="Estate readiness summary"/);
@@ -201,7 +201,7 @@ test("dashboard overview cards use compact shared summary cards with one add act
   assert.doesNotMatch(dashboardRender, /aria-label="Recent documents"/);
   assert.doesNotMatch(dashboardRender, /setupStepsGridStyle|completenessGridStyle|documentCategoryGridStyle|readinessGridStyle/);
   assert.doesNotMatch(dashboardRender, /<ReadinessSnapshot|<ReadinessUploadAction|<AttachmentGallerySummary|<AttachmentGallery\s/);
-  assert.ok(dashboardRender.indexOf("Your Fortress Records") < dashboardRender.indexOf("<DashboardActionSummary"));
+  assert.ok(dashboardRender.indexOf("Your Vault") < dashboardRender.indexOf("<DashboardActionSummary"));
   assert.ok(dashboardRender.indexOf("<DashboardActionSummary") < dashboardRender.indexOf('aria-label="Dashboard review panel"'));
 });
 

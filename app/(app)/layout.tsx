@@ -92,6 +92,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     pathname,
     value: readShellSearchFromLocation(pathname),
   }));
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [devSmokeMode] = useState(() => {
     if (typeof window === "undefined" || process.env.NODE_ENV !== "development") return false;
     return new URLSearchParams(window.location.search).get("lf_dev_smoke") === "1";
@@ -120,6 +121,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
   const accountTriggerRef = useRef<HTMLButtonElement | null>(null);
   const accountMenuId = useId();
+  const shellSearchInputRef = useRef<HTMLInputElement | null>(null);
   const [actionCentreCount, setActionCentreCount] = useState(0);
 
   useEffect(() => {
@@ -701,6 +703,18 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     queueMicrotask(() => setAccountMenuOpen(false));
   }, [pathname]);
 
+  useEffect(() => {
+    const handleSearchShortcut = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setMobileSearchOpen(true);
+        window.requestAnimationFrame(() => shellSearchInputRef.current?.focus());
+      }
+    };
+    window.addEventListener("keydown", handleSearchShortcut);
+    return () => window.removeEventListener("keydown", handleSearchShortcut);
+  }, []);
+
   function resolveFlyoutTop(anchorEl: HTMLElement | undefined, itemCount: number) {
     if (!anchorEl || !navWrapRef.current || !window) return null;
     const wrapRect = navWrapRef.current.getBoundingClientRect();
@@ -942,29 +956,14 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          <form
-            className="lf-search-wrap"
-            onSubmit={(event) => {
-              event.preventDefault();
-              submitShellSearch();
-            }}
-            role="search"
-            aria-label="Search dashboard records"
-          >
-            <span className="lf-search-icon" aria-hidden>
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <circle cx="11" cy="11" r="7" />
-                <path d="M16.5 16.5 21 21" />
-              </svg>
-            </span>
-            <input
-              className="lf-search"
-              placeholder="Search dashboard records"
-              aria-label="Search dashboard records"
-              value={shellSearch}
-              onChange={(event) => setShellSearchState({ pathname, value: event.target.value })}
+          <div className="lf-sidebar-workspace">
+            <WorkspaceSwitcher
+              currentPathname={pathname}
+              compact
+              alwaysShow
+              governanceContext="Sidebar workspace selector · role-aware workspace switch"
             />
-          </form>
+          </div>
 
           <SidebarPrimary
             items={dashboardNavigationItems}
@@ -1062,8 +1061,45 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
           </button>
 
           <div className="lf-topbar-main">
-            <Breadcrumbs items={topbarBreadcrumbs} />
+            <form
+              className={`lf-global-search${mobileSearchOpen ? " is-mobile-open" : ""}`}
+              onSubmit={(event) => {
+                event.preventDefault();
+                setMobileSearchOpen(false);
+                submitShellSearch();
+              }}
+              role="search"
+              aria-label="Search your vault"
+            >
+              <Icon name="search" size={18} />
+              <input
+                ref={shellSearchInputRef}
+                placeholder="Search your vault"
+                aria-label="Search your vault"
+                value={shellSearch}
+                onChange={(event) => setShellSearchState({ pathname, value: event.target.value })}
+              />
+              <kbd aria-label="Keyboard shortcut Command K">⌘K</kbd>
+              {mobileSearchOpen ? (
+                <button type="button" className="lf-global-search-close" onClick={() => setMobileSearchOpen(false)} aria-label="Close search">
+                  <Icon name="close" size={18} />
+                </button>
+              ) : null}
+            </form>
+            <button
+              className="lf-mobile-search-toggle"
+              type="button"
+              aria-label="Search your vault"
+              aria-expanded={mobileSearchOpen}
+              onClick={() => {
+                setMobileSearchOpen(true);
+                window.requestAnimationFrame(() => shellSearchInputRef.current?.focus());
+              }}
+            >
+              <Icon name="search" size={20} />
+            </button>
             <div className="lf-topbar-heading">
+              <Breadcrumbs items={topbarBreadcrumbs} />
               {showBackButton ? (
                 <button className="lf-topbar-back" type="button" onClick={navigateBack} aria-label="Go back">
                   <Icon name="arrow_back" size={16} />
@@ -1075,11 +1111,6 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
           </div>
 
             <div className="lf-topbar-actions">
-            <WorkspaceSwitcher
-              currentPathname={pathname}
-              compact
-              governanceContext="Personal Vault · role-aware workspace switch"
-            />
             <div
               className="lf-topbar-security"
               aria-label={
@@ -1249,6 +1280,22 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
           ) : null}
           {children}
         </main>
+        <nav className="lf-mobile-bottom-nav" aria-label="Primary mobile navigation">
+          {[
+            ["/dashboard", "Home", "home"],
+            ["/action-centre", "Actions", "task_alt"],
+            ["/contacts", "People", "group"],
+            ["/profile", "Settings", "settings"],
+          ].map(([href, label, icon]) => {
+            const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(`${href}/`));
+            return (
+              <Link key={href} href={href} className={`lf-mobile-bottom-nav-item${active ? " is-active" : ""}`} aria-current={active ? "page" : undefined}>
+                <Icon name={icon} size={21} filled={active} />
+                <span>{label}</span>
+              </Link>
+            );
+          })}
+        </nav>
       </div>
     </div>
     </VaultPreferencesProvider>
