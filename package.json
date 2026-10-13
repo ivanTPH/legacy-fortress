@@ -11,6 +11,7 @@
     "audit:routes": "node scripts/route-audit.mjs",
     "validate:env": "node scripts/validate-env.mjs",
     "crawl:links": "node scripts/link-crawler.mjs",
+    "design:check": "node scripts/design-guardian-check.mjs",
     "matrix:routes": "node scripts/generate-route-matrix.mjs",
     "test": "npm run test:unit",
     "test:unit": "npm run test:core && npm run test:stabilisation && node --test tests/admin-phase1-foundation.test.mjs",

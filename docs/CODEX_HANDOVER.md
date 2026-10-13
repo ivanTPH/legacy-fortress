@@ -463,3 +463,16 @@ Date: 2026-10-13.
 - Aligned customer navigation identifiers with the handoff: `space_dashboard`, `gavel`, `home`, `work`, `group`, `key` and `help`.
 - The repository currently contains only the existing local Material Symbols-compatible TTF, not a separately downloaded Rounded font file; external font retrieval was unavailable, so the local fallback remains an explicit validation limitation.
 - No route, data, grant, Auth, IDV, estate, admin, production or staging behavior changed.
+
+## Permanent design guardian increment
+
+Date: 2026-10-13.
+
+- Copied the complete approved design handoff into `design/brand-guardian/` without modifying the source files.
+- Added source provenance/checksums, design authority, change-control, screen-reference and brand-application governance documents.
+- Added root `AGENTS.md` rules requiring customer UI work to identify the approved source state, use canonical tokens/components, preserve business/security behavior, and provide desktop/mobile evidence.
+- Added `npm run design:check`, which verifies all eight handoff source checksums, canonical Material Symbols identifiers, governed copy, and prohibited governed icon-library usage.
+- Preserved the existing Finance structural correction and Dashboard tooltip removal in the same validated increment.
+- Validation: design guardian pass, icon tests 2/2, TypeScript pass after moving stale generated `.next/dev` output aside, lint pass, stabilisation 91/91, production build pass, route audit pass, link crawl pass, diff check pass.
+- External GitHub and Google Fonts DNS were unavailable during this run. The repository still contains only the existing local Material Symbols-compatible font asset, so exact Rounded font asset conformance remains an explicit follow-up rather than being claimed complete.
+- No schema, RLS, grant, invitation, IDV, estate, admin, production, or staging changes were made.

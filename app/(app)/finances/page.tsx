@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import DashboardAssetSummaryCard from "../components/dashboard/DashboardAssetSummaryCard";
 import Icon from "../../../components/ui/Icon";
 import { LFPageHeader, LFStatsStrip } from "../../../components/ui/LFDesignSystem";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
@@ -119,6 +118,7 @@ export default function FinancesOverviewPage() {
         categoryKey: section.key,
         currency,
         href: section.href,
+        itemLimit: 20,
       }),
     })).filter((section) => isVaultSubsectionEnabled(preferences, section.preferenceKey)),
     [assetRows, currency, preferences],
@@ -145,16 +145,24 @@ export default function FinancesOverviewPage() {
   const formatUpdatedDate = (value: string | null) => value
     ? new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value))
     : "Not yet";
+  const sectionUnit = (section: FinanceSectionCard, count: number) => {
+    if (section.key === "bank") return count === 1 ? "account" : "accounts";
+    const singular = section.title.endsWith("s") ? section.title.slice(0, -1) : section.title;
+    return count === 1 ? singular.toLowerCase() : section.title.toLowerCase();
+  };
+
+  const populatedSections = summaries.filter((section) => section.summary.items.length > 0);
+  const emptySections = summaries.filter((section) => section.summary.items.length === 0);
 
   return (
-    <section style={{ display: "grid", gap: 14 }}>
+    <section className="lf-finance-page">
       <LFPageHeader
         title="Finances"
         description="Record your bank accounts, savings, pensions, and policies so your estate has a clear financial picture."
         action={{ label: "Add record", href: "/finances/bank?add=1", icon: "add" }}
       />
 
-      {!loading && assetRows.length ? (
+      {!loading ? (
         <LFStatsStrip items={[
           { label: "Total recorded", value: new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(totalRecorded) },
           { label: "Records", value: String(assetRows.length), suffix: `in ${summaries.filter((section) => section.summary.items.length > 0).length} of ${summaries.length} categories` },
@@ -164,47 +172,45 @@ export default function FinancesOverviewPage() {
 
       {status ? <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div> : null}
       {loading ? <div className="lf-loading-note" role="status">Loading your finances...</div> : null}
-      {!loading && recommendedFinanceAction ? (
-        <Link href={recommendedFinanceAction.href} style={recommendedActionStyle}>
-          <span style={recommendedIconStyle}>
-            <Icon name="arrow_forward" size={17} />
-          </span>
-          <span style={{ display: "grid", gap: 3 }}>
-            <span style={{ color: "#1f1712", fontWeight: 800 }}>{recommendedFinanceAction.label}</span>
-            <span style={{ color: "#64748b", fontSize: 13 }}>{recommendedFinanceAction.description}</span>
-          </span>
+      {!loading && recommendedFinanceAction && !assetRows.length ? (
+        <Link href={recommendedFinanceAction.href} className="lf-finance-recommended-action">
+          <span className="lf-finance-recommended-icon"><Icon name="arrow_forward" size={17} /></span>
+          <span><strong>{recommendedFinanceAction.label}</strong><small>{recommendedFinanceAction.description}</small></span>
         </Link>
       ) : null}
 
-      {summaries.length ? (
-      <div className="lf-content-grid">
-        {summaries.map((section) => {
-          const isEmpty = !section.summary.items.length;
-          const cardHref = section.href;
-          return (
-            <div key={section.href} className="lf-finance-summary-tile">
-              <DashboardAssetSummaryCard
-                icon={<Icon name={section.icon} size={13} />}
-                title={section.title}
-                href={cardHref}
-                addedAt={section.summary.addedAt}
-                value={section.summary.valueText}
-                detail={isEmpty ? section.description : section.summary.detailText}
-                items={section.summary.items}
-                addHref={`${section.href}?add=1`}
-                addLabel={`Add ${section.title.toLowerCase()}`}
-                emptyActionLabel={`Add ${section.title.toLowerCase()}`}
-                emptyState={isEmpty}
-              />
+      {!loading && summaries.length ? (
+        <div className="lf-finance-sections">
+          {populatedSections.map((section) => (
+            <section key={section.href} className="lf-finance-section-card" aria-labelledby={`finance-${section.key}`}>
+              <div className="lf-finance-section-heading">
+                <span className="lf-finance-section-icon"><Icon name={section.icon} size={20} /></span>
+                <span><h2 id={`finance-${section.key}`}>{section.title}</h2><small>{section.summary.includedCount} {sectionUnit(section, section.summary.includedCount)}</small></span>
+                <strong>{section.summary.totalMajor > 0 ? new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(section.summary.totalMajor) : ""}</strong>
+                <Link href={`${section.href}?add=1`} className="lf-finance-add" aria-label={`Add ${section.title.toLowerCase()}`}><Icon name="add" size={20} /></Link>
+              </div>
+              <div className="lf-finance-record-list">
+                {section.summary.items.map((item) => (
+                  <Link key={item.id} href={item.href} className="lf-finance-record-row">
+                    <span><strong>{item.label}</strong><small>{item.updatedAt ? `Updated ${formatUpdatedDate(item.updatedAt)}` : "Updated date unavailable"}</small></span>
+                    <span><strong>{item.meta}</strong><Icon name="chevron_right" size={20} /></span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          ))}
+          {emptySections.length ? <section className="lf-finance-empty-section" aria-labelledby="finance-empty-heading">
+            <h2 id="finance-empty-heading">Not added yet</h2>
+            <div className="lf-finance-empty-grid">
+              {emptySections.map((section) => <Link key={section.href} href={`${section.href}?add=1`} className="lf-finance-empty-tile"><span className="lf-finance-empty-icon"><Icon name={section.icon} size={20} /></span><span><strong>{section.title}</strong><small>{section.description}</small></span><Icon name="add" size={20} /></Link>)}
             </div>
-          );
-        })}
-      </div>
-      ) : (
+          </section> : null}
+        </div>
+      ) : !loading ? (
         <div style={{ color: "#64748b", fontSize: 13 }}>
           Finance subsections are currently hidden by My Vault preferences. Re-enable them in Account / My Vault at any time.
         </div>
-      )}
+      ) : null}
     </section>
   );
 }

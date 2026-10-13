@@ -38,6 +38,7 @@ export type DashboardSummaryItem = {
   label: string;
   href: string;
   meta?: string;
+  updatedAt?: string | null;
 };
 export type DashboardBucketSummary = {
   addedAt: string | null;
@@ -258,6 +259,7 @@ export function buildFinanceCategorySummary<T extends DashboardAssetRow>(
       label: getFinanceRowLabel(row),
       href,
       meta: formatCurrency(getFinanceRowValueMajor(row), getFinanceRowCurrencyCode(row) || currency),
+      updatedAt: row.updated_at ?? row.created_at ?? null,
     })),
     includedCount: scopedRows.length,
     totalMajor: totals.activeValueMajor,

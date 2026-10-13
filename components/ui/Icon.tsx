@@ -6,6 +6,7 @@ import type { CSSProperties } from "react";
 export const LF_ICON_MAP = {
   dashboard: "space_dashboard",
   add: "add",
+  addCircle: "add_circle",
   actionCentre: "task_alt",
   finances: "account_balance_wallet",
   legal: "gavel",

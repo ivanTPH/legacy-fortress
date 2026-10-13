@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&display=block">
+<style>
+body{margin:0;background:#efebe7;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;color:#1f1715;-webkit-font-smoothing:antialiased}
+a{color:#7a3d27}a:hover{color:#2b1714}
+input,button{font-family:inherit}
+.ms{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;letter-spacing:normal;text-transform:none;white-space:nowrap;direction:ltr;font-feature-settings:'liga';font-variation-settings:'FILL' 0,'wght' 400,'opsz' 24;display:inline-block}
+.dv-turn{padding:40px 44px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 8px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 15px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-tsub{font:13px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.6);max-width:900px;margin:0 0 24px}
+.dv-opts{display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 12px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.6);max-width:375px}
+.dv-card{max-width:100%;background:#faf8f6;border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.dv-next{margin:28px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t0" style="padding-bottom:28px">
+<div class="dv-thd"><span class="dv-tname">High-priority journeys, in the design language from <a href="Legacy%20Fortress%20Redesign.dc.html">the redesign</a></span></div>
+<p class="dv-tsub" style="margin:0">Cast: <b>Ivan Yardley</b> owns the Fortress. <b>Bob Smith</b> is his executor. <b>Jacqui Yardley</b> is family and is linked with no access. Journeys 1, 2 and 6 are shown from Bob’s or Jacqui’s side. New patterns introduced here: <b>context banner</b> (whose Fortress you’re in), <b>locked row</b>, <b>flow stepper</b>, <b>step rail form</b>, <b>status timeline</b>, <b>camera overlay</b>. Medium-priority screens follow (7–12). Placeholder data is used where the live system wasn’t visible (organisation names, admin numbers, timings).</p>
+</section>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Linked Fortresses</span></div>
+<p class="dv-tsub">The workspace switcher under the logo becomes the single place to change Fortress. When you’re inside someone else’s Fortress, a persistent ink banner says whose it is and what you can do, and every record is either permitted (normal row) or locked (lock icon, no detail, no count of what’s hidden beyond “1 record not shared”).</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a"><div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Switcher open (Bob’s own Vault)</div>
+<div class="dv-card" style="width:1120px;height:700px;display:grid;grid-template-columns:264px minmax(0,1fr);position:relative">
+<aside style="background:#f5f1ed;border-right:1px solid #ebe4de;padding:18px 12px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:10px;padding:4px 8px;border-radius:10px;background:rgba(43,23,20,.06)"><div style="width:34px;height:34px;border-radius:9px;background:#111;color:#fff;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:22px;font-variation-settings:'FILL' 1,'wght' 600">apps</span></div><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">Legacy Fortress</span><span style="font-size:12px;color:#6b5f5a">My Vault</span></div><span class="ms" style="font-size:18px;color:#6b5f5a">unfold_more</span></div>
+<div style="display:flex;flex-direction:column;gap:2px;opacity:.5">
+<div style="height:36px;padding:0 12px;display:flex;align-items:center;gap:12px;font-size:14px"><span class="ms" style="font-size:20px">space_dashboard</span>Dashboard</div>
+<div style="height:36px;padding:0 12px;display:flex;align-items:center;gap:12px;font-size:14px"><span class="ms" style="font-size:20px">add_circle</span>Add to my Fortress</div>
+<div style="height:36px;padding:0 12px;display:flex;align-items:center;gap:12px;font-size:14px"><span class="ms" style="font-size:20px">task_alt</span>Action Centre</div>
+<div style="height:36px;padding:0 12px;display:flex;align-items:center;gap:12px;font-size:14px"><span class="ms" style="font-size:20px">account_balance_wallet</span>Finances</div>
+</div>
+</aside>
+<div style="background:#faf8f6"></div>
+<div style="position:absolute;left:14px;top:66px;width:340px;background:#fff;border-radius:14px;box-shadow:0 16px 40px rgba(31,23,21,.18),0 0 0 1px #ebe4de;overflow:hidden;z-index:2">
+<div style="padding:12px 16px 6px;font-size:12px;font-weight:600;color:#6b5f5a">Your Fortress</div>
+<div style="display:flex;align-items:center;gap:12px;padding:10px 16px;background:#faf7f4"><div style="width:36px;height:36px;border-radius:18px;background:#d9cbc2;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center">BS</div><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">My Vault</span><span style="font-size:13px;color:#6b5f5a">Bob Smith</span></div><span class="ms" style="font-size:20px;color:#2b1714">check</span></div>
+<div style="padding:14px 16px 6px;font-size:12px;font-weight:600;color:#6b5f5a;border-top:1px solid #f3eeea">Linked to you</div>
+<div style="display:flex;align-items:center;gap:12px;padding:10px 16px"><div style="width:36px;height:36px;border-radius:18px;background:#e8dcd4;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center">IY</div><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:600">Ivan Yardley’s Fortress</span><span style="font-size:13px;color:#6b5f5a">Executor · View only · 2 records</span></div><span class="ms" style="font-size:20px;color:#9a8f8a">chevron_right</span></div>
+<div style="display:flex;align-items:center;gap:12px;padding:10px 16px"><div style="width:36px;height:36px;border-radius:18px;background:#e8dcd4;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center">MH</div><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:600">Mary Hale’s Fortress</span><span style="display:flex;align-items:center;gap:6px;font-size:13px;color:#6b5f5a">Trusted person ·<span style="font-size:11px;font-weight:600;padding:2px 6px;border-radius:4px;background:#fdf1d8;color:#7a4f00">Invitation pending</span></span></div><span class="ms" style="font-size:20px;color:#9a8f8a">chevron_right</span></div>
+<div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-top:1px solid #f3eeea;font-size:14px;color:#7a3d27"><span class="ms" style="font-size:18px">info</span>About linked Fortresses</div>
+</div>
+<div style="position:absolute;left:380px;top:80px;width:300px;font-size:13px;line-height:19px;color:#6b5f5a;display:flex;flex-direction:column;gap:8px">
+<b style="color:#1f1715">Switcher rules</b>
+<span>· Own Vault is always first and checked when active.</span>
+<span>· Each linked Fortress shows role · access level · count of records you can see.</span>
+<span>· Status chip only when not fully linked (amber pending, red expired).</span>
+<span>· Selecting one reloads the shell in that context; the sidebar collapses to the areas you can see.</span>
+<span>· Keyboard: ⌘⇧F opens the switcher.</span>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1b"><div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Inside Ivan’s Fortress: permitted and locked records</div>
+<div class="dv-card" style="width:1120px;height:700px;display:grid;grid-template-columns:264px minmax(0,1fr)">
+<aside style="background:#f5f1ed;border-right:1px solid #ebe4de;padding:18px 12px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:10px;padding:4px 8px"><div style="width:34px;height:34px;border-radius:17px;background:#e8dcd4;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center">IY</div><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">Ivan Yardley</span><span style="font-size:12px;color:#6b5f5a">Linked Fortress</span></div><span class="ms" style="font-size:18px;color:#6b5f5a">unfold_more</span></div>
+<div style="display:flex;flex-direction:column;gap:2px">
+<div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b5f5a;padding:8px 12px 6px">Shared with you</div>
+<div style="height:36px;padding:0 12px;display:flex;align-items:center;gap:12px;font-size:14px;border-radius:8px;background:#fff;box-shadow:0 0 0 1px #ebe4de;font-weight:600"><span class="ms" style="font-size:20px;font-variation-settings:'FILL' 1">space_dashboard</span>Overview</div>
+<div style="height:36px;padding:0 12px;display:flex;align-items:center;gap:12px;font-size:14px"><span class="ms" style="font-size:20px">account_balance_wallet</span><span style="flex:1">Finances</span><span style="font-size:12px;color:#6b5f5a">1</span></div>
+<div style="height:36px;padding:0 12px;display:flex;align-items:center;gap:12px;font-size:14px"><span class="ms" style="font-size:20px">gavel</span><span style="flex:1">Legal</span><span style="font-size:12px;color:#6b5f5a">1</span></div>
+<div style="height:36px;padding:0 12px;display:flex;align-items:center;gap:12px;font-size:14px"><span class="ms" style="font-size:20px">assignment_ind</span>My role</div>
+</div>
+<div style="flex:1"></div>
+<div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;border-radius:9px;border:1px solid #e6dfd9;background:#fff;font-size:14px;font-weight:500"><span class="ms" style="font-size:18px">arrow_back</span>Back to my Vault</div>
+</aside>
+<main style="display:flex;flex-direction:column;min-width:0">
+<div style="height:44px;flex:none;background:#2b1714;color:#fff;display:flex;align-items:center;gap:10px;padding:0 24px;font-size:14px"><span class="ms" style="font-size:18px">visibility</span><span><b>Ivan Yardley’s Fortress</b> · You’re the executor · View only</span><div style="flex:1"></div><span style="color:#e6d8d0">Switch to my Vault</span></div>
+<div style="flex:1;overflow:hidden;padding:28px 36px;display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;flex-direction:column;gap:6px"><h1 style="margin:0;font-size:28px;line-height:34px;font-weight:700;letter-spacing:-.02em">Overview</h1><p style="margin:0;font-size:15px;color:#6b5f5a">Ivan has shared 2 records with you. Others stay locked until he shares them or your executor authority is confirmed.</p></div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:#fff;border:1px solid #ebe4de;border-radius:12px">
+<div style="padding:14px 20px;display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;color:#6b5f5a">Relationship</span><span style="font-size:17px;font-weight:600;display:flex;align-items:center;gap:6px"><span class="ms" style="font-size:18px;color:#225c3a;font-variation-settings:'FILL' 1">check_circle</span>Linked · Verified</span></div>
+<div style="padding:14px 20px;display:flex;flex-direction:column;gap:4px;border-left:1px solid #f0ebe7"><span style="font-size:13px;color:#6b5f5a">Your access</span><span style="font-size:17px;font-weight:600">View only · 2 records</span></div>
+<div style="padding:14px 20px;display:flex;flex-direction:column;gap:4px;border-left:1px solid #f0ebe7"><span style="font-size:13px;color:#6b5f5a">Role</span><span style="font-size:17px;font-weight:600">Executor</span></div>
+</div>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<div style="display:flex;align-items:center;gap:14px;padding:14px 20px"><div style="width:36px;height:36px;border-radius:9px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px">account_balance_wallet</span></div><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:17px;font-weight:600">Finances</span><span style="font-size:13px;color:#6b5f5a">1 shared · 2 locked</span></div></div>
+<div style="display:flex;align-items:center;gap:14px;height:56px;padding:0 16px 0 70px;border-top:1px solid #f3eeea"><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:15px">Barclays</span><span style="font-size:13px;color:#6b5f5a">Banks · Updated 17 Jul 2026</span></div><span style="font-size:15px;font-variant-numeric:tabular-nums">£76,213.00</span><span class="ms" style="font-size:20px;color:#9a8f8a">chevron_right</span></div>
+<div style="display:flex;align-items:center;gap:14px;height:56px;padding:0 16px 0 70px;border-top:1px solid #f3eeea;background:#fcfaf8"><span class="ms" style="font-size:18px;color:#6b5f5a">lock</span><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:15px;color:#6b5f5a">2 records not shared with you</span><span style="font-size:13px;color:#6b5f5a">Names and values are hidden</span></div><span style="font-size:14px;font-weight:500;color:#7a3d27">Request access</span></div>
+</div>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<div style="display:flex;align-items:center;gap:14px;padding:14px 20px"><div style="width:36px;height:36px;border-radius:9px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px">gavel</span></div><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:17px;font-weight:600">Legal</span><span style="font-size:13px;color:#6b5f5a">1 shared</span></div></div>
+<div style="display:flex;align-items:center;gap:14px;height:56px;padding:0 16px 0 70px;border-top:1px solid #f3eeea"><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:15px">Will</span><span style="font-size:13px;color:#6b5f5a">Wills · Updated 16 Jul 2026</span></div><span class="ms" style="font-size:20px;color:#9a8f8a">chevron_right</span></div>
+</div>
+</div>
+</main>
+</div>
+</div>
+
+<div class="dv-opt" id="1c"><div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Zero-access state (Jacqui inside Ivan’s Fortress)</div>
+<div class="dv-card" style="width:760px;height:700px;display:flex;flex-direction:column">
+<div style="height:44px;flex:none;background:#2b1714;color:#fff;display:flex;align-items:center;gap:10px;padding:0 24px;font-size:14px"><span class="ms" style="font-size:18px">visibility_off</span><span><b>Ivan Yardley’s Fortress</b> · Family · No access</span><div style="flex:1"></div><span style="color:#e6d8d0">Switch to my Vault</span></div>
+<div style="flex:1;padding:48px 56px;display:flex;flex-direction:column;align-items:center;gap:20px;text-align:center">
+<div style="width:64px;height:64px;border-radius:32px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:32px">lock_person</span></div>
+<div style="display:flex;flex-direction:column;gap:8px;max-width:460px"><span style="font-size:22px;font-weight:700">Ivan hasn’t shared anything with you yet</span><span style="font-size:15px;line-height:22px;color:#6b5f5a">You’re linked to Ivan’s Fortress, so he can share records with you at any time. You’ll get a notification when he does.</span></div>
+<div style="width:100%;max-width:460px;background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden;text-align:left">
+<div style="display:flex;align-items:center;height:48px;padding:0 16px;font-size:15px;border-bottom:1px solid #f3eeea"><span style="width:140px;color:#6b5f5a">Relationship</span><span style="flex:1">Family</span></div>
+<div style="display:flex;align-items:center;height:48px;padding:0 16px;font-size:15px;border-bottom:1px solid #f3eeea"><span style="width:140px;color:#6b5f5a">Status</span><span style="font-size:12px;font-weight:500;padding:4px 8px;border-radius:6px;background:#e9f3ec;color:#225c3a">Linked · Verified</span></div>
+<div style="display:flex;align-items:center;height:48px;padding:0 16px;font-size:15px"><span style="width:140px;color:#6b5f5a">Access</span><span style="flex:1">None</span></div>
+</div>
+<div style="display:flex;gap:8px"><button style="height:36px;padding:0 14px;border-radius:8px;border:1px solid #e6dfd9;background:#fff;font-size:14px;font-weight:500;color:#2b1714">Request access</button><button style="height:36px;padding:0 14px;border-radius:8px;border:0;background:#2b1714;color:#fff;font-size:14px;font-weight:600">Back to my Vault</button></div>
+<span style="font-size:13px;color:#6b5f5a;max-width:420px">Requests go to Ivan. He decides what to share; you can’t see what his Fortress contains.</span>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1d"><div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Mobile: switcher sheet from the Home title</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ w }}" height="{{ h }}" hint-size="375px,780px">
+<div style="padding:56px 0 0;min-height:100%;box-sizing:border-box;background:#f6f3f0;position:relative">
+<div style="padding:16px 20px;display:flex;align-items:center;gap:6px"><span style="font-size:34px;font-weight:700">My Vault</span><span class="ms" style="font-size:24px;color:#6b5f5a">expand_more</span></div>
+<div style="margin:0 16px;height:200px;border-radius:20px;background:#2b1714;opacity:.35"></div>
+<div style="position:absolute;inset:0;background:rgba(31,23,21,.32)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;background:#f6f3f0;border-radius:24px 24px 0 0;padding:8px 0 40px">
+<div style="width:36px;height:5px;border-radius:3px;background:#cfc6c0;margin:0 auto 12px"></div>
+<div style="padding:0 20px 12px;font-size:20px;font-weight:700">Switch Fortress</div>
+<div style="margin:0 16px 20px;background:#fff;border-radius:12px;overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;min-height:60px;padding:0 16px;border-bottom:.5px solid #ebe4de"><div style="width:36px;height:36px;border-radius:18px;background:#d9cbc2;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center">BS</div><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:17px">My Vault</span><span style="font-size:13px;color:#6b5f5a">Bob Smith</span></div><span class="ms" style="font-size:22px;color:#2b1714">check</span></div>
+<div style="display:flex;align-items:center;gap:12px;min-height:60px;padding:0 16px;border-bottom:.5px solid #ebe4de"><div style="width:36px;height:36px;border-radius:18px;background:#e8dcd4;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center">IY</div><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:17px">Ivan Yardley</span><span style="font-size:13px;color:#6b5f5a">Executor · 2 records</span></div></div>
+<div style="display:flex;align-items:center;gap:12px;min-height:60px;padding:0 16px"><div style="width:36px;height:36px;border-radius:18px;background:#e8dcd4;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center">MH</div><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:17px">Mary Hale</span><span style="font-size:13px;color:#7a4f00">Invitation pending</span></div></div>
+</div>
+</div>
+</div>
+</x-import>
+</div>
+
+</div>
+</section>
+
+<section class="dv-turn" id="t2">
+<div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Invitation acceptance (Bob, invited by Ivan)</span></div>
+<p class="dv-tsub">One linear flow with a 4-step stepper (Invitation · Account · Verify · Linked) that persists across every screen. Each screen has one primary action and explains what the recipient will and won’t see before asking for anything.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="2a"><div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a>Invitation email</div>
+<div class="dv-card" style="width:375px;height:780px;background:#fff;display:flex;flex-direction:column">
+<div style="padding:16px 20px;border-bottom:1px solid #f3eeea;font-size:13px;color:#6b5f5a;display:flex;flex-direction:column;gap:2px"><span><b style="color:#1f1715">Legacy Fortress</b> &lt;invites@mylegacyfortress.com&gt;</span><span>Ivan Yardley has invited you to be his executor</span></div>
+<div style="padding:32px 24px;display:flex;flex-direction:column;gap:18px">
+<div style="width:40px;height:40px;border-radius:10px;background:#111;color:#fff;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:24px;font-variation-settings:'FILL' 1,'wght' 600">apps</span></div>
+<span style="font-size:24px;line-height:30px;font-weight:700">Ivan Yardley has named you as his executor</span>
+<span style="font-size:15px;line-height:22px;color:#3a2c28">Hi Bob, Ivan uses Legacy Fortress to keep his important records in one place. He’s invited you so you can help with his estate when the time comes.</span>
+<span style="font-size:15px;line-height:22px;color:#3a2c28">You won’t see any of his records unless he chooses to share them.</span>
+<div style="height:48px;border-radius:10px;background:#2b1714;color:#fff;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center">View invitation</div>
+<span style="font-size:13px;line-height:19px;color:#6b5f5a">This link expires on 20 Oct 2026. If you weren’t expecting this, you can ignore it.</span>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="2b"><div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a>Invitation landing</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ w }}" height="{{ h }}" hint-size="375px,780px">
+<div style="padding:60px 20px 40px;min-height:100%;box-sizing:border-box;background:#f6f3f0;display:flex;flex-direction:column;gap:18px">
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px"><div style="height:4px;border-radius:2px;background:#2b1714"></div><div style="height:4px;border-radius:2px;background:#e6dfd9"></div><div style="height:4px;border-radius:2px;background:#e6dfd9"></div><div style="height:4px;border-radius:2px;background:#e6dfd9"></div></div>
+<span style="font-size:13px;color:#6b5f5a">Step 1 of 4 · Invitation</span>
+<div style="width:56px;height:56px;border-radius:28px;background:#e8dcd4;font-size:20px;font-weight:600;display:flex;align-items:center;justify-content:center">IY</div>
+<span style="font-size:28px;line-height:34px;font-weight:700">Ivan Yardley invited you as his executor</span>
+<div style="background:#fff;border-radius:12px;overflow:hidden">
+<div style="display:flex;gap:12px;padding:14px 16px;border-bottom:.5px solid #ebe4de"><span class="ms" style="font-size:22px;color:#225c3a">check_circle</span><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:600">What you can do</span><span style="font-size:14px;line-height:20px;color:#6b5f5a">See records Ivan shares with you, and report a death when needed.</span></div></div>
+<div style="display:flex;gap:12px;padding:14px 16px"><span class="ms" style="font-size:22px;color:#6e3a28">lock</span><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:600">What stays private</span><span style="font-size:14px;line-height:20px;color:#6b5f5a">Everything else. Ivan can’t see your own Vault either.</span></div></div>
+</div>
+<div style="flex:1"></div>
+<div style="height:50px;border-radius:12px;background:#2b1714;color:#fff;font-size:17px;font-weight:600;display:flex;align-items:center;justify-content:center">Accept and continue</div>
+<div style="height:44px;display:flex;align-items:center;justify-content:center;font-size:17px;color:#7a3d27">Decline</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="2c"><div class="dv-olabel"><a class="dv-oid" href="#2c">2c</a>Sign in or create account (email prefilled)</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ w }}" height="{{ h }}" hint-size="375px,780px">
+<div style="padding:60px 20px 40px;min-height:100%;box-sizing:border-box;background:#f6f3f0;display:flex;flex-direction:column;gap:16px">
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px"><div style="height:4px;border-radius:2px;background:#2b1714"></div><div style="height:4px;border-radius:2px;background:#2b1714"></div><div style="height:4px;border-radius:2px;background:#e6dfd9"></div><div style="height:4px;border-radius:2px;background:#e6dfd9"></div></div>
+<span style="font-size:13px;color:#6b5f5a">Step 2 of 4 · Account</span>
+<span style="font-size:28px;line-height:34px;font-weight:700">Create your account</span>
+<span style="font-size:15px;line-height:20px;color:#6b5f5a">You’ll also get your own private Vault.</span>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:500">Email</span><div style="height:48px;border-radius:10px;background:#efe9e4;padding:0 14px;display:flex;align-items:center;font-size:17px;color:#3a2c28">bob.smith@example.com<div style="flex:1"></div><span class="ms" style="font-size:18px;color:#6b5f5a">lock</span></div></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:500">Password</span><div style="height:48px;border-radius:10px;background:#fff;border:1.5px solid #8c4a32;padding:0 14px;display:flex;align-items:center;font-size:17px">••••••••••<div style="flex:1"></div><span class="ms" style="font-size:20px;color:#6b5f5a">visibility</span></div><span style="font-size:13px;color:#225c3a;display:flex;align-items:center;gap:4px"><span class="ms" style="font-size:16px">check</span>12+ characters</span></div>
+<div style="height:50px;border-radius:12px;background:#2b1714;color:#fff;font-size:17px;font-weight:600;display:flex;align-items:center;justify-content:center">Create account</div>
+<div style="display:flex;align-items:center;gap:10px;font-size:13px;color:#6b5f5a"><div style="flex:1;height:1px;background:#e3dbd4"></div>or<div style="flex:1;height:1px;background:#e3dbd4"></div></div>
+<div style="height:50px;border-radius:12px;background:#000;color:#fff;font-size:17px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px">Continue with Apple</div>
+<div style="height:50px;border-radius:12px;background:#fff;border:1px solid #e6dfd9;font-size:17px;font-weight:500;display:flex;align-items:center;justify-content:center">Continue with Google</div>
+<span style="font-size:15px;text-align:center;color:#6b5f5a">Already have an account? <span style="color:#7a3d27">Sign in</span></span>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="2d"><div class="dv-olabel"><a class="dv-oid" href="#2d">2d</a>Verify identity hand-off (goes to journey 3)</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ w }}" height="{{ h }}" hint-size="375px,780px">
+<div style="padding:60px 20px 40px;min-height:100%;box-sizing:border-box;background:#f6f3f0;display:flex;flex-direction:column;gap:16px">
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px"><div style="height:4px;border-radius:2px;background:#2b1714"></div><div style="height:4px;border-radius:2px;background:#2b1714"></div><div style="height:4px;border-radius:2px;background:#2b1714"></div><div style="height:4px;border-radius:2px;background:#e6dfd9"></div></div>
+<span style="font-size:13px;color:#6b5f5a">Step 3 of 4 · Verify</span>
+<span style="font-size:28px;line-height:34px;font-weight:700">Confirm it’s you</span>
+<span style="font-size:15px;line-height:22px;color:#6b5f5a">Executors verify their identity so Ivan’s records can only ever reach the right person. It takes about 3 minutes.</span>
+<div style="background:#fff;border-radius:12px;overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;min-height:52px;padding:0 16px;border-bottom:.5px solid #ebe4de"><span class="ms" style="font-size:22px;color:#6e3a28">badge</span><span style="font-size:17px">Photo of your ID</span></div>
+<div style="display:flex;align-items:center;gap:12px;min-height:52px;padding:0 16px;border-bottom:.5px solid #ebe4de"><span class="ms" style="font-size:22px;color:#6e3a28">face</span><span style="font-size:17px">A short selfie video</span></div>
+<div style="display:flex;align-items:center;gap:12px;min-height:52px;padding:0 16px"><span class="ms" style="font-size:22px;color:#6e3a28">schedule</span><span style="font-size:17px">Result in under a minute</span></div>
+</div>
+<div style="flex:1"></div>
+<div style="height:50px;border-radius:12px;background:#2b1714;color:#fff;font-size:17px;font-weight:600;display:flex;align-items:center;justify-content:center">Start verification</div>
+<div style="height:44px;display:flex;align-items:center;justify-content:center;font-size:17px;color:#7a3d27">Do this later</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="2e"><div class="dv-olabel"><a class="dv-oid" href="#2e">2e</a>Linked confirmation</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ w }}" height="{{ h }}" hint-size="375px,780px">
+<div style="padding:60px 20px 40px;min-height:100%;box-sizing:border-box;background:#f6f3f0;display:flex;flex-direction:column;gap:16px">
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px"><div style="height:4px;border-radius:2px;background:#2b1714"></div><div style="height:4px;border-radius:2px;background:#2b1714"></div><div style="height:4px;border-radius:2px;background:#2b1714"></div><div style="height:4px;border-radius:2px;background:#2b1714"></div></div>
+<span style="font-size:13px;color:#6b5f5a">Step 4 of 4 · Linked</span>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center">
+<div style="width:80px;height:80px;border-radius:40px;background:#e9f3ec;color:#225c3a;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:44px;font-variation-settings:'FILL' 1">link</span></div>
+<span style="font-size:28px;line-height:34px;font-weight:700">You’re linked to Ivan’s Fortress</span>
+<span style="font-size:15px;line-height:22px;color:#6b5f5a">Ivan has been told. He’s shared 2 records with you so far.</span>
+</div>
+<div style="height:50px;border-radius:12px;background:#2b1714;color:#fff;font-size:17px;font-weight:600;display:flex;align-items:center;justify-content:center">Go to my Vault</div>
+<div style="height:44px;display:flex;align-items:center;justify-content:center;font-size:17px;color:#7a3d27">View Ivan’s Fortress</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="2f"><div class="dv-olabel"><a class="dv-oid" href="#2f">2f</a>Bob’s own Vault, first run</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ w }}" height="{{ h }}" hint-size="375px,780px">
+<div style="padding:56px 0 40px;min-height:100%;box-sizing:border-box;background:#f6f3f0;display:flex;flex-direction:column">
+<div style="padding:16px 20px 12px;display:flex;align-items:center;gap:6px"><span style="font-size:34px;font-weight:700">My Vault</span><span class="ms" style="font-size:24px;color:#6b5f5a">expand_more</span></div>
+<div style="margin:0 16px 16px;background:#fff;border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;border-radius:20px;background:#e8dcd4;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center">IY</div><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">Ivan Yardley’s Fortress</span><span style="font-size:13px;color:#6b5f5a">Executor · 2 shared records</span></div><span class="ms" style="font-size:20px;color:#b3a9a4">chevron_right</span></div>
+<div style="margin:0 16px 20px;padding:18px;background:#2b1714;color:#fff;border-radius:20px;display:flex;flex-direction:column;gap:10px">
+<span style="font-size:20px;font-weight:700">Start your own Vault</span>
+<span style="font-size:15px;line-height:20px;color:#e6d8d0">Add one record now. You can fill in details later.</span>
+<div style="align-self:flex-start;height:40px;padding:0 16px;border-radius:20px;background:#fff;color:#2b1714;font-size:15px;font-weight:600;display:flex;align-items:center;gap:6px"><span class="ms" style="font-size:20px">add</span>Add first record</div>
+</div>
+<div style="padding:0 36px 7px;font-size:13px;color:#6b5f5a;text-transform:uppercase">Suggested</div>
+<div style="margin:0 16px;background:#fff;border-radius:12px;overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;min-height:48px;padding:0 16px;border-bottom:.5px solid #ebe4de"><div style="width:30px;height:30px;border-radius:7px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px">account_balance</span></div><span style="flex:1;font-size:17px">Bank account</span><span style="font-size:17px;color:#7a3d27">Add</span></div>
+<div style="display:flex;align-items:center;gap:12px;min-height:48px;padding:0 16px;border-bottom:.5px solid #ebe4de"><div style="width:30px;height:30px;border-radius:7px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px">history_edu</span></div><span style="flex:1;font-size:17px">Will</span><span style="font-size:17px;color:#7a3d27">Add</span></div>
+<div style="display:flex;align-items:center;gap:12px;min-height:48px;padding:0 16px"><div style="width:30px;height:30px;border-radius:7px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px">person_add</span></div><span style="flex:1;font-size:17px">Trusted person</span><span style="font-size:17px;color:#7a3d27">Add</span></div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="2g"><div class="dv-olabel"><a class="dv-oid" href="#2g">2g</a>Desktop: same steps in a centred 520px column</div>
+<div class="dv-card" style="width:1000px;height:780px;display:flex;flex-direction:column;align-items:center;padding:40px 0;box-sizing:border-box">
+<div style="width:520px;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;align-items:center;gap:10px"><div style="width:32px;height:32px;border-radius:8px;background:#111;color:#fff;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px;font-variation-settings:'FILL' 1,'wght' 600">apps</span></div><span style="font-size:15px;font-weight:600">Legacy Fortress</span></div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+<div style="display:flex;flex-direction:column;gap:6px"><div style="height:4px;border-radius:2px;background:#2b1714"></div><span style="font-size:12px;font-weight:600">Invitation</span></div>
+<div style="display:flex;flex-direction:column;gap:6px"><div style="height:4px;border-radius:2px;background:#e6dfd9"></div><span style="font-size:12px;color:#6b5f5a">Account</span></div>
+<div style="display:flex;flex-direction:column;gap:6px"><div style="height:4px;border-radius:2px;background:#e6dfd9"></div><span style="font-size:12px;color:#6b5f5a">Verify</span></div>
+<div style="display:flex;flex-direction:column;gap:6px"><div style="height:4px;border-radius:2px;background:#e6dfd9"></div><span style="font-size:12px;color:#6b5f5a">Linked</span></div>
+</div>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:16px;padding:32px;display:flex;flex-direction:column;gap:18px">
+<div style="width:56px;height:56px;border-radius:28px;background:#e8dcd4;font-size:20px;font-weight:600;display:flex;align-items:center;justify-content:center">IY</div>
+<span style="font-size:28px;line-height:34px;font-weight:700">Ivan Yardley invited you as his executor</span>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+<div style="padding:14px;border-radius:12px;background:#f7f4f1;display:flex;flex-direction:column;gap:4px"><span class="ms" style="font-size:22px;color:#225c3a">check_circle</span><span style="font-size:15px;font-weight:600">What you can do</span><span style="font-size:13px;line-height:18px;color:#6b5f5a">See records Ivan shares, and report a death when needed.</span></div>
+<div style="padding:14px;border-radius:12px;background:#f7f4f1;display:flex;flex-direction:column;gap:4px"><span class="ms" style="font-size:22px;color:#6e3a28">lock</span><span style="font-size:15px;font-weight:600">What stays private</span><span style="font-size:13px;line-height:18px;color:#6b5f5a">Everything else, both ways.</span></div>
+</div>
+<div style="display:flex;gap:8px"><button style="height:42px;padding:0 18px;border-radius:9px;border:0;background:#2b1714;color:#fff;font-size:15px;font-weight:600">Accept and continue</button><button style="height:42px;padding:0 14px;border-radius:9px;border:0;background:transparent;font-size:15px;font-weight:500;color:#7a3d27">Decline</button></div>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</section>
+
+<section class="dv-turn" id="t3">
+<div class="dv-thd"><a class="dv-tid" href="#t3">3</a><span class="dv-tname">Identity verification (mobile-first)</span></div>
+<p class="dv-tsub">Camera screens switch to a dark full-bleed UI so the frame and guidance stand out. Capture is automatic when the document is steady, with a manual shutter as fallback. Every failure states the reason in plain words and offers a retry plus another route. On desktop, the flow hands off to the phone via QR code (<a class="dv-oid" href="#3i">3i</a>).</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="3a"><div class="dv-olabel"><a class="dv-oid" href="#3a">3a</a>Consent</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ w }}" height="{{ h }}" hint-size="375px,780px">
+<div style="padding:60px 20px 40px;min-height:100%;box-sizing:border-box;background:#f6f3f0;display:flex;flex-direction:column;gap:16px">
+<span style="font-size:13px;color:#6b5f5a">Verify identity · 1 of 4</span>
+<span style="font-size:28px;line-height:34px;font-weight:700">Before we start</span>
+<div style="background:#fff;border-radius:12px;overflow:hidden">
+<div style="display:flex;gap:12px;padding:14px 16px;border-bottom:.5px solid #ebe4de"><span class="ms" style="font-size:22px;color:#6e3a28">photo_camera</span><span style="font-size:15px;line-height:20px">We’ll use your camera to photograph your ID and record a 5-second selfie video.</span></div>
+<div style="display:flex;gap:12px;padding:14px 16px;border-bottom:.5px solid #ebe4de"><span class="ms" style="font-size:22px;color:#6e3a28">verified_user</span><span style="font-size:15px;line-height:20px">Our verification partner checks the images match. They delete them after 30 days.</span></div>
+<div style="display:flex;gap:12px;padding:14px 16px"><span class="ms" style="font-size:22px;color:#6e3a28">visibility_off</span><span style="font-size:15px;line-height:20px">Ivan never sees your ID or photos.</span></div>
+</div>
+<div style="display:flex;gap:12px;align-items:flex-start;padding:4px"><div style="width:22px;height:22px;border-radius:6px;background:#2b1714;color:#fff;display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:16px;font-variation-settings:'wght' 600">check</span></div><span style="font-size:15px;line-height:20px">I agree to my identity being checked as described in the <span style="color:#7a3d27">privacy notice</span>.</span></div>
+<div style="flex:1"></div>
+<div style="height:50px;border-radius:12px;background:#2b1714;color:#fff;font-size:17px;font-weight:600;display:flex;align-items:center;justify-content:center">Continue</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="3b"><div class="dv-olabel"><a class="dv-oid" href="#3b">3b</a>Choose document</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ w }}" height="{{ h }}" hint-size="375px,780px">
+<div style="padding:60px 0 40px;min-height:100%;box-sizing:border-box;background:#f6f3f0;display:flex;flex-direction:column;gap:16px">
+<span style="font-size:13px;color:#6b5f5a;padding:0 20px">Verify identity · 2 of 4</span>
+<span style="font-size:28px;line-height:34px;font-weight:700;padding:0 20px">Which ID will you use?</span>
+<div style="margin:0 16px;background:#fff;border-radius:12px;overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;min-height:60px;padding:0 16px;border-bottom:.5px solid #ebe4de"><div style="width:36px;height:36px;border-radius:9px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px">menu_book</span></div><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:17px">Passport</span><span style="font-size:13px;color:#6b5f5a">Any country · photo page</span></div><span class="ms" style="font-size:20px;color:#b3a9a4">chevron_right</span></div>
+<div style="display:flex;align-items:center;gap:12px;min-height:60px;padding:0 16px;border-bottom:.5px solid #ebe4de"><div style="width:36px;height:36px;border-radius:9px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px">id_card</span></div><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:17px">Driving licence</span><span style="font-size:13px;color:#6b5f5a">Front and back</span></div><span class="ms" style="font-size:20px;color:#b3a9a4">chevron_right</span></div>
+<div style="display:flex;align-items:center;gap:12px;min-height:60px;padding:0 16px"><div style="width:36px;height:36px;border-radius:9px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px">badge</span></div><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:17px">National ID card</span><span style="font-size:13px;color:#6b5f5a">Front and back</span></div><span class="ms" style="font-size:20px;color:#b3a9a4">chevron_right</span></div>
+</div>
+<div style="margin:0 20px;display:flex;gap:8px;font-size:13px;line-height:18px;color:#6b5f5a"><span class="ms" style="font-size:18px">lightbulb</span>Find a well-lit spot and lay the document on a dark, plain surface.</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="3c"><div class="dv-olabel"><a class="dv-oid" href="#3c">3c</a>Camera: document frame, auto-capture</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ w }}" height="{{ h }}" dark="{{ true }}" hint-size="375px,780px">
+<div style="height:780px;position:relative;background:repeating-linear-gradient(135deg,#2a2422 0 10px,#2f2826 10px 20px);overflow:hidden">
+<div style="position:absolute;top:56px;left:0;right:0;display:flex;justify-content:space-between;padding:0 16px"><div style="width:44px;height:44px;border-radius:22px;background:rgba(255,255,255,.14);color:#fff;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:22px">close</span></div><div style="width:44px;height:44px;border-radius:22px;background:rgba(255,255,255,.14);color:#fff;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:22px">flash_off</span></div></div>
+<div style="position:absolute;top:130px;left:0;right:0;text-align:center;color:#fff;display:flex;flex-direction:column;gap:6px;padding:0 32px"><span style="font-size:20px;font-weight:600">Passport photo page</span><span style="font-size:15px;color:rgba(255,255,255,.8)">Fit the page inside the frame</span></div>
+<div style="position:absolute;top:230px;left:28px;right:28px;height:220px;border-radius:16px;box-shadow:0 0 0 2000px rgba(0,0,0,.55);border:3px solid #fff"></div>
+<div style="position:absolute;top:240px;left:40px;font:11px ui-monospace,Menlo,monospace;color:rgba(255,255,255,.6)">live camera feed</div>
+<div style="position:absolute;top:470px;left:0;right:0;display:flex;justify-content:center"><span style="display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:16px;background:#e9f3ec;color:#225c3a;font-size:13px;font-weight:600"><span class="ms" style="font-size:16px">center_focus_strong</span>Hold still… capturing</span></div>
+<div style="position:absolute;bottom:60px;left:0;right:0;display:flex;justify-content:center"><div style="width:76px;height:76px;border-radius:38px;border:4px solid #fff;display:flex;align-items:center;justify-content:center"><div style="width:60px;height:60px;border-radius:30px;background:#fff"></div></div></div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="3d"><div class="dv-olabel"><a class="dv-oid" href="#3d">3d</a>Review capture</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ w }}" height="{{ h }}" hint-size="375px,780px">
+<div style="padding:60px 20px 40px;min-height:100%;box-sizing:border-box;background:#f6f3f0;display:flex;flex-direction:column;gap:16px">
+<span style="font-size:28px;line-height:34px;font-weight:700">Check your photo</span>
+<div style="height:210px;border-radius:14px;background:repeating-linear-gradient(135deg,#e8e1db 0 10px,#efe9e4 10px 20px);display:flex;align-items:center;justify-content:center;font:12px ui-monospace,Menlo,monospace;color:#6b5f5a">captured passport image</div>
+<div style="background:#fff;border-radius:12px;overflow:hidden">
+<div style="display:flex;align-items:center;gap:10px;min-height:44px;padding:0 16px;border-bottom:.5px solid #ebe4de;font-size:15px"><span class="ms" style="font-size:20px;color:#225c3a">check_circle</span>All four corners visible</div>
+<div style="display:flex;align-items:center;gap:10px;min-height:44px;padding:0 16px;border-bottom:.5px solid #ebe4de;font-size:15px"><span class="ms" style="font-size:20px;color:#225c3a">check_circle</span>Text is sharp</div>
+<div style="display:flex;align-items:center;gap:10px;min-height:44px;padding:0 16px;font-size:15px"><span class="ms" style="font-size:20px;color:#225c3a">check_circle</span>No glare on the photo</div>
+</div>
+<div style="flex:1"></div>
+<div style="height:50px;border-radius:12px;background:#2b1714;color:#fff;font-size:17px;font-weight:600;display:flex;align-items:center;justify-content:center">Use this photo</div>
+<div style="height:44px;display:flex;align-items:center;justify-content:center;font-size:17px;color:#7a3d27">Retake</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="3e"><div class="dv-olabel"><a class="dv-oid" href="#3e">3e</a>Liveness: face oval with progress ring</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ w }}" height="{{ h }}" dark="{{ true }}" hint-size="375px,780px">
+<div style="height:780px;position:relative;background:#1a1514;overflow:hidden">
+<div style="position:absolute;top:56px;left:16px;width:44px;height:44px;border-radius:22px;background:rgba(255,255,255,.14);color:#fff;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:22px">close</span></div>
+<div style="position:absolute;top:130px;left:0;right:0;text-align:center;color:#fff;display:flex;flex-direction:column;gap:6px;padding:0 32px"><span style="font-size:13px;color:rgba(255,255,255,.7)">Verify identity · 3 of 4</span><span style="font-size:22px;font-weight:600">Slowly turn your head left</span></div>
+<div style="position:absolute;top:230px;left:50%;margin-left:-120px;width:240px;height:310px;border-radius:50%;border:6px solid rgba(255,255,255,.18);box-sizing:border-box"></div>
+<div style="position:absolute;top:230px;left:50%;margin-left:-120px;width:240px;height:310px;border-radius:50%;border:6px solid transparent;border-top-color:#7fc79a;border-left-color:#7fc79a;box-sizing:border-box;transform:rotate(-20deg)"></div>
+<div style="position:absolute;top:248px;left:50%;margin-left:-102px;width:204px;height:274px;border-radius:50%;background:repeating-linear-gradient(135deg,#2a2422 0 10px,#2f2826 10px 20px);display:flex;align-items:center;justify-content:center;font:11px ui-monospace,Menlo,monospace;color:rgba(255,255,255,.5)">front camera</div>
+<div style="position:absolute;bottom:80px;left:0;right:0;text-align:center;color:rgba(255,255,255,.8);font-size:15px;padding:0 40px">Good light, no glasses or hat. This takes about 5 seconds.</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="3f"><div class="dv-olabel"><a class="dv-oid" href="#3f">3f</a>Checking (progress)</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ w }}" height="{{ h }}" hint-size="375px,780px">
+<div style="padding:60px 20px 40px;min-height:100%;box-sizing:border-box;background:#f6f3f0;display:flex;flex-direction:column;gap:20px">
+<span style="font-size:13px;color:#6b5f5a">Verify identity · 4 of 4</span>
+<span style="font-size:28px;line-height:34px;font-weight:700">Checking your details</span>
+<span style="font-size:15px;line-height:22px;color:#6b5f5a">Usually under a minute. You can leave this screen; we’ll notify you.</span>
+<div style="background:#fff;border-radius:12px;overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;min-height:52px;padding:0 16px;border-bottom:.5px solid #ebe4de;font-size:17px"><span class="ms" style="font-size:22px;color:#225c3a;font-variation-settings:'FILL' 1">check_circle</span>Document uploaded</div>
+<div style="display:flex;align-items:center;gap:12px;min-height:52px;padding:0 16px;border-bottom:.5px solid #ebe4de;font-size:17px"><span class="ms" style="font-size:22px;color:#225c3a;font-variation-settings:'FILL' 1">check_circle</span>Document is genuine</div>
+<div style="display:flex;align-items:center;gap:12px;min-height:52px;padding:0 16px;border-bottom:.5px solid #ebe4de;font-size:17px"><span style="width:20px;height:20px;border-radius:10px;border:3px solid #e6dfd9;border-top-color:#2b1714;box-sizing:border-box;margin:0 1px"></span>Matching your face</div>
+<div style="display:flex;align-items:center;gap:12px;min-height:52px;padding:0 16px;font-size:17px;color:#6b5f5a"><span class="ms" style="font-size:22px;color:#cfc6c0">radio_button_unchecked</span>Confirming identity</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="3g"><div class="dv-olabel"><a class="dv-oid" href="#3g">3g</a>Failure with reason and retry</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ w }}" height="{{ h }}" hint-size="375px,780px">
+<div style="padding:60px 20px 40px;min-height:100%;box-sizing:border-box;background:#f6f3f0;display:flex;flex-direction:column;gap:16px">
+<div style="width:64px;height:64px;border-radius:32px;background:#fbeee6;color:#b3261e;display:flex;align-items:center;justify-content:center;margin-top:40px"><span class="ms" style="font-size:34px">error</span></div>
+<span style="font-size:28px;line-height:34px;font-weight:700">We couldn’t read your passport</span>
+<span style="font-size:15px;line-height:22px;color:#6b5f5a">There was glare across the photo, so the details weren’t clear. Nothing has been saved.</span>
+<div style="background:#fff;border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;font-size:15px;line-height:20px">
+<b>Try this</b><span>· Turn off overhead lights or move near a window</span><span>· Tilt the passport slightly to remove reflections</span>
+</div>
+<span style="font-size:13px;color:#6b5f5a">Attempt 1 of 3</span>
+<div style="flex:1"></div>
+<div style="height:50px;border-radius:12px;background:#2b1714;color:#fff;font-size:17px;font-weight:600;display:flex;align-items:center;justify-content:center">Try again</div>
+<div style="height:44px;display:flex;align-items:center;justify-content:center;font-size:17px;color:#7a3d27">Use a different document</div>
+<div style="height:32px;display:flex;align-items:center;justify-content:center;font-size:15px;color:#6b5f5a">Get help</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="3h"><div class="dv-olabel"><a class="dv-oid" href="#3h">3h</a>Verified</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ w }}" height="{{ h }}" hint-size="375px,780px">
+<div style="padding:60px 20px 40px;min-height:100%;box-sizing:border-box;background:#f6f3f0;display:flex;flex-direction:column;gap:16px">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center">
+<div style="width:80px;height:80px;border-radius:40px;background:#e9f3ec;color:#225c3a;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:44px;font-variation-settings:'FILL' 1">verified_user</span></div>
+<span style="font-size:28px;line-height:34px;font-weight:700">You’re verified</span>
+<span style="font-size:15px;line-height:22px;color:#6b5f5a">Bob Smith · Verified 13 Oct 2026. You won’t need to do this again.</span>
+</div>
+<div style="height:50px;border-radius:12px;background:#2b1714;color:#fff;font-size:17px;font-weight:600;display:flex;align-items:center;justify-content:center">Continue</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="3i"><div class="dv-olabel"><a class="dv-oid" href="#3i">3i</a>Desktop: continue on phone</div>
+<div class="dv-card" style="width:760px;height:520px;display:flex;align-items:center;justify-content:center">
+<div style="width:560px;background:#fff;border:1px solid #ebe4de;border-radius:16px;padding:32px;display:grid;grid-template-columns:minmax(0,1fr) 180px;gap:28px;align-items:center">
+<div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:#6b5f5a">Verify identity</span><span style="font-size:24px;line-height:30px;font-weight:700">Continue on your phone</span><span style="font-size:15px;line-height:22px;color:#6b5f5a">Phone cameras give the clearest ID photos. Scan the code; this page updates when you’re done.</span><span style="font-size:14px;font-weight:500;color:#7a3d27">Use this computer’s webcam instead</span></div>
+<div style="width:180px;height:180px;border-radius:12px;background:repeating-linear-gradient(45deg,#e8e1db 0 8px,#f3eeea 8px 16px);display:flex;align-items:center;justify-content:center;font:11px ui-monospace,Menlo,monospace;color:#6b5f5a">QR code</div>
+</div>
+</div>
+</div>
+
+</div>
+</section>
+
+<section class="dv-turn" id="t4">
+<div class="dv-thd"><a class="dv-tid" href="#t4">4</a><span class="dv-tname">Add / Edit record forms</span></div>
+<p class="dv-tsub">One progressive form shell for every record type. On desktop a left step rail is used; on mobile, a top progress bar. Every step saves as a draft. The footer always has <b>Save &amp; continue</b> (primary) and <b>Save &amp; finish later</b> (secondary). Edit mode uses the same shell with all steps unlocked, and the primary becomes “Save changes”. Only required fields are marked; everything else is labelled optional.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="4a"><div class="dv-olabel"><a class="dv-oid" href="#4a">4a</a>Desktop: Bank account, step 2 Details</div>
+<div class="dv-card" style="width:1120px;height:720px;display:flex;flex-direction:column">
+<div style="height:60px;flex:none;display:flex;align-items:center;gap:12px;padding:0 28px;background:#fff;border-bottom:1px solid #ebe4de"><span class="ms" style="font-size:22px;color:#3a2c28">close</span><span style="font-size:15px;font-weight:600">Add bank account</span><div style="flex:1"></div><span style="display:flex;align-items:center;gap:6px;font-size:13px;color:#6b5f5a"><span class="ms" style="font-size:16px;color:#225c3a">cloud_done</span>Draft saved 14:32</span></div>
+<div style="flex:1;display:grid;grid-template-columns:260px minmax(0,1fr);min-height:0">
+<div style="padding:28px 20px;border-right:1px solid #ebe4de;display:flex;flex-direction:column;gap:4px">
+<div style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;font-size:14px"><span class="ms" style="font-size:22px;color:#225c3a;font-variation-settings:'FILL' 1">check_circle</span>Basics</div>
+<div style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;font-size:14px;font-weight:600;background:#fff;border-radius:8px;box-shadow:0 0 0 1px #ebe4de"><span style="width:22px;height:22px;border-radius:11px;background:#2b1714;color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center">2</span>Details</div>
+<div style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;font-size:14px;color:#6b5f5a"><span style="width:22px;height:22px;border-radius:11px;border:1.5px solid #cfc6c0;font-size:12px;display:flex;align-items:center;justify-content:center;box-sizing:border-box">3</span>Documents</div>
+<div style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;font-size:14px;color:#6b5f5a"><span style="width:22px;height:22px;border-radius:11px;border:1.5px solid #cfc6c0;font-size:12px;display:flex;align-items:center;justify-content:center;box-sizing:border-box">4</span>Review</div>
+</div>
+<div style="display:flex;flex-direction:column;min-height:0">
+<div style="flex:1;overflow:hidden;padding:32px 48px;display:flex;flex-direction:column;gap:20px;max-width:640px">
+<div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;color:#6b5f5a">Step 2 of 4</span><span style="font-size:24px;font-weight:700">Account details</span><span style="font-size:15px;color:#6b5f5a">Enough for your executor to find it. Never enter passwords or PINs.</span></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+<label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Account type<div style="height:42px;border-radius:9px;border:1px solid #e6dfd9;background:#fff;padding:0 12px;display:flex;align-items:center;font-size:15px;font-weight:400">Savings account<div style="flex:1"></div><span class="ms" style="font-size:20px;color:#6b5f5a">expand_more</span></div></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Approximate balance<div style="height:42px;border-radius:9px;border:1.5px solid #8c4a32;background:#fff;padding:0 12px;display:flex;align-items:center;font-size:15px;font-weight:400;font-variant-numeric:tabular-nums"><span style="color:#6b5f5a;margin-right:6px">£</span>76,213.00</div></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Sort code <span style="font-weight:400;color:#6b5f5a;margin-top:-4px">Optional</span><div style="height:42px;border-radius:9px;border:1px solid #e6dfd9;background:#fff;padding:0 12px;display:flex;align-items:center;font-size:15px;font-weight:400;color:#9a8f8a">00-00-00</div></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Last 4 digits <span style="font-weight:400;color:#6b5f5a;margin-top:-4px">Optional</span><div style="height:42px;border-radius:9px;border:1px solid #e6dfd9;background:#fff;padding:0 12px;display:flex;align-items:center;font-size:15px;font-weight:400">4821</div></label>
+</div>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Notes for your executor <span style="font-weight:400;color:#6b5f5a;margin-top:-4px">Optional</span><div style="height:84px;border-radius:9px;border:1px solid #e6dfd9;background:#fff;padding:10px 12px;font-size:15px;font-weight:400;color:#9a8f8a;box-sizing:border-box">For example, which branch or online banking app</div></label>
+</div>
+<div style="flex:none;height:68px;display:flex;align-items:center;gap:8px;padding:0 48px;border-top:1px solid #ebe4de;background:#fff">
+<button style="height:38px;padding:0 12px;border-radius:8px;border:0;background:transparent;font-size:14px;font-weight:500;color:#2b1714;display:flex;align-items:center;gap:4px"><span class="ms" style="font-size:18px">arrow_back</span>Back</button>
+<div style="flex:1"></div>
+<button style="height:38px;padding:0 14px;border-radius:8px;border:1px solid #e6dfd9;background:#fff;font-size:14px;font-weight:500;color:#2b1714">Save &amp; finish later</button>
+<button style="height:38px;padding:0 16px;border-radius:8px;border:0;background:#2b1714;color:#fff;font-size:14px;font-weight:600">Save &amp; continue</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="4b"><div class="dv-olabel"><a class="dv-oid" href="#4b">4b</a>Desktop: step 3 Documents (upload states)</div>
+<div class="dv-card" style="width:760px;height:720px;padding:32px 40px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;color:#6b5f5a">Step 3 of 4</span><span style="font-size:24px;font-weight:700">Documents</span><span style="font-size:15px;color:#6b5f5a">Optional. Statements or letters help your executor contact the bank.</span></div>
+<div style="height:150px;border:1.5px dashed #c9bcb3;border-radius:14px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px"><span class="ms" style="font-size:32px;color:#6e3a28">upload_file</span><span style="font-size:15px"><b>Drop files here</b> or <span style="color:#7a3d27;font-weight:500">browse</span></span><span style="font-size:13px;color:#6b5f5a">PDF, JPG or PNG · up to 20 MB each</span></div>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;height:60px;padding:0 16px;border-bottom:1px solid #f3eeea"><span class="ms" style="font-size:24px;color:#6e3a28">picture_as_pdf</span><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:500">Barclays statement Jun 2026.pdf</span><span style="font-size:12px;color:#225c3a">Uploaded · 1.2 MB</span></div><span class="ms" style="font-size:20px;color:#6b5f5a">delete</span></div>
+<div style="display:flex;align-items:center;gap:12px;height:60px;padding:0 16px;border-bottom:1px solid #f3eeea"><span class="ms" style="font-size:24px;color:#6e3a28">image</span><div style="flex:1;display:flex;flex-direction:column;gap:6px"><span style="font-size:14px;font-weight:500">Letter from bank.jpg</span><div style="height:4px;border-radius:2px;background:#efe8e3"><div style="width:62%;height:4px;border-radius:2px;background:#2b1714"></div></div></div><span style="font-size:12px;color:#6b5f5a">62%</span><span class="ms" style="font-size:20px;color:#6b5f5a">close</span></div>
+<div style="display:flex;align-items:center;gap:12px;height:60px;padding:0 16px;background:#fdf6f5"><span class="ms" style="font-size:24px;color:#b3261e">error</span><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:500">Scan.heic</span><span style="font-size:12px;color:#b3261e">This file type isn’t supported. Save it as JPG or PDF.</span></div><span style="font-size:14px;font-weight:500;color:#7a3d27">Retry</span></div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="4c"><div class="dv-olabel"><a class="dv-oid" href="#4c">4c</a>Mobile: same step with sticky footer</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ w }}" height="{{ h }}" hint-size="375px,780px">
+<div style="padding:56px 0 0;min-height:100%;box-sizing:border-box;background:#f6f3f0;display:flex;flex-direction:column">
+<div style="display:flex;align-items:center;padding:4px 16px;height:48px"><span style="font-size:17px;color:#7a3d27">Cancel</span><div style="flex:1;text-align:center;font-size:17px;font-weight:600">Add bank account</div><span style="font-size:13px;color:#6b5f5a;display:flex;align-items:center;gap:3px"><span class="ms" style="font-size:16px;color:#225c3a">cloud_done</span>Saved</span></div>
+<div style="padding:4px 20px 16px;display:flex;flex-direction:column;gap:8px"><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px"><div style="height:4px;border-radius:2px;background:#2b1714"></div><div style="height:4px;border-radius:2px;background:#2b1714"></div><div style="height:4px;border-radius:2px;background:#e6dfd9"></div><div style="height:4px;border-radius:2px;background:#e6dfd9"></div></div><span style="font-size:13px;color:#6b5f5a">Step 2 of 4 · Details</span></div>
+<div style="padding:0 36px 7px;font-size:13px;color:#6b5f5a;text-transform:uppercase">Account</div>
+<div style="margin:0 16px 20px;background:#fff;border-radius:12px;overflow:hidden">
+<div style="display:flex;align-items:center;min-height:48px;padding:0 16px;border-bottom:.5px solid #ebe4de;font-size:17px"><span style="flex:1">Type</span><span style="color:#6b5f5a">Savings</span><span class="ms" style="font-size:20px;color:#b3a9a4">unfold_more</span></div>
+<div style="display:flex;align-items:center;min-height:48px;padding:0 16px;border-bottom:.5px solid #ebe4de;font-size:17px"><span style="flex:1">Balance</span><span style="font-variant-numeric:tabular-nums">£76,213.00</span></div>
+<div style="display:flex;align-items:center;min-height:48px;padding:0 16px;border-bottom:.5px solid #ebe4de;font-size:17px"><span style="flex:1">Sort code</span><span style="color:#b3a9a4">Optional</span></div>
+<div style="display:flex;align-items:center;min-height:48px;padding:0 16px;font-size:17px"><span style="flex:1">Last 4 digits</span><span>4821</span></div>
+</div>
+<div style="padding:0 36px 7px;font-size:13px;color:#6b5f5a;text-transform:uppercase">Notes for your executor</div>
+<div style="margin:0 16px;background:#fff;border-radius:12px;min-height:80px;padding:12px 16px;font-size:17px;color:#b3a9a4;box-sizing:border-box">Optional</div>
+<div style="flex:1"></div>
+<div style="position:sticky;bottom:0;padding:12px 16px 34px;background:#f6f3f0;border-top:.5px solid #e3dbd4;display:flex;flex-direction:column;gap:6px">
+<div style="height:50px;border-radius:12px;background:#2b1714;color:#fff;font-size:17px;font-weight:600;display:flex;align-items:center;justify-content:center">Save &amp; continue</div>
+<div style="height:40px;display:flex;align-items:center;justify-content:center;font-size:17px;color:#7a3d27">Save &amp; finish later</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="4d"><div class="dv-olabel"><a class="dv-oid" href="#4d">4d</a>Steps per record type (same shell)</div>
+<div class="dv-card" style="width:620px;background:#fff">
+<div style="display:grid;grid-template-columns:150px repeat(4,minmax(0,1fr));font-size:13px">
+<div style="padding:12px 16px;font-weight:600;color:#6b5f5a;border-bottom:1px solid #ebe4de">Record</div><div style="padding:12px 10px;font-weight:600;color:#6b5f5a;border-bottom:1px solid #ebe4de">1 Basics</div><div style="padding:12px 10px;font-weight:600;color:#6b5f5a;border-bottom:1px solid #ebe4de">2 Details</div><div style="padding:12px 10px;font-weight:600;color:#6b5f5a;border-bottom:1px solid #ebe4de">3 Documents</div><div style="padding:12px 10px;font-weight:600;color:#6b5f5a;border-bottom:1px solid #ebe4de">4 Review</div>
+<div style="padding:12px 16px;font-weight:600;border-bottom:1px solid #f3eeea;display:flex;gap:8px;align-items:center"><span class="ms" style="font-size:18px;color:#6e3a28">account_balance</span>Bank account</div><div style="padding:12px 10px;border-bottom:1px solid #f3eeea">Bank, nickname</div><div style="padding:12px 10px;border-bottom:1px solid #f3eeea">Type, balance, sort code, last 4</div><div style="padding:12px 10px;border-bottom:1px solid #f3eeea">Statements</div><div style="padding:12px 10px;border-bottom:1px solid #f3eeea">Summary + share</div>
+<div style="padding:12px 16px;font-weight:600;border-bottom:1px solid #f3eeea;display:flex;gap:8px;align-items:center"><span class="ms" style="font-size:18px;color:#6e3a28">savings</span>Pension</div><div style="padding:12px 10px;border-bottom:1px solid #f3eeea">Provider, type</div><div style="padding:12px 10px;border-bottom:1px solid #f3eeea">Value, policy no., beneficiaries</div><div style="padding:12px 10px;border-bottom:1px solid #f3eeea">Annual statement</div><div style="padding:12px 10px;border-bottom:1px solid #f3eeea">Summary + share</div>
+<div style="padding:12px 16px;font-weight:600;border-bottom:1px solid #f3eeea;display:flex;gap:8px;align-items:center"><span class="ms" style="font-size:18px;color:#6e3a28">home</span>Property</div><div style="padding:12px 10px;border-bottom:1px solid #f3eeea">Address, ownership</div><div style="padding:12px 10px;border-bottom:1px solid #f3eeea">Value, mortgage, insurer</div><div style="padding:12px 10px;border-bottom:1px solid #f3eeea">Deeds, valuation</div><div style="padding:12px 10px;border-bottom:1px solid #f3eeea">Summary + share</div>
+<div style="padding:12px 16px;font-weight:600;border-bottom:1px solid #f3eeea;display:flex;gap:8px;align-items:center"><span class="ms" style="font-size:18px;color:#6e3a28">history_edu</span>Will</div><div style="padding:12px 10px;border-bottom:1px solid #f3eeea">Exists? date signed</div><div style="padding:12px 10px;border-bottom:1px solid #f3eeea">Where it’s kept, solicitor, executors</div><div style="padding:12px 10px;border-bottom:1px solid #f3eeea">Scan of Will</div><div style="padding:12px 10px;border-bottom:1px solid #f3eeea">Summary + share</div>
+<div style="padding:12px 16px;font-weight:600;border-bottom:1px solid #f3eeea;display:flex;gap:8px;align-items:center"><span class="ms" style="font-size:18px;color:#6e3a28">diamond</span>Possession</div><div style="padding:12px 10px;border-bottom:1px solid #f3eeea">Item, category</div><div style="padding:12px 10px;border-bottom:1px solid #f3eeea">Value, location, intended recipient</div><div style="padding:12px 10px;border-bottom:1px solid #f3eeea">Photos, receipts</div><div style="padding:12px 10px;border-bottom:1px solid #f3eeea">Summary + share</div>
+<div style="padding:12px 16px;font-weight:600;display:flex;gap:8px;align-items:center"><span class="ms" style="font-size:18px;color:#6e3a28">devices</span>Digital</div><div style="padding:12px 10px">Service, account email</div><div style="padding:12px 10px">Wishes (close, memorialise, transfer)</div><div style="padding:12px 10px">Optional</div><div style="padding:12px 10px">Summary + share</div>
+</div>
+</div>
+</div>
+
+</div>
+</section>
+
+<section class="dv-turn" id="t5">
+<div class="dv-thd"><a class="dv-tid" href="#t5">5</a><span class="dv-tname">Record detail</span></div>
+<p class="dv-tsub">The owner’s view has tabs: Overview · Documents · History · Access. A linked person sees the same layout with an ink context banner, no Edit, and locked panels where they lack permission. Fully locked records show the lock state only. Their name is visible only if the owner chose to reveal it.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="5a"><div class="dv-olabel"><a class="dv-oid" href="#5a">5a</a>Owner view: Overview with history and access</div>
+<div class="dv-card" style="width:1120px;height:720px;padding:28px 40px;box-sizing:border-box;display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;align-items:center;gap:4px;font-size:14px"><div style="width:30px;height:30px;border-radius:15px;border:1px solid #e6dfd9;background:#fff;display:flex;align-items:center;justify-content:center;margin-right:6px"><span class="ms" style="font-size:18px">arrow_back</span></div><span style="color:#7a3d27;font-weight:500">Finances</span><span class="ms" style="font-size:16px;color:#9a8f8a">chevron_right</span><span style="color:#7a3d27;font-weight:500">Banks</span><span class="ms" style="font-size:16px;color:#9a8f8a">chevron_right</span><span style="color:#6b5f5a">Barclays</span></div>
+<div style="display:flex;align-items:flex-end;gap:16px"><div style="flex:1;display:flex;flex-direction:column;gap:4px"><span style="font-size:28px;font-weight:700;letter-spacing:-.02em">Barclays</span><span style="font-size:15px;color:#6b5f5a">Savings account · Updated 17 Jul 2026</span></div><button style="height:36px;padding:0 12px;border-radius:8px;border:1px solid #e6dfd9;background:#fff;font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px"><span class="ms" style="font-size:18px">more_horiz</span></button><button style="height:36px;padding:0 14px 0 10px;border-radius:8px;border:0;background:#2b1714;color:#fff;font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px"><span class="ms" style="font-size:18px">edit</span>Edit</button></div>
+<div style="display:flex;gap:24px;border-bottom:1px solid #ebe4de;font-size:14px"><span style="padding:0 0 10px;border-bottom:2px solid #2b1714;font-weight:600">Overview</span><span style="padding:0 0 10px;color:#6b5f5a">Documents · 1</span><span style="padding:0 0 10px;color:#6b5f5a">History</span><span style="padding:0 0 10px;color:#6b5f5a">Access · 1</span></div>
+<div style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;align-items:start">
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<div style="display:flex;align-items:center;min-height:48px;padding:0 20px;border-bottom:1px solid #f3eeea;font-size:15px"><span style="width:160px;color:#6b5f5a">Balance</span><span style="font-size:20px;font-weight:600;font-variant-numeric:tabular-nums">£76,213.00</span></div>
+<div style="display:flex;align-items:center;min-height:48px;padding:0 20px;border-bottom:1px solid #f3eeea;font-size:15px"><span style="width:160px;color:#6b5f5a">Account type</span>Savings account</div>
+<div style="display:flex;align-items:center;min-height:48px;padding:0 20px;border-bottom:1px solid #f3eeea;font-size:15px"><span style="width:160px;color:#6b5f5a">Last 4 digits</span>•••• 4821</div>
+<div style="display:flex;align-items:center;min-height:48px;padding:0 20px;font-size:15px"><span style="width:160px;color:#6b5f5a">Sort code</span><span style="flex:1;color:#6b5f5a">Not added</span><span style="font-size:14px;font-weight:500;color:#7a3d27">Add</span></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px">
+<span style="font-size:15px;font-weight:600">Who can see this</span>
+<div style="display:flex;align-items:center;gap:10px"><div style="width:32px;height:32px;border-radius:16px;background:#e8dcd4;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center">BS</div><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:500">Bob Smith</span><span style="font-size:12px;color:#6b5f5a">Executor · View only</span></div><span class="ms" style="font-size:18px;color:#6b5f5a">more_vert</span></div>
+<span style="font-size:14px;font-weight:500;color:#7a3d27">Share with someone</span>
+</div>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px">
+<span style="font-size:15px;font-weight:600">Recent activity</span>
+<div style="display:flex;gap:10px;font-size:13px;line-height:18px"><span style="width:8px;height:8px;border-radius:4px;background:#2b1714;margin-top:5px;flex:none"></span><div style="display:flex;flex-direction:column"><span>Balance changed to £76,213.00</span><span style="color:#6b5f5a">You · 17 Jul 2026</span></div></div>
+<div style="display:flex;gap:10px;font-size:13px;line-height:18px"><span style="width:8px;height:8px;border-radius:4px;background:#cfc6c0;margin-top:5px;flex:none"></span><div style="display:flex;flex-direction:column"><span>Shared with Bob Smith</span><span style="color:#6b5f5a">You · 12 Jul 2026</span></div></div>
+<div style="display:flex;gap:10px;font-size:13px;line-height:18px"><span style="width:8px;height:8px;border-radius:4px;background:#cfc6c0;margin-top:5px;flex:none"></span><div style="display:flex;flex-direction:column"><span>Record created</span><span style="color:#6b5f5a">You · 3 Jul 2026</span></div></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="5b"><div class="dv-olabel"><a class="dv-oid" href="#5b">5b</a>Linked view: permitted, with a restricted panel</div>
+<div class="dv-card" style="width:760px;height:720px;display:flex;flex-direction:column">
+<div style="height:44px;flex:none;background:#2b1714;color:#fff;display:flex;align-items:center;gap:10px;padding:0 24px;font-size:14px"><span class="ms" style="font-size:18px">visibility</span><span><b>Ivan Yardley’s Fortress</b> · View only</span></div>
+<div style="padding:28px 32px;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:28px;font-weight:700">Barclays</span><span style="font-size:15px;color:#6b5f5a">Savings account · Updated 17 Jul 2026</span></div>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<div style="display:flex;align-items:center;min-height:48px;padding:0 20px;border-bottom:1px solid #f3eeea;font-size:15px"><span style="width:160px;color:#6b5f5a">Balance</span><span style="font-size:20px;font-weight:600">£76,213.00</span></div>
+<div style="display:flex;align-items:center;min-height:48px;padding:0 20px;border-bottom:1px solid #f3eeea;font-size:15px"><span style="width:160px;color:#6b5f5a">Account type</span>Savings account</div>
+<div style="display:flex;align-items:center;min-height:48px;padding:0 20px;font-size:15px"><span style="width:160px;color:#6b5f5a">Notes</span>Branch: Sutton Coldfield</div>
+</div>
+<div style="background:#fcfaf8;border:1px dashed #d9cfc8;border-radius:12px;padding:18px;display:flex;gap:14px;align-items:flex-start">
+<span class="ms" style="font-size:24px;color:#6b5f5a">lock</span>
+<div style="flex:1;display:flex;flex-direction:column;gap:4px"><span style="font-size:15px;font-weight:600">Documents are restricted</span><span style="font-size:14px;line-height:20px;color:#6b5f5a">Ivan has shared this record’s details but not its documents.</span></div>
+<span style="font-size:14px;font-weight:500;color:#7a3d27;white-space:nowrap">Request access</span>
+</div>
+<span style="font-size:13px;color:#6b5f5a">History and other people with access aren’t shown to linked people.</span>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="5c"><div class="dv-olabel"><a class="dv-oid" href="#5c">5c</a>Mobile: fully locked record</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ w }}" height="{{ h }}" hint-size="375px,780px">
+<div style="padding:56px 0 40px;min-height:100%;box-sizing:border-box;background:#f6f3f0;display:flex;flex-direction:column">
+<div style="margin:0 16px 8px;height:36px;border-radius:18px;background:#2b1714;color:#fff;display:flex;align-items:center;gap:8px;padding:0 14px;font-size:13px"><span class="ms" style="font-size:16px">visibility</span>Ivan Yardley’s Fortress · View only</div>
+<div style="display:flex;align-items:center;padding:4px 16px;height:48px"><div style="height:44px;padding:0 14px 0 8px;border-radius:22px;background:rgba(255,255,255,.9);display:flex;align-items:center;font-size:17px"><span class="ms" style="font-size:24px">chevron_left</span>Finances</div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:0 32px;text-align:center">
+<div style="width:72px;height:72px;border-radius:36px;background:#efe8e3;color:#6b5f5a;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:36px">lock</span></div>
+<span style="font-size:22px;font-weight:700">This record isn’t shared with you</span>
+<span style="font-size:15px;line-height:22px;color:#6b5f5a">You can see that it exists in Banks. Its name and details are private.</span>
+<div style="height:44px;padding:0 18px;border-radius:22px;border:1px solid #e6dfd9;background:#fff;font-size:15px;font-weight:500;display:flex;align-items:center">Request access</div>
+</div>
+</div>
+</x-import>
+</div>
+
+</div>
+</section>
+
+<section class="dv-turn" id="t6">
+<div class="dv-thd"><a class="dv-tid" href="#t6">6</a><span class="dv-tname">Executor / death reporting</span></div>
+<p class="dv-tsub">The tone is calm and plain, with no celebratory colour. Reporting a death is a deliberate secondary action, never a primary button on the overview. After submission, a status timeline shows each gate (Reported → Evidence reviewed → Death verified → Authority confirmed → Access granted). A persistent note explains that Vault access opens only at the last step.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="6a"><div class="dv-olabel"><a class="dv-oid" href="#6a">6a</a>“My role” in Ivan’s Fortress</div>
+<div class="dv-card" style="width:880px;height:700px;display:flex;flex-direction:column">
+<div style="height:44px;flex:none;background:#2b1714;color:#fff;display:flex;align-items:center;gap:10px;padding:0 24px;font-size:14px"><span class="ms" style="font-size:18px">visibility</span><span><b>Ivan Yardley’s Fortress</b> · You’re the executor</span></div>
+<div style="padding:28px 40px;display:flex;flex-direction:column;gap:20px;max-width:720px">
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:28px;font-weight:700">Your role as executor</span><span style="font-size:15px;line-height:22px;color:#6b5f5a">Ivan named you on 12 Jul 2026. Here’s what that means in Legacy Fortress.</span></div>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<div style="display:flex;gap:14px;padding:16px 20px;border-bottom:1px solid #f3eeea"><span class="ms" style="font-size:22px;color:#6e3a28">visibility</span><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:600">Now</span><span style="font-size:14px;line-height:20px;color:#6b5f5a">You can view the 2 records Ivan has shared with you.</span></div></div>
+<div style="display:flex;gap:14px;padding:16px 20px;border-bottom:1px solid #f3eeea"><span class="ms" style="font-size:22px;color:#6e3a28">description</span><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:600">If Ivan dies</span><span style="font-size:14px;line-height:20px;color:#6b5f5a">You report it here and upload the death certificate. We verify it before anything changes.</span></div></div>
+<div style="display:flex;gap:14px;padding:16px 20px"><span class="ms" style="font-size:22px;color:#6e3a28">lock_open</span><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:600">After verification</span><span style="font-size:14px;line-height:20px;color:#6b5f5a">Once your authority is confirmed (for example, a grant of probate), you get access to the records Ivan set for his executor.</span></div></div>
+</div>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:14px">
+<span class="ms" style="font-size:22px;color:#6b5f5a">report</span>
+<div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:600">Report a death</span><span style="font-size:14px;color:#6b5f5a">Only when you have the death certificate or other official evidence.</span></div>
+<button style="height:36px;padding:0 14px;border-radius:8px;border:1px solid #e6dfd9;background:#fff;font-size:14px;font-weight:500;color:#2b1714">Start report</button>
+</div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="6b"><div class="dv-olabel"><a class="dv-oid" href="#6b">6b</a>Report: details and evidence (one page)</div>
+<div class="dv-card" style="width:760px;height:700px;padding:28px 40px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6b5f5a">Report a death · Ivan Yardley</span><span style="font-size:24px;font-weight:700">We’re sorry for your loss</span><span style="font-size:15px;line-height:22px;color:#6b5f5a">Take your time. You can save this and come back.</span></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+<label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Date of death<div style="height:42px;border-radius:9px;border:1px solid #e6dfd9;background:#fff;padding:0 12px;display:flex;align-items:center;font-size:15px;font-weight:400;color:#9a8f8a">DD / MM / YYYY</div></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Your relationship<div style="height:42px;border-radius:9px;border:1px solid #e6dfd9;background:#fff;padding:0 12px;display:flex;align-items:center;font-size:15px;font-weight:400">Executor<div style="flex:1"></div><span class="ms" style="font-size:20px;color:#6b5f5a">expand_more</span></div></label>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:13px;font-weight:500">Evidence</span>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;min-height:60px;padding:0 16px;border-bottom:1px solid #f3eeea"><span class="ms" style="font-size:22px;color:#6e3a28">description</span><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:600">Death certificate <span style="font-weight:400;color:#6b5f5a">· Required</span></span><span style="font-size:12px;color:#6b5f5a">Photo or scan of the certified copy</span></div><button style="height:32px;padding:0 12px;border-radius:8px;border:1px solid #e6dfd9;background:#fff;font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px"><span class="ms" style="font-size:18px">upload</span>Upload</button></div>
+<div style="display:flex;align-items:center;gap:12px;min-height:60px;padding:0 16px"><span class="ms" style="font-size:22px;color:#6e3a28">gavel</span><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:600">Grant of probate <span style="font-weight:400;color:#6b5f5a">· Add later if you don’t have it yet</span></span><span style="font-size:12px;color:#6b5f5a">Needed before access is granted</span></div><button style="height:32px;padding:0 12px;border-radius:8px;border:1px solid #e6dfd9;background:#fff;font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px"><span class="ms" style="font-size:18px">upload</span>Upload</button></div>
+</div></div>
+<div style="padding:14px 16px;border-radius:12px;background:#f7f4f1;display:flex;gap:10px;font-size:14px;line-height:20px;color:#3a2c28"><span class="ms" style="font-size:20px;color:#6e3a28">info</span>Submitting doesn’t give you access. Our team reviews the evidence first, usually within 2 working days.</div>
+<div style="flex:1"></div>
+<div style="display:flex;gap:8px;justify-content:flex-end"><button style="height:38px;padding:0 14px;border-radius:8px;border:1px solid #e6dfd9;background:#fff;font-size:14px;font-weight:500">Save &amp; finish later</button><button style="height:38px;padding:0 16px;border-radius:8px;border:0;background:#2b1714;color:#fff;font-size:14px;font-weight:600">Submit report</button></div>
+</div>
+</div>
+
+<div class="dv-opt" id="6c"><div class="dv-olabel"><a class="dv-oid" href="#6c">6c</a>Progress tracker (desktop)</div>
+<div class="dv-card" style="width:760px;height:700px;padding:28px 40px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6b5f5a">Ivan Yardley · Report submitted 13 Oct 2026</span><span style="font-size:24px;font-weight:700">Under review</span><span style="font-size:15px;color:#6b5f5a">We’ll email you when anything changes.</span></div>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;padding:20px;display:flex;flex-direction:column">
+<div style="display:flex;gap:14px"><div style="display:flex;flex-direction:column;align-items:center"><span class="ms" style="font-size:24px;color:#225c3a;font-variation-settings:'FILL' 1">check_circle</span><div style="width:2px;flex:1;min-height:28px;background:#225c3a"></div></div><div style="display:flex;flex-direction:column;padding-bottom:16px"><span style="font-size:15px;font-weight:600">Death reported</span><span style="font-size:13px;color:#6b5f5a">13 Oct 2026 · by you</span></div></div>
+<div style="display:flex;gap:14px"><div style="display:flex;flex-direction:column;align-items:center"><span style="width:24px;height:24px;border-radius:12px;border:3px solid #e6dfd9;border-top-color:#2b1714;box-sizing:border-box"></span><div style="width:2px;flex:1;min-height:28px;background:#e6dfd9"></div></div><div style="display:flex;flex-direction:column;padding-bottom:16px"><span style="font-size:15px;font-weight:600">Evidence being reviewed</span><span style="font-size:13px;color:#6b5f5a">Usually 2 working days</span></div></div>
+<div style="display:flex;gap:14px"><div style="display:flex;flex-direction:column;align-items:center"><span class="ms" style="font-size:24px;color:#cfc6c0">radio_button_unchecked</span><div style="width:2px;flex:1;min-height:28px;background:#e6dfd9"></div></div><div style="display:flex;flex-direction:column;padding-bottom:16px"><span style="font-size:15px;color:#6b5f5a">Death verified</span></div></div>
+<div style="display:flex;gap:14px"><div style="display:flex;flex-direction:column;align-items:center"><span class="ms" style="font-size:24px;color:#cfc6c0">radio_button_unchecked</span><div style="width:2px;flex:1;min-height:28px;background:#e6dfd9"></div></div><div style="display:flex;flex-direction:column;padding-bottom:16px"><span style="font-size:15px;color:#6b5f5a">Executor authority confirmed</span><span style="font-size:13px;color:#7a3d27;font-weight:500">Upload grant of probate</span></div></div>
+<div style="display:flex;gap:14px"><span class="ms" style="font-size:24px;color:#cfc6c0">lock</span><div style="display:flex;flex-direction:column"><span style="font-size:15px;color:#6b5f5a">Access granted</span><span style="font-size:13px;color:#6b5f5a">You’ll see the records Ivan set for his executor</span></div></div>
+</div>
+<div style="padding:14px 16px;border-radius:12px;background:#f7f4f1;display:flex;gap:10px;font-size:14px;line-height:20px;color:#3a2c28"><span class="ms" style="font-size:20px;color:#6e3a28">lock</span>Ivan’s Vault stays locked until every step is complete. Other linked people are told only once the death is verified.</div>
+</div>
+</div>
+
+<div class="dv-opt" id="6d"><div class="dv-olabel"><a class="dv-oid" href="#6d">6d</a>Mobile tracker</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ w }}" height="{{ h }}" hint-size="375px,780px">
+<div style="padding:60px 0 40px;min-height:100%;box-sizing:border-box;background:#f6f3f0;display:flex;flex-direction:column;gap:14px">
+<div style="padding:0 20px;display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;color:#6b5f5a">Ivan Yardley</span><span style="font-size:28px;font-weight:700">Under review</span><span style="font-size:15px;color:#6b5f5a">Step 2 of 5 · usually 2 working days</span></div>
+<div style="margin:0 16px;background:#fff;border-radius:12px;overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;min-height:52px;padding:0 16px;border-bottom:.5px solid #ebe4de;font-size:17px"><span class="ms" style="font-size:22px;color:#225c3a;font-variation-settings:'FILL' 1">check_circle</span>Death reported</div>
+<div style="display:flex;align-items:center;gap:12px;min-height:52px;padding:0 16px;border-bottom:.5px solid #ebe4de;font-size:17px;font-weight:600"><span style="width:20px;height:20px;border-radius:10px;border:3px solid #e6dfd9;border-top-color:#2b1714;box-sizing:border-box;margin:0 1px"></span>Evidence being reviewed</div>
+<div style="display:flex;align-items:center;gap:12px;min-height:52px;padding:0 16px;border-bottom:.5px solid #ebe4de;font-size:17px;color:#6b5f5a"><span class="ms" style="font-size:22px;color:#cfc6c0">radio_button_unchecked</span>Death verified</div>
+<div style="display:flex;align-items:center;gap:12px;min-height:52px;padding:0 16px;border-bottom:.5px solid #ebe4de;font-size:17px;color:#6b5f5a"><span class="ms" style="font-size:22px;color:#cfc6c0">radio_button_unchecked</span>Authority confirmed</div>
+<div style="display:flex;align-items:center;gap:12px;min-height:52px;padding:0 16px;font-size:17px;color:#6b5f5a"><span class="ms" style="font-size:22px;color:#cfc6c0">lock</span>Access granted</div>
+</div>
+<div style="margin:0 16px;background:#fff;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px"><span class="ms" style="font-size:22px;color:#6e3a28">gavel</span><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:17px">Grant of probate</span><span style="font-size:13px;color:#6b5f5a">Needed for step 4</span></div><span style="font-size:17px;color:#7a3d27">Upload</span></div>
+<div style="margin:0 20px;font-size:13px;line-height:18px;color:#6b5f5a;display:flex;gap:8px"><span class="ms" style="font-size:16px">lock</span>Ivan’s Vault stays locked until every step is complete.</div>
+</div>
+</x-import>
+</div>
+
+</div>
+</section>
+
+<section class="dv-turn" id="t7">
+<div class="dv-thd"><a class="dv-tid" href="#t7">7</a><span class="dv-tname">Notifications centre</span></div>
+<p class="dv-tsub">The bell opens a 400px popover with the latest items. “View all” goes to a full page with filters and a detail pane. Unread items have an accent dot and semibold title. Opening an item marks it read. Notifications are events only; to-dos stay in the Action Centre.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="7a"><div class="dv-olabel"><a class="dv-oid" href="#7a">7a</a>Bell popover</div>
+<div class="dv-card" style="width:520px;height:560px;position:relative">
+<div style="height:60px;background:#fff;border-bottom:1px solid #ebe4de;display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:0 20px"><div style="width:36px;height:36px;border-radius:18px;background:#f3eeea;display:flex;align-items:center;justify-content:center;position:relative"><span class="ms" style="font-size:22px;font-variation-settings:'FILL' 1">notifications</span><span style="position:absolute;top:4px;right:4px;min-width:16px;height:16px;border-radius:8px;background:#8c4a32;color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center">2</span></div><div style="width:32px;height:32px;border-radius:16px;background:#d9cbc2;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center">IY</div></div>
+<div style="position:absolute;right:16px;top:68px;width:400px;background:#fff;border-radius:14px;box-shadow:0 16px 40px rgba(31,23,21,.18),0 0 0 1px #ebe4de;overflow:hidden">
+<div style="display:flex;align-items:center;padding:14px 16px 10px"><span style="flex:1;font-size:17px;font-weight:600">Notifications</span><span style="font-size:13px;font-weight:500;color:#7a3d27;white-space:nowrap;flex:none">Mark all read</span></div>
+<div style="display:flex;gap:6px;padding:0 16px 10px"><span style="height:28px;padding:0 12px;border-radius:14px;background:#2b1714;color:#fff;font-size:13px;display:flex;align-items:center;white-space:nowrap;flex:none">All</span><span style="height:28px;padding:0 12px;border-radius:14px;border:1px solid #e6dfd9;font-size:13px;display:flex;align-items:center;white-space:nowrap;flex:none">Unread · 2</span></div>
+<div style="padding:6px 16px;font-size:12px;font-weight:600;color:#6b5f5a;background:#faf8f6">Today</div>
+<div style="display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid #f3eeea"><div style="width:36px;height:36px;border-radius:18px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:20px">verified_user</span></div><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:600">Jacqui Yardley verified her identity</span><span style="font-size:12px;color:#6b5f5a">People I Trust · 09:14</span></div><span style="width:8px;height:8px;border-radius:4px;background:#8c4a32;margin-top:6px"></span></div>
+<div style="display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid #f3eeea"><div style="width:36px;height:36px;border-radius:18px;background:#fbeee6;color:#b3261e;display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:20px">shield</span></div><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:600">New sign-in on Chrome, macOS</span><span style="font-size:12px;color:#6b5f5a">Security · 08:02 · Birmingham, UK</span></div><span style="width:8px;height:8px;border-radius:4px;background:#8c4a32;margin-top:6px"></span></div>
+<div style="padding:6px 16px;font-size:12px;font-weight:600;color:#6b5f5a;background:#faf8f6">Earlier</div>
+<div style="display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid #f3eeea"><div style="width:36px;height:36px;border-radius:18px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:20px">savings</span></div><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px">Pension updated · Provincial</span><span style="font-size:12px;color:#6b5f5a">Finances · 17 Jul</span></div></div>
+<div style="padding:12px 16px;text-align:center;font-size:14px;font-weight:500;color:#7a3d27">View all notifications</div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="7b"><div class="dv-olabel"><a class="dv-oid" href="#7b">7b</a>Full page with detail pane</div>
+<div class="dv-card" style="width:1120px;height:560px;padding:28px 36px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;align-items:flex-end"><div style="flex:1;display:flex;flex-direction:column;gap:4px"><span style="font-size:28px;font-weight:700">Notifications</span><span style="font-size:15px;color:#6b5f5a">Changes to your vault, people and security.</span></div><span style="font-size:14px;font-weight:500;color:#7a3d27">Notification settings</span></div>
+<div style="display:flex;gap:6px"><span style="height:30px;padding:0 12px;border-radius:15px;background:#2b1714;color:#fff;font-size:13px;display:flex;align-items:center;white-space:nowrap;flex:none">All</span><span style="height:30px;padding:0 12px;border-radius:15px;border:1px solid #e6dfd9;font-size:13px;display:flex;align-items:center;white-space:nowrap;flex:none">Unread</span><span style="height:30px;padding:0 12px;border-radius:15px;border:1px solid #e6dfd9;font-size:13px;display:flex;align-items:center;white-space:nowrap;flex:none">Security</span><span style="height:30px;padding:0 12px;border-radius:15px;border:1px solid #e6dfd9;font-size:13px;display:flex;align-items:center;white-space:nowrap;flex:none">People</span><span style="height:30px;padding:0 12px;border-radius:15px;border:1px solid #e6dfd9;font-size:13px;display:flex;align-items:center;white-space:nowrap;flex:none">Records</span></div>
+<div style="flex:1;display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:16px;min-height:0">
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<div style="display:flex;gap:12px;padding:14px 16px;border-bottom:1px solid #f3eeea;background:#f7f4f1;box-shadow:inset 3px 0 0 #2b1714"><span class="ms" style="font-size:20px;color:#b3261e">shield</span><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:600">New sign-in on Chrome, macOS</span><span style="font-size:12px;color:#6b5f5a">Today 08:02</span></div></div>
+<div style="display:flex;gap:12px;padding:14px 16px;border-bottom:1px solid #f3eeea"><span class="ms" style="font-size:20px;color:#6e3a28">verified_user</span><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:600">Jacqui Yardley verified her identity</span><span style="font-size:12px;color:#6b5f5a">Today 09:14</span></div><span style="width:8px;height:8px;border-radius:4px;background:#8c4a32;margin-top:6px"></span></div>
+<div style="display:flex;gap:12px;padding:14px 16px;border-bottom:1px solid #f3eeea"><span class="ms" style="font-size:20px;color:#6e3a28">savings</span><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px">Pension updated · Provincial</span><span style="font-size:12px;color:#6b5f5a">17 Jul 2026</span></div></div>
+<div style="display:flex;gap:12px;padding:14px 16px"><span class="ms" style="font-size:20px;color:#6e3a28">history_edu</span><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px">Will added</span><span style="font-size:12px;color:#6b5f5a">16 Jul 2026</span></div></div>
+</div>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:14px">
+<div style="width:44px;height:44px;border-radius:22px;background:#fbeee6;color:#b3261e;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:24px">shield</span></div>
+<span style="font-size:20px;font-weight:600">New sign-in to your account</span>
+<div style="border:1px solid #f0ebe7;border-radius:10px;overflow:hidden;font-size:14px">
+<div style="display:flex;padding:10px 14px;border-bottom:1px solid #f0ebe7"><span style="width:90px;color:#6b5f5a">Device</span>Chrome on macOS</div>
+<div style="display:flex;padding:10px 14px;border-bottom:1px solid #f0ebe7"><span style="width:90px;color:#6b5f5a">Location</span>Birmingham, UK</div>
+<div style="display:flex;padding:10px 14px"><span style="width:90px;color:#6b5f5a">Time</span>13 Oct 2026, 08:02</div>
+</div>
+<div style="display:flex;gap:8px"><button style="height:36px;padding:0 14px;border-radius:8px;border:1px solid #e6dfd9;background:#fff;font-size:14px;font-weight:500">This was me</button><button style="height:36px;padding:0 14px;border-radius:8px;border:0;background:#b3261e;color:#fff;font-size:14px;font-weight:600">Secure my account</button></div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="7c"><div class="dv-olabel"><a class="dv-oid" href="#7c">7c</a>Empty state</div>
+<div class="dv-card" style="width:400px;height:300px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:24px;box-sizing:border-box">
+<div style="width:56px;height:56px;border-radius:28px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:28px">notifications_off</span></div>
+<span style="font-size:17px;font-weight:600">You’re all caught up</span>
+<span style="font-size:14px;line-height:20px;color:#6b5f5a">We’ll let you know when someone accepts an invitation, a record changes or there’s a security event.</span>
+</div>
+</div>
+
+</div>
+</section>
+
+<section class="dv-turn" id="t8">
+<div class="dv-thd"><a class="dv-tid" href="#t8">8</a><span class="dv-tname">Global search</span></div>
+<p class="dv-tsub">Typing in the header field (or ⌘K) opens a grouped dropdown with Records, People and Pages, at most 4 per group, plus keyboard navigation. Enter opens the full results page with filter chips. Search only covers the active Fortress; the context is shown in the field.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="8a"><div class="dv-olabel"><a class="dv-oid" href="#8a">8a</a>Dropdown</div>
+<div class="dv-card" style="width:620px;height:520px;position:relative">
+<div style="height:60px;background:#fff;border-bottom:1px solid #ebe4de;display:flex;align-items:center;padding:0 20px"><div style="display:flex;align-items:center;gap:8px;height:38px;padding:0 12px;width:460px;background:#fff;border:1.5px solid #8c4a32;border-radius:9px;font-size:14px"><span class="ms" style="font-size:18px;color:#6b5f5a">search</span><span style="flex:1">bar</span><span style="font-size:12px;color:#6b5f5a">in My Vault</span></div></div>
+<div style="position:absolute;left:20px;top:66px;width:460px;background:#fff;border-radius:12px;box-shadow:0 16px 40px rgba(31,23,21,.18),0 0 0 1px #ebe4de;overflow:hidden">
+<div style="padding:10px 14px 4px;font-size:12px;font-weight:600;color:#6b5f5a">Records</div>
+<div style="display:flex;align-items:center;gap:10px;height:44px;padding:0 14px;background:#f7f4f1"><span class="ms" style="font-size:20px;color:#6e3a28">account_balance</span><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px"><b>Bar</b>clays</span><span style="font-size:12px;color:#6b5f5a">Finances › Banks</span></div><span style="font:11px ui-monospace,Menlo,monospace;color:#6b5f5a">↵</span></div>
+<div style="display:flex;align-items:center;gap:10px;height:44px;padding:0 14px"><span class="ms" style="font-size:20px;color:#6e3a28">picture_as_pdf</span><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px"><b>Bar</b>clays statement Jun 2026.pdf</span><span style="font-size:12px;color:#6b5f5a">Document · Barclays</span></div></div>
+<div style="padding:10px 14px 4px;font-size:12px;font-weight:600;color:#6b5f5a;border-top:1px solid #f3eeea">People</div>
+<div style="display:flex;align-items:center;gap:10px;height:44px;padding:0 14px;font-size:14px;color:#6b5f5a">No matches</div>
+<div style="padding:10px 14px 4px;font-size:12px;font-weight:600;color:#6b5f5a;border-top:1px solid #f3eeea">Pages</div>
+<div style="display:flex;align-items:center;gap:10px;height:44px;padding:0 14px"><span class="ms" style="font-size:20px;color:#6b5f5a">article</span><span style="font-size:14px">Help: Adding a <b>bar</b>clays account</span></div>
+<div style="display:flex;align-items:center;gap:12px;height:40px;padding:0 14px;border-top:1px solid #f3eeea;font-size:12px;color:#6b5f5a"><span>↑↓ to move</span><span>↵ to open</span><span>esc to close</span><div style="flex:1"></div><span style="color:#7a3d27;font-weight:500">All results</span></div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="8b"><div class="dv-olabel"><a class="dv-oid" href="#8b">8b</a>Full results and no-results</div>
+<div class="dv-card" style="width:760px;height:520px;padding:28px 32px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:28px;font-weight:700">Results for “pension”</span><span style="font-size:15px;color:#6b5f5a">2 results in My Vault</span></div>
+<div style="display:flex;gap:6px"><span style="height:30px;padding:0 12px;border-radius:15px;background:#2b1714;color:#fff;font-size:13px;display:flex;align-items:center;white-space:nowrap;flex:none">All · 2</span><span style="height:30px;padding:0 12px;border-radius:15px;border:1px solid #e6dfd9;font-size:13px;display:flex;align-items:center;white-space:nowrap;flex:none">Records · 1</span><span style="height:30px;padding:0 12px;border-radius:15px;border:1px solid #e6dfd9;font-size:13px;display:flex;align-items:center;white-space:nowrap;flex:none">Documents · 0</span><span style="height:30px;padding:0 12px;border-radius:15px;border:1px solid #e6dfd9;font-size:13px;display:flex;align-items:center;white-space:nowrap;flex:none">People · 0</span><span style="height:30px;padding:0 12px;border-radius:15px;border:1px solid #e6dfd9;font-size:13px;display:flex;align-items:center;white-space:nowrap;flex:none">Help · 1</span></div>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<div style="display:flex;align-items:center;gap:14px;height:60px;padding:0 16px;border-bottom:1px solid #f3eeea"><div style="width:36px;height:36px;border-radius:9px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px">savings</span></div><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">Provincial</span><span style="font-size:13px;color:#6b5f5a">Finances › Pensions · £520,345.00</span></div><span class="ms" style="font-size:20px;color:#9a8f8a">chevron_right</span></div>
+<div style="display:flex;align-items:center;gap:14px;height:60px;padding:0 16px"><div style="width:36px;height:36px;border-radius:9px;background:#efe8e3;color:#6b5f5a;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px">article</span></div><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">How pension records work</span><span style="font-size:13px;color:#6b5f5a">Help</span></div><span class="ms" style="font-size:20px;color:#9a8f8a">chevron_right</span></div>
+</div>
+<div style="margin-top:8px;padding:20px;border:1px dashed #d9cfc8;border-radius:12px;display:flex;gap:14px;align-items:center"><span class="ms" style="font-size:28px;color:#6b5f5a">search_off</span><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:600">No-results state: Nothing matches “isa”</span><span style="font-size:13px;color:#6b5f5a">Check the spelling, or add it as a new record.</span></div><button style="height:34px;padding:0 12px;border-radius:8px;border:1px solid #e6dfd9;background:#fff;font-size:14px;font-weight:500">Add “isa”</button></div>
+</div>
+</div>
+
+<div class="dv-opt" id="8c"><div class="dv-olabel"><a class="dv-oid" href="#8c">8c</a>Mobile search screen</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ w }}" height="{{ h }}" hint-size="375px,780px">
+<div style="padding:56px 0 40px;min-height:100%;box-sizing:border-box;background:#f6f3f0;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:10px;padding:4px 16px"><div style="flex:1;height:40px;border-radius:12px;background:#e9e3de;display:flex;align-items:center;gap:6px;padding:0 10px;font-size:17px"><span class="ms" style="font-size:20px;color:#6b5f5a">search</span>bar<div style="flex:1"></div><span class="ms" style="font-size:18px;color:#8a7f7a;font-variation-settings:'FILL' 1">cancel</span></div><span style="font-size:17px;color:#7a3d27">Cancel</span></div>
+<div style="padding:0 36px;font-size:13px;color:#6b5f5a;text-transform:uppercase">Records</div>
+<div style="margin:0 16px;background:#fff;border-radius:12px;overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;min-height:56px;padding:0 16px;border-bottom:.5px solid #ebe4de"><div style="width:30px;height:30px;border-radius:7px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px">account_balance</span></div><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:17px"><b>Bar</b>clays</span><span style="font-size:13px;color:#6b5f5a">Finances › Banks</span></div></div>
+<div style="display:flex;align-items:center;gap:12px;min-height:56px;padding:0 16px"><div style="width:30px;height:30px;border-radius:7px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px">picture_as_pdf</span></div><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:17px"><b>Bar</b>clays statement</span><span style="font-size:13px;color:#6b5f5a">Document</span></div></div>
+</div>
+<div style="padding:0 36px;font-size:13px;color:#6b5f5a;text-transform:uppercase">Recent searches</div>
+<div style="margin:0 16px;background:#fff;border-radius:12px;overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;min-height:44px;padding:0 16px;border-bottom:.5px solid #ebe4de;font-size:17px"><span class="ms" style="font-size:20px;color:#8a7f7a">history</span>pension</div>
+<div style="display:flex;align-items:center;gap:12px;min-height:44px;padding:0 16px;font-size:17px"><span class="ms" style="font-size:20px;color:#8a7f7a">history</span>will</div>
+</div>
+</div>
+</x-import>
+</div>
+
+</div>
+</section>
+
+<section class="dv-turn" id="t9">
+<div class="dv-thd"><a class="dv-tid" href="#t9">9</a><span class="dv-tname">Account creation, sign-in and recovery</span></div>
+<p class="dv-tsub">This is a visual reskin only; the existing auth behaviour, fields and order are unchanged. It uses a centred 400px card on the canvas with the logo above it, one primary button per card, inline field errors, and the same layout on mobile (full width).</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="9a"><div class="dv-olabel"><a class="dv-oid" href="#9a">9a</a>Sign in (with error)</div>
+<div class="dv-card" style="width:560px;height:640px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px">
+<div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;border-radius:9px;background:#111;color:#fff;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:22px;font-variation-settings:'FILL' 1,'wght' 600">apps</span></div><span style="font-size:17px;font-weight:600">Legacy Fortress</span></div>
+<div style="width:400px;background:#fff;border:1px solid #ebe4de;border-radius:16px;padding:28px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px">
+<span style="font-size:24px;font-weight:700">Sign in</span>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Email<div style="height:44px;border-radius:9px;border:1px solid #e6dfd9;padding:0 12px;display:flex;align-items:center;font-size:15px;font-weight:400">ivanyardley@me.com</div></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500"><span style="display:flex">Password<span style="flex:1"></span><span style="color:#7a3d27">Forgot password?</span></span><div style="height:44px;border-radius:9px;border:1.5px solid #b3261e;padding:0 12px;display:flex;align-items:center;font-size:15px;font-weight:400">••••••••<div style="flex:1"></div><span class="ms" style="font-size:20px;color:#6b5f5a">visibility</span></div><span style="font-size:13px;font-weight:400;color:#b3261e;display:flex;align-items:center;gap:4px"><span class="ms" style="font-size:16px">error</span>Email or password is incorrect</span></label>
+<button style="height:44px;border-radius:10px;border:0;background:#2b1714;color:#fff;font-size:15px;font-weight:600">Sign in</button>
+<div style="display:flex;align-items:center;gap:10px;font-size:13px;color:#6b5f5a"><div style="flex:1;height:1px;background:#ebe4de"></div>or<div style="flex:1;height:1px;background:#ebe4de"></div></div>
+<button style="height:44px;border-radius:10px;border:1px solid #e6dfd9;background:#fff;font-size:15px;font-weight:500">Continue with Google</button>
+<button style="height:44px;border-radius:10px;border:0;background:#000;color:#fff;font-size:15px;font-weight:600">Continue with Apple</button>
+</div>
+<span style="font-size:14px;color:#6b5f5a">New here? <span style="color:#7a3d27;font-weight:500">Create an account</span></span>
+</div>
+</div>
+
+<div class="dv-opt" id="9b"><div class="dv-olabel"><a class="dv-oid" href="#9b">9b</a>Two-step code</div>
+<div class="dv-card" style="width:480px;height:640px;display:flex;align-items:center;justify-content:center">
+<div style="width:400px;background:#fff;border:1px solid #ebe4de;border-radius:16px;padding:28px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px">
+<span class="ms" style="font-size:32px;color:#6e3a28">sms</span>
+<span style="font-size:24px;font-weight:700">Enter your code</span>
+<span style="font-size:15px;line-height:22px;color:#6b5f5a">We sent a 6-digit code to •••• 482.</span>
+<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px"><div style="height:52px;border-radius:10px;border:1px solid #e6dfd9;font-size:22px;font-weight:600;display:flex;align-items:center;justify-content:center">4</div><div style="height:52px;border-radius:10px;border:1px solid #e6dfd9;font-size:22px;font-weight:600;display:flex;align-items:center;justify-content:center">1</div><div style="height:52px;border-radius:10px;border:1px solid #e6dfd9;font-size:22px;font-weight:600;display:flex;align-items:center;justify-content:center">9</div><div style="height:52px;border-radius:10px;border:1.5px solid #8c4a32"></div><div style="height:52px;border-radius:10px;border:1px solid #e6dfd9"></div><div style="height:52px;border-radius:10px;border:1px solid #e6dfd9"></div></div>
+<button style="height:44px;border-radius:10px;border:0;background:#2b1714;color:#fff;font-size:15px;font-weight:600">Verify</button>
+<span style="font-size:14px;color:#6b5f5a">Didn’t get it? <span style="color:#7a3d27;font-weight:500">Resend in 0:42</span></span>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="9c"><div class="dv-olabel"><a class="dv-oid" href="#9c">9c</a>Recovery: request and check email</div>
+<div class="dv-card" style="width:880px;height:640px;display:flex;align-items:center;justify-content:center;gap:24px">
+<div style="width:400px;background:#fff;border:1px solid #ebe4de;border-radius:16px;padding:28px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px">
+<span style="font-size:14px;color:#7a3d27;display:flex;align-items:center;gap:4px"><span class="ms" style="font-size:18px">arrow_back</span>Sign in</span>
+<span style="font-size:24px;font-weight:700">Reset your password</span>
+<span style="font-size:15px;line-height:22px;color:#6b5f5a">Enter your email and we’ll send a reset link.</span>
+<div style="height:44px;border-radius:9px;border:1px solid #e6dfd9;padding:0 12px;display:flex;align-items:center;font-size:15px">ivanyardley@me.com</div>
+<button style="height:44px;border-radius:10px;border:0;background:#2b1714;color:#fff;font-size:15px;font-weight:600">Send reset link</button>
+</div>
+<div style="width:400px;background:#fff;border:1px solid #ebe4de;border-radius:16px;padding:28px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px;align-items:flex-start">
+<div style="width:52px;height:52px;border-radius:26px;background:#e9f3ec;color:#225c3a;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:28px">mark_email_read</span></div>
+<span style="font-size:24px;font-weight:700">Check your email</span>
+<span style="font-size:15px;line-height:22px;color:#6b5f5a">If an account exists for ivanyardley@me.com, a link is on its way. It expires in 30 minutes.</span>
+<button style="height:40px;padding:0 14px;border-radius:9px;border:1px solid #e6dfd9;background:#fff;font-size:14px;font-weight:500">Open email app</button>
+<span style="font-size:14px;color:#7a3d27;font-weight:500">Resend link</span>
+</div>
+</div>
+</div>
+
+</div>
+</section>
+
+<section class="dv-turn" id="t10">
+<div class="dv-thd"><a class="dv-tid" href="#t10">10</a><span class="dv-tname">Professional / Enterprise workspace</span></div>
+<p class="dv-tsub">Professional workspaces use the same switcher, grouped under “Work”. In a professional context the sidebar shows a teal-tinted org badge and an org nav (Overview, Clients, Team, Licences, Settings), so a solicitor never confuses client work with their own Vault. The example organisation is a placeholder.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="10a"><div class="dv-olabel"><a class="dv-oid" href="#10a">10a</a>Organisation overview and team</div>
+<div class="dv-card" style="width:1120px;height:700px;display:grid;grid-template-columns:264px minmax(0,1fr)">
+<aside style="background:#f5f1ed;border-right:1px solid #ebe4de;padding:18px 12px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:10px;padding:4px 8px"><div style="width:34px;height:34px;border-radius:9px;background:#e3eeec;color:#1f5a55;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">HC</div><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">Hale &amp; Co</span><span style="font-size:12px;color:#6b5f5a">Professional · Admin</span></div><span class="ms" style="font-size:18px;color:#6b5f5a">unfold_more</span></div>
+<div style="display:flex;flex-direction:column;gap:2px">
+<div style="height:36px;padding:0 12px;display:flex;align-items:center;gap:12px;font-size:14px;border-radius:8px;background:#fff;box-shadow:0 0 0 1px #ebe4de;font-weight:600"><span class="ms" style="font-size:20px;font-variation-settings:'FILL' 1">space_dashboard</span>Overview</div>
+<div style="height:36px;padding:0 12px;display:flex;align-items:center;gap:12px;font-size:14px"><span class="ms" style="font-size:20px">folder_shared</span>Clients</div>
+<div style="height:36px;padding:0 12px;display:flex;align-items:center;gap:12px;font-size:14px"><span class="ms" style="font-size:20px">groups</span>Team</div>
+<div style="height:36px;padding:0 12px;display:flex;align-items:center;gap:12px;font-size:14px"><span class="ms" style="font-size:20px">workspace_premium</span>Licences</div>
+<div style="height:36px;padding:0 12px;display:flex;align-items:center;gap:12px;font-size:14px"><span class="ms" style="font-size:20px">settings</span>Organisation settings</div>
+</div>
+<div style="flex:1"></div>
+<div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;border-radius:9px;border:1px solid #e6dfd9;background:#fff;font-size:14px;font-weight:500"><span class="ms" style="font-size:18px">swap_horiz</span>Switch to my Vault</div>
+</aside>
+<main style="padding:28px 36px;display:flex;flex-direction:column;gap:20px;min-width:0">
+<div style="display:flex;align-items:flex-end"><div style="flex:1;display:flex;flex-direction:column;gap:4px"><span style="font-size:28px;font-weight:700">Overview</span><span style="font-size:15px;color:#6b5f5a">Hale &amp; Co · Professional plan</span></div><button style="height:36px;padding:0 14px 0 10px;border-radius:8px;border:0;background:#2b1714;color:#fff;font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px"><span class="ms" style="font-size:18px">person_add</span>Invite team member</button></div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:#fff;border:1px solid #ebe4de;border-radius:12px">
+<div style="padding:16px 20px;display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6b5f5a">Licences used</span><span style="font-size:22px;font-weight:600">12 <span style="font-size:14px;font-weight:400;color:#6b5f5a">of 20</span></span><div style="height:6px;border-radius:3px;background:#efe8e3"><div style="width:60%;height:6px;border-radius:3px;background:#2b1714"></div></div></div>
+<div style="padding:16px 20px;display:flex;flex-direction:column;gap:6px;border-left:1px solid #f0ebe7"><span style="font-size:13px;color:#6b5f5a">Client Fortresses</span><span style="font-size:22px;font-weight:600">38</span></div>
+<div style="padding:16px 20px;display:flex;flex-direction:column;gap:6px;border-left:1px solid #f0ebe7"><span style="font-size:13px;color:#6b5f5a">Pending invitations</span><span style="font-size:22px;font-weight:600">3</span></div>
+</div>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<div style="display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) 120px 44px;padding:10px 20px;font-size:12px;font-weight:600;color:#6b5f5a;border-bottom:1px solid #ebe4de"><span>Name</span><span>Role</span><span>Clients</span><span>Status</span><span></span></div>
+<div style="display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) 120px 44px;align-items:center;height:56px;padding:0 20px;border-bottom:1px solid #f3eeea;font-size:14px"><span style="display:flex;align-items:center;gap:10px"><span style="width:32px;height:32px;border-radius:16px;background:#e8dcd4;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center">MH</span><span style="display:flex;flex-direction:column"><b style="font-weight:600">Mary Hale</b><span style="font-size:12px;color:#6b5f5a">mary@haleandco.example</span></span></span><span>Admin</span><span>14</span><span><span style="font-size:12px;font-weight:500;padding:4px 8px;border-radius:6px;background:#e9f3ec;color:#225c3a">Active</span></span><span class="ms" style="font-size:20px;color:#6b5f5a">more_vert</span></div>
+<div style="display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) 120px 44px;align-items:center;height:56px;padding:0 20px;border-bottom:1px solid #f3eeea;font-size:14px"><span style="display:flex;align-items:center;gap:10px"><span style="width:32px;height:32px;border-radius:16px;background:#e8dcd4;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center">DP</span><span style="display:flex;flex-direction:column"><b style="font-weight:600">Dan Patel</b><span style="font-size:12px;color:#6b5f5a">dan@haleandco.example</span></span></span><span>Adviser</span><span>24</span><span><span style="font-size:12px;font-weight:500;padding:4px 8px;border-radius:6px;background:#e9f3ec;color:#225c3a">Active</span></span><span class="ms" style="font-size:20px;color:#6b5f5a">more_vert</span></div>
+<div style="display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) 120px 44px;align-items:center;height:56px;padding:0 20px;font-size:14px"><span style="display:flex;align-items:center;gap:10px"><span style="width:32px;height:32px;border-radius:16px;background:#efe8e3;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;color:#6b5f5a">?</span><span style="display:flex;flex-direction:column"><b style="font-weight:600">sam@haleandco.example</b><span style="font-size:12px;color:#6b5f5a">Invited 10 Oct</span></span></span><span>Adviser</span><span>–</span><span><span style="font-size:12px;font-weight:500;padding:4px 8px;border-radius:6px;background:#fdf1d8;color:#7a4f00">Invited</span></span><span class="ms" style="font-size:20px;color:#6b5f5a">more_vert</span></div>
+</div>
+</main>
+</div>
+</div>
+
+<div class="dv-opt" id="10b"><div class="dv-olabel"><a class="dv-oid" href="#10b">10b</a>Switcher with Personal and Work groups</div>
+<div class="dv-card" style="width:380px;background:#fff;padding:0">
+<div style="padding:12px 16px 6px;font-size:12px;font-weight:600;color:#6b5f5a">Personal</div>
+<div style="display:flex;align-items:center;gap:12px;padding:10px 16px"><div style="width:36px;height:36px;border-radius:18px;background:#d9cbc2;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center">MH</div><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">My Vault</span><span style="font-size:13px;color:#6b5f5a">Mary Hale</span></div></div>
+<div style="padding:12px 16px 6px;font-size:12px;font-weight:600;color:#6b5f5a;border-top:1px solid #f3eeea">Work</div>
+<div style="display:flex;align-items:center;gap:12px;padding:10px 16px;background:#faf7f4"><div style="width:36px;height:36px;border-radius:9px;background:#e3eeec;color:#1f5a55;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">HC</div><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">Hale &amp; Co</span><span style="font-size:13px;color:#6b5f5a">Admin · 38 clients</span></div><span class="ms" style="font-size:20px">check</span></div>
+<div style="padding:12px 16px 6px;font-size:12px;font-weight:600;color:#6b5f5a;border-top:1px solid #f3eeea">Linked to you</div>
+<div style="display:flex;align-items:center;gap:12px;padding:10px 16px 14px"><div style="width:36px;height:36px;border-radius:18px;background:#e8dcd4;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center">IY</div><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">Ivan Yardley’s Fortress</span><span style="font-size:13px;color:#6b5f5a">Trusted person</span></div></div>
+</div>
+</div>
+
+</div>
+</section>
+
+<section class="dv-turn" id="t11">
+<div class="dv-thd"><a class="dv-tid" href="#t11">11</a><span class="dv-tname">System administration</span></div>
+<p class="dv-tsub">A separate app shell that can’t be mistaken for a Vault: dark ink sidebar, a red “Admin” badge, and denser 44px table rows. The same type, icons, chips and buttons are used. There’s no switcher into customer Vaults; admins act on cases, not records. All numbers are placeholders.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="11a"><div class="dv-olabel"><a class="dv-oid" href="#11a">11a</a>Overview with probate/death verification queue</div>
+<div class="dv-card" style="width:1120px;height:700px;display:grid;grid-template-columns:240px minmax(0,1fr)">
+<aside style="background:#1f1715;color:#e6d8d0;padding:18px 12px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:10px;padding:4px 8px"><div style="width:34px;height:34px;border-radius:9px;background:#fff;color:#111;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:22px;font-variation-settings:'FILL' 1,'wght' 600">apps</span></div><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600;color:#fff">Legacy Fortress</span><span style="align-self:flex-start;font-size:11px;font-weight:700;letter-spacing:.06em;padding:1px 6px;border-radius:4px;background:#b3261e;color:#fff;margin-top:2px">ADMIN</span></div></div>
+<div style="display:flex;flex-direction:column;gap:2px;font-size:14px">
+<div style="height:36px;padding:0 12px;display:flex;align-items:center;gap:12px;border-radius:8px;background:rgba(255,255,255,.1);color:#fff;font-weight:600"><span class="ms" style="font-size:20px;font-variation-settings:'FILL' 1">monitoring</span>Overview</div>
+<div style="height:36px;padding:0 12px;display:flex;align-items:center;gap:12px"><span class="ms" style="font-size:20px">gavel</span><span style="flex:1">Probate &amp; deaths</span><span style="font-size:12px;padding:1px 7px;border-radius:9px;background:#8c4a32;color:#fff">4</span></div>
+<div style="height:36px;padding:0 12px;display:flex;align-items:center;gap:12px"><span class="ms" style="font-size:20px">domain</span>Organisations</div>
+<div style="height:36px;padding:0 12px;display:flex;align-items:center;gap:12px"><span class="ms" style="font-size:20px">group</span>Users</div>
+<div style="height:36px;padding:0 12px;display:flex;align-items:center;gap:12px"><span class="ms" style="font-size:20px">forward_to_inbox</span>Invitations</div>
+<div style="height:36px;padding:0 12px;display:flex;align-items:center;gap:12px"><span class="ms" style="font-size:20px">receipt_long</span>Audit log</div>
+</div>
+</aside>
+<main style="padding:24px 32px;display:flex;flex-direction:column;gap:18px;min-width:0">
+<div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:28px;font-weight:700">Overview</span><span style="font-size:15px;color:#6b5f5a">System status and cases that need a decision.</span></div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:#fff;border:1px solid #ebe4de;border-radius:12px">
+<div style="padding:14px 18px;display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;color:#6b5f5a">Active users</span><span style="font-size:22px;font-weight:600">1,284</span></div>
+<div style="padding:14px 18px;display:flex;flex-direction:column;gap:4px;border-left:1px solid #f0ebe7"><span style="font-size:13px;color:#6b5f5a">Organisations</span><span style="font-size:22px;font-weight:600">17</span></div>
+<div style="padding:14px 18px;display:flex;flex-direction:column;gap:4px;border-left:1px solid #f0ebe7"><span style="font-size:13px;color:#6b5f5a">Open death reports</span><span style="font-size:22px;font-weight:600">4</span></div>
+<div style="padding:14px 18px;display:flex;flex-direction:column;gap:4px;border-left:1px solid #f0ebe7"><span style="font-size:13px;color:#6b5f5a">Services</span><span style="font-size:17px;font-weight:600;display:flex;align-items:center;gap:6px;color:#225c3a"><span class="ms" style="font-size:18px;font-variation-settings:'FILL' 1">check_circle</span>All operational</span></div>
+</div>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<div style="padding:12px 18px;font-size:15px;font-weight:600;border-bottom:1px solid #ebe4de">Death &amp; probate queue</div>
+<div style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1.2fr) minmax(0,1fr) 150px 110px;padding:8px 18px;font-size:12px;font-weight:600;color:#6b5f5a;border-bottom:1px solid #f3eeea"><span>Deceased</span><span>Reported by</span><span>Submitted</span><span>Stage</span><span></span></div>
+<div style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1.2fr) minmax(0,1fr) 150px 110px;align-items:center;height:44px;padding:0 18px;border-bottom:1px solid #f3eeea;font-size:14px"><span style="font-weight:600">Ivan Yardley</span><span>Bob Smith · Executor</span><span>13 Oct 2026</span><span><span style="font-size:12px;font-weight:500;padding:3px 8px;border-radius:6px;background:#fdf1d8;color:#7a4f00">Evidence review</span></span><button style="height:30px;padding:0 10px;border-radius:7px;border:1px solid #e6dfd9;background:#fff;font-size:13px;font-weight:500">Review</button></div>
+<div style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1.2fr) minmax(0,1fr) 150px 110px;align-items:center;height:44px;padding:0 18px;border-bottom:1px solid #f3eeea;font-size:14px"><span style="font-weight:600">Case #2041</span><span>Attorney</span><span>11 Oct 2026</span><span><span style="font-size:12px;font-weight:500;padding:3px 8px;border-radius:6px;background:#f3eeea;color:#3a2c28">Awaiting probate</span></span><button style="height:30px;padding:0 10px;border-radius:7px;border:1px solid #e6dfd9;background:#fff;font-size:13px;font-weight:500">Open</button></div>
+<div style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1.2fr) minmax(0,1fr) 150px 110px;align-items:center;height:44px;padding:0 18px;font-size:14px"><span style="font-weight:600">Case #2038</span><span>Executor</span><span>8 Oct 2026</span><span><span style="font-size:12px;font-weight:500;padding:3px 8px;border-radius:6px;background:#fbeee6;color:#b3261e">Evidence rejected</span></span><button style="height:30px;padding:0 10px;border-radius:7px;border:1px solid #e6dfd9;background:#fff;font-size:13px;font-weight:500">Open</button></div>
+</div>
+</main>
+</div>
+</div>
+
+<div class="dv-opt" id="11b"><div class="dv-olabel"><a class="dv-oid" href="#11b">11b</a>Audit log</div>
+<div class="dv-card" style="width:760px;height:700px;background:#fff;padding:24px 28px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px">
+<span style="font-size:24px;font-weight:700">Audit log</span>
+<div style="display:flex;gap:8px"><div style="flex:1;height:36px;border-radius:9px;border:1px solid #e6dfd9;display:flex;align-items:center;gap:8px;padding:0 10px;font-size:14px;color:#6b5f5a"><span class="ms" style="font-size:18px">search</span>Search user, case or action</div><span style="height:36px;padding:0 12px;border-radius:9px;border:1px solid #e6dfd9;font-size:14px;display:flex;align-items:center;gap:4px">Last 7 days<span class="ms" style="font-size:18px">expand_more</span></span><span style="height:36px;padding:0 12px;border-radius:9px;border:1px solid #e6dfd9;font-size:14px;display:flex;align-items:center;gap:4px"><span class="ms" style="font-size:18px">download</span>Export CSV</span></div>
+<div style="border:1px solid #ebe4de;border-radius:12px;overflow:hidden;font-size:13px">
+<div style="display:grid;grid-template-columns:130px 150px minmax(0,1fr);padding:8px 14px;font-weight:600;color:#6b5f5a;border-bottom:1px solid #ebe4de"><span>Time</span><span>Actor</span><span>Event</span></div>
+<div style="display:grid;grid-template-columns:130px 150px minmax(0,1fr);padding:10px 14px;border-bottom:1px solid #f3eeea;font-family:ui-monospace,Menlo,monospace;font-size:12px"><span>13 Oct 09:41</span><span>admin.jl</span><span>Opened death report case #2042 (Ivan Yardley)</span></div>
+<div style="display:grid;grid-template-columns:130px 150px minmax(0,1fr);padding:10px 14px;border-bottom:1px solid #f3eeea;font-family:ui-monospace,Menlo,monospace;font-size:12px"><span>13 Oct 09:14</span><span>system</span><span>Identity verified: Jacqui Yardley</span></div>
+<div style="display:grid;grid-template-columns:130px 150px minmax(0,1fr);padding:10px 14px;border-bottom:1px solid #f3eeea;font-family:ui-monospace,Menlo,monospace;font-size:12px"><span>12 Oct 17:02</span><span>mary.hale</span><span>Licence assigned to sam@haleandco.example</span></div>
+<div style="display:grid;grid-template-columns:130px 150px minmax(0,1fr);padding:10px 14px;font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#fdf6f5"><span>12 Oct 03:11</span><span>system</span><span style="color:#b3261e">5 failed sign-ins: ivanyardley@me.com · locked 15 min</span></div>
+</div>
+</div>
+</div>
+
+</div>
+</section>
+
+<section class="dv-turn" id="t12">
+<div class="dv-thd"><a class="dv-tid" href="#t12">12</a><span class="dv-tname">Alerts and exceptional states</span></div>
+<p class="dv-tsub">There are three levels, each with one component. An <b>inline banner</b> sits at the top of the page for persistent conditions. A <b>toast</b> appears bottom-centre for 5 seconds to confirm a transient result. A <b>full-page state</b> is used when the page can’t be shown. Colour encodes severity: red for security or errors, amber for warnings or pending, neutral for info. Every alert says what happened and gives one next step.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="12a"><div class="dv-olabel"><a class="dv-oid" href="#12a">12a</a>Inline banners and toasts</div>
+<div class="dv-card" style="width:760px;padding:24px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:12px;background:#fdf3f2;border:1px solid #f2cfcb"><span class="ms" style="font-size:22px;color:#b3261e">shield</span><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:600">New sign-in from an unrecognised device</span><span style="font-size:13px;color:#6b5f5a">Chrome on Windows · London · 08:02</span></div><span style="font-size:14px;font-weight:500;color:#b3261e;white-space:nowrap;flex:none">Review</span><span class="ms" style="font-size:18px;color:#6b5f5a">close</span></div>
+<div style="display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:12px;background:#fef8ec;border:1px solid #f1dfb4"><span class="ms" style="font-size:22px;color:#7a4f00">forward_to_inbox</span><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:600">Invitation to Bob Smith couldn’t be delivered</span><span style="font-size:13px;color:#6b5f5a">The email address bounced. Check it and send again.</span></div><span style="font-size:14px;font-weight:500;color:#7a3d27;white-space:nowrap;flex:none">Fix email</span></div>
+<div style="display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:12px;background:#f7f4f1;border:1px solid #ebe4de"><span class="ms" style="font-size:22px;color:#6e3a28">cloud_off</span><div style="flex:1;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:600">Document uploads are temporarily unavailable</span><span style="font-size:13px;color:#6b5f5a">Everything else works. We’ll keep your drafts.</span></div><span style="font-size:14px;font-weight:500;color:#7a3d27;white-space:nowrap;flex:none">Status</span></div>
+<div style="display:flex;gap:12px;margin-top:12px;justify-content:center;flex-wrap:wrap">
+<div style="display:flex;align-items:center;gap:10px;height:44px;padding:0 16px;border-radius:22px;background:#2b1714;color:#fff;font-size:14px;white-space:nowrap;box-shadow:0 8px 24px rgba(31,23,21,.25)"><span class="ms" style="font-size:20px;color:#9fd8b2">check_circle</span>Invitation sent to Bob Smith<span style="color:#e9c9b6;font-weight:600;margin-left:6px">Undo</span></div>
+<div style="display:flex;align-items:center;gap:10px;height:44px;padding:0 16px;border-radius:22px;background:#2b1714;color:#fff;font-size:14px;white-space:nowrap;box-shadow:0 8px 24px rgba(31,23,21,.25)"><span class="ms" style="font-size:20px;color:#f2a49c">error</span>Couldn’t save. Check your connection.<span style="color:#e9c9b6;font-weight:600;margin-left:6px">Retry</span></div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="12b"><div class="dv-olabel"><a class="dv-oid" href="#12b">12b</a>Full-page states</div>
+<div style="display:grid;grid-template-columns:repeat(3,300px);gap:16px">
+<div class="dv-card" style="height:360px;background:#fff;padding:28px 24px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px;align-items:flex-start"><div style="width:52px;height:52px;border-radius:26px;background:#fef8ec;color:#7a4f00;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:28px">link_off</span></div><span style="font-size:20px;font-weight:700">This link has expired</span><span style="font-size:14px;line-height:20px;color:#6b5f5a">Invitation links last 7 days. Ask Ivan to send a new one, or request it here.</span><div style="flex:1"></div><button style="height:40px;padding:0 14px;border-radius:9px;border:0;background:#2b1714;color:#fff;font-size:14px;font-weight:600">Request a new link</button></div>
+<div class="dv-card" style="height:360px;background:#fff;padding:28px 24px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px;align-items:flex-start"><div style="width:52px;height:52px;border-radius:26px;background:#efe8e3;color:#3a2c28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:28px">block</span></div><span style="font-size:20px;font-weight:700">You don’t have permission to view this</span><span style="font-size:14px;line-height:20px;color:#6b5f5a">It belongs to a Fortress or area that hasn’t been shared with you.</span><div style="flex:1"></div><div style="display:flex;gap:8px"><button style="height:40px;padding:0 14px;border-radius:9px;border:0;background:#2b1714;color:#fff;font-size:14px;font-weight:600">Go to my Vault</button><button style="height:40px;padding:0 12px;border-radius:9px;border:1px solid #e6dfd9;background:#fff;font-size:14px;font-weight:500">Request access</button></div></div>
+<div class="dv-card" style="height:360px;background:#fff;padding:28px 24px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px;align-items:flex-start"><div style="width:52px;height:52px;border-radius:26px;background:#f7f4f1;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:28px">construction</span></div><span style="font-size:20px;font-weight:700">We’ll be right back</span><span style="font-size:14px;line-height:20px;color:#6b5f5a">Legacy Fortress is briefly unavailable. Your data is safe. Try again in a few minutes.</span><div style="flex:1"></div><button style="height:40px;padding:0 14px;border-radius:9px;border:1px solid #e6dfd9;background:#fff;font-size:14px;font-weight:500">Try again</button></div>
+</div>
+<span style="font-size:12px;color:rgba(0,0,0,.55)">Verification failure: see <a class="dv-oid" href="#3g">3g</a>. Rejected death evidence uses the same full-page pattern with “Upload again”.</span>
+</div>
+
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() { return { w: 375, h: 780 }; }
+}
+</script>
+</body>
+</html>

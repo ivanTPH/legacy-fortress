@@ -1,0 +1,15 @@
+{
+  "authority": "Legacy Fortress approved design handoff",
+  "copiedFrom": "/Users/ivan-imac/legacy-fortress-web/design_handoff_legacy_fortress 2",
+  "copiedAt": "2026-10-13",
+  "files": [
+    { "path": "README.md", "sha256": "ef8f974ffa652f689a147f2bb413d9c8e5e8bd6f06edf4780c2e00255bf71b17" },
+    { "path": "PROMPTS.md", "sha256": "3c4fa3656466d681fe1606824823471306f356285040afb1331fe88a770adf9f" },
+    { "path": "JOURNEYS.md", "sha256": "e47ef0a6b7e2835171177503ed2572750006ab8d252a78388124fcf829a2348c" },
+    { "path": "design/Finances Review.dc.html", "sha256": "9e08c17cd0ce60f26f356a77031145dbfb96752437a90c8f1f942af09d832113" },
+    { "path": "design/Legacy Fortress Journeys.dc.html", "sha256": "ff29f967eedd8e8cbe527366a1db2e251137de67621165597afa1a3420f56355" },
+    { "path": "design/Legacy Fortress Redesign.dc.html", "sha256": "dbe71a4527cf468fa1f534ea7ce7a8eaa3a2cad77d36f2375242d434152b0d8e" },
+    { "path": "design/ios-frame.jsx", "sha256": "24642b887be3d26ab5d1ff445ad98c363cffd33746c539a117da570ac7b6eb54" },
+    { "path": "design/support.js", "sha256": "8fe7df74405f3c55f49b7249c74ea1397e65d07dea2b1bd3b4a489bec2e28cbe" }
+  ]
+}

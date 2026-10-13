@@ -7,7 +7,6 @@ import ActionQueuePanel, { buildActionCentrePreview, getActionCentreActionCount,
 import DashboardActionSummary from "../components/dashboard/DashboardActionSummary";
 import ActionCentreEntryPrompt from "../components/dashboard/ActionCentreEntryPrompt";
 import Icon from "../../../components/ui/Icon";
-import InfoTip from "../../../components/ui/InfoTip";
 import { LFPageHeader, LFStatsStrip } from "../../../components/ui/LFDesignSystem";
 import AttachmentGallery, { type AttachmentGalleryItem } from "../../../components/documents/AttachmentGallery";
 import { FormField, NumberInput, TextInput } from "../../../components/forms/asset/AssetFormControls";
@@ -1744,12 +1743,6 @@ const legalSummary = useMemo(() => {
               <Icon name="dashboard" size={16} />
             </div>
             <h2 style={{ margin: 0, fontSize: 18 }}>{viewer.mode === "linked" ? "Shared information" : "Your Vault"}</h2>
-            <InfoTip
-              className="lf-panel-help"
-              label="Explain dashboard overview"
-              title="Dashboard overview"
-              message={viewer.mode === "linked" ? "Only records explicitly shared with you are shown here." : "These cards show what you have recorded. Open a category to review it, or use the plus button to add another record."}
-            />
           </div>
         <div className="lf-dashboard-overview-copy" style={{ color: "#64748b", fontSize: 13 }}>
           {viewer.mode === "linked" ? "Only information explicitly shared through this relationship is shown." : "Your recorded information, in one place."}
