@@ -3,7 +3,7 @@ import { LFPageHeader } from "../../../../components/ui/LFDesignSystem";
 
 export function SettingsPageShell({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return (
-    <div className="lf-settings-page-shell" style={{ display: "grid", gap: 24, maxWidth: 960 }}>
+    <div className="lf-settings-page-shell">
       <LFPageHeader title={title} description={subtitle} />
       {children}
     </div>
@@ -12,10 +12,10 @@ export function SettingsPageShell({ title, subtitle, children }: { title: string
 
 export function SettingsCard({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   return (
-    <section className="lf-settings-card" style={cardStyle}>
-      <div style={{ display: "grid", gap: 4 }}>
-        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>{title}</h2>
-        {description ? <p style={{ margin: 0, color: "#6b7280", fontSize: 14 }}>{description}</p> : null}
+    <section className="lf-settings-card">
+      <div className="lf-settings-card-heading">
+        <h2>{title}</h2>
+        {description ? <p>{description}</p> : null}
       </div>
       {children}
     </section>
@@ -24,8 +24,8 @@ export function SettingsCard({ title, description, children }: { title: string; 
 
 export function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <label style={{ display: "grid", gap: 6 }}>
-      <span style={{ fontSize: 13, color: "#374151" }}>{label}</span>
+    <label className="lf-settings-field">
+      <span>{label}</span>
       {children}
     </label>
   );
@@ -33,7 +33,7 @@ export function Field({ label, children }: { label: string; children: ReactNode 
 
 export function StatusNote({ message }: { message: string }) {
   if (!message) return null;
-  return <div style={{ color: "#6b7280", fontSize: 13 }}>{message}</div>;
+  return <div className="lf-settings-status-note" role="status">{message}</div>;
 }
 
 export const cardStyle: CSSProperties = {

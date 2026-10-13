@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import Link from "next/link";
-import Icon from "../../../../components/ui/Icon";
+import { LFVaultAreaTile } from "../../../../components/ui/LFDesignSystem";
 import { useViewerAccess } from "../../../../components/access/ViewerAccessContext";
 import { waitForActiveUser } from "../../../../lib/auth/session";
 import { fetchCanonicalAssets } from "../../../../lib/assets/fetchCanonicalAssets";
@@ -99,18 +98,17 @@ export default function CanonicalAssetOverviewGrid({ tiles, emptyMessage }: Cano
         );
         const isLoading = state.status === "loading";
         const isEmpty = !isLoading && rows.length === 0;
-        const href = isLoading || !isEmpty ? tile.href : tile.addHref;
-
         return (
-          <Link key={tile.key} href={href} className={`lf-vault-area-tile${isLoading ? " is-loading" : isEmpty ? " is-empty" : " is-populated"}`} aria-disabled={isLoading || undefined}>
-            <span className="lf-vault-area-tile-icon"><Icon name={tile.icon} size={20} /></span>
-            <span className="lf-vault-area-tile-copy">
-              <strong>{tile.title}</strong>
-              <small>{isLoading ? "Loading your records..." : isEmpty ? "Not added yet" : `${rows.length} active record${rows.length === 1 ? "" : "s"}${latestTimestamp(rows.map((row) => row.updated_at ?? row.created_at)) ? ` · Updated ${formatDate(latestTimestamp(rows.map((row) => row.updated_at ?? row.created_at))!)}` : ""}`}</small>
-              {!isLoading && isEmpty ? <em>{tile.description}</em> : null}
-            </span>
-            <Icon name={isLoading || !isEmpty ? "chevron_right" : "add_circle"} size={20} />
-          </Link>
+          <LFVaultAreaTile
+            key={tile.key}
+            title={tile.title}
+            description={tile.description}
+            icon={tile.icon}
+            href={isLoading || !isEmpty ? tile.href : tile.addHref}
+            state={isLoading ? "loading" : isEmpty ? "empty" : "populated"}
+            count={rows.length}
+            updatedAt={latestTimestamp(rows.map((row) => row.updated_at ?? row.created_at))}
+          />
         );
       })}
       {state.status === "error" ? (
@@ -120,11 +118,6 @@ export default function CanonicalAssetOverviewGrid({ tiles, emptyMessage }: Cano
       ) : null}
     </>
   );
-}
-
-function formatDate(value: string) {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "date unavailable" : new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(date);
 }
 
 export function metadataToken(row: CanonicalAssetOverviewRow, ...keys: string[]) {

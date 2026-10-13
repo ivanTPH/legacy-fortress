@@ -2890,6 +2890,7 @@ textarea {
 }
 
 .lf-brand-row { margin: 0 8px 20px; }
+.lf-sidebar-brand-stack { display: grid; gap: 0; min-width: 0; }
 .lf-brand-title { color: var(--lf-ink); font-size: 15px; font-weight: 700; }
 .lf-brand-subtitle { color: var(--lf-text-secondary); font-size: 12px; line-height: 18px; }
 .lf-sidebar-workspace { margin: 0 4px 16px; }
@@ -7219,6 +7220,13 @@ textarea {
 /* High-fidelity production primitives mapped from the approved handoff. */
 .lf-page-content { width: 100%; max-width: 960px; margin: 0 auto; display: grid; gap: 24px; }
 .lf-page-stack { display: grid; gap: 24px; min-width: 0; }
+.lf-settings-page-shell { display: grid; gap: 24px; width: 100%; max-width: 960px; min-width: 0; }
+.lf-settings-card-heading { display: grid; gap: 4px; }
+.lf-settings-card-heading h2 { margin: 0; color: #1F1715; font-size: 18px; line-height: 24px; font-weight: 600; }
+.lf-settings-card-heading p { margin: 0; color: #6B5F5A; font-size: 14px; line-height: 20px; }
+.lf-settings-field { display: grid; gap: 6px; min-width: 0; }
+.lf-settings-field > span { color: #6B5F5A; font-size: 13px; line-height: 18px; }
+.lf-settings-status-note { color: #6B5F5A; font-size: 13px; line-height: 18px; }
 .lf-topbar { grid-template-columns: 340px minmax(0, 1fr) auto; background: #FFFFFF; padding: 0 28px; }
 .lf-global-search { width: 340px; background: #F7F4F1; border-color: #EBE4DE; border-radius: 9px; }
 .lf-global-search:focus-within { background: #FFFFFF; }
@@ -7281,6 +7289,7 @@ textarea {
   .lf-ui-page-header { display: flex; }
   .lf-dashboard-shell > .lf-ui-page-header { display: none; }
   .lf-page-content { max-width: none; gap: 24px; }
+  .lf-settings-page-shell { max-width: none; gap: 20px; }
   .lf-topbar { grid-template-columns: 36px minmax(0, 1fr) 36px; padding: 10px 16px; }
   .lf-topbar-security { display: none !important; }
   .lf-ui-page-header { align-items: stretch; flex-direction: column; gap: 12px; }

@@ -69,3 +69,46 @@ export function LFEmptyTile({ icon, title, description, href }: { icon: string; 
     </Link>
   );
 }
+
+export function LFVaultAreaTile({
+  title,
+  description,
+  icon,
+  href,
+  state,
+  count,
+  updatedAt,
+}: {
+  title: string;
+  description: string;
+  icon: string;
+  href: string;
+  state: "loading" | "populated" | "empty";
+  count?: number;
+  updatedAt?: string | null;
+}) {
+  const summary = state === "loading"
+    ? "Loading your records..."
+    : state === "empty"
+      ? "Not added yet"
+      : `${count ?? 0} ${(count ?? 0) === 1 ? "record" : "records"}${updatedAt ? ` · Updated ${formatVaultDate(updatedAt)}` : ""}`;
+
+  return (
+    <Link href={href} className={`lf-vault-area-tile is-${state}`} aria-busy={state === "loading" || undefined}>
+      <span className="lf-vault-area-tile-icon"><Icon name={icon} size={20} /></span>
+      <span className="lf-vault-area-tile-copy">
+        <strong>{title}</strong>
+        <small>{summary}</small>
+        {state === "empty" ? <em>{description}</em> : null}
+      </span>
+      <Icon name={state === "empty" ? "add_circle" : "chevron_right"} size={20} />
+    </Link>
+  );
+}
+
+function formatVaultDate(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "date unavailable"
+    : new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(date);
+}

@@ -949,21 +949,23 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
         }}
       >
         <aside className="lf-sidebar">
-          <div className="lf-brand-row">
-            <BrandMark size={32} priority />
-            <div>
-              <div className="lf-brand-title">Legacy Fortress</div>
-              <div className="lf-brand-subtitle">Your secure legacy vault</div>
+          <div className="lf-sidebar-brand-stack">
+            <div className="lf-brand-row">
+              <BrandMark size={32} priority />
+              <div>
+                <div className="lf-brand-title">Legacy Fortress</div>
+                <div className="lf-brand-subtitle">Your secure legacy vault</div>
+              </div>
             </div>
-          </div>
 
-          <div className="lf-sidebar-workspace">
-            <WorkspaceSwitcher
-              currentPathname={pathname}
-              compact
-              alwaysShow
-              governanceContext="Sidebar workspace selector · role-aware workspace switch"
-            />
+            <div className="lf-sidebar-workspace">
+              <WorkspaceSwitcher
+                currentPathname={pathname}
+                compact
+                alwaysShow
+                governanceContext="Sidebar workspace selector · role-aware workspace switch"
+              />
+            </div>
           </div>
 
           <SidebarPrimary
