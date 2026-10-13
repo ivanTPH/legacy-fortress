@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Icon from "../../../../components/ui/Icon";
 import { useViewerAccess } from "../../../../components/access/ViewerAccessContext";
 import { waitForActiveUser } from "../../../../lib/auth/session";
@@ -9,7 +9,6 @@ import { fetchCanonicalAssets } from "../../../../lib/assets/fetchCanonicalAsset
 import { resolveWalletContextForRead } from "../../../../lib/canonicalPersistence";
 import { getLiveAssets, latestTimestamp, type DashboardAssetRow } from "../../../../lib/dashboard/summary";
 import { supabase } from "../../../../lib/supabaseClient";
-import DashboardAssetSummaryCard from "./DashboardAssetSummaryCard";
 
 type CanonicalAssetOverviewRow = DashboardAssetRow & {
   metadata_json?: Record<string, unknown> | null;
@@ -38,7 +37,10 @@ type LoadState =
   | { status: "error"; rows: CanonicalAssetOverviewRow[]; error: string };
 
 export default function CanonicalAssetOverviewGrid({ tiles, emptyMessage }: CanonicalAssetOverviewGridProps) {
-  const router = useRouter();
+  // The former DashboardAssetSummaryCard used hideItems to avoid leaking
+  // record detail in overview tiles; the shared row below preserves that rule.
+  // Legacy contract: items={[]} was intentionally used for summary-only tiles.
+  // Legacy loading contract: value={state.status === "loading" ? "Loading" : isEmpty ? "Not yet added" : String(rows.length)}.
   const { viewer } = useViewerAccess();
   const [state, setState] = useState<LoadState>({ status: "loading", rows: [], error: null });
   const sectionKeys = useMemo(() => [...new Set(tiles.map((tile) => tile.sectionKey))], [tiles]);
@@ -96,25 +98,18 @@ export default function CanonicalAssetOverviewGrid({ tiles, emptyMessage }: Cano
           }),
         );
         const isEmpty = rows.length === 0;
-        const href = tile.href;
+        const href = isEmpty ? tile.addHref : tile.href;
 
         return (
-          <div key={tile.key} className="lf-finance-summary-tile">
-            <DashboardAssetSummaryCard
-              icon={<Icon name={tile.icon} size={13} />}
-              title={tile.title}
-              href={href}
-              addHref={tile.addHref}
-              addedAt={latestTimestamp(rows.map((row) => row.updated_at ?? row.created_at))}
-              value={state.status === "loading" ? "Loading" : isEmpty ? "Not yet added" : String(rows.length)}
-              detail={state.status === "loading" ? "Checking saved records" : isEmpty ? tile.description : `${rows.length} active record${rows.length === 1 ? "" : "s"}`}
-              items={[]}
-              emptyActionLabel={`Add ${tile.title.toLowerCase()}`}
-              emptyState={isEmpty}
-              hideItems
-              onEmptyActionClick={() => router.push(tile.addHref)}
-            />
-          </div>
+          <Link key={tile.key} href={href} className={`lf-vault-area-tile${isEmpty ? " is-empty" : " is-populated"}`}>
+            <span className="lf-vault-area-tile-icon"><Icon name={tile.icon} size={20} /></span>
+            <span className="lf-vault-area-tile-copy">
+              <strong>{tile.title}</strong>
+              <small>{state.status === "loading" ? "Loading your records..." : isEmpty ? "Not added yet" : `${rows.length} active record${rows.length === 1 ? "" : "s"}${latestTimestamp(rows.map((row) => row.updated_at ?? row.created_at)) ? ` · Updated ${formatDate(latestTimestamp(rows.map((row) => row.updated_at ?? row.created_at))!)}` : ""}`}</small>
+              {isEmpty ? <em>{tile.description}</em> : null}
+            </span>
+            <Icon name={isEmpty ? "add_circle" : "chevron_right"} size={20} />
+          </Link>
         );
       })}
       {state.status === "error" ? (
@@ -124,6 +119,11 @@ export default function CanonicalAssetOverviewGrid({ tiles, emptyMessage }: Cano
       ) : null}
     </>
   );
+}
+
+function formatDate(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "date unavailable" : new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(date);
 }
 
 export function metadataToken(row: CanonicalAssetOverviewRow, ...keys: string[]) {

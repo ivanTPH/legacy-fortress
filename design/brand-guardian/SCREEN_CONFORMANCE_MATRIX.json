@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "updated": "2026-10-13",
+  "authority": "design/brand-guardian/",
+  "screens": [
+    {"id":"dashboard","route":"/dashboard","reference":"Legacy Fortress Redesign 2a/2b","status":"PARTIAL","ownerFiles":["app/(app)/dashboard/page.tsx","app/(app)/layout.tsx"],"gaps":["authenticated rendered comparison pending"]},
+    {"id":"finances","route":"/finances","reference":"Finances Review 1b/1c","status":"PARTIAL","ownerFiles":["app/(app)/finances/page.tsx"],"gaps":["authenticated rendered comparison pending"]},
+    {"id":"legal","route":"/legal","reference":"Legacy Fortress Redesign 2a/2b","status":"PARTIAL","ownerFiles":["app/(app)/legal/page.tsx","components/vault/VaultAreaOverview.tsx"],"gaps":["record-detail comparison pending"]},
+    {"id":"property","route":"/property","reference":"Legacy Fortress Redesign 2a/2b","status":"PARTIAL","ownerFiles":["app/(app)/property/page.tsx","components/vault/VaultAreaOverview.tsx"],"gaps":["canonical populated-state comparison pending"]},
+    {"id":"business","route":"/business","reference":"Legacy Fortress Redesign 2a/2b","status":"PARTIAL","ownerFiles":["app/(app)/business/page.tsx","components/vault/VaultAreaOverview.tsx"],"gaps":["canonical populated-state comparison pending"]},
+    {"id":"digital","route":"/vault/digital","reference":"Legacy Fortress Redesign 2a/2b","status":"PARTIAL","ownerFiles":["app/(app)/vault/digital/page.tsx"],"gaps":["shared area primitive adoption pending"]},
+    {"id":"possessions","route":"/personal","reference":"Legacy Fortress Redesign 2a/2b","status":"REFERENCE_NOT_SPECIFIED","ownerFiles":["app/(app)/personal/page.tsx"],"gaps":["no dedicated approved prototype state"]},
+    {"id":"action-centre","route":"/action-centre","reference":"Legacy Fortress Redesign 2a/2b","status":"PARTIAL","ownerFiles":["app/(app)/components/dashboard/ActionQueuePanel.tsx","app/(app)/dashboard/page.tsx"],"gaps":["authenticated rendered comparison pending"]},
+    {"id":"people","route":"/contacts","reference":"Legacy Fortress Redesign 2a; Journeys 1/7","status":"PARTIAL","ownerFiles":["components/contacts/ContactsNetworkWorkspace.tsx"],"gaps":["authenticated rendered comparison pending"]},
+    {"id":"access-sharing","route":"/access-sharing","reference":"Legacy Fortress Redesign 2a; Journeys 1/5","status":"PARTIAL","ownerFiles":["components/access/AccessSharingWorkspace.tsx"],"gaps":["authenticated rendered comparison pending"]},
+    {"id":"access-requests","route":"/access-requests","reference":"Legacy Fortress Redesign 2a; Journeys 1/6","status":"PARTIAL","ownerFiles":["components/access-requests/AccessRequestsWorkspace.tsx"],"gaps":["authenticated rendered comparison pending"]},
+    {"id":"linked-fortresses","route":"/linked-fortresses","reference":"Journeys 1","status":"PARTIAL","ownerFiles":["app/(app)/linked-fortresses/page.tsx"],"gaps":["authenticated rendered comparison pending"]},
+    {"id":"settings","route":"/account/my-vault","reference":"Legacy Fortress Redesign 2a/2b","status":"PARTIAL","ownerFiles":["app/(app)/account/my-vault/page.tsx"],"gaps":["authenticated rendered comparison pending"]},
+    {"id":"support","route":"/support","reference":"Legacy Fortress Redesign 2a/2b","status":"PARTIAL","ownerFiles":["components/support/SupportWorkspace.tsx"],"gaps":["authenticated rendered comparison pending"]},
+    {"id":"search","route":"global shell","reference":"Legacy Fortress Redesign 2a/2b; Journey 8","status":"PARTIAL","ownerFiles":["app/(app)/layout.tsx","lib/records/discovery.ts"],"gaps":["authenticated rendered comparison pending"]},
+    {"id":"notifications","route":"global shell","reference":"Legacy Fortress Redesign 2b; Journey 7","status":"PARTIAL","ownerFiles":["components/notifications/NotificationBell.tsx"],"gaps":["authenticated event fixture comparison pending"]}
+  ]
+}

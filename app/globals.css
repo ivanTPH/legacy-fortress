@@ -3014,7 +3014,25 @@ textarea {
 .lf-finance-empty-tile > .lf-icon { color: #7A3D27; }
 .lf-finance-recommended-action { display: none; }
 
+/* Shared Vault-area overview: populated and empty sections use the same
+   record-first structure without reusing the Dashboard summary card. */
+.lf-vault-area-overview { display: grid; gap: 24px; }
+.lf-vault-area-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.lf-vault-area-tile { min-width: 0; display: grid; grid-template-columns: 36px minmax(0, 1fr) 20px; align-items: center; gap: 12px; min-height: 76px; padding: 14px 16px; border: 1px solid #EBE4DE; border-radius: 12px; background: #FFFFFF; color: #1F1715; text-decoration: none; }
+.lf-vault-area-tile:hover, .lf-vault-area-tile:focus-visible { border-color: #D6C9C0; box-shadow: 0 2px 8px rgba(43,23,20,.06); outline: none; }
+.lf-vault-area-tile.is-empty { border-style: dashed; background: transparent; }
+.lf-vault-area-tile-icon { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 9px; background: #F3EBE6; color: #6E3A28; }
+.lf-vault-area-tile-copy { min-width: 0; display: grid; gap: 2px; }
+.lf-vault-area-tile-copy strong { overflow-wrap: anywhere; font-size: 15px; line-height: 20px; font-weight: 600; }
+.lf-vault-area-tile-copy small { color: #6B5F5A; font-size: 13px; line-height: 18px; }
+.lf-vault-area-tile-copy em { overflow-wrap: anywhere; color: #6B5F5A; font-size: 13px; line-height: 18px; font-style: normal; }
+.lf-vault-area-tile > .lf-icon { color: #7A3D27; }
+
 @media (max-width: 767px) {
+  .lf-vault-area-overview { gap: 20px; }
+  .lf-vault-area-grid { grid-template-columns: 1fr; gap: 8px; }
+  .lf-vault-area-tile { min-height: 64px; padding: 12px; }
+  .lf-vault-area-tile-icon { width: 32px; height: 32px; border-radius: 8px; }
   .lf-finance-page { gap: 20px; }
   .lf-finance-section-heading { grid-template-columns: 32px minmax(0,1fr) 36px; min-height: 64px; padding: 12px; }
   .lf-finance-section-icon { width: 32px; height: 32px; border-radius: 8px; }
@@ -7148,6 +7166,10 @@ textarea {
 .lf-dashboard-overview-title-row > div:first-child { display: none; }
 
 @media (max-width: 767px) {
+  /* Area pages retain their approved large title on mobile; only Dashboard
+     uses the bespoke Home heading below it. */
+  .lf-ui-page-header { display: flex; }
+  .lf-dashboard-shell > .lf-ui-page-header { display: none; }
   .lf-page-content { max-width: none; gap: 24px; }
   .lf-topbar { grid-template-columns: 36px minmax(0, 1fr) 36px; padding: 10px 16px; }
   .lf-topbar-security { display: none !important; }
@@ -7159,7 +7181,7 @@ textarea {
   .lf-ui-stat:first-child { border-top: 0; }
   .lf-page-stack { gap: 20px; }
   .lf-dashboard-entry-prompt { display: block; }
-  .lf-ui-page-header { display: none; }
+  .lf-dashboard-shell > .lf-ui-page-header { display: none; }
   .lf-topbar-heading { display: none; }
   .lf-dashboard-mobile-home { display: grid; gap: 16px; }
   .lf-dashboard-mobile-home { order: -1; }

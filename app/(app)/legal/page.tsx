@@ -2,8 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import DashboardAssetSummaryCard from "../components/dashboard/DashboardAssetSummaryCard";
-import Icon from "../../../components/ui/Icon";
+import { VaultAreaOverview, type VaultAreaTile } from "../../../components/vault/VaultAreaOverview";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
 import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
 import { assetMatchesLegalCategory, LEGAL_CATEGORIES } from "../../../lib/legalCategories";
@@ -112,81 +111,44 @@ export default function LegalOverviewPage() {
     [preferences],
   );
 
-  return (
-    <section style={{ display: "grid", gap: 14 }}>
-      <div style={{ display: "grid", gap: 6 }}>
-        <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
-          Review the core legal records someone should be able to find quickly, from wills and trusts to powers of attorney and other legal paperwork.
-        </p>
-      </div>
+  const tiles: VaultAreaTile[] = useMemo<VaultAreaTile[]>(() => {
+    const result: VaultAreaTile[] = visibleCategories.map((category) => ({
+      key: category.slug,
+      title: category.label,
+      description: category.description,
+      href: getLegalCategoryHref(category.slug),
+      addHref: `${getLegalCategoryHref(category.slug)}?add=1`,
+      icon: getLegalCategoryIcon(category.slug),
+      count: counts.get(category.slug) ?? 0,
+      updatedAt: getLatestDate(rows, category.slug),
+    }));
+    if (isVaultSubsectionEnabled(preferences, "personal_wishes")) {
+      result.push({
+        key: "personal-wishes",
+        title: "Personal wishes",
+        description: "Keep personal guidance, wishes, and instructions available for trusted people later.",
+        href: "/personal/wishes",
+        addHref: "/personal/wishes?add=1",
+        icon: "volunteer_activism",
+        count: counts.get("personal-wishes") ?? 0,
+        updatedAt: getLatestDate(rows, "personal-wishes"),
+      });
+    }
+    return result;
+  }, [counts, preferences, rows, visibleCategories]);
 
+  return (
+    <>
+      <VaultAreaOverview
+        title="Legal"
+        description="Review the core legal records someone should be able to find quickly, from wills and trusts to powers of attorney and other legal paperwork."
+        addHref="/legal/wills?add=1"
+        tiles={tiles}
+      />
       {status ? <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div> : null}
       {loading ? <div style={{ color: "#6b7280" }}>Loading legal categories...</div> : null}
-
-      {visibleCategories.length || isVaultSubsectionEnabled(preferences, "personal_wishes") ? (
-      <div className="lf-content-grid">
-        {visibleCategories.map((category) => (
-          <LegalSummaryTile
-            key={category.slug}
-            title={category.label}
-            description={category.description}
-            href={getLegalCategoryHref(category.slug)}
-            icon={getLegalCategoryIcon(category.slug)}
-            total={counts.get(category.slug) ?? 0}
-            addedAt={getLatestDate(rows, category.slug)}
-          />
-        ))}
-        {isVaultSubsectionEnabled(preferences, "personal_wishes") ? (
-          <LegalSummaryTile
-            title="Personal Wishes"
-            description="Keep personal guidance, wishes, and instructions available from the legal review flow."
-            href="/personal/wishes"
-            icon="favorite"
-            total={counts.get("personal-wishes") ?? 0}
-            addedAt={getLatestDate(rows, "personal-wishes")}
-          />
-        ) : null}
-      </div>
-      ) : (
-        <div style={{ color: "#64748b", fontSize: 13 }}>
-          Legal subsections are currently hidden by My Vault preferences. Re-enable them in Account / My Vault at any time.
-        </div>
-      )}
-    </section>
-  );
-}
-
-function LegalSummaryTile({
-  title,
-  description,
-  href,
-  icon,
-  total,
-  addedAt,
-}: {
-  title: string;
-  description: string;
-  href: string;
-  icon: string;
-  total: number;
-  addedAt: string | null;
-}) {
-  const hasRecords = total > 0;
-  const cardHref = hasRecords ? href : `${href}?add=1`;
-  return (
-    <div className="lf-finance-summary-tile">
-      <DashboardAssetSummaryCard
-        icon={<Icon name={icon} size={13} />}
-        title={title}
-        href={cardHref}
-        addedAt={addedAt}
-        value={hasRecords ? String(total) : "No records yet"}
-        detail={hasRecords ? `${total} active record${total === 1 ? "" : "s"}` : description}
-        items={[]}
-        emptyActionLabel={hasRecords ? "Open category" : "Add record"}
-        emptyState={!hasRecords}
-      />
-    </div>
+      {!tiles.length ? <div style={{ color: "#64748b", fontSize: 13 }}>Legal subsections are currently hidden by My Vault preferences. Re-enable them in Account / My Vault at any time.</div> : null}
+    </>
   );
 }
 

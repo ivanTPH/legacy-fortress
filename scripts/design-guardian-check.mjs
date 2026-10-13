@@ -6,6 +6,7 @@ import crypto from "node:crypto";
 const root = process.cwd();
 const authority = path.join(root, "design/brand-guardian");
 const manifest = JSON.parse(fs.readFileSync(path.join(authority, "DESIGN_SOURCE_MANIFEST.json"), "utf8"));
+const matrix = JSON.parse(fs.readFileSync(path.join(authority, "SCREEN_CONFORMANCE_MATRIX.json"), "utf8"));
 
 for (const entry of manifest.files) {
   const file = path.join(authority, entry.path);
@@ -13,6 +14,9 @@ for (const entry of manifest.files) {
   const hash = crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
   assert.equal(hash, entry.sha256, `design source checksum changed: ${entry.path}`);
 }
+
+assert.ok(Array.isArray(matrix.screens) && matrix.screens.length >= 10, "screen conformance matrix is missing or incomplete");
+assert.ok(matrix.screens.every((screen) => ["MATCHED", "PARTIAL", "NOT_IMPLEMENTED", "BLOCKED", "REFERENCE_NOT_SPECIFIED"].includes(screen.status)), "screen matrix contains an invalid status");
 
 const iconSource = fs.readFileSync(path.join(root, "components/ui/Icon.tsx"), "utf8");
 const navSource = fs.readFileSync(path.join(root, "app/(app)/components/NavIcons.tsx"), "utf8");

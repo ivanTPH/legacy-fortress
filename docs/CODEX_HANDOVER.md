@@ -476,3 +476,15 @@ Date: 2026-10-13.
 - Validation: design guardian pass, icon tests 2/2, TypeScript pass after moving stale generated `.next/dev` output aside, lint pass, stabilisation 91/91, production build pass, route audit pass, link crawl pass, diff check pass.
 - External GitHub and Google Fonts DNS were unavailable during this run. The repository still contains only the existing local Material Symbols-compatible font asset, so exact Rounded font asset conformance remains an explicit follow-up rather than being claimed complete.
 - No schema, RLS, grant, invitation, IDV, estate, admin, production, or staging changes were made.
+
+## Application-wide Vault presentation convergence
+
+Date: 2026-10-13.
+
+- Added `components/vault/VaultAreaOverview.tsx` as the shared record-first area overview primitive.
+- Migrated Legal, Property and Business overview pages away from legacy Dashboard summary cards while preserving preference gates, canonical reads, routes and add flows.
+- Migrated the canonical asset overview grid used by Digital and Personal areas to the same populated/empty/loading tile language.
+- Restored the approved mobile large page title for non-Dashboard area pages; Dashboard retains its dedicated Home composition.
+- Added `design/brand-guardian/SCREEN_CONFORMANCE_MATRIX.json` and made `npm run design:check` validate matrix completeness and allowed statuses.
+- Browser smoke captured local dev-smoke screenshots under `/private/tmp/lf-guardian-*-settled.png` at 1440x960 and 402x874; all tested routes returned HTTP 200 and matched viewport width. This is unauthenticated/dev-smoke evidence, not hosted authenticated acceptance.
+- Validation: TypeScript pass, design guardian pass, stabilisation 91/91, production build pass, focused Phase 4A data-proof tests 6/6, lint pass, diff check pass. Core remains 55/58 because of the pre-existing local Supabase `site_url` assertion; no auth configuration was changed.
