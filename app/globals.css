@@ -3021,6 +3021,7 @@ textarea {
 .lf-vault-area-tile { min-width: 0; display: grid; grid-template-columns: 36px minmax(0, 1fr) 20px; align-items: center; gap: 12px; min-height: 76px; padding: 14px 16px; border: 1px solid #EBE4DE; border-radius: 12px; background: #FFFFFF; color: #1F1715; text-decoration: none; }
 .lf-vault-area-tile:hover, .lf-vault-area-tile:focus-visible { border-color: #D6C9C0; box-shadow: 0 2px 8px rgba(43,23,20,.06); outline: none; }
 .lf-vault-area-tile.is-empty { border-style: dashed; background: transparent; }
+.lf-vault-area-tile.is-loading { cursor: progress; opacity: .72; }
 .lf-vault-area-tile-icon { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 9px; background: #F3EBE6; color: #6E3A28; }
 .lf-vault-area-tile-copy { min-width: 0; display: grid; gap: 2px; }
 .lf-vault-area-tile-copy strong { overflow-wrap: anywhere; font-size: 15px; line-height: 20px; font-weight: 600; }

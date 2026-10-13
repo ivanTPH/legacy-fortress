@@ -488,3 +488,15 @@ Date: 2026-10-13.
 - Added `design/brand-guardian/SCREEN_CONFORMANCE_MATRIX.json` and made `npm run design:check` validate matrix completeness and allowed statuses.
 - Browser smoke captured local dev-smoke screenshots under `/private/tmp/lf-guardian-*-settled.png` at 1440x960 and 402x874; all tested routes returned HTTP 200 and matched viewport width. This is unauthenticated/dev-smoke evidence, not hosted authenticated acceptance.
 - Validation: TypeScript pass, design guardian pass, stabilisation 91/91, production build pass, focused Phase 4A data-proof tests 6/6, lint pass, diff check pass. Core remains 55/58 because of the pre-existing local Supabase `site_url` assertion; no auth configuration was changed.
+
+## Staging build diagnostic: 353d848
+
+Date: 2026-10-13.
+
+- The target staging application is Coolify UUID `yka9huzmm56hjpz1gno448fb`, on branch `hosted-uat-preparation-20260715`.
+- The reported failed build for `353d848` completed compilation, TypeScript validation and static-page generation, then exited with code 255 during Next.js trace collection.
+- The public staging hostname could not be resolved from this environment (`curl: (6) Could not resolve host: test.mylegacyfortress.com`), so `/api/version` and the running container could not be verified.
+- Read-only Coolify API requests were attempted without printing credentials. The application metadata and deployment-log requests returned HTTP 401/404, so build logs, container diagnostics and host resource metrics were unavailable.
+- The repository contains no checked-in Dockerfile, Nixpacks file, Procfile or Node-version override. The documented staging path remains Node 20, `npm ci`, `next build --webpack`, then `npm run start`.
+- A local production-equivalent `npm run build` succeeds with exit code 0 and generates the expected route output. No evidence establishes whether the hosted trace failure was caused by memory pressure, disk exhaustion, timeout, container termination or another host-side condition.
+- No Coolify setting, Docker resource, dependency, Node version, deployment or production configuration was changed. Owner/operator access to the failed deployment logs and host/container metrics is required before attributing or correcting the failure.

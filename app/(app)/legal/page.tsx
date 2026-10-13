@@ -144,6 +144,7 @@ export default function LegalOverviewPage() {
         description="Review the core legal records someone should be able to find quickly, from wills and trusts to powers of attorney and other legal paperwork."
         addHref="/legal/wills?add=1"
         tiles={tiles}
+        loading={loading}
       />
       {status ? <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div> : null}
       {loading ? <div style={{ color: "#6b7280" }}>Loading legal categories...</div> : null}

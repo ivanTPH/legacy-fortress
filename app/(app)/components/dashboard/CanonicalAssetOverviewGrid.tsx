@@ -97,18 +97,19 @@ export default function CanonicalAssetOverviewGrid({ tiles, emptyMessage }: Cano
             return tile.match ? tile.match(row) : true;
           }),
         );
-        const isEmpty = rows.length === 0;
-        const href = isEmpty ? tile.addHref : tile.href;
+        const isLoading = state.status === "loading";
+        const isEmpty = !isLoading && rows.length === 0;
+        const href = isLoading || !isEmpty ? tile.href : tile.addHref;
 
         return (
-          <Link key={tile.key} href={href} className={`lf-vault-area-tile${isEmpty ? " is-empty" : " is-populated"}`}>
+          <Link key={tile.key} href={href} className={`lf-vault-area-tile${isLoading ? " is-loading" : isEmpty ? " is-empty" : " is-populated"}`} aria-disabled={isLoading || undefined}>
             <span className="lf-vault-area-tile-icon"><Icon name={tile.icon} size={20} /></span>
             <span className="lf-vault-area-tile-copy">
               <strong>{tile.title}</strong>
-              <small>{state.status === "loading" ? "Loading your records..." : isEmpty ? "Not added yet" : `${rows.length} active record${rows.length === 1 ? "" : "s"}${latestTimestamp(rows.map((row) => row.updated_at ?? row.created_at)) ? ` · Updated ${formatDate(latestTimestamp(rows.map((row) => row.updated_at ?? row.created_at))!)}` : ""}`}</small>
-              {isEmpty ? <em>{tile.description}</em> : null}
+              <small>{isLoading ? "Loading your records..." : isEmpty ? "Not added yet" : `${rows.length} active record${rows.length === 1 ? "" : "s"}${latestTimestamp(rows.map((row) => row.updated_at ?? row.created_at)) ? ` · Updated ${formatDate(latestTimestamp(rows.map((row) => row.updated_at ?? row.created_at))!)}` : ""}`}</small>
+              {!isLoading && isEmpty ? <em>{tile.description}</em> : null}
             </span>
-            <Icon name={isEmpty ? "add_circle" : "chevron_right"} size={20} />
+            <Icon name={isLoading || !isEmpty ? "chevron_right" : "add_circle"} size={20} />
           </Link>
         );
       })}
