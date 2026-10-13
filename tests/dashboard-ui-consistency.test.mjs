@@ -31,6 +31,7 @@ test("dashboard overview cards use compact shared summary cards with one add act
   assert.match(dashboardPage, /className="lf-dashboard-overview-panel"/);
   assert.match(dashboardPage, /className="lf-content-grid lf-dashboard-overview-grid"/);
   assert.match(actionSummary, /className="lf-dashboard-action-summary"/);
+  assert.match(actionSummary, /lf-dashboard-action-summary-heading[\s\S]*View Action Centre[\s\S]*lf-dashboard-action-summary-list/);
   assert.match(actionSummary, /lf-dashboard-action-summary-status/);
   assert.match(shellCss, /\.lf-main-content \{[\s\S]*max-width: none/);
   assert.match(shellCss, /\.lf-page-content \{[\s\S]*max-width: 960px/);

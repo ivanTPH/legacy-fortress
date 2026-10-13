@@ -7193,14 +7193,15 @@ textarea {
 .lf-dashboard-overview-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 12px !important; }
 .lf-dashboard-summary-card { border-radius: 12px !important; padding: 0 !important; }
 .lf-dashboard-action-summary { gap: 0; padding: 0; border-color: #EBE4DE; border-radius: 12px; }
-.lf-dashboard-action-summary-heading { padding: 16px 20px 8px; }
+.lf-dashboard-action-summary-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px 8px; }
 .lf-dashboard-action-summary h2 { color: #1F1715; font-size: 17px; line-height: 22px; font-weight: 600; }
 .lf-dashboard-action-summary-list { gap: 0; }
 .lf-dashboard-action-summary-item { min-height: 56px; padding: 12px 16px 12px 20px; border: 0; border-top: 1px solid #F3EEEA; border-radius: 0; }
 .lf-dashboard-action-summary-item > span:not(.lf-dashboard-action-summary-status) { flex: 1 1 auto; }
 .lf-dashboard-action-summary-item strong { color: #1F1715; font-size: 15px; font-weight: 600; }
 .lf-dashboard-action-summary-item small { color: #6B5F5A; font-size: 13px; white-space: normal; }
-.lf-dashboard-action-summary-link { margin: 4px 20px 16px; color: #7A3D27; font-size: 14px; font-weight: 500; }
+.lf-dashboard-action-summary-link { display: inline-flex; align-items: center; gap: 4px; margin: 0; color: #7A3D27; font-size: 14px; font-weight: 500; white-space: nowrap; text-decoration: none; }
+.lf-dashboard-action-summary-link:hover, .lf-dashboard-action-summary-link:focus-visible { text-decoration: underline; outline: none; }
 .lf-content-grid { gap: 12px; }
 .lf-finance-summary-tile { min-width: 0; }
 .lf-finance-summary-tile .lf-dashboard-summary-card { min-height: 0; }
