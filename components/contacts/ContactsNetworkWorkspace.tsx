@@ -681,10 +681,13 @@ export default function ContactsNetworkWorkspace() {
                         }}
                         aria-label={`Open ${contact.full_name || "person"}`}
                       >
-                          <span style={{ display: "grid", gap: 3, minWidth: 0, textAlign: "left" }}>
-                            <strong style={contactSummaryNameStyle}>{contact.full_name || "Unnamed person"}</strong>
-                            <span style={contactSummaryRelationshipStyle}>{formatContactRoleLine(contact)}</span>
-                            {getRelationshipDocumentLabel(contact) ? <span className="lf-contact-summary-context">{getRelationshipDocumentLabel(contact)}</span> : null}
+                          <span className="lf-contact-summary-person">
+                            <span className="lf-contact-avatar" aria-hidden="true">{contact.full_name.split(/\s+/).filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "LF"}</span>
+                            <span style={{ display: "grid", gap: 3, minWidth: 0, textAlign: "left" }}>
+                              <strong style={contactSummaryNameStyle}>{contact.full_name || "Unnamed person"}</strong>
+                              <span style={contactSummaryRelationshipStyle}>{formatContactRoleLine(contact)}</span>
+                              {getRelationshipDocumentLabel(contact) ? <span className="lf-contact-summary-context">{getRelationshipDocumentLabel(contact)}</span> : null}
+                            </span>
                           </span>
                           <span className="lf-people-status-chip" data-tone={getPeopleStatusChip(contact).tone}><Icon name={getPeopleStatusChip(contact).icon} size={14} />{getPeopleStatusChip(contact).label}</span>
                         <div className="lf-contact-summary-action" style={contactSummaryActionStyle}>
@@ -902,7 +905,6 @@ function PersonDetailDrawer({
   onClose: () => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
-  const [moreOpen, setMoreOpen] = useState(false);
   const [managementView, setManagementView] = useState<"edit" | "relationship" | "invitation" | "access" | "remove" | null>(null);
   const relatedContexts = (contact.linked_context ?? []).filter((context) => context.source_kind !== "invitation");
   const status = getContactSummaryStatus(contact);
@@ -930,7 +932,10 @@ function PersonDetailDrawer({
             <h2 id="person-drawer-title" style={{ margin: 0, fontSize: 22 }}>{contact.full_name || "Unnamed person"}</h2>
             <span style={contactSummaryRelationshipStyle}>{formatContactRoleLine(contact)}</span>
           </div>
-          <button ref={closeRef} type="button" className="lf-person-drawer-close" aria-label="Close person details" onClick={onClose}>×</button>
+          <div className="lf-person-drawer-header-actions">
+            {!readOnly ? <IconButton icon="edit" label="Edit" variant="round" className="lf-person-drawer-edit" onClick={() => setManagementView("edit")} /> : null}
+            <button ref={closeRef} type="button" className="lf-person-drawer-close" aria-label="Close person details" onClick={onClose}>×</button>
+          </div>
         </div>
 
         <div className="lf-person-drawer-content">
@@ -973,20 +978,7 @@ function PersonDetailDrawer({
             </button>
           ) : null}
 
-          {!readOnly ? (
-            <div className="lf-person-more-details">
-              <button type="button" className="lf-person-more-summary" aria-haspopup="menu" aria-expanded={moreOpen} onClick={() => setMoreOpen((current) => !current)}>••• More</button>
-              {moreOpen ? (
-                <div className="lf-person-more-menu" role="menu">
-                  <button type="button" role="menuitem" onClick={() => { setMoreOpen(false); setManagementView("edit"); }}>Edit details</button>
-                  <button type="button" role="menuitem" onClick={() => { setMoreOpen(false); setManagementView("relationship"); }}>Edit relationship</button>
-                  {(contact.invite_status === "invite_sent" || contact.invite_status === "not_invited") ? <button type="button" role="menuitem" onClick={() => { setMoreOpen(false); setManagementView("invitation"); }}>Manage invitation</button> : null}
-                  {canShowAccessManagement(contact) ? <button type="button" role="menuitem" onClick={() => { setMoreOpen(false); setManagementView("access"); }}>Manage access</button> : null}
-                  <button type="button" role="menuitem" className="is-danger" onClick={() => { setMoreOpen(false); setManagementView("remove"); }}>Remove person</button>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
+          {!readOnly ? <button type="button" className="lf-person-remove-link" onClick={() => setManagementView("remove")}>Remove person</button> : null}
 
           {managementView ? (
             <PersonManagementPanel

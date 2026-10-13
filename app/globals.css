@@ -2971,6 +2971,38 @@ textarea {
   .lf-dashboard-overview-grid > * { min-width: 0; }
 }
 
+/* People and access surfaces: the reference uses compact grouped rows and a
+   focused editor drawer while retaining the existing contact/grant handlers. */
+.lf-contact-summary-row { grid-template-columns: minmax(0, 1.2fr) minmax(150px, .9fr) auto; min-height: 72px; padding: 12px 16px; background: #FFFFFF; border-color: #EBE4DE; }
+.lf-contact-summary-person { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.lf-contact-avatar { width: 40px; height: 40px; display: inline-flex; flex: 0 0 40px; align-items: center; justify-content: center; border-radius: 50%; background: #F3EBE6; color: #6E3A28; font-size: 13px; font-weight: 600; }
+.lf-contact-summary-row > span:first-child::before { display: none; }
+.lf-contact-summary-row > span:first-child { min-width: 0; }
+.lf-contact-summary-row > span:first-child::before { content: ""; display: inline-flex; width: 40px; height: 40px; margin-right: 10px; vertical-align: middle; border-radius: 50%; background: #F3EBE6; }
+.lf-contact-summary-row .lf-people-status-chip { justify-self: start; }
+.lf-contact-summary-context { color: #6B5F5A; font-size: 13px; }
+.lf-people-status-chip { min-height: 24px; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 500; }
+.lf-contact-send-button, .lf-contact-edit-button, .lf-person-drawer-edit { width: 36px; height: 36px; min-width: 36px; border-radius: 50%; }
+.lf-person-drawer-header-actions { display: inline-flex; align-items: center; gap: 8px; flex: none; }
+.lf-person-drawer-edit { background: #FFFFFF; border: 1px solid #E6DFD9; color: #2B1714; }
+.lf-person-remove-link { align-self: flex-start; border: 0; padding: 8px 0; background: transparent; color: #B3261E; font-size: 14px; cursor: pointer; }
+.lf-person-drawer { width: min(448px, 100vw); border-left: 1px solid #EBE4DE; box-shadow: -12px 0 40px rgba(31, 23, 21, .14); }
+.lf-person-drawer-header { min-height: 76px; padding: 16px 20px; border-bottom: 1px solid #F3EEEA; }
+.lf-person-drawer-content { padding: 20px; gap: 16px; }
+.lf-person-access-chooser { border: 1px solid #EBE4DE; border-radius: 12px; background: #FFFFFF; padding: 16px; }
+.lf-person-access-group { border: 1px solid #EBE4DE; border-radius: 10px; padding: 12px; background: #FAF8F6; }
+.lf-person-access-group label, .lf-person-access-select-all { min-height: 44px; display: flex; align-items: center; gap: 10px; padding: 6px 0; color: #1F1715; font-size: 14px; }
+.lf-person-access-group input[type="checkbox"] { width: 20px; height: 20px; accent-color: #2B1714; }
+
+@media (max-width: 767px) {
+  .lf-contact-summary-row { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .lf-contact-summary-row .lf-people-status-chip { grid-column: 1 / -1; }
+  .lf-contact-summary-row .lf-contact-summary-action { grid-column: 2; grid-row: 1; }
+  .lf-person-drawer { width: 100vw; max-width: none; }
+  .lf-person-drawer-content { padding: 16px; }
+  .lf-person-access-chooser { padding: 12px; }
+}
+
 @media (min-width: 768px) and (max-width: 1100px) {
   .lf-topbar { padding-right: 20px; padding-left: 20px; }
   .lf-main-content { padding-right: 24px; padding-left: 24px; }
@@ -7012,4 +7044,29 @@ textarea {
   .lf-ui-stat { border-left: 0; border-top: 1px solid #F0EBE7; }
   .lf-ui-stat:first-child { border-top: 0; }
   .lf-page-stack { gap: 20px; }
+}
+
+/* Final People/access cascade. */
+.lf-contact-summary-row { grid-template-columns: minmax(0, 1.2fr) minmax(150px, .9fr) auto; min-height: 72px; padding: 12px 16px; background: #FFFFFF; border-color: #EBE4DE; }
+.lf-contact-summary-row .lf-people-status-chip { justify-self: start; }
+.lf-contact-summary-context { color: #6B5F5A; font-size: 13px; }
+.lf-people-status-chip { min-height: 24px; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 500; }
+.lf-contact-send-button, .lf-contact-edit-button, .lf-person-drawer-edit { width: 36px; height: 36px; min-width: 36px; border-radius: 50%; }
+.lf-person-drawer-header-actions { display: inline-flex; align-items: center; gap: 8px; flex: none; }
+.lf-person-drawer-edit { background: #FFFFFF; border: 1px solid #E6DFD9; color: #2B1714; }
+.lf-person-remove-link { align-self: flex-start; border: 0; padding: 8px 0; background: transparent; color: #B3261E; font-size: 14px; cursor: pointer; }
+.lf-person-drawer { width: min(448px, 100vw); border-left: 1px solid #EBE4DE; box-shadow: -12px 0 40px rgba(31, 23, 21, .14); }
+.lf-person-drawer-header { min-height: 76px; padding: 16px 20px; border-bottom: 1px solid #F3EEEA; }
+.lf-person-drawer-content { padding: 20px; gap: 16px; }
+.lf-person-access-chooser { border: 1px solid #EBE4DE; border-radius: 12px; background: #FFFFFF; padding: 16px; }
+.lf-person-access-group { border: 1px solid #EBE4DE; border-radius: 10px; padding: 12px; background: #FAF8F6; }
+.lf-person-access-group label, .lf-person-access-select-all { min-height: 44px; display: flex; align-items: center; gap: 10px; padding: 6px 0; color: #1F1715; font-size: 14px; }
+.lf-person-access-group input[type="checkbox"] { width: 20px; height: 20px; accent-color: #2B1714; }
+@media (max-width: 767px) {
+  .lf-contact-summary-row { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .lf-contact-summary-row .lf-people-status-chip { grid-column: 1 / -1; }
+  .lf-contact-summary-row .lf-contact-summary-action { grid-column: 2; grid-row: 1; }
+  .lf-person-drawer { width: 100vw; max-width: none; }
+  .lf-person-drawer-content { padding: 16px; }
+  .lf-person-access-chooser { padding: 12px; }
 }
