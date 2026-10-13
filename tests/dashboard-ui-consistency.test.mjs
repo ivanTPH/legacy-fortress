@@ -13,6 +13,7 @@ test("dashboard overview cards use compact shared summary cards with one add act
   const summaryCard = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/DashboardAssetSummaryCard.tsx"), "utf8");
   const actionSummary = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/DashboardActionSummary.tsx"), "utf8");
   const actionQueue = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/ActionQueuePanel.tsx"), "utf8");
+  const shellCss = fs.readFileSync(path.join(root, "app/globals.css"), "utf8");
   const dashboardRender = dashboardPage.slice(
     dashboardPage.indexOf('return (\n    <div className="lf-dashboard-shell" style={{ display: "grid", gap: 14 }}>'),
     dashboardPage.indexOf("function ReadinessSnapshot"),
@@ -30,6 +31,11 @@ test("dashboard overview cards use compact shared summary cards with one add act
   assert.match(dashboardPage, /className="lf-dashboard-overview-panel"/);
   assert.match(dashboardPage, /className="lf-content-grid lf-dashboard-overview-grid"/);
   assert.match(actionSummary, /className="lf-dashboard-action-summary"/);
+  assert.match(actionSummary, /lf-dashboard-action-summary-status/);
+  assert.match(shellCss, /\.lf-main-content \{[\s\S]*max-width: none/);
+  assert.match(shellCss, /\.lf-page-content \{[\s\S]*max-width: 960px/);
+  assert.match(shellCss, /\.lf-nav-item\.is-active \{[\s\S]*background: #FFFFFF/);
+  assert.doesNotMatch(shellCss, /\.lf-nav-item\.is-active \{[^}]*linear-gradient/);
   assert.match(dashboardPage, /Your Vault/);
   assert.doesNotMatch(dashboardPage, /showFullActionCentre/);
   assert.match(dashboardPage, /actionCentreCount/);
