@@ -43,7 +43,8 @@ test("sidebar launches top-level dashboards instead of submenu flyouts", () => {
   assert.match(files.appLayout, /stripNavigationChildren\(topLevelItems\)/);
   assert.match(files.appLayout, /items=\{dashboardNavigationItems\}/);
   assert.match(files.appLayout, /className="lf-topbar-back"/);
-  assert.match(files.sidebarPrimary, /aria-haspopup=\{item\.children\?\.length \? "menu" : undefined\}/);
+  assert.match(files.sidebarPrimary, /href=\{item\.path\}/);
+  assert.match(files.sidebarPrimary, /className="lf-nav-expand"/);
 });
 
 test("record workspaces open the add form from add=1 query links", () => {

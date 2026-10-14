@@ -1,6 +1,6 @@
 # Version 3 decisions for owner review
 
-Status: **Phases 1 and 2 approved and implemented; Phase 3 awaits owner review** (14 October 2026). This file distinguishes authorised foundation work from later product directions. Add explicit owner answers under the open questions before their implementation phases.
+Status: **Phases 1–3 approved and implemented; Phase 4 awaits owner review** (14 October 2026). This file distinguishes approved shell decisions from provisional product directions and later security/backend approvals.
 
 ## Approved Phase 1 decisions
 
@@ -16,16 +16,22 @@ Status: **Phases 1 and 2 approved and implemented; Phase 3 awaits owner review**
 - Diagnose Colima and local Supabase read-only; run no authenticated test until local isolation is proved. Commit and push only verified Phase 2 code and evidence, without merging or deploying.
 - Keep the primitive APIs presentational. Their labels and callbacks do not grant access, select an identity provider, persist data or create a new backend capability.
 
+## Approved Phase 3 decisions
+
+- Q1: `/add` and `/actions` are canonical customer routes, with existing entry points and server-side controls preserved. Their full designed screens belong to Phase 4.
+- Q2: the customer sidebar has six primary Vault areas: Finances, Legal, Property, Business, Digital and Possessions. Other categories, URLs, data and preferences remain in My Vault.
+- Q19: use the nine-dot Version 3 brand in the customer shell only. Authentication, enterprise and system-administrator branding remain outside Phase 3.
+- Implement the desktop/mobile customer shell in an isolated branch, restore local Colima/Supabase only if safe, prove local isolation before synthetic/auth operations, capture actual application screenshots and run Chrome/WebKit plus regression checks. Do not merge, deploy or change hosted services.
+
 ## Provisional product directions
 
-The proposals in Q1–Q17 remain useful design directions, **not approvals** for a route change, backend feature, identity provider, migration, permission policy or customer-facing claim. The phase approval did not supply written answers to those questions in this file. Version 3 references guide visual work only where they do not conflict with current security and operational policy.
+The proposals in Q3–Q17 remain useful design directions, **not approvals** for a backend feature, identity provider, migration, permission policy or customer-facing claim. Q1/Q2 authorise the stated routes and sidebar presentation only. Version 3 references guide visual work only where they do not conflict with current security and operational policy.
 
 ## Decisions still requiring explicit owner approval
 
-- Q1–Q17 require answers before the named later phases introduce the relevant product behaviour; Q5–Q9 and Q12 are especially security/identity/estate sensitive.
-- Q19 is approved for the local Rounded icon font and a reusable nine-dot glyph. Replacing `BrandMark` across customer, auth or admin screens remains open.
-- Q1, Q2 and the remaining Q19 brand-placement decision need owner direction before the corresponding Phase 3 navigation and logo work. Phase 3 can be narrowed to existing-route shell styling if those remain open.
-- Any backend capability, identity-provider selection, data migration, production change or hosted release needs its own approval. Phases 1–2 do not grant it.
+- Q3–Q17 require answers before their named phases introduce product behaviour; Q5–Q9 and Q12 are especially security, identity and estate sensitive. Q3/Q4/Q17 matter for the Phase 4 screen plan.
+- Full Add/Action Centre behaviour, route hierarchy and counts still need Phase 4 review. Q2 preserves extra My Vault categories without authorising category or data migrations.
+- Replacing authentication, enterprise or administrator branding remains unapproved. Identity-provider selection, new backend capabilities, data migrations and hosted releases require separate approval.
 
 ## Resolved precedence and safety facts
 
@@ -40,13 +46,13 @@ The proposals in Q1–Q17 remain useful design directions, **not approvals** for
 
 The design adds top-level “Add to my Fortress” and “Action Centre”, but the current app has no dedicated routes: add happens within dashboard/category forms and Action Centre lives in `ActionQueuePanel` on `/dashboard`. Which canonical paths should these use? Proposed: `/add` and `/actions`, keeping existing entry points as links.
 
-**Owner answer:**
+**Owner answer:** Approved for Phase 3: `/add` and `/actions` are canonical customer paths. Existing entry points and server-side access controls remain; full destination functionality may arrive in the approved screen phase.
 
 ### Q2 — Vault taxonomy and visibility (before phase 4)
 
 The sidebar prototype has six vault areas, while My Vault in the same prototype has nine areas (Legal, Finances, Personal, Digital, Tasks, Property, Business, Cars & Transport, Executors & Trustees). Current navigation and preferences also include Personal, Cars and Executors routes. Which taxonomy and visibility controls should customers see, and where do those extra areas appear in the redesigned sidebar/mobile navigation?
 
-**Owner answer:**
+**Owner answer:** Approved for Phase 3: use six primary customer sidebar areas, Finances, Legal, Property, Business, Digital and Possessions. Keep all additional categories in My Vault with their existing URLs, data and permissions.
 
 ### Q3 — Area › Section › Record route model (before phase 4)
 
@@ -142,16 +148,16 @@ The README says “wire to the existing assistant” and “Send request”. `Su
 
 The master prompt asks for `design/phase-<n>` branches and per-component commits. The current branch is `hosted-uat-preparation-20260715` and the working tree contains unrelated modified/untracked owner work, including three untracked tests. Should implementation use a separate worktree/branch after preserving that state, or continue in place without commits until the owner has reviewed the dirty-file boundary? No existing changes will be reset, cleaned, overwritten or staged as part of this plan.
 
-**Owner answer:** Approved for Phases 1–2: use isolated worktrees and commit/push only verified in-scope files. The existing owner working tree is untouched.
+**Owner answer:** Approved for Phases 1–3: use isolated worktrees and commit/push only verified in-scope files. The existing owner working tree is untouched.
 
 ### Q19 — Visual assets and fonts (before phase 1)
 
 The design specifies Material Symbols Rounded, the black 9-dot `apps` logo and a system font stack. The app currently bundles Material Symbols Outlined and has `BrandMark` plus older `NavIcons`. Is bundling the Rounded font locally approved for consistent offline/local rendering, and should the existing brand mark be replaced in every customer/auth/admin context or only the customer shell? Proposed: bundle the icon font and map the logo per approved context without altering security indicators.
 
-**Owner answer:** Approved for Phase 1: locally bundle genuine Material Symbols Rounded after source/license verification and implement the icon foundation. The scope for replacing existing `BrandMark` across customer, auth and admin contexts is still open; the nine-dot glyph can be built as a reusable foundation component.
+**Owner answer:** Approved for Phase 1: locally bundle genuine Material Symbols Rounded after source/license verification and implement the icon foundation. Approved for Phase 3: place the nine-dot glyph in the customer shell only. Authentication, enterprise and administrator branding remain unchanged and require separate approval to replace.
 
 ## Browser readiness issue, not a design decision
 
-Chrome and WebKit work for isolated visual and hydrated component tests. A process listens at `127.0.0.1:3012`, but its runtime isolation and responsive health were not established in Phase 2. `colima status` reports stopped; Docker's Colima socket is absent, `supabase status` fails, and local Supabase at `127.0.0.1:55421` refuses connections. The committed base branch's Supabase `site_url` is hosted while the owner working tree has a local uncommitted correction. Authenticated browser tests are pending a local stack and approved config. The local environment file's URL hosts were checked as local without printing values; the already-running app's runtime target must still be verified before any auth/database test. No hosted URL will be substituted for a missing local service.
+Phase 3 started the local Colima VM. Supabase auth health at `127.0.0.1:55421` and the isolated app schema health at `127.0.0.1:3012` returned 200; every approved local env URL host was loopback before synthetic account setup. Authenticated standard-owner Chrome/WebKit shell tests ran. The local database is behind the repo migrations: `account_access_grants.required_identity_level`, `contact_invitations.expires_at` and `enterprise_memberships` are absent. A zero-scope linked grant could not be inserted, so authenticated linked-context browser testing remains blocked. The migration inventory showed later files pending; none were applied. WebKit shell interaction assertions passed with local API/access-control page errors, which remain a browser-data limitation. The temporary local config/env/password were removed; the committed base config still has the hosted `site_url`, explaining the core-test baseline failure.
 
-**Next checkpoint:** review the Phase 2 branch and `PLAN.md`, then explicitly approve or revise **Phase 3**. Resolve Q1/Q2/Q19 for the shell work they affect; answer other Q1–Q17 questions before their later phases. The local stack and runtime must be proved before authenticated testing.
+**Next checkpoint:** review the Phase 3 branch, screenshots, test limits and `PLAN.md`, then explicitly approve or revise **Phase 4**. Resolve Q3/Q4/Q17 for screen routing, counts and support copy before implementing their dependent behaviour. Reconcile local database migrations through a separately reviewed local test plan before claiming linked cross-user browser proof.

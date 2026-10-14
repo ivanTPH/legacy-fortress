@@ -264,10 +264,11 @@ export async function loadViewerAccessState(
 export function mapPathnameToSectionKey(pathname: string): SectionKey | null {
   const value = pathname.trim().toLowerCase();
   if (!value) return null;
+  if (value === "/add" || value === "/actions") return "dashboard";
   if (value === "/dashboard" || value === "/app/dashboard") return "dashboard";
   if (value.startsWith("/profile")) return "profile";
   if (value.startsWith("/contacts")) return "personal";
-  if (value.startsWith("/personal") || value.startsWith("/trust")) return "personal";
+  if (value.startsWith("/personal") || value.startsWith("/trust") || value.startsWith("/vault/personal")) return "personal";
   if (value.startsWith("/legal")) return "legal";
   if (value.startsWith("/property") || value.startsWith("/vault/property")) return "property";
   if (value.startsWith("/business") || value.startsWith("/vault/business")) return "business";
@@ -278,6 +279,7 @@ export function mapPathnameToSectionKey(pathname: string): SectionKey | null {
 }
 
 export function canViewPath(pathname: string, viewer: ViewerAccessState) {
+  if (viewer.mode === "linked" && (pathname === "/add" || pathname === "/actions" || pathname.startsWith("/access-requests"))) return false;
   if (viewer.mode === "linked" && pathname.startsWith("/contact-wallet")) return true;
   if (viewer.mode === "linked" && !isProtectedGrantActive(viewer.activationStatus)) return false;
   const section = mapPathnameToSectionKey(pathname);
@@ -285,7 +287,7 @@ export function canViewPath(pathname: string, viewer: ViewerAccessState) {
   if (!canAccessSection(viewer.viewerRole, section, "view", viewer.activationStatus)) return false;
   if (viewer.mode !== "linked") return true;
   if (pathname.startsWith("/account") || pathname.startsWith("/settings")) return false;
-  if (viewer.assignedSectionKeys.length > 0 && section !== "dashboard" && !viewer.assignedSectionKeys.includes(section)) {
+  if (section !== "dashboard" && !viewer.assignedSectionKeys.includes(section)) {
     return false;
   }
   return true;

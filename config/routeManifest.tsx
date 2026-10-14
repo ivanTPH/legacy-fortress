@@ -1,17 +1,5 @@
 import type { ReactNode } from "react";
-import {
-  BriefcaseIcon,
-  BuildingIcon,
-  ContactsIcon,
-  DashboardIcon,
-  DigitalIcon,
-  DocumentIcon,
-  HelpIcon,
-  PossessionsIcon,
-  AccessRequestsIcon,
-  SettingsIcon,
-  WalletIcon,
-} from "../app/(app)/components/NavIcons";
+import Icon from "../components/ui/Icon";
 import type { VaultCategoryGroupKey, VaultSubsectionKey } from "../lib/vaultPreferences";
 
 export type AppRouteNode = {
@@ -34,14 +22,28 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     label: "Dashboard",
     path: "/dashboard",
     description: "Overview",
-    icon: <DashboardIcon />,
+    icon: <Icon name="space_dashboard" size={20} />,
+    enabled: on,
+  },
+  {
+    id: "add",
+    label: "Add to my Fortress",
+    path: "/add",
+    icon: <Icon name="add_circle" size={20} />,
+    enabled: on,
+  },
+  {
+    id: "actions",
+    label: "Action Centre",
+    path: "/actions",
+    icon: <Icon name="task_alt" size={20} />,
     enabled: on,
   },
   {
     id: "finances",
-    label: "All finances",
+    label: "Finances",
     path: "/finances",
-    icon: <WalletIcon />,
+    icon: <Icon name="account_balance_wallet" size={20} />,
     vaultCategoryKey: "finances",
     enabled: on,
     children: [
@@ -56,7 +58,7 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     id: "legal",
     label: "Legal",
     path: "/legal",
-    icon: <DocumentIcon />,
+    icon: <Icon name="gavel" size={20} />,
     vaultCategoryKey: "legal",
     enabled: on,
     children: [
@@ -72,7 +74,7 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     id: "property",
     label: "Property",
     path: "/property",
-    icon: <BuildingIcon />,
+    icon: <Icon name="home" size={20} />,
     vaultCategoryKey: "property",
     enabled: on,
     children: [
@@ -84,7 +86,7 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     id: "business",
     label: "Business",
     path: "/business",
-    icon: <BriefcaseIcon />,
+    icon: <Icon name="work" size={20} />,
     vaultCategoryKey: "business",
     enabled: on,
     children: [
@@ -96,7 +98,7 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     id: "digital",
     label: "Digital",
     path: "/vault/digital",
-    icon: <DigitalIcon />,
+    icon: <Icon name="devices" size={20} />,
     vaultCategoryKey: "digital",
     enabled: on,
   },
@@ -104,40 +106,40 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     id: "possessions",
     label: "Possessions",
     path: "/vault/personal",
-    icon: <PossessionsIcon />,
+    icon: <Icon name="inventory_2" size={20} />,
     vaultCategoryKey: "personal",
     vaultSubsectionKey: "personal_possessions",
     enabled: on,
   },
   {
     id: "people-contacts",
-    label: "Contacts",
+    label: "People I Trust",
     path: "/contacts",
-    icon: <ContactsIcon />,
+    icon: <Icon name="group" size={20} />,
     enabled: on,
   },
   {
     id: "access-requests",
     label: "Access Requests",
     path: "/access-requests",
-    icon: <AccessRequestsIcon />,
-    enabled: on,
-  },
-  {
-    id: "support",
-    label: "Support",
-    path: "/support",
-    icon: <HelpIcon />,
+    icon: <Icon name="key" size={20} />,
     enabled: on,
   },
 ];
 
 export const ACCOUNT_ROUTE_MANIFEST: AppRouteNode[] = [
   {
+    id: "support",
+    label: "Support",
+    path: "/support",
+    icon: <Icon name="help" size={20} />,
+    enabled: on,
+  },
+  {
     id: "account-profile",
     label: "Settings",
     path: "/profile",
-    icon: <SettingsIcon />,
+    icon: <Icon name="settings" size={20} />,
     enabled: on,
     children: [
       { id: "settings-accessibility", label: "Accessibility", path: "/account/accessibility", enabled: on },

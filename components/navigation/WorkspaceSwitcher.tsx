@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import Icon from "../ui/Icon";
+import { ContextSwitcher } from "../ui/V3Primitives";
 import {
   extractPlatformRolesFromMetadata,
   normalizePlatformRole,
@@ -31,6 +33,9 @@ type WorkspaceSwitcherProps = {
   showDetails?: boolean;
   governanceContext?: string;
   alwaysShow?: boolean;
+  customerShell?: boolean;
+  linkedOwnerName?: string;
+  onReturnToOwn?: () => void;
 };
 
 type WorkspaceSession = {
@@ -50,7 +55,11 @@ export default function WorkspaceSwitcher({
   showDetails = false,
   governanceContext = "workspace route guard",
   alwaysShow = false,
+  customerShell = false,
+  linkedOwnerName,
+  onReturnToOwn,
 }: WorkspaceSwitcherProps) {
+  const router = useRouter();
   const [session, setSession] = useState<WorkspaceSession | null>(null);
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLElement | null>(null);
@@ -170,6 +179,25 @@ export default function WorkspaceSwitcher({
       }
       return next;
     });
+  }
+
+  if (customerShell) {
+    const linked = Boolean(linkedOwnerName);
+    return <ContextSwitcher
+      label={linked ? `${linkedOwnerName}’s Fortress` : "Personal Vault"}
+      selectedId={linked ? "linked" : "application"}
+      groups={[
+        { title: "Personal", options: [{ id: "application", label: "Personal Vault", detail: "Your private vault" }] },
+        ...(linked ? [{ title: "Linked Fortress", options: [{ id: "linked", label: `${linkedOwnerName}’s Fortress`, detail: "Current authorised view" }] }] : []),
+        ...(hasMultipleContexts ? [{ title: "Other workspaces", options: workspaces.filter((workspace) => workspace.id !== "application").map((workspace) => ({ id: workspace.id, label: workspace.label, detail: workspace.description })) }] : []),
+      ]}
+      onSelect={(id) => {
+        if (id === "linked") return;
+        if (linked && id === "application") { onReturnToOwn?.(); return; }
+        const target = workspaces.find((workspace) => workspace.id === id);
+        if (target) router.push(target.href);
+      }}
+    />;
   }
 
   if (!session || (!hasMultipleContexts && !alwaysShow)) return null;

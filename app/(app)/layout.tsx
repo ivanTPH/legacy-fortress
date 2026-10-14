@@ -3,14 +3,14 @@
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import BrandMark from "./components/BrandMark";
+import BrandGlyph from "../../components/ui/BrandGlyph";
 import Icon from "../../components/ui/Icon";
 import Breadcrumbs from "./components/navigation/Breadcrumbs";
 import FlyoutMenu from "./components/navigation/FlyoutMenu";
 import MobileNavTree from "./components/navigation/MobileNavTree";
 import SidebarPrimary from "./components/navigation/SidebarPrimary";
 import { accountNavigation, mainNavigation, type NavNode } from "./navigation/navigation.config";
-import { getBreadcrumbsByPath, getChildrenById, getOpenMenuChain, normalizePath } from "./navigation/navigation.utils";
+import { getBreadcrumbsByPath, getChildrenById, getNodeById, getOpenMenuChain, normalizePath } from "./navigation/navigation.utils";
 import { computeFlyoutTop } from "../../lib/navigation/flyoutPosition";
 import { trackClientEvent } from "../../lib/observability/clientEvents";
 import { getFlyoutMenuKeyAction, getTopMenuKeyAction } from "../../lib/navigation/menuKeyActions";
@@ -27,6 +27,7 @@ import { ViewerAccessProvider } from "../../components/access/ViewerAccessContex
 import { VaultPreferencesProvider } from "../../components/vault/VaultPreferencesContext";
 import { AccessibilityPreferencesProvider } from "../../components/accessibility/AccessibilityPreferencesContext";
 import WorkspaceSwitcher from "../../components/navigation/WorkspaceSwitcher";
+import { Chip } from "../../components/ui/V3Primitives";
 import { DEMO_EXPERIENCE_LABEL, DEMO_EXPERIENCE_SUBLABEL, isDemoSessionUser } from "../../lib/demo/config";
 import {
   canViewPath,
@@ -103,6 +104,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const [menuState, dispatchMenu] = useReducer(menuReducer, initialMenuState);
   const navWrapRef = useRef<HTMLDivElement | null>(null);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const mobileDrawerRef = useRef<HTMLElement | null>(null);
+  const mainContentRef = useRef<HTMLElement | null>(null);
+  const accountMenuRef = useRef<HTMLDetailsElement | null>(null);
 
   useEffect(() => {
     if (!effectiveAvatarUrl) {
@@ -228,6 +233,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     (reason: MenuCloseReason, closeMobile = true) => {
       dispatchMenu({ type: "close_all", reason, closeMobile });
       trackClientEvent("menu.close", { reason, closeMobile });
+      if (closeMobile && (reason === "escape" || reason === "outside_click")) queueMicrotask(() => mobileMenuButtonRef.current?.focus());
     },
     [],
   );
@@ -439,6 +445,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           setViewerAccess(null);
           setIsDemoExperience(false);
           setAuthState("none");
+          window.location.replace("/sign-in");
           return;
         }
         void (async () => {
@@ -584,6 +591,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     function onDocClick(event: Event) {
       const target = event.target as Node;
+      if (accountMenuRef.current?.open && !accountMenuRef.current.contains(target)) accountMenuRef.current.open = false;
       if (!navWrapRef.current?.contains(target)) closeNavigationState("outside_click", false);
     }
 
@@ -596,8 +604,29 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     queueMicrotask(() => {
       closeNavigationState("route_change");
+      mainContentRef.current?.focus();
+      window.scrollTo(0, 0);
     });
   }, [pathname, closeNavigationState]);
+
+  useEffect(() => { if (accountMenuRef.current) accountMenuRef.current.open = false; }, [pathname]);
+
+  useEffect(() => {
+    if (!menuState.mobileNavOpen) return;
+    const drawer = mobileDrawerRef.current;
+    const focusable = () => [...(drawer?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), summary, input:not([disabled])') ?? [])];
+    focusable()[0]?.focus();
+    function trap(event: KeyboardEvent) {
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      if (!items.length) return;
+      const first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    }
+    document.addEventListener("keydown", trap);
+    return () => document.removeEventListener("keydown", trap);
+  }, [menuState.mobileNavOpen]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -637,11 +666,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   function navigateBack() {
     closeNavigationState("item_select", false);
-    if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
-      return;
-    }
-    router.push("/dashboard");
+    router.push(breadcrumbs[breadcrumbs.length - 2]?.path ?? "/dashboard");
   }
 
   function submitShellSearch() {
@@ -651,6 +676,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   function onTopKeyDown(event: ReactKeyboardEvent<HTMLAnchorElement>, item: NavNode) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      navigateTo(item.path);
+      return;
+    }
     const currentIndex = topLevelItems.findIndex((node) => node.id === item.id);
 
     const action = getTopMenuKeyAction({ key: event.key, hasChildren: Boolean(item.children?.length) });
@@ -773,10 +803,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   );
   const normalizedPathname = normalizePath(pathname);
   const topbarTitle = normalizedPathname === "/dashboard"
-    ? "Dashboard"
+    ? "Home"
     : currentNode?.label ?? "Dashboard";
   const topbarBreadcrumbs = normalizedPathname === "/dashboard" ? [] : breadcrumbs.slice(0, -1);
-  const showBackButton = normalizedPathname !== "/dashboard";
+  const topLevelPaths = new Set([...mainNavigation, ...accountNavigation].map((item) => normalizePath(item.path)));
+  const showBackButton = !topLevelPaths.has(normalizedPathname);
 
   if (effectiveAuthState !== "ready") {
     const sessionTitle = effectiveAuthState === "error"
@@ -835,36 +866,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       >
         <aside className="lf-sidebar">
           <div className="lf-brand-row">
-            <BrandMark size={32} priority />
-            <div>
+            <BrandGlyph />
+            <div className="lf-brand-copy">
               <div className="lf-brand-title">Legacy Fortress</div>
-              <div className="lf-brand-subtitle">Your secure legacy vault</div>
+              <div className="lf-brand-subtitle">{resolvedViewerAccess.mode === "linked" ? "Linked Fortress" : "Personal Vault"}</div>
             </div>
+            <WorkspaceSwitcher currentPathname={pathname} customerShell linkedOwnerName={resolvedViewerAccess.mode === "linked" ? resolvedViewerAccess.accountHolderName : undefined} onReturnToOwn={() => viewerContextValue.clearLinkedGrant()} />
           </div>
-
-          <form
-            className="lf-search-wrap"
-            onSubmit={(event) => {
-              event.preventDefault();
-              submitShellSearch();
-            }}
-            role="search"
-            aria-label="Search dashboard records"
-          >
-            <span className="lf-search-icon" aria-hidden>
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <circle cx="11" cy="11" r="7" />
-                <path d="M16.5 16.5 21 21" />
-              </svg>
-            </span>
-            <input
-              className="lf-search"
-              placeholder="Search dashboard records"
-              aria-label="Search dashboard records"
-              value={shellSearch}
-              onChange={(event) => setShellSearchState({ pathname, value: event.target.value })}
-            />
-          </form>
 
           <SidebarPrimary
             items={dashboardNavigationItems}
@@ -872,7 +880,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             highlightedTopId={menuState.openPrimaryId}
             flyoutId={level2FlyoutId}
             onActivateTop={(event, item, anchorEl) => {
-              if (item.children?.length) {
+              if (item.children?.length && event.currentTarget.tagName === "BUTTON") {
                 event.preventDefault();
                 const top = resolveFlyoutTop(anchorEl, item.children.length);
                 dispatchMenu({ type: "toggle_primary", id: item.id, top });
@@ -888,7 +896,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="lf-sidebar-foot">
             <nav aria-label="Account and preferences" className="lf-account-nav">
               {accountItems.map((item) => {
-                const isActive = normalizePath(pathname) === normalizePath(item.path);
+                const isActive = normalizePath(pathname) === normalizePath(item.path) || (item.id === "account-profile" && normalizedPathname.startsWith("/account/"));
                 return (
                   <Link key={item.id} href={item.path} className={`lf-account-link ${isActive ? "is-active" : ""}`} onClick={() => closeNavigationState("item_select")}>
                     <span className="lf-nav-icon">{item.icon}</span>
@@ -898,11 +906,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               })}
             </nav>
 
-            <div className="lf-sidebar-actions">
-              <button className="lf-signout" onClick={signOut} type="button">
-                Sign out
-              </button>
-            </div>
           </div>
         </aside>
 
@@ -910,7 +913,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <FlyoutMenu
             menuId={level2FlyoutId}
             level={2}
-            parentLabel={activePrimary?.label ?? "submenu"}
+            parentLabel={getNodeById(menuState.openPrimaryId ?? "")?.label ?? "submenu"}
             items={level2Items}
             highlightedId={menuState.openSecondaryId}
             childMenuId={level3FlyoutId}
@@ -951,7 +954,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       <div className="lf-content-wrap">
         <header className="lf-topbar">
+          <form className="lf-search-wrap" onSubmit={(event) => { event.preventDefault(); submitShellSearch(); }} role="search" aria-label="Search your vault"><Icon name="search" size={20} /><input className="lf-search" placeholder="Search your vault" aria-label="Search your vault" value={shellSearch} onChange={(event) => setShellSearchState({ pathname, value: event.target.value })} /><kbd>⌘K</kbd></form>
           <button
+            ref={mobileMenuButtonRef}
             className="lf-menu-btn"
             type="button"
             onClick={() => dispatchMenu({ type: "toggle_mobile_nav" })}
@@ -977,31 +982,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="lf-topbar-actions">
-            <WorkspaceSwitcher
-              currentPathname={pathname}
-              compact
-              governanceContext="Personal Vault · role-aware workspace switch"
-            />
-            <div
-              className="lf-topbar-security"
-              aria-label={
-                resolvedViewerAccess.mode === "linked"
-                  ? `${getRoleLabel(resolvedViewerAccess.viewerRole)} view-only access`
-                  : "Private and secure account"
-              }
-              title={
-                resolvedViewerAccess.mode === "linked"
-                  ? `${getRoleLabel(resolvedViewerAccess.viewerRole)} view-only access`
-                  : "Private and secure account"
-              }
-            >
-              <Icon name={resolvedViewerAccess.mode === "linked" ? "visibility_lock" : "verified_user"} size={16} />
-            </div>
-            <Link href="/profile" className="lf-topbar-user" aria-label={`Edit account details for ${effectiveDisplayName}`} title={effectiveDisplayName}>
-              <div className="lf-topbar-user-copy">
-                <div className="lf-topbar-user-greeting">Hello</div>
-                <div className="lf-topbar-user-name">{effectiveDisplayName}</div>
-              </div>
+            <Chip tone="success" icon={resolvedViewerAccess.mode === "linked" ? "visibility" : "verified_user"} className="lf-topbar-security">
+              {resolvedViewerAccess.mode === "linked" ? "Linked view" : "Vault secured"}
+            </Chip>
+            <Link href="/account/communications-preferences" className="lf-topbar-bell" aria-label="Notification settings"><Icon name="notifications" size={20} /></Link>
+            {resolvedViewerAccess.mode !== "linked" ? <Link href="/add" className="lf-mobile-add" aria-label="Add to my Fortress"><Icon name="add" size={24} /></Link> : null}
+            <details ref={accountMenuRef} className="lf-topbar-account" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); accountMenuRef.current?.removeAttribute("open"); accountMenuRef.current?.querySelector("summary")?.focus(); } }}>
+              <summary className="lf-topbar-user" aria-label={`Account menu for ${effectiveDisplayName}`} title={effectiveDisplayName}>
+              <div className="lf-topbar-user-copy"><div className="lf-topbar-user-name">{effectiveDisplayName}</div></div>
               <span
                 className="lf-topbar-user-avatar"
                 aria-label={`Signed-in account picture for ${effectiveDisplayName}`}
@@ -1014,7 +1002,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 ) : null}
                 <span className="lf-topbar-user-avatar-fallback">{effectiveInitials || "LF"}</span>
               </span>
-            </Link>
+              <Icon name="expand_more" size={18} />
+              </summary>
+              <div className="lf-topbar-account-menu"><Link href="/profile"><Icon name="settings" size={20} />Settings</Link><button className="lf-signout" onClick={signOut} type="button"><Icon name="logout" size={20} />Sign out</button></div>
+            </details>
           </div>
         </header>
 
@@ -1026,20 +1017,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               aria-label="Close navigation menu"
               onClick={() => closeNavigationState("outside_click")}
             />
-            <aside className="lf-mobile-drawer" aria-label="Mobile Navigation">
+            <aside ref={mobileDrawerRef} className="lf-mobile-drawer" aria-label="Mobile Navigation" role="dialog" aria-modal="true">
               <div className="lf-brand-row">
-                <BrandMark size={32} priority />
+                <BrandGlyph />
                 <div>
                   <div className="lf-brand-title">Legacy Fortress</div>
-                  <div className="lf-brand-subtitle">Your secure legacy vault</div>
+                  <div className="lf-brand-subtitle">{resolvedViewerAccess.mode === "linked" ? "Linked Fortress" : "Personal Vault"}</div>
                 </div>
               </div>
 
               <WorkspaceSwitcher
                 currentPathname={pathname}
-                compact
-                alwaysShow
-                governanceContext="Mobile navigation · role-aware workspace switch"
+                customerShell
+                linkedOwnerName={resolvedViewerAccess.mode === "linked" ? resolvedViewerAccess.accountHolderName : undefined}
+                onReturnToOwn={() => viewerContextValue.clearLinkedGrant()}
               />
 
               <MobileNavTree
@@ -1054,7 +1045,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
               <nav aria-label="Account and preferences" className="lf-account-nav">
                 {accountItems.map((item) => {
-                  const isActive = normalizePath(pathname) === normalizePath(item.path);
+                  const isActive = normalizePath(pathname) === normalizePath(item.path) || (item.id === "account-profile" && normalizedPathname.startsWith("/account/"));
                   return (
                     <Link
                       key={item.id}
@@ -1096,7 +1087,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </>
         ) : null}
 
-        <main className="lf-main-content">
+        <main ref={mainContentRef} className="lf-main-content" tabIndex={-1}>
           {isDemoExperience ? (
             <section
               style={{
@@ -1165,6 +1156,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           ) : null}
           {children}
         </main>
+        <nav className="lf-mobile-tabs" aria-label="Customer tabs">
+          {[
+            { label: "Home", href: "/dashboard", icon: "home" },
+            { label: "Actions", href: "/actions", icon: "task_alt" },
+            { label: "People", href: "/contacts", icon: "group" },
+            { label: "Settings", href: "/profile", icon: "settings" },
+          ].filter((tab) => canViewPath(tab.href, resolvedViewerAccess)).map((tab) => {
+            const selected = normalizedPathname === tab.href || (tab.href === "/profile" && normalizedPathname.startsWith("/account/"));
+            return <Link key={tab.href} href={tab.href} className={selected ? "is-active" : ""} aria-current={selected ? "page" : undefined}><Icon name={tab.icon} size={24} filled={selected} /><span>{tab.label}</span></Link>;
+          })}
+        </nav>
       </div>
     </div>
     </VaultPreferencesProvider>

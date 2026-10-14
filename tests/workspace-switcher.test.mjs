@@ -93,8 +93,8 @@ test("workspace switcher is present in admin shell, application shell, sign-in, 
   assert.match(adminShell, /canRoleAccessPath\(userRoles, pathname\)/);
   assert.match(adminShell, /getMasterAdminRolesForEmail\(user\.email\)/);
   assert.match(appLayout, /WorkspaceSwitcher/);
-  assert.match(appLayout, /alwaysShow/);
-  assert.match(appLayout, /Mobile navigation · role-aware workspace switch/);
+  assert.match(appLayout, /customerShell/);
+  assert.match(appLayout, /linkedOwnerName/);
   assert.match(authEntry, /WorkspaceSwitcher/);
   assert.match(authEntry, /resolvePermissionedAdminDestination/);
   assert.match(authEntry, /getMasterAdminRolesForEmail\(sessionUser\.email\)/);
@@ -121,8 +121,8 @@ test("workspace switcher is present in admin shell, application shell, sign-in, 
   assert.match(switcher, /Switch workspace/);
   assert.match(switcher, /lf-workspace-route-meta/);
   assert.match(switcher, /Workspace/);
-  assert.match(globals, /--lf-shell-sidebar-width: 286px/);
-  assert.match(globals, /--lf-shell-header-min-height: 76px/);
+  assert.match(globals, /--lf-shell-sidebar-width: var\(--lf-sidebar-width\)/);
+  assert.match(globals, /--lf-shell-header-min-height: var\(--lf-header-height\)/);
   assert.match(globals, /max-width: 700px\)[\s\S]*\.lf-mobile-drawer \.lf-workspace-switcher[\s\S]*display: block/);
 });
 
@@ -154,7 +154,8 @@ test("workspace switcher exposes explicit identity and role context without chan
   assert.match(switcher, /aria-current=\{workspace\.id === currentWorkspace \? "page"/);
   assert.match(workspaces, /label: "Platform Probate Review"/);
   assert.match(shell, /workspaceHome = workspaceLabel === "Enterprise Operations" \? "\/enterprise"/);
-  assert.doesNotMatch(switcher, /auth\.signOut|router\.(push|replace)/);
+  assert.doesNotMatch(switcher, /auth\.signOut/);
+  assert.match(switcher, /router\.push\(target\.href\)/);
 });
 
 test("current workspace detection recognises enterprise, probate, executor, and application routes", () => {

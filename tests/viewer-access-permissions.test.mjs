@@ -59,6 +59,17 @@ test("owner viewers retain edit access without scoped id checks", () => {
   };
   assert.equal(canEditAssetForViewer("asset-any", ownerViewer), true);
   assert.equal(canEditRecordForViewer("record-any", ownerViewer), true);
+  assert.equal(canViewPath("/add", ownerViewer), true);
+  assert.equal(canViewPath("/actions", ownerViewer), true);
+});
+
+test("linked navigation excludes owner actions and unassigned possessions", () => {
+  assert.equal(canViewPath("/add", linkedViewer), false);
+  assert.equal(canViewPath("/actions", linkedViewer), false);
+  assert.equal(canViewPath("/access-requests", linkedViewer), false);
+  assert.equal(canViewPath("/vault/personal", linkedViewer), false);
+  assert.equal(canViewPath("/finances", linkedViewer), true);
+  assert.equal(canViewPath("/finances", { ...linkedViewer, assignedSectionKeys: [] }), false);
 });
 
 test("accepted invitation state can open Contact Wallet but not protected detail routes", () => {
