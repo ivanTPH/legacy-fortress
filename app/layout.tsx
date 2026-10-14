@@ -3,6 +3,7 @@ import UatEnvironmentBanner from "../components/internal/UatEnvironmentBanner";
 import TestPersonaBanner from "../components/internal/TestPersonaBanner";
 import { getRobotsPolicy } from "../lib/environment/appEnvironment";
 import "./globals.css";
+import "./v3-primitives.css";
 
 export const metadata: Metadata = {
   title: "Legacy Fortress",

@@ -1,6 +1,6 @@
 # Version 3 decisions for owner review
 
-Status: **Phase 1 conditionally approved** (14 October 2026). This file distinguishes the authorised foundation work from later product directions. Add explicit owner answers under the open questions before their implementation phases.
+Status: **Phases 1 and 2 approved and implemented; Phase 3 awaits owner review** (14 October 2026). This file distinguishes authorised foundation work from later product directions. Add explicit owner answers under the open questions before their implementation phases.
 
 ## Approved Phase 1 decisions
 
@@ -8,6 +8,13 @@ Status: **Phase 1 conditionally approved** (14 October 2026). This file distingu
 - Bundle genuine Material Symbols Rounded locally after verifying Google's source and Apache 2.0 license. Keep accessibility settings and responsive behaviour working.
 - Use an isolated worktree, preserve unrelated owner files, diagnose local Supabase, capture desktop/mobile design reference screenshots, run focused checks, and commit/push only verified Phase 1 files.
 - Preserve routes, data operations, Supabase authentication, RLS, audit and estate/linked-access boundaries. Do not deploy staging or change production/hosted services.
+
+## Approved Phase 2 decisions
+
+- Verify the pushed Phase 1 history, then build shared Version 3 primitives in a new isolated branch/worktree. Keep the original owner tree and unrelated files intact.
+- Use the actual Version 3 desktop/mobile and journey references, with Chrome/Playwright evidence, keyboard/focus/touch checks and existing accessibility preferences.
+- Diagnose Colima and local Supabase read-only; run no authenticated test until local isolation is proved. Commit and push only verified Phase 2 code and evidence, without merging or deploying.
+- Keep the primitive APIs presentational. Their labels and callbacks do not grant access, select an identity provider, persist data or create a new backend capability.
 
 ## Provisional product directions
 
@@ -17,13 +24,14 @@ The proposals in Q1–Q17 remain useful design directions, **not approvals** for
 
 - Q1–Q17 require answers before the named later phases introduce the relevant product behaviour; Q5–Q9 and Q12 are especially security/identity/estate sensitive.
 - Q19 is approved for the local Rounded icon font and a reusable nine-dot glyph. Replacing `BrandMark` across customer, auth or admin screens remains open.
-- Any backend capability, identity-provider selection, data migration, production change or hosted release needs its own approval. Phase 1 does not grant it.
+- Q1, Q2 and the remaining Q19 brand-placement decision need owner direction before the corresponding Phase 3 navigation and logo work. Phase 3 can be narrowed to existing-route shell styling if those remain open.
+- Any backend capability, identity-provider selection, data migration, production change or hosted release needs its own approval. Phases 1–2 do not grant it.
 
 ## Resolved precedence and safety facts
 
 - Your instruction names `design_handoff_legacy_fortress 3/` as authoritative and says preserve root `AGENTS.md`; therefore the master prompt's older “rename handoff 2” and “append UI rules to root AGENTS.md” setup steps are superseded for this task. The Version 3 UI rules are read as design requirements without changing root guidance.
 - Version 3 visuals supersede earlier design handoffs. Current `PROJECT_CONTEXT.md` and governance documents still require authentication, identity-gated access, RLS, audit, estate lock and privacy controls that a static prototype cannot override.
-- The master prompt requests `design/phase-<n>` branches and small commits. Phase 1 uses an isolated `design/phase-1` worktree because the owner working tree contains unrelated changes, including three untracked test files. The release process remains owner-controlled in Mac Terminal.
+- The master prompt requests `design/phase-<n>` branches and small commits. Phases 1–2 use isolated `design/phase-1` and `design/phase-2` worktrees because the owner working tree contains unrelated changes, including three untracked test files. The release process remains owner-controlled in Mac Terminal.
 - `Finances Review.dc.html` (1a–1d) is the rationale; `Legacy Fortress Redesign.dc.html` (2a/2b/2c) and `JOURNEYS.md` are the implementation visual target. Example names, dates, amounts, organisation figures, timings and retention text are placeholders.
 
 ## Decisions needed before or during implementation
@@ -134,7 +142,7 @@ The README says “wire to the existing assistant” and “Send request”. `Su
 
 The master prompt asks for `design/phase-<n>` branches and per-component commits. The current branch is `hosted-uat-preparation-20260715` and the working tree contains unrelated modified/untracked owner work, including three untracked tests. Should implementation use a separate worktree/branch after preserving that state, or continue in place without commits until the owner has reviewed the dirty-file boundary? No existing changes will be reset, cleaned, overwritten or staged as part of this plan.
 
-**Owner answer:** Approved for Phase 1: use an isolated worktree or equivalent safe process, and commit/push only verified in-scope files. The existing owner working tree is untouched.
+**Owner answer:** Approved for Phases 1–2: use isolated worktrees and commit/push only verified in-scope files. The existing owner working tree is untouched.
 
 ### Q19 — Visual assets and fonts (before phase 1)
 
@@ -144,6 +152,6 @@ The design specifies Material Symbols Rounded, the black 9-dot `apps` logo and a
 
 ## Browser readiness issue, not a design decision
 
-Chrome, bundled Chromium and WebKit work for isolated visual tests. A process listens at `127.0.0.1:3012`, but its runtime isolation and responsive health were not established in Phase 1. Local Supabase at `127.0.0.1:55421` is currently down, and the committed base branch's Supabase `site_url` is hosted while the owner working tree has a local uncommitted correction. Authenticated browser tests are pending a local stack and approved config. The local environment file's URL hosts were checked as local without printing values; the already-running app's runtime target must still be verified before any auth/database test. No hosted URL will be substituted for a missing local service.
+Chrome and WebKit work for isolated visual and hydrated component tests. A process listens at `127.0.0.1:3012`, but its runtime isolation and responsive health were not established in Phase 2. `colima status` reports stopped; Docker's Colima socket is absent, `supabase status` fails, and local Supabase at `127.0.0.1:55421` refuses connections. The committed base branch's Supabase `site_url` is hosted while the owner working tree has a local uncommitted correction. Authenticated browser tests are pending a local stack and approved config. The local environment file's URL hosts were checked as local without printing values; the already-running app's runtime target must still be verified before any auth/database test. No hosted URL will be substituted for a missing local service.
 
-**Next checkpoint:** review the Phase 1 commit and `PLAN.md`, then explicitly approve or revise **Phase 2**. Answer Q1–Q17 before the later phases that depend on them; decide remaining Q19 branding scope before replacing `BrandMark`.
+**Next checkpoint:** review the Phase 2 branch and `PLAN.md`, then explicitly approve or revise **Phase 3**. Resolve Q1/Q2/Q19 for the shell work they affect; answer other Q1–Q17 questions before their later phases. The local stack and runtime must be proved before authenticated testing.

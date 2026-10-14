@@ -58,6 +58,21 @@
   --lf-shadow-selected: 0 1px 2px rgba(43, 23, 20, 0.08), 0 0 0 1px var(--lf-border);
   --lf-shadow-sheet: -12px 0 40px rgba(31, 23, 21, 0.14);
   --lf-card-hover-border: #d6c9c0;
+  --lf-neutral-chip-bg: #f3eeea;
+  --lf-neutral-chip-text: #3a2c28;
+  --lf-invited-chip-bg: #fdf1d8;
+  --lf-invited-chip-text: #7a4f00;
+  --lf-danger: #b3261e;
+  --lf-danger-bg: #fdf3f2;
+  --lf-danger-border: #f2cfcb;
+  --lf-warning-banner-bg: #fef8ec;
+  --lf-warning-banner-border: #f1dfb4;
+  --lf-info-banner-bg: #f7f4f1;
+  --lf-step-pending: #e6dfd9;
+  --lf-locked-bg: #fcfaf8;
+  --lf-scrim: rgba(31, 23, 21, 0.24);
+  --lf-high-contrast-ink: #000000;
+  --lf-radius-icon-tile-mobile: 7px;
 
   --lf-type-page: 28px;
   --lf-type-page-line: 34px;
@@ -65,6 +80,7 @@
   --lf-type-mobile-title-line: 41px;
   --lf-type-stat: 22px;
   --lf-type-section: 17px;
+  --lf-type-sheet-title: 20px;
   --lf-type-body: 15px;
   --lf-type-body-line: 22px;
   --lf-type-nav: 14px;

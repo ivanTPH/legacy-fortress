@@ -1,5 +1,13 @@
 # Codex Handover
 
+## Version 3 Phase 2 checkpoint — 2026-10-14
+
+- Verified remote `design/phase-1` at `b1a24d8` with `a4b4498` in history. Created isolated `design/phase-2` worktree at `/private/tmp/legacy-fortress-v3-phase2`; root owner changes and three untracked tests remain untouched.
+- Implemented the Version 3 shared primitives in `components/ui/V3Primitives.tsx` with one dedicated stylesheet and small token additions. The set includes buttons, chips, rows, cards, page header, breadcrumb, switches, sheets, banners, toasts, empty/restricted states, linked-context banner/switcher, stepper and timeline. Existing `Icon` gained an accessible image label when titled. No application route, auth, permission, data, estate or hosted code changed.
+- Actual Version 3 journey reference cards and Chrome component screenshots are in `docs/design-implementation/screenshots/`; comparison and measured checks are in `PHASE2_COMPARISON.md`. Hydrated Chrome/WebKit checks passed at 1440×900 and 390×844, including switch keyboard use, sheet focus trap/Escape/return, toast Undo, mobile context sheet, 44px targets, high contrast and enlarged text.
+- TypeScript, lint, build, stabilisation (81/81), focused navigation/dashboard/admin-prototype (9/9) and admin foundation (9/9) passed. Lint reported 18 pre-existing warnings. Core tests still fail only on the base Supabase `site_url` local URL assertion.
+- Colima is stopped, its Docker socket is unavailable, local Supabase health refuses connection, and the existing port 3012 process has not been proved isolated. Do not run authenticated UAT until local config, stack and app runtime are verified. No staging/production deployment or hosted mutation occurred. Phase 3 needs an owner checkpoint, especially Q1/Q2/Q19 shell decisions.
+
 ## Version 3 Phase 1 checkpoint — 2026-10-14
 
 - Phase 1 was implemented in isolated branch/worktree `design/phase-1` at `/private/tmp/legacy-fortress-v3-phase1`; the owner working tree, root `AGENTS.md` and three untracked tests were not changed.

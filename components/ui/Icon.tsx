@@ -25,6 +25,8 @@ export default function Icon({
     <span
       className={`lf-icon material-symbols-rounded${className ? ` ${className}` : ""}`}
       aria-hidden={title ? undefined : true}
+      aria-label={title}
+      role={title ? "img" : undefined}
       title={title}
       style={{
         fontSize: size,
