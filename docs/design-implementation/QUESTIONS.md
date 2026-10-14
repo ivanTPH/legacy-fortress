@@ -1,6 +1,6 @@
 # Version 3 decisions for owner review
 
-Status: **Phases 1–3 approved and implemented; Phase 4 awaits owner review** (14 October 2026). This file distinguishes approved shell decisions from provisional product directions and later security/backend approvals.
+Status: **Phase 4 preparation authorised; local migration approval is the current security checkpoint** (14 October 2026). This file distinguishes approved screen directions from provisional product decisions and later security/backend approvals. See [PHASE4_SCHEMA_CHECKPOINT.md](PHASE4_SCHEMA_CHECKPOINT.md).
 
 ## Approved Phase 1 decisions
 
@@ -23,14 +23,21 @@ Status: **Phases 1–3 approved and implemented; Phase 4 awaits owner review** (
 - Q19: use the nine-dot Version 3 brand in the customer shell only. Authentication, enterprise and system-administrator branding remain outside Phase 3.
 - Implement the desktop/mobile customer shell in an isolated branch, restore local Colima/Supabase only if safe, prove local isolation before synthetic/auth operations, capture actual application screenshots and run Chrome/WebKit plus regression checks. Do not merge, deploy or change hosted services.
 
+## Approved Phase 4 directions
+
+- Q3: presentation routes and aliases may be added where needed. Preserve existing URLs, record IDs, canonical persistence, RLS and server-side permissions; data migration and replacement of legacy persistence are outside this approval.
+- Q4: derive dashboard counts and statistics from real, authorised, deduplicated records. Do not use prototype numbers or valuations, or expose restricted counts. Investigate the Legal/Will disagreement before changing statistics.
+- Q17: describe Support as saving a request in the support workspace. Do not claim delivery to a human unless a delivery integration is verified.
+- Stage A requires a read-only local ledger/schema audit and a concrete migration proposal before any application. Phase 4 screen work waits at the security checkpoint if migration approval is needed. Keep an isolated branch, owner tree and hosted environments untouched.
+
 ## Provisional product directions
 
-The proposals in Q3–Q17 remain useful design directions, **not approvals** for a backend feature, identity provider, migration, permission policy or customer-facing claim. Q1/Q2 authorise the stated routes and sidebar presentation only. Version 3 references guide visual work only where they do not conflict with current security and operational policy.
+The proposals in Q5–Q16 remain useful design directions, **not approvals** for a backend feature, identity provider, migration, permission policy or customer-facing claim. The Q3/Q4/Q17 answers approve constrained presentation, counts and wording only. Version 3 references guide visual work only where they do not conflict with current security and operational policy.
 
 ## Decisions still requiring explicit owner approval
 
-- Q3–Q17 require answers before their named phases introduce product behaviour; Q5–Q9 and Q12 are especially security, identity and estate sensitive. Q3/Q4/Q17 matter for the Phase 4 screen plan.
-- Full Add/Action Centre behaviour, route hierarchy and counts still need Phase 4 review. Q2 preserves extra My Vault categories without authorising category or data migrations.
+- Q5–Q16 require answers before their named phases introduce new product behaviour; Q5–Q9 and Q12 are especially security, identity and estate sensitive. Phase 4 must keep the existing permission and action model while these remain open.
+- The exact ten-file local migration proposal in `PHASE4_SCHEMA_CHECKPOINT.md` needs explicit owner approval before applying it, even to a disposable clone. Q2 preserves extra My Vault categories without authorising category or data migrations.
 - Replacing authentication, enterprise or administrator branding remains unapproved. Identity-provider selection, new backend capabilities, data migrations and hosted releases require separate approval.
 
 ## Resolved precedence and safety facts
@@ -58,13 +65,13 @@ The sidebar prototype has six vault areas, while My Vault in the same prototype 
 
 The prototype assumes a uniform three-level route hierarchy. The current app uses `/finances/*`, `/legal/[category]`, `/vault/*`, `/employment`, and `/business` for both area and interests; some record detail paths read legacy tables rather than canonical records. May phase 4 add presentation routes/aliases while leaving persisted data and existing URLs intact? Which routes should be canonical for Business Interests, Digital subsections, Possessions categories and record details?
 
-**Owner answer:**
+**Owner answer:** Approved for Phase 4: add presentation routes/aliases where needed while preserving all existing URLs, record IDs, canonical persistence, RLS and server-side permissions. No data migration or replacement of legacy persistence is authorised.
 
 ### Q4 — Dashboard counts and money (before phase 4)
 
 The README flags a current Dashboard/Legal Will count disagreement. The prototype's “4 records”, “£652,590.00” and “12 actions” are synthetic. Which canonical count/value rules should drive the new stats, including visibility filtering for linked users, excluded/archived records, debts and currencies? Proposed: audit `lib/dashboard/summary.ts` and area loaders with local synthetic fixtures before changing labels.
 
-**Owner answer:**
+**Owner answer:** Approved for Phase 4: statistics must use real, authorised, deduplicated records. Prototype figures, fabricated valuations and restricted counts are prohibited. Investigate the Legal/Will discrepancy. Preliminary source audit: Legal reads legacy `records` plus canonical `assets`, while Dashboard reads legal `assets` plus `documents`; Dashboard omits legacy legal `records` and may count a document linked to an asset twice. The historic example cannot be reproduced in the current empty local records set.
 
 ### Q5 — People permission scope and capability (before phase 4/5)
 
@@ -142,13 +149,13 @@ Journeys 10–11 show organisation names, licence counts, service-health stats, 
 
 The README says “wire to the existing assistant” and “Send request”. `SupportWorkspace` currently provides guided canned answers and saves a request in `section_entries`; it does not prove a human delivery channel. Should the redesigned wording describe saved requests, or is an approved support-delivery service available? Proposed: preserve accurate current behaviour until a delivery contract exists.
 
-**Owner answer:**
+**Owner answer:** Approved for Phase 4: describe the current request-saving behaviour accurately. The present Support form inserts `section_entries` and confirms it was saved; no human delivery integration has been verified.
 
 ### Q18 — Working tree, branches and phase commits (before phase 1)
 
 The master prompt asks for `design/phase-<n>` branches and per-component commits. The current branch is `hosted-uat-preparation-20260715` and the working tree contains unrelated modified/untracked owner work, including three untracked tests. Should implementation use a separate worktree/branch after preserving that state, or continue in place without commits until the owner has reviewed the dirty-file boundary? No existing changes will be reset, cleaned, overwritten or staged as part of this plan.
 
-**Owner answer:** Approved for Phases 1–3: use isolated worktrees and commit/push only verified in-scope files. The existing owner working tree is untouched.
+**Owner answer:** Approved for Phases 1–4: use isolated worktrees and commit/push only verified in-scope files. The existing owner working tree is untouched.
 
 ### Q19 — Visual assets and fonts (before phase 1)
 
@@ -160,4 +167,4 @@ The design specifies Material Symbols Rounded, the black 9-dot `apps` logo and a
 
 Phase 3 started the local Colima VM. Supabase auth health at `127.0.0.1:55421` and the isolated app schema health at `127.0.0.1:3012` returned 200; every approved local env URL host was loopback before synthetic account setup. Authenticated standard-owner Chrome/WebKit shell tests ran. The local database is behind the repo migrations: `account_access_grants.required_identity_level`, `contact_invitations.expires_at` and `enterprise_memberships` are absent. A zero-scope linked grant could not be inserted, so authenticated linked-context browser testing remains blocked. The migration inventory showed later files pending; none were applied. WebKit shell interaction assertions passed with local API/access-control page errors, which remain a browser-data limitation. The temporary local config/env/password were removed; the committed base config still has the hosted `site_url`, explaining the core-test baseline failure.
 
-**Next checkpoint:** review the Phase 3 branch, screenshots, test limits and `PLAN.md`, then explicitly approve or revise **Phase 4**. Resolve Q3/Q4/Q17 for screen routing, counts and support copy before implementing their dependent behaviour. Reconcile local database migrations through a separately reviewed local test plan before claiming linked cross-user browser proof.
+**Next checkpoint:** review the Phase 4 read-only audit and explicitly approve or revise the local-only ten-file migration plan in `PHASE4_SCHEMA_CHECKPOINT.md`. No migration or Phase 4 screen change has been made at this checkpoint. Do not claim linked or enterprise browser proof until the approved local schema and actual tests support it.

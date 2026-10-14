@@ -1,5 +1,13 @@
 # Codex Handover
 
+## Version 3 Phase 4 Stage A security checkpoint — 2026-10-14
+
+- Verified remote `design/phase-3` at `49852838d60b156e38851e1de89141c4a9dadea5`; created isolated `/private/tmp/legacy-fortress-v3-phase4` on `design/phase-4`. The original owner tree and unrelated changes remain untouched.
+- Read-only local audit: approved API/DB env hosts were verified as `127.0.0.1:55421`/`:55422`, local auth health was 200, TCP target and `supabase_db_legacy-fortress-web-uat` were identified. The worktree's committed `supabase/config.toml` instead points to another local stack on 54321/54322; its `supabase migration list --local` is **not** the UAT ledger. The UAT ledger has 38 repository migrations applied through `20260717120000` and 21 pending. The missing grant identity column comes from pending `20260820120000`; enterprise membership and invitation expiry are also pending.
+- Proposed the smallest contiguous ten-file candidate through `20260821162000` for owner/linked/identity test readiness, conditional on a PostgreSQL 17.6 backup, verified disposable-clone restore and security rehearsal. The Mac's `pg_dump` is 16.13; the local DB container has 17.6. No migration, repair, reset, backup, synthetic user change, application-code edit or browser test was performed in Stage A. The local UAT database currently has 8 auth users, 7 admin users and 1 wallet, so reset is unacceptable.
+- Product directions Q3/Q4/Q17 are recorded in `docs/design-implementation/QUESTIONS.md`. Preliminary Legal/Will source audit found Legal counts legacy `records` and canonical `assets`, while Dashboard counts `assets` and `documents`, with no shared deduplication. Support currently saves a `section_entries` row and has no verified human delivery. Full findings, affected objects, recovery/test plan and exact approval request are in `docs/design-implementation/PHASE4_SCHEMA_CHECKPOINT.md`.
+- **Next:** owner approval or revision of the local-only migration plan. Stop before applying any migration, then resume Phase 4 screen implementation only after the schema dependency is resolved or explicitly isolated. No staging merge, deployment or hosted mutation occurred.
+
 ## Version 3 Phase 3 checkpoint — 2026-10-14
 
 - Verified GitHub `design/phase-2` at `b2761c958090fab9f3bd49334adcda6d9a219e44` and created isolated `design/phase-3` worktree at `/private/tmp/legacy-fortress-v3-phase3`. The original owner tree, root `AGENTS.md`, all unrelated edits and three untracked owner tests were left intact.
