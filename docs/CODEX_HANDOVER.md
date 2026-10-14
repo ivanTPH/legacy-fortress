@@ -1,5 +1,12 @@
 # Codex Handover
 
+## Version 3 Phase 1 checkpoint — 2026-10-14
+
+- Phase 1 was implemented in isolated branch/worktree `design/phase-1` at `/private/tmp/legacy-fortress-v3-phase1`; the owner working tree, root `AGENTS.md` and three untracked tests were not changed.
+- Added Version 3 CSS tokens and system typography in `app/globals.css`, locally bundled verified Material Symbols Rounded with license/provenance, updated the shared icon foundation, and added a reusable nine-dot glyph. Existing shell geometry, routes, data operations and security code remain in place.
+- Desktop/mobile Chrome reference captures and isolated foundation previews are in `docs/design-implementation/screenshots/`. The test/evidence limits and Phase 2 gate are in `docs/design-implementation/PLAN.md`; approval classifications are in `QUESTIONS.md`.
+- Local Supabase auth on `127.0.0.1:55421` is unavailable because the Colima Docker socket is unavailable. Authenticated Playwright journeys remain pending local stack and app-runtime isolation proof. No staging deployment or hosted mutation occurred.
+
 Updated: 2026-08-30 16:30 BST
 
 ## Latest Prompt 21 IDV Simulator Remediation

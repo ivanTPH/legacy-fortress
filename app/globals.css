@@ -1,32 +1,109 @@
 @import "tailwindcss";
 
 @font-face {
-  font-family: "Material Symbols Outlined";
+  font-family: "Material Symbols Rounded";
   font-style: normal;
-  font-weight: 400;
+  font-weight: 100 700;
   font-display: block;
-  src: url("/fonts/material-symbols-outlined.ttf") format("truetype");
+  src: url("/fonts/material-symbols-rounded.woff2") format("woff2");
 }
 
 :root {
-  --lf-bg: #fbfaf8;
+  /* Version 3 foundation. Legacy --lf-* aliases below keep existing screens on one palette. */
+  --lf-font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  --lf-ink: #2b1714;
+  --lf-ink-hover: #43231d;
+  --lf-text: #1f1715;
+  --lf-text-secondary: #6b5f5a;
+  --lf-text-tertiary: #9a8f8a;
+  --lf-accent: #8c4a32;
+  --lf-link: #7a3d27;
+  --lf-tint: #f3ebe6;
+  --lf-tint-icon: #6e3a28;
+  --lf-canvas: #faf8f6;
+  --lf-canvas-ios: #f6f3f0;
+  --lf-sidebar-surface: #f5f1ed;
   --lf-surface: #ffffff;
-  --lf-surface-muted: #f8f6f4;
-  --lf-border: #e5e0dc;
-  --lf-text: #111827;
-  --lf-text-soft: #6f6a65;
-  --lf-primary: #15110f;
-  --lf-primary-strong: #0d0b0a;
-  --lf-accent: #4a2418;
-  --lf-bronze: #3a2118;
-  --lf-bronze-strong: #21110d;
-  --lf-radius-xl: 20px;
-  --lf-radius-lg: 14px;
-  --lf-shadow-sm: 0 1px 2px rgba(33, 17, 13, 0.035);
-  --lf-shadow-md: 0 14px 32px rgba(33, 17, 13, 0.07);
+  --lf-border: #ebe4de;
+  --lf-border-input: #e6dfd9;
+  --lf-divider: #f3eeea;
+  --lf-border-dashed: #d9cfc8;
+  --lf-success-bg: #e9f3ec;
+  --lf-success: #225c3a;
+  --lf-warn-bg: #fbeee6;
+  --lf-warn: #8c4a32;
+  --lf-switch-off: #d9d1cb;
+  --lf-uat-banner: #9b1c1c;
+  --lf-logo-bg: #111111;
+
+  --lf-space-2: 2px;
+  --lf-space-4: 4px;
+  --lf-space-6: 6px;
+  --lf-space-8: 8px;
+  --lf-space-10: 10px;
+  --lf-space-12: 12px;
+  --lf-space-14: 14px;
+  --lf-space-16: 16px;
+  --lf-space-20: 20px;
+  --lf-space-24: 24px;
+  --lf-space-32: 32px;
+  --lf-space-40: 40px;
+  --lf-radius-card: 12px;
+  --lf-radius-control: 8px;
+  --lf-radius-input: 9px;
+  --lf-radius-icon-tile: 9px;
+  --lf-radius-chip: 6px;
+  --lf-radius-pill: 999px;
+  --lf-shadow-card-hover: 0 2px 8px rgba(43, 23, 20, 0.06);
+  --lf-shadow-selected: 0 1px 2px rgba(43, 23, 20, 0.08), 0 0 0 1px var(--lf-border);
+  --lf-shadow-sheet: -12px 0 40px rgba(31, 23, 21, 0.14);
+  --lf-card-hover-border: #d6c9c0;
+
+  --lf-type-page: 28px;
+  --lf-type-page-line: 34px;
+  --lf-type-mobile-title: 34px;
+  --lf-type-mobile-title-line: 41px;
+  --lf-type-stat: 22px;
+  --lf-type-section: 17px;
+  --lf-type-body: 15px;
+  --lf-type-body-line: 22px;
+  --lf-type-nav: 14px;
+  --lf-type-button: 14px;
+  --lf-type-meta: 13px;
+  --lf-type-meta-line: 18px;
+  --lf-type-group: 13px;
+  --lf-type-sidebar-group: 11px;
+
+  --lf-page-max-width: 960px;
+  --lf-page-padding-top: 32px;
+  --lf-page-padding-side: 40px;
+  --lf-page-block-gap: 24px;
+  --lf-header-height: 60px;
+  --lf-sidebar-width: 264px;
+
+  --lf-bg: var(--lf-canvas);
+  --lf-surface-muted: var(--lf-sidebar-surface);
+  --lf-text-soft: var(--lf-text-secondary);
+  --lf-primary: var(--lf-ink);
+  --lf-primary-strong: var(--lf-ink-hover);
+  --lf-bronze: var(--lf-ink);
+  --lf-bronze-strong: var(--lf-ink-hover);
+  --lf-radius-xl: var(--lf-radius-card);
+  --lf-radius-lg: var(--lf-radius-input);
+  --lf-shadow-sm: 0 1px 2px rgba(43, 23, 20, 0.035);
+  --lf-shadow-md: 0 14px 32px rgba(43, 23, 20, 0.07);
+  --lf-shadow-lg: 0 18px 44px rgba(43, 23, 20, 0.1);
+  /* Existing shell geometry stays stable until the Phase 3 shell review. */
   --lf-shell-sidebar-width: 286px;
   --lf-shell-header-min-height: 76px;
   --lf-shell-content-max-width: 1180px;
+}
+
+@media (max-width: 767px) {
+  :root {
+    --lf-bg: var(--lf-canvas-ios);
+    --lf-text-tertiary: #b3a9a4;
+  }
 }
 
 .lf-test-persona-banner {
@@ -59,8 +136,8 @@
   gap: 12px;
   width: 100%;
   padding: 9px 16px;
-  border-bottom: 1px solid #7f1d1d;
-  background: #991b1b;
+  border-bottom: 1px solid var(--lf-uat-banner);
+  background: var(--lf-uat-banner);
   color: #fff;
   font-size: 13px;
   line-height: 1.35;
@@ -1416,6 +1493,10 @@
   color: #000000;
 }
 
+.lf-shell[data-lf-contrast="high"] .lf-brand-glyph .lf-icon {
+  color: var(--lf-surface) !important;
+}
+
 .lf-shell[data-lf-contrast="high"] .lf-primary-btn,
 .lf-shell[data-lf-contrast="high"] .lf-icon-btn,
 .lf-shell[data-lf-contrast="high"] .lf-topbar-security {
@@ -1457,7 +1538,9 @@ body {
 body {
   background: var(--lf-bg);
   color: var(--lf-text);
-  font-family: var(--font-geist-sans), "Avenir Next", "Segoe UI", sans-serif;
+  font-family: var(--lf-font-sans);
+  font-size: var(--lf-type-body);
+  line-height: var(--lf-type-body-line);
   overflow-x: hidden;
 }
 
@@ -1474,7 +1557,7 @@ textarea {
 
 .lf-icon {
   display: inline-flex;
-  font-family: "Material Symbols Outlined";
+  font-family: "Material Symbols Rounded";
   font-style: normal;
   font-weight: 400;
   letter-spacing: normal;
@@ -1487,6 +1570,18 @@ textarea {
   direction: ltr;
   font-feature-settings: "liga";
   -webkit-font-smoothing: antialiased;
+}
+
+.lf-brand-glyph {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border-radius: var(--lf-radius-control);
+  background: var(--lf-logo-bg);
+  color: var(--lf-surface);
 }
 
 .lf-panel-help {
@@ -4353,7 +4448,7 @@ textarea {
     border-radius: 9px !important;
   }
 
-  .lf-dashboard-summary-icon .material-symbols-outlined {
+  .lf-dashboard-summary-icon .material-symbols-rounded {
     font-size: 18px !important;
   }
 
@@ -4377,7 +4472,7 @@ textarea {
     box-shadow: none !important;
   }
 
-  .lf-dashboard-summary-header .lf-icon-btn .material-symbols-outlined {
+  .lf-dashboard-summary-header .lf-icon-btn .material-symbols-rounded {
     font-size: 19px !important;
   }
 

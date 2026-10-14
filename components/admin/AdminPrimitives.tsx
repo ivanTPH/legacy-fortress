@@ -120,7 +120,7 @@ export function AdminMetricCard({
 export function AdminContextHelp({ label, children }: { label: string; children: ReactNode }) {
   return (
     <span className="lf-admin-context-help">
-      <span aria-hidden="true" className="material-symbols-outlined">help</span>
+      <span aria-hidden="true" className="lf-icon material-symbols-rounded">help</span>
       <span>
         <strong>{label}</strong>
         <small>{children}</small>
@@ -286,7 +286,7 @@ const adminPrimitiveCss = `
     gap: 8px;
     padding: 9px 10px;
   }
-  .lf-admin-context-help .material-symbols-outlined {
+  .lf-admin-context-help .material-symbols-rounded {
     color: #475569;
     font-size: 18px;
     line-height: 1.3;

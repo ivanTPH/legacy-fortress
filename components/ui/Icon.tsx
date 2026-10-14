@@ -15,7 +15,7 @@ type IconProps = {
 
 export default function Icon({
   name,
-  size = 18,
+  size = 20,
   filled = false,
   className,
   style,
@@ -23,14 +23,12 @@ export default function Icon({
 }: IconProps) {
   return (
     <span
-      className={`lf-icon material-symbols-outlined${className ? ` ${className}` : ""}`}
+      className={`lf-icon material-symbols-rounded${className ? ` ${className}` : ""}`}
       aria-hidden={title ? undefined : true}
       title={title}
       style={{
         fontSize: size,
-        fontVariationSettings: filled
-          ? '"FILL" 1, "wght" 500, "GRAD" 0, "opsz" 24'
-          : '"FILL" 0, "wght" 500, "GRAD" 0, "opsz" 24',
+        fontVariationSettings: `'FILL' ${filled ? 1 : 0}, 'wght' 400, 'GRAD' 0, 'opsz' ${Math.min(48, Math.max(20, size))}`,
         ...style,
       }}
     >
