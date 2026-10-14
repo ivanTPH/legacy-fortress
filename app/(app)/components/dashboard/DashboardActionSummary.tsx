@@ -44,11 +44,11 @@ export default function DashboardActionSummary({ items, context, guidanceItems, 
           return item.guidanceKey === "will" && item.guidanceState === "unknown" && guidance && onGuidanceApplicability ? (
             <div key={item.key} className="lf-dashboard-action-summary-item" role="group" aria-label="Will applicability choices">
               <span className="lf-dashboard-action-summary-status" aria-hidden="true" />
-              <span>
+              <span className="lf-dashboard-action-summary-copy">
                 <strong>{item.title}</strong>
                 <small>{item.blockerLabel}</small>
               </span>
-              <span style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "flex-end" }}>
+              <span className="lf-dashboard-action-summary-choices">
                 <button type="button" onClick={() => onGuidanceApplicability(guidance, "yes")}>Yes</button>
                 <button type="button" onClick={() => onGuidanceApplicability(guidance, "no")}>No</button>
                 <button type="button" onClick={() => onGuidanceApplicability(guidance, "unsure")}>Not sure</button>
@@ -57,7 +57,7 @@ export default function DashboardActionSummary({ items, context, guidanceItems, 
           ) : (
             <button key={item.key} type="button" className="lf-dashboard-action-summary-item" onClick={() => onAction(item.actionKey, item.href)}>
               <span className="lf-dashboard-action-summary-status" aria-hidden="true" />
-              <span>
+              <span className="lf-dashboard-action-summary-copy">
                 <strong>{item.title}</strong>
                 <small>{item.blockerLabel}</small>
               </span>

@@ -228,6 +228,21 @@ test("vault area tiles and sidebar workspace presentation use shared production 
   assert.match(layout, /lf-sidebar-brand-stack[\s\S]*lf-sidebar-workspace/);
 });
 
+test("dashboard shell keeps footer workspace and attention-row geometry aligned", () => {
+  const layout = fs.readFileSync(path.join(root, "app/(app)/layout.tsx"), "utf8");
+  const actionSummary = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/DashboardActionSummary.tsx"), "utf8");
+  const shellCss = fs.readFileSync(path.join(root, "app/globals.css"), "utf8");
+
+  assert.match(layout, /filter\(\(item\) => item\.id !== "support"\)/);
+  assert.match(layout, /\.\.\.topLevelItems\.filter\(\(item\) => item\.id === "support"\)/);
+  assert.match(layout, /<div className="lf-brand-subtitle">Personal Vault<\/div>/);
+  assert.match(actionSummary, /className="lf-dashboard-action-summary-copy"/);
+  assert.match(actionSummary, /className="lf-dashboard-action-summary-choices"/);
+  assert.match(shellCss, /\.lf-dashboard-action-summary-item > \.lf-icon \{ flex: 0 0 18px; margin-left: auto;/);
+  assert.match(shellCss, /\.lf-personal-account-menu \.lf-admin-shell-account-trigger \{[^}]*border: 0;/);
+  assert.match(shellCss, /\.lf-sidebar \.lf-workspace-switcher \{ border: 0; background: transparent;/);
+});
+
 test("contacts keeps legacy invitation management only for add-person setup while person details stay focused", () => {
   const contactsWorkspace = fs.readFileSync(path.join(root, "components/contacts/ContactsNetworkWorkspace.tsx"), "utf8");
   const invitationManager = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/ContactInvitationManager.tsx"), "utf8");

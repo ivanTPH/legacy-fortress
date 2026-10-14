@@ -242,14 +242,17 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     [contextualTopLevelItems, resolvedViewerAccess, vaultPreferences],
   );
   const dashboardNavigationItems = useMemo(
-    () => stripNavigationChildren(topLevelItems).map((item) => item.id === "action-centre"
+    () => stripNavigationChildren(topLevelItems).filter((item) => item.id !== "support").map((item) => item.id === "action-centre"
       ? { ...item, badge: actionCentreCount > 0 ? String(actionCentreCount) : undefined }
       : item),
     [actionCentreCount, topLevelItems],
   );
   const accountItems = useMemo(
-    () => filterNodesByVaultPreferences(filterNavigationTreeForViewer(baseAccountItems, resolvedViewerAccess), vaultPreferences),
-    [baseAccountItems, resolvedViewerAccess, vaultPreferences],
+    () => [
+      ...topLevelItems.filter((item) => item.id === "support"),
+      ...filterNodesByVaultPreferences(filterNavigationTreeForViewer(baseAccountItems, resolvedViewerAccess), vaultPreferences),
+    ],
+    [baseAccountItems, resolvedViewerAccess, topLevelItems, vaultPreferences],
   );
 
   const activeChain = useMemo(() => getOpenMenuChain(pathname), [pathname]);
@@ -954,7 +957,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
               <BrandMark size={32} priority />
               <div>
                 <div className="lf-brand-title">Legacy Fortress</div>
-                <div className="lf-brand-subtitle">Your secure legacy vault</div>
+                <div className="lf-brand-subtitle">Personal Vault</div>
               </div>
             </div>
 
@@ -1000,9 +1003,9 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
               })}
             </nav>
 
-            <div className="lf-sidebar-actions" aria-label="Account controls">
-              <Link href="/profile" className="lf-account-link" onClick={() => closeNavigationState("item_select")}>Profile and account</Link>
-            </div>
+              <div className="lf-sidebar-actions" aria-label="Account controls">
+                <Link href="/profile" className="lf-account-link" onClick={() => closeNavigationState("item_select")}>Profile and account</Link>
+              </div>
           </div>
         </aside>
 
@@ -1178,7 +1181,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                 <BrandMark size={32} priority />
                 <div>
                   <div className="lf-brand-title">Legacy Fortress</div>
-                  <div className="lf-brand-subtitle">Your secure legacy vault</div>
+                  <div className="lf-brand-subtitle">Personal Vault</div>
                 </div>
               </div>
 
