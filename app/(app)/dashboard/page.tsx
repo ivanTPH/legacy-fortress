@@ -1598,7 +1598,7 @@ const legalSummary = useMemo(() => {
   }
 
   return (
-    <div className="lf-dashboard-shell" style={{ display: "grid", gap: 14 }}>
+    <div className="lf-dashboard-shell">
       <LFPageHeader
         title="Dashboard"
         description="Your recorded information, in one place."
@@ -1728,36 +1728,18 @@ const legalSummary = useMemo(() => {
       ) : null}
       <section
         className="lf-dashboard-overview-panel"
-        style={{
-          border: "1px solid #e8e1dc",
-          borderRadius: 16,
-          background: "#fff",
-          padding: 18,
-          display: "grid",
-          gap: 12,
-        }}
       >
-        <div className="lf-dashboard-overview-heading" style={{ display: "grid", gap: 4 }}>
-          <div className="lf-dashboard-overview-title-row" style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
-            <div style={overviewIconStyle}>
-              <Icon name="dashboard" size={16} />
-            </div>
-            <h2 style={{ margin: 0, fontSize: 18 }}>{viewer.mode === "linked" ? "Shared information" : "Your Vault"}</h2>
+        <div className="lf-dashboard-overview-heading">
+          <div className="lf-dashboard-overview-title-row">
+            <h2>{viewer.mode === "linked" ? "Shared information" : "Your vault"}</h2>
           </div>
-        <div className="lf-dashboard-overview-copy" style={{ color: "#64748b", fontSize: 13 }}>
-          {viewer.mode === "linked" ? "Only information explicitly shared through this relationship is shown." : "Your recorded information, in one place."}
-        </div>
-        {viewer.mode !== "linked" ? <div className="lf-dashboard-overview-summary" aria-label="Fortress summary">
-          <strong>{financeRecordCount + legalRecordCount + propertyRecordCount + businessRecordCount + digitalRecordCount + possessionsRecordCount} records</strong>
-          <span aria-hidden="true">·</span>
-          <strong>{contactRows.length} {contactRows.length === 1 ? "person" : "people"}</strong>
-        </div> : null}
+          {viewer.mode === "linked" ? <p className="lf-dashboard-overview-copy">Only information explicitly shared through this relationship is shown.</p> : null}
         </div>
         {hasVisibleOverviewCard && (showFinancialCard || showLegalCard || showPropertyCard || showBusinessCard || showDigitalCard || showPossessionsCard) ? (
         <div className="lf-content-grid lf-dashboard-overview-grid">
           {showFinancialCard && (viewer.mode !== "linked" || financeRecordCount > 0) ? (
             <DashboardAssetSummaryCard
-              icon={<Icon name="account_balance" size={22} />}
+              icon={<Icon name="finances" size={22} />}
               title="Finances"
               href="/finances"
               addedAt={financialSummary.addedAt}
@@ -1775,7 +1757,7 @@ const legalSummary = useMemo(() => {
 
           {showLegalCard && (viewer.mode !== "linked" || legalRecordCount > 0) ? (
             <DashboardAssetSummaryCard
-              icon={<Icon name="description" size={22} />}
+              icon={<Icon name="legal" size={22} />}
               title="Legal"
               href="/legal"
               addedAt={legalSummary.addedAt}
@@ -1793,7 +1775,7 @@ const legalSummary = useMemo(() => {
 
           {showPropertyCard && (viewer.mode !== "linked" || propertyRecordCount > 0) ? (
             <DashboardAssetSummaryCard
-              icon={<Icon name="home" size={22} />}
+              icon={<Icon name="property" size={22} />}
               title="Property"
               href="/property"
               addedAt={propertySummary.addedAt}
@@ -1811,7 +1793,7 @@ const legalSummary = useMemo(() => {
 
           {showBusinessCard && (viewer.mode !== "linked" || businessRecordCount > 0) ? (
             <DashboardAssetSummaryCard
-              icon={<Icon name="business_center" size={22} />}
+              icon={<Icon name="business" size={22} />}
               title="Business"
               href="/business"
               addedAt={businessSummary.addedAt}
@@ -1829,7 +1811,7 @@ const legalSummary = useMemo(() => {
 
           {showDigitalCard && (viewer.mode !== "linked" || digitalRecordCount > 0) ? (
             <DashboardAssetSummaryCard
-              icon={<Icon name="devices" size={22} />}
+              icon={<Icon name="digital" size={22} />}
               title="Digital"
               href="/vault/digital"
               addedAt={digitalSummary.addedAt}
@@ -1847,7 +1829,7 @@ const legalSummary = useMemo(() => {
 
           {showPossessionsCard && (viewer.mode !== "linked" || possessionsRecordCount > 0) ? (
             <DashboardAssetSummaryCard
-              icon={<Icon name="inventory_2" size={22} />}
+              icon={<Icon name="possessions" size={22} />}
               title="Possessions"
               href="/vault/personal"
               addedAt={possessionsSummary.addedAt}

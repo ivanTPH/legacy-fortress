@@ -1511,6 +1511,7 @@ textarea {
 
 .lf-icon {
   display: inline-flex;
+  flex: 0 0 auto;
   font-family: "Material Symbols Rounded", "Material Symbols Outlined", sans-serif;
   font-style: normal;
   font-weight: 400;
@@ -7185,10 +7186,10 @@ textarea {
 
 /* Reference composition overrides: the overview is a page section, not a
    second dashboard shell. */
-.lf-dashboard-overview-panel { border: 0 !important; padding: 0 !important; background: transparent !important; gap: 10px !important; }
-.lf-dashboard-overview-heading { gap: 8px !important; }
+.lf-dashboard-overview-panel { display: grid; border: 0 !important; padding: 0 !important; background: transparent !important; gap: 10px !important; }
+.lf-dashboard-overview-heading { display: grid; gap: 8px !important; }
 .lf-dashboard-overview-title-row > .lf-panel-help, .lf-dashboard-overview-title-row > div:first-child { display: none; }
-.lf-dashboard-overview-title-row { min-height: 20px; }
+.lf-dashboard-overview-title-row { display: flex; align-items: center; min-height: 20px; }
 .lf-dashboard-overview-title-row h2 { font-size: 13px !important; line-height: 18px; color: #6B5F5A !important; font-weight: 600; text-transform: none; }
 .lf-dashboard-overview-copy, .lf-dashboard-overview-summary { display: none; }
 .lf-dashboard-overview-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 12px !important; }
@@ -7220,6 +7221,7 @@ textarea {
 /* High-fidelity production primitives mapped from the approved handoff. */
 .lf-page-content { width: 100%; max-width: 960px; margin: 0 auto; display: grid; gap: 24px; }
 .lf-page-stack { display: grid; gap: 24px; min-width: 0; }
+.lf-dashboard-shell { display: grid; gap: 24px; min-width: 0; }
 .lf-settings-page-shell { display: grid; gap: 24px; width: 100%; max-width: 960px; min-width: 0; }
 .lf-settings-card-heading { display: grid; gap: 4px; }
 .lf-settings-card-heading h2 { margin: 0; color: #1F1715; font-size: 18px; line-height: 24px; font-weight: 600; }

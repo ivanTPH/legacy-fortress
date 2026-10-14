@@ -15,7 +15,7 @@ test("dashboard overview cards use compact shared summary cards with one add act
   const actionQueue = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/ActionQueuePanel.tsx"), "utf8");
   const shellCss = fs.readFileSync(path.join(root, "app/globals.css"), "utf8");
   const dashboardRender = dashboardPage.slice(
-    dashboardPage.indexOf('return (\n    <div className="lf-dashboard-shell" style={{ display: "grid", gap: 14 }}>'),
+    dashboardPage.indexOf('return (\n    <div className="lf-dashboard-shell">'),
     dashboardPage.indexOf("function ReadinessSnapshot"),
   );
 
@@ -37,7 +37,7 @@ test("dashboard overview cards use compact shared summary cards with one add act
   assert.match(shellCss, /\.lf-page-content \{[\s\S]*max-width: 960px/);
   assert.match(shellCss, /\.lf-nav-item\.is-active \{[\s\S]*background: #FFFFFF/);
   assert.doesNotMatch(shellCss, /\.lf-nav-item\.is-active \{[^}]*linear-gradient/);
-  assert.match(dashboardPage, /Your Vault/);
+  assert.match(dashboardPage, /Your vault/);
   assert.doesNotMatch(dashboardPage, /showFullActionCentre/);
   assert.match(dashboardPage, /actionCentreCount/);
   assert.doesNotMatch(summaryCard, /icon=\{actionIcon\}/);
@@ -197,9 +197,9 @@ test("dashboard overview cards use compact shared summary cards with one add act
   assert.match(dashboardPage, /No permitted records, contacts, documents, or destinations match this search/);
   assert.match(dashboardPage, /permitted records, documents, contacts, and destinations/);
   assert.match(fs.readFileSync(path.join(root, "app/(app)/layout.tsx"), "utf8"), /placeholder="Search your vault"/);
-  assert.match(dashboardRender, /Your Vault/);
+  assert.match(dashboardRender, /Your vault/);
   assert.match(dashboardRender, /guidanceItems=\{guidanceItems\}/);
-  assert.match(dashboardRender, /aria-label="Fortress summary"/);
+  assert.doesNotMatch(dashboardRender, /aria-label="Fortress summary"/);
   assert.doesNotMatch(dashboardRender, /aria-label="Estate readiness summary"/);
   assert.doesNotMatch(dashboardRender, /Get started with your vault/);
   assert.doesNotMatch(dashboardRender, /<h2 style=\{\{ margin: 0, fontSize: 18 \}\}>Next steps<\/h2>/);
