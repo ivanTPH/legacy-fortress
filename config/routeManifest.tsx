@@ -41,7 +41,7 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
   {
     id: "add-to-fortress",
     label: "Add to my Fortress",
-    path: "/add-to-fortress",
+    path: "/add",
     description: "Add a record to your vault",
     icon: <Icon name="add_circle" size={18} />,
     enabled: on,
@@ -49,7 +49,7 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
   {
     id: "action-centre",
     label: "Action Centre",
-    path: "/action-centre",
+    path: "/actions",
     description: "Review useful next actions",
     icon: <Icon name="task_alt" size={18} />,
     enabled: on,

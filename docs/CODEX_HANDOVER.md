@@ -1,5 +1,14 @@
 # Codex Handover
 
+## 15 October 2026 — Version 3 staging-first integration
+
+- Isolated worktree: `/private/tmp/legacy-fortress-v3-staging-preview`; branch `integration/v3-staging-preview`, based on staging SHA `e552b9d1608b8ccffe9b50d1c29ac98d85ee16ab`. The original owner tree and `design/phase-4` remain untouched.
+- Selectively integrated the Version 3 customer design system, local Rounded icon font, shell branding, canonical `/add` and `/actions` aliases, Dashboard, Action Centre, Add, six Vault overviews, and People I Trust presentation. Staging auth, recovery, invitation, provider, redirect and email source paths were preserved.
+- Corrected linked Property area routing using only RLS-visible assigned asset sections; linked navigation and Dashboard hide unassigned areas and owner action prompts. No hosted service was changed.
+- Included the two previously rehearsed, forward-only security correction SQL files in source. They were **not** applied to any hosted database. The local API and PostgreSQL targets were explicitly verified as `127.0.0.1:55421` and `127.0.0.1:55422`, with 61 local migrations.
+- Local synthetic browser proof: registration and recovery in Chrome; owner, wrong-account invitation, verified and revoked linked access, and admin isolation in Chrome desktop and WebKit mobile. All fixtures were removed. The loopback-only journey runner is `scripts/verify-v3-integration-local.mjs`. Focused source tests: 24/24; TypeScript and build passed. Selected screenshots are in `docs/release/v3-integration-evidence/`.
+- Hosted Test LF migration ledger and security function definitions remain unverified. Do not deploy this branch to Test LF until a read-only, identity-verified hosted schema comparison and owner release approval. Local preview can use the approved loopback app, Supabase and Mailpit without real email.
+
 Updated: 2026-08-30 16:30 BST
 
 ## Latest Prompt 21 IDV Simulator Remediation

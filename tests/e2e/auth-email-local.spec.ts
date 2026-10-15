@@ -38,7 +38,7 @@ test.describe("Phase 2 local auth emails", () => {
     await page.goto("/forgot-password");
     await page.getByLabel("Email").fill(email);
     await page.getByRole("button", { name: /send reset link/i }).click();
-    await expect(page.getByText(/password reset link sent/i)).toBeVisible();
+    await expect(page.getByText(/password reset requested\. If an account exists/i)).toBeVisible();
 
     const reset = await waitForMail(email, /reset your password|reset password/i);
     expect(reset.link).toContain("/auth/v1/verify");

@@ -8,8 +8,9 @@ import { getAssetCategoryFormConfig } from "../lib/assets/fieldDictionary.ts";
 
 const root = process.cwd();
 
-test("dashboard overview cards use compact shared summary cards with one add action", () => {
+test("dashboard uses authorised Version 3 area summaries and keeps live actions", () => {
   const dashboardPage = fs.readFileSync(path.join(root, "app/(app)/dashboard/page.tsx"), "utf8");
+  const v3Overview = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/V3DashboardOverview.tsx"), "utf8");
   const summaryCard = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/DashboardAssetSummaryCard.tsx"), "utf8");
   const actionSummary = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/DashboardActionSummary.tsx"), "utf8");
   const actionQueue = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/ActionQueuePanel.tsx"), "utf8");
@@ -19,17 +20,22 @@ test("dashboard overview cards use compact shared summary cards with one add act
     dashboardPage.indexOf("function ReadinessSnapshot"),
   );
 
-  assert.match(dashboardPage, /value=\{String\(financeRecordCount\)\}/);
-  assert.match(dashboardPage, /value=\{String\(propertyRecordCount\)\}/);
-  assert.match(dashboardPage, /value=\{String\(businessRecordCount\)\}/);
+  assert.match(dashboardPage, /count: financeRecordCount/);
+  assert.match(dashboardPage, /count: propertyRecordCount/);
+  assert.match(dashboardPage, /count: businessRecordCount/);
+  assert.match(dashboardPage, /recordCount=\{recordIds\.size\}/);
+  assert.match(dashboardPage, /valuedRows\.size === 0 \? "Not recorded"/);
+  assert.match(dashboardPage, /area\.visible && \(viewer\.mode !== "linked" \|\| area\.count > 0\)/);
+  assert.match(dashboardPage, /viewer\.mode !== "linked" \? <DashboardActionSummary/);
+  assert.match(v3Overview, /href="\/add"/);
   assert.doesNotMatch(dashboardPage, /value=\{financialSummary\.valueText\}/);
   assert.doesNotMatch(dashboardPage, /value=\{propertySummary\.valueText\}/);
   assert.doesNotMatch(dashboardPage, /value=\{businessSummary\.valueText\}/);
   assert.match(dashboardPage, /function useDashboardState\(input: DashboardStateInput\): DashboardState/);
   assert.match(dashboardPage, /<ActionQueuePanel[\s\S]*guidanceItems=\{guidanceItems\}[\s\S]*onGuidanceDecision/);
   assert.match(dashboardPage, /className="lf-dashboard-shell"/);
-  assert.match(dashboardPage, /className="lf-dashboard-overview-panel"/);
-  assert.match(dashboardPage, /className="lf-content-grid lf-dashboard-overview-grid"/);
+  assert.match(dashboardPage, /<V3DashboardOverview/);
+  assert.doesNotMatch(dashboardPage, /className="lf-dashboard-overview-panel"/);
   assert.match(actionSummary, /className="lf-dashboard-action-summary"/);
   assert.match(actionSummary, /lf-dashboard-action-summary-heading[\s\S]*View Action Centre[\s\S]*lf-dashboard-action-summary-list/);
   assert.match(actionSummary, /lf-dashboard-action-summary-status/);
@@ -37,7 +43,7 @@ test("dashboard overview cards use compact shared summary cards with one add act
   assert.match(shellCss, /\.lf-page-content \{[\s\S]*max-width: 960px/);
   assert.match(shellCss, /\.lf-nav-item\.is-active \{[\s\S]*background: #FFFFFF/);
   assert.doesNotMatch(shellCss, /\.lf-nav-item\.is-active \{[^}]*linear-gradient/);
-  assert.match(dashboardPage, /Your vault/);
+  assert.match(v3Overview, /Your vault/);
   assert.doesNotMatch(dashboardPage, /showFullActionCentre/);
   assert.match(dashboardPage, /actionCentreCount/);
   assert.doesNotMatch(summaryCard, /icon=\{actionIcon\}/);
@@ -125,8 +131,7 @@ test("dashboard overview cards use compact shared summary cards with one add act
   assert.match(dashboardPage, /type: "review_overdue"/);
   assert.match(dashboardPage, /const handleAction = useCallback\(\(actionKey: string, destination\?: string\)/);
   assert.match(dashboardPage, /deriveBlockingState\(/);
-  assert.match(dashboardPage, /inlineSummary/);
-  assert.match(dashboardPage, /hideItems/);
+  assert.match(v3Overview, /lf-v3-vault-tile/);
   assert.match(summaryCard, /<IconButton/);
   assert.doesNotMatch(summaryCard, /actionIcon/);
   assert.match(summaryCard, /className="lf-dashboard-summary-value" style=\{valueStyle\}/);
@@ -158,8 +163,10 @@ test("dashboard overview cards use compact shared summary cards with one add act
   assert.doesNotMatch(dashboardPage, /showTaskCard/);
   assert.doesNotMatch(dashboardPage, /taskSummary/);
   assert.doesNotMatch(dashboardPage, /title="Tasks"/);
-  assert.match(dashboardPage, /showFinancialCard \|\| showLegalCard \|\| showPropertyCard \|\| showBusinessCard \|\| showDigitalCard \|\| showPossessionsCard/);
-  assert.doesNotMatch(dashboardPage, /showFinancialCard \|\| showLegalCard \|\| showPropertyCard \|\| showBusinessCard \|\| showDigitalCard \|\| showPossessionsCard \|\| showTaskCard/);
+  for (const area of ["Financial", "Legal", "Property", "Business", "Digital", "Possessions"]) {
+    assert.match(dashboardPage, new RegExp(`visible: show${area}Card`));
+  }
+  assert.doesNotMatch(dashboardPage, /visible: showTaskCard/);
   assert.match(dashboardPage, /categoryKey !== "tasks"/);
   assert.match(dashboardPage, /markDashboardTaskComplete/);
   assert.match(dashboardPage, /tasks: actionCentreTasks/);
@@ -197,7 +204,7 @@ test("dashboard overview cards use compact shared summary cards with one add act
   assert.match(dashboardPage, /No permitted records, contacts, documents, or destinations match this search/);
   assert.match(dashboardPage, /permitted records, documents, contacts, and destinations/);
   assert.match(fs.readFileSync(path.join(root, "app/(app)/layout.tsx"), "utf8"), /placeholder="Search your vault"/);
-  assert.match(dashboardRender, /Your vault/);
+  assert.match(v3Overview, /Your vault/);
   assert.match(dashboardRender, /guidanceItems=\{guidanceItems\}/);
   assert.doesNotMatch(dashboardRender, /aria-label="Fortress summary"/);
   assert.doesNotMatch(dashboardRender, /aria-label="Estate readiness summary"/);
@@ -212,7 +219,7 @@ test("dashboard overview cards use compact shared summary cards with one add act
   assert.ok(dashboardRender.indexOf("<DashboardActionSummary") < dashboardRender.indexOf('aria-label="Dashboard review panel"'));
 });
 
-test("vault area tiles and sidebar workspace presentation use shared production primitives", () => {
+test("vault area tiles use Version 3 primitives while the sidebar keeps its workspace", () => {
   const designSystem = fs.readFileSync(path.join(root, "components/ui/LFDesignSystem.tsx"), "utf8");
   const overview = fs.readFileSync(path.join(root, "components/vault/VaultAreaOverview.tsx"), "utf8");
   const canonicalGrid = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/CanonicalAssetOverviewGrid.tsx"), "utf8");
@@ -221,7 +228,8 @@ test("vault area tiles and sidebar workspace presentation use shared production 
   assert.match(designSystem, /export function LFVaultAreaTile/);
   assert.match(designSystem, /className=\{`lf-vault-area-tile is-\$\{state\}`\}/);
   assert.match(overview, /<LFVaultAreaTile/);
-  assert.match(canonicalGrid, /<LFVaultAreaTile/);
+  assert.match(canonicalGrid, /<Card/);
+  assert.match(canonicalGrid, /filterAssetIdsForViewer/);
   assert.doesNotMatch(overview, /className=\{`lf-vault-area-tile/);
   assert.doesNotMatch(canonicalGrid, /className=\{`lf-vault-area-tile/);
   assert.match(layout, /className="lf-sidebar-brand-stack"/);
@@ -277,14 +285,13 @@ test("contacts keeps legacy invitation management only for add-person setup whil
 test("add-to-fortress uses the page header once and renders grouped creation choices", () => {
   const page = fs.readFileSync(path.join(root, "app/(app)/add-to-fortress/page.tsx"), "utf8");
   const panel = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/AddToFortressPanel.tsx"), "utf8");
-  const css = fs.readFileSync(path.join(root, "app/globals.css"), "utf8");
 
-  assert.match(page, /<LFPageHeader title="Add to my Fortress"/);
+  assert.match(page, /<PageHeader title="Add to my Fortress"/);
   assert.match(panel, /aria-label="Choose what to add"/);
-  assert.match(panel, /className="lf-add-to-fortress-groups"/);
+  assert.match(panel, /className="lf-v3-destination-grid"/);
   assert.doesNotMatch(panel, /Build this at your pace/);
   assert.doesNotMatch(panel, /<h2 id="add-to-fortress-title">Add to my Fortress<\/h2>/);
-  assert.match(css, /\.lf-add-to-fortress-group \{[\s\S]*border: 1px solid #EBE4DE/);
+  assert.match(fs.readFileSync(path.join(root, "app/v3-screens.css"), "utf8"), /\.lf-v3-destination-grid/);
 });
 
 test("shared attachment gallery uses icon buttons with tooltips instead of ad hoc text action buttons", () => {

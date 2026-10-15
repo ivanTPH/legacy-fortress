@@ -1,8 +1,7 @@
 "use client";
 
-import Icon from "../../../../components/ui/Icon";
-import { useRouter } from "next/navigation";
 import { useViewerAccess } from "../../../../components/access/ViewerAccessContext";
+import { Card, RestrictedState, Row } from "../../../../components/ui/V3Primitives";
 import { FINANCE_CATEGORY_CHOICE } from "../../../../lib/vault/addRecordTypes";
 
 type AddChoice = { label: string; description: string; href: string; icon: string };
@@ -44,42 +43,19 @@ const ADD_GROUPS: AddGroup[] = [
 
 export default function AddToFortressPanel() {
   const { viewer } = useViewerAccess();
-  const router = useRouter();
 
   if (viewer.mode === "linked") {
-    return (
-      <section className="lf-add-to-fortress-panel" aria-labelledby="add-to-fortress-title">
-        <div className="lf-add-to-fortress-heading">
-          <span className="lf-legacy-guidance-icon"><Icon name="lock" size={18} /></span>
-          <span>
-            <span className="lf-legacy-guidance-eyebrow">Read-only access</span>
-          <h2 id="add-to-fortress-title">My Fortress only</h2>
-        </span>
-      </div>
-        <p className="lf-add-to-fortress-intro">You are viewing another person&apos;s linked context. Return to My Fortress before adding or changing your own records.</p>
-        <button className="lf-link-btn" type="button" onClick={() => router.push("/dashboard")}>Return to My Fortress</button>
-      </section>
-    );
+    return <RestrictedState reason="Adding records is available in your own vault." />;
   }
 
   return (
-    <section className="lf-add-to-fortress-panel" aria-label="Choose what to add">
-      <div className="lf-add-to-fortress-groups">
+    <section className="lf-v3-destination-grid" aria-label="Choose what to add">
         {ADD_GROUPS.map((group) => (
-          <div className="lf-add-to-fortress-group" key={group.title}>
+          <Card key={group.title}>
             <h3>{group.title}</h3>
-            <div className="lf-add-to-fortress-choices">
-              {group.choices.map((choice) => (
-                <a className="lf-add-to-fortress-choice" href={choice.href} key={choice.href}>
-                  <span className="lf-add-to-fortress-choice-icon"><Icon name={choice.icon} size={16} /></span>
-                  <span><strong>{choice.label}</strong><small>{choice.description}</small></span>
-                  <Icon name="arrow_forward" size={15} />
-                </a>
-              ))}
-            </div>
-          </div>
+            {group.choices.map((choice) => <Row key={choice.href} title={choice.label} description={choice.description} icon={choice.icon} href={choice.href} />)}
+          </Card>
         ))}
-      </div>
     </section>
   );
 }

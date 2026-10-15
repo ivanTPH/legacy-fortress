@@ -12,8 +12,11 @@ const contacts = fs.readFileSync(path.join(root, "components/contacts/ContactsNe
 test("Add to my Fortress uses existing canonical record and contact routes", () => {
   assert.doesNotMatch(dashboard, /<AddToFortressPanel \/>/);
   assert.match(addPage, /<AddToFortressPanel \/>/);
-  assert.match(dashboard, /href="\/add-to-fortress"/);
-  for (const route of ["/property?add=1", "/finances/bank?add=1", "/legal/wills?add=1", "/legal/power-of-attorney?add=1", "/contacts?group=executors&add=1", "/vault/personal/records?add=1", "/vault/digital/records?add=1", "/personal/wishes?add=1"]) {
+  assert.match(dashboard, /<V3DashboardOverview/);
+  assert.match(fs.readFileSync(path.join(root, "app/(app)/components/dashboard/V3DashboardOverview.tsx"), "utf8"), /href="\/add"/);
+  assert.match(addPanel, /FINANCE_CATEGORY_CHOICE/);
+  assert.match(fs.readFileSync(path.join(root, "lib/vault/addRecordTypes.ts"), "utf8"), /\/finances\/bank\?add=1/);
+  for (const route of ["/property?add=1", "/legal/wills?add=1", "/legal/power-of-attorney?add=1", "/contacts?group=executors&add=1", "/vault/personal/records?add=1", "/vault/digital/records?add=1", "/personal/wishes?add=1"]) {
     assert.match(addPanel, new RegExp(route.replace(/[?&=]/g, "\\$&")));
   }
   assert.match(contacts, /setAddContactGroupKey\(selectedGroup\)/);

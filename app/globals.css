@@ -12,12 +12,13 @@
 @font-face {
   font-family: "Material Symbols Rounded";
   font-style: normal;
-  font-weight: 300 500;
+  font-weight: 100 700;
   font-display: block;
-  src: url("/fonts/material-symbols-outlined.ttf") format("truetype");
+  src: url("/fonts/material-symbols-rounded.woff2") format("woff2");
 }
 
 :root {
+  --lf-font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
   --lf-ink: #2B1714;
   --lf-ink-hover: #43231D;
   --lf-text: #1F1715;
@@ -41,6 +42,7 @@
   --lf-warn: #8C4A32;
   --lf-switch-off: #D9D1CB;
   --lf-uat-banner: #9B1C1C;
+  --lf-logo-bg: #111111;
   /* Compatibility aliases for older components. Keep them on the approved palette. */
   --lf-bg: #FAF8F6;
   --lf-surface-muted: #F3EBE6;
@@ -53,9 +55,64 @@
   --lf-radius-lg: 12px;
   --lf-shadow-sm: 0 1px 2px rgba(43, 23, 20, 0.035);
   --lf-shadow-md: 0 2px 8px rgba(43, 23, 20, 0.06);
+  --lf-shadow-lg: 0 8px 24px rgba(43, 23, 20, 0.12);
   --lf-shell-sidebar-width: 264px;
   --lf-shell-header-min-height: 60px;
   --lf-shell-content-max-width: 960px;
+  --lf-border-dashed: var(--lf-dashed);
+  --lf-sidebar-surface: var(--lf-sidebar);
+  --lf-card-hover-border: #D6C9C0;
+  --lf-neutral-chip-bg: #F3EEEA;
+  --lf-neutral-chip-text: #3A2C28;
+  --lf-invited-chip-bg: #FDF1D8;
+  --lf-invited-chip-text: #7A4F00;
+  --lf-danger: #B3261E;
+  --lf-danger-bg: #FDF3F2;
+  --lf-danger-border: #F2CFCB;
+  --lf-warning-banner-bg: #FEF8EC;
+  --lf-warning-banner-border: #F1DFB4;
+  --lf-info-banner-bg: #F7F4F1;
+  --lf-step-pending: #E6DFD9;
+  --lf-locked-bg: #FCFAF8;
+  --lf-scrim: rgba(31, 23, 21, .24);
+  --lf-shadow-card-hover: var(--lf-shadow-md);
+  --lf-shadow-sheet: -12px 0 40px rgba(31, 23, 21, .14);
+  --lf-space-2: 2px;
+  --lf-space-4: 4px;
+  --lf-space-6: 6px;
+  --lf-space-8: 8px;
+  --lf-space-10: 10px;
+  --lf-space-12: 12px;
+  --lf-space-14: 14px;
+  --lf-space-16: 16px;
+  --lf-space-20: 20px;
+  --lf-space-24: 24px;
+  --lf-space-32: 32px;
+  --lf-space-40: 40px;
+  --lf-radius-card: 12px;
+  --lf-radius-control: 8px;
+  --lf-radius-input: 9px;
+  --lf-radius-icon-tile: 9px;
+  --lf-radius-icon-tile-mobile: 7px;
+  --lf-radius-chip: 6px;
+  --lf-radius-pill: 999px;
+  --lf-type-page: 28px;
+  --lf-type-page-line: 34px;
+  --lf-type-mobile-title: 34px;
+  --lf-type-mobile-title-line: 41px;
+  --lf-type-stat: 22px;
+  --lf-type-section: 17px;
+  --lf-type-sheet-title: 20px;
+  --lf-type-body: 15px;
+  --lf-type-body-line: 22px;
+  --lf-type-nav: 14px;
+  --lf-type-button: 14px;
+  --lf-type-meta: 13px;
+  --lf-type-meta-line: 18px;
+  --lf-type-group: 13px;
+  --lf-type-sidebar-group: 11px;
+  --lf-page-block-gap: 24px;
+  --lf-high-contrast-ink: #000000;
 }
 
 html, body { background: var(--lf-canvas); color: var(--lf-text); }
@@ -2979,13 +3036,13 @@ textarea {
   .lf-shell { display: block; min-height: 100vh; }
   .lf-nav-wrap { display: none; }
   .lf-topbar { position: sticky; top: 0; z-index: 40; display: grid; grid-template-columns: 36px minmax(0, 1fr) 36px; min-height: 60px; padding: 10px 16px; gap: 8px; }
-  .lf-topbar-main { display: block; grid-column: 2; grid-row: 1; min-width: 0; }
+  .lf-topbar-main { display: flex; align-items: center; gap: 8px; grid-column: 2; grid-row: 1; min-width: 0; }
   .lf-global-search { position: absolute; inset: 8px 52px 8px 52px; z-index: 2; display: none; width: auto; height: 44px; }
   .lf-global-search.is-mobile-open { display: flex; }
   .lf-global-search kbd { display: none; }
   .lf-global-search-close { display: inline-flex; align-items: center; justify-content: center; }
   .lf-mobile-search-toggle { grid-column: 3; grid-row: 1; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; color: var(--lf-ink); }
-  .lf-topbar-heading { display: block; grid-column: 2; grid-row: 1; }
+  .lf-topbar-heading { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; grid-column: 2; grid-row: 1; }
   .lf-topbar-heading .lf-breadcrumbs { display: none; }
   .lf-topbar-heading .lf-topbar-title { display: block; margin: 0; overflow: hidden; color: var(--lf-text); font-size: 17px; font-weight: 600; line-height: 22px; text-overflow: ellipsis; white-space: nowrap; }
   .lf-topbar-back { display: none; }
@@ -7175,11 +7232,11 @@ textarea {
   .lf-shell { display: block; min-height: 100vh; }
   .lf-nav-wrap { display: none; }
   .lf-topbar { position: sticky; top: 0; z-index: 40; display: grid; grid-template-columns: 36px minmax(0, 1fr) 36px; min-height: 60px; padding: 10px 16px; gap: 8px; }
-  .lf-topbar-main { display: block; grid-column: 2; grid-row: 1; min-width: 0; }
+  .lf-topbar-main { display: flex; align-items: center; gap: 8px; grid-column: 2; grid-row: 1; min-width: 0; }
   .lf-global-search { position: absolute; inset: 8px 52px 8px 52px; z-index: 2; display: none; width: auto; height: 44px; }
   .lf-global-search.is-mobile-open { display: flex; }
   .lf-global-search kbd { display: none; }
-  .lf-topbar-heading { display: block; grid-column: 2; grid-row: 1; }
+  .lf-topbar-heading { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; grid-column: 2; grid-row: 1; }
   .lf-topbar-heading .lf-topbar-title { overflow: hidden; font-size: 17px; line-height: 22px; text-overflow: ellipsis; white-space: nowrap; }
   .lf-topbar-actions { grid-column: 1; grid-row: 1; display: block; justify-self: start; }
   .lf-topbar-actions > .lf-topbar-security, .lf-topbar-actions > .lf-personal-account-menu { display: none; }
@@ -7324,7 +7381,7 @@ textarea {
   .lf-page-stack { gap: 20px; }
   .lf-dashboard-entry-prompt { display: block; }
   .lf-dashboard-shell > .lf-ui-page-header { display: none; }
-  .lf-topbar-heading { display: none; }
+  .lf-topbar-heading { display: flex; }
   .lf-dashboard-mobile-home { display: grid; gap: 16px; }
   .lf-dashboard-mobile-home { order: -1; }
   .lf-dashboard-mobile-home-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }

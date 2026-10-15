@@ -53,9 +53,8 @@ test("linked Fortress surfaces preserve relationship and access separation", () 
 test("linked record navigation and dashboard copy do not offer owner creation controls", () => {
   const access = fs.readFileSync(path.join(root, "lib/access-control/viewerAccess.ts"), "utf8");
   const dashboard = fs.readFileSync(path.join(root, "app/(app)/dashboard/page.tsx"), "utf8");
-  const summaryCard = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/DashboardAssetSummaryCard.tsx"), "utf8");
   assert.match(access, /assignedSectionKeys\.length === 0 && section !== "dashboard"/);
-  assert.match(dashboard, /Only records explicitly shared with you are shown here/);
-  assert.match(dashboard, /showAddAction=\{viewer\.mode !== "linked"\}/);
-  assert.match(summaryCard, /showAddAction = true/);
+  assert.match(access, /loadAssetSectionKeys\(client, selectedGrant\.owner_user_id, assignedAssetIds\)/);
+  assert.match(dashboard, /area\.visible && \(viewer\.mode !== "linked" \|\| area\.count > 0\)/);
+  assert.match(dashboard, /canAddRecords=\{viewer\.mode !== "linked"\}/);
 });

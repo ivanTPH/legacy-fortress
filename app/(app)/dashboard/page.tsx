@@ -2,15 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import DashboardAssetSummaryCard from "../components/dashboard/DashboardAssetSummaryCard";
 import ActionQueuePanel, { buildActionCentrePreview, getActionCentreActionCount, type ActionCentreContext, type ActionCentreTask } from "../components/dashboard/ActionQueuePanel";
 import DashboardActionSummary from "../components/dashboard/DashboardActionSummary";
+import V3DashboardOverview, { type VaultAreaSummary } from "../components/dashboard/V3DashboardOverview";
 import ActionCentreEntryPrompt from "../components/dashboard/ActionCentreEntryPrompt";
 import Icon from "../../../components/ui/Icon";
-import { LFPageHeader, LFStatsStrip } from "../../../components/ui/LFDesignSystem";
+import { Card, PageHeader } from "../../../components/ui/V3Primitives";
 import AttachmentGallery, { type AttachmentGalleryItem } from "../../../components/documents/AttachmentGallery";
 import { FormField, NumberInput, TextInput } from "../../../components/forms/asset/AssetFormControls";
 import { formatCurrency } from "../../../lib/currency";
+import type { CollaboratorRole } from "../../../lib/access-control/roles";
 import {
   buildFinanceSummary,
   buildBucketSummary,
@@ -20,7 +21,6 @@ import {
   getLegalDocuments,
   latestTimestamp,
 } from "../../../lib/dashboard/summary";
-import { shouldObscureSection, type AccessActivationStatus, type CollaboratorRole } from "../../../lib/access-control/roles";
 import { canViewPath, filterAssetIdsForViewer, filterRecordIdsForViewer } from "../../../lib/access-control/viewerAccess";
 import { waitForActiveUser } from "../../../lib/auth/session";
 import { supabase } from "../../../lib/supabaseClient";
@@ -407,7 +407,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const actionCentreOnly = pathname === "/action-centre";
+  const actionCentreOnly = pathname === "/action-centre" || pathname === "/actions";
   const { viewer, clearLinkedGrant } = useViewerAccess();
   const { preferences, setPreferences } = useVaultPreferences();
 
@@ -458,8 +458,6 @@ export default function DashboardPage() {
   });
   const [guidanceBusyKey, setGuidanceBusyKey] = useState<string | null>(null);
 
-  const viewerRole: CollaboratorRole = viewer.viewerRole;
-  const viewerActivation: AccessActivationStatus = viewer.activationStatus;
   const canViewFinancial = canViewPath("/finances", viewer);
   const canViewLegal = canViewPath("/legal", viewer);
   const canViewProperty = canViewPath("/property", viewer);
@@ -483,18 +481,12 @@ export default function DashboardPage() {
     () => assetBuckets.finance.filter((row) => String(row.category_key ?? "").trim() === "bank").length,
     [assetBuckets.finance],
   );
-  const debtRows = useMemo(
-    () => assetBuckets.finance.filter((row) => `${row.category_key ?? ""} ${row.subtype_key ?? ""} ${row.title ?? ""}`.toLowerCase().includes("debt") || `${row.category_key ?? ""} ${row.subtype_key ?? ""} ${row.title ?? ""}`.toLowerCase().includes("loan")),
-    [assetBuckets.finance],
-  );
-  const debtTotal = debtRows.reduce((sum, row) => sum + getAssetValueMajor(row), 0);
   const propertyRecordCount = assetBuckets.property.length;
   const businessRecordCount = assetBuckets.business.length;
   const digitalRecordCount = assetBuckets.digital.length;
   const possessionsRows = assetBuckets.possessions;
   const possessionsRecordCount = possessionsRows.length;
   const legalRecordCount = legalAssets.length + legalDocuments.length;
-  const hasVisibleOverviewCard = viewer.mode !== "linked" || financeRecordCount > 0 || legalRecordCount > 0 || propertyRecordCount > 0 || businessRecordCount > 0 || digitalRecordCount > 0 || possessionsRecordCount > 0;
   const willRecordCount = useMemo(
     () => legalAssets.filter(isWillAsset).length + legalDocuments.filter(isWillDocument).length,
     [legalAssets, legalDocuments],
@@ -1576,14 +1568,33 @@ const legalSummary = useMemo(() => {
     );
   }
 
+  const v3Areas: VaultAreaSummary[] = ([
+    { title: "Finances", icon: "account_balance_wallet", href: "/finances", count: financeRecordCount, updatedAt: financialSummary.addedAt, visible: showFinancialCard },
+    { title: "Legal", icon: "gavel", href: "/legal", count: legalRecordCount, updatedAt: legalSummary.addedAt, visible: showLegalCard },
+    { title: "Property", icon: "home", href: "/property", count: propertyRecordCount, updatedAt: propertySummary.addedAt, visible: showPropertyCard },
+    { title: "Business", icon: "work", href: "/business", count: businessRecordCount, updatedAt: businessSummary.addedAt, visible: showBusinessCard },
+    { title: "Digital", icon: "devices", href: "/vault/digital", count: digitalRecordCount, updatedAt: digitalSummary.addedAt, visible: showDigitalCard },
+    { title: "Possessions", icon: "inventory_2", href: "/vault/personal", count: possessionsRecordCount, updatedAt: possessionsSummary.addedAt, visible: showPossessionsCard },
+  ] as (VaultAreaSummary & { visible: boolean })[]).filter((area) => area.visible && (viewer.mode !== "linked" || area.count > 0));
+  const recordIds = new Set([
+    ...assetRows.filter((row) => !row.deleted_at && !row.archived_at && row.status !== "archived" && getDashboardAssetBucket(row) !== "tasks").map((row) => `asset:${row.id}`),
+    ...sectionEntryRows.map((row) => `record:${row.id}`),
+    ...documentRows.filter((row) => !row.asset_id).map((row) => `document:${row.id}`),
+  ]);
+  const valuedRows = new Map(assetRows.filter((row) => !row.deleted_at && !row.archived_at && row.status !== "archived" && getDashboardAssetBucket(row) !== "tasks" && getDashboardAssetValueMajor(row) !== 0)
+    .map((row) => [row.id, row]));
+  const valuedCurrencies = new Set([...valuedRows.values()].map((row) => row.currency_code || currency));
+  const recordedValue = valuedRows.size === 0 ? "Not recorded" : valuedCurrencies.size > 1 ? "Multiple currencies"
+    : formatCurrency([...valuedRows.values()].reduce((sum, row) => sum + getDashboardAssetValueMajor(row), 0), currency);
+
   if (actionCentreOnly) {
     if (viewer.mode === "linked") {
       return <div className="lf-action-centre-page" role="status">Returning you to My Fortress before opening your personal Action Centre...</div>;
     }
     return (
-      <div className="lf-action-centre-page" style={{ display: "grid", gap: 14 }}>
-        <LFPageHeader title="Action Centre" description="Things worth your attention, with a direct path to each next step." />
-        <ActionQueuePanel
+      <div className="lf-action-centre-page lf-v3-area-page">
+        <PageHeader title="Action Centre" description="Things worth your attention, with a direct path to each next step." />
+        <Card className="lf-v3-actions-workspace"><ActionQueuePanel
           items={dashboardState.actions.items}
           context={dashboardState.actions.context}
           guidanceItems={guidanceItems}
@@ -1591,7 +1602,7 @@ const legalSummary = useMemo(() => {
           onAction={handleAction}
           onGuidanceDecision={(item, action) => void handleGuidanceDecision(item, action)}
           onGuidanceApplicability={(item, state) => void handleGuidanceApplicability(item, state)}
-        />
+        /></Card>
         {reviewPanel ? <section className="lf-action-centre-follow-up" role="status"><strong>{reviewPanel.title}</strong><p>{reviewPanel.description}</p><button type="button" onClick={() => router.push(reviewPanel.href)}>{reviewPanel.ctaLabel}</button></section> : null}
       </div>
     );
@@ -1599,18 +1610,11 @@ const legalSummary = useMemo(() => {
 
   return (
     <div className="lf-dashboard-shell">
-      <LFPageHeader
-        title="Dashboard"
-        description="Your recorded information, in one place."
-        action={viewer.mode === "linked" ? undefined : { label: "Add record", href: "/add-to-fortress", icon: "add" }}
-      />
-      {viewer.mode !== "linked" ? (
-        <LFStatsStrip items={[
-          { label: "Records", value: String(financeRecordCount + legalRecordCount + propertyRecordCount + businessRecordCount + digitalRecordCount + possessionsRecordCount) },
-          { label: "People", value: String(contactRows.length) },
-          { label: "Open actions", value: String(getActionCentreActionCount(dashboardState.actions.items, dashboardState.actions.context, guidanceItems)) },
-        ]} />
-      ) : null}
+      <V3DashboardOverview mode="dashboard" loading={loading} areas={v3Areas} recordCount={recordIds.size}
+        peopleCount={viewer.mode === "linked" ? undefined : contactRows.length} recordedValue={recordedValue}
+        actions={[]} tasks={[]} showActions={false}
+        actionCount={viewer.mode === "linked" ? undefined : getActionCentreActionCount(dashboardState.actions.items, dashboardState.actions.context, guidanceItems)}
+        canAddRecords={viewer.mode !== "linked"} />
       {status ? (
         isPlanLimitStatus(status) ? (
           <button
@@ -1627,7 +1631,7 @@ const legalSummary = useMemo(() => {
           <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div>
         )
       ) : null}
-      {entryPromptVisible && actionCentrePreview ? (
+      {viewer.mode !== "linked" && entryPromptVisible && actionCentrePreview ? (
         <div className="lf-dashboard-entry-prompt">
           <ActionCentreEntryPrompt
             item={actionCentrePreview}
@@ -1643,22 +1647,6 @@ const legalSummary = useMemo(() => {
           />
         </div>
       ) : null}
-      <section className="lf-dashboard-mobile-home" aria-label="Home summary">
-        <div className="lf-dashboard-mobile-home-heading">
-          <h1>Home</h1>
-          <a className="lf-dashboard-mobile-add" href="/add-to-fortress" aria-label="Add record"><Icon name="add" size={22} /></a>
-        </div>
-        <section className="lf-dashboard-mobile-value-card" aria-label="Total recorded value">
-          <span>Total recorded value</span>
-          <strong>{financialSummary.totalMajor > 0 ? formatCurrency(financialSummary.totalMajor, currency) : "No value recorded yet"}</strong>
-          {financialSummary.addedAt ? <small>Updated {new Date(financialSummary.addedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</small> : null}
-          <div className="lf-dashboard-mobile-value-stats">
-            <span><strong>{financeRecordCount + legalRecordCount + propertyRecordCount + businessRecordCount + digitalRecordCount + possessionsRecordCount}</strong>Records</span>
-            <span><strong>{contactRows.length}</strong>People</span>
-            <span><strong>{formatCurrency(debtTotal, currency)}</strong>Debts</span>
-          </div>
-        </section>
-      </section>
       {loading ? <div style={{ color: "#6b7280" }}>Loading dashboard summary...</div> : null}
       {searchQuery ? (
           <section style={searchResultsPanelStyle} aria-label="Vault search results">
@@ -1726,141 +1714,15 @@ const legalSummary = useMemo(() => {
           </div>
         </section>
       ) : null}
-      <section
-        className="lf-dashboard-overview-panel"
-      >
-        <div className="lf-dashboard-overview-heading">
-          <div className="lf-dashboard-overview-title-row">
-            <h2>{viewer.mode === "linked" ? "Shared information" : "Your vault"}</h2>
-          </div>
-          {viewer.mode === "linked" ? <p className="lf-dashboard-overview-copy">Only information explicitly shared through this relationship is shown.</p> : null}
-        </div>
-        {hasVisibleOverviewCard && (showFinancialCard || showLegalCard || showPropertyCard || showBusinessCard || showDigitalCard || showPossessionsCard) ? (
-        <div className="lf-content-grid lf-dashboard-overview-grid">
-          {showFinancialCard && (viewer.mode !== "linked" || financeRecordCount > 0) ? (
-            <DashboardAssetSummaryCard
-              icon={<Icon name="finances" size={22} />}
-              title="Finances"
-              href="/finances"
-              addedAt={financialSummary.addedAt}
-              value={String(financeRecordCount)}
-              detail={`finance record${financeRecordCount === 1 ? "" : "s"}`}
-              obscured={shouldObscureSection(viewerRole, "financial", viewerActivation)}
-              inlineSummary
-              hideItems
-              referenceTile
-              addHref="/finances"
-              addLabel="Add financial record"
-              showAddAction={viewer.mode !== "linked"}
-            />
-          ) : null}
-
-          {showLegalCard && (viewer.mode !== "linked" || legalRecordCount > 0) ? (
-            <DashboardAssetSummaryCard
-              icon={<Icon name="legal" size={22} />}
-              title="Legal"
-              href="/legal"
-              addedAt={legalSummary.addedAt}
-              value={String(legalRecordCount)}
-              detail={`legal record${legalRecordCount === 1 ? "" : "s"}`}
-              obscured={shouldObscureSection(viewerRole, "legal", viewerActivation)}
-              inlineSummary
-              hideItems
-              referenceTile
-              addHref="/legal/wills?add=1"
-              addLabel="Add legal record"
-              showAddAction={viewer.mode !== "linked"}
-            />
-          ) : null}
-
-          {showPropertyCard && (viewer.mode !== "linked" || propertyRecordCount > 0) ? (
-            <DashboardAssetSummaryCard
-              icon={<Icon name="property" size={22} />}
-              title="Property"
-              href="/property"
-              addedAt={propertySummary.addedAt}
-              value={String(propertyRecordCount)}
-              detail={`property record${propertyRecordCount === 1 ? "" : "s"}`}
-              obscured={shouldObscureSection(viewerRole, "property", viewerActivation)}
-              inlineSummary
-              hideItems
-              referenceTile
-              addHref="/property?add=1"
-              addLabel="Add property"
-              showAddAction={viewer.mode !== "linked"}
-            />
-          ) : null}
-
-          {showBusinessCard && (viewer.mode !== "linked" || businessRecordCount > 0) ? (
-            <DashboardAssetSummaryCard
-              icon={<Icon name="business" size={22} />}
-              title="Business"
-              href="/business"
-              addedAt={businessSummary.addedAt}
-              value={String(businessRecordCount)}
-              detail={`business record${businessRecordCount === 1 ? "" : "s"}`}
-              obscured={shouldObscureSection(viewerRole, "business", viewerActivation)}
-              inlineSummary
-              hideItems
-              referenceTile
-              addHref="/business?add=1"
-              addLabel="Add business interest"
-              showAddAction={viewer.mode !== "linked"}
-            />
-          ) : null}
-
-          {showDigitalCard && (viewer.mode !== "linked" || digitalRecordCount > 0) ? (
-            <DashboardAssetSummaryCard
-              icon={<Icon name="digital" size={22} />}
-              title="Digital"
-              href="/vault/digital"
-              addedAt={digitalSummary.addedAt}
-              value={String(digitalRecordCount)}
-              detail={`digital record${digitalRecordCount === 1 ? "" : "s"}`}
-              obscured={shouldObscureSection(viewerRole, "digital", viewerActivation)}
-              inlineSummary
-              hideItems
-              referenceTile
-              addHref="/vault/digital/records?add=1&digitalType=__other"
-              addLabel="Add digital account"
-              showAddAction={viewer.mode !== "linked"}
-            />
-          ) : null}
-
-          {showPossessionsCard && (viewer.mode !== "linked" || possessionsRecordCount > 0) ? (
-            <DashboardAssetSummaryCard
-              icon={<Icon name="possessions" size={22} />}
-              title="Possessions"
-              href="/vault/personal"
-              addedAt={possessionsSummary.addedAt}
-              value={String(possessionsRecordCount)}
-              detail={`possession record${possessionsRecordCount === 1 ? "" : "s"}`}
-              inlineSummary
-              hideItems
-              referenceTile
-              addHref="/vault/personal/records?add=1&possessionCategory=other"
-              addLabel="Add possession"
-              showAddAction={viewer.mode !== "linked"}
-            />
-          ) : null}
-
-        </div>
-        ) : (
-          <div style={searchEmptyStateStyle}>
-            {viewer.mode === "linked" ? `No Vault information is currently shared with you. You are securely linked to ${viewer.accountHolderName}'s Fortress, but linking does not provide access to private records.` : "Your dashboard overview is currently hidden by My Vault preferences. Re-enable categories or subsections in Account / My Vault at any time."}
-          </div>
-        )}
-      </section>
-
-      <DashboardActionSummary
+      {viewer.mode !== "linked" ? <DashboardActionSummary
         items={dashboardState.actions.items}
         context={dashboardState.actions.context}
         guidanceItems={guidanceItems}
         onAction={handleAction}
         onGuidanceApplicability={(item, state) => void handleGuidanceApplicability(item, state)}
         excludedActionKeys={entryPromptActionKey ? [entryPromptActionKey] : []}
-      />
-      {reviewPanel ? (
+      /> : null}
+      {viewer.mode !== "linked" && reviewPanel ? (
         <section className="lf-dashboard-review-panel" style={reviewPanelStyle(reviewPanel.tone)} aria-live="polite" aria-label="Dashboard review panel">
           <div style={commandCardHeaderStyle}>
             <span style={commandIconStyle(reviewPanel.tone)}>

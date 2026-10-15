@@ -249,8 +249,14 @@ export async function loadViewerAccessState(
   const linkedRecordIds = ((recordLinksRes as { data?: Array<{ record_id?: string | null }> | null }).data ?? [])
     .map((row) => String(row.record_id ?? "").trim())
     .filter(Boolean);
+  const assignedAssetIds = Array.from(new Set([...permissionsOverride.assetIds, ...linkedAssetIds]));
   const recordSectionKeys = linkedRecordIds.length
     ? await loadRecordSectionKeys(client, selectedGrant.owner_user_id, linkedRecordIds)
+    : [];
+  // Resolve the assigned IDs through this caller's RLS view. Legacy contact links
+  // may not carry a section key, and a role alone must not reveal an area.
+  const linkedAssetSectionKeys = assignedAssetIds.length
+    ? await loadAssetSectionKeys(client, selectedGrant.owner_user_id, assignedAssetIds)
     : [];
   const assetSectionKeys = ((assetLinksRes as { data?: Array<{ section_key?: string | null }> | null }).data ?? [])
     .map((row) => normalizeSectionKey(row.section_key))
@@ -258,6 +264,7 @@ export async function loadViewerAccessState(
   const assignedSectionKeys = Array.from(new Set([
     ...permissionsOverride.allowedSections,
     ...assetSectionKeys,
+    ...linkedAssetSectionKeys,
     ...recordSectionKeys,
   ]));
 
@@ -278,7 +285,7 @@ export async function loadViewerAccessState(
     requiredIdentityLevel,
     vaultLifecycleState,
     permissionsOverride,
-    assignedAssetIds: Array.from(new Set([...permissionsOverride.assetIds, ...linkedAssetIds])),
+    assignedAssetIds,
     assignedRecordIds: Array.from(new Set([...permissionsOverride.recordIds, ...linkedRecordIds])),
     editableAssetIds: permissionsOverride.editableAssetIds,
     editableRecordIds: permissionsOverride.editableRecordIds,
@@ -337,8 +344,8 @@ export function mapPathnameToSectionKey(pathname: string): SectionKey | null {
   if (value === "/dashboard" || value === "/app/dashboard") return "dashboard";
   if (value.startsWith("/profile")) return "profile";
   if (value.startsWith("/contacts")) return "personal";
-  if (value.startsWith("/personal") || value.startsWith("/trust")) return "personal";
-  if (value.startsWith("/legal")) return "legal";
+  if (value.startsWith("/personal") || value.startsWith("/trust") || value.startsWith("/vault/personal")) return "personal";
+  if (value.startsWith("/legal") || value.startsWith("/vault/legal")) return "legal";
   if (value.startsWith("/property") || value.startsWith("/vault/property")) return "property";
   if (value.startsWith("/business") || value.startsWith("/vault/business")) return "business";
   if (value.startsWith("/finances") || value.startsWith("/vault/financial")) return "financial";
@@ -349,12 +356,13 @@ export function mapPathnameToSectionKey(pathname: string): SectionKey | null {
 
 export function canViewPath(pathname: string, viewer: ViewerAccessState) {
   if (viewer.mode === "linked" && pathname.startsWith("/contact-wallet")) return true;
-  if (viewer.mode === "linked" && ["/action-centre", "/contacts", "/profile", "/add-to-fortress", "/account", "/settings"].some((path) => pathname === path || pathname.startsWith(`${path}/`))) return false;
+  if (viewer.mode === "linked" && ["/actions", "/action-centre", "/contacts", "/profile", "/add", "/add-to-fortress", "/account", "/settings"].some((path) => pathname === path || pathname.startsWith(`${path}/`))) return false;
   if (viewer.mode === "linked" && !isProtectedGrantActive(viewer.activationStatus)) return false;
   const section = mapPathnameToSectionKey(pathname);
   if (!section) return true;
   if (!canAccessSection(viewer.viewerRole, section, "view", viewer.activationStatus)) return false;
   if (viewer.mode !== "linked") return true;
+  if (section !== "dashboard" && viewer.identityAssuranceLevel < viewer.requiredIdentityLevel) return false;
   if (pathname.startsWith("/account") || pathname.startsWith("/settings")) return false;
   if (viewer.assignedSectionKeys.length === 0 && section !== "dashboard") return false;
   if (viewer.assignedSectionKeys.length > 0 && section !== "dashboard" && !viewer.assignedSectionKeys.includes(section)) {
@@ -535,6 +543,18 @@ async function loadRecordSectionKeys(client: AnySupabaseClient, ownerUserId: str
     .select("section_key")
     .eq("owner_user_id", ownerUserId)
     .in("id", recordIds);
+  if (result.error) return [];
+  return ((result.data ?? []) as Array<{ section_key?: string | null }>)
+    .map((row) => normalizeSectionKey(row.section_key))
+    .filter((value): value is SectionKey => Boolean(value));
+}
+
+async function loadAssetSectionKeys(client: AnySupabaseClient, ownerUserId: string, assetIds: string[]) {
+  const result = await client
+    .from("assets")
+    .select("section_key")
+    .eq("owner_user_id", ownerUserId)
+    .in("id", assetIds);
   if (result.error) return [];
   return ((result.data ?? []) as Array<{ section_key?: string | null }>)
     .map((row) => normalizeSectionKey(row.section_key))

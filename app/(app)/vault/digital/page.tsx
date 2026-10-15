@@ -1,7 +1,9 @@
 "use client";
 
 import CanonicalAssetOverviewGrid, { metadataToken, type CanonicalAssetOverviewTile } from "../../components/dashboard/CanonicalAssetOverviewGrid";
-import { LFPageHeader } from "../../../../components/ui/LFDesignSystem";
+import Link from "next/link";
+import { useViewerAccess } from "../../../../components/access/ViewerAccessContext";
+import { PageHeader } from "../../../../components/ui/V3Primitives";
 
 const digitalTiles: CanonicalAssetOverviewTile[] = [
   {
@@ -76,17 +78,12 @@ const digitalTiles: CanonicalAssetOverviewTile[] = [
 ];
 
 export default function DigitalVaultOverviewPage() {
+  const { viewer } = useViewerAccess();
   return (
-    <section style={{ display: "grid", gap: 14 }}>
-      <LFPageHeader
-        title="Digital"
-        description="Keep online accounts, subscriptions, platforms, recovery contacts, and access notes clear for trusted people later."
-        action={{ label: "Add record", href: "/vault/digital/records?add=1&digitalType=__other", icon: "add" }}
-      />
-
-      <div className="lf-content-grid">
-        <CanonicalAssetOverviewGrid tiles={digitalTiles} />
-      </div>
+    <section className="lf-v3-area-page">
+      <PageHeader title="Digital" description="Keep online accounts, subscriptions, platforms and recovery contacts clear for trusted people."
+        action={viewer.mode === "linked" ? undefined : <Link className="lf-v3-button lf-v3-button--primary" href={digitalTiles[0].addHref}>Add record</Link>} />
+      <CanonicalAssetOverviewGrid tiles={digitalTiles} />
     </section>
   );
 }

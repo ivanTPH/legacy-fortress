@@ -37,6 +37,7 @@ import { useViewerAccess } from "../access/ViewerAccessContext";
 import Icon from "../ui/Icon";
 import { IconButton } from "../ui/IconButton";
 import InfoTip from "../ui/InfoTip";
+import { PageHeader } from "../ui/V3Primitives";
 import DocumentPreviewDialog, { type DocumentPreviewDialogItem } from "../documents/DocumentPreviewDialog";
 import { ROLE_RULES, type AccessActivationStatus, type CollaboratorRole, type SectionKey } from "../../lib/access-control/roles";
 
@@ -582,9 +583,9 @@ export default function ContactsNetworkWorkspace() {
   }
 
   return (
-    <section style={{ display: "grid", gap: 14 }}>
-      {!addContactGroupKey ? <h1 style={{ margin: 0, fontSize: 28, color: "#1f1712" }}>People I Trust</h1> : null}
-      {!addContactGroupKey ? <section style={panelStyle}>
+    <section className="lf-v3-people-page">
+      {!addContactGroupKey ? <PageHeader title="People I Trust" description="Keep the people and roles connected to your Fortress clear." /> : null}
+      {!addContactGroupKey ? <section className="lf-v3-people-toolbar">
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <label style={contactSearchFieldStyle}>
             <span style={contactSearchLabelStyle}>
@@ -682,7 +683,7 @@ export default function ContactsNetworkWorkspace() {
                         aria-label={`Open ${contact.full_name || "person"}`}
                       >
                           <span className="lf-contact-summary-person">
-                            <span className="lf-contact-avatar" aria-hidden="true">{contact.full_name.split(/\s+/).filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "LF"}</span>
+                            <span className="lf-contact-avatar lf-v3-person-avatar" aria-hidden="true">{contact.full_name.split(/\s+/).filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "LF"}</span>
                             <span style={{ display: "grid", gap: 3, minWidth: 0, textAlign: "left" }}>
                               <strong style={contactSummaryNameStyle}>{contact.full_name || "Unnamed person"}</strong>
                               <span style={contactSummaryRelationshipStyle}>{formatContactRoleLine(contact)}</span>

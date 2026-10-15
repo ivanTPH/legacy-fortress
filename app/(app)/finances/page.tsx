@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import Icon from "../../../components/ui/Icon";
-import { LFPageHeader, LFStatsStrip } from "../../../components/ui/LFDesignSystem";
+import { Card, IconTile, PageHeader, Row } from "../../../components/ui/V3Primitives";
+import { formatCurrency } from "../../../lib/currency";
+import { latestTimestamp } from "../../../lib/dashboard/summary";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
 import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
 import { waitForActiveUser } from "../../../lib/auth/session";
@@ -12,12 +13,13 @@ import { supabase } from "../../../lib/supabaseClient";
 import { resolveWalletContextForRead } from "../../../lib/canonicalPersistence";
 import {
   buildFinanceCategorySummary,
-  getDashboardAssetValueMajor,
-  latestTimestamp,
+  getAssetsForFinanceCategory,
+  getFinanceRowCurrencyCode,
   type DashboardAssetRow,
   type FinanceCategoryKey,
 } from "../../../lib/dashboard/summary";
 import { loadFinanceDashboardRows } from "../../../lib/dashboard/financeRows";
+import { filterFinanceDashboardRowsForViewer } from "../../../lib/dashboard/financeViewerRows";
 import { isVaultSubsectionEnabled, type VaultSubsectionKey } from "../../../lib/vaultPreferences";
 import {
   shouldRefreshDashboardForAssetMutation,
@@ -87,7 +89,7 @@ export default function FinancesOverviewPage() {
           return;
         }
 
-        const rows = (assetsRes.data ?? []) as DashboardAssetRow[];
+        const rows = filterFinanceDashboardRowsForViewer((assetsRes.data ?? []) as DashboardAssetRow[], viewer);
         setAssetRows(rows);
         const firstCurrency =
           rows.find((row) => row.currency_code)?.currency_code
@@ -109,7 +111,7 @@ export default function FinancesOverviewPage() {
     return () => {
       mounted = false;
     };
-  }, [refreshToken, router, viewer.targetOwnerUserId]);
+  }, [refreshToken, router, viewer]);
 
   const summaries = useMemo(
     () => FINANCE_SECTION_CARDS.map((section) => ({
@@ -118,123 +120,54 @@ export default function FinancesOverviewPage() {
         categoryKey: section.key,
         currency,
         href: section.href,
-        itemLimit: 20,
+        itemLimit: Number.POSITIVE_INFINITY,
       }),
     })).filter((section) => isVaultSubsectionEnabled(preferences, section.preferenceKey)),
     [assetRows, currency, preferences],
   );
-  const bankRecordCount = useMemo(
-    () => assetRows.filter((row) => String(row.category_key ?? "").trim() === "bank").length,
-    [assetRows],
-  );
-  const recommendedFinanceAction = bankRecordCount === 0
-    ? {
-        href: "/finances/bank?add=1",
-        label: "Add your first account",
-        description: "Start with a bank account so your financial picture has a clear foundation.",
-      }
-    : assetRows.length === 0
-      ? {
-          href: "/finances/bank?add=1",
-          label: "Add your first finance record",
-          description: "Choose one financial area and add what you know now.",
-        }
-      : null;
-  const totalRecorded = assetRows.reduce((sum, row) => sum + getDashboardAssetValueMajor(row), 0);
-  const lastUpdated = latestTimestamp(assetRows.map((row) => row.updated_at ?? row.created_at));
-  const formatUpdatedDate = (value: string | null) => value
-    ? new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value))
-    : "Not yet";
-  const sectionUnit = (section: FinanceSectionCard, count: number) => {
-    if (section.key === "bank") return count === 1 ? "account" : "accounts";
-    const singular = section.title.endsWith("s") ? section.title.slice(0, -1) : section.title;
-    return count === 1 ? singular.toLowerCase() : section.title.toLowerCase();
-  };
+  const populated = summaries.filter((section) => section.summary.includedCount > 0);
+  const empty = summaries.filter((section) => section.summary.includedCount === 0);
+  const recordCount = populated.reduce((sum, section) => sum + section.summary.includedCount, 0);
+  const total = populated.reduce((sum, section) => sum + section.summary.totalMajor, 0);
+  const currencies = new Set(assetRows.map((row) => getFinanceRowCurrencyCode(row) || currency));
+  const updatedAt = latestTimestamp(populated.map((section) => section.summary.addedAt));
+  const bankRecordCount = assetRows.filter((row) => String(row.category_key ?? "").trim() === "bank").length;
+  const recommendedFinanceAction = bankRecordCount === 0 && viewer.mode !== "linked"
+    ? { href: "/finances/bank?add=1", label: "Add your first account", description: "Start with a bank account so your financial picture has a clear foundation." }
+    : null;
 
-  const populatedSections = summaries.filter((section) => section.summary.items.length > 0);
-  const emptySections = summaries.filter((section) => section.summary.items.length === 0);
-
-  return (
-    <section className="lf-finance-page">
-      <LFPageHeader
-        title="Finances"
-        description="Record your bank accounts, savings, pensions, and policies so your estate has a clear financial picture."
-        action={{ label: "Add record", href: "/finances/bank?add=1", icon: "add" }}
-      />
-
-      {!loading ? (
-        <LFStatsStrip items={[
-          { label: "Total recorded", value: new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(totalRecorded) },
-          { label: "Records", value: String(assetRows.length), suffix: `in ${summaries.filter((section) => section.summary.items.length > 0).length} of ${summaries.length} categories` },
-          { label: "Last updated", value: formatUpdatedDate(lastUpdated) },
-        ]} />
-      ) : null}
-
-      {status ? <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div> : null}
-      {loading ? <div className="lf-loading-note" role="status">Loading your finances...</div> : null}
-      {!loading && recommendedFinanceAction && !assetRows.length ? (
-        <Link href={recommendedFinanceAction.href} className="lf-finance-recommended-action">
-          <span className="lf-finance-recommended-icon"><Icon name="arrow_forward" size={17} /></span>
-          <span><strong>{recommendedFinanceAction.label}</strong><small>{recommendedFinanceAction.description}</small></span>
-        </Link>
-      ) : null}
-
-      {!loading && summaries.length ? (
-        <div className="lf-finance-sections">
-          {populatedSections.map((section) => (
-            <section key={section.href} className="lf-finance-section-card" aria-labelledby={`finance-${section.key}`}>
-              <div className="lf-finance-section-heading">
-                <span className="lf-finance-section-icon"><Icon name={section.icon} size={20} /></span>
-                <span><h2 id={`finance-${section.key}`}>{section.title}</h2><small>{section.summary.includedCount} {sectionUnit(section, section.summary.includedCount)}</small></span>
-                <strong>{section.summary.totalMajor > 0 ? new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(section.summary.totalMajor) : ""}</strong>
-                <Link href={`${section.href}?add=1`} className="lf-finance-add" aria-label={`Add ${section.title.toLowerCase()}`}><Icon name="add" size={20} /></Link>
-              </div>
-              <div className="lf-finance-record-list">
-                {section.summary.items.map((item) => (
-                  <Link key={item.id} href={item.href} className="lf-finance-record-row">
-                    <span><strong>{item.label}</strong><small>{item.updatedAt ? `Updated ${formatUpdatedDate(item.updatedAt)}` : "Updated date unavailable"}</small></span>
-                    <span><strong>{item.meta}</strong><Icon name="chevron_right" size={20} /></span>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          ))}
-          {emptySections.length ? <section className="lf-finance-empty-section" aria-labelledby="finance-empty-heading">
-            <h2 id="finance-empty-heading">Not added yet</h2>
-            <div className="lf-finance-empty-grid">
-              {emptySections.map((section) => <Link key={section.href} href={`${section.href}?add=1`} className="lf-finance-empty-tile"><span className="lf-finance-empty-icon"><Icon name={section.icon} size={20} /></span><span><strong>{section.title}</strong><small>{section.description}</small></span><Icon name="add" size={20} /></Link>)}
-            </div>
-          </section> : null}
-        </div>
-      ) : !loading ? (
-        <div style={{ color: "#64748b", fontSize: 13 }}>
-          Finance subsections are currently hidden by My Vault preferences. Re-enable them in Account / My Vault at any time.
-        </div>
-      ) : null}
-    </section>
-  );
+  return <section className="lf-v3-area-page">
+    <PageHeader title="Finances" description="Keep accounts, pensions, investments, insurance and debts together for trusted review."
+      action={viewer.mode === "linked" ? undefined : <Link className="lf-v3-button lf-v3-button--primary" href="/finances/bank?add=1">Add record</Link>} />
+    {status ? <p role="alert">{status}</p> : null}
+    {loading ? <p role="status">Loading finance summary…</p> : null}
+    {!loading && recommendedFinanceAction ? <Card><Row icon="account_balance" title={recommendedFinanceAction.label}
+      description={recommendedFinanceAction.description} href={recommendedFinanceAction.href} /></Card> : null}
+    {!loading && recordCount > 0 ? <Card className="lf-v3-stats-strip" aria-label="Finance summary">
+      <div><span>Total recorded</span><strong>{currencies.size > 1 ? "Multiple currencies" : formatCurrency(total, currency)}</strong></div>
+      <div><span>Records</span><strong>{recordCount}</strong><small>in {populated.length} of {summaries.length} sections</small></div>
+      <div><span>Last updated</span><strong>{formatFinanceDate(updatedAt)}</strong></div>
+    </Card> : null}
+    {populated.map((section) => <Card key={section.href} className="lf-v3-area-section">
+      <header><Link href={section.href}><IconTile icon={section.icon} /><span><strong>{section.title}</strong><small>{section.summary.includedCount} record{section.summary.includedCount === 1 ? "" : "s"}</small></span></Link>
+        <strong className="lf-v3-area-total">{new Set(getAssetsForFinanceCategory(assetRows, section.key).map((row) => getFinanceRowCurrencyCode(row) || currency)).size > 1 ? "Multiple currencies" : section.summary.valueText}</strong>
+        {viewer.mode !== "linked" ? <Link href={`${section.href}?add=1`} className="lf-v3-area-add" aria-label={`Add ${section.title} record`}>+</Link> : null}
+      </header>
+      {section.summary.items.map((item) => <Row key={item.id} title={item.label} trailing={item.meta}
+        description={item.updatedAt ? `Updated ${formatFinanceDate(item.updatedAt)}` : "Open record details"} href={item.href} />)}
+    </Card>)}
+    {viewer.mode !== "linked" && empty.length ? <section className="lf-v3-area-empty" aria-label="Not added yet">
+      <h2>{recordCount ? "Not added yet" : "Start with any of these"}</h2>
+      <div>{empty.map((section) => <Link key={section.href} href={section.href} className="lf-v3-area-empty-tile">
+        <IconTile icon={section.icon} size={32} /><strong>{section.title}</strong><small>{section.description}</small><span aria-hidden="true">＋</span>
+      </Link>)}</div>
+    </section> : null}
+    {!loading && viewer.mode === "linked" && !recordCount ? <p>No finance records are assigned to you.</p> : null}
+  </section>;
 }
 
-const recommendedActionStyle = {
-  textDecoration: "none",
-  border: "1px solid #e3d9d1",
-  borderRadius: 14,
-  background: "#fffefd",
-  padding: 14,
-  display: "flex",
-  alignItems: "center",
-  gap: 12,
-  color: "#0f172a",
-} as const;
-
-const recommendedIconStyle = {
-  width: 34,
-  height: 34,
-  borderRadius: 11,
-  background: "#2b201b",
-  color: "#fff",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  flexShrink: 0,
-} as const;
+function formatFinanceDate(value: string | null | undefined) {
+  if (!value) return "Not recorded";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Not recorded" : new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(date);
+}

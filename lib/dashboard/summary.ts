@@ -427,7 +427,7 @@ function getFinanceRowValueMajor(row: DashboardAssetRow) {
   return getDashboardAssetValueMajor(row);
 }
 
-function getFinanceRowCurrencyCode(row: DashboardAssetRow) {
+export function getFinanceRowCurrencyCode(row: DashboardAssetRow) {
   const categoryKey = getNormalizedDashboardCategoryKey(row);
   const metadata = row.metadata_json ?? row.metadata ?? {};
 

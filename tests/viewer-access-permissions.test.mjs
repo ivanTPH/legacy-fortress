@@ -6,6 +6,7 @@ import {
   canEditAssetForViewer,
   canEditRecordForViewer,
   canViewPath,
+  filterAssetIdsForViewer,
 } from "../lib/access-control/viewerAccess.ts";
 import {
   LF_IDENTITY_LEVEL_1_AUTHENTICATED,
@@ -73,6 +74,25 @@ test("accepted invitation state can open Contact Wallet but not protected detail
   assert.equal(canViewPath("/finances/bank", acceptedViewer), false);
   assert.equal(canViewPath("/property", acceptedViewer), false);
   assert.equal(canContributeDocumentForViewer("asset-1", acceptedViewer), false);
+});
+
+test("verified linked property access stays within assigned assets", () => {
+  const propertyViewer = {
+    ...linkedViewer,
+    viewerRole: "executor",
+    assignedSectionKeys: ["property"],
+    assignedAssetIds: ["assigned-property"],
+    permissionsOverride: { ...linkedViewer.permissionsOverride, allowedSections: [], assetIds: ["assigned-property"] },
+  };
+  const rows = [{ id: "assigned-property", section_key: "property" }, { id: "another-owner-property", section_key: "property" }];
+  assert.equal(canViewPath("/property", propertyViewer), true);
+  assert.equal(canViewPath("/vault/personal", propertyViewer), false);
+  assert.equal(canViewPath("/vault/legal", propertyViewer), false);
+  assert.equal(canViewPath("/actions", propertyViewer), false);
+  assert.deepEqual(filterAssetIdsForViewer(rows, propertyViewer), [rows[0]]);
+  assert.equal(canViewPath("/property", { ...propertyViewer, assignedSectionKeys: [], assignedAssetIds: [] }), false);
+  assert.deepEqual(filterAssetIdsForViewer(rows, { ...propertyViewer, assignedAssetIds: [] }), []);
+  assert.equal(canViewPath("/property", { ...propertyViewer, identityAssuranceLevel: LF_IDENTITY_LEVEL_1_AUTHENTICATED }), false);
 });
 
 test("professional adviser contribution requires explicit permission and verified identity", () => {

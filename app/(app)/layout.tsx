@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useId, useMemo, useReducer, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import BrandMark from "./components/BrandMark";
+import BrandGlyph from "../../components/ui/BrandGlyph";
 import Icon from "../../components/ui/Icon";
 import Breadcrumbs from "./components/navigation/Breadcrumbs";
 import FlyoutMenu from "./components/navigation/FlyoutMenu";
@@ -883,10 +883,10 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
 
   const normalizedPathname = normalizePath(pathname);
   const topbarTitle = normalizedPathname === "/dashboard"
-    ? "Dashboard"
+    ? "Home"
     : currentNode?.label ?? "Dashboard";
   const topbarBreadcrumbs = normalizedPathname === "/dashboard" ? [] : breadcrumbs.slice(0, -1);
-  const showBackButton = normalizedPathname !== "/dashboard";
+  const showBackButton = !["/dashboard", "/add", "/add-to-fortress", "/actions", "/action-centre", "/contacts", "/profile"].includes(normalizedPathname);
 
   function toggleAccountMenu() {
     setAccountMenuOpen((current) => {
@@ -954,7 +954,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
         <aside className="lf-sidebar">
           <div className="lf-sidebar-brand-stack">
             <div className="lf-brand-row">
-              <BrandMark size={32} priority />
+              <BrandGlyph />
               <div>
                 <div className="lf-brand-title">Legacy Fortress</div>
                 <div className="lf-brand-subtitle">Personal Vault</div>
@@ -1108,7 +1108,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
               <Breadcrumbs items={topbarBreadcrumbs} />
               {showBackButton ? (
                 <button className="lf-topbar-back" type="button" onClick={navigateBack} aria-label="Go back">
-                  <Icon name="arrow_back" size={16} />
+                  <b aria-hidden="true" style={{ fontSize: 20, fontWeight: 400, lineHeight: 1 }}>←</b>
                   <span>Back</span>
                 </button>
               ) : null}
@@ -1178,7 +1178,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
             />
             <aside className="lf-mobile-drawer" aria-label="Mobile Navigation">
               <div className="lf-brand-row">
-                <BrandMark size={32} priority />
+                <BrandGlyph />
                 <div>
                   <div className="lf-brand-title">Legacy Fortress</div>
                   <div className="lf-brand-subtitle">Personal Vault</div>
@@ -1296,11 +1296,11 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
         <nav className="lf-mobile-bottom-nav" aria-label="Primary mobile navigation">
           {[
             ["/dashboard", "Home", "home"],
-            ["/action-centre", "Actions", "task_alt"],
+            ["/actions", "Actions", "task_alt"],
             ["/contacts", "People", "group"],
             ["/profile", "Settings", "settings"],
-          ].map(([href, label, icon]) => {
-            const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(`${href}/`));
+          ].filter(([href]) => canViewPath(href, resolvedViewerAccess)).map(([href, label, icon]) => {
+            const active = pathname === href || (href === "/actions" && pathname === "/action-centre") || (href !== "/dashboard" && pathname.startsWith(`${href}/`));
             return (
               <Link key={href} href={href} className={`lf-mobile-bottom-nav-item${active ? " is-active" : ""}`} aria-current={active ? "page" : undefined}>
                 <Icon name={icon} size={21} filled={active} />
