@@ -47,7 +47,7 @@ function assertDeployWebhook() {
 async function deployWebhook() {
   const url = assertDeployWebhook();
   const response = await fetch(url, {
-    method: "GET",
+    method: "POST",
     headers: {
       Accept: "application/json",
       Authorization: `Bearer ${process.env.COOLIFY_DEPLOY_TOKEN}`,
