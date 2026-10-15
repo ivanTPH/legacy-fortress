@@ -1,5 +1,12 @@
 # Codex Handover
 
+## Version 3 Phase 4 local UAT migration checkpoint — 2026-10-15
+
+- Owner-approved local-only 21 historical plus two corrective migrations were applied to explicit `127.0.0.1:55422/postgres` from `design/phase-4` base `ba9cce0`, after SHA/order, 38-ledger, fingerprints and fresh backup/clone-restore preflight. Final UAT ledger is 61 (hash `211777dddfd08a36dee58500292a9517`); no hosted/staging/production change. The original owner worktree remains untouched. Recovery archive, globals, focused logs and synthetic-only screenshots are restricted outside Git under `/private/tmp/lf-phase4-uat-migration-20261015/`.
+- UAT rollback SQL: guard/RLS/identity/estate/admin 11 checks, invitation 7, privacy 4 all pass. Real local JWT anonymous/cross-user RPC denial passes. Chrome/WebKit owner, invitation, linked grant activation/revocation and admin-domain checks ran with temporary synthetic accounts, all cleaned up. Existing 8 auth users, 7 admins, 1 wallet and 134 pre-existing auth audit entries retain their fingerprints; no temporary records remain.
+- Browser limitation: linked `/vault/property` redirected to `/dashboard` while the authenticated API correctly returned only the assigned property after Level 2 activation, and denied it after revocation. Positive linked-area rendering remains a Phase 4 screen acceptance item. Source checks: TypeScript, build, lint (18 existing warnings), stabilisation 81/81 pass; core 53/54 on the unchanged Supabase `site_url` assertion. Full checkpoint evidence is in `docs/design-implementation/PHASE4_SECURITY_REMEDIATION.md`.
+- **Next:** owner review at this migration checkpoint, then prioritise Version 3 Dashboard, Add to my Fortress, Action Centre, six Vault areas, People I Trust and mobile. Reuse existing tokens/primitives and preserve linked security. Do not merge or deploy.
+
 ## Version 3 Phase 4 Stage A second clone-only security rehearsal — 2026-10-15
 
 - Continued isolated `design/phase-4` from report SHA `954f5810a75de0290b16ffadbaf09dc6047416cb`; original owner worktree and hosted environments were untouched. Restored the checksum-verified local PG17.6 backup to disposable `lf_phase4_rehearsal2_20261015`, then replayed the exact final SQL from the same backup into fresh `lf_phase4_rehearsal3_20261015` after tightening the invitation exception. The final clone's 38-entry pre-migration ledger, roles, synthetic data counts and wrapper hash matched source. Original UAT is still `127.0.0.1:55422/postgres` at 38 migrations.

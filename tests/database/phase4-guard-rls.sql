@@ -1,11 +1,20 @@
--- Run only with: psql -X -v ON_ERROR_STOP=1 -U supabase_admin
---   -d lf_phase4_rehearsal2_20261015 -f tests/database/phase4-guard-rls.sql
--- All fixtures are synthetic and rolled back. The guard refuses the source DB.
+-- Synthetic fixtures are rolled back. Original UAT requires an explicit local
+-- TCP target, the approved 61-migration schema, and a session opt-in.
 \set ON_ERROR_STOP on
-SELECT current_database() LIKE 'lf_phase4_rehearsal%' AS disposable_clone \gset
-\if :disposable_clone
+SELECT COALESCE((
+  current_database() LIKE 'lf_phase4_rehearsal%'
+  OR (
+    current_database() = 'postgres'
+    AND current_user = 'postgres'
+    AND host(inet_server_addr()) = '127.0.0.1'
+    AND inet_server_port() = 5432
+    AND current_setting('lf.phase4_local_uat_test', true) = 'approved'
+    AND (SELECT count(*) FROM supabase_migrations.schema_migrations) = 61
+  )
+), false) AS approved_target \gset
+\if :approved_target
 \else
-  \echo Refusing security test outside a disposable Phase 4 clone
+  \echo Refusing security test outside an approved local Phase 4 database
   SELECT 1/0;
   \quit
 \endif

@@ -1,10 +1,20 @@
--- Additional regression for the later-migration SECURITY DEFINER grant gap.
+-- Local-only regression for the later-migration SECURITY DEFINER grant gap.
 -- Synthetic fixtures only; all writes roll back.
 \set ON_ERROR_STOP on
-SELECT current_database() LIKE 'lf_phase4_rehearsal%' AS disposable_clone \gset
-\if :disposable_clone
+SELECT COALESCE((
+  current_database() LIKE 'lf_phase4_rehearsal%'
+  OR (
+    current_database() = 'postgres'
+    AND current_user = 'postgres'
+    AND host(inet_server_addr()) = '127.0.0.1'
+    AND inet_server_port() = 5432
+    AND current_setting('lf.phase4_local_uat_test', true) = 'approved'
+    AND (SELECT count(*) FROM supabase_migrations.schema_migrations) = 61
+  )
+), false) AS approved_target \gset
+\if :approved_target
 \else
-  \echo Refusing privacy test outside a disposable Phase 4 clone
+  \echo Refusing privacy test outside an approved local Phase 4 database
   SELECT 1/0;
   \quit
 \endif
