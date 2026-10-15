@@ -1,5 +1,12 @@
 # Codex Handover
 
+## Version 3 Phase 4 Stage A clone-only rehearsal — 2026-10-15
+
+- Verified `design/phase-4` at `99283e80e161a289fa6e616f7e5a39073538207f` and explicit local UAT source `127.0.0.1:55422/postgres`. A restricted PostgreSQL 17.6 backup of source data/schema/ledger and globals was restored to disposable database `lf_phase4_rehearsal_20261014` in the local container; the generated GraphQL wrapper ACL required one restore-only repair, which was checked against source. The original owner worktree was untouched.
+- All ten owner-approved migrations applied to the clone in repository order, with 48 total clone ledger entries. Source UAT remains at 38 migrations with unchanged ledger, critical row counts and auth/admin/wallet fingerprints. No migration was applied to source; no later migration, hosted service, staging or production was touched.
+- Rollback-wrapped synthetic role/RLS tests passed owner create/read, pending and unverified linked denial, verified assigned-only access, wrong-user denial and protective-lock read/write restrictions. A valid invitation preview failed because migration 8 references nonexistent `public.profiles`; the later `20260824143000` migration repairs this. Anonymous and authenticated callers can also use newly added `SECURITY DEFINER` helpers to learn another user's identity level and vault lock state despite direct row RLS. Focused source/unit tests passed 39/39, but authenticated API/browser tests did not target the clone.
+- **Recommendation: requires corrections.** The ten-file candidate is not safe to apply to existing local UAT. Detailed evidence and the next clone-only correction checkpoint are in `docs/design-implementation/PHASE4_CLONE_REHEARSAL.md`. Stop before any UAT migration and request separate owner approval after corrected clone verification.
+
 ## Version 3 Phase 4 Stage A security checkpoint — 2026-10-14
 
 - Verified remote `design/phase-3` at `49852838d60b156e38851e1de89141c4a9dadea5`; created isolated `/private/tmp/legacy-fortress-v3-phase4` on `design/phase-4`. The original owner tree and unrelated changes remain untouched.

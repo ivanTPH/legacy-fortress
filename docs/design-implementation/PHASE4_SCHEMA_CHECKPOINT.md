@@ -1,5 +1,7 @@
 # Phase 4 local schema security checkpoint — 14 October 2026
 
+**15 October update:** the owner-approved *clone-only* rehearsal is complete. All ten files applied to a disposable clone, but security and invitation runtime checks failed. **Do not apply this candidate to local UAT.** See [PHASE4_CLONE_REHEARSAL.md](./PHASE4_CLONE_REHEARSAL.md) for backup/restore evidence, exact test results and the correction checkpoint. The original UAT database remains unchanged. The text below records the earlier pre-rehearsal proposal and is superseded by that result.
+
 **State:** read-only audit complete. No migration, migration-history repair, database reset, hosted change or Phase 4 screen change has been made. Phase 4 screen implementation waits for explicit owner approval of the local migration plan below.
 
 ## Proven target and cause
