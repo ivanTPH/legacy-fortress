@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
-import Icon from "../../../../components/ui/Icon";
+import Link from "next/link";
+import { Card, IconTile, Row } from "../../../../components/ui/V3Primitives";
 import { useViewerAccess } from "../../../../components/access/ViewerAccessContext";
+import { filterAssetIdsForViewer } from "../../../../lib/access-control/viewerAccess";
 import { waitForActiveUser } from "../../../../lib/auth/session";
 import { fetchCanonicalAssets } from "../../../../lib/assets/fetchCanonicalAssets";
 import { resolveWalletContextForRead } from "../../../../lib/canonicalPersistence";
 import { getLiveAssets, latestTimestamp, type DashboardAssetRow } from "../../../../lib/dashboard/summary";
 import { supabase } from "../../../../lib/supabaseClient";
-import DashboardAssetSummaryCard from "./DashboardAssetSummaryCard";
 
 type CanonicalAssetOverviewRow = DashboardAssetRow & {
   metadata_json?: Record<string, unknown> | null;
@@ -38,7 +38,6 @@ type LoadState =
   | { status: "error"; rows: CanonicalAssetOverviewRow[]; error: string };
 
 export default function CanonicalAssetOverviewGrid({ tiles, emptyMessage }: CanonicalAssetOverviewGridProps) {
-  const router = useRouter();
   const { viewer } = useViewerAccess();
   const [state, setState] = useState<LoadState>({ status: "loading", rows: [], error: null });
   const sectionKeys = useMemo(() => [...new Set(tiles.map((tile) => tile.sectionKey))], [tiles]);
@@ -68,7 +67,7 @@ export default function CanonicalAssetOverviewGrid({ tiles, emptyMessage }: Cano
           return;
         }
 
-        setState({ status: "ready", rows: ((result.data ?? []) as CanonicalAssetOverviewRow[]), error: null });
+        setState({ status: "ready", rows: filterAssetIdsForViewer((result.data ?? []) as CanonicalAssetOverviewRow[], viewer), error: null });
       } catch (error) {
         if (cancelled) return;
         setState({ status: "error", rows: [], error: error instanceof Error ? error.message : "Could not load records." });
@@ -79,50 +78,57 @@ export default function CanonicalAssetOverviewGrid({ tiles, emptyMessage }: Cano
     return () => {
       cancelled = true;
     };
-  }, [sectionKeys, viewer.targetOwnerUserId]);
+  }, [sectionKeys, viewer]);
 
   if (!tiles.length) {
     return emptyMessage ? <>{emptyMessage}</> : null;
   }
 
-  return (
-    <>
-      {tiles.map((tile) => {
-        const rows = getLiveAssets(
-          state.rows.filter((row) => {
-            if (row.section_key !== tile.sectionKey) return false;
-            if (row.category_key !== tile.categoryKey) return false;
-            return tile.match ? tile.match(row) : true;
-          }),
-        );
-        const isEmpty = rows.length === 0;
-        const href = isEmpty ? tile.addHref : tile.href;
+  const sections = tiles.map((tile) => ({
+    tile,
+    rows: getLiveAssets(state.rows.filter((row) => row.section_key === tile.sectionKey
+      && row.category_key === tile.categoryKey && (!tile.match || tile.match(row)))),
+  }));
+  const populated = sections.filter((section) => section.rows.length > 0);
+  const empty = sections.filter((section) => section.rows.length === 0);
+  const recordCount = new Set(populated.flatMap((section) => section.rows.map((row) => row.id))).size;
+  const updatedAt = latestTimestamp(populated.flatMap((section) => section.rows.map((row) => row.updated_at ?? row.created_at)));
+  return <div className="lf-v3-area-content">
+    {state.status === "loading" ? <p role="status">Loading records…</p> : null}
+    {state.status === "error" ? <p role="alert">Records could not be refreshed. Open a section to review them directly.</p> : null}
+    {state.status === "ready" && recordCount ? <Card className="lf-v3-stats-strip" aria-label="Area summary">
+      <div><span>Records</span><strong>{recordCount}</strong></div>
+      <div><span>Sections</span><strong>{populated.length} of {tiles.length}</strong></div>
+      <div><span>Last updated</span><strong>{formatAreaDate(updatedAt)}</strong></div>
+    </Card> : null}
+    {populated.map(({ tile, rows }) => <Card key={tile.key} className="lf-v3-area-section">
+      <header><Link href={tile.href}><IconTile icon={tile.icon} /><span><strong>{tile.title}</strong><small>{rows.length} record{rows.length === 1 ? "" : "s"}</small></span></Link>
+        {viewer.mode !== "linked" ? <Link href={tile.addHref} className="lf-v3-area-add" aria-label={`Add ${tile.title} record`}>+</Link> : null}
+      </header>
+      {rows.map((row) => <Row key={row.id} title={row.title || "Untitled record"}
+        description={row.updated_at || row.created_at ? `Updated ${formatAreaDate(row.updated_at ?? row.created_at)}` : undefined}
+        href={recordHref(tile.href, row.id)} />)}
+    </Card>)}
+    {viewer.mode !== "linked" && empty.length ? <section className="lf-v3-area-empty" aria-label={recordCount ? "Not added yet" : "Start with any of these"}>
+      <h2>{recordCount ? "Not added yet" : "Start with any of these"}</h2>
+      <div>{empty.map(({ tile }) => <Link key={tile.key} href={tile.addHref} className="lf-v3-area-empty-tile"><IconTile icon={tile.icon} size={32} /><strong>{tile.title}</strong><small>{tile.description}</small><span aria-hidden="true">＋</span></Link>)}</div>
+    </section> : null}
+    {state.status === "ready" && viewer.mode === "linked" && !recordCount ? <p>No records are assigned in this area.</p> : null}
+  </div>;
+}
 
-        return (
-          <div key={tile.key} className="lf-finance-summary-tile">
-            <DashboardAssetSummaryCard
-              icon={<Icon name={tile.icon} size={13} />}
-              title={tile.title}
-              href={href}
-              addedAt={latestTimestamp(rows.map((row) => row.updated_at ?? row.created_at))}
-              value={state.status === "loading" ? "Loading" : isEmpty ? "Add record" : String(rows.length)}
-              detail={state.status === "loading" ? "Checking saved records" : isEmpty ? tile.description : `${rows.length} active record${rows.length === 1 ? "" : "s"}`}
-              items={[]}
-              emptyActionLabel="Add record"
-              emptyState={isEmpty}
-              hideItems
-              onEmptyActionClick={() => router.push(tile.addHref)}
-            />
-          </div>
-        );
-      })}
-      {state.status === "error" ? (
-        <p style={{ color: "#b45309", fontSize: 13, margin: 0 }}>
-          Dashboard records could not be refreshed. Open a category to review saved records directly.
-        </p>
-      ) : null}
-    </>
-  );
+function formatAreaDate(value: string | null | undefined) {
+  if (!value) return "Not recorded";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Not recorded" : new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(date);
+}
+
+function recordHref(href: string, id: string) {
+  const [path, query = ""] = href.split("?");
+  const params = new URLSearchParams(query);
+  params.delete("add");
+  params.set("asset", id);
+  return `${path}?${params.toString()}`;
 }
 
 export function metadataToken(row: CanonicalAssetOverviewRow, ...keys: string[]) {

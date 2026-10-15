@@ -30,6 +30,7 @@ import { getStoredFileSignedUrl } from "../../lib/assets/documentLinks";
 import ContactInvitationManager from "../../app/(app)/components/dashboard/ContactInvitationManager";
 import { useViewerAccess } from "../access/ViewerAccessContext";
 import Icon from "../ui/Icon";
+import { Button, PageHeader } from "../ui/V3Primitives";
 import InfoTip from "../ui/InfoTip";
 import DocumentPreviewDialog, { type DocumentPreviewDialogItem } from "../documents/DocumentPreviewDialog";
 import { type CollaboratorRole, type SectionKey } from "../../lib/access-control/roles";
@@ -68,6 +69,21 @@ const GROUPS = [
   { key: "beneficiaries", label: "Beneficiaries", description: "People named to receive assets, gifts, or beneficiary-linked instructions." },
   { key: "trusted_contacts", label: "Trusted contacts", description: "Other important people linked to live records, providers, or practical next steps." },
 ] as const;
+
+function makeContactInitials(name: string) {
+  return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("") || "?";
+}
+
+function displayInviteState(state: ReturnType<typeof getInviteState>) {
+  const labels: Record<string, string> = {
+    "Ready to invite": "Not invited",
+    "Invite sent": "Invited · awaiting acceptance",
+    "Awaiting acceptance": "Invited · awaiting acceptance",
+    "Invite accepted": "Accepted",
+    Verified: "Linked · Verified",
+  };
+  return { ...state, label: labels[state.label] ?? state.label };
+}
 
 export default function ContactsNetworkWorkspace() {
   const router = useRouter();
@@ -337,14 +353,6 @@ export default function ContactsNetworkWorkspace() {
     return map;
   }, [contacts, search]);
 
-  const completeness = useMemo(() => {
-    const total = contacts.length;
-    const withEmail = contacts.filter((item) => item.email).length;
-    const withPhone = contacts.filter((item) => item.phone).length;
-    const linkedContextCount = contacts.reduce((sum, item) => sum + (item.linked_context?.length ?? 0), 0);
-    return { total, withEmail, withPhone, linkedContextCount };
-  }, [contacts]);
-
   const selectedContactId = String(searchParams.get("contact") ?? "").trim();
   const selectedGroup = normalizeContactGroupKey(searchParams.get("group"));
   const isNextOfKinAddMode = selectedGroup === "family" && searchParams.get("add") === "1";
@@ -539,31 +547,11 @@ export default function ContactsNetworkWorkspace() {
   }
 
   return (
-    <section style={{ display: "grid", gap: 14 }}>
-      <div style={buildCheckMarkerStyle}>CONTACTS BUILD CHECK - DOCUMENT DRAWER V2</div>
-      {!addContactGroupKey ? <div style={{ display: "grid", gap: 6 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
-            Use grouped contacts to manage role-linked people, invite state, access scope, and missing record associations without duplicating the same workflow elsewhere.
-          </p>
-          <InfoTip
-            label="Explain the Contacts section"
-            message="Use Contacts to invite trusted people, set what they can review or edit, keep internal notes, and jump directly to the linked records that explain why they matter."
-          />
-        </div>
-        <p style={{ margin: "6px 0 0", color: "#64748b", fontSize: 13 }}>
-          Each person appears once in their main role group, with invite state, association health, and the next action shown on the row.
-        </p>
-      </div> : null}
-
-      {!addContactGroupKey ? <section style={panelStyle}>
-        <div className="lf-contacts-metrics" style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-          <Metric label="Contacts in place" value={String(completeness.total)} />
-          <Metric label="With email" value={String(completeness.withEmail)} />
-          <Metric label="With phone" value={String(completeness.withPhone)} />
-          <Metric label="Linked roles" value={String(completeness.linkedContextCount)} />
-        </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+    <section className="lf-v3-people-page">
+      <PageHeader title="People I Trust" description="The people who may help with your estate, and whether they’ve been invited."
+        action={!viewer.readOnly && !addContactGroupKey ? <Button variant="primary" icon="person_add" onClick={() => startAddContact(selectedGroup || openGroupKey || "trusted_contacts")}>Add person</Button> : undefined} />
+      {!addContactGroupKey ? <section className="lf-v3-people-toolbar" style={panelStyle}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "end" }}>
           <label style={contactSearchFieldStyle}>
             <span style={contactSearchLabelStyle}>
               <Icon name="search" size={16} />
@@ -576,18 +564,7 @@ export default function ContactsNetworkWorkspace() {
               onChange={(event) => setSearch(event.target.value)}
             />
           </label>
-          {!viewer.readOnly ? (
-            <button
-              type="button"
-              style={primaryMenuActionStyle}
-              onClick={() => startAddContact(selectedGroup || openGroupKey || "trusted_contacts")}
-              title="Add a contact and choose their wallet access"
-            >
-              <Icon name="person_add" size={16} />
-              Add person
-            </button>
-          ) : null}
-          <Link href="/personal" style={linkPillStyle}>Review personal records</Link>
+          {!viewer.readOnly ? <Link href="/access-requests" className="lf-v3-button lf-v3-button--secondary">Access &amp; sharing</Link> : null}
         </div>
       </section> : null}
 
@@ -705,16 +682,16 @@ export default function ContactsNetworkWorkspace() {
                             className="lf-contact-row"
                             data-contact-id={contact.id}
                           >
+                            <span className="lf-v3-person-avatar" aria-hidden="true">{makeContactInitials(contact.full_name)}</span>
                             <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
                               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                                 <Link href={buildContactsWorkspaceHref(contact.id)} style={contactTitleLinkStyle}>
                                   {contact.full_name || "Unnamed contact"}
                                 </Link>
-                                <StatusPill {...inviteState} />
-                                <StatusPill {...associationState} />
+                                <StatusPill {...displayInviteState(inviteState)} />
                               </div>
                               <div style={{ color: "#475569", fontSize: 13 }}>
-                                {formatContactRoleLine(contact)}
+                                {formatContactRoleLine(contact)} · {associationState.label}
                               </div>
                               <div style={{ color: "#64748b", fontSize: 12 }}>
                                 {formatContactSupportLine(contact)}
@@ -758,15 +735,10 @@ export default function ContactsNetworkWorkspace() {
                             </div>
 
                             <div style={rowActionsStyle}>
-                              <button
-                                type="button"
-                                style={rowPrimaryActionStyle}
-                                title={`${getPrimaryActionLabel(contact)} for ${contact.full_name || "contact"}`}
-                                onClick={() => openContact(contact.id, group.key)}
-                              >
-                                <Icon name={getPrimaryActionIcon(contact)} size={16} />
-                                {getPrimaryActionLabel(contact)}
-                              </button>
+                              <Button variant="icon" icon={getPrimaryActionIcon(contact)}
+                                label={`${getPrimaryActionLabel(contact)} for ${contact.full_name || "contact"}`}
+                                className={inviteState.label === "Ready to invite" ? "lf-v3-person-invite" : ""}
+                                onClick={() => openContact(contact.id, group.key)} />
                               {hasLinkedDocuments ? (
                                 <button
                                   type="button"
@@ -781,15 +753,8 @@ export default function ContactsNetworkWorkspace() {
                                   Review documents
                                 </button>
                               ) : null}
-                              <button
-                                type="button"
-                                style={rowSecondaryActionStyle}
-                                title={`Manage ${contact.full_name || "contact"}`}
-                                onClick={() => openContact(contact.id, group.key)}
-                              >
-                                <Icon name="edit" size={16} />
-                                Manage
-                              </button>
+                              <Button variant="icon" icon="edit" label={`Manage ${contact.full_name || "contact"}`}
+                                onClick={() => openContact(contact.id, group.key)} />
                               {(contact.linked_context ?? []).map((context, index) => {
                                 const validationKey = buildContactLinkValidationKey({
                                   source_kind: context.source_kind === "asset" || context.source_kind === "invitation" ? context.source_kind : "record",
@@ -1218,15 +1183,6 @@ function NextOfKinContactForm({
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ display: "grid", gap: 2 }}>
-      <div style={{ fontSize: 12, color: "#64748b" }}>{label}</div>
-      <div style={{ fontSize: 20, fontWeight: 700 }}>{value}</div>
-    </div>
-  );
-}
-
 function StatusPill({ label, tone }: { label: string; tone: "neutral" | "success" | "warning" | "danger" }) {
   const iconName = tone === "success" ? "verified" : tone === "warning" ? "warning" : tone === "danger" ? "error" : "info";
 
@@ -1324,20 +1280,20 @@ const groupWarningStyle: CSSProperties = {
 };
 
 const contactRowStyle: CSSProperties = {
-  border: "1px solid #e2e8f0",
+  border: "1px solid var(--lf-border)",
   borderRadius: 12,
-  background: "#f8fafc",
-  padding: 10,
+  background: "var(--lf-surface)",
+  padding: 16,
   display: "grid",
-  gridTemplateColumns: "minmax(0, 1.6fr) auto auto",
-  gap: 10,
+  gridTemplateColumns: "40px minmax(0, 1fr) auto",
+  gap: 12,
   alignItems: "center",
 };
 
 const selectedContactRowStyle: CSSProperties = {
   ...contactRowStyle,
-  borderColor: "#2563eb",
-  boxShadow: "0 0 0 2px rgba(37, 99, 235, 0.12)",
+  borderColor: "var(--lf-ink)",
+  boxShadow: "0 0 0 2px rgba(43, 23, 20, 0.12)",
 };
 
 const selectedContactStackStyle: CSSProperties = {
@@ -1375,18 +1331,6 @@ const moreLinksStyle: CSSProperties = {
   fontSize: 11,
   color: "#64748b",
   fontWeight: 600,
-};
-
-const linkPillStyle: CSSProperties = {
-  border: "1px solid #cbd5e1",
-  borderRadius: 999,
-  padding: "10px 14px",
-  minHeight: 44,
-  textDecoration: "none",
-  color: "#0f172a",
-  fontSize: 13,
-  display: "inline-flex",
-  alignItems: "center",
 };
 
 const contactTitleLinkStyle: CSSProperties = {
@@ -1493,16 +1437,6 @@ const unavailableLinkedDocumentStyle: CSSProperties = {
 
 const linkedDocumentIconLabelStyle: CSSProperties = {
   lineHeight: 1,
-};
-
-const buildCheckMarkerStyle: CSSProperties = {
-  borderRadius: 10,
-  padding: "10px 12px",
-  background: "#dbeafe",
-  color: "#1d4ed8",
-  fontSize: 13,
-  fontWeight: 800,
-  letterSpacing: 0.2,
 };
 
 const contactSearchFieldStyle: CSSProperties = {

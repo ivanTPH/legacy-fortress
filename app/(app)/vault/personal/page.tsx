@@ -1,13 +1,16 @@
 "use client";
 
 import CanonicalAssetOverviewGrid, { metadataToken, type CanonicalAssetOverviewTile } from "../../components/dashboard/CanonicalAssetOverviewGrid";
+import Link from "next/link";
+import { useViewerAccess } from "../../../../components/access/ViewerAccessContext";
+import { PageHeader } from "../../../../components/ui/V3Primitives";
 
 const possessionTiles: CanonicalAssetOverviewTile[] = [
   {
     key: "vehicles",
     title: "Vehicles",
     description: "Cars, motorbikes, registration details, ownership notes and supporting files.",
-    href: "/cars-transport?add=1",
+    href: "/cars-transport",
     addHref: "/cars-transport?add=1",
     icon: "directions_car",
     sectionKey: "personal",
@@ -75,17 +78,12 @@ const possessionTiles: CanonicalAssetOverviewTile[] = [
 ];
 
 export default function PersonalPossessionsOverviewPage() {
+  const { viewer } = useViewerAccess();
   return (
-    <section style={{ display: "grid", gap: 14 }}>
-      <div style={{ display: "grid", gap: 6 }}>
-        <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
-          Capture personal possessions with values, references, locations, attachments, and photos.
-        </p>
-      </div>
-
-      <div className="lf-content-grid">
-        <CanonicalAssetOverviewGrid tiles={possessionTiles} />
-      </div>
+    <section className="lf-v3-area-page">
+      <PageHeader title="Possessions" description="Capture personal possessions with values, references, locations, attachments and photos."
+        action={viewer.mode === "linked" ? undefined : <Link className="lf-v3-button lf-v3-button--primary" href={possessionTiles[0].addHref}>Add record</Link>} />
+      <CanonicalAssetOverviewGrid tiles={possessionTiles} />
     </section>
   );
 }

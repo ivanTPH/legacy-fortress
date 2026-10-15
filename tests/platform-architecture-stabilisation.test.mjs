@@ -143,7 +143,7 @@ test("legacy persistence readiness keeps canonical assets, documents, and contac
 });
 
 test("implementation keeps shared documents and contacts canonical while known compatibility writes remain explicit", () => {
-  const dashboard = fs.readFileSync(path.join(root, "app/(app)/dashboard/page.tsx"), "utf8");
+  const dashboard = fs.readFileSync(path.join(root, "app/(app)/dashboard/DashboardWorkspace.tsx"), "utf8");
   const contactsWorkspace = fs.readFileSync(path.join(root, "components/contacts/ContactsNetworkWorkspace.tsx"), "utf8");
   const documentsWorkspace = fs.readFileSync(path.join(root, "components/documents/DocumentsWorkspace.tsx"), "utf8");
   const sectionWorkspace = fs.readFileSync(path.join(root, "components/sections/SectionWorkspace.tsx"), "utf8");
@@ -155,7 +155,8 @@ test("implementation keeps shared documents and contacts canonical while known c
   assert.match(documentsWorkspace, /AttachmentGallery/);
   assert.match(documentsWorkspace, /loadCanonicalDocumentWorkspaceData/);
   assert.match(documentsWorkspace, /createCanonicalAssetDocument/);
-  assert.match(dashboard, /<ActionQueuePanel items=\{dashboardState\.actions\.items\}/);
+  assert.match(dashboard, /<V3DashboardOverview/);
+  assert.match(dashboard, /actions=\{viewer\.mode === "linked" \? \[\] : dashboardState\.actions\.items\}/);
   assert.doesNotMatch(dashboard, /title="Tasks"/);
   assert.doesNotMatch(routeManifest, /\/internal\/admin|\/internal\/test-login/);
 

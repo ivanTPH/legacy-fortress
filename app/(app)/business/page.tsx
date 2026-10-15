@@ -1,13 +1,15 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import CanonicalAssetOverviewGrid, { type CanonicalAssetOverviewTile } from "../components/dashboard/CanonicalAssetOverviewGrid";
-import DashboardAssetSummaryCard from "../components/dashboard/DashboardAssetSummaryCard";
-import Icon from "../../../components/ui/Icon";
+import { IconTile, PageHeader } from "../../../components/ui/V3Primitives";
+import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
 import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
 import { isVaultSubsectionEnabled } from "../../../lib/vaultPreferences";
 
 export default function BusinessOverviewPage() {
+  const { viewer } = useViewerAccess();
   const { preferences } = useVaultPreferences();
   const showBusinessInterests = isVaultSubsectionEnabled(preferences, "business_interests");
   const showEmployment = isVaultSubsectionEnabled(preferences, "business_employment");
@@ -27,25 +29,13 @@ export default function BusinessOverviewPage() {
   ), [showBusinessInterests]);
 
   return (
-    <section style={{ display: "grid", gap: 14 }}>
-      <div style={{ display: "grid", gap: 6 }}>
-        <p style={{ margin: 0, color: "#6b7280" }}>
-          Keep your business interests, workplace records, and supporting documents clear for future review.
-        </p>
-      </div>
+    <section className="lf-v3-area-page">
+      <PageHeader title="Business" description="Keep business interests, workplace records and supporting documents clear for future review."
+        action={viewer.mode === "linked" || !businessTiles.length ? undefined : <Link className="lf-v3-button lf-v3-button--primary" href={businessTiles[0].addHref}>Add record</Link>} />
 
       {showBusinessInterests || showEmployment ? (
-        <div className="lf-content-grid">
-          <CanonicalAssetOverviewGrid tiles={businessTiles} />
-          {showEmployment ? (
-            <BusinessSummaryTile
-              title="Employment"
-              description="Review workplace records, death-in-service details, and employer-linked documents."
-              href="/employment"
-              icon="work"
-            />
-          ) : null}
-        </div>
+        <><CanonicalAssetOverviewGrid tiles={businessTiles} />
+          {showEmployment && viewer.mode !== "linked" ? <div className="lf-v3-area-extra"><Link href="/employment" className="lf-v3-area-empty-tile"><IconTile icon="work" size={32} /><strong>Employment</strong><small>Workplace records, death-in-service details and employer-linked documents.</small><span aria-hidden="true">›</span></Link></div> : null}</>
       ) : null}
       {!showBusinessInterests && !showEmployment ? (
         <div style={{ color: "#64748b", fontSize: 13 }}>
@@ -53,32 +43,5 @@ export default function BusinessOverviewPage() {
         </div>
       ) : null}
     </section>
-  );
-}
-
-function BusinessSummaryTile({
-  title,
-  description,
-  href,
-  icon,
-}: {
-  title: string;
-  description: string;
-  href: string;
-  icon: string;
-}) {
-  return (
-    <div className="lf-finance-summary-tile">
-      <DashboardAssetSummaryCard
-        icon={<Icon name={icon} size={13} />}
-        title={title}
-        href={`${href}?add=1`}
-        value="No records yet"
-        detail={description}
-        items={[]}
-        emptyActionLabel="Add record"
-        emptyState
-      />
-    </div>
   );
 }

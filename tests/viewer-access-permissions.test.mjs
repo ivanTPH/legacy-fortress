@@ -7,6 +7,7 @@ import {
   canEditRecordForViewer,
   canViewPath,
 } from "../lib/access-control/viewerAccess.ts";
+import { filterFinanceDashboardRowsForViewer } from "../lib/dashboard/financeViewerRows.ts";
 import {
   LF_IDENTITY_LEVEL_1_AUTHENTICATED,
   LF_IDENTITY_LEVEL_2_IDENTITY_VERIFIED,
@@ -70,6 +71,33 @@ test("linked navigation excludes owner actions and unassigned possessions", () =
   assert.equal(canViewPath("/vault/personal", linkedViewer), false);
   assert.equal(canViewPath("/finances", linkedViewer), true);
   assert.equal(canViewPath("/finances", { ...linkedViewer, assignedSectionKeys: [] }), false);
+});
+
+test("assigned property opens for its verified linked viewer without broad vault access", () => {
+  const propertyViewer = {
+    ...linkedViewer,
+    assignedAssetIds: ["property-1"],
+    assignedRecordIds: [],
+    assignedSectionKeys: ["property"],
+    permissionsOverride: { ...linkedViewer.permissionsOverride, allowedSections: [], assetIds: ["property-1"] },
+  };
+  assert.equal(canViewPath("/vault/property", propertyViewer), true);
+  assert.equal(canViewPath("/vault/financial", propertyViewer), false);
+  assert.equal(canViewPath("/vault/digital", propertyViewer), false);
+  assert.equal(canViewPath("/vault/property", { ...propertyViewer, activationStatus: "revoked" }), false);
+  assert.equal(canViewPath("/vault/property", { ...propertyViewer, assignedSectionKeys: [], assignedAssetIds: [] }), false);
+});
+
+test("linked finance summaries include only assigned assets and legacy records", () => {
+  const rows = [
+    { id: "asset-1", section_key: "finances", metadata_json: {} },
+    { id: "asset-2", section_key: "finances", metadata_json: {} },
+    { id: "record-1", section_key: "finances", metadata_json: { finance_record_source: "records" } },
+    { id: "record-2", section_key: "finances", metadata_json: { finance_record_source: "records" } },
+  ];
+  assert.deepEqual(filterFinanceDashboardRowsForViewer(rows, linkedViewer).map((row) => row.id), ["asset-1", "record-1"]);
+  assert.deepEqual(filterFinanceDashboardRowsForViewer(rows, { ...linkedViewer, assignedAssetIds: [], assignedRecordIds: [] }), []);
+  assert.deepEqual(filterFinanceDashboardRowsForViewer(rows, { ...linkedViewer, activationStatus: "revoked" }), []);
 });
 
 test("accepted invitation state can open Contact Wallet but not protected detail routes", () => {

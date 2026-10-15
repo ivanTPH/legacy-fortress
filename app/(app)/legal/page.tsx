@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import DashboardAssetSummaryCard from "../components/dashboard/DashboardAssetSummaryCard";
-import Icon from "../../../components/ui/Icon";
+import { Card, IconTile, PageHeader, Row } from "../../../components/ui/V3Primitives";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
+import { filterAssetIdsForViewer, filterRecordIdsForViewer } from "../../../lib/access-control/viewerAccess";
 import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
 import { assetMatchesLegalCategory, LEGAL_CATEGORIES } from "../../../lib/legalCategories";
 import { fetchCanonicalAssets } from "../../../lib/assets/fetchCanonicalAssets";
@@ -15,6 +16,8 @@ import { isVaultSubsectionEnabled, type VaultSubsectionKey } from "../../../lib/
 
 type LegalRow = {
   id: string;
+  title?: string | null;
+  source: "asset" | "record";
   category_key: string | null;
   created_at: string | null;
 };
@@ -53,7 +56,7 @@ export default function LegalOverviewPage() {
       const [legacyResult, walletContext] = await Promise.all([
         supabase
           .from("records")
-          .select("id,category_key,created_at")
+          .select("id,title,category_key,created_at")
           .eq("owner_user_id", ownerUserId)
           .eq("section_key", "legal")
           .order("created_at", { ascending: false }),
@@ -74,19 +77,21 @@ export default function LegalOverviewPage() {
         setStatus(`⚠️ Could not load legal summary: ${message}`);
         setRows([]);
       } else {
-        const legacyRows = (legacyResult.data ?? []) as LegalRow[];
-        const canonicalRows = ((canonicalResult.data ?? []) as LegalAssetRow[]).reduce<LegalRow[]>((result, row) => {
+        const legacyRows = filterRecordIdsForViewer((legacyResult.data ?? []) as Omit<LegalRow, "source">[], viewer).map((row) => ({ ...row, source: "record" as const }));
+        const canonicalRows = filterAssetIdsForViewer((canonicalResult.data ?? []) as LegalAssetRow[], viewer).reduce<LegalRow[]>((result, row) => {
             const matchedCategory = LEGAL_CATEGORIES.find((category) => assetMatchesLegalCategory(row, category.slug));
             if (!matchedCategory) return result;
             result.push({
               id: String(row.id),
+              title: row.title,
+              source: "asset",
               category_key: matchedCategory.slug,
               created_at: row.created_at,
             });
             return result;
           }, []);
 
-        setRows([...legacyRows, ...canonicalRows]);
+        setRows([...new Map([...legacyRows, ...canonicalRows].map((row) => [`${row.source}:${row.id}`, row])).values()]);
       }
 
       setLoading(false);
@@ -96,106 +101,57 @@ export default function LegalOverviewPage() {
     return () => {
       mounted = false;
     };
-  }, [router, viewer.targetOwnerUserId]);
-
-  const counts = useMemo(() => {
-    const byType = new Map<string, number>();
-    for (const row of rows) {
-      const type = row.category_key || "other-legal-documents";
-      byType.set(type, (byType.get(type) ?? 0) + 1);
-    }
-    return byType;
-  }, [rows]);
+  }, [router, viewer]);
 
   const visibleCategories = useMemo(
     () => LEGAL_CATEGORIES.filter((category) => isVaultSubsectionEnabled(preferences, mapLegalSlugToPreferenceKey(category.slug))),
     [preferences],
   );
 
-  return (
-    <section style={{ display: "grid", gap: 14 }}>
-      <div style={{ display: "grid", gap: 6 }}>
-        <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
-          Review the core legal records someone should be able to find quickly, from wills and trusts to powers of attorney and other legal paperwork.
-        </p>
-      </div>
+  const sections = [
+    ...visibleCategories.map((category) => ({ slug: category.slug, title: category.label, description: category.description,
+      href: getLegalCategoryHref(category.slug), icon: getLegalCategoryIcon(category.slug) })),
+    ...(isVaultSubsectionEnabled(preferences, "personal_wishes") ? [{ slug: "personal-wishes", title: "Personal Wishes",
+      description: "Guidance and wishes for your trusted people.", href: "/personal/wishes", icon: "volunteer_activism" }] : []),
+  ].map((section) => ({ ...section, records: rows.filter((row) => (row.category_key || "other-legal-documents") === section.slug) }));
+  const populated = sections.filter((section) => section.records.length > 0);
+  const empty = sections.filter((section) => section.records.length === 0);
+  const recordCount = new Set(populated.flatMap((section) => section.records.map((row) => `${row.source}:${row.id}`))).size;
+  const latest = populated.flatMap((section) => section.records.map((row) => row.created_at)).filter((value): value is string => Boolean(value))
+    .sort((a, b) => Date.parse(b) - Date.parse(a))[0];
 
-      {status ? <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div> : null}
-      {loading ? <div style={{ color: "#6b7280" }}>Loading legal categories...</div> : null}
-
-      {visibleCategories.length || isVaultSubsectionEnabled(preferences, "personal_wishes") ? (
-      <div className="lf-content-grid">
-        {visibleCategories.map((category) => (
-          <LegalSummaryTile
-            key={category.slug}
-            title={category.label}
-            description={category.description}
-            href={getLegalCategoryHref(category.slug)}
-            icon={getLegalCategoryIcon(category.slug)}
-            total={counts.get(category.slug) ?? 0}
-            addedAt={getLatestDate(rows, category.slug)}
-          />
-        ))}
-        {isVaultSubsectionEnabled(preferences, "personal_wishes") ? (
-          <LegalSummaryTile
-            title="Personal Wishes"
-            description="Keep personal guidance, wishes, and instructions available from the legal review flow."
-            href="/personal/wishes"
-            icon="favorite"
-            total={counts.get("personal-wishes") ?? 0}
-            addedAt={getLatestDate(rows, "personal-wishes")}
-          />
-        ) : null}
-      </div>
-      ) : (
-        <div style={{ color: "#64748b", fontSize: 13 }}>
-          Legal subsections are currently hidden by My Vault preferences. Re-enable them in Account / My Vault at any time.
-        </div>
-      )}
-    </section>
-  );
+  return <section className="lf-v3-area-page">
+    <PageHeader title="Legal" description="Keep wills, trusts, powers of attorney and other legal records easy to find."
+      action={viewer.mode === "linked" ? undefined : <Link className="lf-v3-button lf-v3-button--primary" href="/legal/wills?add=1">Add record</Link>} />
+    {status ? <p role="alert">{status}</p> : null}
+    {loading ? <p role="status">Loading legal records…</p> : null}
+    {!loading && recordCount > 0 ? <Card className="lf-v3-stats-strip" aria-label="Legal summary">
+      <div><span>Records</span><strong>{recordCount}</strong></div>
+      <div><span>Sections</span><strong>{populated.length} of {sections.length}</strong></div>
+      <div><span>Last updated</span><strong>{formatLegalDate(latest)}</strong></div>
+    </Card> : null}
+    {populated.map((section) => <Card key={section.slug} className="lf-v3-area-section">
+      <header><Link href={section.href}><IconTile icon={section.icon} /><span><strong>{section.title}</strong><small>{section.records.length} record{section.records.length === 1 ? "" : "s"}</small></span></Link>
+        {viewer.mode !== "linked" ? <Link href={`${section.href}?add=1`} className="lf-v3-area-add" aria-label={`Add ${section.title} record`}>+</Link> : null}
+      </header>
+      {section.records.map((row) => <Row key={`${row.source}:${row.id}`} title={row.title || section.title}
+        description={row.created_at ? `Updated ${formatLegalDate(row.created_at)}` : undefined}
+        href={`${section.href}?${row.source === "asset" ? "asset" : "record"}=${encodeURIComponent(row.id)}`} />)}
+    </Card>)}
+    {viewer.mode !== "linked" && empty.length ? <section className="lf-v3-area-empty" aria-label="Not added yet">
+      <h2>{recordCount ? "Not added yet" : "Start with any of these"}</h2>
+      <div>{empty.map((section) => <Link key={section.slug} href={section.href} className="lf-v3-area-empty-tile">
+        <IconTile icon={section.icon} size={32} /><strong>{section.title}</strong><small>{section.description}</small><span aria-hidden="true">＋</span>
+      </Link>)}</div>
+    </section> : null}
+    {!loading && viewer.mode === "linked" && !recordCount ? <p>No legal records are assigned to you.</p> : null}
+  </section>;
 }
 
-function LegalSummaryTile({
-  title,
-  description,
-  href,
-  icon,
-  total,
-  addedAt,
-}: {
-  title: string;
-  description: string;
-  href: string;
-  icon: string;
-  total: number;
-  addedAt: string | null;
-}) {
-  const hasRecords = total > 0;
-  const cardHref = hasRecords ? href : `${href}?add=1`;
-  return (
-    <div className="lf-finance-summary-tile">
-      <DashboardAssetSummaryCard
-        icon={<Icon name={icon} size={13} />}
-        title={title}
-        href={cardHref}
-        addedAt={addedAt}
-        value={hasRecords ? String(total) : "No records yet"}
-        detail={hasRecords ? `${total} active record${total === 1 ? "" : "s"}` : description}
-        items={[]}
-        emptyActionLabel={hasRecords ? "Open category" : "Add record"}
-        emptyState={!hasRecords}
-      />
-    </div>
-  );
-}
-
-function getLatestDate(rows: LegalRow[], categoryKey: string) {
-  return rows
-    .filter((row) => (row.category_key || "other-legal-documents") === categoryKey)
-    .map((row) => row.created_at)
-    .filter((value): value is string => Boolean(value))
-    .sort((a, b) => Date.parse(b) - Date.parse(a))[0] ?? null;
+function formatLegalDate(value: string | null | undefined) {
+  if (!value) return "Not recorded";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Not recorded" : new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(date);
 }
 
 function mapLegalSlugToPreferenceKey(slug: string): VaultSubsectionKey {

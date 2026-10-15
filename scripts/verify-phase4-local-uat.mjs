@@ -31,7 +31,7 @@ const people = Object.fromEntries(["owner", "chrome_linked", "webkit_linked", "w
   .map((role) => [role, { email: `phase4-migration-${role}-${stamp}@local.test`, id: "" }]));
 const createdUsers = [];
 const fixture = { ownerOrg: "", ownerWallet: "", asset: "", invitations: [], grants: [], assurance: [] };
-const screenshotDir = "/private/tmp/lf-phase4-uat-migration-20261015/screenshots";
+const screenshotDir = process.env.LF_SCREENSHOT_DIR ?? "/private/tmp/lf-phase4-uat-migration-20261015/screenshots";
 const checks = [];
 const limitations = [];
 await mkdir(screenshotDir, { recursive: true, mode: 0o700 });
@@ -62,7 +62,9 @@ try {
   console.log("SETUP temporary synthetic users and owner wallet ready");
   await apiDisclosureChecks();
 
-  for (const engine of process.env.LF_PHASE4_API_ONLY === "1" ? [] : ["chrome", "webkit"]) {
+  const browserEngines = process.env.LF_PHASE4_ENGINE === "webkit" || process.env.LF_PHASE4_ENGINE === "chrome"
+    ? [process.env.LF_PHASE4_ENGINE] : ["chrome", "webkit"];
+  for (const engine of process.env.LF_PHASE4_API_ONLY === "1" ? [] : browserEngines) {
     const linked = people[`${engine}_linked`];
     const token = randomBytes(24).toString("hex");
     const invite = await row(admin.from("contact_invitations").insert({ owner_user_id: people.owner.id,
@@ -75,6 +77,12 @@ try {
   }
   console.log(`PASS local UAT checks: ${checks.join(", ")}`);
   if (limitations.length) console.log(`LIMITATION ${limitations.join("; ")}`);
+} catch (error) {
+  const message = String(error instanceof Error ? error.message : error)
+    .replace(/([?&]token=)[^&\s"']+/gi, "$1[redacted]")
+    .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, "Bearer [redacted]");
+  console.error(`FAIL local UAT check: ${message}`);
+  process.exitCode = 1;
 } finally {
   const cleanupErrors = [];
   async function remove(query, label) { const res = await query; if (res.error) cleanupErrors.push(`${label}: ${res.error.code ?? "error"}`); }
@@ -131,6 +139,7 @@ async function apiDisclosureChecks() {
 }
 
 async function browserJourney(engine, linked, invitationId, invitePath, title) {
+  const journeyViewport = engine === "chrome" ? { width: 1440, height: 900 } : { width: 390, height: 844 };
   const blockedHosts = [];
   async function watch(context) {
     context.on("request", (request) => { const u = new URL(request.url());
@@ -141,47 +150,96 @@ async function browserJourney(engine, linked, invitationId, invitePath, title) {
   const browser = await (engine === "chrome" ? chromium : webkit).launch(engine === "chrome"
     ? { channel: "chrome", headless: true } : { headless: true });
   try {
-    for (const [device, viewport] of [["desktop", { width: 1440, height: 900 }], ["mobile", { width: 390, height: 844 }]]) {
+    const targetViewports = engine === "chrome"
+      ? [["desktop", { width: 1440, height: 900 }]]
+      : [["mobile", { width: 390, height: 844 }]];
+    for (const [device, viewport] of targetViewports) {
       const context = await browser.newContext({ viewport, baseURL: appUrl });
       await watch(context);
       const page = await context.newPage();
       try {
         await signIn(page, people.owner.email);
-        await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-        await page.locator(".lf-shell").waitFor({ timeout: 20_000 });
-        await page.screenshot({ path: `${screenshotDir}/${engine}-${device}-owner.png` });
+        for (const [name, path, heading] of [
+          ["dashboard", "/dashboard", "Dashboard"],
+          ["actions", "/actions", "Action Centre"],
+          ["add", "/add", "Add to my Fortress"],
+          ["finances", "/finances", "Finances"],
+          ["legal", "/legal", "Legal"],
+          ["property", "/property", "Property"],
+          ["business", "/business", "Business"],
+          ["digital", "/vault/digital", "Digital"],
+          ["possessions", "/vault/personal", "Possessions"],
+          ["people", "/contacts", "People I Trust"],
+        ]) {
+          const screenPage = await context.newPage();
+          try {
+            await screenPage.goto(path, { waitUntil: "domcontentloaded" });
+            if (name === "dashboard" && device === "mobile") await screenPage.locator(".lf-shell").waitFor({ timeout: 20_000 });
+            else await screenPage.getByRole("heading", { name: heading, exact: true }).first().waitFor({ timeout: 20_000 });
+            await screenPage.waitForFunction(() => !/Loading (dashboard summary|finance summary|legal records|records|contacts network|actions)/i.test(document.body.innerText), null, { timeout: 30_000 });
+            if (name === "dashboard") await screenPage.waitForFunction(() => {
+              const value = document.querySelector(".lf-v3-stats-strip strong")?.textContent?.trim();
+              return Boolean(value && value !== "…");
+            }, null, { timeout: 30_000 });
+            if (name === "property") await screenPage.getByText(title, { exact: false }).first().waitFor({ timeout: 20_000 });
+            await screenPage.screenshot({ path: `${screenshotDir}/${engine}-${device}-${name}.png` });
+            if (name === "actions" && await screenPage.getByRole("button", { name: "Review", exact: true }).count()) {
+              await screenPage.getByRole("button", { name: "Review", exact: true }).first().click();
+              await screenPage.locator(".lf-dashboard-review-panel").waitFor({ timeout: 20_000 });
+              await screenPage.waitForFunction(() => document.activeElement?.classList.contains("lf-dashboard-review-panel"), null, { timeout: 20_000 });
+            }
+            if (name === "property") {
+              await screenPage.getByRole("link", { name: new RegExp(title) }).click();
+              await screenPage.waitForURL((url) => url.pathname === "/vault/property" && url.searchParams.get("asset") === fixture.asset);
+              await screenPage.getByText(title, { exact: false }).first().waitFor({ timeout: 20_000 });
+            }
+          } finally { await screenPage.close(); }
+        }
         const ownerApi = await asUser(people.owner.email);
         assert.deepEqual((await row(ownerApi.from("assets").select("id").eq("id", fixture.asset))).map((x) => x.id), [fixture.asset]);
-        await page.goto("/admin", { waitUntil: "domcontentloaded" });
-        await page.getByRole("heading", { name: /Admin access is restricted|Access not available/i }).waitFor({ timeout: 20_000 });
-        await page.goto("/enterprise", { waitUntil: "domcontentloaded" });
-        await page.getByRole("heading", { name: /Access denied|Enterprise workspace unavailable/i }).waitFor({ timeout: 20_000 });
+        for (const [path, heading] of [["/admin", /Admin access is restricted|Access not available/i],
+          ["/enterprise", /Access denied|Enterprise workspace unavailable/i]]) {
+          const domainPage = await context.newPage();
+          try {
+            await domainPage.goto(path, { waitUntil: "domcontentloaded" });
+            await domainPage.getByRole("heading", { name: heading }).waitFor({ timeout: 20_000 });
+          } finally { await domainPage.close(); }
+        }
         checks.push(`${engine}-${device}-owner-and-domain-isolation`);
       console.log(`PASS ${engine} ${device} owner and domain isolation`);
       } finally { await context.close(); }
     }
 
-    const wrongContext = await browser.newContext({ baseURL: appUrl });
+    const wrongContext = await browser.newContext({ baseURL: appUrl, viewport: journeyViewport });
     await watch(wrongContext);
     try {
+      const wrongAuthPage = await wrongContext.newPage();
+      await signIn(wrongAuthPage, people.wrong.email);
       const wrongPage = await wrongContext.newPage();
-      await signIn(wrongPage, people.wrong.email);
       await wrongPage.goto(invitePath, { waitUntil: "domcontentloaded" });
       await wrongPage.getByRole("region", { name: "Wrong account" }).waitFor({ timeout: 20_000 });
       assert.equal(await wrongPage.getByRole("button", { name: /Accept .*role and continue/i }).count(), 0);
       await wrongPage.screenshot({ path: `${screenshotDir}/${engine}-wrong-account.png` });
+      const wrongApi = await asUser(people.wrong.email);
+      assert.deepEqual(await row(wrongApi.from("assets").select("id").eq("id", fixture.asset)), []);
+      const wrongVaultPage = await wrongContext.newPage();
+      await wrongVaultPage.goto("/vault/property", { waitUntil: "domcontentloaded" });
+      await wrongVaultPage.waitForFunction(() => !document.body.innerText.includes("Loading records…"), null, { timeout: 20_000 });
+      assert.equal(await wrongVaultPage.getByText(title, { exact: false }).count(), 0,
+        "Unassigned account must not see the owner's property");
       checks.push(`${engine}-wrong-account-invitation`);
       console.log(`PASS ${engine} wrong-account invitation`);
     } finally { await wrongContext.close(); }
 
-    const linkedContext = await browser.newContext({ baseURL: appUrl });
+    const linkedContext = await browser.newContext({ baseURL: appUrl, viewport: journeyViewport });
     await watch(linkedContext);
     try {
-      const linkedPage = await linkedContext.newPage();
-      await signIn(linkedPage, linked.email);
-      await linkedPage.goto(invitePath, { waitUntil: "domcontentloaded" });
-      await linkedPage.getByRole("button", { name: /Accept .*role and continue/i }).click();
-      await linkedPage.waitForURL(/\/identity\/verify/, { timeout: 20_000 });
+      const linkedAuthPage = await linkedContext.newPage();
+      await signIn(linkedAuthPage, linked.email);
+      const linkedInvitePage = await linkedContext.newPage();
+      await linkedInvitePage.goto(invitePath, { waitUntil: "domcontentloaded" });
+      await linkedInvitePage.getByRole("button", { name: /Accept .*role and continue/i }).click();
+      await linkedInvitePage.waitForURL(/\/identity\/verify/, { timeout: 20_000 });
       const grant = await row(admin.from("account_access_grants").select("id,activation_status")
         .eq("invitation_id", invitationId).single());
       fixture.grants.push(grant.id);
@@ -195,12 +253,33 @@ async function browserJourney(engine, linked, invitationId, invitePath, title) {
         permissions_override: { asset_ids: [fixture.asset] } }).eq("id", grant.id));
       assert.deepEqual((await row(linkedApi.from("assets").select("id,title").eq("owner_user_id", people.owner.id)))
         .map((x) => x.id), [fixture.asset]);
+      const linkedDashboardPage = await linkedContext.newPage();
+      await linkedDashboardPage.goto("/dashboard", { waitUntil: "domcontentloaded" });
+      await linkedDashboardPage.locator(".lf-v3-vault-tile").first().waitFor({ timeout: 20_000 });
+      try {
+        await linkedDashboardPage.waitForFunction(() => document.querySelector(".lf-v3-stats-strip strong")?.textContent?.trim() === "1", null, { timeout: 30_000 });
+      } catch (error) {
+        await linkedDashboardPage.screenshot({ path: `${screenshotDir}/${engine}-linked-dashboard-timeout.png`, fullPage: true });
+        const state = await linkedDashboardPage.evaluate(() => ({
+          path: location.pathname,
+          count: document.querySelector(".lf-v3-stats-strip strong")?.textContent?.trim() ?? "missing",
+          status: document.querySelector(".lf-dashboard-shell > [role='status']")?.textContent?.slice(0, 100) ?? "none",
+        }));
+        console.error(`LINKED_DASHBOARD_DIAGNOSTIC ${JSON.stringify(state)}`);
+        throw error;
+      }
+      assert.equal(await linkedDashboardPage.locator('.lf-v3-dashboard-pageheader a[href="/add"]').count(), 0);
+      assert.deepEqual(await linkedDashboardPage.locator(".lf-v3-vault-tile").evaluateAll((tiles) => tiles.map((tile) => tile.getAttribute("href"))), ["/property"]);
+      assert.equal(await linkedDashboardPage.locator(".lf-dashboard-readiness-summary").count(), 0);
+      await linkedDashboardPage.screenshot({ path: `${screenshotDir}/${engine}-linked-dashboard.png` });
+      const linkedPage = await linkedContext.newPage();
       await linkedPage.goto("/vault/property", { waitUntil: "domcontentloaded" });
-      try { await linkedPage.locator(".lf-shell").waitFor({ timeout: 20_000 }); }
-      catch { limitations.push(`${engine} linked route did not reach the customer shell`); }
-      try { await linkedPage.getByText(title, { exact: false }).first().waitFor({ timeout: 10_000 }); }
-      catch { limitations.push(`${engine} linked asset was authorised by API but not displayed at ${new URL(linkedPage.url()).pathname}`); }
+      await linkedPage.locator(".lf-shell").waitFor({ timeout: 20_000 });
+      await linkedPage.getByText(title, { exact: false }).first().waitFor({ timeout: 20_000 });
+      assert.equal(new URL(linkedPage.url()).pathname, "/vault/property", "Assigned area must remain open");
       await linkedPage.screenshot({ path: `${screenshotDir}/${engine}-linked-assigned.png` });
+      assert.equal(await linkedPage.getByRole("button", { name: "Edit record" }).count(), 0);
+      assert.equal(await linkedPage.getByRole("button", { name: "Delete record" }).count(), 0);
       await row(admin.from("account_access_grants").update({ activation_status: "revoked" }).eq("id", grant.id));
       assert.deepEqual(await row(linkedApi.from("assets").select("id").eq("id", fixture.asset)), []);
       await linkedPage.reload({ waitUntil: "domcontentloaded" });
@@ -209,11 +288,12 @@ async function browserJourney(engine, linked, invitationId, invitePath, title) {
       console.log(`PASS ${engine} invitation, linked identity and revocation`);
     } finally { await linkedContext.close(); }
 
-    const adminContext = await browser.newContext({ baseURL: appUrl });
+    const adminContext = await browser.newContext({ baseURL: appUrl, viewport: journeyViewport });
     await watch(adminContext);
     try {
+      const adminAuthPage = await adminContext.newPage();
+      await signIn(adminAuthPage, people.admin.email);
       const adminPage = await adminContext.newPage();
-      await signIn(adminPage, people.admin.email);
       await adminPage.goto("/admin", { waitUntil: "domcontentloaded" });
       await adminPage.getByRole("heading", { name: /Admin overview/i }).waitFor({ timeout: 20_000 });
       await adminPage.screenshot({ path: `${screenshotDir}/${engine}-admin.png` });

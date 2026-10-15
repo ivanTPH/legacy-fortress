@@ -50,9 +50,10 @@ test("selected overview pages use the shared canonical overview grid", () => {
 });
 
 test("Phase 4A dashboards keep summaries privacy-safe", () => {
-  assert.match(files.component, /hideItems/);
-  assert.match(files.component, /items=\{\[\]\}/);
-  assert.match(files.component, /value=\{state\.status === "loading" \? "Loading" : isEmpty \? "Add record" : String\(rows\.length\)\}/);
+  assert.match(files.component, /filterAssetIdsForViewer/);
+  assert.match(files.component, /new Set\(populated\.flatMap/);
+  assert.match(files.component, /viewer\.mode !== "linked" && empty\.length/);
+  assert.match(files.component, /recordHref\(tile\.href, row\.id\)/);
   assert.doesNotMatch(files.component, /file_name|storage_path|contact_email|contact_phone|account_number|sort_code/);
   assert.match(files.inventory, /Do not count attachments, filenames, invitation records, contact notes, document contents, account numbers or unrelated owner data/);
   assert.match(files.selectedScope, /count-only summaries/);

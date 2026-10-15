@@ -225,8 +225,14 @@ export async function loadViewerAccessState(
   const linkedRecordIds = ((recordLinksRes as { data?: Array<{ record_id?: string | null }> | null }).data ?? [])
     .map((row) => String(row.record_id ?? "").trim())
     .filter(Boolean);
+  const assignedAssetIds = Array.from(new Set([...permissionsOverride.assetIds, ...linkedAssetIds]));
   const recordSectionKeys = linkedRecordIds.length
     ? await loadRecordSectionKeys(client, selectedGrant.owner_user_id, linkedRecordIds)
+    : [];
+  // Older contact links have no section_key. Resolve the assigned asset IDs through
+  // the current caller's RLS view, rather than granting the whole area by role.
+  const linkedAssetSectionKeys = assignedAssetIds.length
+    ? await loadAssetSectionKeys(client, selectedGrant.owner_user_id, assignedAssetIds)
     : [];
   const assetSectionKeys = ((assetLinksRes as { data?: Array<{ section_key?: string | null }> | null }).data ?? [])
     .map((row) => normalizeSectionKey(row.section_key))
@@ -234,6 +240,7 @@ export async function loadViewerAccessState(
   const assignedSectionKeys = Array.from(new Set([
     ...permissionsOverride.allowedSections,
     ...assetSectionKeys,
+    ...linkedAssetSectionKeys,
     ...recordSectionKeys,
   ]));
 
@@ -253,7 +260,7 @@ export async function loadViewerAccessState(
     requiredIdentityLevel,
     vaultLifecycleState,
     permissionsOverride,
-    assignedAssetIds: Array.from(new Set([...permissionsOverride.assetIds, ...linkedAssetIds])),
+    assignedAssetIds,
     assignedRecordIds: Array.from(new Set([...permissionsOverride.recordIds, ...linkedRecordIds])),
     editableAssetIds: permissionsOverride.editableAssetIds,
     editableRecordIds: permissionsOverride.editableRecordIds,
@@ -465,6 +472,18 @@ async function loadRecordSectionKeys(client: AnySupabaseClient, ownerUserId: str
     .select("section_key")
     .eq("owner_user_id", ownerUserId)
     .in("id", recordIds);
+  if (result.error) return [];
+  return ((result.data ?? []) as Array<{ section_key?: string | null }>)
+    .map((row) => normalizeSectionKey(row.section_key))
+    .filter((value): value is SectionKey => Boolean(value));
+}
+
+async function loadAssetSectionKeys(client: AnySupabaseClient, ownerUserId: string, assetIds: string[]) {
+  const result = await client
+    .from("assets")
+    .select("section_key")
+    .eq("owner_user_id", ownerUserId)
+    .in("id", assetIds);
   if (result.error) return [];
   return ((result.data ?? []) as Array<{ section_key?: string | null }>)
     .map((row) => normalizeSectionKey(row.section_key))

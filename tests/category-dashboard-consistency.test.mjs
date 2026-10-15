@@ -22,20 +22,19 @@ const files = {
   globals: readFileSync(new URL("../app/globals.css", import.meta.url), "utf8"),
 };
 
-test("asset-class overview pages use the same summary card pattern as finance", () => {
+test("asset-class overview pages use Version 3 section cards and the shared canonical grid", () => {
   for (const [name, source] of Object.entries({
     legal: files.legal,
+    finances: files.finances,
     property: files.property,
     business: files.business,
-    personal: files.personal,
     digitalOverview: files.digitalOverview,
     possessionOverview: files.possessionOverview,
   })) {
-    assert.match(source, /DashboardAssetSummaryCard|CanonicalAssetOverviewGrid/, `${name} should use shared dashboard summary cards`);
-    assert.match(`${source}\n${files.canonicalOverviewGrid}`, /lf-finance-summary-tile/, `${name} should use the finance dashboard tile layout`);
-    assert.doesNotMatch(source, /CategoryDashboardCard/, `${name} should not use the retired dashboard card pattern`);
+    assert.match(source, /PageHeader/, `${name} should use the shared page header`);
+    assert.match(source, /CanonicalAssetOverviewGrid|lf-v3-area-section/, `${name} should use Version 3 area sections`);
   }
-  assert.match(files.canonicalOverviewGrid, /DashboardAssetSummaryCard/);
+  assert.match(files.canonicalOverviewGrid, /lf-v3-area-section/);
   assert.match(files.canonicalOverviewGrid, /fetchCanonicalAssets/);
 });
 
@@ -49,16 +48,11 @@ test("sidebar launches top-level dashboards instead of submenu flyouts", () => {
 
 test("record workspaces open the add form from add=1 query links", () => {
   assert.match(files.finances, /\$\{section\.href\}\?add=1/);
-  assert.match(files.finances, /emptyState=\{isEmpty\}/);
-  assert.match(files.finances, /emptyActionLabel="Add record"/);
-  assert.match(files.legal, /\$\{href\}\?add=1/);
-  assert.match(files.legal, /emptyState=\{!hasRecords\}/);
-  assert.match(files.property, /\$\{item\.href\}\?add=1/);
+  assert.match(files.legal, /\$\{section\.href\}\?add=1/);
+  assert.match(files.property, /addHref: "\/vault\/property\?add=1"/);
   assert.match(files.property, /CanonicalAssetOverviewGrid/);
-  assert.match(files.property, /emptyState/);
-  assert.match(files.business, /\$\{href\}\?add=1/);
+  assert.match(files.business, /addHref: "\/vault\/business\?add=1"/);
   assert.match(files.business, /CanonicalAssetOverviewGrid/);
-  assert.match(files.personal, /\$\{item\.href\}\?add=1/);
   assert.match(files.digitalOverview, /\/vault\/digital\/records\?add=1&digitalType=/);
   assert.match(files.possessionOverview, /\/vault\/personal\/records\?add=1&possessionCategory=/);
   assert.match(files.digitalRecords, /UniversalRecordWorkspace/);
@@ -71,21 +65,11 @@ test("record workspaces open the add form from add=1 query links", () => {
   assert.match(files.sectionWorkspace, /setShowForm\(true\)/);
 });
 
-test("empty dashboard cards use a single primary add action", () => {
-  assert.match(files.summaryCard, /emptyState = false/);
-  assert.match(files.summaryCard, /emptyState \? \(/);
-  assert.match(files.summaryCard, /emptyPrimaryActionStyle/);
-  assert.match(files.summaryCard, /emptyPrimaryLabelStyle/);
-  assert.match(files.summaryCard, /emptyPrimaryIconStyle/);
-  assert.match(files.summaryCard, /Icon name="add" size=\{22\}/);
-  assert.match(files.summaryCard, /border: "1px solid #e5e0dc"/);
-  assert.match(files.summaryCard, /width: 32/);
-  assert.match(files.summaryCard, /fontSize: 24/);
-  assert.match(files.summaryCard, /color: "#a4afbf"/);
-  assert.match(files.summaryCard, /color: "#7f8794"/);
-  assert.match(files.summaryCard, /style=\{emptyState \? emptyFooterStyle : footerWrapStyle\}/);
-  assert.match(files.summaryCard, /minHeight: 62/);
-  assert.match(files.globals, /\.lf-finance-summary-tile \{\s*display: grid;\s*gap: 4px;\s*height: 100%;\s*grid-template-rows: auto 1fr;/);
+test("empty area tiles provide owner-only add destinations", () => {
+  assert.match(files.canonicalOverviewGrid, /viewer\.mode !== "linked" && empty\.length/);
+  assert.match(files.canonicalOverviewGrid, /href=\{tile\.addHref\}/);
+  assert.match(files.legal, /viewer\.mode !== "linked" && empty\.length/);
+  assert.match(files.globals, /\.lf-v3-area-empty-tile/);
 });
 
 test("digital and possession starter tiles map to known form types", () => {

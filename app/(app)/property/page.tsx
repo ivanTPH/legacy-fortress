@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import CanonicalAssetOverviewGrid, { type CanonicalAssetOverviewTile } from "../components/dashboard/CanonicalAssetOverviewGrid";
-import DashboardAssetSummaryCard from "../components/dashboard/DashboardAssetSummaryCard";
-import Icon from "../../../components/ui/Icon";
+import { PageHeader, IconTile } from "../../../components/ui/V3Primitives";
+import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
 import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
 import { isVaultSubsectionEnabled, type VaultSubsectionKey } from "../../../lib/vaultPreferences";
 
@@ -13,6 +14,7 @@ const items = [
 ];
 
 export default function PropertyOverviewPage() {
+  const { viewer } = useViewerAccess();
   const { preferences } = useVaultPreferences();
   const visibleItems = items.filter((item) => isVaultSubsectionEnabled(preferences, item.preferenceKey));
   const propertyRecordTiles: CanonicalAssetOverviewTile[] = useMemo(() => (
@@ -31,28 +33,14 @@ export default function PropertyOverviewPage() {
   ), [preferences]);
 
   return (
-    <section style={{ display: "grid", gap: 14 }}>
-      <div style={{ display: "grid", gap: 6 }}>
-        <p style={{ margin: "6px 0 0", color: "#6b7280" }}>Record your properties, deeds, valuations, and supporting documents for your estate.</p>
-      </div>
+    <section className="lf-v3-area-page">
+      <PageHeader title="Property" description="Record properties, deeds, valuations and supporting documents for your estate."
+        action={viewer.mode === "linked" || !propertyRecordTiles.length ? undefined : <Link className="lf-v3-button lf-v3-button--primary" href={propertyRecordTiles[0].addHref}>Add record</Link>} />
       {visibleItems.length ? (
-      <div className="lf-content-grid">
-        <CanonicalAssetOverviewGrid tiles={propertyRecordTiles} />
-        {visibleItems.filter((item) => item.href !== "/vault/property").map((item) => (
-          <div key={item.href} className="lf-finance-summary-tile">
-            <DashboardAssetSummaryCard
-              icon={<Icon name={item.icon} size={13} />}
-              title={item.label}
-              href={`${item.href}?add=1`}
-              value="No records yet"
-              detail={item.desc}
-              items={[]}
-              emptyActionLabel="Add record"
-              emptyState
-            />
-          </div>
-        ))}
-      </div>
+      <><CanonicalAssetOverviewGrid tiles={propertyRecordTiles} />
+      {viewer.mode !== "linked" ? <div className="lf-v3-area-extra">{visibleItems.filter((item) => item.href !== "/vault/property").map((item) => (
+        <Link key={item.href} href={item.href} className="lf-v3-area-empty-tile"><IconTile icon={item.icon} size={32} /><strong>{item.label}</strong><small>{item.desc}</small><span aria-hidden="true">›</span></Link>
+      ))}</div> : null}</>
       ) : (
         <div style={{ color: "#64748b", fontSize: 13 }}>
           Property subsections are currently hidden by My Vault preferences. Re-enable them in Account / My Vault at any time.

@@ -3,13 +3,14 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const financeRowsSource = readFileSync(new URL("../lib/dashboard/financeRows.ts", import.meta.url), "utf8");
-const dashboardSource = readFileSync(new URL("../app/(app)/dashboard/page.tsx", import.meta.url), "utf8");
+const dashboardSource = readFileSync(new URL("../app/(app)/dashboard/DashboardWorkspace.tsx", import.meta.url), "utf8");
 const financesSource = readFileSync(new URL("../app/(app)/finances/page.tsx", import.meta.url), "utf8");
 
 test("dashboard merges canonical finance assets with legacy finance records", () => {
   assert.match(dashboardSource, /loadFinanceDashboardRows/);
   assert.match(dashboardSource, /const nonFinanceAssets = canonicalAssets\.filter/);
-  assert.match(dashboardSource, /const mergedAssets = \[\.\.\.nonFinanceAssets, \.\.\.\(\(\(financeRowsRes\.data \?\? \[\]\)/);
+  assert.match(dashboardSource, /filterAssetIdsForViewer\(nonFinanceAssets, viewer\)/);
+  assert.match(dashboardSource, /filterFinanceDashboardRowsForViewer\(financeRows, viewer\)/);
 });
 
 test("finance loader maps legacy finance records into dashboard rows", () => {

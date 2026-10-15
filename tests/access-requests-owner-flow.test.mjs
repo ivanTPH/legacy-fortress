@@ -8,7 +8,7 @@ const root = process.cwd();
 test("access requests separate owner permissions from invited-person evidence escalation", () => {
   const workspace = fs.readFileSync(path.join(root, "components/access-requests/AccessRequestsWorkspace.tsx"), "utf8");
   const css = fs.readFileSync(path.join(root, "app/globals.css"), "utf8");
-  const dashboardPage = fs.readFileSync(path.join(root, "app/(app)/dashboard/page.tsx"), "utf8");
+  const dashboardPage = fs.readFileSync(path.join(root, "app/(app)/dashboard/DashboardWorkspace.tsx"), "utf8");
   const deathCertificatePage = fs.readFileSync(path.join(root, "app/(app)/legal/death-certificate/page.tsx"), "utf8");
 
   assert.match(workspace, /Access Requests/);

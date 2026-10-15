@@ -10,9 +10,9 @@ test("contextual help popover stays reusable, accessible, and mobile safe", () =
   const css = fs.readFileSync(path.join(root, "app/globals.css"), "utf8");
   const appLayout = fs.readFileSync(path.join(root, "app/layout.tsx"), "utf8");
 
-  assert.equal(fs.existsSync(path.join(root, "public/fonts/material-symbols-outlined.ttf")), true);
-  assert.match(css, /@font-face \{\s*font-family: "Material Symbols Outlined"/);
-  assert.match(css, /src: url\("\/fonts\/material-symbols-outlined\.ttf"\) format\("truetype"\)/);
+  assert.equal(fs.existsSync(path.join(root, "public/fonts/material-symbols-rounded.woff2")), true);
+  assert.match(css, /@font-face \{\s*font-family: "Material Symbols Rounded"/);
+  assert.match(css, /src: url\("\/fonts\/material-symbols-rounded\.woff2"\) format\("woff2"\)/);
   assert.doesNotMatch(appLayout, /fonts\.googleapis\.com\/css2\?family=Material\+Symbols\+Outlined/);
   assert.match(infoTip, /type InfoTipProps = \{/);
   assert.match(infoTip, /message: ReactNode/);
@@ -42,13 +42,11 @@ test("contextual help popover stays reusable, accessible, and mobile safe", () =
 });
 
 test("dashboard introduces contextual help without changing core navigation", () => {
-  const dashboardPage = fs.readFileSync(path.join(root, "app/(app)/dashboard/page.tsx"), "utf8");
+  const dashboardPage = fs.readFileSync(path.join(root, "app/(app)/dashboard/DashboardWorkspace.tsx"), "utf8");
   const actionQueue = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/ActionQueuePanel.tsx"), "utf8");
 
   assert.match(dashboardPage, /import InfoTip from "\.\.\/\.\.\/\.\.\/components\/ui\/InfoTip"/);
-  assert.match(dashboardPage, /label="Explain dashboard overview"/);
-  assert.match(dashboardPage, /className="lf-panel-help"/);
-  assert.match(dashboardPage, /title="Dashboard overview"/);
+  assert.match(dashboardPage, /V3DashboardOverview/);
   assert.match(dashboardPage, /className="lf-dashboard-readiness-heading"/);
   assert.match(dashboardPage, /label="Explain estate readiness"/);
   assert.match(dashboardPage, /title="Estate readiness"/);
@@ -58,7 +56,7 @@ test("dashboard introduces contextual help without changing core navigation", ()
   assert.match(actionQueue, /title="Action Centre"/);
   assert.match(actionQueue, /tone="warning"/);
   assert.match(actionQueue, /className="lf-panel-help"/);
-  assert.match(dashboardPage, /href="\/finances"/);
+  assert.match(dashboardPage, /href: "\/finances"/);
   assert.match(actionQueue, /onAction\(item\.actionKey\)/);
 });
 
