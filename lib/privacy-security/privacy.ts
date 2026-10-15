@@ -182,7 +182,8 @@ export async function createRetentionItem(client: AnySupabaseClient, input: {
 export async function evaluateRetentionItem(client: AnySupabaseClient, input: { itemId: string }) {
   const state = await client.rpc("lf_retention_item_effective_state", { p_item_id: input.itemId });
   if (state.error) throw new Error(state.error.message);
-  return String(state.data ?? "active");
+  if (state.data == null) throw new Error("retention_state_unavailable");
+  return String(state.data);
 }
 
 async function recordPrivacyCaseEvent(client: AnySupabaseClient, caseId: string, actorUserId: string, eventType: string, result: string, metadata: Record<string, unknown>) {

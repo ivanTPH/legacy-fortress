@@ -1,6 +1,6 @@
 # Version 3 decisions for owner review
 
-Status: **Phase 4 preparation authorised; local migration approval is the current security checkpoint** (14 October 2026). This file distinguishes approved screen directions from provisional product decisions and later security/backend approvals. See [PHASE4_SCHEMA_CHECKPOINT.md](PHASE4_SCHEMA_CHECKPOINT.md).
+Status: **Phase 4 Stage A clone-only remediation rehearsed; original local UAT migration awaits a separate owner decision** (15 October 2026). This file distinguishes approved screen directions from provisional product decisions and later security/backend approvals. See [PHASE4_SECURITY_REMEDIATION.md](PHASE4_SECURITY_REMEDIATION.md).
 
 ## Approved Phase 1 decisions
 
@@ -29,6 +29,7 @@ Status: **Phase 4 preparation authorised; local migration approval is the curren
 - Q4: derive dashboard counts and statistics from real, authorised, deduplicated records. Do not use prototype numbers or valuations, or expose restricted counts. Investigate the Legal/Will disagreement before changing statistics.
 - Q17: describe Support as saving a request in the support workspace. Do not claim delivery to a human unless a delivery integration is verified.
 - Stage A requires a read-only local ledger/schema audit and a concrete migration proposal before any application. Phase 4 screen work waits at the security checkpoint if migration approval is needed. Keep an isolated branch, owner tree and hosted environments untouched.
+- The owner approved the first ten-file **clone-only** rehearsal, then a second **clone-only** security correction rehearsal. Neither approval permits migration, reset or cleanup of original UAT. The corrected disposable clone contains all 21 pending historical migrations and two forward-only guard migrations; SQL role/RLS and invitation tests pass there. Real API/browser authentication against that clone has not been claimed.
 
 ## Provisional product directions
 
@@ -37,7 +38,8 @@ The proposals in Q5–Q16 remain useful design directions, **not approvals** for
 ## Decisions still requiring explicit owner approval
 
 - Q5–Q16 require answers before their named phases introduce new product behaviour; Q5–Q9 and Q12 are especially security, identity and estate sensitive. Phase 4 must keep the existing permission and action model while these remain open.
-- The exact ten-file local migration proposal in `PHASE4_SCHEMA_CHECKPOINT.md` needs explicit owner approval before applying it, even to a disposable clone. Q2 preserves extra My Vault categories without authorising category or data migrations.
+- **Q20 — original local UAT migration:** decide separately whether to approve the reviewed 21-historical-plus-2-forward sequence in `PHASE4_SECURITY_REMEDIATION.md` for `127.0.0.1:55422/postgres`, with a fresh source backup, explicit target proof, per-file ledger/object verification and rollback plan. Approval has **not** been given. The earlier ten-file intermediate schema is unsafe for invitation use.
+- **Q21 — authenticated API validation:** after an explicitly approved UAT migration, prove the local Supabase API and app runtime target that UAT schema before synthetic owner, linked, invitation, enterprise or browser testing. SQL role simulation on a clone is not an authenticated PostgREST/Playwright pass. Q2 still preserves extra My Vault categories without authorising category or data migrations.
 - Replacing authentication, enterprise or administrator branding remains unapproved. Identity-provider selection, new backend capabilities, data migrations and hosted releases require separate approval.
 
 ## Resolved precedence and safety facts
@@ -167,4 +169,4 @@ The design specifies Material Symbols Rounded, the black 9-dot `apps` logo and a
 
 Phase 3 started the local Colima VM. Supabase auth health at `127.0.0.1:55421` and the isolated app schema health at `127.0.0.1:3012` returned 200; every approved local env URL host was loopback before synthetic account setup. Authenticated standard-owner Chrome/WebKit shell tests ran. The local database is behind the repo migrations: `account_access_grants.required_identity_level`, `contact_invitations.expires_at` and `enterprise_memberships` are absent. A zero-scope linked grant could not be inserted, so authenticated linked-context browser testing remains blocked. The migration inventory showed later files pending; none were applied. WebKit shell interaction assertions passed with local API/access-control page errors, which remain a browser-data limitation. The temporary local config/env/password were removed; the committed base config still has the hosted `site_url`, explaining the core-test baseline failure.
 
-**Next checkpoint:** review the Phase 4 read-only audit and explicitly approve or revise the local-only ten-file migration plan in `PHASE4_SCHEMA_CHECKPOINT.md`. No migration or Phase 4 screen change has been made at this checkpoint. Do not claim linked or enterprise browser proof until the approved local schema and actual tests support it.
+**Updated next checkpoint:** review the second clone-only findings and corrective migrations in `PHASE4_SECURITY_REMEDIATION.md`. No migration has been applied to original local UAT and no Phase 4 screen has changed. Any original-UAT migration requires separate explicit approval; linked, enterprise and browser claims remain pending correctly targeted authenticated tests.

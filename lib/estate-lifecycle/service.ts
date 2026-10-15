@@ -25,7 +25,8 @@ export function normalizeEstateClaimAction(value: string | null | undefined): Es
 export async function getVaultLifecycleState(client: AnySupabaseClient, ownerUserId: string) {
   const { data, error } = await client.rpc("lf_vault_lifecycle_state", { p_owner_user_id: ownerUserId });
   if (error) throw new Error(error.message);
-  return String(data ?? "OWNER_ACTIVE") as VaultLifecycleState;
+  if (data == null) throw new Error("vault_state_unavailable");
+  return String(data) as VaultLifecycleState;
 }
 
 export async function getIdentityPresenceLevel(client: AnySupabaseClient, userId: string) {
