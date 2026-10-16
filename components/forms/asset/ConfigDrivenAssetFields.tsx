@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 import { shouldShowAssetField, type AssetCategoryFormConfig } from "../../../lib/assets/fieldDictionary";
+import Icon from "../../ui/Icon";
 import {
   DateInput,
   FileUploadPlaceholder,
@@ -31,12 +32,11 @@ export default function ConfigDrivenAssetFields({
 }: ConfigDrivenAssetFieldsProps) {
   const fieldIdPrefix = useId();
 
-  return (
-    <>
-      {config.fields.map((field) => {
-        if (!shouldShowAssetField(field, values)) {
-          return null;
-        }
+  const visibleFields = config.fields.filter((field) => shouldShowAssetField(field, values));
+  const requiredFields = visibleFields.filter((field) => field.required);
+  const optionalFields = visibleFields.filter((field) => !field.required);
+
+  function renderField(field: typeof config.fields[number]) {
         const value = values[field.key] ?? "";
         const fieldId = `${fieldIdPrefix}-${config.categorySlug}-${field.key}`;
 
@@ -101,7 +101,13 @@ export default function ConfigDrivenAssetFields({
             </FormField>
           </div>
         );
-      })}
-    </>
-  );
+  }
+
+  return <div className="lf-v4-form-sections">
+    {requiredFields.length ? <section className="lf-v4-required-block" aria-label="Required fields"><h3>Required</h3><div className="lf-v4-form-grid">{requiredFields.map(renderField)}</div></section> : null}
+    {optionalFields.length ? <details className="lf-v4-optional-group" open={optionalFields.some((field) => Boolean(errors[field.key])) || undefined}>
+      <summary><Icon name="tune" size={20} /><span><strong>Optional details</strong><small>{optionalFields.map((field) => field.label).join(" · ")}</small></span><Icon name="expand_more" size={20} /></summary>
+      <div className="lf-v4-form-grid">{optionalFields.map(renderField)}</div>
+    </details> : null}
+  </div>;
 }

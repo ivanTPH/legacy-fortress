@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import CanonicalAssetOverviewGrid, { type CanonicalAssetOverviewTile } from "../components/dashboard/CanonicalAssetOverviewGrid";
 import { IconTile, PageHeader } from "../../../components/ui/V3Primitives";
+import { AddAssetLink } from "../../../components/ui/LFDesignSystem";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
 import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
 import { isVaultSubsectionEnabled } from "../../../lib/vaultPreferences";
@@ -31,7 +32,7 @@ export default function BusinessOverviewPage() {
   return (
     <section className="lf-v3-area-page">
       <PageHeader title="Business" description="Keep business interests, workplace records and supporting documents clear for future review."
-        action={viewer.mode === "linked" || !businessTiles.length ? undefined : <Link className="lf-v3-button lf-v3-button--primary" href={businessTiles[0].addHref}>Add record</Link>} />
+        action={viewer.mode === "linked" || !businessTiles.length ? undefined : <AddAssetLink href={businessTiles[0].addHref} />} />
 
       {showBusinessInterests || showEmployment ? (
         <><CanonicalAssetOverviewGrid tiles={businessTiles} />

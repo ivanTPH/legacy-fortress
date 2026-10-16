@@ -4,6 +4,7 @@ import CanonicalAssetOverviewGrid, { metadataToken, type CanonicalAssetOverviewT
 import Link from "next/link";
 import { useViewerAccess } from "../../../../components/access/ViewerAccessContext";
 import { PageHeader } from "../../../../components/ui/V3Primitives";
+import { AddAssetLink } from "../../../../components/ui/LFDesignSystem";
 
 const digitalTiles: CanonicalAssetOverviewTile[] = [
   {
@@ -82,7 +83,7 @@ export default function DigitalVaultOverviewPage() {
   return (
     <section className="lf-v3-area-page">
       <PageHeader title="Digital" description="Keep online accounts, subscriptions, platforms and recovery contacts clear for trusted people."
-        action={viewer.mode === "linked" ? undefined : <Link className="lf-v3-button lf-v3-button--primary" href={digitalTiles[0].addHref}>Add record</Link>} />
+        action={viewer.mode === "linked" ? undefined : <AddAssetLink href={digitalTiles[0].addHref} />} />
       <CanonicalAssetOverviewGrid tiles={digitalTiles} />
     </section>
   );

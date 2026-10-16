@@ -41,7 +41,7 @@ export function FormField({ fieldId, label, iconName, required = false, error, h
     : children;
 
   return (
-    <div style={fieldWrapStyle}>
+    <div className="lf-v4-form-field" data-error={Boolean(error)} style={fieldWrapStyle}>
       <label htmlFor={resolvedFieldId} style={labelStyle}>
         {iconName ? (
           <span style={labelIconStyle}>
@@ -49,7 +49,7 @@ export function FormField({ fieldId, label, iconName, required = false, error, h
           </span>
         ) : null}
         {label}
-        {required ? <RequiredIndicator /> : null}
+        {required ? <RequiredIndicator /> : <span className="lf-v4-optional-tag">Optional</span>}
       </label>
       {resolvedChildren}
       <ValidationText error={error} helpText={helpText} />
@@ -59,7 +59,7 @@ export function FormField({ fieldId, label, iconName, required = false, error, h
 
 export function RequiredIndicator() {
   return (
-    <span style={requiredPillStyle} aria-label="Required">
+    <span className="lf-v4-required-tag" style={requiredPillStyle} aria-label="Required">
       Required
     </span>
   );
@@ -80,7 +80,7 @@ export function TextInput({
   placeholder?: string;
   disabled?: boolean;
 }) {
-  return <input id={id} aria-label={ariaLabel} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} style={inputStyle} disabled={disabled} />;
+  return <input className="lf-v4-form-control" id={id} aria-label={ariaLabel} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} style={inputStyle} disabled={disabled} />;
 }
 
 export function NumberInput({
@@ -98,7 +98,7 @@ export function NumberInput({
   placeholder?: string;
   disabled?: boolean;
 }) {
-  return <input id={id} aria-label={ariaLabel} type="number" value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} style={inputStyle} disabled={disabled} />;
+  return <input className="lf-v4-form-control" id={id} aria-label={ariaLabel} type="number" value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} style={inputStyle} disabled={disabled} />;
 }
 
 export function TextAreaInput({
@@ -118,6 +118,7 @@ export function TextAreaInput({
 }) {
   return (
     <textarea
+      className="lf-v4-form-control"
       id={id}
       aria-label={ariaLabel}
       value={value}
@@ -162,7 +163,8 @@ export function SelectInput({
   }, [onChange]);
 
   return (
-    <select
+    <span className="lf-v4-select-wrap"><select
+      className="lf-v4-form-control"
       ref={selectRef}
       id={id}
       aria-label={ariaLabel}
@@ -179,7 +181,7 @@ export function SelectInput({
           {option.label}
         </option>
       ))}
-    </select>
+    </select><Icon name="expand_more" size={20} className="lf-v4-select-chevron" /></span>
   );
 }
 
@@ -470,12 +472,12 @@ export function FileDropzone({
 
 export function ValidationText({ error, helpText }: { error?: string; helpText?: string }) {
   if (error) {
-    return <span role="alert" style={{ color: "#b91c1c", fontSize: 12, fontWeight: 700 }}>{error}</span>;
+    return <span className="lf-v4-field-error" role="alert"><Icon name="error" size={16} />{error}</span>;
   }
   if (helpText) {
-    return <span style={{ color: "#64748b", fontSize: 12 }}>{helpText}</span>;
+    return <span className="lf-v4-field-help">{helpText}</span>;
   }
-  return <span style={{ color: "#94a3b8", fontSize: 12 }}>Optional unless marked *</span>;
+  return null;
 }
 
 export const fieldWrapStyle: CSSProperties = {
@@ -485,7 +487,7 @@ export const fieldWrapStyle: CSSProperties = {
 
 export const labelStyle: CSSProperties = {
   fontSize: 13,
-  color: "#334155",
+  color: "var(--lf-text)",
   display: "inline-flex",
   alignItems: "center",
   gap: 6,
@@ -493,22 +495,22 @@ export const labelStyle: CSSProperties = {
 
 export const inputStyle: CSSProperties = {
   width: "100%",
-  border: "1px solid #d8d2cc",
-  borderRadius: 10,
-  padding: "11px 12px",
-  fontSize: 14,
+  minHeight: 44,
+  border: "1px solid var(--lf-border-input)",
+  borderRadius: "var(--lf-radius-input)",
+  padding: "10px 12px",
+  fontSize: "var(--lf-type-body)",
   outline: "none",
-  background: "#fffefd",
+  background: "var(--lf-surface)",
 };
 
 const requiredPillStyle: CSSProperties = {
-  border: "1px solid #eadfd8",
-  borderRadius: 999,
-  background: "#fffefd",
-  color: "#6b4b35",
+  borderRadius: 4,
+  background: "var(--lf-tint)",
+  color: "var(--lf-tint-icon)",
   padding: "2px 6px",
-  fontSize: 10,
-  fontWeight: 800,
+  fontSize: 11,
+  fontWeight: 500,
 };
 
 const labelIconStyle: CSSProperties = {

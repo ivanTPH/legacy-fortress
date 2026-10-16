@@ -19,9 +19,9 @@ export default function PeopleAccessWorkspace() {
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const [pendingByContact, setPendingByContact] = useState<Record<string, string>>({});
   const [requestRevision, setRequestRevision] = useState(0);
-  const view = params.get("view") === "requests" || ((pathname === "/access-requests" || pathname === "/access") && params.get("view") !== "people")
-    ? "requests"
-    : "people";
+  const requestedView = params.get("view");
+  const view = requestedView === "sharing" ? "sharing"
+    : requestedView === "requests" || ((pathname === "/access-requests" || pathname === "/access") && requestedView !== "people") ? "requests" : "people";
 
   useEffect(() => {
     if (viewer.mode === "linked" || pathname === "/people-access") return;
@@ -76,9 +76,10 @@ export default function PeopleAccessWorkspace() {
     <nav className="lf-pa-tabs" aria-label="People and access views">
       <Link href="/people-access?view=people" className={view === "people" ? "is-active" : ""} aria-current={view === "people" ? "page" : undefined}>People</Link>
       <Link href="/people-access?view=requests" className={view === "requests" ? "is-active" : ""} aria-current={view === "requests" ? "page" : undefined}>Requests{pendingCount ? <span className="lf-pa-count">{pendingCount}</span> : null}</Link>
+      <Link href="/people-access?view=sharing" className={view === "sharing" ? "is-active" : ""} aria-current={view === "sharing" ? "page" : undefined}>Sharing</Link>
     </nav>
-    {view === "people"
-      ? <ContactsNetworkWorkspace embedded basePath="/people-access" pendingByContact={pendingByContact} />
-      : <AccessRequestsWorkspace embedded onRequestChanged={() => setRequestRevision((current) => current + 1)} onOpenPerson={(contactId) => router.push(`/people-access?view=people&contact=${encodeURIComponent(contactId)}`)} />}
+    {view === "requests"
+      ? <AccessRequestsWorkspace embedded onRequestChanged={() => setRequestRevision((current) => current + 1)} onOpenPerson={(contactId) => router.push(`/people-access?view=people&contact=${encodeURIComponent(contactId)}`)} />
+      : <ContactsNetworkWorkspace embedded sharingView={view === "sharing"} basePath="/people-access" pendingByContact={pendingByContact} />}
   </section>;
 }

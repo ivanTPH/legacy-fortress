@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Button, Card, EmptyState, IconTile, PageHeader, Row } from "../../../../components/ui/V3Primitives";
+import { AddAssetLink } from "../../../../components/ui/LFDesignSystem";
 import type { BlockingItem } from "../../../../lib/workflow/blockingModel";
 import type { ActionCentreTask } from "./ActionQueuePanel";
 
@@ -54,7 +55,7 @@ export default function V3DashboardOverview({ mode, loading, areas, recordCount,
     <div className={dashboard ? "lf-v3-dashboard-pageheader" : ""}><PageHeader
       title={dashboard ? "Dashboard" : "Action Centre"}
       description={dashboard ? "Your recorded information, in one place." : "Open an item to understand why it is here and choose what to do next."}
-      action={dashboard && canAddRecords ? <Link className="lf-v3-button lf-v3-button--primary" href="/add">Add record</Link> : undefined}
+      action={dashboard && canAddRecords ? <AddAssetLink href="/add" /> : undefined}
     /></div>
     {dashboard ? <>
       <Card className="lf-v3-stats-strip" aria-label="Vault summary">

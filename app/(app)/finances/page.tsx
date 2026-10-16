@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, IconTile, PageHeader, Row } from "../../../components/ui/V3Primitives";
+import { AddAssetLink } from "../../../components/ui/LFDesignSystem";
 import { formatCurrency } from "../../../lib/currency";
 import { latestTimestamp } from "../../../lib/dashboard/summary";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
@@ -138,7 +139,7 @@ export default function FinancesOverviewPage() {
 
   return <section className="lf-v3-area-page">
     <PageHeader title="Finances" description="Keep accounts, pensions, investments, insurance and debts together for trusted review."
-      action={viewer.mode === "linked" ? undefined : <Link className="lf-v3-button lf-v3-button--primary" href="/finances/bank?add=1">Add record</Link>} />
+      action={viewer.mode === "linked" ? undefined : <AddAssetLink href="/finances/bank?add=1" />} />
     {status ? <p role="alert">{status}</p> : null}
     {loading ? <p role="status">Loading finance summary…</p> : null}
     {!loading && recommendedFinanceAction ? <Card><Row icon="account_balance" title={recommendedFinanceAction.label}
@@ -151,7 +152,7 @@ export default function FinancesOverviewPage() {
     {populated.map((section) => <Card key={section.href} className="lf-v3-area-section">
       <header><Link href={section.href}><IconTile icon={section.icon} /><span><strong>{section.title}</strong><small>{section.summary.includedCount} record{section.summary.includedCount === 1 ? "" : "s"}</small></span></Link>
         <strong className="lf-v3-area-total">{new Set(getAssetsForFinanceCategory(assetRows, section.key).map((row) => getFinanceRowCurrencyCode(row) || currency)).size > 1 ? "Multiple currencies" : section.summary.valueText}</strong>
-        {viewer.mode !== "linked" ? <Link href={`${section.href}?add=1`} className="lf-v3-area-add" aria-label={`Add ${section.title} record`}>+</Link> : null}
+        {viewer.mode !== "linked" ? <AddAssetLink href={`${section.href}?add=1`} /> : null}
       </header>
       {section.summary.items.map((item) => <Row key={item.id} title={item.label} trailing={item.meta}
         description={item.updatedAt ? `Updated ${formatFinanceDate(item.updatedAt)}` : "Open record details"} href={item.href} />)}

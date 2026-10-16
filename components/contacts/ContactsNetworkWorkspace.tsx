@@ -38,7 +38,7 @@ import { useViewerAccess } from "../access/ViewerAccessContext";
 import Icon from "../ui/Icon";
 import { IconButton } from "../ui/IconButton";
 import InfoTip from "../ui/InfoTip";
-import { Button, PageHeader } from "../ui/V3Primitives";
+import { Button, Chip, EmptyState, PageHeader, Sheet } from "../ui/V3Primitives";
 import DocumentPreviewDialog, { type DocumentPreviewDialogItem } from "../documents/DocumentPreviewDialog";
 import { ROLE_RULES, type AccessActivationStatus, type CollaboratorRole, type SectionKey } from "../../lib/access-control/roles";
 
@@ -102,9 +102,10 @@ const RELATIONSHIP_ROLE_GROUPS = [
   },
 ] as const;
 
-type ContactAccessSummary = { count: number; readOnly: boolean; activationStatus: string; linkedUserId: string | null };
+type ContactAccessSummary = { count: number; recordKeys: string[]; readOnly: boolean; activationStatus: string; linkedUserId: string | null };
+type SharingResource = { key: string; sectionKey: string; label: string };
 
-export default function ContactsNetworkWorkspace({ embedded = false, basePath = "/contacts", pendingByContact = {} }: { embedded?: boolean; basePath?: string; pendingByContact?: Record<string, string> }) {
+export default function ContactsNetworkWorkspace({ embedded = false, sharingView = false, basePath = "/contacts", pendingByContact = {} }: { embedded?: boolean; sharingView?: boolean; basePath?: string; pendingByContact?: Record<string, string> }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { viewer } = useViewerAccess();
@@ -112,7 +113,10 @@ export default function ContactsNetworkWorkspace({ embedded = false, basePath = 
   const [status, setStatus] = useState("");
   const [contacts, setContacts] = useState<ContactRow[]>([]);
   const [accessByContact, setAccessByContact] = useState<Record<string, ContactAccessSummary> | null>(null);
+  const [sharingResources, setSharingResources] = useState<SharingResource[] | null>(null);
+  const [sharingError, setSharingError] = useState(false);
   const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
   const [validationSourceText, setValidationSourceText] = useState<Record<string, string>>({});
   const [, setConfirmingValidationKey] = useState("");
   const [, setAssociationAlerts] = useState<string[]>([]);
@@ -154,12 +158,24 @@ export default function ContactsNetworkWorkspace({ embedded = false, basePath = 
           for (const grant of grantResult.data ?? []) {
             if (!["accepted", "pending_verification", "verification_submitted", "verified", "active"].includes(String(grant.activation_status ?? ""))) continue;
             const permissions = normalizeContactPermissionsOverride(grant.permissions_override);
-            const count = new Set([...permissions.asset_ids.map((id) => `asset:${id}`), ...permissions.record_ids.map((id) => `record:${id}`)]).size;
+            const keys = [...permissions.asset_ids.map((id) => `asset:${id}`), ...permissions.record_ids.map((id) => `record:${id}`)];
             for (const key of [grant.contact_id, grant.linked_user_id]) {
-              if (key) next[key] = { count, readOnly: permissions.read_only, activationStatus: grant.activation_status, linkedUserId: grant.linked_user_id };
+              if (!key) continue;
+              const previous = next[key];
+              const recordKeys = [...new Set([...(previous?.recordKeys ?? []), ...keys])];
+              next[key] = { count: recordKeys.length, recordKeys, readOnly: previous?.readOnly !== false && permissions.read_only, activationStatus: grant.activation_status, linkedUserId: grant.linked_user_id };
             }
           }
           setAccessByContact(next);
+        }
+        if (sharingView) {
+          try {
+            setSharingError(false);
+            const resources = await loadPeopleScopeResourcesForOwner(supabase, ownerUserId);
+            if (isMounted()) setSharingResources(resources.map((resource) => ({ key: `${resource.source_kind}:${resource.id}`, sectionKey: normalizeAccessSectionKey(resource.section_key) ?? "other", label: resource.title || (resource.source_kind === "asset" ? resource.provider_name : resource.summary) || "Unnamed record" })));
+          } catch {
+            if (isMounted()) { setSharingError(true); setSharingResources([]); }
+          }
         }
       } catch (error) {
         if (!isMounted()) return;
@@ -168,7 +184,7 @@ export default function ContactsNetworkWorkspace({ embedded = false, basePath = 
         setAccessByContact(null);
       }
       setLoading(false);
-  }, [router, viewer.targetOwnerUserId]);
+  }, [router, sharingView, viewer.targetOwnerUserId]);
 
   useEffect(() => {
     let mounted = true;
@@ -419,11 +435,17 @@ export default function ContactsNetworkWorkspace({ embedded = false, basePath = 
     for (const contact of contacts) {
       if (seenContactIds.has(contact.id)) continue;
       if (query && !buildContactSearchText(contact).includes(query)) continue;
+      if (roleFilter !== "all" && resolveContactGroupKey(contact) !== roleFilter) continue;
       seenContactIds.add(contact.id);
       map.get(resolveContactGroupKey(contact))?.push(contact);
     }
     return map;
-  }, [contacts, search]);
+  }, [contacts, roleFilter, search]);
+  const sharingGroups = useMemo(() => {
+    const groups = new Map<string, SharingResource[]>();
+    for (const resource of sharingResources ?? []) groups.set(resource.sectionKey, [...(groups.get(resource.sectionKey) ?? []), resource]);
+    return [...groups.entries()];
+  }, [sharingResources]);
 
   const selectedContactId = String(searchParams.get("contact") ?? "").trim();
   const selectedGroup = normalizeContactGroupKey(searchParams.get("group"));
@@ -495,13 +517,14 @@ export default function ContactsNetworkWorkspace({ embedded = false, basePath = 
     setConfirmingValidationKey("");
   }
 
-  function openContact(contactId: string, groupKey?: string, trigger?: HTMLElement | null) {
+  function openContact(contactId: string, groupKey?: string, trigger?: HTMLElement | null, access = false) {
     lastContactTriggerRef.current = trigger ?? document.activeElement as HTMLElement | null;
     setDismissedContactId(null);
     const params = new URLSearchParams();
     params.set("contact", contactId);
     if (groupKey) params.set("group", groupKey);
     if (embedded) params.set("view", "people");
+    if (access) params.set("access", "1");
     router.push(`${basePath}?${params.toString()}`);
   }
 
@@ -615,7 +638,7 @@ export default function ContactsNetworkWorkspace({ embedded = false, basePath = 
   return (
     <section className="lf-v3-people-page">
       {!embedded && !addContactGroupKey ? <PageHeader title="People I Trust" description="Keep the people and roles connected to your Fortress clear." /> : null}
-      {!addContactGroupKey ? <section className="lf-v3-people-toolbar">
+      {!addContactGroupKey && !sharingView ? <section className="lf-v3-people-toolbar">
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <label style={contactSearchFieldStyle}>
             <span style={contactSearchLabelStyle}>
@@ -643,6 +666,9 @@ export default function ContactsNetworkWorkspace({ embedded = false, basePath = 
           {!embedded && !viewer.readOnly ? <Link href="/access-sharing" className="lf-access-sharing-link">Access &amp; Sharing</Link> : null}
         </div>
       </section> : null}
+      {embedded && !addContactGroupKey && !sharingView ? <div className="lf-pa-role-filters" role="group" aria-label="Filter people by role">
+        {[["all", "All"], ["executors", "Executors"], ["family", "Family"], ["advisors", "Advisers"]].map(([key, label]) => <button key={key} type="button" aria-pressed={roleFilter === key} onClick={() => setRoleFilter(key)}>{label}</button>)}
+      </div> : null}
 
       {!viewer.readOnly && addContactGroupKey ? (
         <section className={embedded ? "lf-pa-add-panel" : undefined} style={embedded ? undefined : addContactGroupKey === "executors" ? { display: "grid", gap: 12 } : addContactPanelStyle} aria-label={addContactGroupKey === "executors" ? "Invite an Executor" : "Add contact and permissions"}>
@@ -658,7 +684,7 @@ export default function ContactsNetworkWorkspace({ embedded = false, basePath = 
             <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}>
               {isNextOfKinAddMode
                 ? "Next of Kin is stored as a canonical contact designation. It does not grant vault access; invitations and permissions stay separate."
-                : "The role preset comes from the selected contact group. You can still change the role, tick categories, use My wallet - all, and set view/edit permissions before sending the invite."}
+                : embedded ? "Adding or inviting someone does not share records. Give access separately after they connect." : "The role preset comes from the selected contact group. You can still change the role, tick categories, use My wallet - all, and set view/edit permissions before sending the invite."}
             </p>
           </div>
           )}
@@ -672,9 +698,11 @@ export default function ContactsNetworkWorkspace({ embedded = false, basePath = 
           ) : (
             <ContactInvitationManager
               mode="full"
-              guidedExecutor={addContactGroupKey === "executors"}
+              guidedExecutor={!embedded && addContactGroupKey === "executors"}
+              contactOnly={embedded}
+              onContactSaved={embedded ? () => { setAddContactGroupKey(null); router.replace("/people-access?view=people"); void loadContacts(); } : undefined}
               initialRole={getAddContactPreset(addContactGroupKey).role}
-              initialAllowedSections={getAddContactPreset(addContactGroupKey).sections}
+              initialAllowedSections={embedded ? [] : getAddContactPreset(addContactGroupKey).sections}
             />
           )}
         </section>
@@ -683,7 +711,7 @@ export default function ContactsNetworkWorkspace({ embedded = false, basePath = 
       {status ? <div style={{ color: "#b91c1c", fontSize: 13 }}>{status}</div> : null}
       {loading ? <div style={{ color: "#64748b" }}>Loading contacts network...</div> : null}
 
-      {!loading && !addContactGroupKey ? (
+      {!loading && !addContactGroupKey && !sharingView ? (
         <div style={{ display: "grid", gap: 18 }}>
           {Array.from(groupedContacts.entries()).filter(([, rows]) => rows.length > 0).map(([groupKey, rows]) => {
             const group = GROUPS.find((item) => item.key === groupKey) ?? GROUPS[0];
@@ -713,7 +741,7 @@ export default function ContactsNetworkWorkspace({ embedded = false, basePath = 
                           return eligibility === "eligible" ? `${summary.readOnly ? "View" : "Can edit"} ${summary.count} ${summary.count === 1 ? "record" : "records"}` : "No active access";
                         })();
                     return (
-                      <article key={contact.id} className="lf-contact-row lf-contact-summary-row lf-pa-person-row">
+                      <article key={contact.id} className="lf-contact-row lf-contact-summary-row lf-pa-person-row" data-selected={selectedContactId === contact.id}>
                         <button type="button" className="lf-pa-person-open" onClick={(event) => openContact(contact.id, groupKey, event.currentTarget)} aria-label={`Open ${contact.full_name || "person"}`}>
                           <span className="lf-contact-summary-person">
                             <span className="lf-contact-avatar lf-v3-person-avatar" aria-hidden="true">{contact.full_name.split(/\s+/).filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "LF"}</span>
@@ -723,9 +751,11 @@ export default function ContactsNetworkWorkspace({ embedded = false, basePath = 
                             </span>
                           </span>
                           <span className="lf-pa-person-facts">
-                            <span className="lf-pa-fact"><small>Invitation</small><span className="lf-people-status-chip" data-tone={invitation.tone}><Icon name={invitation.icon} size={14} />{invitation.label}</span></span>
-                            <span className="lf-pa-fact"><small>Identity</small><span>{identity}</span></span>
-                            <span className="lf-pa-fact"><small>Record access</small><span>{access}</span></span>
+                            <span className="lf-people-status-chip" data-tone={invitation.tone}><Icon name={invitation.icon} size={14} />{invitation.label}</span>
+                            <span className="lf-pa-progress" role="img" aria-label={`Connected: ${contact.linked_user_id ? "yes" : "no"}; identity verified: ${identity === "Verified" ? "yes" : "no"}; access granted: ${access.includes("record") && !access.startsWith("No") ? "yes" : "no"}`}>
+                              <span data-state={contact.linked_user_id ? "done" : contact.invite_status === "invite_sent" ? "pending" : "rest"} /><span data-state={identity === "Verified" ? "done" : identity === "In progress" ? "pending" : "rest"} /><span data-state={access.includes("record") && !access.startsWith("No") ? "done" : "rest"} />
+                            </span>
+                            <span className="lf-pa-status-caption">{contact.linked_user_id ? "Connected" : "Not connected"} · {identity === "Verified" ? "Identity verified" : "Identity not verified"} · {access}</span>
                           </span>
                           <Icon name="chevron_right" size={18} className="lf-pa-row-chevron" />
                         </button>
@@ -741,11 +771,11 @@ export default function ContactsNetworkWorkspace({ embedded = false, basePath = 
                             />
                           ) : null}
                           <IconButton
-                            icon="edit"
-                            label="Edit"
+                            icon="key"
+                            label="Manage record access"
                             variant="round"
                             className="lf-contact-edit-button"
-                            onClick={(event) => openContact(contact.id, groupKey, event.currentTarget)}
+                            onClick={(event) => openContact(contact.id, groupKey, event.currentTarget, true)}
                           />
                         </div>
                       </article>
@@ -762,10 +792,25 @@ export default function ContactsNetworkWorkspace({ embedded = false, basePath = 
               {!embedded && !viewer.readOnly ? <button type="button" style={rowPrimaryActionStyle} onClick={() => startAddContact("trusted_contacts")}><Icon name="person_add" size={16} />Add person</button> : null}
             </section>
           ) : null}
+          {contacts.length > 0 && !Array.from(groupedContacts.values()).some((rows) => rows.length) ? <EmptyState icon="search_off" title="No people match this filter" description="Try another role or search term." /> : null}
         </div>
       ) : null}
+      {!loading && sharingView ? <section className="lf-pa-sharing" aria-label="Record sharing overview">
+        <p>Each row shows who can currently see that record. Invitation and identity verification alone never share records. New records are not shared automatically.</p>
+        {accessByContact === null || sharingError ? <span role="status">Sharing details are unavailable right now.</span> : sharingResources === null ? <span role="status">Loading record sharing…</span> : !sharingGroups.length ? <EmptyState icon="visibility_off" title="No records to share yet" description="Add a record to your Vault, then choose who can see it." /> : sharingGroups.map(([sectionKey, resources]) => <section key={sectionKey} className="lf-pa-sharing-group" aria-label={accessSectionLabel(sectionKey)}>
+          <h2>{accessSectionLabel(sectionKey)}</h2>
+          {resources.map((resource) => {
+            const people = contacts.filter((contact) => {
+              const summary = accessByContact[contact.id] ?? (contact.linked_user_id ? accessByContact[contact.linked_user_id] : undefined);
+              return Boolean(summary?.recordKeys.includes(resource.key) && resolveOwnerAccessEligibility({ invitationStatus: contact.invite_status, activationStatus: summary.activationStatus, linkedUserId: summary.linkedUserId, assignedRole: contact.contact_role }) === "eligible");
+            });
+            return <div key={resource.key} className="lf-pa-sharing-record"><strong>{resource.label}</strong><div className="lf-pa-sharing-people">{people.length ? people.map((contact) => <span key={contact.id} className="lf-pa-sharing-person"><Icon name="check" size={16} /><span>{contact.full_name || "Unnamed person"}</span><Link href={`/people-access?view=people&contact=${encodeURIComponent(contact.id)}&access=1`}>Edit access</Link></span>) : <span className="lf-pa-sharing-none">— No one has access</span>}</div></div>;
+          })}
+        </section>)}
+      </section> : null}
       {selectedContactRow ? (
         <PersonDetailDrawer
+          key={selectedContactRow.id}
           contact={selectedContactRow}
           readOnly={viewer.readOnly}
           ownerUserId={viewer.targetOwnerUserId || null}
@@ -774,6 +819,7 @@ export default function ContactsNetworkWorkspace({ embedded = false, basePath = 
           onSaved={() => { window.dispatchEvent(new CustomEvent("lf:contacts-updated")); void loadContacts(); }}
           pendingRequestId={pendingByContact[selectedContactRow.id] ?? null}
           unified={embedded}
+          initialAccess={searchParams.get("access") === "1"}
           onClose={closeContact}
         />
       ) : null}
@@ -943,7 +989,8 @@ function PersonVaultAccessSummary({
 
   return (
     <section className="lf-person-detail-section" aria-labelledby="person-access-heading">
-      <h3 id="person-access-heading">Records shared</h3>
+      <h3 id="person-access-heading">Access granted</h3>
+      {state !== "checking" && state !== "error" ? <Chip tone={state === "shared" ? "success" : "neutral"} icon="key">{state === "shared" ? "Access granted" : "No record access"}</Chip> : null}
       {state === "checking" ? <span style={drawerExplanationStyle}>Checking current access…</span> : null}
       {state === "pending" ? <><strong>No records shared</strong><span style={drawerExplanationStyle}>The invitation has not been accepted. An invitation alone never grants record access.</span></> : null}
       {state === "verification" ? <><strong>No active record access</strong><span style={drawerExplanationStyle}>The invitation and identity check are separate from record sharing. This person must finish linking and meet the required identity level before selected records are available.</span></> : null}
@@ -954,7 +1001,7 @@ function PersonVaultAccessSummary({
       {sharedCount > 0 && state !== "shared" && state !== "checking" && state !== "error" ? <span style={drawerExplanationStyle}>{sharedCount} selected {sharedCount === 1 ? "record is" : "records are"} not currently available to this person.</span> : null}
       {sharedNames.length > 0 ? <ul className="lf-person-shared-records">{sharedNames.map((name, index) => <li key={`${name}-${index}`}>{name}</li>)}</ul> : null}
       {sharedCount > 0 && !sharedNames.length && state !== "checking" ? <span style={drawerExplanationStyle}>Selected record names are unavailable right now.</span> : null}
-      {!readOnly && state !== "checking" && state !== "error" ? <Button variant="secondary" onClick={onManage}>{sharedCount ? "Change or revoke record access" : "Choose records to share"}</Button> : null}
+      {!readOnly && state !== "checking" && state !== "error" ? <Button variant={sharedCount ? "secondary" : "primary"} icon="key" onClick={onManage}>{sharedCount ? "Edit access" : "Give access"}</Button> : null}
     </section>
   );
 }
@@ -968,6 +1015,7 @@ function PersonDetailDrawer({
   onSaved,
   pendingRequestId,
   unified,
+  initialAccess,
   onClose,
 }: {
   contact: ContactRow;
@@ -978,30 +1026,38 @@ function PersonDetailDrawer({
   onSaved: () => void;
   pendingRequestId: string | null;
   unified: boolean;
+  initialAccess: boolean;
   onClose: () => void;
 }) {
+  const router = useRouter();
   const closeRef = useRef<HTMLButtonElement>(null);
-  const [managementView, setManagementView] = useState<"edit" | "relationship" | "invitation" | "access" | "remove" | null>(null);
+  const [managementView, setManagementView] = useState<"edit" | "relationship" | "invitation" | "access" | "remove" | null>(initialAccess ? "access" : null);
+  const [accessRevision, setAccessRevision] = useState(0);
   const relatedContexts = (contact.linked_context ?? []).filter((context) => context.source_kind !== "invitation");
   const invitation = getInvitationDisplay(contact);
+
+  function closeAccess() {
+    setManagementView(null);
+    if (initialAccess) router.replace(`/people-access?view=people&contact=${encodeURIComponent(contact.id)}`);
+  }
 
   useEffect(() => {
     closeRef.current?.focus();
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape" && managementView !== "access") onClose();
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = previousOverflow;
     };
-  }, [onClose]);
+  }, [managementView, onClose]);
 
   const panel = (
-    <div className={`lf-person-drawer-backdrop${unified ? " lf-pa-person-drawer-backdrop" : ""}`} role="presentation" onClick={onClose}>
-      <aside className="lf-person-drawer" role="dialog" aria-modal="true" aria-labelledby="person-drawer-title" onClick={(event) => event.stopPropagation()}>
+    <><div className={`lf-person-drawer-backdrop${unified ? " lf-pa-person-drawer-backdrop" : ""}`} role="presentation" onClick={onClose} style={managementView === "access" ? { visibility: "hidden" } : undefined}>
+      <aside className="lf-person-drawer" role="dialog" aria-modal={managementView !== "access"} aria-hidden={managementView === "access"} aria-labelledby="person-drawer-title" onClick={(event) => event.stopPropagation()}>
         <div className="lf-person-drawer-header">
           <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
             <h2 id="person-drawer-title" style={{ margin: 0, fontSize: 22 }}>{contact.full_name || "Unnamed person"}</h2>
@@ -1014,7 +1070,7 @@ function PersonDetailDrawer({
         </div>
 
         <div className="lf-person-drawer-content">
-          {managementView ? (
+          {managementView && managementView !== "access" ? (
             <PersonManagementPanel
               contact={contact}
               view={managementView}
@@ -1038,21 +1094,27 @@ function PersonDetailDrawer({
               {!readOnly ? <div className="lf-person-detail-actions"><Button variant="secondary" onClick={() => setManagementView("edit")}>Edit details</Button><Button variant="secondary" onClick={() => setManagementView("relationship")}>Edit relationship</Button></div> : null}
             </section>
             <section className="lf-person-detail-section" aria-labelledby="person-invitation-heading">
-              <h3 id="person-invitation-heading">Invitation and identity</h3>
-              <span className="lf-pa-detail-fact"><span>Invitation</span><span className="lf-people-status-chip" data-tone={invitation.tone}><Icon name={invitation.icon} size={14} />{invitation.label}</span></span>
-              <span className="lf-pa-detail-fact"><span>Identity</span><strong>{getIdentityDisplay(contact)}</strong></span>
+              <h3 id="person-invitation-heading">Connection and identity</h3>
+              <div className="lf-pa-status-list">
+                <span className="lf-pa-detail-fact"><span>Invitation</span><Chip tone={invitation.tone === "warning" ? "warning" : invitation.tone === "danger" ? "danger" : invitation.tone === "success" ? "success" : "neutral"} icon={invitation.icon}>{invitation.label}</Chip></span>
+                <span className="lf-pa-detail-fact"><span>Connected</span><Chip tone={contact.linked_user_id ? "success" : "neutral"} icon="link">{contact.linked_user_id ? "Connected" : "Not connected"}</Chip></span>
+                <span className="lf-pa-detail-fact"><span>Identity verified</span><Chip tone={getIdentityDisplay(contact) === "Verified" ? "success" : getIdentityDisplay(contact) === "In progress" ? "warning" : "neutral"} icon="verified_user">{getIdentityDisplay(contact)}</Chip></span>
+              </div>
               <span style={drawerExplanationStyle}>Identity verification does not grant access to any records.</span>
               {getRelationshipDocumentLabel(contact) ? <span style={drawerExplanationStyle}>Will access stays locked while the owner is living.</span> : null}
               <InvitationProgressTracker contact={contact} />
               {!readOnly && ["invite_sent", "not_invited", "failed"].includes(contact.invite_status) ? <Button variant="secondary" onClick={() => setManagementView("invitation")}>{contact.invite_status === "not_invited" ? "Send invitation" : "Manage invitation"}</Button> : null}
             </section>
-            <PersonVaultAccessSummary key={contact.id} contact={contact} ownerUserId={ownerUserId} readOnly={readOnly} onManage={() => setManagementView("access")} />
+            <PersonVaultAccessSummary key={`${contact.id}:${accessRevision}`} contact={contact} ownerUserId={ownerUserId} readOnly={readOnly} onManage={() => setManagementView("access")} />
             {pendingRequestId ? <section className="lf-person-detail-section" aria-label="Request awaiting decision"><h3>Request awaiting decision</h3><p style={drawerExplanationStyle}>Review this person&apos;s request and current sharing in People &amp; Access.</p><Link href={`/people-access?view=requests&request=${encodeURIComponent(pendingRequestId)}`} className="lf-pa-text-action">Review request</Link></section> : null}
             {!readOnly ? <button type="button" className="lf-person-remove-link" onClick={() => setManagementView("remove")}>Remove person</button> : null}
           </>}
         </div>
       </aside>
     </div>
+    <div className="lf-pa-access-modal"><Sheet open={managementView === "access"} title={`Record access for ${contact.full_name || "person"}`} onClose={closeAccess}>
+      <PersonManagementPanel contact={contact} view="access" ownerUserId={ownerUserId} onInvite={onInvite} inviting={inviting} onBack={closeAccess} onNavigate={setManagementView} onSaved={() => { setAccessRevision((revision) => revision + 1); onSaved(); }} readOnly={readOnly} />
+    </Sheet></div></>
   );
   return unified ? createPortal(panel, document.body) : panel;
 }
@@ -1094,14 +1156,16 @@ function PersonManagementPanel({
   const [accessCanConfigure, setAccessCanConfigure] = useState(false);
   const [accessEligibility, setAccessEligibility] = useState<OwnerAccessEligibility | null>(null);
   const [accessPermissionLabel, setAccessPermissionLabel] = useState("View only");
+  const [accessSearch, setAccessSearch] = useState("");
   const accessGroups = useMemo(() => {
     const groups = new Map<string, typeof accessOptions>();
     for (const option of accessOptions) {
+      if (accessSearch && !option.label.toLowerCase().includes(accessSearch.trim().toLowerCase())) continue;
       const key = option.sectionKey || "other";
       groups.set(key, [...(groups.get(key) ?? []), option]);
     }
     return Array.from(groups.entries());
-  }, [accessOptions]);
+  }, [accessOptions, accessSearch]);
 
   useEffect(() => {
     if (view !== "access") return;
@@ -1370,8 +1434,7 @@ function PersonManagementPanel({
 
   return (
     <section className="lf-person-management-panel" aria-label={title}>
-      <button type="button" className="lf-person-back-button" onClick={onBack}>← Back to {contact.full_name || "person"}</button>
-      <h3 style={{ margin: 0, fontSize: 18 }}>{title}</h3>
+      {view !== "access" ? <><button type="button" className="lf-person-back-button" onClick={onBack}>← Back to {contact.full_name || "person"}</button><h3 style={{ margin: 0, fontSize: 18 }}>{title}</h3></> : null}
       {view === "edit" ? (
         <div className="lf-person-edit-form">
           <label><span>Name</span><input value={name} onChange={(event) => setName(event.target.value)} /></label>
@@ -1411,22 +1474,23 @@ function PersonManagementPanel({
               <h5>Choose individual records</h5>
               <p>Tick records to share. Untick a shared record to revoke it, then save. New records are never shared automatically.</p>
               <span className="lf-person-access-scope-note">New sharing is view only. <InfoTip label="Explain view-only sharing" message="This person can view selected records but cannot change or delete them." /></span>
-              {!accessOptionsLoaded ? <span role="status">Loading eligible records…</span> : accessGroups.length ? accessGroups.map(([sectionKey, options]) => {
+              <label className="lf-pa-access-search"><Icon name="search" size={18} /><input type="search" aria-label="Search records" value={accessSearch} onChange={(event) => setAccessSearch(event.target.value)} placeholder="Search records" /></label>
+              {!accessOptionsLoaded ? <span role="status">Loading eligible records…</span> : accessGroups.length ? accessGroups.map(([sectionKey, options], index) => {
                 const groupKeys = options.map((option) => `${option.sourceKind}:${option.sourceId}`);
                 const selectedInGroup = groupKeys.filter((key) => selectedAccessKeys.includes(key)).length;
                 const allSelected = selectedInGroup === groupKeys.length;
-                return <fieldset key={sectionKey} className="lf-person-access-group">
-                  <legend>{accessSectionLabel(sectionKey)} <span className="lf-person-access-count">{selectedInGroup} of {options.length} selected</span></legend>
-                  {options.length > 1 ? <label className="lf-person-access-select-all"><input type="checkbox" checked={allSelected} onChange={() => setSelectedAccessKeys((current) => allSelected ? current.filter((key) => !groupKeys.includes(key)) : Array.from(new Set([...current, ...groupKeys])))} />Select all current {accessSectionLabel(sectionKey).toLowerCase()} records</label> : null}
+                return <details key={sectionKey} className="lf-person-access-group" open={accessSearch || selectedInGroup > 0 || index === 0 ? true : undefined}>
+                  <summary>{accessSectionLabel(sectionKey)} <span className="lf-person-access-count">{selectedInGroup} of {options.length} selected</span><Icon name="expand_more" size={18} /></summary>
+                  {options.length > 1 ? <label className="lf-person-access-select-all"><input type="checkbox" ref={(node) => { if (node) node.indeterminate = selectedInGroup > 0 && !allSelected; }} checked={allSelected} onChange={() => setSelectedAccessKeys((current) => allSelected ? current.filter((key) => !groupKeys.includes(key)) : Array.from(new Set([...current, ...groupKeys])))} />Select all {options.length} current {accessSectionLabel(sectionKey).toLowerCase()} records</label> : null}
                   {options.map((option) => {
                     const key = `${option.sourceKind}:${option.sourceId}`;
                     const selected = selectedAccessKeys.includes(key);
                     return <label key={key} className="lf-person-access-record" data-shared={selected}><input type="checkbox" checked={selected} onChange={() => setSelectedAccessKeys((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key])} /><span>{option.label}</span><small>{selected ? "Shared" : "Not shared"}</small></label>;
                   })}
-                </fieldset>;
-              }) : <span style={drawerExplanationStyle}>There are no eligible records to share.</span>}
+                </details>;
+              }) : <span style={drawerExplanationStyle}>{accessSearch ? "No records match this search." : "There are no eligible records to share."}</span>}
               {accessOptionsLoaded && savedAccessKeys.some((key) => !accessOptions.some((option) => `${option.sourceKind}:${option.sourceId}` === key)) ? <span style={drawerExplanationStyle}>Some previously selected records are unavailable in this editor. Remove all access to revoke every selection.</span> : null}
-              <div className="lf-person-access-actions"><Button variant="primary" disabled={saving || !accessOptionsLoaded || !accessOptions.length || (selectedAccessKeys.length === savedAccessKeys.length && selectedAccessKeys.every((key) => savedAccessKeys.includes(key)))} onClick={() => void saveAccess(selectedAccessKeys)}>Save record sharing</Button>{savedAccessKeys.length ? <Button variant="secondary" disabled={saving} onClick={() => { if (window.confirm(`Remove all record access for ${contact.full_name || "this person"}?`)) void saveAccess([]); }}>Remove all access</Button> : null}</div>
+              <div className="lf-person-access-actions"><span>{selectedAccessKeys.length} {selectedAccessKeys.length === 1 ? "record" : "records"} selected</span><Button variant="secondary" onClick={onBack}>Cancel</Button><Button variant="primary" disabled={saving || !accessOptionsLoaded || !accessOptions.length || (selectedAccessKeys.length === savedAccessKeys.length && selectedAccessKeys.every((key) => savedAccessKeys.includes(key)))} onClick={() => void saveAccess(selectedAccessKeys)}>Save access</Button>{savedAccessKeys.length ? <Button variant="secondary" disabled={saving} onClick={() => { if (window.confirm(`Remove all record access for ${contact.full_name || "this person"}?`)) void saveAccess([]); }}>Revoke all</Button> : null}</div>
             </div> : null}
           </>}
         </div>

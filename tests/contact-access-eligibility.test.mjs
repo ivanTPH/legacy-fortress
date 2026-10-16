@@ -21,8 +21,8 @@ test("People I Trust access UI exposes state-aware management without changing g
   assert.match(workspace, /invitation is accepted and the account is linked/);
   assert.match(workspace, /Executor status does not unlock your private Vault/);
   assert.match(workspace, /Choose individual records/);
-  assert.match(workspace, /Save record sharing/);
-  assert.match(workspace, /Remove all access/);
+  assert.match(workspace, /Save access/);
+  assert.match(workspace, /Revoke all/);
   assert.match(workspace, /loadPeopleScopeResourcesForOwner/);
   assert.match(workspace, /account_access_grants/);
   assert.match(workspace, /access_updated/);

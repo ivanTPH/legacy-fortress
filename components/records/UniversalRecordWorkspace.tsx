@@ -15,7 +15,7 @@ import { FileDropzone, FormField } from "../forms/asset/AssetFormControls";
 import { ActionIconButton } from "../ui/IconButton";
 import Icon from "../ui/Icon";
 import InfoTip from "../ui/InfoTip";
-import { LFPageHeader } from "../ui/LFDesignSystem";
+import { AddDocumentControl, LFPageHeader } from "../ui/LFDesignSystem";
 import AttachmentGallery, { AttachmentGallerySummary } from "../documents/AttachmentGallery";
 import { waitForActiveUser } from "../../lib/auth/session";
 import { formatCurrency } from "../../lib/currency";
@@ -3596,6 +3596,7 @@ export default function UniversalRecordWorkspace({
 
         <div style={recordActionsStyle} className="lf-record-card-actions">
           {canEditWorkspaceRow(row.id) ? <ActionIconButton action="edit" label="Edit record" onClick={() => startEdit(row)} /> : null}
+          {canEditWorkspaceRow(row.id) ? <AddDocumentControl accept={DOCUMENT_UPLOAD_ACCEPT} disabled={uploadingFor === row.id} onFilesSelected={(files) => files.forEach((file) => void uploadAttachment(row.id, file, "document"))} multiple /> : null}
           {viewer.mode !== "linked" && !isWillsWorkspace && canEditWorkspaceRow(row.id) ? <Link href={`/access-sharing?asset=${encodeURIComponent(row.id)}`} className="lf-icon-only-link" aria-label={`Manage people with access to ${row.title || "this record"}`}><Icon name="people" size={16} /></Link> : null}
           {isPossessions || usesCanonicalAssets ? (
             <ActionIconButton
@@ -3614,22 +3615,6 @@ export default function UniversalRecordWorkspace({
                 <button type="button" style={ghostBtn} disabled={archivingFor === row.id} onClick={() => void archiveRecord(row.id)}>
                   {archivingFor === row.id ? "Archiving..." : "Archive"}
                 </button>
-              ) : null}
-              {canEditWorkspaceRow(row.id) ? (
-                <label style={ghostBtn}>
-                  {uploadingFor === row.id ? "Uploading..." : "Upload document"}
-                  <input
-                    type="file"
-                    multiple
-                    accept={DOCUMENT_UPLOAD_ACCEPT}
-                    style={{ display: "none" }}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      if (file) void uploadAttachment(row.id, file, "document");
-                      event.currentTarget.value = "";
-                    }}
-                  />
-                </label>
               ) : null}
             </>
           ) : null}
@@ -3832,38 +3817,6 @@ export default function UniversalRecordWorkspace({
               )}
             </div>
 
-            {usesCanonicalAssets && canEditWorkspaceRow(row.id) ? (
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <label style={ghostBtn}>
-                  {uploadingFor === row.id
-                    ? "Uploading..."
-                    : `Upload document to ${canonicalBankAsset?.title ?? canonicalPropertyAsset?.title ?? canonicalBusinessAsset?.title ?? canonicalDigitalAsset?.title ?? row.title ?? "this asset"}`}
-                  <input
-                    type="file"
-                    accept={DOCUMENT_UPLOAD_ACCEPT}
-                    style={{ display: "none" }}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      if (file) void uploadAttachment(row.id, file, "document");
-                      event.currentTarget.value = "";
-                    }}
-                  />
-                </label>
-                <label style={ghostBtn}>
-                  {uploadingFor === row.id ? "Uploading..." : "Add picture"}
-                  <input
-                    type="file"
-                    accept={IMAGE_UPLOAD_ACCEPT}
-                    style={{ display: "none" }}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      if (file) void uploadAttachment(row.id, file, "photo");
-                      event.currentTarget.value = "";
-                    }}
-                  />
-                </label>
-              </div>
-            ) : null}
 
             {linkedContactsTable ? (
               <div className="lf-linked-contact-panel-list" aria-label="Linked contacts">
@@ -4688,32 +4641,6 @@ export default function UniversalRecordWorkspace({
               </label>
             ) : null}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {(isPossessions || isFinanceSection || (isNarrativeDocumentWorkspace && !isWillsWorkspace && !isTrustsWorkspace)) && !editingId ? (
-              <>
-                {!usesCanonicalAssets ? <label style={ghostBtn}>
-                  {pendingPhotoFile ? `Picture selected: ${pendingPhotoFile.name}` : "Add picture"}
-                  <input
-                    type="file"
-                    accept={IMAGE_UPLOAD_ACCEPT}
-                    style={{ display: "none" }}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0] ?? null;
-                      if (!file) return;
-                      const validation = validateUploadFile(file, {
-                        allowedMimeTypes: IMAGE_UPLOAD_MIME_TYPES,
-                        maxBytes: 15 * 1024 * 1024,
-                      });
-                      if (!validation.ok) {
-                        setStatus(`${validation.error}. Allowed: JPG, PNG up to 15MB.`);
-                        return;
-                      }
-                      setPendingPhotoFile(file);
-                      event.currentTarget.value = "";
-                    }}
-                  />
-                </label> : null}
-              </>
-            ) : null}
             {!showNarrativeNotes && !usesStructuredWorkspaceForm ? (
               <button type="button" style={ghostBtn} onClick={() => setShowNarrativeNotes(true)}>
                 <Icon name="add" size={16} />
@@ -4733,40 +4660,6 @@ export default function UniversalRecordWorkspace({
                 <Icon name="delete" size={16} />
                 Delete
               </button>
-            ) : null}
-            {editingId && canEditWorkspaceRow(editingId) ? (
-              <>
-                <label style={ghostBtn}>
-                  <Icon name="upload_file" size={16} />
-                  Upload document to {form.title.trim() || form.bank_name.trim() || "this asset"}
-                  <input
-                    type="file"
-                    multiple
-                    accept={DOCUMENT_UPLOAD_ACCEPT}
-                    style={{ display: "none" }}
-                    onChange={(event) => {
-                      const files = Array.from(event.target.files ?? []);
-                      files.forEach((file) => void uploadAttachment(editingId, file, "document"));
-                      event.currentTarget.value = "";
-                    }}
-                  />
-                </label>
-                <label style={ghostBtn}>
-                  <Icon name="add_a_photo" size={16} />
-                  Add photo to {form.title.trim() || form.bank_name.trim() || "this asset"}
-                  <input
-                    type="file"
-                    multiple
-                    accept={IMAGE_UPLOAD_ACCEPT}
-                    style={{ display: "none" }}
-                    onChange={(event) => {
-                      const files = Array.from(event.target.files ?? []);
-                      files.forEach((file) => void uploadAttachment(editingId, file, "photo"));
-                      event.currentTarget.value = "";
-                    }}
-                  />
-                </label>
-              </>
             ) : null}
           </div>
           </div>
@@ -4828,10 +4721,10 @@ function InlineDocumentUploadField({
         onFilesSelected(event.dataTransfer.files);
       }}
     >
-      <span style={labelStyle}>{files.length ? `${files.length} document${files.length === 1 ? "" : "s"} selected` : "Add document here"}</span>
+      <span style={labelStyle}>{files.length ? `${files.length} document${files.length === 1 ? "" : "s"} or photos selected` : "Add documents or photos"}</span>
       <span className="lf-will-upload-control lf-shared-document-upload-control">
         <span className="lf-will-upload-icon">
-          <Icon name="upload_file" size={24} />
+          <Icon name="note_add" size={24} />
         </span>
         <span className="lf-will-upload-copy">
           {helpText}
@@ -4859,10 +4752,11 @@ function InlineDocumentUploadField({
       ) : null}
       <input
         type="file"
+        aria-label="Add documents or photos"
         multiple
         accept={accept}
         disabled={disabled}
-        style={{ display: "none" }}
+        style={{ position: "absolute", width: 1, height: 1, opacity: 0 }}
         onChange={(event) => {
           onFilesSelected(event.target.files ?? []);
           event.currentTarget.value = "";

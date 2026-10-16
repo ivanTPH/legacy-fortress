@@ -29,7 +29,7 @@ test("contacts uses grouped person sections as the primary workflow", () => {
   assert.match(contactsWorkspace, /getStoredFileSignedUrl/);
   assert.match(contactsWorkspace, /function PersonManagementPanel/);
   assert.match(contactsWorkspace, /Edit details/);
-  assert.match(contactsWorkspace, /Choose records to share/);
+  assert.match(contactsWorkspace, /Give access/);
   assert.match(contactsWorkspace, /Remove person/);
   assert.match(contactsWorkspace, /account_access_grants/);
   assert.match(contactsWorkspace, /Invitation cancelled/);

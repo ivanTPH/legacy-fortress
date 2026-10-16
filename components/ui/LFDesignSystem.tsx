@@ -31,10 +31,12 @@ export function LFPageHeader({
   title,
   description,
   action,
+  actionNode,
 }: {
   title: string;
   description?: string;
   action?: { label: string; href: string; icon?: string };
+  actionNode?: ReactNode;
 }) {
   return (
     <div className="lf-ui-page-header">
@@ -42,9 +44,17 @@ export function LFPageHeader({
         <h1>{title}</h1>
         {description ? <p>{description}</p> : null}
       </div>
-      {action ? <Link className="lf-ui-button lf-ui-button-primary" href={action.href}>{action.icon ? <Icon name={action.icon} size={18} /> : null}{action.label}</Link> : null}
+      {actionNode ?? (action?.label === "Add record" ? <AddAssetLink href={action.href} /> : action ? <Link className="lf-ui-button lf-ui-button-primary" href={action.href}>{action.icon ? <Icon name={action.icon} size={18} /> : null}{action.label}</Link> : null)}
     </div>
   );
+}
+
+export function AddAssetLink({ href }: { href: string }) {
+  return <Link className="lf-v4-add-asset" href={href} aria-label="Add asset" title="Add asset"><Icon name="add" size={20} /><span>Add asset</span></Link>;
+}
+
+export function AddDocumentControl({ accept, onFilesSelected, disabled = false, multiple = false }: { accept: string; onFilesSelected: (files: File[]) => void; disabled?: boolean; multiple?: boolean }) {
+  return <label className="lf-v4-add-document" title="Add document"><Icon name="note_add" size={20} /><span>Add document</span><input type="file" aria-label="Add document" accept={accept} multiple={multiple} disabled={disabled} onChange={(event) => { const files = Array.from(event.currentTarget.files ?? []); if (files.length) onFilesSelected(files); event.currentTarget.value = ""; }} /></label>;
 }
 
 export function LFStatsStrip({ items }: { items: Array<{ label: string; value: string; suffix?: string }> }) {

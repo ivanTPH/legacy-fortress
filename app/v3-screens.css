@@ -50,7 +50,9 @@
 .lf-v3-area-empty h2 { margin: 0; font-size: var(--lf-type-section); font-weight: 600; }
 .lf-v3-area-empty > div, .lf-v3-area-extra { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--lf-space-16); }
 .lf-v3-area-empty-tile { position: relative; display: grid; align-content: start; gap: var(--lf-space-8); min-height: 142px; padding: var(--lf-space-16); color: var(--lf-text); text-decoration: none; border: 1px dashed var(--lf-border-dashed); border-radius: var(--lf-radius-card); }
-.lf-v3-area-empty-tile:hover { background: var(--lf-surface); }
+.lf-v3-area-empty-tile { transition: background-color 120ms ease-out; }
+.lf-v3-area-empty-tile:hover { background: var(--lf-interaction-hover); }
+.lf-v3-area-empty-tile:active { background: var(--lf-interaction-pressed); }
 .lf-v3-area-empty-tile strong { font-size: var(--lf-type-body); font-weight: 600; }
 .lf-v3-area-empty-tile small { color: var(--lf-text-secondary); font-size: var(--lf-type-meta); line-height: 1.4; }
 .lf-v3-area-empty-tile > span:last-child { position: absolute; top: var(--lf-space-16); right: var(--lf-space-16); color: var(--lf-link); font-size: 20px; }

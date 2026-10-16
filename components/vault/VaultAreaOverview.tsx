@@ -1,4 +1,4 @@
-import { LFPageHeader, LFVaultAreaTile } from "../../components/ui/LFDesignSystem";
+import { AddAssetLink, LFPageHeader, LFVaultAreaTile } from "../../components/ui/LFDesignSystem";
 
 export type VaultAreaTile = {
   key: string;
@@ -26,7 +26,7 @@ export function VaultAreaOverview({
 }) {
   return (
     <section className="lf-vault-area-overview">
-      <LFPageHeader title={title} description={description} action={{ label: "Add record", href: addHref, icon: "add" }} />
+      <LFPageHeader title={title} description={description} actionNode={<AddAssetLink href={addHref} />} />
       <div className="lf-vault-area-grid">
         {tiles.map((tile) => {
           const hasRecords = !loading && (tile.count ?? 0) > 0;

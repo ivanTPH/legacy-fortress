@@ -100,6 +100,11 @@ test.describe("V3 recovery local owner journey", () => {
     await page.waitForURL((next) => next.pathname === "/dashboard", { timeout: 20_000 });
     await page.goto("/people-access", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "People & Access" })).toBeVisible();
+    await page.getByRole("link", { name: "Sharing", exact: true }).click();
+    const sharedRecord = page.locator(".lf-pa-sharing-record").filter({ hasText: firstTitle });
+    await expect(sharedRecord.getByText("Recovery Linked Person")).toBeVisible();
+    await page.screenshot({ path: `/private/tmp/lf-v4-sharing-${isMobile ? "mobile" : "desktop"}.png` });
+    await page.getByRole("navigation", { name: "People and access views" }).getByRole("link", { name: "People", exact: true }).click();
     if (isMobile) await page.getByRole("button", { name: "Toggle navigation menu" }).click();
     const switcher = page.locator(".lf-workspace-switcher:visible").first();
     const trigger = switcher.locator(".lf-workspace-current");
@@ -150,8 +155,8 @@ test.describe("V3 recovery local owner journey", () => {
     const drawer = page.getByRole("dialog");
     await expect(drawer).toBeVisible();
     await expect(drawer.getByRole("heading", { name: "Contact details" })).toBeVisible();
-    await expect(drawer.getByRole("heading", { name: "Invitation and identity" })).toBeVisible();
-    await expect(drawer.getByRole("heading", { name: "Records shared" })).toBeVisible();
+    await expect(drawer.getByRole("heading", { name: "Connection and identity" })).toBeVisible();
+    await expect(drawer.getByRole("heading", { name: "Access granted" })).toBeVisible();
     await expect(drawer.getByText(firstTitle)).toBeVisible();
     expect((await grantPermissions()).asset_ids).toEqual([ids.assets[0]]);
     await page.screenshot({ path: `/private/tmp/lf-v3-recovery-${isMobile ? "mobile" : "desktop"}-person.png` });
@@ -160,22 +165,22 @@ test.describe("V3 recovery local owner journey", () => {
     await drawer.getByRole("button", { name: "Save changes" }).click();
     await expect.poll(async () => (await admin.from("contacts").select("full_name").eq("id", ids.contact!).single()).data?.full_name).toBe("Recovery Edited Person");
     await drawer.getByRole("button", { name: /Back to/ }).click();
-    await drawer.getByRole("button", { name: "Change or revoke record access" }).click();
+    await drawer.getByRole("button", { name: "Edit access" }).click();
     await expect(drawer.getByRole("heading", { name: "Record permissions" })).toBeVisible();
     await expect(drawer.locator(".lf-person-access-summary-list")).toHaveCount(0);
     await expect(drawer.getByText("Checking current access...")).toHaveCount(0);
     await expect(drawer.getByLabel(secondTitle)).toBeVisible();
     await page.screenshot({ path: `/private/tmp/lf-v4-permissions-${isMobile ? "mobile" : "desktop"}.png` });
     await drawer.getByLabel(secondTitle).check();
-    await drawer.getByRole("button", { name: "Save record sharing" }).click();
+    await drawer.getByRole("button", { name: "Save access" }).click();
     await expect.poll(async () => (await grantPermissions()).asset_ids).toEqual(expect.arrayContaining(ids.assets));
     await drawer.getByLabel(firstTitle).uncheck();
-    await drawer.getByRole("button", { name: "Save record sharing" }).click();
+    await drawer.getByRole("button", { name: "Save access" }).click();
     await expect.poll(async () => (await grantPermissions()).asset_ids).toEqual([ids.assets[1]]);
     page.once("dialog", (dialog) => dialog.accept());
-    await drawer.getByRole("button", { name: "Remove all access" }).click();
+    await drawer.getByRole("button", { name: "Revoke all" }).click();
     await expect.poll(async () => (await grantPermissions()).asset_ids).toEqual([]);
-    await drawer.getByRole("button", { name: /Back to/ }).click();
+    await drawer.getByRole("button", { name: "Cancel" }).click();
     await expect(drawer.getByText("No records shared")).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(drawer).toHaveCount(0);
@@ -194,6 +199,44 @@ test.describe("V3 recovery local owner journey", () => {
     }
   });
 
+  test("V4 Add person saves a contact without granting record access", async ({ page, isMobile }) => {
+    const addedEmail = `v4-no-access-${runId}@legacyfortress.test`;
+    await signIn(page, ownerEmail);
+    await page.goto("/people-access?view=people&group=trusted_contacts&add=1", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Add person" })).toBeVisible();
+    await page.getByRole("textbox", { name: /First name/ }).fill("V4");
+    await page.getByRole("textbox", { name: /Last name/ }).fill("Unshared");
+    await page.getByRole("textbox", { name: /Email/ }).fill(addedEmail);
+    await expect(page.getByRole("checkbox", { name: /Send invitation now/ })).toBeChecked();
+    await page.getByRole("checkbox", { name: /Send invitation now/ }).uncheck();
+    await page.screenshot({ path: `/private/tmp/lf-v4-add-person-${isMobile ? "mobile" : "desktop"}.png` });
+    try {
+      await page.getByRole("button", { name: "Add person", exact: true }).click();
+      await expect.poll(async () => (await admin.from("contacts").select("id").eq("owner_user_id", ids.owner!).eq("email_normalized", addedEmail).maybeSingle()).data?.id).toBeTruthy();
+      const contact = await admin.from("contacts").select("id,invite_status").eq("owner_user_id", ids.owner!).eq("email_normalized", addedEmail).single();
+      expect(contact.data?.invite_status).toBe("not_invited");
+      const grants = await admin.from("account_access_grants").select("permissions_override").eq("owner_user_id", ids.owner!).eq("contact_id", contact.data!.id);
+      expect(grants.error).toBeNull();
+      for (const grant of grants.data ?? []) {
+        const permissions = grant.permissions_override as { asset_ids?: string[]; record_ids?: string[] } | null;
+        expect(permissions?.asset_ids ?? []).toEqual([]);
+        expect(permissions?.record_ids ?? []).toEqual([]);
+      }
+    } finally {
+      const contacts = await admin.from("contacts").select("id").eq("owner_user_id", ids.owner!).eq("email_normalized", addedEmail);
+      for (const contact of contacts.data ?? []) {
+        const invitations = await admin.from("contact_invitations").select("id").eq("owner_user_id", ids.owner!).eq("contact_id", contact.id);
+        for (const invitation of invitations.data ?? []) {
+          await admin.from("invitation_events").delete().eq("invitation_id", invitation.id);
+          await admin.from("role_assignments").delete().eq("invitation_id", invitation.id);
+          await admin.from("contact_invitations").delete().eq("id", invitation.id);
+        }
+        await admin.from("account_access_grants").delete().eq("contact_id", contact.id);
+        await admin.from("contacts").delete().eq("id", contact.id);
+      }
+    }
+  });
+
   test("People & Access reviews a request without silently changing record sharing", async ({ page, isMobile }) => {
     test.setTimeout(120_000);
     await signIn(page, ownerEmail);
@@ -202,7 +245,7 @@ test.describe("V3 recovery local owner journey", () => {
     const person = page.getByRole("button", { name: /Open Recovery (Linked|Edited) Person/ });
     await expect(person).toBeVisible();
     await expect(person.getByText("Accepted")).toBeVisible();
-    await expect(person.getByText("Verified")).toBeVisible();
+    await expect(person.getByText(/Identity verified/)).toBeVisible();
     await page.screenshot({ path: `/private/tmp/lf-v4-people-list-${isMobile ? "mobile" : "desktop"}.png` });
     await person.click();
     const personDrawer = page.getByRole("dialog", { name: /Recovery (Linked|Edited) Person/ });
@@ -228,7 +271,7 @@ test.describe("V3 recovery local owner journey", () => {
     expect((await grantPermissions()).asset_ids).toEqual(before.asset_ids);
     await review.getByRole("button", { name: "Review shared records" }).click();
     await expect(page).toHaveURL(/view=people.*contact=/);
-    await expect(page.getByRole("dialog").getByRole("heading", { name: "Records shared" })).toBeVisible();
+    await expect(page.getByRole("dialog").getByRole("heading", { name: "Access granted" })).toBeVisible();
     await expect(page.getByRole("dialog").getByText("Checking current access...")).toHaveCount(0);
     await page.screenshot({ path: `/private/tmp/lf-v4-people-${isMobile ? "mobile" : "desktop"}.png` });
   });
@@ -245,7 +288,12 @@ async function signIn(page: Page, email: string) {
   await page.locator('input[type="email"]').fill(email);
   await page.locator('input[type="password"]').fill(password);
   const button = page.getByRole("button", { name: /^sign in$/i });
-  await expect(button).toBeEnabled({ timeout: 15_000 });
+  await expect.poll(async () => {
+    if (await button.isEnabled()) return true;
+    await page.locator('input[type="email"]').fill(email);
+    await page.locator('input[type="password"]').fill(password);
+    return button.isEnabled();
+  }, { timeout: 15_000 }).toBe(true);
   await button.click();
   await page.waitForURL((next) => !next.pathname.includes("sign-in"), { timeout: 20_000 });
   if (await page.getByRole("heading", { name: "Welcome to Legacy Fortress" }).isVisible()) {

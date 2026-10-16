@@ -35,8 +35,15 @@ assert.match(navSource, /space_dashboard/);
 assert.doesNotMatch(dashboardSource, /plus button/i);
 assert.doesNotMatch(dashboardSource, /Your Fortress Records/);
 assert.doesNotMatch(dashboardSource, /Search dashboard records/);
-assert.match(financeSource, /lf-finance-section-card/);
-assert.match(financeSource, /lf-finance-empty-tile/);
+assert.match(financeSource, /lf-v3-area-section/, "Finances uses the shared area section card");
+assert.match(financeSource, /lf-v3-area-empty-tile/, "Finances retains its empty section links");
+assert.match(financeSource, /<AddAssetLink/, "Finances uses the V4 Add asset control");
+assert.match(cssSource, /--lf-interaction-hover:\s*#F6EFEA/, "V4 hover token is present");
+for (const relative of ["V4_UPDATE.md", "design/People and Access V4.dc.html"]) {
+  const full = fs.readFileSync(path.join(root, "design_handoff_legacy_fortress 4", relative));
+  const incremental = fs.readFileSync(path.join(root, "design_update_v4", relative));
+  assert.equal(crypto.createHash("sha256").update(full).digest("hex"), crypto.createHash("sha256").update(incremental).digest("hex"), `V4 source packs disagree: ${relative}`);
+}
 assert.doesNotMatch(financeSource, /DashboardAssetSummaryCard/);
 assert.match(sidebarSource, /lf-nav-group-label/);
 

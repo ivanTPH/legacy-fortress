@@ -95,6 +95,8 @@ export default function ContactInvitationManager({
   selectedContactProfile = null,
   initialRole,
   initialAllowedSections = DEFAULT_INITIAL_ALLOWED_SECTIONS,
+  contactOnly = false,
+  onContactSaved,
 }: {
   mode?: "full" | "dashboard";
   guidedExecutor?: boolean;
@@ -102,6 +104,8 @@ export default function ContactInvitationManager({
   selectedContactProfile?: Pick<CanonicalContactRow, "id" | "full_name" | "email" | "contact_role" | "linked_context"> | null;
   initialRole?: CollaboratorRole;
   initialAllowedSections?: SectionKey[];
+  contactOnly?: boolean;
+  onContactSaved?: () => void;
 }) {
   const router = useRouter();
   const { preferences } = useVaultPreferences();
@@ -112,6 +116,9 @@ export default function ContactInvitationManager({
   const [rows, setRows] = useState<InvitationRow[]>([]);
 
   const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [sendInvitationNow, setSendInvitationNow] = useState(true);
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState<CollaboratorRole>("professional_advisor");
@@ -248,10 +255,10 @@ export default function ContactInvitationManager({
     setStatus("");
 
     try {
-      const nameTrim = name.trim();
+      const nameTrim = contactOnly ? [firstName.trim(), lastName.trim()].filter(Boolean).join(" ") : name.trim();
       const emailTrim = email.trim().toLowerCase();
-      if (!nameTrim || !emailTrim) {
-        setStatus("❌ Contact name and email are required.");
+      if (!nameTrim || !emailTrim || (contactOnly && (!firstName.trim() || !lastName.trim()))) {
+        setStatus("First name, last name and email are required.");
         return;
       }
 
@@ -271,14 +278,18 @@ export default function ContactInvitationManager({
           })
         : null;
       const managedInvitation = currentEditingRow ?? existingDraftInvitation;
+      if (contactOnly && managedInvitation) {
+        setStatus("This person already has an invitation. Open their People & Access profile to manage it.");
+        return;
+      }
       const managedInvitationId = editingId ?? existingDraftInvitation?.id ?? null;
       const permissionsOverride = buildScopedPermissionPayload({
-        allowedSections,
-        ownerNotes,
-        assetIds: allowedAssetIds.length > 0 ? allowedAssetIds : [],
-        recordIds: allowedRecordIds.length > 0 ? allowedRecordIds : [],
-        editableAssetIds,
-        editableRecordIds,
+        allowedSections: contactOnly ? [] : allowedSections,
+        ownerNotes: contactOnly ? "" : ownerNotes,
+        assetIds: contactOnly ? [] : allowedAssetIds,
+        recordIds: contactOnly ? [] : allowedRecordIds,
+        editableAssetIds: contactOnly ? [] : editableAssetIds,
+        editableRecordIds: contactOnly ? [] : editableRecordIds,
       });
       const currentInviteStatus = managedInvitation
         ? mapRowToCanonicalInviteStatus(managedInvitation)
@@ -397,6 +408,7 @@ export default function ContactInvitationManager({
           }, false);
           if (sent) {
             clearInvitationForm();
+            onContactSaved?.();
           }
           return;
         }
@@ -414,6 +426,8 @@ export default function ContactInvitationManager({
       setEditingId(null);
       setDraftContactId(null);
       setName("");
+      setFirstName("");
+      setLastName("");
       setEmail("");
       setPhone("");
       setRole("professional_advisor");
@@ -426,6 +440,7 @@ export default function ContactInvitationManager({
       setStatus(`✅ ${managedInvitation ? getExistingContactInvitationNotice(managedInvitation.invitation_status) : "Invitation prepared — ready to send."}`);
       await loadRows();
       notifyContactsUpdated();
+      onContactSaved?.();
     } catch (error) {
       setStatus(`❌ Save failed: ${getSafeContactInvitationErrorMessage(error)}`);
     } finally {
@@ -485,7 +500,10 @@ export default function ContactInvitationManager({
     setEditingId(null);
     setDraftContactId(null);
     setName("");
+    setFirstName("");
+    setLastName("");
     setEmail("");
+    setPhone("");
     setRole("professional_advisor");
     setOwnerNotes("");
     setAllowedSections([]);
@@ -659,7 +677,7 @@ export default function ContactInvitationManager({
       style={panelStyle}
       aria-label="Contact invitation management"
     >
-      {!guidedExecutor ? <div style={panelHeaderStyle}>
+      {!guidedExecutor && !contactOnly ? <div style={panelHeaderStyle}>
         <div style={{ display: "grid", gap: 4 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={sectionIconStyle}>
@@ -718,7 +736,7 @@ export default function ContactInvitationManager({
 
       {!isDashboardMode && currentEditingRow ? <InvitationStatusPanel row={currentEditingRow} /> : null}
 
-      {!isDashboardMode && !guidedExecutor ? (
+      {!isDashboardMode && !guidedExecutor && !contactOnly ? (
       <div style={summaryGridStyle}>
         <div style={summaryCardStyle}>
           <span style={summaryLabelStyle}>Contacts</span>
@@ -748,38 +766,44 @@ export default function ContactInvitationManager({
         <div style={sectionHeaderStyle}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <h3 style={sectionTitleStyle}>{editingId || draftContactId ? "Manage contact" : "Add contact"}</h3>
-              <InfoTip
+              <h3 style={sectionTitleStyle}>{contactOnly ? "Add person" : editingId || draftContactId ? "Manage contact" : "Add contact"}</h3>
+              {!contactOnly ? <InfoTip
                 label="Explain contact access setup"
                 message="Invite trusted people, choose the categories they can review, and allow edit access only on the specific records that really need it."
-              />
+              /> : null}
             </div>
             <p style={sectionIntroStyle}>
-              Save the selected contact here, then manage role, invitation state, internal notes, category access, and exact linked-record scope from the same shared admin surface.
+              {contactOnly ? "Adding or inviting a person does not share any Vault records. You can give access after they connect." : "Save the selected contact here, then manage role, invitation state, internal notes, category access, and exact linked-record scope from the same shared admin surface."}
             </p>
           </div>
         </div>
 
         <div className="lf-content-grid" style={{ gap: 10 }}>
-          <label style={fieldStyle}>
+          {contactOnly ? <><label style={fieldStyle}>
+            <span style={fieldLabelStyle}>First name <span className="lf-v4-required-tag">Required</span></span>
+            <input value={firstName} onChange={(e) => setFirstName(e.target.value)} style={inputStyle} autoComplete="given-name" />
+          </label><label style={fieldStyle}>
+            <span style={fieldLabelStyle}>Last name <span className="lf-v4-required-tag">Required</span></span>
+            <input value={lastName} onChange={(e) => setLastName(e.target.value)} style={inputStyle} autoComplete="family-name" />
+          </label></> : <label style={fieldStyle}>
             <span style={fieldLabelStyle}>Name</span>
             <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} placeholder="Full name" />
-          </label>
+          </label>}
           <label style={fieldStyle}>
-            <span style={fieldLabelStyle}>Email</span>
+            <span style={fieldLabelStyle}>Email {contactOnly ? <span className="lf-v4-required-tag">Required</span> : null}</span>
             <input value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} type="email" placeholder="name@example.com" />
           </label>
           <label style={fieldStyle}>
-              <span style={fieldLabelStyle}>Role</span>
-              <select value={role} onChange={(e) => setRole(e.target.value as CollaboratorRole)} style={inputStyle}>
+              <span style={fieldLabelStyle}>Role {contactOnly ? <span className="lf-v4-required-tag">Required</span> : null}</span>
+              <span className="lf-v4-select-wrap"><select value={role} onChange={(e) => setRole(e.target.value as CollaboratorRole)} style={inputStyle}>
               {roleOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
               ))}
-            </select>
+            </select><Icon name="expand_more" size={20} className="lf-v4-select-chevron" /></span>
           </label>
-          <label style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
+          {contactOnly ? <details className="lf-v4-optional-group" style={{ gridColumn: "1 / -1" }}><summary><Icon name="contact_phone" size={20} /><span><strong>Optional details</strong><small>Phone</small></span><Icon name="expand_more" size={20} /></summary><div className="lf-v4-form-grid" style={{ padding: 14 }}><label style={fieldStyle}><span style={fieldLabelStyle}>Phone <span className="lf-v4-optional-tag">Optional</span></span><input value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} type="tel" autoComplete="tel" /></label></div></details> : <label style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
             <span style={fieldLabelStyle}>Owner notes</span>
             <textarea
               value={ownerNotes}
@@ -787,8 +811,8 @@ export default function ContactInvitationManager({
               style={{ ...inputStyle, minHeight: 88, resize: "vertical" }}
               placeholder="Optional handover or access notes"
             />
-          </label>
-          <div style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
+          </label>}
+          {!contactOnly ? <div style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
             <span style={fieldLabelStyle}>Category access</span>
             <div style={{ color: "#64748b", fontSize: 12 }}>
               Choose the visible categories this contact can review. Records beneath each selected category start as view only, then you can allow editing record by record.
@@ -824,19 +848,20 @@ export default function ContactInvitationManager({
                   );
                 })}
             </div>
-          </div>
+          </div> : null}
+          {contactOnly ? <label className="lf-pa-send-invite-now" style={{ gridColumn: "1 / -1" }}><input type="checkbox" checked={sendInvitationNow} onChange={(event) => setSendInvitationNow(event.target.checked)} /><span>Send invitation now <small>This does not share any records.</small></span></label> : null}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button
               type="button"
               style={primaryBtnStyle}
               title={editingId ? "Save contact changes" : draftContactId ? "Save this contact setup" : "Add this contact"}
               disabled={saving}
-              onClick={() => void saveContact()}
+              onClick={() => void saveContact({ sendAfterSave: contactOnly && sendInvitationNow })}
             >
               <Icon name={(editingId || draftContactId) ? "save" : "person_add"} size={16} />
-              {saving ? "Saving..." : (editingId || draftContactId) ? "Save" : "Add contact"}
+              {saving ? "Saving..." : contactOnly ? sendInvitationNow ? "Add and invite" : "Add person" : (editingId || draftContactId) ? "Save" : "Add contact"}
             </button>
-            {!editingId && draftContactId && email.trim() ? (
+            {!contactOnly && !editingId && draftContactId && email.trim() ? (
               <button type="button" style={ghostBtnStyle} title="Save this contact and send the invite email" disabled={saving} onClick={() => void saveContact({ sendAfterSave: true })}>
                 <Icon name="send" size={16} />
                 {saving ? "Saving..." : "Send invite"}
@@ -844,7 +869,7 @@ export default function ContactInvitationManager({
             ) : null}
           </div>
 
-          {allowedSections.length ? (
+          {!contactOnly && allowedSections.length ? (
             <div style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
               <span style={fieldLabelStyle}>Linked records and document permissions</span>
               <div style={{ color: "#64748b", fontSize: 12 }}>

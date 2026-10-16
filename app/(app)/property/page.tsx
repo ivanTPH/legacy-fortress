@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import CanonicalAssetOverviewGrid, { type CanonicalAssetOverviewTile } from "../components/dashboard/CanonicalAssetOverviewGrid";
 import { PageHeader, IconTile } from "../../../components/ui/V3Primitives";
+import { AddAssetLink } from "../../../components/ui/LFDesignSystem";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
 import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
 import { isVaultSubsectionEnabled, type VaultSubsectionKey } from "../../../lib/vaultPreferences";
@@ -35,7 +36,7 @@ export default function PropertyOverviewPage() {
   return (
     <section className="lf-v3-area-page">
       <PageHeader title="Property" description="Record properties, deeds, valuations and supporting documents for your estate."
-        action={viewer.mode === "linked" || !propertyRecordTiles.length ? undefined : <Link className="lf-v3-button lf-v3-button--primary" href={propertyRecordTiles[0].addHref}>Add record</Link>} />
+        action={viewer.mode === "linked" || !propertyRecordTiles.length ? undefined : <AddAssetLink href={propertyRecordTiles[0].addHref} />} />
       {visibleItems.length ? (
       <><CanonicalAssetOverviewGrid tiles={propertyRecordTiles} />
       {viewer.mode !== "linked" ? <div className="lf-v3-area-extra">{visibleItems.filter((item) => item.href !== "/vault/property").map((item) => (

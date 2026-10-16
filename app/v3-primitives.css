@@ -1,4 +1,4 @@
-/* Version 3 shared primitives. Screen layouts adopt these in later phases. */
+/* Shared customer primitives. V4 interaction states retain the existing component API. */
 .lf-v3-button,
 .lf-v3-breadcrumb-back,
 .lf-v3-row-main,
@@ -19,17 +19,28 @@
   font: 600 var(--lf-type-button)/1.3 var(--lf-font-sans);
   white-space: nowrap;
   cursor: pointer;
-  transition: background-color 150ms ease, border-color 150ms ease;
+  transition: background-color 120ms ease-out;
 }
 .lf-v3-button--primary { background: var(--lf-ink); color: var(--lf-surface); }
 .lf-v3-button--primary:hover:not(:disabled) { background: var(--lf-ink-hover); }
 .lf-v3-button--secondary { background: var(--lf-surface); color: var(--lf-ink); border-color: var(--lf-border-input); font-weight: 500; }
-.lf-v3-button--secondary:hover:not(:disabled) { background: var(--lf-tint); }
+.lf-v3-button--secondary:hover:not(:disabled) { background: var(--lf-interaction-hover); }
 .lf-v3-button--text { padding-inline: var(--lf-space-8); background: transparent; color: var(--lf-link); font-weight: 500; }
-.lf-v3-button--text:hover:not(:disabled) { background: var(--lf-tint); }
+.lf-v3-button--text:hover:not(:disabled) { background: var(--lf-interaction-hover); }
 .lf-v3-button--icon { width: 36px; height: 36px; padding: 0; border-color: var(--lf-border-input); border-radius: var(--lf-radius-pill); background: var(--lf-surface); color: var(--lf-ink); }
-.lf-v3-button--icon:hover:not(:disabled) { background: var(--lf-tint); }
+.lf-v3-button--icon:hover:not(:disabled) { background: var(--lf-interaction-hover); }
+.lf-v3-button--secondary:active:not(:disabled), .lf-v3-button--text:active:not(:disabled), .lf-v3-button--icon:active:not(:disabled) { background: var(--lf-interaction-pressed); }
 .lf-v3-button:disabled { opacity: .5; cursor: not-allowed; }
+.lf-v4-add-asset { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 36px; height: 36px; border-radius: var(--lf-radius-pill); background: var(--lf-ink); color: var(--lf-surface); text-decoration: none; transition: background-color 120ms ease-out; }
+.lf-v4-add-asset:hover { background: var(--lf-ink-hover); }
+.lf-v4-add-asset:focus-visible { outline: 2px solid var(--lf-surface); box-shadow: 0 0 0 4px var(--lf-interaction-focus); }
+.lf-v4-add-asset span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.lf-v4-add-document { position: relative; display: inline-flex; align-items: center; justify-content: center; flex: none; width: 36px; height: 36px; border: 1px solid var(--lf-border-input); border-radius: var(--lf-radius-pill); background: var(--lf-surface); color: var(--lf-ink); cursor: pointer; transition: background-color 120ms ease-out; }
+.lf-v4-add-document:hover { background: var(--lf-interaction-hover); }
+.lf-v4-add-document:active { background: var(--lf-interaction-pressed); }
+.lf-v4-add-document:focus-within { outline: 2px solid var(--lf-surface); box-shadow: 0 0 0 4px var(--lf-interaction-focus); }
+.lf-v4-add-document span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.lf-v4-add-document input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 
 .lf-v3-icon-tile { display: inline-flex; align-items: center; justify-content: center; flex: none; background: var(--lf-tint); color: var(--lf-tint-icon); }
 .lf-v3-icon-tile--36 { width: 36px; height: 36px; border-radius: var(--lf-radius-icon-tile); }
@@ -44,13 +55,15 @@
 .lf-v3-chip--danger { background: var(--lf-danger-bg); color: var(--lf-danger); }
 
 .lf-v3-card { min-width: 0; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface); }
-.lf-v3-card--link { display: block; color: inherit; text-decoration: none; transition: border-color 150ms ease, box-shadow 150ms ease; }
-.lf-v3-card--link:hover { border-color: var(--lf-card-hover-border); box-shadow: var(--lf-shadow-card-hover); }
+.lf-v3-card--link { display: block; color: inherit; text-decoration: none; transition: background-color 120ms ease-out; }
+.lf-v3-card--link:hover { background: var(--lf-interaction-hover); }
+.lf-v3-card--link:active { background: var(--lf-interaction-pressed); }
 .lf-v3-row { display: flex; align-items: stretch; min-width: 0; border-bottom: 1px solid var(--lf-divider); }
 .lf-v3-row:last-child { border-bottom: 0; }
 .lf-v3-row-main { display: flex; flex: 1; align-items: center; gap: var(--lf-space-12); min-width: 0; min-height: 48px; width: 100%; padding: var(--lf-space-8) var(--lf-space-16); border: 0; background: transparent; color: var(--lf-text); text-align: left; text-decoration: none; font: inherit; }
 button.lf-v3-row-main, a.lf-v3-row-main { cursor: pointer; }
-button.lf-v3-row-main:hover, a.lf-v3-row-main:hover { background: var(--lf-canvas); }
+button.lf-v3-row-main:hover, a.lf-v3-row-main:hover { background: var(--lf-interaction-hover); }
+button.lf-v3-row-main:active, a.lf-v3-row-main:active { background: var(--lf-interaction-pressed); }
 .lf-v3-row-copy { display: grid; flex: 1; gap: var(--lf-space-2); min-width: 0; }
 .lf-v3-row-title { font-size: var(--lf-type-body); font-weight: 600; line-height: var(--lf-type-body-line); }
 .lf-v3-row-description { color: var(--lf-text-secondary); font-size: var(--lf-type-meta); line-height: var(--lf-type-meta-line); }
@@ -153,7 +166,11 @@ button.lf-v3-row-main:hover, a.lf-v3-row-main:hover { background: var(--lf-canva
 .lf-v3-timeline strong { font-size: var(--lf-type-body); font-weight: 600; }
 .lf-v3-timeline p { margin: var(--lf-space-4) 0 0; color: var(--lf-text-secondary); font-size: var(--lf-type-meta); }
 
-.lf-v3-button:focus-visible, .lf-v3-card--link:focus-visible, .lf-v3-row-main:focus-visible, .lf-v3-breadcrumb a:focus-visible, .lf-v3-switch:focus-visible, .lf-v3-context-switcher summary:focus-visible, .lf-v3-context-menu button:focus-visible, .lf-v3-context-menu-mobile button:focus-visible, .lf-v3-context-banner a:focus-visible, .lf-v3-toast button:focus-visible, .lf-v3-sheet-scrim:focus-visible { outline: 3px solid var(--lf-accent); outline-offset: 2px; }
+.lf-v3-button:focus-visible, .lf-v3-card--link:focus-visible, .lf-v3-row-main:focus-visible, .lf-v3-breadcrumb a:focus-visible, .lf-v3-switch:focus-visible, .lf-v3-context-switcher summary:focus-visible, .lf-v3-context-menu button:focus-visible, .lf-v3-context-menu-mobile button:focus-visible, .lf-v3-context-banner a:focus-visible, .lf-v3-toast button:focus-visible, .lf-v3-sheet-scrim:focus-visible { outline: 2px solid var(--lf-surface); box-shadow: 0 0 0 4px var(--lf-interaction-focus); }
+
+@media (prefers-reduced-motion: reduce) {
+  .lf-v3-button, .lf-v3-card--link, .lf-v3-row-main { transition: none; }
+}
 
 .lf-shell[data-lf-text-size="large"] { --lf-v3-type-scale: 1.06; }
 .lf-shell[data-lf-text-size="xlarge"] { --lf-v3-type-scale: 1.12; }
@@ -175,6 +192,8 @@ button.lf-v3-row-main:hover, a.lf-v3-row-main:hover { background: var(--lf-canva
 .lf-shell[data-lf-spacing="comfortable"] .lf-v3-card { line-height: 1.5; }
 
 @media (max-width: 767px) {
+  .lf-v4-add-asset { width: auto; min-height: 44px; padding: 0 14px; gap: 6px; }
+  .lf-v4-add-asset span { position: static; width: auto; height: auto; overflow: visible; clip-path: none; font-size: var(--lf-type-button); font-weight: 600; }
   .lf-v3-button { min-height: 44px; }
   .lf-v3-button--icon { width: 44px; height: 44px; }
   .lf-v3-page-header-main { align-items: flex-start; flex-direction: column; gap: var(--lf-space-16); }

@@ -4,6 +4,7 @@ import CanonicalAssetOverviewGrid, { metadataToken, type CanonicalAssetOverviewT
 import Link from "next/link";
 import { useViewerAccess } from "../../../../components/access/ViewerAccessContext";
 import { PageHeader } from "../../../../components/ui/V3Primitives";
+import { AddAssetLink } from "../../../../components/ui/LFDesignSystem";
 
 const possessionTiles: CanonicalAssetOverviewTile[] = [
   {
@@ -82,7 +83,7 @@ export default function PersonalPossessionsOverviewPage() {
   return (
     <section className="lf-v3-area-page">
       <PageHeader title="Possessions" description="Capture personal possessions with values, references, locations, attachments and photos."
-        action={viewer.mode === "linked" ? undefined : <Link className="lf-v3-button lf-v3-button--primary" href={possessionTiles[0].addHref}>Add record</Link>} />
+        action={viewer.mode === "linked" ? undefined : <AddAssetLink href={possessionTiles[0].addHref} />} />
       <CanonicalAssetOverviewGrid tiles={possessionTiles} />
     </section>
   );

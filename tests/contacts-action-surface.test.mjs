@@ -33,13 +33,13 @@ test("People I Trust uses compact rows with progressive person details", () => {
   assert.doesNotMatch(contactsWorkspace, /label: "Advisor"/);
   assert.match(contactsWorkspace, /PersonVaultAccessSummary/);
   assert.match(contactsWorkspace, /Contact details/);
-  assert.match(contactsWorkspace, /Invitation and identity/);
-  assert.match(contactsWorkspace, /Records shared/);
-  assert.match(contactsWorkspace, /Change or revoke record access/);
+  assert.match(contactsWorkspace, /Connection and identity/);
+  assert.match(contactsWorkspace, /Access granted/);
+  assert.match(contactsWorkspace, /Edit access/);
   assert.match(contactsWorkspace, /sharedNames\.map/);
   assert.match(contactsWorkspace, /contact\.invite_status === "not_invited" && contact\.email \? <button[^\n]*onInvite/);
   assert.match(contactsWorkspace, /Choose individual records/);
-  assert.match(contactsWorkspace, /Choose records to share/);
+  assert.match(contactsWorkspace, /Give access/);
   assert.match(contactsWorkspace, /getAddContactPreset/);
   assert.match(contactsWorkspace, /Cancel/);
   assert.match(contactsWorkspace, /<ContactInvitationManager[\s\S]*mode="full"/);
@@ -85,7 +85,7 @@ test("focused People I Trust actions use canonical invitation and scoped access 
   assert.match(contactsWorkspace, /role_assignments.*update|from\("role_assignments"\)/s);
   assert.match(contactsWorkspace, /access_updated/);
   assert.match(contactsWorkspace, /access_revoked/);
-  assert.match(contactsWorkspace, /Save record sharing/);
-  assert.match(contactsWorkspace, /Remove all access/);
+  assert.match(contactsWorkspace, /Save access/);
+  assert.match(contactsWorkspace, /Revoke all/);
   assert.doesNotMatch(contactsWorkspace, /Delivered|Opened/);
 });
