@@ -35,11 +35,11 @@ test("People I Trust uses compact rows with progressive person details", () => {
   assert.match(contactsWorkspace, /Contact details/);
   assert.match(contactsWorkspace, /Invitation and identity/);
   assert.match(contactsWorkspace, /Records shared/);
-  assert.match(contactsWorkspace, /Change or revoke access/);
+  assert.match(contactsWorkspace, /Change or revoke record access/);
   assert.match(contactsWorkspace, /sharedNames\.map/);
   assert.match(contactsWorkspace, /contact\.invite_status === "not_invited" && contact\.email \? <button[^\n]*onInvite/);
-  assert.match(contactsWorkspace, /Give access/);
-  assert.match(contactsWorkspace, /Manage access/);
+  assert.match(contactsWorkspace, /Choose individual records/);
+  assert.match(contactsWorkspace, /Choose records to share/);
   assert.match(contactsWorkspace, /getAddContactPreset/);
   assert.match(contactsWorkspace, /Cancel/);
   assert.match(contactsWorkspace, /<ContactInvitationManager[\s\S]*mode="full"/);
@@ -67,7 +67,7 @@ test("person presentation keeps relationship, invitation and access distinct", (
   assert.match(contactsWorkspace, /Recorded/);
   assert.match(contactsWorkspace, /Invitation awaiting acceptance/);
   assert.match(contactsWorkspace, /Being recorded as an executor does not give this person access/i);
-  assert.match(contactsWorkspace, /This person must accept your invitation before Vault records can be shared/i);
+  assert.match(contactsWorkspace, /invitation has not been accepted.*never grants record access/i);
   assert.match(contactsWorkspace, /source_kind !== "invitation"/);
   assert.match(invitationManager, /Being linked does not automatically give this person access/);
   assert.match(invitationManager, /Identity verification does not establish legal authority/);
@@ -85,7 +85,7 @@ test("focused People I Trust actions use canonical invitation and scoped access 
   assert.match(contactsWorkspace, /role_assignments.*update|from\("role_assignments"\)/s);
   assert.match(contactsWorkspace, /access_updated/);
   assert.match(contactsWorkspace, /access_revoked/);
-  assert.match(contactsWorkspace, /Give access/);
-  assert.match(contactsWorkspace, /Remove access/);
+  assert.match(contactsWorkspace, /Save record sharing/);
+  assert.match(contactsWorkspace, /Remove all access/);
   assert.doesNotMatch(contactsWorkspace, /Delivered|Opened/);
 });

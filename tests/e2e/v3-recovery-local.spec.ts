@@ -98,9 +98,16 @@ test.describe("V3 recovery local owner journey", () => {
     test.setTimeout(180_000);
     await signIn(page, ownerEmail);
     await page.waitForURL((next) => next.pathname === "/dashboard", { timeout: 20_000 });
+    await page.goto("/people-access", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "People & Access" })).toBeVisible();
     if (isMobile) await page.getByRole("button", { name: "Toggle navigation menu" }).click();
     const switcher = page.locator(".lf-workspace-switcher:visible").first();
     const trigger = switcher.locator(".lf-workspace-current");
+    await expect(trigger).toBeEnabled();
+    const navigation = isMobile ? page.locator(".lf-mobile-drawer .lf-mobile-tree") : page.locator(".lf-sidebar .lf-nav");
+    const navigationContainer = isMobile ? page.locator(".lf-mobile-drawer") : page.locator(".lf-sidebar");
+    const navigationTop = (await navigation.boundingBox())!.y - (await navigationContainer.boundingBox())!.y;
+    expect(navigationTop).toBeDefined();
     await trigger.click();
     await expect(trigger).toHaveAttribute("aria-expanded", "true");
     const menu = switcher.getByRole("navigation", { name: "Available workspaces" });
@@ -111,6 +118,9 @@ test.describe("V3 recovery local owner journey", () => {
     expect(viewport).not.toBeNull();
     expect(bounds!.x).toBeGreaterThanOrEqual(0);
     expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(viewport!.width + 1);
+    expect(bounds!.height).toBeLessThanOrEqual(360);
+    expect((await navigation.boundingBox())!.y - (await navigationContainer.boundingBox())!.y).toBe(navigationTop);
+    await expect(menu.getByRole("link", { name: /Admin|Enterprise/ })).toHaveCount(0);
     if (!isMobile) {
       const sidebar = await page.locator(".lf-sidebar").boundingBox();
       expect(sidebar).not.toBeNull();
@@ -122,6 +132,7 @@ test.describe("V3 recovery local owner journey", () => {
     await expect(trigger).toBeFocused();
     await trigger.click();
     await page.locator(".lf-workspace-switcher:visible").first().getByRole("link", { name: /Personal Vault/ }).click();
+    await page.waitForURL((next) => next.pathname === "/dashboard", { timeout: 20_000 });
     await expect(page.locator(".lf-workspace-links:visible")).toHaveCount(0);
     if (isMobile) {
       const mobileToggle = page.getByRole("button", { name: "Toggle navigation menu" });
@@ -149,16 +160,23 @@ test.describe("V3 recovery local owner journey", () => {
     await drawer.getByRole("button", { name: "Save changes" }).click();
     await expect.poll(async () => (await admin.from("contacts").select("full_name").eq("id", ids.contact!).single()).data?.full_name).toBe("Recovery Edited Person");
     await drawer.getByRole("button", { name: /Back to/ }).click();
-    await drawer.getByRole("button", { name: "Change or revoke access" }).click();
-    await drawer.getByRole("button", { name: "Edit access" }).click();
+    await drawer.getByRole("button", { name: "Change or revoke record access" }).click();
+    await expect(drawer.getByRole("heading", { name: "Record permissions" })).toBeVisible();
+    await expect(drawer.locator(".lf-person-access-summary-list")).toHaveCount(0);
+    await expect(drawer.getByText("Checking current access...")).toHaveCount(0);
+    await expect(drawer.getByLabel(secondTitle)).toBeVisible();
+    await page.screenshot({ path: `/private/tmp/lf-v4-permissions-${isMobile ? "mobile" : "desktop"}.png` });
     await drawer.getByLabel(secondTitle).check();
-    await drawer.getByRole("button", { name: "Save shared access" }).click();
+    await drawer.getByRole("button", { name: "Save record sharing" }).click();
     await expect.poll(async () => (await grantPermissions()).asset_ids).toEqual(expect.arrayContaining(ids.assets));
+    await drawer.getByLabel(firstTitle).uncheck();
+    await drawer.getByRole("button", { name: "Save record sharing" }).click();
+    await expect.poll(async () => (await grantPermissions()).asset_ids).toEqual([ids.assets[1]]);
     page.once("dialog", (dialog) => dialog.accept());
-    await drawer.getByRole("button", { name: "Remove access" }).click();
+    await drawer.getByRole("button", { name: "Remove all access" }).click();
     await expect.poll(async () => (await grantPermissions()).asset_ids).toEqual([]);
     await drawer.getByRole("button", { name: /Back to/ }).click();
-    await expect(drawer.getByText("No active access")).toBeVisible();
+    await expect(drawer.getByText("No records shared")).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(drawer).toHaveCount(0);
   });

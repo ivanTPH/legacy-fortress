@@ -5,7 +5,7 @@ import path from "node:path";
 
 const root = process.cwd();
 
-test("contacts uses grouped collapsible sections as the primary workflow", () => {
+test("contacts uses grouped person sections as the primary workflow", () => {
   const contactsWorkspace = fs.readFileSync(path.join(root, "components/contacts/ContactsNetworkWorkspace.tsx"), "utf8");
   const invitationManager = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/ContactInvitationManager.tsx"), "utf8");
 
@@ -22,14 +22,14 @@ test("contacts uses grouped collapsible sections as the primary workflow", () =>
   assert.match(contactsWorkspace, /Edit relationship/);
   assert.match(contactsWorkspace, /<ContactInvitationManager[\s\S]*mode="full"[\s\S]*initialRole=\{getAddContactPreset\(addContactGroupKey\)\.role\}/);
   assert.match(contactsWorkspace, /function PersonManagementPanel/);
-  assert.match(contactsWorkspace, /className="lf-person-more-menu"/);
+  assert.match(contactsWorkspace, /className="lf-pa-person-open"/);
   assert.doesNotMatch(contactsWorkspace, /<ContactInvitationManager[\s\S]*selectedContactId=\{contact\.id\}/);
   assert.match(contactsWorkspace, /<DocumentPreviewDialog/);
   assert.match(contactsWorkspace, /getPreviewableTargetsForContext/);
   assert.match(contactsWorkspace, /getStoredFileSignedUrl/);
   assert.match(contactsWorkspace, /function PersonManagementPanel/);
   assert.match(contactsWorkspace, /Edit details/);
-  assert.match(contactsWorkspace, /Manage access/);
+  assert.match(contactsWorkspace, /Choose records to share/);
   assert.match(contactsWorkspace, /Remove person/);
   assert.match(contactsWorkspace, /account_access_grants/);
   assert.match(contactsWorkspace, /Invitation cancelled/);

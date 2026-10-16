@@ -143,8 +143,9 @@ test("workspace switcher uses controlled dismissal instead of sticky native deta
   assert.match(switcher, /window\.addEventListener\("lf-admin-menu-open", onOtherMenuOpen\)/);
   assert.match(switcher, /onClick=\{closeAfterSelection\}/);
   assert.match(switcher, /onSelect\?\.\(\)/);
-  assert.match(globals, /\.lf-sidebar-workspace \.lf-workspace-links \{[\s\S]*?position: static;[\s\S]*?width: 100%;/);
-  assert.match(globals, /\.lf-sidebar-workspace \.lf-workspace-route-meta \{ display: none; \}/);
+  assert.match(globals, /\.lf-sidebar-workspace \.lf-workspace-links \{[\s\S]*?position: absolute;[\s\S]*?width: 100%;/);
+  assert.match(globals, /\.lf-mobile-drawer \.lf-workspace-links \{[\s\S]*?position: absolute;[\s\S]*?width: 100%;/);
+  assert.match(globals, /grid-template-rows: auto auto minmax\(0, 1fr\) auto auto/);
   assert.doesNotMatch(switcher, /<details className="lf-workspace-menu"/);
   assert.doesNotMatch(switcher, /<summary className="lf-workspace-current"/);
   assert.match(globals, /\.lf-workspace-current \{\n  border: 0;\n  background: transparent;/);

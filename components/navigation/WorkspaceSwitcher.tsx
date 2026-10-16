@@ -195,7 +195,7 @@ export default function WorkspaceSwitcher({
     onSelect?.();
   }
 
-  if (!session || (!hasMultipleContexts && linkedFortresses.length === 0 && !alwaysShow)) return null;
+  if ((!session && !alwaysShow) || (session && !hasMultipleContexts && linkedFortresses.length === 0 && !alwaysShow)) return null;
 
   return (
     <section
@@ -210,6 +210,8 @@ export default function WorkspaceSwitcher({
           className="lf-workspace-current"
           aria-expanded={open}
           aria-controls={menuId}
+          aria-busy={!session}
+          disabled={!session}
           onClick={toggleOpen}
         >
           <span className="lf-workspace-icon" aria-hidden="true">
@@ -221,7 +223,7 @@ export default function WorkspaceSwitcher({
           </span>
           <Icon name="expand_more" size={18} />
         </button>
-        {open ? (
+        {open && session ? (
           <nav id={menuId} className="lf-workspace-links" aria-label="Available workspaces">
             <div className="lf-workspace-menu-heading">
               <span>Switch context</span>
@@ -269,7 +271,7 @@ export default function WorkspaceSwitcher({
           </nav>
         ) : null}
       </div>
-      {showDetails ? (
+      {showDetails && session ? (
         <details className="lf-workspace-details">
           <summary>Prototype session</summary>
           <dl>

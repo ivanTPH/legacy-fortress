@@ -18,11 +18,11 @@ test("owner access eligibility follows invitation, linking and assurance state",
 test("People I Trust access UI exposes state-aware management without changing grant architecture", () => {
   const workspace = fs.readFileSync(path.join(root, "components/contacts/ContactsNetworkWorkspace.tsx"), "utf8");
   assert.match(workspace, /activation_status.*accepted.*pending_verification.*verification_submitted.*verified.*active/);
-  assert.match(workspace, /must accept your invitation before you can share Vault records/);
-  assert.match(workspace, /Being recorded as an executor does not give this person access/);
-  assert.match(workspace, /Give access/);
-  assert.match(workspace, /Edit access/);
-  assert.match(workspace, /Remove access/);
+  assert.match(workspace, /invitation is accepted and the account is linked/);
+  assert.match(workspace, /Executor status does not unlock your private Vault/);
+  assert.match(workspace, /Choose individual records/);
+  assert.match(workspace, /Save record sharing/);
+  assert.match(workspace, /Remove all access/);
   assert.match(workspace, /loadPeopleScopeResourcesForOwner/);
   assert.match(workspace, /account_access_grants/);
   assert.match(workspace, /access_updated/);

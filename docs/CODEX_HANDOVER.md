@@ -1,5 +1,11 @@
 # Codex Handover
 
+## 16 October 2026 — V3 review corrections
+
+- On `fix/v3-recovery` after `ac338343`, People & Access now shows saved, individual record choices directly and provides clear save and revoke actions. Invitation, identity verification and record sharing are described separately; existing grant persistence and permission checks remain in place.
+- The shared workspace selector uses a compact anchored menu on desktop and mobile, reserves header space while the session loads, and leaves navigation in place. Role-based choices and keyboard dismissal use the existing component.
+- Local synthetic desktop Chrome and mobile WebKit owner journeys passed for workspace dismissal, contact edit, individual asset grant/revocation and persisted permission checks; the wrong-user test passed separately. Focused source tests, TypeScript, targeted lint and build passed. Hosted Jacqui-specific state still requires the outstanding read-only Coolify operator response; no hosted data was changed. Staging release is manual and requires owner approval.
+
 ## 16 October 2026 — People & Access V4 recovery package
 
 - `fix/v3-recovery` retains the committed V3 workspace and contact fixes at `ad575d0` and adds one customer People & Access workspace. `/people-access` is canonical; owner `/contacts`, `/access`, and `/access-requests` entries lead into it. Linked requesters retain their guarded access-request view.
