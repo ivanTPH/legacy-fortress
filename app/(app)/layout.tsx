@@ -886,7 +886,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     ? "Home"
     : currentNode?.label ?? "Dashboard";
   const topbarBreadcrumbs = normalizedPathname === "/dashboard" ? [] : breadcrumbs.slice(0, -1);
-  const showBackButton = !["/dashboard", "/add", "/add-to-fortress", "/actions", "/action-centre", "/contacts", "/profile"].includes(normalizedPathname);
+  const showBackButton = !["/dashboard", "/add", "/add-to-fortress", "/actions", "/action-centre", "/contacts", "/people-access", "/profile"].includes(normalizedPathname);
 
   function toggleAccountMenu() {
     setAccountMenuOpen((current) => {
@@ -1298,10 +1298,10 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
           {[
             ["/dashboard", "Home", "home"],
             ["/actions", "Actions", "task_alt"],
-            ["/contacts", "People", "group"],
+            ["/people-access", "People", "group"],
             ["/profile", "Settings", "settings"],
           ].filter(([href]) => canViewPath(href, resolvedViewerAccess)).map(([href, label, icon]) => {
-            const active = pathname === href || (href === "/actions" && pathname === "/action-centre") || (href !== "/dashboard" && pathname.startsWith(`${href}/`));
+            const active = pathname === href || (href === "/people-access" && ["/contacts", "/access-requests", "/access"].includes(pathname)) || (href === "/actions" && pathname === "/action-centre") || (href !== "/dashboard" && pathname.startsWith(`${href}/`));
             return (
               <Link key={href} href={href} className={`lf-mobile-bottom-nav-item${active ? " is-active" : ""}`} aria-current={active ? "page" : undefined}>
                 <Icon name={icon} size={21} filled={active} />
@@ -1319,7 +1319,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
 }
 
 function isPersonalOnlyPath(pathname: string) {
-  return ["/action-centre", "/contacts", "/profile", "/add-to-fortress", "/account", "/settings"]
+  return ["/action-centre", "/contacts", "/people-access", "/profile", "/add-to-fortress", "/account", "/settings"]
     .some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
 

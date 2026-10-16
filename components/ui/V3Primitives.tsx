@@ -111,7 +111,12 @@ export function Sheet({ open, title, onClose, children, footer, preserveSidebar 
     document.body.style.overflow = "hidden";
     closeRef.current?.focus();
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") { event.preventDefault(); onCloseRef.current(); return; }
+      if (event.key === "Escape") {
+        if (document.querySelector("dialog[open]")) return;
+        event.preventDefault();
+        onCloseRef.current();
+        return;
+      }
       if (event.key !== "Tab" || !panelRef.current) return;
       const focusable = [...panelRef.current.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')];
       if (!focusable.length) return;

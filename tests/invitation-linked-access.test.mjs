@@ -50,6 +50,7 @@ test("accepted executors can open Contact Wallet but not protected linked-accoun
 
   assert.equal(canViewPath("/contact-wallet", viewer), true);
   assert.equal(canViewPath("/dashboard", viewer), false);
+  assert.equal(canViewPath("/people-access", viewer), false);
   assert.equal(canViewPath("/profile", viewer), false);
   assert.equal(canViewPath("/finances/bank", viewer), false);
   assert.equal(canViewPath("/legal/wills", viewer), false);
@@ -83,6 +84,8 @@ test("accountants stay out of personal routes while keeping financial visibility
   assert.equal(canViewPath("/finances/bank", viewer), true);
   assert.equal(canViewPath("/dashboard", viewer), true);
   assert.equal(canViewPath("/contacts", viewer), false);
+  assert.equal(canViewPath("/people-access", viewer), false);
+  assert.equal(canViewPath("/access-requests", viewer), true);
   assert.equal(canViewPath("/personal/contacts", viewer), false);
   assert.equal(canViewPath("/property", viewer), false);
   assert.equal(canViewPath("/account/billing", viewer), false);

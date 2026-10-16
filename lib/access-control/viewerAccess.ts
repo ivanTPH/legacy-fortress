@@ -343,7 +343,7 @@ export function mapPathnameToSectionKey(pathname: string): SectionKey | null {
   if (!value) return null;
   if (value === "/dashboard" || value === "/app/dashboard") return "dashboard";
   if (value.startsWith("/profile")) return "profile";
-  if (value.startsWith("/contacts")) return "personal";
+  if (value.startsWith("/contacts") || value.startsWith("/people-access")) return "personal";
   if (value.startsWith("/personal") || value.startsWith("/trust") || value.startsWith("/vault/personal")) return "personal";
   if (value.startsWith("/legal") || value.startsWith("/vault/legal")) return "legal";
   if (value.startsWith("/property") || value.startsWith("/vault/property")) return "property";

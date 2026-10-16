@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { supabase } from "../../lib/supabaseClient";
 import { waitForActiveUser } from "../../lib/auth/session";
 import {
@@ -37,7 +38,7 @@ import { useViewerAccess } from "../access/ViewerAccessContext";
 import Icon from "../ui/Icon";
 import { IconButton } from "../ui/IconButton";
 import InfoTip from "../ui/InfoTip";
-import { PageHeader } from "../ui/V3Primitives";
+import { Button, PageHeader } from "../ui/V3Primitives";
 import DocumentPreviewDialog, { type DocumentPreviewDialogItem } from "../documents/DocumentPreviewDialog";
 import { ROLE_RULES, type AccessActivationStatus, type CollaboratorRole, type SectionKey } from "../../lib/access-control/roles";
 
@@ -101,13 +102,16 @@ const RELATIONSHIP_ROLE_GROUPS = [
   },
 ] as const;
 
-export default function ContactsNetworkWorkspace() {
+type ContactAccessSummary = { count: number; readOnly: boolean; activationStatus: string; linkedUserId: string | null };
+
+export default function ContactsNetworkWorkspace({ embedded = false, basePath = "/contacts", pendingByContact = {} }: { embedded?: boolean; basePath?: string; pendingByContact?: Record<string, string> }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { viewer } = useViewerAccess();
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState("");
   const [contacts, setContacts] = useState<ContactRow[]>([]);
+  const [accessByContact, setAccessByContact] = useState<Record<string, ContactAccessSummary> | null>(null);
   const [search, setSearch] = useState("");
   const [validationSourceText, setValidationSourceText] = useState<Record<string, string>>({});
   const [, setConfirmingValidationKey] = useState("");
@@ -134,16 +138,34 @@ export default function ContactsNetworkWorkspace() {
       if (!isMounted()) return;
       try {
         const ownerUserId = viewer.targetOwnerUserId || user.id;
-        const [loaded, invitations] = await Promise.all([
+        const [loaded, invitations, grantResult] = await Promise.all([
           loadCanonicalContactsForOwner(supabase, ownerUserId),
           loadCanonicalContactInvitationsForOwner(supabase, ownerUserId),
+          supabase.from("account_access_grants")
+            .select("contact_id,linked_user_id,activation_status,permissions_override")
+            .eq("owner_user_id", ownerUserId),
         ]);
         if (!isMounted()) return;
         setContacts(mergeContactsWithInvitations(loaded as ContactRow[], invitations));
+        if (grantResult.error) {
+          setAccessByContact(null);
+        } else {
+          const next: Record<string, ContactAccessSummary> = {};
+          for (const grant of grantResult.data ?? []) {
+            if (!["accepted", "pending_verification", "verification_submitted", "verified", "active"].includes(String(grant.activation_status ?? ""))) continue;
+            const permissions = normalizeContactPermissionsOverride(grant.permissions_override);
+            const count = new Set([...permissions.asset_ids.map((id) => `asset:${id}`), ...permissions.record_ids.map((id) => `record:${id}`)]).size;
+            for (const key of [grant.contact_id, grant.linked_user_id]) {
+              if (key) next[key] = { count, readOnly: permissions.read_only, activationStatus: grant.activation_status, linkedUserId: grant.linked_user_id };
+            }
+          }
+          setAccessByContact(next);
+        }
       } catch (error) {
         if (!isMounted()) return;
         setStatus(`Could not load contacts network: ${error instanceof Error ? error.message : "Unknown error"}`);
         setContacts([]);
+        setAccessByContact(null);
       }
       setLoading(false);
   }, [router, viewer.targetOwnerUserId]);
@@ -479,20 +501,28 @@ export default function ContactsNetworkWorkspace() {
     const params = new URLSearchParams();
     params.set("contact", contactId);
     if (groupKey) params.set("group", groupKey);
-    router.replace(`/contacts?${params.toString()}`);
+    if (embedded) params.set("view", "people");
+    router.push(`${basePath}?${params.toString()}`);
   }
 
   function closeContact() {
     if (selectedContactId) setDismissedContactId(selectedContactId);
     lastContactTriggerRef.current?.focus();
     lastContactTriggerRef.current = null;
-    router.replace(selectedGroup ? `/contacts?group=${selectedGroup}` : "/contacts");
+    const params = new URLSearchParams();
+    if (embedded) params.set("view", "people");
+    if (selectedGroup) params.set("group", selectedGroup);
+    router.replace(`${basePath}${params.size ? `?${params.toString()}` : ""}`);
   }
 
 
   function startAddContact(groupKey = "trusted_contacts") {
     setAddContactGroupKey(groupKey);
-    router.replace(groupKey ? `/contacts?group=${groupKey}` : "/contacts");
+    const params = new URLSearchParams();
+    if (embedded) params.set("view", "people");
+    if (groupKey) params.set("group", groupKey);
+    params.set("add", "1");
+    router.push(`${basePath}?${params.toString()}`);
   }
 
   async function saveNextOfKinContact() {
@@ -584,7 +614,7 @@ export default function ContactsNetworkWorkspace() {
 
   return (
     <section className="lf-v3-people-page">
-      {!addContactGroupKey ? <PageHeader title="People I Trust" description="Keep the people and roles connected to your Fortress clear." /> : null}
+      {!embedded && !addContactGroupKey ? <PageHeader title="People I Trust" description="Keep the people and roles connected to your Fortress clear." /> : null}
       {!addContactGroupKey ? <section className="lf-v3-people-toolbar">
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <label style={contactSearchFieldStyle}>
@@ -599,7 +629,7 @@ export default function ContactsNetworkWorkspace() {
               onChange={(event) => setSearch(event.target.value)}
             />
           </label>
-          {!viewer.readOnly ? (
+          {!embedded && !viewer.readOnly ? (
             <button
               type="button"
               style={addPersonActionStyle}
@@ -610,12 +640,12 @@ export default function ContactsNetworkWorkspace() {
               Add person
             </button>
           ) : null}
-          {!viewer.readOnly ? <Link href="/access-sharing" className="lf-access-sharing-link">Access &amp; Sharing</Link> : null}
+          {!embedded && !viewer.readOnly ? <Link href="/access-sharing" className="lf-access-sharing-link">Access &amp; Sharing</Link> : null}
         </div>
       </section> : null}
 
       {!viewer.readOnly && addContactGroupKey ? (
-        <section style={addContactGroupKey === "executors" ? { display: "grid", gap: 12 } : addContactPanelStyle} aria-label={addContactGroupKey === "executors" ? "Invite an Executor" : "Add contact and permissions"}>
+        <section className={embedded ? "lf-pa-add-panel" : undefined} style={embedded ? undefined : addContactGroupKey === "executors" ? { display: "grid", gap: 12 } : addContactPanelStyle} aria-label={addContactGroupKey === "executors" ? "Invite an Executor" : "Add contact and permissions"}>
           {addContactGroupKey === "executors" ? null : (
           <div style={{ display: "grid", gap: 4 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
@@ -659,38 +689,46 @@ export default function ContactsNetworkWorkspace() {
             const group = GROUPS.find((item) => item.key === groupKey) ?? GROUPS[0];
             return (
               <section key={groupKey} aria-labelledby={`people-group-${groupKey}`}>
-                <div style={simpleGroupHeadingStyle}>
+                <div className="lf-pa-group-heading" style={embedded ? undefined : simpleGroupHeadingStyle}>
                   <h2 id={`people-group-${groupKey}`} style={{ margin: 0, fontSize: 16 }}>{group.label}</h2>
-                  <span style={groupCountStyle}>{rows.length}</span>
+                  <span className="lf-pa-group-count" style={embedded ? undefined : groupCountStyle}>{rows.length}</span>
                 </div>
                 <div style={{ display: "grid", gap: 8 }}>
                   {rows.map((contact) => {
-                    const inviteState = getInviteState(contact);
+                    const invitation = getInvitationDisplay(contact);
+                    const identity = getIdentityDisplay(contact);
+                    const access = accessByContact === null
+                      ? "Checking access"
+                      : contact.contact_role === "executor"
+                        ? "No living access"
+                        : (() => {
+                          const summary = accessByContact[contact.id] ?? (contact.linked_user_id ? accessByContact[contact.linked_user_id] : undefined);
+                          if (!summary?.count) return "No records";
+                          const eligibility = resolveOwnerAccessEligibility({
+                            invitationStatus: contact.invite_status,
+                            activationStatus: summary.activationStatus,
+                            linkedUserId: summary.linkedUserId,
+                            assignedRole: contact.contact_role,
+                          });
+                          return eligibility === "eligible" ? `${summary.readOnly ? "View" : "Can edit"} ${summary.count} ${summary.count === 1 ? "record" : "records"}` : "No active access";
+                        })();
                     return (
-                      <article
-                        key={contact.id}
-                        className="lf-contact-row lf-contact-summary-row"
-                        style={contactSummaryRowStyle}
-                        role="button"
-                        tabIndex={0}
-                        onClick={(event) => openContact(contact.id, groupKey, event.currentTarget)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            openContact(contact.id, groupKey, event.currentTarget);
-                          }
-                        }}
-                        aria-label={`Open ${contact.full_name || "person"}`}
-                      >
+                      <article key={contact.id} className="lf-contact-row lf-contact-summary-row lf-pa-person-row">
+                        <button type="button" className="lf-pa-person-open" onClick={(event) => openContact(contact.id, groupKey, event.currentTarget)} aria-label={`Open ${contact.full_name || "person"}`}>
                           <span className="lf-contact-summary-person">
                             <span className="lf-contact-avatar lf-v3-person-avatar" aria-hidden="true">{contact.full_name.split(/\s+/).filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "LF"}</span>
                             <span style={{ display: "grid", gap: 3, minWidth: 0, textAlign: "left" }}>
                               <strong style={contactSummaryNameStyle}>{contact.full_name || "Unnamed person"}</strong>
                               <span style={contactSummaryRelationshipStyle}>{formatContactRoleLine(contact)}</span>
-                              {getRelationshipDocumentLabel(contact) ? <span className="lf-contact-summary-context">{getRelationshipDocumentLabel(contact)}</span> : null}
                             </span>
                           </span>
-                          <span className="lf-people-status-chip" data-tone={getPeopleStatusChip(contact).tone}><Icon name={getPeopleStatusChip(contact).icon} size={14} />{getPeopleStatusChip(contact).label}</span>
+                          <span className="lf-pa-person-facts">
+                            <span className="lf-pa-fact"><small>Invitation</small><span className="lf-people-status-chip" data-tone={invitation.tone}><Icon name={invitation.icon} size={14} />{invitation.label}</span></span>
+                            <span className="lf-pa-fact"><small>Identity</small><span>{identity}</span></span>
+                            <span className="lf-pa-fact"><small>Record access</small><span>{access}</span></span>
+                          </span>
+                          <Icon name="chevron_right" size={18} className="lf-pa-row-chevron" />
+                        </button>
                         <div className="lf-contact-summary-action" style={contactSummaryActionStyle}>
                           {contact.invite_status === "not_invited" && contact.email && !viewer.readOnly ? (
                             <IconButton
@@ -699,7 +737,7 @@ export default function ContactsNetworkWorkspace() {
                               variant="round"
                               className="lf-contact-send-button"
                               disabled={sendingInviteId === contact.id}
-                              onClick={(event) => { event.stopPropagation(); void sendExistingContactInvite(contact); }}
+                              onClick={() => { void sendExistingContactInvite(contact); }}
                             />
                           ) : null}
                           <IconButton
@@ -707,7 +745,7 @@ export default function ContactsNetworkWorkspace() {
                             label="Edit"
                             variant="round"
                             className="lf-contact-edit-button"
-                            onClick={(event) => { event.stopPropagation(); openContact(contact.id, groupKey, event.currentTarget); }}
+                            onClick={(event) => openContact(contact.id, groupKey, event.currentTarget)}
                           />
                         </div>
                       </article>
@@ -721,7 +759,7 @@ export default function ContactsNetworkWorkspace() {
             <section style={emptyPeopleStyle} aria-label="No people recorded">
               <strong>No people recorded yet.</strong>
               <span>Add someone when you are ready to keep their relationship to your Fortress clear.</span>
-              {!viewer.readOnly ? <button type="button" style={rowPrimaryActionStyle} onClick={() => startAddContact("trusted_contacts")}><Icon name="person_add" size={16} />Add person</button> : null}
+              {!embedded && !viewer.readOnly ? <button type="button" style={rowPrimaryActionStyle} onClick={() => startAddContact("trusted_contacts")}><Icon name="person_add" size={16} />Add person</button> : null}
             </section>
           ) : null}
         </div>
@@ -734,6 +772,8 @@ export default function ContactsNetworkWorkspace() {
           onInvite={() => sendExistingContactInvite(selectedContactRow)}
           inviting={sendingInviteId === selectedContactRow.id}
           onSaved={() => { window.dispatchEvent(new CustomEvent("lf:contacts-updated")); void loadContacts(); }}
+          pendingRequestId={pendingByContact[selectedContactRow.id] ?? null}
+          unified={embedded}
           onClose={closeContact}
         />
       ) : null}
@@ -761,14 +801,21 @@ function getContactCardStatus(contact: ContactRow) {
   return connection;
 }
 
-function getPeopleStatusChip(contact: ContactRow) {
-  if (contact.linked_user_id || ["verified", "active"].includes(contact.verification_status)) {
-    return { label: "Linked · Verified", icon: "check_circle", tone: "success" as const };
+function getInvitationDisplay(contact: ContactRow) {
+  if (contact.invite_status === "failed") return { label: "Failed", icon: "error", tone: "danger" as const };
+  if (contact.invite_status === "revoked" || contact.invite_status === "rejected") return { label: "Revoked", icon: "block", tone: "danger" as const };
+  if (contact.invite_status === "accepted") {
+    return { label: "Accepted", icon: "check_circle", tone: "success" as const };
   }
-  if (contact.invite_status === "invite_sent" || ["accepted", "pending_verification", "verification_submitted"].includes(contact.verification_status)) {
-    return { label: "Awaiting acceptance", icon: "hourglass_top", tone: "warning" as const };
-  }
+  if (contact.invite_status === "invite_sent") return { label: "Pending", icon: "hourglass_top", tone: "warning" as const };
   return { label: "Not invited", icon: "schedule_send", tone: "neutral" as const };
+}
+
+function getIdentityDisplay(contact: ContactRow) {
+  if (["verified", "active"].includes(contact.verification_status)) return "Verified";
+  if (contact.verification_status === "rejected") return "Failed";
+  if (["pending_verification", "verification_submitted"].includes(contact.verification_status)) return "In progress";
+  return "Not verified";
 }
 
 function getPrimaryContactAction(contact: ContactRow) {
@@ -907,7 +954,7 @@ function PersonVaultAccessSummary({
       {sharedCount > 0 && state !== "shared" && state !== "checking" && state !== "error" ? <span style={drawerExplanationStyle}>{sharedCount} selected {sharedCount === 1 ? "record is" : "records are"} not currently available to this person.</span> : null}
       {sharedNames.length > 0 ? <ul className="lf-person-shared-records">{sharedNames.map((name, index) => <li key={`${name}-${index}`}>{name}</li>)}</ul> : null}
       {sharedCount > 0 && !sharedNames.length && state !== "checking" ? <span style={drawerExplanationStyle}>Selected record names are unavailable right now.</span> : null}
-      {!readOnly && state !== "checking" && state !== "error" ? <button type="button" style={rowPrimaryActionStyle} onClick={onManage}>{sharedCount ? "Change or revoke access" : "Manage access"}</button> : null}
+      {!readOnly && state !== "checking" && state !== "error" ? <Button variant="secondary" onClick={onManage}>{sharedCount ? "Change or revoke access" : "Manage access"}</Button> : null}
     </section>
   );
 }
@@ -919,6 +966,8 @@ function PersonDetailDrawer({
   onInvite,
   inviting,
   onSaved,
+  pendingRequestId,
+  unified,
   onClose,
 }: {
   contact: ContactRow;
@@ -927,13 +976,14 @@ function PersonDetailDrawer({
   onInvite: () => Promise<void>;
   inviting: boolean;
   onSaved: () => void;
+  pendingRequestId: string | null;
+  unified: boolean;
   onClose: () => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const [managementView, setManagementView] = useState<"edit" | "relationship" | "invitation" | "access" | "remove" | null>(null);
   const relatedContexts = (contact.linked_context ?? []).filter((context) => context.source_kind !== "invitation");
-  const status = getContactSummaryStatus(contact);
-  const inviteState = getInviteState(contact);
+  const invitation = getInvitationDisplay(contact);
 
   useEffect(() => {
     closeRef.current?.focus();
@@ -949,8 +999,8 @@ function PersonDetailDrawer({
     };
   }, [onClose]);
 
-  return (
-    <div className="lf-person-drawer-backdrop" role="presentation" onClick={onClose}>
+  const panel = (
+    <div className={`lf-person-drawer-backdrop${unified ? " lf-pa-person-drawer-backdrop" : ""}`} role="presentation" onClick={onClose}>
       <aside className="lf-person-drawer" role="dialog" aria-modal="true" aria-labelledby="person-drawer-title" onClick={(event) => event.stopPropagation()}>
         <div className="lf-person-drawer-header">
           <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
@@ -985,23 +1035,26 @@ function PersonDetailDrawer({
               {contact.phone ? <span style={drawerRelatedItemStyle}>Phone: {contact.phone}</span> : null}
               {getRelationshipDocumentLabel(contact) ? <span style={drawerRelatedItemStyle}>Document: {getRelationshipDocumentLabel(contact)}</span> : null}
               {relatedContexts.slice(0, 3).map((context, index) => <span key={`${context.source_id}-${index}`} style={drawerRelatedItemStyle}>{context.role ? `${humanizeContactTerm(context.role)} · ` : ""}{context.label || describeLinkedDocumentContext(context)}</span>)}
-              {!readOnly ? <div className="lf-person-detail-actions"><button type="button" style={rowSecondaryActionStyle} onClick={() => setManagementView("edit")}>Edit details</button><button type="button" style={rowSecondaryActionStyle} onClick={() => setManagementView("relationship")}>Edit relationship</button></div> : null}
+              {!readOnly ? <div className="lf-person-detail-actions"><Button variant="secondary" onClick={() => setManagementView("edit")}>Edit details</Button><Button variant="secondary" onClick={() => setManagementView("relationship")}>Edit relationship</Button></div> : null}
             </section>
             <section className="lf-person-detail-section" aria-labelledby="person-invitation-heading">
               <h3 id="person-invitation-heading">Invitation and identity</h3>
-              <span style={contactSummaryStatusStyle} data-tone={inviteState.tone}>{status}</span>
-              <span style={drawerRelatedItemStyle}>Identity: {contact.verification_status === "verified" || contact.verification_status === "active" ? "Verified" : contact.verification_status === "not_verified" ? "Not verified" : "Verification in progress"}</span>
+              <span className="lf-pa-detail-fact"><span>Invitation</span><span className="lf-people-status-chip" data-tone={invitation.tone}><Icon name={invitation.icon} size={14} />{invitation.label}</span></span>
+              <span className="lf-pa-detail-fact"><span>Identity</span><strong>{getIdentityDisplay(contact)}</strong></span>
+              <span style={drawerExplanationStyle}>Identity verification does not grant access to any records.</span>
               {getRelationshipDocumentLabel(contact) ? <span style={drawerExplanationStyle}>Will access stays locked while the owner is living.</span> : null}
               <InvitationProgressTracker contact={contact} />
-              {!readOnly && (contact.invite_status === "invite_sent" || contact.invite_status === "not_invited") ? <button type="button" style={rowSecondaryActionStyle} onClick={() => setManagementView("invitation")}>{contact.invite_status === "invite_sent" ? "Manage invitation" : "Send invitation"}</button> : null}
+              {!readOnly && ["invite_sent", "not_invited", "failed"].includes(contact.invite_status) ? <Button variant="secondary" onClick={() => setManagementView("invitation")}>{contact.invite_status === "not_invited" ? "Send invitation" : "Manage invitation"}</Button> : null}
             </section>
             <PersonVaultAccessSummary key={contact.id} contact={contact} ownerUserId={ownerUserId} readOnly={readOnly} onManage={() => setManagementView("access")} />
+            {pendingRequestId ? <section className="lf-person-detail-section" aria-label="Request awaiting decision"><h3>Request awaiting decision</h3><p style={drawerExplanationStyle}>Review this person&apos;s request and current sharing in People &amp; Access.</p><Link href={`/people-access?view=requests&request=${encodeURIComponent(pendingRequestId)}`} className="lf-pa-text-action">Review request</Link></section> : null}
             {!readOnly ? <button type="button" className="lf-person-remove-link" onClick={() => setManagementView("remove")}>Remove person</button> : null}
           </>}
         </div>
       </aside>
     </div>
   );
+  return unified ? createPortal(panel, document.body) : panel;
 }
 
 function PersonManagementPanel({
@@ -1344,10 +1397,10 @@ function PersonManagementPanel({
       ) : null}
       {view === "invitation" ? (
         <div className="lf-person-focused-panel">
-          <span style={drawerExplanationStyle}>{contact.invite_status === "invite_sent" ? "Status: Awaiting response" : "This person is recorded but has not been invited."}</span>
+          <span style={drawerExplanationStyle}>{contact.invite_status === "invite_sent" ? "Status: Awaiting response" : contact.invite_status === "failed" ? "The invitation request failed. You can retry using the existing invitation." : "This person is recorded but has not been invited."}</span>
           {contact.email ? <span style={drawerContactLineStyle}>{contact.email}</span> : <span style={drawerExplanationStyle}>Add an email address in Edit details before sending an invitation.</span>}
           {contact.invite_status === "not_invited" && contact.email ? <button type="button" style={rowPrimaryActionStyle} disabled={readOnly || inviting} onClick={() => void onInvite()}>{inviting ? "Sending…" : "Send invitation"}</button> : null}
-          {contact.invite_status === "invite_sent" ? <button type="button" style={rowPrimaryActionStyle} disabled={saving} onClick={() => void resendInvitation()}>Resend invitation</button> : null}
+          {(contact.invite_status === "invite_sent" || contact.invite_status === "failed") ? <button type="button" style={rowPrimaryActionStyle} disabled={saving || !contact.email} onClick={() => void resendInvitation()}>Resend invitation</button> : null}
           {contact.invite_status === "invite_sent" ? <button type="button" style={rowSecondaryActionStyle} disabled={saving} onClick={() => void updateInvitation("revoked")}>Cancel invitation</button> : null}
         </div>
       ) : null}

@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useViewerAccess } from "../access/ViewerAccessContext";
 import { supabase } from "../../lib/supabaseClient";
 import { getSafeUserData } from "../../lib/auth/requireActiveUser";
 import { sanitizeFileName, validateUploadFile } from "../../lib/validation/upload";
+import Icon from "../ui/Icon";
+import { Banner, Button, EmptyState, Sheet } from "../ui/V3Primitives";
 
 type Assignment = {
   id: string;
@@ -40,6 +42,7 @@ type VerificationRow = {
   requester_name?: string;
   requester_email?: string;
   assigned_role?: string;
+  contact_id?: string | null;
 };
 
 type OwnerDecision = "approved" | "rejected";
@@ -83,12 +86,14 @@ async function hydrateRequesters(rows: VerificationRow[], knownAssignments: Assi
       requester_name: contact?.full_name || invitation?.contact_name || "Unknown requester",
       requester_email: contact?.email || invitation?.contact_email || "",
       assigned_role: role?.assigned_role || row.assigned_role || "",
+      contact_id: contact?.id ?? null,
     };
   });
 }
 
-export default function AccessRequestsWorkspace() {
+export default function AccessRequestsWorkspace({ embedded = false, onOpenPerson, onRequestChanged }: { embedded?: boolean; onOpenPerson?: (contactId: string) => void; onRequestChanged?: () => void }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { viewer } = useViewerAccess();
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState("");
@@ -97,7 +102,18 @@ export default function AccessRequestsWorkspace() {
   const [requests, setRequests] = useState<VerificationRow[]>([]);
   const [savingRequestId, setSavingRequestId] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [decision, setDecision] = useState<OwnerDecision | null>(null);
+  const confirmationRef = useRef<HTMLDialogElement>(null);
+  const requestTriggerRef = useRef<HTMLElement | null>(null);
   const isLinkedRequester = viewer.mode === "linked";
+  const selectedRequestId = embedded ? searchParams.get("request") : null;
+
+  useEffect(() => {
+    const dialog = confirmationRef.current;
+    if (!dialog) return;
+    if (decision && !dialog.open) dialog.showModal();
+    if (!decision && dialog.open) dialog.close();
+  }, [decision]);
 
   useEffect(() => {
     let mounted = true;
@@ -148,6 +164,9 @@ export default function AccessRequestsWorkspace() {
     () => requests.filter((item) => item.request_type !== "death_certificate"),
     [requests],
   );
+  const pendingOwnerRequests = ownerAccessRequests.filter((item) => ["pending", "submitted"].includes(item.request_status));
+  const previousOwnerRequests = ownerAccessRequests.filter((item) => !["pending", "submitted"].includes(item.request_status));
+  const selectedRequest = ownerAccessRequests.find((item) => item.id === selectedRequestId) ?? null;
   const deathCertificateRequests = useMemo(
     () => requests.filter((item) => item.request_type === "death_certificate"),
     [requests],
@@ -175,16 +194,20 @@ export default function AccessRequestsWorkspace() {
       })
       .eq("id", item.id)
       .eq("owner_user_id", viewer.targetOwnerUserId || userData.user.id)
-      .neq("request_type", "death_certificate");
+      .neq("request_type", "death_certificate")
+      .in("request_status", ["pending", "submitted"])
+      .select("id")
+      .maybeSingle();
 
     setSavingRequestId("");
-    if (update.error) {
-      setStatus(`Could not ${nextStatus === "approved" ? "approve" : "reject"} request: ${update.error.message}`);
+    if (update.error || !update.data) {
+      setStatus(update.error ? `Could not ${nextStatus === "approved" ? "approve" : "reject"} request: ${update.error.message}` : "This request has already changed. Refresh to see its current status.");
       return;
     }
 
     setRequests((current) => current.map((row) => row.id === item.id ? { ...row, request_status: nextStatus } : row));
-    setStatus(`${item.requester_name || "Requester"} request ${nextStatus}. Manage any final permission toggles in Contacts.`);
+    onRequestChanged?.();
+    setStatus(`${item.requester_name || "Requester"} request ${nextStatus}. Record sharing is unchanged.`);
   }
 
   async function submitEvidence(file: File) {
@@ -329,6 +352,51 @@ export default function AccessRequestsWorkspace() {
         </section>
       </section>
     );
+  }
+
+  if (embedded) {
+    const closeRequest = () => {
+      setDecision(null);
+      router.replace("/people-access?view=requests");
+    };
+    const openRequest = (item: VerificationRow, trigger: HTMLElement) => {
+      requestTriggerRef.current = trigger;
+      setStatus("");
+      router.push(`/people-access?view=requests&request=${encodeURIComponent(item.id)}`);
+    };
+    const renderRequest = (item: VerificationRow) => <article key={item.id} className="lf-pa-request-row">
+      <span className="lf-pa-request-avatar" aria-hidden="true">{item.requester_name?.split(/\s+/).filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "?"}</span>
+      <div className="lf-pa-request-copy"><strong>{item.requester_name || "Unknown requester"}</strong><span>{formatRequestedAccess(item)} · Submitted {new Date(item.submitted_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span></div>
+      <span className="lf-pa-request-status">{formatLabel(item.request_status)}</span>
+      <Button onClick={(event) => openRequest(item, event.currentTarget)}>Review request<Icon name="chevron_right" size={17} /></Button>
+    </article>;
+
+    return <section className="lf-pa-requests">
+      {status ? <Banner tone={status.startsWith("Could not") || status.startsWith("This request") ? "danger" : "success"}>{status}</Banner> : null}
+      <section aria-labelledby="pa-pending-heading">
+        <h2 id="pa-pending-heading">Awaiting your decision{pendingOwnerRequests.length ? ` · ${pendingOwnerRequests.length}` : ""}</h2>
+        {loading ? <p role="status">Loading requests…</p> : pendingOwnerRequests.length ? <div className="lf-pa-request-list">{pendingOwnerRequests.map(renderRequest)}</div> : <EmptyState icon="inbox" title="No requests waiting" description="New access requests will appear here." />}
+      </section>
+      {previousOwnerRequests.length ? <details className="lf-pa-previous"><summary>Previous decisions · {previousOwnerRequests.length}</summary><div className="lf-pa-request-list">{previousOwnerRequests.map(renderRequest)}</div></details> : null}
+      <details className="lf-access-request-guidance"><summary>How access requests work</summary><p>A request is reviewed here. Record sharing is changed separately through the person&apos;s selected records. Death certificate evidence is reviewed by application administrators.</p></details>
+      <section className="lf-pa-escalation"><Icon name="lock" size={20} /><div><h2>Death certificate escalation</h2><p>Invited executors or attorneys submit evidence from their linked view. Application administrators review it; submitting evidence does not grant access.</p></div></section>
+      {!loading && selectedRequestId && !selectedRequest ? <Banner tone="warning">This request is not available in your current account.</Banner> : null}
+      <Sheet open={Boolean(selectedRequest)} title="Review request" onClose={closeRequest} preserveSidebar returnFocusTo={requestTriggerRef}
+        footer={selectedRequest && ["pending", "submitted"].includes(selectedRequest.request_status) ? <div className="lf-pa-review-actions"><Button variant="primary" disabled={Boolean(savingRequestId)} onClick={() => setDecision("approved")}>Approve request</Button><Button disabled={Boolean(savingRequestId)} onClick={() => setDecision("rejected")}>Decline request</Button></div> : undefined}>
+        {selectedRequest ? <div className="lf-pa-review">
+          <div><strong>{selectedRequest.requester_name || "Unknown requester"}</strong><p>{formatLabel(selectedRequest.assigned_role || "linked contact")}</p></div>
+          <section className="lf-pa-review-card"><h3>Request</h3><dl><div><dt>Requested</dt><dd>{formatRequestedAccess(selectedRequest)}</dd></div><div><dt>Submitted</dt><dd>{new Date(selectedRequest.submitted_at).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</dd></div><div><dt>Status</dt><dd>{formatLabel(selectedRequest.request_status)}</dd></div></dl></section>
+          <section className="lf-pa-review-card"><h3>Supporting information</h3><p>Only the request information available to this account is shown. Protected evidence remains in its existing review workflow.</p></section>
+          <section className="lf-pa-review-card"><h3>Current sharing</h3><p>Review this person&apos;s selected records separately. A request decision does not change record access.</p>{selectedRequest.contact_id && onOpenPerson ? <button type="button" className="lf-pa-text-action" onClick={() => onOpenPerson(selectedRequest.contact_id!)}>Review shared records</button> : null}</section>
+          {["pending", "submitted"].includes(selectedRequest.request_status) ? <Banner tone="warning">Approving this request does not automatically share another record.</Banner> : <p role="status">{selectedRequest.request_status === "approved" ? "Request approved; record sharing is unchanged." : `Request ${formatLabel(selectedRequest.request_status)}.`}</p>}
+        </div> : null}
+      </Sheet>
+      <dialog ref={confirmationRef} className="lf-pa-confirm" onCancel={(event) => { event.preventDefault(); event.stopPropagation(); setDecision(null); }} onKeyDown={(event) => { if (event.key === "Escape") event.stopPropagation(); }} aria-labelledby="pa-confirm-title">
+        <h2 id="pa-confirm-title">{decision === "approved" ? "Approve this request?" : "Decline this request?"}</h2>
+        <p>{decision === "approved" ? "Approval records your decision. It does not share any additional record." : "The person’s current record sharing will remain unchanged."}</p>
+        <div className="lf-pa-review-actions"><Button variant="primary" disabled={Boolean(savingRequestId)} onClick={() => { if (selectedRequest && decision) void decideOwnerRequest(selectedRequest, decision); setDecision(null); }}>{decision === "approved" ? "Confirm approval" : "Confirm decline"}</Button><Button onClick={() => setDecision(null)}>Cancel</Button></div>
+      </dialog>
+    </section>;
   }
 
   return (

@@ -1,5 +1,11 @@
 # Codex Handover
 
+## 16 October 2026 — People & Access V4 recovery package
+
+- `fix/v3-recovery` retains the committed V3 workspace and contact fixes at `ad575d0` and adds one customer People & Access workspace. `/people-access` is canonical; owner `/contacts`, `/access`, and `/access-requests` entries lead into it. Linked requesters retain their guarded access-request view.
+- People, invitation and identity states, selected record grants, and incoming requests use existing Supabase tables and canonical management services. Request approval records a decision without changing sharing; the owner can open the associated contact to manage access. No migration or hosted change is part of this package.
+- Focused source tests (20/20), local synthetic Chrome/WebKit People & Access journeys (2/2), targeted lint and production build passed. `design:check` remains blocked by an unrelated pre-existing Finance selector assertion. Staging integration and release require separate verification.
+
 ## 16 October 2026 — V3 workspace and People I Trust recovery
 
 - Isolated branch `fix/v3-recovery` starts at deployed staging SHA `952dccb177281080ba08e52467db497ba2e1919e`; the owner worktree and release worktree were not changed.

@@ -1,11 +1,11 @@
 import { Suspense } from "react";
 
-import ContactsNetworkWorkspace from "../../../components/contacts/ContactsNetworkWorkspace";
+import PeopleAccessWorkspace from "../../../components/people-access/PeopleAccessWorkspace";
 
 export default function ContactsPage() {
   return (
     <Suspense fallback={null}>
-      <ContactsNetworkWorkspace />
+      <PeopleAccessWorkspace />
     </Suspense>
   );
 }

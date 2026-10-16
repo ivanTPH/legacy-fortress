@@ -1,8 +1,8 @@
 "use client";
 
-import AccessRequestsWorkspace from "../../../components/access-requests/AccessRequestsWorkspace";
-import { LFPageHeader } from "../../../components/ui/LFDesignSystem";
+import { Suspense } from "react";
+import PeopleAccessWorkspace from "../../../components/people-access/PeopleAccessWorkspace";
 
 export default function AccessRequestsPage() {
-  return <section className="lf-page-stack"><LFPageHeader title="Access Requests" description="Review requests from people connected to your Fortress." /><AccessRequestsWorkspace /></section>;
+  return <Suspense fallback={<p role="status">Loading People &amp; Access…</p>}><PeopleAccessWorkspace /></Suspense>;
 }

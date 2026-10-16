@@ -8,7 +8,6 @@ import {
   DocumentIcon,
   HelpIcon,
   PossessionsIcon,
-  AccessRequestsIcon,
   SettingsIcon,
   WalletIcon,
 } from "../app/(app)/components/NavIcons";
@@ -128,8 +127,8 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
   },
   {
     id: "people-contacts",
-    label: "People I Trust",
-    path: "/contacts",
+    label: "People & Access",
+    path: "/people-access",
     icon: <ContactsIcon />,
     enabled: on,
   },
@@ -138,13 +137,6 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     label: "Linked Fortresses",
     path: "/linked-fortresses",
     icon: <Icon name="account_tree" size={18} />,
-    enabled: on,
-  },
-  {
-    id: "access-requests",
-    label: "Access Requests",
-    path: "/access-requests",
-    icon: <AccessRequestsIcon />,
     enabled: on,
   },
   {
