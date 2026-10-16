@@ -731,6 +731,8 @@ export default function ContactsNetworkWorkspace() {
           contact={selectedContactRow}
           readOnly={viewer.readOnly}
           ownerUserId={viewer.targetOwnerUserId || null}
+          onInvite={() => sendExistingContactInvite(selectedContactRow)}
+          inviting={sendingInviteId === selectedContactRow.id}
           onSaved={() => { window.dispatchEvent(new CustomEvent("lf:contacts-updated")); void loadContacts(); }}
           onClose={closeContact}
         />
@@ -820,33 +822,21 @@ function PersonVaultAccessSummary({
   contact,
   ownerUserId,
   onManage,
+  readOnly,
 }: {
   contact: ContactRow;
   ownerUserId: string | null;
   onManage: () => void;
+  readOnly: boolean;
 }) {
-  const [state, setState] = useState<"hidden" | "checking" | "pending" | "verification" | "executor" | "none" | "shared" | "error">("checking");
+  const [state, setState] = useState<"checking" | "pending" | "verification" | "executor" | "none" | "shared" | "error">("checking");
   const [sharedCount, setSharedCount] = useState(0);
+  const [sharedNames, setSharedNames] = useState<string[]>([]);
+  const [permissionLabel, setPermissionLabel] = useState("View only");
 
   useEffect(() => {
-    if (contact.invite_status === "not_invited") {
-      setState("hidden");
-      return;
-    }
-    if (contact.contact_role === "executor") {
-      setState("executor");
-      return;
-    }
-    if (contact.invite_status === "invite_sent") {
-      setState("pending");
-      return;
-    }
-    if (!["verified", "active"].includes(contact.verification_status)) {
-      setState("verification");
-      return;
-    }
-
     let cancelled = false;
+    queueMicrotask(() => { if (!cancelled) setState("checking"); });
     async function loadSummary() {
       const user = await waitForActiveUser(supabase, { attempts: 5, delayMs: 120 });
       const ownerId = ownerUserId || user?.id;
@@ -856,7 +846,7 @@ function PersonVaultAccessSummary({
       }
       const result = await supabase
         .from("account_access_grants")
-        .select("permissions_override")
+        .select("linked_user_id,activation_status,permissions_override")
         .eq("owner_user_id", ownerId)
         .eq("contact_id", contact.id)
         .in("activation_status", ["accepted", "pending_verification", "verification_submitted", "verified", "active"])
@@ -867,27 +857,57 @@ function PersonVaultAccessSummary({
         setState("error");
         return;
       }
-      const permissions = normalizeContactPermissionsOverride((result.data as { permissions_override?: Record<string, unknown> | null } | null)?.permissions_override);
+      const grant = result.data as { linked_user_id?: string | null; activation_status?: string | null; permissions_override?: Record<string, unknown> | null } | null;
+      const permissions = normalizeContactPermissionsOverride(grant?.permissions_override);
       const count = permissions.asset_ids.length + permissions.record_ids.length;
       setSharedCount(count);
-      setState(count ? "shared" : "none");
+      setPermissionLabel(permissions.read_only ? "View only" : "Can edit");
+      const eligibility = resolveOwnerAccessEligibility({
+        invitationStatus: contact.invite_status,
+        activationStatus: grant?.activation_status ?? contact.verification_status,
+        linkedUserId: grant?.linked_user_id,
+        assignedRole: contact.contact_role,
+      });
+      setState(eligibility === "executor_restricted" ? "executor"
+        : eligibility === "invitation_pending" ? "pending"
+        : eligibility === "verification_required" || eligibility === "link_required" ? "verification"
+        : eligibility === "eligible" && count ? "shared" : "none");
+      if (!count) {
+        setSharedNames([]);
+        return;
+      }
+      try {
+        const resources = await loadPeopleScopeResourcesForOwner(supabase, ownerId);
+        if (cancelled) return;
+        const selected = new Set([
+          ...permissions.asset_ids.map((id) => `asset:${id}`),
+          ...permissions.record_ids.map((id) => `record:${id}`),
+        ]);
+        setSharedNames(resources
+          .filter((resource) => selected.has(`${resource.source_kind}:${resource.id}`))
+          .map((resource) => resource.title || resource.provider_name || resource.summary || "Unnamed record"));
+      } catch {
+        if (!cancelled) setSharedNames([]);
+      }
     }
     void loadSummary();
     return () => { cancelled = true; };
   }, [contact.contact_role, contact.id, contact.invite_status, contact.verification_status, ownerUserId]);
 
-  if (state === "hidden") return null;
-
   return (
-    <section style={drawerSectionStyle} aria-labelledby="person-access-heading">
-      <span id="person-access-heading" style={drawerSectionLabelStyle}>Vault access</span>
+    <section className="lf-person-detail-section" aria-labelledby="person-access-heading">
+      <h3 id="person-access-heading">Records shared</h3>
       {state === "checking" ? <span style={drawerExplanationStyle}>Checking current access…</span> : null}
-      {state === "pending" ? <><strong>None</strong><span style={drawerExplanationStyle}>This person must accept your invitation before Vault records can be shared.</span></> : null}
-      {state === "verification" ? <><strong>Not available yet</strong><span style={drawerExplanationStyle}>This person must finish securely connecting before Vault records can be shared.</span></> : null}
-      {state === "executor" ? <><strong>None</strong><span style={drawerExplanationStyle}>Being recorded as an executor does not give this person access to your private Vault while you are alive.</span></> : null}
+      {state === "pending" ? <><strong>No active access</strong><span style={drawerExplanationStyle}>This person must accept your invitation before Vault records can be shared.</span></> : null}
+      {state === "verification" ? <><strong>No active access</strong><span style={drawerExplanationStyle}>This person must finish connecting and meet the required identity level before Vault records are available.</span></> : null}
+      {state === "executor" ? <><strong>No active access</strong><span style={drawerExplanationStyle}>Being recorded as an executor does not give this person access to your private Vault while you are alive.</span></> : null}
       {state === "error" ? <span style={drawerExplanationStyle}>Access details are not available right now.</span> : null}
-      {state === "none" ? <><strong>None</strong><button type="button" style={rowPrimaryActionStyle} onClick={onManage}>Give access</button></> : null}
-      {state === "shared" ? <><strong>{sharedCount} {sharedCount === 1 ? "record" : "records"} shared · View only</strong><button type="button" style={rowPrimaryActionStyle} onClick={onManage}>Manage access</button></> : null}
+      {state === "none" ? <strong>No active access</strong> : null}
+      {state === "shared" ? <strong>{sharedCount} {sharedCount === 1 ? "record" : "records"} shared · {permissionLabel}</strong> : null}
+      {sharedCount > 0 && state !== "shared" && state !== "checking" && state !== "error" ? <span style={drawerExplanationStyle}>{sharedCount} selected {sharedCount === 1 ? "record is" : "records are"} not currently available to this person.</span> : null}
+      {sharedNames.length > 0 ? <ul className="lf-person-shared-records">{sharedNames.map((name, index) => <li key={`${name}-${index}`}>{name}</li>)}</ul> : null}
+      {sharedCount > 0 && !sharedNames.length && state !== "checking" ? <span style={drawerExplanationStyle}>Selected record names are unavailable right now.</span> : null}
+      {!readOnly && state !== "checking" && state !== "error" ? <button type="button" style={rowPrimaryActionStyle} onClick={onManage}>{sharedCount ? "Change or revoke access" : "Manage access"}</button> : null}
     </section>
   );
 }
@@ -896,12 +916,16 @@ function PersonDetailDrawer({
   contact,
   readOnly,
   ownerUserId,
+  onInvite,
+  inviting,
   onSaved,
   onClose,
 }: {
   contact: ContactRow;
   readOnly: boolean;
   ownerUserId: string | null;
+  onInvite: () => Promise<void>;
+  inviting: boolean;
   onSaved: () => void;
   onClose: () => void;
 }) {
@@ -940,58 +964,40 @@ function PersonDetailDrawer({
         </div>
 
         <div className="lf-person-drawer-content">
-          {contact.email ? <div style={drawerContactLineStyle}>{contact.email}</div> : null}
-          <div style={contactSummaryStatusStyle} data-tone={inviteState.tone}>{status}</div>
-          {contact.invite_status === "invite_sent" ? <p style={drawerExplanationStyle}>You invited this person to connect with your Fortress. Their response is still outstanding.</p> : null}
-          {contact.invite_status === "not_invited" && contact.email ? <p style={drawerExplanationStyle}>This person is recorded in People I Trust. You can decide separately whether to invite them.</p> : null}
-
-          <InvitationProgressTracker contact={contact} />
-
-          <section style={drawerSectionStyle} aria-labelledby="person-relationship-heading">
-            <span id="person-relationship-heading" style={drawerSectionLabelStyle}>Relationship</span>
-            <span style={drawerRelatedItemStyle}>{humanizeContactTerm(contact.relationship) || "Not specified"}</span>
-            {humanizeContactTerm(contact.contact_role) && humanizeContactTerm(contact.contact_role) !== humanizeContactTerm(contact.relationship) ? <span style={drawerRelatedItemStyle}>Role: {humanizeContactTerm(contact.contact_role)}</span> : null}
-            {getRelationshipDocumentLabel(contact) ? <span style={drawerRelatedItemStyle}>Document: {getRelationshipDocumentLabel(contact)}</span> : null}
-          </section>
-
-          <section style={drawerSectionStyle} aria-labelledby="person-status-heading">
-            <span id="person-status-heading" style={drawerSectionLabelStyle}>Status</span>
-            <span style={drawerRelatedItemStyle}>Connection: {getContactSummaryStatus(contact)}</span>
-            <span style={drawerRelatedItemStyle}>Identity: {contact.verification_status === "verified" || contact.verification_status === "active" ? "Verified" : contact.verification_status === "not_verified" ? "Not verified" : "Verification in progress"}</span>
-            {getRelationshipDocumentLabel(contact) ? <span style={drawerRelatedItemStyle}>Will access: Locked while living</span> : null}
-          </section>
-
-          {relatedContexts.length ? (
-            <section style={drawerSectionStyle} aria-labelledby="person-related-heading">
-              <span id="person-related-heading" style={drawerSectionLabelStyle}>Related to</span>
-              <div style={{ display: "grid", gap: 6 }}>
-                {relatedContexts.slice(0, 3).map((context, index) => <span key={`${context.source_id}-${index}`} style={drawerRelatedItemStyle}>{context.role ? `${humanizeContactTerm(context.role)} · ` : ""}{context.label || describeLinkedDocumentContext(context)}</span>)}
-              </div>
-            </section>
-          ) : null}
-
-          <PersonVaultAccessSummary contact={contact} ownerUserId={ownerUserId} onManage={() => setManagementView("access")} />
-
-          {!readOnly && (contact.invite_status === "invite_sent" || contact.invite_status === "not_invited") ? (
-            <button type="button" style={rowPrimaryActionStyle} onClick={() => setManagementView("invitation")}>
-              <Icon name="send" size={16} />
-              {contact.invite_status === "invite_sent" ? "Manage invitation" : "Send invitation"}
-            </button>
-          ) : null}
-
-          {!readOnly ? <button type="button" className="lf-person-remove-link" onClick={() => setManagementView("remove")}>Remove person</button> : null}
-
           {managementView ? (
             <PersonManagementPanel
               contact={contact}
               view={managementView}
               ownerUserId={ownerUserId}
+              onInvite={onInvite}
+              inviting={inviting}
               onBack={() => setManagementView(null)}
               onNavigate={setManagementView}
               onSaved={onSaved}
               readOnly={readOnly}
             />
-          ) : null}
+          ) : <>
+            <section className="lf-person-detail-section" aria-labelledby="person-details-heading">
+              <h3 id="person-details-heading">Contact details</h3>
+              <span style={drawerRelatedItemStyle}>Relationship: {humanizeContactTerm(contact.relationship) || "Not specified"}</span>
+              {humanizeContactTerm(contact.contact_role) && humanizeContactTerm(contact.contact_role) !== humanizeContactTerm(contact.relationship) ? <span style={drawerRelatedItemStyle}>Role: {humanizeContactTerm(contact.contact_role)}</span> : null}
+              <span style={drawerRelatedItemStyle}>Email: {contact.email || "Not recorded"}</span>
+              {contact.phone ? <span style={drawerRelatedItemStyle}>Phone: {contact.phone}</span> : null}
+              {getRelationshipDocumentLabel(contact) ? <span style={drawerRelatedItemStyle}>Document: {getRelationshipDocumentLabel(contact)}</span> : null}
+              {relatedContexts.slice(0, 3).map((context, index) => <span key={`${context.source_id}-${index}`} style={drawerRelatedItemStyle}>{context.role ? `${humanizeContactTerm(context.role)} · ` : ""}{context.label || describeLinkedDocumentContext(context)}</span>)}
+              {!readOnly ? <div className="lf-person-detail-actions"><button type="button" style={rowSecondaryActionStyle} onClick={() => setManagementView("edit")}>Edit details</button><button type="button" style={rowSecondaryActionStyle} onClick={() => setManagementView("relationship")}>Edit relationship</button></div> : null}
+            </section>
+            <section className="lf-person-detail-section" aria-labelledby="person-invitation-heading">
+              <h3 id="person-invitation-heading">Invitation and identity</h3>
+              <span style={contactSummaryStatusStyle} data-tone={inviteState.tone}>{status}</span>
+              <span style={drawerRelatedItemStyle}>Identity: {contact.verification_status === "verified" || contact.verification_status === "active" ? "Verified" : contact.verification_status === "not_verified" ? "Not verified" : "Verification in progress"}</span>
+              {getRelationshipDocumentLabel(contact) ? <span style={drawerExplanationStyle}>Will access stays locked while the owner is living.</span> : null}
+              <InvitationProgressTracker contact={contact} />
+              {!readOnly && (contact.invite_status === "invite_sent" || contact.invite_status === "not_invited") ? <button type="button" style={rowSecondaryActionStyle} onClick={() => setManagementView("invitation")}>{contact.invite_status === "invite_sent" ? "Manage invitation" : "Send invitation"}</button> : null}
+            </section>
+            <PersonVaultAccessSummary key={contact.id} contact={contact} ownerUserId={ownerUserId} readOnly={readOnly} onManage={() => setManagementView("access")} />
+            {!readOnly ? <button type="button" className="lf-person-remove-link" onClick={() => setManagementView("remove")}>Remove person</button> : null}
+          </>}
         </div>
       </aside>
     </div>
@@ -1003,6 +1009,8 @@ function PersonManagementPanel({
   view,
   ownerUserId,
   readOnly,
+  onInvite,
+  inviting,
   onBack,
   onNavigate,
   onSaved,
@@ -1011,6 +1019,8 @@ function PersonManagementPanel({
   view: "edit" | "relationship" | "invitation" | "access" | "remove";
   ownerUserId: string | null;
   readOnly: boolean;
+  onInvite: () => Promise<void>;
+  inviting: boolean;
   onBack: () => void;
   onNavigate: (view: "edit" | "relationship" | "invitation" | "access" | "remove") => void;
   onSaved: () => void;
@@ -1025,7 +1035,7 @@ function PersonManagementPanel({
   const [accessSummary, setAccessSummary] = useState<string[] | null>(null);
   const [accessOptions, setAccessOptions] = useState<Array<{ sourceKind: "asset" | "record"; sourceId: string; label: string; sectionKey: string | null; categoryKey: string | null }>>([]);
   const [selectedAccessKeys, setSelectedAccessKeys] = useState<string[]>([]);
-  const [accessEditOpen, setAccessEditOpen] = useState(true);
+  const [accessEditOpen, setAccessEditOpen] = useState(false);
   const [accessGrantId, setAccessGrantId] = useState<string | null>(null);
   const [accessInvitationId, setAccessInvitationId] = useState<string | null>(null);
   const [accessCanConfigure, setAccessCanConfigure] = useState(false);
@@ -1336,6 +1346,7 @@ function PersonManagementPanel({
         <div className="lf-person-focused-panel">
           <span style={drawerExplanationStyle}>{contact.invite_status === "invite_sent" ? "Status: Awaiting response" : "This person is recorded but has not been invited."}</span>
           {contact.email ? <span style={drawerContactLineStyle}>{contact.email}</span> : <span style={drawerExplanationStyle}>Add an email address in Edit details before sending an invitation.</span>}
+          {contact.invite_status === "not_invited" && contact.email ? <button type="button" style={rowPrimaryActionStyle} disabled={readOnly || inviting} onClick={() => void onInvite()}>{inviting ? "Sending…" : "Send invitation"}</button> : null}
           {contact.invite_status === "invite_sent" ? <button type="button" style={rowPrimaryActionStyle} disabled={saving} onClick={() => void resendInvitation()}>Resend invitation</button> : null}
           {contact.invite_status === "invite_sent" ? <button type="button" style={rowSecondaryActionStyle} disabled={saving} onClick={() => void updateInvitation("revoked")}>Cancel invitation</button> : null}
         </div>
@@ -2128,21 +2139,6 @@ const drawerExplanationStyle: CSSProperties = {
   color: "#64748b",
   fontSize: 13,
   lineHeight: 1.55,
-};
-
-const drawerSectionStyle: CSSProperties = {
-  display: "grid",
-  gap: 7,
-  borderTop: "1px solid #eee8e3",
-  paddingTop: 14,
-};
-
-const drawerSectionLabelStyle: CSSProperties = {
-  color: "#7c4a35",
-  fontSize: 11,
-  fontWeight: 800,
-  letterSpacing: "0.06em",
-  textTransform: "uppercase",
 };
 
 const drawerRelatedItemStyle: CSSProperties = {

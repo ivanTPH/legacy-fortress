@@ -1,5 +1,13 @@
 # Codex Handover
 
+## 16 October 2026 — V3 workspace and People I Trust recovery
+
+- Isolated branch `fix/v3-recovery` starts at deployed staging SHA `952dccb177281080ba08e52467db497ba2e1919e`; the owner worktree and release worktree were not changed.
+- Workspace menu fits the customer sidebar and mobile drawer, wraps identity text, closes on outside click, Escape and selection, and uses trusted app/admin role sources for visibility. Existing route and server authorisation remain in place.
+- People I Trust presents contact details, invitation/identity status and named shared records separately. The existing contact, invitation and access services remain canonical; opening the drawer does not grant access.
+- Local synthetic Chrome desktop and WebKit mobile journeys covered menu behavior, contact edit persistence, scoped asset selection, revocation and wrong-user denial. TypeScript, focused source tests and production build passed; synthetic fixtures were removed.
+- No hosted database, deployment or staging branch was changed. Owner review is required before staging integration.
+
 ## 15 October 2026 — Version 3 staging-first integration
 
 - Isolated worktree: `/private/tmp/legacy-fortress-v3-staging-preview`; branch `integration/v3-staging-preview`, based on staging SHA `e552b9d1608b8ccffe9b50d1c29ac98d85ee16ab`. The original owner tree and `design/phase-4` remain untouched.

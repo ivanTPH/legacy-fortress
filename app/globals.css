@@ -2963,6 +2963,15 @@ textarea {
 .lf-sidebar .lf-workspace-current-copy { display: block; }
 .lf-sidebar .lf-workspace-current strong { font-size: 13px; font-weight: 500; }
 .lf-sidebar .lf-workspace-current > .lf-icon { margin-left: auto; color: var(--lf-text-secondary); }
+.lf-sidebar-workspace .lf-workspace-links {
+  position: static;
+  width: 100%;
+  max-width: 100%;
+  max-height: min(420px, 55dvh);
+  margin-top: 8px;
+  box-shadow: 0 8px 24px rgba(31, 23, 18, .1);
+}
+.lf-sidebar-workspace .lf-workspace-route-meta { display: none; }
 
 .lf-topbar {
   min-height: var(--lf-shell-header-min-height);
@@ -3841,6 +3850,38 @@ textarea {
   display: grid;
   gap: 16px;
   padding: 20px 22px 32px;
+}
+
+.lf-person-detail-section {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #e8e1dc;
+  border-radius: 12px;
+  background: #fff;
+  overflow-wrap: anywhere;
+}
+
+.lf-person-detail-section h3 {
+  margin: 0;
+  color: var(--lf-text);
+  font-size: 15px;
+}
+
+.lf-person-detail-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lf-person-shared-records {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+  color: var(--lf-text);
+  font-size: 13px;
 }
 
 .lf-person-more-details {
@@ -6493,6 +6534,24 @@ textarea {
   font-weight: 700;
 }
 
+.lf-workspace-session-summary {
+  display: grid;
+  gap: 4px;
+  padding: 2px 9px 8px;
+  color: var(--lf-text-soft);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.lf-workspace-session-summary span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.lf-workspace-session-summary strong {
+  color: var(--lf-text);
+}
+
 .lf-workspace-links a {
   position: relative;
   min-height: 54px;
@@ -6517,6 +6576,14 @@ textarea {
 .lf-workspace-links a strong,
 .lf-workspace-links a small {
   display: block;
+  overflow-wrap: anywhere;
+}
+
+.lf-workspace-links a > span:nth-child(2),
+.lf-workspace-session-summary,
+.lf-workspace-menu-heading {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .lf-workspace-links a small {

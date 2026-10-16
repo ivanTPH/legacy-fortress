@@ -32,6 +32,12 @@ test("People I Trust uses compact rows with progressive person details", () => {
   assert.match(contactsWorkspace, /<optgroup/);
   assert.doesNotMatch(contactsWorkspace, /label: "Advisor"/);
   assert.match(contactsWorkspace, /PersonVaultAccessSummary/);
+  assert.match(contactsWorkspace, /Contact details/);
+  assert.match(contactsWorkspace, /Invitation and identity/);
+  assert.match(contactsWorkspace, /Records shared/);
+  assert.match(contactsWorkspace, /Change or revoke access/);
+  assert.match(contactsWorkspace, /sharedNames\.map/);
+  assert.match(contactsWorkspace, /contact\.invite_status === "not_invited" && contact\.email \? <button[^\n]*onInvite/);
   assert.match(contactsWorkspace, /Give access/);
   assert.match(contactsWorkspace, /Manage access/);
   assert.match(contactsWorkspace, /getAddContactPreset/);

@@ -1189,6 +1189,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                 currentPathname={pathname}
                 compact
                 alwaysShow
+                onSelect={() => closeNavigationState("item_select")}
                 governanceContext="Mobile navigation · role-aware workspace switch"
               />
 

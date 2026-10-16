@@ -40,6 +40,7 @@ type WorkspaceSwitcherProps = {
   showDetails?: boolean;
   governanceContext?: string;
   alwaysShow?: boolean;
+  onSelect?: () => void;
 };
 
 type WorkspaceSession = {
@@ -59,6 +60,7 @@ export default function WorkspaceSwitcher({
   showDetails = false,
   governanceContext = "workspace route guard",
   alwaysShow = false,
+  onSelect,
 }: WorkspaceSwitcherProps) {
   const [session, setSession] = useState<WorkspaceSession | null>(null);
   const [linkedFortresses, setLinkedFortresses] = useState<LinkedFortressSummary[]>([]);
@@ -84,7 +86,6 @@ export default function WorkspaceSwitcher({
       const metadataRoles = user
         ? [
             ...extractPlatformRolesFromMetadata(user.app_metadata),
-            ...extractPlatformRolesFromMetadata(user.user_metadata),
           ]
         : [];
       const adminRoles = user && data.session?.access_token
@@ -158,6 +159,8 @@ export default function WorkspaceSwitcher({
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
       setOpen(false);
       triggerRef.current?.focus();
     }
@@ -168,11 +171,11 @@ export default function WorkspaceSwitcher({
     }
 
     document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keydown", onKeyDown, true);
     window.addEventListener("lf-admin-menu-open", onOtherMenuOpen);
     return () => {
       document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keydown", onKeyDown, true);
       window.removeEventListener("lf-admin-menu-open", onOtherMenuOpen);
     };
   }, [menuId, open]);
@@ -187,10 +190,19 @@ export default function WorkspaceSwitcher({
     });
   }
 
+  function closeAfterSelection() {
+    setOpen(false);
+    onSelect?.();
+  }
+
   if (!session || (!hasMultipleContexts && linkedFortresses.length === 0 && !alwaysShow)) return null;
 
   return (
-    <section ref={menuRef} className={compact ? "lf-workspace-switcher compact" : "lf-workspace-switcher"} aria-label="Switch workspace">
+    <section
+      ref={menuRef}
+      className={compact ? "lf-workspace-switcher compact" : "lf-workspace-switcher"}
+      aria-label="Switch workspace"
+    >
       <div className="lf-workspace-menu">
         <button
           ref={triggerRef}
@@ -198,7 +210,6 @@ export default function WorkspaceSwitcher({
           className="lf-workspace-current"
           aria-expanded={open}
           aria-controls={menuId}
-          aria-haspopup="menu"
           onClick={toggleOpen}
         >
           <span className="lf-workspace-icon" aria-hidden="true">
@@ -226,7 +237,7 @@ export default function WorkspaceSwitcher({
                 href={workspace.href}
                 className={workspace.id === currentWorkspace ? "is-active" : ""}
                 aria-current={workspace.id === currentWorkspace ? "page" : undefined}
-                onClick={() => setOpen(false)}
+                onClick={closeAfterSelection}
               >
                 <Icon name={iconForWorkspace(workspace.id)} size={15} />
                 <span>
@@ -239,7 +250,7 @@ export default function WorkspaceSwitcher({
             {linkedFortresses.length ? (
               <div className="lf-workspace-linked-group">
                 <div className="lf-workspace-menu-heading"><span>Linked Fortresses</span></div>
-                <Link href="/dashboard" onClick={() => { clearStoredLinkedGrantId(); setOpen(false); }}>
+                <Link href="/dashboard" onClick={() => { clearStoredLinkedGrantId(); closeAfterSelection(); }}>
                   <Icon name="home" size={15} />
                   <span><strong>My Fortress</strong><small>My Personal Vault</small></span>
                 </Link>
@@ -247,7 +258,7 @@ export default function WorkspaceSwitcher({
                   <Link
                     key={linked.grantId}
                     href={`/contact-wallet?grant=${encodeURIComponent(linked.grantId)}`}
-                    onClick={() => { setStoredLinkedGrantId(linked.grantId); setOpen(false); }}
+                    onClick={() => { setStoredLinkedGrantId(linked.grantId); closeAfterSelection(); }}
                   >
                     <Icon name="verified_user" size={15} />
                     <span><strong>{linked.ownerName}</strong><small>{getRoleLabel(linked.role)} · {getLinkedFortressAccessLabel(linked)}</small></span>
