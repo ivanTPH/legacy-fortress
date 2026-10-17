@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Legacy Fortress V4 · 390px mobile supplement</title>
+  <style>
+    @font-face { font-family: "Material Symbols Rounded"; src: url("../../public/fonts/material-symbols-rounded.woff2") format("woff2"); font-weight: 100 700; font-display: block; }
+    :root { --ink:#2B1714; --text:#1F1715; --secondary:#6B5F5A; --accent:#8C4A32; --link:#7A3D27; --canvas:#F6F3F0; --surface:#fff; --tint:#F3EBE6; --divider:#EBE4DE; --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif; }
+    * { box-sizing:border-box; }
+    body { margin:0; padding:32px 20px 56px; background:#eee9e5; color:var(--text); font-family:var(--font); }
+    header.intro { max-width:1050px; margin:0 auto 28px; }
+    .intro h1 { margin:0 0 8px; font-size:28px; line-height:34px; }
+    .intro p { margin:0; max-width:760px; color:var(--secondary); font-size:15px; line-height:22px; }
+    .gallery { max-width:1050px; margin:auto; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:32px 40px; }
+    figure { margin:0; min-width:0; }
+    .frame-label { margin:0 0 10px; font-size:17px; font-weight:600; }
+    .phone { position:relative; width:390px; max-width:100%; height:844px; overflow:hidden; border:1px solid #d8cec7; border-radius:24px; background:var(--canvas); box-shadow:0 12px 32px rgba(43,23,20,.12); }
+    .mi { font-family:"Material Symbols Rounded"; font-weight:400; font-style:normal; font-size:20px; line-height:1; font-feature-settings:"liga"; font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24; white-space:nowrap; }
+    .mi.filled { font-variation-settings:'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 24; }
+    .status { height:44px; display:flex; align-items:center; justify-content:space-between; padding:8px 24px 0; font-size:14px; font-weight:600; }
+    .status .icons { display:flex; gap:4px; align-items:center; }
+    .status .icons .mi { font-size:16px; }
+    .mast { height:56px; display:flex; align-items:center; gap:8px; padding:0 16px; }
+    .brand { min-width:0; flex:1; display:flex; align-items:center; gap:10px; height:48px; padding:4px; border-radius:10px; }
+    .brand .logo { width:34px; height:34px; flex:none; display:grid; place-items:center; border-radius:9px; background:#111; color:#fff; }
+    .brand .logo .mi { font-size:22px; font-variation-settings:'FILL' 1,'wght' 600,'GRAD' 0,'opsz' 24; }
+    .brand-copy { min-width:0; flex:1; display:grid; gap:1px; }
+    .brand-copy strong { font-size:15px; font-weight:600; line-height:18px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .brand-copy small { color:var(--secondary); font-size:12px; line-height:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .brand > .mi { color:var(--secondary); font-size:18px; }
+    .icon-button { width:44px; height:44px; flex:none; display:grid; place-items:center; border:0; border-radius:999px; background:#fff; color:var(--ink); }
+    .icon-button.ink { background:var(--ink); color:#fff; }
+    .scroll { position:absolute; top:100px; bottom:102px; left:0; right:0; overflow-y:auto; overflow-x:hidden; padding:8px 16px 16px; scrollbar-width:none; }
+    .scroll::-webkit-scrollbar, .drawer::-webkit-scrollbar { display:none; }
+    .page-title { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+    .page-title h2 { min-width:0; flex:1; margin:0; font-size:34px; line-height:41px; font-weight:700; }
+    .page-title .icon-button { width:40px; height:40px; }
+    .value-card { width:100%; min-width:0; padding:18px; border-radius:20px; background:var(--ink); color:#fff; }
+    .eyebrow { display:block; color:#e6d8d0; font-size:13px; line-height:18px; }
+    .amount { display:block; margin:5px 0 3px; font-size:28px; line-height:34px; font-weight:700; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+    .value-card .updated { color:#e6d8d0; font-size:13px; }
+    .value-bar { display:flex; gap:2px; height:8px; margin:15px 0 8px; overflow:hidden; border-radius:4px; background:#fff3; }
+    .value-bar i:first-child { width:76%; background:#E9C9B6; }
+    .value-bar i:last-child { width:24%; background:#B7795C; }
+    .value-legend { display:flex; justify-content:space-between; gap:12px; color:#e6d8d0; font-size:12px; }
+    .kpis { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:10px; }
+    .kpi { min-width:0; min-height:76px; padding:12px 10px; border:1px solid var(--divider); border-radius:12px; background:#fff; }
+    .kpi strong { display:block; font-size:20px; line-height:24px; font-weight:600; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+    .kpi span { display:block; margin-top:4px; color:var(--secondary); font-size:13px; line-height:18px; }
+    .section-head { display:flex; justify-content:space-between; align-items:center; gap:8px; margin:20px 0 10px; }
+    .section-head h3 { margin:0; font-size:17px; line-height:22px; font-weight:600; }
+    .section-head a { color:var(--link); font-size:13px; text-decoration:none; }
+    .next-card { padding:14px 16px; border:1px solid var(--divider); border-radius:12px; background:#fff; }
+    .next-card .meta { display:flex; justify-content:space-between; gap:8px; color:var(--accent); font-size:13px; font-weight:600; }
+    .next-card strong { display:block; margin:8px 0 3px; font-size:15px; line-height:22px; }
+    .next-card p { margin:0; color:var(--secondary); font-size:13px; line-height:18px; }
+    .vault-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+    .vault-tile { min-width:0; min-height:104px; padding:12px; border:1px solid var(--divider); border-radius:12px; background:#fff; }
+    .vault-tile .mi { display:grid; place-items:center; width:30px; height:30px; border-radius:7px; background:var(--tint); color:#6E3A28; font-size:18px; }
+    .vault-tile strong { display:block; margin-top:10px; font-size:15px; line-height:20px; font-weight:600; overflow-wrap:anywhere; }
+    .vault-tile small { display:block; margin-top:2px; color:var(--secondary); font-size:13px; line-height:18px; overflow-wrap:anywhere; }
+    .tabs { position:absolute; z-index:2; left:16px; right:16px; bottom:30px; height:62px; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); align-items:center; padding:4px; border:1px solid var(--divider); border-radius:999px; background:rgba(255,255,255,.96); box-shadow:0 6px 24px rgba(43,23,20,.14); }
+    .tab { min-width:0; height:54px; display:grid; justify-items:center; align-content:center; gap:2px; color:#8A7F7A; font-size:11px; line-height:14px; white-space:nowrap; }
+    .tab.active { color:var(--ink); font-weight:600; }
+    .tab .mi { font-size:22px; }
+    .tab .badge { position:absolute; margin-left:22px; margin-top:-3px; padding:0 5px; border-radius:8px; background:var(--accent); color:#fff; font-size:10px; }
+    .pin { display:inline-grid; place-items:center; width:20px; height:20px; flex:none; border-radius:50%; background:var(--accent); color:#fff; font-size:11px; font-weight:700; vertical-align:middle; }
+    .pin.float { position:absolute; z-index:4; }
+    .drawer-scrim, .sheet-scrim { position:absolute; inset:0; background:rgba(31,23,21,.5); }
+    .drawer { position:absolute; z-index:3; inset:0 auto 0 0; width:318px; max-width:calc(100% - 48px); overflow-y:auto; padding:44px 12px 26px; background:var(--canvas); }
+    .drawer .mast { padding:0 4px; }
+    .drawer .group-label { margin:20px 12px 8px; color:var(--secondary); font-size:11px; font-weight:600; letter-spacing:.06em; }
+    .drawer .row { display:flex; align-items:center; gap:12px; min-height:48px; padding:0 12px; border-radius:8px; font-size:15px; }
+    .drawer .row .mi { color:var(--ink); }
+    .drawer .row strong { flex:1; min-width:0; font-weight:500; overflow-wrap:anywhere; }
+    .drawer .divider { height:1px; margin:16px 12px; background:var(--divider); }
+    .sheet { position:absolute; z-index:3; left:0; right:0; bottom:0; max-height:calc(100% - 52px); overflow-y:auto; padding:16px 16px 26px; border-radius:20px 20px 0 0; background:#fff; box-shadow:0 -8px 32px rgba(31,23,21,.15); }
+    .grabber { width:36px; height:4px; margin:0 auto 15px; border-radius:2px; background:#d8cec7; }
+    .sheet-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+    .sheet-head h2 { margin:0; font-size:20px; line-height:26px; }
+    .sheet-head .icon-button { width:36px; height:36px; background:var(--canvas); }
+    .workspace-option { display:flex; align-items:center; gap:12px; min-height:54px; padding:0 12px; border-top:1px solid var(--divider); font-size:15px; }
+    .workspace-option.current { border-radius:9px; border-top-color:transparent; background:var(--tint); color:var(--ink); font-weight:600; }
+    .workspace-option .mi:first-child { color:var(--accent); }
+    .workspace-option span:nth-child(2) { flex:1; min-width:0; overflow-wrap:anywhere; }
+    .workspace-option .mi:last-child { color:var(--accent); }
+    .sheet-note { margin:12px 4px 0; color:var(--secondary); font-size:13px; line-height:18px; }
+    .admin-scroll { bottom:0; padding-bottom:34px; }
+    .admin-scroll .page-title { display:block; }
+    .admin-scroll .page-title h2 { font-size:28px; line-height:34px; overflow-wrap:anywhere; }
+    .admin-scroll .page-title p { margin:5px 0 0; color:var(--secondary); font-size:13px; line-height:18px; }
+    .admin-kpis { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+    .admin-card { min-width:0; margin-top:12px; padding:16px; border:1px solid var(--divider); border-radius:12px; background:#fff; }
+    .admin-card h3 { margin:0 0 10px; font-size:17px; line-height:22px; }
+    .admin-card p { margin:0 0 12px; color:var(--secondary); font-size:13px; line-height:18px; overflow-wrap:anywhere; }
+    .admin-card .status-chip { display:inline-flex; padding:5px 8px; border-radius:6px; background:#FBEEE6; color:var(--accent); font-size:13px; font-weight:600; }
+    .admin-card .record-name { display:block; margin:10px 0 3px; font-size:15px; font-weight:600; overflow-wrap:anywhere; }
+    .admin-card .action { display:flex; justify-content:center; align-items:center; width:100%; min-height:44px; margin-top:12px; border-radius:8px; background:var(--ink); color:#fff; font-size:14px; font-weight:600; }
+    figcaption { max-width:390px; padding:12px 2px 0; color:var(--secondary); font-size:13px; line-height:18px; }
+    figcaption p { margin:0 0 6px; }
+    figcaption .pin { margin-right:5px; }
+    @media (max-width:860px) { .gallery { grid-template-columns:1fr; justify-items:center; } figure { width:390px; max-width:100%; } }
+    @media (max-width:430px) { body { padding:20px 8px 40px; } }
+  </style>
+</head>
+<body>
+  <header class="intro"><h1>V4 mobile refinement · 390px</h1><p>Annotated customer and administrator states. Figures and names are illustrative only; the application must display authorised, real data. The 390×844 frames show the visible viewport, including simulated safe areas.</p></header>
+  <main class="gallery">
+    <figure>
+      <h2 class="frame-label">1 · Compact Dashboard</h2>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span class="icons"><span class="mi">signal_cellular_alt</span><span class="mi">wifi</span><span class="mi">battery_full</span></span></div>
+        <div class="mast"><div class="brand"><span class="logo"><span class="mi">apps</span></span><span class="brand-copy"><strong>Legacy Fortress</strong><small>Personal Vault</small></span><span class="mi">unfold_more</span></div><span class="icon-button"><span class="mi">menu</span></span></div>
+        <div class="scroll">
+          <div class="page-title"><h2>Home</h2><span class="icon-button"><span class="mi">notifications</span></span><span class="icon-button ink"><span class="mi">add</span></span></div>
+          <section class="value-card"><span class="eyebrow">Total recorded value</span><strong class="amount">£76,213.00</strong><span class="updated">Updated 17 Oct 2026</span><div class="value-bar"><i></i><i></i></div><div class="value-legend"><span>Pensions · 76%</span><span>Banks · 24%</span></div></section>
+          <div class="kpis"><div class="kpi"><strong>12</strong><span>Records</span></div><div class="kpi"><strong>3</strong><span>People</span></div><div class="kpi"><strong>£0.00</strong><span>Debts</span></div></div>
+          <div class="section-head"><h3>Next step</h3><a href="#">See all</a></div><div class="next-card"><span class="meta"><span>1 of 5</span><span>Action Centre</span></span><strong>Add your will</strong><p>Keep your important legal details in one place.</p></div>
+          <div class="section-head"><h3>Your vault</h3></div><div class="vault-grid"><div class="vault-tile"><span class="mi">account_balance_wallet</span><strong>Finances</strong><small>5 records</small></div><div class="vault-tile"><span class="mi">gavel</span><strong>Legal</strong><small>1 record</small></div><div class="vault-tile"><span class="mi">home</span><strong>Property</strong><small>2 records</small></div><div class="vault-tile"><span class="mi">work</span><strong>Business</strong><small>Not added yet</small></div><div class="vault-tile"><span class="mi">devices</span><strong>Digital</strong><small>3 records</small></div><div class="vault-tile"><span class="mi">inventory_2</span><strong>Possessions</strong><small>1 record</small></div></div>
+        </div>
+        <nav class="tabs" aria-label="Primary customer tabs"><div class="tab active"><span class="mi filled">space_dashboard</span>Home</div><div class="tab"><span class="mi">task_alt</span>Actions</div><div class="tab"><span class="mi">group</span>People</div><div class="tab"><span class="mi">settings</span>Settings</div></nav>
+      </div>
+      <figcaption><p><span class="pin">1</span> Summary fills the 358px content width; amounts wrap within the card.</p><p><span class="pin">2</span> Three compact KPI tiles sit outside the summary.</p><p><span class="pin">3</span> Six vault areas use a two-column grid; the last row remains scrollable above the tab bar.</p></figcaption>
+    </figure>
+    <figure>
+      <h2 class="frame-label">2 · Vault drawer, customer context</h2>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span class="icons"><span class="mi">signal_cellular_alt</span><span class="mi">wifi</span><span class="mi">battery_full</span></span></div>
+        <div class="mast"><div class="brand"><span class="logo"><span class="mi">apps</span></span><span class="brand-copy"><strong>Legacy Fortress</strong><small>Personal Vault</small></span><span class="mi">unfold_more</span></div><span class="icon-button"><span class="mi">menu</span></span></div>
+        <div class="scroll"><div class="page-title"><h2>Home</h2></div><div class="value-card"><span class="eyebrow">Total recorded value</span><strong class="amount">£76,213.00</strong></div></div>
+        <div class="drawer-scrim"></div><aside class="drawer" aria-label="Vault areas"><div class="mast"><div class="brand"><span class="logo"><span class="mi">apps</span></span><span class="brand-copy"><strong>Legacy Fortress</strong><small>Personal Vault</small></span><span class="mi">unfold_more</span></div><span class="icon-button"><span class="mi">close</span></span></div><p class="group-label">VAULT</p><div class="row"><span class="mi">account_balance_wallet</span><strong>Finances</strong><span class="mi">chevron_right</span></div><div class="row"><span class="mi">gavel</span><strong>Legal</strong><span class="mi">chevron_right</span></div><div class="row"><span class="mi">home</span><strong>Property</strong><span class="mi">chevron_right</span></div><div class="row"><span class="mi">work</span><strong>Business</strong><span class="mi">chevron_right</span></div><div class="row"><span class="mi">devices</span><strong>Digital</strong><span class="mi">chevron_right</span></div><div class="row"><span class="mi">inventory_2</span><strong>Possessions</strong><span class="mi">chevron_right</span></div><div class="divider"></div><div class="row"><span class="mi">add_circle</span><strong>Add to my Fortress</strong></div><div class="row"><span class="mi">help</span><strong>Support</strong></div></aside>
+      </div>
+      <figcaption><p><span class="pin">4</span> Bottom tabs own Home, Actions, People and Settings. The drawer contains vault areas and secondary destinations, without duplicate tab entries.</p><p><span class="pin">5</span> Scrim makes the customer tabs inert while the independently scrolling drawer is open.</p></figcaption>
+    </figure>
+    <figure>
+      <h2 class="frame-label">3 · Workspace selector sheet</h2>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span class="icons"><span class="mi">signal_cellular_alt</span><span class="mi">wifi</span><span class="mi">battery_full</span></span></div>
+        <div class="mast"><div class="brand"><span class="logo"><span class="mi">apps</span></span><span class="brand-copy"><strong>Legacy Fortress</strong><small>Personal Vault</small></span><span class="mi">unfold_more</span></div><span class="icon-button"><span class="mi">menu</span></span></div>
+        <div class="scroll"><div class="page-title"><h2>Home</h2></div><div class="value-card"><span class="eyebrow">Total recorded value</span><strong class="amount">£76,213.00</strong></div></div>
+        <div class="sheet-scrim"></div><section class="sheet" aria-label="Switch workspace"><div class="grabber"></div><div class="sheet-head"><h2>Switch workspace</h2><span class="icon-button"><span class="mi">close</span></span></div><div class="workspace-option current"><span class="mi filled">apps</span><span>Personal Vault</span><span class="mi">check</span></div><div class="workspace-option"><span class="mi">admin_panel_settings</span><span>Platform Administration</span></div><div class="workspace-option"><span class="mi">corporate_fare</span><span>Enterprise Operations</span></div><div class="workspace-option"><span class="mi">shield_lock</span><span>Platform Probate Review</span></div><p class="sheet-note">This illustration shows a user authorised for every workspace. Render only choices the signed-in user may open.</p></section>
+      </div>
+      <figcaption><p><span class="pin">6</span> The brand row opens a sheet on mobile; it does not add another sidebar row or shift the page.</p><p><span class="pin">7</span> The selected workspace is explicit. Role-filtered choices, Escape, outside tap and selection dismissal use the existing switcher behaviour.</p></figcaption>
+    </figure>
+    <figure>
+      <h2 class="frame-label">4 · Platform Administration</h2>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span class="icons"><span class="mi">signal_cellular_alt</span><span class="mi">wifi</span><span class="mi">battery_full</span></span></div>
+        <div class="mast"><div class="brand"><span class="logo"><span class="mi">apps</span></span><span class="brand-copy"><strong>Legacy Fortress</strong><small>Platform Administration</small></span><span class="mi">unfold_more</span></div><span class="icon-button"><span class="mi">menu</span></span></div>
+        <div class="scroll admin-scroll"><div class="page-title"><h2>Platform Administration</h2><p>Manage authorised platform operations.</p></div><div class="admin-kpis"><div class="kpi"><strong>4</strong><span>Open reviews</span></div><div class="kpi"><strong>2</strong><span>Organisations</span></div></div><div class="section-head"><h3>Needs attention</h3></div><article class="admin-card"><span class="status-chip">Pending review</span><strong class="record-name">Example organisation with a long display name</strong><p>Submitted 17 Oct 2026 · Review the information before taking action.</p><span class="action">Review request</span></article><article class="admin-card"><h3>Recent activity</h3><p>Administrative events remain in a single-column list. Long labels wrap; details open on their existing route.</p><span class="action">View activity</span></article></div>
+      </div>
+      <figcaption><p><span class="pin">8</span> The workspace name truncates in the brand row; the full page title wraps.</p><p><span class="pin">9</span> Admin cards stack at 390px with full-width 44px actions. Customer bottom tabs do not appear in the admin security domain.</p></figcaption>
+    </figure>
+  </main>
+</body>
+</html>

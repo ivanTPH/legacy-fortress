@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+body{margin:0;background:#efebe7;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;color:#1f1715}
+a{color:#7a3d27}a:hover{color:#2b1714}
+</style>
+</helmet>
+
+<section id="t1" style="padding:40px 44px 24px;border-bottom:1px solid rgba(0,0,0,.08)">
+<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px"><a href="#t1" style="font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none">1</a><span style="font:600 15px system-ui,sans-serif">Platform Admin on mobile · Super admin</span></div>
+<p style="font:13px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.6);max-width:900px;margin:0 0 24px">Each phone is the live Admin Console at 390 × 844, so everything is tappable: tabs, rows, sheets, the role picker and the confirm-with-reason dialog. Sign-in is a two-step flow. The bottom tabs are Overview, Verification and Audit, plus Menu for every other section. Table rows become two-line list rows, and selecting one opens a full-screen sheet.</p>
+<div style="display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start">
+<div id="1a" style="display:flex;flex-direction:column;gap:10px"><span style="font:12px system-ui;color:rgba(0,0,0,.6)"><b style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px">1a</b>Sign in</span><dc-import name="Admin Console" preview="mobile" embedded="{{ true }}" start-at="signin" hint-size="390px,844px"></dc-import></div>
+<div id="1b" style="display:flex;flex-direction:column;gap:10px"><span style="font:12px system-ui;color:rgba(0,0,0,.6)"><b style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px">1b</b>Overview</span><dc-import name="Admin Console" preview="mobile" embedded="{{ true }}" hint-size="390px,844px"></dc-import></div>
+<div id="1c" style="display:flex;flex-direction:column;gap:10px"><span style="font:12px system-ui;color:rgba(0,0,0,.6)"><b style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px">1c</b>Identity verification list</span><dc-import name="Admin Console" preview="mobile" embedded="{{ true }}" screen="verification" hint-size="390px,844px"></dc-import></div>
+<div id="1d" style="display:flex;flex-direction:column;gap:10px"><span style="font:12px system-ui;color:rgba(0,0,0,.6)"><b style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px">1d</b>Review sheet (tap Approve for the reason dialog)</span><dc-import name="Admin Console" preview="mobile" embedded="{{ true }}" screen="verification" open-row="{{ 0 }}" hint-size="390px,844px"></dc-import></div>
+<div id="1e" style="display:flex;flex-direction:column;gap:10px"><span style="font:12px system-ui;color:rgba(0,0,0,.6)"><b style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px">1e</b>Menu: all sections and role picker</span><dc-import name="Admin Console" preview="mobile" embedded="{{ true }}" menu-open="{{ true }}" hint-size="390px,844px"></dc-import></div>
+<div id="1f" style="display:flex;flex-direction:column;gap:10px"><span style="font:12px system-ui;color:rgba(0,0,0,.6)"><b style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px">1f</b>Organisations (Commercial)</span><dc-import name="Admin Console" preview="mobile" embedded="{{ true }}" screen="orgs" hint-size="390px,844px"></dc-import></div>
+</div>
+</section>
+
+<section id="t2" style="padding:40px 44px 24px;border-bottom:1px solid rgba(0,0,0,.08)">
+<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px"><a href="#t2" style="font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none">2</a><span style="font:600 15px system-ui,sans-serif">Platform Admin on mobile · Probate reviewer</span></div>
+<p style="font:13px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.6);max-width:900px;margin:0 0 24px">The same app with a narrower role. The menu and tabs only show Overview, Probate cases, Identity verification and Audit. The case sheet shows the status timeline; access stays locked until every step is complete.</p>
+<div style="display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start">
+<div id="2a" style="display:flex;flex-direction:column;gap:10px"><span style="font:12px system-ui;color:rgba(0,0,0,.6)"><b style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px">2a</b>Overview (filtered to role)</span><dc-import name="Admin Console" preview="mobile" embedded="{{ true }}" role="probate" hint-size="390px,844px"></dc-import></div>
+<div id="2b" style="display:flex;flex-direction:column;gap:10px"><span style="font:12px system-ui;color:rgba(0,0,0,.6)"><b style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px">2b</b>Probate cases</span><dc-import name="Admin Console" preview="mobile" embedded="{{ true }}" role="probate" screen="probate" hint-size="390px,844px"></dc-import></div>
+<div id="2c" style="display:flex;flex-direction:column;gap:10px"><span style="font:12px system-ui;color:rgba(0,0,0,.6)"><b style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px">2c</b>Case sheet with timeline</span><dc-import name="Admin Console" preview="mobile" embedded="{{ true }}" role="probate" screen="probate" open-row="{{ 0 }}" hint-size="390px,844px"></dc-import></div>
+</div>
+</section>
+
+<section id="t3" style="padding:40px 44px 48px">
+<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px"><a href="#t3" style="font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none">3</a><span style="font:600 15px system-ui,sans-serif">Partner portal on mobile · Organisation admin</span></div>
+<p style="font:13px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.6);max-width:900px;margin:0 0 24px">The partner portal uses a light top bar with the teal PARTNER badge. Its tabs are Overview, Team and Invitations, plus Menu. Invite team member opens the Required/Optional form as a full-screen sheet. Removing someone frees their seat but never deletes their own Vault.</p>
+<div style="display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start">
+<div id="3a" style="display:flex;flex-direction:column;gap:10px"><span style="font:12px system-ui;color:rgba(0,0,0,.6)"><b style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px">3a</b>Partner sign-in</span><dc-import name="Admin Console" workspace="partner" preview="mobile" embedded="{{ true }}" start-at="signin" hint-size="390px,844px"></dc-import></div>
+<div id="3b" style="display:flex;flex-direction:column;gap:10px"><span style="font:12px system-ui;color:rgba(0,0,0,.6)"><b style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px">3b</b>Overview</span><dc-import name="Admin Console" workspace="partner" preview="mobile" embedded="{{ true }}" hint-size="390px,844px"></dc-import></div>
+<div id="3c" style="display:flex;flex-direction:column;gap:10px"><span style="font:12px system-ui;color:rgba(0,0,0,.6)"><b style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px">3c</b>Team &amp; seats</span><dc-import name="Admin Console" workspace="partner" preview="mobile" embedded="{{ true }}" screen="p_team" hint-size="390px,844px"></dc-import></div>
+<div id="3d" style="display:flex;flex-direction:column;gap:10px"><span style="font:12px system-ui;color:rgba(0,0,0,.6)"><b style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px">3d</b>Team member sheet</span><dc-import name="Admin Console" workspace="partner" preview="mobile" embedded="{{ true }}" screen="p_team" open-row="{{ 1 }}" hint-size="390px,844px"></dc-import></div>
+<div id="3e" style="display:flex;flex-direction:column;gap:10px"><span style="font:12px system-ui;color:rgba(0,0,0,.6)"><b style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px">3e</b>Licence (read-only)</span><dc-import name="Admin Console" workspace="partner" preview="mobile" embedded="{{ true }}" screen="p_licence" hint-size="390px,844px"></dc-import></div>
+<div id="3f" style="display:flex;flex-direction:column;gap:10px"><span style="font:12px system-ui;color:rgba(0,0,0,.6)"><b style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px">3f</b>Menu</span><dc-import name="Admin Console" workspace="partner" preview="mobile" embedded="{{ true }}" menu-open="{{ true }}" hint-size="390px,844px"></dc-import></div>
+</div>
+</section>
+</x-dc>
+</body>
+</html>

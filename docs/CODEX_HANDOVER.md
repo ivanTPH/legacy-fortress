@@ -558,3 +558,9 @@ Date: 2026-10-17. Branch: `fix/v4-mobile-acceptance`, based on staging `38ea8d1`
 - Preserved the in-progress mobile Finance, dashboard, People/form clearance, and Platform Administration layout fixes. Shared record forms now use mobile spacing and hide the fixed bottom navigation while open.
 - Moved the customer workspace trigger into the brand row on desktop and mobile. The menu opens as an overlay, supports outside click, Escape, arrow keys and selection dismissal, and still uses the existing role-filtered workspace list.
 - Focused workspace tests, TypeScript, and targeted lint passed. Local Chrome smoke mode verified the desktop/mobile selector and dashboard geometry at 1440px/390px. Local Supabase on `127.0.0.1:55421` was unavailable, so authenticated Finance, bank form, and admin content checks remain for staging review.
+
+## V5 design handoff integration
+
+- Based the isolated `design/v5-handoff-integration` worktree on confirmed remote staging `0557f28cf7312b40650e3c8e674f9dde9c36c97b`. The owner main worktree, its unpublished admin/release/configuration work, and all hosted environments were left untouched.
+- Added the complete `design_handoff_legacy_fortress 5/` package with its original relative design assets. Retained V4 design history, including the previously committed mobile supplement, and indexed V5 precedence, implementation gaps, staged delivery and unresolved decisions in `docs/design-implementation/`.
+- This is documentation only: no application, authentication, permissions, schema or release behavior was changed. The next stage is Personal Vault mobile after owner approval of its bounded scope; retain current authorised workspace choices until the conflicting V5 navigation guidance is resolved.
