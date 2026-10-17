@@ -33,10 +33,11 @@ test("shared asset form actions use reveal notes, cancel, save ordering", () => 
 test("manual finance branches use controlled selects for bounded type fields", () => {
   const workspace = read("components/records/UniversalRecordWorkspace.tsx");
 
-  assert.match(workspace, /FieldSelect label="Currency" value=\{form\.currency_code\} options=\{CURRENCY_SELECT_OPTIONS\}/);
+  assert.match(workspace, /CurrencyAmountField label="Estimated value"[\s\S]*currency=\{form\.currency_code\}/);
+  assert.match(workspace, /<select aria-label=\{`\$\{label\} currency`\} value=\{currency\}/);
   assert.match(workspace, /FieldSelect label="Ownership type" value=\{form\.ownership_type\} options=\{OWNERSHIP_TYPE_OPTIONS\}/);
-  assert.match(workspace, /FieldSelect label="Policy type" value=\{form\.policy_type\} options=\{INSURANCE_SELECT_OPTIONS\}/);
-  assert.match(workspace, /FieldSelect label="Debt type" value=\{form\.debt_type\} options=\{DEBT_SELECT_OPTIONS\}/);
+  assert.match(workspace, /FieldSelect label="Policy type" required value=\{form\.policy_type\} options=\{INSURANCE_SELECT_OPTIONS\}/);
+  assert.match(workspace, /FieldSelect label="Debt type" required value=\{form\.debt_type\} options=\{DEBT_SELECT_OPTIONS\}/);
 });
 
 test("shared upload styling supports pending file chips", () => {

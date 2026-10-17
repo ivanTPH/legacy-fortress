@@ -72,6 +72,7 @@ export function TextInput({
   onChange,
   placeholder,
   disabled,
+  type = "text",
 }: {
   id?: string;
   ariaLabel?: string;
@@ -79,8 +80,9 @@ export function TextInput({
   onChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  type?: "text" | "email" | "tel" | "date";
 }) {
-  return <input className="lf-v4-form-control" id={id} aria-label={ariaLabel} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} style={inputStyle} disabled={disabled} />;
+  return <input className="lf-v4-form-control" id={id} aria-label={ariaLabel} type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} style={inputStyle} disabled={disabled} />;
 }
 
 export function NumberInput({
@@ -138,6 +140,7 @@ export function SelectInput({
   options,
   disabled,
   placeholder,
+  required = false,
 }: {
   id?: string;
   ariaLabel?: string;
@@ -146,36 +149,20 @@ export function SelectInput({
   options: AssetFieldOption[];
   disabled?: boolean;
   placeholder?: string;
+  required?: boolean;
 }) {
-  const selectRef = useRef<HTMLSelectElement | null>(null);
-
-  useEffect(() => {
-    const node = selectRef.current;
-    if (!node) return;
-
-    const syncValue = () => onChange(node.value);
-    node.addEventListener("input", syncValue);
-    node.addEventListener("change", syncValue);
-    return () => {
-      node.removeEventListener("input", syncValue);
-      node.removeEventListener("change", syncValue);
-    };
-  }, [onChange]);
-
   return (
     <span className="lf-v4-select-wrap"><select
       className="lf-v4-form-control"
-      ref={selectRef}
       id={id}
       aria-label={ariaLabel}
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      onInput={(event) => onChange((event.target as HTMLSelectElement).value)}
-      onBlur={(event) => onChange(event.target.value)}
       style={inputStyle}
       disabled={disabled}
+      required={required}
     >
-      <option value="">{placeholder ?? "Select an option"}</option>
+      {!options.some((option) => option.value === "") ? <option value="">{placeholder ?? "Select an option"}</option> : null}
       {options.map((option) => (
         <option key={option.value} value={option.value}>
           {option.label}
@@ -248,7 +235,7 @@ export function DateInput({
   onChange: (value: string) => void;
   disabled?: boolean;
 }) {
-  return <input id={id} aria-label={ariaLabel} type="date" value={value} onChange={(event) => onChange(event.target.value)} style={inputStyle} disabled={disabled} />;
+  return <input className="lf-v4-form-control" id={id} aria-label={ariaLabel} type="date" value={value} onChange={(event) => onChange(event.target.value)} style={inputStyle} disabled={disabled} />;
 }
 
 export function ToggleInput({

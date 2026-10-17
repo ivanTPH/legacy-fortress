@@ -34,12 +34,12 @@
 .lf-v4-add-asset { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 36px; height: 36px; border-radius: var(--lf-radius-pill); background: var(--lf-ink); color: var(--lf-surface); text-decoration: none; transition: background-color 120ms ease-out; }
 .lf-v4-add-asset:hover { background: var(--lf-ink-hover); }
 .lf-v4-add-asset:focus-visible { outline: 2px solid var(--lf-surface); box-shadow: 0 0 0 4px var(--lf-interaction-focus); }
-.lf-v4-add-asset span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.lf-v4-add-asset > .lf-v4-add-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .lf-v4-add-document { position: relative; display: inline-flex; align-items: center; justify-content: center; flex: none; width: 36px; height: 36px; border: 1px solid var(--lf-border-input); border-radius: var(--lf-radius-pill); background: var(--lf-surface); color: var(--lf-ink); cursor: pointer; transition: background-color 120ms ease-out; }
 .lf-v4-add-document:hover { background: var(--lf-interaction-hover); }
 .lf-v4-add-document:active { background: var(--lf-interaction-pressed); }
 .lf-v4-add-document:focus-within { outline: 2px solid var(--lf-surface); box-shadow: 0 0 0 4px var(--lf-interaction-focus); }
-.lf-v4-add-document span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.lf-v4-add-document > .lf-v4-add-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .lf-v4-add-document input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 
 .lf-v3-icon-tile { display: inline-flex; align-items: center; justify-content: center; flex: none; background: var(--lf-tint); color: var(--lf-tint-icon); }
@@ -193,7 +193,7 @@ button.lf-v3-row-main:active, a.lf-v3-row-main:active { background: var(--lf-int
 
 @media (max-width: 767px) {
   .lf-v4-add-asset { width: auto; min-height: 44px; padding: 0 14px; gap: 6px; }
-  .lf-v4-add-asset span { position: static; width: auto; height: auto; overflow: visible; clip-path: none; font-size: var(--lf-type-button); font-weight: 600; }
+  .lf-v4-add-asset > .lf-v4-add-label { position: static; width: auto; height: auto; overflow: visible; clip-path: none; font-size: var(--lf-type-button); font-weight: 600; }
   .lf-v3-button { min-height: 44px; }
   .lf-v3-button--icon { width: 44px; height: 44px; }
   .lf-v3-page-header-main { align-items: flex-start; flex-direction: column; gap: var(--lf-space-16); }

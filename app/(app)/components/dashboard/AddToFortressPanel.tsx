@@ -2,17 +2,17 @@
 
 import { useViewerAccess } from "../../../../components/access/ViewerAccessContext";
 import { Card, RestrictedState, Row } from "../../../../components/ui/V3Primitives";
-import { FINANCE_CATEGORY_CHOICE } from "../../../../lib/vault/addRecordTypes";
+import { FINANCE_RECORD_CHOICES } from "../../../../lib/vault/addRecordTypes";
 
 type AddChoice = { label: string; description: string; href: string; icon: string };
 type AddGroup = { title: string; choices: AddChoice[] };
 
 const ADD_GROUPS: AddGroup[] = [
   {
-    title: "Money & property",
+    title: "Finances & property",
     choices: [
       { label: "Property", description: "Home, ownership and supporting records.", href: "/property?add=1", icon: "home" },
-      FINANCE_CATEGORY_CHOICE,
+      ...FINANCE_RECORD_CHOICES.map(({ label, description, href, icon }) => ({ label, description, href, icon })),
     ],
   },
   {

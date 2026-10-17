@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { Fragment, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   optionLabel,
@@ -11,7 +11,7 @@ import {
 } from "../../lib/categoryConfig";
 import MaskedField, { maskAllButLast } from "../ui/MaskedField";
 import ConfigDrivenAssetFields from "../forms/asset/ConfigDrivenAssetFields";
-import { FileDropzone, FormField } from "../forms/asset/AssetFormControls";
+import { FormField, NumberInput, RequiredIndicator, SelectInput, TextAreaInput, TextInput } from "../forms/asset/AssetFormControls";
 import { ActionIconButton } from "../ui/IconButton";
 import Icon from "../ui/Icon";
 import InfoTip from "../ui/InfoTip";
@@ -25,6 +25,7 @@ import {
   getAssetCategoryFormConfig,
   resolveConfiguredFieldValue,
   validateAssetFormValues,
+  type AssetCategoryFormConfig,
 } from "../../lib/assets/fieldDictionary";
 import {
   canonicalizeCategoryTypeValue,
@@ -97,7 +98,6 @@ import { supabase } from "../../lib/supabaseClient";
 import {
   DOCUMENT_UPLOAD_ACCEPT,
   DOCUMENT_UPLOAD_MIME_TYPES,
-  IMAGE_UPLOAD_ACCEPT,
   IMAGE_UPLOAD_MIME_TYPES,
   sanitizeFileName,
   validateUploadFile,
@@ -929,14 +929,14 @@ export default function UniversalRecordWorkspace({
     !editingId &&
     !isTrustedContacts &&
     !isWillsWorkspace &&
-    !isTrustsWorkspace &&
-    !isCanonicalTask;
+    !isTrustsWorkspace;
+  const financeTypeName = ({ bank: "bank account", pensions: "pension", investments: "investment", insurance: "insurance policy", debts: "debt" } as Record<string, string>)[categoryKey];
   const addLabel = isPossessions
     ? "Add possession"
     : isTrustedContacts
       ? "Add contact"
       : isBankCategory
-        ? "Add bank record"
+        ? "Add bank account"
         : isCanonicalBeneficiary
           ? "Add beneficiary"
         : isCanonicalExecutor
@@ -950,7 +950,7 @@ export default function UniversalRecordWorkspace({
         : isCanonicalProperty
           ? "Add property asset"
           : isFinanceSection
-            ? "Add record"
+            ? `Add ${financeTypeName || "record"}`
             : "Add record";
   const saveLabel = isPossessions
     ? "Save possession"
@@ -1692,9 +1692,14 @@ export default function UniversalRecordWorkspace({
       acceptedFiles.push(file);
     }
     setPendingDocumentFiles((prev) => [...prev, ...acceptedFiles]);
+    if (!pendingPhotoFile) {
+      const firstImage = acceptedFiles.find((file) => IMAGE_UPLOAD_MIME_TYPES.includes(file.type));
+      if (firstImage) setPendingPhotoFile(firstImage);
+    }
   }
 
   function removePendingDocumentFile(index: number) {
+    if (pendingDocumentFiles[index] === pendingPhotoFile) setPendingPhotoFile(null);
     setPendingDocumentFiles((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
   }
 
@@ -2704,6 +2709,7 @@ export default function UniversalRecordWorkspace({
 
       if (pendingDocumentFiles.length) {
         for (const pendingDocumentFile of pendingDocumentFiles) {
+          if (pendingDocumentFile === pendingPhotoFile) continue;
           const documentUpload = await uploadAttachmentAfterSave({
             userId: user.id,
             recordId,
@@ -4172,8 +4178,10 @@ export default function UniversalRecordWorkspace({
         role="region"
         aria-labelledby={`${createFormRegionId}-heading`}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
-          <h2 id={`${createFormRegionId}-heading`} style={{ margin: 0, fontSize: 17 }}>
+        <div className="lf-v4-form-header">
+          <div>
+            <button type="button" className="lf-v4-form-back" onClick={cancelForm}><Icon name="chevron_left" size={18} />{title}</button>
+            <h2 id={`${createFormRegionId}-heading`}>
             {editingId
               ? isTrustedContacts
                 ? "Edit contact"
@@ -4183,7 +4191,7 @@ export default function UniversalRecordWorkspace({
                     ? "Edit executor"
                     : isCanonicalTask
                       ? "Edit task"
-                  : "Edit record"
+                  : isFinanceSection ? `Edit ${financeTypeName || "record"}` : "Edit record"
               : isTrustedContacts
                 ? "Add new contact"
                 : isCanonicalBeneficiary
@@ -4192,15 +4200,11 @@ export default function UniversalRecordWorkspace({
                     ? "Add new executor"
                     : isCanonicalTask
                       ? "Add new task"
-                  : "Add new record"}
-          </h2>
-          {formVisible ? <button type="button" style={ghostBtn} onClick={cancelForm}>Cancel</button> : null}
-        </div>
-        {formVisible && !isTrustsWorkspace ? (
-          <div style={formConfidenceStyle}>
-            Securely stored in your vault. You can update this anytime.
+                  : addLabel}
+            </h2>
           </div>
-        ) : null}
+          <button type="button" className="lf-v4-form-close" onClick={cancelForm} aria-label="Close form" title="Close form"><Icon name="close" size={20} /></button>
+        </div>
 
         {!formVisible ? (
           <div style={{ display: "grid", gap: 10 }}>
@@ -4221,6 +4225,7 @@ export default function UniversalRecordWorkspace({
             categoryKey={categoryKey}
             form={form}
             setForm={setForm}
+            showValidation={Boolean(submitError)}
             taskRelationOptions={taskRelationOptions}
             taskExecutorOptions={taskExecutorOptions}
             taskBeneficiaryOptions={taskBeneficiaryOptions}
@@ -4515,48 +4520,6 @@ export default function UniversalRecordWorkspace({
                 <div>{submitError}</div>
               </div>
             ) : null}
-            {usesCanonicalAssets && !editingId ? (
-              <div className="lf-content-grid">
-                <FormField
-                  label={isCanonicalTask ? "Task image" : isCanonicalExecutor ? "Executor image" : isCanonicalBeneficiary ? "Beneficiary image" : isCanonicalProperty ? "Property photo" : isCanonicalBusiness ? "Business image" : isCanonicalDigital ? "Digital asset image" : "Photo or cheque image"}
-                  iconName="add_a_photo"
-                  helpText={
-                    isCanonicalTask
-                      ? "Optional image preview for the task card."
-                      : isCanonicalExecutor
-                      ? "Optional image preview for the executor card."
-                      : isCanonicalBeneficiary
-                      ? "Optional image preview for the beneficiary card."
-                      : isCanonicalProperty
-                      ? "Optional image preview for the property asset card."
-                      : isCanonicalBusiness
-                        ? "Optional image preview for the business asset card."
-                        : isCanonicalDigital
-                          ? "Optional image preview for the digital asset card."
-                        : "Optional image preview for the bank asset card."
-                  }
-                >
-                  <FileDropzone
-                    label={pendingPhotoFile ? "Replace image" : "Drop an image here"}
-                    accept={IMAGE_UPLOAD_ACCEPT}
-                    file={pendingPhotoFile}
-                    onFileSelect={(file) => {
-                      const validation = validateUploadFile(file, {
-                        allowedMimeTypes: IMAGE_UPLOAD_MIME_TYPES,
-                        maxBytes: 15 * 1024 * 1024,
-                      });
-                      if (!validation.ok) {
-                        setStatus(`${validation.error}. Allowed: JPG, PNG up to 15MB.`);
-                        return;
-                      }
-                      setPendingPhotoFile(file);
-                    }}
-                    onClear={() => setPendingPhotoFile(null)}
-                    disabled={saving}
-                  />
-                </FormField>
-              </div>
-            ) : null}
             {usesCanonicalAssets && hasStagedExtractionInput ? (
               <label style={confirmationCardStyle}>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontWeight: 700 }}>
@@ -4640,7 +4603,9 @@ export default function UniversalRecordWorkspace({
                 </span>
               </label>
             ) : null}
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <div className="lf-v4-form-footer">
+            <span className="lf-v4-form-security"><Icon name="lock" size={16} />Stored securely. Not shared with anyone.</span>
+            <div className="lf-v4-form-actions">
             {!showNarrativeNotes && !usesStructuredWorkspaceForm ? (
               <button type="button" style={ghostBtn} onClick={() => setShowNarrativeNotes(true)}>
                 <Icon name="add" size={16} />
@@ -4661,6 +4626,7 @@ export default function UniversalRecordWorkspace({
                 Delete
               </button>
             ) : null}
+            </div>
           </div>
           </div>
         ) : null}
@@ -4777,6 +4743,7 @@ function FinanceFields({
   categoryKey,
   form,
   setForm,
+  showValidation,
   taskRelationOptions = [],
   taskExecutorOptions = [],
   taskBeneficiaryOptions = [],
@@ -4785,10 +4752,12 @@ function FinanceFields({
   categoryKey: string;
   form: EditForm;
   setForm: (value: EditForm | ((prev: EditForm) => EditForm)) => void;
+  showValidation: boolean;
   taskRelationOptions?: Array<{ value: string; label: string }>;
   taskExecutorOptions?: Array<{ value: string; label: string }>;
   taskBeneficiaryOptions?: Array<{ value: string; label: string }>;
 }) {
+  const fieldErrors = (config: AssetCategoryFormConfig, values: Record<string, string>) => showValidation ? validateAssetFormValues(config, values) : {};
   if (sectionKey === "personal" && categoryKey === "tasks") {
     if (!TASK_FORM_CONFIG) {
       return <div style={{ color: "#b91c1c", fontSize: 13 }}>Task form configuration is unavailable.</div>;
@@ -4799,7 +4768,7 @@ function FinanceFields({
       executorOptions: taskExecutorOptions,
       beneficiaryOptions: taskBeneficiaryOptions,
     });
-    const taskErrors = validateAssetFormValues(taskConfig, taskValues);
+    const taskErrors = fieldErrors(taskConfig, taskValues);
 
     return (
       <div style={{ display: "grid", gap: 16 }}>
@@ -4843,7 +4812,7 @@ function FinanceFields({
     }
     const legalContactDefinition = getLegalLinkedContactDefinition(categoryKey);
     const identityValues = identityDocumentFormToConfigValues(form);
-    const identityErrors = validateAssetFormValues(IDENTITY_DOCUMENT_FORM_CONFIG, identityValues);
+    const identityErrors = fieldErrors(IDENTITY_DOCUMENT_FORM_CONFIG, identityValues);
 
     return (
       <div style={{ display: "grid", gap: 16 }}>
@@ -4886,19 +4855,17 @@ function FinanceFields({
       return <div style={{ color: "#b91c1c", fontSize: 13 }}>Digital form configuration is unavailable.</div>;
     }
     const digitalValues = digitalFormToConfigValues(form);
-    const digitalErrors = validateAssetFormValues(DIGITAL_FORM_CONFIG, digitalValues);
+    const digitalErrors = fieldErrors(DIGITAL_FORM_CONFIG, digitalValues);
 
     return (
-      <div className="lf-content-grid">
-        <ConfigDrivenAssetFields
+      <ConfigDrivenAssetFields
           config={DIGITAL_FORM_CONFIG}
           values={digitalValues}
           errors={digitalErrors}
           onChange={(key, value) => {
             setForm((prev) => applyDigitalConfigFieldChange(prev, key, value));
           }}
-        />
-      </div>
+      />
     );
   }
 
@@ -4907,7 +4874,7 @@ function FinanceFields({
       return <div style={{ color: "#b91c1c", fontSize: 13 }}>Social media form configuration is unavailable.</div>;
     }
     const socialValues = socialMediaFormToConfigValues(form);
-    const socialErrors = validateAssetFormValues(SOCIAL_MEDIA_FORM_CONFIG, socialValues);
+    const socialErrors = fieldErrors(SOCIAL_MEDIA_FORM_CONFIG, socialValues);
 
     return (
       <div style={{ display: "grid", gap: 16 }}>
@@ -4940,7 +4907,7 @@ function FinanceFields({
       return <div style={{ color: "#b91c1c", fontSize: 13 }}>Beneficiary form configuration is unavailable.</div>;
     }
     const beneficiaryValues = beneficiaryFormToConfigValues(form);
-    const beneficiaryErrors = validateAssetFormValues(BENEFICIARY_FORM_CONFIG, beneficiaryValues);
+    const beneficiaryErrors = fieldErrors(BENEFICIARY_FORM_CONFIG, beneficiaryValues);
 
     return (
       <div style={{ display: "grid", gap: 16 }}>
@@ -5003,7 +4970,7 @@ function FinanceFields({
       return <div style={{ color: "#b91c1c", fontSize: 13 }}>Executor form configuration is unavailable.</div>;
     }
     const executorValues = executorFormToConfigValues(form);
-    const executorErrors = validateAssetFormValues(EXECUTOR_FORM_CONFIG, executorValues);
+    const executorErrors = fieldErrors(EXECUTOR_FORM_CONFIG, executorValues);
 
     return (
       <div style={{ display: "grid", gap: 16 }}>
@@ -5056,19 +5023,17 @@ function FinanceFields({
       return <div style={{ color: "#b91c1c", fontSize: 13 }}>Business form configuration is unavailable.</div>;
     }
     const businessValues = businessFormToConfigValues(form);
-    const businessErrors = validateAssetFormValues(BUSINESS_FORM_CONFIG, businessValues);
+    const businessErrors = fieldErrors(BUSINESS_FORM_CONFIG, businessValues);
 
     return (
-      <div className="lf-content-grid">
-        <ConfigDrivenAssetFields
+      <ConfigDrivenAssetFields
           config={BUSINESS_FORM_CONFIG}
           values={businessValues}
           errors={businessErrors}
           onChange={(key, value) => {
             setForm((prev) => applyBusinessConfigFieldChange(prev, key, value));
           }}
-        />
-      </div>
+      />
     );
   }
 
@@ -5077,19 +5042,17 @@ function FinanceFields({
       return <div style={{ color: "#b91c1c", fontSize: 13 }}>Property form configuration is unavailable.</div>;
     }
     const propertyValues = propertyFormToConfigValues(form);
-    const propertyErrors = validateAssetFormValues(PROPERTY_FORM_CONFIG, propertyValues);
+    const propertyErrors = fieldErrors(PROPERTY_FORM_CONFIG, propertyValues);
 
     return (
-      <div className="lf-content-grid">
-        <ConfigDrivenAssetFields
+      <ConfigDrivenAssetFields
           config={PROPERTY_FORM_CONFIG}
           values={propertyValues}
           errors={propertyErrors}
           onChange={(key, value) => {
             setForm((prev) => applyPropertyConfigFieldChange(prev, key, value));
           }}
-        />
-      </div>
+      />
     );
   }
 
@@ -5098,109 +5061,111 @@ function FinanceFields({
       return <div style={{ color: "#b91c1c", fontSize: 13 }}>Bank form configuration is unavailable.</div>;
     }
     const bankValues = bankFormToConfigValues(form);
-    const bankErrors = validateAssetFormValues(BANK_FORM_CONFIG, bankValues);
+    const bankErrors = fieldErrors(BANK_FORM_CONFIG, bankValues);
 
     return (
-      <div className="lf-content-grid">
-        <ConfigDrivenAssetFields
+      <ConfigDrivenAssetFields
           config={BANK_FORM_CONFIG}
           values={bankValues}
           errors={bankErrors}
           onChange={(key, value) => {
             setForm((prev) => applyBankConfigFieldChange(prev, key, value));
           }}
-        />
-      </div>
+      />
     );
   }
 
   if (categoryKey === "investments") {
     return (
-      <div className="lf-content-grid">
-        <FieldInput label="Provider / platform name" value={form.investment_provider} onChange={(value) => setForm((prev) => ({ ...prev, investment_provider: value }))} />
-        <FieldSelect label="Investment type" value={form.investment_type} options={INVESTMENT_SELECT_OPTIONS} onChange={(value) => setForm((prev) => ({ ...prev, investment_type: value }))} />
-        <FieldInput label="Account/reference number" value={form.investment_reference} onChange={(value) => setForm((prev) => ({ ...prev, investment_reference: value }))} />
-        <FieldInput label="Estimated value" type="number" value={form.value_major} onChange={(value) => setForm((prev) => ({ ...prev, value_major: value }))} />
-        <FieldSelect label="Currency" value={form.currency_code} options={CURRENCY_SELECT_OPTIONS} onChange={(value) => setForm((prev) => ({ ...prev, currency_code: value.toUpperCase() }))} />
-        <FieldInput label="Adviser name" value={form.adviser_name} onChange={(value) => setForm((prev) => ({ ...prev, adviser_name: value }))} />
-        <FieldInput label="Adviser company" value={form.adviser_company} onChange={(value) => setForm((prev) => ({ ...prev, adviser_company: value }))} />
-        <FieldInput label="Adviser phone" value={form.adviser_phone} onChange={(value) => setForm((prev) => ({ ...prev, adviser_phone: value }))} />
-        <FieldInput label="Adviser email" value={form.adviser_email} onChange={(value) => setForm((prev) => ({ ...prev, adviser_email: value }))} />
-        <FieldInput label="Online portal URL" value={form.investment_portal_url} onChange={(value) => setForm((prev) => ({ ...prev, investment_portal_url: value }))} />
-        <FieldSelect label="Ownership type" value={form.ownership_type} options={OWNERSHIP_TYPE_OPTIONS} onChange={(value) => setForm((prev) => ({ ...prev, ownership_type: value }))} />
-        <FieldInput label="Beneficiary notes" value={form.beneficiary_notes} onChange={(value) => setForm((prev) => ({ ...prev, beneficiary_notes: value }))} />
-        <label style={fieldStyle}>
-          <span style={labelStyle}>Notes</span>
-          <textarea style={textAreaStyle} value={form.notes} onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))} />
-        </label>
-      </div>
+      <FinanceFormLayout required={<>
+        <FieldInput label="Provider / platform name" required value={form.investment_provider} onChange={(value) => setForm((prev) => ({ ...prev, investment_provider: value }))} />
+        <FieldSelect label="Investment type" required value={form.investment_type} options={INVESTMENT_SELECT_OPTIONS} onChange={(value) => setForm((prev) => ({ ...prev, investment_type: value }))} />
+        <CurrencyAmountField label="Estimated value" value={form.value_major} currency={form.currency_code} onValueChange={(value) => setForm((prev) => ({ ...prev, value_major: value }))} onCurrencyChange={(value) => setForm((prev) => ({ ...prev, currency_code: value }))} />
+      </>} optional={[
+        { title: "Account details", description: "Reference, ownership and beneficiary", icon: "account_balance", fields: <>
+          <FieldInput label="Account/reference number" value={form.investment_reference} onChange={(value) => setForm((prev) => ({ ...prev, investment_reference: value }))} />
+          <FieldSelect label="Ownership type" value={form.ownership_type} options={OWNERSHIP_TYPE_OPTIONS} onChange={(value) => setForm((prev) => ({ ...prev, ownership_type: value }))} />
+          <div className="lf-v4-form-span"><FieldInput label="Beneficiary notes" value={form.beneficiary_notes} onChange={(value) => setForm((prev) => ({ ...prev, beneficiary_notes: value }))} /></div>
+        </> },
+        { title: "Adviser and online access", description: "Name, contact and portal", icon: "support_agent", fields: <>
+          <FieldInput label="Adviser name" value={form.adviser_name} onChange={(value) => setForm((prev) => ({ ...prev, adviser_name: value }))} />
+          <FieldInput label="Adviser company" value={form.adviser_company} onChange={(value) => setForm((prev) => ({ ...prev, adviser_company: value }))} />
+          <FieldInput label="Adviser phone" type="tel" value={form.adviser_phone} onChange={(value) => setForm((prev) => ({ ...prev, adviser_phone: value }))} />
+          <FieldInput label="Adviser email" type="email" value={form.adviser_email} onChange={(value) => setForm((prev) => ({ ...prev, adviser_email: value }))} />
+          <div className="lf-v4-form-span"><FieldInput label="Online portal URL" value={form.investment_portal_url} onChange={(value) => setForm((prev) => ({ ...prev, investment_portal_url: value }))} /></div>
+        </> },
+        { title: "Notes", description: "Additional context", icon: "description", fields: <div className="lf-v4-form-span"><FieldTextArea label="Notes" value={form.notes} onChange={(value) => setForm((prev) => ({ ...prev, notes: value }))} /></div> },
+      ]} />
     );
   }
 
   if (categoryKey === "pensions") {
     return (
-      <div className="lf-content-grid">
-        <FieldInput label="Pension provider" value={form.pension_provider} onChange={(value) => setForm((prev) => ({ ...prev, pension_provider: value }))} />
-        <FieldSelect label="Pension type" value={form.pension_type} options={PENSION_SELECT_OPTIONS} onChange={(value) => setForm((prev) => ({ ...prev, pension_type: value }))} />
-        <FieldInput label="Policy/member number" value={form.pension_member_number} onChange={(value) => setForm((prev) => ({ ...prev, pension_member_number: value }))} />
-        <FieldInput label="Estimated value" type="number" value={form.value_major} onChange={(value) => setForm((prev) => ({ ...prev, value_major: value }))} />
-        <FieldSelect label="Currency" value={form.currency_code} options={CURRENCY_SELECT_OPTIONS} onChange={(value) => setForm((prev) => ({ ...prev, currency_code: value.toUpperCase() }))} />
-        <FieldInput label="Employer name" value={form.employer_name} onChange={(value) => setForm((prev) => ({ ...prev, employer_name: value }))} />
-        <FieldInput label="Scheme name" value={form.scheme_name} onChange={(value) => setForm((prev) => ({ ...prev, scheme_name: value }))} />
-        <FieldInput label="Provider phone" value={form.provider_phone} onChange={(value) => setForm((prev) => ({ ...prev, provider_phone: value }))} />
-        <FieldInput label="Provider email" value={form.provider_email} onChange={(value) => setForm((prev) => ({ ...prev, provider_email: value }))} />
-        <FieldInput label="Provider address" value={form.provider_address} onChange={(value) => setForm((prev) => ({ ...prev, provider_address: value }))} />
-        <FieldInput label="Online portal URL" value={form.pension_portal_url} onChange={(value) => setForm((prev) => ({ ...prev, pension_portal_url: value }))} />
-        <FieldInput label="Beneficiary / nominated person" value={form.pension_beneficiary} onChange={(value) => setForm((prev) => ({ ...prev, pension_beneficiary: value }))} />
-        <label style={fieldStyle}>
-          <span style={labelStyle}>Notes</span>
-          <textarea style={textAreaStyle} value={form.notes} onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))} />
-        </label>
-      </div>
+      <FinanceFormLayout required={<>
+        <FieldInput label="Pension provider" required value={form.pension_provider} onChange={(value) => setForm((prev) => ({ ...prev, pension_provider: value }))} />
+        <FieldSelect label="Pension type" required value={form.pension_type} options={PENSION_SELECT_OPTIONS} onChange={(value) => setForm((prev) => ({ ...prev, pension_type: value }))} />
+        <CurrencyAmountField label="Estimated value" value={form.value_major} currency={form.currency_code} onValueChange={(value) => setForm((prev) => ({ ...prev, value_major: value }))} onCurrencyChange={(value) => setForm((prev) => ({ ...prev, currency_code: value }))} />
+      </>} optional={[
+        { title: "Scheme details", description: "Membership, employer and beneficiary", icon: "savings", fields: <>
+          <FieldInput label="Policy/member number" value={form.pension_member_number} onChange={(value) => setForm((prev) => ({ ...prev, pension_member_number: value }))} />
+          <FieldInput label="Employer name" value={form.employer_name} onChange={(value) => setForm((prev) => ({ ...prev, employer_name: value }))} />
+          <FieldInput label="Scheme name" value={form.scheme_name} onChange={(value) => setForm((prev) => ({ ...prev, scheme_name: value }))} />
+          <FieldInput label="Beneficiary / nominated person" value={form.pension_beneficiary} onChange={(value) => setForm((prev) => ({ ...prev, pension_beneficiary: value }))} />
+        </> },
+        { title: "Provider contact", description: "Phone, email, address and portal", icon: "support_agent", fields: <>
+          <FieldInput label="Provider phone" type="tel" value={form.provider_phone} onChange={(value) => setForm((prev) => ({ ...prev, provider_phone: value }))} />
+          <FieldInput label="Provider email" type="email" value={form.provider_email} onChange={(value) => setForm((prev) => ({ ...prev, provider_email: value }))} />
+          <FieldInput label="Provider address" value={form.provider_address} onChange={(value) => setForm((prev) => ({ ...prev, provider_address: value }))} />
+          <FieldInput label="Online portal URL" value={form.pension_portal_url} onChange={(value) => setForm((prev) => ({ ...prev, pension_portal_url: value }))} />
+        </> },
+        { title: "Notes", description: "Additional context", icon: "description", fields: <div className="lf-v4-form-span"><FieldTextArea label="Notes" value={form.notes} onChange={(value) => setForm((prev) => ({ ...prev, notes: value }))} /></div> },
+      ]} />
     );
   }
 
   if (categoryKey === "insurance") {
     return (
-      <div className="lf-content-grid">
-        <FieldInput label="Insurer name" value={form.insurer_name} onChange={(value) => setForm((prev) => ({ ...prev, insurer_name: value }))} />
-        <FieldSelect label="Policy type" value={form.policy_type} options={INSURANCE_SELECT_OPTIONS} onChange={(value) => setForm((prev) => ({ ...prev, policy_type: value }))} />
-        <FieldInput label="Policy number" value={form.policy_number} onChange={(value) => setForm((prev) => ({ ...prev, policy_number: value }))} />
-        <FieldInput label="Insured person/item" value={form.insured_item} onChange={(value) => setForm((prev) => ({ ...prev, insured_item: value }))} />
-        <FieldInput label="Cover amount" type="number" value={form.cover_amount} onChange={(value) => setForm((prev) => ({ ...prev, cover_amount: value }))} />
-        <FieldSelect label="Currency" value={form.currency_code} options={CURRENCY_SELECT_OPTIONS} onChange={(value) => setForm((prev) => ({ ...prev, currency_code: value.toUpperCase() }))} />
-        <FieldInput label="Renewal date" type="date" value={form.renewal_date} onChange={(value) => setForm((prev) => ({ ...prev, renewal_date: value }))} />
-        <FieldInput label="Insurer phone" value={form.insurer_phone} onChange={(value) => setForm((prev) => ({ ...prev, insurer_phone: value }))} />
-        <FieldInput label="Insurer email" value={form.insurer_email} onChange={(value) => setForm((prev) => ({ ...prev, insurer_email: value }))} />
-        <FieldInput label="Broker/adviser name" value={form.broker_name} onChange={(value) => setForm((prev) => ({ ...prev, broker_name: value }))} />
-        <FieldInput label="Broker/adviser contact" value={form.broker_contact} onChange={(value) => setForm((prev) => ({ ...prev, broker_contact: value }))} />
-        <label style={fieldStyle}>
-          <span style={labelStyle}>Notes</span>
-          <textarea style={textAreaStyle} value={form.notes} onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))} />
-        </label>
-      </div>
+      <FinanceFormLayout required={<>
+        <FieldInput label="Insurer name" required value={form.insurer_name} onChange={(value) => setForm((prev) => ({ ...prev, insurer_name: value }))} />
+        <FieldSelect label="Policy type" required value={form.policy_type} options={INSURANCE_SELECT_OPTIONS} onChange={(value) => setForm((prev) => ({ ...prev, policy_type: value }))} />
+        <CurrencyAmountField label="Cover amount" value={form.cover_amount} currency={form.currency_code} onValueChange={(value) => setForm((prev) => ({ ...prev, cover_amount: value }))} onCurrencyChange={(value) => setForm((prev) => ({ ...prev, currency_code: value }))} />
+      </>} optional={[
+        { title: "Policy details", description: "Number, insured item and renewal", icon: "health_and_safety", fields: <>
+          <FieldInput label="Policy number" value={form.policy_number} onChange={(value) => setForm((prev) => ({ ...prev, policy_number: value }))} />
+          <FieldInput label="Insured person/item" value={form.insured_item} onChange={(value) => setForm((prev) => ({ ...prev, insured_item: value }))} />
+          <FieldInput label="Renewal date" type="date" value={form.renewal_date} onChange={(value) => setForm((prev) => ({ ...prev, renewal_date: value }))} />
+        </> },
+        { title: "Contacts", description: "Insurer and broker details", icon: "support_agent", fields: <>
+          <FieldInput label="Insurer phone" type="tel" value={form.insurer_phone} onChange={(value) => setForm((prev) => ({ ...prev, insurer_phone: value }))} />
+          <FieldInput label="Insurer email" type="email" value={form.insurer_email} onChange={(value) => setForm((prev) => ({ ...prev, insurer_email: value }))} />
+          <FieldInput label="Broker/adviser name" value={form.broker_name} onChange={(value) => setForm((prev) => ({ ...prev, broker_name: value }))} />
+          <FieldInput label="Broker/adviser contact" value={form.broker_contact} onChange={(value) => setForm((prev) => ({ ...prev, broker_contact: value }))} />
+        </> },
+        { title: "Notes", description: "Additional context", icon: "description", fields: <div className="lf-v4-form-span"><FieldTextArea label="Notes" value={form.notes} onChange={(value) => setForm((prev) => ({ ...prev, notes: value }))} /></div> },
+      ]} />
     );
   }
 
   return (
-    <div className="lf-content-grid">
-      <FieldInput label="Creditor name" value={form.creditor_name} onChange={(value) => setForm((prev) => ({ ...prev, creditor_name: value }))} />
-      <FieldSelect label="Debt type" value={form.debt_type} options={DEBT_SELECT_OPTIONS} onChange={(value) => setForm((prev) => ({ ...prev, debt_type: value }))} />
-      <FieldInput label="Account/reference number" value={form.debt_reference} onChange={(value) => setForm((prev) => ({ ...prev, debt_reference: value }))} />
-      <FieldInput label="Outstanding balance" type="number" value={form.outstanding_balance} onChange={(value) => setForm((prev) => ({ ...prev, outstanding_balance: value }))} />
-      <FieldSelect label="Currency" value={form.currency_code} options={CURRENCY_SELECT_OPTIONS} onChange={(value) => setForm((prev) => ({ ...prev, currency_code: value.toUpperCase() }))} />
-      <FieldInput label="Debtor name" value={form.debtor_name} onChange={(value) => setForm((prev) => ({ ...prev, debtor_name: value }))} />
-      <FieldInput label="Repayment amount" type="number" value={form.repayment_amount} onChange={(value) => setForm((prev) => ({ ...prev, repayment_amount: value }))} />
-      <FieldInput label="Repayment frequency" value={form.repayment_frequency} onChange={(value) => setForm((prev) => ({ ...prev, repayment_frequency: value }))} />
-      <FieldInput label="Interest rate" type="number" value={form.interest_rate} onChange={(value) => setForm((prev) => ({ ...prev, interest_rate: value }))} />
-      <FieldInput label="Creditor phone" value={form.creditor_phone} onChange={(value) => setForm((prev) => ({ ...prev, creditor_phone: value }))} />
-      <FieldInput label="Creditor email" value={form.creditor_email} onChange={(value) => setForm((prev) => ({ ...prev, creditor_email: value }))} />
-      <FieldInput label="Creditor address" value={form.creditor_address} onChange={(value) => setForm((prev) => ({ ...prev, creditor_address: value }))} />
-      <label style={fieldStyle}>
-        <span style={labelStyle}>Notes</span>
-        <textarea style={textAreaStyle} value={form.notes} onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))} />
-      </label>
-    </div>
+    <FinanceFormLayout required={<>
+      <FieldInput label="Creditor name" required value={form.creditor_name} onChange={(value) => setForm((prev) => ({ ...prev, creditor_name: value }))} />
+      <FieldSelect label="Debt type" required value={form.debt_type} options={DEBT_SELECT_OPTIONS} onChange={(value) => setForm((prev) => ({ ...prev, debt_type: value }))} />
+      <CurrencyAmountField label="Outstanding balance" value={form.outstanding_balance} currency={form.currency_code} onValueChange={(value) => setForm((prev) => ({ ...prev, outstanding_balance: value }))} onCurrencyChange={(value) => setForm((prev) => ({ ...prev, currency_code: value }))} />
+    </>} optional={[
+      { title: "Debt details", description: "Reference, debtor and repayment", icon: "credit_card", fields: <>
+        <FieldInput label="Account/reference number" value={form.debt_reference} onChange={(value) => setForm((prev) => ({ ...prev, debt_reference: value }))} />
+        <FieldInput label="Debtor name" value={form.debtor_name} onChange={(value) => setForm((prev) => ({ ...prev, debtor_name: value }))} />
+        <FieldInput label="Repayment amount" type="number" value={form.repayment_amount} onChange={(value) => setForm((prev) => ({ ...prev, repayment_amount: value }))} />
+        <FieldInput label="Repayment frequency" value={form.repayment_frequency} onChange={(value) => setForm((prev) => ({ ...prev, repayment_frequency: value }))} />
+        <FieldInput label="Interest rate" type="number" value={form.interest_rate} onChange={(value) => setForm((prev) => ({ ...prev, interest_rate: value }))} />
+      </> },
+      { title: "Creditor contact", description: "Phone, email and address", icon: "support_agent", fields: <>
+        <FieldInput label="Creditor phone" type="tel" value={form.creditor_phone} onChange={(value) => setForm((prev) => ({ ...prev, creditor_phone: value }))} />
+        <FieldInput label="Creditor email" type="email" value={form.creditor_email} onChange={(value) => setForm((prev) => ({ ...prev, creditor_email: value }))} />
+        <FieldInput label="Creditor address" value={form.creditor_address} onChange={(value) => setForm((prev) => ({ ...prev, creditor_address: value }))} />
+      </> },
+      { title: "Notes", description: "Additional context", icon: "description", fields: <div className="lf-v4-form-span"><FieldTextArea label="Notes" value={form.notes} onChange={(value) => setForm((prev) => ({ ...prev, notes: value }))} /></div> },
+    ]} />
   );
 }
 
@@ -5210,21 +5175,19 @@ function FieldInput({
   value,
   onChange,
   type = "text",
+  required = false,
 }: {
   label: string;
   iconName?: string;
   value: string;
   onChange: (value: string) => void;
   type?: "text" | "number" | "date" | "email" | "tel";
+  required?: boolean;
 }) {
   return (
-    <label style={fieldStyle}>
-      <span style={labelStyle}>
-        {iconName ? <Icon name={iconName} size={16} /> : null}
-        {label}
-      </span>
-      <input type={type} style={inputStyle} value={value} onChange={(event) => onChange(event.target.value)} />
-    </label>
+    <FormField label={label} iconName={iconName} required={required}>
+      {type === "number" ? <NumberInput value={value} onChange={onChange} /> : <TextInput type={type} value={value} onChange={onChange} />}
+    </FormField>
   );
 }
 
@@ -5234,28 +5197,71 @@ function FieldSelect({
   value,
   options,
   onChange,
+  required = false,
 }: {
   label: string;
   iconName?: string;
   value: string;
   options: Array<{ value: string; label: string }>;
   onChange: (value: string) => void;
+  required?: boolean;
 }) {
   return (
-    <label style={fieldStyle}>
-      <span style={labelStyle}>
-        {iconName ? <Icon name={iconName} size={16} /> : null}
-        {label}
-      </span>
-      <select style={inputStyle} value={value} onChange={(event) => onChange(event.target.value)} required>
-        {options.map((option) => (
-          <option key={`${label}-${option.value || "empty"}`} value={option.value} disabled={!option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>
+    <FormField label={label} iconName={iconName} required={required}>
+      <SelectInput value={value} options={options} onChange={onChange} required={required} />
+    </FormField>
   );
+}
+
+function FieldTextArea({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return <FormField label={label}><TextAreaInput value={value} onChange={onChange} /></FormField>;
+}
+
+function CurrencyAmountField({
+  label,
+  value,
+  currency,
+  onValueChange,
+  onCurrencyChange,
+}: {
+  label: string;
+  value: string;
+  currency: string;
+  onValueChange: (value: string) => void;
+  onCurrencyChange: (value: string) => void;
+}) {
+  const inputId = useId();
+  return <div className="lf-v4-form-field">
+    <label htmlFor={inputId} style={labelStyle}>{label}<RequiredIndicator /></label>
+    <div className="lf-v4-currency-amount">
+      <span className="lf-v4-currency-prefix">
+        <select aria-label={`${label} currency`} value={currency} onChange={(event) => onCurrencyChange(event.target.value)}>
+          {CURRENCY_SELECT_OPTIONS.filter((option) => option.value).map((option) => <option key={option.value} value={option.value}>{option.value}</option>)}
+        </select>
+        <Icon name="expand_more" size={16} />
+      </span>
+      <input id={inputId} aria-label={label} type="number" inputMode="decimal" value={value} onChange={(event) => onValueChange(event.target.value)} />
+    </div>
+  </div>;
+}
+
+function FinanceFormLayout({
+  required,
+  optional,
+}: {
+  required: ReactNode;
+  optional: Array<{ title: string; description: string; icon: string; fields: ReactNode }>;
+}) {
+  return <div className="lf-v4-form-sections">
+    <section className="lf-v4-required-block" aria-label="Required fields">
+      <h3>Required</h3>
+      <div className="lf-v4-form-grid">{required}</div>
+    </section>
+    {optional.map((group) => <details className="lf-v4-optional-group" key={group.title}>
+      <summary><Icon name={group.icon} size={20} /><span><strong>{group.title}</strong><small>Optional · {group.description}</small></span><Icon name="expand_more" size={20} /></summary>
+      <div className="lf-v4-form-grid">{group.fields}</div>
+    </details>)}
+  </div>;
 }
 
 function FormSection({
@@ -7174,12 +7180,6 @@ const emptyStateStyle: CSSProperties = {
   padding: 16,
   display: "grid",
   gap: 6,
-  fontSize: 13,
-  lineHeight: 1.45,
-};
-
-const formConfidenceStyle: CSSProperties = {
-  color: "#64748b",
   fontSize: 13,
   lineHeight: 1.45,
 };

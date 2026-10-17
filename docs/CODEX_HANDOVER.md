@@ -541,3 +541,12 @@ Date: 2026-10-13.
 - At 402px, the local browser measurement reports `scrollWidth=402`, bottom navigation top `800px`, last content bottom `689.5px` at the page end, and no overlap. A geometry sweep at 320, 375, 390, 402, 430, 768, and 1280px reported zero viewport-overflow failures across Dashboard, Finances, Action Centre, People, Settings, and record-detail routes.
 - Local browser smoke remains unauthenticated because the isolated runtime has no Supabase URL; it is geometry evidence only. Real iPhone/WebKit and authenticated hosted acceptance were not run.
 - No Auth, RLS, grant, invitation, IDV, estate, probate, admin, production, or staging deployment behavior changed.
+
+## V4 visual acceptance correction branch
+
+Date: 2026-10-17. Branch: `fix/v4-visual-acceptance`, based on deployed staging `5066c552` in isolated `/private/tmp/legacy-fortress-v4-visual`; owner worktree untouched.
+
+- Fixed shared Add Asset/`note_add` icon hiding, shared select chevron position, required-first two-column record forms, collapsed optional fields, one Cancel action, and a single document/photo upload area. The first image still uses the existing photo attachment path.
+- Made `/add` finance choices open their forms directly. People & Access now separates connection, identity and active record access; shows named records, adds revoke confirmation and request filters, and presents Sharing as an owner-only record-by-person matrix. Record toggles are disabled while permissions save to avoid overwriting a second edit.
+- Authenticated local Chrome desktop and WebKit mobile visual journeys passed before the final matrix and mobile CSS changes. Focused desktop/mobile permission edit and revoke journeys passed after the save fix; wrong-user denial passed in the same local synthetic run. The owner stopped further browser execution, so the final matrix/mobile spacing still needs owner visual review.
+- Final TypeScript and production build passed. Targeted ESLint passed with warnings; repository-wide lint still has pre-existing errors in the copied design HTML support files. Focused source checks pass after updating assertions for V4 currency and named-record UI. No hosted environment was changed.

@@ -103,6 +103,7 @@ export default function AccessRequestsWorkspace({ embedded = false, onOpenPerson
   const [savingRequestId, setSavingRequestId] = useState("");
   const [uploading, setUploading] = useState(false);
   const [decision, setDecision] = useState<OwnerDecision | null>(null);
+  const [requestFilter, setRequestFilter] = useState<"all" | "pending" | "approved" | "declined" | "history">("all");
   const confirmationRef = useRef<HTMLDialogElement>(null);
   const requestTriggerRef = useRef<HTMLElement | null>(null);
   const isLinkedRequester = viewer.mode === "linked";
@@ -166,6 +167,11 @@ export default function AccessRequestsWorkspace({ embedded = false, onOpenPerson
   );
   const pendingOwnerRequests = ownerAccessRequests.filter((item) => ["pending", "submitted"].includes(item.request_status));
   const previousOwnerRequests = ownerAccessRequests.filter((item) => !["pending", "submitted"].includes(item.request_status));
+  const filteredOwnerRequests = ownerAccessRequests.filter((item) => requestFilter === "all"
+    || (requestFilter === "pending" && ["pending", "submitted"].includes(item.request_status))
+    || (requestFilter === "approved" && item.request_status === "approved")
+    || (requestFilter === "declined" && ["rejected", "declined"].includes(item.request_status))
+    || (requestFilter === "history" && !["pending", "submitted"].includes(item.request_status)));
   const selectedRequest = ownerAccessRequests.find((item) => item.id === selectedRequestId) ?? null;
   const deathCertificateRequests = useMemo(
     () => requests.filter((item) => item.request_type === "death_certificate"),
@@ -373,11 +379,13 @@ export default function AccessRequestsWorkspace({ embedded = false, onOpenPerson
 
     return <section className="lf-pa-requests">
       {status ? <Banner tone={status.startsWith("Could not") || status.startsWith("This request") ? "danger" : "success"}>{status}</Banner> : null}
-      <section aria-labelledby="pa-pending-heading">
+      <div className="lf-pa-request-filters" role="group" aria-label="Filter access requests">{([[
+        "all", "All"], ["pending", "Pending"], ["approved", "Approved"], ["declined", "Declined"], ["history", "History"]] as const).map(([key, label]) => <button key={key} type="button" aria-pressed={requestFilter === key} onClick={() => setRequestFilter(key)}>{label}</button>)}</div>
+      {requestFilter === "all" ? <section aria-labelledby="pa-pending-heading">
         <h2 id="pa-pending-heading">Awaiting your decision{pendingOwnerRequests.length ? ` · ${pendingOwnerRequests.length}` : ""}</h2>
         {loading ? <p role="status">Loading requests…</p> : pendingOwnerRequests.length ? <div className="lf-pa-request-list">{pendingOwnerRequests.map(renderRequest)}</div> : <EmptyState icon="inbox" title="No requests waiting" description="New access requests will appear here." />}
-      </section>
-      {previousOwnerRequests.length ? <details className="lf-pa-previous"><summary>Previous decisions · {previousOwnerRequests.length}</summary><div className="lf-pa-request-list">{previousOwnerRequests.map(renderRequest)}</div></details> : null}
+      </section> : <section aria-label={`${requestFilter} access requests`}>{loading ? <p role="status">Loading requests…</p> : filteredOwnerRequests.length ? <div className="lf-pa-request-list">{filteredOwnerRequests.map(renderRequest)}</div> : <EmptyState icon="inbox" title={`No ${requestFilter} requests`} description="Requests matching this filter will appear here." />}</section>}
+      {requestFilter === "all" && previousOwnerRequests.length ? <details className="lf-pa-previous"><summary>Previous decisions · {previousOwnerRequests.length}</summary><div className="lf-pa-request-list">{previousOwnerRequests.map(renderRequest)}</div></details> : null}
       <details className="lf-access-request-guidance"><summary>How access requests work</summary><p>A request is reviewed here. Record sharing is changed separately through the person&apos;s selected records. Death certificate evidence is reviewed by application administrators.</p></details>
       <section className="lf-pa-escalation"><Icon name="lock" size={20} /><div><h2>Death certificate escalation</h2><p>Invited executors or attorneys submit evidence from their linked view. Application administrators review it; submitting evidence does not grant access.</p></div></section>
       {!loading && selectedRequestId && !selectedRequest ? <Banner tone="warning">This request is not available in your current account.</Banner> : null}

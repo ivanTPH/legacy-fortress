@@ -441,11 +441,23 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
     }
     return map;
   }, [contacts, roleFilter, search]);
+  const sharingPeople = useMemo(() => {
+    if (!accessByContact || !sharingResources) return [];
+    const knownResources = new Set(sharingResources.map((resource) => resource.key));
+    return contacts.filter((contact) => {
+      const summary = accessByContact[contact.id] ?? (contact.linked_user_id ? accessByContact[contact.linked_user_id] : undefined);
+      return summary?.recordKeys.some((key) => knownResources.has(key));
+    });
+  }, [accessByContact, contacts, sharingResources]);
   const sharingGroups = useMemo(() => {
     const groups = new Map<string, SharingResource[]>();
-    for (const resource of sharingResources ?? []) groups.set(resource.sectionKey, [...(groups.get(resource.sectionKey) ?? []), resource]);
+    const selected = new Set(sharingPeople.flatMap((contact) => {
+      const summary = accessByContact?.[contact.id] ?? (contact.linked_user_id ? accessByContact?.[contact.linked_user_id] : undefined);
+      return summary?.recordKeys ?? [];
+    }));
+    for (const resource of sharingResources ?? []) if (selected.has(resource.key)) groups.set(resource.sectionKey, [...(groups.get(resource.sectionKey) ?? []), resource]);
     return [...groups.entries()];
-  }, [sharingResources]);
+  }, [accessByContact, sharingPeople, sharingResources]);
 
   const selectedContactId = String(searchParams.get("contact") ?? "").trim();
   const selectedGroup = normalizeContactGroupKey(searchParams.get("group"));
@@ -796,17 +808,17 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
         </div>
       ) : null}
       {!loading && sharingView ? <section className="lf-pa-sharing" aria-label="Record sharing overview">
-        <p>Each row shows who can currently see that record. Invitation and identity verification alone never share records. New records are not shared automatically.</p>
-        {accessByContact === null || sharingError ? <span role="status">Sharing details are unavailable right now.</span> : sharingResources === null ? <span role="status">Loading record sharing…</span> : !sharingGroups.length ? <EmptyState icon="visibility_off" title="No records to share yet" description="Add a record to your Vault, then choose who can see it." /> : sharingGroups.map(([sectionKey, resources]) => <section key={sectionKey} className="lf-pa-sharing-group" aria-label={accessSectionLabel(sectionKey)}>
-          <h2>{accessSectionLabel(sectionKey)}</h2>
-          {resources.map((resource) => {
-            const people = contacts.filter((contact) => {
-              const summary = accessByContact[contact.id] ?? (contact.linked_user_id ? accessByContact[contact.linked_user_id] : undefined);
-              return Boolean(summary?.recordKeys.includes(resource.key) && resolveOwnerAccessEligibility({ invitationStatus: contact.invite_status, activationStatus: summary.activationStatus, linkedUserId: summary.linkedUserId, assignedRole: contact.contact_role }) === "eligible");
-            });
-            return <div key={resource.key} className="lf-pa-sharing-record"><strong>{resource.label}</strong><div className="lf-pa-sharing-people">{people.length ? people.map((contact) => <span key={contact.id} className="lf-pa-sharing-person"><Icon name="check" size={16} /><span>{contact.full_name || "Unnamed person"}</span><Link href={`/people-access?view=people&contact=${encodeURIComponent(contact.id)}&access=1`}>Edit access</Link></span>) : <span className="lf-pa-sharing-none">— No one has access</span>}</div></div>;
-          })}
-        </section>)}
+        <p>Selected records appear below. A check means the person can currently view the record; a pending status means selection alone has not unlocked access. New records are never shared automatically.</p>
+        {accessByContact === null || sharingError ? <span role="status">Sharing details are unavailable right now.</span> : sharingResources === null ? <span role="status">Loading record sharing…</span> : !sharingGroups.length ? <EmptyState icon="visibility_off" title="No records selected for sharing" description="Choose a person and grant access to an individual record when you are ready." /> : <div className="lf-pa-sharing-scroll" tabIndex={0} aria-label="Record sharing matrix, scroll horizontally for more people"><div className="lf-pa-sharing-matrix" role="table" aria-label="Who can see each record" style={{ gridTemplateColumns: `minmax(220px, 1fr) repeat(${sharingPeople.length}, minmax(120px, 140px))`, minWidth: 220 + sharingPeople.length * 120 }}>
+          <div className="lf-pa-sharing-matrix-row lf-pa-sharing-matrix-head" role="row" style={{ display: "contents" }}><span role="columnheader">Record</span>{sharingPeople.map((contact) => <span role="columnheader" key={contact.id}><strong>{contact.full_name || "Unnamed person"}</strong><Link href={`/people-access?view=people&contact=${encodeURIComponent(contact.id)}&access=1`}>Edit</Link></span>)}</div>
+          {sharingGroups.map(([sectionKey, resources]) => <div key={sectionKey} role="rowgroup" style={{ display: "contents" }}><h2 className="lf-pa-sharing-matrix-section" style={{ gridColumn: `1 / span ${sharingPeople.length + 1}` }}>{accessSectionLabel(sectionKey)}</h2>{resources.map((resource) => <div key={resource.key} className="lf-pa-sharing-record" role="row" style={{ display: "contents" }}><strong role="rowheader">{resource.label}</strong>{sharingPeople.map((contact) => {
+            const summary = accessByContact[contact.id] ?? (contact.linked_user_id ? accessByContact[contact.linked_user_id] : undefined);
+            const selected = Boolean(summary?.recordKeys.includes(resource.key));
+            const eligibility = selected && summary ? resolveOwnerAccessEligibility({ invitationStatus: contact.invite_status, activationStatus: summary.activationStatus, linkedUserId: summary.linkedUserId, assignedRole: contact.contact_role }) : null;
+            const label = !selected ? "Not selected" : eligibility === "eligible" ? "Can view" : eligibility === "executor_restricted" ? "After death" : "Not yet accessible";
+            return <span role="cell" key={contact.id} data-active={selected && eligibility === "eligible"} aria-label={`${contact.full_name || "Unnamed person"}: ${label}`}>{selected && eligibility === "eligible" ? <Icon name="check_circle" size={20} filled /> : selected ? <small>{label}</small> : <span aria-hidden="true">—</span>}</span>;
+          })}</div>)}</div>)}
+        </div></div>}
       </section> : null}
       {selectedContactRow ? (
         <PersonDetailDrawer
@@ -915,21 +927,25 @@ function PersonVaultAccessSummary({
   contact,
   ownerUserId,
   onManage,
+  onRevoke,
   readOnly,
 }: {
   contact: ContactRow;
   ownerUserId: string | null;
   onManage: () => void;
+  onRevoke: () => void;
   readOnly: boolean;
 }) {
   const [state, setState] = useState<"checking" | "pending" | "verification" | "executor" | "none" | "shared" | "error">("checking");
   const [sharedCount, setSharedCount] = useState(0);
-  const [sharedNames, setSharedNames] = useState<string[]>([]);
+  const [sharedRecords, setSharedRecords] = useState<Array<{ name: string; section: string }>>([]);
+  const [namesLoaded, setNamesLoaded] = useState(false);
   const [permissionLabel, setPermissionLabel] = useState("View only");
 
   useEffect(() => {
     let cancelled = false;
     queueMicrotask(() => { if (!cancelled) setState("checking"); });
+    queueMicrotask(() => { if (!cancelled) setNamesLoaded(false); });
     async function loadSummary() {
       const user = await waitForActiveUser(supabase, { attempts: 5, delayMs: 120 });
       const ownerId = ownerUserId || user?.id;
@@ -966,7 +982,8 @@ function PersonVaultAccessSummary({
         : eligibility === "verification_required" || eligibility === "link_required" ? "verification"
         : eligibility === "eligible" && count ? "shared" : "none");
       if (!count) {
-        setSharedNames([]);
+        setSharedRecords([]);
+        setNamesLoaded(true);
         return;
       }
       try {
@@ -976,11 +993,12 @@ function PersonVaultAccessSummary({
           ...permissions.asset_ids.map((id) => `asset:${id}`),
           ...permissions.record_ids.map((id) => `record:${id}`),
         ]);
-        setSharedNames(resources
+        setSharedRecords(resources
           .filter((resource) => selected.has(`${resource.source_kind}:${resource.id}`))
-          .map((resource) => resource.title || resource.provider_name || resource.summary || "Unnamed record"));
+          .map((resource) => ({ name: resource.title || resource.provider_name || resource.summary || "Unnamed record", section: accessSectionLabel(normalizeAccessSectionKey(resource.section_key) || "other") })));
+        setNamesLoaded(true);
       } catch {
-        if (!cancelled) setSharedNames([]);
+        if (!cancelled) { setSharedRecords([]); setNamesLoaded(true); }
       }
     }
     void loadSummary();
@@ -999,9 +1017,11 @@ function PersonVaultAccessSummary({
       {state === "none" ? <><strong>No records shared</strong><span style={drawerExplanationStyle}>Being invited or identity-verified does not share a record. Choose individual records to grant access.</span></> : null}
       {state === "shared" ? <strong>{sharedCount} {sharedCount === 1 ? "record" : "records"} shared · {permissionLabel}</strong> : null}
       {sharedCount > 0 && state !== "shared" && state !== "checking" && state !== "error" ? <span style={drawerExplanationStyle}>{sharedCount} selected {sharedCount === 1 ? "record is" : "records are"} not currently available to this person.</span> : null}
-      {sharedNames.length > 0 ? <ul className="lf-person-shared-records">{sharedNames.map((name, index) => <li key={`${name}-${index}`}>{name}</li>)}</ul> : null}
-      {sharedCount > 0 && !sharedNames.length && state !== "checking" ? <span style={drawerExplanationStyle}>Selected record names are unavailable right now.</span> : null}
+      {sharedCount > 0 && !namesLoaded ? <span style={drawerExplanationStyle}>Loading selected records…</span> : null}
+      {sharedRecords.length > 0 ? <><h4 className="lf-pa-can-see-heading">{state === "shared" ? "Can see" : "Selected records · not currently accessible"}</h4><ul className="lf-person-shared-records">{sharedRecords.map((record, index) => <li key={`${record.name}-${index}`}><Icon name="description" size={20} /><span>{record.name}<small>{record.section}</small></span></li>)}</ul></> : null}
+      {sharedCount > 0 && namesLoaded && !sharedRecords.length && state !== "checking" ? <span style={drawerExplanationStyle}>Selected record names are unavailable right now.</span> : null}
       {!readOnly && state !== "checking" && state !== "error" ? <Button variant={sharedCount ? "secondary" : "primary"} icon="key" onClick={onManage}>{sharedCount ? "Edit access" : "Give access"}</Button> : null}
+      {!readOnly && state === "shared" ? <Button variant="secondary" icon="block" onClick={onRevoke}>Revoke all</Button> : null}
     </section>
   );
 }
@@ -1032,12 +1052,14 @@ function PersonDetailDrawer({
   const router = useRouter();
   const closeRef = useRef<HTMLButtonElement>(null);
   const [managementView, setManagementView] = useState<"edit" | "relationship" | "invitation" | "access" | "remove" | null>(initialAccess ? "access" : null);
+  const [revokeRequested, setRevokeRequested] = useState(false);
   const [accessRevision, setAccessRevision] = useState(0);
   const relatedContexts = (contact.linked_context ?? []).filter((context) => context.source_kind !== "invitation");
   const invitation = getInvitationDisplay(contact);
 
   function closeAccess() {
     setManagementView(null);
+    setRevokeRequested(false);
     if (initialAccess) router.replace(`/people-access?view=people&contact=${encodeURIComponent(contact.id)}`);
   }
 
@@ -1105,7 +1127,7 @@ function PersonDetailDrawer({
               <InvitationProgressTracker contact={contact} />
               {!readOnly && ["invite_sent", "not_invited", "failed"].includes(contact.invite_status) ? <Button variant="secondary" onClick={() => setManagementView("invitation")}>{contact.invite_status === "not_invited" ? "Send invitation" : "Manage invitation"}</Button> : null}
             </section>
-            <PersonVaultAccessSummary key={`${contact.id}:${accessRevision}`} contact={contact} ownerUserId={ownerUserId} readOnly={readOnly} onManage={() => setManagementView("access")} />
+            <PersonVaultAccessSummary key={`${contact.id}:${accessRevision}`} contact={contact} ownerUserId={ownerUserId} readOnly={readOnly} onManage={() => setManagementView("access")} onRevoke={() => { setRevokeRequested(true); setManagementView("access"); }} />
             {pendingRequestId ? <section className="lf-person-detail-section" aria-label="Request awaiting decision"><h3>Request awaiting decision</h3><p style={drawerExplanationStyle}>Review this person&apos;s request and current sharing in People &amp; Access.</p><Link href={`/people-access?view=requests&request=${encodeURIComponent(pendingRequestId)}`} className="lf-pa-text-action">Review request</Link></section> : null}
             {!readOnly ? <button type="button" className="lf-person-remove-link" onClick={() => setManagementView("remove")}>Remove person</button> : null}
           </>}
@@ -1113,7 +1135,7 @@ function PersonDetailDrawer({
       </aside>
     </div>
     <div className="lf-pa-access-modal"><Sheet open={managementView === "access"} title={`Record access for ${contact.full_name || "person"}`} onClose={closeAccess}>
-      <PersonManagementPanel contact={contact} view="access" ownerUserId={ownerUserId} onInvite={onInvite} inviting={inviting} onBack={closeAccess} onNavigate={setManagementView} onSaved={() => { setAccessRevision((revision) => revision + 1); onSaved(); }} readOnly={readOnly} />
+      <PersonManagementPanel contact={contact} view="access" ownerUserId={ownerUserId} onInvite={onInvite} inviting={inviting} onBack={closeAccess} onNavigate={setManagementView} onSaved={() => { setAccessRevision((revision) => revision + 1); onSaved(); }} readOnly={readOnly} revokeRequested={revokeRequested} onRevokeRequestedChange={setRevokeRequested} />
     </Sheet></div></>
   );
   return unified ? createPortal(panel, document.body) : panel;
@@ -1129,6 +1151,8 @@ function PersonManagementPanel({
   onBack,
   onNavigate,
   onSaved,
+  revokeRequested = false,
+  onRevokeRequestedChange = () => {},
 }: {
   contact: ContactRow;
   view: "edit" | "relationship" | "invitation" | "access" | "remove";
@@ -1139,6 +1163,8 @@ function PersonManagementPanel({
   onBack: () => void;
   onNavigate: (view: "edit" | "relationship" | "invitation" | "access" | "remove") => void;
   onSaved: () => void;
+  revokeRequested?: boolean;
+  onRevokeRequestedChange?: (requested: boolean) => void;
 }) {
   const [name, setName] = useState(contact.full_name);
   const [email, setEmail] = useState(contact.email ?? "");
@@ -1407,6 +1433,7 @@ function PersonManagementPanel({
       setSavedAccessKeys(nextKeys);
       setAccessPermissionLabel("View only");
       setStatus(nextKeys.length ? "Access updated." : "Access removed. The person remains in People I Trust.");
+      onRevokeRequestedChange(false);
       onSaved();
     } else {
       setStatus("Could not update access.");
@@ -1481,17 +1508,18 @@ function PersonManagementPanel({
                 const allSelected = selectedInGroup === groupKeys.length;
                 return <details key={sectionKey} className="lf-person-access-group" open={accessSearch || selectedInGroup > 0 || index === 0 ? true : undefined}>
                   <summary>{accessSectionLabel(sectionKey)} <span className="lf-person-access-count">{selectedInGroup} of {options.length} selected</span><Icon name="expand_more" size={18} /></summary>
-                  {options.length > 1 ? <label className="lf-person-access-select-all"><input type="checkbox" ref={(node) => { if (node) node.indeterminate = selectedInGroup > 0 && !allSelected; }} checked={allSelected} onChange={() => setSelectedAccessKeys((current) => allSelected ? current.filter((key) => !groupKeys.includes(key)) : Array.from(new Set([...current, ...groupKeys])))} />Select all {options.length} current {accessSectionLabel(sectionKey).toLowerCase()} records</label> : null}
+                  {options.length > 1 ? <label className="lf-person-access-select-all"><input type="checkbox" ref={(node) => { if (node) node.indeterminate = selectedInGroup > 0 && !allSelected; }} checked={allSelected} disabled={saving} onChange={() => setSelectedAccessKeys((current) => allSelected ? current.filter((key) => !groupKeys.includes(key)) : Array.from(new Set([...current, ...groupKeys])))} />Select all {options.length} current {accessSectionLabel(sectionKey).toLowerCase()} records</label> : null}
                   {options.map((option) => {
                     const key = `${option.sourceKind}:${option.sourceId}`;
                     const selected = selectedAccessKeys.includes(key);
-                    return <label key={key} className="lf-person-access-record" data-shared={selected}><input type="checkbox" checked={selected} onChange={() => setSelectedAccessKeys((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key])} /><span>{option.label}</span><small>{selected ? "Shared" : "Not shared"}</small></label>;
+                    return <label key={key} className="lf-person-access-record" data-shared={selected}><input type="checkbox" checked={selected} disabled={saving} onChange={() => setSelectedAccessKeys((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key])} /><span>{option.label}</span><small>{selected ? "Shared" : "Not shared"}</small></label>;
                   })}
                 </details>;
               }) : <span style={drawerExplanationStyle}>{accessSearch ? "No records match this search." : "There are no eligible records to share."}</span>}
               {accessOptionsLoaded && savedAccessKeys.some((key) => !accessOptions.some((option) => `${option.sourceKind}:${option.sourceId}` === key)) ? <span style={drawerExplanationStyle}>Some previously selected records are unavailable in this editor. Remove all access to revoke every selection.</span> : null}
-              <div className="lf-person-access-actions"><span>{selectedAccessKeys.length} {selectedAccessKeys.length === 1 ? "record" : "records"} selected</span><Button variant="secondary" onClick={onBack}>Cancel</Button><Button variant="primary" disabled={saving || !accessOptionsLoaded || !accessOptions.length || (selectedAccessKeys.length === savedAccessKeys.length && selectedAccessKeys.every((key) => savedAccessKeys.includes(key)))} onClick={() => void saveAccess(selectedAccessKeys)}>Save access</Button>{savedAccessKeys.length ? <Button variant="secondary" disabled={saving} onClick={() => { if (window.confirm(`Remove all record access for ${contact.full_name || "this person"}?`)) void saveAccess([]); }}>Revoke all</Button> : null}</div>
+              <div className="lf-person-access-actions"><span>{selectedAccessKeys.length} {selectedAccessKeys.length === 1 ? "record" : "records"} selected</span><Button variant="secondary" onClick={onBack}>Cancel</Button><Button variant="primary" disabled={saving || !accessOptionsLoaded || !accessOptions.length || (selectedAccessKeys.length === savedAccessKeys.length && selectedAccessKeys.every((key) => savedAccessKeys.includes(key)))} onClick={() => void saveAccess(selectedAccessKeys)}>Save access</Button>{savedAccessKeys.length ? <Button variant="secondary" disabled={saving} onClick={() => onRevokeRequestedChange(true)}>Revoke all</Button> : null}</div>
             </div> : null}
+            {revokeRequested && savedAccessKeys.length > 0 ? <div className="lf-pa-revoke-confirmation" role="alertdialog" aria-label="Revoke all record access" aria-modal="false"><strong>Revoke all record access?</strong><p>{contact.full_name || "This person"} will no longer see any selected records. Their contact and invitation remain.</p><div><Button variant="secondary" onClick={() => onRevokeRequestedChange(false)}>Keep access</Button><Button variant="secondary" disabled={saving || !accessCanConfigure} onClick={() => void saveAccess([])}>Confirm revoke</Button></div></div> : null}
           </>}
         </div>
       ) : null}

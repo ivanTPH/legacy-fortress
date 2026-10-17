@@ -50,11 +50,11 @@ export function LFPageHeader({
 }
 
 export function AddAssetLink({ href }: { href: string }) {
-  return <Link className="lf-v4-add-asset" href={href} aria-label="Add asset" title="Add asset"><Icon name="add" size={20} /><span>Add asset</span></Link>;
+  return <Link className="lf-v4-add-asset" href={href} aria-label="Add asset" title="Add asset"><Icon name="add" size={20} /><span className="lf-v4-add-label">Add asset</span></Link>;
 }
 
 export function AddDocumentControl({ accept, onFilesSelected, disabled = false, multiple = false }: { accept: string; onFilesSelected: (files: File[]) => void; disabled?: boolean; multiple?: boolean }) {
-  return <label className="lf-v4-add-document" title="Add document"><Icon name="note_add" size={20} /><span>Add document</span><input type="file" aria-label="Add document" accept={accept} multiple={multiple} disabled={disabled} onChange={(event) => { const files = Array.from(event.currentTarget.files ?? []); if (files.length) onFilesSelected(files); event.currentTarget.value = ""; }} /></label>;
+  return <label className="lf-v4-add-document" title="Add document"><Icon name="note_add" size={20} /><span className="lf-v4-add-label">Add document</span><input type="file" aria-label="Add document" accept={accept} multiple={multiple} disabled={disabled} onChange={(event) => { const files = Array.from(event.currentTarget.files ?? []); if (files.length) onFilesSelected(files); event.currentTarget.value = ""; }} /></label>;
 }
 
 export function LFStatsStrip({ items }: { items: Array<{ label: string; value: string; suffix?: string }> }) {

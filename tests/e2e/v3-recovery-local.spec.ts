@@ -102,7 +102,7 @@ test.describe("V3 recovery local owner journey", () => {
     await expect(page.getByRole("heading", { name: "People & Access" })).toBeVisible();
     await page.getByRole("link", { name: "Sharing", exact: true }).click();
     const sharedRecord = page.locator(".lf-pa-sharing-record").filter({ hasText: firstTitle });
-    await expect(sharedRecord.getByText("Recovery Linked Person")).toBeVisible();
+    await expect(sharedRecord.getByRole("cell", { name: "Recovery Linked Person: Can view" })).toBeVisible();
     await page.screenshot({ path: `/private/tmp/lf-v4-sharing-${isMobile ? "mobile" : "desktop"}.png` });
     await page.getByRole("navigation", { name: "People and access views" }).getByRole("link", { name: "People", exact: true }).click();
     if (isMobile) await page.getByRole("button", { name: "Toggle navigation menu" }).click();
@@ -151,7 +151,12 @@ test.describe("V3 recovery local owner journey", () => {
     await expect(page.locator(".lf-workspace-links:visible")).toHaveCount(0);
     await page.waitForLoadState("networkidle");
 
-    await page.goto(`/contacts?contact=${ids.contact}`);
+    try {
+      await page.goto(`/contacts?contact=${ids.contact}`, { waitUntil: "networkidle" });
+    } catch (error) {
+      if (!String(error).includes("interrupted by another navigation")) throw error;
+      await page.goto(`/contacts?contact=${ids.contact}`, { waitUntil: "networkidle" });
+    }
     const drawer = page.getByRole("dialog");
     await expect(drawer).toBeVisible();
     await expect(drawer.getByRole("heading", { name: "Contact details" })).toBeVisible();
@@ -174,11 +179,15 @@ test.describe("V3 recovery local owner journey", () => {
     await drawer.getByLabel(secondTitle).check();
     await drawer.getByRole("button", { name: "Save access" }).click();
     await expect.poll(async () => (await grantPermissions()).asset_ids).toEqual(expect.arrayContaining(ids.assets));
+    await expect(drawer.getByText("Access updated.", { exact: true })).toBeVisible();
+    await expect(drawer.getByLabel(firstTitle)).toBeEnabled();
     await drawer.getByLabel(firstTitle).uncheck();
+    await expect(drawer.getByRole("button", { name: "Save access" })).toBeEnabled();
     await drawer.getByRole("button", { name: "Save access" }).click();
     await expect.poll(async () => (await grantPermissions()).asset_ids).toEqual([ids.assets[1]]);
-    page.once("dialog", (dialog) => dialog.accept());
     await drawer.getByRole("button", { name: "Revoke all" }).click();
+    await expect(page.getByRole("alertdialog", { name: "Revoke all record access" })).toBeVisible();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Confirm revoke" }).click();
     await expect.poll(async () => (await grantPermissions()).asset_ids).toEqual([]);
     await drawer.getByRole("button", { name: "Cancel" }).click();
     await expect(drawer.getByText("No records shared")).toBeVisible();
@@ -274,6 +283,104 @@ test.describe("V3 recovery local owner journey", () => {
     await expect(page.getByRole("dialog").getByRole("heading", { name: "Access granted" })).toBeVisible();
     await expect(page.getByRole("dialog").getByText("Checking current access...")).toHaveCount(0);
     await page.screenshot({ path: `/private/tmp/lf-v4-people-${isMobile ? "mobile" : "desktop"}.png` });
+  });
+
+  test("V4 visual acceptance captures add, finance forms, and People & Access", async ({ page, isMobile }) => {
+    test.setTimeout(180_000);
+    await page.setViewportSize(isMobile ? { width: 390, height: 844 } : { width: 1440, height: 900 });
+    await signIn(page, ownerEmail);
+    const stage = process.env.V4_CAPTURE_STAGE === "before" ? "before" : "after";
+    const size = isMobile ? "mobile" : "desktop";
+    const visit = async (path: string) => {
+      try {
+        await page.goto(path, { waitUntil: "networkidle" });
+      } catch (error) {
+        if (!String(error).includes("interrupted by another navigation")) throw error;
+        await page.goto(path, { waitUntil: "networkidle" });
+      }
+    };
+    const bank = await admin.from("assets").insert({
+      organisation_id: ids.org, wallet_id: ids.wallet, owner_user_id: ids.owner,
+      section_key: "finances", category_key: "bank", title: `Visual Bank ${runId}`,
+      provider_name: "Local visual fixture", status: "active", visibility: "private",
+      metadata_json: { account_type: "current_account" },
+    }).select("id").single();
+    if (bank.error || !bank.data) throw bank.error ?? new Error("Could not create synthetic bank record");
+    try {
+      await visit("/add");
+      await expect(page.getByRole("heading", { name: "Add to my Fortress" })).toBeVisible();
+      if (stage === "after") {
+        expect(await page.locator('a[href="/finances/investments?add=1"]').count()).toBeGreaterThan(0);
+        await expect.poll(() => page.evaluate(() => document.fonts.check('20px "Material Symbols Rounded"'))).toBe(true);
+      }
+      await page.screenshot({ path: `/private/tmp/lf-v4-${stage}-add-${size}.png`, fullPage: true });
+
+      await visit("/finances");
+      await expect(page.getByRole("heading", { name: "Finances", exact: true })).toBeVisible();
+      if (stage === "after") {
+        expect(await page.locator(".lf-v4-add-asset .lf-icon:visible").count()).toBeGreaterThan(0);
+      }
+      await page.screenshot({ path: `/private/tmp/lf-v4-${stage}-finances-${size}.png`, fullPage: true });
+
+      if (stage === "after") {
+        await visit("/finances/bank");
+        await expect(page.getByText(`Visual Bank ${runId}`)).toBeVisible();
+        expect(await page.locator(".lf-v4-add-document .lf-icon:visible").count()).toBeGreaterThan(0);
+      }
+
+      for (const category of ["bank", "investments", "insurance"]) {
+        await visit(`/finances/${category}?add=1`);
+        const form = page.getByRole("region", { name: /^Add (new record|bank account|investment|insurance policy)/ });
+        await expect(form).toBeVisible();
+        if (stage === "after") {
+          await expect(form.getByRole("button", { name: "Cancel", exact: true })).toHaveCount(1);
+          await expect(form.locator(".lf-v4-optional-group").first()).not.toHaveAttribute("open", "");
+          const columns = await form.locator(".lf-v4-form-grid").first().evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").length);
+          expect(columns).toBe(isMobile ? 1 : 2);
+          expect(await form.locator(".lf-shared-document-upload-field").count()).toBe(1);
+          expect(await form.locator(".lf-v4-select-chevron").count()).toBeGreaterThan(0);
+        }
+        await page.screenshot({ path: `/private/tmp/lf-v4-${stage}-${category}-${size}.png`, fullPage: true });
+        if (stage === "after" && category === "bank") {
+          await form.getByLabel("Add documents or photos").setInputFiles({ name: "synthetic-photo.png", mimeType: "image/png", buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==", "base64") });
+          await expect(form.getByText("synthetic-photo.png")).toBeVisible();
+          await expect(form.locator(".lf-shared-document-upload-field")).toHaveCount(1);
+          await form.getByRole("button", { name: "Remove synthetic-photo.png" }).click();
+          await expect(form.getByText("synthetic-photo.png")).toHaveCount(0);
+        }
+      }
+
+      await visit("/people-access?view=people");
+      await expect(page.getByRole("heading", { name: "People & Access" })).toBeVisible();
+      await page.screenshot({ path: `/private/tmp/lf-v4-${stage}-people-${size}.png`, fullPage: true });
+      await page.getByRole("button", { name: /Open Recovery Linked Person/ }).click();
+      await expect(page.getByRole("dialog", { name: /Recovery Linked Person/ })).toBeVisible();
+      if (stage === "after") {
+        await expect(page.locator(".lf-person-shared-records li").filter({ hasText: firstTitle })).toBeVisible();
+        await expect(page.getByRole("dialog", { name: /Recovery Linked Person/ }).getByRole("button", { name: "Revoke all" })).toBeVisible();
+      }
+      await page.screenshot({ path: `/private/tmp/lf-v4-${stage}-person-${size}.png` });
+      await page.getByRole("dialog").getByRole("button", { name: "Edit access" }).click();
+      await expect(page.getByRole("dialog").getByRole("heading", { name: "Record permissions" })).toBeVisible();
+      if (stage === "after") await expect(page.getByRole("dialog").getByLabel(firstTitle)).toBeVisible();
+      await page.screenshot({ path: `/private/tmp/lf-v4-${stage}-access-${size}.png` });
+      if (stage === "after") {
+        await page.getByRole("dialog").getByRole("button", { name: "Revoke all" }).click();
+        await expect(page.getByRole("alertdialog", { name: "Revoke all record access" })).toBeVisible();
+        await page.getByRole("alertdialog").getByRole("button", { name: "Keep access" }).click();
+      }
+      await visit("/people-access?view=sharing");
+      await expect(page.getByRole("heading", { name: "People & Access" })).toBeVisible();
+      await expect(page.locator(".lf-pa-sharing-record").filter({ hasText: firstTitle })).toBeVisible();
+      if (stage === "after") await expect(page.getByRole("table", { name: "Who can see each record" }).getByRole("cell", { name: "Recovery Linked Person: Can view" })).toBeVisible();
+      await page.screenshot({ path: `/private/tmp/lf-v4-${stage}-sharing-${size}.png`, fullPage: true });
+      await visit("/people-access?view=requests");
+      await expect(page.getByRole("heading", { name: "People & Access" })).toBeVisible();
+      await expect(page.locator(".lf-pa-request-row").filter({ hasText: "Recovery Linked Person" })).toBeVisible();
+      await page.screenshot({ path: `/private/tmp/lf-v4-${stage}-requests-${size}.png`, fullPage: true });
+    } finally {
+      await admin.from("assets").delete().eq("id", bank.data.id);
+    }
   });
 });
 
