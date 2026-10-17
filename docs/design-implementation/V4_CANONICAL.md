@@ -2,6 +2,8 @@
 
 The complete, versioned source is [`design_handoff_legacy_fortress 4/`](../../design_handoff_legacy_fortress%204/). Its [`README.md`](../../design_handoff_legacy_fortress%204/README.md) defines tokens, shell, components and responsive layouts; [`V4_UPDATE.md`](../../design_handoff_legacy_fortress%204/V4_UPDATE.md) governs People & Access, record forms, add controls and interaction states wherever earlier guidance conflicts. The visual states are in [`design/People and Access V4.dc.html`](../../design_handoff_legacy_fortress%204/design/People%20and%20Access%20V4.dc.html), with the rest of the customer screens in `design/Legacy Fortress Redesign.dc.html`. [`design_update_v4/`](../../design_update_v4/) preserves the incremental source pack; its update and People & Access HTML are byte-identical to the complete handoff.
 
+The [390px mobile supplement](V4_MOBILE_SUPPLEMENT.md) records the compact Dashboard, distinct drawer/tab roles, safe-area clearance, mobile workspace sheet and administration layout. It changes presentation guidance only.
+
 ## Implementation map
 
 | V4 concern | Existing implementation |

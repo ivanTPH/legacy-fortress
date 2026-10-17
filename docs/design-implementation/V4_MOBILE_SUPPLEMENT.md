@@ -1,0 +1,26 @@
+# V4 mobile supplement · 390px
+
+Open the [four annotated 390×844 designs](V4_MOBILE_SUPPLEMENT.html): **Dashboard**, **customer vault drawer**, **workspace sheet**, and **Platform Administration**. This supplements the [canonical V4 handoff](V4_CANONICAL.md); `V4_UPDATE.md` still wins where older guidance conflicts. The owner's iPhone image attachments were not available in this session, so the designs address the reported failures rather than claiming a pixel comparison with those images. Names, dates and figures in the visual are illustrative, never application defaults.
+
+## Screen decisions
+
+| Annotation | Design rule |
+| --- | --- |
+| 1 | The financial summary occupies the full **358px content width** at 390px (16px gutters). Use authorised, deduplicated data; show the existing loading, empty or restricted state when a value is unavailable. Amounts use tabular numerals and may wrap inside the card. |
+| 2 | Records, People and Debts become **three separate compact KPI tiles**, retaining the V4 information hierarchy. Each tile uses `minmax(0, 1fr)` so long values cannot widen the viewport. Values must come from the same authorised sources as the current Dashboard. |
+| 3 | The six primary Vault areas form a **two-column grid** at 390px. Tiles wrap names and counts; additional My Vault categories remain available on their existing routes. A tile never displays a linked user's inaccessible count. |
+| 4–5 | The four customer tabs remain Home, Actions, People and Settings. The hamburger drawer contains the six Vault areas, Add to my Fortress and Support. It does not repeat the tabs or add a second workspace selector. While open, its scrim makes the tab bar inert; the drawer scrolls independently. |
+| 6–7 | The brand row is the workspace trigger. On mobile it opens the existing role-filtered choices in a bottom sheet with a visible selected state, 44px minimum rows, outside-tap and Escape dismissal, focus return, and selection dismissal. The four labels in the illustration show the **maximum-authorised case**, not options for every user. No access is granted by displaying or selecting a workspace. |
+| 8–9 | Platform Administration keeps its own header and authorised navigation. The current workspace label may ellipsize in the compact brand row; the page title and card text wrap. Cards and actions stack in one column. Customer tabs are absent in the admin security domain. |
+
+## Layout and interaction specification
+
+- **Breakpoints:** preserve the existing desktop shell at **768px and above**. At **360–767px**, use 16px page gutters, a full-width summary, three `minmax(0,1fr)` KPI tracks, and two `minmax(0,1fr)` Vault tracks with 8–10px gaps. Below **360px**, use two KPI columns with the third tile spanning the row and one Vault column. Every grid child, label and action needs `min-width:0`; long text wraps rather than increasing document width.
+- **Scrolling and safe areas:** the document or main scroll region owns page scrolling; the bottom tab bar is fixed above `env(safe-area-inset-bottom)`. If the main region has its own scrollport, end it above the 62px bar plus its offset and a 10–16px gap. If the document scrolls, reserve that same total height in `padding-bottom` and `scroll-padding-bottom`. No card or field may sit behind the bar. Inputs, sheets and sticky Save actions must remain visible when the keyboard opens. Drawer and sheet each have their own bounded vertical scroll area and safe-area padding; avoid fixing their content to the page scroll position.
+- **Navigation:** the customer hamburger opens a drawer for Vault/secondary destinations only. The brand trigger opens the workspace sheet. Bottom tabs handle the four primary customer destinations. In an admin context, the hamburger contains authorised admin destinations and the customer tab bar is not rendered. Preserve existing route and server-side access checks; use the current `getAvailableWorkspaces` filtering and existing linked-Fortress boundaries.
+- **Focus and dismissal:** opening a drawer or sheet moves focus to its heading/first action; Tab stays within an open modal surface; Escape, Close and outside tap dismiss; focus returns to the opener. Mark background controls inert while an overlay is open. Keep visible V4 focus rings and 44px touch targets. Reduce motion for users who request it.
+- **Components and tokens:** reuse `WorkspaceSwitcher`, the shared Sheet, Icon, Card and navigation components. Use the existing V4 font, Material Symbols Rounded, `--lf-canvas-ios`, `--lf-ink`, `--lf-text-secondary`, `--lf-divider`, spacing scale and 12px card radius. Do not add page-specific overrides to compensate for a shared grid or shell defect.
+
+## Focused acceptance
+
+At 390×844, 320×568 and 402×874, inspect Dashboard, the open/closed drawer, the open/closed workspace sheet, a long-name admin card, a record form and People & Access. Verify `documentElement.scrollWidth ≤ innerWidth`, all action rows meet 44px, the final scrollable item clears the bottom tabs and safe area, and no overlay shifts navigation. Test authorised and unauthorised workspace lists, keyboard focus/escape, and an iPhone with the software keyboard visible. Keep desktop and business-flow regression checks scoped to the shared components touched by implementation.
