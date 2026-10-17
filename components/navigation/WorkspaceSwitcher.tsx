@@ -208,6 +208,7 @@ export default function WorkspaceSwitcher({
           ref={triggerRef}
           type="button"
           className="lf-workspace-current"
+          aria-label={`Switch workspace, current ${activeLinkedFortress?.ownerName ?? activeWorkspace?.label ?? "Personal Vault"}`}
           aria-expanded={open}
           aria-controls={menuId}
           aria-busy={!session}

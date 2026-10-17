@@ -122,8 +122,7 @@ export default function LegalOverviewPage() {
     .sort((a, b) => Date.parse(b) - Date.parse(a))[0];
 
   return <section className="lf-v3-area-page">
-    <PageHeader title="Legal" description="Keep wills, trusts, powers of attorney and other legal records easy to find."
-      action={viewer.mode === "linked" ? undefined : <AddAssetLink href="/legal/wills?add=1" />} />
+    <PageHeader title="Legal" description="Keep wills, trusts, powers of attorney and other legal records easy to find." />
     {status ? <p role="alert">{status}</p> : null}
     {loading ? <p role="status">Loading legal records…</p> : null}
     {!loading && recordCount > 0 ? <Card className="lf-v3-stats-strip" aria-label="Legal summary">

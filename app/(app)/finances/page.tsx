@@ -138,8 +138,7 @@ export default function FinancesOverviewPage() {
     : null;
 
   return <section className="lf-v3-area-page">
-    <PageHeader title="Finances" description="Keep accounts, pensions, investments, insurance and debts together for trusted review."
-      action={viewer.mode === "linked" ? undefined : <AddAssetLink href="/finances/bank?add=1" />} />
+    <PageHeader title="Finances" description="Keep accounts, pensions, investments, insurance and debts together for trusted review." />
     {status ? <p role="alert">{status}</p> : null}
     {loading ? <p role="status">Loading finance summary…</p> : null}
     {!loading && recommendedFinanceAction ? <Card><Row icon="account_balance" title={recommendedFinanceAction.label}

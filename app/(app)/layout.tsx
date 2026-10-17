@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useId, useMemo, useReducer, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import React, { useCallback, useEffect, useId, useMemo, useReducer, useRef, useState, useSyncExternalStore, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import BrandGlyph from "../../components/ui/BrandGlyph";
@@ -63,6 +63,9 @@ import {
 
 const PROFILE_AVATAR_CACHE_KEY = "lf:profile-avatar:last-good";
 type AuthState = "checking" | "ready" | "redirecting" | "none" | "error";
+const subscribeToDevSmokeQuery = () => () => {};
+const getDevSmokeQuery = () => process.env.NODE_ENV === "development"
+  && new URLSearchParams(window.location.search).get("lf_dev_smoke") === "1";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -94,10 +97,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     value: readShellSearchFromLocation(pathname),
   }));
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const [devSmokeMode] = useState(() => {
-    if (typeof window === "undefined" || process.env.NODE_ENV !== "development") return false;
-    return new URLSearchParams(window.location.search).get("lf_dev_smoke") === "1";
-  });
+  const devSmokeMode = useSyncExternalStore(subscribeToDevSmokeQuery, getDevSmokeQuery, () => false);
   const [prototypePreviewMode, setPrototypePreviewMode] = useState(false);
   const effectiveAuthState = devSmokeMode || prototypePreviewMode ? "ready" : authState;
   const effectiveEmail = devSmokeMode ? "smoke-user@legacy-fortress.local" : email;
@@ -897,6 +897,30 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
   }
 
   if (effectiveAuthState !== "ready") {
+    if (effectiveAuthState === "checking") {
+      return (
+        <div className="lf-shell lf-shell-loading" role="status" aria-label="Checking session" aria-busy="true">
+          <div className="lf-nav-wrap">
+            <aside className="lf-sidebar" aria-hidden="true">
+              <div className="lf-sidebar-brand-stack">
+                <div className="lf-brand-row">
+                  <BrandGlyph />
+                  <div>
+                    <div className="lf-brand-title">Legacy Fortress</div>
+                    <div className="lf-brand-subtitle">Personal Vault</div>
+                  </div>
+                </div>
+                <div className="lf-sidebar-workspace"><div className="lf-workspace-placeholder" /></div>
+              </div>
+            </aside>
+          </div>
+          <div className="lf-content-wrap">
+            <div className="lf-topbar" aria-hidden="true" />
+            <main className="lf-main-content"><p>Checking session…</p></main>
+          </div>
+        </div>
+      );
+    }
     const sessionTitle = effectiveAuthState === "error"
       ? "Session needs attention"
       : effectiveAuthState === "none"
