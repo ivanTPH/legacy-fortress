@@ -194,6 +194,7 @@ button.lf-v3-row-main:active, a.lf-v3-row-main:active { background: var(--lf-int
 @media (max-width: 767px) {
   .lf-v4-add-asset { width: auto; min-height: 44px; padding: 0 14px; gap: 6px; }
   .lf-v4-add-asset > .lf-v4-add-label { position: static; width: auto; height: auto; overflow: visible; clip-path: none; font-size: var(--lf-type-button); font-weight: 600; }
+  .lf-v3-row-trailing { min-width: 0; max-width: 45%; white-space: normal; overflow-wrap: anywhere; text-align: right; }
   .lf-v3-button { min-height: 44px; }
   .lf-v3-button--icon { width: 44px; height: 44px; }
   .lf-v3-page-header-main { align-items: flex-start; flex-direction: column; gap: var(--lf-space-16); }
@@ -205,6 +206,8 @@ button.lf-v3-row-main:active, a.lf-v3-row-main:active { background: var(--lf-int
   .lf-v3-breadcrumb ol { display: none; }
   .lf-v3-sheet-scrim--main { left: 0; width: 100%; }
   .lf-v3-sheet { top: auto; left: 0; width: 100%; max-height: 88dvh; border-radius: var(--lf-radius-card) var(--lf-radius-card) 0 0; }
+  .lf-v3-sheet-content { scroll-padding-bottom: calc(var(--lf-space-24) + env(safe-area-inset-bottom)); }
+  .lf-v3-sheet > footer { padding-bottom: calc(var(--lf-space-16) + env(safe-area-inset-bottom)); }
   .lf-v3-sheet > header, .lf-v3-sheet-content, .lf-v3-sheet > footer { padding-inline: var(--lf-space-16); }
   .lf-v3-context-banner { gap: var(--lf-space-8); min-height: 44px; margin: var(--lf-space-8) var(--lf-space-16); padding: 0 var(--lf-space-12); border-radius: var(--lf-radius-pill); font-size: var(--lf-type-meta); }
   .lf-v3-context-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

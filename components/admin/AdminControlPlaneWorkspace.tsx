@@ -1359,7 +1359,7 @@ function renderPlatformFilterToolbar(
   },
 ) {
   return (
-    <section style={compactFilterStyle} aria-label="Organisation filters">
+    <section className="lf-admin-organisation-filters" style={compactFilterStyle} aria-label="Organisation filters">
       <label style={labelStyle}>Search
         <input value={filters.search} onChange={(event) => actions.setSearch(event.target.value)} placeholder="Organisation, contact or registration" />
       </label>
@@ -2899,11 +2899,11 @@ const loadingPageStyle = {
 const panelStyle = { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: 18, display: "grid", gap: 14 } satisfies CSSProperties;
 const alertStyle = { ...panelStyle, color: "#991b1b", background: "#fff7ed" } satisfies CSSProperties;
 const stackStyle = { display: "grid", gap: 16 } satisfies CSSProperties;
-const gridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 12 } satisfies CSSProperties;
+const gridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 190px), 1fr))", gap: 12 } satisfies CSSProperties;
 const toolbarStyle = { ...panelStyle, display: "flex", alignItems: "end", justifyContent: "space-between", gap: 12, flexWrap: "wrap" } satisfies CSSProperties;
 const fieldStackStyle = { display: "grid", gap: 6, minWidth: 0, flex: "1 1 260px" } satisfies CSSProperties;
-const formGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 12 } satisfies CSSProperties;
-const definitionGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 } satisfies CSSProperties;
+const formGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 190px), 1fr))", gap: 12 } satisfies CSSProperties;
+const definitionGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", gap: 12 } satisfies CSSProperties;
 const settingsCardStyle = { ...panelStyle, gap: 8 } satisfies CSSProperties;
 const rowStyle = { border: "1px solid #e2e8f0", borderRadius: 8, padding: 12, display: "grid", gap: 4 } satisfies CSSProperties;
 const eyebrowStyle = { margin: 0, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 12, fontWeight: 800 } satisfies CSSProperties;
@@ -2921,8 +2921,8 @@ const permissionSummaryStyle = { border: "1px solid #bfdbfe", borderRadius: 8, p
 const sectionHeaderStyle = { display: "flex", justifyContent: "space-between", alignItems: "start", gap: 12, flexWrap: "wrap" } satisfies CSSProperties;
 const caseHeaderStyle = { ...sectionHeaderStyle, padding: "4px 0 10px", borderBottom: "1px solid #e2e8f0" } satisfies CSSProperties;
 const caseActionBarStyle = { display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", padding: "0 0 4px" } satisfies CSSProperties;
-const twoColumnDetailStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 14 } satisfies CSSProperties;
-const compactDetailGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8 } satisfies CSSProperties;
+const twoColumnDetailStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))", gap: 14 } satisfies CSSProperties;
+const compactDetailGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))", gap: 8 } satisfies CSSProperties;
 const emptyCaseStyle = { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 14, flexWrap: "wrap", border: "1px dashed #94a3b8", borderRadius: 8, padding: 14, background: "#f8fafc" } satisfies CSSProperties;
 const noteComposerStyle = { display: "grid", gap: 10, padding: 12, border: "1px solid #bfdbfe", borderRadius: 8, background: "#eff6ff" } satisfies CSSProperties;
 const modalBackdropStyle = { position: "fixed", inset: 0, zIndex: 50, display: "grid", placeItems: "center", padding: 20, background: "rgba(15, 23, 42, 0.52)" } satisfies CSSProperties;
@@ -2933,6 +2933,6 @@ const actionRowStyle = { display: "flex", gap: 10, alignItems: "center", flexWra
 const detailGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10 } satisfies CSSProperties;
 const detailItemStyle = { display: "grid", gap: 4, border: "1px solid #e2e8f0", borderRadius: 8, padding: 10, background: "#fff", minWidth: 0 } satisfies CSSProperties;
 const eventListStyle = { margin: 0, paddingLeft: 18, display: "grid", gap: 8 } satisfies CSSProperties;
-const compactFilterStyle = { ...panelStyle, display: "grid", gridTemplateColumns: "minmax(220px, 1.5fr) repeat(4, minmax(150px, 1fr)) auto", gap: 10, alignItems: "end" } satisfies CSSProperties;
+const compactFilterStyle = { ...panelStyle, display: "grid", gap: 10, alignItems: "end" } satisfies CSSProperties;
 const contextNavStyle = { display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 } satisfies CSSProperties;
 const labelStyle = { display: "grid", gap: 5, color: "#334155", fontSize: 13, fontWeight: 700 } satisfies CSSProperties;

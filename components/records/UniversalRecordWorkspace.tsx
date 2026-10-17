@@ -4173,6 +4173,7 @@ export default function UniversalRecordWorkspace({
       {formVisible ? (
       <section
         id={createFormRegionId}
+        className="lf-v4-record-form"
         style={cardStyle}
         ref={formSectionRef}
         role="region"

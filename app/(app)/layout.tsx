@@ -903,14 +903,14 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
           <div className="lf-nav-wrap">
             <aside className="lf-sidebar" aria-hidden="true">
               <div className="lf-sidebar-brand-stack">
-                <div className="lf-brand-row">
+                <div className="lf-workspace-placeholder lf-sidebar-workspace">
                   <BrandGlyph />
-                  <div>
+                  <div className="lf-workspace-current-copy">
                     <div className="lf-brand-title">Legacy Fortress</div>
                     <div className="lf-brand-subtitle">Personal Vault</div>
                   </div>
+                  <Icon name="unfold_more" size={18} />
                 </div>
-                <div className="lf-sidebar-workspace"><div className="lf-workspace-placeholder" /></div>
               </div>
             </aside>
           </div>
@@ -977,18 +977,11 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
       >
         <aside className="lf-sidebar">
           <div className="lf-sidebar-brand-stack">
-            <div className="lf-brand-row">
-              <BrandGlyph />
-              <div>
-                <div className="lf-brand-title">Legacy Fortress</div>
-                <div className="lf-brand-subtitle">Personal Vault</div>
-              </div>
-            </div>
-
             <div className="lf-sidebar-workspace">
               <WorkspaceSwitcher
                 currentPathname={pathname}
                 compact
+                branded
                 alwaysShow
                 governanceContext="Sidebar workspace selector · role-aware workspace switch"
               />
@@ -1201,21 +1194,16 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
               onClick={() => closeNavigationState("outside_click")}
             />
             <aside className="lf-mobile-drawer" aria-label="Mobile Navigation">
-              <div className="lf-brand-row">
-                <BrandGlyph />
-                <div>
-                  <div className="lf-brand-title">Legacy Fortress</div>
-                  <div className="lf-brand-subtitle">Personal Vault</div>
-                </div>
+              <div className="lf-sidebar-workspace">
+                <WorkspaceSwitcher
+                  currentPathname={pathname}
+                  compact
+                  branded
+                  alwaysShow
+                  onSelect={() => closeNavigationState("item_select")}
+                  governanceContext="Mobile navigation · role-aware workspace switch"
+                />
               </div>
-
-              <WorkspaceSwitcher
-                currentPathname={pathname}
-                compact
-                alwaysShow
-                onSelect={() => closeNavigationState("item_select")}
-                governanceContext="Mobile navigation · role-aware workspace switch"
-              />
 
               <MobileNavTree
                 items={dashboardNavigationItems}

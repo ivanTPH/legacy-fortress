@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import Icon from "../ui/Icon";
+import BrandGlyph from "../ui/BrandGlyph";
 import {
   extractPlatformRolesFromMetadata,
   normalizePlatformRole,
@@ -37,6 +38,7 @@ type WorkspaceSwitcherProps = {
   currentPathname: string;
   adminRole?: PlatformRole | string | null;
   compact?: boolean;
+  branded?: boolean;
   showDetails?: boolean;
   governanceContext?: string;
   alwaysShow?: boolean;
@@ -57,6 +59,7 @@ export default function WorkspaceSwitcher({
   currentPathname,
   adminRole = null,
   compact = false,
+  branded = false,
   showDetails = false,
   governanceContext = "workspace route guard",
   alwaysShow = false,
@@ -67,6 +70,7 @@ export default function WorkspaceSwitcher({
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const focusOnOpenRef = useRef<"first" | "last" | null>(null);
   const menuId = useId();
 
   useEffect(() => {
@@ -180,6 +184,38 @@ export default function WorkspaceSwitcher({
     };
   }, [menuId, open]);
 
+  useEffect(() => {
+    if (!open || !focusOnOpenRef.current) return;
+    const links = menuRef.current?.querySelectorAll<HTMLElement>(".lf-workspace-links a");
+    const target = focusOnOpenRef.current === "last" ? links?.[links.length - 1] : links?.[0];
+    focusOnOpenRef.current = null;
+    target?.focus();
+  }, [open]);
+
+  function onTriggerKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>) {
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+    event.preventDefault();
+    focusOnOpenRef.current = event.key === "ArrowUp" ? "last" : "first";
+    if (!open) toggleOpen();
+    else {
+      const links = menuRef.current?.querySelectorAll<HTMLElement>(".lf-workspace-links a");
+      (focusOnOpenRef.current === "last" ? links?.[links.length - 1] : links?.[0])?.focus();
+      focusOnOpenRef.current = null;
+    }
+  }
+
+  function onMenuKeyDown(event: ReactKeyboardEvent<HTMLElement>) {
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    const links = Array.from(event.currentTarget.querySelectorAll<HTMLElement>("a"));
+    if (!links.length) return;
+    event.preventDefault();
+    const currentIndex = links.indexOf(document.activeElement as HTMLElement);
+    const nextIndex = event.key === "Home" ? 0 : event.key === "End" ? links.length - 1
+      : event.key === "ArrowDown" ? (currentIndex + 1) % links.length
+      : (currentIndex - 1 + links.length) % links.length;
+    links[nextIndex]?.focus();
+  }
+
   function toggleOpen() {
     setOpen((current) => {
       const next = !current;
@@ -200,7 +236,7 @@ export default function WorkspaceSwitcher({
   return (
     <section
       ref={menuRef}
-      className={compact ? "lf-workspace-switcher compact" : "lf-workspace-switcher"}
+      className={["lf-workspace-switcher", compact && "compact", branded && "branded"].filter(Boolean).join(" ")}
       aria-label="Switch workspace"
     >
       <div className="lf-workspace-menu">
@@ -214,18 +250,20 @@ export default function WorkspaceSwitcher({
           aria-busy={!session}
           disabled={!session}
           onClick={toggleOpen}
+          onKeyDown={onTriggerKeyDown}
         >
-          <span className="lf-workspace-icon" aria-hidden="true">
+          {branded ? <BrandGlyph /> : <span className="lf-workspace-icon" aria-hidden="true">
             <Icon name={iconForWorkspace(activeWorkspace?.id ?? "application")} size={16} />
-          </span>
+          </span>}
           <span className="lf-workspace-current-copy">
-            <span className="lf-workspace-label">{activeLinkedFortress ? "Linked Fortress" : "Workspace"}</span>
+            {branded ? <span className="lf-workspace-brand-name">Legacy Fortress</span>
+              : <span className="lf-workspace-label">{activeLinkedFortress ? "Linked Fortress" : "Workspace"}</span>}
             <strong>{activeLinkedFortress?.ownerName ?? activeWorkspace?.label ?? "Personal Vault"}</strong>
           </span>
-          <Icon name="expand_more" size={18} />
+          <Icon name={branded ? "unfold_more" : "expand_more"} size={18} />
         </button>
         {open && session ? (
-          <nav id={menuId} className="lf-workspace-links" aria-label="Available workspaces">
+          <nav id={menuId} className="lf-workspace-links" aria-label="Available workspaces" onKeyDown={onMenuKeyDown}>
             <div className="lf-workspace-menu-heading">
               <span>Switch context</span>
               <small>{workspaces.length + linkedFortresses.length} available</small>

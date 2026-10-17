@@ -98,12 +98,26 @@
   .lf-v3-vault-overview { order: 3; }
   .lf-v3-screen-overview .lf-v3-stats-strip { order: 4; }
   .lf-v3-vault-grid { grid-template-columns: 1fr; gap: var(--lf-space-8); }
-  .lf-v3-vault-tile { padding: var(--lf-space-14) var(--lf-space-16); gap: var(--lf-space-10); }
-  .lf-v3-vault-tile-meta { padding-top: var(--lf-space-10); }
+  .lf-v3-vault-tile { padding: var(--lf-space-14) var(--lf-space-16); gap: var(--lf-space-10); max-width: 100%; }
+  .lf-v3-vault-tile-heading strong, .lf-v3-vault-tile-meta > * { min-width: 0; overflow-wrap: anywhere; }
+  .lf-v3-vault-tile-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding-top: var(--lf-space-10); }
+  .lf-v3-screen-overview, .lf-v3-screen-overview > *, .lf-v3-vault-overview, .lf-v3-vault-grid, .lf-v3-mobile-value { min-width: 0; max-width: 100%; }
+  .lf-v3-screen-overview .lf-v3-mobile-value > strong, .lf-v3-stats-strip strong { min-width: 0; overflow-wrap: anywhere; }
   .lf-v3-stats-strip > div { padding: 0 var(--lf-space-8); }
   .lf-v3-stats-strip > div:first-child { padding-left: 0; }
   .lf-v3-stats-strip small { display: none; }
   .lf-v3-area-page, .lf-v3-area-content { gap: var(--lf-space-20); }
+  .lf-v3-area-page .lf-v3-stats-strip { display: grid; grid-template-columns: minmax(0, 1fr); padding: 0; }
+  .lf-v3-area-page .lf-v3-stats-strip > div { min-width: 0; padding: var(--lf-space-12) var(--lf-space-16); border-left: 0; border-top: 1px solid var(--lf-divider); }
+  .lf-v3-area-page .lf-v3-stats-strip > div:first-child { border-top: 0; }
+  .lf-v3-area-section > header { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--lf-space-8); padding: var(--lf-space-12) var(--lf-space-16); }
+  .lf-v3-area-section > header > a:first-child { min-width: 0; }
+  .lf-v3-area-section > header > a:first-child > span:last-child { min-width: 0; }
+  .lf-v3-area-section > header > a:first-child strong { overflow-wrap: anywhere; }
+  .lf-v3-area-section > header > .lf-v3-area-total { grid-column: 1 / -1; grid-row: 2; min-width: 0; max-width: 100%; text-align: right; overflow-wrap: anywhere; }
+  .lf-v3-area-section > header > .lf-v4-add-asset { grid-column: 2; grid-row: 1; width: 44px; min-height: 44px; padding: 0; }
+  .lf-v3-area-section > header > .lf-v4-add-asset > .lf-v4-add-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .lf-v3-area-section .lf-v3-row-title, .lf-v3-area-section .lf-v3-row-trailing { overflow-wrap: anywhere; }
   .lf-v3-area-empty > div, .lf-v3-area-extra { grid-template-columns: 1fr; gap: var(--lf-space-8); }
   .lf-v3-area-empty-tile { min-height: 80px; padding: var(--lf-space-12) var(--lf-space-16); }
   .lf-v3-area-section .lf-v3-row { margin-left: var(--lf-space-16); }

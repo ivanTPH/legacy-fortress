@@ -130,6 +130,7 @@ test("workspace switcher is present in admin shell, application shell, sign-in, 
 
 test("workspace switcher uses controlled dismissal instead of sticky native details", () => {
   const switcher = fs.readFileSync(path.join(root, "components/navigation/WorkspaceSwitcher.tsx"), "utf8");
+  const appLayout = fs.readFileSync(path.join(root, "app/(app)/layout.tsx"), "utf8");
   const globals = fs.readFileSync(path.join(root, "app/globals.css"), "utf8");
 
   assert.match(switcher, /const \[open, setOpen\] = useState\(false\)/);
@@ -143,9 +144,12 @@ test("workspace switcher uses controlled dismissal instead of sticky native deta
   assert.match(switcher, /window\.addEventListener\("lf-admin-menu-open", onOtherMenuOpen\)/);
   assert.match(switcher, /onClick=\{closeAfterSelection\}/);
   assert.match(switcher, /onSelect\?\.\(\)/);
-  assert.match(globals, /\.lf-sidebar-workspace \.lf-workspace-links \{[\s\S]*?position: absolute;[\s\S]*?width: 100%;/);
-  assert.match(globals, /\.lf-mobile-drawer \.lf-workspace-links \{[\s\S]*?position: absolute;[\s\S]*?width: 100%;/);
-  assert.match(globals, /grid-template-rows: auto auto minmax\(0, 1fr\) auto auto/);
+  assert.match(appLayout, /<WorkspaceSwitcher[\s\S]*?compact\s+branded\s+alwaysShow/);
+  assert.match(switcher, /<BrandGlyph \/>/);
+  assert.match(switcher, /name=\{branded \? "unfold_more" : "expand_more"\}/);
+  assert.match(globals, /\.lf-sidebar-workspace \.lf-workspace-links \{[\s\S]*?position: absolute;[\s\S]*?left: calc\(100% \+ 16px\);/);
+  assert.match(globals, /\.lf-mobile-drawer \.lf-workspace-links \{[\s\S]*?position: fixed;[\s\S]*?bottom: calc\(12px \+ env\(safe-area-inset-bottom\)\);/);
+  assert.match(globals, /grid-template-rows: auto minmax\(0, 1fr\) auto auto/);
   assert.doesNotMatch(switcher, /<details className="lf-workspace-menu"/);
   assert.doesNotMatch(switcher, /<summary className="lf-workspace-current"/);
   assert.match(globals, /\.lf-workspace-current \{\n  border: 0;\n  background: transparent;/);

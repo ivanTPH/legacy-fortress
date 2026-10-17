@@ -550,3 +550,11 @@ Date: 2026-10-17. Branch: `fix/v4-visual-acceptance`, based on deployed staging 
 - Made `/add` finance choices open their forms directly. People & Access now separates connection, identity and active record access; shows named records, adds revoke confirmation and request filters, and presents Sharing as an owner-only record-by-person matrix. Record toggles are disabled while permissions save to avoid overwriting a second edit.
 - Authenticated local Chrome desktop and WebKit mobile visual journeys passed before the final matrix and mobile CSS changes. Focused desktop/mobile permission edit and revoke journeys passed after the save fix; wrong-user denial passed in the same local synthetic run. The owner stopped further browser execution, so the final matrix/mobile spacing still needs owner visual review.
 - Final TypeScript and production build passed. Targeted ESLint passed with warnings; repository-wide lint still has pre-existing errors in the copied design HTML support files. Focused source checks pass after updating assertions for V4 currency and named-record UI. No hosted environment was changed.
+
+## Combined V4 mobile and workspace selector correction
+
+Date: 2026-10-17. Branch: `fix/v4-mobile-acceptance`, based on staging `38ea8d1`; no deployment.
+
+- Preserved the in-progress mobile Finance, dashboard, People/form clearance, and Platform Administration layout fixes. Shared record forms now use mobile spacing and hide the fixed bottom navigation while open.
+- Moved the customer workspace trigger into the brand row on desktop and mobile. The menu opens as an overlay, supports outside click, Escape, arrow keys and selection dismissal, and still uses the existing role-filtered workspace list.
+- Focused workspace tests, TypeScript, and targeted lint passed. Local Chrome smoke mode verified the desktop/mobile selector and dashboard geometry at 1440px/390px. Local Supabase on `127.0.0.1:55421` was unavailable, so authenticated Finance, bank form, and admin content checks remain for staging review.
