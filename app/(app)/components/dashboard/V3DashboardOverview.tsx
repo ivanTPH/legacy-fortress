@@ -63,11 +63,12 @@ export default function V3DashboardOverview({ mode, loading, areas, recordCount,
         {peopleCount !== undefined ? <div><span>People</span><strong>{loading ? "…" : peopleCount}</strong><small>trusted contacts</small></div> : null}
         {actionCount !== undefined || showActions ? <div><span>Open actions</span><strong>{loading ? "…" : displayedActionCount}</strong><small>to review</small></div> : null}
       </Card>
-      <Card className="lf-v3-mobile-value" aria-label="Total recorded value"><span>Total recorded value</span><strong>{loading ? "…" : recordedValue}</strong><small>{updatedLabel(latestUpdate)}</small>
-        <div className="lf-v3-mobile-value-stats"><span><strong>{loading ? "…" : recordCount}</strong>Records</span>
-          {peopleCount !== undefined ? <span><strong>{loading ? "…" : peopleCount}</strong>People</span> : null}
-          {actionCount !== undefined || showActions ? <span><strong>{loading ? "…" : displayedActionCount}</strong>Actions</span> : null}</div>
-      </Card>
+      <Card className="lf-v3-mobile-value" aria-label="Total recorded value"><span>Total recorded value</span><strong>{loading ? "…" : recordedValue}</strong><small>{updatedLabel(latestUpdate)}</small></Card>
+      <div className="lf-v3-mobile-kpis" aria-label="Vault at a glance">
+        <Link href="/account/my-vault"><span>Records</span><strong>{loading ? "…" : recordCount}</strong></Link>
+        {peopleCount !== undefined ? <Link href="/people-access"><span>People</span><strong>{loading ? "…" : peopleCount}</strong></Link> : null}
+        {actionCount !== undefined || showActions ? <Link href="/actions"><span>Actions</span><strong>{loading ? "…" : displayedActionCount}</strong></Link> : null}
+      </div>
       {showActions ? <Card className="lf-v3-next-step">
         <header><strong>Next step</strong><span>{currentStep ? `${stepIndex % actionRows.length + 1} of ${actionRows.length}` : "All clear"}</span></header>
         {loading ? <p role="status">Loading actions…</p> : currentStep ? <><h2>{currentStep.title}</h2><p>{currentStep.description}</p>
@@ -83,6 +84,10 @@ export default function V3DashboardOverview({ mode, loading, areas, recordCount,
           <span className="lf-v3-vault-tile-meta"><strong>{loading ? "Loading" : area.count ? `${area.count} record${area.count === 1 ? "" : "s"}` : "Nothing yet"}</strong><small>{area.count ? updatedLabel(area.updatedAt) : "Add first record"}</small></span>
         </Link>)}</div>
       </section>
+      {!showActions && actionCount !== undefined ? <Link className="lf-v3-mobile-next-steps" href="/actions">
+        <span><strong>Next steps</strong><small>{loading ? "Loading actions…" : displayedActionCount ? `${displayedActionCount} to review` : "All up to date"}</small></span>
+        <span>See all actions</span>
+      </Link> : null}
     </> : null}
     {showActions ? <Card className="lf-v3-actions-list" aria-label={dashboard ? "Things worth your attention" : "Action Centre items"}>
       <header><h2>{dashboard ? "Things worth your attention" : "Your actions"}</h2>{dashboard ? <Link href="/actions">View Action Centre</Link> : !loading ? <span>{actionRows.length} open</span> : null}</header>

@@ -28,6 +28,11 @@ export type WorkspaceRouteOptions = {
   currentRole?: PlatformRole | null;
 };
 
+/** Customer navigation stays within the Personal Vault security domain. */
+export function filterCustomerWorkspaces(routes: readonly WorkspaceRoute[]): WorkspaceRoute[] {
+  return routes.filter((route) => route.id === "application" || route.id === "contact_wallet");
+}
+
 const ENTERPRISE_WORKSPACE_ROLES = new Set<PlatformRole>([
   "enterprise_admin",
   "enterprise_viewer",

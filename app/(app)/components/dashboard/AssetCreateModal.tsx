@@ -88,6 +88,8 @@ function AssetCreateModalContent({
     <div
       role="dialog"
       aria-modal="true"
+      aria-label={`Create ${categoryLabel}`}
+      className="lf-mobile-create-dialog"
       style={{
         position: "fixed",
         inset: 0,
@@ -100,6 +102,7 @@ function AssetCreateModalContent({
       onClick={onClose}
     >
       <div
+        className="lf-mobile-create-panel"
         style={{
           width: "100%",
           maxWidth: 560,
@@ -112,7 +115,7 @@ function AssetCreateModalContent({
         }}
         onClick={(event) => event.stopPropagation()}
       >
-        <h2 style={{ margin: 0, fontSize: 18 }}>Create {categoryLabel}</h2>
+        <div className="lf-mobile-create-header"><button type="button" className="lf-mobile-create-cancel" onClick={onClose} disabled={saving}>Cancel</button><h2 style={{ margin: 0, fontSize: 18 }}>Create {categoryLabel}</h2></div>
 
         <ConfigDrivenAssetFields
           config={config}
@@ -127,17 +130,16 @@ function AssetCreateModalContent({
         {error ? <div style={{ color: "#b91c1c", fontSize: 13 }}>{error}</div> : null}
         {success ? <div style={{ color: "#166534", fontSize: 13 }}>{success}</div> : null}
 
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-          <button type="button" onClick={onClose} disabled={saving} style={secondaryButtonStyle}>
-            Cancel
-          </button>
+        <div className="lf-mobile-create-footer" style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+          <button type="button" className="lf-mobile-create-desktop-cancel" onClick={onClose} disabled={saving} style={secondaryButtonStyle}>Cancel</button>
           <button
+            className="lf-mobile-create-save"
             type="button"
             disabled={saving || Object.values(errors).some(Boolean)}
             style={primaryButtonStyle}
             onClick={submit}
           >
-            {saving ? "Saving..." : "Create asset"}
+            {saving ? "Saving..." : "Save record"}
           </button>
         </div>
       </div>

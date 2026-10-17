@@ -983,6 +983,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                 compact
                 branded
                 alwaysShow
+                customerOnly
                 governanceContext="Sidebar workspace selector · role-aware workspace switch"
               />
             </div>
@@ -1070,7 +1071,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
       </div>
 
       <div className="lf-content-wrap">
-        <header className="lf-topbar">
+        <header className={`lf-topbar${showBackButton ? " is-pushed" : " is-root"}`}>
           <button
             className="lf-menu-btn"
             type="button"
@@ -1123,6 +1124,14 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
             </button>
             <div className="lf-topbar-heading">
               <Breadcrumbs items={topbarBreadcrumbs} />
+              {!showBackButton ? <div className="lf-mobile-workspace-trigger"><WorkspaceSwitcher
+                currentPathname={pathname}
+                compact
+                branded
+                alwaysShow
+                customerOnly
+                governanceContext="Mobile header · role-aware workspace switch"
+              /></div> : null}
               {showBackButton ? (
                 <button className="lf-topbar-back" type="button" onClick={navigateBack} aria-label="Go back">
                   <b aria-hidden="true" style={{ fontSize: 20, fontWeight: 400, lineHeight: 1 }}>←</b>
@@ -1194,19 +1203,10 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
               onClick={() => closeNavigationState("outside_click")}
             />
             <aside className="lf-mobile-drawer" aria-label="Mobile Navigation">
-              <div className="lf-sidebar-workspace">
-                <WorkspaceSwitcher
-                  currentPathname={pathname}
-                  compact
-                  branded
-                  alwaysShow
-                  onSelect={() => closeNavigationState("item_select")}
-                  governanceContext="Mobile navigation · role-aware workspace switch"
-                />
-              </div>
+              <div className="lf-mobile-drawer-heading"><strong>Your vault</strong><button type="button" onClick={() => closeNavigationState("escape")} aria-label="Close navigation"><Icon name="close" size={20} /></button></div>
 
               <MobileNavTree
-                items={dashboardNavigationItems}
+                items={dashboardNavigationItems.filter((item) => ["finances", "legal", "property", "business", "digital", "possessions", "add", "add-to-fortress", "support"].includes(item.id))}
                 expandedIds={new Set([...activeChainIds, ...menuState.mobileExpandedIds])}
                 activeChainIds={activeChainIds}
                 onToggle={(id) => {
@@ -1215,43 +1215,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                 onNavigate={() => closeNavigationState("item_select")}
               />
 
-              <nav aria-label="Account and preferences" className="lf-account-nav">
-                {accountItems.map((item) => {
-                  const isActive = normalizePath(pathname) === normalizePath(item.path);
-                  return (
-                    <Link
-                      key={item.id}
-                      href={item.path}
-                      className={`lf-account-link ${isActive ? "is-active" : ""}`}
-                      onClick={() => closeNavigationState("item_select")}
-                    >
-                      <span className="lf-nav-icon">{item.icon}</span>
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </nav>
-
-              <div className="lf-sidebar-foot">
-                <div className="lf-user-card">
-                  <span
-                    className="lf-user-avatar"
-                    aria-label={`Signed-in account picture for ${effectiveDisplayName}`}
-                    role="img"
-                    data-avatar-ready={renderedAvatarUrl ? "true" : "false"}
-                  >
-                    {renderedAvatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img className="lf-topbar-user-avatar-img" src={renderedAvatarUrl} alt="" aria-hidden="true" />
-                    ) : null}
-                    <span className="lf-topbar-user-avatar-fallback">{effectiveInitials || "LF"}</span>
-                  </span>
-                  <div>
-                    <div className="lf-user-name">{effectiveDisplayName}</div>
-                    <div className="lf-user-email">{effectiveEmail || "Signed in"}</div>
-                  </div>
-                </div>
-              </div>
+              {accountItems.filter((item) => item.id === "support").map((item) => <Link key={item.id} href={item.path} className="lf-mobile-drawer-support" onClick={() => closeNavigationState("item_select")}><span className="lf-nav-icon">{item.icon}</span>{item.label}</Link>)}
             </aside>
           </>
         ) : null}

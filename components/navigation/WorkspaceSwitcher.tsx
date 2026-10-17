@@ -12,6 +12,7 @@ import {
 import { getMasterAdminRolesForEmail, mergePlatformRoles } from "../../lib/auth/adminRoles";
 import {
   getAvailableWorkspaces,
+  filterCustomerWorkspaces,
   getCurrentWorkspaceForPath,
   getPrimaryWorkspaceRole,
   type WorkspaceId,
@@ -42,6 +43,7 @@ type WorkspaceSwitcherProps = {
   showDetails?: boolean;
   governanceContext?: string;
   alwaysShow?: boolean;
+  customerOnly?: boolean;
   onSelect?: () => void;
 };
 
@@ -63,6 +65,7 @@ export default function WorkspaceSwitcher({
   showDetails = false,
   governanceContext = "workspace route guard",
   alwaysShow = false,
+  customerOnly = false,
   onSelect,
 }: WorkspaceSwitcherProps) {
   const [session, setSession] = useState<WorkspaceSession | null>(null);
@@ -135,10 +138,10 @@ export default function WorkspaceSwitcher({
     return session?.roles ?? [];
   }, [roleOverride, session?.roles]);
   const primaryRole = getPrimaryWorkspaceRole(effectiveRoles);
-  const workspaces = useMemo(
-    () => getAvailableWorkspaces(effectiveRoles, { prototype: isTestPersonaAccessEnabled(), currentRole: primaryRole, includeDisabled: false }),
-    [effectiveRoles, primaryRole],
-  );
+  const workspaces = useMemo(() => {
+    const available = getAvailableWorkspaces(effectiveRoles, { prototype: isTestPersonaAccessEnabled(), currentRole: primaryRole, includeDisabled: false });
+    return customerOnly ? filterCustomerWorkspaces(available) : available;
+  }, [customerOnly, effectiveRoles, primaryRole]);
   const currentWorkspace = getCurrentWorkspaceForPath(currentPathname);
   const activeWorkspace = workspaces.find((workspace) => workspace.id === currentWorkspace)
     ?? workspaces.find((workspace) => workspace.id === "application")
@@ -205,6 +208,18 @@ export default function WorkspaceSwitcher({
   }
 
   function onMenuKeyDown(event: ReactKeyboardEvent<HTMLElement>) {
+    if (event.key === "Tab") {
+      const links = Array.from(event.currentTarget.querySelectorAll<HTMLElement>("a"));
+      if (!links.length) return;
+      if (event.shiftKey && document.activeElement === links[0]) {
+        event.preventDefault();
+        links[links.length - 1]?.focus();
+      } else if (!event.shiftKey && document.activeElement === links[links.length - 1]) {
+        event.preventDefault();
+        links[0]?.focus();
+      }
+      return;
+    }
     if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
     const links = Array.from(event.currentTarget.querySelectorAll<HTMLElement>("a"));
     if (!links.length) return;
@@ -220,6 +235,7 @@ export default function WorkspaceSwitcher({
     setOpen((current) => {
       const next = !current;
       if (next) {
+        focusOnOpenRef.current = "first";
         window.dispatchEvent(new CustomEvent("lf-admin-menu-open", { detail: { source: menuId } }));
       }
       return next;
@@ -263,6 +279,7 @@ export default function WorkspaceSwitcher({
           <Icon name={branded ? "unfold_more" : "expand_more"} size={18} />
         </button>
         {open && session ? (
+          <><button type="button" tabIndex={-1} className="lf-workspace-scrim" aria-label="Close workspace menu" onClick={() => { setOpen(false); triggerRef.current?.focus(); }} />
           <nav id={menuId} className="lf-workspace-links" aria-label="Available workspaces" onKeyDown={onMenuKeyDown}>
             <div className="lf-workspace-menu-heading">
               <span>Switch context</span>
@@ -307,7 +324,7 @@ export default function WorkspaceSwitcher({
                 ))}
               </div>
             ) : null}
-          </nav>
+          </nav></>
         ) : null}
       </div>
       {showDetails && session ? (

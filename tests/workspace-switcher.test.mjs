@@ -7,6 +7,7 @@ import {
   buildPrototypeWorkspaceUrl,
   getAvailableWorkspaces,
   getCurrentWorkspaceForPath,
+  filterCustomerWorkspaces,
 } from "../lib/workspaces.ts";
 import {
   getMasterAdminRolesForEmail,
@@ -78,6 +79,13 @@ test("master admin email stays in platform context unless an enterprise role is 
   ]);
 });
 
+test("customer switcher never offers platform or partner destinations", () => {
+  const roles = ["consumer_user", "enterprise_admin", "executor"];
+  const available = getAvailableWorkspaces(roles, { prototype: true });
+  assert.deepEqual(filterCustomerWorkspaces(available).map((workspace) => workspace.id), ["application", "contact_wallet"]);
+  assert.deepEqual(filterCustomerWorkspaces(getAvailableWorkspaces(["consumer_user"])).map((workspace) => workspace.id), ["application"]);
+});
+
 test("workspace switcher is present in admin shell, application shell, sign-in, and test launcher", () => {
   const adminShell = fs.readFileSync(path.join(root, "components/admin/prototype/AdminPrototypeShell.tsx"), "utf8");
   const appLayout = fs.readFileSync(path.join(root, "app/(app)/layout.tsx"), "utf8");
@@ -94,8 +102,8 @@ test("workspace switcher is present in admin shell, application shell, sign-in, 
   assert.match(adminShell, /getMasterAdminRolesForEmail\(user\.email\)/);
   assert.match(appLayout, /WorkspaceSwitcher/);
   assert.match(appLayout, /alwaysShow/);
-  assert.match(appLayout, /Mobile navigation · role-aware workspace switch/);
-  assert.match(appLayout, /onSelect=\{\(\) => closeNavigationState\("item_select"\)\}/);
+  assert.match(appLayout, /Mobile header · role-aware workspace switch/);
+  assert.match(appLayout, /customerOnly/);
   assert.match(authEntry, /WorkspaceSwitcher/);
   assert.match(authEntry, /resolvePermissionedAdminDestination/);
   assert.match(authEntry, /getMasterAdminRolesForEmail\(sessionUser\.email\)/);
@@ -125,7 +133,7 @@ test("workspace switcher is present in admin shell, application shell, sign-in, 
   assert.match(switcher, /Workspace/);
   assert.match(globals, /--lf-shell-sidebar-width: 264px/);
   assert.match(globals, /--lf-shell-header-min-height: 60px/);
-  assert.match(globals, /max-width: 700px\)[\s\S]*\.lf-mobile-drawer \.lf-workspace-switcher[\s\S]*display: block/);
+  assert.match(globals, /\.lf-mobile-workspace-trigger \.lf-workspace-links/);
 });
 
 test("workspace switcher uses controlled dismissal instead of sticky native details", () => {
@@ -148,8 +156,8 @@ test("workspace switcher uses controlled dismissal instead of sticky native deta
   assert.match(switcher, /<BrandGlyph \/>/);
   assert.match(switcher, /name=\{branded \? "unfold_more" : "expand_more"\}/);
   assert.match(globals, /\.lf-sidebar-workspace \.lf-workspace-links \{[\s\S]*?position: absolute;[\s\S]*?left: calc\(100% \+ 16px\);/);
-  assert.match(globals, /\.lf-mobile-drawer \.lf-workspace-links \{[\s\S]*?position: fixed;[\s\S]*?bottom: calc\(12px \+ env\(safe-area-inset-bottom\)\);/);
-  assert.match(globals, /grid-template-rows: auto minmax\(0, 1fr\) auto auto/);
+  assert.match(globals, /\.lf-mobile-workspace-trigger \.lf-workspace-links \{ position: fixed;/);
+  assert.match(globals, /grid-template-rows: auto minmax\(0, 1fr\) auto/);
   assert.doesNotMatch(switcher, /<details className="lf-workspace-menu"/);
   assert.doesNotMatch(switcher, /<summary className="lf-workspace-current"/);
   assert.match(globals, /\.lf-workspace-current \{\n  border: 0;\n  background: transparent;/);

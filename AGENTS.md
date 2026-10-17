@@ -61,7 +61,7 @@ Prefer targeted tests before full suites.
 
 ## V4.1 / V5 UI rules
 
-16. Treat the V5 proposal for three interfaces and a separate Platform Admin sign-in as a product and security decision requiring explicit owner approval. Do not consolidate Admin, Enterprise or Probate routes, alter authentication, or change roles from visual guidance alone.
+16. The owner has approved three separate security entry points: Personal Vault, Platform Administration and Partner Portal. Ordinary users must not cross these domains through a workspace switcher. Customer switching is limited to Personal and authorised linked Vault contexts. Separate staff/partner authentication and any TEST-only master-owner exception require a separately approved, server-enforced and audited security implementation. Do not consolidate Admin, Enterprise or Probate routes, alter authentication, or change roles during visual work.
 17. For admin and partner visual work, use the shared page pattern in `ADMIN_PARTNER.md`: breadcrumb, title, short description, one primary action and a suitable table or empty state. Keep existing capability checks. Show a confirmation and require an audited reason for risky actions only where the existing service supports it; otherwise raise a decision.
 18. Use the wording, Material Symbols Rounded names and interaction states in V5 `CONSISTENCY.md` across customer, admin and partner presentation. Keep existing security and user-facing behavior intact.
 19. Apply `CONSISTENCY.md` mobile layouts to admin and partner screens, including bounded rows, full-screen panels, safe-area clearance and role-authorised navigation.

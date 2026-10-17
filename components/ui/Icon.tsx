@@ -1,6 +1,20 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useEffect, type CSSProperties } from "react";
+
+let roundedFontRequested = false;
+
+function ensureRoundedFont() {
+  if (roundedFontRequested || typeof document === "undefined") return;
+  roundedFontRequested = true;
+  void document.fonts.load('24px "Material Symbols Rounded"').then((faces) => {
+    if (faces.some((face) => face.status === "loaded" && face.family.includes("Material Symbols Rounded"))) {
+      document.documentElement.dataset.lfIconsReady = "true";
+    }
+  }).catch(() => {
+    // Keep the fixed icon boxes empty when the local font cannot be loaded.
+  });
+}
 
 /** Semantic names used by the application resolve to the approved Material Symbols vocabulary. */
 export const LF_ICON_MAP = {
@@ -56,6 +70,7 @@ export default function Icon({
   style,
   title,
 }: IconProps) {
+  useEffect(ensureRoundedFont, []);
   return (
     <span
       className={`lf-icon material-symbols-rounded${className ? ` ${className}` : ""}`}

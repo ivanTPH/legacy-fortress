@@ -4613,16 +4613,16 @@ export default function UniversalRecordWorkspace({
                 Add notes
               </button>
             ) : null}
-            <button type="button" style={ghostBtn} onClick={cancelForm}>
+            <button type="button" className="lf-v4-form-cancel" style={ghostBtn} onClick={cancelForm}>
               <Icon name="close" size={16} />
               Cancel
             </button>
-            {(!editingId ? canCreateRecords : canEditWorkspaceRow(editingId)) ? <button type="button" style={primaryBtn} disabled={saving} onClick={() => void saveRecord()} title={editingId ? "Save changes to this record" : "Save this new record"}>
+            {(!editingId ? canCreateRecords : canEditWorkspaceRow(editingId)) ? <button type="button" className="lf-v4-form-save" style={primaryBtn} disabled={saving} onClick={() => void saveRecord()} title={editingId ? "Save changes to this record" : "Save this new record"}>
               <Icon name="save" size={16} style={{ marginRight: 6, verticalAlign: "text-bottom" }} />
-              {saving ? "Saving..." : editingId ? "Save changes" : saveLabel}
+              {saving ? "Saving..." : <><span className="lf-v4-form-save-desktop">{editingId ? "Save changes" : saveLabel}</span><span className="lf-v4-form-save-mobile">Save record</span></>}
             </button> : null}
             {editingId && viewer.mode !== "linked" ? (
-              <button type="button" style={dangerBtn} onClick={() => void deleteRecord(editingId)}>
+              <button type="button" className="lf-v4-form-delete" style={dangerBtn} onClick={() => void deleteRecord(editingId)}>
                 <Icon name="delete" size={16} />
                 Delete
               </button>
