@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from "react";
 import Icon from "../ui/Icon";
 import BrandGlyph from "../ui/BrandGlyph";
 import {
@@ -27,6 +27,7 @@ import {
 import { supabase } from "../../lib/supabaseClient";
 import {
   clearStoredLinkedGrantId,
+  selectOwnVault,
   getRoleLabel,
   getLinkedFortressAccessLabel,
   getStoredLinkedGrantId,
@@ -48,6 +49,7 @@ type WorkspaceSwitcherProps = {
 };
 
 type WorkspaceSession = {
+  userId: string | null;
   displayName: string;
   email: string | null;
   roles: PlatformRole[];
@@ -112,6 +114,7 @@ export default function WorkspaceSwitcher({
       setLinkedFortresses(await loadLinkedFortressSummaries(supabase, user?.id ?? ""));
       if (!mounted) return;
       setSession({
+        userId: user?.id ?? null,
         displayName: String(user?.user_metadata?.full_name ?? user?.email ?? persona?.label ?? "Secure account"),
         email: user?.email ?? null,
         roles,
@@ -247,6 +250,18 @@ export default function WorkspaceSwitcher({
     onSelect?.();
   }
 
+  function openOwnVault(event: ReactMouseEvent<HTMLAnchorElement>, href: string) {
+    if (!session?.userId) {
+      clearStoredLinkedGrantId();
+      closeAfterSelection();
+      return;
+    }
+    event.preventDefault();
+    selectOwnVault(session.userId);
+    closeAfterSelection();
+    window.location.assign(href);
+  }
+
   if ((!session && !alwaysShow) || (session && !hasMultipleContexts && linkedFortresses.length === 0 && !alwaysShow)) return null;
 
   return (
@@ -295,7 +310,7 @@ export default function WorkspaceSwitcher({
                 href={workspace.href}
                 className={workspace.id === currentWorkspace ? "is-active" : ""}
                 aria-current={workspace.id === currentWorkspace ? "page" : undefined}
-                onClick={closeAfterSelection}
+                onClick={(event) => workspace.id === "application" ? openOwnVault(event, workspace.href) : closeAfterSelection()}
               >
                 <Icon name={iconForWorkspace(workspace.id)} size={15} />
                 <span>
@@ -308,7 +323,7 @@ export default function WorkspaceSwitcher({
             {linkedFortresses.length ? (
               <div className="lf-workspace-linked-group">
                 <div className="lf-workspace-menu-heading"><span>Linked Fortresses</span></div>
-                <Link href="/dashboard" onClick={() => { clearStoredLinkedGrantId(); closeAfterSelection(); }}>
+                <Link href="/dashboard" onClick={(event) => openOwnVault(event, "/dashboard")}>
                   <Icon name="home" size={15} />
                   <span><strong>My Fortress</strong><small>My Personal Vault</small></span>
                 </Link>

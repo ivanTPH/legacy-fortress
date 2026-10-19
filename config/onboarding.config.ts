@@ -1,3 +1,5 @@
+export const CURRENT_TERMS_VERSION = "legacy-fortress-2026-03";
+
 export type OnboardingStepId =
   | "identity"
   | "verification"

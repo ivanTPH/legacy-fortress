@@ -1,4 +1,4 @@
-import { ONBOARDING_STEPS, type OnboardingStepId } from "../../config/onboarding.config";
+import { CURRENT_TERMS_VERSION, ONBOARDING_STEPS, type OnboardingStepId } from "../../config/onboarding.config";
 import { hasColumn, hasTable } from "../schemaSafe";
 import { isMissingRelationError } from "../supabaseErrors";
 import type { supabase } from "../supabaseClient";
@@ -10,7 +10,7 @@ const DEFAULT_STEP: OnboardingStepId = "identity";
 const FALLBACK_COMPLETE_STEP: OnboardingStepId = "complete";
 const ONBOARDING_TABLE = "user_onboarding_state";
 const TERMS_TABLE = "terms_acceptances";
-export const CURRENT_TERMS_VERSION = "legacy-fortress-2026-03";
+export { CURRENT_TERMS_VERSION };
 export const TERMS_POLICY = {
   type: "terms",
   currentVersion: CURRENT_TERMS_VERSION,

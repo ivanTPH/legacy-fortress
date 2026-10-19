@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { CURRENT_TERMS_VERSION } from "../../config/onboarding.config.ts";
 import {
   ROLE_RULES,
   canAccessSection,
@@ -22,6 +23,7 @@ import {
 type AnySupabaseClient = SupabaseClient;
 
 export const ACTIVE_LINKED_GRANT_STORAGE_KEY = "lf.activeLinkedGrantId";
+const OWN_VAULT_SELECTION_PREFIX = "own-vault:";
 
 export type AccountAccessGrantRow = {
   id: string;
@@ -113,7 +115,18 @@ export function getLinkedFortressAccessLabel(summary: Pick<LinkedFortressSummary
 
 export function getStoredLinkedGrantId() {
   if (typeof window === "undefined") return "";
-  return window.localStorage.getItem(ACTIVE_LINKED_GRANT_STORAGE_KEY) ?? "";
+  const selection = window.localStorage.getItem(ACTIVE_LINKED_GRANT_STORAGE_KEY) ?? "";
+  return selection.startsWith(OWN_VAULT_SELECTION_PREFIX) ? "" : selection;
+}
+
+export function isOwnVaultSelected(sessionUserId: string) {
+  if (typeof window === "undefined" || !sessionUserId) return false;
+  return window.localStorage.getItem(ACTIVE_LINKED_GRANT_STORAGE_KEY) === `${OWN_VAULT_SELECTION_PREFIX}${sessionUserId}`;
+}
+
+export function selectOwnVault(sessionUserId: string) {
+  if (typeof window === "undefined" || !sessionUserId) return;
+  window.localStorage.setItem(ACTIVE_LINKED_GRANT_STORAGE_KEY, `${OWN_VAULT_SELECTION_PREFIX}${sessionUserId}`);
 }
 
 export function setStoredLinkedGrantId(grantId: string) {
@@ -142,6 +155,21 @@ export async function hasLinkedAccountAccess(client: AnySupabaseClient, userId: 
   return Boolean((res.data ?? []).length);
 }
 
+async function hasOwnVaultAccess(client: AnySupabaseClient, userId: string) {
+  const { data, error } = await client
+    .from("user_onboarding_state")
+    .select("is_completed")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error || data?.is_completed !== true) return false;
+  const terms = await client
+    .from("terms_acceptances")
+    .select("accepted,terms_version")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return !terms.error && terms.data?.accepted === true && terms.data.terms_version === CURRENT_TERMS_VERSION;
+}
+
 export async function loadViewerAccessState(
   client: AnySupabaseClient,
   sessionUserId: string,
@@ -149,10 +177,12 @@ export async function loadViewerAccessState(
     preferredGrantId,
     fallbackDisplayName = "Secure Account",
     includePreVerificationGrants = false,
+    preferOwnVault = false,
   }: {
     preferredGrantId?: string | null;
     fallbackDisplayName?: string;
     includePreVerificationGrants?: boolean;
+    preferOwnVault?: boolean;
   } = {},
 ): Promise<ViewerAccessState> {
   const allowedGrantStatuses = includePreVerificationGrants ? CONTACT_WALLET_GRANT_STATUSES : ACTIVE_PROTECTED_GRANT_STATUSES;
@@ -164,10 +194,14 @@ export async function loadViewerAccessState(
     .order("updated_at", { ascending: false });
 
   const grants = ((grantsRes.data ?? []) as AccountAccessGrantRow[]).filter(Boolean);
-  const selectedGrant =
-    grants.find((row) => row.id === String(preferredGrantId ?? "").trim())
-    ?? grants[0]
-    ?? null;
+  const ownVaultAllowed = preferOwnVault && !preferredGrantId
+    ? await hasOwnVaultAccess(client, sessionUserId)
+    : false;
+  const selectedGrant = ownVaultAllowed
+    ? null
+    : grants.find((row) => row.id === String(preferredGrantId ?? "").trim())
+      ?? grants[0]
+      ?? null;
 
   if (!selectedGrant) {
     return {

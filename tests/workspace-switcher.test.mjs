@@ -150,7 +150,7 @@ test("workspace switcher uses controlled dismissal instead of sticky native deta
   assert.match(switcher, /triggerRef\.current\?\.focus\(\)/);
   assert.match(switcher, /window\.dispatchEvent\(new CustomEvent\("lf-admin-menu-open"/);
   assert.match(switcher, /window\.addEventListener\("lf-admin-menu-open", onOtherMenuOpen\)/);
-  assert.match(switcher, /onClick=\{closeAfterSelection\}/);
+  assert.match(switcher, /workspace\.id === "application" \? openOwnVault\(event, workspace\.href\) : closeAfterSelection\(\)/);
   assert.match(switcher, /onSelect\?\.\(\)/);
   assert.match(appLayout, /<WorkspaceSwitcher[\s\S]*?compact\s+branded\s+alwaysShow/);
   assert.match(switcher, /<BrandGlyph \/>/);

@@ -37,8 +37,10 @@ import {
   getLinkedFortressAccessLabel,
   hasLinkedAccountAccess,
   getStoredLinkedGrantId,
+  isOwnVaultSelected,
   loadLinkedFortressSummaries,
   loadViewerAccessState,
+  selectOwnVault,
   setStoredLinkedGrantId,
   type ViewerAccessState,
 } from "../../lib/access-control/viewerAccess";
@@ -402,6 +404,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
       try {
         const nextViewer = await loadViewerAccessState(supabase, userId, {
           preferredGrantId: requestedGrantId || getStoredLinkedGrantId(),
+          preferOwnVault: !requestedGrantId && isOwnVaultSelected(userId),
           fallbackDisplayName: nextEmail.split("@")[0] || "Secure Account",
         });
         if (!mounted) return;
@@ -837,7 +840,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
         setViewerAccess((current) => current ? { ...current, grantId } : current);
       },
       clearLinkedGrant: () => {
-        clearStoredLinkedGrantId();
+        selectOwnVault(resolvedViewerAccess.sessionUserId);
         setViewerAccess((current) => current
           ? {
               mode: "owner",

@@ -19,6 +19,7 @@ import {
   clearStoredLinkedGrantId,
   getStoredLinkedGrantId,
   loadViewerAccessState,
+  selectOwnVault,
   setStoredLinkedGrantId,
   type ViewerAccessState,
 } from "../../../lib/access-control/viewerAccess";
@@ -214,7 +215,7 @@ export default function ContactWalletPage() {
         icon="workspace_premium"
         title="Optional personal vault"
         detail="Your Personal Vault is separate from the supporting relationships shown above."
-        action={<Link className="lf-link-btn" href="/onboarding" onClick={() => clearStoredLinkedGrantId()}>Set up my Personal Vault</Link>}
+        action={<Link className="lf-link-btn" href="/onboarding" onClick={() => { if (viewer?.sessionUserId) selectOwnVault(viewer.sessionUserId); else clearStoredLinkedGrantId(); }}>Set up my Personal Vault</Link>}
       >
         <PlatformNotice>
           Your supporting relationships stay attached to this Legacy Fortress identity. Set up your own Personal Vault separately when you are ready.
