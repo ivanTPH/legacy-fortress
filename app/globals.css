@@ -3302,7 +3302,7 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-pa-fact small { color: var(--lf-text-secondary); font-size: 11px; }
 .lf-pa-fact > span:last-child { overflow-wrap: anywhere; }
 .lf-pa-row-chevron { color: var(--lf-text-tertiary); }
-.lf-pa-person-row .lf-contact-summary-action { flex: none; }
+.lf-pa-person-row .lf-contact-summary-action { display: flex; flex: none; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; }
 .lf-people-status-chip[data-tone="danger"] { background: #FDF3F2; color: #B3261E; }
 .lf-pa-detail-fact { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; }
 .lf-pa-detail-fact > span:first-child { color: var(--lf-text-secondary); }
@@ -3380,13 +3380,14 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
   .lf-pa-page .lf-v3-people-toolbar > div { width: 100%; }
   .lf-pa-page .lf-v3-people-toolbar input { width: 100%; }
   .lf-pa-add-panel .lf-content-grid { grid-template-columns: 1fr; }
-  .lf-pa-person-row { align-items: flex-start; }
-  .lf-pa-person-open { grid-template-columns: minmax(0, 1fr) 18px; gap: 10px; }
+  .lf-pa-person-row { align-items: flex-start; flex-wrap: wrap; }
+  .lf-pa-person-open { grid-template-columns: minmax(0, 1fr) 18px; gap: 10px; flex-basis: 100%; }
   .lf-pa-person-facts { grid-column: 1 / -1; grid-row: 2; padding-left: 50px; }
   .lf-pa-role-filters button { min-height: 44px; }
   .lf-pa-fact { grid-template-columns: 78px 1fr; align-items: center; }
   .lf-pa-row-chevron { grid-column: 2; grid-row: 1; }
-  .lf-pa-person-row .lf-contact-summary-action { display: none; }
+  .lf-pa-person-row .lf-contact-summary-action { width: 100%; }
+  .lf-pa-person-row .lf-contact-summary-action .lf-icon-btn-round { width: 44px; min-width: 44px; height: 44px; }
   .lf-pa-request-row { flex-wrap: wrap; }
   .lf-pa-request-status { margin-left: auto; }
   .lf-pa-request-row .lf-v3-button { width: 100%; justify-content: center; }
@@ -6624,6 +6625,8 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-workspace-current::-webkit-details-marker {
   display: none;
 }
+
+.lf-workspace-current:disabled { cursor: default; opacity: 1; }
 
 .lf-workspace-current:focus-visible {
   outline: 2px solid rgba(58, 33, 24, 0.32);

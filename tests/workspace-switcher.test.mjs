@@ -126,7 +126,8 @@ test("workspace switcher is present in admin shell, application shell, sign-in, 
   assert.match(switcher, /alwaysShow/);
   assert.match(switcher, /!hasMultipleContexts && linkedFortresses\.length === 0 && !alwaysShow/);
   assert.match(switcher, /lf-workspace-menu/);
-  assert.match(switcher, /aria-expanded=\{open\}/);
+  assert.match(switcher, /aria-expanded=\{singleCustomerContext \? undefined : open\}/);
+  assert.match(switcher, /disabled=\{!session \|\| singleCustomerContext\}/);
   assert.match(switcher, /aria-controls=\{menuId\}/);
   assert.match(switcher, /Switch context/);
   assert.match(switcher, /lf-workspace-route-meta/);

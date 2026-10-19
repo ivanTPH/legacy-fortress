@@ -153,6 +153,7 @@ export default function WorkspaceSwitcher({
     ? linkedFortresses.find((linked) => linked.grantId === getStoredLinkedGrantId())
     : null;
   const hasMultipleContexts = workspaces.length > 1;
+  const singleCustomerContext = customerOnly && !hasMultipleContexts && linkedFortresses.length === 0;
   const activeRole = activeWorkspace?.roleContext ?? primaryRole;
 
   useEffect(() => {
@@ -275,11 +276,11 @@ export default function WorkspaceSwitcher({
           ref={triggerRef}
           type="button"
           className="lf-workspace-current"
-          aria-label={`Switch workspace, current ${activeLinkedFortress?.ownerName ?? activeWorkspace?.label ?? "Personal Vault"}`}
-          aria-expanded={open}
+          aria-label={`${singleCustomerContext ? "Current workspace" : "Switch workspace, current"} ${activeLinkedFortress?.ownerName ?? activeWorkspace?.label ?? "Personal Vault"}`}
+          aria-expanded={singleCustomerContext ? undefined : open}
           aria-controls={menuId}
           aria-busy={!session}
-          disabled={!session}
+          disabled={!session || singleCustomerContext}
           onClick={toggleOpen}
           onKeyDown={onTriggerKeyDown}
         >
@@ -291,7 +292,7 @@ export default function WorkspaceSwitcher({
               : <span className="lf-workspace-label">{activeLinkedFortress ? "Linked Fortress" : "Workspace"}</span>}
             <strong>{activeLinkedFortress?.ownerName ?? activeWorkspace?.label ?? "Personal Vault"}</strong>
           </span>
-          <Icon name={branded ? "unfold_more" : "expand_more"} size={18} />
+          {!singleCustomerContext ? <Icon name={branded ? "unfold_more" : "expand_more"} size={18} /> : null}
         </button>
         {open && session ? (
           <><button type="button" tabIndex={-1} className="lf-workspace-scrim" aria-label="Close workspace menu" onClick={() => { setOpen(false); triggerRef.current?.focus(); }} />

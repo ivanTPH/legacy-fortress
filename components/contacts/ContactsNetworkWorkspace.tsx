@@ -771,7 +771,7 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
                           </span>
                           <Icon name="chevron_right" size={18} className="lf-pa-row-chevron" />
                         </button>
-                        <div className="lf-contact-summary-action" style={contactSummaryActionStyle}>
+                        <div className="lf-contact-summary-action">
                           {contact.invite_status === "not_invited" && contact.email && !viewer.readOnly ? (
                             <IconButton
                               icon="send"
@@ -2251,15 +2251,6 @@ const contactSummaryStatusStyle: CSSProperties = {
   color: "#475569",
   fontSize: 13,
   fontWeight: 650,
-};
-
-const contactSummaryActionStyle: CSSProperties = {
-  position: "relative",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "flex-end",
-  gap: 8,
-  minWidth: 0,
 };
 
 const contactNextActionStyle: CSSProperties = {
