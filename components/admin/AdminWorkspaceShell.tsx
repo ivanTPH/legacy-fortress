@@ -761,6 +761,7 @@ const adminShellCss = `
       padding: 12px;
       gap: 12px;
       overflow-x: clip;
+      grid-template-columns: minmax(0, 1fr);
     }
     .lf-admin-shell-content > *,
     .lf-admin-shell-content :is(section, article, form, nav, dl) {
@@ -771,6 +772,9 @@ const adminShellCss = `
     }
     .lf-admin-shell-header {
       display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      box-sizing: border-box;
+      width: 100%;
       padding: 16px;
     }
     .lf-admin-shell-actions {
@@ -788,10 +792,16 @@ const adminShellCss = `
       max-width: 100%;
     }
     .lf-admin-shell-actions .lf-workspace-links {
-      left: 0;
-      right: auto;
-      width: 100%;
-      max-width: 100%;
+      position: fixed;
+      top: auto;
+      right: max(12px, env(safe-area-inset-right));
+      bottom: max(12px, env(safe-area-inset-bottom));
+      left: max(12px, env(safe-area-inset-left));
+      z-index: 1002;
+      width: auto;
+      max-width: calc(100vw - 24px);
+      max-height: min(70dvh, 560px);
+      overflow-y: auto;
       box-sizing: border-box;
     }
     .lf-admin-shell-account-popover {
