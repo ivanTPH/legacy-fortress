@@ -1382,7 +1382,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 }
 
 @media (max-width: 720px) {
-  .lf-admin-data-table {
+  .lf-admin-shell-content .lf-admin-data-table {
     display: none;
   }
 
@@ -7672,6 +7672,22 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
   .lf-mobile-drawer-heading button { width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: transparent; }
   .lf-mobile-drawer-support { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; color: var(--lf-text); text-decoration: none; }
   .lf-workspace-scrim { display: block; position: fixed; inset: 0; z-index: 1001; width: 100%; border: 0; background: rgba(31, 23, 21, .42); }
+  .lf-admin-shell-actions .lf-workspace-links {
+    position: fixed;
+    top: auto;
+    right: max(12px, env(safe-area-inset-right));
+    bottom: max(12px, env(safe-area-inset-bottom));
+    left: max(12px, env(safe-area-inset-left));
+    z-index: 1002;
+    box-sizing: border-box;
+    width: auto;
+    max-width: none;
+    max-height: min(70dvh, 560px);
+    overflow-y: auto;
+  }
+  .lf-entry-panel input:not([type="checkbox"]):not([type="radio"]),
+  .lf-entry-panel select,
+  .lf-entry-panel textarea { font-size: 16px; }
   .lf-mobile-workspace-trigger .lf-workspace-links { position: fixed; top: auto; right: 0; bottom: 0; left: 0; z-index: 1002; width: 100%; max-width: none; max-height: min(70dvh, 560px); margin: 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); overflow-y: auto; border-radius: 16px 16px 0 0; background: var(--lf-surface); }
   .lf-admin-prototype-topbar .lf-workspace-links { z-index: 1002; }
   .lf-mobile-workspace-trigger .lf-workspace-links a { min-height: 48px; }

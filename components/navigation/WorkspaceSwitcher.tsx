@@ -139,9 +139,9 @@ export default function WorkspaceSwitcher({
   }, [roleOverride, session?.roles]);
   const primaryRole = getPrimaryWorkspaceRole(effectiveRoles);
   const workspaces = useMemo(() => {
-    const available = getAvailableWorkspaces(effectiveRoles, { prototype: isTestPersonaAccessEnabled(), currentRole: primaryRole, includeDisabled: false });
+    const available = getAvailableWorkspaces(effectiveRoles, { prototype: isTestPersonaAccessEnabled() && session?.source !== "signed_in_user", currentRole: primaryRole, includeDisabled: false });
     return customerOnly ? filterCustomerWorkspaces(available) : available;
-  }, [customerOnly, effectiveRoles, primaryRole]);
+  }, [customerOnly, effectiveRoles, primaryRole, session?.source]);
   const currentWorkspace = getCurrentWorkspaceForPath(currentPathname);
   const activeWorkspace = workspaces.find((workspace) => workspace.id === currentWorkspace)
     ?? workspaces.find((workspace) => workspace.id === "application")
