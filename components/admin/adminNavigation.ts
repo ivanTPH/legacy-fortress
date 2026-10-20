@@ -13,36 +13,42 @@ export type AdminNavigationGroup = {
 
 export const PLATFORM_ADMIN_NAVIGATION: AdminNavigationGroup[] = [
   {
-    label: "Platform Administration",
+    label: "",
     items: [
       { key: "overview", label: "Overview", href: "/admin", icon: "space_dashboard", capability: "admin.dashboard.read" },
-      { key: "users", label: "Users", href: "/admin/users", icon: "manage_accounts", capability: "users:lookup" },
-      { key: "admin-users", label: "Admin users", href: "/admin/admin-users", icon: "admin_panel_settings", capability: "admin_users:manage" },
+    ],
+  },
+  {
+    label: "Operations",
+    items: [
+      { key: "users", label: "Customer users", href: "/admin/users", icon: "manage_accounts", capability: "users:lookup" },
       { key: "invitations", label: "Invitations", href: "/admin/invitations", icon: "forward_to_inbox", capability: "support:read" },
-      { key: "access", label: "Access requests", href: "/admin/access", icon: "vpn_key", capability: "support:read" },
+      { key: "access", label: "Access requests", href: "/admin/access", icon: "key", capability: "support:read" },
       { key: "support", label: "Support", href: "/admin/support", icon: "support_agent", capability: "support:read" },
     ],
   },
   {
-    label: "Platform Enterprise",
+    label: "Probate & verification",
     items: [
-      { key: "organisations", label: "Organisations", href: "/admin/organisations", icon: "domain", capability: "organisation:view" },
-      { key: "licences", label: "Licences", href: "/admin/licences", icon: "license", capability: "licence:view" },
-      { key: "enterprise-audit", label: "Enterprise audit", href: "/admin/audit?scope=enterprise", icon: "history", capability: "enterprise.report.read" },
+      { key: "probate", label: "Probate cases", href: "/admin/probate", icon: "gavel", capability: "admin.probate.summary.read" },
+      { key: "verification", label: "Identity verification", href: "/admin/verification", icon: "verified_user", capability: "verification:read" },
     ],
   },
   {
-    label: "Platform Probate",
+    label: "Commercial",
     items: [
-      { key: "probate", label: "Probate queue", href: "/admin/probate", icon: "gavel", capability: "admin.probate.summary.read" },
-      { key: "verification", label: "Verification", href: "/admin/verification", icon: "fact_check", capability: "verification:read" },
+      { key: "organisations", label: "Organisations", href: "/admin/organisations", icon: "domain", capability: "organisation:view" },
+      { key: "licences", label: "Licences", href: "/admin/licences", icon: "workspace_premium", capability: "licence:view" },
     ],
   },
   {
     label: "Oversight",
     items: [
-      { key: "audit", label: "Audit", href: "/admin/audit", icon: "history", capability: "audit:read" },
+      { key: "audit", label: "Audit", href: "/admin/audit", icon: "receipt_long", capability: "audit:read" },
+      { key: "enterprise-audit", label: "Enterprise audit", href: "/admin/audit?scope=enterprise", icon: "history", capability: "enterprise.report.read" },
+      { key: "probate-audit", label: "Probate audit", href: "/admin/audit?scope=probate", icon: "history", capability: "audit:read" },
       { key: "system-health", label: "System health", href: "/admin/system-health", icon: "monitor_heart", capability: "admin.dashboard.read" },
+      { key: "admin-users", label: "Admin users", href: "/admin/admin-users", icon: "admin_panel_settings", capability: "admin_users:manage" },
       { key: "settings", label: "Settings", href: "/admin/settings", icon: "settings", capability: "admin_shell:view" },
     ],
   },

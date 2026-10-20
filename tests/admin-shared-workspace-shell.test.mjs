@@ -12,6 +12,9 @@ test("shared admin shell exposes responsive navigation, identity and sign-out co
   assert.match(source, /lf-admin-shell-mobile-toggle/);
   assert.match(source, /role="dialog"/);
   assert.match(source, /WorkspaceSwitcher/);
+  assert.match(source, /!isPlatform \? <WorkspaceSwitcher/);
+  assert.match(source, /lf-admin-shell-mobile-tabs/);
+  assert.match(source, /preferredTabs\.map/);
   assert.match(source, /Sign out/);
   assert.match(source, /aria-label="Sign out of Legacy Fortress"/);
   assert.match(source, /lf-admin-shell-account-trigger/);
@@ -96,7 +99,8 @@ test("platform, enterprise and probate entry surfaces use the shared shell", () 
 
   assert.match(platform, /AdminWorkspaceShell/);
   assert.match(platform, /PLATFORM_ADMIN_NAVIGATION/);
-  assert.match(platform, /PROBATE_REVIEW_NAVIGATION/);
+  assert.match(platform, /filterAdminNavigation\(PLATFORM_ADMIN_NAVIGATION, capabilities\)/);
+  assert.match(platform, /adminRole=\{admin\?\.role\}/);
   assert.match(platform, /workspaceLabel=\{section === "probate" \|\| section === "probate-detail" \? "Platform Probate Review" : "Platform Administration"\}/);
   assert.match(enterprise, /AdminWorkspaceShell/);
   assert.match(enterprise, /ENTERPRISE_ADMIN_NAVIGATION/);

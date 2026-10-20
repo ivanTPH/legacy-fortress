@@ -179,7 +179,7 @@ export default function PlatformOrganisationControlCentre({ organisationId }: { 
   if (state === "error" || !session) return <main style={pageStyle}><section style={panelStyle}><p style={eyebrowStyle}>Platform Administration</p><h1>Commercial register unavailable</h1><p>{message || "Try again later."}</p></section></main>;
 
   return (
-    <AdminWorkspaceShell workspaceLabel="Platform Administration" eyebrow="Platform Administration" title={currentLabel} description={organisationId ? "Manage commercial metadata, licence position and administrator access without entering customer vault data." : "Privacy-bounded organisation register for commercial account operations."} currentPathname={organisationId ? `/admin/organisations/${organisationId}` : "/admin/organisations"} navigation={navigation} onSignOut={() => { void supabase.auth.signOut(); window.location.assign("/sign-in"); }} identityLabel={identity?.label} identityDetail={identity?.detail}>
+    <AdminWorkspaceShell workspaceLabel="Platform Administration" eyebrow="Platform Administration" title={currentLabel} description={organisationId ? "Manage commercial metadata, licence position and administrator access without entering customer vault data." : "Privacy-bounded organisation register for commercial account operations."} currentPathname={organisationId ? `/admin/organisations/${organisationId}` : "/admin/organisations"} navigation={navigation} onSignOut={() => { void supabase.auth.signOut(); window.location.assign("/sign-in"); }} identityLabel={identity?.label} identityDetail={identity?.detail} adminRole={session?.role}>
       {message ? <div role="status" style={alertStyle}>{message}</div> : null}
       {organisationId && detail ? renderDetail() : renderRegister()}
       {formOpen ? <Modal title="New organisation" onClose={closeDialogs}><OrganisationForm value={form} onChange={setForm} onSubmit={submitOrganisation} onCancel={closeDialogs} saving={saving} /></Modal> : null}
@@ -280,7 +280,7 @@ function badgeStatus(value: string): "Active" | "Suspended" | "Pending" | "Restr
 }
 
 const pageStyle: CSSProperties = { minHeight: "100vh", background: "#f8fafc", padding: 24 };
-const panelStyle: CSSProperties = { border: "1px solid #dbe3ef", borderRadius: 8, padding: 18, background: "#fff", display: "grid", gap: 12 };
+const panelStyle: CSSProperties = { border: "1px solid #e6ded9", borderRadius: 12, padding: 20, background: "#fff", display: "grid", gap: 12 };
 const stackStyle: CSSProperties = { display: "grid", gap: 16 };
 const eyebrowStyle: CSSProperties = { margin: 0, color: "#526173", fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.04em" };
 const h2Style: CSSProperties = { margin: 0, color: "#0f172a", fontSize: 24 };
@@ -303,8 +303,8 @@ const activityListStyle: CSSProperties = { display: "grid", gap: 10, margin: 0, 
 const emptyStyle: CSSProperties = { display: "grid", gap: 5, padding: 18, color: "#526173" };
 const labelStyle: CSSProperties = { display: "grid", gap: 5, color: "#334155", fontWeight: 700, fontSize: 13 };
 const checkboxStyle: CSSProperties = { display: "flex", gap: 8, alignItems: "center", color: "#334155", fontWeight: 700 };
-const primaryButtonStyle: CSSProperties = { border: 0, borderRadius: 6, padding: "10px 14px", background: "#0f172a", color: "#fff", fontWeight: 800, cursor: "pointer" };
-const secondaryButtonStyle: CSSProperties = { border: "1px solid #94a3b8", borderRadius: 6, padding: "9px 13px", background: "#fff", color: "#0f172a", fontWeight: 700, cursor: "pointer" };
+const primaryButtonStyle: CSSProperties = { border: 0, borderRadius: 8, padding: "10px 14px", background: "#8c4a32", color: "#fff", fontWeight: 800, cursor: "pointer", minHeight: 44 };
+const secondaryButtonStyle: CSSProperties = { border: "1px solid #d9cfca", borderRadius: 8, padding: "10px 13px", background: "#fff", color: "#1f1715", fontWeight: 700, cursor: "pointer", minHeight: 44 };
 const dangerButtonStyle: CSSProperties = { border: "1px solid #b91c1c", borderRadius: 6, padding: "9px 13px", background: "#fff", color: "#991b1b", fontWeight: 800, cursor: "pointer" };
 const secondaryLinkStyle: CSSProperties = { display: "inline-block", border: "1px solid #94a3b8", borderRadius: 6, padding: "9px 13px", color: "#0f172a", fontWeight: 700, textDecoration: "none" };
 const alertStyle: CSSProperties = { padding: 12, border: "1px solid #fbbf24", background: "#fffbeb", color: "#78350f", borderRadius: 6 };

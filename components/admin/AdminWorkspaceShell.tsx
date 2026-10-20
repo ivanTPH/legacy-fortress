@@ -5,7 +5,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import WorkspaceSwitcher from "@/components/navigation/WorkspaceSwitcher";
 import Icon from "@/components/ui/Icon";
-import type { AdminNavigationGroup } from "./adminNavigation";
+import type { AdminNavigationGroup, AdminNavigationItem } from "./adminNavigation";
 
 type AdminWorkspaceShellProps = {
   workspaceLabel: string;
@@ -19,6 +19,7 @@ type AdminWorkspaceShellProps = {
   identityLabel?: string;
   identityDetail?: string;
   identityAvatarUrl?: string;
+  adminRole?: string;
   primaryAction?: ReactNode;
   breadcrumbs?: Array<{ label: string; href?: string }>;
   stagingLabel?: string;
@@ -36,6 +37,7 @@ export default function AdminWorkspaceShell({
   identityLabel = "Secure account",
   identityDetail,
   identityAvatarUrl = "",
+  adminRole,
   primaryAction,
   breadcrumbs = [],
   stagingLabel = "STAGING",
@@ -44,6 +46,9 @@ export default function AdminWorkspaceShell({
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
   const accountTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const mobileMenuTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const drawerCloseRef = useRef<HTMLButtonElement | null>(null);
+  const drawerPanelRef = useRef<HTMLDivElement | null>(null);
   const accountMenuId = useId();
 
   useEffect(() => {
@@ -57,12 +62,23 @@ export default function AdminWorkspaceShell({
     if (!menuOpen && !accountMenuOpen) return;
 
     function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Tab" && menuOpen && drawerPanelRef.current) {
+        const focusable = Array.from(drawerPanelRef.current.querySelectorAll<HTMLElement>('a[href], button:not([disabled])'));
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first && last) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last && first) { event.preventDefault(); first.focus(); }
+        return;
+      }
       if (event.key !== "Escape") return;
       if (accountMenuOpen) {
         setAccountMenuOpen(false);
         accountTriggerRef.current?.focus();
       }
-      if (menuOpen) setMenuOpen(false);
+      if (menuOpen) {
+        setMenuOpen(false);
+        mobileMenuTriggerRef.current?.focus();
+      }
     }
 
     function onOtherMenuOpen(event: Event) {
@@ -90,6 +106,14 @@ export default function AdminWorkspaceShell({
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [accountMenuOpen]);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    drawerCloseRef.current?.focus();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, [menuOpen]);
+
   function toggleAccountMenu() {
     setAccountMenuOpen((current) => {
       const next = !current;
@@ -100,20 +124,33 @@ export default function AdminWorkspaceShell({
     });
   }
 
-  const workspaceHome = workspaceLabel === "Enterprise Operations" ? "/enterprise" : workspaceLabel === "Platform Probate Review" ? "/admin/probate" : "/admin";
+  const isPlatform = workspaceLabel !== "Enterprise Operations";
+  const workspaceHome = isPlatform ? "/admin" : "/enterprise";
+  const visibleItems = navigation.flatMap((group) => group.items);
+  const preferredTabs = adminRole === "support_agent" ? ["overview", "users", "support"]
+    : adminRole === "probate_reviewer" ? ["overview", "probate", "verification"]
+    : adminRole === "enterprise_admin" ? ["overview", "organisations", "licences"]
+    : adminRole === "auditor" ? ["overview", "audit", "system-health"]
+    : ["overview", "verification", "audit"];
+  const mobileTabs = [
+    ...preferredTabs.map((key) => visibleItems.find((item) => item.key === key)),
+    ...visibleItems,
+  ].filter((item): item is AdminNavigationItem => item !== undefined)
+    .filter((item, index, items) => items.findIndex((candidate) => candidate.key === item.key) === index)
+    .slice(0, 3);
   const sidebar = (
     <aside className="lf-admin-shell-sidebar" aria-label={`${workspaceLabel} navigation`}>
       <Link href={workspaceHome} className="lf-admin-shell-brand" prefetch={false}>
-        <span className="lf-admin-shell-brand-mark">LF</span>
+        <span className="lf-admin-shell-brand-mark">{isPlatform ? <Icon name="apps" size={22} filled /> : "LF"}</span>
         <span>
           <strong>Legacy Fortress</strong>
-          <small>{workspaceLabel}</small>
+          <small>{isPlatform ? "Platform Admin" : workspaceLabel}</small>
         </span>
       </Link>
       <nav className="lf-admin-shell-nav">
         {navigation.map((group) => (
           <section key={group.label} className="lf-admin-shell-nav-group">
-            <div className="lf-admin-shell-nav-label">{group.label}</div>
+            {group.label ? <div className="lf-admin-shell-nav-label">{group.label}</div> : null}
             {group.items.map((item) => {
               const active = isActivePath(currentPathname, item.href);
               return (
@@ -191,17 +228,26 @@ export default function AdminWorkspaceShell({
   );
 
   return (
-    <main className="lf-admin-shell">
-      <button type="button" className="lf-admin-shell-mobile-toggle" onClick={() => setMenuOpen(true)} aria-expanded={menuOpen} aria-controls="admin-mobile-navigation">
-        <Icon name="menu" size={20} />
-        Menu
-      </button>
+    <main className={isPlatform ? "lf-admin-shell lf-admin-shell--platform" : "lf-admin-shell"}>
+      {isPlatform ? (
+        <div className="lf-admin-shell-mobile-bar">
+          <Link href="/admin" className="lf-admin-shell-mobile-brand" prefetch={false}><Icon name="apps" size={21} filled /><span>Platform Admin</span></Link>
+          <span className="lf-admin-shell-mobile-badge">ADMIN</span>
+          <button ref={mobileMenuTriggerRef} type="button" className="lf-admin-shell-mobile-toggle" onClick={() => setMenuOpen(true)} aria-label="Open Platform Admin menu" aria-expanded={menuOpen} aria-controls="admin-mobile-navigation">
+            <Icon name="menu" size={22} />
+          </button>
+        </div>
+      ) : (
+        <button ref={mobileMenuTriggerRef} type="button" className="lf-admin-shell-mobile-toggle" onClick={() => setMenuOpen(true)} aria-expanded={menuOpen} aria-controls="admin-mobile-navigation">
+          <Icon name="menu" size={20} />Menu
+        </button>
+      )}
       {sidebar}
       {menuOpen ? (
         <div className="lf-admin-shell-drawer" id="admin-mobile-navigation" role="dialog" aria-modal="true" aria-label={`${workspaceLabel} menu`}>
-          <div className="lf-admin-shell-drawer-backdrop" onClick={() => setMenuOpen(false)} />
-          <div className="lf-admin-shell-drawer-panel">
-            <button type="button" className="lf-admin-shell-drawer-close" onClick={() => setMenuOpen(false)}>
+          <div className="lf-admin-shell-drawer-backdrop" onClick={() => { setMenuOpen(false); mobileMenuTriggerRef.current?.focus(); }} />
+          <div ref={drawerPanelRef} className="lf-admin-shell-drawer-panel">
+            <button ref={drawerCloseRef} type="button" className="lf-admin-shell-drawer-close" onClick={() => { setMenuOpen(false); mobileMenuTriggerRef.current?.focus(); }}>
               <Icon name="close" size={18} />
               Close
             </button>
@@ -222,10 +268,15 @@ export default function AdminWorkspaceShell({
       <section className="lf-admin-shell-content">
         <header className="lf-admin-shell-header">
           <div className="lf-admin-shell-title">
-            <p className="lf-admin-shell-eyebrow">{eyebrow}</p>
+            {!isPlatform ? <p className="lf-admin-shell-eyebrow">{eyebrow}</p> : null}
+            {isPlatform && breadcrumbs.length ? (
+              <nav className="lf-admin-shell-breadcrumb" aria-label="Breadcrumb">
+                {breadcrumbs.map((item, index) => <span key={`${item.label}-${index}`}>{item.href ? <Link href={item.href} prefetch={false}>{item.label}</Link> : item.label}</span>)}
+              </nav>
+            ) : null}
             <h1>{title}</h1>
             <p>{description}</p>
-            {breadcrumbs.length ? (
+            {!isPlatform && breadcrumbs.length ? (
               <nav className="lf-admin-shell-breadcrumb" aria-label="Breadcrumb">
                 {breadcrumbs.map((item, index) => (
                   <span key={`${item.label}-${index}`}>
@@ -238,12 +289,18 @@ export default function AdminWorkspaceShell({
           <div className="lf-admin-shell-actions">
             {stagingLabel ? <span className="lf-admin-shell-stage">{stagingLabel}</span> : null}
             {primaryAction}
-            <WorkspaceSwitcher currentPathname={currentPathname} compact />
+            {!isPlatform ? <WorkspaceSwitcher currentPathname={currentPathname} compact /> : null}
             {accountMenu}
           </div>
         </header>
         {children}
       </section>
+      {isPlatform ? <nav className="lf-admin-shell-mobile-tabs" aria-label="Platform Admin quick navigation">
+        {mobileTabs.map((item) => <Link key={item.key} href={item.href} aria-current={isActivePath(currentPathname, item.href) ? "page" : undefined} prefetch={false}>
+          <Icon name={item.icon} size={22} /><span>{item.label}</span>
+        </Link>)}
+        <button type="button" onClick={() => setMenuOpen(true)} aria-label="Open all Platform Admin navigation"><Icon name="menu" size={22} /><span>Menu</span></button>
+      </nav> : null}
       <style jsx global>{adminShellCss}</style>
     </main>
   );
@@ -254,6 +311,7 @@ function isActivePath(currentPathname: string, href: string) {
   const [currentPath, currentQuery = ""] = currentPathname.split("?");
   if (hrefQuery) return currentPath === hrefPath && currentQuery.includes(hrefQuery);
   if (hrefPath === "/admin") return currentPath === "/admin";
+  if (hrefPath === "/admin/audit" && currentQuery) return false;
   if (hrefPath === "/enterprise") return currentPath === "/enterprise" && !currentQuery;
   return currentPath === hrefPath || currentPath.startsWith(`${hrefPath}/`);
 }

@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import AdminDataTable, { AdminContextHelp, AdminEmptyState, AdminMetricCard, AdminStatusBadge } from "@/components/admin/AdminPrimitives";
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell";
 import InfoTip from "@/components/ui/InfoTip";
-import { filterAdminNavigation, PLATFORM_ADMIN_NAVIGATION, PROBATE_REVIEW_NAVIGATION } from "@/components/admin/adminNavigation";
+import { filterAdminNavigation, PLATFORM_ADMIN_NAVIGATION } from "@/components/admin/adminNavigation";
 import { waitForActiveUser } from "@/lib/auth/session";
 import { supabase } from "@/lib/supabaseClient";
 import { getSupportNextStep, getSupportOperationalState } from "@/lib/admin/operations";
@@ -1049,9 +1049,8 @@ export default function AdminControlPlaneWorkspace({
   }
 
   const visibleNav = useMemo(() => {
-    const baseNavigation = section === "probate" || section === "probate-detail" ? PROBATE_REVIEW_NAVIGATION : PLATFORM_ADMIN_NAVIGATION;
-    return filterAdminNavigation(baseNavigation, capabilities);
-  }, [capabilities, section]);
+    return filterAdminNavigation(PLATFORM_ADMIN_NAVIGATION, capabilities);
+  }, [capabilities]);
 
   const page = PAGE_COPY[section];
   const currentPathname = currentHrefForSection(section, resourceId);
@@ -1101,6 +1100,7 @@ export default function AdminControlPlaneWorkspace({
       onSignOut={signOut}
       identityLabel={admin?.displayName || admin?.email || "Admin user"}
       identityDetail={admin ? `${admin.role.replace(/_/g, " ")} · ${admin.email}` : undefined}
+      adminRole={admin?.role}
       breadcrumbs={buildPlatformBreadcrumbs(section, resourceId, enterprisePortfolio, page.title)}
     >
         {message ? <section style={alertStyle}>{message}</section> : null}
@@ -2896,25 +2896,25 @@ const loadingPageStyle = {
   padding: 24,
 } satisfies CSSProperties;
 
-const panelStyle = { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: 18, display: "grid", gap: 14 } satisfies CSSProperties;
+const panelStyle = { background: "#fff", border: "1px solid #e6ded9", borderRadius: 12, padding: 20, display: "grid", gap: 14 } satisfies CSSProperties;
 const alertStyle = { ...panelStyle, color: "#991b1b", background: "#fff7ed" } satisfies CSSProperties;
 const stackStyle = { display: "grid", gap: 16 } satisfies CSSProperties;
-const gridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 190px), 1fr))", gap: 12 } satisfies CSSProperties;
+const gridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 154px), 1fr))", gap: 12 } satisfies CSSProperties;
 const toolbarStyle = { ...panelStyle, display: "flex", alignItems: "end", justifyContent: "space-between", gap: 12, flexWrap: "wrap" } satisfies CSSProperties;
 const fieldStackStyle = { display: "grid", gap: 6, minWidth: 0, flex: "1 1 260px" } satisfies CSSProperties;
 const formGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 190px), 1fr))", gap: 12 } satisfies CSSProperties;
 const definitionGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", gap: 12 } satisfies CSSProperties;
 const settingsCardStyle = { ...panelStyle, gap: 8 } satisfies CSSProperties;
-const rowStyle = { border: "1px solid #e2e8f0", borderRadius: 8, padding: 12, display: "grid", gap: 4 } satisfies CSSProperties;
+const rowStyle = { border: "1px solid #e6ded9", borderRadius: 10, padding: 12, display: "grid", gap: 4 } satisfies CSSProperties;
 const eyebrowStyle = { margin: 0, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 12, fontWeight: 800 } satisfies CSSProperties;
 const h1Style = { margin: 0, fontSize: 28, lineHeight: 1.15 } satisfies CSSProperties;
 const h2Style = { margin: 0, fontSize: 20 } satisfies CSSProperties;
 const h3Style = { margin: 0, fontSize: 16 } satisfies CSSProperties;
-const mutedStyle = { margin: 0, color: "#64748b", lineHeight: 1.45 } satisfies CSSProperties;
-const mutedInlineStyle = { color: "#64748b", fontSize: 13 } satisfies CSSProperties;
-const secondaryLinkStyle = { border: "1px solid #cbd5e1", borderRadius: 6, padding: "9px 12px", color: "#0f172a", textDecoration: "none", fontWeight: 700, background: "#fff" } satisfies CSSProperties;
+const mutedStyle = { margin: 0, color: "#6f625e", lineHeight: 1.45 } satisfies CSSProperties;
+const mutedInlineStyle = { color: "#6f625e", fontSize: 13 } satisfies CSSProperties;
+const secondaryLinkStyle = { border: "1px solid #d9cfca", borderRadius: 8, padding: "10px 13px", color: "#1f1715", textDecoration: "none", fontWeight: 700, background: "#fff", minHeight: 44 } satisfies CSSProperties;
 const secondaryButtonStyle = { ...secondaryLinkStyle, cursor: "pointer" } satisfies CSSProperties;
-const primaryButtonStyle = { border: 0, borderRadius: 6, padding: "10px 14px", color: "#fff", background: "#111827", fontWeight: 800, cursor: "pointer" } satisfies CSSProperties;
+const primaryButtonStyle = { border: 0, borderRadius: 8, padding: "10px 14px", color: "#fff", background: "#8c4a32", fontWeight: 800, cursor: "pointer", minHeight: 44 } satisfies CSSProperties;
 const dangerButtonStyle = { ...primaryButtonStyle, background: "#991b1b" } satisfies CSSProperties;
 const checkboxLineStyle = { display: "flex", gap: 8, alignItems: "center", fontWeight: 700 } satisfies CSSProperties;
 const permissionSummaryStyle = { border: "1px solid #bfdbfe", borderRadius: 8, padding: 12, background: "#eff6ff", color: "#1e3a8a", display: "grid", gap: 4 } satisfies CSSProperties;
