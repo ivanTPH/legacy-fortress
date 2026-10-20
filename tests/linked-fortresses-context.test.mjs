@@ -12,6 +12,7 @@ const idv = fs.readFileSync(path.join(root, "app/identity/verify/IdentityVerific
 const linkedList = fs.readFileSync(path.join(root, "app/(app)/linked-fortresses/page.tsx"), "utf8");
 const linkedDetail = fs.readFileSync(path.join(root, "app/(app)/linked-fortresses/[grantId]/page.tsx"), "utf8");
 const deathReportApi = fs.readFileSync(path.join(root, "app/api/estate/death-reports/route.ts"), "utf8");
+const releaseMigration = fs.readFileSync(path.join(root, "supabase/migrations/20261020091848_linked_release_access_policy.sql"), "utf8");
 
 test("personal context clears the selected linked grant before own-vault setup", () => {
   assert.match(layout, /onClick=\{\(\) => viewerContextValue\.clearLinkedGrant\(\)\}/);
@@ -20,13 +21,13 @@ test("personal context clears the selected linked grant before own-vault setup",
   assert.match(layout, /resolvedViewerAccess\.mode === "linked"/);
 });
 
-test("linked context selection uses canonical grants and preserves multiple owners", () => {
-  assert.match(viewerAccess, /from\("account_access_grants"\)/);
-  assert.match(viewerAccess, /eq\("linked_user_id", sessionUserId\)/);
+test("linked context selection uses narrow relationship RPC and preserves multiple owners", () => {
+  assert.match(viewerAccess, /rpc\("lf_linked_relationships"\)/);
+  assert.match(viewerAccess, /row\.linked_user_id === sessionUserId/);
   assert.match(switcher, /Linked Fortresses/);
   assert.match(switcher, /contact-wallet\?grant=/);
   assert.match(switcher, /getLinkedFortressAccessLabel/);
-  assert.match(viewerAccess, /No records shared/);
+  assert.match(viewerAccess, /Records locked/);
 });
 
 test("contact wallet and identity verification use relationship context without granting access", () => {
@@ -55,6 +56,19 @@ test("linked record navigation and dashboard copy do not offer owner creation co
   const dashboard = fs.readFileSync(path.join(root, "app/(app)/dashboard/page.tsx"), "utf8");
   assert.match(access, /assignedSectionKeys\.length === 0 && section !== "dashboard"/);
   assert.match(access, /loadAssetSectionKeys\(client, selectedGrant\.owner_user_id, assignedAssetIds\)/);
-  assert.match(dashboard, /area\.visible && \(viewer\.mode !== "linked" \|\| area\.count > 0\)/);
-  assert.match(dashboard, /canAddRecords=\{viewer\.mode !== "linked"\}/);
+  assert.match(dashboard, /if \(viewer\.mode === "linked"\)/);
+  assert.match(dashboard, /Records and financial information remain locked pending explicit authorisation/);
+  assert.match(access, /viewer\.releaseState !== "ESTATE_RELEASED"/);
+});
+
+test("new grant states default locked and released records require a reviewed scope", () => {
+  assert.match(releaseMigration, /access_state text NOT NULL DEFAULT 'DESIGNATED_LOCKED'/);
+  assert.match(releaseMigration, /UPDATE public\.account_access_grants SET access_state = 'REVOKED'/);
+  assert.match(releaseMigration, /c\.status = 'active'/);
+  assert.match(releaseMigration, /d\.status = 'confirmed'/);
+  assert.match(releaseMigration, /g\.release_scope -> 'asset_ids'/);
+  assert.match(releaseMigration, /g\.permissions_override -> 'asset_ids'/);
+  assert.match(releaseMigration, /attorney_owner_authorized_at IS NOT NULL/);
+  assert.match(releaseMigration, /DROP POLICY IF EXISTS account_access_grants_linked_select/);
+  assert.match(releaseMigration, /lf_linked_relationships/);
 });

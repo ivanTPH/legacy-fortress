@@ -20,6 +20,11 @@ const READ_KEY = "lf:notification-events:read";
 
 function describeEvent(event: NotificationEvent) {
   const type = event.event_type.toLowerCase();
+  if (type === "recipient_records_designated") return { title: "Records designated", detail: "Records were designated for possible future access. They remain locked until authorised release.", group: "records", icon: "lock", href: "/contact-wallet" };
+  if (type === "recipient_designation_revoked") return { title: "Designation removed", detail: "Your designated records were updated. Sign in to review your relationship status.", group: "records", icon: "lock", href: "/contact-wallet" };
+  if (type === "recipient_estate_released") return { title: "Estate access authorised", detail: "Access to specific records has been authorised. Sign in to review your available records.", group: "records", icon: "verified_user", href: "/contact-wallet" };
+  if (type === "recipient_attorney_limited") return { title: "Limited attorney access", detail: "Approved institution identification is available. Sign in to review your access.", group: "records", icon: "verified_user", href: "/contact-wallet" };
+  if (type === "recipient_release_revoked" || type === "recipient_release_locked") return { title: "Access status updated", detail: "Your access to information in Legacy Fortress has been updated. Sign in to review your relationship status.", group: "records", icon: "lock", href: "/contact-wallet" };
   if (type === "recipient_record_access_updated" || type === "recipient_record_access_revoked") return {
     title: "Your access was updated",
     detail: "Your access to information in Legacy Fortress has been updated. Sign in to review your available records.",

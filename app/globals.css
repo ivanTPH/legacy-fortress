@@ -3500,6 +3500,23 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
   border-color: #101318;
 }
 
+.lf-reset-password-input {
+  font-size: 16px;
+}
+
+.lf-reset-password-input[aria-invalid="true"] {
+  border-color: #b42318;
+  box-shadow: 0 0 0 1px #b42318;
+}
+
+.lf-reset-password-visibility {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 14px;
+}
+
 .lf-primary-btn {
   border: 1px solid var(--lf-primary);
   background: var(--lf-primary);

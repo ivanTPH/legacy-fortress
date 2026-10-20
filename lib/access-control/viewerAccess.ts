@@ -39,10 +39,13 @@ export type AccountAccessGrantRow = {
   vault_lifecycle_state?: VaultLifecycleState | string | null;
   last_accessed_at: string | null;
   updated_at: string;
+  access_state?: "DESIGNATED_LOCKED" | "ATTORNEY_LIMITED" | "ESTATE_RELEASED" | "REVOKED";
+  account_holder_name?: string | null;
 };
 
 export type ViewerAccessState = {
   mode: "owner" | "linked";
+  releaseState?: "DESIGNATED_LOCKED" | "ATTORNEY_LIMITED" | "ESTATE_RELEASED" | "REVOKED";
   grantId: string | null;
   sessionUserId: string;
   targetOwnerUserId: string;
@@ -87,7 +90,7 @@ export type LinkedFortressSummary = {
   requiredIdentityLevel: IdentityAssuranceLevel;
   vaultLifecycleState: VaultLifecycleState;
   sharedRecordCount: number;
-  accessState: "no_records" | "records_shared" | "verification_required" | "estate_locked";
+  accessState: "no_records" | "records_shared" | "verification_required" | "estate_locked" | "attorney_limited" | "revoked";
 };
 
 export function buildInvitationAcceptPath(invitationId: string, token: string) {
@@ -107,10 +110,12 @@ export function getRoleLabel(role: CollaboratorRole) {
 }
 
 export function getLinkedFortressAccessLabel(summary: Pick<LinkedFortressSummary, "accessState" | "sharedRecordCount">) {
+  if (summary.accessState === "revoked") return "Access revoked";
+  if (summary.accessState === "attorney_limited") return "Limited attorney identification";
   if (summary.accessState === "estate_locked") return "Estate access locked";
   if (summary.accessState === "verification_required") return "Verification required";
-  if (summary.accessState === "records_shared") return `${summary.sharedRecordCount} record${summary.sharedRecordCount === 1 ? "" : "s"} shared`;
-  return "No records shared";
+  if (summary.accessState === "records_shared") return `${summary.sharedRecordCount} record${summary.sharedRecordCount === 1 ? "" : "s"} released`;
+  return "Records locked";
 }
 
 export function getStoredLinkedGrantId() {
@@ -144,15 +149,11 @@ export function clearStoredLinkedGrantId() {
 }
 
 export async function hasLinkedAccountAccess(client: AnySupabaseClient, userId: string) {
-  const res = await client
-    .from("account_access_grants")
-    .select("id")
-    .eq("linked_user_id", userId)
-    .in("activation_status", ACTIVE_PROTECTED_GRANT_STATUSES)
-    .limit(1);
+  const res = await client.rpc("lf_linked_relationships");
 
   if (res.error) return false;
-  return Boolean((res.data ?? []).length);
+  return Boolean(((res.data ?? []) as AccountAccessGrantRow[]).some((row) =>
+    row.linked_user_id === userId && ACTIVE_PROTECTED_GRANT_STATUSES.includes(row.activation_status)));
 }
 
 async function hasOwnVaultAccess(client: AnySupabaseClient, userId: string) {
@@ -186,14 +187,11 @@ export async function loadViewerAccessState(
   } = {},
 ): Promise<ViewerAccessState> {
   const allowedGrantStatuses = includePreVerificationGrants ? CONTACT_WALLET_GRANT_STATUSES : ACTIVE_PROTECTED_GRANT_STATUSES;
-  const grantsRes = await client
-    .from("account_access_grants")
-    .select("id,owner_user_id,linked_user_id,contact_id,invitation_id,assigned_role,relationship,activation_status,permissions_override,required_identity_level,vault_lifecycle_state,last_accessed_at,updated_at")
-    .eq("linked_user_id", sessionUserId)
-    .in("activation_status", allowedGrantStatuses)
-    .order("updated_at", { ascending: false });
+  const grantsRes = await client.rpc("lf_linked_relationships");
 
-  const grants = ((grantsRes.data ?? []) as AccountAccessGrantRow[]).filter(Boolean);
+  const grants = ((grantsRes.data ?? []) as AccountAccessGrantRow[])
+    .filter((row) => row.linked_user_id === sessionUserId && allowedGrantStatuses.includes(row.activation_status))
+    .sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at));
   const ownVaultAllowed = preferOwnVault && !preferredGrantId
     ? await hasOwnVaultAccess(client, sessionUserId)
     : false;
@@ -229,88 +227,39 @@ export async function loadViewerAccessState(
     };
   }
 
-  const permissionsOverride = normalizePermissionsOverride(selectedGrant.permissions_override);
+  const released = selectedGrant.access_state === "ESTATE_RELEASED";
+  const permissionsOverride = normalizePermissionsOverride(released ? selectedGrant.permissions_override : {});
   const identityAssuranceLevel = await loadIdentityAssuranceLevel(client, sessionUserId);
   const requiredIdentityLevel = normalizeIdentityAssuranceLevel(selectedGrant.required_identity_level ?? 2);
   const vaultLifecycleState = normalizeVaultLifecycleState(selectedGrant.vault_lifecycle_state);
 
-  const [contactRes, profileRes, legacyProfileRes, assetLinksRes, recordLinksRes] = await Promise.all([
-    selectedGrant.contact_id
-      ? client
-          .from("contacts")
-          .select("id,full_name,relationship")
-          .eq("owner_user_id", selectedGrant.owner_user_id)
-          .eq("id", selectedGrant.contact_id)
-          .maybeSingle()
-      : Promise.resolve({ data: null, error: null }),
-    client
-      .from("user_profiles")
-      .select("display_name")
-      .eq("user_id", selectedGrant.owner_user_id)
-      .maybeSingle(),
-    client
-      .from("profiles")
-      .select("display_name")
-      .eq("user_id", selectedGrant.owner_user_id)
-      .maybeSingle(),
-    selectedGrant.contact_id
-      ? client
-          .from("contact_links")
-          .select("source_id,section_key")
-          .eq("owner_user_id", selectedGrant.owner_user_id)
-          .eq("contact_id", selectedGrant.contact_id)
-          .eq("source_kind", "asset")
-      : Promise.resolve({ data: [], error: null }),
-    selectedGrant.contact_id
-      ? client
-          .from("record_contacts")
-          .select("record_id")
-          .eq("owner_user_id", selectedGrant.owner_user_id)
-          .eq("contact_id", selectedGrant.contact_id)
-      : Promise.resolve({ data: [], error: null }),
-  ]);
-
-  const accountHolderName =
-    String((profileRes as { data?: { display_name?: string | null } | null }).data?.display_name ?? "").trim()
-    || String((legacyProfileRes as { data?: { display_name?: string | null } | null }).data?.display_name ?? "").trim()
-    || fallbackDisplayName;
-
-  const linkedContact = (contactRes as { data?: { full_name?: string | null; relationship?: string | null } | null }).data;
-  const linkedContactName = String(linkedContact?.full_name ?? "").trim();
-  const linkedAssetIds = ((assetLinksRes as { data?: Array<{ source_id?: string | null }> | null }).data ?? [])
-    .map((row) => String(row.source_id ?? "").trim())
-    .filter(Boolean);
-  const linkedRecordIds = ((recordLinksRes as { data?: Array<{ record_id?: string | null }> | null }).data ?? [])
-    .map((row) => String(row.record_id ?? "").trim())
-    .filter(Boolean);
-  const assignedAssetIds = Array.from(new Set([...permissionsOverride.assetIds, ...linkedAssetIds]));
-  const recordSectionKeys = linkedRecordIds.length
-    ? await loadRecordSectionKeys(client, selectedGrant.owner_user_id, linkedRecordIds)
+  const accountHolderName = String(selectedGrant.account_holder_name ?? "").trim() || fallbackDisplayName;
+  const linkedContactName = "";
+  const assignedAssetIds = permissionsOverride.assetIds;
+  const recordSectionKeys = permissionsOverride.recordIds.length
+    ? await loadRecordSectionKeys(client, selectedGrant.owner_user_id, permissionsOverride.recordIds)
     : [];
   // Resolve the assigned IDs through this caller's RLS view. Legacy contact links
   // may not carry a section key, and a role alone must not reveal an area.
   const linkedAssetSectionKeys = assignedAssetIds.length
     ? await loadAssetSectionKeys(client, selectedGrant.owner_user_id, assignedAssetIds)
     : [];
-  const assetSectionKeys = ((assetLinksRes as { data?: Array<{ section_key?: string | null }> | null }).data ?? [])
-    .map((row) => normalizeSectionKey(row.section_key))
-    .filter((value): value is SectionKey => Boolean(value));
   const assignedSectionKeys = Array.from(new Set([
     ...permissionsOverride.allowedSections,
-    ...assetSectionKeys,
     ...linkedAssetSectionKeys,
     ...recordSectionKeys,
   ]));
 
   return {
     mode: "linked",
+    releaseState: selectedGrant.access_state ?? "DESIGNATED_LOCKED",
     grantId: selectedGrant.id,
     sessionUserId,
     targetOwnerUserId: selectedGrant.owner_user_id,
     accountHolderName,
     linkedContactId: selectedGrant.contact_id ?? null,
     linkedContactName,
-    relationship: selectedGrant.relationship ?? (String(linkedContact?.relationship ?? "").trim() || null),
+    relationship: selectedGrant.relationship,
     viewerRole: selectedGrant.assigned_role,
     activationStatus: selectedGrant.activation_status,
     readOnly: permissionsOverride.readOnly ?? true,
@@ -320,7 +269,7 @@ export async function loadViewerAccessState(
     vaultLifecycleState,
     permissionsOverride,
     assignedAssetIds,
-    assignedRecordIds: Array.from(new Set([...permissionsOverride.recordIds, ...linkedRecordIds])),
+    assignedRecordIds: permissionsOverride.recordIds,
     editableAssetIds: permissionsOverride.editableAssetIds,
     editableRecordIds: permissionsOverride.editableRecordIds,
     assignedSectionKeys,
@@ -329,16 +278,13 @@ export async function loadViewerAccessState(
 
 export async function loadLinkedFortressSummaries(client: AnySupabaseClient, sessionUserId: string): Promise<LinkedFortressSummary[]> {
   if (!sessionUserId) return [];
-  const grantsRes = await client
-    .from("account_access_grants")
-    .select("id,activation_status,updated_at")
-    .eq("linked_user_id", sessionUserId)
-    .in("activation_status", CONTACT_WALLET_GRANT_STATUSES)
-    .order("updated_at", { ascending: false });
+  const grantsRes = await client.rpc("lf_linked_relationships");
   if (grantsRes.error) return [];
 
   const summaries = await Promise.all(
-    ((grantsRes.data ?? []) as Array<{ id?: string }>).map(async (grant) => {
+    ((grantsRes.data ?? []) as Array<{ id?: string; activation_status?: string }> )
+      .filter((grant) => CONTACT_WALLET_GRANT_STATUSES.includes(grant.activation_status as AccessActivationStatus))
+      .map(async (grant) => {
       const grantId = String(grant.id ?? "").trim();
       if (!grantId) return null;
       const viewer = await loadViewerAccessState(client, sessionUserId, {
@@ -347,13 +293,11 @@ export async function loadLinkedFortressSummaries(client: AnySupabaseClient, ses
       });
       if (viewer.mode !== "linked" || !viewer.grantId) return null;
       const sharedRecordCount = new Set([...viewer.assignedAssetIds, ...viewer.assignedRecordIds]).size;
-      const accessState = viewer.vaultLifecycleState !== "OWNER_ACTIVE"
-        ? "estate_locked"
-        : viewer.identityAssuranceLevel < viewer.requiredIdentityLevel
-          ? "verification_required"
-          : sharedRecordCount > 0
-            ? "records_shared"
-            : "no_records";
+      const accessState = viewer.releaseState === "REVOKED" ? "revoked"
+        : viewer.identityAssuranceLevel < viewer.requiredIdentityLevel ? "verification_required"
+          : viewer.releaseState === "ATTORNEY_LIMITED" ? "attorney_limited"
+            : viewer.releaseState === "ESTATE_RELEASED" ? "records_shared"
+              : "estate_locked";
       return {
         grantId: viewer.grantId,
         ownerUserId: viewer.targetOwnerUserId,
@@ -369,7 +313,7 @@ export async function loadLinkedFortressSummaries(client: AnySupabaseClient, ses
       } satisfies LinkedFortressSummary;
     }),
   );
-  return summaries.filter((summary): summary is LinkedFortressSummary => Boolean(summary));
+  return summaries.filter((summary) => summary !== null) as LinkedFortressSummary[];
 }
 
 export function mapPathnameToSectionKey(pathname: string): SectionKey | null {
@@ -390,6 +334,9 @@ export function mapPathnameToSectionKey(pathname: string): SectionKey | null {
 
 export function canViewPath(pathname: string, viewer: ViewerAccessState) {
   if (viewer.mode === "linked" && pathname.startsWith("/contact-wallet")) return true;
+  if (viewer.mode === "linked" && viewer.releaseState !== "ESTATE_RELEASED"
+    && !["/dashboard", "/linked-fortresses", "/notifications"].some((path) =>
+      pathname === path || pathname.startsWith(`${path}/`))) return false;
   if (viewer.mode === "linked" && ["/actions", "/action-centre", "/contacts", "/profile", "/add", "/add-to-fortress", "/account", "/settings"].some((path) => pathname === path || pathname.startsWith(`${path}/`))) return false;
   if (viewer.mode === "linked" && !isProtectedGrantActive(viewer.activationStatus)) return false;
   const section = mapPathnameToSectionKey(pathname);

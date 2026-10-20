@@ -36,6 +36,7 @@ export default function ContactWalletPage() {
   const [state, setState] = useState<"loading" | "ready" | "empty" | "error">("loading");
   const [viewer, setViewer] = useState<ViewerAccessState | null>(null);
   const [message, setMessage] = useState("");
+  const [attorneyIdentifications, setAttorneyIdentifications] = useState<Array<{ category: string; institution: string }>>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -65,6 +66,13 @@ export default function ContactWalletPage() {
           return;
         }
         if (access.grantId) setStoredLinkedGrantId(access.grantId);
+        if (access.releaseState === "ATTORNEY_LIMITED" && access.grantId) {
+          const details = await supabase.rpc("lf_linked_attorney_identifications", { p_grant_id: access.grantId });
+          if (!mounted) return;
+          setAttorneyIdentifications(Array.isArray(details.data) ? details.data as Array<{ category: string; institution: string }> : []);
+        } else {
+          setAttorneyIdentifications([]);
+        }
         setViewer(access);
         setState("ready");
       } catch (error) {
@@ -154,8 +162,8 @@ export default function ContactWalletPage() {
         <PlatformStatCard
           icon="lock"
           label="Access mode"
-          value={viewer.readOnly ? "Read-only" : "Limited edit"}
-          detail="Explicit grants, not broad role labels."
+          value={viewer.releaseState === "ESTATE_RELEASED" ? "Estate released" : viewer.releaseState === "ATTORNEY_LIMITED" ? "Limited attorney" : "Locked"}
+          detail="Identity and record designation alone do not unlock information."
         />
       </section>
 
@@ -171,12 +179,16 @@ export default function ContactWalletPage() {
             <PlatformInfoTile label="Role" value={getRoleLabel(supportedPerson.role)} />
             <PlatformInfoTile label="Role acceptance" value={supportedPerson.activationStatus === "invited" ? "Pending" : "Accepted"} />
             <PlatformInfoTile label="Identity" value={viewer.identityAssuranceLevel >= 2 ? "Verified" : "Required"} />
-            <PlatformInfoTile label="Authority" value="Not established / pending" />
-            <PlatformInfoTile label="Access" value={supportedPerson.activationStatus === "active" ? "Active" : "Unavailable / pending policy"} />
-            <PlatformInfoTile label="Permitted sections" value={supportedPerson.allowedSections.length ? supportedPerson.allowedSections.join(", ") : "Grant scoped"} />
+            <PlatformInfoTile label="Authority" value={viewer.releaseState === "ESTATE_RELEASED" ? "Estate release approved" : viewer.releaseState === "ATTORNEY_LIMITED" ? "Limited attorney authority verified" : "Not established / pending"} />
+            <PlatformInfoTile label="Record access" value={viewer.releaseState === "ESTATE_RELEASED" ? "Specifically released records only" : "Locked"} />
+            <PlatformInfoTile label="Permitted sections" value={viewer.releaseState === "ESTATE_RELEASED" && supportedPerson.allowedSections.length ? supportedPerson.allowedSections.join(", ") : "None released"} />
           </div>
         ) : null}
       </PlatformSection>
+
+      {viewer.releaseState === "ATTORNEY_LIMITED" ? <PlatformSection icon="account_balance" title="Approved institution identification" detail="Only the reviewed institution names and categories below are available. Balances, account identifiers and Vault records remain private.">
+        <div className="lf-dashboard-grid">{attorneyIdentifications.map((item, index) => <PlatformInfoTile key={`${item.category}-${index}`} label={item.category} value={item.institution} />)}</div>
+      </PlatformSection> : null}
 
       <PlatformNotice icon="arrow_forward">
         <strong>Next step:</strong> complete any required security, identity or authority review. Identity verification alone does not establish legal authority or activate estate access.

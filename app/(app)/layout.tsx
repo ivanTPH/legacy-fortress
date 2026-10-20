@@ -232,13 +232,11 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     ...resolvedViewerAccess.assignedAssetIds,
     ...resolvedViewerAccess.assignedRecordIds,
   ]).size;
-  const linkedAccessState = resolvedViewerAccess.vaultLifecycleState !== "OWNER_ACTIVE"
-    ? "estate_locked"
-    : resolvedViewerAccess.identityAssuranceLevel < resolvedViewerAccess.requiredIdentityLevel
-      ? "verification_required"
-      : linkedSharedRecordCount > 0
-        ? "records_shared"
-        : "no_records";
+  const linkedAccessState = resolvedViewerAccess.releaseState === "REVOKED" ? "revoked"
+    : resolvedViewerAccess.identityAssuranceLevel < resolvedViewerAccess.requiredIdentityLevel ? "verification_required"
+      : resolvedViewerAccess.releaseState === "ATTORNEY_LIMITED" ? "attorney_limited"
+        : resolvedViewerAccess.releaseState === "ESTATE_RELEASED" ? "records_shared"
+          : "estate_locked";
   const topLevelItems = useMemo(
     () => filterNodesByVaultPreferences(filterNavigationTreeForViewer(contextualTopLevelItems, resolvedViewerAccess), vaultPreferences),
     [contextualTopLevelItems, resolvedViewerAccess, vaultPreferences],

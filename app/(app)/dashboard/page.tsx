@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import ActionQueuePanel, { buildActionCentrePreview, getActionCentreActionCount, type ActionCentreContext, type ActionCentreTask } from "../components/dashboard/ActionQueuePanel";
@@ -535,6 +536,15 @@ export default function DashboardPage() {
     async function load() {
       setLoading(true);
       setStatus("");
+      if (viewer.mode === "linked") {
+        setAssetRows([]);
+        setDocumentRows([]);
+        setAttachmentRows([]);
+        setContactRows([]);
+        setSectionEntryRows([]);
+        setLoading(false);
+        return;
+      }
 
       try {
         const user = await waitForActiveUser(supabase, { attempts: 6, delayMs: 130 });
@@ -621,7 +631,7 @@ export default function DashboardPage() {
         setAttachmentRows(
           filterRecordIdsForViewer(((attachmentsRes.data ?? []) as AttachmentRow[]), viewer),
         );
-        setContactRows(viewer.mode === "linked" ? [] : ((contactsRes ?? []) as ContactDiscoveryRow[]));
+        setContactRows((contactsRes ?? []) as ContactDiscoveryRow[]);
         setSectionEntryRows(scopedSectionEntries.filter((row) => allowedRecordIds.has(String(row.id)) || allowedRecordIds.size === 0));
         setProfileReadiness(profileReadinessRes);
 
@@ -1608,13 +1618,28 @@ const legalSummary = useMemo(() => {
     );
   }
 
+  if (viewer.mode === "linked") {
+    return <section className="lf-page-shell" aria-label="Linked Fortress status">
+      <PageHeader title="Linked Fortress" description="Your relationship and identity status do not unlock private Vault information." />
+      <Card>
+        <h2>{viewer.accountHolderName}&apos;s Fortress</h2>
+        <p>{viewer.releaseState === "ESTATE_RELEASED"
+          ? "A reviewed estate release is active. Only specifically released records are available. Recorded values are owner estimates, not verified balances."
+          : viewer.releaseState === "ATTORNEY_LIMITED"
+            ? "Limited attorney identification is available in your Contact Wallet. Balances and Vault records remain private."
+            : "Records and financial information remain locked pending explicit authorisation."}</p>
+        <Link href="/contact-wallet">Review relationship and available access</Link>
+      </Card>
+    </section>;
+  }
+
   return (
     <div className="lf-dashboard-shell">
       <V3DashboardOverview mode="dashboard" loading={loading} areas={v3Areas} recordCount={recordIds.size}
-        peopleCount={viewer.mode === "linked" ? undefined : contactRows.length} recordedValue={recordedValue}
+        peopleCount={contactRows.length} recordedValue={recordedValue}
         actions={[]} tasks={[]} showActions={false}
-        actionCount={viewer.mode === "linked" ? undefined : getActionCentreActionCount(dashboardState.actions.items, dashboardState.actions.context, guidanceItems)}
-        canAddRecords={viewer.mode !== "linked"} />
+        actionCount={getActionCentreActionCount(dashboardState.actions.items, dashboardState.actions.context, guidanceItems)}
+        canAddRecords />
       {status ? (
         isPlanLimitStatus(status) ? (
           <button
@@ -1631,7 +1656,7 @@ const legalSummary = useMemo(() => {
           <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div>
         )
       ) : null}
-      {viewer.mode !== "linked" && entryPromptVisible && actionCentrePreview ? (
+      {entryPromptVisible && actionCentrePreview ? (
         <div className="lf-dashboard-entry-prompt">
           <ActionCentreEntryPrompt
             item={actionCentrePreview}
@@ -1714,15 +1739,15 @@ const legalSummary = useMemo(() => {
           </div>
         </section>
       ) : null}
-      {viewer.mode !== "linked" ? <DashboardActionSummary
+      {<DashboardActionSummary
         items={dashboardState.actions.items}
         context={dashboardState.actions.context}
         guidanceItems={guidanceItems}
         onAction={handleAction}
         onGuidanceApplicability={(item, state) => void handleGuidanceApplicability(item, state)}
         excludedActionKeys={entryPromptActionKey ? [entryPromptActionKey] : []}
-      /> : null}
-      {viewer.mode !== "linked" && reviewPanel ? (
+      />}
+      {reviewPanel ? (
         <section className="lf-dashboard-review-panel" style={reviewPanelStyle(reviewPanel.tone)} aria-live="polite" aria-label="Dashboard review panel">
           <div style={commandCardHeaderStyle}>
             <span style={commandIconStyle(reviewPanel.tone)}>

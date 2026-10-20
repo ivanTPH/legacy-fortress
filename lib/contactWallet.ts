@@ -34,18 +34,18 @@ export const CONTACT_WALLET_ASSURANCE_LEVELS: Record<ContactWalletAssuranceLevel
   },
   2: {
     label: "Phone and MFA ready",
-    permitted: ["Enter Contact Wallet dashboard", "View non-sensitive responsibilities", "See permitted low-risk metadata"],
+    permitted: ["Enter Contact Wallet dashboard", "View relationship and verification status", "See non-sensitive responsibilities"],
     blocked: ["Protected document download", "High-risk legal actions"],
   },
   3: {
     label: "Identity verified",
-    permitted: ["Use relationship grants for protected documents", "Upload authorised evidence", "Submit protected information"],
-    blocked: ["Step-up protected actions without recent strong authentication"],
+    permitted: ["View relationship status", "Request review of legal authority", "Use separately authorised evidence actions"],
+    blocked: ["Vault records without explicit release", "Step-up protected actions without recent strong authentication"],
   },
   4: {
     label: "Recent strong authentication",
-    permitted: ["High-risk document access", "Evidence replacement", "Recovery or export-adjacent actions"],
-    blocked: ["Actions outside the explicit relationship grant"],
+    permitted: ["Review separately authorised records", "Use approved evidence or recovery actions"],
+    blocked: ["Vault records without explicit release", "Actions outside the approved release scope"],
   },
 };
 

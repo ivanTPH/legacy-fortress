@@ -9,6 +9,17 @@ import { waitForActiveUser } from "@/lib/auth/session";
 import { trackClientEvent } from "@/lib/observability/clientEvents";
 import { supabase } from "@/lib/supabaseClient";
 
+// Mirrors the checked-in local Auth configuration. TEST must be confirmed
+// against its effective GoTrue settings before this UI is released.
+const MIN_PASSWORD_LENGTH = 6;
+
+function passwordUpdateError(message: string) {
+  if (/password/i.test(message) && /(character|length|weak|require|minimum|at least)/i.test(message)) {
+    return message;
+  }
+  return "Password reset failed. Please request a new reset email and try again.";
+}
+
 export default function ResetPasswordPage() {
   const router = useRouter();
   const [password, setPassword] = useState("");
@@ -17,6 +28,11 @@ export default function ResetPasswordPage() {
   const [ready, setReady] = useState(false);
   const [saving, setSaving] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const [passwordTouched, setPasswordTouched] = useState(false);
+  const [confirmTouched, setConfirmTouched] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const passwordValid = password.length >= MIN_PASSWORD_LENGTH;
+  const confirmationValid = confirmPassword.length > 0 && password === confirmPassword;
 
   useEffect(() => {
     let mounted = true;
@@ -76,8 +92,10 @@ export default function ResetPasswordPage() {
   }, [router]);
 
   async function updatePassword() {
-    if (password.length < 10) {
-      setStatus("Password must be at least 10 characters.");
+    setPasswordTouched(true);
+    setConfirmTouched(true);
+    if (!passwordValid) {
+      setStatus(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
       return;
     }
     if (password !== confirmPassword) {
@@ -91,7 +109,7 @@ export default function ResetPasswordPage() {
     setSaving(false);
 
     if (error) {
-      setStatus("Password reset failed. Please request a new reset email and try again.");
+      setStatus(passwordUpdateError(error.message));
       trackClientEvent("auth.recovery.update_password.error");
       return;
     }
@@ -128,32 +146,43 @@ export default function ResetPasswordPage() {
           <label className="lf-label">
             <span>New password</span>
             <input
-              className="lf-input"
-              type="password"
+              className="lf-input lf-reset-password-input"
+              type={showPassword ? "text" : "password"}
               value={password}
-              onChange={(event) => setPassword(event.target.value)}
+              onChange={(event) => { setPassword(event.target.value); setPasswordTouched(true); }}
+              onBlur={() => setPasswordTouched(true)}
               autoComplete="new-password"
+              aria-invalid={passwordTouched && !passwordValid}
+              aria-describedby="reset-password-requirement"
               disabled={!ready || saving}
             />
           </label>
+          <p id="reset-password-requirement" className="lf-muted-note" role="status">
+            {passwordValid ? "Password length met." : `At least ${MIN_PASSWORD_LENGTH - password.length} more character${MIN_PASSWORD_LENGTH - password.length === 1 ? "" : "s"} required.`}
+          </p>
+          <label className="lf-reset-password-visibility"><input type="checkbox" checked={showPassword} onChange={(event) => setShowPassword(event.target.checked)} />Show password</label>
 
           <label className="lf-label">
             <span>Confirm password</span>
             <input
-              className="lf-input"
-              type="password"
+              className="lf-input lf-reset-password-input"
+              type={showPassword ? "text" : "password"}
               value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
+              onChange={(event) => { setConfirmPassword(event.target.value); setConfirmTouched(true); }}
+              onBlur={() => setConfirmTouched(true)}
               autoComplete="new-password"
+              aria-invalid={confirmTouched && !confirmationValid}
+              aria-describedby="reset-password-match"
               disabled={!ready || saving}
             />
           </label>
+          <p id="reset-password-match" className="lf-muted-note" role="status">{confirmTouched ? confirmationValid ? "Passwords match." : "Passwords do not match." : ""}</p>
 
           <button
             className="lf-primary-btn"
             type="button"
             onClick={() => void updatePassword()}
-            disabled={!ready || saving || completed || !password || !confirmPassword}
+            disabled={!ready || saving || completed || !passwordValid || !confirmationValid}
           >
             {saving ? "Updating..." : "Update password"}
           </button>

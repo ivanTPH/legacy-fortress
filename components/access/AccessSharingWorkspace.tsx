@@ -102,7 +102,7 @@ export default function AccessSharingWorkspace() {
     setStatus("");
     const result = await supabase.from("account_access_grants").update({ permissions_override: payload, updated_at: new Date().toISOString() }).eq("owner_user_id", ownerId).eq("id", grant.id);
     if (result.error) {
-      setStatus("We could not update shared access. Please try again.");
+      setStatus("We could not update the record designation. Please try again.");
     } else {
       if (grant.invitation_id) {
         await supabase.from("role_assignments").update({ permissions_override: payload, updated_at: new Date().toISOString() }).eq("owner_user_id", ownerId).eq("invitation_id", grant.invitation_id);
@@ -126,21 +126,21 @@ export default function AccessSharingWorkspace() {
       <div className="lf-page-heading">
         <div>
           <h1>Access &amp; Sharing</h1>
-          <p>{recordId ? `Choose who can view ${recordLabel || "this record"}.` : "See who can currently view information in your Fortress."}</p>
+          <p>{recordId ? `Choose who is designated for ${recordLabel || "this record"}. A separate release is required.` : "Review which records are designated for each person. Designation alone does not unlock access."}</p>
         </div>
         <Link href="/contacts" className="lf-secondary-btn">People I Trust</Link>
       </div>
       {recordId ? (
         <section className="lf-access-sharing-panel" aria-labelledby="record-sharing-heading">
-          <h2 id="record-sharing-heading">People with access</h2>
-          {recordIsLocked ? <p className="lf-muted-copy">This Will is locked while the owner is living. An executor relationship does not provide living access.</p> : <p className="lf-muted-copy">View only <InfoTip label="Explain view-only access" message="People can view information you share but cannot change or delete your records." /></p>}
+          <h2 id="record-sharing-heading">People designated</h2>
+          {recordIsLocked ? <p className="lf-muted-copy">This Will is locked while the owner is living. An executor relationship does not provide living access.</p> : <p className="lf-muted-copy">Selections do not unlock records. <InfoTip label="Explain record designation" message="Legal authority and an explicit release decision are required before any selected record becomes visible." /></p>}
           {recordIsLocked ? null : (
             <>
           {eligibleContacts.length ? eligibleContacts.map((contact) => {
             const grant = grantByContact.get(contact.id) ?? (contact.linked_user_id ? grantByContact.get(contact.linked_user_id) : undefined);
             if (!grant) return null;
             return <label key={grant.id} className="lf-access-sharing-person"><input type="checkbox" checked={selected.has(grant.id)} disabled={saving === grant.id} onChange={() => void toggleRecordAccess(contact, grant)} /><span><strong>{contact.full_name}</strong><small>{contact.relationship || "Relationship not set"}{contact.contact_role && contact.contact_role !== contact.relationship ? ` · ${contact.contact_role}` : ""}</small></span></label>;
-          }) : <p className="lf-muted-copy">No eligible linked people are available for living Vault sharing.</p>}
+          }) : <p className="lf-muted-copy">No eligible linked people are available for designation.</p>}
             </>
           )}
         </section>
@@ -150,7 +150,7 @@ export default function AccessSharingWorkspace() {
             const grant = grantByContact.get(contact.id) ?? (contact.linked_user_id ? grantByContact.get(contact.linked_user_id) : undefined);
             const permissions = normalizeContactPermissionsOverride(grant?.permissions_override);
             const count = permissions.asset_ids.length + permissions.record_ids.length;
-            return <article key={contact.id} className="lf-access-sharing-card"><div><h2>{contact.full_name}</h2><p>{contact.relationship || "Relationship not set"}{contact.contact_role && contact.contact_role !== contact.relationship ? ` · ${contact.contact_role}` : ""}</p></div><strong>{contact.contact_role === "executor" ? "No living access" : count ? `${count} records shared · View only` : "No records shared"}</strong><Link href={`/contacts?contact=${encodeURIComponent(contact.id)}`} className="lf-secondary-btn">Edit</Link></article>;
+            return <article key={contact.id} className="lf-access-sharing-card"><div><h2>{contact.full_name}</h2><p>{contact.relationship || "Relationship not set"}{contact.contact_role && contact.contact_role !== contact.relationship ? ` · ${contact.contact_role}` : ""}</p></div><strong>{count ? `${count} records designated · release required` : "No records designated"}</strong><Link href={`/contacts?contact=${encodeURIComponent(contact.id)}`} className="lf-secondary-btn">Edit</Link></article>;
           })}
           {!contacts.some((contact) => contact.linked_user_id) ? <p className="lf-muted-copy">No linked people are available yet.</p> : null}
         </section>
