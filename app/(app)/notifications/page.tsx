@@ -20,6 +20,11 @@ const READ_KEY = "lf:notification-events:read";
 
 function describeEvent(event: NotificationEvent) {
   const type = event.event_type.toLowerCase();
+  if (type === "recipient_record_access_updated" || type === "recipient_record_access_revoked") return {
+    title: "Your access was updated",
+    detail: "Your access to information in Legacy Fortress has been updated. Sign in to review your available records.",
+    group: "records", icon: "key", href: "/contact-wallet",
+  };
   if (type.includes("accepted")) return { title: "Invitation accepted", detail: "A person accepted an invitation to your Fortress.", group: "people", icon: "person_check", href: "/contacts" };
   if (type.includes("verified")) return { title: "Identity verified", detail: "An invited relationship completed identity verification.", group: "people", icon: "verified_user", href: "/contacts" };
   if (type.includes("access")) return { title: "Access updated", detail: "Shared living access was changed for a relationship.", group: "people", icon: "key", href: "/access-sharing" };

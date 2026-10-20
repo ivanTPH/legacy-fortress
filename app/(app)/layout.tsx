@@ -1163,8 +1163,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
               <span>Vault secured</span>
             </div>
             <NotificationBell
-              ownerUserId={resolvedViewerAccess.mode === "owner" ? (resolvedViewerAccess.targetOwnerUserId || null) : null}
-              disabled={resolvedViewerAccess.mode === "linked"}
+              ownerUserId={resolvedViewerAccess.sessionUserId || null}
             />
             <div ref={accountMenuRef} className="lf-admin-shell-account-menu lf-personal-account-menu">
               <button ref={accountTriggerRef} type="button" className="lf-admin-shell-account-trigger" aria-label={`Open account menu for ${effectiveDisplayName}`} aria-expanded={accountMenuOpen} aria-controls={accountMenuId} aria-haspopup="menu" onClick={toggleAccountMenu}>
