@@ -62,6 +62,11 @@ BEGIN
   END IF;
 
   v_event_type := CASE WHEN
+    (v_old_scope -> 'asset_ids' <> '[]'::jsonb
+      OR v_old_scope -> 'record_ids' <> '[]'::jsonb
+      OR v_old_scope -> 'editable_asset_ids' <> '[]'::jsonb
+      OR v_old_scope -> 'editable_record_ids' <> '[]'::jsonb)
+    AND
     v_new_scope -> 'asset_ids' = '[]'::jsonb
     AND v_new_scope -> 'record_ids' = '[]'::jsonb
     AND v_new_scope -> 'editable_asset_ids' = '[]'::jsonb
