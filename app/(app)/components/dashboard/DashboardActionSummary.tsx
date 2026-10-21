@@ -7,7 +7,7 @@ import type { VaultApplicabilityState } from "../../../../lib/vaultPreferences";
 import Icon from "../../../../components/ui/Icon";
 import {
   buildActionCentrePreview,
-  getActionCentreActionCount,
+  getActionCentreToDoCount,
   type ActionCentreContext,
 } from "./ActionQueuePanel";
 
@@ -21,20 +21,20 @@ type DashboardActionSummaryProps = {
 };
 
 export default function DashboardActionSummary({ items, context, guidanceItems, onAction, onGuidanceApplicability, excludedActionKeys = [] }: DashboardActionSummaryProps) {
-  const count = getActionCentreActionCount(items, context, guidanceItems);
+  const count = getActionCentreToDoCount(items, context, guidanceItems);
   if (!count) return null;
 
-  const preview = buildActionCentrePreview(items, context, guidanceItems, 3, excludedActionKeys);
+  const preview = buildActionCentrePreview(items, context, guidanceItems, 3, excludedActionKeys, "todo");
   if (!preview.length) return null;
 
   return (
-    <section id="action-centre" className="lf-dashboard-action-summary" aria-label="Things worth your attention">
+    <section id="action-centre" className="lf-dashboard-action-summary" aria-label="To do">
       <div className="lf-dashboard-action-summary-heading">
         <div>
-          <h2>Things worth your attention</h2>
+          <h2>To do</h2>
         </div>
-        <Link className="lf-dashboard-action-summary-link" href="/action-centre">
-          View Action Centre
+        <Link className="lf-dashboard-action-summary-link" href="/actions?filter=todo">
+          See all {count}
           <Icon name="arrow_forward" size={16} aria-hidden />
         </Link>
       </div>

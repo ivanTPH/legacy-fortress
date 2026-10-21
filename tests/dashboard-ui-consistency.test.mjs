@@ -37,7 +37,7 @@ test("dashboard uses authorised Version 3 area summaries and keeps live actions"
   assert.match(dashboardPage, /<V3DashboardOverview/);
   assert.doesNotMatch(dashboardPage, /className="lf-dashboard-overview-panel"/);
   assert.match(actionSummary, /className="lf-dashboard-action-summary"/);
-  assert.match(actionSummary, /lf-dashboard-action-summary-heading[\s\S]*View Action Centre[\s\S]*lf-dashboard-action-summary-list/);
+  assert.match(actionSummary, /lf-dashboard-action-summary-heading[\s\S]*See all \{count\}[\s\S]*lf-dashboard-action-summary-list/);
   assert.match(actionSummary, /lf-dashboard-action-summary-status/);
   assert.match(shellCss, /\.lf-main-content \{[\s\S]*max-width: none/);
   assert.match(shellCss, /\.lf-page-content \{[\s\S]*max-width: 960px/);
@@ -215,7 +215,7 @@ test("dashboard uses authorised Version 3 area summaries and keeps live actions"
   assert.doesNotMatch(dashboardRender, /aria-label="Recent documents"/);
   assert.doesNotMatch(dashboardRender, /setupStepsGridStyle|completenessGridStyle|documentCategoryGridStyle|readinessGridStyle/);
   assert.doesNotMatch(dashboardRender, /<ReadinessSnapshot|<ReadinessUploadAction|<AttachmentGallerySummary|<AttachmentGallery\s/);
-  assert.ok(dashboardRender.indexOf("Your Vault") < dashboardRender.indexOf("<DashboardActionSummary"));
+  assert.match(dashboardRender, /actionPreview=\{viewer\.mode !== "linked" \? <DashboardActionSummary/);
   assert.ok(dashboardRender.indexOf("<DashboardActionSummary") < dashboardRender.indexOf('aria-label="Dashboard review panel"'));
 });
 

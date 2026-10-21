@@ -137,19 +137,22 @@ export default function FinancesOverviewPage() {
     ? { href: "/finances/bank?add=1", label: "Add your first account", description: "Start with a bank account so your financial picture has a clear foundation." }
     : null;
 
-  return <section className="lf-v3-area-page">
-    <PageHeader title="Finances" description="Keep accounts, pensions, investments, insurance and debts together for trusted review." />
+  return <section className="lf-v3-area-page lf-v51-finance-page">
+    <div className="lf-v51-finance-heading"><PageHeader title="Finances" description="Keep accounts, pensions, investments, insurance and debts together for trusted review." />
+      <details className="lf-v51-finance-info"><summary aria-label="About Finances">ⓘ</summary><p>Keep accounts, pensions, investments, insurance and debts together for trusted review.</p></details>
+    </div>
     {status ? <p role="alert">{status}</p> : null}
     {loading ? <p role="status">Loading finance summary…</p> : null}
-    {!loading && recommendedFinanceAction ? <Card><Row icon="account_balance" title={recommendedFinanceAction.label}
-      description={recommendedFinanceAction.description} href={recommendedFinanceAction.href} /></Card> : null}
+    {!loading && recordCount > 0 ? <div className="lf-v51-finance-total" aria-label="Finance recorded total"><strong>{currencies.size > 1 ? "Multiple currencies" : formatCurrency(total, currency)}</strong><span>{recordCount} record{recordCount === 1 ? "" : "s"} · updated {formatFinanceDate(updatedAt)}</span></div> : null}
     {!loading && recordCount > 0 ? <Card className="lf-v3-stats-strip" aria-label="Finance summary">
       <div><span>Total recorded</span><strong>{currencies.size > 1 ? "Multiple currencies" : formatCurrency(total, currency)}</strong></div>
       <div><span>Records</span><strong>{recordCount}</strong><small>in {populated.length} of {summaries.length} sections</small></div>
       <div><span>Last updated</span><strong>{formatFinanceDate(updatedAt)}</strong></div>
     </Card> : null}
+    {!loading && recommendedFinanceAction ? <Card><Row icon="account_balance" title={recommendedFinanceAction.label}
+      description={recommendedFinanceAction.description} href={recommendedFinanceAction.href} /></Card> : null}
     {populated.map((section) => <Card key={section.href} className="lf-v3-area-section">
-      <header><Link href={section.href}><IconTile icon={section.icon} /><span><strong>{section.title}</strong><small>{section.summary.includedCount} record{section.summary.includedCount === 1 ? "" : "s"}</small></span></Link>
+      <header><Link href={section.href}><IconTile icon={section.icon} /><span><strong>{section.title}</strong><small className="lf-v3-section-count">{section.summary.includedCount} record{section.summary.includedCount === 1 ? "" : "s"}</small><small className="lf-v51-finance-section-summary">{section.summary.includedCount} record{section.summary.includedCount === 1 ? "" : "s"} · {section.summary.valueText}</small></span></Link>
         <strong className="lf-v3-area-total">{new Set(getAssetsForFinanceCategory(assetRows, section.key).map((row) => getFinanceRowCurrencyCode(row) || currency)).size > 1 ? "Multiple currencies" : section.summary.valueText}</strong>
         {viewer.mode !== "linked" ? <AddAssetLink href={`${section.href}?add=1`} /> : null}
       </header>

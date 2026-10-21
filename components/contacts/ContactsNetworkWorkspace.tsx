@@ -650,7 +650,7 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
   return (
     <section className="lf-v3-people-page">
       {!embedded && !addContactGroupKey ? <PageHeader title="People I Trust" description="Keep the people and roles connected to your Fortress clear." /> : null}
-      {!addContactGroupKey && !sharingView ? <section className="lf-v3-people-toolbar">
+      {!addContactGroupKey && !sharingView ? <section className={`lf-v3-people-toolbar${embedded ? " lf-v51-people-toolbar" : ""}`}>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <label style={contactSearchFieldStyle}>
             <span style={contactSearchLabelStyle}>
@@ -664,6 +664,13 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
               onChange={(event) => setSearch(event.target.value)}
             />
           </label>
+          {embedded ? <details className="lf-v51-people-filter">
+            <summary aria-label="Filter people by role"><Icon name="tune" size={20} /></summary>
+            <div role="group" aria-label="Filter people by role">
+              {[["all", "All"], ["executors", "Executors"], ["family", "Family"], ["advisors", "Advisers"]].map(([key, label]) => <button key={key} type="button" aria-pressed={roleFilter === key} onClick={() => setRoleFilter(key)}>{label}</button>)}
+            </div>
+          </details> : null}
+          {embedded && !viewer.readOnly ? <Link className="lf-v51-people-add" href={`${basePath}?view=people&group=trusted_contacts&add=1`} aria-label="Add person"><Icon name="person_add" size={20} /></Link> : null}
           {!embedded && !viewer.readOnly ? (
             <button
               type="button"
@@ -678,7 +685,7 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
           {!embedded && !viewer.readOnly ? <Link href="/access-sharing" className="lf-access-sharing-link">Access &amp; Sharing</Link> : null}
         </div>
       </section> : null}
-      {embedded && !addContactGroupKey && !sharingView ? <div className="lf-pa-role-filters" role="group" aria-label="Filter people by role">
+      {embedded && !addContactGroupKey && !sharingView ? <div className="lf-pa-role-filters lf-v51-desktop-role-filters" role="group" aria-label="Filter people by role">
         {[["all", "All"], ["executors", "Executors"], ["family", "Family"], ["advisors", "Advisers"]].map(([key, label]) => <button key={key} type="button" aria-pressed={roleFilter === key} onClick={() => setRoleFilter(key)}>{label}</button>)}
       </div> : null}
 
@@ -764,6 +771,7 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
                           </span>
                           <span className="lf-pa-person-facts">
                             <span className="lf-people-status-chip" data-tone={invitation.tone}><Icon name={invitation.icon} size={14} />{invitation.label}</span>
+                            <span className="lf-people-status-chip lf-v51-mobile-person-status" data-tone={access.includes("record") && !access.startsWith("No") ? "success" : invitation.tone}>{access.includes("record") && !access.startsWith("No") ? access : invitation.label}</span>
                             <span className="lf-pa-progress" role="img" aria-label={`Connected: ${contact.linked_user_id ? "yes" : "no"}; identity verified: ${identity === "Verified" ? "yes" : "no"}; access granted: ${access.includes("record") && !access.startsWith("No") ? "yes" : "no"}`}>
                               <span data-state={contact.linked_user_id ? "done" : contact.invite_status === "invite_sent" ? "pending" : "rest"} /><span data-state={identity === "Verified" ? "done" : identity === "In progress" ? "pending" : "rest"} /><span data-state={access.includes("record") && !access.startsWith("No") ? "done" : "rest"} />
                             </span>

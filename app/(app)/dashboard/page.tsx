@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import ActionQueuePanel, { buildActionCentrePreview, getActionCentreActionCount, type ActionCentreContext, type ActionCentreTask } from "../components/dashboard/ActionQueuePanel";
+import ActionQueuePanel, { buildActionCentrePreview, getActionCentreActionCount, getActionCentreToDoCount, type ActionCentreContext, type ActionCentreTask } from "../components/dashboard/ActionQueuePanel";
 import DashboardActionSummary from "../components/dashboard/DashboardActionSummary";
 import V3DashboardOverview, { type VaultAreaSummary } from "../components/dashboard/V3DashboardOverview";
 import ActionCentreEntryPrompt from "../components/dashboard/ActionCentreEntryPrompt";
@@ -1593,7 +1593,7 @@ const legalSummary = useMemo(() => {
     }
     return (
       <div className="lf-action-centre-page lf-v3-area-page">
-        <PageHeader title="Action Centre" description="Things worth your attention, with a direct path to each next step." />
+        <PageHeader title="Action Centre" description="Everything that needs you, in one place." />
         <Card className="lf-v3-actions-workspace"><ActionQueuePanel
           items={dashboardState.actions.items}
           context={dashboardState.actions.context}
@@ -1613,8 +1613,16 @@ const legalSummary = useMemo(() => {
       <V3DashboardOverview mode="dashboard" loading={loading} areas={v3Areas} recordCount={recordIds.size}
         peopleCount={viewer.mode === "linked" ? undefined : contactRows.length} recordedValue={recordedValue}
         actions={[]} tasks={[]} showActions={false}
-        actionCount={viewer.mode === "linked" ? undefined : getActionCentreActionCount(dashboardState.actions.items, dashboardState.actions.context, guidanceItems)}
-        canAddRecords={viewer.mode !== "linked"} />
+        actionCount={viewer.mode === "linked" ? undefined : getActionCentreToDoCount(dashboardState.actions.items, dashboardState.actions.context, guidanceItems)}
+        canAddRecords={viewer.mode !== "linked"}
+        actionPreview={viewer.mode !== "linked" ? <DashboardActionSummary
+          items={dashboardState.actions.items}
+          context={dashboardState.actions.context}
+          guidanceItems={guidanceItems}
+          onAction={handleAction}
+          onGuidanceApplicability={(item, state) => void handleGuidanceApplicability(item, state)}
+          excludedActionKeys={entryPromptActionKey ? [entryPromptActionKey] : []}
+        /> : null} />
       {status ? (
         isPlanLimitStatus(status) ? (
           <button
@@ -1714,14 +1722,6 @@ const legalSummary = useMemo(() => {
           </div>
         </section>
       ) : null}
-      {viewer.mode !== "linked" ? <DashboardActionSummary
-        items={dashboardState.actions.items}
-        context={dashboardState.actions.context}
-        guidanceItems={guidanceItems}
-        onAction={handleAction}
-        onGuidanceApplicability={(item, state) => void handleGuidanceApplicability(item, state)}
-        excludedActionKeys={entryPromptActionKey ? [entryPromptActionKey] : []}
-      /> : null}
       {viewer.mode !== "linked" && reviewPanel ? (
         <section className="lf-dashboard-review-panel" style={reviewPanelStyle(reviewPanel.tone)} aria-live="polite" aria-label="Dashboard review panel">
           <div style={commandCardHeaderStyle}>

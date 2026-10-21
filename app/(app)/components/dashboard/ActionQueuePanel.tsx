@@ -80,6 +80,12 @@ type ActionCentreStatus = "Required" | "Recommended" | "Pending" | "Complete" | 
 type ActionPriorityLevel = "Critical" | "High" | "Medium" | "Low";
 type ActionCentreTaskType = "user_created" | "system_generated" | "reminder";
 
+function actionGroup(row: ActionCentreRow): "todo" | "waiting" | "suggested" {
+  if (row.status === "Pending") return "waiting";
+  if (["Required", "Failed", "Plan limit reached"].includes(row.status) || row.taskType === "user_created") return "todo";
+  return "suggested";
+}
+
 export type ActionCentreTask = {
   id: string;
   title: string;
@@ -249,8 +255,13 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
     [context, guidanceItems, items],
   );
   const [selectedActionKey, setSelectedActionKey] = useState<string | null>(null);
+  const [filter, setFilter] = useState<"all" | "todo" | "waiting" | "suggested">("all");
   const [readActionKeys, setReadActionKeys] = useState<Set<string>>(new Set());
   const selectedRow = rows.find((row) => row.actionKey === selectedActionKey) ?? null;
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("filter") === "todo") setFilter("todo");
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -286,8 +297,11 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
     setSelectedActionKey(row.actionKey);
   }
 
-  const primaryRows = rows.slice(0, 5);
-  const secondaryRows = rows.slice(5);
+  const groupedRows = {
+    todo: rows.filter((row) => actionGroup(row) === "todo"),
+    waiting: rows.filter((row) => actionGroup(row) === "waiting"),
+    suggested: rows.filter((row) => actionGroup(row) === "suggested"),
+  };
 
   function renderInboxRow(item: ActionCentreRow) {
     const isRead = readActionKeys.has(item.actionKey);
@@ -310,22 +324,17 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
 
   return (
     <section id="action-centre" className="lf-action-centre" style={panelStyle} aria-label="Action centre">
-      <div className="lf-action-centre-inbox" style={{ display: "grid", gap: 2 }}>
-        {rows.length === 0 ? (
-          <section style={clearStateStyle}>
-            <strong>Nothing needs your attention right now.</strong>
-            <span style={{ color: "#166534", fontSize: 13 }}>You can add or review records whenever you are ready.</span>
-          </section>
-        ) : primaryRows.map(renderInboxRow)}
+      <div className="lf-v51-action-filters" aria-label="Filter Action Centre">
+        {([ ["all", "All", rows.length], ["todo", "To do", groupedRows.todo.length], ["waiting", "Waiting", groupedRows.waiting.length], ["suggested", "Suggested", groupedRows.suggested.length] ] as const).map(([key, label, count]) =>
+          <button key={key} type="button" aria-pressed={filter === key} onClick={() => setFilter(key)}>{label} <span>{count}</span></button>)}
       </div>
-      {secondaryRows.length ? (
-        <details className="lf-action-centre-more-options">
-          <summary>More things to consider ({secondaryRows.length})</summary>
-          <div className="lf-action-centre-inbox" style={{ display: "grid", gap: 2, marginTop: 6 }}>
-            {secondaryRows.map(renderInboxRow)}
-          </div>
-        </details>
-      ) : null}
+      {!rows.length ? <section style={clearStateStyle}><strong>Nothing needs your attention right now.</strong><span>You can add or review records whenever you are ready.</span></section> : null}
+      {([ ["todo", "To do"], ["waiting", "Waiting on others"], ["suggested", "Suggested"] ] as const).map(([key, label]) => filter === "all" || filter === key ? (
+        <section key={key} className="lf-v51-action-group" aria-label={label}>
+          <h2>{label} <span>{groupedRows[key].length}</span></h2>
+          {groupedRows[key].length ? <div className="lf-action-centre-inbox">{groupedRows[key].map(renderInboxRow)}</div> : filter !== "all" ? <p>No {label.toLowerCase()} items right now.</p> : null}
+        </section>
+      ) : null)}
       {completedRows.length ? (
         <details className="lf-action-centre-resolved">
           <summary>Recently resolved</summary>
@@ -574,16 +583,21 @@ export function getActionCentreActionCount(
   return getActiveActionRows(items, context ? { ...context, guidanceItems } : undefined).length;
 }
 
+export function getActionCentreToDoCount(items: BlockingItem[], context?: ActionCentreContext, guidanceItems: GuidanceItem[] = []) {
+  return getActiveActionRows(items, context ? { ...context, guidanceItems } : undefined).filter((row) => actionGroup(row) === "todo").length;
+}
+
 export function buildActionCentrePreview(
   items: BlockingItem[],
   context?: ActionCentreContext,
   guidanceItems: GuidanceItem[] = [],
   limit = 3,
   excludedActionKeys: readonly string[] = [],
+  filter: "all" | "todo" = "all",
 ): ActionCentrePreviewItem[] {
   const excluded = new Set(excludedActionKeys);
   return getActiveActionRows(items, context ? { ...context, guidanceItems } : undefined)
-    .filter((row) => !excluded.has(row.actionKey))
+    .filter((row) => !excluded.has(row.actionKey) && (filter === "all" || actionGroup(row) === "todo"))
     .slice(0, limit)
     .map(({ key, title, actionKey, href, blockerLabel, priorityLevel, guidanceItem, taskType }) => ({
       key,

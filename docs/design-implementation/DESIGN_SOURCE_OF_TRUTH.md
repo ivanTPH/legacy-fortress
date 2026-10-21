@@ -20,6 +20,10 @@ The current visual handoff is [`design_handoff_legacy_fortress 5.1/`](../../desi
 
 ## Boundaries and status
 
+### TEST owner launcher dependency (21 October 2026)
+
+The founding-owner TEST launcher in V5.1 section 5c remains a design reference. Direct navigation to `/dashboard` on the current TEST host works with an authorised owner session. A cross-domain launcher requires independently authenticated TEST entry points and a server-verified, protected master-owner account ID/role assignment. The current Admin master flag can derive from an email match, and the V5.1 prototype's three UAT sign-in hosts are not configured current destinations. Do not render launcher links or carry a session between domains until those prerequisites are approved and verified. Current `/admin`, `/enterprise` and `/dashboard` routes retain their existing guards; this design release does not change them.
+
 - V5.1 release order: Admin mobile (V5-A.1), Partner (V5-B), then Personal Vault (V5-C), each from the latest verified TEST code. The V5.1 Admin artboards are sections 2a–2e and 5d; Partner sections 3a–3b; Vault sections 4a–4d, 5a–5b and 6a–6f. The drawn TEST launcher (5c) remains security-gated and is not an implemented route.
 - V5-A design is deployed on TEST at `3ed3f3677c7a9130f0417e83972ace868e5f1e70`. The privacy-release-policy branch `3772ac39b3f21298091679eeb78e2f3a4038c880` remains undeployed; its migrations and access rules must not be represented as live. V5.1 visual work does not change authentication, grants, RLS, storage or probate release.
 - Baseline for this handoff integration: remote staging `0557f28cf7312b40650e3c8e674f9dde9c36c97b`. V4 mobile and workspace-header corrections are in that commit. The retained V4 supplement was committed separately at `f327ae2`; V5 corrects it on the points enumerated in `MOBILE_V4.1.md`.

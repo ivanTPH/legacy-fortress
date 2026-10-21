@@ -91,7 +91,7 @@ export default function NotificationBell({ ownerUserId, disabled = false }: { ow
         aria-label={unreadCount ? `${unreadCount} unread notifications` : "Notifications"}
         aria-expanded={open}
         disabled={disabled}
-        onClick={() => { setOpen((current) => !current); if (!open) markRead(); }}
+        onClick={() => setOpen((current) => !current)}
       >
         <Icon name="notifications" size={20} />
         {unreadCount ? <span className="lf-notification-count" aria-hidden="true">{unreadCount > 9 ? "9+" : unreadCount}</span> : null}
@@ -100,7 +100,10 @@ export default function NotificationBell({ ownerUserId, disabled = false }: { ow
         <div className="lf-notification-sheet" role="dialog" aria-label="Notifications">
           <div className="lf-notification-sheet-header">
             <div><strong>Notifications</strong><span>Events from your Fortress</span></div>
-            <button type="button" className="lf-icon-btn-round" aria-label="Close notifications" onClick={() => setOpen(false)}><Icon name="close" size={18} /></button>
+            <div className="lf-notification-sheet-actions">
+              {unreadCount > 0 ? <button type="button" onClick={markRead}>Mark read</button> : null}
+              <button type="button" className="lf-icon-btn-round" aria-label="Close notifications" onClick={() => setOpen(false)}><Icon name="close" size={18} /></button>
+            </div>
           </div>
           {loading ? <p className="lf-notification-empty">Loading recent events…</p> : null}
           {!loading && !visibleEvents.length ? <p className="lf-notification-empty">Nothing new has happened yet.</p> : null}

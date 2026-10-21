@@ -28,8 +28,8 @@ test("dashboard uses a compact preview while Action Centre retains the full list
   const route = read("app/(app)/action-centre/page.tsx");
 
   assert.match(dashboard, /<DashboardActionSummary/);
-  assert.match(summary, /buildActionCentrePreview\([\s\S]*, 3, excludedActionKeys\)/);
-  assert.match(summary, /View Action Centre/);
+  assert.match(summary, /buildActionCentrePreview\([\s\S]*, 3, excludedActionKeys, "todo"\)/);
+  assert.match(summary, /See all \{count\}/);
   assert.doesNotMatch(dashboard, /lf-dashboard-fortress-summary/);
   assert.doesNotMatch(dashboard, /<LegacyGuidancePanel|<AddToFortressPanel/);
   assert.match(queue, /getActionCentreActionCount/);
@@ -37,7 +37,7 @@ test("dashboard uses a compact preview while Action Centre retains the full list
   assert.match(route, /import DashboardPage from "\.\.\/dashboard\/page"/);
   assert.match(route, /return <DashboardPage \/>/);
   assert.match(dashboard, /const actionCentreOnly = pathname === "\/action-centre"/);
-  assert.match(dashboard, /id="action-centre-page-title">Action Centre/);
+  assert.match(dashboard, /<PageHeader title="Action Centre"/);
   assert.doesNotMatch(dashboard, /showFullActionCentre/);
   assert.doesNotMatch(route, /redirect\(/);
 });

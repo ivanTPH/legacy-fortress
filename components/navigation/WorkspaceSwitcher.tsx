@@ -265,35 +265,37 @@ export default function WorkspaceSwitcher({
 
   if ((!session && !alwaysShow) || (session && !hasMultipleContexts && linkedFortresses.length === 0 && !alwaysShow)) return null;
 
+  const currentContent = <>
+    {branded ? <BrandGlyph /> : <span className="lf-workspace-icon" aria-hidden="true"><Icon name={iconForWorkspace(activeWorkspace?.id ?? "application")} size={16} /></span>}
+    <span className="lf-workspace-current-copy">
+      {branded ? <span className="lf-workspace-brand-name">Legacy Fortress</span>
+        : <span className="lf-workspace-label">{activeLinkedFortress ? "Linked Fortress" : "Workspace"}</span>}
+      <strong>{activeLinkedFortress?.ownerName ?? (customerOnly && activeWorkspace?.id === "application" ? "My Vault" : activeWorkspace?.label) ?? "Personal Vault"}</strong>
+    </span>
+  </>;
+
   return (
     <section
       ref={menuRef}
       className={["lf-workspace-switcher", compact && "compact", branded && "branded"].filter(Boolean).join(" ")}
-      aria-label="Switch workspace"
+      aria-label={singleCustomerContext ? "Current Vault" : "Switch Vault"}
     >
       <div className="lf-workspace-menu">
-        <button
+        {singleCustomerContext ? <div className="lf-workspace-current lf-workspace-current-label" aria-label="My Vault">{currentContent}</div> : <button
           ref={triggerRef}
           type="button"
           className="lf-workspace-current"
-          aria-label={`${singleCustomerContext ? "Current workspace" : "Switch workspace, current"} ${activeLinkedFortress?.ownerName ?? activeWorkspace?.label ?? "Personal Vault"}`}
-          aria-expanded={singleCustomerContext ? undefined : open}
+          aria-label={`Switch Vault, current ${activeLinkedFortress?.ownerName ?? activeWorkspace?.label ?? "Personal Vault"}`}
+          aria-expanded={open}
           aria-controls={menuId}
           aria-busy={!session}
-          disabled={!session || singleCustomerContext}
+          disabled={!session}
           onClick={toggleOpen}
           onKeyDown={onTriggerKeyDown}
         >
-          {branded ? <BrandGlyph /> : <span className="lf-workspace-icon" aria-hidden="true">
-            <Icon name={iconForWorkspace(activeWorkspace?.id ?? "application")} size={16} />
-          </span>}
-          <span className="lf-workspace-current-copy">
-            {branded ? <span className="lf-workspace-brand-name">Legacy Fortress</span>
-              : <span className="lf-workspace-label">{activeLinkedFortress ? "Linked Fortress" : "Workspace"}</span>}
-            <strong>{activeLinkedFortress?.ownerName ?? activeWorkspace?.label ?? "Personal Vault"}</strong>
-          </span>
-          {!singleCustomerContext ? <Icon name={branded ? "unfold_more" : "expand_more"} size={18} /> : null}
-        </button>
+          {currentContent}
+          <Icon name={branded ? "unfold_more" : "expand_more"} size={18} />
+        </button>}
         {open && session ? (
           <><button type="button" tabIndex={-1} className="lf-workspace-scrim" aria-label="Close workspace menu" onClick={() => { setOpen(false); triggerRef.current?.focus(); }} />
           <nav id={menuId} className="lf-workspace-links" aria-label="Available workspaces" onKeyDown={onMenuKeyDown}>

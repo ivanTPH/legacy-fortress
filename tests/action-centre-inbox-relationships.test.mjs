@@ -18,7 +18,7 @@ test("Action Centre uses an inbox row and progressive detail drawer", () => {
   assert.match(queue, /Remind me later/);
   const inbox = queue.slice(queue.indexOf("function ActionCentreInbox"), queue.indexOf("export default memo"));
   assert.doesNotMatch(inbox, /priorityPill|activeBlockerCount|Recommended actions/);
-  assert.match(summary, /View Action Centre/);
+  assert.match(summary, /See all \{count\}/);
   assert.doesNotMatch(summary, /actionable items/);
 });
 

@@ -1142,6 +1142,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                 </button>
               ) : null}
               <div className="lf-topbar-title">{topbarTitle}</div>
+              {showBackButton ? <div className="lf-topbar-parent-title">{topbarBreadcrumbs.at(-1)?.label ?? "Home"}</div> : null}
             </div>
           </div>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Button, Card, EmptyState, IconTile, PageHeader, Row } from "../../../../components/ui/V3Primitives";
 import { AddAssetLink } from "../../../../components/ui/LFDesignSystem";
 import type { BlockingItem } from "../../../../lib/workflow/blockingModel";
@@ -28,6 +28,7 @@ type Props = {
   actionCount?: number;
   canAddRecords?: boolean;
   onAction?: (key: string) => void;
+  actionPreview?: ReactNode;
 };
 
 function updatedLabel(value?: string | null) {
@@ -36,7 +37,7 @@ function updatedLabel(value?: string | null) {
   return Number.isNaN(date.getTime()) ? "Updated recently" : `Updated ${new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(date)}`;
 }
 
-export default function V3DashboardOverview({ mode, loading, areas, recordCount, peopleCount, recordedValue, actions, tasks, showActions = true, actionCount, canAddRecords = true, onAction }: Props) {
+export default function V3DashboardOverview({ mode, loading, areas, recordCount, peopleCount, recordedValue, actions, tasks, showActions = true, actionCount, canAddRecords = true, onAction, actionPreview }: Props) {
   const [stepIndex, setStepIndex] = useState(0);
   const activeTasks = tasks.filter((task) => !["complete", "completed", "done"].includes(task.status.toLowerCase()));
   const displayedActionCount = actionCount ?? actions.length + activeTasks.length;
@@ -51,7 +52,7 @@ export default function V3DashboardOverview({ mode, loading, areas, recordCount,
   const latestUpdate = areas.map((area) => area.updatedAt).filter((value): value is string => Boolean(value))
     .sort((a, b) => Date.parse(b) - Date.parse(a))[0];
 
-  return <div className={`lf-v3-screen-overview ${dashboard ? "is-dashboard" : "is-actions"}`}>
+  return <div className={`lf-v3-screen-overview ${dashboard ? "is-dashboard" : "is-actions"}${dashboard && peopleCount !== undefined && actionCount !== undefined ? " is-v51-owner" : ""}`}>
     <div className={dashboard ? "lf-v3-dashboard-pageheader" : ""}><PageHeader
       title={dashboard ? "Dashboard" : "Action Centre"}
       description={dashboard ? "Your recorded information, in one place." : "Open an item to understand why it is here and choose what to do next."}
@@ -64,6 +65,14 @@ export default function V3DashboardOverview({ mode, loading, areas, recordCount,
         {actionCount !== undefined || showActions ? <div><span>Open actions</span><strong>{loading ? "…" : displayedActionCount}</strong><small>to review</small></div> : null}
       </Card>
       <Card className="lf-v3-mobile-value" aria-label="Total recorded value"><span>Total recorded value</span><strong>{loading ? "…" : recordedValue}</strong><small>{updatedLabel(latestUpdate)}</small></Card>
+      {peopleCount !== undefined && actionCount !== undefined ? <Card className="lf-v51-mobile-summary" aria-label="Vault summary">
+        <span>Total recorded value</span><strong>{loading ? "…" : recordedValue}</strong><small>{latestUpdate ? updatedLabel(latestUpdate) : "No values recorded yet"}</small>
+        <div className="lf-v51-mobile-summary-metrics">
+          <Link href="#lf-v3-vault-heading"><strong>{loading ? "…" : recordCount}</strong><span>Records</span><span aria-hidden="true">›</span></Link>
+          <Link href="/people-access"><strong>{loading ? "…" : peopleCount}</strong><span>People</span><span aria-hidden="true">›</span></Link>
+          <Link href="/actions?filter=todo"><strong>{loading ? "…" : displayedActionCount}</strong><span>To do</span><span aria-hidden="true">›</span></Link>
+        </div>
+      </Card> : null}
       <div className="lf-v3-mobile-kpis" aria-label="Vault at a glance">
         <Link href="/account/my-vault"><span>Records</span><strong>{loading ? "…" : recordCount}</strong></Link>
         {peopleCount !== undefined ? <Link href="/people-access"><span>People</span><strong>{loading ? "…" : peopleCount}</strong></Link> : null}
@@ -77,6 +86,7 @@ export default function V3DashboardOverview({ mode, loading, areas, recordCount,
           <footer><span aria-hidden="true">{actionRows.slice(0, Math.min(actionRows.length, 5)).map((action, index) => <i key={action.id} className={index === stepIndex % actionRows.length ? "is-current" : ""} />)}</span><Link href="/actions">See all</Link></footer>
         </> : <p>No open actions right now.</p>}
       </Card> : null}
+      {actionPreview ? <div className="lf-v51-home-preview">{actionPreview}</div> : null}
       <section aria-labelledby="lf-v3-vault-heading" className="lf-v3-vault-overview">
         <h2 id="lf-v3-vault-heading">Your vault</h2>
         <div className="lf-v3-vault-grid">{areas.map((area) => <Link key={area.href} href={area.href} className="lf-v3-vault-tile">
@@ -84,7 +94,7 @@ export default function V3DashboardOverview({ mode, loading, areas, recordCount,
           <span className="lf-v3-vault-tile-meta"><strong>{loading ? "Loading" : area.count ? `${area.count} record${area.count === 1 ? "" : "s"}` : "Nothing yet"}</strong><small>{area.count ? updatedLabel(area.updatedAt) : "Add first record"}</small></span>
         </Link>)}</div>
       </section>
-      {!showActions && actionCount !== undefined ? <Link className="lf-v3-mobile-next-steps" href="/actions">
+      {!showActions && actionCount !== undefined && !actionPreview ? <Link className="lf-v3-mobile-next-steps" href="/actions">
         <span><strong>Next steps</strong><small>{loading ? "Loading actions…" : displayedActionCount ? `${displayedActionCount} to review` : "All up to date"}</small></span>
         <span>See all actions</span>
       </Link> : null}
