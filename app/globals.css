@@ -167,6 +167,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 .lf-uat-environment-banner span {
   color: rgba(255, 255, 255, 0.92);
 }
+.lf-uat-mobile-label { display: none; }
 
 /* The environment banner is document content, not a second sticky header.
    Keeping it in normal flow prevents iOS Safari from stacking it over the
@@ -175,12 +176,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 
 @media (max-width: 720px) {
   .lf-uat-environment-banner {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 2px;
-    text-align: left;
+    min-height: 28px;
+    padding: 3px 8px;
+    font-size: 12px;
+    line-height: 22px;
     z-index: 38;
   }
+  .lf-uat-environment-banner > strong:not(.lf-uat-mobile-label),
+  .lf-uat-environment-banner > span { display: none; }
+  .lf-uat-mobile-label { display: block; }
 }
 
 .lf-test-persona-banner > div {
@@ -236,6 +240,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 }
 
 @media (max-width: 860px) {
+  .lf-platform-org-action button { width: 100%; min-height: 48px; }
+  .lf-platform-org-totals > div { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .lf-platform-org-totals section { padding: 12px !important; }
   .lf-admin-prototype-shell {
     grid-template-columns: 1fr !important;
   }
@@ -1394,8 +1401,24 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 
   .lf-platform-organisation-cards {
     display: grid;
-    gap: 10px;
+    gap: 0;
+    overflow: hidden;
+    border: 1px solid #e6ded9;
+    border-radius: 12px;
   }
+  .lf-platform-organisation-card { gap: 4px; padding: 14px 16px; border: 0; border-bottom: 1px solid #eee8e4; border-radius: 0; }
+  .lf-platform-organisation-card:last-child { border-bottom: 0; }
+  .lf-platform-organisation-card > div:first-child strong { font-size: 16px; line-height: 1.3; overflow-wrap: anywhere; }
+  .lf-platform-organisation-card > div:nth-child(n+4) { display: none; }
+  .lf-platform-organisation-card > div > span { display: none; }
+  .lf-platform-organisation-card > div:nth-child(2), .lf-platform-organisation-card > div:nth-child(3) { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+  .lf-platform-organisation-card > div:nth-child(3) strong { font-size: 12px; font-weight: 500; }
+  .lf-platform-organisation-card > div:nth-child(3) small { display: none; }
+  .lf-platform-organisation-card > a { min-height: 44px; display: inline-flex; align-items: center; }
+  section:has(> .lf-platform-organisation-cards) > table { display: none; }
+  .lf-admin-shell--platform section[aria-label="Organisation search and filters"] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px !important; }
+  .lf-admin-shell--platform section[aria-label="Organisation search and filters"] > label:first-child { grid-column: 1 / -1; }
+  .lf-admin-shell--platform section[aria-label="Organisation search and filters"] :is(input, select) { width: 100%; min-width: 0; }
 
   .lf-admin-data-toolbar {
     align-items: stretch;
@@ -1477,8 +1500,34 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 .lf-admin-shell--platform .lf-admin-status-badge.neutral { background: #f5efeb; color: #594b46; border-color: #e6ded9; }
 .lf-admin-shell--platform .lf-admin-shell-mobile-bar,
 .lf-admin-shell--platform .lf-admin-shell-mobile-tabs { display: none; }
+.lf-admin-shell--platform .lf-admin-shell-mobile-account { display: none; }
+.lf-admin-overview-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.lf-admin-overview-decisions { display: grid; gap: 0; border: 1px solid #e6ded9; border-radius: 12px; background: #fff; overflow: hidden; }
+.lf-admin-overview-decisions h2 { margin: 0; padding: 16px; }
+.lf-admin-decision-row { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 10px 16px; border-top: 1px solid #eee8e4; color: #1f1715; text-decoration: none; }
+.lf-admin-decision-row span { flex: 1; min-width: 0; }
+.lf-admin-decision-row strong { display: grid; place-items: center; min-width: 28px; height: 28px; padding: 0 6px; border-radius: 20px; color: #fff; background: #2b1714; }
+.lf-admin-decision-row:hover { background: #f6efea; }
+.lf-admin-verification-mobile { display: none; }
+.lf-admin-verification-boundary { display: flex; align-items: flex-start; gap: 10px; padding: 12px; border-radius: 10px; background: #f1ebe7; color: #1f1715; }
+.lf-admin-verification-boundary > *:first-child { flex: 0 0 auto; }
 
 @media (max-width: 860px) {
+  .lf-admin-verification-mobile { display: grid; gap: 12px; }
+  .lf-admin-overview-operational-metrics, .lf-admin-overview-resources { display: none !important; }
+  .lf-admin-verification-queue .lf-admin-data-cards,
+  .lf-admin-verification-queue .lf-admin-empty-state { display: none; }
+  .lf-admin-verification-filters { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+  .lf-admin-verification-filters button { flex: 0 0 auto; min-height: 44px; padding: 8px 12px; border: 1px solid #e6ded9; border-radius: 24px; color: #1f1715; background: #fff; font: inherit; }
+  .lf-admin-verification-filters button[aria-pressed="true"] { color: #fff; background: #2b1714; border-color: #2b1714; }
+  .lf-admin-verification-list { display: grid; border: 1px solid #e6ded9; border-radius: 12px; overflow: hidden; }
+  .lf-admin-verification-row { position: relative; display: grid; gap: 3px; min-height: 76px; padding: 12px 40px 12px 14px; border-bottom: 1px solid #eee8e4; color: #1f1715; background: #fff; text-decoration: none; }
+  .lf-admin-verification-row:last-child { border-bottom: 0; }
+  .lf-admin-verification-row > span { min-width: 0; overflow-wrap: anywhere; }
+  .lf-admin-verification-row small { color: #6f625e; }
+  .lf-admin-verification-row > svg, .lf-admin-verification-row > .material-symbols-rounded { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); }
+  .lf-admin-overview-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .lf-admin-overview-metrics .lf-admin-metric-card { min-height: 112px; padding: 14px; }
   .lf-admin-shell--platform .lf-admin-shell-mobile-bar {
     position: sticky;
     top: 0;
@@ -1486,28 +1535,36 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
     box-sizing: border-box;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     width: 100%;
     min-width: 0;
     height: 56px;
-    padding: 0 max(12px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
-    background: #261c1a;
+    padding: 0 max(4px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left));
+    background: #1f1715;
     color: #fff;
   }
-  .lf-admin-shell--platform .lf-admin-shell-mobile-brand { color: inherit; display: inline-flex; align-items: center; gap: 8px; min-width: 0; text-decoration: none; font-size: 14px; font-weight: 800; }
-  .lf-admin-shell--platform .lf-admin-shell-mobile-brand span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .lf-admin-shell--platform .lf-admin-shell-mobile-badge { flex: 0 0 auto; color: #eab4a5; font-size: 10px; font-weight: 900; letter-spacing: .08em; }
-  .lf-admin-shell--platform .lf-admin-shell-mobile-toggle { position: static; margin: 0 0 0 auto; flex: 0 0 44px; justify-content: center; border: 0; background: transparent; color: #fff; padding: 0; }
+  .lf-admin-shell--platform .lf-admin-shell-mobile-brand { color: inherit; display: inline-flex; align-items: center; gap: 7px; min-width: 0; text-decoration: none; font-size: 13px; font-weight: 800; }
+  .lf-admin-shell--platform .lf-admin-shell-mobile-logo { flex: 0 0 28px; width: 28px; height: 28px; display: grid; place-items: center; color: #1f1715; background: #fff; border-radius: 6px; }
+  .lf-admin-shell--platform .lf-admin-shell-mobile-brand-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lf-admin-shell--platform .lf-admin-shell-mobile-badge { flex: 0 0 auto; padding: 3px 5px; border-radius: 4px; color: #fff; background: #b3261e; font-size: 9px; font-weight: 900; letter-spacing: .04em; }
+  .lf-admin-shell--platform .lf-admin-shell-mobile-toggle { position: static; margin: 0; flex: 0 0 44px; justify-content: center; border: 0; background: transparent; color: #fff; padding: 0; }
+  .lf-admin-shell--platform .lf-admin-shell-mobile-search { display: grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; margin-left: auto; color: #fff; }
   .lf-admin-shell--platform .lf-admin-shell-content { padding: 20px max(16px, env(safe-area-inset-right)) calc(92px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
   .lf-admin-shell--platform .lf-admin-shell-header { padding: 0; gap: 12px; }
   .lf-admin-shell--platform .lf-admin-shell-title h1 { font-size: 24px; }
-  .lf-admin-shell--platform .lf-admin-shell-actions { display: flex; justify-content: flex-start; width: 100%; }
-  .lf-admin-shell--platform .lf-admin-shell-account-menu { width: auto; }
-  .lf-admin-shell--platform .lf-admin-shell-account-trigger { width: auto; min-height: 44px; }
+  .lf-admin-shell--platform .lf-admin-shell-actions { display: contents; }
+  .lf-admin-shell--platform .lf-admin-shell-actions > .lf-admin-shell-account-menu { display: none; }
+  .lf-admin-shell--platform .lf-admin-shell-mobile-account { display: block; flex: 0 0 44px; width: 44px; }
+  .lf-admin-shell--platform .lf-admin-shell-account-trigger { width: 44px; min-height: 44px; padding: 2px; border: 0; background: transparent; color: #fff; }
   .lf-admin-shell--platform .lf-admin-shell-account-copy { display: none; }
-  .lf-admin-shell--platform .lf-admin-shell-account-popover { left: auto; right: 0; }
-  .lf-admin-shell--platform .lf-admin-shell-drawer-panel { box-sizing: border-box; width: min(320px, 100vw); max-width: 100vw; background: #261c1a; }
-  .lf-admin-shell--platform .lf-admin-shell-drawer-panel .lf-admin-shell-sidebar { background: #261c1a; min-height: 0; }
+  .lf-admin-shell--platform .lf-admin-shell-account-popover { left: auto; right: 0; color: #1f1715; }
+  .lf-admin-shell--platform .lf-admin-shell-breadcrumb { display: none; }
+  .lf-admin-shell--platform .lf-admin-shell-drawer-panel { box-sizing: border-box; width: 100vw; max-width: 100vw; background: #f7f3f1; }
+  .lf-admin-shell--platform .lf-admin-shell-drawer-panel .lf-admin-shell-sidebar { background: #f7f3f1; color: #1f1715; min-height: 0; }
+  .lf-admin-shell--platform .lf-admin-shell-drawer-panel .lf-admin-shell-nav-label { color: #6f625e; }
+  .lf-admin-shell--platform .lf-admin-shell-drawer-panel .lf-admin-shell-nav-group { overflow: hidden; border: 1px solid #e6ded9; border-radius: 12px; background: #fff; }
+  .lf-admin-shell--platform .lf-admin-shell-drawer-panel .lf-admin-shell-nav-link { color: #1f1715; border-radius: 0; min-height: 48px; }
+  .lf-admin-shell--platform .lf-admin-shell-drawer-panel .lf-admin-shell-nav-link.active { background: #f6efea; color: #8c4a32; }
   .lf-admin-shell--platform .lf-admin-data-table { display: none; }
   .lf-admin-shell--platform .lf-admin-data-cards { display: grid; gap: 12px; }
   .lf-admin-shell--platform .lf-admin-data-card { padding: 16px; }
@@ -1520,12 +1577,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
     left: 0;
     z-index: 30;
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     min-height: calc(64px + env(safe-area-inset-bottom));
     padding: 4px max(4px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(4px, env(safe-area-inset-left));
     box-sizing: border-box;
-    background: #fff;
-    border-top: 1px solid #e4dcd7;
+    background: #1f1715;
+    border-top: 1px solid #3a2b27;
   }
   .lf-admin-shell--platform .lf-admin-shell-mobile-tabs :is(a, button) {
     display: grid;
@@ -1537,7 +1594,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
     padding: 4px;
     border: 0;
     background: transparent;
-    color: #6f625e;
+    color: #cbbdb8;
     font: inherit;
     font-size: 10px;
     font-weight: 700;
@@ -1546,7 +1603,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
     cursor: pointer;
   }
   .lf-admin-shell--platform .lf-admin-shell-mobile-tabs :is(a, button) span:last-child { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .lf-admin-shell--platform .lf-admin-shell-mobile-tabs a[aria-current="page"] { color: #8c4a32; }
+  .lf-admin-shell--platform .lf-admin-shell-mobile-tabs a[aria-current="page"] { color: #fff; }
+}
+
+@media (max-width: 359px) {
+  .lf-admin-shell--platform section[aria-label="Organisation search and filters"] { grid-template-columns: minmax(0, 1fr) !important; }
 }
 
 .lf-shell[data-lf-text-size="large"] {

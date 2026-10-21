@@ -7,6 +7,7 @@ export default function UatEnvironmentBanner() {
     <aside className="lf-uat-environment-banner" role="status" aria-label="UAT test environment">
       <strong>UAT / TEST ENVIRONMENT</strong>
       <span>Use synthetic data only. Do not enter real customer, payment, identity or document details.</span>
+      <strong className="lf-uat-mobile-label">UAT · synthetic data only</strong>
     </aside>
   );
 }

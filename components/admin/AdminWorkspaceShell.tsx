@@ -46,10 +46,14 @@ export default function AdminWorkspaceShell({
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
   const accountTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const mobileAccountMenuRef = useRef<HTMLDivElement | null>(null);
+  const mobileAccountTriggerRef = useRef<HTMLButtonElement | null>(null);
   const mobileMenuTriggerRef = useRef<HTMLButtonElement | null>(null);
   const drawerCloseRef = useRef<HTMLButtonElement | null>(null);
   const drawerPanelRef = useRef<HTMLDivElement | null>(null);
   const accountMenuId = useId();
+  const isPlatform = workspaceLabel !== "Enterprise Operations";
+  const verificationDetail = isPlatform && currentPathname.startsWith("/admin/verification/");
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -73,7 +77,8 @@ export default function AdminWorkspaceShell({
       if (event.key !== "Escape") return;
       if (accountMenuOpen) {
         setAccountMenuOpen(false);
-        accountTriggerRef.current?.focus();
+        if (window.innerWidth <= 860 && isPlatform) mobileAccountTriggerRef.current?.focus();
+        else accountTriggerRef.current?.focus();
       }
       if (menuOpen) {
         setMenuOpen(false);
@@ -92,13 +97,13 @@ export default function AdminWorkspaceShell({
       document.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("lf-admin-menu-open", onOtherMenuOpen);
     };
-  }, [accountMenuId, accountMenuOpen, menuOpen]);
+  }, [accountMenuId, accountMenuOpen, menuOpen, isPlatform]);
 
   useEffect(() => {
     if (!accountMenuOpen) return;
 
     function onPointerDown(event: PointerEvent) {
-      if (accountMenuRef.current?.contains(event.target as Node)) return;
+      if (accountMenuRef.current?.contains(event.target as Node) || mobileAccountMenuRef.current?.contains(event.target as Node)) return;
       setAccountMenuOpen(false);
     }
 
@@ -124,7 +129,6 @@ export default function AdminWorkspaceShell({
     });
   }
 
-  const isPlatform = workspaceLabel !== "Enterprise Operations";
   const workspaceHome = isPlatform ? "/admin" : "/enterprise";
   const visibleItems = navigation.flatMap((group) => group.items);
   const preferredTabs = adminRole === "support_agent" ? ["overview", "users", "support"]
@@ -138,6 +142,7 @@ export default function AdminWorkspaceShell({
   ].filter((item): item is AdminNavigationItem => item !== undefined)
     .filter((item, index, items) => items.findIndex((candidate) => candidate.key === item.key) === index)
     .slice(0, 3);
+  const canSearchUsers = visibleItems.some((item) => item.key === "users");
   const sidebar = (
     <aside className="lf-admin-shell-sidebar" aria-label={`${workspaceLabel} navigation`}>
       <Link href={workspaceHome} className="lf-admin-shell-brand" prefetch={false}>
@@ -176,15 +181,15 @@ export default function AdminWorkspaceShell({
   const accountIdentity = splitIdentityDetail(identityDetail);
   const closedAccountMeta = accountIdentity.role || accountIdentity.context || "Secure account";
 
-  const accountMenu = (
-    <div ref={accountMenuRef} className="lf-admin-shell-account-menu">
+  const accountMenu = (mobile = false) => (
+    <div ref={mobile ? mobileAccountMenuRef : accountMenuRef} className={mobile ? "lf-admin-shell-account-menu lf-admin-shell-mobile-account" : "lf-admin-shell-account-menu"}>
       <button
-        ref={accountTriggerRef}
+        ref={mobile ? mobileAccountTriggerRef : accountTriggerRef}
         type="button"
         className="lf-admin-shell-account-trigger"
         aria-label={`Open account menu for ${identityLabel}`}
         aria-expanded={accountMenuOpen}
-        aria-controls={accountMenuId}
+        aria-controls={mobile ? `${accountMenuId}-mobile` : accountMenuId}
         aria-haspopup="menu"
         onClick={toggleAccountMenu}
       >
@@ -196,7 +201,7 @@ export default function AdminWorkspaceShell({
         <Icon name="expand_more" size={18} />
       </button>
       {accountMenuOpen ? (
-        <div id={accountMenuId} className="lf-admin-shell-account-popover" role="menu" aria-label="Account menu">
+        <div id={mobile ? `${accountMenuId}-mobile` : accountMenuId} className="lf-admin-shell-account-popover" role="menu" aria-label="Account menu">
           <div className="lf-admin-shell-account-summary">
             <AccountAvatar label={identityLabel} initials={initials} avatarUrl={identityAvatarUrl} />
             <div className="lf-admin-shell-account-summary-copy">
@@ -231,11 +236,11 @@ export default function AdminWorkspaceShell({
     <main className={isPlatform ? "lf-admin-shell lf-admin-shell--platform" : "lf-admin-shell"}>
       {isPlatform ? (
         <div className="lf-admin-shell-mobile-bar">
-          <Link href="/admin" className="lf-admin-shell-mobile-brand" prefetch={false}><Icon name="apps" size={21} filled /><span>Platform Admin</span></Link>
+          {verificationDetail ? <Link href="/admin/verification" className="lf-admin-shell-mobile-toggle" aria-label="Back to Verification" prefetch={false}><Icon name="arrow_back_ios_new" size={20} /></Link> : <button ref={mobileMenuTriggerRef} type="button" className="lf-admin-shell-mobile-toggle" onClick={() => setMenuOpen(true)} aria-label="Open Platform Admin menu" aria-expanded={menuOpen} aria-controls="admin-mobile-navigation"><Icon name="menu" size={22} /></button>}
+          <Link href="/admin" className="lf-admin-shell-mobile-brand" prefetch={false}><span className="lf-admin-shell-mobile-logo"><Icon name="apps" size={19} filled /></span><span className="lf-admin-shell-mobile-brand-name">Legacy Fortress</span></Link>
           <span className="lf-admin-shell-mobile-badge">ADMIN</span>
-          <button ref={mobileMenuTriggerRef} type="button" className="lf-admin-shell-mobile-toggle" onClick={() => setMenuOpen(true)} aria-label="Open Platform Admin menu" aria-expanded={menuOpen} aria-controls="admin-mobile-navigation">
-            <Icon name="menu" size={22} />
-          </button>
+          {canSearchUsers ? <Link href="/admin/users" className="lf-admin-shell-mobile-search" aria-label="Search customer users" prefetch={false}><Icon name="search" size={22} /></Link> : null}
+          {accountMenu(true)}
         </div>
       ) : (
         <button ref={mobileMenuTriggerRef} type="button" className="lf-admin-shell-mobile-toggle" onClick={() => setMenuOpen(true)} aria-expanded={menuOpen} aria-controls="admin-mobile-navigation">
@@ -287,10 +292,10 @@ export default function AdminWorkspaceShell({
             ) : null}
           </div>
           <div className="lf-admin-shell-actions">
-            {stagingLabel ? <span className="lf-admin-shell-stage">{stagingLabel}</span> : null}
+            {!isPlatform && stagingLabel ? <span className="lf-admin-shell-stage">{stagingLabel}</span> : null}
             {primaryAction}
             {!isPlatform ? <WorkspaceSwitcher currentPathname={currentPathname} compact /> : null}
-            {accountMenu}
+            {accountMenu(false)}
           </div>
         </header>
         {children}
@@ -299,7 +304,6 @@ export default function AdminWorkspaceShell({
         {mobileTabs.map((item) => <Link key={item.key} href={item.href} aria-current={isActivePath(currentPathname, item.href) ? "page" : undefined} prefetch={false}>
           <Icon name={item.icon} size={22} /><span>{item.label}</span>
         </Link>)}
-        <button type="button" onClick={() => setMenuOpen(true)} aria-label="Open all Platform Admin navigation"><Icon name="menu" size={22} /><span>Menu</span></button>
       </nav> : null}
       <style jsx global>{adminShellCss}</style>
     </main>

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import AdminDataTable, { AdminContextHelp, AdminEmptyState, AdminMetricCard, AdminStatusBadge } from "@/components/admin/AdminPrimitives";
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell";
 import InfoTip from "@/components/ui/InfoTip";
+import Icon from "@/components/ui/Icon";
 import { filterAdminNavigation, PLATFORM_ADMIN_NAVIGATION } from "@/components/admin/adminNavigation";
 import { waitForActiveUser } from "@/lib/auth/session";
 import { supabase } from "@/lib/supabaseClient";
@@ -446,9 +447,9 @@ type HealthState = {
 
 const PAGE_COPY: Record<AdminControlPlaneSection, { title: string; eyebrow: string; description: string }> = {
   overview: {
-    title: "Admin overview",
+    title: "Overview",
     eyebrow: "Legacy Fortress Admin",
-    description: "Privacy-safe operational summary with links into live queues. Customer vault contents and private documents are not shown here.",
+    description: "Queues that need a decision.",
   },
   users: {
     title: "Customer users",
@@ -516,7 +517,7 @@ const PAGE_COPY: Record<AdminControlPlaneSection, { title: string; eyebrow: stri
     description: "Review linked-access issues and verification handoffs without exposing unrelated vault content.",
   },
   verification: {
-    title: "Verification queue",
+    title: "Verification",
     eyebrow: "Operations",
     description: "Review executor verification requests and evidence presence.",
   },
@@ -1106,7 +1107,7 @@ export default function AdminControlPlaneWorkspace({
         {message ? <section style={alertStyle}>{message}</section> : null}
         {confirmation ? <AdminConfirmationDialog confirmation={confirmation} onCancel={() => setConfirmation(null)} onConfirm={() => { const action = confirmation.onConfirm; setConfirmation(null); void action(); }} /> : null}
 
-        {section === "overview" ? renderOverview(metrics, support, verificationQueue, probateCases, capabilities) : null}
+        {section === "overview" ? renderOverview(metrics, support, verificationQueue, probateCases, enterprisePortfolio, capabilities) : null}
         {section === "organisations" ? renderPlatformOrganisations(enterpriseViews, {
           search: enterpriseSearch,
           status: enterpriseStatusFilter,
@@ -1205,33 +1206,48 @@ function buildPlatformBreadcrumbs(section: AdminControlPlaneSection, resourceId:
   return crumbs;
 }
 
-function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | null, verification: VerificationItem[], probate: ProbateCase[], capabilities: string[]) {
-  const cards = [
-    { label: "Pending invitations", value: support?.counts.pendingInvitations ?? null, href: "/admin/invitations?status=pending", source: "support snapshot" },
-    { label: "Ready to send", value: support?.counts.readyToSendInvitations ?? null, href: "/admin/invitations?status=ready", source: "saved contact invitations without dispatch" },
-    { label: "Verification awaiting review", value: support?.counts.verificationAwaitingReview ?? verification.length, href: "/admin/verification?status=awaiting_review", source: "verification queue" },
-    { label: "Probate cases", value: probate.length, href: "/admin/probate", source: "probate cases API" },
-    { label: "Access issues", value: support?.counts.invitationIssues ?? null, href: "/admin/access?status=issue", source: "support snapshot" },
+function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | null, verification: VerificationItem[], probate: ProbateCase[], portfolio: EnterprisePortfolio | null, capabilities: string[]) {
+  const canVerify = capabilities.includes("verification:read");
+  const canViewOrganisations = capabilities.includes("organisation:view");
+  const canViewInvitations = capabilities.includes("support:read");
+  const canViewSeats = capabilities.includes("licence:view");
+  const summaryCards = [
+    { label: "Verification requests", value: canVerify ? (support?.counts.verificationAwaitingReview ?? verification.length) : null, href: canVerify ? "/admin/verification" : undefined },
+    { label: "Organisations", value: canViewOrganisations ? portfolio?.organisations.length ?? null : null, href: canViewOrganisations ? "/admin/organisations" : undefined },
+    { label: "Active seats", value: canViewSeats ? portfolio?.licences.reduce((sum, licence) => sum + licence.activeSeats, 0) ?? null : null, href: canViewSeats ? "/admin/licences" : undefined },
+    { label: "Pending invitations", value: canViewInvitations ? support?.counts.pendingInvitations ?? null : null, href: canViewInvitations ? "/admin/invitations" : undefined },
   ];
+  const visibleSummaryCards = summaryCards.filter((card) => card.href || card.value !== null);
+  const usersMetric = metrics.find((metric) => metric.key === "totalUsers");
+  const supportFallbackCards = [
+    { label: "Customer users", value: capabilities.includes("users:lookup") && usersMetric?.available ? usersMetric.value : null, href: capabilities.includes("users:lookup") ? "/admin/users" : undefined },
+    { label: "Ready to send", value: canViewInvitations ? support?.counts.readyToSendInvitations ?? null : null, href: canViewInvitations ? "/admin/invitations?status=ready" : undefined },
+    { label: "Access issues", value: canViewInvitations ? support?.counts.invitationIssues ?? null : null, href: canViewInvitations ? "/admin/support" : undefined },
+  ];
+  for (const card of supportFallbackCards) {
+    if (visibleSummaryCards.length >= 4) break;
+    if (card.href) visibleSummaryCards.push(card);
+  }
+  const decisions = [
+    canVerify && (support?.counts.verificationAwaitingReview ?? verification.length) > 0 ? { label: "Checks waiting for a reviewer", count: support?.counts.verificationAwaitingReview ?? verification.length, href: "/admin/verification" } : null,
+    canVerify && probate.length > 0 ? { label: "Probate cases to review", count: probate.length, href: "/admin/probate" } : null,
+    canViewInvitations && (support?.counts.invitationIssues ?? 0) > 0 ? { label: "Invitation issues", count: support?.counts.invitationIssues ?? 0, href: "/admin/access" } : null,
+  ].filter((item): item is { label: string; count: number; href: string } => item !== null).slice(0, 3);
   return (
-    <div style={stackStyle}>
-      <section style={panelStyle} aria-labelledby="admin-action-centre-title">
-        <h2 id="admin-action-centre-title" style={h2Style}>Action centre</h2>
-        <p style={mutedStyle}>Start with queues that need an operational decision. Counts are taken from the live admin summaries below; unavailable sources are labelled rather than treated as empty.</p>
-      </section>
-      <section style={gridStyle}>
-        {cards.map((card) => (
+    <div style={stackStyle} className="lf-admin-overview">
+      <section className="lf-admin-overview-metrics" aria-label="Overview metrics">
+        {visibleSummaryCards.map((card) => (
           <AdminMetricCard
             key={card.label}
             label={card.label}
             value={card.value === null ? "Unavailable" : card.value.toLocaleString()}
-            detail={`Source: ${card.source}`}
-            actionLabel="Open queue"
             href={card.href}
           />
         ))}
+        {!visibleSummaryCards.length ? <p style={mutedStyle}>No summary metrics are available for this role.</p> : null}
       </section>
-      <section style={panelStyle}>
+      {decisions.length ? <section className="lf-admin-overview-decisions" aria-labelledby="admin-decisions-title"><h2 id="admin-decisions-title" style={h2Style}>Needs a decision</h2>{decisions.map((item) => <Link key={item.href} href={item.href} className="lf-admin-decision-row"><span>{item.label}</span><strong>{item.count}</strong><Icon name="chevron_right" size={20} /></Link>)}</section> : null}
+      <section style={panelStyle} className="lf-admin-overview-operational-metrics">
         <h2 style={h2Style}>Operational metrics</h2>
         <AdminDataTable
           caption="Operational metrics"
@@ -1261,7 +1277,7 @@ function renderPlatformControlMap(capabilities: string[]) {
   ].filter((resource) => capabilities.includes(resource.capability));
 
   return (
-    <section style={panelStyle} aria-labelledby="platform-control-map-title">
+    <section style={panelStyle} className="lf-admin-overview-resources" aria-labelledby="platform-control-map-title">
       <div style={sectionHeaderStyle}>
         <div>
           <p style={eyebrowStyle}>Platform resources</p>
@@ -2463,6 +2479,7 @@ function renderVerification(
             <Detail label="Assigned reviewer" value={selected.assignedReviewerName ?? "Unassigned"} />
             <Detail label="Started" value={formatDate(selected.submittedAt)} />
           </div>
+          <p className="lf-admin-verification-boundary"><Icon name="lock" size={20} />Approving identity confirms who someone is. It never gives access to records.</p>
           {canReview ? <section style={contextPanelStyle}>
             <h3 style={h3Style}>Review actions</h3>
             <p style={mutedStyle}>These actions manage the verification workflow only. They cannot activate access or override identity policy.</p>
@@ -2477,26 +2494,47 @@ function renderVerification(
           </section> : null}
         </section>
       ) : null}
-      <section style={panelStyle}>
-        <h2 style={h2Style}>Verification queue</h2>
+      {resourceId && !selected ? <AdminEmptyState title="Case unavailable">This case is not available to your role.</AdminEmptyState> : null}
+      {!resourceId ? <section style={panelStyle} className="lf-admin-verification-queue">
+        <VerificationMobileQueue queue={queue} />
         <AdminDataTable
           caption="Verification queue"
-          description={<p style={mutedStyle}>Identity verification requests are shown as status metadata only. Raw documents and biometric evidence are excluded.</p>}
           columns={[
-            { key: "case", header: "Case", render: (item) => <>{item.ownerName}<small>{item.contactName} · {formatDate(item.submittedAt)}</small></> },
-            { key: "role", header: "Role", render: (item) => labelise(item.assignedRole) },
-            { key: "status", header: "Status", render: (item) => <><AdminStatusBadge status={item.requestStatus} /><small>{item.manualReviewRequired ? "Review required" : labelise(item.activationStatus)}</small></> },
-            { key: "checks", header: "Checks", render: (item) => <><small>Document: {item.documentType ? labelise(item.documentType) : "Pending"}</small><small>Liveness: {item.livenessStatus ? labelise(item.livenessStatus) : "Pending"}</small><small>Face match: {item.faceMatchResult ? labelise(item.faceMatchResult) : "Pending"}</small></> },
+            { key: "reference", header: "Reference", render: (item) => <code>{item.id.slice(0, 8)}</code> },
+            { key: "type", header: "Type", render: (item) => labelise(item.purpose ?? item.requestType) },
+            { key: "action", header: "Pending action", render: (item) => item.manualReviewRequired ? "Manual review" : labelise(item.requestStatus) },
+            { key: "status", header: "Status", render: (item) => <AdminStatusBadge status={item.requestStatus} /> },
             { key: "assigned", header: "Reviewer", render: (item) => item.assignedReviewerName ?? "Unassigned" },
+            { key: "age", header: "Submitted", render: (item) => formatDate(item.submittedAt) },
             { key: "detail", header: "Detail", render: (item) => <Link href={`/admin/verification/${item.id}`}>Inspect</Link> },
           ]}
           rows={queue}
           getRowKey={(item) => item.id}
           emptyState={<AdminEmptyState title="No verification requests">No verification requests are waiting.</AdminEmptyState>}
         />
-      </section>
+      </section> : null}
     </div>
   );
+}
+
+function VerificationMobileQueue({ queue }: { queue: VerificationItem[] }) {
+  const [filter, setFilter] = useState("all");
+  const filters = [
+    { key: "all", label: "All", matches: () => true },
+    { key: "review", label: "Needs review", matches: (item: VerificationItem) => item.manualReviewRequired || item.requestStatus === "review_required" },
+    { key: "progress", label: "In review", matches: (item: VerificationItem) => Boolean(item.assignedReviewerUserId) && item.requestStatus !== "review_required" },
+    { key: "waiting", label: "Waiting", matches: (item: VerificationItem) => ["pending", "requires_input", "retry_requested"].includes(item.requestStatus) },
+  ];
+  const visible = queue.filter(filters.find((option) => option.key === filter)?.matches ?? filters[0].matches);
+  return <div className="lf-admin-verification-mobile">
+    <div className="lf-admin-verification-filters" aria-label="Filter verification requests">{filters.map((option) => <button key={option.key} type="button" onClick={() => setFilter(option.key)} aria-pressed={filter === option.key}>{option.label} {queue.filter(option.matches).length}</button>)}</div>
+    <div className="lf-admin-verification-list">{visible.length ? visible.map((item) => <Link key={item.id} href={`/admin/verification/${item.id}`} className="lf-admin-verification-row">
+      <span><strong><code>{item.id.slice(0, 8)}</code></strong> <small>{labelise(item.purpose ?? item.requestType)}</small></span>
+      <span>{item.manualReviewRequired ? "Manual review required" : labelise(item.requestStatus)}</span>
+      <span><AdminStatusBadge status={item.requestStatus} /> <small>{item.assignedReviewerName ?? "Unassigned"} · {formatDate(item.submittedAt)}</small></span>
+      <Icon name="chevron_right" size={20} />
+    </Link>) : <p>No requests match this filter.</p>}</div>
+  </div>;
 }
 
 function renderProbate(

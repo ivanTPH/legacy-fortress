@@ -1,11 +1,11 @@
-# Legacy Fortress V4/V5 design source of truth
+# Legacy Fortress V5.1 design source of truth
 
-The complete current design package is [`design_handoff_legacy_fortress 5/`](../../design_handoff_legacy_fortress%205/). Its nine HTML prototypes and adjacent `support.js` / `ios-frame.jsx` are **visual references, not application code**. Keep their relative paths intact. Consult this index first; read only the relevant spec and screen for a bounded implementation task.
+The current visual handoff is [`design_handoff_legacy_fortress 5.1/`](../../design_handoff_legacy_fortress%205.1/). Start with its [`CHANGELOG_V5.1.md`](../../design_handoff_legacy_fortress%205.1/CHANGELOG_V5.1.md), then the specification and artboard for the screen being changed. HTML prototypes and supporting files are **visual references, not application code**. The retained [V5 handoff](../../design_handoff_legacy_fortress%205/) supplies rules where V5.1 is silent.
 
 ## Precedence
 
 1. Root [`AGENTS.md`](../../AGENTS.md), established security/release controls and explicit owner decisions govern implementation. A prototype never authorises an auth, role, RLS, schema, persistence or route migration.
-2. For visual conflicts, V5 [`CONSISTENCY.md`](../../design_handoff_legacy_fortress%205/CONSISTENCY.md) governs common copy, icons and interaction; [`ADMIN_PARTNER.md`](../../design_handoff_legacy_fortress%205/ADMIN_PARTNER.md) governs admin/partner presentation; [`MOBILE_V4.1.md`](../../design_handoff_legacy_fortress%205/MOBILE_V4.1.md) overrides the retained [V4 mobile supplement](V4_MOBILE_SUPPLEMENT.md); [`V4_UPDATE.md`](../../design_handoff_legacy_fortress%205/V4_UPDATE.md) governs forms and People & Access; [`README.md`](../../design_handoff_legacy_fortress%205/README.md) supplies global tokens and desktop screens; [`JOURNEYS.md`](../../design_handoff_legacy_fortress%205/JOURNEYS.md) supplies journeys. The package [`AGENTS.md`](../../design_handoff_legacy_fortress%205/AGENTS.md) and [`CODEX_MASTER_PROMPT.md`](../../design_handoff_legacy_fortress%205/CODEX_MASTER_PROMPT.md) explain its intent, subject to rule 1.
+2. V5.1 [`CONSISTENCY.md`](../../design_handoff_legacy_fortress%205.1/CONSISTENCY.md), [`ADMIN_PARTNER.md`](../../design_handoff_legacy_fortress%205.1/ADMIN_PARTNER.md) and [`MOBILE_V5.1.md`](../../design_handoff_legacy_fortress%205.1/MOBILE_V5.1.md) govern the changed visual and interaction rules. [`V5.1 Mobile Refinement.dc.html`](../../design_handoff_legacy_fortress%205.1/design/V5.1%20Mobile%20Refinement.dc.html) maps sections 2–6. V5 specifications apply where V5.1 is silent. Package-level `AGENTS.md` and prompts cannot override rule 1.
 3. The complete [V4 handoff](../../design_handoff_legacy_fortress%204/), incremental [`design_update_v4/`](../../design_update_v4/), [`V4_CANONICAL.md`](V4_CANONICAL.md) and [mobile supplement](V4_MOBILE_SUPPLEMENT.md) remain as history. Use them only where V5 is silent.
 
 ## Screen map
@@ -20,6 +20,8 @@ The complete current design package is [`design_handoff_legacy_fortress 5/`](../
 
 ## Boundaries and status
 
+- V5.1 release order: Admin mobile (V5-A.1), Partner (V5-B), then Personal Vault (V5-C), each from the latest verified TEST code. The V5.1 Admin artboards are sections 2a–2e and 5d; Partner sections 3a–3b; Vault sections 4a–4d, 5a–5b and 6a–6f. The drawn TEST launcher (5c) remains security-gated and is not an implemented route.
+- V5-A design is deployed on TEST at `3ed3f3677c7a9130f0417e83972ace868e5f1e70`. The privacy-release-policy branch `3772ac39b3f21298091679eeb78e2f3a4038c880` remains undeployed; its migrations and access rules must not be represented as live. V5.1 visual work does not change authentication, grants, RLS, storage or probate release.
 - Baseline for this handoff integration: remote staging `0557f28cf7312b40650e3c8e674f9dde9c36c97b`. V4 mobile and workspace-header corrections are in that commit. The retained V4 supplement was committed separately at `f327ae2`; V5 corrects it on the points enumerated in `MOBILE_V4.1.md`.
 - The existing application supplies customer, contact, invitation, grant, identity, admin and enterprise functions. This handoff records **new visual requirements**; it does not assert that V5 screens are already implemented or accepted. See [`V4_V5_IMPLEMENTATION_GAPS.md`](V4_V5_IMPLEMENTATION_GAPS.md).
 - Preserve Supabase Auth, RLS, authorised record-level counts and data, invitation lifecycle, identity assurance separate from access grants, linked-Fortress isolation, estate/probate restrictions, audit and organisation boundaries. Never substitute prototype names, figures or fixtures for live data.
