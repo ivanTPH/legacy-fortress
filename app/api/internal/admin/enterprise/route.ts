@@ -81,7 +81,14 @@ export async function GET(request: Request) {
       document_content_excluded: true,
     },
   }).catch(() => null);
-  return NextResponse.json({ ok: true, portfolio });
+  return NextResponse.json({
+    ok: true,
+    portfolio,
+    uiAccess: {
+      organisationScoped: admin.access.enterpriseScope?.organisationScoped ?? false,
+      capabilities: admin.access.capabilities,
+    },
+  });
 }
 
 export async function POST(request: Request) {

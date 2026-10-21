@@ -5,6 +5,18 @@ import test from "node:test";
 
 const root = process.cwd();
 
+test("Partner presentation uses server-resolved organisation scope and capabilities", () => {
+  const api = fs.readFileSync(path.join(root, "app/api/internal/admin/enterprise/route.ts"), "utf8");
+  const ui = fs.readFileSync(path.join(root, "components/enterprise/EnterpriseOperationsWorkspace.tsx"), "utf8");
+  assert.match(api, /requireEnterpriseAccess\(request\)/);
+  assert.match(api, /assertEnterpriseOrganisationScope\(admin\.access, organisationId\)/);
+  assert.match(api, /organisationScoped: admin\.access\.enterpriseScope\?\.organisationScoped/);
+  assert.match(api, /capabilities: admin\.access\.capabilities/);
+  assert.match(ui, /setPartnerMode\(Boolean\(json\.uiAccess\?\.organisationScoped\)\)/);
+  assert.match(ui, /const capabilities = json\.uiAccess\?\.capabilities/);
+  assert.match(ui, /setNavigationCapabilities\(\[\.\.\.new Set\(\["enterprise\.workspace\.access", \.\.\.capabilities\]\)\]\)/);
+});
+
 test("enterprise operations migration creates private operational tables without vault access", () => {
   const migration = fs.readFileSync(path.join(root, "supabase/migrations/20260722103000_admin_enterprise_operations.sql"), "utf8");
 

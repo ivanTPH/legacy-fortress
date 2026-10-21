@@ -585,3 +585,9 @@ Date: 2026-10-17. Branch: `fix/v4-mobile-acceptance`, based on staging `38ea8d1`
 - Admin has a compact dark mobile header, left menu, account/search utilities, three role tabs, concise Overview metrics, a status-only verification list and compact organisation controls. Existing routes, capability filters and verification actions remain intact. The TEST launcher, new approval actions and undeployed privacy migrations are excluded.
 - Synthetic local support-agent and super-admin routes passed at 390px and 320px with no horizontal overflow; desktop passed at 1440px. TypeScript and 12 focused tests passed. Targeted lint has only the pre-existing organisation loader warning. Evidence is in `/private/tmp/lf-v5a1-evidence/` and `/private/tmp/lf-v5a1-super-evidence/`; synthetic accounts were removed.
 - Next: commit, confirm the remote staging branch still equals `3ed3f367`, then use the protected GitHub Actions/Coolify TEST release. Stop on any gate failure before V5-B.
+
+## V5.1 Partner presentation
+
+- V5-A.1 was released to TEST at `72e011c57b0c32aba37f4951b21d1b5bfd7ff690`; protected GitHub Actions and hosted acceptance passed.
+- The isolated `feat/v5-1-partner` branch adds a Partner Portal presentation to the existing `/enterprise` route for organisation-scoped members. The API exposes its existing resolved scope and capabilities to the UI; server-side organisation and action checks remain unchanged. Mobile has Overview, Team and Invitations tabs, compact cards/lists and a light navigation shell. Platform staff retain their existing Enterprise Operations presentation.
+- Synthetic local partner sign-in and tenant-scope denial passed, with no overflow at 390px, 320px or desktop 1440px. No schema, RLS, auth or privacy-release migration is included. The TEST-only owner launcher and separate Partner sign-in remain security-gated.

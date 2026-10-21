@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { AdminMetricCard, AdminStatusBadge } from "@/components/admin/AdminPrimitives";
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell";
 import { ENTERPRISE_ADMIN_NAVIGATION, filterAdminNavigation } from "@/components/admin/adminNavigation";
@@ -354,6 +354,8 @@ export default function EnterpriseOperationsWorkspace() {
   const [message, setMessage] = useState("");
   const [identity, setIdentity] = useState({ label: "Enterprise user", detail: "" });
   const [navigationCapabilities, setNavigationCapabilities] = useState<string[]>([]);
+  const [partnerMode, setPartnerMode] = useState(false);
+  const [partnerInviteIntent, setPartnerInviteIntent] = useState(false);
   const [portfolio, setPortfolio] = useState<EnterprisePortfolio>(EMPTY_PORTFOLIO);
   const [activeTab, setActiveTab] = useState<EnterpriseTab>("overview");
   const [filters, setFilters] = useState({
@@ -487,13 +489,14 @@ export default function EnterpriseOperationsWorkspace() {
       detail: String(user.email ?? ""),
     });
     const res = await authFetch("/api/internal/admin/enterprise");
-    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; portfolio?: EnterprisePortfolio; message?: string };
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; portfolio?: EnterprisePortfolio; message?: string; uiAccess?: { organisationScoped: boolean; capabilities: string[] } };
     if (!res.ok || !json.ok || !json.portfolio) {
       setMessage(json.message || "Enterprise Operations is available only to authorised administrators.");
       setState(res.status === 403 ? "denied" : "error");
       return;
     }
     setPortfolio(json.portfolio);
+    setPartnerMode(Boolean(json.uiAccess?.organisationScoped));
     const scopedOrganisation = json.portfolio.organisations.length === 1 ? json.portfolio.organisations[0] : null;
     const scopeLabel = scopedOrganisation
       ? `Organisation: ${scopedOrganisation.name}`
@@ -518,9 +521,11 @@ export default function EnterpriseOperationsWorkspace() {
     }
     const sessionRes = await authFetch("/api/internal/admin/session");
     const sessionJson = await sessionRes.json().catch(() => ({})) as { admin?: { capabilities?: string[] } };
-    setNavigationCapabilities(sessionRes.ok && sessionJson.admin?.capabilities?.length
+    const capabilities = json.uiAccess?.capabilities ?? (sessionRes.ok && sessionJson.admin?.capabilities?.length
       ? sessionJson.admin.capabilities
       : ["organisation:view", "licence:view", "enterprise.membership.read", "enterprise.report.read"]);
+    // A successful portfolio read already proves workspace access; this only exposes its existing navigation link.
+    setNavigationCapabilities([...new Set(["enterprise.workspace.access", ...capabilities])]);
     setState("ready");
   }, [authFetch, router]);
 
@@ -650,6 +655,8 @@ export default function EnterpriseOperationsWorkspace() {
   const currentPathname = `/enterprise${activeTab === "overview" ? "" : `?tab=${activeTab}`}`;
   const visibleNavigation = useMemo(() => filterAdminNavigation(ENTERPRISE_ADMIN_NAVIGATION, navigationCapabilities), [navigationCapabilities]);
   const can = useCallback((capability: string) => navigationCapabilities.includes(capability), [navigationCapabilities]);
+  const partnerTitle = activeTab === "users" ? "Team & seats" : activeTab === "overview" ? "Overview" : activeTab === "invitations" ? "Invitations" : labelise(activeTab);
+  const partnerScope = portfolio.organisations.length === 1 ? portfolio.organisations[0].name : `${portfolio.organisations.length} authorised organisations`;
 
   if (state === "checking") {
     return (
@@ -679,43 +686,46 @@ export default function EnterpriseOperationsWorkspace() {
     );
   }
 
+  const filterPanel = renderFilterBar(
+    filters,
+    setFilters,
+    () => setFilters({ organisation: "", status: "", type: "", licence: "", licencePlan: "", billingStatus: "", renewal: "", utilisation: "", invitation: "", adoption: "", consent: "", risk: "", country: "", accountOwner: "", onboarding: "", membership: "", role: "", dateRange: "", synthetic: "" }),
+    () => runAction("save_view", { name: savedViewName || "Enterprise portfolio view", viewType: activeTab, filters }),
+    savedViewName,
+    setSavedViewName,
+    portfolio.organisations,
+    portfolio.savedViews,
+    (view) => {
+      setFilters({ organisation: "", status: "", type: "", licence: "", licencePlan: "", billingStatus: "", renewal: "", utilisation: "", invitation: "", adoption: "", consent: "", risk: "", country: "", accountOwner: "", onboarding: "", membership: "", role: "", dateRange: "", synthetic: "", ...coerceSavedFilters(view.filters) });
+      setActiveTab((view.view_type === "portfolio" ? "overview" : view.view_type) as typeof activeTab);
+      void runAction("update_view", { viewId: view.id, touch: true });
+    },
+    (view) => runAction("delete_view", { viewId: view.id }),
+  );
+
   return (
     <AdminWorkspaceShell
-      workspaceLabel="Enterprise Operations"
+      workspaceLabel={partnerMode ? "Partner Portal" : "Enterprise Operations"}
       eyebrow="Legacy Fortress Enterprise"
-      title="Enterprise Operations"
-      description="Organisation licensing, seats, invitations, consent-aware reporting, and renewals. Private vault records and documents are excluded."
+      title={partnerMode ? partnerTitle : "Enterprise Operations"}
+      description={partnerMode ? "Manage your organisation and its team." : "Organisation licensing, seats, invitations, consent-aware reporting, and renewals. Private vault records and documents are excluded."}
+      contextLabel={partnerMode ? partnerScope : undefined}
       currentPathname={currentPathname}
       navigation={visibleNavigation}
       onSignOut={signOut}
       identityLabel={identity.label}
       identityDetail={identity.detail}
-      breadcrumbs={[{ label: "Enterprise Operations", href: "/enterprise" }, { label: labelise(activeTab) }]}
-      stagingLabel="STAGING — synthetic test data may be present"
+      breadcrumbs={partnerMode ? [] : [{ label: "Enterprise Operations", href: "/enterprise" }, { label: labelise(activeTab) }]}
+      stagingLabel={partnerMode ? "" : "STAGING — synthetic test data may be present"}
     >
 
       {message ? <section style={alertStyle}>{message}</section> : null}
 
-      {renderEnterpriseContext(portfolio)}
+      {!partnerMode ? renderEnterpriseContext(portfolio) : null}
 
-      {renderFilterBar(
-        filters,
-        setFilters,
-        () => setFilters({ organisation: "", status: "", type: "", licence: "", licencePlan: "", billingStatus: "", renewal: "", utilisation: "", invitation: "", adoption: "", consent: "", risk: "", country: "", accountOwner: "", onboarding: "", membership: "", role: "", dateRange: "", synthetic: "" }),
-        () => runAction("save_view", { name: savedViewName || "Enterprise portfolio view", viewType: activeTab, filters }),
-        savedViewName,
-        setSavedViewName,
-        portfolio.organisations,
-        portfolio.savedViews,
-        (view) => {
-          setFilters({ organisation: "", status: "", type: "", licence: "", licencePlan: "", billingStatus: "", renewal: "", utilisation: "", invitation: "", adoption: "", consent: "", risk: "", country: "", accountOwner: "", onboarding: "", membership: "", role: "", dateRange: "", synthetic: "", ...coerceSavedFilters(view.filters) });
-          setActiveTab((view.view_type === "portfolio" ? "overview" : view.view_type) as typeof activeTab);
-          void runAction("update_view", { viewId: view.id, touch: true });
-        },
-        (view) => runAction("delete_view", { viewId: view.id }),
-      )}
+      {(!partnerMode || activeTab !== "overview") ? partnerMode ? <><div className="lf-partner-desktop-filters">{filterPanel}</div><details className="lf-partner-mobile-filters"><summary>Filters and saved views</summary>{filterPanel}</details></> : filterPanel : null}
 
-      {activeTab === "overview" ? renderOverview(portfolio, filteredOrganisations, filteredLicences, filteredInvitations, setActiveTab, setFilters) : null}
+      {activeTab === "overview" ? partnerMode ? renderPartnerOverview(portfolio, setActiveTab) : renderOverview(portfolio, filteredOrganisations, filteredLicences, filteredInvitations, setActiveTab, setFilters) : null}
       {activeTab === "organisations" ? renderOrganisations(filteredOrganisations, portfolio, orgForm, setOrgForm, runAction, async () => {
         await runAction("create_organisation", orgForm);
         setOrganisationFormOpen(false);
@@ -728,8 +738,8 @@ export default function EnterpriseOperationsWorkspace() {
         await runAction("create_licence", licenceForm);
         setLicenceFormOpen(false);
       }, licenceFormOpen, setLicenceFormOpen, can("licence:create")) : null}
-      {activeTab === "users" ? renderUsersAndSeats({ ...portfolio, memberships: filteredMemberships }, runAction, membershipLifecycleForm, setMembershipLifecycleForm, can("enterprise.membership.manage")) : null}
-      {activeTab === "invitations" ? renderInvitations(filteredInvitations, portfolio, inviteForm, setInviteForm, enrolmentForm, setEnrolmentForm, bulkRows, setBulkRows, runAction, invitationLifecycleForm, setInvitationLifecycleForm, false, can("enterprise.invitation.manage")) : null}
+      {activeTab === "users" ? partnerMode ? <PartnerTeam portfolio={{ ...portfolio, memberships: filteredMemberships }} canInvite={can("enterprise.invitation.manage")} onInvite={() => { setPartnerInviteIntent(true); setActiveTab("invitations"); }} advanced={renderUsersAndSeats({ ...portfolio, memberships: filteredMemberships }, runAction, membershipLifecycleForm, setMembershipLifecycleForm, can("enterprise.membership.manage"))} /> : renderUsersAndSeats({ ...portfolio, memberships: filteredMemberships }, runAction, membershipLifecycleForm, setMembershipLifecycleForm, can("enterprise.membership.manage")) : null}
+      {activeTab === "invitations" ? partnerMode ? <PartnerInvitations invitations={filteredInvitations} source={renderInvitations(filteredInvitations, portfolio, inviteForm, setInviteForm, enrolmentForm, setEnrolmentForm, bulkRows, setBulkRows, runAction, invitationLifecycleForm, setInvitationLifecycleForm, false, can("enterprise.invitation.manage"))} canInvite={can("enterprise.invitation.manage")} openForm={partnerInviteIntent} /> : renderInvitations(filteredInvitations, portfolio, inviteForm, setInviteForm, enrolmentForm, setEnrolmentForm, bulkRows, setBulkRows, runAction, invitationLifecycleForm, setInvitationLifecycleForm, false, can("enterprise.invitation.manage")) : null}
       {activeTab === "registration-links" ? renderRegistrationLinks(portfolio, enrolmentForm, setEnrolmentForm, runAction, copiedLinkId, copyRegistrationLink) : null}
       {activeTab === "adoption" ? renderAdoption(portfolio, filteredOrganisations) : null}
       {activeTab === "reports" ? renderReports(portfolio, reportType, setReportType, () => runAction("export_report", { reportType, filters })) : null}
@@ -738,6 +748,60 @@ export default function EnterpriseOperationsWorkspace() {
       {activeTab === "settings" ? renderEnterpriseSettings(portfolio, settingsForm, setSettingsForm, runAction, can("organisation:manage")) : null}
     </AdminWorkspaceShell>
   );
+}
+
+function renderPartnerOverview(portfolio: EnterprisePortfolio, setActiveTab: (tab: EnterpriseTab) => void) {
+  const activeLinks = portfolio.enrolmentLinks.filter((link) => link.status === "active");
+  const now = Date.now();
+  const expiresSoon = (value: string) => { const time = new Date(value).getTime(); return time >= now && time < now + 7 * 86400000; };
+  const expiringInvitations = portfolio.invitations.filter((item) => ["sent", "delivered"].includes(item.status) && expiresSoon(item.expiresAt));
+  const expiringLinks = activeLinks.filter((link) => expiresSoon(link.expiresAt));
+  return <div className="lf-partner-overview">
+    <section className="lf-partner-overview-metrics" aria-label="Organisation metrics">
+      <AdminMetricCard label="Seats used" value={`${portfolio.summary.seats.active}/${portfolio.summary.seats.purchased}`} onClick={() => setActiveTab("users")} />
+      <AdminMetricCard label="Pending invitations" value={String(portfolio.summary.pendingInvitations)} onClick={() => setActiveTab("invitations")} />
+      <AdminMetricCard label="Active sign-up links" value={String(activeLinks.length)} onClick={() => setActiveTab("registration-links")} />
+      <AdminMetricCard label="Registration claims" value={String(portfolio.enrolmentLinks.reduce((sum, link) => sum + link.claimsUsed, 0))} detail="Claims used across your sign-up links" />
+    </section>
+    {expiringInvitations.length || expiringLinks.length ? <section className="lf-partner-attention"><h2>Needs attention</h2>
+      {expiringInvitations.length ? <button type="button" onClick={() => setActiveTab("invitations")}>{expiringInvitations.length} invitation{expiringInvitations.length === 1 ? "" : "s"} expire this week <span aria-hidden="true">›</span></button> : null}
+      {expiringLinks.length ? <button type="button" onClick={() => setActiveTab("registration-links")}>{expiringLinks.length} sign-up link{expiringLinks.length === 1 ? "" : "s"} expire this week <span aria-hidden="true">›</span></button> : null}
+    </section> : null}
+  </div>;
+}
+
+function PartnerTeam({ portfolio, canInvite, onInvite, advanced }: { portfolio: EnterprisePortfolio; canInvite: boolean; onInvite: () => void; advanced: ReactNode }) {
+  const [filter, setFilter] = useState("all");
+  const invited = portfolio.invitations.filter((item) => ["sent", "delivered", "scheduled"].includes(item.status));
+  const people = [
+    ...portfolio.memberships.map((item) => ({ id: item.id, name: item.fullName || item.email, role: item.organisationRole, status: item.status, kind: "member" })),
+    ...invited.map((item) => ({ id: item.id, name: item.fullName || item.email, role: item.roleTemplate, status: "invited", kind: "invitation" })),
+  ];
+  const filtered = people.filter((person) => filter === "all" || filter === "active" && person.status === "active" || filter === "invited" && person.status === "invited" || filter === "admins" && person.role.includes("admin"));
+  const filters = [{ key: "all", label: "All" }, { key: "active", label: "Active" }, { key: "invited", label: "Invited" }, { key: "admins", label: "Admins" }];
+  return <div className="lf-partner-team">
+    {canInvite ? <button type="button" className="lf-partner-primary" onClick={onInvite}>Invite team member</button> : null}
+    <section className="lf-partner-seat-card"><strong>{portfolio.summary.seats.active} of {portfolio.summary.seats.purchased} seats used</strong><span>Invitations hold a seat</span><progress max={Math.max(portfolio.summary.seats.purchased, 1)} value={portfolio.summary.seats.active} /></section>
+    <div className="lf-partner-filter-chips" aria-label="Filter team">{filters.map((option) => <button key={option.key} type="button" aria-pressed={filter === option.key} onClick={() => setFilter(option.key)}>{option.label} {people.filter((person) => option.key === "all" || option.key === "active" && person.status === "active" || option.key === "invited" && person.status === "invited" || option.key === "admins" && person.role.includes("admin")).length}</button>)}</div>
+    <section className="lf-partner-team-list" aria-label="Team members">{filtered.length ? filtered.map((person) => <div key={`${person.kind}-${person.id}`} className="lf-partner-person-row"><span className="lf-partner-person-avatar" aria-hidden="true">{person.name.trim().slice(0, 2).toUpperCase()}</span><span><strong>{person.name}</strong><small>{labelise(person.status)} · {labelise(person.role)}</small></span>{person.kind === "invitation" ? <button type="button" onClick={onInvite} aria-label={`View invitations for ${person.name}`}>View invitations</button> : null}</div>) : <p>No people match this filter.</p>}</section>
+    <details className="lf-partner-advanced"><summary>Manage membership details</summary>{advanced}</details>
+  </div>;
+}
+
+function PartnerInvitations({ invitations, source, canInvite, openForm }: { invitations: EnterpriseInvitation[]; source: ReactNode; canInvite: boolean; openForm: boolean }) {
+  const [filter, setFilter] = useState("all");
+  const [formOpen, setFormOpen] = useState(openForm);
+  const active = invitations.filter((item) => ["scheduled", "sent", "delivered"].includes(item.status));
+  const filtered = invitations.filter((item) => filter === "all" || filter === "pending" && active.includes(item) || filter === "accepted" && item.status === "accepted" || filter === "expired" && item.status === "expired");
+  const options = [{ key: "all", label: "All", count: invitations.length }, { key: "pending", label: "Pending", count: active.length }, { key: "accepted", label: "Accepted", count: invitations.filter((item) => item.status === "accepted").length }, { key: "expired", label: "Expired", count: invitations.filter((item) => item.status === "expired").length }];
+  return <div className="lf-partner-invitations">
+    <div className="lf-partner-desktop-invitations">{source}</div>
+    <div className="lf-partner-mobile-invitations">
+      <details className="lf-partner-invite-form" open={formOpen} onToggle={(event) => setFormOpen(event.currentTarget.open)}><summary>{canInvite ? "Invite or manage team members" : "View invitation details"}</summary>{source}</details>
+      <div className="lf-partner-filter-chips" aria-label="Filter invitations">{options.map((option) => <button key={option.key} type="button" aria-pressed={filter === option.key} onClick={() => setFilter(option.key)}>{option.label} {option.count}</button>)}</div>
+      <section className="lf-partner-team-list" aria-label="Organisation invitations">{filtered.length ? filtered.map((item) => <div key={item.id} className="lf-partner-person-row"><span className="lf-partner-person-avatar" aria-hidden="true">{(item.fullName || item.email).trim().slice(0, 2).toUpperCase()}</span><span><strong>{item.fullName || item.email}</strong><small>{labelise(item.status)} · {labelise(item.roleTemplate)}</small></span></div>) : <p>No invitations match this filter.</p>}</section>
+    </div>
+  </div>;
 }
 
 function renderOverview(

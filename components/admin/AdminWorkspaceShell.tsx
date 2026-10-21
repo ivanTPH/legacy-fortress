@@ -23,6 +23,7 @@ type AdminWorkspaceShellProps = {
   primaryAction?: ReactNode;
   breadcrumbs?: Array<{ label: string; href?: string }>;
   stagingLabel?: string;
+  contextLabel?: string;
 };
 
 export default function AdminWorkspaceShell({
@@ -41,6 +42,7 @@ export default function AdminWorkspaceShell({
   primaryAction,
   breadcrumbs = [],
   stagingLabel = "STAGING",
+  contextLabel,
 }: AdminWorkspaceShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
@@ -52,7 +54,8 @@ export default function AdminWorkspaceShell({
   const drawerCloseRef = useRef<HTMLButtonElement | null>(null);
   const drawerPanelRef = useRef<HTMLDivElement | null>(null);
   const accountMenuId = useId();
-  const isPlatform = workspaceLabel !== "Enterprise Operations";
+  const isPartner = workspaceLabel === "Partner Portal";
+  const isPlatform = workspaceLabel !== "Enterprise Operations" && !isPartner;
   const verificationDetail = isPlatform && currentPathname.startsWith("/admin/verification/");
 
   useEffect(() => {
@@ -77,7 +80,7 @@ export default function AdminWorkspaceShell({
       if (event.key !== "Escape") return;
       if (accountMenuOpen) {
         setAccountMenuOpen(false);
-        if (window.innerWidth <= 860 && isPlatform) mobileAccountTriggerRef.current?.focus();
+        if (window.innerWidth <= 860 && (isPlatform || isPartner)) mobileAccountTriggerRef.current?.focus();
         else accountTriggerRef.current?.focus();
       }
       if (menuOpen) {
@@ -97,7 +100,7 @@ export default function AdminWorkspaceShell({
       document.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("lf-admin-menu-open", onOtherMenuOpen);
     };
-  }, [accountMenuId, accountMenuOpen, menuOpen, isPlatform]);
+  }, [accountMenuId, accountMenuOpen, menuOpen, isPlatform, isPartner]);
 
   useEffect(() => {
     if (!accountMenuOpen) return;
@@ -131,7 +134,8 @@ export default function AdminWorkspaceShell({
 
   const workspaceHome = isPlatform ? "/admin" : "/enterprise";
   const visibleItems = navigation.flatMap((group) => group.items);
-  const preferredTabs = adminRole === "support_agent" ? ["overview", "users", "support"]
+  const preferredTabs = isPartner ? ["enterprise-overview", "enterprise-users", "enterprise-invitations"]
+    : adminRole === "support_agent" ? ["overview", "users", "support"]
     : adminRole === "probate_reviewer" ? ["overview", "probate", "verification"]
     : adminRole === "enterprise_admin" ? ["overview", "organisations", "licences"]
     : adminRole === "auditor" ? ["overview", "audit", "system-health"]
@@ -142,11 +146,11 @@ export default function AdminWorkspaceShell({
   ].filter((item): item is AdminNavigationItem => item !== undefined)
     .filter((item, index, items) => items.findIndex((candidate) => candidate.key === item.key) === index)
     .slice(0, 3);
-  const canSearchUsers = visibleItems.some((item) => item.key === "users");
+  const canSearchUsers = visibleItems.some((item) => item.key === "users" || item.key === "enterprise-users");
   const sidebar = (
     <aside className="lf-admin-shell-sidebar" aria-label={`${workspaceLabel} navigation`}>
       <Link href={workspaceHome} className="lf-admin-shell-brand" prefetch={false}>
-        <span className="lf-admin-shell-brand-mark">{isPlatform ? <Icon name="apps" size={22} filled /> : "LF"}</span>
+        <span className="lf-admin-shell-brand-mark">{isPlatform || isPartner ? <Icon name="apps" size={22} filled /> : "LF"}</span>
         <span>
           <strong>Legacy Fortress</strong>
           <small>{isPlatform ? "Platform Admin" : workspaceLabel}</small>
@@ -233,13 +237,13 @@ export default function AdminWorkspaceShell({
   );
 
   return (
-    <main className={isPlatform ? "lf-admin-shell lf-admin-shell--platform" : "lf-admin-shell"}>
-      {isPlatform ? (
+    <main className={isPlatform ? "lf-admin-shell lf-admin-shell--platform" : isPartner ? "lf-admin-shell lf-admin-shell--partner" : "lf-admin-shell"}>
+      {isPlatform || isPartner ? (
         <div className="lf-admin-shell-mobile-bar">
-          {verificationDetail ? <Link href="/admin/verification" className="lf-admin-shell-mobile-toggle" aria-label="Back to Verification" prefetch={false}><Icon name="arrow_back_ios_new" size={20} /></Link> : <button ref={mobileMenuTriggerRef} type="button" className="lf-admin-shell-mobile-toggle" onClick={() => setMenuOpen(true)} aria-label="Open Platform Admin menu" aria-expanded={menuOpen} aria-controls="admin-mobile-navigation"><Icon name="menu" size={22} /></button>}
-          <Link href="/admin" className="lf-admin-shell-mobile-brand" prefetch={false}><span className="lf-admin-shell-mobile-logo"><Icon name="apps" size={19} filled /></span><span className="lf-admin-shell-mobile-brand-name">Legacy Fortress</span></Link>
-          <span className="lf-admin-shell-mobile-badge">ADMIN</span>
-          {canSearchUsers ? <Link href="/admin/users" className="lf-admin-shell-mobile-search" aria-label="Search customer users" prefetch={false}><Icon name="search" size={22} /></Link> : null}
+          {verificationDetail ? <Link href="/admin/verification" className="lf-admin-shell-mobile-toggle" aria-label="Back to Verification" prefetch={false}><Icon name="arrow_back_ios_new" size={20} /></Link> : <button ref={mobileMenuTriggerRef} type="button" className="lf-admin-shell-mobile-toggle" onClick={() => setMenuOpen(true)} aria-label={`Open ${isPartner ? "Partner Portal" : "Platform Admin"} menu`} aria-expanded={menuOpen} aria-controls="admin-mobile-navigation"><Icon name="menu" size={22} /></button>}
+          <Link href={workspaceHome} className="lf-admin-shell-mobile-brand" prefetch={false}><span className="lf-admin-shell-mobile-logo"><Icon name="apps" size={19} filled /></span><span className="lf-admin-shell-mobile-brand-name">Legacy Fortress</span></Link>
+          <span className="lf-admin-shell-mobile-badge">{isPartner ? "PARTNER" : "ADMIN"}</span>
+          {canSearchUsers ? <Link href={isPartner ? "/enterprise?tab=users" : "/admin/users"} className="lf-admin-shell-mobile-search" aria-label={isPartner ? "Find team members" : "Search customer users"} prefetch={false}><Icon name="search" size={22} /></Link> : null}
           {accountMenu(true)}
         </div>
       ) : (
@@ -273,13 +277,14 @@ export default function AdminWorkspaceShell({
       <section className="lf-admin-shell-content">
         <header className="lf-admin-shell-header">
           <div className="lf-admin-shell-title">
-            {!isPlatform ? <p className="lf-admin-shell-eyebrow">{eyebrow}</p> : null}
+            {!isPlatform && !isPartner ? <p className="lf-admin-shell-eyebrow">{eyebrow}</p> : null}
             {isPlatform && breadcrumbs.length ? (
               <nav className="lf-admin-shell-breadcrumb" aria-label="Breadcrumb">
                 {breadcrumbs.map((item, index) => <span key={`${item.label}-${index}`}>{item.href ? <Link href={item.href} prefetch={false}>{item.label}</Link> : item.label}</span>)}
               </nav>
             ) : null}
             <h1>{title}</h1>
+            {isPartner && contextLabel ? <span className="lf-partner-scope-chip"><Icon name="domain" size={17} />{contextLabel}</span> : null}
             <p>{description}</p>
             {!isPlatform && breadcrumbs.length ? (
               <nav className="lf-admin-shell-breadcrumb" aria-label="Breadcrumb">
@@ -292,17 +297,17 @@ export default function AdminWorkspaceShell({
             ) : null}
           </div>
           <div className="lf-admin-shell-actions">
-            {!isPlatform && stagingLabel ? <span className="lf-admin-shell-stage">{stagingLabel}</span> : null}
+            {!isPlatform && !isPartner && stagingLabel ? <span className="lf-admin-shell-stage">{stagingLabel}</span> : null}
             {primaryAction}
-            {!isPlatform ? <WorkspaceSwitcher currentPathname={currentPathname} compact /> : null}
+            {!isPlatform && !isPartner ? <WorkspaceSwitcher currentPathname={currentPathname} compact /> : null}
             {accountMenu(false)}
           </div>
         </header>
         {children}
       </section>
-      {isPlatform ? <nav className="lf-admin-shell-mobile-tabs" aria-label="Platform Admin quick navigation">
+      {isPlatform || isPartner ? <nav className="lf-admin-shell-mobile-tabs" style={{ gridTemplateColumns: `repeat(${Math.max(mobileTabs.length, 1)}, minmax(0, 1fr))` }} aria-label={isPartner ? "Partner Portal quick navigation" : "Platform Admin quick navigation"}>
         {mobileTabs.map((item) => <Link key={item.key} href={item.href} aria-current={isActivePath(currentPathname, item.href) ? "page" : undefined} prefetch={false}>
-          <Icon name={item.icon} size={22} /><span>{item.label}</span>
+          <Icon name={item.icon} size={22} /><span>{isPartner && item.key === "enterprise-users" ? "Team" : item.label}</span>
         </Link>)}
       </nav> : null}
       <style jsx global>{adminShellCss}</style>

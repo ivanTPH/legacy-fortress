@@ -12,7 +12,7 @@ test("shared admin shell exposes responsive navigation, identity and sign-out co
   assert.match(source, /lf-admin-shell-mobile-toggle/);
   assert.match(source, /role="dialog"/);
   assert.match(source, /WorkspaceSwitcher/);
-  assert.match(source, /!isPlatform \? <WorkspaceSwitcher/);
+  assert.match(source, /!isPlatform && !isPartner \? <WorkspaceSwitcher/);
   assert.match(source, /lf-admin-shell-mobile-tabs/);
   assert.match(source, /preferredTabs\.map/);
   assert.match(source, /Sign out/);
@@ -104,7 +104,7 @@ test("platform, enterprise and probate entry surfaces use the shared shell", () 
   assert.match(platform, /workspaceLabel=\{section === "probate" \|\| section === "probate-detail" \? "Platform Probate Review" : "Platform Administration"\}/);
   assert.match(enterprise, /AdminWorkspaceShell/);
   assert.match(enterprise, /ENTERPRISE_ADMIN_NAVIGATION/);
-  assert.match(enterprise, /workspaceLabel="Enterprise Operations"/);
+  assert.match(enterprise, /workspaceLabel=\{partnerMode \? "Partner Portal" : "Enterprise Operations"\}/);
   assert.match(enterpriseOrgDetail, /AdminWorkspaceShell/);
   assert.match(enterpriseOrgDetail, /filterAdminNavigation\(ENTERPRISE_ADMIN_NAVIGATION/);
   assert.match(enterpriseLicenceDetail, /AdminWorkspaceShell/);
