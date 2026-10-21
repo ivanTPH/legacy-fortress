@@ -480,15 +480,6 @@ export default function ProfilePage() {
       title="Profile"
       subtitle="Keep your identity, contact, and address details clear for trusted people who may need them."
     >
-      <nav className="lf-v51-settings-home" aria-label="Settings sections">
-        <h1>Settings</h1>
-        <div>
-          <Link href={editorOpen ? "#profile-editor" : "#profile-summary"}><Icon name="person" size={20} />Your profile<Icon name="chevron_right" size={18} /></Link>
-          <Link href="/account/security"><Icon name="shield" size={20} />Security<Icon name="chevron_right" size={18} /></Link>
-          <Link href="/account/communications-preferences"><Icon name="notifications" size={20} />Notifications<Icon name="chevron_right" size={18} /></Link>
-          <Link href="/account/my-vault"><Icon name="account_balance_wallet" size={20} />Your Vault<Icon name="chevron_right" size={18} /></Link>
-        </div>
-      </nav>
       {!editorOpen ? (
       <div id="profile-summary">
       <SettingsCard title="Saved profile summary" description="These are the core details someone would rely on first to confirm identity, make contact, and trust the record.">

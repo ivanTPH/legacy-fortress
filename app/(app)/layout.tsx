@@ -381,6 +381,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
     if (devSmokeMode) return () => { mounted = false; };
+    let hydrationInFlight: { userId: string; promise: Promise<void> } | null = null;
 
     async function hydrateAuthenticatedSession(user: {
       id: string;
@@ -449,6 +450,15 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
       setAuthState("ready");
     }
 
+    function hydrateOnce(user: Parameters<typeof hydrateAuthenticatedSession>[0]) {
+      if (hydrationInFlight?.userId === user.id) return hydrationInFlight.promise;
+      const promise = hydrateAuthenticatedSession(user).finally(() => {
+        if (hydrationInFlight?.promise === promise) hydrationInFlight = null;
+      });
+      hydrationInFlight = { userId: user.id, promise };
+      return promise;
+    }
+
     async function guard() {
       if (!mounted) return;
       try {
@@ -489,7 +499,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        await hydrateAuthenticatedSession(user);
+        await hydrateOnce(user);
       } catch {
         if (!mounted) return;
         setAuthState("error");
@@ -500,10 +510,10 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
+      // The guard owns initial bootstrap and its required redirects. Hydrating on
+      // INITIAL_SESSION as well can briefly render a destination before bootstrap.
+      if (event === "INITIAL_SESSION") return;
       if (!session) {
-        if (event === "INITIAL_SESSION") {
-          return;
-        }
         if (isFinalSignedOutAuthEvent(event)) {
           setViewerAccess(null);
           setIsDemoExperience(false);
@@ -514,7 +524,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
           const confirmedUser = await waitForActiveUser(supabase, { attempts: 2, delayMs: 100 });
           if (!mounted) return;
           if (confirmedUser) {
-            await hydrateAuthenticatedSession(confirmedUser);
+            await hydrateOnce(confirmedUser);
             return;
           }
           if (!mounted) return;
@@ -525,8 +535,8 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      if (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") {
-        void hydrateAuthenticatedSession(session.user);
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        void hydrateOnce(session.user);
       }
     });
 

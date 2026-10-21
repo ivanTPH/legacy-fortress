@@ -1032,21 +1032,23 @@ const legalSummary = useMemo(() => {
     item: GuidanceItem,
     state: "yes" | "no" | "unsure",
   ) => {
-    if (viewer.mode === "linked") return;
+    if (viewer.mode === "linked") return false;
     setGuidanceBusyKey(item.key);
     try {
       const user = await waitForActiveUser(supabase, { attempts: 4, delayMs: 120 });
       if (!user) {
         setStatus("⚠️ Sign in again to save that choice.");
-        return;
+        return false;
       }
       const savedPreferences = await saveVaultPreferences(supabase, user.id, setVaultApplicability(preferences, item.key, state));
       setPreferences(savedPreferences);
       setStatus("✅ Thanks. We will tailor the next step to your answer.");
       setRefreshToken((current) => current + 1);
       setEntryPromptVisible(false);
+      return true;
     } catch (error) {
       setStatus(`⚠️ Could not save that choice: ${error instanceof Error ? error.message : "Unknown error"}`);
+      return false;
     } finally {
       setGuidanceBusyKey(null);
     }
@@ -1601,8 +1603,9 @@ const legalSummary = useMemo(() => {
           guidanceBusyKey={guidanceBusyKey}
           onAction={handleAction}
           onGuidanceDecision={(item, action) => void handleGuidanceDecision(item, action)}
-          onGuidanceApplicability={(item, state) => void handleGuidanceApplicability(item, state)}
+          onGuidanceApplicability={handleGuidanceApplicability}
         /></Card>
+        {status ? <p role="status" className="lf-action-centre-save-status">{stripStatusPrefix(status)}</p> : null}
         {reviewPanel ? <section className="lf-action-centre-follow-up" role="status"><strong>{reviewPanel.title}</strong><p>{reviewPanel.description}</p><button type="button" onClick={() => router.push(reviewPanel.href)}>{reviewPanel.ctaLabel}</button></section> : null}
       </div>
     );
@@ -1620,7 +1623,6 @@ const legalSummary = useMemo(() => {
           context={dashboardState.actions.context}
           guidanceItems={guidanceItems}
           onAction={handleAction}
-          onGuidanceApplicability={(item, state) => void handleGuidanceApplicability(item, state)}
           excludedActionKeys={entryPromptActionKey ? [entryPromptActionKey] : []}
         /> : null} />
       {status ? (

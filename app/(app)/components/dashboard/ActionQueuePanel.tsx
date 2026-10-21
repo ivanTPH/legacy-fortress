@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { BlockingItem } from "../../../../lib/workflow/blockingModel";
 import type { GuidanceAction, GuidanceItem } from "../../../../lib/readiness/guidance";
 import type { VaultApplicabilityState } from "../../../../lib/vaultPreferences";
@@ -11,7 +11,7 @@ type ActionQueuePanelProps = {
   context?: ActionCentreContext;
   guidanceItems?: GuidanceItem[];
   onGuidanceDecision?: (item: GuidanceItem, action: Exclude<GuidanceAction, "add" | "learn_more">) => void;
-  onGuidanceApplicability?: (item: GuidanceItem, state: Extract<VaultApplicabilityState, "yes" | "no" | "unsure">) => void;
+  onGuidanceApplicability?: (item: GuidanceItem, state: Extract<VaultApplicabilityState, "yes" | "no" | "unsure">) => Promise<boolean> | boolean;
   guidanceBusyKey?: string | null;
 };
 
@@ -255,13 +255,21 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
     [context, guidanceItems, items],
   );
   const [selectedActionKey, setSelectedActionKey] = useState<string | null>(null);
+  const [willChoice, setWillChoice] = useState<"yes" | "no" | "unsure" | null>(null);
+  const requestedActionHandled = useRef(false);
   const [filter, setFilter] = useState<"all" | "todo" | "waiting" | "suggested">("all");
   const [readActionKeys, setReadActionKeys] = useState<Set<string>>(new Set());
   const selectedRow = rows.find((row) => row.actionKey === selectedActionKey) ?? null;
 
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("filter") === "todo") setFilter("todo");
-  }, []);
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("filter") === "todo") setFilter("todo");
+    const requestedAction = params.get("action");
+    if (requestedAction && !requestedActionHandled.current && rows.some((row) => row.actionKey === requestedAction)) {
+      requestedActionHandled.current = true;
+      setSelectedActionKey(requestedAction);
+    }
+  }, [rows]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -291,6 +299,7 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
   }, [selectedActionKey]);
 
   function openRow(row: ActionCentreRow) {
+    setWillChoice(null);
     const next = new Set(readActionKeys).add(row.actionKey);
     setReadActionKeys(next);
     window.sessionStorage.setItem("lf:action-centre-read", JSON.stringify([...next]));
@@ -356,11 +365,19 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
             <p style={{ margin: 0, color: "#475569", lineHeight: 1.55 }}>{selectedRow.whyItMatters}</p>
             <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}>{selectedRow.blockerLabel}</p>
             {selectedRow.guidanceItem?.key === "will" && selectedRow.guidanceItem.state === "unknown" && onGuidanceApplicability ? (
-              <div style={drawerChoiceStyle} aria-label="Will applicability choices">
-                <strong>Have you already made a Will?</strong>
-                <button type="button" style={primaryActionStyle} onClick={() => { onGuidanceApplicability(selectedRow.guidanceItem!, "yes"); setSelectedActionKey(null); }}>Yes, I have a Will</button>
-                <button type="button" style={secondaryActionStyle} onClick={() => { onGuidanceApplicability(selectedRow.guidanceItem!, "no"); setSelectedActionKey(null); }}>No, I don&apos;t have one</button>
-                <button type="button" style={secondaryActionStyle} onClick={() => { onGuidanceApplicability(selectedRow.guidanceItem!, "unsure"); setSelectedActionKey(null); }}>I&apos;m not sure</button>
+              <div style={drawerChoiceStyle}>
+                <fieldset className="lf-action-will-choices">
+                  <legend>Have you already made a Will?</legend>
+                  {([ ["yes", "Yes, I have a Will"], ["no", "No, I don’t have one"], ["unsure", "I’m not sure"] ] as const).map(([value, label]) => (
+                    <label key={value}><input type="radio" name="will-applicability" value={value} checked={willChoice === value} onChange={() => setWillChoice(value)} />{label}</label>
+                  ))}
+                </fieldset>
+                <button type="button" style={primaryActionStyle} disabled={!willChoice || guidanceBusyKey === selectedRow.guidanceItem.key} onClick={() => {
+                  if (!willChoice) return;
+                  void Promise.resolve(onGuidanceApplicability(selectedRow.guidanceItem!, willChoice)).then((saved) => {
+                    if (saved) setSelectedActionKey(null);
+                  });
+                }}>Save choice</button>
               </div>
             ) : (
               <button type="button" style={primaryActionStyle} onClick={() => onAction(selectedRow.actionKey)}>{selectedRow.primaryActionLabel}</button>

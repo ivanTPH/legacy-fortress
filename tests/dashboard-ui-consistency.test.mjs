@@ -245,7 +245,8 @@ test("dashboard shell keeps footer workspace and attention-row geometry aligned"
   assert.match(layout, /\.\.\.topLevelItems\.filter\(\(item\) => item\.id === "support"\)/);
   assert.match(layout, /<div className="lf-brand-subtitle">Personal Vault<\/div>/);
   assert.match(actionSummary, /className="lf-dashboard-action-summary-copy"/);
-  assert.match(actionSummary, /className="lf-dashboard-action-summary-choices"/);
+  assert.doesNotMatch(actionSummary, /className="lf-dashboard-action-summary-choices"/);
+  assert.match(actionSummary, /router\.push\(`\/actions\?filter=todo&action=/);
   assert.match(shellCss, /\.lf-dashboard-action-summary-item > \.lf-icon \{ flex: 0 0 18px; margin-left: auto;/);
   assert.match(shellCss, /\.lf-personal-account-menu \.lf-admin-shell-account-trigger \{[^}]*border: 0;/);
   assert.match(shellCss, /\.lf-sidebar \.lf-workspace-switcher \{ border: 0; background: transparent;/);

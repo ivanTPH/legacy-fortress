@@ -163,7 +163,7 @@ export default function AdminWorkspaceShell({
             {group.items.map((item) => {
               const active = isActivePath(currentPathname, item.href);
               return (
-                <Link key={item.key} href={item.href} className={active ? "lf-admin-shell-nav-link active" : "lf-admin-shell-nav-link"} onClick={() => setMenuOpen(false)} prefetch={false}>
+                <Link key={item.key} href={item.href} className={active ? "lf-admin-shell-nav-link active" : "lf-admin-shell-nav-link"} onClick={active ? () => setMenuOpen(false) : undefined} prefetch={false}>
                   <Icon name={item.icon} size={18} />
                   <span>{item.label}</span>
                 </Link>

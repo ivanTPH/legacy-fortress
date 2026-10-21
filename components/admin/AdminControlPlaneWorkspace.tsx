@@ -1247,8 +1247,9 @@ function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | n
         {!visibleSummaryCards.length ? <p style={mutedStyle}>No summary metrics are available for this role.</p> : null}
       </section>
       {decisions.length ? <section className="lf-admin-overview-decisions" aria-labelledby="admin-decisions-title"><h2 id="admin-decisions-title" style={h2Style}>Needs a decision</h2>{decisions.map((item) => <Link key={item.href} href={item.href} className="lf-admin-decision-row"><span>{item.label}</span><strong>{item.count}</strong><Icon name="chevron_right" size={20} /></Link>)}</section> : null}
-      <section style={panelStyle} className="lf-admin-overview-operational-metrics">
-        <h2 style={h2Style}>Operational metrics</h2>
+      <details className="lf-admin-overview-operational-metrics">
+        <summary>All operational metrics</summary>
+        <div style={panelStyle}>
         <AdminDataTable
           caption="Operational metrics"
           columns={[
@@ -1261,8 +1262,12 @@ function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | n
           getRowKey={(metric) => metric.key}
           emptyState={<AdminEmptyState title="No metrics">No summary metrics are available.</AdminEmptyState>}
         />
-      </section>
-      {renderPlatformControlMap(capabilities)}
+        </div>
+      </details>
+      <details className="lf-admin-overview-resources-details">
+        <summary>Platform resources</summary>
+        {renderPlatformControlMap(capabilities)}
+      </details>
     </div>
   );
 }
