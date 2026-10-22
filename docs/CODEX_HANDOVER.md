@@ -1,5 +1,12 @@
 # Codex Handover
 
+## 22 October 2026 — Dashboard return path and TEST launcher candidate
+
+- Isolated `feat/v5-2-founder-test-launcher` starts from verified TEST `09fb6ce349f57e5452bc6eccc99fcf22b72f3f0f`; the owner's main worktree and privacy migrations are untouched.
+- Dashboard no-session redirects now retain `next=/dashboard`, avoiding the Admin default landing after reauthentication. Live unauthenticated `/dashboard` returns the Vault shell; the reported founder iPhone redirect still needs an authenticated reproduction and final Safari URL.
+- TEST launcher code is fail closed until Coolify TEST has `TEST_FOUNDER_AUTH_USER_ID` set to the verified founding owner's immutable Supabase Auth UUID. The server additionally requires an active `admin_users` row with that `user_id`, `is_master=true`, `role=super_admin`, the exact TEST app host and the test Supabase host. Do not promote or claim hosted success before that binding and an authenticated owner journey are verified.
+- Existing destinations are `/dashboard`, `/admin`, `/enterprise` on the current TEST host. Separate Admin and Partner sign-in hosts are not configured; opening these routes carries no URL credentials but the existing same-origin browser session may be reused. Future session-domain separation remains a separate security project.
+
 ## 22 October 2026 — V5.2 bounded UI and document-path verification
 
 - Isolated `feat/v5-2-records-ui` worktree starts from verified TEST and remote staging `291d4c72df576266069e01a97b13b34db6c6a680`; the owner's dirty main tree and undeployed privacy migrations remain untouched.

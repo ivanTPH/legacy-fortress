@@ -22,7 +22,7 @@ import {
   latestTimestamp,
 } from "../../../lib/dashboard/summary";
 import { canViewPath, filterAssetIdsForViewer, filterRecordIdsForViewer } from "../../../lib/access-control/viewerAccess";
-import { waitForActiveUser } from "../../../lib/auth/session";
+import { buildProtectedSignInRedirect, waitForActiveUser } from "../../../lib/auth/session";
 import { supabase } from "../../../lib/supabaseClient";
 import { isMissingColumnError, isMissingRelationError } from "../../../lib/supabaseErrors";
 import { fetchCanonicalAssets } from "../../../lib/assets/fetchCanonicalAssets";
@@ -540,7 +540,7 @@ export default function DashboardPage() {
         const user = await waitForActiveUser(supabase, { attempts: 6, delayMs: 130 });
         if (!user) {
           if (!devSmokeMode) {
-            router.replace("/sign-in");
+            router.replace(buildProtectedSignInRedirect("/dashboard"));
             return;
           }
           applyDevSmokeDashboardState(devSmokeVariant, setAssetRows, setDocumentRows, setAttachmentRows, setCurrency, setContactRows);
@@ -1082,7 +1082,7 @@ const legalSummary = useMemo(() => {
     try {
       const user = await waitForActiveUser(supabase);
       if (!user) {
-        router.replace("/sign-in");
+        router.replace(buildProtectedSignInRedirect("/dashboard"));
         return;
       }
 
@@ -1138,7 +1138,7 @@ const legalSummary = useMemo(() => {
     try {
       const user = await waitForActiveUser(supabase);
       if (!user) {
-        router.replace("/sign-in");
+        router.replace(buildProtectedSignInRedirect("/dashboard"));
         return;
       }
       const loaded = await loadProfileWorkspace(supabase, {
@@ -1199,7 +1199,7 @@ const legalSummary = useMemo(() => {
     try {
       const user = await waitForActiveUser(supabase);
       if (!user) {
-        router.replace("/sign-in");
+        router.replace(buildProtectedSignInRedirect("/dashboard"));
         return;
       }
 
@@ -1257,7 +1257,7 @@ const legalSummary = useMemo(() => {
     try {
       const user = await waitForActiveUser(supabase);
       if (!user) {
-        router.replace("/sign-in");
+        router.replace(buildProtectedSignInRedirect("/dashboard"));
         return;
       }
       await createAsset(supabase, {

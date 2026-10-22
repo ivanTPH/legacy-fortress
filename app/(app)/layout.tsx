@@ -27,6 +27,7 @@ import { ViewerAccessProvider } from "../../components/access/ViewerAccessContex
 import { VaultPreferencesProvider } from "../../components/vault/VaultPreferencesContext";
 import { AccessibilityPreferencesProvider } from "../../components/accessibility/AccessibilityPreferencesContext";
 import WorkspaceSwitcher from "../../components/navigation/WorkspaceSwitcher";
+import FounderTestLauncher, { useFounderTestLauncherAccess } from "../../components/navigation/FounderTestLauncher";
 import NotificationBell from "../../components/notifications/NotificationBell";
 import { DEMO_EXPERIENCE_LABEL, DEMO_EXPERIENCE_SUBLABEL, isDemoSessionUser } from "../../lib/demo/config";
 import {
@@ -119,6 +120,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
   }, []);
 
   const [menuState, dispatchMenu] = useReducer(menuReducer, initialMenuState);
+  const founderLauncherAvailable = useFounderTestLauncherAccess();
   const navWrapRef = useRef<HTMLDivElement | null>(null);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
@@ -1022,6 +1024,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
           />
 
           <div className="lf-sidebar-foot">
+            <FounderTestLauncher current="vault" available={founderLauncherAvailable} />
             <nav aria-label="Account and preferences" className="lf-account-nav">
               {accountItems.map((item) => {
                 const isActive = normalizePath(pathname) === normalizePath(item.path);
@@ -1229,7 +1232,10 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                 onNavigate={() => closeNavigationState("item_select")}
               />
 
-              {accountItems.filter((item) => item.id === "support").map((item) => <Link key={item.id} href={item.path} className="lf-mobile-drawer-support" onClick={() => closeNavigationState("item_select")}><span className="lf-nav-icon">{item.icon}</span>{item.label}</Link>)}
+              <div className="lf-mobile-drawer-footer">
+                {accountItems.filter((item) => item.id === "support").map((item) => <Link key={item.id} href={item.path} className="lf-mobile-drawer-support" onClick={() => closeNavigationState("item_select")}><span className="lf-nav-icon">{item.icon}</span>{item.label}</Link>)}
+                <FounderTestLauncher current="vault" available={founderLauncherAvailable} />
+              </div>
             </aside>
           </>
         ) : null}

@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import WorkspaceSwitcher from "@/components/navigation/WorkspaceSwitcher";
+import FounderTestLauncher, { useFounderTestLauncherAccess } from "@/components/navigation/FounderTestLauncher";
 import Icon from "@/components/ui/Icon";
 import type { AdminNavigationGroup, AdminNavigationItem } from "./adminNavigation";
 
@@ -56,6 +57,7 @@ export default function AdminWorkspaceShell({
   const accountMenuId = useId();
   const isPartner = workspaceLabel === "Partner Portal";
   const isPlatform = workspaceLabel !== "Enterprise Operations" && !isPartner;
+  const founderLauncherAvailable = useFounderTestLauncherAccess();
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -177,6 +179,7 @@ export default function AdminWorkspaceShell({
           </section>
         ))}
       </nav>
+      {isPlatform || isPartner ? <FounderTestLauncher current={isPartner ? "partner" : "admin"} available={founderLauncherAvailable} /> : null}
     </aside>
   );
 
