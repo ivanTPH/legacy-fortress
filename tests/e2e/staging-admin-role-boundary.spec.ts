@@ -84,11 +84,14 @@ test.afterAll(async () => {
 
 test("platform admin remains in admin context while using users, invitations, organisation resources and account menu", async ({ page }) => {
   await signIn(page, users[0].email, "/admin");
-  await page.goto(`${BASE_URL}/admin/users`, { waitUntil: "networkidle" });
+  await expect(page).toHaveURL(`${BASE_URL}/admin`);
+  await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
+  await page.goto(`${BASE_URL}/admin/users`, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Customer users" })).toBeVisible();
-  await page.goto(`${BASE_URL}/admin/invitations`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE_URL}/admin/invitations`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "Invitation queue" })).toBeVisible();
   await expect(page.getByText("Platform Administration").first()).toBeVisible();
-  await page.goto(`${BASE_URL}/admin/organisations/${organisationId}`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE_URL}/admin/organisations/${organisationId}`, { waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL(new RegExp(`/admin/organisations/${organisationId}`));
   await expect(page).not.toHaveURL(/\/enterprise/);
   await assertAccountMenu(page);
@@ -98,7 +101,7 @@ test("enterprise admin is organisation-scoped and cannot use platform administra
   const session = await signIn(page, users[1].email, "/enterprise");
   await expect(page.getByText(/Enterprise Operations/i).first()).toBeVisible();
   await assertAccountMenu(page);
-  await page.goto(`${BASE_URL}/admin`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE_URL}/admin`, { waitUntil: "domcontentloaded" });
   await assertDeniedWorkspace(page, /Admin access is restricted|Access denied|Sign in/i);
   const responseStatus = await page.evaluate(async (accessToken) => (await fetch("/api/internal/admin/admin-users", {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -109,13 +112,13 @@ test("enterprise admin is organisation-scoped and cannot use platform administra
 test("personal user cannot enter administrative workspaces", async ({ page }) => {
   const session = await signIn(page, users[2].email, "/dashboard");
   await assertAccountMenu(page);
-  await page.goto(`${BASE_URL}/admin`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE_URL}/admin`, { waitUntil: "domcontentloaded" });
   await assertDeniedWorkspace(page, /Admin access is restricted|Access denied|Sign in/i);
   const adminResponseStatus = await page.evaluate(async (accessToken) => (await fetch("/api/internal/admin/admin-users", {
     headers: { Authorization: `Bearer ${accessToken}` },
   })).status, session.access_token);
   expect(adminResponseStatus).toBe(403);
-  await page.goto(`${BASE_URL}/enterprise`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE_URL}/enterprise`, { waitUntil: "domcontentloaded" });
   await assertDeniedWorkspace(page, /Access denied|Enterprise workspace unavailable|Sign in/i);
 });
 
@@ -165,8 +168,7 @@ async function signIn(page: Page, email: string, next: string) {
   await page.evaluate((session) => {
     window.localStorage.setItem("sb-supabase-test-auth-token", JSON.stringify(session));
   }, auth.data.session);
-  await page.goto(`${BASE_URL}${next}`, { waitUntil: "networkidle" });
-  await page.waitForLoadState("networkidle");
+  await page.goto(`${BASE_URL}${next}`, { waitUntil: "domcontentloaded" });
   return auth.data.session;
 }
 
