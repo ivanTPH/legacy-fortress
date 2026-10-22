@@ -166,6 +166,25 @@
 .lf-topbar-parent-title { display: none; }
 .lf-notification-sheet-actions { display: flex; align-items: center; gap: 8px; }
 .lf-notification-sheet-actions > button:first-child:not(.lf-icon-btn-round) { min-height: 44px; padding: 0 8px; border: 0; background: transparent; color: var(--lf-link); font: inherit; cursor: pointer; }
+.lf-v51-settings-page { display: grid; gap: 20px; width: min(760px, 100%); min-width: 0; margin-inline: auto; }
+.lf-v51-settings-page h1 { margin: 0; color: var(--lf-text); font-size: 30px; line-height: 1.2; }
+.lf-v51-settings-page h2 { margin: 0 0 10px; color: var(--lf-text); font-size: 16px; }
+.lf-v51-settings-profile, .lf-v51-settings-list { border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface); }
+.lf-v51-settings-profile { display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 68px; padding: 12px 16px; color: var(--lf-text); text-decoration: none; }
+.lf-v51-settings-avatar { display: grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; border-radius: 50%; background: var(--lf-tint); color: var(--lf-tint-icon); }
+.lf-v51-settings-profile > span:nth-child(2) { display: grid; flex: 1; min-width: 0; }
+.lf-v51-settings-profile small { overflow: hidden; color: var(--lf-text-secondary); text-overflow: ellipsis; white-space: nowrap; }
+.lf-v51-settings-list { overflow: hidden; }
+.lf-v51-settings-list a { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 10px 16px; border-bottom: 1px solid var(--lf-divider); color: var(--lf-text); text-decoration: none; }
+.lf-v51-settings-list a:last-child { border-bottom: 0; }
+.lf-v51-settings-list a > span:not(.lf-icon) { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.lf-v51-settings-profile:hover, .lf-v51-settings-list a:hover { background: var(--lf-interaction-hover); }
+.lf-v51-settings-profile:active, .lf-v51-settings-list a:active { background: var(--lf-interaction-pressed); }
+.lf-v51-settings-profile:focus-visible, .lf-v51-settings-list a:focus-visible { outline: 2px solid var(--lf-interaction-focus); outline-offset: 2px; }
+.lf-v51-profile-settings-link { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 10px 16px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface); color: var(--lf-text); text-decoration: none; }
+.lf-v51-profile-settings-link span { flex: 1; }
+.lf-v51-profile-settings-link:hover { background: var(--lf-interaction-hover); }
+.lf-v51-profile-settings-link:focus-visible { outline: 2px solid var(--lf-interaction-focus); outline-offset: 2px; }
 
 @media (max-width: 767px) {
   .lf-topbar.is-pushed .lf-topbar-title { display: none; }

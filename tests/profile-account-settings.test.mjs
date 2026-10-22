@@ -5,13 +5,17 @@ import path from "node:path";
 
 const root = process.cwd();
 
-test("profile keeps accessibility inside account settings links instead of a standalone accessibility panel", () => {
+test("profile and account settings have separate canonical destinations", () => {
   const profilePage = fs.readFileSync(path.join(root, "app/(app)/profile/page.tsx"), "utf8");
+  const settingsPage = fs.readFileSync(path.join(root, "app/(app)/settings/page.tsx"), "utf8");
+  const appLayout = fs.readFileSync(path.join(root, "app/(app)/layout.tsx"), "utf8");
   const accessibilityPage = fs.readFileSync(path.join(root, "app/(app)/account/accessibility/page.tsx"), "utf8");
   const routeManifest = fs.readFileSync(path.join(root, "config/routeManifest.tsx"), "utf8");
 
-  assert.match(profilePage, /title="Account settings"/);
-  assert.match(profilePage, /href: "\/account\/accessibility"/);
+  assert.match(profilePage, /href="\/settings"/);
+  assert.match(settingsPage, /href: "\/account\/accessibility"/);
+  assert.match(settingsPage, /href="\/profile"/);
+  assert.match(appLayout, /\["\/settings", "Settings", "settings"\]/);
   assert.doesNotMatch(profilePage, /title="Accessibility and guided help"/);
   assert.match(accessibilityPage, /title="Accessibility"/);
   assert.match(accessibilityPage, /<AccessibilitySettingsCard \/>/);

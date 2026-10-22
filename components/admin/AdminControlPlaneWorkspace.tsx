@@ -1214,7 +1214,7 @@ function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | n
   const summaryCards = [
     { label: "Verification requests", value: canVerify ? (support?.counts.verificationAwaitingReview ?? verification.length) : null, href: canVerify ? "/admin/verification" : undefined },
     { label: "Organisations", value: canViewOrganisations ? portfolio?.organisations.length ?? null : null, href: canViewOrganisations ? "/admin/organisations" : undefined },
-    { label: "Active seats", value: canViewSeats ? portfolio?.licences.reduce((sum, licence) => sum + licence.activeSeats, 0) ?? null : null, href: canViewSeats ? "/admin/licences" : undefined },
+    { label: "Active seats", value: canViewSeats ? portfolio?.licences.reduce((sum, licence) => sum + licence.activeSeats, 0) ?? null : null, href: undefined },
     { label: "Pending invitations", value: canViewInvitations ? support?.counts.pendingInvitations ?? null : null, href: canViewInvitations ? "/admin/invitations" : undefined },
   ];
   const visibleSummaryCards = summaryCards.filter((card) => card.href || card.value !== null);

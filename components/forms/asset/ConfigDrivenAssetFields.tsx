@@ -7,6 +7,7 @@ import {
   DateInput,
   FileUploadPlaceholder,
   FormField,
+  GroupedAssetFormContext,
   NumberInput,
   OtherSelectInput,
   SelectInput,
@@ -103,11 +104,11 @@ export default function ConfigDrivenAssetFields({
         );
   }
 
-  return <div className="lf-v4-form-sections">
-    {requiredFields.length ? <section className="lf-v4-required-block" aria-label="Required fields"><h3>Required</h3><div className="lf-v4-form-grid">{requiredFields.map(renderField)}</div></section> : null}
+  return <GroupedAssetFormContext.Provider value><div className="lf-v4-form-sections">
+    {requiredFields.length ? <section className="lf-v4-required-block" aria-label="Required fields"><h3>Required</h3><p className="lf-v51-form-helper">Choose the closest option in each list. Use Other only when none fit.</p><div className="lf-v4-form-grid">{requiredFields.map(renderField)}</div></section> : null}
     {optionalFields.length ? <details className="lf-v4-optional-group" open={optionalFields.some((field) => Boolean(errors[field.key])) || undefined}>
       <summary><Icon name="tune" size={20} /><span><strong>Optional details</strong><small>{optionalFields.map((field) => field.label).join(" · ")}</small></span><Icon name="expand_more" size={20} /></summary>
       <div className="lf-v4-form-grid">{optionalFields.map(renderField)}</div>
     </details> : null}
-  </div>;
+  </div></GroupedAssetFormContext.Provider>;
 }

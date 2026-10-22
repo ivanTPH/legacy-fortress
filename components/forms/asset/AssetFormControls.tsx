@@ -3,7 +3,9 @@
 import Image from "next/image";
 import {
   cloneElement,
+  createContext,
   isValidElement,
+  useContext,
   useEffect,
   useId,
   useMemo,
@@ -27,7 +29,10 @@ type SharedProps = {
   children: ReactNode;
 };
 
+export const GroupedAssetFormContext = createContext(false);
+
 export function FormField({ fieldId, label, iconName, required = false, error, helpText, children }: SharedProps) {
+  const grouped = useContext(GroupedAssetFormContext);
   const generatedFieldId = useId();
   const resolvedFieldId = fieldId ?? generatedFieldId;
   const childElement = isValidElement(children)
@@ -36,28 +41,32 @@ export function FormField({ fieldId, label, iconName, required = false, error, h
   const resolvedChildren = childElement
     ? cloneElement(childElement, {
       id: childElement.props.id ?? resolvedFieldId,
-      ariaLabel: childElement.props["aria-label"] ?? childElement.props.ariaLabel ?? label,
+      ariaLabel: grouped && required && (childElement.props.ariaLabel ?? label) === label
+        ? `${label} (required)`
+        : childElement.props["aria-label"] ?? childElement.props.ariaLabel ?? label,
     })
     : children;
 
   return (
     <div className="lf-v4-form-field" data-error={Boolean(error)} style={fieldWrapStyle}>
       <label htmlFor={resolvedFieldId} style={labelStyle}>
-        {iconName ? (
+        {iconName && !grouped ? (
           <span style={labelIconStyle}>
             <Icon name={iconName} size={18} />
           </span>
         ) : null}
         {label}
-        {required ? <RequiredIndicator /> : <span className="lf-v4-optional-tag">Optional</span>}
+        {!grouped ? required ? <RequiredIndicator /> : <span className="lf-v4-optional-tag">Optional</span> : null}
       </label>
       {resolvedChildren}
-      <ValidationText error={error} helpText={helpText} />
+      <ValidationText error={error} helpText={grouped && helpText?.startsWith("Choose the closest option") ? undefined : helpText} />
     </div>
   );
 }
 
 export function RequiredIndicator() {
+  const grouped = useContext(GroupedAssetFormContext);
+  if (grouped) return null;
   return (
     <span className="lf-v4-required-tag" style={requiredPillStyle} aria-label="Required">
       Required

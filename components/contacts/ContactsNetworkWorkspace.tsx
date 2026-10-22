@@ -117,6 +117,7 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
   const [sharingError, setSharingError] = useState(false);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  const peopleFilterRef = useRef<HTMLDetailsElement | null>(null);
   const [validationSourceText, setValidationSourceText] = useState<Record<string, string>>({});
   const [, setConfirmingValidationKey] = useState("");
   const [, setAssociationAlerts] = useState<string[]>([]);
@@ -129,6 +130,25 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
   const [nextOfKinDraft, setNextOfKinDraft] = useState({ fullName: "", relationship: "", email: "", phone: "" });
   const [savingNextOfKin, setSavingNextOfKin] = useState(false);
   const [sendingInviteId, setSendingInviteId] = useState<string | null>(null);
+
+  useEffect(() => {
+    function dismissOnOutsidePointer(event: PointerEvent) {
+      const panel = peopleFilterRef.current;
+      if (panel?.open && !panel.contains(event.target as Node)) panel.open = false;
+    }
+    function dismissOnEscape(event: KeyboardEvent) {
+      const panel = peopleFilterRef.current;
+      if (event.key !== "Escape" || !panel?.open) return;
+      panel.open = false;
+      panel.querySelector("summary")?.focus();
+    }
+    document.addEventListener("pointerdown", dismissOnOutsidePointer);
+    document.addEventListener("keydown", dismissOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", dismissOnOutsidePointer);
+      document.removeEventListener("keydown", dismissOnEscape);
+    };
+  }, []);
 
   const loadContacts = useCallback(async (isMounted: () => boolean = () => true) => {
       setLoading(true);
@@ -435,7 +455,7 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
     for (const contact of contacts) {
       if (seenContactIds.has(contact.id)) continue;
       if (query && !buildContactSearchText(contact).includes(query)) continue;
-      if (roleFilter !== "all" && resolveContactGroupKey(contact) !== roleFilter) continue;
+      if (roleFilter === "not_invited" ? contact.invite_status !== "not_invited" : roleFilter !== "all" && resolveContactGroupKey(contact) !== roleFilter) continue;
       seenContactIds.add(contact.id);
       map.get(resolveContactGroupKey(contact))?.push(contact);
     }
@@ -664,10 +684,10 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
               onChange={(event) => setSearch(event.target.value)}
             />
           </label>
-          {embedded ? <details className="lf-v51-people-filter">
+          {embedded ? <details ref={peopleFilterRef} className="lf-v51-people-filter">
             <summary aria-label="Filter people by role"><Icon name="tune" size={20} /></summary>
             <div role="group" aria-label="Filter people by role">
-              {[["all", "All"], ["executors", "Executors"], ["family", "Family"], ["advisors", "Advisers"]].map(([key, label]) => <button key={key} type="button" aria-pressed={roleFilter === key} onClick={() => setRoleFilter(key)}>{label}</button>)}
+              {[["all", "All"], ["executors", "Executors"], ["family", "Family"], ["advisors", "Advisers"], ["not_invited", "Not invited"]].map(([key, label]) => <button key={key} type="button" aria-pressed={roleFilter === key} onClick={() => { setRoleFilter(key); if (peopleFilterRef.current) peopleFilterRef.current.open = false; }}>{label}</button>)}
             </div>
           </details> : null}
           {embedded && !viewer.readOnly ? <Link className="lf-v51-people-add" href={`${basePath}?view=people&group=trusted_contacts&add=1`} aria-label="Add person"><Icon name="person_add" size={20} /></Link> : null}
@@ -686,7 +706,7 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
         </div>
       </section> : null}
       {embedded && !addContactGroupKey && !sharingView ? <div className="lf-pa-role-filters lf-v51-desktop-role-filters" role="group" aria-label="Filter people by role">
-        {[["all", "All"], ["executors", "Executors"], ["family", "Family"], ["advisors", "Advisers"]].map(([key, label]) => <button key={key} type="button" aria-pressed={roleFilter === key} onClick={() => setRoleFilter(key)}>{label}</button>)}
+        {[["all", "All"], ["executors", "Executors"], ["family", "Family"], ["advisors", "Advisers"], ["not_invited", "Not invited"]].map(([key, label]) => <button key={key} type="button" aria-pressed={roleFilter === key} onClick={() => setRoleFilter(key)}>{label}</button>)}
       </div> : null}
 
       {!viewer.readOnly && addContactGroupKey ? (

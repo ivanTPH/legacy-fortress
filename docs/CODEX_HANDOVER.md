@@ -1,5 +1,12 @@
 # Codex Handover
 
+## 22 October 2026 — V5.1 interface completion candidate
+
+- Isolated branch `feat/v5-1-interface-completion` starts from verified TEST staging `4ddb50a0d0e6bd280c240e13f0c89f9f427621db`; owner worktrees and the undeployed privacy-policy branch remain untouched.
+- Scoped UI changes: canonical Vault Settings/Profile links, shared required-first mobile record form with fixed header and Save area, corrected Property add deep link and one-time `?add=1` intent, compact People filters, Admin detail back links and drawer dismissal, interactive Admin metrics, and Partner Team/metric navigation. No Auth, RLS, schema or migration files changed.
+- Local synthetic browser checks passed at 390px and 320px for Admin menu one-tap navigation and Property form, at 390px and 1440px for Bank form, and for Property required validation and Save. TypeScript passed; 39 focused tests passed; targeted lint has zero errors and 39 existing warnings. Protected TEST release and real-device keyboard review remain outstanding.
+- Founder-only TEST launcher remains omitted: current master-admin protection uses an email comparison, and there is no verified founding-owner account-ID grant plus independent authenticated Admin/Partner entry points. Direct authorised routes remain available. Admin organisation seats are available per organisation; registration links and enterprise reports remain in capability-gated Enterprise Operations, not consolidated Admin routes.
+
 ## 16 October 2026 — V3 review corrections
 
 - On `fix/v3-recovery` after `ac338343`, People & Access now shows saved, individual record choices directly and provides clear save and revoke actions. Invitation, identity verification and record sharing are described separately; existing grant persistence and permission checks remain in place.

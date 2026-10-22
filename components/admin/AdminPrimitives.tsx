@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import Icon from "../ui/Icon";
 
 export type AdminDataColumn<T> = {
   key: string;
@@ -107,14 +108,14 @@ export function AdminMetricCard({
   );
 
   if (href) {
-    return <Link href={href} className="lf-admin-metric-card" prefetch={false}>{body}</Link>;
+    return <Link href={href} className="lf-admin-metric-card lf-admin-metric-card--interactive" aria-label={`${typeof value === "string" || typeof value === "number" ? `${value} ` : ""}${label}. Open ${actionLabel ?? label}`} prefetch={false}>{body}<Icon name="chevron_right" size={18} className="lf-admin-metric-chevron" /></Link>;
   }
 
   if (onClick) {
-    return <button type="button" className="lf-admin-metric-card lf-admin-metric-card-button" onClick={onClick}>{body}</button>;
+    return <button type="button" className="lf-admin-metric-card lf-admin-metric-card-button lf-admin-metric-card--interactive" onClick={onClick} aria-label={`${typeof value === "string" || typeof value === "number" ? `${value} ` : ""}${label}. Open ${actionLabel ?? label}`}>{body}<Icon name="chevron_right" size={18} className="lf-admin-metric-chevron" /></button>;
   }
 
-  return <article className="lf-admin-metric-card">{body}</article>;
+  return <article className="lf-admin-metric-card lf-admin-metric-card--informational">{body}</article>;
 }
 
 export function AdminContextHelp({ label, children }: { label: string; children: ReactNode }) {
@@ -238,13 +239,15 @@ const adminPrimitiveCss = `
     display: none;
   }
   .lf-admin-metric-card {
+    position: relative;
     background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
+    border: 1px solid #e3dad3;
+    border-radius: 12px;
     color: inherit;
     display: grid;
     gap: 6px;
     min-width: 0;
+    min-height: 76px;
     padding: 16px;
     text-align: left;
     text-decoration: none;
@@ -253,16 +256,21 @@ const adminPrimitiveCss = `
     cursor: pointer;
     font: inherit;
   }
+  .lf-admin-metric-card--interactive { padding-right: 36px; }
+  .lf-admin-metric-card--interactive:hover { background: #f6efea; }
+  .lf-admin-metric-card--interactive:active { background: #ebe0d8; }
+  .lf-admin-metric-card--interactive:focus-visible { outline: 2px solid #8c4a32; outline-offset: 2px; }
+  .lf-admin-metric-chevron { position: absolute; top: 14px; right: 12px; color: #766962; }
+  .lf-admin-metric-card--informational { min-height: 0; padding: 8px 0; border: 0; border-radius: 0; background: transparent; }
   .lf-admin-metric-label {
-    color: #475569;
-    font-size: 12px;
-    font-weight: 900;
-    text-transform: uppercase;
+    color: #6b5f5a;
+    font-size: 13px;
+    font-weight: 500;
   }
   .lf-admin-metric-value {
-    color: #0f172a;
+    color: #1f1715;
     display: block;
-    font-size: 28px;
+    font-size: 22px;
     line-height: 1.1;
     overflow-wrap: break-word;
   }

@@ -11,7 +11,7 @@ const ADD_GROUPS: AddGroup[] = [
   {
     title: "Finances & property",
     choices: [
-      { label: "Property", description: "Home, ownership and supporting records.", href: "/property?add=1", icon: "home" },
+      { label: "Property", description: "Home, ownership and supporting records.", href: "/vault/property?add=1", icon: "home" },
       ...FINANCE_RECORD_CHOICES.map(({ label, description, href, icon }) => ({ label, description, href, icon })),
     ],
   },

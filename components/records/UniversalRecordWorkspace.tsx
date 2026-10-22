@@ -11,7 +11,7 @@ import {
 } from "../../lib/categoryConfig";
 import MaskedField, { maskAllButLast } from "../ui/MaskedField";
 import ConfigDrivenAssetFields from "../forms/asset/ConfigDrivenAssetFields";
-import { FormField, NumberInput, RequiredIndicator, SelectInput, TextAreaInput, TextInput } from "../forms/asset/AssetFormControls";
+import { FormField, GroupedAssetFormContext, NumberInput, RequiredIndicator, SelectInput, TextAreaInput, TextInput } from "../forms/asset/AssetFormControls";
 import { ActionIconButton } from "../ui/IconButton";
 import Icon from "../ui/Icon";
 import InfoTip from "../ui/InfoTip";
@@ -849,6 +849,7 @@ export default function UniversalRecordWorkspace({
   const addRecordButtonRef = useRef<HTMLButtonElement | null>(null);
   const existingRecordsHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const shouldFocusFormOnOpenRef = useRef(false);
+  const handledAddQueryRef = useRef(false);
 
   const isPossessions = variant === "possessions";
   const isTrustedContacts = variant === "trusted_contacts";
@@ -948,7 +949,7 @@ export default function UniversalRecordWorkspace({
           : isCanonicalDigital
             ? "Add digital asset"
         : isCanonicalProperty
-          ? "Add property asset"
+          ? "Add property record"
           : isFinanceSection
             ? `Add ${financeTypeName || "record"}`
             : "Add record";
@@ -1252,8 +1253,32 @@ export default function UniversalRecordWorkspace({
   }, [formVisible]);
 
   useEffect(() => {
-    if (searchParams.get("add") !== "1") return;
-    if (!canCreateRecords || formVisible || editingId) return;
+    if (!formVisible) return;
+    const form = formSectionRef.current;
+    const viewport = window.visualViewport;
+    if (!form || !viewport) return;
+    const resizeForm = () => {
+      form.style.setProperty("--lf-form-visual-height", `${viewport.height}px`);
+      form.style.setProperty("--lf-form-visual-top", `${viewport.offsetTop}px`);
+    };
+    resizeForm();
+    viewport.addEventListener("resize", resizeForm);
+    viewport.addEventListener("scroll", resizeForm);
+    return () => {
+      viewport.removeEventListener("resize", resizeForm);
+      viewport.removeEventListener("scroll", resizeForm);
+      form.style.removeProperty("--lf-form-visual-height");
+      form.style.removeProperty("--lf-form-visual-top");
+    };
+  }, [formVisible]);
+
+  useEffect(() => {
+    if (searchParams.get("add") !== "1") {
+      handledAddQueryRef.current = false;
+      return;
+    }
+    if (handledAddQueryRef.current || !canCreateRecords || formVisible || editingId) return;
+    handledAddQueryRef.current = true;
     const nextForm = { ...EMPTY_FORM };
     if (legalLinkedContactDefinition) {
       nextForm.legal_contacts = [createLegalContactRow({ role: defaultLegalContactRole })];
@@ -1619,6 +1644,7 @@ export default function UniversalRecordWorkspace({
     if (hasUnsavedFormChanges() && !window.confirm(getDiscardPrompt())) {
       return;
     }
+    clearAddRecordQueryFlag();
     resetFormState({ focusAddButton: true });
     if (isWillsWorkspace && !isTrustsWorkspace) {
       router.push("/legal");
@@ -2761,6 +2787,7 @@ export default function UniversalRecordWorkspace({
       recordFilter,
       viewer,
     });
+    clearAddRecordQueryFlag();
     if (recordId && writesCanonicalAsset) {
       pushBankSubmitTrace(`sync notified: section="${sectionKey}" category="${categoryKey}" asset_id="${recordId}"`);
       notifyCanonicalAssetMutation({
@@ -2774,7 +2801,6 @@ export default function UniversalRecordWorkspace({
     }
     await new Promise((resolve) => setTimeout(resolve, 1200));
     setSavedConfirmation("");
-    clearAddRecordQueryFlag();
     resetFormState({ focusExistingRecords: true });
     pushBankSubmitTrace(`reload completed: asset_id="${recordId ?? ""}"`);
     mergeDevBankContextTrace({
@@ -4181,7 +4207,7 @@ export default function UniversalRecordWorkspace({
       >
         <div className="lf-v4-form-header">
           <div>
-            <button type="button" className="lf-v4-form-back" onClick={cancelForm}><Icon name="chevron_left" size={18} />{title}</button>
+            <button type="button" className="lf-v4-form-back" onClick={cancelForm}><Icon name="chevron_left" size={18} /><span className="lf-v4-form-back-parent">{title}</span><span className="lf-v4-form-back-mobile">Cancel</span></button>
             <h2 id={`${createFormRegionId}-heading`}>
             {editingId
               ? isTrustedContacts
@@ -4206,6 +4232,7 @@ export default function UniversalRecordWorkspace({
           </div>
           <button type="button" className="lf-v4-form-close" onClick={cancelForm} aria-label="Close form" title="Close form"><Icon name="close" size={20} /></button>
         </div>
+        <div className="lf-v4-form-body">
 
         {!formVisible ? (
           <div style={{ display: "grid", gap: 10 }}>
@@ -4529,18 +4556,18 @@ export default function UniversalRecordWorkspace({
                 </span>
                 <span style={{ color: "#64748b", fontSize: 13 }}>
                   {isCanonicalTask
-                    ? "Confirm the task details and any staged document uploads before saving this asset."
+                    ? "Confirm the task details and any staged document uploads before saving this record."
                     : isCanonicalExecutor
-                    ? "Confirm the executor details and any staged document uploads before saving this asset."
+                    ? "Confirm the executor details and any staged document uploads before saving this record."
                     : isCanonicalBeneficiary
-                    ? "Confirm the beneficiary details and any staged document uploads before saving this asset."
+                    ? "Confirm the beneficiary details and any staged document uploads before saving this record."
                     : isCanonicalProperty
-                    ? "Confirm the property details and any staged document uploads before saving this asset."
+                    ? "Confirm the property details and any staged document uploads before saving this record."
                     : isCanonicalBusiness
-                      ? "Confirm the business interest details and any staged document uploads before saving this asset."
+                      ? "Confirm the business interest details and any staged document uploads before saving this record."
                       : isCanonicalDigital
-                        ? "Confirm the digital asset details and any staged document uploads before saving this asset."
-                    : "Confirm the account details and any staged document uploads before saving this asset."}
+                        ? "Confirm the digital record details and any staged document uploads before saving this record."
+                    : "Confirm the account details and any staged document uploads before saving this record."}
                 </span>
                 <span style={{ color: "#334155", fontSize: 13 }}>
                   {isCanonicalTask
@@ -4604,31 +4631,6 @@ export default function UniversalRecordWorkspace({
                 </span>
               </label>
             ) : null}
-            <div className="lf-v4-form-footer">
-            <span className="lf-v4-form-security"><Icon name="lock" size={16} />Stored securely. Not shared with anyone.</span>
-            <div className="lf-v4-form-actions">
-            {!showNarrativeNotes && !usesStructuredWorkspaceForm ? (
-              <button type="button" style={ghostBtn} onClick={() => setShowNarrativeNotes(true)}>
-                <Icon name="add" size={16} />
-                Add notes
-              </button>
-            ) : null}
-            <button type="button" className="lf-v4-form-cancel" style={ghostBtn} onClick={cancelForm}>
-              <Icon name="close" size={16} />
-              Cancel
-            </button>
-            {(!editingId ? canCreateRecords : canEditWorkspaceRow(editingId)) ? <button type="button" className="lf-v4-form-save" style={primaryBtn} disabled={saving} onClick={() => void saveRecord()} title={editingId ? "Save changes to this record" : "Save this new record"}>
-              <Icon name="save" size={16} style={{ marginRight: 6, verticalAlign: "text-bottom" }} />
-              {saving ? "Saving..." : <><span className="lf-v4-form-save-desktop">{editingId ? "Save changes" : saveLabel}</span><span className="lf-v4-form-save-mobile">Save record</span></>}
-            </button> : null}
-            {editingId && viewer.mode !== "linked" ? (
-              <button type="button" className="lf-v4-form-delete" style={dangerBtn} onClick={() => void deleteRecord(editingId)}>
-                <Icon name="delete" size={16} />
-                Delete
-              </button>
-            ) : null}
-            </div>
-          </div>
           </div>
         ) : null}
 
@@ -4636,7 +4638,7 @@ export default function UniversalRecordWorkspace({
           <div style={{ display: "grid", gap: 8 }}>
             <div style={{ fontSize: 13, fontWeight: 700 }}>Current attachments</div>
             {attachments.filter((item) => item.record_id === editingId).length === 0 ? (
-              <div style={{ color: "#64748b", fontSize: 13 }}>No attachments yet for this asset.</div>
+              <div style={{ color: "#64748b", fontSize: 13 }}>No documents attached to this record yet.</div>
             ) : (
               <AttachmentGallery
                 items={attachments
@@ -4649,7 +4651,7 @@ export default function UniversalRecordWorkspace({
                     thumbnailUrl: isImageAttachment(item) ? photoPreviews[item.record_id] ?? "" : "",
                     attachment: item,
                   }))}
-                emptyText="No attachments yet for this asset."
+                emptyText="No documents attached to this record yet."
                 onResolvePreviewUrl={(entry) => getAttachmentSignedUrl(entry.attachment, 120)}
                 onDownload={(entry) => void downloadAttachment(entry.attachment)}
                 onPrint={(entry) => void printAttachment(entry.attachment)}
@@ -4658,6 +4660,19 @@ export default function UniversalRecordWorkspace({
             )}
           </div>
         ) : null}
+        {!showNarrativeNotes && !usesStructuredWorkspaceForm ? <button type="button" style={ghostBtn} onClick={() => setShowNarrativeNotes(true)}><Icon name="add" size={16} /> Add notes</button> : null}
+        </div>
+        <div className="lf-v4-form-footer">
+          <span className="lf-v4-form-security"><Icon name="lock" size={16} />Stored securely. Not shared with anyone.</span>
+          <div className="lf-v4-form-actions">
+            <button type="button" className="lf-v4-form-cancel" style={ghostBtn} onClick={cancelForm}><Icon name="close" size={16} />Cancel</button>
+            {(!editingId ? canCreateRecords : canEditWorkspaceRow(editingId)) ? <button type="button" className="lf-v4-form-save" style={primaryBtn} disabled={saving} onClick={() => void saveRecord()} title={editingId ? "Save changes to this record" : "Save this new record"}>
+              <Icon name="save" size={16} style={{ marginRight: 6, verticalAlign: "text-bottom" }} />
+              {saving ? "Saving..." : <><span className="lf-v4-form-save-desktop">{editingId ? "Save changes" : saveLabel}</span><span className="lf-v4-form-save-mobile">{editingId ? "Save changes" : "Save record"}</span></>}
+            </button> : null}
+            {editingId && viewer.mode !== "linked" ? <button type="button" className="lf-v4-form-delete" style={dangerBtn} onClick={() => void deleteRecord(editingId)}><Icon name="delete" size={16} />Delete</button> : null}
+          </div>
+        </div>
       </section>
       ) : null}
     </section>
@@ -5253,16 +5268,17 @@ function FinanceFormLayout({
   required: ReactNode;
   optional: Array<{ title: string; description: string; icon: string; fields: ReactNode }>;
 }) {
-  return <div className="lf-v4-form-sections">
+  return <GroupedAssetFormContext.Provider value><div className="lf-v4-form-sections">
     <section className="lf-v4-required-block" aria-label="Required fields">
       <h3>Required</h3>
+      <p className="lf-v51-form-helper">Choose the closest option in each list. Use Other only when none fit.</p>
       <div className="lf-v4-form-grid">{required}</div>
     </section>
-    {optional.map((group) => <details className="lf-v4-optional-group" key={group.title}>
-      <summary><Icon name={group.icon} size={20} /><span><strong>{group.title}</strong><small>Optional · {group.description}</small></span><Icon name="expand_more" size={20} /></summary>
-      <div className="lf-v4-form-grid">{group.fields}</div>
-    </details>)}
-  </div>;
+    {optional.length ? <details className="lf-v4-optional-group">
+      <summary><Icon name="tune" size={20} /><span><strong>Optional details</strong><small>{optional.map((group) => group.title).join(" · ")}</small></span><Icon name="expand_more" size={20} /></summary>
+      <div className="lf-v51-optional-groups">{optional.map((group) => <section key={group.title} aria-label={group.title}><h4>{group.title}</h4><div className="lf-v4-form-grid">{group.fields}</div></section>)}</div>
+    </details> : null}
+  </div></GroupedAssetFormContext.Provider>;
 }
 
 function FormSection({

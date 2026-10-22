@@ -1289,9 +1289,9 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
             ["/dashboard", "Home", "home"],
             ["/actions", "Actions", "task_alt"],
             ["/people-access", "People", "group"],
-            ["/profile", "Settings", "settings"],
+            ["/settings", "Settings", "settings"],
           ].filter(([href]) => canViewPath(href, resolvedViewerAccess)).map(([href, label, icon]) => {
-            const active = pathname === href || (href === "/people-access" && ["/contacts", "/access-requests", "/access"].includes(pathname)) || (href === "/actions" && pathname === "/action-centre") || (href !== "/dashboard" && pathname.startsWith(`${href}/`));
+            const active = pathname === href || (href === "/people-access" && ["/contacts", "/access-requests", "/access"].includes(pathname)) || (href === "/actions" && pathname === "/action-centre") || (href === "/settings" && (pathname === "/profile" || pathname.startsWith("/account/"))) || (href !== "/dashboard" && pathname.startsWith(`${href}/`));
             return (
               <Link key={href} href={href} className={`lf-mobile-bottom-nav-item${active ? " is-active" : ""}`} aria-current={active ? "page" : undefined}>
                 <Icon name={icon} size={21} filled={active} />

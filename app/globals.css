@@ -1342,10 +1342,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
   .lf-admin-shell-drawer-panel {
     position: relative;
     width: min(320px, calc(100vw - 32px));
-    min-height: 100dvh;
+    height: 100dvh;
     background: #111827;
     color: #f8fafc;
-    overflow: auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .lf-admin-shell-drawer-panel .lf-admin-shell-sidebar {
@@ -1355,6 +1356,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
   }
 
   .lf-admin-shell-drawer-close {
+    position: sticky;
+    top: 12px;
+    z-index: 2;
     margin: 12px 12px 0;
     min-height: 44px;
     display: inline-flex;
@@ -1493,6 +1497,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 .lf-admin-shell--platform .lf-admin-data-card small { color: #6f625e; }
 .lf-admin-shell--platform .lf-admin-metric-card,
 .lf-admin-shell--platform .lf-admin-data-card { border: 1px solid #e6ded9; border-radius: 12px; }
+.lf-admin-shell--platform .lf-admin-metric-card--informational,
+.lf-admin-shell--partner .lf-admin-metric-card--informational { min-height: 0; padding: 8px 0; border: 0; border-radius: 0; background: transparent; }
 .lf-admin-shell--platform .lf-admin-metric-label { color: #6f625e; text-transform: none; font-size: 13px; }
 .lf-admin-shell--platform .lf-admin-metric-value { color: #1f1715; }
 .lf-admin-shell--platform .lf-admin-metric-detail { color: #6f625e; }
@@ -1533,7 +1539,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
   .lf-admin-verification-row small { color: #6f625e; }
   .lf-admin-verification-row > svg, .lf-admin-verification-row > .material-symbols-rounded { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); }
   .lf-admin-overview-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .lf-admin-overview-metrics .lf-admin-metric-card { min-height: 112px; padding: 14px; }
+  .lf-admin-overview-metrics .lf-admin-metric-card { min-height: 88px; padding: 12px; }
   .lf-admin-shell--platform .lf-admin-shell-mobile-bar {
     position: sticky;
     top: 0;
@@ -1690,7 +1696,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
   .lf-admin-shell--partner .lf-admin-shell-mobile-tabs a { display: grid; justify-items: center; align-content: center; gap: 2px; min-width: 0; min-height: 54px; padding: 4px; color: #766962; font-size: 11px; text-align: center; text-decoration: none; }
   .lf-admin-shell--partner .lf-admin-shell-mobile-tabs a[aria-current="page"] { color: #2b1714; font-weight: 800; }
   .lf-partner-overview-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .lf-partner-overview-metrics .lf-admin-metric-card { min-height: 112px; padding: 14px; }
+  .lf-partner-overview-metrics .lf-admin-metric-card { min-height: 88px; padding: 12px; }
   .lf-partner-primary { width: 100%; }
 }
 
@@ -8038,10 +8044,16 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-v4-form-sections { display: grid; gap: var(--lf-space-16); min-width: 0; }
 .lf-v4-required-block { display: grid; gap: var(--lf-space-12); }
 .lf-v4-required-block h3 { margin: 0; color: var(--lf-text); font-size: var(--lf-type-group); font-weight: 600; }
+.lf-v51-form-helper { margin: 0; color: var(--lf-text-secondary); font-size: var(--lf-type-body); line-height: 1.4; }
+.lf-v51-optional-groups { display: grid; gap: var(--lf-space-16); padding: var(--lf-space-14); border-top: 1px solid var(--lf-divider); }
+.lf-v51-optional-groups > section { display: grid; gap: var(--lf-space-12); min-width: 0; }
+.lf-v51-optional-groups h4 { margin: 0; color: var(--lf-text); font-size: var(--lf-type-body); font-weight: 600; }
 .lf-v4-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--lf-space-16); min-width: 0; }
 .lf-v4-form-grid > * { min-width: 0; }
 .lf-v4-form-span { grid-column: 1 / -1; }
 .lf-v4-form-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.lf-v4-form-body { display: grid; gap: var(--lf-space-16); min-width: 0; }
+.lf-v4-form-back-mobile { display: none; }
 .lf-v4-form-header h2 { margin: 6px 0 0; color: var(--lf-ink); font-size: 23px; line-height: 1.3; }
 .lf-v4-form-back, .lf-v4-form-close { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; border: 0; background: transparent; color: var(--lf-text-secondary); cursor: pointer; }
 .lf-v4-form-back { padding: 0; font-size: 13px; }
@@ -8083,11 +8095,18 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-v4-optional-group summary:focus-visible { outline: 2px solid var(--lf-surface); box-shadow: 0 0 0 4px var(--lf-interaction-focus); }
 @media (max-width: 767px) {
   body:has(.lf-v4-record-form) .lf-main-content { overflow: hidden; }
-  .lf-v4-record-form { position: fixed; inset: 0; z-index: 70; width: 100%; height: 100dvh; min-width: 0; max-width: none; overflow-y: auto; overscroll-behavior: contain; padding: calc(16px + env(safe-area-inset-top)) 16px calc(112px + env(safe-area-inset-bottom)) !important; gap: var(--lf-space-16) !important; border: 0 !important; border-radius: 0 !important; background: var(--lf-surface) !important; }
-  .lf-v4-form-header { position: sticky; top: calc(-16px - env(safe-area-inset-top)); z-index: 2; min-height: 52px; gap: var(--lf-space-8); margin-bottom: 4px; padding: 8px 0; background: var(--lf-surface); }
+  .lf-v4-record-form { position: fixed; top: var(--lf-form-visual-top, 0px); right: 0; bottom: auto; left: 0; z-index: 70; display: grid !important; grid-template-rows: auto minmax(0, 1fr) auto; width: 100%; height: var(--lf-form-visual-height, 100dvh); min-width: 0; max-width: none; overflow: hidden; padding: 0 !important; gap: 0 !important; border: 0 !important; border-radius: 0 !important; background: var(--lf-surface) !important; }
+  .lf-v4-form-header { position: relative; z-index: 2; display: grid; grid-template-columns: minmax(74px, 1fr) minmax(0, 3fr) minmax(74px, 1fr); align-items: center; min-height: calc(52px + env(safe-area-inset-top)); gap: 4px; margin: 0; padding: env(safe-area-inset-top) 12px 0; border-bottom: 1px solid var(--lf-border); background: var(--lf-surface); }
+  .lf-v4-form-header > div { display: contents; }
+  .lf-v4-form-header h2 { grid-column: 2; grid-row: 1; min-width: 0; margin: 0; overflow: hidden; font-size: 17px; line-height: 1.25; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+  .lf-v4-form-back { grid-column: 1; grid-row: 1; min-width: 0; font-size: 16px; }
+  .lf-v4-form-back .lf-icon, .lf-v4-form-back-parent, .lf-v4-form-close { display: none; }
+  .lf-v4-form-back-mobile { display: inline; }
+  .lf-v4-form-body { display: block; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px 16px 24px; scroll-padding-bottom: 24px; -webkit-overflow-scrolling: touch; }
+  .lf-v4-form-body > * + * { margin-top: var(--lf-space-16); }
   .lf-v4-form-grid { grid-template-columns: 1fr; }
   .lf-v4-optional-group summary span { min-width: 0; overflow-wrap: anywhere; }
-  .lf-v4-form-footer { position: fixed; right: 0; bottom: 0; left: 0; z-index: 4; display: block; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: var(--lf-surface); box-shadow: 0 -1px 0 var(--lf-border); }
+  .lf-v4-form-footer { position: relative; z-index: 4; display: block; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: var(--lf-surface); box-shadow: 0 -1px 0 var(--lf-border); }
   .lf-v4-form-security, .lf-v4-form-cancel, .lf-v4-form-save-desktop { display: none !important; }
   .lf-v4-form-save-mobile { display: inline; }
   .lf-v4-form-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; gap: 8px; }

@@ -810,26 +810,7 @@ export default function ProfilePage() {
       </SettingsCard>
       ) : null}
 
-      <div id="account-settings">
-      <SettingsCard title="Account settings" description="Security, billing, terms, communications, and reminders now stay linked from Profile so account controls have one clear home.">
-        <div className="lf-content-grid">
-          {[
-            { href: "/account/accessibility", label: "Accessibility", desc: "Text size, contrast, spacing, read aloud, and guided help preferences." },
-            { href: "/account/security", label: "Security", desc: "Password, recovery, and mobile verification controls." },
-            { href: "/account/billing", label: "Billing and Account", desc: "Plan status, limits, and subscription readiness." },
-            { href: "/account/my-vault", label: "My Vault", desc: "Choose which category groups and subsections stay visible across your workspace." },
-            { href: "/account/terms", label: "Terms and Conditions", desc: "Review the current terms status and acceptance record." },
-            { href: "/account/communications-preferences", label: "Communications Preferences", desc: "Choose how service updates reach you." },
-            { href: "/account/reminder-preferences", label: "Reminder Preferences", desc: "Control reminder timing and destinations." },
-          ].map((item) => (
-            <Link key={item.href} href={item.href} style={accountLinkCardStyle}>
-              <div style={{ fontWeight: 700 }}>{item.label}</div>
-              <div style={{ color: "#64748b", fontSize: 13 }}>{item.desc}</div>
-            </Link>
-          ))}
-        </div>
-      </SettingsCard>
-      </div>
+      <Link href="/settings" className="lf-v51-profile-settings-link"><Icon name="settings" size={20} /><span>Account settings</span><Icon name="chevron_right" size={18} /></Link>
 
       {avatarTraceEnabled ? (
         <SettingsCard title="DEV avatar trace" description="Temporary local trace for upload, save, reload, and sidebar hydrate.">
@@ -865,17 +846,6 @@ const readyPillStyle = {
   background: "#ecfdf3",
   color: "#166534",
 };
-
-const accountLinkCardStyle = {
-  border: "1px solid #e8e1dc",
-  borderRadius: 12,
-  padding: 16,
-  background: "#fff",
-  textDecoration: "none",
-  color: "#111827",
-  display: "grid",
-  gap: 6,
-} as const;
 
 const profileIconWrapStyle = {
   width: 40,

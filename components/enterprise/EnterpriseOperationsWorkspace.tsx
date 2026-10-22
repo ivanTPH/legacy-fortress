@@ -657,6 +657,10 @@ export default function EnterpriseOperationsWorkspace() {
   const can = useCallback((capability: string) => navigationCapabilities.includes(capability), [navigationCapabilities]);
   const partnerTitle = activeTab === "users" ? "Team & seats" : activeTab === "overview" ? "Overview" : activeTab === "invitations" ? "Invitations" : labelise(activeTab);
   const partnerScope = portfolio.organisations.length === 1 ? portfolio.organisations[0].name : `${portfolio.organisations.length} authorised organisations`;
+  const openPartnerTab = (tab: EnterpriseTab) => {
+    setActiveTab(tab);
+    router.push(tab === "overview" ? "/enterprise" : `/enterprise?tab=${tab}`);
+  };
 
   if (state === "checking") {
     return (
@@ -725,7 +729,7 @@ export default function EnterpriseOperationsWorkspace() {
 
       {(!partnerMode || activeTab !== "overview") ? partnerMode ? <><div className="lf-partner-desktop-filters">{filterPanel}</div><details className="lf-partner-mobile-filters"><summary>Filters and saved views</summary>{filterPanel}</details></> : filterPanel : null}
 
-      {activeTab === "overview" ? partnerMode ? renderPartnerOverview(portfolio, setActiveTab) : renderOverview(portfolio, filteredOrganisations, filteredLicences, filteredInvitations, setActiveTab, setFilters) : null}
+      {activeTab === "overview" ? partnerMode ? renderPartnerOverview(portfolio, openPartnerTab) : renderOverview(portfolio, filteredOrganisations, filteredLicences, filteredInvitations, setActiveTab, setFilters) : null}
       {activeTab === "organisations" ? renderOrganisations(filteredOrganisations, portfolio, orgForm, setOrgForm, runAction, async () => {
         await runAction("create_organisation", orgForm);
         setOrganisationFormOpen(false);
@@ -738,7 +742,7 @@ export default function EnterpriseOperationsWorkspace() {
         await runAction("create_licence", licenceForm);
         setLicenceFormOpen(false);
       }, licenceFormOpen, setLicenceFormOpen, can("licence:create")) : null}
-      {activeTab === "users" ? partnerMode ? <PartnerTeam portfolio={{ ...portfolio, memberships: filteredMemberships }} canInvite={can("enterprise.invitation.manage")} onInvite={() => { setPartnerInviteIntent(true); setActiveTab("invitations"); }} advanced={renderUsersAndSeats({ ...portfolio, memberships: filteredMemberships }, runAction, membershipLifecycleForm, setMembershipLifecycleForm, can("enterprise.membership.manage"))} /> : renderUsersAndSeats({ ...portfolio, memberships: filteredMemberships }, runAction, membershipLifecycleForm, setMembershipLifecycleForm, can("enterprise.membership.manage")) : null}
+      {activeTab === "users" ? partnerMode ? <PartnerTeam portfolio={{ ...portfolio, memberships: filteredMemberships }} canInvite={can("enterprise.invitation.manage")} onInvite={() => { setPartnerInviteIntent(true); openPartnerTab("invitations"); }} onOpenInvitations={() => { setPartnerInviteIntent(false); openPartnerTab("invitations"); }} advanced={renderUsersAndSeats({ ...portfolio, memberships: filteredMemberships }, runAction, membershipLifecycleForm, setMembershipLifecycleForm, can("enterprise.membership.manage"))} /> : renderUsersAndSeats({ ...portfolio, memberships: filteredMemberships }, runAction, membershipLifecycleForm, setMembershipLifecycleForm, can("enterprise.membership.manage")) : null}
       {activeTab === "invitations" ? partnerMode ? <PartnerInvitations invitations={filteredInvitations} source={renderInvitations(filteredInvitations, portfolio, inviteForm, setInviteForm, enrolmentForm, setEnrolmentForm, bulkRows, setBulkRows, runAction, invitationLifecycleForm, setInvitationLifecycleForm, false, can("enterprise.invitation.manage"))} canInvite={can("enterprise.invitation.manage")} openForm={partnerInviteIntent} /> : renderInvitations(filteredInvitations, portfolio, inviteForm, setInviteForm, enrolmentForm, setEnrolmentForm, bulkRows, setBulkRows, runAction, invitationLifecycleForm, setInvitationLifecycleForm, false, can("enterprise.invitation.manage")) : null}
       {activeTab === "registration-links" ? renderRegistrationLinks(portfolio, enrolmentForm, setEnrolmentForm, runAction, copiedLinkId, copyRegistrationLink) : null}
       {activeTab === "adoption" ? renderAdoption(portfolio, filteredOrganisations) : null}
@@ -770,7 +774,7 @@ function renderPartnerOverview(portfolio: EnterprisePortfolio, setActiveTab: (ta
   </div>;
 }
 
-function PartnerTeam({ portfolio, canInvite, onInvite, advanced }: { portfolio: EnterprisePortfolio; canInvite: boolean; onInvite: () => void; advanced: ReactNode }) {
+function PartnerTeam({ portfolio, canInvite, onInvite, onOpenInvitations, advanced }: { portfolio: EnterprisePortfolio; canInvite: boolean; onInvite: () => void; onOpenInvitations: () => void; advanced: ReactNode }) {
   const [filter, setFilter] = useState("all");
   const invited = portfolio.invitations.filter((item) => ["sent", "delivered", "scheduled"].includes(item.status));
   const people = [
@@ -783,7 +787,7 @@ function PartnerTeam({ portfolio, canInvite, onInvite, advanced }: { portfolio: 
     {canInvite ? <button type="button" className="lf-partner-primary" onClick={onInvite}>Invite team member</button> : null}
     <section className="lf-partner-seat-card"><strong>{portfolio.summary.seats.active} of {portfolio.summary.seats.purchased} seats used</strong><span>Invitations hold a seat</span><progress max={Math.max(portfolio.summary.seats.purchased, 1)} value={portfolio.summary.seats.active} /></section>
     <div className="lf-partner-filter-chips" aria-label="Filter team">{filters.map((option) => <button key={option.key} type="button" aria-pressed={filter === option.key} onClick={() => setFilter(option.key)}>{option.label} {people.filter((person) => option.key === "all" || option.key === "active" && person.status === "active" || option.key === "invited" && person.status === "invited" || option.key === "admins" && person.role.includes("admin")).length}</button>)}</div>
-    <section className="lf-partner-team-list" aria-label="Team members">{filtered.length ? filtered.map((person) => <div key={`${person.kind}-${person.id}`} className="lf-partner-person-row"><span className="lf-partner-person-avatar" aria-hidden="true">{person.name.trim().slice(0, 2).toUpperCase()}</span><span><strong>{person.name}</strong><small>{labelise(person.status)} · {labelise(person.role)}</small></span>{person.kind === "invitation" ? <button type="button" onClick={onInvite} aria-label={`View invitations for ${person.name}`}>View invitations</button> : null}</div>) : <p>No people match this filter.</p>}</section>
+    <section className="lf-partner-team-list" aria-label="Team members">{filtered.length ? filtered.map((person) => <div key={`${person.kind}-${person.id}`} className="lf-partner-person-row"><span className="lf-partner-person-avatar" aria-hidden="true">{person.name.trim().slice(0, 2).toUpperCase()}</span><span><strong>{person.name}</strong><small>{labelise(person.status)} · {labelise(person.role)}</small></span>{person.kind === "invitation" ? <button type="button" onClick={onOpenInvitations} aria-label={`View invitations for ${person.name}`}>View invitations</button> : null}</div>) : <p>No people match this filter.</p>}</section>
     <details className="lf-partner-advanced"><summary>Manage membership details</summary>{advanced}</details>
   </div>;
 }
