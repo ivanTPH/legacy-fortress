@@ -34,8 +34,10 @@ export default function ConfigDrivenAssetFields({
   const fieldIdPrefix = useId();
 
   const visibleFields = config.fields.filter((field) => shouldShowAssetField(field, values));
-  const requiredFields = visibleFields.filter((field) => field.required);
-  const optionalFields = visibleFields.filter((field) => !field.required);
+  const valueKeys = new Set(["estimated_value", "current_balance", "valuation_date"]);
+  const valueFields = visibleFields.filter((field) => valueKeys.has(field.key));
+  const requiredFields = visibleFields.filter((field) => field.required && !valueKeys.has(field.key));
+  const optionalFields = visibleFields.filter((field) => !field.required && !valueKeys.has(field.key));
 
   function renderField(field: typeof config.fields[number]) {
         const value = values[field.key] ?? "";
@@ -106,6 +108,7 @@ export default function ConfigDrivenAssetFields({
 
   return <GroupedAssetFormContext.Provider value><div className="lf-v4-form-sections">
     {requiredFields.length ? <section className="lf-v4-required-block" aria-label="Required fields"><h3>Required</h3><p className="lf-v51-form-helper">Choose the closest option in each list. Use Other only when none fit.</p><div className="lf-v4-form-grid">{requiredFields.map(renderField)}</div></section> : null}
+    {valueFields.length ? <section className="lf-v52-value-block" aria-label="Record value"><h3>Value</h3><p>Use your own recorded estimate. It is not a verified balance.</p><div className="lf-v4-form-grid">{valueFields.map(renderField)}</div></section> : null}
     {optionalFields.length ? <details className="lf-v4-optional-group" open={optionalFields.some((field) => Boolean(errors[field.key])) || undefined}>
       <summary><Icon name="tune" size={20} /><span><strong>Optional details</strong><small>{optionalFields.map((field) => field.label).join(" · ")}</small></span><Icon name="expand_more" size={20} /></summary>
       <div className="lf-v4-form-grid">{optionalFields.map(renderField)}</div>

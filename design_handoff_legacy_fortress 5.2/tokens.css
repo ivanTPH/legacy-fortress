@@ -1,0 +1,222 @@
+/* Legacy Fortress design tokens (V5.2)
+   Source of truth for colour, type, size and motion on mobile and web.
+   Components must use these variables only; no hard-coded hex.
+   Theme: <html data-theme="light|dark"> overrides; no attribute = Automatic (follows OS).
+   Contrast measured: text >= 4.5:1, borders and focus >= 3:1 in every mode. See V5.2.md. */
+
+:root {
+  color-scheme: light;
+
+  /* Surfaces */
+  --lf-surface-page: #F7F4F1;        /* app background */
+  --lf-surface-card: #FFFFFF;        /* cards, rows, headers, inputs */
+  --lf-surface-sidebar: #F5F1ED;     /* web sidebar */
+  --lf-surface-subtle: #F0EBE7;      /* notes, neutral chips, +N avatar */
+  --lf-surface-tile: #F3ECE7;        /* record/document icon tiles, £ prefix */
+  --lf-surface-hover: #F6EFEA;
+  --lf-surface-pressed: #EBE0D8;
+  --lf-scrim: rgba(31, 23, 21, 0.36);
+
+  /* Text */
+  --lf-text: #1F1715;                /* 17.6:1 on card */
+  --lf-text-secondary: #6B5F5A;      /* 6.2:1 on card, 5.6:1 on page. Also placeholders */
+  --lf-text-tertiary: #4A3F3A;       /* body copy in notes and descriptions */
+  --lf-icon: #5C514C;
+  --lf-link: #7A3D27;                /* 8.3:1 */
+
+  /* Lines */
+  --lf-divider: #F0EBE7;             /* between rows inside a card (decorative) */
+  --lf-border: #EBE4DE;              /* card outline (decorative) */
+  --lf-border-control: #E3DAD3;      /* outlined buttons */
+  --lf-border-input: #8C7F79;        /* inputs, radios: 3.9:1 */
+  --lf-focus: #8C4A32;               /* focus ring: 6.7:1 */
+
+  /* Primary action */
+  --lf-primary-bg: #2B1714;
+  --lf-primary-text: #FFFFFF;        /* 17.0:1 */
+  --lf-destructive: #B3261E;         /* text and filled button */
+  --lf-destructive-text-on-fill: #FFFFFF;
+  --lf-badge-count-bg: #8C4A32;      /* tab and bell count badges */
+  --lf-badge-count-text: #FFFFFF;
+
+  /* Status chips (always icon + word) */
+  --lf-status-pending-bg: #FBF0DC;  --lf-status-pending-text: #7A4F00;   /* 6.3:1 */
+  --lf-status-approved-bg: #E6F2EA; --lf-status-approved-text: #1E6B3A;  /* 5.7:1 */
+  --lf-status-rejected-bg: #FBE9E7; --lf-status-rejected-text: #B3261E;
+  --lf-status-applied-bg: #F0EBE7;  --lf-status-applied-text: #2B1714;
+
+  /* People */
+  --lf-avatar-family-bg: #F3E6DF;   --lf-avatar-family-text: #6E3A28;    /* circle, 7.5:1 */
+  --lf-avatar-pro-bg: #E3EEF0;      --lf-avatar-pro-text: #1F5A55;       /* 10px rounded square, 6.7:1 */
+  --lf-avatar-system-bg: #F0EBE7;   --lf-avatar-system-text: #5C514C;    /* history "System" tile */
+  --lf-avatar-unconnected-outline: #6B5F5A;  /* 1.5px dashed */
+
+  /* Access badges (bottom-right of avatar) */
+  --lf-badge-locked-bg: #FFFFFF;    --lf-badge-locked-icon: #5C514C;  --lf-badge-locked-ring: #8C7F79;   /* 1.5px, lock */
+  --lf-badge-limited-bg: #FFFFFF;   --lf-badge-limited-icon: #2B1714; --lf-badge-limited-ring: #2B1714;  /* 1.5px, edit_note / id_card */
+  --lf-badge-released-bg: #2B1714;  --lf-badge-released-icon: #FFFFFF; --lf-badge-released-ring: #FFFFFF; /* lock_open */
+
+  /* Action Centre task tiles */
+  --lf-task-todo-bg: #2B1714;       --lf-task-todo-icon: #FFFFFF;                                       /* filled circle */
+  --lf-task-waiting-bg: #FFFFFF;    --lf-task-waiting-icon: #5C514C; --lf-task-waiting-outline: #8C7F79; /* 1.5px solid circle */
+  --lf-task-suggested-bg: #FFFFFF;  --lf-task-suggested-icon: #5C514C; --lf-task-suggested-outline: #8C7F79; /* 1.5px dashed, 10px square */
+
+  /* Environment */
+  --lf-uat-bg: #8C1D18;  --lf-uat-text: #FFFFFF;   /* same in every theme */
+  --lf-logo-bg: #111111; --lf-logo-icon: #FFFFFF;  /* same in every theme */
+
+  /* Type (px; scale with Dynamic Type / browser zoom, never fixed-height containers) */
+  --lf-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  --lf-text-min: 13px;        /* absolute minimum: dates, chips, captions, tab labels */
+  --lf-text-small: 14px;      /* secondary lines */
+  --lf-text-body: 15px;       /* body, row subtitles */
+  --lf-text-row: 16px;        /* row titles, buttons, inputs (16px stops iOS zoom) */
+  --lf-text-section: 16px;    /* section headings, weight 600 */
+  --lf-text-sheet-title: 20px;
+  --lf-text-title-mobile: 30px;   /* page H1, weight 700 */
+  --lf-text-title-web: 32px;
+  --lf-text-value: 34px;          /* record value hero (web), 26px mobile */
+  --lf-text-badge-count: 12px;    /* weight 700 on 18px pill */
+  --lf-weight-regular: 400; --lf-weight-medium: 500; --lf-weight-semibold: 600; --lf-weight-bold: 700;
+
+  /* Size */
+  --lf-target-min: 44px;      /* every control, avatar and row */
+  --lf-target-gap: 8px;       /* between separate targets */
+  --lf-row-min: 52px;  --lf-row-two-line: 64px;
+  --lf-button-height: 48px;   /* primary / docked */
+  --lf-button-pill-height: 36px;  /* header pill inside 44px target (web 40px) */
+  --lf-avatar: 36px;  --lf-avatar-badge: 20px;  --lf-avatar-badge-icon: 13px;
+  --lf-icon-size: 20px;
+  --lf-radius-card: 12px; --lf-radius-input: 10px; --lf-radius-chip: 6px; --lf-radius-sheet: 16px;
+  --lf-focus-ring: 0 0 0 2px var(--lf-surface-card), 0 0 0 4px var(--lf-focus);
+  --lf-focus-ring-inset: inset 0 0 0 2px var(--lf-surface-card), inset 0 0 0 4px var(--lf-focus);
+
+  /* Web layout */
+  --lf-web-sidebar: 264px; --lf-web-topbar: 60px; --lf-web-content-max: 1080px;
+  --lf-web-rail: 380px; --lf-web-panel: 440px; --lf-web-dialog: 640px; --lf-web-dialog-small: 560px;
+
+  /* Motion */
+  --lf-motion-fast: 120ms;
+  --lf-ease: ease-out;
+  --lf-toast-min: 6000ms;
+}
+
+/* Dark: explicit choice */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --lf-surface-page: #171210;
+  --lf-surface-card: #241C19;
+  --lf-surface-sidebar: #1C1613;
+  --lf-surface-subtle: #2F2622;
+  --lf-surface-tile: #33281F;
+  --lf-surface-hover: #30261F;
+  --lf-surface-pressed: #3B2F28;
+  --lf-scrim: rgba(0, 0, 0, 0.6);
+  --lf-text: #F3ECE7;                /* 14.3:1 */
+  --lf-text-secondary: #BCAEA6;      /* 7.8:1 on card, 8.6:1 on page */
+  --lf-text-tertiary: #D9CDC5;
+  --lf-icon: #CBBDB5;
+  --lf-link: #F0A98A;                /* 8.6:1 */
+  --lf-divider: #2F2622;
+  --lf-border: #3A302B;
+  --lf-border-control: #4D413B;
+  --lf-border-input: #A89A92;        /* 6.1:1 */
+  --lf-focus: #F0A98A;
+  --lf-primary-bg: #EFE3DA;
+  --lf-primary-text: #1B1411;        /* 14.4:1 */
+  --lf-destructive: #F2A59F;
+  --lf-destructive-text-on-fill: #1B1411;
+  --lf-badge-count-bg: #F0A98A;
+  --lf-badge-count-text: #1B1411;
+  --lf-status-pending-bg: #3D2E0F;  --lf-status-pending-text: #F3C56B;
+  --lf-status-approved-bg: #183A26; --lf-status-approved-text: #8FD6A8;
+  --lf-status-rejected-bg: #4A1C19; --lf-status-rejected-text: #F2A59F;
+  --lf-status-applied-bg: #2F2622;  --lf-status-applied-text: #F3ECE7;
+  --lf-avatar-family-bg: #4A2E22;   --lf-avatar-family-text: #F4C3AD;
+  --lf-avatar-pro-bg: #173D3A;      --lf-avatar-pro-text: #9FD9D2;
+  --lf-avatar-system-bg: #2F2622;   --lf-avatar-system-text: #CBBDB5;
+  --lf-avatar-unconnected-outline: #BCAEA6;
+  --lf-badge-locked-bg: #241C19;    --lf-badge-locked-icon: #CBBDB5;  --lf-badge-locked-ring: #A89A92;
+  --lf-badge-limited-bg: #241C19;   --lf-badge-limited-icon: #F3ECE7; --lf-badge-limited-ring: #F3ECE7;
+  --lf-badge-released-bg: #EFE3DA;  --lf-badge-released-icon: #1B1411; --lf-badge-released-ring: #171210;
+  --lf-task-todo-bg: #EFE3DA;       --lf-task-todo-icon: #1B1411;
+  --lf-task-waiting-bg: #241C19;    --lf-task-waiting-icon: #CBBDB5; --lf-task-waiting-outline: #A89A92;
+  --lf-task-suggested-bg: #241C19;  --lf-task-suggested-icon: #CBBDB5; --lf-task-suggested-outline: #A89A92;
+}
+
+/* Dark: Automatic (no data-theme) follows the OS */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --lf-surface-page: #171210; --lf-surface-card: #241C19; --lf-surface-sidebar: #1C1613; --lf-surface-subtle: #2F2622;
+    --lf-surface-tile: #33281F; --lf-surface-hover: #30261F; --lf-surface-pressed: #3B2F28; --lf-scrim: rgba(0, 0, 0, 0.6);
+    --lf-text: #F3ECE7; --lf-text-secondary: #BCAEA6; --lf-text-tertiary: #D9CDC5; --lf-icon: #CBBDB5; --lf-link: #F0A98A;
+    --lf-divider: #2F2622; --lf-border: #3A302B; --lf-border-control: #4D413B; --lf-border-input: #A89A92; --lf-focus: #F0A98A;
+    --lf-primary-bg: #EFE3DA; --lf-primary-text: #1B1411; --lf-destructive: #F2A59F; --lf-destructive-text-on-fill: #1B1411;
+    --lf-badge-count-bg: #F0A98A; --lf-badge-count-text: #1B1411;
+    --lf-status-pending-bg: #3D2E0F; --lf-status-pending-text: #F3C56B; --lf-status-approved-bg: #183A26; --lf-status-approved-text: #8FD6A8;
+    --lf-status-rejected-bg: #4A1C19; --lf-status-rejected-text: #F2A59F; --lf-status-applied-bg: #2F2622; --lf-status-applied-text: #F3ECE7;
+    --lf-avatar-family-bg: #4A2E22; --lf-avatar-family-text: #F4C3AD; --lf-avatar-pro-bg: #173D3A; --lf-avatar-pro-text: #9FD9D2;
+    --lf-avatar-system-bg: #2F2622; --lf-avatar-system-text: #CBBDB5; --lf-avatar-unconnected-outline: #BCAEA6;
+    --lf-badge-locked-bg: #241C19; --lf-badge-locked-icon: #CBBDB5; --lf-badge-locked-ring: #A89A92;
+    --lf-badge-limited-bg: #241C19; --lf-badge-limited-icon: #F3ECE7; --lf-badge-limited-ring: #F3ECE7;
+    --lf-badge-released-bg: #EFE3DA; --lf-badge-released-icon: #1B1411; --lf-badge-released-ring: #171210;
+    --lf-task-todo-bg: #EFE3DA; --lf-task-todo-icon: #1B1411;
+    --lf-task-waiting-bg: #241C19; --lf-task-waiting-icon: #CBBDB5; --lf-task-waiting-outline: #A89A92;
+    --lf-task-suggested-bg: #241C19; --lf-task-suggested-icon: #CBBDB5; --lf-task-suggested-outline: #A89A92;
+  }
+}
+
+/* Increase contrast (iOS) / prefers-contrast: more (web) */
+@media (prefers-contrast: more) {
+  :root {
+    --lf-text-secondary: #4A3F3A;
+    --lf-text-tertiary: #2B1714;
+    --lf-border: #8C7F79;
+    --lf-divider: #8C7F79;
+    --lf-border-control: #6B5F5A;
+    --lf-border-input: #6B5F5A;
+    --lf-surface-hover: #EBE0D8;
+    --lf-surface-pressed: #DDCFC5;
+    --lf-outline-width: 2px;       /* badge rings, task tile outlines, avatar dashed outline */
+  }
+  :root[data-theme="dark"] {
+    --lf-text-secondary: #E0D5CE;
+    --lf-text-tertiary: #F3ECE7;
+    --lf-border: #A89A92;
+    --lf-divider: #A89A92;
+    --lf-border-control: #BCAEA6;
+    --lf-border-input: #BCAEA6;
+    --lf-surface-hover: #3B2F28;
+    --lf-surface-pressed: #4A3B33;
+  }
+}
+@media (prefers-contrast: more) and (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --lf-text-secondary: #E0D5CE; --lf-text-tertiary: #F3ECE7; --lf-border: #A89A92; --lf-divider: #A89A92;
+    --lf-border-control: #BCAEA6; --lf-border-input: #BCAEA6; --lf-surface-hover: #3B2F28; --lf-surface-pressed: #4A3B33;
+  }
+}
+:root { --lf-outline-width: 1.5px; }
+@media (prefers-contrast: more) { :root { --lf-outline-width: 2px; } }
+
+/* Reduce motion: no slide/scale; fade or appear instantly */
+@media (prefers-reduced-motion: reduce) {
+  :root { --lf-motion-fast: 0ms; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+
+/* Windows high contrast / forced colours */
+@media (forced-colors: active) {
+  :root { --lf-focus: Highlight; }
+  button, a, [role="radio"], [role="tab"], input, select, textarea { border: 1px solid ButtonText; }
+  .lf-badge, .lf-chip, .lf-avatar { forced-color-adjust: auto; border: 1px solid CanvasText; }
+}
+
+/* Base */
+html { font-family: var(--lf-font); -webkit-text-size-adjust: 100%; }
+body { background: var(--lf-surface-page); color: var(--lf-text); font-size: var(--lf-text-body); }
+a { color: var(--lf-link); }
+:focus { outline: none; }
+:focus-visible { box-shadow: var(--lf-focus-ring); border-radius: inherit; }
+::placeholder { color: var(--lf-text-secondary); opacity: 1; }

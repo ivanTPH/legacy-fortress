@@ -1,5 +1,13 @@
 # Codex Handover
 
+## 22 October 2026 — V5.2 bounded UI and document-path verification
+
+- Isolated `feat/v5-2-records-ui` worktree starts from verified TEST and remote staging `291d4c72df576266069e01a97b13b34db6c6a680`; the owner's dirty main tree and undeployed privacy migrations remain untouched.
+- Copied the V5.2 handoff unchanged. Added a Value block to shared record forms and owner record details, V5.2 Action Centre interaction states, and corrected upload copy that falsely promised extraction. Source of truth and capability limits are in `docs/design-implementation/`.
+- Founder TEST launcher is blocked: protected founder account-ID proof and independent TEST sign-in destinations are unverified. No launcher, auth, RLS, storage, schema or migration changes were made.
+- Vault document uploads attach files to saved records, but OCR, structured extraction, source evidence, people matching and pending adviser proposals are not implemented. Hosted upload, denial and browser proof remain unverified. Do not promote or deploy before required security and authenticated browser gates pass.
+- Focused TypeScript, lint (zero errors), build and six relevant tests passed. Four unrelated older source-assertion tests failed against unchanged V5.1 code and were not rerun.
+
 ## 22 October 2026 — V5.1 interface completion candidate
 
 - Isolated branch `feat/v5-1-interface-completion` starts from verified TEST staging `4ddb50a0d0e6bd280c240e13f0c89f9f427621db`; owner worktrees and the undeployed privacy-policy branch remain untouched.

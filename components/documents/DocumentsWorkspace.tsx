@@ -21,7 +21,7 @@ import {
   IMAGE_UPLOAD_MIME_TYPES,
   validateUploadFile,
 } from "../../lib/validation/upload";
-import { ExtractionConfirmationPanel, FileDropzone, FormField, SelectInput, TextInput } from "../forms/asset/AssetFormControls";
+import { UploadConfirmationPanel, FileDropzone, FormField, SelectInput, TextInput } from "../forms/asset/AssetFormControls";
 import AttachmentGallery from "./AttachmentGallery";
 import {
   filterDiscoveryDocuments,
@@ -162,7 +162,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
       return;
     }
     if (!reviewConfirmed) {
-      setFormError("Confirm the extracted details and asset link before saving.");
+      setFormError("Confirm the selected file and record link before saving.");
       return;
     }
 
@@ -467,9 +467,9 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
           />
         </FormField>
 
-        <ExtractionConfirmationPanel
+        <UploadConfirmationPanel
           status={pendingFile ? "ready" : "idle"}
-          message={pendingFile ? "Check the selected file and parent asset before saving. Any extracted details remain editable before they become part of your vault." : "Choose a file first. If details can be read from it, you will still confirm them before saving."}
+          message={pendingFile ? "Check the selected file and record before linking. This upload does not extract or apply record details." : "Choose a file and the saved record it belongs to. This upload does not extract record details."}
         >
           <label style={confirmWrapStyle}>
             <input
@@ -484,7 +484,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
             I confirm this file and the selected parent asset are correct before linking.
           </label>
           {formError ? <div role="alert" style={{ color: "#b91c1c", fontSize: 12, fontWeight: 700 }}>{formError}</div> : null}
-        </ExtractionConfirmationPanel>
+        </UploadConfirmationPanel>
 
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button type="button" style={primaryBtnStyle} onClick={() => void handleUpload()} disabled={saving || loading || assets.length === 0}>

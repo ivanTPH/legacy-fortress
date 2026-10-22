@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&display=block">
+<style>
+body{margin:0;background:#faf8f6;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;color:#1f1715;-webkit-font-smoothing:antialiased}
+a{color:#7a3d27}a:hover{color:#2b1714}
+input,button,select,textarea{font-family:inherit}
+.ms{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;letter-spacing:normal;text-transform:none;white-space:nowrap;direction:ltr;font-feature-settings:'liga';display:inline-block;font-variation-settings:'FILL' 0,'wght' 400,'opsz' 24}
+</style>
+</helmet>
+
+<div style="position:relative;min-height:{{ fr.minH }};height:{{ fr.h }};width:{{ fr.w }};max-width:100%;margin:{{ fr.m }};border-radius:{{ fr.r }};border:{{ fr.bd }};overflow:{{ fr.ov }};box-sizing:border-box;display:flex;flex-direction:column;background:#faf8f6;box-shadow:{{ fr.sh }}">
+<sc-if value="{{ si.on }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;min-height:{{ si.minH }};background:{{ si.bg }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:32px 16px;box-sizing:border-box;overflow:auto">
+<div style="display:flex;align-items:center;gap:10px;color:{{ si.fg }}"><div style="width:36px;height:36px;border-radius:9px;background:{{ sb.tileBg }};color:{{ sb.tileFg }};display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:22px;font-variation-settings:'FILL' 1,'wght' 600">apps</span></div><span style="font-size:17px;font-weight:600">Legacy Fortress</span><span style="font-size:10px;font-weight:700;letter-spacing:.06em;padding:2px 6px;border-radius:4px;background:{{ sb.badgeBg }};color:{{ sb.badgeFg }}">{{ sb.badge }}</span></div>
+<div style="width:400px;max-width:100%;background:#fff;border:1px solid #ebe4de;border-radius:16px;padding:28px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:24px;line-height:30px;font-weight:700">{{ si.title }}</span><span style="font-size:15px;line-height:22px;color:#6b5f5a;text-wrap:pretty">{{ si.desc }}</span></div>
+<sc-if value="{{ si.isCred }}" hint-placeholder-val="{{ true }}">
+<label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600">Email<input value="{{ si.email }}" readOnly="{{ true }}" style="height:44px;box-sizing:border-box;padding:0 12px;border-radius:9px;border:1px solid #d9cfc8;font-size:15px;font-weight:400;color:#1f1715;outline:none" style-focus="border-color:#8c4a32;box-shadow:0 0 0 3px #f3e6df"></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600"><span style="display:flex">Password<span style="flex:1"></span><span style="font-weight:500;color:#7a3d27">Forgot password?</span></span><input type="password" value="password" readOnly="{{ true }}" style="height:44px;box-sizing:border-box;padding:0 12px;border-radius:9px;border:1px solid #d9cfc8;font-size:15px;font-weight:400;color:#1f1715;outline:none" style-focus="border-color:#8c4a32;box-shadow:0 0 0 3px #f3e6df"></label>
+</sc-if>
+<sc-if value="{{ si.isCode }}" hint-placeholder-val="{{ false }}"><div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px"><sc-for list="{{ si.boxes }}" as="b" hint-placeholder-count="6"><div style="height:52px;border-radius:10px;border:{{ b.bd }};font-size:22px;font-weight:600;display:flex;align-items:center;justify-content:center">{{ b.v }}</div></sc-for></div></sc-if>
+<button onClick="{{ si.go }}" style="height:44px;border-radius:10px;border:0;background:#2b1714;color:#fff;font-size:15px;font-weight:600;cursor:pointer" style-hover="background:#43231d">{{ si.btn }}</button>
+<sc-if value="{{ si.isCode }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px;color:#6b5f5a">Can’t use your app? <span style="color:#7a3d27;font-weight:500">Use a recovery code</span></span></sc-if>
+<sc-if value="{{ si.isCred }}" hint-placeholder-val="{{ true }}"><div style="display:flex;gap:8px;font-size:13px;line-height:19px;color:#6b5f5a"><span class="ms" style="font-size:18px;color:#6e3a28">lock</span><span style="flex:1;text-wrap:pretty">{{ si.note }}</span></div></sc-if>
+</div>
+<span style="font-size:14px;color:{{ si.muted }};text-align:center;max-width:400px">{{ si.foot }}</span>
+</div>
+</sc-if>
+<sc-if value="{{ desk }}" hint-placeholder-val="{{ true }}">
+<sc-if value="{{ showUat }}" hint-placeholder-val="{{ true }}"><div style="position:sticky;top:0;z-index:20;height:32px;flex:none;background:#8c1d18;color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;gap:10px"><b style="letter-spacing:.06em">UAT · TEST ENVIRONMENT</b><span>Use synthetic data only.</span></div></sc-if>
+
+<div style="flex:1;display:grid;grid-template-columns:256px minmax(0,1fr)">
+<aside style="position:sticky;top:{{ sbTop }};height:{{ sbH }};box-sizing:border-box;background:{{ sb.bg }};color:{{ sb.fg }};border-right:{{ sb.border }};padding:16px 12px 12px;display:flex;flex-direction:column;gap:12px;overflow:auto">
+<div onClick="{{ toggleSw }}" style="display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:10px;cursor:pointer;transition:background .12s ease-out" style-hover="background:{{ sb.hov }}">
+<div style="width:34px;height:34px;border-radius:9px;background:{{ sb.tileBg }};color:{{ sb.tileFg }};display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:22px;font-variation-settings:'FILL' 1,'wght' 600">apps</span></div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span style="font-size:15px;font-weight:600;color:{{ sb.strong }}">Legacy Fortress</span><span style="display:flex;align-items:center;gap:6px;font-size:12px;color:{{ sb.muted }};white-space:nowrap;overflow:hidden"><span style="font-size:10px;font-weight:700;letter-spacing:.06em;padding:1px 5px;border-radius:4px;background:{{ sb.badgeBg }};color:{{ sb.badgeFg }}">{{ sb.badge }}</span>{{ sb.sub }}</span></div>
+<span class="ms" style="font-size:18px;color:{{ sb.muted }}">unfold_more</span>
+</div>
+
+<nav style="display:flex;flex-direction:column;gap:2px">
+<sc-for list="{{ nav }}" as="g" hint-placeholder-count="4">
+<div style="display:flex;flex-direction:column;gap:2px;padding-top:{{ g.pt }}">
+<sc-if value="{{ g.label }}" hint-placeholder-val="{{ false }}"><div style="padding:6px 12px 4px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:{{ sb.muted }}">{{ g.label }}</div></sc-if>
+<sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3">
+<div onClick="{{ it.go }}" style="height:36px;padding:0 12px;border-radius:8px;display:flex;align-items:center;gap:12px;font-size:14px;cursor:pointer;transition:background .12s ease-out;background:{{ it.bg }};color:{{ it.color }};font-weight:{{ it.weight }};box-shadow:{{ it.shadow }}" style-hover="background:{{ it.hov }}" style-active="background:{{ it.act }}">
+<span class="ms" style="font-size:20px;font-variation-settings:'FILL' {{ it.fill }}">{{ it.icon }}</span>
+<span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ it.label }}</span>
+<sc-if value="{{ it.badge }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;font-weight:500;padding:1px 7px;border-radius:9px;background:#8c4a32;color:#fff">{{ it.badge }}</span></sc-if>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</nav>
+
+<div style="flex:1"></div>
+
+<sc-if value="{{ showRole }}" hint-placeholder-val="{{ true }}">
+<label style="display:flex;flex-direction:column;gap:6px;padding:0 8px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:{{ sb.muted }}">Preview as role
+<div style="position:relative;display:flex"><select value="{{ role }}" onChange="{{ setRole }}" style="flex:1;min-width:0;height:36px;box-sizing:border-box;padding:0 40px 0 10px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:#fff;font-size:13px;font-weight:500;letter-spacing:0;text-transform:none;appearance:none;-webkit-appearance:none;cursor:pointer;outline:none"><sc-for list="{{ roleOpts }}" as="o" hint-placeholder-count="0"><option value="{{ o.v }}" style="color:#1f1715">{{ o.l }}</option></sc-for></select><span class="ms" style="position:absolute;right:12px;top:8px;font-size:20px;pointer-events:none;color:#e6d8d0">expand_more</span></div>
+</label>
+</sc-if>
+
+<div onClick="{{ mobToggle }}" style="height:36px;padding:0 12px;border-radius:8px;display:flex;align-items:center;gap:12px;font-size:14px;cursor:pointer;color:{{ sb.fg }};transition:background .12s ease-out" style-hover="background:{{ sb.hov }}"><span class="ms" style="font-size:20px">smartphone</span>Mobile preview</div>
+<div style="display:flex;align-items:center;gap:10px;padding:10px 8px 2px;border-top:{{ sb.divider }}">
+<div style="width:32px;height:32px;border-radius:16px;background:{{ sb.avBg }};color:{{ sb.avFg }};font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">{{ user.ini }}</div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:500;color:{{ sb.strong }};white-space:nowrap">{{ user.name }}</span><span style="font-size:12px;color:{{ sb.muted }};white-space:nowrap">{{ user.role }}</span></div>
+<button onClick="{{ signOut }}" title="Sign out" aria-label="Sign out" style="width:36px;height:36px;flex:none;border-radius:18px;border:0;background:transparent;color:{{ sb.muted }};cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:{{ sb.hov }}"><span class="ms" style="font-size:20px">logout</span></button>
+</div>
+</aside>
+
+<main data-screen-label="{{ page.title }}" style="min-width:0;max-width:1280px;width:100%;box-sizing:border-box;padding:28px 36px 64px;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;align-items:center;gap:4px;font-size:13px;color:#6b5f5a"><span>{{ page.crumb }}</span><span class="ms" style="font-size:16px">chevron_right</span><span style="color:#1f1715">{{ page.title }}</span></div>
+<div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap">
+<div style="flex:1;min-width:280px;display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h1 style="margin:0;font-size:28px;line-height:34px;font-weight:700;letter-spacing:-.01em">{{ page.title }}</h1><sc-if value="{{ page.hasScope }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:500;padding:4px 8px;border-radius:6px;background:{{ page.scopeBg }};color:{{ page.scopeFg }};white-space:nowrap"><span class="ms" style="font-size:14px">domain</span>{{ page.scope }}</span></sc-if></div>
+<span style="font-size:15px;line-height:22px;color:#6b5f5a;max-width:720px;text-wrap:pretty">{{ page.desc }}</span>
+</div>
+<sc-if value="{{ page.hasAction }}" hint-placeholder-val="{{ false }}"><button onClick="{{ page.actGo }}" style="height:40px;padding:0 16px 0 12px;border-radius:9px;border:0;background:#2b1714;color:#fff;font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap" style-hover="background:#43231d"><span class="ms" style="font-size:20px">{{ page.actIcon }}</span>{{ page.actLabel }}</button></sc-if>
+</div>
+</div>
+
+<sc-if value="{{ banner.has }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:12px;background:#f7f4f1;border:1px solid #ebe4de;font-size:14px;line-height:20px;color:#3a2c28"><span class="ms" style="font-size:20px;color:#6e3a28">{{ banner.icon }}</span><span style="flex:1;text-wrap:pretty">{{ banner.text }}</span></div></sc-if>
+
+<sc-if value="{{ stats.has }}" hint-placeholder-val="{{ false }}"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden"><sc-for list="{{ stats.items }}" as="s" hint-placeholder-count="4"><div style="padding:14px 18px;display:flex;flex-direction:column;gap:4px;box-shadow:-1px 0 0 #f0ebe7"><span style="font-size:13px;color:#6b5f5a">{{ s.l }}</span><span style="font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap">{{ s.v }}</span></div></sc-for></div></sc-if>
+
+<sc-if value="{{ queue.has }}" hint-placeholder-val="{{ false }}"><div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden"><div style="padding:14px 18px;font-size:15px;font-weight:600;border-bottom:1px solid #f0ebe7">{{ queue.title }}</div>
+<sc-for list="{{ queue.items }}" as="q" hint-placeholder-count="3"><div onClick="{{ q.go }}" style="display:flex;align-items:center;gap:14px;padding:12px 18px;border-top:{{ q.bt }};cursor:pointer;transition:background .12s ease-out" style-hover="background:#f6efea" style-active="background:#ebe0d8">
+<div style="width:36px;height:36px;border-radius:9px;background:{{ q.bg }};color:{{ q.fg }};display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:20px">{{ q.icon }}</span></div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:600">{{ q.title }}</span><span style="font-size:13px;color:#6b5f5a">{{ q.sub }}</span></div>
+<span style="min-width:24px;height:24px;padding:0 8px;box-sizing:border-box;border-radius:12px;background:{{ q.bg }};color:{{ q.fg }};font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center">{{ q.n }}</span>
+<span class="ms" style="font-size:20px;color:#9a8f8a">chevron_right</span>
+</div></sc-for>
+</div></sc-if>
+
+<sc-if value="{{ kv.has }}" hint-placeholder-val="{{ false }}"><div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:12px"><span style="font-size:15px;font-weight:600">{{ kv.title }}</span><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px 24px"><sc-for list="{{ kv.items }}" as="k" hint-placeholder-count="4"><div style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-size:13px;color:#6b5f5a">{{ k.k }}</span><span style="font-size:14px;font-family:{{ k.ff }};overflow-wrap:anywhere">{{ k.v }}</span></div></sc-for></div></div></sc-if>
+
+<sc-if value="{{ tbl.has }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:12px">
+<sc-if value="{{ tbl.hasTools }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+<sc-if value="{{ tbl.search }}" hint-placeholder-val="{{ false }}"><div style="flex:0 1 320px;min-width:200px;height:36px;border-radius:9px;border:1px solid #e6dfd9;background:#fff;display:flex;align-items:center;gap:8px;padding:0 10px;box-sizing:border-box"><span class="ms" style="font-size:18px;color:#6b5f5a">search</span><input placeholder="{{ tbl.search }}" style="flex:1;min-width:0;border:0;outline:none;font-size:14px;background:transparent;color:#1f1715"></div></sc-if>
+<sc-for list="{{ tbl.chips }}" as="c" hint-placeholder-count="0"><span onClick="{{ c.go }}" style="height:30px;padding:0 12px;border-radius:15px;font-size:13px;display:flex;align-items:center;white-space:nowrap;cursor:pointer;background:{{ c.bg }};color:{{ c.fg }};border:{{ c.bd }};box-sizing:border-box;transition:background .12s ease-out" style-hover="background:{{ c.hov }}">{{ c.l }}</span></sc-for>
+</div></sc-if>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<sc-if value="{{ tbl.title }}" hint-placeholder-val="{{ false }}"><div style="padding:14px 18px;font-size:15px;font-weight:600;border-bottom:1px solid #f0ebe7">{{ tbl.title }}</div></sc-if>
+<div style="overflow-x:auto"><div style="min-width:760px">
+<div style="display:grid;grid-template-columns:{{ tbl.gtc }};gap:16px;padding:10px 18px;font-size:12px;font-weight:600;color:#6b5f5a;border-bottom:1px solid #ebe4de"><sc-for list="{{ tbl.heads }}" as="h" hint-placeholder-count="4"><span style="white-space:nowrap">{{ h.t }}</span></sc-for></div>
+<sc-for list="{{ tbl.rows }}" as="r" hint-placeholder-count="4">
+<div onClick="{{ r.open }}" style="display:grid;grid-template-columns:{{ tbl.gtc }};gap:16px;align-items:center;min-height:56px;padding:10px 18px;box-sizing:border-box;border-top:{{ r.bt }};cursor:{{ r.cursor }};background:{{ r.bg }};box-shadow:{{ r.shadow }};transition:background .12s ease-out" style-hover="background:{{ r.hov }}">
+<sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="4"><div style="min-width:0;display:flex;flex-direction:column;gap:2px">
+<sc-if value="{{ c.isChip }}" hint-placeholder-val="{{ false }}"><span style="align-self:flex-start;display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:500;padding:4px 8px;border-radius:6px;background:{{ c.bg }};color:{{ c.fg }};white-space:nowrap"><sc-if value="{{ c.icon }}" hint-placeholder-val="{{ false }}"><span class="ms" style="font-size:14px;font-variation-settings:'FILL' 1">{{ c.icon }}</span></sc-if>{{ c.t }}</span></sc-if>
+<sc-if value="{{ c.isText }}" hint-placeholder-val="{{ true }}"><span style="font-size:14px;font-weight:{{ c.w }};font-family:{{ c.ff }};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.t }}</span><sc-if value="{{ c.s }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#6b5f5a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.s }}</span></sc-if></sc-if>
+</div></sc-for>
+<div style="display:flex;justify-content:flex-end;align-items:center;gap:6px"><sc-if value="{{ r.act }}" hint-placeholder-val="{{ false }}"><button onClick="{{ r.actGo }}" style="height:32px;padding:0 12px;border-radius:8px;border:1px solid #e6dfd9;background:#fff;font-size:13px;font-weight:500;color:#2b1714;cursor:pointer;white-space:nowrap" style-hover="background:#f6efea">{{ r.act }}</button></sc-if><sc-if value="{{ r.chev }}" hint-placeholder-val="{{ false }}"><span class="ms" style="font-size:20px;color:#9a8f8a">chevron_right</span></sc-if></div>
+</div>
+</sc-for>
+<sc-if value="{{ tbl.isEmpty }}" hint-placeholder-val="{{ false }}"><div style="margin:16px 18px 18px;padding:28px 20px;border:1px dashed #d9cfc8;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center"><div style="width:44px;height:44px;border-radius:22px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:24px">{{ tbl.emptyIcon }}</span></div><span style="font-size:15px;font-weight:600">{{ tbl.emptyT }}</span><span style="font-size:14px;line-height:20px;color:#6b5f5a;max-width:520px;text-wrap:pretty">{{ tbl.emptyS }}</span></div></sc-if>
+</div></div>
+</div>
+<sc-if value="{{ tbl.note }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;line-height:19px;color:#6b5f5a">{{ tbl.note }}</span></sc-if>
+</div>
+</sc-if>
+</main>
+</div>
+</sc-if>
+<sc-if value="{{ mob }}" hint-placeholder-val="{{ false }}">
+<sc-if value="{{ fr.framed }}" hint-placeholder-val="{{ false }}"><div style="height:44px;flex:none;background:{{ sb.bg }};color:{{ sb.strong }};display:flex;align-items:center;padding:0 26px;font-size:15px;font-weight:600"><span style="flex:1">9:41</span><span style="display:flex;gap:4px"><span class="ms" style="font-size:18px;font-variation-settings:'FILL' 1">signal_cellular_alt</span><span class="ms" style="font-size:18px;font-variation-settings:'FILL' 1">wifi</span><span class="ms" style="font-size:18px;font-variation-settings:'FILL' 1">battery_full</span></span></div></sc-if>
+<sc-if value="{{ showUat }}" hint-placeholder-val="{{ true }}"><div style="height:24px;flex:none;background:#8c1d18;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;gap:6px"><b style="letter-spacing:.06em">UAT</b>Use synthetic data only</div></sc-if>
+<div style="height:56px;flex:none;box-sizing:border-box;background:{{ sb.bg }};border-bottom:{{ sb.border }};display:flex;align-items:center;gap:8px;padding:0 10px">
+<div onClick="{{ toggleSw }}" style="flex:1;min-width:0;display:flex;align-items:center;gap:10px;height:44px;padding:0 6px;border-radius:10px;cursor:pointer" style-active="background:{{ sb.hov }}">
+<div style="width:30px;height:30px;border-radius:8px;background:{{ sb.tileBg }};color:{{ sb.tileFg }};display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:20px;font-variation-settings:'FILL' 1,'wght' 600">apps</span></div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:600;color:{{ sb.strong }}">Legacy Fortress</span><span style="display:flex;align-items:center;gap:6px;font-size:12px;color:{{ sb.muted }};white-space:nowrap;overflow:hidden"><span style="font-size:10px;font-weight:700;letter-spacing:.06em;padding:1px 5px;border-radius:4px;background:{{ sb.badgeBg }};color:{{ sb.badgeFg }}">{{ sb.badge }}</span>{{ sb.sub }}</span></div>
+<span class="ms" style="font-size:18px;color:{{ sb.muted }}">unfold_more</span>
+</div>
+<div style="width:32px;height:32px;border-radius:16px;background:{{ sb.avBg }};color:{{ sb.avFg }};font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">{{ user.ini }}</div>
+</div>
+<div data-screen-label="{{ page.title }} (mobile)" style="flex:1;min-height:0;overflow:auto;padding:16px 16px 24px;display:block"><div style="display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6b5f5a">{{ page.crumb }}</span><h1 style="margin:0;font-size:26px;line-height:32px;font-weight:700;letter-spacing:-.01em">{{ page.title }}</h1><sc-if value="{{ page.hasScope }}" hint-placeholder-val="{{ false }}"><span style="align-self:flex-start;display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:500;padding:4px 8px;border-radius:6px;background:{{ page.scopeBg }};color:{{ page.scopeFg }};white-space:nowrap"><span class="ms" style="font-size:14px">domain</span>{{ page.scope }}</span></sc-if><span style="font-size:15px;line-height:21px;color:#6b5f5a;text-wrap:pretty">{{ page.desc }}</span></div>
+<sc-if value="{{ page.hasAction }}" hint-placeholder-val="{{ false }}"><button onClick="{{ page.actGo }}" style="height:44px;border-radius:12px;border:0;background:#2b1714;color:#fff;font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer" style-active="background:#43231d"><span class="ms" style="font-size:20px">{{ page.actIcon }}</span>{{ page.actLabel }}</button></sc-if>
+<sc-if value="{{ banner.has }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:12px;background:#f7f4f1;border:1px solid #ebe4de;font-size:14px;line-height:20px;color:#3a2c28"><span class="ms" style="font-size:20px;color:#6e3a28">{{ banner.icon }}</span><span style="flex:1;text-wrap:pretty">{{ banner.text }}</span></div></sc-if>
+<sc-if value="{{ stats.has }}" hint-placeholder-val="{{ false }}"><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden"><sc-for list="{{ stats.items }}" as="s" hint-placeholder-count="4"><div style="padding:12px 14px;display:flex;flex-direction:column;gap:2px;box-shadow:-1px -1px 0 #f0ebe7"><span style="font-size:12px;color:#6b5f5a">{{ s.l }}</span><span style="font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap">{{ s.v }}</span></div></sc-for></div></sc-if>
+<sc-if value="{{ queue.has }}" hint-placeholder-val="{{ false }}"><div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden"><div style="padding:12px 16px;font-size:15px;font-weight:600;border-bottom:1px solid #f0ebe7">{{ queue.title }}</div>
+<sc-for list="{{ queue.items }}" as="q" hint-placeholder-count="3"><div onClick="{{ q.go }}" style="display:flex;align-items:center;gap:12px;min-height:64px;padding:10px 16px;box-sizing:border-box;border-top:{{ q.bt }};cursor:pointer" style-active="background:#ebe0d8">
+<div style="width:36px;height:36px;border-radius:9px;background:{{ q.bg }};color:{{ q.fg }};display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:20px">{{ q.icon }}</span></div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:600">{{ q.title }}</span><span style="font-size:13px;color:#6b5f5a">{{ q.sub }}</span></div>
+<span style="min-width:24px;height:24px;padding:0 8px;box-sizing:border-box;border-radius:12px;background:{{ q.bg }};color:{{ q.fg }};font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center">{{ q.n }}</span>
+</div></sc-for></div></sc-if>
+<sc-if value="{{ kv.has }}" hint-placeholder-val="{{ false }}"><div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden"><div style="padding:12px 16px;font-size:15px;font-weight:600;border-bottom:1px solid #f0ebe7">{{ kv.title }}</div><sc-for list="{{ kv.items }}" as="k" hint-placeholder-count="4"><div style="display:flex;gap:12px;padding:12px 16px;border-top:{{ k.bt }};font-size:15px"><span style="width:120px;flex:none;color:#6b5f5a">{{ k.k }}</span><span style="flex:1;min-width:0;font-family:{{ k.ff }};overflow-wrap:anywhere">{{ k.v }}</span></div></sc-for></div></sc-if>
+<sc-if value="{{ tbl.has }}" hint-placeholder-val="{{ true }}">
+<sc-if value="{{ tbl.search }}" hint-placeholder-val="{{ false }}"><div style="height:40px;flex:none;border-radius:10px;background:#efe9e4;display:flex;align-items:center;gap:6px;padding:0 10px"><span class="ms" style="font-size:20px;color:#6b5f5a">search</span><input placeholder="{{ tbl.search }}" style="flex:1;min-width:0;border:0;outline:none;font-size:16px;background:transparent;color:#1f1715"></div></sc-if>
+<sc-if value="{{ tbl.hasChips }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:6px;overflow-x:auto;margin:0 -16px;padding:0 16px 2px;flex:none"><sc-for list="{{ tbl.chips }}" as="c" hint-placeholder-count="0"><span onClick="{{ c.go }}" style="flex:none;height:32px;padding:0 12px;border-radius:16px;font-size:13px;display:flex;align-items:center;white-space:nowrap;cursor:pointer;background:{{ c.bg }};color:{{ c.fg }};border:{{ c.bd }};box-sizing:border-box">{{ c.l }}</span></sc-for></div></sc-if>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden;flex:none">
+<sc-if value="{{ tbl.title }}" hint-placeholder-val="{{ false }}"><div style="padding:12px 16px;font-size:15px;font-weight:600;border-bottom:1px solid #f0ebe7">{{ tbl.title }}</div></sc-if>
+<sc-for list="{{ tbl.rows }}" as="r" hint-placeholder-count="4"><div onClick="{{ r.open }}" style="display:flex;align-items:center;gap:12px;min-height:64px;padding:12px 16px;box-sizing:border-box;border-top:{{ r.bt }};background:{{ r.bg }};cursor:{{ r.cursor }}" style-active="background:{{ r.mAct }}">
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span style="font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.mT }}</span><sc-if value="{{ r.mS }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:#6b5f5a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.mS }}</span></sc-if><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:2px"><sc-if value="{{ r.mHasChip }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:500;padding:3px 7px;border-radius:6px;background:{{ r.mChBg }};color:{{ r.mChFg }};white-space:nowrap">{{ r.mChT }}</span></sc-if><sc-if value="{{ r.mMeta }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#6b5f5a">{{ r.mMeta }}</span></sc-if></div></div>
+<sc-if value="{{ r.act }}" hint-placeholder-val="{{ false }}"><button onClick="{{ r.actGo }}" style="flex:none;height:36px;padding:0 12px;border-radius:9px;border:1px solid #e6dfd9;background:#fff;font-size:14px;font-weight:500;color:#2b1714;cursor:pointer;white-space:nowrap" style-active="background:#ebe0d8">{{ r.act }}</button></sc-if><sc-if value="{{ r.chev }}" hint-placeholder-val="{{ false }}"><span class="ms" style="font-size:20px;color:#9a8f8a">chevron_right</span></sc-if>
+</div></sc-for>
+<sc-if value="{{ tbl.isEmpty }}" hint-placeholder-val="{{ false }}"><div style="margin:14px;padding:24px 16px;border:1px dashed #d9cfc8;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center"><div style="width:44px;height:44px;border-radius:22px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:24px">{{ tbl.emptyIcon }}</span></div><span style="font-size:15px;font-weight:600">{{ tbl.emptyT }}</span><span style="font-size:14px;line-height:20px;color:#6b5f5a;text-wrap:pretty">{{ tbl.emptyS }}</span></div></sc-if>
+</div>
+<sc-if value="{{ tbl.note }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;line-height:19px;color:#6b5f5a">{{ tbl.note }}</span></sc-if>
+</sc-if>
+</div>
+</div>
+<div style="flex:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:#fff;border-top:1px solid #ebe4de;padding:6px 4px {{ fr.tabPad }}"><sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4"><div onClick="{{ t.go }}" style="height:50px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:{{ t.w }};color:{{ t.c }};cursor:pointer;border-radius:10px" style-active="background:#ebe0d8"><span class="ms" style="font-size:24px;font-variation-settings:'FILL' {{ t.fill }}">{{ t.icon }}</span><span style="white-space:nowrap">{{ t.l }}</span></div></sc-for></div>
+<sc-if value="{{ mnav.open }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;z-index:35;background:#f6f3f0;display:flex;flex-direction:column">
+<div style="height:{{ mnav.topPad }};flex:none"></div>
+<div style="height:56px;flex:none;display:flex;align-items:center;padding:0 16px"><span style="flex:1;font-size:17px;font-weight:600">Menu</span><button onClick="{{ mnav.close }}" title="Close" aria-label="Close" style="width:36px;height:36px;border-radius:18px;border:1px solid #e6dfd9;background:#fff;color:#2b1714;cursor:pointer;display:flex;align-items:center;justify-content:center" style-active="background:#ebe0d8"><span class="ms" style="font-size:20px">close</span></button></div>
+<div style="flex:1;overflow:auto;padding:0 16px 24px;display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{ nav }}" as="g" hint-placeholder-count="4"><div style="display:flex;flex-direction:column;gap:6px"><sc-if value="{{ g.label }}" hint-placeholder-val="{{ false }}"><span style="padding:8px 16px 0;font-size:13px;color:#6b5f5a;text-transform:uppercase">{{ g.label }}</span></sc-if><div style="background:#fff;border-radius:12px;overflow:hidden"><sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3"><div onClick="{{ it.go }}" style="display:flex;align-items:center;gap:12px;min-height:48px;padding:0 16px;border-top:{{ it.bt }};cursor:pointer;font-size:16px;font-weight:{{ it.weight }}" style-active="background:#ebe0d8"><span class="ms" style="font-size:22px;color:#6e3a28;font-variation-settings:'FILL' {{ it.fill }}">{{ it.icon }}</span><span style="flex:1">{{ it.label }}</span><sc-if value="{{ it.badge }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;font-weight:500;padding:1px 7px;border-radius:9px;background:#8c4a32;color:#fff">{{ it.badge }}</span></sc-if><span class="ms" style="font-size:20px;color:#9a8f8a">chevron_right</span></div></sc-for></div></div></sc-for>
+<sc-if value="{{ showRole }}" hint-placeholder-val="{{ false }}"><label style="display:flex;flex-direction:column;gap:6px;padding:8px 0 0;font-size:13px;color:#6b5f5a;text-transform:uppercase"><span style="padding:0 16px">Preview as role</span><div style="position:relative;display:flex"><select value="{{ role }}" onChange="{{ setRole }}" style="flex:1;min-width:0;height:48px;box-sizing:border-box;padding:0 44px 0 16px;border-radius:12px;border:0;background:#fff;color:#1f1715;font-size:16px;text-transform:none;appearance:none;-webkit-appearance:none;outline:none"><sc-for list="{{ roleOpts }}" as="o" hint-placeholder-count="0"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select><span class="ms" style="position:absolute;right:14px;top:14px;font-size:20px;pointer-events:none;color:#6b5f5a">expand_more</span></div></label></sc-if>
+<div style="background:#fff;border-radius:12px;overflow:hidden;margin-top:8px"><div onClick="{{ signOut }}" style="display:flex;align-items:center;gap:12px;min-height:48px;padding:0 16px;font-size:16px;color:#b3261e;cursor:pointer" style-active="background:#ebe0d8"><span class="ms" style="font-size:22px">logout</span>Sign out</div></div>
+</div></div></sc-if>
+</sc-if>
+
+<sc-if value="{{ sw.open }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ sw.close }}" style="position:{{ ov.pos }};inset:0;z-index:30"></div>
+<div style="position:{{ ov.pos }};left:12px;top:{{ sw.top }};width:300px;z-index:31;background:#fff;color:#1f1715;border-radius:12px;box-shadow:0 16px 40px rgba(31,23,21,.22),0 0 0 1px #ebe4de;overflow:hidden">
+<sc-for list="{{ sw.groups }}" as="g" hint-placeholder-count="3">
+<div style="padding:10px 14px 4px;font-size:12px;font-weight:600;color:#6b5f5a;border-top:{{ g.bt }}">{{ g.l }}</div>
+<sc-for list="{{ g.items }}" as="i" hint-placeholder-count="1"><div onClick="{{ i.go }}" style="display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;transition:background .12s ease-out" style-hover="background:#f6efea"><div style="width:34px;height:34px;border-radius:9px;background:{{ i.bg }};color:{{ i.fg }};display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:20px;font-variation-settings:'FILL' 1">{{ i.icon }}</span></div><div style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:600">{{ i.t }}</span><span style="font-size:12px;color:#6b5f5a">{{ i.s }}</span></div><sc-if value="{{ i.on }}" hint-placeholder-val="{{ false }}"><span class="ms" style="font-size:20px">check</span></sc-if></div></sc-for>
+</sc-for>
+<div style="padding:10px 14px;border-top:1px solid #f0ebe7;font-size:12px;line-height:17px;color:#6b5f5a">Prototype only. In production, Platform Admin is a separate sign-in with two-step verification and doesn’t appear in this list.</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ pn.open }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ pn.close }}" style="position:{{ ov.pos }};inset:0;background:rgba(31,23,21,.28);z-index:40"></div>
+<aside style="position:{{ ov.pos }};top:0;right:0;bottom:0;width:{{ ov.pw }};max-width:100%;background:#fff;z-index:41;box-shadow:-16px 0 40px rgba(31,23,21,.18);display:flex;flex-direction:column">
+<div style="display:flex;align-items:flex-start;gap:12px;padding:20px 22px 16px;border-bottom:1px solid #f0ebe7">
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><span style="font-size:20px;line-height:26px;font-weight:600">{{ pn.title }}</span><sc-if value="{{ pn.sub }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:#6b5f5a;overflow-wrap:anywhere">{{ pn.sub }}</span></sc-if><sc-if value="{{ pn.hasChip }}" hint-placeholder-val="{{ false }}"><span style="align-self:flex-start;margin-top:4px;font-size:12px;font-weight:500;padding:4px 8px;border-radius:6px;background:{{ pn.chipBg }};color:{{ pn.chipFg }};white-space:nowrap">{{ pn.chipT }}</span></sc-if></div>
+<button onClick="{{ pn.close }}" title="Close" aria-label="Close" style="width:36px;height:36px;flex:none;border-radius:18px;border:1px solid #e6dfd9;background:#fff;color:#2b1714;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#f6efea"><span class="ms" style="font-size:20px">close</span></button>
+</div>
+<div style="flex:1;overflow:auto;padding:18px 22px;display:flex;flex-direction:column;gap:18px">
+
+<sc-if value="{{ pn.hasSteps }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column"><sc-for list="{{ pn.steps }}" as="s" hint-placeholder-count="3"><div style="display:flex;gap:12px"><div style="display:flex;flex-direction:column;align-items:center;width:24px;flex:none"><span class="ms" style="font-size:24px;color:{{ s.c }};font-variation-settings:'FILL' {{ s.fill }}">{{ s.icon }}</span><div style="flex:1;width:2px;min-height:12px;background:{{ s.line }}"></div></div><div style="flex:1;display:flex;flex-direction:column;gap:2px;padding:2px 0 14px"><span style="font-size:14px;font-weight:{{ s.w }}">{{ s.t }}</span><sc-if value="{{ s.m }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:#6b5f5a">{{ s.m }}</span></sc-if></div></div></sc-for></div></sc-if>
+
+<sc-if value="{{ pn.hasChecks }}" hint-placeholder-val="{{ false }}"><div style="border:1px solid #f0ebe7;border-radius:10px;overflow:hidden"><sc-for list="{{ pn.checks }}" as="k" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:{{ k.bt }}"><span class="ms" style="font-size:20px;color:{{ k.c }};font-variation-settings:'FILL' 1">{{ k.icon }}</span><span style="flex:1;font-size:14px;font-weight:500">{{ k.l }}</span><span style="font-size:13px;color:#6b5f5a">{{ k.v }}</span></div></sc-for></div></sc-if>
+
+<sc-if value="{{ pn.hasKv }}" hint-placeholder-val="{{ false }}"><div style="border:1px solid #f0ebe7;border-radius:10px;overflow:hidden"><sc-for list="{{ pn.kv }}" as="k" hint-placeholder-count="4"><div style="display:flex;gap:12px;padding:10px 14px;border-top:{{ k.bt }};font-size:14px"><span style="width:130px;flex:none;color:#6b5f5a">{{ k.k }}</span><span style="flex:1;min-width:0;font-family:{{ k.ff }};overflow-wrap:anywhere">{{ k.v }}</span></div></sc-for></div></sc-if>
+
+<sc-if value="{{ pn.isForm }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:14px">
+<sc-for list="{{ pn.req }}" as="f" hint-placeholder-count="3"><label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600;min-width:0"><span style="display:flex;align-items:center;gap:8px">{{ f.l }}<span style="font-size:11px;font-weight:500;padding:2px 6px;border-radius:4px;background:#f3ebe6;color:#6e3a28">Required</span></span>
+<sc-if value="{{ f.isText }}" hint-placeholder-val="{{ true }}"><input placeholder="{{ f.ph }}" style="height:44px;box-sizing:border-box;padding:0 12px;border-radius:9px;border:1px solid #d9cfc8;font-size:15px;font-weight:400;color:#1f1715;background:#fff;outline:none;width:100%" style-focus="border-color:#8c4a32;box-shadow:0 0 0 3px #f3e6df"></sc-if>
+<sc-if value="{{ f.isSel }}" hint-placeholder-val="{{ false }}"><div style="position:relative;display:flex"><select style="flex:1;min-width:0;height:44px;box-sizing:border-box;padding:0 44px 0 12px;border-radius:9px;border:1px solid #d9cfc8;font-size:15px;font-weight:400;color:#1f1715;background:#fff;appearance:none;-webkit-appearance:none;outline:none;cursor:pointer" style-focus="border-color:#8c4a32;box-shadow:0 0 0 3px #f3e6df"><sc-for list="{{ f.opts }}" as="o" hint-placeholder-count="0"><option>{{ o.v }}</option></sc-for></select><span class="ms" style="position:absolute;right:12px;top:12px;font-size:20px;color:#6b5f5a;pointer-events:none">expand_more</span></div></sc-if>
+</label></sc-for>
+<div style="border:1px solid #ebe4de;border-radius:10px;overflow:hidden">
+<div onClick="{{ pn.toggleOpt }}" style="display:flex;align-items:center;gap:10px;min-height:48px;padding:0 14px;cursor:pointer;transition:background .12s ease-out" style-hover="background:#f6efea" style-active="background:#ebe0d8"><span class="ms" style="font-size:20px;color:#6e3a28">tune</span><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:500">More details</span><span style="font-size:12px;color:#6b5f5a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Optional · {{ pn.optHint }}</span></span><span class="ms" style="font-size:20px;color:#6b5f5a">{{ pn.optChev }}</span></div>
+<sc-if value="{{ pn.optOpen }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:12px;padding:4px 14px 16px"><sc-for list="{{ pn.opt }}" as="f" hint-placeholder-count="2"><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:#3a2c28">{{ f.l }}<input placeholder="{{ f.ph }}" style="height:40px;box-sizing:border-box;padding:0 12px;border-radius:9px;border:1px solid #e6dfd9;font-size:15px;color:#1f1715;background:#fff;outline:none;width:100%" style-focus="border-color:#8c4a32;box-shadow:0 0 0 3px #f3e6df"></label></sc-for></div></sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ pn.note }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:10px;padding:12px 14px;border-radius:10px;background:#f7f4f1;font-size:13px;line-height:19px;color:#3a2c28"><span class="ms" style="font-size:18px;color:#6e3a28">info</span><span style="flex:1;text-wrap:pretty">{{ pn.note }}</span></div></sc-if>
+</div>
+<sc-if value="{{ pn.hasButtons }}" hint-placeholder-val="{{ false }}"><div style="padding:14px 22px;border-top:1px solid #f0ebe7;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+<sc-for list="{{ pn.buttons }}" as="b" hint-placeholder-count="2"><button onClick="{{ b.go }}" style="height:40px;padding:0 14px;border-radius:9px;border:{{ b.bd }};background:{{ b.bg }};color:{{ b.fg }};font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;margin-right:{{ b.mr }}" style-hover="background:{{ b.hov }}">{{ b.l }}</button></sc-for>
+</div></sc-if>
+</aside>
+</sc-if>
+
+<sc-if value="{{ md.open }}" hint-placeholder-val="{{ false }}">
+<div style="position:{{ ov.pos }};inset:0;z-index:60;background:rgba(31,23,21,.4);display:flex;align-items:center;justify-content:center;padding:20px">
+<div style="width:440px;max-width:100%;background:#fff;border-radius:14px;padding:24px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px;box-shadow:0 24px 60px rgba(31,23,21,.3)">
+<div style="width:44px;height:44px;border-radius:22px;background:{{ md.iconBg }};color:{{ md.iconFg }};display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:24px">{{ md.icon }}</span></div>
+<span style="font-size:20px;line-height:26px;font-weight:600">{{ md.title }}</span>
+<span style="font-size:14px;line-height:20px;color:#6b5f5a;text-wrap:pretty">{{ md.text }}</span>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600;margin-top:4px"><span style="display:flex;align-items:center;gap:8px">Reason<span style="font-size:11px;font-weight:500;padding:2px 6px;border-radius:4px;background:#f3ebe6;color:#6e3a28">Required</span></span><textarea value="{{ md.reason }}" onChange="{{ md.onReason }}" placeholder="Saved to the audit log with your name" style="min-height:84px;box-sizing:border-box;padding:10px 12px;border-radius:9px;border:1px solid #d9cfc8;font-size:15px;font-weight:400;color:#1f1715;resize:vertical;outline:none" style-focus="border-color:#8c4a32;box-shadow:0 0 0 3px #f3e6df"></textarea></label>
+<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px"><button onClick="{{ md.cancel }}" style="height:40px;padding:0 14px;border-radius:9px;border:1px solid #e6dfd9;background:#fff;font-size:14px;font-weight:500;color:#2b1714;cursor:pointer" style-hover="background:#f6efea">Cancel</button><button onClick="{{ md.go }}" style="height:40px;padding:0 16px;border-radius:9px;border:0;background:{{ md.btnBg }};opacity:{{ md.op }};cursor:{{ md.cur }};color:#fff;font-size:14px;font-weight:600">{{ md.label }}</button></div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ toast.has }}" hint-placeholder-val="{{ false }}"><div style="position:{{ ov.pos }};left:50%;bottom:{{ ov.tb }};transform:translateX(-50%);z-index:70;display:flex;align-items:center;gap:10px;height:44px;max-width:calc(100% - 32px);box-sizing:border-box;overflow:hidden;padding:0 16px;border-radius:22px;background:#2b1714;color:#fff;font-size:14px;white-space:nowrap;box-shadow:0 8px 24px rgba(31,23,21,.25)"><span class="ms" style="font-size:20px;color:#9fd8b2;font-variation-settings:'FILL' 1">check_circle</span>{{ toast.text }}</div></sc-if>
+<sc-if value="{{ fr.exit }}" hint-placeholder-val="{{ false }}"><button onClick="{{ mobToggle }}" style="position:fixed;top:16px;left:16px;z-index:80;height:36px;padding:0 14px 0 10px;border-radius:18px;border:1px solid #e6dfd9;background:#fff;color:#2b1714;font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px;cursor:pointer;box-shadow:0 2px 8px rgba(31,23,21,.08)" style-hover="background:#f6efea"><span class="ms" style="font-size:20px">computer</span>Desktop view</button></sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;workspace&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;admin&quot;,&quot;partner&quot;],&quot;default&quot;:&quot;admin&quot;,&quot;tsType&quot;:&quot;'admin'|'partner'&quot;},&quot;role&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;super&quot;,&quot;support&quot;,&quot;probate&quot;,&quot;account&quot;,&quot;auditor&quot;],&quot;default&quot;:&quot;super&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;preview&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;desktop&quot;,&quot;mobile&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;startAt&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;app&quot;,&quot;signin&quot;],&quot;default&quot;:&quot;app&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;showUat&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;screen&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;openRow&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;number&quot;},&quot;menuOpen&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;boolean&quot;},&quot;embedded&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  state = { ws: null, role: null, scr: null, sel: null, form: null, optOpen: false, chip: 0, sw: false, md: null, reason: '', toast: '', mob: null, mnav: false, auth: null, vw: typeof window !== 'undefined' ? window.innerWidth : 1280 };
+  TABS = { super: ['overview', 'verification', 'audit'], support: ['overview', 'users', 'support'], probate: ['overview', 'probate', 'verification'], account: ['overview', 'orgs', 'licences'], auditor: ['overview', 'audit', 'health'], partner: ['p_overview', 'p_team', 'p_inv'] };
+  SHORT = { 'Customer users': 'Users', 'Identity verification': 'Verification', 'Probate cases': 'Probate', 'Team & seats': 'Team', 'Registration links': 'Links', 'System health': 'Health', 'Admin users': 'Admins', 'Users & seats': 'Seats', 'Activity log': 'Activity' };
+  componentDidMount() { this._rs = () => this.setState({ vw: window.innerWidth }); window.addEventListener('resize', this._rs); const p = this.props; if (p.screen || p.openRow != null || p.menuOpen) this.setState({ scr: p.screen || null, sel: p.openRow != null ? Number(p.openRow) : null, mnav: !!p.menuOpen }); }
+  T = { neutral: ['#f3eeea', '#3a2c28'], amber: ['#fdf1d8', '#7a4f00'], green: ['#e9f3ec', '#225c3a'], red: ['#fbeee6', '#b3261e'], teal: ['#e3eeec', '#1f5a55'], ink: ['#f3ebe6', '#6e3a28'] };
+  NAV = {
+    admin: [
+      ['', [['overview', 'space_dashboard', 'Overview']]],
+      ['Operations', [['users', 'person_search', 'Customer users'], ['invitations', 'forward_to_inbox', 'Invitations'], ['access', 'key', 'Access requests'], ['support', 'support_agent', 'Support']]],
+      ['Probate & verification', [['probate', 'gavel', 'Probate cases', 1], ['verification', 'verified_user', 'Identity verification', 4]]],
+      ['Commercial', [['orgs', 'domain', 'Organisations'], ['licences', 'workspace_premium', 'Licences'], ['seats', 'event_seat', 'Users & seats'], ['links', 'link', 'Registration links'], ['reports', 'bar_chart', 'Reports']]],
+      ['Oversight', [['audit', 'receipt_long', 'Audit'], ['health', 'monitor_heart', 'System health'], ['admins', 'admin_panel_settings', 'Admin users'], ['settings', 'settings', 'Settings']]],
+    ],
+    partner: [
+      ['', [['p_overview', 'space_dashboard', 'Overview']]],
+      ['Your organisation', [['p_team', 'groups', 'Team & seats'], ['p_inv', 'forward_to_inbox', 'Invitations', 3], ['p_links', 'link', 'Registration links'], ['p_reports', 'bar_chart', 'Reports'], ['p_licence', 'workspace_premium', 'Licence']]],
+      ['Oversight', [['p_audit', 'receipt_long', 'Activity log']]],
+    ],
+  };
+  ROLES = {
+    super: { l: 'Super admin' },
+    support: { l: 'Support agent', g: ['', 'Operations', 'Oversight'], only: ['audit'] },
+    probate: { l: 'Probate reviewer', g: ['', 'Probate & verification', 'Oversight'], only: ['audit'] },
+    account: { l: 'Account manager', g: ['', 'Commercial', 'Oversight'], only: ['audit'] },
+    auditor: { l: 'Auditor (read-only)', g: ['', 'Oversight'], only: ['audit', 'health'] },
+  };
+  ORGS = ['Hale & Co Solicitors', 'Northgate Wealth', 'Brightwater Insurance', 'Meridian Employers Group'];
+  FORMS = {
+    org: { title: 'Add organisation', req: [['Organisation name', 'text', 'e.g. Hale & Co Solicitors'], ['Type', 'select', ['Adviser', 'Employer', 'Insurer', 'Other']], ['Main contact email', 'text', 'name@company.com']], opt: [['Registration number', 'Companies House number'], ['Account owner', 'Legacy Fortress staff member'], ['Internal notes', 'Not visible to the organisation']], submit: 'Add organisation', toast: 'Organisation added' },
+    licence: { title: 'Create licence', req: [['Organisation', 'select', this.ORGS], ['Plan', 'select', ['Starter', 'Professional', 'Enterprise']], ['Seats', 'text', 'e.g. 100'], ['Renewal date', 'text', 'dd/mm/yyyy']], opt: [['Contract reference', ''], ['Billing contact email', '']], submit: 'Create licence', toast: 'Licence created and waiting for approval' },
+    link: { title: 'Create registration link', req: [['Organisation', 'select', this.ORGS], ['Licence', 'select', ['Starter · 100 seats']], ['Link name', 'text', 'e.g. Spring client onboarding']], opt: [['Maximum claims', '1'], ['Expires after (days)', '14'], ['Allowed email domain', 'e.g. haleandco.co.uk']], submit: 'Create link', toast: 'Registration link created' },
+    admin: { title: 'Invite administrator', req: [['Email', 'text', 'name@legacyfortress.com'], ['Role', 'select', ['Support agent', 'Probate reviewer', 'Account manager', 'Auditor (read-only)', 'Super admin']]], opt: [['Full name', '']], note: 'Two-step verification is always required for administrators. They have no access until they accept and set it up.', submit: 'Send invitation', toast: 'Invitation sent' },
+    member: { title: 'Invite team member', req: [['Email', 'text', 'name@haleandco.co.uk'], ['Role', 'select', ['Adviser', 'Organisation admin']]], opt: [['Full name', ''], ['Department', ''], ['Internal reference', '']], note: 'This reserves 1 of your 7 available seats until they accept.', submit: 'Send invitation', toast: 'Invitation sent' },
+  };
+
+  c = (t, s) => ({ t, s });
+  ch = (t, tone, icon) => ({ chip: true, t, tone, icon });
+  m = (t, s) => ({ t, s, mono: true });
+  r = (cells, act, p, toast) => ({ cells, act, p, toast });
+  A = (l, kind, ct, cx) => ({ l, kind: kind || 'secondary', confirm: ct ? { t: ct, x: cx } : null });
+
+  data() {
+    if (this._S) return this._S;
+    const { c, ch, m, r, A } = this;
+    const vr = (name, when, check, st, tone, icon, checks) => r([c(name, when), 'Linked access', check, ch(st, tone, icon), 'Unassigned'], st === 'Review required' ? 'Review' : null, {
+      title: name, sub: 'Identity verification · started ' + when, chip: [st, tone], checks,
+      note: 'Reviewers see check results only. Document images and biometric data aren’t shown here. Approving confirms who someone is; it never grants access to records.',
+      actions: st === 'Review required' ? [A('Reject', 'danger', 'Reject this verification?', 'The claimant will be asked to try again, for example with a different document.'), A('Assign to me'), A('Approve identity', 'primary', 'Approve identity?', 'This marks the person as Identity verified. It doesn’t share any records with them.')] : [] });
+    const ok = [['Document', 'Passport', 1], ['Liveness', 'Passed', 1], ['Face match', 'Match', 1]];
+    const bad = [['Document', 'Passport', 1], ['Liveness', 'Failed', 0], ['Face match', 'No match', 0]];
+    const pend = (d) => [['Document', d, null], ['Liveness', 'Not started', null], ['Face match', 'Not started', null]];
+    const reps = [['Licence utilisation', 'Seats used against seats bought'], ['Invitation acceptance', 'Invitations accepted, by organisation'], ['Renewal pipeline', 'Licences renewing in the next 90 days'], ['Onboarding completion', 'Organisations that finished set-up'], ['Adoption bands', 'Organisations grouped by seat use'], ['Organisation risk', 'Low use or overdue renewal'], ['Consent readiness', 'Members who agreed to reporting']];
+    const repRows = (n) => reps.slice(0, n).map(([a, b]) => r([c(a), b, '5 people', 'CSV'], 'Export', null, a + ' exported as CSV'));
+    const repCols = [['Report', 'minmax(0,1.2fr)'], ['What it shows', 'minmax(0,1.6fr)'], ['Smallest group', '120px'], ['Format', '70px']];
+    const repBanner = ['shield_lock', 'Reports use organisation totals only. Groups smaller than 5 people are hidden, and private Vault fields are never included.'];
+    const org = (n, ref, type, lic, adm) => r([c(n, ref), type, lic === 'No licence' ? c('No licence') : c(lic, 'Starter · renews 27 Aug 2027'), adm === 'Invitation sent' ? ch(adm, 'amber', 'hourglass_top') : ch(adm, 'neutral'), ch('Active', 'green')], null, {
+      title: n, sub: type + ' · ' + ref, chip: ['Active', 'green'],
+      kv: [['Type', type], ['Reference', ref, 1], ['Licence', lic], ['Administrator', adm], ['Account owner', 'Unassigned'], ['Onboarding', 'Not started'], ['Risk', 'Normal']],
+      note: 'Only organisation, licence and membership details are shown. Members’ Vaults stay private.',
+      actions: [A('Suspend', 'danger', 'Suspend ' + n + '?', 'Members keep their own Vaults but lose organisation access until it’s restored.'), A('Invite administrator'), A(lic === 'No licence' ? 'Set up licence' : 'Manage licence', 'primary')] });
+    const au = (ev, src, okk, who, role, tgt, tsub, route, time) => r([c(ev, src), ch(okk ? 'Success' : 'Failed', okk ? 'green' : 'red'), c(who, role), c(tgt, tsub), time], null, {
+      title: ev, sub: time, chip: [okk ? 'Success' : 'Failed', okk ? 'green' : 'red'],
+      kv: [['Source', src], ['Who', who], ['Role', role], ['Target', tgt + ' · ' + tsub], ['Route', route, 1], ['Time', time]],
+      note: 'Audit entries are read-only. They can’t be edited or deleted.' });
+    const hr = (n, cnt, d) => r([c(n), ch('Healthy', 'green', 'check_circle'), cnt, d]);
+    const set = (a, b) => r([c(a), b, ch('Read-only', 'neutral', 'lock')], null, { title: a, sub: 'Settings', chip: ['Read-only', 'neutral'], kv: [['Controls', b], ['Who can change it', 'Nobody yet'], ['Change history', 'Audit log']], note: 'This becomes editable once it has its own change screen with confirmation, a reason and an audit entry.' });
+    const inv = (name, email, type, by, st, tone, icon, date, sent) => r([c(name, email), type, by, ch(st, tone, icon), date], st === 'Saved, not sent' ? 'Send' : null, {
+      title: name, sub: email + ' · ' + type, chip: [st, tone],
+      steps: st === 'Revoked' ? [['Created', 'done', date], ['Sent', 'done', '7 Aug'], ['Revoked', 'fail', 'By Ivan Yardley']] : [['Created', 'done', date + ' by ' + by], ['Sent', sent ? 'done' : 'now', sent ? '10 Oct' : 'Not sent yet'], ['Accepted', 'todo'], ['Identity verified', 'todo']],
+      note: 'Accepting an invitation doesn’t share any records. The Vault owner decides that separately.',
+      actions: st === 'Revoked' ? [] : [A('Cancel invitation', 'danger', 'Cancel this invitation?', 'The link stops working straight away. The owner can invite them again later.'), A(sent ? 'Resend' : 'Send invitation', 'primary')] }, st === 'Saved, not sent' ? 'Invitation sent to ' + name : null);
+    const S = {
+      overview: { title: 'Overview', desc: 'What needs a decision today. Customer Vault contents and documents are never shown in admin.',
+        queue: { title: 'Needs a decision', items: [['verified_user', 'Identity checks to review', 'Liveness or face match failed', 4, 'verification', 'amber'], ['gavel', 'Probate evidence to review', 'Case #2042 · reported 13 Oct', 1, 'probate', 'amber'], ['schedule_send', 'Invitations saved but not sent', 'Customers added people without sending', 2, 'invitations', 'neutral'], ['workspace_premium', 'Licence waiting for approval', 'Hale & Co Solicitors · Starter', 1, 'licences', 'neutral']] },
+        tbl: { title: 'Across all Vaults', cols: [['Measure', 'minmax(0,2fr)'], ['Count', '100px'], ['Status', '140px']], rows: [
+          r([c('Customer accounts', 'Signed-up accounts'), '440', ch('Healthy', 'green')]), r([c('No will recorded', 'No active Will record'), '440', ch('Attention', 'amber')]), r([c('No executor accepted', 'No accepted executor'), '437', ch('Attention', 'amber')]),
+          r([c('Wills not updated in 5 years', 'Older than 5 years'), '0', ch('Healthy', 'green')]), r([c('Failed invitation emails', 'Bounced or rejected'), '0', ch('Healthy', 'green')]), r([c('Active Vaults', 'Not tracked yet'), '–', ch('Not measured', 'neutral')])] } },
+      users: { title: 'Customer users', desc: 'Find a customer to help with their account. Record names, values and documents are never shown.',
+        tbl: { search: 'Search by email or name', chips: ['All', 'Active', 'Suspended', 'Not verified'], cols: [['Customer', 'minmax(0,1.6fr)'], ['Organisation', 'minmax(0,1fr)'], ['Last sign-in', '140px'], ['Status', '130px']], rows: [
+          ['Ivan Yardley', 'ivanyardley@me.com', 'Personal', '17 Oct, 21:58', 'Active', 'green', '24', '3'], ['Jacqui Yardley', 'jacqui@me.com', 'Personal', '14 Oct, 09:12', 'Active', 'green', '2', '1'], ['Sam Okafor', 'sam.okafor@example.test', 'Hale & Co Solicitors', 'Never', 'Not verified', 'neutral', '0', '0']]
+          .map(([n, e, o, l, s, t, rc, pc]) => r([c(n, e), o, l, ch(s, t)], null, { title: n, sub: e, chip: [s, t], kv: [['Plan', o === 'Personal' ? 'Personal' : 'Via ' + o], ['Records', rc + ' (count only)'], ['Trusted people', pc], ['Two-step verification', s === 'Active' ? 'On' : 'Not set up'], ['Last sign-in', l]], note: 'Admins see counts only. Names, values and documents stay private.', actions: [A('Suspend account', 'danger', 'Suspend ' + n + '’s account?', 'They won’t be able to sign in until it’s restored. Their Vault and shared access stay as they are.'), A('Send password reset')] })) } },
+      invitations: { title: 'Invitations', desc: 'Every invitation on the platform: customers inviting trusted people, organisations and administrators.',
+        stats: [['Waiting for recipient', '0'], ['Saved, not sent', '2'], ['Expired', '0'], ['Failed delivery', '0']],
+        tbl: { search: 'Search recipient', chips: ['All · 3', 'Trusted people', 'Organisation', 'Administrators'], cols: [['Recipient', 'minmax(0,1.6fr)'], ['Type', 'minmax(0,1fr)'], ['Invited by', 'minmax(0,1fr)'], ['Status', '150px'], ['Created', '90px']], rows: [
+          inv('Jacqui Yardley', 'jacqui@me.com', 'Trusted person', 'Ivan Yardley', 'Saved, not sent', 'neutral', 'schedule_send', '12 Oct', false),
+          inv('Bob Smith', 'bob@example.test', 'Trusted person · Executor', 'Ivan Yardley', 'Saved, not sent', 'neutral', 'schedule_send', '12 Oct', false),
+          inv('uxtest@example.test', 'Probate reviewer', 'Administrator', 'Ivan Yardley', 'Revoked', 'red', 'block', '7 Aug', true)] } },
+      access: { title: 'Access requests', desc: 'Requests to see more of someone’s Vault, and executor requests after a death. Admins route cases; Vault owners decide on access.',
+        tbl: { chips: ['Open · 0', 'Closed'], cols: [['Requester', 'minmax(0,1.4fr)'], ['Fortress', 'minmax(0,1fr)'], ['Asking for', 'minmax(0,1.2fr)'], ['Stage', '140px'], ['Received', '90px']], rows: [], empty: ['key', 'No open access requests', 'When someone asks an owner for more access, or an executor starts the death process, it appears here.'] } },
+      support: { title: 'Support', desc: 'Problems with invitations, linked access and identity checks that need someone to follow up.',
+        stats: [['Invitation problems', '0'], ['Linked-access problems', '0'], ['Verification hand-offs', '0'], ['Active linked accounts', '1']],
+        tbl: { cols: [['Person', 'minmax(0,1.4fr)'], ['Vault owner', 'minmax(0,1fr)'], ['Problem', 'minmax(0,1.2fr)'], ['Next step', 'minmax(0,1.2fr)'], ['Opened', '90px']], rows: [], empty: ['support_agent', 'No support issues', 'Each issue appears with a suggested next step, such as resending an invitation or restarting an identity check.'] } },
+      probate: { title: 'Probate cases', desc: 'Review death reports and executor authority. Identity, authority, evidence and access are separate decisions, and each one is recorded.',
+        tbl: { chips: ['Needs review · 1', 'Waiting on executor', 'Closed · 1'], cols: [['Case', 'minmax(0,1.4fr)'], ['Reported by', 'minmax(0,1.2fr)'], ['Evidence', '90px'], ['Stage', '160px'], ['Updated', '90px']], rows: [
+          r([c('Ivan Yardley', 'Case #2042'), c('Bob Smith', 'Executor'), '1 file', ch('Evidence review', 'amber', 'hourglass_top'), '13 Oct'], 'Review', { title: 'Case #2042 · Ivan Yardley', sub: 'Reported by Bob Smith (Executor) on 13 Oct 2026', chip: ['Evidence review', 'amber'],
+            steps: [['Death reported', 'done', '13 Oct'], ['Evidence reviewed', 'now', 'Death certificate · 1 PDF'], ['Death verified', 'todo'], ['Executor authority confirmed', 'todo', 'Grant of probate needed'], ['Access released to executor', 'lock', 'Only after every step above']],
+            kv: [['Reporter identity', 'Verified'], ['Authority', 'Not yet confirmed'], ['Evidence', 'Death certificate (PDF)']],
+            actions: [A('Reject evidence', 'danger', 'Reject this evidence?', 'Bob will be asked to upload a clearer or different document. Nothing is released.'), A('Ask for more information'), A('Accept evidence', 'primary', 'Accept the death certificate?', 'This moves the case to Death verified. Access isn’t released until executor authority is confirmed.')] }),
+          r([c('LF UAT customer', 'Case #2038'), c('UAT Executor', 'Executor'), '1 file', ch('Rejected', 'red', 'cancel'), '16 Jul'], null, { title: 'Case #2038 · LF UAT customer', sub: 'Closed on 16 Jul 2026', chip: ['Rejected', 'red'],
+            steps: [['Death reported', 'done', '16 Jul'], ['Evidence rejected', 'fail', 'Document unreadable']], note: 'This case is closed and can only be viewed. A new report is needed to continue.' })] } },
+      verification: { title: 'Identity verification', desc: 'Check people who failed an automatic identity check. Approving confirms who someone is; it doesn’t give them access to anything.',
+        tbl: { chips: ['Needs review · 4', 'Waiting on claimant · 2', 'Verified · 2', 'All'], cols: [['Claimant', 'minmax(0,1.3fr)'], ['Linked to', 'minmax(0,0.9fr)'], ['Checks', 'minmax(0,1.5fr)'], ['Status', '150px'], ['Reviewer', '100px']], rows: [
+          vr('Claimant V-1051', '30 Sep, 11:10', 'Passport · liveness failed · no match', 'Review required', 'amber', 'hourglass_top', bad),
+          vr('Claimant V-1052', '30 Sep, 12:22', 'Passport · liveness failed · no match', 'Review required', 'amber', 'hourglass_top', bad),
+          vr('Claimant V-1055', '1 Oct, 10:36', 'Passport · liveness failed · no match', 'Review required', 'amber', 'hourglass_top', bad),
+          vr('Claimant V-1058', '1 Oct, 18:55', 'Passport · liveness failed · no match', 'Review required', 'amber', 'hourglass_top', bad),
+          vr('Ivan Yardley', '30 Aug, 18:21', 'Waiting for a document', 'Document needed', 'neutral', 'description', pend('Not uploaded')),
+          vr('Claimant V-1044', '3 Sep, 08:59', 'Passport · waiting for camera check', 'Camera check needed', 'neutral', 'photo_camera', [['Document', 'Passport', 1], ['Liveness', 'Not started', null], ['Face match', 'Not started', null]]),
+          vr('Jacqui Yardley', '29 Sep, 12:54', 'Passport · passed · match', 'Verified', 'green', 'verified_user', ok)] } },
+      orgs: { title: 'Organisations', desc: 'Partner organisations, their licences and administrators. Members’ Vaults are never shown.', action: ['Add organisation', 'domain_add', 'org'],
+        stats: [['Organisations', '12'], ['Seats bought', '100'], ['Seats in use', '0'], ['At risk', '0']],
+        tbl: { search: 'Search name or reference', chips: ['All · 12', 'Advisers', 'Employers', 'Insurers', 'No licence'], cols: [['Organisation', 'minmax(0,1.5fr)'], ['Type', '90px'], ['Licence', 'minmax(0,1.2fr)'], ['Administrator', '150px'], ['Status', '100px']], rows: [
+          org('Hale & Co Solicitors', 'LF-ORG-6255', 'Adviser', '0 of 100 seats', 'Not invited'), org('Northgate Wealth', 'LF-ORG-9237', 'Adviser', 'No licence', 'Not invited'), org('Brightwater Insurance', 'LF-ORG-5518', 'Insurer', 'No licence', 'Invitation sent'), org('Meridian Employers Group', 'LF-ORG-3878', 'Employer', 'No licence', 'Not invited')] } },
+      licences: { title: 'Licences', desc: 'Seats each organisation has bought, and when they renew.', action: ['Create licence', 'add', 'licence'],
+        tbl: { chips: ['All · 1', 'Waiting for approval · 1', 'Active', 'Renewing soon'], cols: [['Organisation', 'minmax(0,1.4fr)'], ['Plan', 'minmax(0,1fr)'], ['Seats', '130px'], ['Renews', '110px'], ['Status', '170px']], rows: [
+          r([c('Hale & Co Solicitors', 'LF-ORG-6255'), c('Starter', 'No contract reference'), c('0 of 100', '100 available'), '27 Aug 2027', ch('Waiting for approval', 'amber', 'hourglass_top')], 'Review', { title: 'Hale & Co Solicitors · Starter', sub: 'Renews 27 Aug 2027', chip: ['Waiting for approval', 'amber'],
+            kv: [['Billing', 'Not set up'], ['Seats bought', '100'], ['In use', '0'], ['Reserved by invitations', '0'], ['Suspended', '0'], ['Available', '100']],
+            actions: [A('Cancel licence', 'danger', 'Cancel this licence?', 'Members lose organisation access at the end of the term. Their own Vaults aren’t affected.'), A('Change seats'), A('Approve licence', 'primary', 'Approve this licence?', 'Hale & Co can start inviting people and using its 100 seats.')] })] } },
+      seats: { title: 'Users & seats', desc: 'Everyone using an organisation seat. Removing someone frees the seat; it never deletes their own Vault.',
+        stats: [['Seats bought', '100'], ['In use', '0'], ['Reserved', '0'], ['Suspended', '0'], ['Available', '100']],
+        tbl: { search: 'Search name or email', cols: [['Person', 'minmax(0,1.4fr)'], ['Organisation', 'minmax(0,1.2fr)'], ['Role', '120px'], ['Joined', '100px'], ['Status', '110px']], rows: [], empty: ['event_seat', 'No one is using a seat yet', 'People appear here once they accept an organisation invitation.'] } },
+      links: { title: 'Registration links', desc: 'Links that let people join an organisation and claim a seat. Each link is limited by its licence and settings.', action: ['Create link', 'add_link', 'link'],
+        stats: [['Links', '0'], ['Claims used', '0'], ['Active', '0']],
+        tbl: { cols: [['Link', 'minmax(0,1.4fr)'], ['Organisation', 'minmax(0,1.2fr)'], ['Claims', '90px'], ['Expires', '100px'], ['Status', '100px']], rows: [], empty: ['link', 'No registration links', 'Create a link to share with a group, for example an employer’s staff or a firm’s new clients.'] } },
+      reports: { title: 'Reports', desc: 'Organisation-level reports you can export.', banner: repBanner,
+        stats: [['Seats in use', '0 / 100'], ['Invitations accepted', '0 / 0'], ['Renewals due', '0'], ['Hidden for consent', '12']],
+        tbl: { cols: repCols, rows: repRows(7) } },
+      audit: { title: 'Audit', desc: 'Every admin, commercial and probate action in one read-only log.',
+        tbl: { search: 'Search person, action or target', chips: ['All sources', 'Admin', 'Commercial', 'Probate', 'Failed only'], cols: [['Event', 'minmax(0,1.5fr)'], ['Result', '100px'], ['Who', 'minmax(0,1.3fr)'], ['Target', 'minmax(0,1.2fr)'], ['Time', '120px']], rows: [
+          au('Commercial portfolio opened', 'Commercial', true, 'ivanyardley@me.com', 'Super admin', 'Report', 'Enterprise portfolio', '/api/internal/admin/enterprise', '17 Oct, 22:06'),
+          au('System health opened', 'Admin', true, 'ivanyardley@me.com', 'Super admin', 'Access policy', 'System health', '/api/internal/admin/system-health', '17 Oct, 22:05'),
+          au('Overview opened', 'Admin', true, 'ivanyardley@me.com', 'Super admin', 'Access policy', 'Dashboard summary', '/api/internal/admin/dashboard-summary', '17 Oct, 22:05'),
+          au('Organisation viewed', 'Commercial', true, 'staging-admin…8704', 'Super admin', 'Organisation', 'Staging boundary', '/api/internal/admin/enterprise', '17 Oct, 21:47'),
+          au('Probate case opened', 'Probate', true, 'ivanyardley@me.com', 'Probate reviewer', 'Case', '#2042', '/api/internal/admin/probate/2042', '17 Oct, 20:40'),
+          au('Sign-in failed 5 times', 'Admin', false, 'unknown device', '–', 'Account', 'ivanyardley@me.com', '/auth/sign-in', '12 Oct, 03:11')] } },
+      health: { title: 'System health', desc: 'Whether each part of the platform is working. Secrets, tokens and passwords are never displayed.',
+        stats: [['Checks', '8'], ['Warnings', '0'], ['Unavailable', '0'], ['Support backlog', '0']],
+        kv: { title: 'Environment', items: [['Build', '38ea8d1cd57c', 1], ['Commit', '38ea8d1cd57c60ef167693d7edc6a5bf86accf0e', 1], ['Environment', 'Staging'], ['Last checked', '17 Oct 2026, 21:58']] },
+        tbl: { cols: [['Part of the platform', 'minmax(0,1.3fr)'], ['Status', '120px'], ['Records', '110px'], ['What it covers', 'minmax(0,2fr)']], rows: [
+          hr('Audit log', '1,842', 'Admin and product audit entries'), hr('Admin roles', '12', 'Administrator accounts and roles'), hr('Invitations', '48', 'Invitations and delivery history'), hr('Verification queue', '0', 'Identity checks waiting for review'),
+          hr('Probate cases', '1', 'Death and probate cases'), hr('Probate evidence', '1', 'Evidence details only; files aren’t opened'), hr('Runtime settings', '–', 'Required settings are present; values hidden'), hr('Email delivery', '–', 'Provider configured; confirm with a test mailbox')] } },
+      admins: { title: 'Admin users', desc: 'Legacy Fortress staff who can sign in to Platform Admin, and what each one can do.', action: ['Invite administrator', 'person_add', 'admin'],
+        banner: ['shield_person', 'You can’t remove the last master admin or suspend your own account. Every role change needs a reason.'],
+        tbl: { chips: ['Active · 1', 'Invited', 'Suspended', 'Revoked · 1'], cols: [['Name', 'minmax(0,1.5fr)'], ['Role', 'minmax(0,1fr)'], ['Two-step verification', '140px'], ['Status', '110px'], ['Added', '90px']], rows: [
+          r([c('Ivan Yardley', 'ivanyardley@me.com'), 'Master admin', 'Required', ch('Active', 'green'), '15 Jul'], null, { title: 'Ivan Yardley', sub: 'ivanyardley@me.com', chip: ['Active', 'green'], kv: [['Role', 'Master admin'], ['Two-step verification', 'On'], ['Added', '15 Jul 2026, 21:36'], ['Last sign-in', '17 Oct 2026, 21:58']], note: 'This is the only master admin, so it can’t be suspended or downgraded.', actions: [] }),
+          r([c('uxtest@example.test', 'Invitation'), 'Probate reviewer', 'Required', ch('Revoked', 'red'), '7 Aug'], null, { title: 'uxtest@example.test', sub: 'Probate reviewer invitation', chip: ['Revoked', 'red'], kv: [['Role', 'Probate reviewer'], ['Expired', '14 Aug 2026'], ['Revoked by', 'Ivan Yardley']], actions: [A('Invite again', 'primary')] })] } },
+      settings: { title: 'Settings', desc: 'How the platform is configured.', banner: ['lock', 'Settings are read-only until each one has its own change screen with confirmation, a reason and an audit entry.'],
+        tbl: { cols: [['Area', 'minmax(0,1fr)'], ['What it controls', 'minmax(0,2.2fr)'], ['Status', '120px']], rows: [
+          set('General', 'Environment name and how the admin console looks'), set('Security', 'Role changes, protecting the last master admin, reasons for changes'), set('Invitations', 'How long invitations last, resending and cancelling'), set('Identity verification', 'Rules reviewers follow when approving or rejecting'),
+          set('Probate', 'Which case decisions are allowed at each stage'), set('Documents', 'Evidence opens through secure, time-limited links only'), set('Audit & retention', 'How long audit history is kept; it can’t be edited')] } },
+
+      p_overview: { title: 'Overview', desc: 'Your organisation’s seats, invitations and renewal. Clients’ Vaults stay private unless they share records with you.',
+        stats: [['Seats in use', '12 of 20'], ['Client Vaults', '38'], ['Invitations waiting', '3'], ['Renews', '27 Aug 2027']],
+        queue: { title: 'Needs attention', items: [['forward_to_inbox', 'Invitations not accepted yet', 'Sent more than 7 days ago', 3, 'p_inv', 'amber'], ['event_seat', 'Seats available', 'Invite advisers to use them', 7, 'p_team', 'neutral']] } },
+      p_team: { title: 'Team & seats', desc: 'People in your organisation and the seats they use.', action: ['Invite team member', 'person_add', 'member'],
+        stats: [['Seats bought', '20'], ['In use', '12'], ['Reserved', '1'], ['Available', '7']],
+        tbl: { search: 'Search name or email', cols: [['Name', 'minmax(0,1.6fr)'], ['Role', 'minmax(0,1fr)'], ['Clients', '90px'], ['Status', '110px']], rows: [
+          ...[['Mary Hale', 'mary@haleandco.example', 'Organisation admin', '14'], ['Dan Patel', 'dan@haleandco.example', 'Adviser', '24']].map(([n, e, ro, cl]) => r([c(n, e), ro, cl, ch('Active', 'green')], null, { title: n, sub: e, chip: ['Active', 'green'], kv: [['Role', ro], ['Clients', cl], ['Seat', 'In use'], ['Joined', '2 Sep 2026']], note: 'Removing someone frees their seat. It doesn’t delete their own Legacy Fortress Vault.', actions: [A('Remove from organisation', 'danger', 'Remove ' + n + '?', 'Their seat is freed straight away. Clients they work with stay with the organisation. Their own Vault isn’t affected.'), A('Change role', 'primary', 'Change ' + n + '’s role?', 'Their access in the partner portal changes straight away.')] })),
+          r([c('sam@haleandco.example', 'Invited 10 Oct'), 'Adviser', '–', ch('Invited', 'amber', 'hourglass_top')], 'Resend', null, 'Invitation resent to sam@haleandco.example')] } },
+      p_inv: { title: 'Invitations', desc: 'Invitations sent to team members and clients.',
+        tbl: { chips: ['All · 3', 'Team', 'Clients', 'Expired'], cols: [['Recipient', 'minmax(0,1.6fr)'], ['Type', 'minmax(0,1fr)'], ['Status', '120px'], ['Expires', '100px']], rows: [
+          r([c('sam@haleandco.example', 'Sent 10 Oct by Mary Hale'), 'Team member', ch('Invited', 'amber', 'hourglass_top'), '24 Oct'], 'Resend', null, 'Invitation resent'),
+          r([c('r.patel@example.test', 'Sent 7 Oct by Dan Patel'), 'Client', ch('Invited', 'amber', 'hourglass_top'), '21 Oct'], 'Resend', null, 'Invitation resent'),
+          r([c('j.ng@example.test', 'Sent 5 Oct by Dan Patel'), 'Client', ch('Invited', 'amber', 'hourglass_top'), '19 Oct'], 'Resend', null, 'Invitation resent')] } },
+      p_links: { title: 'Registration links', desc: 'Share a link so clients or staff can join Hale & Co and claim a seat.', action: ['Create link', 'add_link', 'link'],
+        tbl: { cols: [['Link', 'minmax(0,1.4fr)'], ['Claims', '90px'], ['Expires', '100px'], ['Status', '100px']], rows: [], empty: ['link', 'No registration links', 'Create a link to share with a group, for example new clients this quarter.'] } },
+      p_reports: { title: 'Reports', desc: 'Reports about your organisation that you can export.', banner: repBanner,
+        tbl: { cols: repCols, rows: repRows(4) } },
+      p_licence: { title: 'Licence', desc: 'Your plan and seats. Changes are made by your Legacy Fortress account manager.', action: ['Request more seats', 'add', null, 'Request sent to your Legacy Fortress account manager'],
+        kv: { title: 'Professional licence', items: [['Plan', 'Professional'], ['Seats', '20 (12 in use)'], ['Renews', '27 Aug 2027'], ['Billing', 'Managed by Legacy Fortress'], ['Account manager', 'Legacy Fortress partner team']] } },
+      p_audit: { title: 'Activity log', desc: 'Changes made in your organisation. Read-only.',
+        tbl: { cols: [['Event', 'minmax(0,1.6fr)'], ['Who', 'minmax(0,1fr)'], ['Time', '120px']], rows: [
+          r([c('Invitation sent', 'sam@haleandco.example'), 'Mary Hale', '10 Oct, 09:30']), r([c('Report exported', 'Licence utilisation'), 'Dan Patel', '30 Sep, 16:02']), r([c('Seat released', 'Former adviser'), 'Mary Hale', '2 Sep, 11:15'])] } },
+    };
+    this._S = S;
+    return S;
+  }
+
+  toast(t) { clearTimeout(this._tt); this.setState({ toast: t }); this._tt = setTimeout(() => this.setState({ toast: '' }), 3200); }
+  componentWillUnmount() { clearTimeout(this._tt); window.removeEventListener('resize', this._rs); }
+
+  renderVals() {
+    const st = this.state, T = this.T, S = this.data();
+    const ws = st.ws || this.props.workspace || 'admin';
+    const isP = ws === 'partner';
+    const role = st.role || this.props.role || 'super';
+    const R = this.ROLES[role] || this.ROLES.super;
+    const ro = !isP && role === 'auditor';
+    const uat = this.props.showUat ?? true;
+    const pv = this.props.preview || 'auto';
+    const isMob = st.mob != null ? st.mob : pv === 'mobile' ? true : pv === 'desktop' ? false : st.vw < 760;
+    const emb = !!this.props.embedded;
+    const framed = isMob && (st.vw >= 760 || emb);
+    const auth = st.auth || (this.props.startAt === 'signin' ? 'cred' : 'in');
+    const signin = auth !== 'in';
+    let groups = this.NAV[ws].map(([g, items]) => [g, items.filter(it => isP || !R.g || (R.g.includes(g) && (g !== 'Oversight' || !R.only || R.only.includes(it[0]))))]).filter(([, i]) => i.length);
+    const allowed = groups.flatMap(([, i]) => i.map(x => x[0]));
+    const scr = allowed.includes(st.scr) ? st.scr : allowed[0];
+    const go = (id) => () => this.setState({ scr: id, sel: null, form: null, chip: 0, sw: false, mnav: false });
+    const D = S[scr];
+    const sb = isP
+      ? { bg: '#f5f1ed', fg: '#3a2c28', strong: '#1f1715', muted: '#6b5f5a', border: '1px solid #ebe4de', hov: '#ede5df', tileBg: '#111', tileFg: '#fff', badge: 'PARTNER', badgeBg: '#e3eeec', badgeFg: '#1f5a55', sub: 'Hale & Co Solicitors', divider: '1px solid #ebe4de', avBg: '#e3eeec', avFg: '#1f5a55' }
+      : { bg: '#1f1715', fg: '#e6d8d0', strong: '#fff', muted: '#a8968d', border: '0', hov: 'rgba(255,255,255,.06)', tileBg: '#fff', tileFg: '#111', badge: 'ADMIN', badgeBg: '#b3261e', badgeFg: '#fff', sub: 'Platform Admin', divider: '1px solid rgba(255,255,255,.1)', avBg: '#43231d', avFg: '#fff' };
+    const nav = groups.map(([g, items], gi) => ({ label: g, pt: gi && g ? '10px' : '0', items: items.map(([id, icon, label, badge], ii) => {
+      const on = id === scr;
+      return { label, icon, badge: badge || 0, go: go(id), fill: on ? 1 : 0, weight: on ? 600 : 400, bt: ii ? '.5px solid #ebe4de' : '0',
+        bg: on ? (isP ? '#fff' : 'rgba(255,255,255,.12)') : 'transparent', color: on ? sb.strong : sb.fg, shadow: on && isP ? '0 0 0 1px #ebe4de' : 'none',
+        hov: on ? (isP ? '#fff' : 'rgba(255,255,255,.12)') : sb.hov, act: on ? (isP ? '#fff' : 'rgba(255,255,255,.12)') : (isP ? '#e6dcd5' : 'rgba(255,255,255,.1)') };
+    }) }));
+    const grpOf = (id) => (this.NAV[ws].find(([, i]) => i.some(x => x[0] === id)) || [''])[0];
+    const commercial = ['orgs', 'licences', 'seats', 'links', 'reports'].includes(scr);
+    const act = D.action && !ro ? D.action : null;
+    const page = { title: D.title, desc: D.desc, crumb: isP ? 'Hale & Co Solicitors' : (grpOf(scr) || 'Platform Admin'),
+      hasScope: isP || commercial, scope: isP ? 'Hale & Co Solicitors' : 'All organisations · 12', scopeBg: isP ? T.teal[0] : T.neutral[0], scopeFg: isP ? T.teal[1] : T.neutral[1],
+      hasAction: !!act, actLabel: act ? act[0] : '', actIcon: act ? act[1] : 'add',
+      actGo: () => { if (!act) return; if (act[2]) this.setState({ form: act[2], sel: null, optOpen: false }); else this.toast(act[3]); } };
+    const queue = { has: !!D.queue, title: D.queue ? D.queue.title : '', items: D.queue ? D.queue.items.filter(q => allowed.includes(q[4])).map(([icon, title, sub, n, to, tone], i) => ({ icon, title, sub, n, go: go(to), bg: T[tone][0], fg: T[tone][1], bt: i ? '1px solid #f3eeea' : '0' })) : [] };
+    const tb = D.tbl;
+    const cell = (x, i) => { if (typeof x === 'string') x = { t: x }; const tn = x.chip ? T[x.tone] : null;
+      return { isChip: !!x.chip, isText: !x.chip, t: x.t, s: x.s || '', icon: x.icon || '', bg: tn ? tn[0] : '', fg: tn ? tn[1] : '', w: i === 0 ? 600 : 400, ff: x.mono ? 'ui-monospace,Menlo,monospace' : 'inherit' }; };
+    const rows = tb ? tb.rows.map((row, i) => { const sel = st.sel === i && !st.form; const can = !!row.p;
+      const cs = row.cells.map(cell); const chc = cs.find(x => x.isChip); const meta = cs.slice(1).filter(x => x.isText && x.t && x.t !== '–').map(x => x.t).join(' · ');
+      const open = () => { if (can) this.setState({ sel: i, form: null }); };
+      return { cells: cs, mT: cs[0].t, mS: cs[0].s, mHasChip: !!chc, mChT: chc ? chc.t : '', mChBg: chc ? chc.bg : '', mChFg: chc ? chc.fg : '', mMeta: meta, mAct: can ? '#ebe0d8' : '#fff', act: (ro && row.act !== 'Export') ? '' : (row.act || ''), chev: can && !row.act, bt: i ? '1px solid #f3eeea' : '0', cursor: can ? 'pointer' : 'default',
+        bg: sel ? '#f6efea' : '#fff', hov: can ? '#f6efea' : '#fff', shadow: sel ? 'inset 3px 0 0 #2b1714' : 'none', open,
+        actGo: (e) => { if (e && e.stopPropagation) e.stopPropagation(); if (row.toast) this.toast(row.toast); else open(); } }; }) : [];
+    const tbl = { hasChips: !!(tb && tb.chips), has: !!tb, title: tb && tb.title ? tb.title : '', search: tb && tb.search ? tb.search : '', hasTools: !!(tb && (tb.search || tb.chips)),
+      chips: tb && tb.chips ? tb.chips.map((l, i) => { const on = i === st.chip; return { l, go: () => this.setState({ chip: i }), bg: on ? '#2b1714' : '#fff', fg: on ? '#fff' : '#1f1715', bd: on ? '1px solid #2b1714' : '1px solid #e6dfd9', hov: on ? '#2b1714' : '#f6efea' }; }) : [],
+      gtc: tb ? tb.cols.map(x => x[1]).join(' ') + ' 104px' : '1fr', heads: tb ? [...tb.cols.map(x => ({ t: x[0] })), { t: '' }] : [], rows,
+      isEmpty: !!tb && !tb.rows.length, emptyIcon: tb && tb.empty ? tb.empty[0] : 'inbox', emptyT: tb && tb.empty ? tb.empty[1] : '', emptyS: tb && tb.empty ? tb.empty[2] : '',
+      note: ro ? 'Read-only role: actions are hidden.' : '' };
+    const close = () => this.setState({ sel: null, form: null });
+    const SI = { done: ['check_circle', '#2e7d4f', 1, '#2e7d4f'], now: ['pending', '#7a4f00', 1, '#e6dfd9'], todo: ['radio_button_unchecked', '#9a8f8a', 0, '#e6dfd9'], lock: ['lock', '#9a8f8a', 0, 'transparent'], fail: ['cancel', '#b3261e', 1, 'transparent'] };
+    const btn = (a) => { const k = a.kind;
+      return { l: a.l, bg: k === 'primary' ? '#2b1714' : '#fff', fg: k === 'primary' ? '#fff' : k === 'danger' ? '#b3261e' : '#2b1714', bd: k === 'primary' ? '0' : '1px solid #e6dfd9', hov: k === 'primary' ? '#43231d' : '#f6efea', mr: k === 'danger' ? 'auto' : '0',
+        go: () => { if (a.confirm) this.setState({ md: { ...a.confirm, l: a.l, kind: k }, reason: '' }); else { this.toast(a.l + ' · recorded in the audit log'); this.setState({ sel: null }); } } }; };
+    const P = !st.form && st.sel != null && tb && tb.rows[st.sel] ? tb.rows[st.sel].p : null;
+    const F = st.form ? this.FORMS[st.form] : null;
+    let pn = { open: false };
+    if (P) {
+      const acts = ro ? [] : (P.actions || []);
+      const tn = P.chip ? T[P.chip[1]] : null;
+      pn = { open: true, isForm: false, title: P.title, sub: P.sub || '', hasChip: !!P.chip, chipT: P.chip ? P.chip[0] : '', chipBg: tn ? tn[0] : '', chipFg: tn ? tn[1] : '',
+        hasSteps: !!P.steps, steps: (P.steps || []).map(([t, s, mm], i, a) => ({ t, m: mm || '', icon: SI[s][0], c: SI[s][1], fill: SI[s][2], line: i === a.length - 1 ? 'transparent' : SI[s][3], w: s === 'now' ? 600 : 500 })),
+        hasChecks: !!P.checks, checks: (P.checks || []).map(([l, v, okk], i) => ({ l, v, bt: i ? '1px solid #f0ebe7' : '0', icon: okk === 1 ? 'check_circle' : okk === 0 ? 'cancel' : 'schedule', c: okk === 1 ? '#2e7d4f' : okk === 0 ? '#b3261e' : '#9a8f8a' })),
+        hasKv: !!P.kv, kv: (P.kv || []).map(([k, v, mono], i) => ({ k, v, bt: i ? '1px solid #f0ebe7' : '0', ff: mono ? 'ui-monospace,Menlo,monospace' : 'inherit' })),
+        note: P.note || '', hasButtons: acts.length > 0, buttons: acts.map(btn), close };
+    } else if (F) {
+      pn = { open: true, isForm: true, title: F.title, sub: '', hasChip: false, hasSteps: false, hasChecks: false, hasKv: false, note: F.note || '', close,
+        req: F.req.map(([l, kind, x]) => ({ l, isSel: kind === 'select', isText: kind !== 'select', ph: kind === 'select' ? '' : x, opts: kind === 'select' ? x.map(v => ({ v })) : [] })),
+        opt: F.opt.map(([l, ph]) => ({ l, ph })), optHint: F.opt.map(o => o[0]).join(', '), optOpen: st.optOpen, optChev: st.optOpen ? 'expand_less' : 'expand_more',
+        toggleOpt: () => this.setState(s => ({ optOpen: !s.optOpen })), hasButtons: true,
+        buttons: [{ l: 'Cancel', bg: '#fff', fg: '#2b1714', bd: '1px solid #e6dfd9', hov: '#f6efea', mr: '0', go: close },
+          { l: F.submit, bg: '#2b1714', fg: '#fff', bd: '0', hov: '#43231d', mr: '0', go: () => { this.toast(F.toast); close(); } }] };
+    }
+    const M = st.md; const dis = !M || st.reason.trim().length < 3; const danger = M && M.kind === 'danger';
+    const md = { open: !!M, title: M ? M.t : '', text: M ? M.x : '', label: M ? M.l : '', reason: st.reason, onReason: e => this.setState({ reason: e.target.value }),
+      btnBg: danger ? '#b3261e' : '#2b1714', op: dis ? 0.45 : 1, cur: dis ? 'not-allowed' : 'pointer', icon: danger ? 'warning' : 'task_alt', iconBg: danger ? '#fbeee6' : '#f3ebe6', iconFg: danger ? '#b3261e' : '#6e3a28',
+      cancel: () => this.setState({ md: null }), go: () => { if (dis) return; this.toast(M.l + ' · reason saved to the audit log'); this.setState({ md: null, sel: null }); } };
+    const swGo = (w) => () => this.setState({ ws: w, scr: null, sel: null, form: null, chip: 0, sw: false });
+    const sw = { open: st.sw, top: isMob ? ((framed ? 44 : 0) + (uat ? 24 : 0) + 58) + 'px' : (uat ? '84px' : '52px'), close: () => this.setState({ sw: false }), groups: [
+      { l: 'Personal', bt: '0', items: [{ icon: 'apps', bg: '#111', fg: '#fff', t: 'My Vault', s: isP ? 'Mary Hale' : 'Ivan Yardley', on: false, go: () => { window.location.href = 'Legacy Fortress Redesign.dc.html'; } }] },
+      { l: 'Work', bt: '1px solid #f0ebe7', items: [{ icon: 'domain', bg: '#e3eeec', fg: '#1f5a55', t: 'Hale & Co Solicitors', s: 'Partner portal · Organisation admin', on: isP, go: swGo('partner') }] },
+      { l: 'Legacy Fortress staff', bt: '1px solid #f0ebe7', items: [{ icon: 'admin_panel_settings', bg: '#1f1715', fg: '#fff', t: 'Platform Admin', s: 'Separate sign-in', on: !isP, go: swGo('admin') }] }] };
+    const allItems = this.NAV[ws].flatMap(([, i]) => i);
+    const tabs = (this.TABS[isP ? 'partner' : role] || this.TABS.super).filter(id => allowed.includes(id)).map(id => { const d = allItems.find(x => x[0] === id); const on = id === scr && !st.mnav;
+      return { icon: d[1], l: this.SHORT[d[2]] || d[2], go: go(id), fill: on ? 1 : 0, w: on ? 600 : 500, c: on ? '#2b1714' : '#6b5f5a' }; })
+      .concat({ icon: 'menu', l: 'Menu', go: () => this.setState({ mnav: true, sel: null, form: null }), fill: st.mnav ? 1 : 0, w: st.mnav ? 600 : 500, c: st.mnav ? '#2b1714' : '#6b5f5a' });
+    const fr = !isMob ? { w: 'auto', h: 'auto', minH: '100vh', m: '0', r: '0', bd: '0', ov: 'visible', sh: 'none', framed: false, tabPad: '6px' }
+      : framed ? { w: '390px', h: '844px', minH: '0', m: emb ? '0' : '32px auto', r: '48px', bd: '10px solid #1a1412', ov: 'hidden', sh: '0 30px 60px rgba(0,0,0,.25)', framed: true, exit: !emb, tabPad: '22px' }
+      : { w: '100%', h: '100vh', minH: '0', m: '0', r: '0', bd: '0', ov: 'hidden', sh: 'none', framed: false, tabPad: 'calc(6px + env(safe-area-inset-bottom))' };
+    const si = { on: signin, minH: isMob ? '100%' : '100vh', bg: isP ? '#f5f1ed' : '#1f1715', fg: isP ? '#1f1715' : '#fff', muted: isP ? '#6b5f5a' : '#c9b8ae',
+      isCred: auth === 'cred', isCode: auth === 'code', email: isP ? 'mary@haleandco.example' : 'ivanyardley@me.com',
+      title: auth === 'code' ? 'Enter your code' : isP ? 'Sign in to the partner portal' : 'Sign in to Platform Admin',
+      desc: auth === 'code' ? 'Enter the 6-digit code from your authenticator app.' : isP ? 'For organisation admins and advisers. Use your work email.' : 'For Legacy Fortress staff only.',
+      btn: auth === 'code' ? 'Sign in' : 'Continue', go: () => this.setState({ auth: auth === 'code' ? 'in' : 'code' }),
+      boxes: ['4', '1', '9', '', '', ''].map((v, i) => ({ v, bd: i === 3 ? '1.5px solid #8c4a32' : '1px solid #e6dfd9' })),
+      note: isP ? 'Your partner portal and your own Vault use one account. You can switch between them after signing in.' : 'Two-step verification is required for every administrator.',
+      foot: isP ? 'Looking for your own Vault? Use the main Legacy Fortress sign-in.' : 'Not Legacy Fortress staff? Use the main Legacy Fortress sign-in.' };
+    return {
+      fr, si, desk: !isMob && !signin, mob: isMob && !signin, tabs,
+      ov: { pos: isMob ? 'absolute' : 'fixed', pw: isMob ? '100%' : '440px', tb: isMob ? '92px' : '24px' },
+      mnav: { open: st.mnav && isMob && !signin, close: () => this.setState({ mnav: false }), topPad: framed ? '44px' : '0' },
+      mobToggle: () => this.setState({ mob: !isMob, mnav: false, sw: false }),
+      signOut: () => this.setState({ auth: 'cred', sel: null, form: null, mnav: false, sw: false }),
+      showUat: uat, sbTop: uat ? '32px' : '0', sbH: uat ? 'calc(100vh - 32px)' : '100vh', sb, nav,
+      toggleSw: () => this.setState(s => ({ sw: !s.sw })), sw,
+      showRole: !isP, role, roleOpts: Object.entries(this.ROLES).map(([v, o]) => ({ v, l: o.l })),
+      setRole: e => this.setState({ role: e.target.value, sel: null, form: null }),
+      user: isP ? { ini: 'MH', name: 'Mary Hale', role: 'Organisation admin' } : { ini: 'IY', name: 'Ivan Yardley', role: R.l },
+      page, queue,
+      banner: { has: !!D.banner, icon: D.banner ? D.banner[0] : '', text: D.banner ? D.banner[1] : '' },
+      stats: { has: !!D.stats, items: (D.stats || []).map(([l, v]) => ({ l, v })) },
+      kv: { has: !!D.kv, title: D.kv ? D.kv.title : '', items: D.kv ? D.kv.items.map(([k, v, mono], i) => ({ k, v, bt: i ? '1px solid #f0ebe7' : '0', ff: mono ? 'ui-monospace,Menlo,monospace' : 'inherit' })) : [] },
+      tbl, pn, md, toast: { has: !!st.toast, text: st.toast },
+    };
+  }
+}
+</script>
+</body>
+</html>

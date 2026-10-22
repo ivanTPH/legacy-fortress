@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&display=block">
+<style>
+body{margin:0;background:#efebe7;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;color:#1f1715;-webkit-font-smoothing:antialiased}
+a{color:#7a3d27}a:hover{color:#2b1714}
+input,textarea,select,button{font-family:inherit}
+.ms{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;letter-spacing:normal;text-transform:none;white-space:nowrap;direction:ltr;font-feature-settings:'liga';font-variation-settings:'FILL' 0,'wght' 400,'opsz' 24;display:inline-block}
+.dv-turn{padding:40px 44px 40px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-opts{display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 12px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.6)}
+.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.dv-next{margin:28px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t2">
+<div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Full app redesign in one design language, following the <a href="Finances%20Review.dc.html">Finances review</a></span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="2a"><div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a>Desktop prototype. Every sidebar item works; tiles, actions and settings rows navigate.</div>
+<div class="dv-card" style="width:1440px;height:960px;display:flex;flex-direction:column;background:#faf8f6">
+<sc-if value="{{ uat }}" hint-placeholder-val="{{ true }}">
+<div style="flex:none;height:28px;background:#9b1c1c;color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;gap:8px"><span style="font-weight:700;letter-spacing:.06em">UAT / TEST</span><span>Use synthetic data only. Do not enter real customer, payment, identity or document details.</span></div>
+</sc-if>
+<div style="flex:1;min-height:0;display:grid;grid-template-columns:264px minmax(0,1fr)">
+
+<aside style="background:#f5f1ed;border-right:1px solid #ebe4de;display:flex;flex-direction:column;padding:18px 12px 14px;gap:14px;min-height:0">
+<div style="display:flex;align-items:center;gap:10px;padding:4px 8px;border-radius:10px;cursor:pointer" style-hover="background:rgba(43,23,20,.05)">
+<div style="width:34px;height:34px;border-radius:9px;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:22px;font-variation-settings:'FILL' 1,'wght' 600">apps</span></div>
+<div style="flex:1;display:flex;flex-direction:column;min-width:0"><span style="font-size:15px;font-weight:600;letter-spacing:-.01em">Legacy Fortress</span><span style="font-size:12px;color:#6b5f5a">Personal Vault</span></div>
+<span class="ms" style="font-size:18px;color:#6b5f5a">unfold_more</span>
+</div>
+<nav style="display:flex;flex-direction:column;gap:2px;overflow:auto;flex:1">
+<sc-for list="{{ navGroups }}" as="grp" hint-placeholder-count="3">
+<sc-if value="{{ grp.label }}" hint-placeholder-val="{{ true }}"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b5f5a;padding:14px 12px 6px">{{ grp.label }}</div></sc-if>
+<sc-for list="{{ grp.items }}" as="n" hint-placeholder-count="4">
+<div onClick="{{ n.select }}" style-hover="background:{{ n.hov }}" style-active="background:{{ n.act }}" style="display:flex;align-items:center;gap:12px;height:36px;padding:0 12px;border-radius:8px;cursor:pointer;transition:background .12s ease-out;background:{{ n.bg }};box-shadow:{{ n.shadow }};color:{{ n.color }};font-size:14px;font-weight:{{ n.weight }}" style-hover="background:rgba(43,23,20,.06)">
+<span class="ms" style="font-size:20px;font-variation-settings:{{ n.fill }}">{{ n.icon }}</span><span style="flex:1;white-space:nowrap">{{ n.label }}</span>
+<sc-if value="{{ n.badge }}" hint-placeholder-val="{{ false }}"><span style="min-width:20px;height:20px;padding:0 6px;box-sizing:border-box;border-radius:10px;background:#8c4a32;color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center">{{ n.badge }}</span></sc-if>
+</div>
+</sc-for>
+</sc-for>
+</nav>
+<div style="border-top:1px solid #ebe4de;padding-top:10px;display:flex;flex-direction:column;gap:2px">
+<sc-for list="{{ navFoot }}" as="n" hint-placeholder-count="2">
+<div onClick="{{ n.select }}" style-hover="background:{{ n.hov }}" style-active="background:{{ n.act }}" style="display:flex;align-items:center;gap:12px;height:36px;padding:0 12px;border-radius:8px;cursor:pointer;transition:background .12s ease-out;background:{{ n.bg }};box-shadow:{{ n.shadow }};color:{{ n.color }};font-size:14px;font-weight:{{ n.weight }}" style-hover="background:rgba(43,23,20,.06)"><span class="ms" style="font-size:20px;font-variation-settings:{{ n.fill }}">{{ n.icon }}</span>{{ n.label }}</div>
+</sc-for>
+</div>
+</aside>
+
+<main style="display:flex;flex-direction:column;min-width:0;min-height:0;position:relative;overflow:hidden">
+<header style="height:60px;flex:none;display:flex;align-items:center;gap:12px;padding:0 28px;border-bottom:1px solid #ebe4de;background:#fff">
+<div style="display:flex;align-items:center;gap:8px;height:36px;padding:0 10px;width:340px;background:#f7f4f1;border:1px solid #ebe4de;border-radius:9px;color:#6b5f5a;font-size:14px">
+<span class="ms" style="font-size:18px">search</span><span style="flex:1">Search your vault</span><span style="font:11px ui-monospace,Menlo,monospace;padding:2px 5px;border:1px solid #e3dbd4;border-radius:4px;background:#fff">⌘K</span>
+</div>
+<div style="flex:1"></div>
+<div style="flex:none;white-space:nowrap;display:flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:15px;background:#e9f3ec;color:#225c3a;font-size:13px;font-weight:500"><span class="ms" style="font-size:17px;font-variation-settings:'FILL' 1">verified_user</span>Vault secured</div>
+<button title="Notifications" style="width:36px;height:36px;border-radius:18px;border:0;background:transparent;color:#3a2c28;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#f3eeea"><span class="ms" style="font-size:22px">notifications</span></button>
+<div onClick="{{ goSettings }}" style="display:flex;align-items:center;gap:8px;height:40px;padding:0 8px 0 4px;border-radius:20px;cursor:pointer;white-space:nowrap" style-hover="background:#f3eeea">
+<div style="width:32px;height:32px;border-radius:16px;background:#d9cbc2;color:#2b1714;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center">IY</div>
+<span style="font-size:14px;font-weight:500">Ivan Yardley</span><span class="ms" style="font-size:18px;color:#6b5f5a">expand_more</span>
+</div>
+</header>
+
+<div ref="{{ mainRef }}" style="flex:1;overflow:auto;padding:32px 40px 56px">
+<div style="max-width:960px;margin:0 auto;display:flex;flex-direction:column;gap:24px">
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<sc-if value="{{ page.hasCrumbs }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:4px;font-size:14px;flex-wrap:wrap"><div onClick="{{ page.backGo }}" title="Back" style="width:30px;height:30px;border-radius:15px;border:1px solid #e6dfd9;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-right:6px;color:#2b1714" style-hover="background:#f5f1ed"><span class="ms" style="font-size:18px">arrow_back</span></div><sc-for list="{{ page.crumbs }}" as="cr" hint-placeholder-count="2"><span onClick="{{ cr.go }}" style="color:{{ cr.color }};cursor:{{ cr.cursor }};font-weight:{{ cr.weight }}">{{ cr.label }}</span><sc-if value="{{ cr.sep }}" hint-placeholder-val="{{ true }}"><span class="ms" style="font-size:16px;color:#9a8f8a">chevron_right</span></sc-if></sc-for></div></sc-if>
+<div style="display:flex;align-items:flex-end;gap:24px">
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;min-width:0">
+<h1 style="margin:0;font-size:28px;line-height:34px;font-weight:700;letter-spacing:-.02em">{{ page.title }}</h1>
+<p style="margin:0;font-size:15px;line-height:22px;color:#6b5f5a;max-width:640px;text-wrap:pretty">{{ page.desc }}</p>
+</div>
+<sc-if value="{{ page.cta }}" hint-placeholder-val="{{ false }}"><button onClick="{{ page.ctaGo }}" style="flex:none;white-space:nowrap;display:flex;align-items:center;gap:6px;height:36px;padding:0 14px 0 10px;border-radius:8px;border:0;background:#2b1714;color:#fff;font-size:14px;font-weight:600;cursor:pointer" style-hover="background:#43231d"><span class="ms" style="font-size:18px">{{ page.ctaIcon }}</span>{{ page.cta }}</button></sc-if><sc-if value="{{ page.addRound }}" hint-placeholder-val="{{ false }}"><button onClick="{{ page.addGo }}" title="{{ page.addTip }}" aria-label="{{ page.addTip }}" style="flex:none;width:36px;height:36px;border-radius:18px;border:0;background:#2b1714;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#43231d"><span class="ms" style="font-size:20px">add</span></button></sc-if>
+</div>
+</div>
+
+<sc-if value="{{ showPATabs }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:28px;border-bottom:1px solid #e6dfd9;font-size:15px"><sc-for list="{{ paTabs }}" as="t" hint-placeholder-count="2"><span onClick="{{ t.go }}" style="padding:0 2px 10px;cursor:pointer;font-weight:{{ t.w }};color:{{ t.c }};border-bottom:2px solid {{ t.b }};display:flex;align-items:center;gap:6px">{{ t.label }}<sc-if value="{{ t.badge }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;font-weight:600;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:9px;background:#8c4a32;color:#fff;display:flex;align-items:center;justify-content:center">{{ t.badge }}</span></sc-if></span></sc-for></div></sc-if>
+
+<sc-if value="{{ stats.length }}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:#fff;border:1px solid #ebe4de;border-radius:12px">
+<sc-for list="{{ stats }}" as="st" hint-placeholder-count="3">
+<div style="padding:16px 20px;display:flex;flex-direction:column;gap:4px;border-left:{{ st.border }}"><span style="font-size:13px;color:#6b5f5a">{{ st.label }}</span><span style="font-size:22px;font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums;white-space:nowrap">{{ st.value }} <span style="font-size:14px;font-weight:400;color:#6b5f5a;letter-spacing:0">{{ st.sub }}</span></span></div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ isDash }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font-size:13px;font-weight:600;color:#6b5f5a">Your vault</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+<sc-for list="{{ areas }}" as="ar" hint-placeholder-count="6">
+<div onClick="{{ ar.go }}" style="display:flex;flex-direction:column;gap:14px;padding:16px;background:#fff;border:1px solid #ebe4de;border-radius:12px;cursor:pointer" style-hover="border-color:#d6c9c0;box-shadow:0 2px 8px rgba(43,23,20,.06)">
+<div style="display:flex;align-items:center;gap:12px">
+<div style="width:36px;height:36px;border-radius:9px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:20px">{{ ar.icon }}</span></div>
+<span style="flex:1;font-size:17px;font-weight:600">{{ ar.name }}</span><span class="ms" style="font-size:20px;color:#9a8f8a">chevron_right</span>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding-top:12px;border-top:1px solid #f3eeea"><span style="font-size:15px;font-weight:{{ ar.weight }};color:{{ ar.color }}">{{ ar.label }}</span><span style="font-size:13px;color:#6b5f5a">{{ ar.meta }}</span></div>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<div style="padding:16px 20px 8px;display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:17px;font-weight:600">Things worth your attention</span><span onClick="{{ goActions }}" style="font-size:14px;font-weight:500;color:#7a3d27;cursor:pointer">View Action Centre</span></div>
+<sc-for list="{{ topActions }}" as="ac" hint-placeholder-count="3">
+<div onClick="{{ ac.go }}" style="display:flex;align-items:center;gap:14px;padding:12px 16px 12px 20px;border-top:1px solid #f3eeea;cursor:pointer" style-hover="background:#f6efea" style-active="background:#ebe0d8">
+<span style="width:8px;height:8px;border-radius:4px;background:{{ ac.dot }};flex:none"></span>
+<div style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:15px;font-weight:600">{{ ac.title }}</span><span style="font-size:13px;color:#6b5f5a">{{ ac.desc }}</span></div>
+<span class="ms" style="font-size:20px;color:#9a8f8a">chevron_right</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ isAdd }}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px">
+<sc-for list="{{ addGroups }}" as="ag" hint-placeholder-count="4">
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<div style="padding:14px 20px 10px;font-size:13px;font-weight:600;color:#6b5f5a">{{ ag.name }}</div>
+<sc-for list="{{ ag.items }}" as="ai" hint-placeholder-count="3">
+<div onClick="{{ ai.go }}" style="display:flex;align-items:center;gap:14px;padding:12px 14px 12px 20px;border-top:1px solid #f3eeea;cursor:pointer" style-hover="background:#f6efea" style-active="background:#ebe0d8">
+<div style="width:36px;height:36px;border-radius:9px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:20px">{{ ai.icon }}</span></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:15px;font-weight:600">{{ ai.name }}</span><span style="font-size:13px;line-height:18px;color:#6b5f5a;text-wrap:pretty">{{ ai.desc }}</span></div>
+<span class="ms" style="font-size:20px;color:#9a8f8a">chevron_right</span>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ isActions }}" hint-placeholder-val="{{ false }}">
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<sc-for list="{{ actions }}" as="ac" hint-placeholder-count="5">
+<div style="display:flex;align-items:center;gap:16px;padding:16px 20px;border-bottom:1px solid #f3eeea">
+<span style="width:8px;height:8px;border-radius:4px;background:{{ ac.dot }};flex:none"></span>
+<div style="flex:1;display:flex;flex-direction:column;gap:3px;min-width:0">
+<div style="display:flex;align-items:center;gap:8px"><span style="font-size:15px;font-weight:600">{{ ac.title }}</span><sc-if value="{{ ac.isNew }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;font-weight:600;padding:2px 6px;border-radius:4px;background:#fbeee6;color:#8c4a32">New</span></sc-if></div>
+<span style="font-size:13px;line-height:18px;color:#6b5f5a;text-wrap:pretty;max-width:620px">{{ ac.desc }}</span>
+</div>
+<button onClick="{{ ac.go }}" style="flex:none;white-space:nowrap;height:32px;padding:0 12px;border-radius:8px;border:1px solid #e6dfd9;background:#fff;font-size:14px;font-weight:500;color:#2b1714;cursor:pointer" style-hover="background:#f5f1ed">{{ ac.cta }}</button>
+</div>
+</sc-for>
+<div style="display:flex;align-items:center;gap:10px;padding:14px 20px;font-size:14px;font-weight:500;color:#3a2c28;cursor:pointer" style-hover="background:#f6efea" style-active="background:#ebe0d8"><span style="flex:1">More things to consider</span><span style="font-size:13px;color:#6b5f5a">7</span><span class="ms" style="font-size:20px;color:#9a8f8a">chevron_right</span></div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isCat }}" hint-placeholder-val="{{ false }}">
+<sc-for list="{{ cat.populated }}" as="s" hint-placeholder-count="2">
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<div onClick="{{ s.go }}" style="display:flex;align-items:center;gap:14px;padding:14px 16px 14px 20px;cursor:pointer" style-hover="background:#f6efea" style-active="background:#ebe0d8">
+<div style="width:36px;height:36px;border-radius:9px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:20px">{{ s.icon }}</span></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:17px;font-weight:600">{{ s.name }}</span><span style="font-size:13px;color:#6b5f5a">{{ s.count }}</span></div>
+<span style="font-size:20px;font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums">{{ s.total }}</span>
+<button onClick="{{ s.add }}" title="Add asset" aria-label="Add asset to {{ s.name }}" style="flex:none;width:36px;height:36px;border-radius:18px;border:0;background:#2b1714;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#43231d"><span class="ms" style="font-size:20px">add</span></button>
+<span class="ms" style="font-size:22px;color:#9a8f8a;margin-left:4px">chevron_right</span>
+</div>
+<sc-for list="{{ s.records }}" as="r" hint-placeholder-count="2">
+<div onClick="{{ r.go }}" style="display:flex;align-items:center;gap:14px;height:56px;padding:0 16px 0 70px;border-top:1px solid #f3eeea;cursor:pointer" style-hover="background:#f6efea" style-active="background:#ebe0d8">
+<div style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:15px">{{ r.name }}</span><span style="font-size:13px;color:#6b5f5a">Updated {{ r.updated }}</span></div>
+<span style="font-size:15px;font-variant-numeric:tabular-nums">{{ r.amount }}</span>
+<button onClick="{{ r.doc }}" title="Add document" aria-label="Add document to {{ r.name }}" style="flex:none;width:36px;height:36px;border-radius:18px;border:1px solid #d9cfc8;background:#fff;color:#2b1714;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#f6efea"><span class="ms" style="font-size:20px">note_add</span></button>
+<span class="ms" style="font-size:20px;color:#9a8f8a">chevron_right</span>
+</div>
+</sc-for>
+</div>
+</sc-for>
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font-size:13px;font-weight:600;color:#6b5f5a">{{ cat.emptyLabel }}</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+<sc-for list="{{ cat.empties }}" as="e" hint-placeholder-count="3">
+<div onClick="{{ e.go }}" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px dashed #d9cfc8;border-radius:12px;cursor:pointer" style-hover="background:#fff;border-color:#c9bcb3">
+<div style="width:36px;height:36px;border-radius:9px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:20px">{{ e.icon }}</span></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:15px;font-weight:600">{{ e.name }}</span><span style="font-size:13px;color:#6b5f5a">{{ e.hint }}</span></div>
+<span class="ms" style="font-size:20px;color:#7a3d27">add_circle</span>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isForm }}" hint-placeholder-val="{{ false }}">
+<div style="max-width:760px;background:#fff;border:1px solid #ebe4de;border-radius:12px;display:flex;flex-direction:column">
+<div style="padding:22px 24px;display:flex;flex-direction:column;gap:18px">
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px">
+<sc-for list="{{ form.req }}" as="f" hint-placeholder-count="4"><label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600;color:#1f1715;min-width:0"><span style="display:flex;align-items:center;gap:8px">{{ f.label }}<span style="font-size:11px;font-weight:500;padding:2px 6px;border-radius:4px;background:{{ f.tagBg }};color:{{ f.tagColor }}">{{ f.tag }}</span></span><sc-if value="{{ f.isText }}" hint-placeholder-val="{{ true }}"><input placeholder="{{ f.ph }}" style="height:44px;box-sizing:border-box;padding:0 12px;border-radius:9px;border:1px solid #d9cfc8;font-size:15px;font-weight:400;color:#1f1715;background:#fff;outline:none;width:100%" style-focus="border-color:#8c4a32;box-shadow:0 0 0 3px #f3e6df"></sc-if><sc-if value="{{ f.isSelect }}" hint-placeholder-val="{{ false }}"><div style="position:relative;display:flex"><select value="{{ f.value }}" onChange="{{ f.onChange }}" style="flex:1;min-width:0;height:44px;box-sizing:border-box;padding:0 44px 0 12px;border-radius:9px;border:1px solid #d9cfc8;font-size:15px;font-weight:400;color:#1f1715;background:#fff;appearance:none;-webkit-appearance:none;outline:none;cursor:pointer" style-focus="border-color:#8c4a32;box-shadow:0 0 0 3px #f3e6df"><sc-for list="{{ f.options }}" as="o" hint-placeholder-count="0"><option value="{{ o.v }}">{{ o.v }}</option></sc-for></select><span class="ms" style="position:absolute;right:12px;top:12px;font-size:20px;color:#6b5f5a;pointer-events:none">expand_more</span></div></sc-if><sc-if value="{{ f.isMoney }}" hint-placeholder-val="{{ false }}"><div style="display:flex;height:44px;box-sizing:border-box;border-radius:9px;border:1px solid #d9cfc8;overflow:hidden;background:#fff" style-focus-within="border-color:#8c4a32"><span style="padding:0 8px 0 12px;display:flex;align-items:center;gap:2px;background:#faf8f6;border-right:1px solid #e6dfd9;font-size:15px;font-weight:500">GBP<span class="ms" style="font-size:18px;color:#6b5f5a">expand_more</span></span><input placeholder="£ 0.00" style="flex:1;min-width:0;border:0;padding:0 12px;font-size:15px;font-weight:400;outline:none;background:transparent"></div></sc-if><sc-if value="{{ f.help }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;font-weight:400;color:#6b5f5a">{{ f.help }}</span></sc-if></label></sc-for>
+</div>
+<div style="border:1px solid #ebe4de;border-radius:10px;overflow:hidden">
+<sc-for list="{{ form.groups }}" as="g" hint-placeholder-count="3">
+<div style="border-top:{{ g.bt }}">
+<div onClick="{{ g.toggle }}" style="display:flex;align-items:center;gap:10px;min-height:48px;padding:0 14px;cursor:pointer;transition:background .12s ease-out" style-hover="background:#f6efea" style-active="background:#ebe0d8"><span class="ms" style="font-size:20px;color:#6e3a28">{{ g.icon }}</span><span style="flex:1;font-size:15px;font-weight:500">{{ g.name }}</span><span style="font-size:12px;color:#6b5f5a;text-align:right">Optional · {{ g.hint }}</span><span class="ms" style="font-size:20px;color:#6b5f5a">{{ g.chev }}</span></div>
+<sc-if value="{{ g.open }}" hint-placeholder-val="{{ false }}"><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:4px 14px 16px 44px"><sc-for list="{{ g.fields }}" as="gf" hint-placeholder-count="2"><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:#3a2c28;min-width:0">{{ gf.label }}<input placeholder="{{ gf.ph }}" style="height:40px;box-sizing:border-box;padding:0 12px;border-radius:9px;border:1px solid #e6dfd9;font-size:15px;color:#1f1715;background:#fff;outline:none;width:100%" style-focus="border-color:#8c4a32;box-shadow:0 0 0 3px #f3e6df"></label></sc-for></div></sc-if>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;align-items:center;gap:12px;padding:14px;border:1px dashed #d9cfc8;border-radius:10px;cursor:pointer" style-hover="background:#f6efea"><div style="width:36px;height:36px;border-radius:18px;border:1px solid #d9cfc8;background:#fff;display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:20px">note_add</span></div><div style="flex:1;display:flex;flex-direction:column;min-width:0"><span style="font-size:14px;font-weight:500">Add documents or photos</span><span style="font-size:12px;color:#6b5f5a">Drop files or choose. PDF, DOCX, JPG, PNG, XLSX, CSV, ICS up to 15 MB.</span></div><span style="font-size:12px;color:#6b5f5a">Optional</span></div>
+</div>
+<div style="padding:14px 24px;border-top:1px solid #f0ebe7;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="flex:1;min-width:200px;font-size:13px;color:#6b5f5a;display:flex;align-items:center;gap:6px"><span class="ms" style="font-size:16px">lock</span>Stored securely. Not shared with anyone.</span><button onClick="{{ form.cancel }}" style="height:40px;padding:0 14px;border-radius:9px;border:1px solid #e6dfd9;background:#fff;font-size:14px;font-weight:500;color:#2b1714;cursor:pointer" style-hover="background:#f6efea">Cancel</button><button onClick="{{ form.cancel }}" style="height:40px;padding:0 18px;border-radius:9px;border:0;background:#2b1714;color:#fff;font-size:14px;font-weight:600;cursor:pointer" style-hover="background:#43231d">Save record</button></div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSection }}" hint-placeholder-val="{{ false }}">
+<sc-if value="{{ sec.hasRecords }}" hint-placeholder-val="{{ true }}">
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<sc-for list="{{ sec.records }}" as="r" hint-placeholder-count="2">
+<div onClick="{{ r.go }}" style="display:flex;align-items:center;gap:14px;height:64px;padding:0 16px 0 20px;border-bottom:1px solid #f3eeea;cursor:pointer" style-hover="background:#f6efea" style-active="background:#ebe0d8">
+<div style="width:36px;height:36px;border-radius:9px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:20px">{{ sec.icon }}</span></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:15px;font-weight:600">{{ r.name }}</span><span style="font-size:13px;color:#6b5f5a">Updated {{ r.updated }}</span></div>
+<span style="font-size:15px;font-variant-numeric:tabular-nums">{{ r.amount }}</span>
+<button onClick="{{ r.doc }}" title="Add document" aria-label="Add document to {{ r.name }}" style="flex:none;width:36px;height:36px;border-radius:18px;border:1px solid #d9cfc8;background:#fff;color:#2b1714;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#f6efea"><span class="ms" style="font-size:20px">note_add</span></button>
+<span class="ms" style="font-size:20px;color:#9a8f8a">chevron_right</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ sec.isEmpty }}" hint-placeholder-val="{{ false }}">
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;padding:40px 24px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center">
+<div style="width:48px;height:48px;border-radius:12px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:24px">{{ sec.icon }}</span></div>
+<span style="font-size:17px;font-weight:600">Nothing in {{ sec.name }} yet</span>
+<span style="font-size:14px;color:#6b5f5a">{{ sec.hint }}. Add a simple record now and fill in details later.</span>
+<button onClick="{{ sec.add }}" style="margin-top:8px;display:flex;align-items:center;gap:10px;border:0;background:transparent;cursor:pointer;font-size:15px;font-weight:600;color:#2b1714;padding:4px 10px 4px 4px;border-radius:22px" style-hover="background:#f6efea"><span style="width:36px;height:36px;border-radius:18px;background:#2b1714;color:#fff;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px">add</span></span>Add first record</button>
+</div>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{ isRecord }}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;align-items:start">
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<div style="padding:14px 20px;font-size:17px;font-weight:600">Details</div>
+<sc-for list="{{ rec.facts }}" as="f" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:12px;min-height:48px;padding:0 20px;border-top:1px solid #f3eeea;font-size:15px"><span style="width:160px;color:#6b5f5a">{{ f.label }}</span><span style="flex:1;color:{{ f.color }};font-variant-numeric:tabular-nums">{{ f.value }}</span><sc-if value="{{ f.missing }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px;font-weight:500;color:#7a3d27;cursor:pointer">Add</span></sc-if></div>
+</sc-for>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;gap:8px"><span class="ms" style="font-size:20px;color:#6e3a28">attach_file</span><span style="flex:1;font-size:15px;font-weight:600">Documents</span><button title="Add document" aria-label="Add document" style="flex:none;width:36px;height:36px;border-radius:18px;border:1px solid #d9cfc8;background:#fff;color:#2b1714;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#f6efea"><span class="ms" style="font-size:20px">note_add</span></button></div>
+<span style="font-size:13px;color:#6b5f5a">No documents attached. Statements or letters help your executor find this account.</span>
+</div>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;gap:8px"><span class="ms" style="font-size:20px;color:#6e3a28">visibility</span><span style="flex:1;font-size:15px;font-weight:600">Shared with</span></div>
+<span style="font-size:13px;color:#6b5f5a">{{ rec.sharedText }}</span>
+<span onClick="{{ goPeople }}" style="font-size:14px;font-weight:500;color:#7a3d27;cursor:pointer">Manage in People &amp; Access</span>
+</div>
+<span style="font-size:14px;font-weight:500;color:#b3261e;cursor:pointer;padding:0 4px">Delete record</span>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isPeople }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;align-items:center;gap:12px">
+<div style="display:flex;align-items:center;gap:8px;height:38px;padding:0 12px;flex:1;max-width:420px;background:#fff;border:1px solid #e6dfd9;border-radius:9px"><span class="ms" style="font-size:18px;color:#6b5f5a">search</span><input value="{{ pq }}" onChange="{{ onPq }}" placeholder="Search name, email or role" style="flex:1;border:0;outline:0;font-size:14px;background:transparent;color:#1f1715"></div>
+<div style="flex:1"></div>
+<button onClick="{{ goAccess }}" style="height:36px;padding:0 12px;border-radius:8px;border:1px solid #e6dfd9;background:#fff;font-size:14px;font-weight:500;color:#2b1714;cursor:pointer;display:flex;align-items:center;gap:6px" style-hover="background:#f5f1ed"><span class="ms" style="font-size:18px">key</span>Access &amp; sharing</button>
+</div>
+<sc-for list="{{ people }}" as="pg" hint-placeholder-count="2">
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:#6b5f5a">{{ pg.name }}<span style="font-size:12px;padding:1px 7px;border-radius:9px;background:#efe8e3;color:#3a2c28">{{ pg.count }}</span></div>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<sc-for list="{{ pg.list }}" as="pp" hint-placeholder-count="1">
+<div onClick="{{ pp.open }}" style="display:flex;align-items:center;gap:14px;padding:14px 16px 14px 20px;cursor:pointer" style-hover="background:#f6efea" style-active="background:#ebe0d8">
+<div style="width:40px;height:40px;border-radius:20px;background:#e8dcd4;color:#2b1714;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">{{ pp.initials }}</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:600">{{ pp.name }}</span><span style="font-size:13px;color:#6b5f5a">{{ pp.role }} · {{ pp.accessLabel }}</span></div>
+<span style="font-size:12px;font-weight:500;padding:4px 8px;border-radius:6px;background:{{ pp.chipBg }};color:{{ pp.chipColor }};white-space:nowrap;display:flex;align-items:center;gap:4px"><span class="ms" style="font-size:14px">{{ pp.chipIcon }}</span>{{ pp.status }}</span>
+<sc-if value="{{ pp.action }}" hint-placeholder-val="{{ false }}"><button onClick="{{ pp.send }}" title="Send invitation" style="width:36px;height:36px;border-radius:18px;border:0;background:#2b1714;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none" style-hover="background:#43231d"><span class="ms" style="font-size:18px;margin-left:2px">send</span></button></sc-if>
+<button onClick="{{ pp.open }}" title="Edit" style="width:36px;height:36px;border-radius:18px;border:1px solid #e6dfd9;background:#fff;color:#3a2c28;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none" style-hover="background:#f5f1ed"><span class="ms" style="font-size:18px">edit</span></button>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+<sc-if value="{{ noPeople }}" hint-placeholder-val="{{ false }}"><div style="padding:24px;text-align:center;font-size:14px;color:#6b5f5a">No one matches “{{ pq }}”.</div></sc-if>
+</sc-if>
+
+<sc-if value="{{ isAccess }}" hint-placeholder-val="{{ false }}">
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<div onClick="{{ toggleHow }}" style="display:flex;align-items:center;gap:12px;padding:14px 20px;cursor:pointer" style-hover="background:#f6efea" style-active="background:#ebe0d8"><span class="ms" style="font-size:20px;color:#6e3a28">info</span><span style="flex:1;font-size:15px;font-weight:600">How access requests work</span><span class="ms" style="font-size:22px;color:#6b5f5a">{{ howChev }}</span></div>
+<sc-if value="{{ howOpen }}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;padding:4px 20px 20px 52px">
+<div style="font-size:13px;line-height:19px;color:#3a2c28"><b style="display:block;font-size:13px;margin-bottom:2px">1. Someone asks</b>A trusted person requests more access than you’ve given them.</div>
+<div style="font-size:13px;line-height:19px;color:#3a2c28"><b style="display:block;font-size:13px;margin-bottom:2px">2. You decide</b>Approve or decline the request on this page.</div>
+<div style="font-size:13px;line-height:19px;color:#3a2c28"><b style="display:block;font-size:13px;margin-bottom:2px">3. Manage later</b>Ongoing permissions live in People & Access.</div>
+</div>
+</sc-if>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font-size:13px;font-weight:600;color:#6b5f5a">Awaiting your decision</div>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;padding:36px 24px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center">
+<div style="width:48px;height:48px;border-radius:24px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:24px">inbox</span></div>
+<span style="font-size:17px;font-weight:600">No requests waiting</span>
+<span style="font-size:14px;line-height:20px;color:#6b5f5a;max-width:440px;text-wrap:pretty">When someone asks for more access, their name, email, the access they’ve requested and your decision will appear here.</span>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px">
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:8px;align-items:flex-start">
+<span class="ms" style="font-size:22px;color:#6e3a28">group</span>
+<span style="font-size:17px;font-weight:600">Current access</span>
+<span style="font-size:14px;line-height:20px;color:#6b5f5a;text-wrap:pretty">See everyone you’ve invited or stored, update their details, and choose exactly which areas they can view or edit.</span>
+<button onClick="{{ goPeople }}" style="margin-top:6px;height:34px;padding:0 12px;border-radius:8px;border:1px solid #e6dfd9;background:#fff;font-size:14px;font-weight:500;color:#2b1714;cursor:pointer" style-hover="background:#f5f1ed">Manage people and permissions</button>
+</div>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:8px">
+<span class="ms" style="font-size:22px;color:#6e3a28">policy</span>
+<span style="font-size:17px;font-weight:600">Death certificate escalation</span>
+<span style="font-size:14px;line-height:20px;color:#6b5f5a;text-wrap:pretty">You don’t submit or approve death certificate evidence for your own vault. If an invited executor or attorney needs post-death access, they submit evidence from their linked view and administrators review it.</span>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSupport }}" hint-placeholder-val="{{ false }}">
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<div style="padding:16px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #f3eeea"><span class="ms" style="font-size:20px;color:#6e3a28">chat</span><span style="font-size:17px;font-weight:600;flex:1">Help assistant</span><span style="font-size:13px;color:#6b5f5a">Instant answers about using the app</span></div>
+<div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px;background:#fcfaf8;max-height:260px;overflow:auto">
+<sc-for list="{{ msgs }}" as="m" hint-placeholder-count="1">
+<sc-if value="{{ m.isUser }}" hint-placeholder-val="{{ false }}"><div style="align-self:flex-end;max-width:70%;padding:10px 14px;border-radius:16px 16px 4px 16px;background:#2b1714;color:#fff;font-size:15px;line-height:21px">{{ m.text }}</div></sc-if>
+<sc-if value="{{ m.isBot }}" hint-placeholder-val="{{ true }}"><div style="align-self:flex-start;max-width:70%;padding:10px 14px;border-radius:16px 16px 16px 4px;background:#fff;border:1px solid #ebe4de;font-size:15px;line-height:21px">{{ m.text }}</div></sc-if>
+</sc-for>
+</div>
+<div style="padding:12px 20px 0;display:flex;flex-wrap:wrap;gap:8px">
+<sc-for list="{{ chips }}" as="c" hint-placeholder-count="3">
+<button onClick="{{ c.ask }}" style="height:30px;padding:0 12px;border-radius:15px;border:1px solid #e6dfd9;background:#fff;font-size:13px;color:#3a2c28;cursor:pointer" style-hover="background:#f5f1ed">{{ c.label }}</button>
+</sc-for>
+</div>
+<div style="padding:12px 20px 20px;display:flex;gap:8px">
+<input value="{{ q }}" onChange="{{ onQ }}" onKeyDown="{{ onQKey }}" placeholder="Ask a support question" style="flex:1;height:40px;padding:0 14px;border-radius:9px;border:1px solid #e6dfd9;font-size:15px;outline:0;color:#1f1715" style-focus="border-color:#8c4a32">
+<button onClick="{{ onAsk }}" style="height:40px;padding:0 16px;border-radius:9px;border:0;background:#2b1714;color:#fff;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px" style-hover="background:#43231d"><span class="ms" style="font-size:18px">send</span>Ask</button>
+</div>
+</div>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:17px;font-weight:600">Contact support</span><span style="font-size:14px;color:#6b5f5a">Still need a person? Send a request and we’ll track it in your support workspace.</span></div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px">
+<label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:#3a2c28">Request type<select style="height:40px;padding:0 10px;border-radius:9px;border:1px solid #e6dfd9;font-size:15px;background:#fff;color:#1f1715"><option>Report a problem</option><option>Request a callback</option><option>Give feedback</option></select></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:#3a2c28">Subject<input placeholder="Short summary" style="height:40px;padding:0 12px;border-radius:9px;border:1px solid #e6dfd9;font-size:15px;outline:0" style-focus="border-color:#8c4a32"></label>
+</div>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:#3a2c28">Message<textarea placeholder="Describe the problem, callback request or feedback" style="height:96px;padding:10px 12px;border-radius:9px;border:1px solid #e6dfd9;font-size:15px;resize:vertical;outline:0" style-focus="border-color:#8c4a32"></textarea></label>
+<div style="display:flex;gap:8px"><button style="height:36px;padding:0 14px;border-radius:8px;border:0;background:#2b1714;color:#fff;font-size:14px;font-weight:600;cursor:pointer" style-hover="background:#43231d">Send request</button><button style="height:36px;padding:0 12px;border-radius:8px;border:0;background:transparent;font-size:14px;font-weight:500;color:#7a3d27;cursor:pointer" style-hover="background:#f5f1ed">Clear</button></div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<div style="display:flex;gap:18px;padding:20px">
+<div style="width:64px;height:64px;border-radius:32px;background:#d9cbc2;color:#2b1714;font-size:22px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">IY</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:4px">
+<span style="font-size:20px;font-weight:600">Ivan Yardley</span>
+<span style="font-size:14px;color:#6b5f5a">ivanyardley@me.com · 33 Knighton Road, Sutton Coldfield, B74 4NX</span>
+<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+<span style="font-size:12px;font-weight:500;padding:4px 8px;border-radius:6px;background:#e9f3ec;color:#225c3a;display:flex;align-items:center;gap:4px"><span class="ms" style="font-size:14px">check_circle</span>Ready for trusted review</span>
+<span style="font-size:12px;font-weight:500;padding:4px 8px;border-radius:6px;background:#f3eeea;color:#3a2c28">Identity saved</span>
+<span style="font-size:12px;font-weight:500;padding:4px 8px;border-radius:6px;background:#f3eeea;color:#3a2c28">Contact saved</span>
+<span style="font-size:12px;font-weight:500;padding:4px 8px;border-radius:6px;background:#f3eeea;color:#3a2c28">Address saved</span>
+</div>
+</div>
+<button style="align-self:flex-start;height:34px;padding:0 12px;border-radius:8px;border:1px solid #e6dfd9;background:#fff;font-size:14px;font-weight:500;color:#2b1714;cursor:pointer;display:flex;align-items:center;gap:6px" style-hover="background:#f5f1ed"><span class="ms" style="font-size:18px">edit</span>Edit profile</button>
+</div>
+<sc-for list="{{ details }}" as="d" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:12px;height:48px;padding:0 20px;border-top:1px solid #f3eeea;font-size:15px"><span style="width:200px;color:#6b5f5a">{{ d.label }}</span><span style="flex:1;color:{{ d.color }}">{{ d.value }}</span><sc-if value="{{ d.missing }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px;font-weight:500;color:#7a3d27;cursor:pointer">Add</span></sc-if></div>
+</sc-for>
+</div>
+<sc-for list="{{ settingGroups }}" as="sg" hint-placeholder-count="3">
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font-size:13px;font-weight:600;color:#6b5f5a">{{ sg.name }}</div>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<sc-for list="{{ sg.rows }}" as="sr" hint-placeholder-count="2">
+<div onClick="{{ sr.go }}" style="display:flex;align-items:center;gap:14px;padding:12px 14px 12px 20px;border-bottom:1px solid #f3eeea;cursor:pointer" style-hover="background:#f6efea" style-active="background:#ebe0d8">
+<div style="width:32px;height:32px;border-radius:8px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:18px">{{ sr.icon }}</span></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:15px;font-weight:500">{{ sr.name }}</span><span style="font-size:13px;color:#6b5f5a">{{ sr.desc }}</span></div>
+<span class="ms" style="font-size:20px;color:#9a8f8a">chevron_right</span>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</sc-if>
+
+<sc-if value="{{ isMyVault }}" hint-placeholder-val="{{ false }}">
+<div style="font-size:13px;font-weight:600;color:#6b5f5a">{{ shownLabel }}</div>
+<sc-for list="{{ vaultAreas }}" as="va" hint-placeholder-count="4">
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<div onClick="{{ va.toggle }}" style="display:flex;align-items:center;gap:14px;padding:14px 20px;cursor:pointer">
+<div style="width:36px;height:36px;border-radius:9px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center;flex:none;opacity:{{ va.op }}"><span class="ms" style="font-size:20px">{{ va.icon }}</span></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:1px;opacity:{{ va.op }}"><span style="font-size:15px;font-weight:600">{{ va.name }}</span><span style="font-size:13px;color:#6b5f5a">{{ va.desc }}</span></div>
+<div style="width:42px;height:26px;border-radius:13px;background:{{ va.track }};padding:2px;box-sizing:border-box;display:flex;justify-content:{{ va.justify }};transition:background .15s"><div style="width:22px;height:22px;border-radius:11px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25)"></div></div>
+</div>
+<sc-if value="{{ va.showSubs }}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:24px;padding:0 20px 8px 70px;border-top:1px solid #f3eeea">
+<sc-for list="{{ va.subs }}" as="sb" hint-placeholder-count="2">
+<div onClick="{{ sb.toggle }}" style="display:flex;align-items:center;gap:10px;height:44px;border-bottom:1px solid #f7f3f0;cursor:pointer"><span style="flex:1;font-size:14px;color:{{ sb.color }}">{{ sb.name }}</span><div style="width:34px;height:20px;border-radius:10px;background:{{ sb.track }};padding:2px;box-sizing:border-box;display:flex;justify-content:{{ sb.justify }}"><div style="width:16px;height:16px;border-radius:8px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25)"></div></div></div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</sc-for>
+<div style="position:sticky;bottom:-56px;margin:0 -8px;padding:14px 8px 20px;background:linear-gradient(rgba(250,248,246,0),#faf8f6 30%);display:flex;align-items:center;gap:10px">
+<button onClick="{{ saveVault }}" style="height:38px;padding:0 16px;border-radius:8px;border:0;background:{{ saveBg }};color:#fff;font-size:14px;font-weight:600;cursor:pointer">Save changes</button>
+<button onClick="{{ resetVault }}" style="height:38px;padding:0 12px;border-radius:8px;border:1px solid #e6dfd9;background:#fff;font-size:14px;font-weight:500;color:#2b1714;cursor:pointer" style-hover="background:#f5f1ed">Reset</button>
+<span style="font-size:13px;color:#6b5f5a">{{ vaultStatus }}</span>
+</div>
+</sc-if>
+
+</div>
+</div>
+
+<sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ closeDrawer }}" style="position:absolute;inset:0;background:rgba(31,23,21,.24);z-index:20"></div>
+<div style="position:absolute;top:0;right:0;bottom:0;width:448px;background:#fff;z-index:21;box-shadow:-12px 0 40px rgba(31,23,21,.14);display:flex;flex-direction:column">
+
+<sc-if value="{{ dDetail }}" hint-placeholder-val="{{ true }}">
+<div style="flex:none;display:flex;align-items:center;gap:14px;padding:20px 20px 16px;border-bottom:1px solid #f3eeea">
+<div style="width:48px;height:48px;border-radius:24px;background:#e8dcd4;font-size:17px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">{{ dp.initials }}</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:20px;font-weight:600">{{ dp.name }}</span><span style="font-size:14px;color:#6b5f5a">{{ dp.role }}</span></div>
+<button onClick="{{ closeDrawer }}" title="Close" style="width:36px;height:36px;border-radius:18px;border:0;background:#f3eeea;color:#3a2c28;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#ebe4de"><span class="ms" style="font-size:20px">close</span></button>
+</div>
+<div style="flex:1;overflow:auto;padding:20px;display:flex;flex-direction:column;gap:22px">
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;font-weight:600;color:#6b5f5a">Invitation</span><span style="font-size:12px;font-weight:500;padding:4px 8px;border-radius:6px;background:{{ dp.chipBg }};color:{{ dp.chipColor }}">{{ dp.stageLabel }}</span></div>
+<div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px">
+<sc-for list="{{ dp.steps }}" as="stp" hint-placeholder-count="5">
+<div style="display:flex;flex-direction:column;gap:6px"><div style="height:4px;border-radius:2px;background:{{ stp.bar }}"></div><span style="font-size:12px;color:{{ stp.color }};font-weight:{{ stp.weight }}">{{ stp.label }}</span></div>
+</sc-for>
+</div>
+</div>
+<div style="border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<sc-for list="{{ dp.facts }}" as="f" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:12px;min-height:46px;padding:0 16px;border-bottom:1px solid #f3eeea;font-size:14px"><span style="width:110px;color:#6b5f5a">{{ f.label }}</span><span style="flex:1;color:{{ f.color }}">{{ f.value }}</span><sc-if value="{{ f.missing }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px;font-weight:500;color:#7a3d27;cursor:pointer">Add</span></sc-if></div>
+</sc-for>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<span style="font-size:13px;font-weight:600;color:#6b5f5a">Vault access</span>
+<div style="border:1px solid #ebe4de;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:12px">
+<div style="width:36px;height:36px;border-radius:9px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:20px">{{ dp.accessIcon }}</span></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:15px;font-weight:600">{{ dp.accessTitle }}</span><span style="font-size:13px;line-height:18px;color:#6b5f5a">{{ dp.accessDesc }}</span></div>
+</div>
+<sc-if value="{{ dp.hasAccess }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ dp.areaChips }}" as="ch" hint-placeholder-count="2"><span style="font-size:12px;font-weight:500;padding:4px 8px;border-radius:6px;background:#f3eeea;color:#3a2c28">{{ ch }}</span></sc-for></div></sc-if>
+<button onClick="{{ openAccess }}" style="height:38px;border-radius:9px;border:{{ dp.accessBtnBorder }};background:{{ dp.accessBtnBg }};color:{{ dp.accessBtnColor }};font-size:14px;font-weight:600;cursor:pointer">{{ dp.accessBtn }}</button>
+</div>
+</div>
+<div style="border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<sc-for list="{{ dp.more }}" as="mo" hint-placeholder-count="3">
+<div onClick="{{ mo.go }}" style="display:flex;align-items:center;gap:12px;height:46px;padding:0 16px;border-bottom:1px solid #f3eeea;font-size:14px;color:{{ mo.color }};cursor:pointer" style-hover="background:#f6efea" style-active="background:#ebe0d8"><span class="ms" style="font-size:20px">{{ mo.icon }}</span><span style="flex:1">{{ mo.label }}</span></div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ dAccess }}" hint-placeholder-val="{{ false }}">
+<div style="flex:none;padding:16px 20px;border-bottom:1px solid #f3eeea;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center"><div onClick="{{ backDetail }}" style="display:flex;align-items:center;gap:2px;font-size:14px;color:#7a3d27;cursor:pointer;margin-left:-6px"><span class="ms" style="font-size:20px">chevron_left</span>{{ dp.name }}</div><div style="flex:1"></div><button onClick="{{ closeDrawer }}" title="Close" style="width:36px;height:36px;border-radius:18px;border:0;background:#f3eeea;color:#3a2c28;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px">close</span></button></div>
+<div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:20px;font-weight:600">Choose what {{ dp.first }} can see</span><span style="font-size:14px;line-height:20px;color:#6b5f5a;text-wrap:pretty">Access is view only. New records aren’t shared automatically.</span></div>
+</div>
+<div style="flex:1;overflow:auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px">
+<span style="font-size:13px;font-weight:600;color:#6b5f5a">{{ draftLabel }}</span>
+<sc-for list="{{ accessAreas }}" as="aa" hint-placeholder-count="4">
+<div style="border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;padding:12px 14px">
+<div style="width:32px;height:32px;border-radius:8px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center;flex:none;opacity:{{ aa.op }}"><span class="ms" style="font-size:18px">{{ aa.icon }}</span></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:1px;opacity:{{ aa.op }}"><span style="font-size:15px;font-weight:600">{{ aa.name }}</span><span style="font-size:13px;color:#6b5f5a">{{ aa.countLabel }}</span></div>
+<sc-if value="{{ aa.hasRecords }}" hint-placeholder-val="{{ true }}"><div onClick="{{ aa.toggleAll }}" title="Share all" style="width:42px;height:26px;border-radius:13px;background:{{ aa.track }};padding:2px;box-sizing:border-box;display:flex;justify-content:{{ aa.justify }};cursor:pointer;flex:none"><div style="width:22px;height:22px;border-radius:11px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25)"></div></div></sc-if>
+</div>
+<sc-for list="{{ aa.records }}" as="rc" hint-placeholder-count="0">
+<div onClick="{{ rc.toggle }}" style="display:flex;align-items:center;gap:12px;min-height:46px;padding:0 14px 0 58px;border-top:1px solid #f3eeea;cursor:pointer" style-hover="background:#f6efea" style-active="background:#ebe0d8">
+<div style="width:20px;height:20px;border-radius:6px;border:{{ rc.boxBorder }};background:{{ rc.boxBg }};box-sizing:border-box;display:flex;align-items:center;justify-content:center;color:#fff;flex:none"><sc-if value="{{ rc.on }}" hint-placeholder-val="{{ false }}"><span class="ms" style="font-size:16px;font-variation-settings:'wght' 600">check</span></sc-if></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:14px">{{ rc.name }}</span><span style="font-size:12px;color:#6b5f5a">{{ rc.meta }}</span></div>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+<div style="flex:none;padding:14px 20px 18px;border-top:1px solid #f3eeea;display:flex;align-items:center;gap:8px">
+<button onClick="{{ saveAccess }}" style="height:38px;padding:0 16px;border-radius:8px;border:0;background:{{ accSaveBg }};color:#fff;font-size:14px;font-weight:600;cursor:pointer">Save access</button>
+<button onClick="{{ backDetail }}" style="height:38px;padding:0 12px;border-radius:8px;border:1px solid #e6dfd9;background:#fff;font-size:14px;font-weight:500;color:#2b1714;cursor:pointer">Cancel</button>
+<div style="flex:1"></div>
+<sc-if value="{{ draftAny }}" hint-placeholder-val="{{ false }}"><span onClick="{{ clearDraft }}" style="font-size:14px;font-weight:500;color:#b3261e;cursor:pointer">Remove all</span></sc-if>
+</div>
+</sc-if>
+
+</div>
+</sc-if>
+</main>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="2b"><div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a>iPhone prototype. Tabs work; tap a vault area or + to push a screen.</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+<div style="padding:56px 0 0;min-height:100%;box-sizing:border-box;display:flex;flex-direction:column;background:#f6f3f0;font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#1f1715">
+
+<div style="display:flex;align-items:center;gap:8px;padding:4px 16px 0;height:48px">
+<sc-if value="{{ mPushed }}" hint-placeholder-val="{{ false }}"><div onClick="{{ mBack }}" style="height:44px;padding:0 14px 0 8px;border-radius:22px;background:rgba(255,255,255,.9);box-shadow:0 1px 2px rgba(0,0,0,.08);display:flex;align-items:center;gap:2px;color:#2b1714;font-size:17px;cursor:pointer"><span class="ms" style="font-size:24px">chevron_left</span>Back</div></sc-if>
+<div style="flex:1"></div>
+<sc-if value="{{ mHome }}" hint-placeholder-val="{{ true }}"><div onClick="{{ mToggleNotif }}" style="width:44px;height:44px;border-radius:22px;background:rgba(255,255,255,.9);box-shadow:0 1px 2px rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center;color:#2b1714;cursor:pointer;position:relative"><span class="ms" style="font-size:24px">notifications</span><span style="position:absolute;top:9px;right:10px;width:9px;height:9px;border-radius:5px;background:#8c4a32;border:2px solid #fff"></span></div><div onClick="{{ mGoAdd }}" style="width:44px;height:44px;border-radius:22px;background:#2b1714;display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer"><span class="ms" style="font-size:24px">add</span></div></sc-if>
+</div>
+<div style="padding:2px 20px 16px"><div style="font-size:34px;line-height:41px;font-weight:700;letter-spacing:.01em">{{ mTitle }}</div><sc-if value="{{ mDesc }}" hint-placeholder-val="{{ false }}"><div style="font-size:15px;line-height:20px;color:#6b5f5a;margin-top:4px;text-wrap:pretty">{{ mDesc }}</div></sc-if></div>
+
+<sc-if value="{{ mHome }}" hint-placeholder-val="{{ true }}">
+<div style="margin:0 16px 16px;padding:18px 18px 16px;background:#2b1714;color:#fff;border-radius:20px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;color:#e6d8d0">Total recorded value</span><span style="font-size:34px;line-height:40px;font-weight:700;letter-spacing:-.01em;font-variant-numeric:tabular-nums">£652,590.00</span><span style="font-size:13px;color:#e6d8d0">Updated 17 Jul 2026</span></div>
+<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px"><div style="width:79.7%;background:#e9c9b6"></div><div style="width:20.3%;background:#b7795c"></div></div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;align-items:center;gap:8px;font-size:15px"><span style="width:8px;height:8px;border-radius:4px;background:#e9c9b6"></span><span style="flex:1">Pensions</span><span style="font-variant-numeric:tabular-nums">£520,345.00</span></div>
+<div style="display:flex;align-items:center;gap:8px;font-size:15px"><span style="width:8px;height:8px;border-radius:4px;background:#b7795c"></span><span style="flex:1">Banks</span><span style="font-variant-numeric:tabular-nums">£132,245.00</span></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);padding-top:12px;border-top:1px solid rgba(255,255,255,.14)">
+<div style="display:flex;flex-direction:column"><span style="font-size:20px;font-weight:600">{{ totalRecords }}</span><span style="font-size:12px;color:#e6d8d0">Records</span></div>
+<div style="display:flex;flex-direction:column"><span style="font-size:20px;font-weight:600">2</span><span style="font-size:12px;color:#e6d8d0">People</span></div>
+<div style="display:flex;flex-direction:column"><span style="font-size:20px;font-weight:600">£0.00</span><span style="font-size:12px;color:#e6d8d0">Debts</span></div>
+</div>
+</div>
+<div style="margin:0 16px 24px;background:#fff;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;font-weight:600;color:#8c4a32">Next step</span><span style="font-size:13px;color:#6b5f5a">{{ mStepLabel }}</span><div style="flex:1"></div><span onClick="{{ mGoActions }}" style="font-size:15px;color:#7a3d27;cursor:pointer">See all</span></div>
+<div style="display:flex;flex-direction:column;gap:3px;min-height:64px"><span style="font-size:17px;font-weight:600">{{ mStep.title }}</span><span style="font-size:15px;line-height:20px;color:#6b5f5a;text-wrap:pretty">{{ mStep.desc }}</span></div>
+<div style="display:flex;align-items:center;gap:8px">
+<div style="flex:none;white-space:nowrap;height:40px;padding:0 16px;border-radius:20px;background:#2b1714;color:#fff;font-size:15px;font-weight:600;display:flex;align-items:center">{{ mStep.cta }}</div>
+<div onClick="{{ mNextStep }}" style="flex:none;white-space:nowrap;height:40px;padding:0 10px;border-radius:20px;color:#7a3d27;font-size:15px;display:flex;align-items:center;cursor:pointer">Not now</div>
+<div style="flex:1;min-width:0"></div>
+<sc-for list="{{ mDots }}" as="d" hint-placeholder-count="5"><span style="width:6px;height:6px;border-radius:3px;flex:none;background:{{ d.c }}"></span></sc-for>
+</div>
+</div>
+<div style="padding:0 36px 7px;font-size:13px;color:#6b5f5a;text-transform:uppercase;letter-spacing:.02em">Your vault</div>
+<div style="margin:0 16px 24px;background:#fff;border-radius:12px;overflow:hidden">
+<sc-for list="{{ areas }}" as="ar" hint-placeholder-count="6">
+<div onClick="{{ ar.mgo }}" style="display:flex;align-items:center;gap:12px;min-height:48px;padding:0 14px 0 16px;border-bottom:.5px solid #ebe4de;cursor:pointer">
+<div style="width:30px;height:30px;border-radius:7px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px">{{ ar.icon }}</span></div>
+<span style="flex:1;font-size:17px">{{ ar.name }}</span><span style="font-size:17px;color:#6b5f5a">{{ ar.short }}</span>
+<span class="ms" style="font-size:20px;color:#b3a9a4">chevron_right</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ mCatOn }}" hint-placeholder-val="{{ false }}">
+<sc-for list="{{ mCat.populated }}" as="s" hint-placeholder-count="1">
+<div style="display:flex;justify-content:space-between;padding:0 36px 7px;font-size:13px;color:#6b5f5a"><span style="text-transform:uppercase;letter-spacing:.02em">{{ s.name }}</span><span style="font-variant-numeric:tabular-nums">{{ s.total }}</span></div>
+<div style="margin:0 16px 24px;background:#fff;border-radius:12px;overflow:hidden">
+<sc-for list="{{ s.records }}" as="r" hint-placeholder-count="2">
+<div style="display:flex;align-items:center;gap:12px;min-height:56px;padding:0 14px 0 16px;border-bottom:.5px solid #ebe4de">
+<div style="width:30px;height:30px;border-radius:7px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px">{{ s.icon }}</span></div>
+<div style="flex:1;display:flex;flex-direction:column"><span style="font-size:17px">{{ r.name }}</span><span style="font-size:13px;color:#6b5f5a">{{ r.updated }}</span></div>
+<span style="font-size:17px;color:#3a2c28;font-variant-numeric:tabular-nums">{{ r.amount }}</span>
+<span class="ms" style="font-size:20px;color:#b3a9a4">chevron_right</span>
+</div>
+</sc-for>
+</div>
+</sc-for>
+<div style="padding:0 36px 7px;font-size:13px;color:#6b5f5a;text-transform:uppercase;letter-spacing:.02em">{{ mCat.emptyLabel }}</div>
+<div style="margin:0 16px 24px;background:#fff;border-radius:12px;overflow:hidden">
+<sc-for list="{{ mCat.empties }}" as="e" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:12px;min-height:48px;padding:0 16px;border-bottom:.5px solid #ebe4de">
+<div style="width:30px;height:30px;border-radius:7px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px">{{ e.icon }}</span></div>
+<span style="flex:1;font-size:17px">{{ e.name }}</span><span style="font-size:17px;color:#7a3d27">Add</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ mAdd }}" hint-placeholder-val="{{ false }}">
+<sc-for list="{{ addGroups }}" as="ag" hint-placeholder-count="4">
+<div style="padding:0 36px 7px;font-size:13px;color:#6b5f5a;text-transform:uppercase;letter-spacing:.02em">{{ ag.name }}</div>
+<div style="margin:0 16px 24px;background:#fff;border-radius:12px;overflow:hidden">
+<sc-for list="{{ ag.items }}" as="ai" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:12px;min-height:60px;padding:0 14px 0 16px;border-bottom:.5px solid #ebe4de">
+<div style="width:30px;height:30px;border-radius:7px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:18px">{{ ai.icon }}</span></div>
+<div style="flex:1;display:flex;flex-direction:column;min-width:0"><span style="font-size:17px">{{ ai.name }}</span><span style="font-size:13px;color:#6b5f5a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ ai.desc }}</span></div>
+<span class="ms" style="font-size:20px;color:#b3a9a4">chevron_right</span>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</sc-if>
+
+<sc-if value="{{ mActions }}" hint-placeholder-val="{{ false }}">
+<div style="margin:0 16px 24px;background:#fff;border-radius:12px;overflow:hidden">
+<sc-for list="{{ actions }}" as="ac" hint-placeholder-count="5">
+<div style="display:flex;gap:12px;padding:12px 16px;border-bottom:.5px solid #ebe4de">
+<span style="width:8px;height:8px;border-radius:4px;background:{{ ac.dot }};flex:none;margin-top:7px"></span>
+<div style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:17px;font-weight:600">{{ ac.title }}</span><span style="font-size:15px;line-height:20px;color:#6b5f5a;text-wrap:pretty">{{ ac.desc }}</span><span style="font-size:15px;color:#7a3d27;margin-top:6px">{{ ac.cta }}</span></div>
+</div>
+</sc-for>
+<div style="display:flex;align-items:center;gap:12px;min-height:48px;padding:0 14px 0 16px"><span style="flex:1;font-size:17px">More things to consider</span><span style="font-size:17px;color:#6b5f5a">7</span><span class="ms" style="font-size:20px;color:#b3a9a4">chevron_right</span></div>
+</div>
+</sc-if>
+
+<sc-if value="{{ mPeople }}" hint-placeholder-val="{{ false }}">
+<div style="margin:0 16px 20px;display:grid;grid-template-columns:1fr 1fr;padding:2px;border-radius:9px;background:#e9e3de">
+<div onClick="{{ mSegP }}" style="height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;background:{{ segPBg }};box-shadow:{{ segPShadow }};cursor:pointer">People</div>
+<div onClick="{{ mSegR }}" style="height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;background:{{ segRBg }};box-shadow:{{ segRShadow }};cursor:pointer">Requests</div>
+</div>
+<sc-if value="{{ segPeople }}" hint-placeholder-val="{{ true }}">
+<sc-for list="{{ people }}" as="pg" hint-placeholder-count="2">
+<div style="padding:0 36px 7px;font-size:13px;color:#6b5f5a;text-transform:uppercase;letter-spacing:.02em">{{ pg.name }}</div>
+<div style="margin:0 16px 24px;background:#fff;border-radius:12px;overflow:hidden">
+<sc-for list="{{ pg.list }}" as="pp" hint-placeholder-count="1">
+<div style="display:flex;align-items:center;gap:12px;min-height:64px;padding:0 14px 0 16px">
+<div style="width:40px;height:40px;border-radius:20px;background:#e8dcd4;font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">{{ pp.initials }}</div>
+<div style="flex:1;display:flex;flex-direction:column"><span style="font-size:17px">{{ pp.name }}</span><span style="font-size:13px;color:{{ pp.chipColor }}">{{ pp.status }}</span></div>
+<sc-if value="{{ pp.action }}" hint-placeholder-val="{{ false }}"><span style="font-size:15px;color:#7a3d27">Invite</span></sc-if>
+<span class="ms" style="font-size:20px;color:#b3a9a4">chevron_right</span>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</sc-if>
+<sc-if value="{{ segRequests }}" hint-placeholder-val="{{ false }}">
+<div style="margin:0 16px 24px;background:#fff;border-radius:12px;padding:32px 20px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center">
+<span class="ms" style="font-size:32px;color:#6e3a28">inbox</span><span style="font-size:17px;font-weight:600">No requests waiting</span><span style="font-size:15px;line-height:20px;color:#6b5f5a">Requests for more access will appear here for you to approve or decline.</span>
+</div>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{ mSettings }}" hint-placeholder-val="{{ false }}">
+<div style="margin:0 16px 24px;background:#fff;border-radius:12px;display:flex;align-items:center;gap:12px;padding:12px 14px 12px 16px">
+<div style="width:56px;height:56px;border-radius:28px;background:#d9cbc2;font-size:20px;font-weight:600;display:flex;align-items:center;justify-content:center">IY</div>
+<div style="flex:1;display:flex;flex-direction:column"><span style="font-size:20px;font-weight:600">Ivan Yardley</span><span style="font-size:13px;color:#6b5f5a">ivanyardley@me.com</span></div>
+<span class="ms" style="font-size:20px;color:#b3a9a4">chevron_right</span>
+</div>
+<sc-for list="{{ mSettingGroups }}" as="sg" hint-placeholder-count="3">
+<div style="padding:0 36px 7px;font-size:13px;color:#6b5f5a;text-transform:uppercase;letter-spacing:.02em">{{ sg.name }}</div>
+<div style="margin:0 16px 24px;background:#fff;border-radius:12px;overflow:hidden">
+<sc-for list="{{ sg.rows }}" as="sr" hint-placeholder-count="2">
+<div style="display:flex;align-items:center;gap:12px;min-height:48px;padding:0 14px 0 16px;border-bottom:.5px solid #ebe4de">
+<div style="width:30px;height:30px;border-radius:7px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px">{{ sr.icon }}</span></div>
+<span style="flex:1;font-size:17px">{{ sr.name }}</span><span class="ms" style="font-size:20px;color:#b3a9a4">chevron_right</span>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</sc-if>
+
+<sc-if value="{{ mNotif }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ mToggleNotif }}" style="position:absolute;inset:0;z-index:40;background:rgba(31,23,21,.28)"></div>
+<div style="position:absolute;left:10px;right:10px;top:58px;z-index:41;background:rgba(255,255,255,.97);border-radius:24px;box-shadow:0 20px 50px rgba(31,23,21,.25);overflow:hidden">
+<div style="display:flex;align-items:center;padding:16px 16px 8px 20px"><span style="flex:1;font-size:20px;font-weight:700">Notifications</span><span onClick="{{ mToggleNotif }}" style="font-size:17px;color:#7a3d27;cursor:pointer">Done</span></div>
+<sc-for list="{{ notifs }}" as="nt" hint-placeholder-count="3">
+<div style="display:flex;gap:12px;padding:12px 20px;border-top:.5px solid #ebe4de">
+<div style="width:36px;height:36px;border-radius:18px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center;flex:none"><span class="ms" style="font-size:20px">{{ nt.icon }}</span></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:15px;font-weight:{{ nt.weight }}">{{ nt.title }}</span><span style="font-size:13px;color:#6b5f5a">{{ nt.sub }}</span></div>
+<span style="flex:none;white-space:nowrap;font-size:13px;color:#6b5f5a">{{ nt.when }}</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+<div style="flex:1"></div>
+<div style="position:sticky;bottom:0;padding:8px 20px 30px;background:linear-gradient(rgba(246,243,240,0),#f6f3f0 40%)">
+<div style="display:grid;grid-template-columns:repeat(4,1fr);height:62px;align-items:center;background:rgba(255,255,255,.92);border-radius:31px;box-shadow:0 4px 20px rgba(43,23,20,.1),0 0 0 .5px rgba(0,0,0,.06);padding:0 6px">
+<sc-for list="{{ mTabs }}" as="t" hint-placeholder-count="4">
+<div onClick="{{ t.select }}" style="display:flex;flex-direction:column;align-items:center;gap:2px;color:{{ t.color }};position:relative;cursor:pointer">
+<span class="ms" style="font-size:24px;font-variation-settings:{{ t.fill }}">{{ t.icon }}</span>
+<span style="font-size:10px;font-weight:600">{{ t.label }}</span>
+<sc-if value="{{ t.badge }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:-4px;left:50%;margin-left:6px;min-width:18px;height:18px;border-radius:9px;background:#8c4a32;color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;padding:0 4px;box-sizing:border-box">{{ t.badge }}</span></sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="2c"><div class="dv-olabel"><a class="dv-oid" href="#2c">2c</a>Design language and screen-by-screen changes</div>
+<div class="dv-card" style="width:520px;padding:24px;display:flex;flex-direction:column;gap:22px">
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b5f5a">Colour</div>
+<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px">
+<sc-for list="{{ swatches }}" as="sw" hint-placeholder-count="6">
+<div style="display:flex;flex-direction:column;gap:4px"><div style="height:40px;border-radius:8px;background:{{ sw.hex }};border:1px solid rgba(0,0,0,.08)"></div><span style="font-size:11px;font-weight:500">{{ sw.name }}</span><span style="font:10px ui-monospace,Menlo,monospace;color:#6b5f5a">{{ sw.hex }}</span></div>
+</sc-for>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b5f5a">Components</div>
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+<button style="height:36px;padding:0 14px;border-radius:8px;border:0;background:#2b1714;color:#fff;font-size:14px;font-weight:600">Primary</button>
+<button style="height:32px;padding:0 12px;border-radius:8px;border:1px solid #e6dfd9;background:#fff;font-size:14px;font-weight:500;color:#2b1714">Secondary</button>
+<span style="font-size:14px;font-weight:500;color:#7a3d27">Text link</span>
+<span style="font-size:11px;font-weight:600;padding:2px 6px;border-radius:4px;background:#fbeee6;color:#8c4a32">New</span>
+<span style="font-size:12px;font-weight:500;padding:4px 8px;border-radius:6px;background:#e9f3ec;color:#225c3a">Verified</span>
+<div style="width:36px;height:36px;border-radius:9px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px">account_balance</span></div>
+<div style="width:42px;height:26px;border-radius:13px;background:#2b1714;padding:2px;box-sizing:border-box;display:flex;justify-content:flex-end"><div style="width:22px;height:22px;border-radius:11px;background:#fff"></div></div>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b5f5a">Rules applied to every screen</div>
+<sc-for list="{{ rules }}" as="ru" hint-placeholder-count="6">
+<div style="display:flex;gap:8px;font-size:13px;line-height:19px;color:#3a2c28"><span class="ms" style="font-size:16px;color:#2f7a4f;margin-top:2px">check</span><span style="text-wrap:pretty">{{ ru }}</span></div>
+</sc-for>
+</div>
+<div style="display:flex;flex-direction:column;gap:2px">
+<div style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b5f5a;margin-bottom:8px">Per screen</div>
+<sc-for list="{{ perScreen }}" as="ps" hint-placeholder-count="8">
+<div style="display:grid;grid-template-columns:130px minmax(0,1fr);gap:12px;padding:8px 0;border-top:1px solid #f0ebe7;font-size:13px;line-height:19px"><span style="font-weight:600">{{ ps.name }}</span><span style="color:#3a2c28;text-wrap:pretty">{{ ps.note }}</span></div>
+</sc-for>
+</div>
+<div style="padding:12px 14px;border-radius:10px;background:#fbeee6;font-size:13px;line-height:19px;color:#5a2e1e"><b>Data check:</b> the current Dashboard shows 0 legal records and 3 in total, but the Legal page has a Will (16/07/26). I’ve counted 4 records here; worth checking how the dashboard totals are calculated.</div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Try next: "add the record detail screen" · "show the Add flow as a sheet on <a class="dv-oid" href="#2b">2b</a>" · "build the Android version of <a class="dv-oid" href="#2b">2b</a>"</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showUat&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Environment&quot;}}">
+class Component extends DCLogic {
+  state = { screen: 'dashboard', form: null, fOpen: {}, vault: {}, subs: {}, dirty: false, saved: false, q: '', pq: '', howOpen: false,
+    msgs: [{ isUser: false, text: 'Hello. I can help with documents, invitations, permissions, security, and My Vault. Choose a prompt below or describe what you need.' }],
+    mTab: 'home', mPush: null, mSeg: 'people', mStep: 0, mNotif: false,
+    drawer: null, dView: 'detail', shared: {}, draft: {}, sec: null, rec: null, sent: {} };
+  mainRef = React.createRef();
+
+  FM = {
+    Banks: { one: 'bank account', req: [['Bank name', 'text', 'e.g. Barclays'], ['Account type', 'select', ['Current account', 'Savings account', 'Joint account', 'ISA', 'Business account']], ['Balance', 'money']],
+      groups: [['tag', 'Account details', 'Sort code, last 4 digits', ['Sort code', 'Last 4 digits of account']], ['call', 'Bank contact', 'Phone, branch', ['Phone', 'Branch']], ['notes', 'Notes for your family', 'Anything they should know', ['Notes']]] },
+    Pensions: { one: 'pension', req: [['Provider', 'text', 'e.g. Aviva'], ['Pension type', 'select', ['Workplace', 'Personal', 'SIPP', 'State', 'Annuity']], ['Estimated value', 'money']],
+      groups: [['tag', 'Policy details', 'Reference number', ['Policy or member number', 'Employer']], ['badge', 'Adviser', 'Name, company, phone, email', ['Adviser name', 'Company', 'Phone', 'Email']], ['notes', 'Notes for your family', 'Nominated beneficiaries, notes', ['Beneficiary notes', 'Notes']]] },
+    Investments: { one: 'investment', req: [['Provider or platform', 'text', 'e.g. Vanguard'], ['Investment type', 'select', ['Stocks & Shares ISA', 'General account', 'Bonds', 'Funds', 'Shares']], ['Estimated value', 'money']],
+      groups: [['tag', 'Account and ownership', 'Reference number, ownership type', ['Account or reference number', 'Ownership type']], ['badge', 'Adviser', 'Name, company, phone, email', ['Adviser name', 'Company', 'Phone', 'Email']], ['language', 'Online access', 'Portal web address', ['Portal web address']], ['notes', 'Notes for your family', 'Beneficiary notes, general notes', ['Beneficiary notes', 'Notes']]] },
+    Insurance: { one: 'insurance policy', req: [['Insurer', 'text', 'e.g. Aviva'], ['Policy type', 'select', ['Life', 'Home', 'Income protection', 'Critical illness', 'Travel']], ['Cover amount', 'money']],
+      groups: [['tag', 'Policy details', 'Policy number, insured person, renewal date', ['Policy number', 'Insured person or item', 'Renewal date']], ['call', 'Insurer contact', 'Phone, email', ['Phone', 'Email']], ['badge', 'Broker or adviser', 'Name, contact', ['Name', 'Contact']], ['notes', 'How to claim', 'Notes for your family', ['Claim guidance']]] },
+    Debts: { one: 'debt', req: [['Lender', 'text', 'e.g. Nationwide'], ['Debt type', 'select', ['Mortgage', 'Loan', 'Credit card', 'Car finance', 'Other']], ['Amount owed', 'money']],
+      groups: [['tag', 'Account details', 'Reference number, end date', ['Reference number', 'End date']], ['call', 'Lender contact', 'Phone, email', ['Phone', 'Email']], ['notes', 'Notes for your family', 'Anything they should know', ['Notes']]] },
+    _default: { one: 'record', req: [['Name', 'text', 'A name you’ll recognise'], ['Estimated value', 'money', '', true]],
+      groups: [['tag', 'Details', 'Reference, location, dates', ['Reference', 'Location']], ['call', 'Contact', 'Who to speak to', ['Name', 'Phone or email']], ['notes', 'Notes for your family', 'Anything they should know', ['Notes']]] },
+  };
+
+  C = {
+    finances: { title: 'Finances', icon: 'account_balance_wallet', desc: 'Record your bank accounts, savings, pensions, and policies so your estate has a clear financial picture.', sections: [
+      { icon: 'account_balance', name: 'Banks', unit: ['account', 'accounts'], total: '£132,245.00', records: [{ name: 'Barclays', amount: '£76,213.00', updated: '17 Jul 2026' }, { name: 'HSBC', amount: '£56,032.00', updated: '17 Jul 2026' }] },
+      { icon: 'savings', name: 'Pensions', unit: ['pension', 'pensions'], total: '£520,345.00', records: [{ name: 'Provincial', amount: '£520,345.00', updated: '17 Jul 2026' }] },
+      { icon: 'trending_up', name: 'Investments', hint: 'ISAs, shares, funds' },
+      { icon: 'health_and_safety', name: 'Insurance', hint: 'Life, home, income' },
+      { icon: 'credit_card', name: 'Debts', hint: 'Mortgages, loans, cards' }], grand: '£652,590.00' },
+    legal: { title: 'Legal', icon: 'gavel', desc: 'Review the core legal records someone should be able to find quickly, from wills and trusts to powers of attorney and other legal paperwork.', sections: [
+      { icon: 'history_edu', name: 'Wills', unit: ['will', 'wills'], total: '', records: [{ name: 'Will', amount: '', updated: '16 Jul 2026' }] },
+      { icon: 'account_tree', name: 'Trusts', hint: 'Trust deeds and documents' },
+      { icon: 'shield_person', name: 'Power of Attorney', hint: 'Lasting or enduring' },
+      { icon: 'local_florist', name: 'Funeral Wishes', hint: 'Guidance and instructions' },
+      { icon: 'family_restroom', name: 'Marriage / Divorce', hint: 'Certificates, agreements' },
+      { icon: 'badge', name: 'Identity Documents', hint: 'Passport, licence, birth' },
+      { icon: 'description', name: 'Other Legal Documents', hint: 'Other legal paperwork' },
+      { icon: 'volunteer_activism', name: 'Personal Wishes', hint: 'Wishes and guidance' }] },
+    property: { title: 'Property', icon: 'home', desc: 'Record your properties, deeds, valuations, and supporting documents for your estate.', sections: [
+      { icon: 'home', name: 'Property Records', hint: 'Homes, land, ownership' },
+      { icon: 'folder', name: 'Property Documents', hint: 'Deeds, valuations, surveys' }] },
+    business: { title: 'Business', icon: 'work', desc: 'Keep your business interests, workplace records, and supporting documents clear for future review.', sections: [
+      { icon: 'domain', name: 'Business Interests', hint: 'Shareholdings, ownership' },
+      { icon: 'work', name: 'Employment', hint: 'Employer, benefits, records' }] },
+    digital: { title: 'Digital', icon: 'devices', desc: 'Keep online accounts, subscriptions, platforms, recovery contacts, and access notes clear for trusted people later.', sections: [
+      { icon: 'alternate_email', name: 'Social media', hint: 'Profiles and handover' },
+      { icon: 'subscriptions', name: 'Subscriptions', hint: 'Recurring services' },
+      { icon: 'cloud', name: 'Email & cloud', hint: 'Mail, storage, photos' },
+      { icon: 'language', name: 'Domains & websites', hint: 'Domains and hosting' },
+      { icon: 'currency_bitcoin', name: 'Crypto & wallets', hint: 'Exchanges, wallet locations' },
+      { icon: 'devices_other', name: 'Other digital record', hint: 'Anything else online' }] },
+    possessions: { title: 'Possessions', icon: 'inventory_2', desc: 'Capture personal possessions with values, references, locations, attachments, and photos.', sections: [
+      { icon: 'directions_car', name: 'Vehicles', hint: 'Cars, bikes, boats' },
+      { icon: 'watch', name: 'Watches & jewellery', hint: 'Pieces and valuations' },
+      { icon: 'palette', name: 'Art & paintings', hint: 'Artworks, provenance' },
+      { icon: 'chair', name: 'Household contents', hint: 'Furniture and contents' },
+      { icon: 'collections_bookmark', name: 'Collections', hint: 'Coins, stamps, wine' },
+      { icon: 'category', name: 'Other possession', hint: 'Anything else of value' }] },
+  };
+
+  componentDidUpdate(pp, ps) {
+    if ((ps.screen !== this.state.screen || ps.sec !== this.state.sec || ps.rec !== this.state.rec) && this.mainRef.current) this.mainRef.current.scrollTop = 0;
+  }
+
+  proc(id) {
+    const c = this.C[id]; const populated = [], empties = []; let n = 0, last = '';
+    c.sections.forEach(s => {
+      if (s.records && s.records.length) {
+        const k = s.records.length; n += k; last = s.records[0].updated;
+        populated.push({ ...s, count: k + ' ' + (k === 1 ? s.unit[0] : s.unit[1]) });
+      } else empties.push(s);
+    });
+    return { ...c, id, populated, empties, n, last, sectionsTotal: c.sections.length,
+      emptyLabel: populated.length ? 'Not added yet' : 'Start with any of these' };
+  }
+
+  renderVals() {
+    const st = this.state, p = this.props;
+    const go = (s) => () => this.setState({ screen: s, sec: null, rec: null, drawer: null, form: null });
+    const scr = st.screen;
+    const isCatId = !!this.C[scr];
+    const mkNav = (id, icon, label, badge) => {
+      const on = scr === id || (id === 'settings' && scr === 'myvault') || (id === 'people' && scr === 'access');
+      return { icon, label, badge, select: go(id), bg: on ? '#fff' : 'transparent', shadow: on ? '0 1px 2px rgba(43,23,20,.08), 0 0 0 1px #ebe4de' : 'none',
+        color: on ? '#2b1714' : '#3a2c28', weight: on ? 600 : 400, hov: on ? '#fff' : '#f6efea', act: on ? '#fff' : '#ebe0d8', fill: on ? "'FILL' 1" : "'FILL' 0" };
+    };
+    const navGroups = [
+      { label: '', items: [mkNav('dashboard', 'space_dashboard', 'Dashboard'), mkNav('add', 'add_circle', 'Add to my Fortress'), mkNav('actions', 'task_alt', 'Action Centre', 12)] },
+      { label: 'Vault', items: Object.keys(this.C).map(k => mkNav(k, this.C[k].icon, this.C[k].title)) },
+      { label: 'Sharing', items: [mkNav('people', 'group', 'People & Access', 2)] },
+    ];
+    const navFoot = [mkNav('support', 'help', 'Support'), mkNav('settings', 'settings', 'Settings')];
+
+    const all = Object.keys(this.C).map(k => this.proc(k));
+    const totalRecords = all.reduce((a, c) => a + c.n, 0);
+    const areas = all.map(c => ({ icon: c.icon, name: c.title, label: c.n ? c.n + (c.n === 1 ? ' record' : ' records') : 'Nothing yet',
+      short: c.n ? String(c.n) : '', meta: c.n ? 'Updated ' + c.last : 'Add first record', weight: c.n ? 600 : 400, color: c.n ? '#1f1715' : '#6b5f5a',
+      go: go(c.id), mgo: () => this.setState({ mPush: c.id }) }));
+
+    const actionData = [
+      { title: 'Add key documents', desc: 'Add identity and key financial or property documents where relevant.', isNew: false, cta: 'Add documents', to: 'legal' },
+      { title: 'Complete profile', desc: 'Complete your basic profile details.', isNew: true, cta: 'Complete profile', to: 'settings' },
+      { title: 'Invite Bob Smith', desc: 'Bob Smith is ready for an invite email.', isNew: true, cta: 'Send invitation', to: 'people' },
+      { title: 'Do you have a Lasting Power of Attorney?', desc: 'You may want to record a power of attorney or another capacity arrangement, depending on your circumstances and jurisdiction.', isNew: true, cta: 'Add an arrangement', to: 'legal' },
+      { title: 'Do you have a Will?', desc: 'A Will can help record how you want your estate dealt with and who should deal with it.', isNew: true, cta: 'Choose an option', to: 'legal' },
+    ];
+    const actions = actionData.map(a => ({ ...a, dot: a.isNew ? '#8c4a32' : '#d9cfc8', go: go(a.to) }));
+
+    const addGroups = [
+      { name: 'Money & property', items: [
+        { icon: 'home', name: 'Property', desc: 'Home, ownership and supporting records.', to: 'property' },
+        { icon: 'account_balance', name: 'Finances', desc: 'Bank accounts, pensions, investments, insurance and debts.', to: 'finances' }] },
+      { name: 'Legal & important documents', items: [
+        { icon: 'history_edu', name: 'Will', desc: 'Record that it exists and add the document when ready.', to: 'legal' },
+        { icon: 'shield_person', name: 'Capacity arrangement', desc: 'Record a power of attorney or related arrangement.', to: 'legal' },
+        { icon: 'upload_file', name: 'Important document', desc: 'Add a document to the appropriate workspace.', to: 'legal' }] },
+      { name: 'People', items: [
+        { icon: 'person_add', name: 'Trusted person', desc: 'Record someone before deciding whether to invite them.', to: 'people' },
+        { icon: 'assignment_ind', name: 'Executor', desc: 'Add a person named to help with your estate.', to: 'people' },
+        { icon: 'family_restroom', name: 'Family or loved one', desc: 'Keep a relationship clear without granting access.', to: 'people' }] },
+      { name: 'Personal, digital & wishes', items: [
+        { icon: 'diamond', name: 'Meaningful possession', desc: 'Jewellery, watches, collections, art or heirlooms.', to: 'possessions' },
+        { icon: 'devices', name: 'Digital account', desc: 'Email, cloud or online services. Do not store passwords.', to: 'digital' },
+        { icon: 'edit_note', name: 'Wish or instruction', desc: 'Personal guidance, funeral wishes or pet-care notes.', to: 'legal' }] },
+    ].map(g => ({ ...g, items: g.items.map(i => ({ ...i, go: go(i.to) })) }));
+
+    const warn = { chipBg: '#fbeee6', chipColor: '#8c4a32' }, ok = { chipBg: '#e9f3ec', chipColor: '#225c3a' };
+    const pq = st.pq.trim().toLowerCase();
+    const STAGE = [
+      { status: 'Not invited', chipIcon: 'schedule_send', chipBg: '#f3eeea', chipColor: '#3a2c28' },
+      { status: 'Invited · awaiting acceptance', chipIcon: 'hourglass_top', chipBg: '#fdf1d8', chipColor: '#7a4f00' },
+      { status: 'Accepted', chipIcon: 'check_circle', chipBg: '#e9f3ec', chipColor: '#225c3a' },
+      { status: 'Verified', chipIcon: 'check_circle', chipBg: '#e9f3ec', chipColor: '#225c3a' },
+      { status: 'Linked · Verified', chipIcon: 'check_circle', chipBg: '#e9f3ec', chipColor: '#225c3a' },
+    ];
+    const mkP = (o) => { const stage = o.id === 'bob' ? (st.sent.bob ? 1 : 0) : o.stage; return { ...o, stage, ...STAGE[stage], action: stage === 0 ? 'Send invitation' : '',
+      send: (e) => { if (e && e.stopPropagation) e.stopPropagation(); this.setState(s => ({ sent: { ...s.sent, [o.id]: true } })); } }; };
+    const PD = {
+      bob: mkP({ id: 'bob', name: 'Bob Smith', first: 'Bob', initials: 'BS', role: 'Executor', email: 'Not added', stage: 0 }),
+      jacqui: mkP({ id: 'jacqui', name: 'Jacqui Yardley', first: 'Jacqui', initials: 'JY', role: 'Friend or family', email: 'jackyardley@me.com', stage: 4 }),
+    };
+    const recLabel = n => n + (n === 1 ? ' record' : ' records');
+    const sharedN = id => Object.values(st.shared[id] || {}).filter(Boolean).length;
+    const open = id => (e) => { if (e && e.stopPropagation) e.stopPropagation(); this.setState({ drawer: id, dView: 'detail' }); };
+    const people = [
+      { name: 'Executors', list: [PD.bob] },
+      { name: 'Family', list: [PD.jacqui] },
+    ].map(g => ({ ...g, list: g.list.map(x => ({ ...x, open: open(x.id), accessLabel: sharedN(x.id) ? 'Can view ' + recLabel(sharedN(x.id)) : 'No vault access' }))
+      .filter(x => !pq || (x.name + ' ' + x.role).toLowerCase().includes(pq)) }))
+     .filter(g => g.list.length).map(g => ({ ...g, count: g.list.length }));
+
+    const rowsDef = {
+      security: { icon: 'lock', name: 'Security', desc: 'Password, recovery, and mobile verification controls.' },
+      billing: { icon: 'credit_card', name: 'Billing and account', desc: 'Plan status, limits, and subscription readiness.' },
+      access: { icon: 'accessibility_new', name: 'Accessibility', desc: 'Text size, contrast, spacing, read aloud, and guided help.' },
+      myvault: { icon: 'tune', name: 'My Vault', desc: 'Choose which areas and sections appear in your vault.', to: 'myvault' },
+      comms: { icon: 'mail', name: 'Communications', desc: 'Choose how service updates reach you.' },
+      remind: { icon: 'notifications', name: 'Reminders', desc: 'Control reminder timing and destinations.' },
+      terms: { icon: 'contract', name: 'Terms and conditions', desc: 'Review the current terms status and acceptance record.' },
+      support: { icon: 'help', name: 'Support', desc: '', to: 'support' },
+    };
+    const row = k => ({ ...rowsDef[k], go: rowsDef[k].to ? go(rowsDef[k].to) : () => {} });
+    const settingGroups = [
+      { name: 'Account', rows: ['security', 'billing'].map(row) },
+      { name: 'Preferences', rows: ['myvault', 'access', 'comms', 'remind'].map(row) },
+      { name: 'Legal', rows: ['terms'].map(row) },
+    ];
+    const mSettingGroups = [
+      { name: 'Account', rows: ['security', 'billing'].map(row) },
+      { name: 'Preferences', rows: ['myvault', 'access', 'comms', 'remind'].map(row) },
+      { name: 'Help', rows: ['support', 'terms'].map(row) },
+    ];
+    const details = [
+      { label: 'Main phone', value: 'Not set', missing: true },
+      { label: 'Notification email', value: 'ivanyardley@me.com', missing: false },
+      { label: 'National Insurance', value: 'Not set', missing: true },
+    ].map(d => ({ ...d, color: d.missing ? '#6b5f5a' : '#1f1715' }));
+
+    const VA = [
+      ['Legal', 'gavel', 'Wills, powers of attorney, identity documents, and other legal records.', ['Wills', 'Trusts', 'Power of Attorney', 'Funeral Wishes', 'Marriage / Divorce', 'Identity Documents', 'Other Legal Documents', 'Death Certificate Verification']],
+      ['Finances', 'account_balance_wallet', 'Banking, pensions, investments, insurance, and debts.', ['Bank', 'Pensions', 'Investments', 'Insurance', 'Debts']],
+      ['Personal', 'person', 'Possessions, subscriptions, social accounts, and personal wishes.', ['Possessions', 'Subscriptions', 'Social media', 'Personal wishes']],
+      ['Digital', 'devices', 'Digital assets, accounts, and access details.', []],
+      ['Tasks', 'task_alt', 'Follow-up actions and practical next steps.', ['Tasks & follow-up']],
+      ['Property', 'home', 'Homes, related records, and supporting property documents.', ['Property Records', 'Property Documents']],
+      ['Business', 'work', 'Business interests, workplace details, and employment-linked records.', ['Business Interests', 'Employment']],
+      ['Cars & Transport', 'directions_car', 'Vehicles, ownership details, transport records, and supporting documents.', []],
+      ['Executors & Trustees', 'assignment_ind', 'Executor, trustee, and estate-role records that stay visible when needed.', []],
+    ];
+    const sw = on => ({ track: on ? '#2b1714' : '#d9d1cb', justify: on ? 'flex-end' : 'flex-start' });
+    const vaultAreas = VA.map(([name, icon, desc, subs]) => {
+      const on = st.vault[name] !== false;
+      return { name, icon, desc, ...sw(on), op: on ? 1 : .5, showSubs: on && subs.length > 0,
+        toggle: () => this.setState(s => ({ vault: { ...s.vault, [name]: !on }, dirty: true, saved: false })),
+        subs: subs.map(sn => { const k = name + '/' + sn, so = st.subs[k] !== false; return { name: sn, ...sw(so), color: so ? '#1f1715' : '#9a8f8a',
+          toggle: () => this.setState(s => ({ subs: { ...s.subs, [k]: !so }, dirty: true, saved: false })) }; }) };
+    });
+    const shown = VA.filter(([n]) => st.vault[n] !== false).length;
+
+    const replies = {
+      'How do I invite someone?': 'Go to People & Access, open the person, and choose Send invitation. They get an email and only see the areas you allow.',
+      'How do permissions work?': 'Each trusted person has their own access. Open them in People & Access to choose which areas they can view or edit.',
+      'Where do I upload a document?': 'Open the record and use the add-document button on it, so the file is always attached to the right asset.',
+    };
+    const ask = (t) => { t = (t || '').trim(); if (!t) return;
+      this.setState(s => ({ q: '', msgs: [...s.msgs, { isUser: true, text: t }, { isUser: false, text: replies[t] || 'Thanks. If this doesn’t answer it, send a support request below and someone will follow up.' }] })); };
+
+    let page = { title: '', desc: '', cta: '', ctaIcon: 'add', ctaGo: () => {}, crumbs: [], addRound: false, addGo: () => {}, addTip: 'Add asset' };
+    let form = { req: [], groups: [] };
+    let stats = [], cat = { populated: [], empties: [], emptyLabel: '' }, sec = { records: [] }, rec = { facts: [] };
+    const crumb = (label, fn) => ({ label, go: fn || (() => {}), link: !!fn });
+    if (isCatId) {
+      cat = all.find(c => c.id === scr);
+      const toCat = () => this.setState({ sec: null, rec: null, form: null });
+      const openSec = n => () => this.setState({ sec: n, rec: null, form: null });
+      const openRec = (sn, rn) => () => this.setState({ sec: sn, rec: rn, form: null });
+      const stop = e => { if (e && e.stopPropagation) e.stopPropagation(); };
+      const openForm = n => (e) => { stop(e); this.setState({ form: n, fOpen: {} }); };
+      const firstSec = this.C[scr].sections[0].name;
+      cat = { ...cat, populated: cat.populated.map(s => ({ ...s, go: openSec(s.name), add: openForm(s.name), records: s.records.map(r => ({ ...r, go: openRec(s.name, r.name), doc: (e) => { stop(e); openRec(s.name, r.name)(); } })) })),
+        empties: cat.empties.map(e => ({ ...e, go: openForm(e.name) })) };
+      const S = st.sec && this.C[scr].sections.find(x => x.name === st.sec);
+      const R = S && st.rec && (S.records || []).find(x => x.name === st.rec);
+      const FS = st.form && this.C[scr].sections.find(x => x.name === st.form);
+      if (FS) {
+        const FM = this.FM[FS.name] || this.FM._default;
+        const req = (n) => ({ tag: 'Required', tagBg: '#f3ebe6', tagColor: '#6e3a28' });
+        const opt = { tag: 'Optional', tagBg: '#f3eeea', tagColor: '#6b5f5a' };
+        const mk = ([label, kind, x, isOpt]) => ({ label, ...(isOpt ? opt : req()), isText: kind === 'text', isSelect: kind === 'select', isMoney: kind === 'money',
+          ph: kind === 'text' ? x : '', options: kind === 'select' ? x.map(v => ({ v })) : [], help: kind === 'money' ? 'A rough figure is fine.' : '' });
+        form = { req: [{ label: 'Record type', ...req(), isSelect: true, value: FS.name, options: this.C[scr].sections.map(s => ({ v: s.name })),
+            onChange: e => this.setState({ form: e.target.value, fOpen: {} }) }, ...FM.req.map(mk)],
+          groups: FM.groups.map(([icon, name, hint, fields], i) => { const open = !!st.fOpen[name]; return { icon, name, hint, open, chev: open ? 'expand_less' : 'expand_more', bt: i ? '1px solid #f0ebe7' : '0',
+            fields: fields.map(l => ({ label: l, ph: '' })), toggle: () => this.setState(s => ({ fOpen: { ...s.fOpen, [name]: !open } })) }; }),
+          cancel: () => this.setState({ form: null }) };
+        page = { ...page, title: 'Add ' + FM.one, desc: 'Fill in the required fields now. Everything else is optional and can be added later.',
+          crumbs: [crumb(cat.title, toCat), crumb(FS.name, openSec(FS.name)), crumb('Add')], backGo: () => this.setState({ form: null }) };
+      } else if (R) {
+        const key = scr + '/' + S.name + '/' + R.name;
+        const who = Object.keys(st.shared).filter(pid => st.shared[pid][key]).map(pid => PD[pid].name);
+        rec = { facts: [
+          { label: 'Name', value: R.name }, { label: 'Section', value: cat.title + ' · ' + S.name },
+          ...(R.amount ? [{ label: 'Value', value: R.amount }] : []),
+          { label: 'Reference', value: 'Not added', missing: true }, { label: 'Last updated', value: R.updated },
+        ].map(f => ({ ...f, color: f.missing ? '#6b5f5a' : '#1f1715' })),
+          sharedText: who.length ? who.join(', ') + ' can view this record.' : 'Not shared with anyone.' };
+        page = { ...page, title: R.name, desc: S.name + ' · Updated ' + R.updated, cta: 'Edit', ctaIcon: 'edit',
+          crumbs: [crumb(cat.title, toCat), crumb(S.name, openSec(S.name)), crumb(R.name)], backGo: openSec(S.name) };
+      } else if (S) {
+        const recs = (S.records || []).map(r => ({ ...r, go: openRec(S.name, r.name) }));
+        sec = { ...S, records: recs, hasRecords: recs.length > 0, isEmpty: !recs.length, hint: S.hint || '' };
+        const k = recs.length;
+        page = { ...page, title: S.name, desc: k ? k + ' ' + (k === 1 ? S.unit[0] : S.unit[1]) + (S.total ? ' · ' + S.total : '') : (S.hint || ''),
+          addRound: true, addGo: openForm(S.name), crumbs: [crumb(cat.title, toCat), crumb(S.name)], backGo: toCat };
+        sec.add = openForm(S.name); sec.records = sec.records.map(r => ({ ...r, doc: (e) => { stop(e); r.go(); } }));
+      } else {
+        page = { ...page, title: cat.title, desc: cat.desc, addRound: true, addGo: openForm(firstSec) };
+        if (cat.n) {
+          if (cat.grand) stats.push({ label: 'Total recorded', value: cat.grand, sub: '' });
+          stats.push({ label: 'Records', value: String(cat.n), sub: 'in ' + cat.populated.length + ' of ' + cat.sectionsTotal + ' sections' });
+          stats.push({ label: 'Last updated', value: cat.last, sub: '' });
+          if (stats.length === 2) stats.push({ label: 'Not added yet', value: String(cat.empties.length), sub: 'sections' });
+        }
+      }
+    } else {
+      const P = {
+        dashboard: ['Dashboard', 'Your recorded information, in one place.', ''],
+        add: ['Add to my Fortress', 'Start with something that matters to you. You can add a simple record now and fill in more details later.', ''],
+        actions: ['Action Centre', 'Open an item to understand why it is here and choose what to do next.', ''],
+        people: ['People & Access', 'Add people, check who they are, and choose exactly what they can see.', 'Add person'],
+        access: ['People & Access', 'Add people, check who they are, and choose exactly what they can see.', 'Add person'],
+        support: ['Support', 'Ask for guidance, report issues, request follow-up, or get a quick walkthrough of the key tasks in the application.', ''],
+        settings: ['Settings', 'Keep your identity, contact, and address details clear for trusted people who may need them.', ''],
+        myvault: ['My Vault', 'Choose what appears in your Vault. You can turn areas back on at any time without losing your information.', ''],
+      }[scr];
+      page = { ...page, title: P[0], desc: P[1], cta: P[2], ctaIcon: (scr === 'people' || scr === 'access') ? 'person_add' : 'add', ctaGo: () => {}, addRound: scr === 'dashboard', addGo: go('add'),
+        crumbs: scr === 'myvault' ? [crumb('Settings', go('settings')), crumb('My Vault')] : [], backGo: go('settings') };
+      if (scr === 'dashboard') stats = [{ label: 'Records', value: String(totalRecords), sub: 'across 2 areas' }, { label: 'People', value: '2', sub: '1 not yet invited' }, { label: 'Open actions', value: '12', sub: '4 new' }];
+    }
+    stats = stats.map((s, i) => ({ ...s, border: i ? '1px solid #f0ebe7' : '0' }));
+    page.hasCrumbs = page.crumbs.length > 0;
+    page.crumbs = page.crumbs.map((c, i, a) => ({ ...c, sep: i < a.length - 1, color: c.link ? '#7a3d27' : '#6b5f5a', cursor: c.link ? 'pointer' : 'default', weight: c.link ? 500 : 400 }));
+
+    // person drawer
+    const AREAS = [{ id: 'profile', name: 'Profile', icon: 'person', records: [{ key: 'profile/details', name: 'Profile details', meta: 'Name, contact and address' }] }]
+      .concat(Object.keys(this.C).map(k => ({ id: k, name: this.C[k].title, icon: this.C[k].icon,
+        records: this.C[k].sections.flatMap(s => (s.records || []).map(r => ({ key: k + '/' + s.name + '/' + r.name, name: r.name, meta: s.name + (r.amount ? ' · ' + r.amount : ' · Updated ' + r.updated) }))) })));
+    const dId = st.drawer, dpRaw = dId ? PD[dId] : PD.jacqui;
+    const committed = st.shared[dpRaw.id] || {};
+    const nShared = Object.values(committed).filter(Boolean).length;
+    const stepNames = ['Prepared', 'Sent', 'Accepted', 'Verified', 'Linked'];
+    const dp = { ...dpRaw,
+      stageLabel: dpRaw.status,
+      steps: stepNames.map((l, i) => ({ label: l, bar: i <= dpRaw.stage ? '#2b1714' : '#e6dfd9', color: i <= dpRaw.stage ? '#1f1715' : '#6b5f5a', weight: i === dpRaw.stage ? 600 : 400 })),
+      facts: [
+        { label: 'Email', value: dpRaw.email, missing: dpRaw.email === 'Not added' },
+        { label: 'Relationship', value: 'Not specified', missing: true },
+        { label: 'Role', value: dpRaw.role, missing: false },
+        { label: 'Identity', value: dpRaw.stage === 4 ? 'Verified' : 'Not verified', missing: false },
+      ].map(f => ({ ...f, color: f.missing ? '#6b5f5a' : '#1f1715' })),
+      hasAccess: nShared > 0,
+      accessIcon: nShared ? 'visibility' : 'visibility_off',
+      accessTitle: nShared ? 'View only · ' + recLabel(nShared) : 'No access',
+      accessDesc: nShared ? dpRaw.first + ' can view these areas. New records aren’t shared automatically.' : dpRaw.first + ' can’t see any of your records yet.',
+      areaChips: AREAS.filter(a => a.records.some(r => committed[r.key])).map(a => a.name),
+      accessBtn: nShared ? 'Change access' : 'Give access',
+      accessBtnBg: nShared ? '#fff' : '#2b1714', accessBtnColor: nShared ? '#2b1714' : '#fff', accessBtnBorder: nShared ? '1px solid #e6dfd9' : '0',
+      more: [
+        { icon: 'edit', label: 'Edit details', color: '#1f1715', go: () => {} },
+        { icon: 'send', label: dpRaw.stage === 0 ? 'Send invitation' : 'Resend invitation', color: '#1f1715', go: dpRaw.send },
+        { icon: 'person_remove', label: 'Remove ' + dpRaw.first, color: '#b3261e', go: () => {} },
+      ] };
+    const dr = st.draft;
+    const draftN = Object.values(dr).filter(Boolean).length;
+    const accessAreas = AREAS.map(a => {
+      const n = a.records.length, sel = a.records.filter(r => dr[r.key]).length, all = n > 0 && sel === n;
+      return { name: a.name, icon: a.icon, hasRecords: n > 0, op: n ? 1 : .5, countLabel: n ? sel + ' of ' + n + ' selected' : 'No records yet', ...sw(all),
+        toggleAll: () => this.setState(s => { const d = { ...s.draft }; a.records.forEach(r => { d[r.key] = !all; }); return { draft: d }; }),
+        records: a.records.map(r => { const on = !!dr[r.key]; return { ...r, on, boxBg: on ? '#2b1714' : '#fff', boxBorder: on ? '0' : '1.5px solid #c9bcb3',
+          toggle: () => this.setState(s => ({ draft: { ...s.draft, [r.key]: !on } })) }; }) };
+    });
+    const draftDirty = JSON.stringify(Object.keys(dr).filter(k => dr[k]).sort()) !== JSON.stringify(Object.keys(committed).filter(k => committed[k]).sort());
+
+    // mobile
+    const mp = st.mPush, mIsCat = !!(mp && this.C[mp]);
+    const mCat = mIsCat ? all.find(c => c.id === mp) : { populated: [], empties: [], emptyLabel: '' };
+    const mTitles = { home: 'Home', actions: 'Action Centre', people: 'People & Access', settings: 'Settings' };
+    const mTab = (id, icon, label, badge) => { const on = st.mTab === id; return { icon, label, badge, color: on ? '#2b1714' : '#8a7f7a', fill: on ? "'FILL' 1" : "'FILL' 0", select: () => this.setState({ mTab: id, mPush: null }) }; };
+    const segOn = { bg: '#fff', sh: '0 1px 3px rgba(0,0,0,.12)' }, segOff = { bg: 'transparent', sh: 'none' };
+    const sp = st.mSeg === 'people';
+
+    return {
+      uat: p.showUat ?? true, navGroups, navFoot, mainRef: this.mainRef, page, stats, cat, areas, totalRecords,
+      isDash: scr === 'dashboard', isAdd: scr === 'add', isActions: scr === 'actions', isCat: isCatId && !st.sec && !st.form, isSection: isCatId && !!st.sec && !st.rec && !st.form, isRecord: isCatId && !!st.rec && !st.form, isForm: isCatId && !!st.form, form,
+      showPATabs: scr === 'people' || scr === 'access', paTabs: [['people', 'People', 0], ['access', 'Requests', 2]].map(([id, label, badge]) => { const on = scr === id; return { label, badge, go: go(id), w: on ? 600 : 400, c: on ? '#1f1715' : '#6b5f5a', b: on ? '#2b1714' : 'transparent' }; }), sec, rec, isPeople: scr === 'people',
+      isAccess: scr === 'access', isSupport: scr === 'support', isSettings: scr === 'settings', isMyVault: scr === 'myvault',
+      goAdd: go('add'), goSettings: go('settings'), goActions: go('actions'), goAccess: go('access'), goPeople: go('people'),
+      topActions: actions.slice(0, 3), actions, addGroups, people, noPeople: !!pq && !people.length, pq: st.pq,
+      onPq: e => this.setState({ pq: e.target.value }),
+      howOpen: st.howOpen, howChev: st.howOpen ? 'expand_less' : 'expand_more', toggleHow: () => this.setState(s => ({ howOpen: !s.howOpen })),
+      msgs: st.msgs.map(m => ({ ...m, isBot: !m.isUser })), q: st.q, onQ: e => this.setState({ q: e.target.value }),
+      onQKey: e => { if (e.key === 'Enter') ask(st.q); }, onAsk: () => ask(st.q),
+      chips: Object.keys(replies).map(l => ({ label: l, ask: () => ask(l) })),
+      details, settingGroups, mSettingGroups, vaultAreas, shownLabel: shown + ' of ' + VA.length + ' areas shown',
+      saveBg: st.dirty ? '#2b1714' : '#b9aca4', vaultStatus: st.saved ? 'Changes saved' : (st.dirty ? 'Unsaved changes' : ''),
+      saveVault: () => st.dirty && this.setState({ dirty: false, saved: true }),
+      resetVault: () => this.setState({ vault: {}, subs: {}, dirty: false, saved: false }),
+      mStep: actions[st.mStep % actions.length], mStepLabel: (st.mStep % actions.length + 1) + ' of ' + actions.length,
+      mNextStep: () => this.setState(s => ({ mStep: s.mStep + 1 })),
+      mDots: actions.map((a, i) => ({ c: i === st.mStep % actions.length ? '#2b1714' : '#d9cfc8' })),
+      mNotif: st.mNotif && !mp && st.mTab === 'home', mToggleNotif: () => this.setState(s => ({ mNotif: !s.mNotif })),
+      notifs: [
+        { icon: 'verified_user', title: 'Jacqui Yardley is verified', sub: 'Linked to your vault', when: 'Today', weight: 600 },
+        { icon: 'savings', title: 'Pension updated', sub: 'Provincial · £520,345.00', when: '17 Jul', weight: 400 },
+        { icon: 'history_edu', title: 'Will added', sub: 'Legal · Wills', when: '16 Jul', weight: 400 },
+      ],
+      drawerOpen: !!dId && scr === 'people', dDetail: st.dView === 'detail', dAccess: st.dView === 'access', dp,
+      closeDrawer: () => this.setState({ drawer: null }),
+      openAccess: () => this.setState({ dView: 'access', draft: { ...committed } }),
+      backDetail: () => this.setState({ dView: 'detail' }),
+      accessAreas, draftAny: draftN > 0, draftLabel: draftN ? recLabel(draftN) + ' selected' : 'Nothing selected',
+      accSaveBg: draftDirty ? '#2b1714' : '#b9aca4',
+      saveAccess: () => draftDirty && this.setState(s => ({ shared: { ...s.shared, [dpRaw.id]: { ...s.draft } }, dView: 'detail' })),
+      clearDraft: () => this.setState({ draft: {} }),
+      mPushed: !!mp, mBack: () => this.setState({ mPush: null }), mGoAdd: () => this.setState({ mPush: 'add' }),
+      mGoActions: () => this.setState({ mTab: 'actions', mPush: null }),
+      mHome: !mp && st.mTab === 'home', mCatOn: mIsCat, mCat, mAdd: mp === 'add',
+      mActions: !mp && st.mTab === 'actions', mPeople: !mp && st.mTab === 'people', mSettings: !mp && st.mTab === 'settings',
+      mTitle: mIsCat ? mCat.title : (mp === 'add' ? 'Add to my Fortress' : mTitles[st.mTab]),
+      mDesc: mIsCat ? mCat.desc : '',
+      mTabs: [mTab('home', 'space_dashboard', 'Home'), mTab('actions', 'task_alt', 'Actions', 12), mTab('people', 'group', 'People'), mTab('settings', 'settings', 'Settings')],
+      segPeople: sp, segRequests: !sp, segPBg: (sp ? segOn : segOff).bg, segPShadow: (sp ? segOn : segOff).sh, segRBg: (sp ? segOff : segOn).bg, segRShadow: (sp ? segOff : segOn).sh,
+      mSegP: () => this.setState({ mSeg: 'people' }), mSegR: () => this.setState({ mSeg: 'requests' }),
+      swatches: [{ name: 'Ink', hex: '#2b1714' }, { name: 'Text', hex: '#1f1715' }, { name: 'Secondary', hex: '#6b5f5a' }, { name: 'Accent', hex: '#8c4a32' }, { name: 'Tint', hex: '#f3ebe6' }, { name: 'Canvas', hex: '#faf8f6' }],
+      rules: [
+        'System font (SF Pro / Roboto / Segoe). Title 28 bold, section 17 semibold, body 15 regular, meta 13.',
+        'Material Symbols Rounded, 20px outline; filled only for the selected nav item or tab.',
+        'One primary button per screen. Repeated row actions are 36px round icon buttons (send = paper plane in an ink circle, edit = outlined circle) with a tooltip; meaning lives in the status chip.',
+        'Invitation status chips: grey “Not invited” → amber “Invited · awaiting acceptance” → green “Accepted / Linked · Verified”.',
+        'Lists use full-width rows with a chevron; whole row is the tap target (44pt min on mobile).',
+        'Empty sections collapse to dashed “Not added yet” tiles instead of blank cards.',
+        'Every page below the top level shows a back arrow plus a clickable trail (Finances › Banks › Barclays). Top-level pages have neither. Search moves to the header; workspace lives under the brand. Add to my Fortress is a normal nav item; each page’s header button handles adding in context.',
+        'Toggles replace checkboxes for show/hide settings, with a single Save bar.',
+      ],
+      perScreen: [
+        { name: 'Dashboard', note: 'Summary strip, six area tiles with counts and last updated, top three actions.' },
+        { name: 'Add to my Fortress', note: 'Duplicate eyebrow and heading removed; four groups as row lists linking to the right area.' },
+        { name: 'Action Centre', note: 'Five black buttons become secondary; “New” chip replaces the faint status text.' },
+        { name: 'Vault areas', note: 'Finances, Legal, Property, Business, Digital, Possessions share one template: records first, empty sections as tiles.' },
+        { name: 'People & Access', note: 'Avatars, role, one status chip, invite as the single primary. Clicking a person opens a side panel: invitation progress bar, details, vault access summary, then a “Choose what they can see” view with per-area switches and record checkboxes.' },
+        { name: 'People & Access · Requests', note: 'Collapsible explainer, proper empty state, two short info cards.' },
+        { name: 'Support', note: 'Chat with suggested prompts; labelled form with Send and Clear.' },
+        { name: 'Settings', note: 'Profile card plus grouped settings rows instead of a 7-card grid.' },
+        { name: 'My Vault', note: 'Single-column list with switches; sub-sections only show when the area is on.' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

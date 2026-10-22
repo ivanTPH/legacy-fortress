@@ -302,7 +302,7 @@ export function SegmentedControl({
   );
 }
 
-export function ExtractionConfirmationPanel({
+export function UploadConfirmationPanel({
   status,
   message,
   children,
@@ -311,20 +311,17 @@ export function ExtractionConfirmationPanel({
   message: string;
   children?: ReactNode;
 }) {
-  const icon = status === "ready" ? "task_alt" : status === "failed" ? "error" : status === "extracting" ? "hourglass_empty" : "document_scanner";
+  const icon = status === "ready" ? "task_alt" : status === "failed" ? "error" : status === "extracting" ? "hourglass_empty" : "description";
   return (
     <section style={extractionPanelStyle(status)} aria-live="polite">
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <span style={labelIconStyle}>
           <Icon name={icon} size={18} />
         </span>
-        <strong>{status === "ready" ? "Review extracted details" : "Assisted extraction"}</strong>
+        <strong>{status === "ready" ? "Review file and record" : "Attach a document"}</strong>
       </div>
       <p style={{ margin: 0, color: "#64748b", fontSize: 13, lineHeight: 1.45 }}>{message}</p>
       {children ? <div style={{ display: "grid", gap: 10 }}>{children}</div> : null}
-      <div style={{ color: "#64748b", fontSize: 12 }}>
-        Extracted values are a starting point only. Please confirm or edit them before saving.
-      </div>
     </section>
   );
 }

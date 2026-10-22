@@ -1,4 +1,28 @@
 @import "tailwindcss";
+@import "../design_handoff_legacy_fortress 5.2/tokens.css" layer(lf-v52-tokens);
+
+/* V5.2 components use the handoff tokens without changing older light surfaces. */
+.lf-v52-value-block { display: grid; gap: 12px; padding: 16px; min-width: 0; border: 1px solid var(--lf-border-control); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); }
+.lf-v52-value-block h3 { margin: 0; color: var(--lf-text); font-size: var(--lf-text-section); font-weight: 700; }
+.lf-v52-value-block p { margin: 0; color: var(--lf-text-secondary); font-size: var(--lf-text-small); line-height: 1.4; }
+.lf-v52-value-block .lf-v4-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.lf-v52-record-value { display: grid; gap: 8px; min-width: 0; padding: 16px; border: 1px solid var(--lf-border-control); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); color: var(--lf-text); }
+.lf-v52-record-value > div { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.lf-v52-record-value strong { font-size: var(--lf-text-section); }
+.lf-v52-record-value span { color: var(--lf-text-secondary); font-size: var(--lf-text-small); }
+.lf-v52-record-value p { margin: 0; font-size: clamp(26px, 5vw, 34px); font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
+.lf-v52-record-value button { min-height: var(--lf-target-min); padding: 0 12px; border: 1px solid var(--lf-border-input); border-radius: var(--lf-radius-input); background: var(--lf-surface-card); color: var(--lf-link); font: inherit; cursor: pointer; }
+.lf-v52-record-value button:hover { background: var(--lf-surface-hover); }
+.lf-v52-record-value button:active { background: var(--lf-surface-pressed); }
+.lf-v52-record-value button:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 2px; }
+.lf-action-centre-row[data-task-group] { border-inline-start: 3px solid transparent; padding-inline-start: 10px !important; }
+.lf-action-centre-row[data-task-group="todo"] { border-inline-start-color: var(--lf-task-todo-bg); }
+.lf-action-centre-row[data-task-group="waiting"] { border-inline-start: var(--lf-outline-width) solid var(--lf-task-waiting-outline); }
+.lf-action-centre-row[data-task-group="suggested"] { border-inline-start: var(--lf-outline-width) dashed var(--lf-task-suggested-outline); }
+.lf-action-centre-row-summary:hover { background: var(--lf-surface-hover) !important; }
+.lf-action-centre-row-summary:active { background: var(--lf-surface-pressed) !important; }
+.lf-action-centre-row-summary:focus-visible { outline: 2px solid var(--lf-focus) !important; outline-offset: 2px; }
+@media (max-width: 390px) { .lf-v52-value-block .lf-v4-form-grid { grid-template-columns: minmax(0, 1fr); } }
 
 @font-face {
   font-family: "Material Symbols Outlined";

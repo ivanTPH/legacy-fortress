@@ -315,8 +315,8 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
   function renderInboxRow(item: ActionCentreRow) {
     const isRead = readActionKeys.has(item.actionKey);
     return (
-      <article key={item.actionKey} className={`lf-action-centre-row${isRead ? " is-read" : " is-new"}`} style={inboxRowStyle}>
-        <button type="button" className="lf-action-centre-row-summary" style={rowSummaryButtonStyle} onClick={() => openRow(item)} aria-label={`Show details for ${item.title}`}>
+      <article key={item.actionKey} className={`lf-action-centre-row${isRead ? " is-read" : " is-new"}`} data-task-group={actionGroup(item)} style={inboxRowStyle}>
+        <button type="button" className="lf-action-centre-row-summary" style={rowSummaryButtonStyle} onClick={() => openRow(item)} aria-label={`${actionGroup(item)} task: Show details for ${item.title}`}>
           <span className={`lf-action-centre-row-indicator${isRead ? " is-read" : ""}`} aria-hidden="true" />
           <span style={{ display: "grid", gap: 3, minWidth: 0, textAlign: "left" }}>
             <strong style={rowTitleStyle}>{item.title}</strong>

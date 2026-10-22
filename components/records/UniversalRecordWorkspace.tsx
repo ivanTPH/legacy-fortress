@@ -3654,6 +3654,15 @@ export default function UniversalRecordWorkspace({
 
         {isOpen ? (
           <div style={detailsPanelStyle}>
+            {viewer.mode !== "linked" && (isFinanceSection || isCanonicalProperty || isCanonicalBusiness || isCanonicalDigital || isPossessions) ? (
+              <section className="lf-v52-record-value" aria-label="Record value">
+                <div><strong>Value</strong><span>Owner-recorded estimate</span></div>
+                <p>{formatCurrency(canonicalBankAsset?.current_balance ?? canonicalPropertyAsset?.estimated_value_major ?? canonicalBusinessAsset?.estimated_value_major ?? canonicalDigitalAsset?.estimated_value_major ?? toMajorUnits(row.value_minor), (row.currency_code ?? "GBP").toUpperCase())}</p>
+                <div><span>As of {canonicalBankAsset?.valuation_date || canonicalPropertyAsset?.valuation_date || canonicalBusinessAsset?.valuation_date || canonicalDigitalAsset?.valuation_date || String(row.metadata?.valuation_date ?? "") || "date not recorded"}</span>
+                  {canEditWorkspaceRow(row.id) ? <button type="button" onClick={() => startEdit(row)}>Update value</button> : null}
+                </div>
+              </section>
+            ) : null}
             {isPossessions ? (
               <div style={{ color: "#475569", fontSize: 13, display: "grid", gap: 2 }}>
                 <div>Description: {String(row.metadata?.description ?? "No description")}</div>
