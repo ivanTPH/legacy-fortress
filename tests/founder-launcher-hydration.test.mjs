@@ -1,8 +1,16 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { createFounderLauncherAvailability } from "../lib/testLauncher/availability.ts";
 
 const settle = async () => { await Promise.resolve(); await Promise.resolve(); };
+
+test("session loading shell does not advertise an unverified switcher", () => {
+  const layout = readFileSync(new URL("../app/(app)/layout.tsx", import.meta.url), "utf8");
+  const placeholder = layout.split('className="lf-workspace-placeholder lf-sidebar-workspace"')[1]?.split("</aside>")[0];
+  assert.ok(placeholder);
+  assert.doesNotMatch(placeholder, /unfold_more|FounderTestLauncher|<WorkspaceSwitcher/);
+});
 
 test("duplicate hydration events cannot replace a verified founder result", async () => {
   const states = [];

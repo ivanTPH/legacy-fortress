@@ -932,7 +932,6 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                     <div className="lf-brand-title">Legacy Fortress</div>
                     <div className="lf-brand-subtitle">Personal Vault</div>
                   </div>
-                  <Icon name="unfold_more" size={18} />
                 </div>
               </div>
             </aside>

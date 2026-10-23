@@ -3285,7 +3285,6 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-sidebar-workspace { min-width: 0; }
 .lf-sidebar-workspace .lf-workspace-switcher { width: 100%; }
 .lf-workspace-placeholder { display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 4px 8px; }
-.lf-workspace-placeholder > .lf-icon { margin-left: auto; color: var(--lf-text-secondary); }
 .lf-sidebar .lf-search-wrap { display: none; }
 .lf-sidebar .lf-workspace-switcher, .lf-mobile-drawer .lf-workspace-switcher { border: 0; background: transparent; box-shadow: none; width: 100%; }
 .lf-sidebar .lf-workspace-switcher:hover, .lf-sidebar .lf-workspace-switcher:focus-within,

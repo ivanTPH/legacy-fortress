@@ -2,7 +2,7 @@
 
 ## 23 October 2026 — Founder switcher hydration candidate
 
-- Live TEST and remote staging were verified at `5f6884be83d41252c6fc8f0be25bafaaabb5ee7b`. The owner reports that the header switcher appears briefly and disappears. The client hook can issue duplicate gate checks for one session during `getSession` plus Auth events; a later failed request can replace a prior positive result. A focused, fail-closed deduplication fix is prepared in the isolated `fix/v52-switcher-stability` branch with status states for pending, allowed and denied.
+- Live TEST and remote staging were verified at `5f6884be83d41252c6fc8f0be25bafaaabb5ee7b`. The owner reports that the header switcher appears briefly and disappears. The desktop session-loading placeholder had an `unfold_more` chevron even though it was not interactive; this misleading cue is removed. The client hook can also issue duplicate gate checks for one session during `getSession` plus Auth events; a later failed request can replace a prior positive result. A focused, fail-closed deduplication fix is prepared in the isolated `fix/v52-switcher-stability` branch with status states for pending, allowed and denied.
 - The actual hosted gate outcome is still unproven. No approved founder session or Coolify Runtime Logs are available locally; the next required evidence is the non-sensitive `founder_test_launcher_unavailable` reason (if any) and the founder request status around the disappearance. Do not promote the candidate or claim iPhone acceptance until that evidence identifies the failing path. No Auth, RLS, schema, role or production change is included.
 
 ## 23 October 2026 — TEST installed-web-app entry correction
