@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import BrandMark from "@/components/ui/BrandMark";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { AdminMetricCard, AdminStatusBadge } from "@/components/admin/AdminPrimitives";
@@ -1806,7 +1807,7 @@ function renderOrganisationTable(organisations: EnterpriseOrganisation[], portfo
             const active = orgLicences.reduce((sum, licence) => sum + licence.activeSeats, 0);
             return (
               <tr key={org.id}>
-                <td>{org.name}<small>{org.registrationNumber ?? org.legalName}</small></td>
+                <td><div className="lf-v52-organisation-identity"><BrandMark name={org.name} /><span>{org.name}<small>{org.registrationNumber ?? org.legalName}</small></span></div></td>
                 <td>{labelise(org.type)}</td>
                 <td>{labelise(org.status)}</td>
                 <td>

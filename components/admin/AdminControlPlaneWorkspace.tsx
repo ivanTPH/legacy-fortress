@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import BrandMark from "@/components/ui/BrandMark";
 import type { CSSProperties, FormEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -1355,7 +1356,7 @@ function renderPlatformOrganisations(
           caption="Platform enterprise organisations"
           description={<p style={mutedStyle}>Global organisation register. Select an organisation before managing licence, users, invitations, seats, or activity.</p>}
           columns={[
-            { key: "organisation", header: "Organisation", render: (org) => <><Link href={`/admin/organisations/${org.id}`}>{org.name}</Link><small>{org.registrationNumber ?? org.legalName}</small></> },
+            { key: "organisation", header: "Organisation", render: (org) => <div className="lf-v52-organisation-identity"><BrandMark name={org.name} /><span><Link href={`/admin/organisations/${org.id}`}>{org.name}</Link><small>{org.registrationNumber ?? org.legalName}</small></span></div> },
             { key: "type", header: "Type", render: (org) => labelise(org.type) },
             { key: "status", header: "Status", render: (org) => <AdminStatusBadge status={org.status} /> },
             { key: "licence", header: "Licence", render: (org) => renderOrgLicenceSummary(org, views.licences) },
