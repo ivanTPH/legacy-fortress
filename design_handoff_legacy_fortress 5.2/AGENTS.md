@@ -48,6 +48,9 @@ Copy this file to the repo root. Codex reads it automatically on every task.
 31. Web: sheets → 440px right side panels; full-screen forms → centred dialogs; record page = main column + 380px right rail (people, history).
 32. Minimum 13px text; inputs 16px; 44 × 44 targets; contrast 4.5:1 text, 3:1 borders and focus, in light, dark and increased contrast. Support Dynamic Type to the largest size, Bold text, Reduce motion, forced colours.
 33. Colours come only from semantic tokens with light, dark and increased-contrast values (V5.2.md › Appearance). Theme: Automatic (default) · Light · Dark.
+34. Categories keep the filled dark tile icon. Records show the organisation's logo in a white hairline tile (monogram fallback; category icon when there's no organisation).
+35. Category list pages use the s4 pattern (one search + Sort row, one-line rows with logo and value, no sensitive numbers). Sensitive fields appear only on the record page, masked, with eye and copy buttons on the right of the row (s5).
+36. Everything in V5.2 applies to the website, Partner and Admin as well as the Vault app (section X). Website lists follow x1, records x2; Partner proposals follow p1–p3; Admin and Partner use the same tokens, accessibility standard and dark mode.
 
 ## Definition of done
 - `npm run lint` and `npm test` pass (use the repo's actual scripts).

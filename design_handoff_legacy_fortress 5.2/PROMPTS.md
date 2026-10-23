@@ -252,4 +252,6 @@ Read `V5.2.md`, `AGENTS.md` rules 24–33 and `design/V5.2 Records Access and Ap
 4. Record access sheet / side panel and Person page record status (display only, from existing data).
 5. Record history sheet / side panel (read from the audit source once verified; hide the section if it isn't).
 6. Action Centre types and row states, mobile and web.
+8. Category list pages and record details (V5.2.md › Icons, logos and category sub-pages; prototype s4, s5) for all six categories. Organisation logo component with monogram fallback. Keep the filled dark category tiles.
+9. Website lists and records (x1, x2); Partner proposal screens (p1–p3, behind the same flag as step 7); Admin and Partner on tokens with accessibility and dark mode (y1–y8).
 7. Approval path for contributed documents (notify, review, comment, approve/reject, apply). Behind a flag until backend persistence, versioning and approval enforcement are independently verified.
