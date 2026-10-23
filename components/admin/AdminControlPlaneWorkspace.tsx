@@ -694,6 +694,11 @@ export default function AdminControlPlaneWorkspace({
   }, [loadAll]);
 
   async function signOut() {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      setMessage("Sign out could not be completed. Please try again.");
+      return;
+    }
     setState("checking");
     setMessage("");
     setAdmin(null);
@@ -710,7 +715,6 @@ export default function AdminControlPlaneWorkspace({
     setEnterprisePortfolio(null);
     setLookupResults([]);
     setUserDetail(null);
-    await supabase.auth.signOut();
     router.replace("/sign-in");
     router.refresh();
   }

@@ -52,7 +52,7 @@ export async function GET(request: Request) {
       document_content_excluded: true,
       financial_values_excluded: true,
     }).catch(() => null);
-    return NextResponse.json({ ok: true, detail });
+    return NextResponse.json({ ok: true, detail, uiAccess: { organisationScoped: admin.access.enterpriseScope?.organisationScoped ?? false } });
   }
   if (organisationId) {
     const scopeDenied = assertEnterpriseOrganisationScope(admin.access, organisationId);
@@ -63,7 +63,7 @@ export async function GET(request: Request) {
       document_content_excluded: true,
       financial_values_excluded: true,
     }).catch(() => null);
-    return NextResponse.json({ ok: true, detail });
+    return NextResponse.json({ ok: true, detail, uiAccess: { organisationScoped: admin.access.enterpriseScope?.organisationScoped ?? false } });
   }
 
   const portfolio = await loadEnterprisePortfolio(admin.adminClient, admin.access);

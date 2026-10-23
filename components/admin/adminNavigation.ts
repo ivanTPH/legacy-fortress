@@ -90,3 +90,14 @@ export function filterAdminNavigation(groups: AdminNavigationGroup[], capabiliti
     }))
     .filter((group) => group.items.length > 0);
 }
+
+export function labelPartnerNavigation(groups: AdminNavigationGroup[]): AdminNavigationGroup[] {
+  return groups.map((group) => ({
+    ...group,
+    label: "Partner Portal",
+    items: group.items.map((item) => ({
+      ...item,
+      label: item.key === "enterprise-users" ? "Team & seats" : item.key === "enterprise-licences" ? "Licence" : item.label,
+    })),
+  }));
+}

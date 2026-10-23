@@ -76,7 +76,7 @@ test("enterprise workspace replaces disabled prototype with functional controls"
   assert.match(workspace, /Create licence/);
   assert.match(workspace, /Send invitation/);
   assert.match(workspace, /Request governed export/);
-  assert.match(workspace, /Private vault records, uploaded documents, legal contents, individual financial values/);
+  assert.match(workspace, /Private Vault contents are never shown here/);
   assert.match(workspace, /AdminWorkspaceShell/);
   assert.match(workspace, /onSignOut=\{signOut\}/);
   assert.match(workspace, /supabase\.auth\.signOut\(\)/);

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useId, useRef, useState } from "react";
-import WorkspaceSwitcher from "@/components/navigation/WorkspaceSwitcher";
 import FounderTestLauncher, { useFounderTestLauncherAccess } from "@/components/navigation/FounderTestLauncher";
 import Icon from "@/components/ui/Icon";
 import type { AdminNavigationGroup, AdminNavigationItem } from "./adminNavigation";
@@ -56,7 +55,8 @@ export default function AdminWorkspaceShell({
   const drawerPanelRef = useRef<HTMLDivElement | null>(null);
   const accountMenuId = useId();
   const isPartner = workspaceLabel === "Partner Portal";
-  const isPlatform = workspaceLabel !== "Enterprise Operations" && !isPartner;
+  const isInternalEnterprise = workspaceLabel === "Enterprise Operations";
+  const isPlatform = !isPartner;
   const founderLauncherAvailable = useFounderTestLauncherAccess();
 
   useEffect(() => {
@@ -134,7 +134,7 @@ export default function AdminWorkspaceShell({
     });
   }
 
-  const workspaceHome = isPlatform ? "/admin" : "/enterprise";
+  const workspaceHome = isInternalEnterprise || isPartner ? "/enterprise" : "/admin";
   const visibleItems = navigation.flatMap((group) => group.items);
   const currentRoute = currentPathname.split("?")[0];
   const detailParent = isPlatform
@@ -142,7 +142,7 @@ export default function AdminWorkspaceShell({
         .filter((item) => currentRoute.startsWith(`${item.href.split("?")[0]}/`))
         .sort((a, b) => b.href.length - a.href.length)[0]
     : undefined;
-  const preferredTabs = isPartner ? ["enterprise-overview", "enterprise-users", "enterprise-invitations"]
+  const preferredTabs = isPartner || isInternalEnterprise ? ["enterprise-overview", "enterprise-users", "enterprise-invitations"]
     : adminRole === "support_agent" ? ["overview", "users", "support"]
     : adminRole === "probate_reviewer" ? ["overview", "probate", "verification"]
     : adminRole === "enterprise_admin" ? ["overview", "organisations", "licences"]
@@ -182,12 +182,6 @@ export default function AdminWorkspaceShell({
       </nav>
       {isPlatform || isPartner ? <FounderTestLauncher current={isPartner ? "partner" : "admin"} available={founderLauncherAvailable} /> : null}
     </aside>
-  );
-
-  const signOutButton = (className = "lf-admin-shell-secondary") => (
-    <button type="button" className={className} aria-label="Sign out of Legacy Fortress" onClick={onSignOut}>
-      Sign out
-    </button>
   );
 
   const initials = getInitials(identityLabel);
@@ -276,7 +270,9 @@ export default function AdminWorkspaceShell({
               </button>
             </div>
             <div className="lf-admin-shell-drawer-scroll">
-              <div className="lf-admin-shell-drawer-account">
+              {sidebar}
+              <div className="lf-admin-shell-drawer-account" aria-label="Account controls">
+                <strong>Account</strong>
                 <div className="lf-admin-shell-identity" title={identityDetail ?? identityLabel}>
                   <Icon name="account_circle" size={22} />
                   <span>
@@ -284,9 +280,10 @@ export default function AdminWorkspaceShell({
                     {identityDetail ? <small>{identityDetail}</small> : null}
                   </span>
                 </div>
-                {signOutButton("lf-admin-shell-secondary lf-admin-shell-drawer-signout")}
+                <button type="button" className="lf-admin-shell-secondary lf-admin-shell-drawer-signout" aria-label="Sign out of Legacy Fortress" onClick={onSignOut}>
+                  <Icon name="logout" size={18} /> Sign out
+                </button>
               </div>
-              {sidebar}
             </div>
           </div>
         </div>
@@ -316,7 +313,6 @@ export default function AdminWorkspaceShell({
           <div className="lf-admin-shell-actions">
             {!isPlatform && !isPartner && stagingLabel ? <span className="lf-admin-shell-stage">{stagingLabel}</span> : null}
             {primaryAction}
-            {!isPlatform && !isPartner ? <WorkspaceSwitcher currentPathname={currentPathname} compact /> : null}
             {accountMenu(false)}
           </div>
         </header>

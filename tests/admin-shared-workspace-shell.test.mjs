@@ -11,8 +11,8 @@ test("shared admin shell exposes responsive navigation, identity and sign-out co
   assert.match(source, /lf-admin-shell-sidebar/);
   assert.match(source, /lf-admin-shell-mobile-toggle/);
   assert.match(source, /role="dialog"/);
-  assert.match(source, /WorkspaceSwitcher/);
-  assert.match(source, /!isPlatform && !isPartner \? <WorkspaceSwitcher/);
+  assert.doesNotMatch(source, /<WorkspaceSwitcher/);
+  assert.match(source, /<FounderTestLauncher current=\{isPartner \? "partner" : "admin"\} available=\{founderLauncherAvailable\}/);
   assert.match(source, /lf-admin-shell-mobile-tabs/);
   assert.match(source, /preferredTabs\.map/);
   assert.match(source, /Sign out/);
@@ -29,7 +29,7 @@ test("shared admin shell exposes responsive navigation, identity and sign-out co
   assert.doesNotMatch(source, /href="\/dashboard" className="lf-admin-shell-secondary"/);
   assert.match(source, /lf-admin-shell-drawer-account/);
   assert.match(source, /lf-admin-shell-drawer-signout/);
-  assert.match(source, /lf-admin-shell-drawer-heading[\s\S]+lf-admin-shell-drawer-close[\s\S]+lf-admin-shell-drawer-scroll[\s\S]+lf-admin-shell-drawer-account[\s\S]+\{sidebar\}/);
+  assert.match(source, /lf-admin-shell-drawer-heading[\s\S]+lf-admin-shell-drawer-close[\s\S]+lf-admin-shell-drawer-scroll[\s\S]+\{sidebar\}[\s\S]+lf-admin-shell-drawer-account/);
   assert.match(source, /flex-wrap: wrap/);
   assert.match(source, /white-space: nowrap/);
   assert.match(source, /prefetch=\{false\}/);

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell";
-import { ENTERPRISE_ADMIN_NAVIGATION, PLATFORM_ADMIN_NAVIGATION, filterAdminNavigation } from "@/components/admin/adminNavigation";
+import { ENTERPRISE_ADMIN_NAVIGATION, PLATFORM_ADMIN_NAVIGATION, filterAdminNavigation, labelPartnerNavigation } from "@/components/admin/adminNavigation";
 import { waitForActiveUser } from "@/lib/auth/session";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -56,6 +56,7 @@ export default function EnterpriseLicenceDetailWorkspace({ licenceId, platformAd
   const [message, setMessage] = useState("");
   const [detail, setDetail] = useState<Detail | null>(null);
   const [navigationCapabilities, setNavigationCapabilities] = useState<string[]>([]);
+  const [partnerMode, setPartnerMode] = useState(false);
   const [identity, setIdentity] = useState({ label: "Enterprise user", detail: "" });
   const [tab, setTab] = useState<"overview" | "seats" | "invitations" | "renewals" | "audit" | "settings">("overview");
   const [seatQuantity, setSeatQuantity] = useState(25);
@@ -99,7 +100,7 @@ export default function EnterpriseLicenceDetailWorkspace({ licenceId, platformAd
       return;
     }
     const res = await authFetch(`/api/internal/admin/enterprise?licenceId=${encodeURIComponent(licenceId)}`);
-    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; detail?: Detail; message?: string };
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; detail?: Detail; message?: string; uiAccess?: { organisationScoped?: boolean } };
     if (!res.ok || !json.ok || !json.detail) {
       setMessage(json.message || "This licence is unavailable.");
       setState(res.status === 403 ? "denied" : "error");
@@ -113,6 +114,7 @@ export default function EnterpriseLicenceDetailWorkspace({ licenceId, platformAd
       detail: sessionJson.admin?.role ? `${sessionJson.admin.role.replace(/_/g, " ")} · ${sessionJson.admin.email ?? user.email ?? ""}` : user.email ?? "",
     });
     setDetail(json.detail);
+    setPartnerMode(!platformAdmin && json.uiAccess?.organisationScoped === true);
     setSeatQuantity(json.detail.licence.purchasedSeats);
     setRenewalSeats(json.detail.licence.purchasedSeats);
     setRenewalDate(json.detail.licence.renewalDate);
@@ -169,9 +171,10 @@ export default function EnterpriseLicenceDetailWorkspace({ licenceId, platformAd
   function closeConfirmation() { setConfirmAction(null); setMessage(""); }
 
   async function signOut() {
+    const { error } = await supabase.auth.signOut();
+    if (error) { setMessage("Sign out could not be completed. Please try again."); return; }
     setDetail(null);
     setMessage("");
-    await supabase.auth.signOut();
     router.replace("/sign-in");
     router.refresh();
   }
@@ -182,10 +185,11 @@ export default function EnterpriseLicenceDetailWorkspace({ licenceId, platformAd
   const licence = detail.licence;
   const workspaceBase = platformAdmin ? "/admin" : "/enterprise";
   const licenceBase = platformAdmin ? "/admin/licences" : "/enterprise/licences";
-  const navigation = filterAdminNavigation(platformAdmin ? PLATFORM_ADMIN_NAVIGATION : ENTERPRISE_ADMIN_NAVIGATION, navigationCapabilities);
+  const allowedNavigation = filterAdminNavigation(platformAdmin ? PLATFORM_ADMIN_NAVIGATION : ENTERPRISE_ADMIN_NAVIGATION, navigationCapabilities);
+  const navigation = partnerMode ? labelPartnerNavigation(allowedNavigation) : allowedNavigation;
   return (
     <AdminWorkspaceShell
-      workspaceLabel={platformAdmin ? "Platform Administration" : "Enterprise Operations"}
+      workspaceLabel={platformAdmin ? "Platform Administration" : partnerMode ? "Partner Portal" : "Enterprise Operations"}
       eyebrow={platformAdmin ? "Platform commercial controls" : "Legacy Fortress Enterprise"}
       title={licence.plan === "custom" ? licence.customPlanName || "Custom licence" : labelise(licence.plan)}
       description={`${detail.organisation?.name ?? "Unknown organisation"} · ${labelise(licence.status)} · ${licence.availableSeats} seats available`}

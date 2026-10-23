@@ -123,6 +123,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
   const founderLauncherAvailable = useFounderTestLauncherAccess();
   const navWrapRef = useRef<HTMLDivElement | null>(null);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [signOutError, setSignOutError] = useState("");
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
   const accountTriggerRef = useRef<HTMLButtonElement | null>(null);
   const accountMenuId = useId();
@@ -838,11 +839,17 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
+    setSignOutError("");
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      setSignOutError("Sign out could not be completed. Please try again.");
+      return;
+    }
     dispatchMenu({ type: "set_mobile_nav", open: false });
     clearStoredLinkedGrantId();
     setIsDemoExperience(false);
-    await supabase.auth.signOut();
     router.replace("/sign-in");
+    router.refresh();
   };
 
   const viewerContextValue = useMemo(
@@ -1241,12 +1248,15 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
               <div className="lf-mobile-drawer-footer">
                 {accountItems.filter((item) => item.id === "support" || item.id === "account-profile").map((item) => <Link key={item.id} href={item.path} className="lf-mobile-drawer-support" onClick={() => closeNavigationState("item_select")}><span className="lf-nav-icon">{item.icon}</span>{item.label}</Link>)}
                 <FounderTestLauncher current="vault" available={founderLauncherAvailable} />
+                <button type="button" className="lf-mobile-drawer-signout" onClick={() => void signOut()}><Icon name="logout" size={20} />Sign out</button>
+                {signOutError ? <p role="alert" className="lf-signout-error">{signOutError}</p> : null}
               </div>
             </aside>
           </>
         ) : null}
 
         <main className="lf-main-content">
+          {signOutError ? <p role="alert" className="lf-signout-error">{signOutError}</p> : null}
           <div className="lf-page-content">
           {isDemoExperience ? (
             <section

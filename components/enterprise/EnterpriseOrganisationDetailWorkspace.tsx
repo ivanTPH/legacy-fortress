@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell";
-import { ENTERPRISE_ADMIN_NAVIGATION, filterAdminNavigation } from "@/components/admin/adminNavigation";
+import { ENTERPRISE_ADMIN_NAVIGATION, filterAdminNavigation, labelPartnerNavigation } from "@/components/admin/adminNavigation";
 import { waitForActiveUser } from "@/lib/auth/session";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -95,6 +95,7 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
   const [message, setMessage] = useState("");
   const [detail, setDetail] = useState<Detail | null>(null);
   const [navigationCapabilities, setNavigationCapabilities] = useState<string[]>([]);
+  const [partnerMode, setPartnerMode] = useState(false);
   const [identity, setIdentity] = useState({ label: "Enterprise user", detail: "" });
   const [tab, setTab] = useState<"overview" | "licence" | "users" | "invitations" | "adoption" | "consent" | "reports" | "audit" | "settings">("overview");
   const [form, setForm] = useState<FormState | null>(null);
@@ -151,7 +152,7 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
       return;
     }
     const res = await authFetch(`/api/internal/admin/enterprise?organisationId=${encodeURIComponent(organisationId)}`);
-    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; detail?: Detail; message?: string };
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; detail?: Detail; message?: string; uiAccess?: { organisationScoped?: boolean } };
     if (!res.ok || !json.ok || !json.detail) {
       setMessage(json.message || "This organisation is unavailable.");
       setState(res.status === 403 ? "denied" : "error");
@@ -165,6 +166,7 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
       detail: sessionJson.admin?.role ? `${sessionJson.admin.role.replace(/_/g, " ")} · ${sessionJson.admin.email ?? user.email ?? ""}` : user.email ?? "",
     });
     setDetail(json.detail);
+    setPartnerMode(json.uiAccess?.organisationScoped === true);
     setForm(toForm(json.detail.organisation));
     setState("ready");
   }, [authFetch, organisationId, router]);
@@ -196,9 +198,10 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
   }
 
   async function signOut() {
+    const { error } = await supabase.auth.signOut();
+    if (error) { setMessage("Sign out could not be completed. Please try again."); return; }
     setDetail(null);
     setMessage("");
-    await supabase.auth.signOut();
     router.replace("/sign-in");
     router.refresh();
   }
@@ -207,10 +210,11 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
   if (state !== "ready" || !detail || !form) return <main style={pageStyle}><section style={panelStyle}><h1>{state === "denied" ? "Access denied" : "Organisation unavailable"}</h1><p>{message}</p><Link href="/enterprise">Back to Enterprise Operations</Link></section></main>;
 
   const org = detail.organisation;
-  const navigation = filterAdminNavigation(ENTERPRISE_ADMIN_NAVIGATION, navigationCapabilities);
+  const allowedNavigation = filterAdminNavigation(ENTERPRISE_ADMIN_NAVIGATION, navigationCapabilities);
+  const navigation = partnerMode ? labelPartnerNavigation(allowedNavigation) : allowedNavigation;
   return (
     <AdminWorkspaceShell
-      workspaceLabel="Enterprise Operations"
+      workspaceLabel={partnerMode ? "Partner Portal" : "Enterprise Operations"}
       eyebrow="Legacy Fortress Enterprise"
       title={org.name}
       description={`${labelise(org.status)} · ${labelise(org.risk)} · ${org.accountOwner || "No account owner"}`}

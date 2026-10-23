@@ -178,7 +178,7 @@ test("workspace switcher exposes explicit identity and role context without chan
   assert.match(switcher, /formatRole\(activeRole\)/);
   assert.match(switcher, /aria-current=\{workspace\.id === currentWorkspace \? "page"/);
   assert.match(workspaces, /label: "Platform Probate Review"/);
-  assert.match(shell, /workspaceHome = isPlatform \? "\/admin" : "\/enterprise"/);
+  assert.match(shell, /workspaceHome = isInternalEnterprise \|\| isPartner \? "\/enterprise" : "\/admin"/);
   assert.doesNotMatch(switcher, /auth\.signOut|router\.(push|replace)/);
 });
 

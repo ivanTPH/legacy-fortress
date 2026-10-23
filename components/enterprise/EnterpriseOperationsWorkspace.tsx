@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { AdminMetricCard, AdminStatusBadge } from "@/components/admin/AdminPrimitives";
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell";
-import { ENTERPRISE_ADMIN_NAVIGATION, filterAdminNavigation } from "@/components/admin/adminNavigation";
+import { ENTERPRISE_ADMIN_NAVIGATION, filterAdminNavigation, labelPartnerNavigation } from "@/components/admin/adminNavigation";
 import { waitForActiveUser } from "@/lib/auth/session";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -544,10 +544,14 @@ export default function EnterpriseOperationsWorkspace() {
   }, [searchParams]);
 
   async function signOut() {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      setMessage("Sign out could not be completed. Please try again.");
+      return;
+    }
     setPortfolio(EMPTY_PORTFOLIO);
     setMessage("");
     setNavigationCapabilities([]);
-    await supabase.auth.signOut();
     router.replace("/sign-in");
     router.refresh();
   }
@@ -653,7 +657,10 @@ export default function EnterpriseOperationsWorkspace() {
     return true;
   });
   const currentPathname = `/enterprise${activeTab === "overview" ? "" : `?tab=${activeTab}`}`;
-  const visibleNavigation = useMemo(() => filterAdminNavigation(ENTERPRISE_ADMIN_NAVIGATION, navigationCapabilities), [navigationCapabilities]);
+  const visibleNavigation = useMemo(() => {
+    const allowed = filterAdminNavigation(ENTERPRISE_ADMIN_NAVIGATION, navigationCapabilities);
+    return partnerMode ? labelPartnerNavigation(allowed) : allowed;
+  }, [navigationCapabilities, partnerMode]);
   const can = useCallback((capability: string) => navigationCapabilities.includes(capability), [navigationCapabilities]);
   const partnerTitle = activeTab === "users" ? "Team & seats" : activeTab === "overview" ? "Overview" : activeTab === "invitations" ? "Invitations" : labelise(activeTab);
   const partnerScope = portfolio.organisations.length === 1 ? portfolio.organisations[0].name : `${portfolio.organisations.length} authorised organisations`;
@@ -711,8 +718,8 @@ export default function EnterpriseOperationsWorkspace() {
     <AdminWorkspaceShell
       workspaceLabel={partnerMode ? "Partner Portal" : "Enterprise Operations"}
       eyebrow="Legacy Fortress Enterprise"
-      title={partnerMode ? partnerTitle : "Enterprise Operations"}
-      description={partnerMode ? "Manage your organisation and its team." : "Organisation licensing, seats, invitations, consent-aware reporting, and renewals. Private vault records and documents are excluded."}
+      title={partnerTitle}
+      description={partnerMode ? "Manage your organisation and its team." : "Manage organisations, licences, invitations and reports."}
       contextLabel={partnerMode ? partnerScope : undefined}
       currentPathname={currentPathname}
       navigation={visibleNavigation}
@@ -725,11 +732,9 @@ export default function EnterpriseOperationsWorkspace() {
 
       {message ? <section style={alertStyle}>{message}</section> : null}
 
-      {!partnerMode ? renderEnterpriseContext(portfolio) : null}
-
       {(!partnerMode || activeTab !== "overview") ? partnerMode ? <><div className="lf-partner-desktop-filters">{filterPanel}</div><details className="lf-partner-mobile-filters"><summary>Filters and saved views</summary>{filterPanel}</details></> : filterPanel : null}
 
-      {activeTab === "overview" ? partnerMode ? renderPartnerOverview(portfolio, openPartnerTab) : renderOverview(portfolio, filteredOrganisations, filteredLicences, filteredInvitations, setActiveTab, setFilters) : null}
+      {activeTab === "overview" ? partnerMode ? renderPartnerOverview(portfolio, openPartnerTab) : renderOverview(portfolio, filteredOrganisations, filteredLicences, filteredInvitations, openPartnerTab, setFilters) : null}
       {activeTab === "organisations" ? renderOrganisations(filteredOrganisations, portfolio, orgForm, setOrgForm, runAction, async () => {
         await runAction("create_organisation", orgForm);
         setOrganisationFormOpen(false);
@@ -821,63 +826,39 @@ function renderOverview(
     { label: "Licensed organisations", value: portfolio.summary.organisations, tab: "organisations" as const, filters: baseFilters },
     { label: "Active licences", value: portfolio.summary.activeLicences, tab: "licences" as const, filters: { ...baseFilters, licence: "active" } },
     { label: "Seats used", value: `${portfolio.summary.seats.active}/${portfolio.summary.seats.purchased}`, tab: "users" as const, filters: { ...baseFilters, membership: "active" } },
+    { label: "Pending invitations", value: portfolio.summary.pendingInvitations, tab: "invitations" as const, filters: { ...baseFilters, invitation: "sent" } },
     { label: "Seats available", value: String(portfolio.summary.seats.available ?? Math.max(portfolio.summary.seats.purchased - portfolio.summary.seats.allocated, 0)), tab: "licences" as const, filters: { ...baseFilters, utilisation: "0_25" } },
     { label: "Renewals due", value: portfolio.summary.renewalsDue, tab: "renewals" as const, filters: { ...baseFilters, renewal: "due_90" } },
-    { label: "Pending invitations", value: portfolio.summary.pendingInvitations, tab: "invitations" as const, filters: { ...baseFilters, invitation: "sent" } },
     { label: "Low adoption", value: portfolio.adoptionBands.filter((row) => row.band === "low").length, tab: "adoption" as const, filters: { ...baseFilters, adoption: "low" } },
     { label: "Consent restricted", value: portfolio.summary.consentRestricted, tab: "consent" as const, filters: { ...baseFilters, consent: "restricted" } },
     { label: "At-risk organisations", value: portfolio.risk.filter((row) => row.band === "at_risk" || row.band === "critical").length, tab: "organisations" as const, filters: { ...baseFilters, risk: "at_risk" } },
   ];
+  const openCard = (card: typeof cards[number]) => {
+    setFilters(card.filters);
+    setActiveTab(card.tab);
+  };
+  const priorities = [cards[3], cards[5], cards[8]].filter((card) => Number(card.value) > 0);
   return (
-    <div style={stackStyle}>
-      <section style={gridStyle}>
-        {cards.map((card) => (
+    <div className="lf-enterprise-overview">
+      <section className="lf-partner-overview-metrics" aria-label="Enterprise summary">
+        {cards.slice(0, 4).map((card) => (
           <AdminMetricCard
             key={card.label}
             label={card.label}
             value={card.value}
-            detail="Filtered by current enterprise scope"
-            actionLabel="Open filtered view"
-            onClick={() => {
-              setFilters(card.filters);
-              setActiveTab(card.tab);
-            }}
+            actionLabel={`Open ${card.label.toLowerCase()}`}
+            onClick={() => openCard(card)}
           />
         ))}
       </section>
-      <section style={panelStyle}>
-        <h2 style={h2Style}>Portfolio snapshot</h2>
-        <p style={mutedStyle}>{organisations.length} organisations, {licences.length} licences, and {invitations.length} invitations match the current filters.</p>
-        <p style={privacyStyle}>Private vault records, uploaded documents, legal contents, individual financial values, notes, wishes, passwords, and account numbers are not queried or displayed.</p>
-      </section>
+      {priorities.length ? <section className="lf-partner-attention" aria-label="Needs a decision"><h2>Needs a decision</h2>
+        {priorities.map((card) => <button key={card.label} type="button" onClick={() => openCard(card)}>{card.label} · {card.value}<span aria-hidden="true">›</span></button>)}
+      </section> : null}
+      <details className="lf-enterprise-more"><summary>More commercial metrics</summary><div className="lf-partner-overview-metrics">
+        {cards.slice(4).map((card) => <AdminMetricCard key={card.label} label={card.label} value={card.value} actionLabel={`Open ${card.label.toLowerCase()}`} onClick={() => openCard(card)} />)}
+      </div></details>
+      <p className="lf-enterprise-overview-note">{organisations.length} organisations, {licences.length} licences and {invitations.length} invitations match the current filters. Private Vault contents are never shown here.</p>
     </div>
-  );
-}
-
-function renderEnterpriseContext(portfolio: EnterprisePortfolio) {
-  const organisations = portfolio.organisations;
-  const primary = organisations.length === 1 ? organisations[0] : null;
-  return (
-    <section style={contextPanelStyle} aria-label="Current enterprise organisation context">
-      <div style={sectionHeaderStyle}>
-        <div>
-          <p style={eyebrowStyle}>Authorised organisation context</p>
-          <h2 style={h2Style}>{primary ? primary.name : organisations.length ? `${organisations.length} authorised organisations` : "No organisation assigned"}</h2>
-          <p style={mutedStyle}>
-            {primary
-              ? `${labelise(primary.status)} organisation · ${labelise(primary.onboardingStatus)} onboarding`
-              : "Every record in this workspace is filtered by the organisation scope granted to your account."}
-          </p>
-        </div>
-        <span style={privacyStyle}>Private vault content excluded</span>
-      </div>
-      <div style={contextSummaryGridStyle}>
-        <div><strong>{portfolio.summary.seats.active}/{portfolio.summary.seats.purchased}</strong><span>active seats</span></div>
-        <div><strong>{portfolio.summary.seats.available ?? 0}</strong><span>available seats</span></div>
-        <div><strong>{portfolio.summary.pendingInvitations}</strong><span>pending invitations</span></div>
-        <div><strong>{portfolio.summary.atRiskOrganisations}</strong><span>at-risk organisations</span></div>
-      </div>
-    </section>
   );
 }
 
@@ -2036,7 +2017,6 @@ const privacyStyle: CSSProperties = { color: "#334155", background: "#f1f5f9", b
 const rowStyle: CSSProperties = { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 };
 const sectionHeaderStyle: CSSProperties = { display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 12 };
 const contextPanelStyle: CSSProperties = { border: "1px solid #cbd5e1", borderRadius: 8, padding: 14, display: "grid", gap: 12, background: "#f8fafc" };
-const contextSummaryGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 };
 const secondaryLinkStyle: CSSProperties = { color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 6, padding: "9px 12px", textDecoration: "none", background: "#fff", fontWeight: 700 };
 const secondaryButtonStyle: CSSProperties = { color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 6, padding: "9px 12px", background: "#fff", fontWeight: 700 };
 const primaryButtonStyle: CSSProperties = { border: 0, borderRadius: 6, padding: "10px 14px", background: "#111827", color: "#fff", fontWeight: 800 };

@@ -8215,3 +8215,35 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-pwa-entry-destinations a:hover { background: var(--lf-surface-hover); }
 .lf-pwa-entry-destinations a:active { background: var(--lf-surface-pressed); }
 .lf-pwa-entry-destinations a:focus-visible { outline: none; box-shadow: var(--lf-focus-ring); }
+
+.lf-enterprise-overview { display: grid; gap: 16px; min-width: 0; }
+.lf-enterprise-overview-note { margin: 0; padding: 12px 16px; border-radius: var(--lf-radius-card); background: var(--lf-surface-subtle); color: var(--lf-text-secondary); }
+.lf-enterprise-more { min-width: 0; border: 1px solid var(--lf-border-control); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); }
+.lf-enterprise-more summary { min-height: var(--lf-target-min); padding: 12px 16px; cursor: pointer; color: var(--lf-link); font-weight: 700; }
+.lf-enterprise-more > div { padding: 0 12px 12px; }
+.lf-enterprise-more summary:focus-visible { outline: none; box-shadow: var(--lf-focus-ring-inset); }
+.lf-signout-error { margin: 8px 0; color: var(--lf-destructive); font-weight: 700; }
+
+@media (max-width: 860px) {
+  .lf-mobile-drawer-footer { display: grid; gap: 4px; }
+  .lf-mobile-drawer-signout,
+  .lf-admin-shell-drawer-signout {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    min-height: var(--lf-target-min);
+    border: 1px solid var(--lf-border-control);
+    border-radius: var(--lf-radius-input);
+    background: var(--lf-surface-card);
+    color: var(--lf-destructive);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .lf-mobile-drawer-signout:focus-visible,
+  .lf-admin-shell-drawer-signout:focus-visible { outline: none; box-shadow: var(--lf-focus-ring); }
+  .lf-admin-shell-drawer-account { border-top: 1px solid var(--lf-divider); padding-bottom: calc(16px + env(safe-area-inset-bottom)); color: var(--lf-text); }
+  .lf-admin-shell-drawer-account .lf-admin-shell-identity { color: var(--lf-text); background: var(--lf-surface-card); border-color: var(--lf-border-control); }
+}
