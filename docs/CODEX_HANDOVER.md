@@ -3,8 +3,15 @@
 ## 23 October 2026 — TEST installed-web-app entry correction
 
 - Owner reproduced that a fresh iPhone Home Screen installation starts at `/` and a destination-free super-admin sign-in lands at `/admin`. The live manifest had `start_url: "/"`; local execution confirmed the role default and that explicit `/dashboard` remains Vault.
-- A TEST-only manifest start URL now opens `/pwa-entry`, which offers route-only sign-in links for Vault, Admin and Partner. Each existing route and sign-in guard still checks its own permissions. Production manifest stays at `/`. The earlier founder header switcher and Vault grid remain isolated on `fix/v5-2-founder-header-vault-grid` pending an authenticated TEST founder-gate result.
-- Focused role/security tests, TypeScript, changed-file lint, and local mobile WebKit/desktop browser checks passed. No authenticated founder session or TEST app-log reason was available; installed-iPhone acceptance remains unverified. After a protected TEST deployment, check `/manifest.webmanifest`, `/api/version`, then reinstall the TEST Home Screen app and test the founder journey.
+- TEST manifest now starts at `/pwa-entry` with route-only sign-in links for Vault, Admin and Partner. Each route keeps its access checks; production manifest stays at `/`. Protected release at `57e2158756a9ec3beca942527dc4e881f1bc52b9` passed, with the hosted manifest and `/api/version` verified. The owner subsequently confirmed the installed iPhone PWA opens the authorised destinations.
+- Focused role/security tests, TypeScript, changed-file lint and local/hosted mobile WebKit and desktop entry checks passed. The separately prepared founder header switcher and Vault grid are incorporated in the current isolated interface-consolidation branch; the founder gate still needs an authenticated hosted response before claiming its availability.
+
+## 23 October 2026 — Founder header entry and Vault Home grid candidate
+
+- Verified TEST staging and `/api/version` at `cbcda97a9a738e6154cecf6cd6f53726f2f2ffdc`. Owner confirms Personal Vault loads on iPhone and desktop, but the founder launcher remains absent. The authenticated `/api/internal/test/environments` denial reason is still required from authorised Coolify TEST application logs; no additional gate bypass has been made.
+- The existing customer `WorkspaceSwitcher` now becomes a header button for a server-authorised founder even with one customer Vault. Its menu keeps customer Vault contexts separate from the existing `FounderTestLauncher` under a labelled TEST section; ordinary users retain the plain one-context label. The same header control is mounted in mobile and desktop Vault layouts.
+- Home's six category links use an adaptive two-column mobile grid at normal 390/402px widths, one column at 320px or increased text, and the existing desktop layout. Focused WebKit/Chromium geometry tests, founder/workspace policy tests, TypeScript and targeted lint pass. These are layout and policy checks, not an authenticated founder journey.
+- Next action: obtain an authenticated TEST founder-gate response or the `founder_test_launcher_unavailable` reason code before claiming the header launcher is operational. Do not claim a founder launcher iPhone PASS from fixture checks.
 
 ## 23 October 2026 — Founder launcher acceptance correction
 

@@ -1000,6 +1000,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                 branded
                 alwaysShow
                 customerOnly
+                founderTestLauncherAvailable={founderLauncherAvailable}
                 governanceContext="Sidebar workspace selector · role-aware workspace switch"
               />
             </div>
@@ -1147,6 +1148,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                 branded
                 alwaysShow
                 customerOnly
+                founderTestLauncherAvailable={founderLauncherAvailable}
                 governanceContext="Mobile header · role-aware workspace switch"
               /></div> : null}
               {showBackButton ? (

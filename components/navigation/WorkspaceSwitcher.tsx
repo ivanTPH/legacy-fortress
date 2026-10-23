@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from "react";
 import Icon from "../ui/Icon";
 import BrandGlyph from "../ui/BrandGlyph";
+import FounderTestLauncher from "./FounderTestLauncher";
 import {
   extractPlatformRolesFromMetadata,
   normalizePlatformRole,
@@ -45,6 +46,7 @@ type WorkspaceSwitcherProps = {
   governanceContext?: string;
   alwaysShow?: boolean;
   customerOnly?: boolean;
+  founderTestLauncherAvailable?: boolean;
   onSelect?: () => void;
 };
 
@@ -68,6 +70,7 @@ export default function WorkspaceSwitcher({
   governanceContext = "workspace route guard",
   alwaysShow = false,
   customerOnly = false,
+  founderTestLauncherAvailable = false,
   onSelect,
 }: WorkspaceSwitcherProps) {
   const [session, setSession] = useState<WorkspaceSession | null>(null);
@@ -111,8 +114,6 @@ export default function WorkspaceSwitcher({
             : [];
 
       if (!mounted) return;
-      setLinkedFortresses(await loadLinkedFortressSummaries(supabase, user?.id ?? ""));
-      if (!mounted) return;
       setSession({
         userId: user?.id ?? null,
         displayName: String(user?.user_metadata?.full_name ?? user?.email ?? persona?.label ?? "Secure account"),
@@ -123,6 +124,12 @@ export default function WorkspaceSwitcher({
         adminFlag,
         prototypeFlag,
       });
+      try {
+        const linked = await loadLinkedFortressSummaries(supabase, user?.id ?? "");
+        if (mounted) setLinkedFortresses(linked);
+      } catch {
+        if (mounted) setLinkedFortresses([]);
+      }
     }
 
     void refresh();
@@ -154,6 +161,7 @@ export default function WorkspaceSwitcher({
     : null;
   const hasMultipleContexts = workspaces.length > 1;
   const singleCustomerContext = customerOnly && !hasMultipleContexts && linkedFortresses.length === 0;
+  const plainCurrentContext = singleCustomerContext && !founderTestLauncherAvailable;
   const activeRole = activeWorkspace?.roleContext ?? primaryRole;
 
   useEffect(() => {
@@ -164,12 +172,14 @@ export default function WorkspaceSwitcher({
     if (!open) return;
 
     function onPointerDown(event: PointerEvent) {
+      if ((event.target as Element).closest?.(".lf-founder-launcher-overlay")) return;
       if (menuRef.current?.contains(event.target as Node)) return;
       setOpen(false);
     }
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
+      if (document.querySelector(".lf-founder-launcher-overlay")) return;
       event.preventDefault();
       event.stopImmediatePropagation();
       setOpen(false);
@@ -193,7 +203,7 @@ export default function WorkspaceSwitcher({
 
   useEffect(() => {
     if (!open || !focusOnOpenRef.current) return;
-    const links = menuRef.current?.querySelectorAll<HTMLElement>(".lf-workspace-links a");
+    const links = menuRef.current?.querySelectorAll<HTMLElement>(".lf-workspace-links a, .lf-workspace-links button:not([disabled])");
     const target = focusOnOpenRef.current === "last" ? links?.[links.length - 1] : links?.[0];
     focusOnOpenRef.current = null;
     target?.focus();
@@ -205,7 +215,7 @@ export default function WorkspaceSwitcher({
     focusOnOpenRef.current = event.key === "ArrowUp" ? "last" : "first";
     if (!open) toggleOpen();
     else {
-      const links = menuRef.current?.querySelectorAll<HTMLElement>(".lf-workspace-links a");
+      const links = menuRef.current?.querySelectorAll<HTMLElement>(".lf-workspace-links a, .lf-workspace-links button:not([disabled])");
       (focusOnOpenRef.current === "last" ? links?.[links.length - 1] : links?.[0])?.focus();
       focusOnOpenRef.current = null;
     }
@@ -213,7 +223,7 @@ export default function WorkspaceSwitcher({
 
   function onMenuKeyDown(event: ReactKeyboardEvent<HTMLElement>) {
     if (event.key === "Tab") {
-      const links = Array.from(event.currentTarget.querySelectorAll<HTMLElement>("a"));
+      const links = Array.from(event.currentTarget.querySelectorAll<HTMLElement>("a, button:not([disabled])"));
       if (!links.length) return;
       if (event.shiftKey && document.activeElement === links[0]) {
         event.preventDefault();
@@ -225,7 +235,7 @@ export default function WorkspaceSwitcher({
       return;
     }
     if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
-    const links = Array.from(event.currentTarget.querySelectorAll<HTMLElement>("a"));
+    const links = Array.from(event.currentTarget.querySelectorAll<HTMLElement>("a, button:not([disabled])"));
     if (!links.length) return;
     event.preventDefault();
     const currentIndex = links.indexOf(document.activeElement as HTMLElement);
@@ -278,14 +288,14 @@ export default function WorkspaceSwitcher({
     <section
       ref={menuRef}
       className={["lf-workspace-switcher", compact && "compact", branded && "branded"].filter(Boolean).join(" ")}
-      aria-label={singleCustomerContext ? "Current Vault" : "Switch Vault"}
+      aria-label={plainCurrentContext ? "Current Vault" : founderTestLauncherAvailable ? "Vault contexts and TEST interfaces" : "Switch Vault"}
     >
       <div className="lf-workspace-menu">
-        {singleCustomerContext ? <div className="lf-workspace-current lf-workspace-current-label" aria-label="My Vault">{currentContent}</div> : <button
+        {plainCurrentContext ? <div className="lf-workspace-current lf-workspace-current-label" aria-label="My Vault">{currentContent}</div> : <button
           ref={triggerRef}
           type="button"
           className="lf-workspace-current"
-          aria-label={`Switch Vault, current ${activeLinkedFortress?.ownerName ?? activeWorkspace?.label ?? "Personal Vault"}`}
+          aria-label={founderTestLauncherAvailable ? `Open Vault contexts and TEST interfaces, current ${activeLinkedFortress?.ownerName ?? "My Vault"}` : `Switch Vault, current ${activeLinkedFortress?.ownerName ?? activeWorkspace?.label ?? "Personal Vault"}`}
           aria-expanded={open}
           aria-controls={menuId}
           aria-busy={!session}
@@ -342,6 +352,10 @@ export default function WorkspaceSwitcher({
                 ))}
               </div>
             ) : null}
+            {founderTestLauncherAvailable ? <div className="lf-workspace-test-group" aria-label="TEST interfaces">
+              <strong>TEST interfaces</strong>
+              <FounderTestLauncher current="vault" available />
+            </div> : null}
           </nav></>
         ) : null}
       </div>

@@ -257,13 +257,18 @@
   .lf-v3-screen-overview.is-v51-owner .lf-dashboard-action-summary-item small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .lf-dashboard-shell:has(.lf-v3-screen-overview.is-v51-owner) > .lf-dashboard-entry-prompt { display: none; }
   .lf-v3-screen-overview.is-v51-owner .lf-v3-vault-overview { order: 3; }
-  .lf-v3-screen-overview.is-v51-owner .lf-v3-vault-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; overflow: hidden; border: 1px solid var(--lf-border); border-radius: 12px; background: var(--lf-surface); }
-  .lf-v3-screen-overview.is-v51-owner .lf-v3-vault-tile { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 8px 12px; border: 0; border-radius: 0; border-bottom: 1px solid var(--lf-divider); }
-  .lf-v3-screen-overview.is-v51-owner .lf-v3-vault-tile:last-child { border-bottom: 0; }
-  .lf-v3-screen-overview.is-v51-owner .lf-v3-vault-tile-heading { flex: 1; }
-  .lf-v3-screen-overview.is-v51-owner .lf-v3-vault-tile-heading strong { font-size: 15px; }
-  .lf-v3-screen-overview.is-v51-owner .lf-v3-vault-tile-heading > span:last-child { display: block; }
+  .lf-v3-screen-overview.is-v51-owner .lf-v3-vault-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); gap: 8px; border: 0; background: transparent; }
+  .lf-v3-screen-overview.is-v51-owner .lf-v3-vault-tile { display: grid; align-content: start; gap: 8px; min-height: 92px; padding: 12px; border: 1px solid var(--lf-border); border-radius: 12px; }
+  .lf-v3-screen-overview.is-v51-owner .lf-v3-vault-tile-heading { min-width: 0; gap: 8px; }
+  .lf-v3-screen-overview.is-v51-owner .lf-v3-vault-tile-heading .lf-v3-icon-tile { width: 32px; height: 32px; }
+  .lf-v3-screen-overview.is-v51-owner .lf-v3-vault-tile-heading strong { font-size: 15px; line-height: 1.3; overflow-wrap: anywhere; }
+  .lf-v3-screen-overview.is-v51-owner .lf-v3-vault-tile-heading > span:last-child { display: block; font-size: 20px; }
   .lf-v3-screen-overview.is-v51-owner .lf-v3-vault-tile-meta { display: block; min-width: 0; padding: 0; border: 0; }
-  .lf-v3-screen-overview.is-v51-owner .lf-v3-vault-tile-meta strong { color: var(--lf-text-secondary); font-size: 13px; font-weight: 400; white-space: nowrap; }
+  .lf-v3-screen-overview.is-v51-owner .lf-v3-vault-tile-meta strong { color: var(--lf-text-secondary); font-size: 13px; font-weight: 400; white-space: normal; overflow-wrap: anywhere; }
   .lf-v3-screen-overview.is-v51-owner .lf-v3-vault-tile-meta small { display: none; }
+}
+
+@media (max-width: 767px) {
+  .lf-shell[data-lf-text-size="large"] .lf-v3-screen-overview.is-v51-owner .lf-v3-vault-grid,
+  .lf-shell[data-lf-text-size="xlarge"] .lf-v3-screen-overview.is-v51-owner .lf-v3-vault-grid { grid-template-columns: minmax(0, 1fr); }
 }

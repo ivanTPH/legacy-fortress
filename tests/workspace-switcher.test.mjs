@@ -126,7 +126,10 @@ test("workspace switcher is present in admin shell, application shell, sign-in, 
   assert.match(switcher, /alwaysShow/);
   assert.match(switcher, /!hasMultipleContexts && linkedFortresses\.length === 0 && !alwaysShow/);
   assert.match(switcher, /lf-workspace-menu/);
-  assert.match(switcher, /singleCustomerContext \? <div className="lf-workspace-current lf-workspace-current-label"/);
+  assert.match(switcher, /plainCurrentContext \? <div className="lf-workspace-current lf-workspace-current-label"/);
+  assert.match(switcher, /const plainCurrentContext = singleCustomerContext && !founderTestLauncherAvailable/);
+  assert.match(switcher, /<FounderTestLauncher current="vault" available \/>/);
+  assert.match(appLayout, /founderTestLauncherAvailable=\{founderLauncherAvailable\}/);
   assert.match(switcher, /aria-expanded=\{open\}/);
   assert.match(switcher, /disabled=\{!session\}/);
   assert.match(switcher, /aria-controls=\{menuId\}/);
@@ -170,7 +173,7 @@ test("workspace switcher exposes explicit identity and role context without chan
   const shell = fs.readFileSync(path.join(root, "components/admin/AdminWorkspaceShell.tsx"), "utf8");
   const workspaces = fs.readFileSync(path.join(root, "lib/workspaces.ts"), "utf8");
 
-  assert.match(switcher, /aria-label=\{singleCustomerContext \? "Current Vault" : "Switch Vault"\}/);
+  assert.match(switcher, /aria-label=\{plainCurrentContext \? "Current Vault" : founderTestLauncherAvailable \? "Vault contexts and TEST interfaces" : "Switch Vault"\}/);
   assert.match(switcher, /Signed in as/);
   assert.match(switcher, /formatRole\(activeRole\)/);
   assert.match(switcher, /aria-current=\{workspace\.id === currentWorkspace \? "page"/);
