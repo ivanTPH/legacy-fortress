@@ -1,5 +1,12 @@
 # Codex Handover
 
+## 23 October 2026 — Founder header entry and Vault Home grid candidate
+
+- Verified TEST staging and `/api/version` at `cbcda97a9a738e6154cecf6cd6f53726f2f2ffdc`. Owner confirms Personal Vault loads on iPhone and desktop, but the founder launcher remains absent. The authenticated `/api/internal/test/environments` denial reason is still required from authorised Coolify TEST application logs; no additional gate bypass has been made.
+- The existing customer `WorkspaceSwitcher` now becomes a header button for a server-authorised founder even with one customer Vault. Its menu keeps customer Vault contexts separate from the existing `FounderTestLauncher` under a labelled TEST section; ordinary users retain the plain one-context label. The same header control is mounted in mobile and desktop Vault layouts.
+- Home's six category links use an adaptive two-column mobile grid at normal 390/402px widths, one column at 320px or increased text, and the existing desktop layout. Focused WebKit/Chromium geometry tests, founder/workspace policy tests, TypeScript and targeted lint pass. These are layout and policy checks, not an authenticated founder journey.
+- Next action: obtain the exact `founder_test_launcher_unavailable` reason code from a founder-authenticated TEST request, fix only that proven gate if needed, then re-run focused checks, promote the scoped commit and complete protected TEST release. Do not claim a founder iPhone PASS before the hosted signed-in journey is observed.
+
 ## 23 October 2026 — Founder launcher acceptance correction
 
 - Live baseline `c4f0434163b4f339da3323825d3d9469a794e1f6`; owner confirms the founder UUID, active master role and Coolify runtime binding, but real iPhone launcher acceptance failed. The exact authenticated endpoint denial remains unobserved without the founder session or authorised TEST application logs.

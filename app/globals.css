@@ -7050,6 +7050,24 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
   color: var(--lf-text);
 }
 
+.lf-workspace-test-group {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin-top: 4px;
+  padding: 12px 8px 4px;
+  border-top: 1px solid var(--lf-divider);
+}
+
+.lf-workspace-test-group > strong {
+  color: var(--lf-text-secondary);
+  font-size: var(--lf-text-small);
+}
+
+.lf-workspace-test-group .lf-founder-launcher-entry {
+  min-height: var(--lf-target-min);
+}
+
 .lf-workspace-links a {
   position: relative;
   min-height: 54px;
