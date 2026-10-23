@@ -1,5 +1,12 @@
 # Codex Handover
 
+## 23 October 2026 — Founder sign-in choice and compact Vault drawer
+
+- Baseline `87a759c6cd2581319f4db624cf9f45ad618fe3a4`. Owner reports TEST founder Auth UUID, active master/super-admin row and Coolify runtime binding verified; no identity or role changes were made here.
+- Normal password sign-in without `next` previously chose `/admin` via `getDefaultLandingForRoles(super_admin)`. The scoped correction offers the existing Vault/Admin/Partner destinations only after the server-authorised TEST launcher endpoint confirms the signed-in founder. Explicit `next` paths, invitations, onboarding and ordinary-user defaults retain their existing handling.
+- The Vault drawer's scrollable CSS grid stretched rows over available height; mobile rows now size to content with 44px targets and a scrollable list. Support, Settings and the existing founder launcher remain in its footer.
+- Focused founder policy tests, TypeScript, targeted lint and a four-size WebKit drawer geometry check passed. Authenticated founder navigation and the exact launcher API response still require an approved TEST browser session; do not claim an iPhone pass from the synthetic layout check.
+
 ## 22 October 2026 — Dashboard return path and TEST launcher candidate
 
 - Isolated `feat/v5-2-founder-test-launcher` starts from verified TEST `09fb6ce349f57e5452bc6eccc99fcf22b72f3f0f`; the owner's main worktree and privacy migrations are untouched.

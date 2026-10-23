@@ -7976,6 +7976,9 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
   .lf-mobile-bottom-nav-item { min-width: 0; min-height: 44px; }
   .lf-mobile-backdrop { z-index: 60; }
   .lf-mobile-drawer { z-index: 61; width: min(320px, calc(100vw - 56px)); grid-template-rows: auto minmax(0, 1fr) auto; padding: max(16px, env(safe-area-inset-top)) 12px calc(16px + env(safe-area-inset-bottom)); border-color: var(--lf-border); }
+  .lf-mobile-drawer .lf-mobile-tree { align-content: start; grid-auto-rows: max-content; overscroll-behavior: contain; }
+  .lf-mobile-drawer .lf-mobile-tree-link, .lf-mobile-drawer .lf-mobile-expand { min-height: 44px; }
+  .lf-mobile-drawer .lf-mobile-expand { flex: none; width: 44px; }
   .lf-mobile-drawer-heading { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding-left: 8px; }
   .lf-mobile-drawer-heading button { width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: transparent; }
   .lf-mobile-drawer-support { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; color: var(--lf-text); text-decoration: none; }

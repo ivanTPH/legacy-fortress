@@ -13,7 +13,7 @@ const unavailable = () => NextResponse.json({ available: false }, {
 export async function GET(request: Request) {
   // Both checks are server-side. Client roles, metadata and email never grant this entry.
   if (!isFounderTestLauncherEnvironment({ appHost: new URL(request.url).hostname })) return unavailable();
-  const configuredUserId = process.env.TEST_FOUNDER_AUTH_USER_ID;
+  const configuredUserId = process.env.TEST_FOUNDER_AUTH_USER_ID?.trim();
   if (!configuredUserId) return unavailable();
 
   const { user } = await getRequestUser(request);

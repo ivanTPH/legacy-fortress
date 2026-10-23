@@ -1233,7 +1233,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
               />
 
               <div className="lf-mobile-drawer-footer">
-                {accountItems.filter((item) => item.id === "support").map((item) => <Link key={item.id} href={item.path} className="lf-mobile-drawer-support" onClick={() => closeNavigationState("item_select")}><span className="lf-nav-icon">{item.icon}</span>{item.label}</Link>)}
+                {accountItems.filter((item) => item.id === "support" || item.id === "account-profile").map((item) => <Link key={item.id} href={item.path} className="lf-mobile-drawer-support" onClick={() => closeNavigationState("item_select")}><span className="lf-nav-icon">{item.icon}</span>{item.label}</Link>)}
                 <FounderTestLauncher current="vault" available={founderLauncherAvailable} />
               </div>
             </aside>

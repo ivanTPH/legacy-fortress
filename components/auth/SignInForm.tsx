@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useState, type CSSProperties, type FormEvent } from "react";
 import Icon from "../ui/Icon";
+import FounderTestLauncher from "../navigation/FounderTestLauncher";
 
 const OAuthButtons = dynamic(() => import("./OAuthButtons"), {
   loading: () => <div className="lf-muted-note">Loading sign-in providers...</div>,
@@ -38,10 +39,12 @@ export default function SignInForm({
   const [status, setStatus] = useState(initialStatus);
   const [showPassword, setShowPassword] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
+  const [showFounderChoice, setShowFounderChoice] = useState(false);
 
   async function signIn(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
     setStatus("");
+    setShowFounderChoice(false);
     setSigningIn(true);
 
     try {
@@ -53,6 +56,7 @@ export default function SignInForm({
         { getMasterAdminRolesForEmail, mergePlatformRoles },
         { extractPlatformRolesFromMetadata },
         { resolvePermissionedAdminDestination },
+        { hasFounderTestLauncherAccess, shouldOfferFounderSignInChoice },
       ] = await Promise.all([
         import("../../lib/supabaseClient"),
         import("../../lib/auth/session"),
@@ -61,6 +65,7 @@ export default function SignInForm({
         import("../../lib/auth/adminRoles"),
         import("../../lib/auth/platformRoles"),
         import("../../lib/auth/adminDestination"),
+        import("../../lib/testLauncher/client"),
       ]);
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
@@ -89,6 +94,18 @@ export default function SignInForm({
         nextPath: nextPath ?? undefined,
         roles,
       });
+      const verifiedFounder = !nextPath && !pendingDestination && bootstrap.onboardingComplete
+        ? await hasFounderTestLauncherAccess(data.session.access_token)
+        : false;
+      if (shouldOfferFounderSignInChoice({
+        nextPath,
+        pendingDestination,
+        onboardingComplete: bootstrap.onboardingComplete,
+        verifiedFounder,
+      })) {
+        setShowFounderChoice(true);
+        return;
+      }
       const destination = pendingDestination ?? await resolvePermissionedAdminDestination(supabase, {
         nextPath,
         fallbackDestination: bootstrap.destination,
@@ -102,6 +119,8 @@ export default function SignInForm({
       setSigningIn(false);
     }
   }
+
+  if (showFounderChoice) return <FounderTestLauncher current={null} available mode="post-login" />;
 
   return (
     <div style={{ display: "grid", gap: compact ? 10 : 12 }}>
