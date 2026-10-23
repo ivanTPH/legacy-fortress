@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import Icon from "@/components/ui/Icon";
 import { supabase } from "@/lib/supabaseClient";
 import { hasFounderTestLauncherAccess } from "@/lib/testLauncher/client";
+import { createFounderLauncherAvailability, type FounderLauncherStatus } from "@/lib/testLauncher/availability";
 import "./founder-test-launcher.css";
 
 type Context = "vault" | "admin" | "partner";
@@ -15,27 +16,28 @@ const destinations: Array<{ id: Context; name: string; path: string; icon: strin
   { id: "partner", name: "Partner Portal", path: "/enterprise", icon: "domain" },
 ];
 
-export function useFounderTestLauncherAccess() {
-  const [available, setAvailable] = useState(false);
+export function useFounderTestLauncherStatus() {
+  const [status, setStatus] = useState<FounderLauncherStatus>("pending");
 
   useEffect(() => {
-    let mounted = true;
-    let latestCheck = 0;
-    async function check(token?: string) {
-      const checkId = ++latestCheck;
-      if (!token) { if (mounted) setAvailable(false); return; }
-      const allowed = await hasFounderTestLauncherAccess(token);
-      if (mounted && checkId === latestCheck) setAvailable(allowed);
-    }
-
-    void supabase.auth.getSession().then(({ data }) => check(data.session?.access_token)).catch(() => { if (mounted) setAvailable(false); });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      queueMicrotask(() => { void check(session?.access_token); });
+    const availability = createFounderLauncherAvailability({
+      verify: hasFounderTestLauncherAccess,
+      onStatus: setStatus,
     });
-    return () => { mounted = false; listener.subscription.unsubscribe(); };
+    void supabase.auth.getSession().then(({ data }) => {
+      availability.initialSession(data.session?.access_token);
+    }).catch(() => availability.initialError());
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      queueMicrotask(() => availability.authEvent(event, session?.access_token));
+    });
+    return () => { availability.dispose(); listener.subscription.unsubscribe(); };
   }, []);
 
-  return available;
+  return status;
+}
+
+export function useFounderTestLauncherAccess() {
+  return useFounderTestLauncherStatus() === "allowed";
 }
 
 export default function FounderTestLauncher({ current, available, mode = "menu", accountMenuItem = false }: { current: Context | null; available: boolean; mode?: "menu" | "post-login"; accountMenuItem?: boolean }) {
