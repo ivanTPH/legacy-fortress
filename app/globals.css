@@ -8175,3 +8175,25 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
   .lf-person-drawer-content { padding: 16px 16px calc(40px + env(safe-area-inset-bottom)); }
   .lf-person-access-chooser { padding: 12px; }
 }
+.lf-pwa-entry-destinations {
+  display: grid;
+  gap: 8px;
+}
+
+.lf-pwa-entry-destinations a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 10px 14px;
+  border: 1px solid var(--lf-border-control);
+  border-radius: var(--lf-radius-card);
+  color: inherit;
+  text-decoration: none;
+  background: var(--lf-surface-card);
+}
+
+.lf-pwa-entry-destinations a span { flex: 1; }
+.lf-pwa-entry-destinations a:hover { background: var(--lf-surface-hover); }
+.lf-pwa-entry-destinations a:active { background: var(--lf-surface-pressed); }
+.lf-pwa-entry-destinations a:focus-visible { outline: none; box-shadow: var(--lf-focus-ring); }

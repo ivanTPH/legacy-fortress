@@ -1,11 +1,15 @@
 import type { MetadataRoute } from "next";
+import { getPwaStartUrl } from "@/lib/pwa/startUrl";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Legacy Fortress",
     short_name: "Legacy Fortress",
     description: "Estate and executor vault for personal, financial, legal, and digital records.",
-    start_url: "/",
+    start_url: getPwaStartUrl({
+      publicSupabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      environments: [process.env.APP_ENV, process.env.LEGACY_FORTRESS_ENV, process.env.VERCEL_ENV],
+    }),
     display: "standalone",
     background_color: "#f4f7fb",
     theme_color: "#0a0a0a",

@@ -1,5 +1,11 @@
 # Codex Handover
 
+## 23 October 2026 — TEST installed-web-app entry correction
+
+- Owner reproduced that a fresh iPhone Home Screen installation starts at `/` and a destination-free super-admin sign-in lands at `/admin`. The live manifest had `start_url: "/"`; local execution confirmed the role default and that explicit `/dashboard` remains Vault.
+- A TEST-only manifest start URL now opens `/pwa-entry`, which offers route-only sign-in links for Vault, Admin and Partner. Each existing route and sign-in guard still checks its own permissions. Production manifest stays at `/`. The earlier founder header switcher and Vault grid remain isolated on `fix/v5-2-founder-header-vault-grid` pending an authenticated TEST founder-gate result.
+- Focused role/security tests, TypeScript, changed-file lint, and local mobile WebKit/desktop browser checks passed. No authenticated founder session or TEST app-log reason was available; installed-iPhone acceptance remains unverified. After a protected TEST deployment, check `/manifest.webmanifest`, `/api/version`, then reinstall the TEST Home Screen app and test the founder journey.
+
 ## 23 October 2026 — Founder launcher acceptance correction
 
 - Live baseline `c4f0434163b4f339da3323825d3d9469a794e1f6`; owner confirms the founder UUID, active master role and Coolify runtime binding, but real iPhone launcher acceptance failed. The exact authenticated endpoint denial remains unobserved without the founder session or authorised TEST application logs.
