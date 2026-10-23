@@ -38,7 +38,7 @@ export function useFounderTestLauncherAccess() {
   return available;
 }
 
-export default function FounderTestLauncher({ current, available, mode = "menu" }: { current: Context | null; available: boolean; mode?: "menu" | "post-login" }) {
+export default function FounderTestLauncher({ current, available, mode = "menu", accountMenuItem = false }: { current: Context | null; available: boolean; mode?: "menu" | "post-login"; accountMenuItem?: boolean }) {
   const [open, setOpen] = useState(false);
   const titleId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -75,7 +75,7 @@ export default function FounderTestLauncher({ current, available, mode = "menu" 
     <span className="lf-founder-launcher-mark"><Icon name={destination.icon} size={22} /></span>
     <span className="lf-founder-launcher-copy"><strong>{destination.name}</strong><small>{destination.path}</small></span>
     {destination.id === current ? <span className="lf-founder-launcher-current"><Icon name="check_circle" size={18} /> Here</span>
-      : <a href={destination.path} {...(mode === "menu" ? { target: "_blank", rel: "noopener noreferrer" } : {})} aria-label={`Open ${destination.name}${mode === "menu" ? " in a new tab" : ""}`} onClick={mode === "menu" ? close : undefined}>Open <Icon name={mode === "menu" ? "open_in_new" : "chevron_right"} size={17} /></a>}
+      : <a href={destination.path} aria-label={`Open ${destination.name}`} onClick={mode === "menu" ? close : undefined}>Open <Icon name="chevron_right" size={17} /></a>}
   </div>);
   if (mode === "post-login") return <section className="lf-founder-launcher-inline" aria-labelledby={titleId}>
     <h3 id={titleId}>Choose your TEST destination</h3>
@@ -83,7 +83,7 @@ export default function FounderTestLauncher({ current, available, mode = "menu" 
     <div className="lf-founder-launcher-list">{rows}</div>
   </section>;
   return <>
-    <button ref={triggerRef} type="button" className="lf-founder-launcher-entry" onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open}>
+    <button ref={triggerRef} type="button" role={accountMenuItem ? "menuitem" : undefined} className="lf-founder-launcher-entry" onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open}>
       <span className="lf-founder-launcher-test">TEST</span><span>Test environments</span><Icon name="chevron_right" size={20} />
     </button>
     {open && typeof document !== "undefined" ? createPortal(

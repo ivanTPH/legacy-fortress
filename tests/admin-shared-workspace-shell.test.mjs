@@ -29,7 +29,7 @@ test("shared admin shell exposes responsive navigation, identity and sign-out co
   assert.doesNotMatch(source, /href="\/dashboard" className="lf-admin-shell-secondary"/);
   assert.match(source, /lf-admin-shell-drawer-account/);
   assert.match(source, /lf-admin-shell-drawer-signout/);
-  assert.match(source, /lf-admin-shell-drawer-close[\s\S]+lf-admin-shell-drawer-account[\s\S]+\{sidebar\}/);
+  assert.match(source, /lf-admin-shell-drawer-heading[\s\S]+lf-admin-shell-drawer-close[\s\S]+lf-admin-shell-drawer-scroll[\s\S]+lf-admin-shell-drawer-account[\s\S]+\{sidebar\}/);
   assert.match(source, /flex-wrap: wrap/);
   assert.match(source, /white-space: nowrap/);
   assert.match(source, /prefetch=\{false\}/);

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
-const { isFounderTestLauncherEnvironment, isVerifiedFounder } = await import("../lib/testLauncher/access.ts");
+const { getFounderTestLauncherEnvironmentFailure, isFounderTestLauncherEnvironment, isVerifiedFounder } = await import("../lib/testLauncher/access.ts");
 const { hasFounderTestLauncherAccess, shouldOfferFounderSignInChoice } = await import("../lib/testLauncher/client.ts");
 const { resolveBootstrapDestination } = await import("../lib/auth/bootstrapRules.ts");
 const { canRoleAccessPath } = await import("../lib/accessModel.ts");
@@ -21,6 +21,20 @@ test("founder TEST environment is restricted to the exact app and Supabase hosts
     { appHost: "legacy-fortress.vercel.app" },
     { supabaseUrl: "https://supabase.mylegacyfortress.com" },
   ]) assert.equal(isFounderTestLauncherEnvironment({ ...testEnvironment, ...change }), false);
+});
+
+test("trusted public TEST identity is independent of the internal Supabase service URL", () => {
+  const formerServerUrl = process.env.SUPABASE_URL;
+  try {
+    process.env.SUPABASE_URL = "http://supabase-kong:8000";
+    assert.equal(isFounderTestLauncherEnvironment(testEnvironment), true);
+    assert.equal(getFounderTestLauncherEnvironmentFailure({ ...testEnvironment, environment: "production" }), "deployment_environment");
+    assert.equal(getFounderTestLauncherEnvironmentFailure({ ...testEnvironment, appHost: "legacy-fortress.vercel.app" }), "app_host");
+    assert.equal(getFounderTestLauncherEnvironmentFailure({ ...testEnvironment, supabaseUrl: "http://supabase-kong:8000" }), "public_supabase_host");
+  } finally {
+    if (formerServerUrl === undefined) delete process.env.SUPABASE_URL;
+    else process.env.SUPABASE_URL = formerServerUrl;
+  }
 });
 
 test("only configured immutable Auth ID plus active protected Admin assignment authorises launcher", () => {
@@ -73,4 +87,20 @@ test("Dashboard session redirects retain the Vault return path", () => {
   const page = fs.readFileSync(new URL("../app/(app)/dashboard/page.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(page, /router\.replace\(["']\/sign-in["']\)/);
   assert.match(page, /router\.replace\(buildProtectedSignInRedirect\("\/dashboard"\)\)/);
+});
+
+test("launcher remains available from TEST menus and account menus without exposing a diagnostic reason", () => {
+  const adminShell = fs.readFileSync(new URL("../components/admin/AdminWorkspaceShell.tsx", import.meta.url), "utf8");
+  const vaultShell = fs.readFileSync(new URL("../app/(app)/layout.tsx", import.meta.url), "utf8");
+  const launcher = fs.readFileSync(new URL("../components/navigation/FounderTestLauncher.tsx", import.meta.url), "utf8");
+  const route = fs.readFileSync(new URL("../app/api/internal/test/environments/route.ts", import.meta.url), "utf8");
+  assert.match(adminShell, /<FounderTestLauncher current=\{isPartner \? "partner" : "admin"\} available=\{founderLauncherAvailable\} accountMenuItem/);
+  assert.match(vaultShell, /<FounderTestLauncher current="vault" available=\{founderLauncherAvailable\} accountMenuItem/);
+  assert.match(launcher, /path: "\/dashboard"/);
+  assert.match(launcher, /path: "\/admin"/);
+  assert.match(launcher, /path: "\/enterprise"/);
+  assert.doesNotMatch(launcher, /target: "_blank"/);
+  assert.match(route, /console\.info\("founder_test_launcher_unavailable", \{ reason \}\)/);
+  assert.match(route, /NextResponse\.json\(\{ available: false \}/);
+  assert.doesNotMatch(route, /NextResponse\.json\(\{ available: false, reason/);
 });

@@ -107,6 +107,7 @@ export default function AdminWorkspaceShell({
     if (!accountMenuOpen) return;
 
     function onPointerDown(event: PointerEvent) {
+      if ((event.target as Element).closest?.(".lf-founder-launcher-overlay")) return;
       if (accountMenuRef.current?.contains(event.target as Node) || mobileAccountMenuRef.current?.contains(event.target as Node)) return;
       setAccountMenuOpen(false);
     }
@@ -234,6 +235,9 @@ export default function AdminWorkspaceShell({
             </Link>
           </div>
           <div className="lf-admin-shell-account-menu-section" role="none">
+            <FounderTestLauncher current={isPartner ? "partner" : "admin"} available={founderLauncherAvailable} accountMenuItem />
+          </div>
+          <div className="lf-admin-shell-account-menu-section" role="none">
             <button type="button" role="menuitem" className="lf-admin-shell-account-signout" onClick={() => { setAccountMenuOpen(false); onSignOut(); }}>
               <Icon name="logout" size={17} />
               <span>Sign out</span>
@@ -264,21 +268,26 @@ export default function AdminWorkspaceShell({
         <div className="lf-admin-shell-drawer" id="admin-mobile-navigation" role="dialog" aria-modal="true" aria-label={`${workspaceLabel} menu`}>
           <div className="lf-admin-shell-drawer-backdrop" onClick={() => { setMenuOpen(false); mobileMenuTriggerRef.current?.focus(); }} />
           <div ref={drawerPanelRef} className="lf-admin-shell-drawer-panel">
-            <button ref={drawerCloseRef} type="button" className="lf-admin-shell-drawer-close" onClick={() => { setMenuOpen(false); mobileMenuTriggerRef.current?.focus(); }}>
-              <Icon name="close" size={18} />
-              Close
-            </button>
-            <div className="lf-admin-shell-drawer-account">
-              <div className="lf-admin-shell-identity" title={identityDetail ?? identityLabel}>
-                <Icon name="account_circle" size={22} />
-                <span>
-                  <strong>{identityLabel}</strong>
-                  {identityDetail ? <small>{identityDetail}</small> : null}
-                </span>
-              </div>
-              {signOutButton("lf-admin-shell-secondary lf-admin-shell-drawer-signout")}
+            <div className="lf-admin-shell-drawer-heading">
+              <strong>{isPartner ? "Partner Portal" : "Platform Admin"}</strong>
+              <button ref={drawerCloseRef} type="button" className="lf-admin-shell-drawer-close" onClick={() => { setMenuOpen(false); mobileMenuTriggerRef.current?.focus(); }}>
+                <Icon name="close" size={18} />
+                Close
+              </button>
             </div>
-            {sidebar}
+            <div className="lf-admin-shell-drawer-scroll">
+              <div className="lf-admin-shell-drawer-account">
+                <div className="lf-admin-shell-identity" title={identityDetail ?? identityLabel}>
+                  <Icon name="account_circle" size={22} />
+                  <span>
+                    <strong>{identityLabel}</strong>
+                    {identityDetail ? <small>{identityDetail}</small> : null}
+                  </span>
+                </div>
+                {signOutButton("lf-admin-shell-secondary lf-admin-shell-drawer-signout")}
+              </div>
+              {sidebar}
+            </div>
           </div>
         </div>
       ) : null}

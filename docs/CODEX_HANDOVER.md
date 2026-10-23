@@ -1,5 +1,12 @@
 # Codex Handover
 
+## 23 October 2026 — Founder launcher acceptance correction
+
+- Live baseline `c4f0434163b4f339da3323825d3d9469a794e1f6`; owner confirms the founder UUID, active master role and Coolify runtime binding, but real iPhone launcher acceptance failed. The exact authenticated endpoint denial remains unobserved without the founder session or authorised TEST application logs.
+- The server gate now identifies TEST by its exact application host and public TEST Supabase URL, independently of a possible internal `SUPABASE_URL` used for service calls. Explicit production environment markers deny access. The immutable Auth ID and active master/super-admin database checks remain mandatory. TEST server logs emit reason codes only; public responses remain generic.
+- The same launcher is now in the Vault, Admin and Partner account menus as well as their navigation menus. Its existing same-origin routes open in the current tab. The Admin mobile drawer has a stable Close header and independently scrolling compact navigation; the previously corrected Vault drawer is unchanged.
+- Founder policy and Admin shell tests, TypeScript, targeted lint, and 320/390/402px WebKit plus Chromium drawer geometry pass. Authenticated founder navigation and the exact live denial reason are still blocked by the absence of an approved founder browser session or operational logs; do not report an iPhone PASS from fixture checks.
+
 ## 23 October 2026 — Founder sign-in choice and compact Vault drawer
 
 - Baseline `87a759c6cd2581319f4db624cf9f45ad618fe3a4`. Owner reports TEST founder Auth UUID, active master/super-admin row and Coolify runtime binding verified; no identity or role changes were made here.

@@ -4,6 +4,7 @@
 .lf-founder-launcher-inline p { margin:8px 0 0; color:var(--lf-text-secondary); font-size:var(--lf-text-small); }
 .lf-founder-launcher-entry > span:nth-child(2) { min-width:0; flex:1; overflow-wrap:anywhere; }
 .lf-founder-launcher-entry:hover { background:var(--lf-surface-hover); }
+.lf-admin-shell-account-popover .lf-founder-launcher-entry { min-height:var(--lf-target-min); border:1px solid transparent; border-radius:var(--lf-radius-input); font-size:13px; font-weight:800; }
 .lf-admin-shell-sidebar .lf-founder-launcher-entry { border-color:var(--lf-border-input); color:var(--lf-primary-text); }
 .lf-admin-shell-sidebar .lf-founder-launcher-entry:hover { background:var(--lf-primary-bg); }
 .lf-mobile-drawer-footer { display:grid; gap:8px; }

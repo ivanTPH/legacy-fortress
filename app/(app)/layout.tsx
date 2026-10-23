@@ -705,6 +705,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!accountMenuOpen) return;
     function onPointerDown(event: PointerEvent) {
+      if ((event.target as Element).closest?.(".lf-founder-launcher-overlay")) return;
       if (!accountMenuRef.current?.contains(event.target as Node)) setAccountMenuOpen(false);
     }
     function onOtherMenuOpen(event: Event) {
@@ -1201,6 +1202,9 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                   <div className="lf-admin-shell-account-menu-section" role="none">
                     <Link href="/profile" role="menuitem" onClick={() => setAccountMenuOpen(false)} prefetch={false}><Icon name="account_circle" size={17} /><span>Profile</span></Link>
                     <Link href="/account/security" role="menuitem" onClick={() => setAccountMenuOpen(false)} prefetch={false}><Icon name="shield_lock" size={17} /><span>Account security</span></Link>
+                  </div>
+                  <div className="lf-admin-shell-account-menu-section" role="none">
+                    <FounderTestLauncher current="vault" available={founderLauncherAvailable} accountMenuItem />
                   </div>
                   <div className="lf-admin-shell-account-menu-section" role="none">
                     <button type="button" role="menuitem" className="lf-admin-shell-account-signout" onClick={() => { setAccountMenuOpen(false); void signOut(); }}><Icon name="logout" size={17} /><span>Sign out</span></button>
