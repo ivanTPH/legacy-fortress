@@ -18,3 +18,7 @@ Baseline: TEST `/api/version` and remote staging both reported `291d4c72df576266
 | Founder TEST launcher | Blocked | Existing Admin master flag can derive from email. A protected founding-owner account-ID assignment/check and verified independent TEST sign-in destinations are absent. Direct `/dashboard`, `/admin` and `/enterprise` routes retain their existing guards. |
 
 No real customer data was used. Hosted write, authenticated linked-user denial, upload, extraction and approval tests remain unverified. The next security release must reconcile migrations, restore-tested TEST backup, grant impact, RLS and Storage before SQL or deployment.
+
+## 23 October update
+
+The founder's immutable TEST Auth ID, active master/super-admin assignment and Coolify Runtime variable were subsequently verified by the owner. The launcher is implemented in staging, but hosted founder acceptance still lacks the authenticated `/api/internal/test/environments` status and non-sensitive Coolify denial/approval log reason. Candidate `67984fd1` only corrects a loading-state visual flash and a same-token request race; it remains unreleased. The document-intelligence, Partner proposal, immutable-history and privacy-release limits above remain unchanged.

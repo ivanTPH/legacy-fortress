@@ -1,12 +1,14 @@
 # Legacy Fortress V5.2 design source of truth
 
-## Current visual precedence (22 October 2026)
+## Current visual precedence (23 October 2026)
 
 The committed [`design_handoff_legacy_fortress 5.2/`](../../design_handoff_legacy_fortress%205.2/) supersedes V5.1 where changed. Read [`V5.2.md`](../../design_handoff_legacy_fortress%205.2/V5.2.md) for records, access presentation, approvals, accessibility and appearance; use its [`tokens.css`](../../design_handoff_legacy_fortress%205.2/tokens.css) and [`tokens.json`](../../design_handoff_legacy_fortress%205.2/tokens.json) for new UI, and [`V5.2 Records Access and Approvals.dc.html`](../../design_handoff_legacy_fortress%205.2/design/V5.2%20Records%20Access%20and%20Approvals.dc.html) as the visual reference. Security, root `AGENTS.md` and owner policy decisions remain first. V5.1 and earlier handoffs remain historical references for unchanged rules. The package's `AGENTS.md` does not replace root instructions.
 
+The 23 October [`UPDATE_2026-10-23.md`](../../design_handoff_legacy_fortress%205.2/UPDATE_2026-10-23.md) and updated sections S/X of `V5.2.md` are authoritative for category icons, record lists and details, Partner proposals, and Admin/Partner cross-platform presentation. The older V5.1 text below is retained as history where V5.2 is silent.
+
 Current verified TEST baseline before V5.2: `291d4c72df576266069e01a97b13b34db6c6a680`. The prepared privacy-release-policy and notification migrations are **not assumed deployed**. V5.2 approval, limited-attorney access, record history and document intelligence designs may only show verified backend facts; see [capability findings](V5_2_CAPABILITIES.md).
 
-The current visual handoff is [`design_handoff_legacy_fortress 5.1/`](../../design_handoff_legacy_fortress%205.1/). Start with its [`CHANGELOG_V5.1.md`](../../design_handoff_legacy_fortress%205.1/CHANGELOG_V5.1.md), then the specification and artboard for the screen being changed. HTML prototypes and supporting files are **visual references, not application code**. The retained [V5 handoff](../../design_handoff_legacy_fortress%205/) supplies rules where V5.1 is silent.
+The previous visual handoff is [`design_handoff_legacy_fortress 5.1/`](../../design_handoff_legacy_fortress%205.1/). Its unchanged rules still apply. HTML prototypes and supporting files are **visual references, not application code**. The retained [V5 handoff](../../design_handoff_legacy_fortress%205/) supplies rules where later handoffs are silent.
 
 ## Precedence
 
