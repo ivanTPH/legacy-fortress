@@ -132,6 +132,8 @@ import { useViewerAccess } from "../access/ViewerAccessContext";
 import { canEditAssetForViewer, canEditRecordForViewer, filterAssetIdsForViewer, filterRecordIdsForViewer } from "../../lib/access-control/viewerAccess";
 import { getPlanLimitRedirectHref } from "../../lib/accountPlan";
 import { getWorkspaceHelpMessage } from "../../lib/workspaceHelp";
+import { resolveProviderLogoPath } from "../../lib/assets/providerLogoPath.mjs";
+import BrandMark from "../ui/BrandMark";
 
 type RecordStatus = "active" | "archived";
 type WorkspaceVariant = "default" | "possessions" | "trusted_contacts";
@@ -646,6 +648,12 @@ const POSSESSION_CATEGORY_ICONS: Record<string, string> = {
   watches: "watch",
   pets: "pets",
   other: "inventory_2",
+};
+const RECORD_CATEGORY_ICONS: Record<string, string> = {
+  bank: "account_balance", investments: "trending_up", pensions: "savings", insurance: "shield", debts: "credit_card",
+  property: "home", business: "business_center", "business-interests": "business_center",
+  digital: "devices", "digital-assets": "devices", wills: "gavel", trusts: "gavel",
+  "identity-documents": "badge", "power-of-attorney": "gavel",
 };
 
 const EXCLUDED_POSSESSION_CATEGORIES = new Set(["cars_vehicles", "vehicles", "transport"]);
@@ -3285,14 +3293,14 @@ export default function UniversalRecordWorkspace({
                 <th scope="col">Name</th>
                 <th scope="col">Role</th>
                 <th scope="col">Invite status</th>
-                <th scope="col">Vault access</th>
+                <th scope="col">Identity</th>
                 <th scope="col" className="lf-linked-contact-actions-heading">Actions</th>
               </tr>
             </thead>
             <tbody>
               {rowContacts.map((item) => {
                 const inviteState = getRecordContactInviteState(item);
-                const vaultState = getRecordContactVaultAccessState(item);
+                const identityState = getRecordContactIdentityState(item);
                 const isEditingContact = editingLinkedContactId === item.id;
                 const draft = linkedContactDrafts[item.id] ?? buildLinkedContactEditDraft(item, defaultLegalContactRole);
                 const contactLabel = item.contact_name || "Linked contact";
@@ -3317,9 +3325,9 @@ export default function UniversalRecordWorkspace({
                         </span>
                       </td>
                       <td>
-                        <span className={`lf-record-vault-status is-${vaultState.state}`}>
-                          <Icon name="visibility_lock" size={13} />
-                          {vaultState.label}
+                        <span className={`lf-record-vault-status is-${identityState.state}`}>
+                          <Icon name="verified_user" size={13} />
+                          {identityState.label}
                         </span>
                       </td>
                       <td>
@@ -3374,9 +3382,9 @@ export default function UniversalRecordWorkspace({
                                 <StatusIconForContact state={inviteState} />
                                 {getRecordContactInviteLabel(inviteState)}
                               </span>
-                              <span className={`lf-record-vault-status is-${vaultState.state}`}>
-                                <Icon name="visibility_lock" size={13} />
-                                {vaultState.label}
+                              <span className={`lf-record-vault-status is-${identityState.state}`}>
+                                <Icon name="verified_user" size={13} />
+                                {identityState.label}
                               </span>
                             </div>
                             {linkedContactErrors[item.id] ? (
@@ -3408,8 +3416,48 @@ export default function UniversalRecordWorkspace({
 
     const previewUrl = photoPreviews[row.id];
     const thumbFailed = failedThumbs[row.id] === true;
+    const recordType = isBankCategory
+      ? bankAccountTypeLabel || "Bank account"
+      : isFinanceSection && categoryKey === "investments"
+        ? getCategoryTypeLabel("finances", "investments", row.metadata?.investment_type ?? "Investment")
+        : isFinanceSection && categoryKey === "pensions"
+          ? getCategoryTypeLabel("finances", "pensions", row.metadata?.pension_type ?? "Pension")
+          : isFinanceSection && categoryKey === "insurance"
+            ? getCategoryTypeLabel("finances", "insurance", row.metadata?.policy_type ?? "Insurance")
+            : isFinanceSection && categoryKey === "debts"
+              ? getCategoryTypeLabel("finances", "debts", row.metadata?.debt_type ?? "Debt")
+      : isCanonicalProperty
+        ? canonicalPropertyAsset?.property_type || "Property"
+        : isCanonicalBusiness
+          ? canonicalBusinessAsset?.business_type || "Business interest"
+          : isCanonicalDigital
+            ? canonicalDigitalAsset?.digital_asset_type || "Digital record"
+            : categoryLabel || title;
+    const showListValue = viewer.mode !== "linked" && !isNarrativeDocumentWorkspace && !isTrustedContacts && row.value_minor != null;
     return (
-      <article key={row.id} style={selectedWorkspaceRecordId === row.id ? selectedRecordCardStyle : recordCardStyle} className="lf-record-card" data-record-id={row.id}>
+      <article key={row.id} style={selectedWorkspaceRecordId === row.id ? selectedRecordCardStyle : recordCardStyle} className={`lf-record-card lf-v52-record-entry${isOpen ? " is-open" : ""}`} data-record-id={row.id}>
+        <button
+          type="button"
+          className="lf-v52-record-summary"
+          aria-expanded={isOpen}
+          aria-controls={`record-detail-${row.id}`}
+          onClick={() => setOpenRecordId((current) => current === row.id ? null : row.id)}
+        >
+          <ProviderBadge
+            provider={provider}
+            fallbackLabel={isBankCategory ? row.title ?? bankProviderName : row.provider_name ?? row.title ?? "Record"}
+            categoryKey={isPossessions ? categoryKeyFromRow : categoryKey}
+          />
+          <span className="lf-v52-record-summary-identity">
+            <strong>{primaryRecordTitle}</strong>
+            <small>{recordType}</small>
+            <small className="lf-v52-record-summary-mobile-date">Updated {formatDate(row.updated_at)}</small>
+          </span>
+          <span className="lf-v52-record-summary-date">{formatDate(row.updated_at)}</span>
+          {showListValue ? <span className="lf-v52-record-summary-value">{formatCurrency(toMajorUnits(row.value_minor), (row.currency_code ?? "GBP").toUpperCase())}</span> : null}
+          <Icon name="chevron_right" size={20} />
+        </button>
+        {isOpen ? <div id={`record-detail-${row.id}`} className="lf-v52-record-expanded">
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 16, alignItems: "flex-start" }}>
           <div style={{ display: "flex", gap: 14, alignItems: "flex-start", minWidth: 0 }}>
             {previewUrl && !thumbFailed ? (
@@ -3867,6 +3915,7 @@ export default function UniversalRecordWorkspace({
             ) : null}
           </div>
         ) : null}
+        </div> : null}
       </article>
     );
   };
@@ -4118,7 +4167,7 @@ export default function UniversalRecordWorkspace({
         </div>
 
         {!isTrustedContacts ? (
-          <div className="lf-content-grid">
+          <div className="lf-content-grid lf-v52-record-toolbar">
             <label style={fieldStyle}>
               <span style={labelStyle}>
                 <Icon name="search" size={16} />
@@ -4138,17 +4187,6 @@ export default function UniversalRecordWorkspace({
             </label>
             <label style={fieldStyle}>
               <span style={labelStyle}>
-                <Icon name="filter_alt" size={16} />
-                State
-              </span>
-              <select style={inputStyle} value={recordStatusFilter} onChange={(event) => setRecordStatusFilter(event.target.value as typeof recordStatusFilter)}>
-                <option value="all">All records</option>
-                <option value="active">Active only</option>
-                <option value="archived">Archived only</option>
-              </select>
-            </label>
-            <label style={fieldStyle}>
-              <span style={labelStyle}>
                 <Icon name="swap_vert" size={16} />
                 Sort
               </span>
@@ -4159,22 +4197,30 @@ export default function UniversalRecordWorkspace({
                 <option value="value_asc">Lowest value</option>
               </select>
             </label>
-            {isPossessions ? (
-              <label style={fieldStyle}>
-                <span style={labelStyle}>
-                  <Icon name="category" size={16} />
-                  Category
-                </span>
-                <select style={inputStyle} value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
-                  <option value="all">All categories</option>
-                  {personalPossessionCategories.map((item) => (
-                    <option key={item.value} value={item.value}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
+            <details className="lf-v52-record-filters">
+              <summary><Icon name="filter_alt" size={18} /> More filters{recordStatusFilter !== "all" || categoryFilter !== "all" ? " applied" : ""}</summary>
+              <div>
+                <label style={fieldStyle}>
+                  <span style={labelStyle}>State</span>
+                  <select style={inputStyle} value={recordStatusFilter} onChange={(event) => setRecordStatusFilter(event.target.value as typeof recordStatusFilter)}>
+                    <option value="all">All records</option>
+                    <option value="active">Active only</option>
+                    <option value="archived">Archived only</option>
+                  </select>
+                </label>
+                {isPossessions ? (
+                  <label style={fieldStyle}>
+                    <span style={labelStyle}>Category</span>
+                    <select style={inputStyle} value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
+                      <option value="all">All categories</option>
+                      {personalPossessionCategories.map((item) => (
+                        <option key={item.value} value={item.value}>{item.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+              </div>
+            </details>
           </div>
         ) : null}
 
@@ -4194,7 +4240,7 @@ export default function UniversalRecordWorkspace({
             ) : null}
           </div>
         ) : null}
-        {!loading && activeRecords.length > 0 ? <div style={{ display: "grid", gap: 10 }}>{activeRecords.map(renderRow)}</div> : null}
+        {!loading && activeRecords.length > 0 ? <div className="lf-v52-record-list"><div className="lf-v52-record-list-head" aria-hidden="true"><span></span><span>Name and type</span><span>Updated</span><span>Value</span><span></span></div>{activeRecords.map(renderRow)}</div> : null}
         </section>
       ) : null}
 
@@ -6346,76 +6392,8 @@ function ProviderBadge({
   fallbackLabel: string;
   categoryKey?: string;
 }) {
-  const [failedLogoSrc, setFailedLogoSrc] = useState("");
-  const providerLogoSrc = useMemo(
-    () => resolveProviderLogoSrc(provider),
-    [provider],
-  );
-
-  if (providerLogoSrc && failedLogoSrc !== providerLogoSrc) {
-    return (
-      <div style={logoWrapStyle} aria-label={provider?.display_name ?? "Bank logo"}>
-        <Image
-          src={providerLogoSrc}
-          alt={provider?.display_name ?? "Bank logo"}
-          width={30}
-          height={30}
-          unoptimized
-          style={{ objectFit: "contain", width: "100%", height: "100%", maxWidth: 30, maxHeight: 30, display: "block" }}
-          onError={() => {
-            setFailedLogoSrc(providerLogoSrc);
-          }}
-        />
-      </div>
-    );
-  }
-
-  const categoryIcon = categoryKey ? POSSESSION_CATEGORY_ICONS[categoryKey] : null;
-  if (categoryIcon) {
-    return (
-      <div style={categoryBadgeStyle} aria-label={categoryKey}>
-        <Icon name={categoryIcon} size={22} />
-      </div>
-    );
-  }
-
-  if (provider?.provider_type === "bank" || categoryKey === "bank") {
-    return (
-      <div style={badgeStyle} aria-label={provider?.display_name || fallbackLabel}>
-        {getProviderInitials(provider?.display_name ?? fallbackLabel)}
-      </div>
-    );
-  }
-
-  const iconName = provider?.icon_text ? null : "folder";
-  const text = provider?.icon_text || getProviderInitials(fallbackLabel);
-  return (
-    <div style={badgeStyle} aria-label={provider?.display_name || fallbackLabel}>
-      {iconName ? <Icon name={iconName} size={22} /> : text}
-    </div>
-  );
-}
-
-function resolveProviderLogoSrc(provider: ProviderCatalogRow | null) {
-  if (provider?.provider_type === "bank") {
-    return provider.provider_key ? `/bank-logos/${provider.provider_key}.png` : "";
-  }
-
-  const rawLogoPath = provider?.logo_path?.trim();
-  if (!rawLogoPath) return "";
-  if (rawLogoPath.startsWith("/")) return rawLogoPath;
-  return `/bank-logos/${rawLogoPath.replace(/^.*[\\/]/, "").trim()}`;
-}
-
-function getProviderInitials(value: string) {
-  const words = value
-    .trim()
-    .split(/\s+/)
-    .map((part) => part.replace(/[^a-z0-9]/gi, ""))
-    .filter(Boolean);
-  if (words.length === 0) return "??";
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return `${words[0][0] ?? ""}${words[1][0] ?? ""}`.toUpperCase();
+  const categoryIcon = categoryKey ? POSSESSION_CATEGORY_ICONS[categoryKey] || RECORD_CATEGORY_ICONS[categoryKey] : undefined;
+  return <BrandMark name={provider?.display_name || fallbackLabel} logoPath={resolveProviderLogoPath(provider)} categoryIcon={provider ? undefined : categoryIcon} markText={provider?.icon_text} />;
 }
 
 function detectProvider(input: string, catalog: ProviderCatalogRow[]) {
@@ -6502,12 +6480,12 @@ function StatusIconForContact({ state }: { state: RecordContactInviteState }) {
   return <Icon name="check" size={13} />;
 }
 
-function getRecordContactVaultAccessState(contact: RecordContact): { state: "locked" | "review" | "approved" | "revoked"; label: string } {
+function getRecordContactIdentityState(contact: RecordContact): { state: "locked" | "review" | "approved" | "revoked"; label: string } {
   const verificationStatus = String(contact.verification_status ?? "").trim().toLowerCase();
-  if (["revoked", "rejected"].includes(verificationStatus)) return { state: "revoked", label: "Vault access: Revoked" };
-  if (["active", "verified"].includes(verificationStatus)) return { state: "approved", label: "Vault access: Approved" };
+  if (["revoked", "rejected"].includes(verificationStatus)) return { state: "revoked", label: "Identity verification revoked" };
+  if (["active", "verified"].includes(verificationStatus)) return { state: "approved", label: "Identity verified; access is set in Sharing" };
   if (["pending_verification", "verification_submitted"].includes(verificationStatus)) return { state: "review", label: "Verification under review" };
-  return { state: "locked", label: "Vault access: Locked" };
+  return { state: "locked", label: "Identity not verified" };
 }
 
 function buildLinkedContactEditDraft(contact: RecordContact, fallbackRole: string): LinkedContactEditDraft {
@@ -7237,20 +7215,6 @@ const archivedPillStyle: CSSProperties = {
   color: "#475569",
 };
 
-const logoWrapStyle: CSSProperties = {
-  width: 44,
-  height: 44,
-  borderRadius: 12,
-  border: "1px solid #e8e1dc",
-  background: "#fff",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  overflow: "hidden",
-  flexShrink: 0,
-  padding: 5,
-};
-
 const thumbWrapStyle: CSSProperties = {
   width: 48,
   height: 48,
@@ -7261,34 +7225,6 @@ const thumbWrapStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-};
-
-const categoryBadgeStyle: CSSProperties = {
-  width: 44,
-  height: 44,
-  borderRadius: 12,
-  border: "1px solid #eadfd8",
-  background: "#f7f3f0",
-  color: "#3a2118",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontSize: 18,
-};
-
-const badgeStyle: CSSProperties = {
-  width: 44,
-  height: 44,
-  borderRadius: 12,
-  border: "1px solid #eadfd8",
-  background: "#f7f3f0",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontSize: 12,
-  fontWeight: 700,
-  color: "#3a2118",
-  textTransform: "uppercase",
 };
 
 const maskedRowStyle: CSSProperties = {
