@@ -249,7 +249,7 @@ test("dashboard shell keeps footer workspace and attention-row geometry aligned"
   assert.match(actionSummary, /router\.push\(`\/actions\?filter=todo&action=/);
   assert.match(shellCss, /\.lf-dashboard-action-summary-item > \.lf-icon \{ flex: 0 0 18px; margin-left: auto;/);
   assert.match(shellCss, /\.lf-personal-account-menu \.lf-admin-shell-account-trigger \{[^}]*border: 0;/);
-  assert.match(shellCss, /\.lf-sidebar \.lf-workspace-switcher \{ border: 0; background: transparent;/);
+  assert.match(shellCss, /\.lf-sidebar \.lf-workspace-switcher, \.lf-mobile-drawer \.lf-workspace-switcher \{ border: 0; background: transparent;/);
 });
 
 test("contacts keeps legacy invitation management only for add-person setup while person details stay focused", () => {
@@ -425,7 +425,7 @@ test("dashboard profile chip signs the avatar through the authenticated server r
   assert.match(layout, /image\.onload = \(\) => \{/);
   assert.match(layout, /setConfirmedAvatarUrl\(effectiveAvatarUrl\)/);
   assert.match(layout, /image\.onerror = \(\) => \{/);
-  assert.match(layout, /data-avatar-ready=\{renderedAvatarUrl \? "true" : "false"\}/);
+  assert.match(layout, /\{renderedAvatarUrl \? \(/);
   assert.match(layout, /className="lf-topbar-user-avatar-fallback"/);
   assert.doesNotMatch(layout, /backgroundImage: `url/);
   assert.match(layout, /const stableAvatarUrl = await loadServerProfileAvatarDataUrl\(\)/);
@@ -480,16 +480,16 @@ test("shared consumer workflow controls support structured capture and assisted 
   assert.match(controls, /Choose the closest option\. Select Other only when none fit\./);
   assert.match(controls, /export function SegmentedControl/);
   assert.match(controls, /role="group"/);
-  assert.match(controls, /export function ExtractionConfirmationPanel/);
-  assert.match(controls, /Extracted values are a starting point only/);
+  assert.match(controls, /export function UploadConfirmationPanel/);
+  assert.doesNotMatch(controls, /Extracted values are a starting point only/);
   assert.match(controls, /helperText\?: string/);
   assert.match(controls, /role="alert"/);
   assert.match(configFields, /field\.inputType === "select" && field\.supportsOther && field\.otherKey/);
   assert.match(configFields, /<OtherSelectInput/);
   assert.match(configFields, /required=\{field\.required\}/);
   assert.doesNotMatch(configFields, /showOther && false/);
-  assert.match(documentsWorkspace, /<ExtractionConfirmationPanel/);
-  assert.match(documentsWorkspace, /Any extracted details remain editable before they become part of your vault/);
+  assert.match(documentsWorkspace, /<UploadConfirmationPanel/);
+  assert.match(documentsWorkspace, /This upload does not extract or apply record details/);
   assert.match(documentsWorkspace, /helperText=\{selectedKind === "photo"/);
   assert.match(documentsWorkspace, /disabled=\{saving \|\| !pendingFile\}/);
   assert.match(onboarding, /PlatformSection/);

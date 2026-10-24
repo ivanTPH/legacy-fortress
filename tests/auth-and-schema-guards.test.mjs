@@ -75,11 +75,11 @@ test("schema health endpoint exposes safe diagnostic categories only", () => {
   assert.doesNotMatch(route, /connection string|service role key|SUPABASE_SERVICE_ROLE_KEY/);
 });
 
-test("Supabase local auth config keeps local site_url while allow-listing production redirects", () => {
+test("Supabase CLI auth config keeps its existing site URL and exact redirect allow-list", () => {
   const config = fs.readFileSync(path.join(process.cwd(), "supabase/config.toml"), "utf8");
-  assert.match(config, /site_url = "http:\/\/localhost:3012"/);
-  assert.match(config, /"http:\/\/127\.0\.0\.1:3012\/auth\/callback"/);
-  assert.match(config, /"http:\/\/127\.0\.0\.1:3012\/reset-password"/);
+  assert.match(config, /site_url = "https:\/\/legacy-fortress\.vercel\.app"/);
+  assert.match(config, /"http:\/\/127\.0\.0\.1:3008\/auth\/callback"/);
+  assert.match(config, /"http:\/\/127\.0\.0\.1:3008\/reset-password"/);
   assert.match(config, /"https:\/\/legacy-fortress\.vercel\.app\/auth\/callback"/);
   assert.match(config, /"https:\/\/legacy-fortress\.vercel\.app\/reset-password"/);
   assert.match(config, /"https:\/\/legacy-fortress\.vercel\.app\/sign-in"/);
