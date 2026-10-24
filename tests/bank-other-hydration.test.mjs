@@ -10,6 +10,23 @@ import {
 
 const workspaceSource = readFileSync(new URL("../components/records/UniversalRecordWorkspace.tsx", import.meta.url), "utf8");
 
+test("saved bank nickname stays distinct from provider while read-only identifiers stay masked", () => {
+  const account = normalizeBankAssetRow({
+    title: "Barclays Savings Account",
+    provider_name: "Barclays",
+    metadata: {
+      account_nickname: "Holiday fund",
+      account_number: "12345678",
+      sort_code: "10-20-30",
+    },
+  });
+
+  assert.equal(account.provider_name, "Barclays");
+  assert.equal(account.account_nickname, "Holiday fund");
+  assert.notEqual(account.masked_account_number, account.account_number);
+  assert.notEqual(account.masked_sort_code, account.sort_code);
+});
+
 test("bank other metadata preserves canonical type and separate custom text", () => {
   const normalized = normalizeCanonicalBankMetadata({
     provider_name: "Local Bank",

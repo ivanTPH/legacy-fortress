@@ -1206,6 +1206,16 @@ export default function UniversalRecordWorkspace({
     return items;
   }, [categoryFilter, isPossessions, recordStatusFilter, records, search, sortBy]);
   const selectedRecord = selectedWorkspaceRecordId ? records.find((row) => row.id === selectedWorkspaceRecordId) ?? null : null;
+  const selectedBankNickname = isBankCategory && selectedRecord
+    ? normalizeBankAssetRow({
+        title: selectedRecord.title,
+        provider_name: selectedRecord.provider_name,
+        provider_key: selectedRecord.provider_key,
+        currency_code: selectedRecord.currency_code,
+        value_minor: selectedRecord.value_minor,
+        metadata: selectedRecord.metadata,
+      }).account_nickname
+    : "";
 
   const activeRecords = filteredRecords.filter((row) => row.status === "active");
   const archivedRecords = filteredRecords.filter((row) => row.status === "archived");
@@ -4113,7 +4123,7 @@ export default function UniversalRecordWorkspace({
           </div>
           <div className="lf-v52-record-page-heading">
             <ProviderBadge provider={findProviderByKey(selectedRecord.provider_key, catalog) ?? detectProvider(selectedRecord.provider_name ?? selectedRecord.title ?? "", catalog)} fallbackLabel={selectedRecord.provider_name ?? selectedRecord.title ?? "Record"} categoryKey={categoryKey} />
-            <div><h1>{selectedRecord.title || "Untitled record"}</h1><p>{selectedRecord.provider_name || title} · Updated {formatDate(selectedRecord.updated_at)}</p></div>
+            <div><h1>{selectedRecord.title || "Untitled record"}</h1><p>{selectedRecord.provider_name || title} · Updated {formatDate(selectedRecord.updated_at)}</p>{selectedBankNickname ? <p className="lf-v52-record-nickname">Account nickname: <strong>{selectedBankNickname}</strong></p> : null}</div>
           </div>
           {renderRow(selectedRecord, true)}
           {viewer.mode !== "linked" ? <details className="lf-v52-record-more-actions"><summary>More record actions</summary>
@@ -5096,6 +5106,7 @@ function FinanceFields({
           config={BANK_FORM_CONFIG}
           values={bankValues}
           errors={bankErrors}
+          primaryFieldKeys={["account_number", "sort_code"]}
           onChange={(key, value) => {
             setForm((prev) => applyBankConfigFieldChange(prev, key, value));
           }}

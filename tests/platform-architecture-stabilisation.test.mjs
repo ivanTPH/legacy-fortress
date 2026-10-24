@@ -137,7 +137,7 @@ test("legacy persistence readiness keeps canonical assets, documents, and contac
   assert.equal(shouldPreferCanonicalPersistence("legacy section_entries support surface"), false);
   assert.equal(isAllowedLegacySectionEntriesSurface("support requests"), true);
   assert.equal(isAllowedLegacySectionEntriesSurface("new enterprise reporting flow"), false);
-  assert.ok(CANONICAL_WORKSPACE_PREFERENCE_RULES.some((rule) => /Action Centre/.test(rule)));
+  assert.ok(CANONICAL_WORKSPACE_PREFERENCE_RULES.some((rule) => /Use To do for tasks, reminders/.test(rule)));
   assert.match(describeLegacyPersistenceCoexistence().migrationPath.join(" "), /Backfill canonical assets\/documents\/contacts/);
   assert.ok(PERSISTENCE_READINESS_SURFACES.every((surface) => surface.note.length > 20));
 });

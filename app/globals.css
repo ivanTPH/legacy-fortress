@@ -8330,6 +8330,8 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-v52-record-page-heading { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .lf-v52-record-page-heading > div:last-child { min-width: 0; }
 .lf-v52-record-page-heading p { margin: 4px 0 0; color: var(--lf-text-secondary); font-size: 13px; }
+.lf-v52-record-page-heading .lf-v52-record-nickname { font-size: 16px; }
+.lf-v52-record-nickname strong { color: var(--lf-text); font-weight: 600; }
 .lf-v52-detail-view { border: 0 !important; background: transparent !important; }
 .lf-v52-detail-view > .lf-v52-record-summary { display: none; }
 .lf-v52-detail-view .lf-v52-record-expanded { padding: 0; border: 0; }

@@ -1,5 +1,12 @@
 # Codex Handover
 
+## 24 October 2026 — Vault Master Release B integration
+
+- Release A is confirmed live on TEST at `b2a37989d0d115c349716cbdab6215b0a045006c`. The isolated `feat/v52-vault-master-24oct` worktree merged that exact staging commit, retaining its Linux lockfile and Vault record/search fixes.
+- Release B retains the completed Vault Master token, Home, header/navigation, To do naming and six-area section-grid work. Bank record detail now labels the saved account nickname beside the provider and title; the main bank Add/Edit form shows account number and sort code without changing their validation rules. Read-only account identifiers remain masked.
+- Protected release and owner iPhone/desktop visual acceptance must be recorded separately; no production, Auth, RLS or database changes are part of this release.
+- The local release gate passed npm audit, lint, TypeScript and core tests. One platform stability assertion still expected the superseded “Action Centre” label; it now checks the canonical “To do” rule and its affected test passed. The remaining route audit, link crawl and production build passed without repeating earlier gate steps. Bank hydration/search checks passed; this is local evidence, not hosted owner acceptance.
+
 ## 23 October 2026 — TEST installed-web-app entry correction
 
 - Owner reproduced that a fresh iPhone Home Screen installation starts at `/` and a destination-free super-admin sign-in lands at `/admin`. The live manifest had `start_url: "/"`; local execution confirmed the role default and that explicit `/dashboard` remains Vault.
