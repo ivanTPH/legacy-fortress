@@ -1152,7 +1152,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
               {!showBackButton ? <div className="lf-mobile-workspace-trigger"><WorkspaceSwitcher
                 currentPathname={pathname}
                 compact
-                branded
+                mobileContextOnly
                 alwaysShow
                 customerOnly
                 founderTestLauncherAvailable={founderLauncherAvailable}
@@ -1167,6 +1167,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
               <div className="lf-topbar-title">{topbarTitle}</div>
               {showBackButton ? <div className="lf-topbar-parent-title">{topbarBreadcrumbs.at(-1)?.label ?? "Home"}</div> : null}
             </div>
+            {!showBackButton && canViewPath("/add", resolvedViewerAccess) ? <Link href="/add" className="lf-mobile-add-record" aria-label="Add to my Vault"><Icon name="add" size={22} /></Link> : null}
           </div>
 
             <div className="lf-topbar-actions">
@@ -1233,7 +1234,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
               onClick={() => closeNavigationState("outside_click")}
             />
             <aside className="lf-mobile-drawer" aria-label="Mobile Navigation">
-              <div className="lf-mobile-drawer-heading"><strong>Your vault</strong><button type="button" onClick={() => closeNavigationState("escape")} aria-label="Close navigation"><Icon name="close" size={20} /></button></div>
+              <div className="lf-mobile-drawer-heading"><strong>My Vault</strong><button type="button" onClick={() => closeNavigationState("escape")} aria-label="Close navigation"><Icon name="close" size={20} /></button></div>
 
               <MobileNavTree
                 items={dashboardNavigationItems.filter((item) => ["finances", "legal", "property", "business", "digital", "possessions", "add", "add-to-fortress", "support"].includes(item.id))}
@@ -1309,7 +1310,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
         <nav className="lf-mobile-bottom-nav" aria-label="Primary mobile navigation">
           {[
             ["/dashboard", "Home", "home"],
-            ["/actions", "Actions", "task_alt"],
+            ["/actions", "To do", "task_alt"],
             ["/people-access", "People", "group"],
             ["/settings", "Settings", "settings"],
           ].filter(([href]) => canViewPath(href, resolvedViewerAccess)).map(([href, label, icon]) => {

@@ -42,6 +42,7 @@ type WorkspaceSwitcherProps = {
   adminRole?: PlatformRole | string | null;
   compact?: boolean;
   branded?: boolean;
+  mobileContextOnly?: boolean;
   showDetails?: boolean;
   governanceContext?: string;
   alwaysShow?: boolean;
@@ -66,6 +67,7 @@ export default function WorkspaceSwitcher({
   adminRole = null,
   compact = false,
   branded = false,
+  mobileContextOnly = false,
   showDetails = false,
   governanceContext = "workspace route guard",
   alwaysShow = false,
@@ -276,9 +278,9 @@ export default function WorkspaceSwitcher({
   if ((!session && !alwaysShow) || (session && !hasMultipleContexts && linkedFortresses.length === 0 && !alwaysShow)) return null;
 
   const currentContent = <>
-    {branded ? <BrandGlyph /> : <span className="lf-workspace-icon" aria-hidden="true"><Icon name={iconForWorkspace(activeWorkspace?.id ?? "application")} size={16} /></span>}
+    {mobileContextOnly ? null : branded ? <BrandGlyph /> : <span className="lf-workspace-icon" aria-hidden="true"><Icon name={iconForWorkspace(activeWorkspace?.id ?? "application")} size={16} /></span>}
     <span className="lf-workspace-current-copy">
-      {branded ? <span className="lf-workspace-brand-name">Legacy Fortress</span>
+      {mobileContextOnly ? null : branded ? <span className="lf-workspace-brand-name">Legacy Fortress</span>
         : <span className="lf-workspace-label">{activeLinkedFortress ? "Linked Fortress" : "Workspace"}</span>}
       <strong>{activeLinkedFortress?.ownerName ?? (customerOnly && activeWorkspace?.id === "application" ? "My Vault" : activeWorkspace?.label) ?? "Personal Vault"}</strong>
     </span>
@@ -287,7 +289,7 @@ export default function WorkspaceSwitcher({
   return (
     <section
       ref={menuRef}
-      className={["lf-workspace-switcher", compact && "compact", branded && "branded"].filter(Boolean).join(" ")}
+      className={["lf-workspace-switcher", compact && "compact", branded && "branded", mobileContextOnly && "mobile-context-only"].filter(Boolean).join(" ")}
       aria-label={plainCurrentContext ? "Current Vault" : founderTestLauncherAvailable ? "Vault contexts and TEST interfaces" : "Switch Vault"}
     >
       <div className="lf-workspace-menu">

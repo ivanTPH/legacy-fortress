@@ -3,10 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import ActionQueuePanel, { buildActionCentrePreview, getActionCentreActionCount, getActionCentreToDoCount, type ActionCentreContext, type ActionCentreTask } from "../components/dashboard/ActionQueuePanel";
-import DashboardActionSummary from "../components/dashboard/DashboardActionSummary";
+import ActionQueuePanel, { getActionCentreActionCount, getActionCentreToDoCount, type ActionCentreContext, type ActionCentreTask } from "../components/dashboard/ActionQueuePanel";
 import V3DashboardOverview, { type VaultAreaSummary } from "../components/dashboard/V3DashboardOverview";
-import ActionCentreEntryPrompt from "../components/dashboard/ActionCentreEntryPrompt";
 import Icon from "../../../components/ui/Icon";
 import { Card, PageHeader } from "../../../components/ui/V3Primitives";
 import AttachmentGallery, { type AttachmentGalleryItem } from "../../../components/documents/AttachmentGallery";
@@ -881,12 +879,6 @@ const legalSummary = useMemo(() => {
     () => getActionCentreActionCount(dashboardState.actions.items, dashboardState.actions.context, guidanceItems),
     [dashboardState.actions.context, dashboardState.actions.items, guidanceItems],
   );
-  const actionCentrePreview = useMemo(
-    () => buildActionCentrePreview(dashboardState.actions.items, dashboardState.actions.context, guidanceItems, 1)[0] ?? null,
-    [dashboardState.actions.context, dashboardState.actions.items, guidanceItems],
-  );
-  const [entryPromptVisible, setEntryPromptVisible] = useState(false);
-  const [entryPromptActionKey, setEntryPromptActionKey] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -894,15 +886,6 @@ const legalSummary = useMemo(() => {
     window.dispatchEvent(new CustomEvent("lf-action-centre-count", { detail: { count: actionCentreCount } }));
   }, [actionCentreCount]);
 
-  useEffect(() => {
-    if (actionCentreOnly || viewer.mode === "linked" || !actionCentrePreview) return;
-    if (typeof window === "undefined") return;
-    const promptKey = "lf:action-centre-entry-prompt:session";
-    if (window.sessionStorage.getItem(promptKey) === "shown") return;
-    window.sessionStorage.setItem(promptKey, "shown");
-    setEntryPromptActionKey(actionCentrePreview.actionKey);
-    setEntryPromptVisible(true);
-  }, [actionCentreOnly, actionCentrePreview, viewer.mode]);
   const markDashboardTaskComplete = useCallback(async (taskId: string) => {
     const task = assetRows.find((row) => row.id === taskId && String(row.category_key ?? "") === "tasks");
     if (!task) {
@@ -1053,7 +1036,6 @@ const legalSummary = useMemo(() => {
       setPreferences(savedPreferences);
       setStatus("✅ Thanks. We will tailor the next step to your answer.");
       setRefreshToken((current) => current + 1);
-      setEntryPromptVisible(false);
       return true;
     } catch (error) {
       setStatus(`⚠️ Could not save that choice: ${error instanceof Error ? error.message : "Unknown error"}`);
@@ -1061,7 +1043,7 @@ const legalSummary = useMemo(() => {
     } finally {
       setGuidanceBusyKey(null);
     }
-  }, [preferences, setEntryPromptVisible, setPreferences, viewer.mode]);
+  }, [preferences, setPreferences, viewer.mode]);
 
   async function handleDashboardInviteAction(contact: ContactDiscoveryRow, invite: ContactInviteDisplay) {
     if (invite.action === "disabled" || invite.action === "status") {
@@ -1600,11 +1582,11 @@ const legalSummary = useMemo(() => {
 
   if (actionCentreOnly) {
     if (viewer.mode === "linked") {
-      return <div className="lf-action-centre-page" role="status">Returning you to My Fortress before opening your personal Action Centre...</div>;
+      return <div className="lf-action-centre-page" role="status">Returning you to My Vault before opening your To do page...</div>;
     }
     return (
       <div className="lf-action-centre-page lf-v3-area-page">
-        <PageHeader title="Action Centre" description="Everything that needs you, in one place." />
+        <PageHeader title="To do" description="Everything that needs you, in one place." />
         <Card className="lf-v3-actions-workspace"><ActionQueuePanel
           items={dashboardState.actions.items}
           context={dashboardState.actions.context}
@@ -1622,18 +1604,10 @@ const legalSummary = useMemo(() => {
 
   return (
     <div className="lf-dashboard-shell">
-      <V3DashboardOverview mode="dashboard" loading={loading} areas={v3Areas} recordCount={recordIds.size}
+      <V3DashboardOverview loading={loading} areas={v3Areas} recordCount={recordIds.size}
         peopleCount={viewer.mode === "linked" ? undefined : contactRows.length} recordedValue={recordedValue}
-        actions={[]} tasks={[]} showActions={false}
         actionCount={viewer.mode === "linked" ? undefined : getActionCentreToDoCount(dashboardState.actions.items, dashboardState.actions.context, guidanceItems)}
-        canAddRecords={viewer.mode !== "linked"}
-        actionPreview={viewer.mode !== "linked" ? <DashboardActionSummary
-          items={dashboardState.actions.items}
-          context={dashboardState.actions.context}
-          guidanceItems={guidanceItems}
-          onAction={handleAction}
-          excludedActionKeys={entryPromptActionKey ? [entryPromptActionKey] : []}
-        /> : null} />
+        canAddRecords={viewer.mode !== "linked"} />
       {status ? (
         isPlanLimitStatus(status) ? (
           <button
@@ -1649,22 +1623,6 @@ const legalSummary = useMemo(() => {
         ) : (
           <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div>
         )
-      ) : null}
-      {viewer.mode !== "linked" && entryPromptVisible && actionCentrePreview ? (
-        <div className="lf-dashboard-entry-prompt">
-          <ActionCentreEntryPrompt
-            item={actionCentrePreview}
-            onAction={(actionKey, href) => {
-              setEntryPromptVisible(false);
-              handleAction(actionKey, href);
-            }}
-            onGuidanceApplicability={(state) => {
-              const item = guidanceItems.find((candidate) => candidate.key === actionCentrePreview.guidanceKey);
-              if (item) void handleGuidanceApplicability(item, state);
-            }}
-            onDismiss={() => setEntryPromptVisible(false)}
-          />
-        </div>
       ) : null}
       {loading ? <div style={{ color: "#6b7280" }}>Loading dashboard summary...</div> : null}
       {searchQuery && !loading ? (

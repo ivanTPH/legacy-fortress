@@ -60,7 +60,7 @@ export const CANONICAL_WORKSPACE_PREFERENCE_RULES = [
   "Use assets for structured finance, property, business, legal, digital, and possession records when a canonical workspace exists.",
   "Use documents plus AttachmentGallery for document storage, preview, download, replace, and remove behaviour.",
   "Use contacts, contact_links, and contact_invitations for people, relationships, executors, advisers, next of kin, and invite state.",
-  "Use Action Centre for tasks, reminders, readiness actions, and dashboard operational queues.",
+  "Use To do for tasks, reminders, readiness actions, and dashboard operational queues.",
   "Use section_entries only for compatibility surfaces until a safe backfill and migration exists.",
 ] as const;
 

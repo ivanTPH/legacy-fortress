@@ -26,7 +26,7 @@ test("dashboard uses authorised Version 3 area summaries and keeps live actions"
   assert.match(dashboardPage, /recordCount=\{recordIds\.size\}/);
   assert.match(dashboardPage, /valuedRows\.size === 0 \? "Not recorded"/);
   assert.match(dashboardPage, /area\.visible && \(viewer\.mode !== "linked" \|\| area\.count > 0\)/);
-  assert.match(dashboardPage, /viewer\.mode !== "linked" \? <DashboardActionSummary/);
+  assert.doesNotMatch(dashboardPage, /<DashboardActionSummary/);
   assert.match(v3Overview, /href="\/add"/);
   assert.doesNotMatch(dashboardPage, /value=\{financialSummary\.valueText\}/);
   assert.doesNotMatch(dashboardPage, /value=\{propertySummary\.valueText\}/);
@@ -43,7 +43,9 @@ test("dashboard uses authorised Version 3 area summaries and keeps live actions"
   assert.match(shellCss, /\.lf-page-content \{[\s\S]*max-width: 960px/);
   assert.match(shellCss, /\.lf-nav-item\.is-active \{[\s\S]*background: #FFFFFF/);
   assert.doesNotMatch(shellCss, /\.lf-nav-item\.is-active \{[^}]*linear-gradient/);
-  assert.match(v3Overview, /Your vault/);
+  assert.match(v3Overview, /aria-label="Vault areas"/);
+  assert.doesNotMatch(v3Overview, /Your vault|Next steps|Action Centre/);
+  assert.match(v3Overview, /No records yet/);
   assert.doesNotMatch(dashboardPage, /showFullActionCentre/);
   assert.match(dashboardPage, /actionCentreCount/);
   assert.doesNotMatch(summaryCard, /icon=\{actionIcon\}/);
@@ -136,7 +138,7 @@ test("dashboard uses authorised Version 3 area summaries and keeps live actions"
   assert.doesNotMatch(summaryCard, /actionIcon/);
   assert.match(summaryCard, /className="lf-dashboard-summary-value" style=\{valueStyle\}/);
   assert.match(summaryCard, /className="lf-dashboard-summary-detail" style=\{detailStyle\}/);
-  assert.match(actionQueue, /Action Centre/);
+  assert.match(actionQueue, /aria-label="To do"/);
   assert.match(actionQueue, /className="lf-action-centre"/);
   assert.match(actionQueue, /className="lf-action-centre-header"/);
   assert.match(actionQueue, /className="lf-action-centre-intro"/);
@@ -204,8 +206,8 @@ test("dashboard uses authorised Version 3 area summaries and keeps live actions"
   assert.match(dashboardPage, /No permitted records, contacts, documents, or destinations match this search/);
   assert.match(dashboardPage, /permitted records, documents, contacts, and destinations/);
   assert.match(fs.readFileSync(path.join(root, "app/(app)/layout.tsx"), "utf8"), /placeholder="Search your vault"/);
-  assert.match(v3Overview, /Your vault/);
-  assert.match(dashboardRender, /guidanceItems=\{guidanceItems\}/);
+  assert.match(v3Overview, /aria-label="Vault areas"/);
+  assert.match(dashboardPage, /guidanceItems=\{guidanceItems\}/);
   assert.doesNotMatch(dashboardRender, /aria-label="Fortress summary"/);
   assert.doesNotMatch(dashboardRender, /aria-label="Estate readiness summary"/);
   assert.doesNotMatch(dashboardRender, /Get started with your vault/);
@@ -215,8 +217,7 @@ test("dashboard uses authorised Version 3 area summaries and keeps live actions"
   assert.doesNotMatch(dashboardRender, /aria-label="Recent documents"/);
   assert.doesNotMatch(dashboardRender, /setupStepsGridStyle|completenessGridStyle|documentCategoryGridStyle|readinessGridStyle/);
   assert.doesNotMatch(dashboardRender, /<ReadinessSnapshot|<ReadinessUploadAction|<AttachmentGallerySummary|<AttachmentGallery\s/);
-  assert.match(dashboardRender, /actionPreview=\{viewer\.mode !== "linked" \? <DashboardActionSummary/);
-  assert.ok(dashboardRender.indexOf("<DashboardActionSummary") < dashboardRender.indexOf('aria-label="Dashboard review panel"'));
+  assert.doesNotMatch(dashboardRender, /actionPreview=|<DashboardActionSummary|<ActionCentreEntryPrompt/);
 });
 
 test("vault area tiles use Version 3 primitives while the sidebar keeps its workspace", () => {
@@ -287,7 +288,7 @@ test("add-to-fortress uses the page header once and renders grouped creation cho
   const page = fs.readFileSync(path.join(root, "app/(app)/add-to-fortress/page.tsx"), "utf8");
   const panel = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/AddToFortressPanel.tsx"), "utf8");
 
-  assert.match(page, /<PageHeader title="Add to my Fortress"/);
+  assert.match(page, /<PageHeader title="Add to my Vault"/);
   assert.match(panel, /aria-label="Choose what to add"/);
   assert.match(panel, /className="lf-v3-destination-grid"/);
   assert.doesNotMatch(panel, /Build this at your pace/);

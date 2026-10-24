@@ -118,20 +118,20 @@ function ActionQueuePanel({ items, onAction, context, guidanceItems, onGuidanceD
   const visibleSections = sections.filter((section) => section.key !== "completed" && section.key !== "clear" && section.rows.length > 0);
 
   return (
-    <section id="action-centre" className="lf-action-centre" style={panelStyle} aria-label="Action centre">
+    <section id="action-centre" className="lf-action-centre" style={panelStyle} aria-label="To do">
       <div style={{ display: "grid", gap: 4 }}>
         <div className="lf-action-centre-header" style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
           <div style={iconWrapStyle}>
             <Icon name={activeBlockerCount > 0 ? "notifications_active" : "verified"} size={21} />
           </div>
-          <h2 style={{ margin: 0, fontSize: 18 }}>Action Centre</h2>
+          <h2 style={{ margin: 0, fontSize: 18 }}>To do</h2>
           <span style={activeBlockerCount > 0 ? activeBadgeStyle : clearBadgeStyle}>
             {activeBlockerCount > 0 ? `${activeBlockerCount} active` : "All clear"}
           </span>
           <InfoTip
             className="lf-panel-help"
-            label="Explain Action Centre"
-            title="Action Centre"
+            label="Explain To do"
+            title="To do"
             tone="warning"
             message="Actions are grouped prompts from your vault data. Completing them can make records easier for trusted people to understand."
           />
@@ -332,13 +332,13 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
   }
 
   return (
-    <section id="action-centre" className="lf-action-centre" style={panelStyle} aria-label="Action centre">
-      <div className="lf-v51-action-filters" aria-label="Filter Action Centre">
-        {([ ["all", "All", rows.length], ["todo", "To do", groupedRows.todo.length], ["waiting", "Waiting", groupedRows.waiting.length], ["suggested", "Suggested", groupedRows.suggested.length] ] as const).map(([key, label, count]) =>
+    <section id="action-centre" className="lf-action-centre" style={panelStyle} aria-label="To do">
+      <div className="lf-v51-action-filters" aria-label="Filter To do">
+        {([ ["all", "All", rows.length], ["todo", "Needs you", groupedRows.todo.length], ["waiting", "Waiting on others", groupedRows.waiting.length], ["suggested", "Suggested", groupedRows.suggested.length] ] as const).map(([key, label, count]) =>
           <button key={key} type="button" aria-pressed={filter === key} onClick={() => setFilter(key)}>{label} <span>{count}</span></button>)}
       </div>
       {!rows.length ? <section style={clearStateStyle}><strong>Nothing needs your attention right now.</strong><span>You can add or review records whenever you are ready.</span></section> : null}
-      {([ ["todo", "To do"], ["waiting", "Waiting on others"], ["suggested", "Suggested"] ] as const).map(([key, label]) => filter === "all" || filter === key ? (
+      {([ ["todo", "Needs you"], ["waiting", "Waiting on others"], ["suggested", "Suggested"] ] as const).map(([key, label]) => filter === "all" || filter === key ? (
         <section key={key} className="lf-v51-action-group" aria-label={label}>
           <h2>{label} <span>{groupedRows[key].length}</span></h2>
           {groupedRows[key].length ? <div className="lf-action-centre-inbox">{groupedRows[key].map(renderInboxRow)}</div> : filter !== "all" ? <p>No {label.toLowerCase()} items right now.</p> : null}

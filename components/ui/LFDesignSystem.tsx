@@ -50,7 +50,7 @@ export function LFPageHeader({
 }
 
 export function AddAssetLink({ href }: { href: string }) {
-  return <Link className="lf-v4-add-asset" href={href} aria-label="Add asset" title="Add asset"><Icon name="add" size={20} /><span className="lf-v4-add-label">Add asset</span></Link>;
+  return <Link className="lf-v4-add-asset" href={href} aria-label="Add record" title="Add record"><Icon name="add" size={20} /><span className="lf-v4-add-label">Add record</span></Link>;
 }
 
 export function AddDocumentControl({ accept, onFilesSelected, disabled = false, multiple = false }: { accept: string; onFilesSelected: (files: File[]) => void; disabled?: boolean; multiple?: boolean }) {

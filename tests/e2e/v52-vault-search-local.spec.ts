@@ -99,9 +99,9 @@ test.describe("V5.2 authorised local Vault search", () => {
     await page.goto("/legal", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Legal", exact: true })).toBeVisible();
     await expect(page.getByText("Loading legal records…")).toHaveCount(0);
-    const emptyLegalTile = page.locator(".lf-v52-legal-page .lf-v3-area-empty-tile").first();
+    const emptyLegalTile = page.locator(".lf-v52-legal-page .lf-v52-section-tile").filter({ hasText: "No records yet" }).first();
     await expect(emptyLegalTile).toBeVisible();
-    expect(await emptyLegalTile.evaluate((element) => element.getBoundingClientRect().height)).toBeLessThanOrEqual(80);
+    await expect(emptyLegalTile.getByRole("link")).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath(isMobile ? "legal-overview-mobile.png" : "legal-overview-desktop.png") });
     await page.goto(`/dashboard?search=${encodeURIComponent(`My Will ${runId}`)}`, { waitUntil: "domcontentloaded" });
     const willResult = page.getByRole("link", { name: new RegExp(`My Will ${runId}`) });

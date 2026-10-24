@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Card, IconTile, PageHeader, Row } from "../../../components/ui/V3Primitives";
-import { AddAssetLink } from "../../../components/ui/LFDesignSystem";
+import { Card, PageHeader } from "../../../components/ui/V3Primitives";
+import VaultSectionGrid from "../../../components/vault/VaultSectionGrid";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
 import { filterAssetIdsForViewer, filterRecordIdsForViewer } from "../../../lib/access-control/viewerAccess";
 import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
@@ -116,7 +115,6 @@ export default function LegalOverviewPage() {
       description: "Guidance and wishes for your trusted people.", href: "/personal/wishes", icon: "volunteer_activism" }] : []),
   ].map((section) => ({ ...section, records: rows.filter((row) => (row.category_key || "other-legal-documents") === section.slug) }));
   const populated = sections.filter((section) => section.records.length > 0);
-  const empty = sections.filter((section) => section.records.length === 0);
   const recordCount = new Set(populated.flatMap((section) => section.records.map((row) => `${row.source}:${row.id}`))).size;
   const latest = populated.flatMap((section) => section.records.map((row) => row.created_at)).filter((value): value is string => Boolean(value))
     .sort((a, b) => Date.parse(b) - Date.parse(a))[0];
@@ -130,20 +128,10 @@ export default function LegalOverviewPage() {
       <div><span>Sections</span><strong>{populated.length} of {sections.length}</strong></div>
       <div><span>Last updated</span><strong>{formatLegalDate(latest)}</strong></div>
     </Card> : null}
-    {populated.map((section) => <Card key={section.slug} className="lf-v3-area-section">
-      <header><Link href={section.href}><IconTile icon={section.icon} /><span><strong>{section.title}</strong><small>{section.records.length} record{section.records.length === 1 ? "" : "s"}</small></span></Link>
-        {viewer.mode !== "linked" ? <AddAssetLink href={`${section.href}?add=1`} /> : null}
-      </header>
-      {section.records.map((row) => <Row key={`${row.source}:${row.id}`} title={row.title || section.title}
-        description={row.created_at ? `Updated ${formatLegalDate(row.created_at)}` : undefined}
-        href={`${section.href}?${row.source === "asset" ? "asset" : "record"}=${encodeURIComponent(row.id)}`} />)}
-    </Card>)}
-    {viewer.mode !== "linked" && empty.length ? <section className="lf-v3-area-empty" aria-label="Not added yet">
-      <h2>{recordCount ? "Not added yet" : "Start with any of these"}</h2>
-      <div>{empty.map((section) => <Link key={section.slug} href={section.href} className="lf-v3-area-empty-tile">
-        <IconTile icon={section.icon} size={32} /><strong>{section.title}</strong><small>{section.description}</small><span aria-hidden="true">＋</span>
-      </Link>)}</div>
-    </section> : null}
+    <VaultSectionGrid sections={(viewer.mode === "linked" ? populated : sections).map((section) => ({
+      key: section.slug, title: section.title, icon: section.icon, href: section.href, count: section.records.length,
+      addHref: viewer.mode === "linked" ? undefined : `${section.href}?add=1`,
+    }))} />
     {!loading && viewer.mode === "linked" && !recordCount ? <p>No legal records are assigned to you.</p> : null}
   </section>;
 }

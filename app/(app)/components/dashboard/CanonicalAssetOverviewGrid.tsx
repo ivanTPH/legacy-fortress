@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import Link from "next/link";
-import { Card, IconTile, Row } from "../../../../components/ui/V3Primitives";
+import { Card } from "../../../../components/ui/V3Primitives";
+import VaultSectionGrid from "../../../../components/vault/VaultSectionGrid";
 import { useViewerAccess } from "../../../../components/access/ViewerAccessContext";
 import { filterAssetIdsForViewer } from "../../../../lib/access-control/viewerAccess";
 import { waitForActiveUser } from "../../../../lib/auth/session";
@@ -90,7 +90,6 @@ export default function CanonicalAssetOverviewGrid({ tiles, emptyMessage }: Cano
       && row.category_key === tile.categoryKey && (!tile.match || tile.match(row)))),
   }));
   const populated = sections.filter((section) => section.rows.length > 0);
-  const empty = sections.filter((section) => section.rows.length === 0);
   const recordCount = new Set(populated.flatMap((section) => section.rows.map((row) => row.id))).size;
   const updatedAt = latestTimestamp(populated.flatMap((section) => section.rows.map((row) => row.updated_at ?? row.created_at)));
   return <div className="lf-v3-area-content">
@@ -101,18 +100,10 @@ export default function CanonicalAssetOverviewGrid({ tiles, emptyMessage }: Cano
       <div><span>Sections</span><strong>{populated.length} of {tiles.length}</strong></div>
       <div><span>Last updated</span><strong>{formatAreaDate(updatedAt)}</strong></div>
     </Card> : null}
-    {populated.map(({ tile, rows }) => <Card key={tile.key} className="lf-v3-area-section">
-      <header><Link href={tile.href}><IconTile icon={tile.icon} /><span><strong>{tile.title}</strong><small>{rows.length} record{rows.length === 1 ? "" : "s"}</small></span></Link>
-        {viewer.mode !== "linked" ? <Link href={tile.addHref} className="lf-v3-area-add" aria-label={`Add ${tile.title} record`}>+</Link> : null}
-      </header>
-      {rows.map((row) => <Row key={row.id} title={row.title || "Untitled record"}
-        description={row.updated_at || row.created_at ? `Updated ${formatAreaDate(row.updated_at ?? row.created_at)}` : undefined}
-        href={recordHref(tile.href, row.id)} />)}
-    </Card>)}
-    {viewer.mode !== "linked" && empty.length ? <section className="lf-v3-area-empty" aria-label={recordCount ? "Not added yet" : "Start with any of these"}>
-      <h2>{recordCount ? "Not added yet" : "Start with any of these"}</h2>
-      <div>{empty.map(({ tile }) => <Link key={tile.key} href={tile.addHref} className="lf-v3-area-empty-tile"><IconTile icon={tile.icon} size={32} /><strong>{tile.title}</strong><small>{tile.description}</small><span aria-hidden="true">＋</span></Link>)}</div>
-    </section> : null}
+    <VaultSectionGrid sections={(viewer.mode === "linked" ? populated : sections).map(({ tile, rows }) => ({
+      key: tile.key, title: tile.title, icon: tile.icon, href: tile.href, count: rows.length,
+      addHref: viewer.mode === "linked" ? undefined : tile.addHref,
+    }))} />
     {state.status === "ready" && viewer.mode === "linked" && !recordCount ? <p>No records are assigned in this area.</p> : null}
   </div>;
 }
@@ -121,14 +112,6 @@ function formatAreaDate(value: string | null | undefined) {
   if (!value) return "Not recorded";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "Not recorded" : new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(date);
-}
-
-function recordHref(href: string, id: string) {
-  const [path, query = ""] = href.split("?");
-  const params = new URLSearchParams(query);
-  params.delete("add");
-  params.set("asset", id);
-  return `${path}?${params.toString()}`;
 }
 
 export function metadataToken(row: CanonicalAssetOverviewRow, ...keys: string[]) {

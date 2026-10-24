@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Card, IconTile, PageHeader, Row } from "../../../components/ui/V3Primitives";
-import { AddAssetLink } from "../../../components/ui/LFDesignSystem";
+import { Card, PageHeader, Row } from "../../../components/ui/V3Primitives";
+import VaultSectionGrid from "../../../components/vault/VaultSectionGrid";
 import { formatCurrency } from "../../../lib/currency";
 import { latestTimestamp } from "../../../lib/dashboard/summary";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
@@ -127,7 +126,6 @@ export default function FinancesOverviewPage() {
     [assetRows, currency, preferences],
   );
   const populated = summaries.filter((section) => section.summary.includedCount > 0);
-  const empty = summaries.filter((section) => section.summary.includedCount === 0);
   const recordCount = populated.reduce((sum, section) => sum + section.summary.includedCount, 0);
   const total = populated.reduce((sum, section) => sum + section.summary.totalMajor, 0);
   const currencies = new Set(assetRows.map((row) => getFinanceRowCurrencyCode(row) || currency));
@@ -151,20 +149,13 @@ export default function FinancesOverviewPage() {
     </Card> : null}
     {!loading && recommendedFinanceAction ? <Card><Row icon="account_balance" title={recommendedFinanceAction.label}
       description={recommendedFinanceAction.description} href={recommendedFinanceAction.href} /></Card> : null}
-    {populated.map((section) => <Card key={section.href} className="lf-v3-area-section">
-      <header><Link href={section.href}><IconTile icon={section.icon} /><span><strong>{section.title}</strong><small className="lf-v3-section-count">{section.summary.includedCount} record{section.summary.includedCount === 1 ? "" : "s"}</small><small className="lf-v51-finance-section-summary">{section.summary.includedCount} record{section.summary.includedCount === 1 ? "" : "s"} · {section.summary.valueText}</small></span></Link>
-        <strong className="lf-v3-area-total">{new Set(getAssetsForFinanceCategory(assetRows, section.key).map((row) => getFinanceRowCurrencyCode(row) || currency)).size > 1 ? "Multiple currencies" : section.summary.valueText}</strong>
-        {viewer.mode !== "linked" ? <AddAssetLink href={`${section.href}?add=1`} /> : null}
-      </header>
-      {section.summary.items.map((item) => <Row key={item.id} title={item.label} trailing={item.meta}
-        description={item.updatedAt ? `Updated ${formatFinanceDate(item.updatedAt)}` : "Open record details"} href={item.href} />)}
-    </Card>)}
-    {viewer.mode !== "linked" && empty.length ? <section className="lf-v3-area-empty" aria-label="Not added yet">
-      <h2>{recordCount ? "Not added yet" : "Start with any of these"}</h2>
-      <div>{empty.map((section) => <Link key={section.href} href={section.href} className="lf-v3-area-empty-tile">
-        <IconTile icon={section.icon} size={32} /><strong>{section.title}</strong><small>{section.description}</small><span aria-hidden="true">＋</span>
-      </Link>)}</div>
-    </section> : null}
+    <VaultSectionGrid sections={(viewer.mode === "linked" ? populated : summaries).map((section) => ({
+      key: section.href, title: section.title, icon: section.icon, href: section.href,
+      count: section.summary.includedCount,
+      value: new Set(getAssetsForFinanceCategory(assetRows, section.key).map((row) => getFinanceRowCurrencyCode(row) || currency)).size > 1
+        ? "Multiple currencies" : section.summary.valueText,
+      addHref: viewer.mode === "linked" ? undefined : `${section.href}?add=1`,
+    }))} />
     {!loading && viewer.mode === "linked" && !recordCount ? <p>No finance records are assigned to you.</p> : null}
   </section>;
 }
