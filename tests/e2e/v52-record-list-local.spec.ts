@@ -35,7 +35,7 @@ test.describe("V5.2 local record list", () => {
       organisation_id: ids.organisation, wallet_id: ids.wallet, owner_user_id: ids.user,
       section_key: "property", category_key: "property", title, provider_name: "",
       value_minor: 12500000, currency_code: "GBP", visibility: "private", status: "active",
-      metadata_json: { property_type: "Residential", property_address: "Synthetic Street" },
+      metadata_json: { property_type: "residential", ownership_type: "sole", property_address: "Synthetic Street", property_country: "UK" },
     }).select("id").single();
     if (asset.error || !asset.data) throw asset.error ?? new Error("Synthetic asset creation failed");
     ids.asset = asset.data.id;
@@ -53,7 +53,7 @@ test.describe("V5.2 local record list", () => {
     }
   });
 
-  test("owner sees a compact, accessible record row and can open the existing details", async ({ page, isMobile }) => {
+  test("owner opens a dedicated record detail from the compact category list", async ({ page, isMobile }, testInfo) => {
     const signedIn = await anon.auth.signInWithPassword({ email, password });
     if (signedIn.error || !signedIn.data.session) throw signedIn.error ?? new Error("Synthetic sign-in failed");
     await page.addInitScript((session) => {
@@ -62,16 +62,55 @@ test.describe("V5.2 local record list", () => {
     await page.goto("/vault/property", { waitUntil: "domcontentloaded" });
     const row = page.getByRole("button", { name: new RegExp(title) });
     await expect(row).toBeVisible();
-    await expect(row).toHaveAttribute("aria-expanded", "false");
     await expect(row).toContainText("£125,000");
+    await page.getByRole("textbox", { name: "Search", exact: true }).fill("not-a-record");
+    await expect(page.getByText("No matching records")).toBeVisible();
+    await page.getByRole("button", { name: "Clear search and filters" }).click();
+    await expect(row).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath(isMobile ? "category-390.png" : "category-1280.png") });
     await row.click();
-    await expect(row).toHaveAttribute("aria-expanded", "true");
+    await expect(page).toHaveURL(new RegExp(`/vault/property\\?asset=${ids.asset}`));
+    await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
     await expect(page.locator(`#record-detail-${ids.asset}`)).toBeVisible();
     for (const width of isMobile ? [320, 390, 402] : [1280]) {
       await page.setViewportSize({ width, height: width === 320 ? 568 : 844 });
-      const geometry = await page.evaluate(() => ({ width: document.documentElement.scrollWidth, target: document.querySelector<HTMLElement>(".lf-v52-record-summary")?.getBoundingClientRect().height ?? 0 }));
+      const geometry = await page.evaluate(() => ({ width: document.documentElement.scrollWidth, target: document.querySelector<HTMLElement>(".lf-v52-record-page-edit")?.getBoundingClientRect().height ?? 0 }));
       expect(geometry.width).toBeLessThanOrEqual(width);
       expect(geometry.target).toBeGreaterThanOrEqual(44);
+      if (width !== 320) await page.screenshot({ path: testInfo.outputPath(`record-detail-${width}.png`) });
     }
+    if (isMobile) {
+      await page.setViewportSize({ width: 390, height: 844 });
+      const largeTextStyle = await page.addStyleTag({ content: ":root { font-size: 125% !important; }" });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+      await largeTextStyle.evaluate((element) => element.parentNode?.removeChild(element));
+      await page.emulateMedia({ colorScheme: "dark" });
+      await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
+      await page.emulateMedia({ colorScheme: "light" });
+    }
+    const addDocumentLabel = page.getByText("Add document", { exact: true });
+    await expect(addDocumentLabel).toBeVisible();
+    expect(await addDocumentLabel.evaluate((element) => element.getBoundingClientRect().width)).toBeGreaterThan(20);
+    await page.getByRole("button", { name: "Edit", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Edit record" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Save changes" })).toBeVisible();
+    page.once("dialog", (dialog) => dialog.accept());
+    await page.getByRole("region", { name: "Edit record" }).getByRole("button", { name: "Cancel" }).first().click();
+    await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Edit", exact: true }).click();
+    const revisedTitle = `Updated ${title}`;
+    await page.getByRole("textbox", { name: /Property name/ }).fill(revisedTitle);
+    await page.getByRole("combobox", { name: /Occupancy status/ }).selectOption("main_residence");
+    await page.getByRole("combobox", { name: /Currency/ }).selectOption("GBP");
+    await page.getByRole("combobox", { name: /Mortgage status/ }).selectOption("none");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await expect(page.getByText("Changes saved", { exact: true })).toBeVisible();
+    await page.goto(`/dashboard?search=${encodeURIComponent(revisedTitle)}`, { waitUntil: "domcontentloaded" });
+    const savedResult = page.getByRole("link", { name: new RegExp(revisedTitle) });
+    await expect(savedResult).toBeVisible();
+    await savedResult.click();
+    await expect(page).toHaveURL(new RegExp(`/vault/property\\?asset=${ids.asset}`));
+    await expect(page.getByRole("heading", { name: revisedTitle, exact: true })).toBeVisible();
   });
 });
