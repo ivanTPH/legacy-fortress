@@ -8,6 +8,7 @@ export type DiscoveryRecordRow = {
   category_key?: string | null;
   status?: string | null;
   metadata?: Record<string, unknown> | null;
+  metadata_json?: Record<string, unknown> | null;
 };
 
 export type DiscoveryDocumentRow = {
@@ -198,12 +199,13 @@ export function buildDashboardDiscoveryResults<
     id: `asset-${asset.id}`,
     kind: "asset" as const,
     label: getDiscoveryAssetLabel(asset),
-    description: [formatDiscoverySectionLabel(asset.section_key), formatDiscoveryCategoryLabel(asset.category_key), stringValue(asset.summary)]
+    description: [formatDiscoverySectionLabel(asset.section_key), formatDiscoveryCategoryLabel(asset.category_key)]
       .filter(Boolean)
       .join(" · "),
     href: assetHref(asset),
     icon: assetIcon(asset),
-    }));
+    }))
+    .filter((asset) => Boolean(asset.href));
 
   const documentResults = filterDiscoveryDocuments(documents, { query: normalizedQuery }).map((document) => ({
     id: `document-${document.id}`,
@@ -259,14 +261,15 @@ export function buildDashboardDiscoveryResults<
 }
 
 function buildSafeRecordSearchText(row: DiscoveryRecordRow) {
-  const categoryLabel = formatDiscoveryCategoryLabel(row.category_key || stringValue(row.metadata?.category));
+  const metadata = row.metadata ?? row.metadata_json;
+  const categoryLabel = formatDiscoveryCategoryLabel(row.category_key || stringValue(metadata?.category));
   const sectionLabel = formatDiscoverySectionLabel(row.section_key);
   const safeTaskLabels =
     normalizeDiscoveryToken(row.category_key) === "tasks"
       ? [
-          stringValue(row.metadata?.related_asset_label),
-          stringValue(row.metadata?.assigned_executor_label),
-          stringValue(row.metadata?.assigned_beneficiary_label),
+          stringValue(metadata?.related_asset_label),
+          stringValue(metadata?.assigned_executor_label),
+          stringValue(metadata?.assigned_beneficiary_label),
         ]
       : [];
 
@@ -275,10 +278,11 @@ function buildSafeRecordSearchText(row: DiscoveryRecordRow) {
       row.title,
       row.provider_name,
       row.provider_key,
-      row.summary,
       sectionLabel,
       categoryLabel,
-      flattenDiscoveryMetadata(row.metadata).join(" "),
+      // Search only display labels. Metadata can contain account numbers, PINs and
+      // private notes, none of which belong in a client-side search index.
+      ...SAFE_RECORD_TYPE_KEYS.map((key) => stringValue(metadata?.[key])),
       ...safeTaskLabels,
     ].join(" "),
   );
@@ -335,7 +339,7 @@ function stringValue(value: unknown) {
 }
 
 function getDiscoveryAssetLabel(row: DiscoveryRecordRow) {
-  const metadataLabel = pickDiscoveryMetadataLabel(row.metadata);
+  const metadataLabel = pickDiscoveryMetadataLabel(row.metadata ?? row.metadata_json);
   return (
     stringValue(row.title)
     || stringValue(row.provider_name)
@@ -344,38 +348,11 @@ function getDiscoveryAssetLabel(row: DiscoveryRecordRow) {
   );
 }
 
-function flattenDiscoveryMetadata(value: unknown): string[] {
-  if (!value || typeof value !== "object") return [];
-
-  const results: string[] = [];
-  const stack: unknown[] = [value];
-
-  while (stack.length > 0) {
-    const current = stack.pop();
-    if (Array.isArray(current)) {
-      for (const item of current) stack.push(item);
-      continue;
-    }
-    if (!current || typeof current !== "object") {
-      if (typeof current === "string") results.push(current.trim());
-      else if (typeof current === "number" || typeof current === "boolean") results.push(String(current));
-      continue;
-    }
-
-    for (const [key, nestedValue] of Object.entries(current as Record<string, unknown>)) {
-      results.push(key.replace(/[_-]+/g, " "));
-      if (typeof nestedValue === "string") {
-        results.push(nestedValue.trim());
-      } else if (typeof nestedValue === "number" || typeof nestedValue === "boolean") {
-        results.push(String(nestedValue));
-      } else if (nestedValue && typeof nestedValue === "object") {
-        stack.push(nestedValue);
-      }
-    }
-  }
-
-  return results.filter(Boolean);
-}
+const SAFE_RECORD_TYPE_KEYS = [
+  "account_type", "bank_account_type", "record_type", "asset_type", "document_type",
+  "provider_name", "institution_name", "bank_name", "investment_provider",
+  "pension_provider", "insurer_name", "creditor_name", "platform_name",
+] as const;
 
 function pickDiscoveryMetadataLabel(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return "";
@@ -384,12 +361,10 @@ function pickDiscoveryMetadataLabel(value: unknown) {
     "provider_name",
     "institution_name",
     "account_name",
-    "account_holder_name",
-    "platform",
     "platform_name",
     "title",
-    "name",
     "document_title",
+    "property_name",
   ];
 
   for (const key of preferredKeys) {
@@ -397,7 +372,7 @@ function pickDiscoveryMetadataLabel(value: unknown) {
     if (candidate) return candidate;
   }
 
-  return Object.values(metadata).map(stringValue).find(Boolean) ?? "";
+  return "";
 }
 
 function normalizeDiscoveryQuery(value: unknown) {

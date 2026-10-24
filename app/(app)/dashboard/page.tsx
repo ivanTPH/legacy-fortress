@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import ActionQueuePanel, { buildActionCentrePreview, getActionCentreActionCount, getActionCentreToDoCount, type ActionCentreContext, type ActionCentreTask } from "../components/dashboard/ActionQueuePanel";
@@ -66,6 +67,7 @@ import {
 
 type AssetRow = {
   id: string;
+  source_kind?: "record";
   owner_user_id?: string | null;
   section_key?: string | null;
   title: string | null;
@@ -430,6 +432,7 @@ export default function DashboardPage() {
   const [attachmentRows, setAttachmentRows] = useState<AttachmentRow[]>([]);
   const [contactRows, setContactRows] = useState<ContactDiscoveryRow[]>([]);
   const [sectionEntryRows, setSectionEntryRows] = useState<SectionEntrySearchRow[]>([]);
+  const [recordSearchRows, setRecordSearchRows] = useState<AssetRow[]>([]);
   const [reviewPanel, setReviewPanel] = useState<DashboardReviewPanel | null>(null);
   const [dashboardInviteState, setDashboardInviteState] = useState<Record<string, DashboardInviteOverride>>({});
   const [quickActionSaving, setQuickActionSaving] = useState(false);
@@ -535,6 +538,7 @@ export default function DashboardPage() {
     async function load() {
       setLoading(true);
       setStatus("");
+      setRecordSearchRows([]);
 
       try {
         const user = await waitForActiveUser(supabase, { attempts: 6, delayMs: 130 });
@@ -548,13 +552,14 @@ export default function DashboardPage() {
         }
         const targetOwnerUserId = viewer.targetOwnerUserId || user.id;
         const wallet = await resolveWalletContextForRead(supabase, targetOwnerUserId);
-        const [assetsRes, financeRowsRes, documentsRes, contactsRes, sectionEntriesRes, profileReadinessRes] = await Promise.all([
+        const [assetsRes, financeRowsRes, documentsRes, contactsRes, sectionEntriesRes, profileReadinessRes, recordSearchRes] = await Promise.all([
           fetchCanonicalAssets(supabase, { userId: targetOwnerUserId, walletId: wallet.walletId }),
           loadFinanceDashboardRows(supabase, { userId: targetOwnerUserId, walletId: wallet.walletId }),
           fetchDocuments(targetOwnerUserId, wallet.walletId),
           loadCanonicalContactsForOwner(supabase, targetOwnerUserId),
           fetchSectionEntries(targetOwnerUserId),
           fetchProfileReadiness(targetOwnerUserId),
+          fetchRecordSearchRows(targetOwnerUserId),
         ]);
         if (!mounted) return;
 
@@ -567,6 +572,9 @@ export default function DashboardPage() {
         }
         if (financeRowsRes.error && !isMissingRelationError(financeRowsRes.error, "records")) {
           warnings.push("Finance summary could not be fully loaded.");
+        }
+        if (recordSearchRes.error && !isMissingRelationError(recordSearchRes.error, "records")) {
+          warnings.push("Record search could not be fully loaded.");
         }
         if (documentsRes.error && !isMissingRelationError(documentsRes.error, "documents")) {
           warnings.push("Document summary could not be fully loaded.");
@@ -581,6 +589,7 @@ export default function DashboardPage() {
         const assets = filterAssetIdsForViewer(mergedAssets, viewer);
         const financeAssets = getAssetsForBucket(assets, "finance");
         setAssetRows(assets);
+        setRecordSearchRows(recordSearchRes.error ? [] : filterRecordIdsForViewer(((recordSearchRes.data ?? []) as AssetRow[]).filter((row) => row.section_key !== "finances").map((row) => ({ ...row, source_kind: "record" as const })), viewer));
         appendDevBankTrace({
           kind: "dashboard-load",
           source: "DashboardPage.load",
@@ -795,7 +804,7 @@ const legalSummary = useMemo(() => {
       if (!searchQuery) return [];
       return buildDashboardDiscoveryResults({
         query: searchQuery,
-        assets: assetRows,
+        assets: [...assetRows.filter((row) => row.metadata_json?.finance_record_source !== "records" || ["pensions", "insurance", "debts"].includes(String(row.category_key ?? ""))), ...recordSearchRows],
         contacts: contactRows.map((row) => ({
           id: row.id,
           fullName: row.full_name ?? null,
@@ -831,7 +840,7 @@ const legalSummary = useMemo(() => {
         extraLinks: DASHBOARD_SEARCH_LINKS,
       });
     },
-    [assetRows, attachmentRows, contactRows, documentRows, searchQuery, sectionEntryRows],
+    [assetRows, attachmentRows, contactRows, documentRows, recordSearchRows, searchQuery, sectionEntryRows],
   );
   const dashboardState = useDashboardState({
     assetRows,
@@ -1658,7 +1667,7 @@ const legalSummary = useMemo(() => {
         </div>
       ) : null}
       {loading ? <div style={{ color: "#6b7280" }}>Loading dashboard summary...</div> : null}
-      {searchQuery ? (
+      {searchQuery && !loading ? (
           <section style={searchResultsPanelStyle} aria-label="Vault search results">
           <div style={{ display: "grid", gap: 4 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1679,7 +1688,7 @@ const legalSummary = useMemo(() => {
           ) : (
             <div style={{ display: "grid", gap: 10 }}>
               {discoveryResults.map((result) => (
-                <a key={result.id} href={result.href} style={searchResultStyle}>
+                <Link key={result.id} href={result.href} style={searchResultStyle}>
                   <span style={searchResultIconStyle}>
                     <Icon name={result.icon} size={16} />
                   </span>
@@ -1687,7 +1696,7 @@ const legalSummary = useMemo(() => {
                     <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>{result.label}</span>
                     <span style={{ fontSize: 13, color: "#64748b" }}>{result.description || "Open this destination"}</span>
                   </span>
-                </a>
+                </Link>
               ))}
             </div>
           )}
@@ -2354,6 +2363,16 @@ async function fetchSectionEntries(userId: string) {
     .from("section_entries")
     .select("id,title,section_key,category_key")
     .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+}
+
+async function fetchRecordSearchRows(userId: string) {
+  // The caller uses the signed-in Supabase client. RLS remains the primary
+  // boundary; only non-sensitive display labels are selected for search.
+  return supabase
+    .from("records")
+    .select("id,title,provider_name,section_key,category_key,status,created_at")
+    .eq("owner_user_id", userId)
     .order("created_at", { ascending: false });
 }
 
@@ -3837,13 +3856,19 @@ const DASHBOARD_SEARCH_LINKS = [
 
 function getDiscoveryAssetHref(asset: AssetRow) {
   const section = String(asset.section_key ?? "").trim();
-  if (section === "finances") return getFinanceWorkspaceHref(String(asset.category_key ?? ""));
-  if (section === "legal") return getLegalWorkspaceHref(String(asset.category_key ?? ""));
-  if (section === "property") return "/property";
-  if (section === "business") return "/business";
-  if (section === "digital") return "/vault/digital";
-  if (section === "personal") return getPersonalWorkspaceHref(String(asset.category_key ?? ""));
-  return "/dashboard";
+  const category = String(asset.category_key ?? "").trim();
+  let base = "";
+  if (section === "finances") base = ["bank", "investments", "pensions", "insurance", "debts", "loans-liabilities"].includes(category) ? getFinanceWorkspaceHref(category) : "";
+  else if (section === "legal") {
+    const legalHref = getLegalWorkspaceHref(category);
+    base = legalHref === "/legal" ? "" : legalHref;
+  }
+  else if (section === "property") base = "/vault/property";
+  else if (section === "business") base = "/vault/business";
+  else if (section === "digital") base = "/vault/digital/records";
+  else if (section === "personal") base = category === "possessions" || category === "personal-possessions" ? "/vault/personal/records" : ["beneficiaries", "subscriptions", "social-media", "tasks"].includes(category) ? `/personal/${category}` : "";
+  const isLegacyRecord = asset.source_kind === "record" || asset.metadata_json?.finance_record_source === "records";
+  return base ? `${base}?${isLegacyRecord ? "record" : "asset"}=${encodeURIComponent(asset.id)}` : "";
 }
 
 function getDiscoveryAssetIcon(asset: AssetRow) {
@@ -3934,6 +3959,7 @@ function getLegalWorkspaceHref(categoryKey: string, parentLabel?: string | null)
   if (normalizedCategory === "power-of-attorney") return "/legal/power-of-attorney";
   if (normalizedCategory === "wills") return "/legal/wills";
   if (normalizedCategory === "death-certificate") return "/legal/death-certificate";
+  if (["trusts", "funeral-wishes", "marriage-divorce-documents", "other-legal-documents"].includes(normalizedCategory)) return `/legal/${normalizedCategory}`;
   if ((parentLabel ?? "").toLowerCase().includes("identity")) return "/identity-documents";
   return "/legal";
 }
