@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><style>body{margin:0;background:#efebe7;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;color:#1f1715}a{color:#7a3d27}a:hover{color:#2b1714}</style></helmet>
+<section style="padding:14px 48px;background:#fbf0dc;border-bottom:1px solid #e8d3a6;display:flex;align-items:center;gap:10px;font-size:14px;color:#3d2e0f"><span style="font:700 11px ui-monospace,Menlo,monospace;padding:3px 7px;background:#7a4f00;color:#fff;border-radius:4px">HISTORY</span><span>Superseded for the Personal Vault by <a href="Vault Master V5.2.dc.html">Vault Master V5.2</a>. Reference only; do not build from this file.</span></section>
+
+<section id="t1" style="padding:40px 44px 48px">
+<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px"><a href="#t1" style="font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none">1</a><span style="font:600 15px system-ui,sans-serif">Vault mobile V4.1 · acceptance views</span></div>
+<p style="font:13px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.6);max-width:920px;margin:0 0 24px">Every phone here is the live prototype (<a href="Vault%20Mobile.dc.html">Vault Mobile</a>), so each one is fully tappable. The key screens are repeated at 390 × 844, 320 × 568 and 402 × 874, plus 390 with 125% text (which behaves like a 312px-wide screen). Below 360px the KPIs wrap to two columns and the Vault grid becomes one column. Content always scrolls above the tab bar or the Save bar, and nothing sits behind them.</p>
+<div style="display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start">
+<div id="1a" style="display:flex;flex-direction:column;gap:10px"><span style="font:12px system-ui;color:rgba(0,0,0,.6)"><b style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px">1a</b>Home · 390</span><dc-import name="Vault Mobile" embedded="{{ true }}" hint-size="410px,864px"></dc-import></div>
+<div id="1b" style="display:flex;flex-direction:column;gap:10px"><span style="font:12px system-ui;color:rgba(0,0,0,.6)"><b style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px">1b</b>Home · 320</span><dc-import name="Vault Mobile" embedded="{{ true }}" width="320" hint-size="340px,588px"></dc-import></div>
+<div id="1c" style="display:flex;flex-direction:column;gap:10px"><span style="font:12px system-ui;color:rgba(0,0,0,.6)"><b style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px">1c</b>Home · 390, large text</span><dc-import name="Vault Mobile" embedded="{{ true }}" large-text="{{ true }}" hint-size="410px,864px"></dc-import></div>
+<div id="1d" style="display:flex;flex-direction:column;gap:10px"><span style="font:12px system-ui;color:rgba(0,0,0,.6)"><b style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px">1d</b>Drawer · 390</span><dc-import name="Vault Mobile" embedded="{{ true }}" start="drawer" hint-size="410px,864px"></dc-import></div>
+<div id="1e" style="display:flex;flex-direction:column;gap:10px"><span style="font:12px system-ui;color:rgba(0,0,0,.6)"><b style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px">1e</b>Workspace sheet · 390</span><dc-import name="Vault Mobile" embedded="{{ true }}" start="workspace" hint-size="410px,864px"></dc-import></div>
+<div id="1f" style="display:flex;flex-direction:column;gap:10px"><span style="font:12px system-ui;color:rgba(0,0,0,.6)"><b style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px">1f</b>Finances · 390</span><dc-import name="Vault Mobile" embedded="{{ true }}" start="finances" hint-size="410px,864px"></dc-import></div>
+<div id="1g" style="display:flex;flex-direction:column;gap:10px"><span style="font:12px system-ui;color:rgba(0,0,0,.6)"><b style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px">1g</b>Finances · 320, large text</span><dc-import name="Vault Mobile" embedded="{{ true }}" width="320" large-text="{{ true }}" start="finances" hint-size="340px,588px"></dc-import></div>
+<div id="1h" style="display:flex;flex-direction:column;gap:10px"><span style="font:12px system-ui;color:rgba(0,0,0,.6)"><b style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px">1h</b>Add bank account · 390</span><dc-import name="Vault Mobile" embedded="{{ true }}" start="form" hint-size="410px,864px"></dc-import></div>
+<div id="1i" style="display:flex;flex-direction:column;gap:10px"><span style="font:12px system-ui;color:rgba(0,0,0,.6)"><b style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px">1i</b>Add bank account · 320</span><dc-import name="Vault Mobile" embedded="{{ true }}" width="320" start="form" hint-size="340px,588px"></dc-import></div>
+<div id="1j" style="display:flex;flex-direction:column;gap:10px"><span style="font:12px system-ui;color:rgba(0,0,0,.6)"><b style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px">1j</b>People &amp; Access · 402</span><dc-import name="Vault Mobile" embedded="{{ true }}" width="402" start="people" hint-size="422px,894px"></dc-import></div>
+<div id="1k" style="display:flex;flex-direction:column;gap:10px"><span style="font:12px system-ui;color:rgba(0,0,0,.6)"><b style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px">1k</b>Person page · 320</span><dc-import name="Vault Mobile" embedded="{{ true }}" width="320" start="person" hint-size="340px,588px"></dc-import></div>
+</div>
+</section>
+</x-dc>
+</body>
+</html>

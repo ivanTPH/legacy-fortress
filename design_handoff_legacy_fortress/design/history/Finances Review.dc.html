@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&display=block">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Flex:opsz,wght@8..144,400;8..144,500&display=swap">
+<style>
+body{margin:0;background:#efebe7;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;color:#1f1715;-webkit-font-smoothing:antialiased}
+a{color:#7a3d27}a:hover{color:#2b1714}
+.ms{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;letter-spacing:normal;text-transform:none;white-space:nowrap;direction:ltr;-webkit-font-feature-settings:'liga';font-feature-settings:'liga';font-variation-settings:'FILL' 0,'wght' 400,'opsz' 24;display:inline-block}
+.dv-turn{padding:40px 44px 40px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-opts{display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 12px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.6)}
+.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.dv-next{margin:28px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+</style>
+</helmet>
+<section style="padding:14px 48px;background:#fbf0dc;border-bottom:1px solid #e8d3a6;display:flex;align-items:center;gap:10px;font-size:14px;color:#3d2e0f"><span style="font:700 11px ui-monospace,Menlo,monospace;padding:3px 7px;background:#7a4f00;color:#fff;border-radius:4px">HISTORY</span><span>Superseded for the Personal Vault by <a href="Vault Master V5.2.dc.html">Vault Master V5.2</a>. Reference only; do not build from this file.</span></section>
+
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Finances — review and refined drafts (desktop, iOS, Android)</span></div>
+
+<div class="dv-opts" style="margin-bottom:48px">
+<div class="dv-opt" id="1a"><div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Review notes</div>
+<div class="dv-card" style="width:1240px;display:grid;grid-template-columns:420px minmax(0,1fr);">
+<div style="padding:28px;background:#f6f3f0;border-right:1px solid #ece6e1;display:flex;flex-direction:column;gap:12px">
+<div style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b5f5a">Current</div>
+<img src="uploads/Screenshot%202026-10-13%20at%2011.37.30.png" alt="Current Finances screen" style="width:100%;border-radius:8px;border:1px solid #e3dcd6;display:block">
+<div style="font-size:13px;line-height:1.5;color:#6b5f5a;text-wrap:pretty">The structure is sound: clear categories, real totals, a calm palette. Most issues are hierarchy and consistency, so the refinements below keep your brand colours and information architecture.</div>
+<div style="margin-top:12px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b5f5a">Proposed type scale</div>
+<div style="display:flex;flex-direction:column;gap:10px;background:#fff;border:1px solid #ece6e1;border-radius:10px;padding:16px">
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:28px;font-weight:700;letter-spacing:-.02em">Finances</span><span style="font:11px ui-monospace,Menlo,monospace;color:#6b5f5a">Title 28/34 · Bold</span></div>
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.01em">£132,245.00</span><span style="font:11px ui-monospace,Menlo,monospace;color:#6b5f5a">Amount 22 · Semibold · tabular</span></div>
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:17px;font-weight:600">Banks</span><span style="font:11px ui-monospace,Menlo,monospace;color:#6b5f5a">Headline 17 · Semibold</span></div>
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:15px">Barclays</span><span style="font:11px ui-monospace,Menlo,monospace;color:#6b5f5a">Body 15 · Regular</span></div>
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;color:#6b5f5a">Updated 17 Jul 2026</span><span style="font:11px ui-monospace,Menlo,monospace;color:#6b5f5a">Footnote 13 · Regular</span></div>
+</div>
+<div style="font-size:12px;line-height:1.5;color:#6b5f5a">Font: the system stack (SF Pro on Apple devices, Roboto on Android, Segoe on Windows). Icons: Google Material Symbols Rounded, 20px outline, filled when selected. Closest freely licensed match to SF Symbols for the web.</div>
+</div>
+<div style="padding:28px 32px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px 36px;align-content:start">
+<sc-for list="{{ notes }}" as="g" hint-placeholder-count="6">
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;gap:10px"><span class="ms" style="font-size:20px;color:#7a3d27">{{ g.icon }}</span><span style="font-size:15px;font-weight:600;white-space:nowrap">{{ g.title }}</span></div>
+<sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3">
+<div style="display:grid;grid-template-columns:minmax(0,1fr);gap:3px;padding:10px 0;border-top:1px solid #f0ebe7">
+<div style="font-size:13px;line-height:1.45;color:#6b5f5a;text-wrap:pretty">{{ it.issue }}</div>
+<div style="font-size:13px;line-height:1.45;color:#1f1715;text-wrap:pretty;display:flex;gap:6px"><span class="ms" style="font-size:16px;color:#2f7a4f;margin-top:1px">arrow_forward</span><span>{{ it.fix }}</span></div>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</div>
+
+<div class="dv-opts">
+<div class="dv-opt" id="1b"><div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Desktop web, 1280 wide. Click the sidebar and category headers.</div>
+<div class="dv-card" style="width:1280px;height:880px;display:grid;grid-template-columns:256px minmax(0,1fr);background:#faf8f6;border-radius:12px">
+
+<aside style="background:#f5f1ed;border-right:1px solid #ebe4de;display:flex;flex-direction:column;padding:20px 12px 16px;gap:16px;min-height:0">
+<div style="display:flex;align-items:center;gap:10px;padding:0 8px">
+<div style="width:32px;height:32px;border-radius:8px;background:#2b1714;color:#fff;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px;font-variation-settings:'FILL' 1">shield</span></div>
+<div style="display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600;letter-spacing:-.01em">Legacy Fortress</span><span style="font-size:12px;color:#6b5f5a">Personal Vault</span></div>
+</div>
+<div style="display:flex;align-items:center;gap:8px;height:36px;padding:0 10px;background:#fff;border:1px solid #e6dfd9;border-radius:8px;color:#6b5f5a;font-size:14px;margin:0 4px">
+<span class="ms" style="font-size:18px">search</span><span style="flex:1">Search records</span><span style="font:11px ui-monospace,Menlo,monospace;padding:2px 5px;border:1px solid #e6dfd9;border-radius:4px">⌘K</span>
+</div>
+<button style="display:flex;align-items:center;justify-content:center;gap:6px;height:36px;margin:0 4px;border:0;border-radius:8px;background:#2b1714;color:#fff;font:600 14px -apple-system,BlinkMacSystemFont,sans-serif;cursor:pointer" style-hover="background:#43231d"><span class="ms" style="font-size:18px">add</span>Add to my Fortress</button>
+<nav style="display:flex;flex-direction:column;gap:2px;overflow:auto;flex:1">
+<sc-for list="{{ navGroups }}" as="grp" hint-placeholder-count="2">
+<div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6b5f5a;padding:14px 12px 6px">{{ grp.label }}</div>
+<sc-for list="{{ grp.items }}" as="n" hint-placeholder-count="5">
+<div onClick="{{ n.select }}" style="display:flex;align-items:center;gap:12px;height:36px;padding:0 12px;border-radius:8px;cursor:pointer;background:{{ n.bg }};color:{{ n.color }};font-size:14px;font-weight:{{ n.weight }}" style-hover="background:#f6efea" style-active="background:#ebe0d8">
+<span class="ms" style="font-size:20px;font-variation-settings:{{ n.fill }}">{{ n.icon }}</span><span style="flex:1">{{ n.label }}</span>
+<sc-if value="{{ n.badge }}" hint-placeholder-val="{{ false }}"><span style="min-width:20px;height:20px;padding:0 6px;box-sizing:border-box;border-radius:10px;background:#8c4a32;color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums">{{ n.badge }}</span></sc-if>
+</div>
+</sc-for>
+</sc-for>
+</nav>
+<div style="border-top:1px solid #ebe4de;padding-top:10px;display:flex;flex-direction:column;gap:2px">
+<div style="display:flex;align-items:center;gap:12px;height:36px;padding:0 12px;border-radius:8px;font-size:14px;color:#3a2c28;cursor:pointer" style-hover="background:#f6efea" style-active="background:#ebe0d8"><span class="ms" style="font-size:20px">help</span>Support</div>
+<div style="display:flex;align-items:center;gap:12px;height:36px;padding:0 12px;border-radius:8px;font-size:14px;color:#3a2c28;cursor:pointer" style-hover="background:#f6efea" style-active="background:#ebe0d8"><span class="ms" style="font-size:20px">settings</span>Settings</div>
+</div>
+</aside>
+
+<main style="display:flex;flex-direction:column;min-width:0;min-height:0">
+<header style="height:60px;flex:none;display:flex;align-items:center;gap:12px;padding:0 32px;border-bottom:1px solid #ebe4de;background:#fff">
+<div style="display:flex;align-items:center;gap:6px;font-size:14px;color:#6b5f5a"><span>Personal Vault</span><span class="ms" style="font-size:18px">chevron_right</span><span style="color:#1f1715;font-weight:500">Finances</span></div>
+<div style="flex:1"></div>
+<div style="flex:none;white-space:nowrap;display:flex;align-items:center;gap:6px;height:32px;padding:0 10px;border-radius:8px;background:#e9f3ec;color:#225c3a;font-size:13px;font-weight:500"><span class="ms" style="font-size:18px;font-variation-settings:'FILL' 1">verified_user</span>Vault secured</div>
+<button style="width:36px;height:36px;border-radius:18px;border:0;background:transparent;color:#3a2c28;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#f3eeea"><span class="ms" style="font-size:22px">notifications</span></button>
+<div style="display:flex;align-items:center;gap:8px;height:40px;padding:0 8px 0 4px;border-radius:20px;cursor:pointer" style-hover="background:#f3eeea">
+<div style="width:32px;height:32px;border-radius:16px;background:#d9cbc2;color:#2b1714;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center">IY</div>
+<span style="font-size:14px;font-weight:500">Ivan Yardley</span><span class="ms" style="font-size:18px;color:#6b5f5a">expand_more</span>
+</div>
+</header>
+
+<div style="flex:1;overflow:auto;padding:32px 40px 48px">
+<div style="max-width:920px;margin:0 auto;display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;align-items:flex-end;gap:24px">
+<div style="flex:1;display:flex;flex-direction:column;gap:6px">
+<h1 style="margin:0;font-size:28px;line-height:34px;font-weight:700;letter-spacing:-.02em">Finances</h1>
+<p style="margin:0;font-size:15px;line-height:22px;color:#6b5f5a;max-width:560px;text-wrap:pretty">Record your bank accounts, savings, pensions, and policies so your estate has a clear financial picture.</p>
+</div>
+<button title="Add asset" aria-label="Add asset" style="flex:none;width:36px;height:36px;border-radius:18px;border:0;background:#2b1714;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#43231d"><span class="ms" style="font-size:20px">add</span></button>
+</div>
+
+<sc-if value="{{ showSummary }}" hint-placeholder-val="{{ true }}">
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:#fff;border:1px solid #ebe4de;border-radius:12px">
+<div style="padding:16px 20px;display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;color:#6b5f5a">Total recorded</span><span style="font-size:22px;font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums">£652,590.00</span></div>
+<div style="padding:16px 20px;display:flex;flex-direction:column;gap:4px;border-left:1px solid #f0ebe7"><span style="font-size:13px;color:#6b5f5a">Records</span><span style="font-size:22px;font-weight:600;font-variant-numeric:tabular-nums">3 <span style="font-size:15px;font-weight:400;color:#6b5f5a">in 2 of 5 categories</span></span></div>
+<div style="padding:16px 20px;display:flex;flex-direction:column;gap:4px;border-left:1px solid #f0ebe7"><span style="font-size:13px;color:#6b5f5a">Last updated</span><span style="font-size:22px;font-weight:600">17 Jul 2026</span></div>
+</div>
+</sc-if>
+
+<sc-for list="{{ cats }}" as="c" hint-placeholder-count="2">
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<div onClick="{{ c.toggle }}" style="display:flex;align-items:center;gap:14px;padding:14px 16px 14px 20px;cursor:pointer" style-hover="background:#f6efea" style-active="background:#ebe0d8">
+<div style="width:36px;height:36px;border-radius:9px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px">{{ c.icon }}</span></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:17px;font-weight:600">{{ c.name }}</span><span style="font-size:13px;color:#6b5f5a">{{ c.count }}</span></div>
+<span style="font-size:20px;font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums">{{ c.total }}</span>
+<button title="Add asset" aria-label="Add asset" style="flex:none;margin-left:8px;width:36px;height:36px;border-radius:18px;border:0;background:#2b1714;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#43231d"><span class="ms" style="font-size:20px">add</span></button>
+<span class="ms" style="font-size:22px;color:#6b5f5a">{{ c.chev }}</span>
+</div>
+<sc-if value="{{ c.open }}" hint-placeholder-val="{{ true }}">
+<div style="border-top:1px solid #f0ebe7">
+<sc-for list="{{ c.accounts }}" as="a" hint-placeholder-count="2">
+<div style="display:flex;align-items:center;gap:14px;height:56px;padding:0 16px 0 70px;border-bottom:1px solid #f5f1ed;cursor:pointer" style-hover="background:#f6efea" style-active="background:#ebe0d8">
+<div style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:15px">{{ a.name }}</span><span style="font-size:13px;color:#6b5f5a">Updated {{ a.updated }}</span></div>
+<span style="font-size:15px;font-variant-numeric:tabular-nums;color:#1f1715">{{ a.amount }}</span><button title="Add document" aria-label="Add document" style="flex:none;width:36px;height:36px;border-radius:18px;border:1px solid #d9cfc8;background:#fff;color:#2b1714;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#f6efea"><span class="ms" style="font-size:20px">note_add</span></button>
+<span class="ms" style="font-size:20px;color:#9a8f8a">chevron_right</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</sc-for>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font-size:13px;font-weight:600;color:#6b5f5a">Not added yet</div>
+<sc-if value="{{ emptyTiles }}" hint-placeholder-val="{{ true }}">
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+<sc-for list="{{ empties }}" as="e" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px dashed #d9cfc8;border-radius:12px;cursor:pointer;background:transparent" style-hover="background:#fff;border-color:#c9bcb3">
+<div style="width:36px;height:36px;border-radius:9px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px">{{ e.icon }}</span></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:15px;font-weight:600">{{ e.name }}</span><span style="font-size:13px;color:#6b5f5a">{{ e.hint }}</span></div>
+<span class="ms" style="font-size:20px;color:#7a3d27">add_circle</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ emptyRows }}" hint-placeholder-val="{{ false }}">
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<sc-for list="{{ empties }}" as="e" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:14px;padding:12px 16px 12px 20px;border-bottom:1px solid #f5f1ed">
+<div style="width:36px;height:36px;border-radius:9px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px">{{ e.icon }}</span></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:15px;font-weight:600">{{ e.name }}</span><span style="font-size:13px;color:#6b5f5a">{{ e.hint }}</span></div>
+<button title="Add asset" aria-label="Add asset" style="flex:none;width:36px;height:36px;border-radius:18px;border:0;background:#2b1714;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#43231d"><span class="ms" style="font-size:20px">add</span></button>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+
+<div class="dv-opt" id="1c"><div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>iOS: large title, inset grouped list, tab bar</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+<div style="padding:58px 0 0;min-height:100%;box-sizing:border-box;display:flex;flex-direction:column;background:#f6f3f0;font-family:-apple-system,BlinkMacSystemFont,sans-serif">
+<div style="display:flex;justify-content:flex-end;gap:8px;padding:4px 16px 0">
+<div style="width:44px;height:44px;border-radius:22px;background:rgba(255,255,255,.85);box-shadow:0 1px 2px rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center;color:#2b1714"><span class="ms" style="font-size:22px">search</span></div>
+<div style="width:44px;height:44px;border-radius:22px;background:#2b1714;display:flex;align-items:center;justify-content:center;color:#fff"><span class="ms" style="font-size:24px">add</span></div>
+</div>
+<div style="padding:2px 20px 14px"><div style="font-size:34px;line-height:41px;font-weight:700;letter-spacing:.01em">Finances</div><div style="font-size:15px;line-height:20px;color:#6b5f5a;margin-top:4px;text-wrap:pretty">Accounts, pensions and policies for your estate.</div></div>
+<div style="margin:0 16px 22px;padding:16px;background:#2b1714;color:#fff;border-radius:16px;display:flex;flex-direction:column;gap:4px">
+<span style="font-size:13px;color:#e6d8d0">Total recorded</span>
+<span style="font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em">£652,590.00</span>
+<span style="font-size:13px;color:#e6d8d0">3 records · Updated 17 Jul 2026</span>
+</div>
+<sc-for list="{{ cats }}" as="c" hint-placeholder-count="2">
+<div style="display:flex;justify-content:space-between;padding:0 36px 7px;font-size:13px;color:#6b5f5a"><span style="text-transform:uppercase;letter-spacing:.02em">{{ c.name }}</span><span style="font-variant-numeric:tabular-nums">{{ c.total }}</span></div>
+<div style="margin:0 16px 22px;background:#fff;border-radius:12px;overflow:hidden">
+<sc-for list="{{ c.accounts }}" as="a" hint-placeholder-count="2">
+<div style="display:flex;align-items:center;gap:12px;min-height:56px;padding:0 14px 0 16px;border-bottom:.5px solid #ebe4de">
+<div style="width:30px;height:30px;border-radius:7px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px">{{ c.icon }}</span></div>
+<div style="flex:1;display:flex;flex-direction:column"><span style="font-size:17px">{{ a.name }}</span><span style="font-size:13px;color:#6b5f5a">{{ a.updated }}</span></div>
+<span style="font-size:17px;color:#3a2c28;font-variant-numeric:tabular-nums">{{ a.amount }}</span>
+<span class="ms" style="font-size:20px;color:#b3a9a4">chevron_right</span>
+</div>
+</sc-for>
+</div>
+</sc-for>
+<div style="padding:0 36px 7px;font-size:13px;color:#6b5f5a;text-transform:uppercase;letter-spacing:.02em">Not added yet</div>
+<div style="margin:0 16px 24px;background:#fff;border-radius:12px;overflow:hidden">
+<sc-for list="{{ empties }}" as="e" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:12px;min-height:48px;padding:0 16px;border-bottom:.5px solid #ebe4de">
+<div style="width:30px;height:30px;border-radius:7px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px">{{ e.icon }}</span></div>
+<span style="flex:1;font-size:17px">{{ e.name }}</span>
+<span style="font-size:17px;color:#7a3d27">Add</span>
+</div>
+</sc-for>
+</div>
+<div style="flex:1"></div>
+<div style="position:sticky;bottom:0;padding:8px 16px 30px;background:linear-gradient(rgba(246,243,240,0),#f6f3f0 40%)">
+<div style="display:grid;grid-template-columns:repeat(5,1fr);height:62px;align-items:center;background:rgba(255,255,255,.9);border-radius:31px;box-shadow:0 4px 20px rgba(43,23,20,.1),0 0 0 .5px rgba(0,0,0,.06);padding:0 4px">
+<sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5">
+<div style="display:flex;flex-direction:column;align-items:center;gap:2px;color:{{ t.color }};position:relative">
+<span class="ms" style="font-size:24px;font-variation-settings:{{ t.fill }}">{{ t.icon }}</span>
+<span style="font-size:10px;font-weight:600">{{ t.label }}</span>
+<sc-if value="{{ t.badge }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:-4px;left:50%;margin-left:6px;min-width:18px;height:18px;border-radius:9px;background:#8c4a32;color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;padding:0 4px;box-sizing:border-box">{{ t.badge }}</span></sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-opt" id="1d"><div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Android: Material 3 top app bar, cards, extended FAB, navigation bar</div>
+<div style="width:412px;height:892px;border-radius:40px;overflow:hidden;position:relative;background:#fbf8f6;box-shadow:0 40px 80px rgba(0,0,0,.18),0 0 0 8px #1c1b1b;font-family:Roboto,sans-serif;display:flex;flex-direction:column">
+<div style="height:40px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 24px;font-size:14px;font-weight:500;color:#1f1715"><span>9:41</span><div style="width:12px;height:12px;border-radius:6px;background:#1c1b1b"></div><span class="ms" style="font-size:18px;font-variation-settings:'FILL' 1">battery_full</span></div>
+<div style="height:64px;flex:none;display:flex;align-items:center;gap:4px;padding:0 4px 0 16px">
+<span style="flex:1;font-family:'Roboto Flex',Roboto,sans-serif;font-size:22px;color:#1f1715">Finances</span>
+<div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;color:#3a2c28"><span class="ms" style="font-size:24px">search</span></div>
+<div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center"><div style="width:32px;height:32px;border-radius:16px;background:#d9cbc2;font-size:13px;font-weight:500;display:flex;align-items:center;justify-content:center">IY</div></div>
+</div>
+<div style="flex:1;overflow:auto;padding:4px 16px 96px;display:flex;flex-direction:column;gap:12px">
+<div style="padding:20px;border-radius:24px;background:#f3e7e1;display:flex;flex-direction:column;gap:4px">
+<span style="font-size:14px;font-weight:500;color:#5a3a2e">Total recorded</span>
+<span style="font-size:32px;line-height:40px;color:#2b1714;font-variant-numeric:tabular-nums">£652,590.00</span>
+<span style="font-size:14px;color:#5a4a44">3 records · Updated 17 Jul 2026</span>
+</div>
+<sc-for list="{{ cats }}" as="c" hint-placeholder-count="2">
+<div style="border-radius:16px;background:#fff;border:1px solid #ebe1db;overflow:hidden">
+<div style="display:flex;align-items:center;gap:16px;padding:16px">
+<div style="width:40px;height:40px;border-radius:20px;background:#f3e7e1;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:22px">{{ c.icon }}</span></div>
+<div style="flex:1;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:500">{{ c.name }}</span><span style="font-size:14px;color:#5a4a44">{{ c.count }}</span></div>
+<span style="font-size:16px;font-weight:500;font-variant-numeric:tabular-nums">{{ c.total }}</span>
+</div>
+<sc-for list="{{ c.accounts }}" as="a" hint-placeholder-count="2">
+<div style="display:flex;align-items:center;gap:16px;height:56px;padding:0 16px 0 72px;border-top:1px solid #f3ece8">
+<span style="flex:1;font-size:16px">{{ a.name }}</span>
+<span style="font-size:14px;color:#3a2c28;font-variant-numeric:tabular-nums">{{ a.amount }}</span>
+</div>
+</sc-for>
+</div>
+</sc-for>
+<div style="font-size:14px;font-weight:500;color:#5a4a44;padding:8px 4px 0">Not added yet</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<sc-for list="{{ empties }}" as="e" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:8px;height:32px;padding:0 16px 0 8px;border-radius:8px;border:1px solid #8a7f7a;font-size:14px;font-weight:500;color:#3a2c28"><span class="ms" style="font-size:18px">add</span>{{ e.name }}</div>
+</sc-for>
+</div>
+</div>
+<div style="position:absolute;right:16px;bottom:96px;height:56px;padding:0 20px 0 16px;border-radius:16px;background:#f3e0d6;color:#2b1714;display:flex;align-items:center;gap:12px;font-size:16px;font-weight:500;box-shadow:0 3px 8px rgba(43,23,20,.18)"><span class="ms" style="font-size:24px">add</span>Add asset</div>
+<div style="position:absolute;left:0;right:0;bottom:0;height:80px;background:#f5eeea;display:grid;grid-template-columns:repeat(5,1fr);align-items:center;padding-bottom:4px">
+<sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5">
+<div style="display:flex;flex-direction:column;align-items:center;gap:4px;color:#3a2c28;position:relative">
+<div style="width:56px;height:32px;border-radius:16px;background:{{ t.pill }};display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:24px;font-variation-settings:{{ t.fill }}">{{ t.icon }}</span></div>
+<span style="font-size:12px;font-weight:{{ t.weight }}">{{ t.label }}</span>
+<sc-if value="{{ t.badge }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:-2px;left:50%;margin-left:4px;min-width:16px;height:16px;border-radius:8px;background:#b3261e;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;padding:0 4px;box-sizing:border-box">{{ t.badge }}</span></sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</div>
+
+<p class="dv-next">Try next: "apply <a class="dv-oid" href="#1b">1b</a> styling to the Dashboard" · "show the account detail screen on <a class="dv-oid" href="#1c">1c</a>" · "try a darker sidebar on <a class="dv-oid" href="#1b">1b</a>"</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showSummary&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Desktop&quot;},&quot;emptyStyle&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;tiles&quot;,&quot;rows&quot;],&quot;default&quot;:&quot;tiles&quot;,&quot;tsType&quot;:&quot;'tiles'|'rows'&quot;,&quot;section&quot;:&quot;Desktop&quot;}}">
+class Component extends DCLogic {
+  state = { active: 'Finances', closed: {} };
+  renderVals() {
+    const p = this.props;
+    const sel = (l) => () => this.setState({ active: l });
+    const mk = (icon, label, badge) => {
+      const on = this.state.active === label;
+      return { icon, label, badge, select: sel(label),
+        bg: on ? '#fff' : 'transparent', color: on ? '#2b1714' : '#3a2c28',
+        weight: on ? 600 : 400, fill: on ? "'FILL' 1" : "'FILL' 0" };
+    };
+    const navGroups = [
+      { label: 'Vault', items: [mk('space_dashboard','Dashboard'), mk('task_alt','Action Centre',12), mk('account_balance_wallet','Finances'), mk('gavel','Legal'), mk('home','Property'), mk('work','Business'), mk('devices','Digital'), mk('inventory_2','Possessions')] },
+      { label: 'Sharing', items: [mk('group','People I Trust'), mk('key','Access Requests')] },
+    ];
+    const raw = [
+      { id:'banks', icon:'account_balance', name:'Banks', count:'2 accounts', total:'£132,245.00',
+        accounts:[{name:'Barclays',amount:'£76,213.00',updated:'17 Jul 2026'},{name:'HSBC',amount:'£56,032.00',updated:'17 Jul 2026'}] },
+      { id:'pensions', icon:'savings', name:'Pensions', count:'1 pension', total:'£520,345.00',
+        accounts:[{name:'Provincial',amount:'£520,345.00',updated:'17 Jul 2026'}] },
+    ];
+    const cats = raw.map(c => {
+      const open = !this.state.closed[c.id];
+      return { ...c, open, chev: open ? 'expand_less' : 'expand_more',
+        toggle: () => this.setState(s => ({ closed: { ...s.closed, [c.id]: open } })) };
+    });
+    const empties = [
+      { icon:'trending_up', name:'Investments', hint:'ISAs, shares, funds' },
+      { icon:'health_and_safety', name:'Insurance', hint:'Life, home, income' },
+      { icon:'credit_card', name:'Debts', hint:'Mortgages, loans, cards' },
+    ];
+    const tab = (icon,label,on,badge) => ({ icon,label,badge, color: on?'#2b1714':'#8a7f7a', fill: on?"'FILL' 1":"'FILL' 0", pill: on?'#f0d9cd':'transparent', weight: on?700:500 });
+    const tabs = [tab('space_dashboard','Home'), tab('account_balance_wallet','Finances',true), tab('task_alt','Actions',false,12), tab('group','People'), tab('more_horiz','More')];
+    const emptyStyle = p.emptyStyle ?? 'tiles';
+    const notes = [
+      { icon:'text_fields', title:'Typography', items:[
+        { issue:'Page title “Finances” is light weight while card titles are bold, so the hierarchy reads upside down.', fix:'One title style: 28/34 bold. Category names 17 semibold, rows 15 regular.' },
+        { issue:'Sidebar labels, card titles and amounts are all bold, so nothing stands out.', fix:'Bold only for the title and totals. Nav items regular, selected item semibold.' },
+        { issue:'Amounts use proportional figures and pale grey row values that fail contrast.', fix:'Tabular numerals so columns align. Row amounts in primary ink, 15px.' },
+      ]},
+      { icon:'dashboard', title:'Layout', items:[
+        { issue:'Three-column card grid leaves large empty cards for Investments, Insurance and Debts.', fix:'Single column of populated categories; empty ones collapse into compact “Not added yet” tiles.' },
+        { issue:'Card heights depend on content, so totals and dates sit at different heights.', fix:'Category header rows: icon, name, count, total right-aligned. Accounts listed below.' },
+        { issue:'No overall figure for “a clear financial picture”.', fix:'Summary strip: total recorded, record count, last updated.' },
+      ]},
+      { icon:'menu', title:'Navigation', items:[
+        { issue:'“Back” on a top-level section duplicates the sidebar.', fix:'Breadcrumb in the header. Back only on detail screens (and native back on mobile).' },
+        { issue:'“Personal Vault” appears twice (workspace switcher and user menu).', fix:'Workspace shown once under the brand; header holds status, notifications, account.' },
+        { issue:'Twelve flat nav items plus a separate Add item.', fix:'Group into Vault and Sharing. “Add to my Fortress” stays as navigation to the type picker; adding inside a section uses the round (+) “Add asset” button.' },
+      ]},
+      { icon:'interests', title:'Icons and components', items:[
+        { issue:'Small white glyphs in heavy dark tiles; sidebar icons all sit in grey circles.', fix:'Material Symbols Rounded at 20px on a light brand tint. No containers in the nav.' },
+        { issue:'Right-pointing chevrons on rows look like expand toggles.', fix:'Chevron on the right edge means “open detail”; expand/collapse on the category header.' },
+        { issue:'Unlabelled shield icon in the header.', fix:'Labelled status chip: “Vault secured”.' },
+      ]},
+      { icon:'edit_note', title:'Copy', items:[
+        { issue:'“2 active record(s)” and “3 finance records saved across 5 visible areas”.', fix:'Real plurals per category: “2 accounts”, “1 pension”. Summary: “3 in 2 of 5 categories”.' },
+        { issue:'Bare date “17/07/26” with no label, ambiguous across locales.', fix:'“Updated 17 Jul 2026” on each account.' },
+      ]},
+      { icon:'smartphone', title:'Mobile', items:[
+        { issue:'A sidebar does not translate to a phone.', fix:'Tab bar with five destinations (Home, Finances, Actions, People, More); badge on Actions.' },
+        { issue:'Small add buttons per card.', fix:'One primary add: nav-bar button on iOS, extended FAB on Android. Rows at least 44pt / 48dp.' },
+      ]},
+    ];
+    return { navGroups, cats, empties, tabs, notes,
+      showSummary: p.showSummary ?? true,
+      emptyTiles: emptyStyle === 'tiles', emptyRows: emptyStyle === 'rows' };
+  }
+}
+</script>
+</body>
+</html>

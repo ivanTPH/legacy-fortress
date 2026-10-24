@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&display=block">
+<style>
+body{margin:0;background:#efebe7;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;color:#1f1715;-webkit-font-smoothing:antialiased}
+a{color:#7a3d27}a:hover{color:#2b1714}
+input,button,select{font-family:inherit}
+.ms{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;width:1em;height:1em;overflow:hidden;flex:none;letter-spacing:normal;text-transform:none;white-space:nowrap;direction:ltr;font-feature-settings:'liga';display:inline-block;font-variation-settings:'FILL' 0,'wght' 400,'opsz' 24}
+</style>
+</helmet>
+<section style="padding:14px 48px;background:#fbf0dc;border-bottom:1px solid #e8d3a6;display:flex;align-items:center;gap:10px;font-size:14px;color:#3d2e0f"><span style="font:700 11px ui-monospace,Menlo,monospace;padding:3px 7px;background:#7a4f00;color:#fff;border-radius:4px">HISTORY</span><span>Superseded for the Personal Vault by <a href="Vault Master V5.2.dc.html">Vault Master V5.2</a>. Reference only; do not build from this file.</span></section>
+
+<div style="min-height:{{ minH }};box-sizing:border-box;padding:{{ pad }};display:flex;justify-content:center;align-items:flex-start">
+<div style="position:relative;flex:none;width:{{ FW }};height:{{ FH }};box-sizing:border-box;border:10px solid #1a1412;border-radius:52px;overflow:hidden;background:#f6f3f0;box-shadow:0 30px 60px rgba(0,0,0,.22)">
+<div style="zoom:{{ Z }};width:{{ IW }};height:{{ IH }};position:relative;display:flex;flex-direction:column;opacity:{{ op }};transition:opacity .2s ease-out">
+
+<div style="height:44px;flex:none;display:flex;align-items:center;padding:0 26px;font-size:15px;font-weight:600;background:{{ topBg }}"><span style="flex:1">9:41</span><span style="display:flex;gap:4px"><span class="ms" style="font-size:18px;font-variation-settings:'FILL' 1">signal_cellular_alt</span><span class="ms" style="font-size:18px;font-variation-settings:'FILL' 1">wifi</span><span class="ms" style="font-size:18px;font-variation-settings:'FILL' 1">battery_full</span></span></div>
+<div style="height:22px;flex:none;background:#8c1d18;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;overflow:hidden"><b style="letter-spacing:.06em">UAT</b>Use synthetic data only</div>
+
+<sc-if value="{{ hdr.root }}" hint-placeholder-val="{{ true }}">
+<div style="height:52px;flex:none;box-sizing:border-box;display:flex;align-items:center;gap:2px;padding:0 4px;background:#fff;border-bottom:1px solid #ebe4de">
+<button onClick="{{ openDrawer }}" aria-label="Open menu" style="width:44px;height:44px;flex:none;border:0;border-radius:22px;background:transparent;color:#2b1714;display:flex;align-items:center;justify-content:center;cursor:pointer" style-active="background:#ebe0d8"><span class="ms" style="font-size:24px">menu</span></button>
+<button onClick="{{ openWs }}" aria-label="Switch workspace" style="flex:1;min-width:0;height:44px;border:0;background:transparent;border-radius:12px;display:flex;align-items:center;gap:8px;padding:0 6px;cursor:pointer;color:#1f1715;text-align:left" style-active="background:#ebe0d8">
+<span style="width:28px;height:28px;flex:none;border-radius:7px;background:#111;color:#fff;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px;font-variation-settings:'FILL' 1,'wght' 600">apps</span></span>
+<span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Legacy Fortress</span><span style="font-size:12px;color:#6b5f5a;display:flex;align-items:center;gap:2px;white-space:nowrap">My Vault<span class="ms" style="font-size:16px">expand_more</span></span></span>
+</button>
+<button onClick="{{ goSearch }}" aria-label="Search" style="width:44px;height:44px;flex:none;border:0;border-radius:22px;background:transparent;color:#2b1714;display:flex;align-items:center;justify-content:center;cursor:pointer" style-active="background:#ebe0d8"><span class="ms" style="font-size:24px">search</span></button>
+<button onClick="{{ goBell }}" aria-label="Notifications, 2 unread" style="position:relative;width:44px;height:44px;flex:none;border:0;border-radius:22px;background:transparent;color:#2b1714;display:flex;align-items:center;justify-content:center;cursor:pointer" style-active="background:#ebe0d8"><span class="ms" style="font-size:24px">notifications</span><span style="position:absolute;top:7px;right:7px;min-width:16px;height:16px;padding:0 4px;box-sizing:border-box;border-radius:8px;background:#8c4a32;color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center">2</span></button>
+</div>
+</sc-if>
+<sc-if value="{{ hdr.sub }}" hint-placeholder-val="{{ false }}">
+<div style="height:52px;flex:none;box-sizing:border-box;display:flex;align-items:center;gap:4px;padding:0 6px 0 2px;background:#fff;border-bottom:1px solid #ebe4de">
+<button onClick="{{ back }}" style="height:44px;min-width:0;max-width:70%;border:0;background:transparent;border-radius:22px;display:flex;align-items:center;padding:0 10px 0 0;color:#7a3d27;font-size:16px;cursor:pointer" style-active="background:#ebe0d8"><span class="ms" style="font-size:30px">chevron_left</span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ hdr.backLabel }}</span></button>
+<div style="flex:1"></div>
+<sc-if value="{{ hdr.hasAdd }}" hint-placeholder-val="{{ false }}"><button onClick="{{ hdr.add }}" aria-label="Add record" title="Add record" style="width:44px;height:44px;flex:none;border:0;background:transparent;border-radius:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0"><span style="width:36px;height:36px;border-radius:18px;background:#2b1714;color:#fff;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:22px">add</span></span></button></sc-if>
+</div>
+</sc-if>
+<sc-if value="{{ hdr.modal }}" hint-placeholder-val="{{ false }}">
+<div style="height:52px;flex:none;box-sizing:border-box;display:grid;grid-template-columns:88px minmax(0,1fr) 88px;align-items:center;padding:0 4px;background:#fff;border-bottom:1px solid #ebe4de">
+<button onClick="{{ back }}" style="height:44px;border:0;background:transparent;border-radius:22px;color:#7a3d27;font-size:16px;cursor:pointer;justify-self:start;padding:0 12px" style-active="background:#ebe0d8">Cancel</button>
+<span style="font-size:16px;font-weight:600;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ hdr.title }}</span><span></span>
+</div>
+</sc-if>
+
+<div data-vm-scroll="1" style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden">
+<div style="padding:14px 16px 24px;display:flex;flex-direction:column;gap:16px">
+
+<sc-if value="{{ page.showTitle }}" hint-placeholder-val="{{ true }}"><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><h1 style="margin:0;font-size:30px;line-height:36px;font-weight:700;letter-spacing:-.015em;overflow-wrap:anywhere">{{ page.title }}</h1><sc-if value="{{ page.desc }}" hint-placeholder-val="{{ false }}"><span style="font-size:15px;line-height:21px;color:#6b5f5a;text-wrap:pretty">{{ page.desc }}</span></sc-if></div></sc-if>
+<sc-if value="{{ page.hasAction }}" hint-placeholder-val="{{ false }}"><button onClick="{{ page.actGo }}" style="align-self:flex-start;height:44px;padding:0 16px 0 12px;border-radius:12px;border:0;background:#2b1714;color:#fff;font-size:15px;font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer" style-active="background:#43231d"><span class="ms" style="font-size:20px">{{ page.actIcon }}</span>{{ page.actLabel }}</button></sc-if>
+
+<sc-if value="{{ is.home }}" hint-placeholder-val="{{ true }}">
+<div onClick="{{ home.goFin }}" style="background:#2b1714;color:#fff;border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:4px;min-width:0;cursor:pointer" style-active="background:#3a201b">
+<span style="font-size:13px;color:#e6d8d0">Total recorded value</span>
+<span style="font-size:30px;line-height:36px;font-weight:700;letter-spacing:-.01em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere">{{ home.total }}</span>
+<span style="font-size:13px;color:#c9b8ae">Finances · updated 17 Oct 2026</span>
+</div>
+<div style="display:grid;grid-template-columns:{{ home.kpiCols }};gap:8px">
+<sc-for list="{{ home.kpis }}" as="k" hint-placeholder-count="3"><button onClick="{{ k.go }}" style="grid-column:{{ k.span }};min-width:0;min-height:72px;border:1px solid #ebe4de;border-radius:12px;background:#fff;padding:10px 12px;box-sizing:border-box;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;cursor:pointer;color:#1f1715;text-align:left" style-active="background:#ebe0d8"><span style="font-size:22px;line-height:26px;font-weight:600;font-variant-numeric:tabular-nums">{{ k.v }}</span><span style="align-self:stretch;font-size:13px;color:#6b5f5a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ k.l }}</span></button></sc-for>
+</div>
+<span style="font-size:20px;font-weight:600;margin-top:4px">Your Vault</span>
+<div style="display:grid;grid-template-columns:{{ home.vaultCols }};gap:10px;margin-top:-6px">
+<sc-for list="{{ home.vault }}" as="t" hint-placeholder-count="6"><button onClick="{{ t.go }}" style="min-width:0;min-height:96px;border:1px solid #ebe4de;border-radius:12px;background:#fff;padding:12px;box-sizing:border-box;display:flex;flex-direction:column;align-items:flex-start;gap:8px;cursor:pointer;color:#1f1715;text-align:left" style-active="background:#ebe0d8">
+<span style="width:36px;height:36px;border-radius:9px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px">{{ t.icon }}</span></span>
+<span style="align-self:stretch;display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:15px;font-weight:600;overflow-wrap:anywhere">{{ t.n }}</span><span style="font-size:13px;color:{{ t.mc }}">{{ t.m }}</span></span>
+</button></sc-for>
+</div>
+<span style="font-size:20px;font-weight:600;margin-top:4px">Next steps</span>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden;margin-top:-6px">
+<sc-for list="{{ home.next }}" as="a" hint-placeholder-count="2"><div onClick="{{ a.go }}" style="display:flex;align-items:center;gap:12px;min-height:64px;padding:10px 14px;box-sizing:border-box;border-top:{{ a.bt }};cursor:pointer" style-active="background:#ebe0d8"><span style="width:36px;height:36px;flex:none;border-radius:9px;background:{{ a.bg }};color:{{ a.fg }};display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px">{{ a.icon }}</span></span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:600;overflow-wrap:anywhere">{{ a.t }}</span><span style="font-size:13px;color:#6b5f5a">{{ a.s }}</span></span><span class="ms" style="font-size:20px;color:#9a8f8a">chevron_right</span></div></sc-for>
+<div onClick="{{ home.allActs }}" style="min-height:48px;display:flex;align-items:center;justify-content:center;border-top:1px solid #f0ebe7;font-size:15px;font-weight:500;color:#7a3d27;cursor:pointer" style-active="background:#ebe0d8">See all actions</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ is.cat }}" hint-placeholder-val="{{ false }}">
+<sc-if value="{{ cat.hasTotal }}" hint-placeholder-val="{{ false }}"><div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:13px;color:#6b5f5a">Total recorded</span><span style="font-size:26px;line-height:32px;font-weight:700;font-variant-numeric:tabular-nums;overflow-wrap:anywhere">{{ cat.total }}</span><span style="font-size:13px;color:#6b5f5a">{{ cat.meta }}</span></div></sc-if>
+<sc-for list="{{ cat.full }}" as="s" hint-placeholder-count="2">
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;padding:8px 6px 8px 14px;min-height:60px;box-sizing:border-box;border-bottom:1px solid #f0ebe7"><span style="width:36px;height:36px;flex:none;border-radius:9px;background:#f3ebe6;color:#6e3a28;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px">{{ s.icon }}</span></span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:16px;font-weight:600;overflow-wrap:anywhere">{{ s.n }}</span><span style="font-size:13px;color:#6b5f5a;overflow-wrap:anywhere">{{ s.m }}</span></span><button onClick="{{ s.add }}" aria-label="Add record" title="Add record" style="width:44px;height:44px;flex:none;border:0;background:transparent;border-radius:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0"><span style="width:36px;height:36px;border-radius:18px;background:#2b1714;color:#fff;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:22px">add</span></span></button></div>
+<sc-for list="{{ s.recs }}" as="r" hint-placeholder-count="1"><div onClick="{{ r.go }}" style="display:flex;align-items:center;gap:10px;min-height:60px;padding:8px 10px 8px 16px;box-sizing:border-box;border-top:{{ r.bt }};cursor:pointer" style-active="background:#ebe0d8"><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:600;overflow-wrap:anywhere">{{ r.n }}</span><sc-if value="{{ r.below }}" hint-placeholder-val="{{ false }}"><span style="font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap">{{ r.v }}</span></sc-if><span style="font-size:13px;color:#6b5f5a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.s }}</span></span><sc-if value="{{ r.beside }}" hint-placeholder-val="{{ true }}"><span style="flex:none;font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap">{{ r.v }}</span></sc-if><span class="ms" style="font-size:20px;color:#9a8f8a">chevron_right</span></div></sc-for>
+</div>
+</sc-for>
+<sc-if value="{{ cat.hasEmpty }}" hint-placeholder-val="{{ false }}">
+<span style="font-size:13px;color:#6b5f5a;text-transform:uppercase;padding:0 4px;margin-bottom:-8px">Not added yet</span>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<sc-for list="{{ cat.empty }}" as="s" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:12px;min-height:56px;padding:4px 6px 4px 14px;box-sizing:border-box;border-top:{{ s.bt }}"><span class="ms" style="font-size:22px;color:#6e3a28">{{ s.icon }}</span><span style="flex:1;min-width:0;font-size:15px;overflow-wrap:anywhere">{{ s.n }}</span><button onClick="{{ s.add }}" aria-label="Add record" title="Add record" style="width:44px;height:44px;flex:none;border:0;background:transparent;border-radius:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0"><span style="width:32px;height:32px;border-radius:16px;background:#2b1714;color:#fff;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px">add</span></span></button></div></sc-for>
+</div>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{ is.rec }}" hint-placeholder-val="{{ false }}">
+<sc-if value="{{ rec.hasValue }}" hint-placeholder-val="{{ false }}"><div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;color:#6b5f5a">Value</span><span style="font-size:26px;line-height:32px;font-weight:700;font-variant-numeric:tabular-nums;overflow-wrap:anywhere">{{ rec.v }}</span><span style="font-size:13px;color:#6b5f5a">{{ rec.upd }}</span></div></sc-if>
+<span style="font-size:13px;color:#6b5f5a;text-transform:uppercase;padding:0 4px;margin-bottom:-8px">Details</span>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden"><sc-for list="{{ rec.kv }}" as="k" hint-placeholder-count="3"><div style="display:flex;gap:12px;min-height:48px;align-items:center;padding:10px 16px;box-sizing:border-box;border-top:{{ k.bt }};font-size:15px"><span style="flex:none;width:44%;color:#6b5f5a">{{ k.k }}</span><span style="flex:1;min-width:0;overflow-wrap:anywhere">{{ k.v }}</span></div></sc-for></div>
+<div style="display:flex;align-items:center;padding:0 0 0 4px;margin-bottom:-12px"><span style="flex:1;font-size:13px;color:#6b5f5a;text-transform:uppercase">Documents</span><button onClick="{{ rec.addDoc }}" aria-label="Add document" title="Add document" style="width:44px;height:44px;border:0;background:transparent;border-radius:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0"><span style="width:36px;height:36px;border-radius:18px;border:1px solid #d9cfc8;background:#fff;color:#2b1714;display:flex;align-items:center;justify-content:center;box-sizing:border-box"><span class="ms" style="font-size:20px">note_add</span></span></button></div>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<sc-for list="{{ rec.docs }}" as="d" hint-placeholder-count="1"><div style="display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 16px;box-sizing:border-box;border-top:{{ d.bt }}"><span class="ms" style="font-size:22px;color:#6e3a28">picture_as_pdf</span><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:15px;overflow-wrap:anywhere">{{ d.n }}</span><span style="font-size:12px;color:#6b5f5a">{{ d.s }}</span></span></div></sc-for>
+<sc-if value="{{ rec.noDocs }}" hint-placeholder-val="{{ false }}"><div style="min-height:52px;display:flex;align-items:center;padding:0 16px;font-size:14px;color:#6b5f5a">No documents yet. Statements or letters help your executor.</div></sc-if>
+</div>
+<span style="font-size:13px;color:#6b5f5a;text-transform:uppercase;padding:0 4px;margin-bottom:-8px">Who can see this</span>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<sc-for list="{{ rec.who }}" as="w" hint-placeholder-count="1"><div onClick="{{ w.go }}" style="display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 10px 8px 16px;box-sizing:border-box;border-top:{{ w.bt }};cursor:pointer" style-active="background:#ebe0d8"><span style="width:32px;height:32px;flex:none;border-radius:16px;background:#f3e6df;color:#6e3a28;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center">{{ w.ini }}</span><span style="flex:1;min-width:0;font-size:15px;overflow-wrap:anywhere">{{ w.n }}</span><span class="ms" style="font-size:20px;color:#9a8f8a">chevron_right</span></div></sc-for>
+<sc-if value="{{ rec.onlyYou }}" hint-placeholder-val="{{ false }}"><div style="min-height:52px;display:flex;align-items:center;gap:10px;padding:0 16px;font-size:14px;color:#6b5f5a"><span class="ms" style="font-size:20px">lock</span>Only you</div></sc-if>
+</div>
+<button onClick="{{ rec.edit }}" style="height:48px;border-radius:12px;border:1px solid #e6dfd9;background:#fff;color:#2b1714;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer" style-active="background:#ebe0d8"><span class="ms" style="font-size:20px">edit</span>Edit record</button>
+</sc-if>
+
+<sc-if value="{{ is.form }}" hint-placeholder-val="{{ false }}">
+<span style="font-size:13px;color:#6b5f5a;text-transform:uppercase;padding:0 4px;margin-bottom:-8px">Required</span>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:14px">
+<sc-for list="{{ form.req }}" as="f" hint-placeholder-count="3"><label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600;min-width:0"><span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">{{ f.l }}<span style="font-size:11px;font-weight:500;padding:2px 6px;border-radius:4px;background:#f3ebe6;color:#6e3a28">Required</span></span>
+<sc-if value="{{ f.isText }}" hint-placeholder-val="{{ true }}"><input placeholder="{{ f.ph }}" style="height:48px;box-sizing:border-box;padding:0 12px;border-radius:10px;border:1px solid #d9cfc8;font-size:16px;font-weight:400;color:#1f1715;background:#fff;outline:none;width:100%;min-width:0" style-focus="border-color:#8c4a32;box-shadow:0 0 0 3px #f3e6df"></sc-if>
+<sc-if value="{{ f.isSel }}" hint-placeholder-val="{{ false }}"><div style="position:relative;display:flex;min-width:0"><select value="{{ f.value }}" onChange="{{ f.onChange }}" style="flex:1;min-width:0;width:100%;height:48px;box-sizing:border-box;padding:0 44px 0 12px;border-radius:10px;border:1px solid #d9cfc8;font-size:16px;font-weight:400;color:#1f1715;background:#fff;appearance:none;-webkit-appearance:none;outline:none;cursor:pointer;text-overflow:ellipsis" style-focus="border-color:#8c4a32;box-shadow:0 0 0 3px #f3e6df"><sc-for list="{{ f.opts }}" as="o" hint-placeholder-count="0"><option value="{{ o.v }}">{{ o.v }}</option></sc-for></select><span class="ms" style="position:absolute;right:12px;top:14px;font-size:20px;color:#6b5f5a;pointer-events:none">expand_more</span></div></sc-if>
+<sc-if value="{{ f.isMoney }}" hint-placeholder-val="{{ false }}"><div style="display:flex;height:48px;box-sizing:border-box;border-radius:10px;border:1px solid #d9cfc8;overflow:hidden;background:#fff;min-width:0"><span style="flex:none;padding:0 10px 0 12px;display:flex;align-items:center;background:#faf8f6;border-right:1px solid #e6dfd9;font-size:15px;font-weight:500">GBP</span><input inputMode="decimal" placeholder="£ 0.00" style="flex:1;min-width:0;border:0;padding:0 12px;font-size:16px;font-weight:400;outline:none;background:transparent;color:#1f1715"></div><span style="font-size:12px;font-weight:400;color:#6b5f5a">A rough figure is fine.</span></sc-if>
+</label></sc-for>
+</div>
+<span style="font-size:13px;color:#6b5f5a;text-transform:uppercase;padding:0 4px;margin-bottom:-8px">Optional</span>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<sc-for list="{{ form.groups }}" as="g" hint-placeholder-count="3"><div style="border-top:{{ g.bt }}">
+<div onClick="{{ g.toggle }}" style="display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 14px;box-sizing:border-box;cursor:pointer" style-active="background:#ebe0d8"><span class="ms" style="font-size:22px;color:#6e3a28">{{ g.icon }}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:15px;font-weight:500">{{ g.n }}</span><span style="font-size:12px;color:#6b5f5a;overflow-wrap:anywhere">{{ g.hint }}</span></span><span class="ms" style="font-size:22px;color:#6b5f5a">{{ g.chev }}</span></div>
+<sc-if value="{{ g.open }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:12px;padding:2px 14px 16px 48px"><sc-for list="{{ g.fields }}" as="gf" hint-placeholder-count="2"><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;color:#3a2c28;min-width:0">{{ gf.l }}<input style="height:44px;box-sizing:border-box;padding:0 12px;border-radius:10px;border:1px solid #e6dfd9;font-size:16px;color:#1f1715;background:#fff;outline:none;width:100%;min-width:0" style-focus="border-color:#8c4a32;box-shadow:0 0 0 3px #f3e6df"></label></sc-for></div></sc-if>
+</div></sc-for>
+</div>
+<div style="display:flex;align-items:center;gap:12px;min-height:60px;padding:8px 14px;box-sizing:border-box;border:1px dashed #d9cfc8;border-radius:12px;background:#fff;cursor:pointer" style-active="background:#ebe0d8"><span style="width:36px;height:36px;flex:none;border-radius:18px;border:1px solid #d9cfc8;box-sizing:border-box;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px">note_add</span></span><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:500">Add documents or photos</span><span style="font-size:12px;color:#6b5f5a">PDF, JPG or PNG up to 15 MB</span></span><span style="font-size:12px;color:#6b5f5a">Optional</span></div>
+<span style="display:flex;gap:6px;align-items:center;font-size:13px;color:#6b5f5a;padding:0 4px"><span class="ms" style="font-size:16px">lock</span>Stored securely. Not shared with anyone.</span>
+</sc-if>
+
+<sc-if value="{{ is.people }}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:#e9e3de;border-radius:10px;padding:2px;margin-top:-2px">
+<sc-for list="{{ pp.tabs }}" as="t" hint-placeholder-count="3"><button onClick="{{ t.go }}" style="min-width:0;height:40px;border:0;border-radius:8px;background:{{ t.bg }};box-shadow:{{ t.sh }};font-size:14px;font-weight:{{ t.w }};color:#1f1715;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;padding:0 4px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.l }}</span><sc-if value="{{ t.badge }}" hint-placeholder-val="{{ false }}"><span style="flex:none;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:9px;background:#8c4a32;color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center">{{ t.badge }}</span></sc-if></button></sc-for>
+</div>
+<sc-if value="{{ pp.isPeople }}" hint-placeholder-val="{{ true }}">
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<sc-for list="{{ pp.people }}" as="p" hint-placeholder-count="3"><div onClick="{{ p.go }}" style="display:flex;align-items:center;gap:12px;min-height:72px;padding:10px 6px 10px 14px;box-sizing:border-box;border-top:{{ p.bt }};cursor:pointer" style-active="background:#ebe0d8">
+<span style="width:40px;height:40px;flex:none;border-radius:20px;background:#f3e6df;color:#6e3a28;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center">{{ p.ini }}</span>
+<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span style="font-size:16px;font-weight:600;overflow-wrap:anywhere">{{ p.n }}</span><span style="font-size:13px;color:#6b5f5a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.roles }}</span><span style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px"><span style="display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:500;padding:3px 7px;border-radius:6px;background:{{ p.cBg }};color:{{ p.cFg }};white-space:nowrap"><span class="ms" style="font-size:14px">{{ p.cIcon }}</span>{{ p.cT }}</span><sc-if value="{{ p.hasAccess }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:500;padding:3px 7px;border-radius:6px;background:#f3ebe6;color:#6e3a28;white-space:nowrap"><span class="ms" style="font-size:14px">key</span>{{ p.access }}</span></sc-if></span></span>
+<sc-if value="{{ p.canSend }}" hint-placeholder-val="{{ false }}"><button onClick="{{ p.send }}" aria-label="Send invitation" title="Send invitation" style="width:44px;height:44px;flex:none;border:0;background:transparent;border-radius:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0"><span style="width:36px;height:36px;border-radius:18px;background:#2b1714;color:#fff;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px">send</span></span></button></sc-if>
+<span class="ms" style="font-size:20px;color:#9a8f8a">chevron_right</span>
+</div></sc-for>
+</div>
+<span style="font-size:13px;line-height:19px;color:#6b5f5a;padding:0 4px">Connected, identity verified and access granted are separate steps. Nothing is shared until you choose records.</span>
+</sc-if>
+<sc-if value="{{ pp.isReq }}" hint-placeholder-val="{{ false }}">
+<sc-for list="{{ pp.reqs }}" as="q" hint-placeholder-count="2"><div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;gap:10px"><span style="width:40px;height:40px;flex:none;border-radius:20px;background:{{ q.aBg }};color:{{ q.aFg }};font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px">{{ q.icon }}</span></span><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:16px;font-weight:600;overflow-wrap:anywhere">{{ q.n }}</span><span style="font-size:13px;color:#6b5f5a">{{ q.s }}</span></span></div>
+<span style="font-size:15px;line-height:21px;overflow-wrap:anywhere">{{ q.what }}</span>
+<span style="font-size:14px;line-height:20px;color:#6b5f5a;text-wrap:pretty">{{ q.why }}</span>
+<sc-if value="{{ q.canDecide }}" hint-placeholder-val="{{ false }}"><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px"><button onClick="{{ q.decline }}" style="height:44px;border-radius:10px;border:1px solid #e6dfd9;background:#fff;font-size:15px;font-weight:500;color:#2b1714;cursor:pointer" style-active="background:#ebe0d8">Decline</button><button onClick="{{ q.review }}" style="height:44px;border-radius:10px;border:0;background:#2b1714;color:#fff;font-size:15px;font-weight:600;cursor:pointer" style-active="background:#43231d">Choose records</button></div></sc-if>
+</div></sc-for>
+<sc-if value="{{ pp.noReqs }}" hint-placeholder-val="{{ false }}"><div style="padding:28px 16px;border:1px dashed #d9cfc8;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center"><span class="ms" style="font-size:28px;color:#6e3a28">key</span><span style="font-size:15px;font-weight:600">No open requests</span><span style="font-size:14px;color:#6b5f5a">When someone asks to see more, it appears here.</span></div></sc-if>
+</sc-if>
+<sc-if value="{{ pp.isShare }}" hint-placeholder-val="{{ false }}">
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<sc-for list="{{ pp.shares }}" as="r" hint-placeholder-count="4"><div onClick="{{ r.go }}" style="display:flex;align-items:center;gap:12px;min-height:64px;padding:10px 10px 10px 14px;box-sizing:border-box;border-top:{{ r.bt }};cursor:pointer" style-active="background:#ebe0d8"><span class="ms" style="font-size:22px;color:#6e3a28">{{ r.icon }}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:600;overflow-wrap:anywhere">{{ r.n }}</span><span style="font-size:13px;color:{{ r.wc }};overflow-wrap:anywhere">{{ r.who }}</span></span><span class="ms" style="font-size:20px;color:#9a8f8a">chevron_right</span></div></sc-for>
+</div>
+<span style="font-size:13px;line-height:19px;color:#6b5f5a;padding:0 4px">Records you add later stay private until you share them.</span>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{ is.person }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding-top:4px"><span style="width:72px;height:72px;border-radius:36px;background:#f3e6df;color:#6e3a28;font-size:24px;font-weight:600;display:flex;align-items:center;justify-content:center">{{ per.ini }}</span><span style="font-size:24px;line-height:30px;font-weight:700;overflow-wrap:anywhere">{{ per.n }}</span><span style="font-size:15px;color:#6b5f5a;overflow-wrap:anywhere">{{ per.roles }}</span></div>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden"><sc-for list="{{ per.steps }}" as="s" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:12px;min-height:52px;padding:8px 16px;box-sizing:border-box;border-top:{{ s.bt }}"><span class="ms" style="font-size:22px;color:{{ s.c }};font-variation-settings:'FILL' {{ s.fill }}">{{ s.icon }}</span><span style="flex:1;min-width:0;font-size:15px;font-weight:500">{{ s.t }}</span><span style="font-size:13px;color:#6b5f5a;text-align:right">{{ s.m }}</span></div></sc-for></div>
+<div style="display:grid;grid-template-columns:{{ per.btnCols }};gap:8px">
+<button onClick="{{ per.primary }}" style="min-width:0;height:48px;border-radius:12px;border:0;background:#2b1714;color:#fff;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;padding:0 8px" style-active="background:#43231d"><span class="ms" style="font-size:20px">{{ per.pIcon }}</span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ per.pLabel }}</span></button>
+<sc-if value="{{ per.canRevoke }}" hint-placeholder-val="{{ false }}"><button onClick="{{ per.revoke }}" style="min-width:0;height:48px;border-radius:12px;border:1px solid #e6dfd9;background:#fff;color:#b3261e;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;padding:0 8px" style-active="background:#ebe0d8"><span class="ms" style="font-size:20px">block</span><span style="white-space:nowrap">Revoke all</span></button></sc-if>
+</div>
+<span style="font-size:13px;color:#6b5f5a;text-transform:uppercase;padding:0 4px;margin-bottom:-8px">Can see</span>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<sc-for list="{{ per.sees }}" as="r" hint-placeholder-count="2"><div onClick="{{ r.go }}" style="display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 10px 8px 16px;box-sizing:border-box;border-top:{{ r.bt }};cursor:pointer" style-active="background:#ebe0d8"><span class="ms" style="font-size:22px;color:#6e3a28">{{ r.icon }}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:15px;overflow-wrap:anywhere">{{ r.n }}</span><span style="font-size:12px;color:#6b5f5a">{{ r.c }}</span></span><span class="ms" style="font-size:20px;color:#9a8f8a">chevron_right</span></div></sc-for>
+<sc-if value="{{ per.seesNone }}" hint-placeholder-val="{{ false }}"><div style="min-height:52px;display:flex;align-items:center;gap:10px;padding:0 16px;font-size:14px;color:#6b5f5a"><span class="ms" style="font-size:20px">lock</span>Nothing shared yet</div></sc-if>
+</div>
+<span style="font-size:13px;color:#6b5f5a;text-transform:uppercase;padding:0 4px;margin-bottom:-8px">Contact</span>
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden"><sc-for list="{{ per.kv }}" as="k" hint-placeholder-count="3"><div style="display:flex;gap:12px;min-height:48px;align-items:center;padding:10px 16px;box-sizing:border-box;border-top:{{ k.bt }};font-size:15px"><span style="flex:none;width:34%;color:#6b5f5a">{{ k.k }}</span><span style="flex:1;min-width:0;overflow-wrap:anywhere">{{ k.v }}</span></div></sc-for></div>
+</sc-if>
+
+<sc-if value="{{ is.actions }}" hint-placeholder-val="{{ false }}">
+<div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden">
+<sc-for list="{{ acts }}" as="a" hint-placeholder-count="4"><div onClick="{{ a.go }}" style="display:flex;align-items:center;gap:12px;min-height:64px;padding:10px 14px;box-sizing:border-box;border-top:{{ a.bt }};cursor:pointer" style-active="background:#ebe0d8"><span style="width:36px;height:36px;flex:none;border-radius:9px;background:{{ a.bg }};color:{{ a.fg }};display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px">{{ a.icon }}</span></span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:600;overflow-wrap:anywhere">{{ a.t }}</span><span style="font-size:13px;color:#6b5f5a">{{ a.s }}</span></span><span class="ms" style="font-size:20px;color:#9a8f8a">chevron_right</span></div></sc-for>
+<sc-if value="{{ noActs }}" hint-placeholder-val="{{ false }}"><div style="padding:28px 16px;text-align:center;font-size:15px;color:#6b5f5a">You’re all caught up.</div></sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ is.settings }}" hint-placeholder-val="{{ false }}">
+<sc-for list="{{ sets }}" as="g" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6b5f5a;text-transform:uppercase;padding:0 4px">{{ g.l }}</span><div style="background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden"><sc-for list="{{ g.items }}" as="i" hint-placeholder-count="2"><div onClick="{{ i.go }}" style="display:flex;align-items:center;gap:12px;min-height:52px;padding:6px 10px 6px 14px;box-sizing:border-box;border-top:{{ i.bt }};cursor:pointer;color:{{ i.c }}" style-active="background:#ebe0d8"><span class="ms" style="font-size:22px;color:{{ i.ic }}">{{ i.icon }}</span><span style="flex:1;min-width:0;font-size:15px">{{ i.l }}</span><span style="font-size:14px;color:#6b5f5a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45%">{{ i.v }}</span><sc-if value="{{ i.chev }}" hint-placeholder-val="{{ true }}"><span class="ms" style="font-size:20px;color:#9a8f8a">chevron_right</span></sc-if></div></sc-for></div></div></sc-for>
+</sc-if>
+
+</div>
+</div>
+
+<sc-if value="{{ showTabs }}" hint-placeholder-val="{{ true }}">
+<div style="flex:none;background:#fff;border-top:1px solid #ebe4de;padding:4px 4px 30px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr))">
+<sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4"><button onClick="{{ t.go }}" aria-label="{{ t.l }}" style="min-width:0;height:52px;border:0;background:transparent;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:{{ t.c }}" style-active="background:#ebe0d8"><span style="position:relative;display:flex"><span class="ms" style="font-size:26px;font-variation-settings:'FILL' {{ t.fill }}">{{ t.icon }}</span><sc-if value="{{ t.badge }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:-4px;left:16px;min-width:16px;height:16px;padding:0 4px;box-sizing:border-box;border-radius:8px;background:#8c4a32;color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center">{{ t.badge }}</span></sc-if></span><span style="font-size:11px;font-weight:{{ t.w }};white-space:nowrap">{{ t.l }}</span></button></sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ is.form }}" hint-placeholder-val="{{ false }}"><div style="flex:none;background:#fff;border-top:1px solid #ebe4de;padding:10px 16px 30px"><button onClick="{{ form.save }}" style="width:100%;height:50px;border-radius:12px;border:0;background:#2b1714;color:#fff;font-size:17px;font-weight:600;cursor:pointer" style-active="background:#43231d">Save record</button></div></sc-if>
+
+<sc-if value="{{ dr.open }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ closeAll }}" style="position:absolute;inset:0;z-index:40;background:rgba(31,23,21,.4)"></div>
+<div role="dialog" aria-label="Menu" style="position:absolute;top:0;left:0;bottom:0;z-index:41;width:{{ dr.w }};background:#f6f3f0;display:flex;flex-direction:column;box-shadow:12px 0 32px rgba(31,23,21,.2)">
+<div style="height:66px;flex:none"></div>
+<div style="height:52px;flex:none;display:flex;align-items:center;gap:10px;padding:0 6px 0 16px"><span style="width:28px;height:28px;flex:none;border-radius:7px;background:#111;color:#fff;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:18px;font-variation-settings:'FILL' 1,'wght' 600">apps</span></span><span style="flex:1;min-width:0;font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">My Vault</span><button onClick="{{ closeAll }}" aria-label="Close menu" style="width:44px;height:44px;flex:none;border:0;border-radius:22px;background:transparent;color:#2b1714;display:flex;align-items:center;justify-content:center;cursor:pointer" style-active="background:#ebe0d8"><span class="ms" style="font-size:24px">close</span></button></div>
+<div style="flex:1;min-height:0;overflow-y:auto;padding:4px 12px 34px;display:flex;flex-direction:column;gap:8px">
+<span style="font-size:13px;color:#6b5f5a;text-transform:uppercase;padding:6px 6px 0">Vault</span>
+<div style="background:#fff;border-radius:12px;overflow:hidden"><sc-for list="{{ dr.cats }}" as="c" hint-placeholder-count="6"><div onClick="{{ c.go }}" style="display:flex;align-items:center;gap:12px;min-height:48px;padding:0 12px;border-top:{{ c.bt }};cursor:pointer;font-size:15px" style-active="background:#ebe0d8"><span class="ms" style="font-size:22px;color:#6e3a28">{{ c.icon }}</span><span style="flex:1;min-width:0;overflow-wrap:anywhere">{{ c.n }}</span><span style="font-size:13px;color:#6b5f5a">{{ c.count }}</span></div></sc-for></div>
+<div style="background:#fff;border-radius:12px;overflow:hidden;margin-top:6px">
+<div onClick="{{ dr.add }}" style="display:flex;align-items:center;gap:12px;min-height:48px;padding:0 12px;cursor:pointer;font-size:15px" style-active="background:#ebe0d8"><span class="ms" style="font-size:22px;color:#6e3a28">add_circle</span>Add to my Fortress</div>
+<div onClick="{{ dr.help }}" style="display:flex;align-items:center;gap:12px;min-height:48px;padding:0 12px;border-top:1px solid #f0ebe7;cursor:pointer;font-size:15px" style-active="background:#ebe0d8"><span class="ms" style="font-size:22px;color:#6e3a28">help</span>Help &amp; support</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ ws.open }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ closeAll }}" style="position:absolute;inset:0;z-index:40;background:rgba(31,23,21,.4)"></div>
+<div role="dialog" aria-label="Switch workspace" style="position:absolute;left:0;right:0;bottom:0;z-index:41;max-height:80%;background:#f6f3f0;border-radius:16px 16px 0 0;display:flex;flex-direction:column;box-shadow:0 -12px 32px rgba(31,23,21,.2)">
+<div style="width:36px;height:5px;border-radius:3px;background:#cfc6c0;margin:8px auto 0;flex:none"></div>
+<div style="display:flex;align-items:center;padding:4px 6px 0 16px;flex:none"><span style="flex:1;font-size:17px;font-weight:600">Switch workspace</span><button onClick="{{ closeAll }}" aria-label="Close" style="width:44px;height:44px;border:0;border-radius:22px;background:transparent;color:#2b1714;display:flex;align-items:center;justify-content:center;cursor:pointer" style-active="background:#ebe0d8"><span class="ms" style="font-size:24px">close</span></button></div>
+<div style="overflow-y:auto;padding:4px 12px 34px;display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{ ws.groups }}" as="g" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6b5f5a;text-transform:uppercase;padding:6px 6px 0">{{ g.l }}</span><div style="background:#fff;border-radius:12px;overflow:hidden"><sc-for list="{{ g.items }}" as="i" hint-placeholder-count="1"><div onClick="{{ i.go }}" style="display:flex;align-items:center;gap:12px;min-height:60px;padding:8px 12px;box-sizing:border-box;border-top:{{ i.bt }};cursor:pointer" style-active="background:#ebe0d8"><span style="width:36px;height:36px;flex:none;border-radius:9px;background:{{ i.bg }};color:{{ i.fg }};display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:20px;font-variation-settings:'FILL' 1">{{ i.icon }}</span></span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:15px;font-weight:600;overflow-wrap:anywhere">{{ i.t }}</span><span style="font-size:13px;color:#6b5f5a;overflow-wrap:anywhere">{{ i.s }}</span></span><sc-if value="{{ i.on }}" hint-placeholder-val="{{ false }}"><span class="ms" style="font-size:22px;color:#2b1714">check</span></sc-if></div></sc-for></div></div></sc-for>
+<span style="font-size:12px;line-height:17px;color:#6b5f5a;padding:4px 6px">Only workspaces you’re allowed to use appear here. Platform Admin has its own sign-in.</span>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ gv.open }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ gv.cancel }}" style="position:absolute;inset:0;z-index:40;background:rgba(31,23,21,.4)"></div>
+<div role="dialog" aria-label="Give access" style="position:absolute;left:0;right:0;bottom:0;top:52px;z-index:41;background:#f6f3f0;border-radius:16px 16px 0 0;display:flex;flex-direction:column;box-shadow:0 -12px 32px rgba(31,23,21,.2)">
+<div style="width:36px;height:5px;border-radius:3px;background:#cfc6c0;margin:8px auto 0;flex:none"></div>
+<div style="height:48px;flex:none;display:grid;grid-template-columns:80px minmax(0,1fr) 80px;align-items:center;padding:0 4px"><button onClick="{{ gv.cancel }}" style="justify-self:start;height:44px;padding:0 12px;border:0;background:transparent;border-radius:22px;color:#7a3d27;font-size:16px;cursor:pointer" style-active="background:#ebe0d8">Cancel</button><span style="font-size:16px;font-weight:600;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ gv.title }}</span><span></span></div>
+<div style="flex:1;min-height:0;overflow-y:auto;padding:4px 16px 16px;display:flex;flex-direction:column;gap:12px">
+<span style="font-size:14px;line-height:20px;color:#6b5f5a;text-wrap:pretty">{{ gv.intro }}</span>
+<div style="background:#fff;border-radius:12px;overflow:hidden">
+<sc-for list="{{ gv.cats }}" as="c" hint-placeholder-count="3"><div style="border-top:{{ c.bt }}">
+<div style="display:flex;align-items:center;min-height:52px"><button onClick="{{ c.toggleAll }}" aria-label="{{ c.allLabel }}" style="width:48px;height:48px;flex:none;border:0;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;color:{{ c.boxC }}"><span class="ms" style="font-size:24px;font-variation-settings:'FILL' {{ c.boxFill }}">{{ c.box }}</span></button><div onClick="{{ c.expand }}" style="flex:1;min-width:0;display:flex;align-items:center;gap:10px;min-height:52px;padding-right:12px;cursor:pointer"><span class="ms" style="font-size:22px;color:#6e3a28">{{ c.icon }}</span><span style="flex:1;min-width:0;font-size:16px;font-weight:600;overflow-wrap:anywhere">{{ c.n }}</span><span style="font-size:13px;color:#6b5f5a;white-space:nowrap">{{ c.count }}</span><span class="ms" style="font-size:20px;color:#6b5f5a">{{ c.chev }}</span></div></div>
+<sc-if value="{{ c.open }}" hint-placeholder-val="{{ false }}"><sc-for list="{{ c.recs }}" as="r" hint-placeholder-count="2"><div onClick="{{ r.toggle }}" style="display:flex;align-items:center;min-height:48px;padding-left:36px;border-top:1px solid #f3eeea;cursor:pointer" style-active="background:#ebe0d8"><span style="width:44px;height:44px;flex:none;display:flex;align-items:center;justify-content:center;color:{{ r.c }}"><span class="ms" style="font-size:24px;font-variation-settings:'FILL' {{ r.fill }}">{{ r.box }}</span></span><span style="flex:1;min-width:0;font-size:15px;padding:8px 12px 8px 0;overflow-wrap:anywhere">{{ r.n }}</span></div></sc-for></sc-if>
+</div></sc-for>
+</div>
+</div>
+<div style="flex:none;background:#fff;border-top:1px solid #ebe4de;padding:10px 16px 30px;display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6b5f5a;text-align:center">{{ gv.sel }}</span><button onClick="{{ gv.save }}" style="width:100%;height:50px;border-radius:12px;border:0;background:#2b1714;color:#fff;font-size:17px;font-weight:600;cursor:pointer" style-active="background:#43231d">Save access</button></div>
+</div>
+</sc-if>
+
+<sc-if value="{{ cf.open }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ closeAll }}" style="position:absolute;inset:0;z-index:50;background:rgba(31,23,21,.4)"></div>
+<div role="alertdialog" style="position:absolute;left:0;right:0;bottom:0;z-index:51;background:#fff;border-radius:16px 16px 0 0;padding:20px 16px 30px;display:flex;flex-direction:column;gap:10px">
+<span style="width:44px;height:44px;border-radius:22px;background:#fbeee6;color:#b3261e;display:flex;align-items:center;justify-content:center"><span class="ms" style="font-size:24px">block</span></span>
+<span style="font-size:20px;line-height:26px;font-weight:600">{{ cf.title }}</span>
+<span style="font-size:15px;line-height:21px;color:#6b5f5a;text-wrap:pretty">{{ cf.text }}</span>
+<button onClick="{{ cf.go }}" style="margin-top:6px;height:50px;border-radius:12px;border:0;background:#b3261e;color:#fff;font-size:17px;font-weight:600;cursor:pointer">Revoke access</button>
+<button onClick="{{ closeAll }}" style="height:50px;border-radius:12px;border:1px solid #e6dfd9;background:#fff;color:#2b1714;font-size:17px;font-weight:500;cursor:pointer" style-active="background:#ebe0d8">Cancel</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ tst.has }}" hint-placeholder-val="{{ false }}"><div role="status" style="position:absolute;left:16px;right:16px;bottom:{{ tst.b }};z-index:60;display:flex;align-items:center;gap:10px;min-height:48px;padding:6px 6px 6px 16px;box-sizing:border-box;border-radius:14px;background:#2b1714;color:#fff;font-size:14px;box-shadow:0 8px 24px rgba(31,23,21,.25)"><span class="ms" style="font-size:20px;color:#9fd8b2;font-variation-settings:'FILL' 1">check_circle</span><span style="flex:1;min-width:0;overflow-wrap:anywhere">{{ tst.text }}</span><sc-if value="{{ tst.hasUndo }}" hint-placeholder-val="{{ false }}"><button onClick="{{ tst.undo }}" style="height:36px;padding:0 12px;border:0;border-radius:10px;background:rgba(255,255,255,.1);color:#e9c9b6;font-size:14px;font-weight:600;cursor:pointer">Undo</button></sc-if></div></sc-if>
+
+<div style="position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#1a1412;z-index:70;pointer-events:none"></div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;width&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;390&quot;,&quot;320&quot;,&quot;402&quot;],&quot;default&quot;:&quot;390&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;largeText&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;start&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;home&quot;,&quot;finances&quot;,&quot;form&quot;,&quot;people&quot;,&quot;person&quot;,&quot;drawer&quot;,&quot;workspace&quot;],&quot;default&quot;:&quot;home&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { scr: 'home', stack: [], cat: 'Finances', rec: null, form: null, fOpen: {}, person: null, ptab: 0, drawer: false, ws: false, give: null, draft: [], gOpen: { Finances: true, Legal: true }, confirm: null, toast: null, ready: false,
+    share: { jacqui: ['Barclays', 'Will'], bob: [], mary: [] }, invited: { mary: true }, declined: false };
+  CATS = [
+    { id: 'Finances', icon: 'account_balance_wallet', desc: 'Bank accounts, pensions, investments, insurance and debts.', total: '£652,590.00', secs: [
+      { n: 'Banks', icon: 'account_balance', total: '£132,245.00', recs: [['Barclays', 'Current account', '£76,213.00', '17 Oct'], ['HSBC', 'Savings account', '£56,032.00', '16 Oct']] },
+      { n: 'Pensions', icon: 'savings', total: '£520,345.00', recs: [['Provincial', 'Workplace pension', '£520,345.00', '17 Oct']] },
+      { n: 'Investments', icon: 'trending_up' }, { n: 'Insurance', icon: 'umbrella' }, { n: 'Debts', icon: 'credit_card' }] },
+    { id: 'Legal', icon: 'gavel', desc: 'Your will, power of attorney and other legal documents.', secs: [
+      { n: 'Wills', icon: 'history_edu', recs: [['Will', 'Signed 2 Sep 2026', '', '2 Sep']] }, { n: 'Power of attorney', icon: 'assignment_ind' }] },
+    { id: 'Property', icon: 'home', desc: 'Homes, land and vehicles.', secs: [{ n: 'Homes', icon: 'house' }, { n: 'Vehicles', icon: 'directions_car' }] },
+    { id: 'Business', icon: 'work', desc: 'Companies and shareholdings you own.', secs: [{ n: 'Companies', icon: 'domain' }, { n: 'Shareholdings', icon: 'pie_chart' }] },
+    { id: 'Digital', icon: 'devices', desc: 'Online accounts and devices, and what should happen to them.', secs: [{ n: 'Online accounts', icon: 'language' }, { n: 'Devices', icon: 'smartphone' }] },
+    { id: 'Possessions', icon: 'inventory_2', desc: 'Valuables and collections worth recording.', secs: [{ n: 'Valuables', icon: 'diamond' }, { n: 'Collections', icon: 'collections' }] },
+  ];
+  REC = {
+    Barclays: { kv: [['Type', 'Current account'], ['Account holder', 'Ivan Yardley'], ['Last 4 digits', '4821'], ['Sort code', 'Not added']], docs: [['Statement June 2026.pdf', 'PDF · 240 KB']] },
+    HSBC: { kv: [['Type', 'Savings account'], ['Account holder', 'Ivan Yardley'], ['Last 4 digits', '0937']], docs: [] },
+    Provincial: { kv: [['Type', 'Workplace pension'], ['Member number', 'PR-55102'], ['Employer', 'Northgate Ltd']], docs: [['Annual statement 2026.pdf', 'PDF · 410 KB']] },
+    Will: { kv: [['Signed', '2 Sep 2026'], ['Solicitor', 'Hale & Co Solicitors'], ['Original kept', 'Solicitor’s safe']], docs: [['Will (scan).pdf', 'PDF · 1.2 MB']] },
+  };
+  PEOPLE = [
+    { id: 'jacqui', n: 'Jacqui Yardley', ini: 'JY', roles: 'Daughter · Family · Beneficiary', email: 'jacqui@me.com', phone: '07700 900123', connected: true, verified: true },
+    { id: 'bob', n: 'Bob Smith', ini: 'BS', roles: 'Executor · Attorney', email: 'bob@example.test', phone: 'Not added', connected: false, verified: false },
+    { id: 'mary', n: 'Mary Hale', ini: 'MH', roles: 'Adviser · Hale & Co Solicitors', email: 'mary@haleandco.example', phone: '020 7946 0000', connected: false, verified: false },
+  ];
+  FM = {
+    Banks: ['bank account', [['Bank name', 'text', 'e.g. Barclays'], ['Account type', 'select', ['Current account', 'Savings account', 'Joint account', 'ISA']], ['Balance', 'money']], [['tag', 'Account details', 'Sort code, last 4 digits', ['Sort code', 'Last 4 digits']], ['call', 'Bank contact', 'Phone, branch', ['Phone', 'Branch']], ['notes', 'Notes for your family', 'Anything they should know', ['Notes']]]],
+    Pensions: ['pension', [['Provider', 'text', 'e.g. Aviva'], ['Pension type', 'select', ['Workplace', 'Personal', 'SIPP', 'State']], ['Estimated value', 'money']], [['tag', 'Policy details', 'Member number, employer', ['Member number', 'Employer']], ['badge', 'Adviser', 'Name, phone, email', ['Adviser name', 'Phone or email']], ['notes', 'Notes for your family', 'Nominated beneficiaries', ['Notes']]]],
+    _: ['record', [['Name', 'text', 'A name you’ll recognise'], ['Estimated value', 'money']], [['tag', 'Details', 'Reference, dates', ['Reference', 'Date']], ['call', 'Contact', 'Who to speak to', ['Name', 'Phone or email']], ['notes', 'Notes for your family', 'Anything they should know', ['Notes']]]],
+  };
+  ONE = { Investments: 'investment', Insurance: 'insurance policy', Debts: 'debt', Wills: 'will', 'Power of attorney': 'power of attorney', Homes: 'home', Vehicles: 'vehicle' };
+  TITLE = { home: 'Home', actions: 'Actions', people: 'People & Access', settings: 'Settings' };
+
+  componentDidMount() {
+    const done = () => { if (!this._u) this.setState({ ready: true }); };
+    try { if (document.fonts && document.fonts.load) { document.fonts.load("24px 'Material Symbols Rounded'", 'home').then(done).catch(done); } else done(); } catch (e) { done(); }
+    this._ft = setTimeout(done, 3000);
+    const s = this.props.start;
+    if (s === 'finances') this.setState({ scr: 'cat', cat: 'Finances', stack: [{ scr: 'home' }] });
+    else if (s === 'form') this.setState({ scr: 'form', form: 'Banks', cat: 'Finances', stack: [{ scr: 'home' }, { scr: 'cat', cat: 'Finances' }] });
+    else if (s === 'people') this.setState({ scr: 'people' });
+    else if (s === 'person') this.setState({ scr: 'person', person: 'jacqui', stack: [{ scr: 'people' }] });
+    else if (s === 'drawer') this.setState({ drawer: true });
+    else if (s === 'workspace') this.setState({ ws: true });
+  }
+  componentWillUnmount() { this._u = true; clearTimeout(this._ft); clearTimeout(this._tt); }
+  componentDidUpdate(pp, ps) { const s = this.state; if (ps.scr !== s.scr || ps.rec !== s.rec || ps.cat !== s.cat || ps.person !== s.person || ps.ptab !== s.ptab) { try { document.querySelectorAll('[data-vm-scroll]').forEach(el => { el.scrollTop = 0; }); } catch (e) {} } }
+
+  push = (scr, extra = {}) => this.setState(s => ({ stack: [...s.stack, { scr: s.scr, cat: s.cat, rec: s.rec, person: s.person, ptab: s.ptab, form: s.form }], scr, ...extra, drawer: false, ws: false }));
+  back = () => this.setState(s => { const st = [...s.stack]; const p = st.pop() || { scr: 'home' }; return { scr: p.scr, cat: p.cat || s.cat, rec: p.rec || null, person: p.person || null, ptab: p.ptab || 0, form: p.form || null, stack: st, fOpen: {} }; });
+  tab = (scr, extra = {}) => () => this.setState({ scr, stack: [], form: null, drawer: false, ws: false, rec: null, person: null, ...extra });
+  toast(text, undo) { clearTimeout(this._tt); this.setState({ toast: { text, undo } }); this._tt = setTimeout(() => this.setState({ toast: null }), 4000); }
+  allRecs() { const out = []; this.CATS.forEach(c => (c.secs || []).forEach(s => (s.recs || []).forEach(r => out.push({ n: r[0], sub: r[1], v: r[2], upd: r[3], cat: c.id, sec: s.n, icon: s.icon })))); return out; }
+  status(p) { const st = this.state; const inv = p.connected || st.invited[p.id]; const cnt = (st.share[p.id] || []).length;
+    const c = p.verified ? ['Verified', 'verified_user', '#e9f3ec', '#225c3a'] : p.connected ? ['Connected', 'link', '#e9f3ec', '#225c3a'] : inv ? ['Invitation sent', 'hourglass_top', '#fdf1d8', '#7a4f00'] : ['Not invited', 'schedule_send', '#f3eeea', '#3a2c28'];
+    return { inv, cnt, c }; }
+
+  renderVals() {
+    const st = this.state, p = this.props;
+    const W = Number(p.width || 390), H = W <= 320 ? 568 : W >= 402 ? 874 : 844, Z = p.largeText ? 1.25 : 1;
+    const IWn = W / Z, narrow = IWn < 360;
+    const recs = this.allRecs();
+    const T = { ink: ['#f3ebe6', '#6e3a28'], amber: ['#fdf1d8', '#7a4f00'], neutral: ['#f3eeea', '#3a2c28'] };
+    const bt = i => (i ? '1px solid #f0ebe7' : '0');
+    const openRec = (n) => () => this.push('rec', { rec: n });
+    const openCat = (id) => () => this.push('cat', { cat: id });
+    const openForm = (sec, cat) => (e) => { if (e && e.stopPropagation) e.stopPropagation(); this.push('form', { form: sec, cat: cat || st.cat, fOpen: {} }); };
+    const openPerson = (id) => () => this.push('person', { person: id });
+    const openGive = (id, pre) => () => this.setState({ give: id, draft: pre || [...(st.share[id] || [])], gOpen: { Finances: true, Legal: true } });
+    const sendInv = (id) => (e) => { if (e && e.stopPropagation) e.stopPropagation(); const per = this.PEOPLE.find(x => x.id === id); this.setState(s => ({ invited: { ...s.invited, [id]: true } })); this.toast('Invitation sent to ' + per.n); };
+
+    const actsRaw = [
+      !st.invited.bob && ['send', 'Send Bob Smith’s invitation', 'He’s your executor but hasn’t been invited', 'ink', openPerson('bob')],
+      !st.declined && ['key', 'Review Mary Hale’s request', 'Wants to see Finances · Pensions', 'amber', this.tab('people', { ptab: 1 })],
+      ['home', 'Add your home', 'Property has nothing yet', 'neutral', openCat('Property')],
+      ['note_add', 'Add a statement to HSBC', 'No document attached', 'neutral', openRec('HSBC')],
+    ].filter(Boolean);
+    const acts = actsRaw.map(([icon, t, s, tone, go], i) => ({ icon, t, s, go, bg: T[tone][0], fg: T[tone][1], bt: bt(i) }));
+
+    const is = { home: st.scr === 'home', actions: st.scr === 'actions', people: st.scr === 'people', settings: st.scr === 'settings', cat: st.scr === 'cat', rec: st.scr === 'rec', person: st.scr === 'person', form: st.scr === 'form' };
+    const root = is.home || is.actions || is.people || is.settings;
+    const prev = st.stack[st.stack.length - 1];
+    const titleOf = (f) => !f ? 'Home' : f.scr === 'cat' ? f.cat : f.scr === 'rec' ? f.rec : f.scr === 'person' ? (this.PEOPLE.find(x => x.id === f.person) || {}).n : this.TITLE[f.scr] || 'Back';
+    const C = this.CATS.find(c => c.id === st.cat) || this.CATS[0];
+    const hdr = { root, sub: is.cat || is.rec || is.person, modal: is.form, backLabel: titleOf(prev), hasAdd: is.cat, add: openForm(C.secs[0].n, C.id), title: '' };
+
+    const page = { showTitle: !is.person, title: '', desc: '', hasAction: false, actLabel: '', actIcon: 'add', actGo: () => {} };
+    let cat = {}, rec = {}, form = {}, pp = {}, per = {};
+    if (is.home) page.title = 'Home';
+    if (is.actions) { page.title = 'Actions'; page.desc = 'Things that would make your Vault more useful to the people you trust.'; }
+    if (is.settings) page.title = 'Settings';
+    if (is.cat) {
+      page.title = C.id; page.desc = C.desc;
+      const full = C.secs.filter(s => s.recs && s.recs.length), empty = C.secs.filter(s => !s.recs || !s.recs.length);
+      const n = full.reduce((a, s) => a + s.recs.length, 0);
+      cat = { hasTotal: !!C.total, total: C.total, meta: n + ' records · updated 17 Oct 2026',
+        full: full.map(s => ({ n: s.n, icon: s.icon, m: s.recs.length + (s.recs.length === 1 ? ' record' : ' records') + (s.total ? ' · ' + s.total : ''), add: openForm(s.n, C.id),
+          recs: s.recs.map((r, i) => ({ n: r[0], s: r[1] + ' · updated ' + r[3], v: r[2], below: narrow && !!r[2], beside: !narrow, go: openRec(r[0]), bt: bt(i) })) })),
+        hasEmpty: empty.length > 0, empty: empty.map((s, i) => ({ n: s.n, icon: s.icon, add: openForm(s.n, C.id), bt: bt(i) })) };
+    }
+    if (is.rec) {
+      const R = recs.find(r => r.n === st.rec) || recs[0]; const D = this.REC[R.n] || { kv: [], docs: [] };
+      const who = this.PEOPLE.filter(x => (st.share[x.id] || []).includes(R.n));
+      page.title = R.n; page.desc = R.cat + ' · ' + R.sec;
+      rec = { hasValue: !!R.v, v: R.v, upd: 'Updated ' + R.upd + ' 2026', kv: D.kv.map(([k, v], i) => ({ k, v, bt: bt(i) })),
+        docs: D.docs.map(([n, s], i) => ({ n, s, bt: bt(i) })), noDocs: !D.docs.length,
+        who: who.map((x, i) => ({ n: x.n, ini: x.ini, go: openPerson(x.id), bt: bt(i) })), onlyYou: !who.length,
+        addDoc: () => this.toast('Prototype: opens the camera or file picker for ' + R.n), edit: () => this.toast('Prototype: opens the same form, prefilled') };
+    }
+    if (is.form) {
+      const F = this.FM[st.form] || this.FM._; const one = this.FM[st.form] ? F[0] : (this.ONE[st.form] || 'record');
+      page.showTitle = false; hdr.title = 'Add ' + one;
+      form = { req: [{ l: 'Record type', isSel: true, value: st.form, opts: C.secs.map(s => ({ v: s.n })), onChange: e => this.setState({ form: e.target.value, fOpen: {} }) },
+          ...F[1].map(([l, k, x]) => ({ l, isText: k === 'text', isSel: k === 'select', isMoney: k === 'money', ph: k === 'text' ? x : '', value: k === 'select' ? x[0] : '', opts: k === 'select' ? x.map(v => ({ v })) : [], onChange: () => {} }))],
+        groups: F[2].map(([icon, n, hint, fields], i) => { const open = !!st.fOpen[n]; return { icon, n, hint, open, chev: open ? 'expand_less' : 'expand_more', bt: bt(i), fields: fields.map(l => ({ l })), toggle: () => this.setState(s => ({ fOpen: { ...s.fOpen, [n]: !open } })) }; }),
+        save: () => { this.back(); this.toast('Record saved to ' + C.id); } };
+    }
+    if (is.people) {
+      page.title = 'People & Access'; page.desc = 'Add people, check who they are and choose exactly what they can see.';
+      page.hasAction = st.ptab === 0; page.actLabel = 'Add person'; page.actIcon = 'person_add'; page.actGo = () => this.toast('Prototype: opens Add person (Required: name, email, roles)');
+      const reqs = [];
+      if (!st.declined) reqs.push({ n: 'Mary Hale', s: 'Adviser · not verified · 14 Oct', icon: 'person', aBg: '#f3e6df', aFg: '#6e3a28', what: 'Wants to see Finances · Pensions', why: '“To prepare your annual pension review.” She’ll only see what you choose after she verifies her identity.', canDecide: true,
+        decline: () => { this.setState({ declined: true }); this.toast('Request declined', () => this.setState({ declined: false })); }, review: openGive('mary', ['Provincial']) });
+      reqs.push({ n: 'Bob Smith · Executor', s: 'Probate request · 12 Oct', icon: 'gavel', aBg: '#fbeee6', aFg: '#b3261e', what: 'Executor access after a death', why: 'Handled by the death verification process. Nothing is shared until our team checks the death certificate and executor authority.', canDecide: false });
+      pp = { isPeople: st.ptab === 0, isReq: st.ptab === 1, isShare: st.ptab === 2, noReqs: !reqs.length, reqs,
+        tabs: [['People', 0], ['Requests', st.declined ? 1 : 2], ['Sharing', 0]].map(([l, badge], i) => ({ l, badge, go: () => this.setState({ ptab: i }), bg: i === st.ptab ? '#fff' : 'transparent', sh: i === st.ptab ? '0 1px 3px rgba(0,0,0,.12)' : 'none', w: i === st.ptab ? 600 : 500 })),
+        people: this.PEOPLE.map((x, i) => { const s = this.status(x); return { n: x.n, ini: x.ini, roles: x.roles, go: openPerson(x.id), bt: bt(i), cT: s.c[0], cIcon: s.c[1], cBg: s.c[2], cFg: s.c[3], hasAccess: s.cnt > 0, access: s.cnt + (s.cnt === 1 ? ' record' : ' records'), canSend: !s.inv, send: sendInv(x.id) }; }),
+        shares: recs.map((r, i) => { const w = this.PEOPLE.filter(x => (st.share[x.id] || []).includes(r.n)).map(x => x.n); const req = r.n === 'Provincial' && !st.declined && !w.length;
+          return { n: r.n, icon: r.icon, go: openRec(r.n), bt: bt(i), who: w.length ? w.join(', ') : req ? 'Requested by Mary Hale' : 'Only you', wc: w.length ? '#225c3a' : req ? '#7a4f00' : '#6b5f5a' }; }) };
+    }
+    if (is.person) {
+      const X = this.PEOPLE.find(x => x.id === st.person) || this.PEOPLE[0]; const s = this.status(X); const shared = st.share[X.id] || [];
+      const SI = { done: ['#2e7d4f', 1], now: ['#7a4f00', 1], todo: ['#9a8f8a', 0] };
+      const steps = [['link', 'Connected', X.connected ? 'done' : s.inv ? 'now' : 'todo', X.connected ? 'Accepted 2 Oct' : s.inv ? 'Invitation sent' : 'Not invited'],
+        ['verified_user', 'Identity verified', X.verified ? 'done' : 'todo', X.verified ? 'Photo ID · 13 Oct' : 'Not yet'],
+        ['key', 'Access granted', shared.length ? 'done' : 'todo', shared.length ? shared.length + (shared.length === 1 ? ' record' : ' records') : 'Nothing shared']];
+      per = { n: X.n, ini: X.ini, roles: X.roles,
+        steps: steps.map(([icon, t, k, m], i) => ({ icon, t, m, c: SI[k][0], fill: SI[k][1], bt: bt(i) })),
+        canRevoke: shared.length > 0, btnCols: shared.length ? 'repeat(2,minmax(0,1fr))' : '1fr',
+        pIcon: !s.inv ? 'send' : 'key', pLabel: !s.inv ? 'Send invitation' : shared.length ? 'Edit access' : 'Give access',
+        primary: !s.inv ? sendInv(X.id) : openGive(X.id), revoke: () => this.setState({ confirm: X.id }),
+        sees: shared.map((n, i) => { const r = recs.find(q => q.n === n) || {}; return { n, c: r.cat || '', icon: r.icon || 'description', go: openRec(n), bt: bt(i) }; }), seesNone: !shared.length,
+        kv: [['Email', X.email], ['Phone', X.phone], ['Roles', X.roles.split(' · ').slice(1).join(', ') || X.roles]].map(([k, v], i) => ({ k, v, bt: bt(i) })) };
+    }
+
+    const kpis = [['4', 'Records', this.tab('settings')], ['3', 'People', this.tab('people')], [String(acts.length), 'Actions', this.tab('actions')]]
+      .map(([v, l, go], i) => ({ v, l, go: i === 0 ? openCat('Finances') : go, span: narrow && i === 2 ? 'span 2' : 'auto' }));
+    const cnt = (c) => (c.secs || []).reduce((a, s) => a + ((s.recs || []).length), 0);
+    const home = { total: '£652,590.00', goFin: openCat('Finances'), kpiCols: narrow ? 'repeat(2,minmax(0,1fr))' : 'repeat(3,minmax(0,1fr))', kpis,
+      vaultCols: narrow ? 'minmax(0,1fr)' : 'repeat(2,minmax(0,1fr))',
+      vault: this.CATS.map(c => { const k = cnt(c); return { n: c.id, icon: c.icon, m: k ? k + (k === 1 ? ' record' : ' records') : 'Nothing yet', mc: k ? '#6b5f5a' : '#9a8f8a', go: openCat(c.id) }; }),
+      next: acts.slice(0, 2), allActs: this.tab('actions') };
+
+    const tabs = [['home', 'home', 'Home'], ['actions', 'task_alt', 'Actions'], ['people', 'group', 'People'], ['settings', 'settings', 'Settings']].map(([id, icon, l]) => {
+      const on = st.scr === id || (id === 'home' && (is.cat || is.rec)) || (id === 'people' && is.person);
+      return { icon, l, go: this.tab(id), fill: on ? 1 : 0, w: on ? 600 : 500, c: on ? '#2b1714' : '#6b5f5a', badge: id === 'actions' ? acts.length : 0 }; });
+
+    const sets = [['Account', [['person', 'Profile', 'Ivan Yardley'], ['mail', 'Email', 'ivanyardley@me.com']]], ['Security', [['shield_lock', 'Two-step verification', 'On'], ['password', 'Password', 'Changed 2 Sep'], ['devices', 'Signed-in devices', '2']]],
+      ['Notifications', [['notifications', 'Email alerts', 'On']]], ['', [['logout', 'Sign out', '', 1]]]]
+      .map(([l, items]) => ({ l, items: items.map(([icon, il, v, danger], i) => ({ icon, l: il, v, bt: bt(i), chev: !danger, c: danger ? '#b3261e' : '#1f1715', ic: danger ? '#b3261e' : '#6e3a28', go: () => this.toast(danger ? 'Prototype: signs you out' : 'Prototype: opens ' + il) })) }));
+
+    const dr = { open: st.drawer, w: Math.min(320, IWn - 56) + 'px', add: () => { this.setState({ drawer: false }); openForm('Banks', 'Finances')(); }, help: () => { this.setState({ drawer: false }); this.toast('Prototype: opens Help & support'); },
+      cats: this.CATS.map((c, i) => ({ n: c.id, icon: c.icon, count: cnt(c) || '', bt: bt(i), go: () => this.setState(s => ({ drawer: false, scr: 'cat', cat: c.id, stack: [{ scr: 'home' }], rec: null, person: null })) })) };
+    const nav = (h) => () => { try { window.location.href = h; } catch (e) {} };
+    const ws = { open: st.ws, groups: [
+      { l: 'Personal', items: [{ icon: 'apps', bg: '#111', fg: '#fff', t: 'My Vault', s: 'Ivan Yardley', on: true, go: () => this.setState({ ws: false }) }] },
+      { l: 'Linked to you', items: [{ icon: 'person', bg: '#f3e6df', fg: '#6e3a28', t: 'Margaret Yardley’s Fortress', s: 'You’re her executor · 2 records shared', on: false, go: () => { this.setState({ ws: false }); this.toast('Prototype: opens Margaret’s Fortress with a context banner'); } }] },
+      { l: 'Work', items: [{ icon: 'domain', bg: '#e3eeec', fg: '#1f5a55', t: 'Hale & Co Solicitors', s: 'Partner portal', on: false, go: nav('Admin and Partner Mobile.dc.html#3b') }] },
+      { l: 'Legacy Fortress staff', items: [{ icon: 'admin_panel_settings', bg: '#1f1715', fg: '#fff', t: 'Platform Admin', s: 'Separate sign-in', on: false, go: nav('Admin and Partner Mobile.dc.html#1a') }] },
+    ].map(g => ({ ...g, items: g.items.map((x, i) => ({ ...x, bt: bt(i) })) })) };
+
+    let gv = { open: false };
+    if (st.give) {
+      const X = this.PEOPLE.find(x => x.id === st.give); const first = X.n.split(' ')[0]; const d = st.draft;
+      const tog = (n) => () => this.setState(s => ({ draft: s.draft.includes(n) ? s.draft.filter(x => x !== n) : [...s.draft, n] }));
+      gv = { open: true, title: 'Give ' + first + ' access', sel: d.length + (d.length === 1 ? ' record selected' : ' records selected'),
+        intro: 'Tick the records ' + first + ' can see. Records you add later stay private unless you come back here.' + (X.verified ? '' : ' ' + first + ' will only see them after verifying her identity.'),
+        cancel: () => this.setState({ give: null }),
+        save: () => { const prev = [...(st.share[X.id] || [])]; this.setState(s => ({ share: { ...s.share, [X.id]: [...s.draft] }, give: null, declined: X.id === 'mary' ? true : s.declined })); this.toast('Saved. ' + first + ' can now see ' + d.length + (d.length === 1 ? ' record' : ' records'), () => this.setState(s => ({ share: { ...s.share, [X.id]: prev } }))); },
+        cats: this.CATS.map((c, i) => { const rs = (c.secs || []).flatMap(s => (s.recs || []).map(r => r[0])); const k = rs.filter(r => d.includes(r)).length; const open = !!st.gOpen[c.id] && rs.length > 0;
+          const all = rs.length && k === rs.length, some = k > 0 && !all;
+          return { n: c.id, icon: c.icon, bt: bt(i), count: rs.length ? k + ' of ' + rs.length : 'No records', disabled: !rs.length, allLabel: 'Select all ' + rs.length + ' current ' + c.id + ' records',
+            box: all ? 'check_box' : some ? 'indeterminate_check_box' : 'check_box_outline_blank', boxFill: k ? 1 : 0, boxC: rs.length ? (k ? '#2b1714' : '#9a8f8a') : '#d9cfc8',
+            toggleAll: () => rs.length && this.setState(s => ({ draft: all ? s.draft.filter(x => !rs.includes(x)) : [...new Set([...s.draft, ...rs])] })),
+            open, chev: rs.length ? (open ? 'expand_less' : 'expand_more') : '', expand: () => rs.length && this.setState(s => ({ gOpen: { ...s.gOpen, [c.id]: !s.gOpen[c.id] } })),
+            recs: rs.map(r => { const on = d.includes(r); return { n: r, toggle: tog(r), box: on ? 'check_box' : 'check_box_outline_blank', fill: on ? 1 : 0, c: on ? '#2b1714' : '#9a8f8a' }; }) }; }) };
+    }
+    let cf = { open: false };
+    if (st.confirm) { const X = this.PEOPLE.find(x => x.id === st.confirm); const first = X.n.split(' ')[0]; const prev = [...(st.share[X.id] || [])];
+      cf = { open: true, title: 'Revoke ' + first + '’s access?', text: first + ' loses access to ' + prev.length + ' records straight away. ' + first + ' stays in your People list and stays verified, so you can share again later.',
+        go: () => { this.setState(s => ({ share: { ...s.share, [X.id]: [] }, confirm: null })); this.toast('Access revoked for ' + first, () => this.setState(s => ({ share: { ...s.share, [X.id]: prev } }))); } }; }
+
+    const showTabs = !is.form;
+    const tst = { has: !!st.toast, text: st.toast ? st.toast.text : '', hasUndo: !!(st.toast && st.toast.undo), undo: () => { const u = st.toast && st.toast.undo; this.setState({ toast: null }); if (u) u(); }, b: is.form ? '100px' : '96px' };
+    return {
+      pad: p.embedded ? '0' : '32px 16px', minH: p.embedded ? '0' : '100vh', FW: (W + 20) + 'px', FH: (H + 20) + 'px', Z, IW: IWn + 'px', IH: (H / Z) + 'px', op: st.ready ? 1 : 0, topBg: root || is.cat || is.rec || is.person || is.form ? '#fff' : '#fff',
+      hdr, page, is, home, cat, rec, form, pp, per, acts, noActs: !acts.length, sets, tabs, showTabs, dr, ws, gv, cf, tst,
+      back: this.back, openDrawer: () => this.setState({ drawer: true, ws: false }), openWs: () => this.setState({ ws: true, drawer: false }), closeAll: () => this.setState({ drawer: false, ws: false, confirm: null }),
+      goSearch: () => this.toast('Prototype: opens full-screen search'), goBell: () => this.toast('Prototype: opens notifications'),
+    };
+  }
+}
+</script>
+</body>
+</html>
