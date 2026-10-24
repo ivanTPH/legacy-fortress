@@ -8272,6 +8272,8 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-v52-record-filters summary:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 2px; }
 .lf-v52-record-filters > div { display: flex; flex-wrap: wrap; gap: 12px; padding: 8px 0; }
 .lf-v52-record-filters > div > label { flex: 1 1 180px; max-width: 280px; }
+.lf-v52-record-clear { justify-self: start; grid-column: 1 / -1; min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--lf-link); font: inherit; cursor: pointer; }
+.lf-v52-record-clear:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 2px; }
 .lf-v52-record-list { display: grid; gap: 8px; min-width: 0; }
 .lf-v52-record-list-head { display: none; }
 .lf-v52-record-summary {
@@ -8309,6 +8311,40 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
   .lf-v52-record-detail-grid.has-people > .lf-linked-contact-panel-list { grid-column: 2; grid-row: 1 / span 3; min-width: 0; }
 }
 .lf-v52-record-entry .lf-v52-record-summary-date { display: none; }
+.lf-v52-category-heading { display: grid; gap: 8px; min-width: 0; color: var(--lf-text); }
+.lf-v52-category-heading p { margin: 0; color: var(--lf-text-secondary); font-size: 14px; }
+.lf-v52-category-heading .lf-v52-category-description { font-size: 13px; }
+.lf-v52-category-title-row, .lf-v52-record-page-nav, .lf-v52-record-documents-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+.lf-v52-category-title-row h1, .lf-v52-record-page-heading h1 { margin: 0; color: var(--lf-text); font-size: clamp(24px, 4vw, 34px); line-height: 1.15; overflow-wrap: anywhere; }
+.lf-v52-category-add, .lf-v52-record-page-edit { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 8px 14px; border: 1px solid var(--lf-border-control); border-radius: 24px; background: var(--lf-primary-bg); color: var(--lf-primary-text); font: inherit; font-weight: 600; cursor: pointer; }
+.lf-v52-record-page-edit { background: var(--lf-surface-card); color: var(--lf-text); }
+.lf-v52-category-add:focus-visible, .lf-v52-record-page-edit:focus-visible, .lf-v52-record-page-back:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 2px; }
+.lf-v52-record-page-back { display: inline-flex; align-items: center; min-height: 44px; color: var(--lf-link); text-decoration: none; }
+.lf-v52-category-list-shell { display: grid; gap: 12px; min-width: 0; }
+.lf-v52-category-list-shell > p { margin: 0; color: var(--lf-text-secondary); font-size: 13px; }
+.lf-v52-category-list-shell .lf-v52-record-toolbar { margin: 0; }
+.lf-v52-record-list { gap: 0; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); overflow: hidden; background: var(--lf-surface-card); }
+.lf-v52-record-list .lf-v52-record-entry { border: 0 !important; border-radius: 0 !important; border-bottom: 1px solid var(--lf-divider) !important; box-shadow: none !important; }
+.lf-v52-record-list .lf-v52-record-entry:last-child { border-bottom: 0 !important; }
+.lf-v52-record-page { display: grid; gap: 16px; min-width: 0; color: var(--lf-text); }
+.lf-v52-record-page-heading { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.lf-v52-record-page-heading > div:last-child { min-width: 0; }
+.lf-v52-record-page-heading p { margin: 4px 0 0; color: var(--lf-text-secondary); font-size: 13px; }
+.lf-v52-detail-view { border: 0 !important; background: transparent !important; }
+.lf-v52-detail-view > .lf-v52-record-summary { display: none; }
+.lf-v52-detail-view .lf-v52-record-expanded { padding: 0; border: 0; }
+.lf-v52-detail-view .lf-v52-record-detail-grid { border: 0 !important; padding: 0 !important; background: transparent !important; }
+.lf-v52-detail-view .lf-v52-record-detail-grid > div:not(.lf-linked-contact-panel-list):not(.lf-v52-record-documents) { padding: 16px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); }
+.lf-v52-detail-view .lf-v52-record-duplicate-title { display: none !important; }
+.lf-v52-record-documents { display: grid; gap: 8px; padding: 16px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); }
+.lf-v52-record-documents h2 { margin: 0; font-size: 17px; }
+.lf-v52-record-documents .lf-v4-add-document { width: auto; min-width: 44px; min-height: 44px; height: auto; gap: 6px; padding: 8px 12px; }
+.lf-v52-record-documents .lf-v4-add-document > .lf-v4-add-label { position: static; display: inline; width: auto; height: auto; overflow: visible; clip-path: none; white-space: normal; }
+.lf-v52-record-more-actions { border-top: 1px solid var(--lf-divider); padding-block: 8px 24px; }
+.lf-v52-record-more-actions summary { display: flex; align-items: center; min-height: 44px; color: var(--lf-link); cursor: pointer; }
+.lf-v52-record-more-actions > a, .lf-v52-record-more-actions > button { display: flex; align-items: center; min-height: 44px; color: var(--lf-link); background: none; border: 0; font: inherit; text-decoration: none; cursor: pointer; }
+.lf-v52-record-more-actions .lf-v52-record-delete { color: var(--lf-destructive); }
+@media (max-width: 390px) { .lf-v52-record-summary { grid-template-columns: 40px minmax(0, 1fr) 20px; } .lf-v52-record-summary-value { grid-column: 2; text-align: start; } }
 @media (min-width: 768px) {
   .lf-v52-record-list-head { display: grid; grid-template-columns: 44px minmax(0, 2fr) minmax(110px, 1fr) minmax(110px, 1fr) 20px; gap: 12px; padding: 0 14px; color: var(--lf-text-secondary); font-size: 13px; font-weight: 600; }
   .lf-v52-record-list-head > span:nth-last-child(2) { text-align: end; }
@@ -8332,4 +8368,16 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 }
 @media (prefers-reduced-motion: reduce) {
   .lf-v52-record-summary > .lf-icon { transition: none; }
+}
+.lf-v52-legal-page .lf-v3-area-empty > div { display: grid; grid-template-columns: 1fr; gap: 0; overflow: hidden; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); }
+.lf-v52-legal-page .lf-v3-page-header h1 { position: static; width: auto; height: auto; padding: 0; margin: 0; overflow: visible; clip: auto; white-space: normal; border: 0; }
+.lf-v52-legal-page .lf-v3-area-empty-tile { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 14px; border: 0; border-bottom: 1px solid var(--lf-divider); border-radius: 0; }
+.lf-v52-legal-page .lf-v3-area-empty-tile:last-child { border-bottom: 0; }
+.lf-v52-legal-page .lf-v3-area-empty-tile small { display: none; }
+.lf-v52-legal-page .lf-v3-area-empty-tile > span:last-child { position: static; display: grid; place-items: center; margin-left: auto; min-width: 44px; min-height: 44px; }
+.lf-v52-record-closed summary { display: flex; align-items: center; min-height: 44px; color: var(--lf-link); cursor: pointer; }
+@media (max-width: 390px) {
+  .lf-v52-record-list .lf-v52-record-summary { grid-template-columns: 40px minmax(0, 1fr) 20px; }
+  .lf-v52-record-list .lf-v52-record-summary-value { grid-column: 2; grid-row: 2; text-align: start; }
+  .lf-v52-record-list .lf-v52-record-summary > .lf-icon { grid-column: 3; grid-row: 1 / 3; }
 }

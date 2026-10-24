@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Fragment, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   optionLabel,
   personalPossessionCategories,
@@ -12,10 +12,9 @@ import {
 import MaskedField, { maskAllButLast } from "../ui/MaskedField";
 import ConfigDrivenAssetFields from "../forms/asset/ConfigDrivenAssetFields";
 import { FormField, GroupedAssetFormContext, NumberInput, RequiredIndicator, SelectInput, TextAreaInput, TextInput } from "../forms/asset/AssetFormControls";
-import { ActionIconButton } from "../ui/IconButton";
 import Icon from "../ui/Icon";
 import InfoTip from "../ui/InfoTip";
-import { AddDocumentControl, LFPageHeader } from "../ui/LFDesignSystem";
+import { AddDocumentControl } from "../ui/LFDesignSystem";
 import AttachmentGallery, { AttachmentGallerySummary } from "../documents/AttachmentGallery";
 import { waitForActiveUser } from "../../lib/auth/session";
 import { formatCurrency } from "../../lib/currency";
@@ -815,6 +814,7 @@ export default function UniversalRecordWorkspace({
   recordFilter,
 }: WorkspaceProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { viewer } = useViewerAccess();
   const [loading, setLoading] = useState(true);
@@ -830,7 +830,6 @@ export default function UniversalRecordWorkspace({
   const [taskRelationOptions, setTaskRelationOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [taskExecutorOptions, setTaskExecutorOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [taskBeneficiaryOptions, setTaskBeneficiaryOptions] = useState<Array<{ value: string; label: string }>>([]);
-  const [openRecordId, setOpenRecordId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
   const [archivingFor, setArchivingFor] = useState<string | null>(null);
@@ -932,6 +931,7 @@ export default function UniversalRecordWorkspace({
     || searchParams.get("record")
     || "",
   ).trim();
+  const recordHref = (recordId: string) => `${pathname}?${usesCanonicalAssetReadPath ? "asset" : "record"}=${encodeURIComponent(recordId)}`;
   const hasStagedExtractionInput = Boolean(pendingDocumentFiles.length || pendingPhotoFile);
   const showInlineDocumentUpload =
     formVisible &&
@@ -1205,17 +1205,18 @@ export default function UniversalRecordWorkspace({
     });
     return items;
   }, [categoryFilter, isPossessions, recordStatusFilter, records, search, sortBy]);
+  const selectedRecord = selectedWorkspaceRecordId ? records.find((row) => row.id === selectedWorkspaceRecordId) ?? null : null;
 
   const activeRecords = filteredRecords.filter((row) => row.status === "active");
   const archivedRecords = filteredRecords.filter((row) => row.status === "archived");
   const hasAnyRecords = records.length > 0;
   const hasDiscoveryFilters = Boolean(search.trim()) || recordStatusFilter !== "all" || (isPossessions && categoryFilter !== "all");
-  const recordProgressText = hasAnyRecords
-    ? `${activeRecords.length} active record${activeRecords.length === 1 ? "" : "s"} saved`
-    : "0 records saved";
+  const recordProgressText = `${filteredRecords.length} matching record${filteredRecords.length === 1 ? "" : "s"}`;
+  const categoryParentHref = sectionKey === "finances" ? "/finances" : sectionKey === "legal" ? "/legal" : sectionKey === "personal" ? "/personal" : "/dashboard";
+  const categoryActiveCount = records.filter((row) => row.status === "active").length;
   const createFormRegionId = `${sectionId ?? `${sectionKey}-${categoryKey}`}-create-record-form`;
   const isCreatingRecord = formVisible && !editingId;
-  const shouldShowExistingRecords = !loading && (hasAnyRecords || isTrustsWorkspace || canCreateRecords) && !isCreatingRecord;
+  const shouldShowExistingRecords = !loading && !isCreatingRecord;
 
   useEffect(() => {
     let cancelled = false;
@@ -1247,10 +1248,6 @@ export default function UniversalRecordWorkspace({
     };
   }, [attachments]);
 
-  useEffect(() => {
-    if (!selectedWorkspaceRecordId) return;
-    setOpenRecordId(selectedWorkspaceRecordId);
-  }, [selectedWorkspaceRecordId]);
 
   useEffect(() => {
     if (!formVisible || !shouldFocusFormOnOpenRef.current) return;
@@ -2916,7 +2913,7 @@ export default function UniversalRecordWorkspace({
       setStatus(`Record deleted, but contact link cleanup failed: ${message}`);
     }
     setStatus("Record deleted.");
-    setOpenRecordId((prev) => (prev === recordId ? null : prev));
+    if (selectedWorkspaceRecordId === recordId) router.replace(pathname);
     if (editingId === recordId) cancelForm();
     await reloadWorkspace(router, sectionKey, categoryKey, setRecords, setAttachments, setContacts, setStatus, {
       targetOwnerUserId: viewer.targetOwnerUserId,
@@ -3177,7 +3174,7 @@ export default function UniversalRecordWorkspace({
     }
   }
 
-  const renderRow = (row: UniversalRecordRow) => {
+  const renderRow = (row: UniversalRecordRow, detailMode = false) => {
     const canonicalBankAsset =
       isBankCategory
         ? normalizeBankAssetRow({
@@ -3278,7 +3275,7 @@ export default function UniversalRecordWorkspace({
 
     const rowContacts = contacts.filter((item) => item.record_id === row.id);
     const primaryContact = rowContacts[0] ?? null;
-    const isOpen = openRecordId === row.id;
+    const isOpen = detailMode;
     const categoryKeyFromRow = String(row.metadata?.category ?? "");
     const categoryLabel =
       isPossessions && categoryKeyFromRow
@@ -3434,14 +3431,13 @@ export default function UniversalRecordWorkspace({
             ? canonicalDigitalAsset?.digital_asset_type || "Digital record"
             : categoryLabel || title;
     const showListValue = viewer.mode !== "linked" && !isNarrativeDocumentWorkspace && !isTrustedContacts && row.value_minor != null;
+    const valueAsOf = canonicalBankAsset?.valuation_date || canonicalPropertyAsset?.valuation_date || canonicalBusinessAsset?.valuation_date || canonicalDigitalAsset?.valuation_date || String(row.metadata?.valuation_date ?? "");
     return (
-      <article key={row.id} style={selectedWorkspaceRecordId === row.id ? selectedRecordCardStyle : recordCardStyle} className={`lf-record-card lf-v52-record-entry${isOpen ? " is-open" : ""}`} data-record-id={row.id}>
+      <article key={row.id} className={`lf-record-card lf-v52-record-entry${detailMode ? " is-open lf-v52-detail-view" : ""}${detailMode && isFinanceSection ? " lf-v52-finance-detail" : ""}`} data-record-id={row.id}>
         <button
           type="button"
           className="lf-v52-record-summary"
-          aria-expanded={isOpen}
-          aria-controls={`record-detail-${row.id}`}
-          onClick={() => setOpenRecordId((current) => current === row.id ? null : row.id)}
+          onClick={() => router.push(recordHref(row.id))}
         >
           <ProviderBadge
             provider={provider}
@@ -3458,7 +3454,7 @@ export default function UniversalRecordWorkspace({
           <Icon name="chevron_right" size={20} />
         </button>
         {isOpen ? <div id={`record-detail-${row.id}`} className="lf-v52-record-expanded">
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 16, alignItems: "flex-start" }}>
+        {!detailMode ? <div className="lf-v52-record-expanded-intro" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 16, alignItems: "flex-start" }}>
           <div style={{ display: "flex", gap: 14, alignItems: "flex-start", minWidth: 0 }}>
             {previewUrl && !thumbFailed ? (
               <div style={thumbWrapStyle}>
@@ -3482,7 +3478,7 @@ export default function UniversalRecordWorkspace({
               />
             )}
             <div style={{ display: "grid", gap: 5, minWidth: 0 }}>
-              <div style={{ fontWeight: 800, color: "#111827", lineHeight: 1.25, fontSize: 15 }}>
+              <div className="lf-v52-record-duplicate-title" style={{ fontWeight: 800, color: "#111827", lineHeight: 1.25, fontSize: 15 }}>
                 {primaryRecordTitle}
               </div>
               {isTrustedContacts ? (
@@ -3671,33 +3667,7 @@ export default function UniversalRecordWorkspace({
           <span style={row.status === "archived" ? archivedPillStyle : activePillStyle}>
             {row.status === "archived" ? "Archived" : "Active"}
           </span>
-        </div>
-
-        <div style={recordActionsStyle} className="lf-record-card-actions">
-          {canEditWorkspaceRow(row.id) ? <ActionIconButton action="edit" label="Edit record" onClick={() => startEdit(row)} /> : null}
-          {canEditWorkspaceRow(row.id) ? <AddDocumentControl accept={DOCUMENT_UPLOAD_ACCEPT} disabled={uploadingFor === row.id} onFilesSelected={(files) => files.forEach((file) => void uploadAttachment(row.id, file, "document"))} multiple /> : null}
-          {viewer.mode !== "linked" && !isWillsWorkspace && canEditWorkspaceRow(row.id) ? <Link href={`/access-sharing?asset=${encodeURIComponent(row.id)}`} className="lf-icon-only-link" aria-label={`Manage people with access to ${row.title || "this record"}`}><Icon name="people" size={16} /></Link> : null}
-          {isPossessions || usesCanonicalAssets ? (
-            <ActionIconButton
-              action="attachments"
-              label={isOpen ? "Hide documents" : attachmentGalleryItems.length > 0 ? `Open document${attachmentGalleryItems.length === 1 ? "" : "s"}` : "Documents"}
-              onClick={() => setOpenRecordId((prev) => (prev === row.id ? null : row.id))}
-            />
-          ) : null}
-          {viewer.mode !== "linked" ? <ActionIconButton action="delete" label="Delete record" onClick={() => void deleteRecord(row.id)} /> : null}
-          {!isPossessions && !isTrustedContacts && !usesCanonicalAssets && !isFinanceSection ? (
-            <>
-              <button type="button" style={ghostBtn} onClick={() => setOpenRecordId((prev) => (prev === row.id ? null : row.id))}>
-                {isOpen ? "Hide" : "View"}
-              </button>
-              {viewer.mode !== "linked" && row.status !== "archived" ? (
-                <button type="button" style={ghostBtn} disabled={archivingFor === row.id} onClick={() => void archiveRecord(row.id)}>
-                  {archivingFor === row.id ? "Archiving..." : "Archive"}
-                </button>
-              ) : null}
-            </>
-          ) : null}
-        </div>
+        </div> : null}
 
         {isOpen ? (
           <div style={detailsPanelStyle} className={`lf-v52-record-detail-grid${linkedContactsTable ? " has-people" : ""}`}>
@@ -3705,20 +3675,18 @@ export default function UniversalRecordWorkspace({
               <section className="lf-v52-record-value" aria-label="Record value">
                 <div><strong>Value</strong><span>Owner-recorded estimate</span></div>
                 <p>{formatCurrency(canonicalBankAsset?.current_balance ?? canonicalPropertyAsset?.estimated_value_major ?? canonicalBusinessAsset?.estimated_value_major ?? canonicalDigitalAsset?.estimated_value_major ?? toMajorUnits(row.value_minor), (row.currency_code ?? "GBP").toUpperCase())}</p>
-                <div><span>As of {canonicalBankAsset?.valuation_date || canonicalPropertyAsset?.valuation_date || canonicalBusinessAsset?.valuation_date || canonicalDigitalAsset?.valuation_date || String(row.metadata?.valuation_date ?? "") || "date not recorded"}</span>
-                  {canEditWorkspaceRow(row.id) ? <button type="button" onClick={() => startEdit(row)}>Update value</button> : null}
-                </div>
+                <div><span>{valueAsOf ? `As of ${formatDate(valueAsOf)}` : "As of date not recorded"}</span></div>
               </section>
             ) : null}
             {isPossessions ? (
-              <div style={{ color: "#475569", fontSize: 13, display: "grid", gap: 2 }}>
+              <div style={{ color: "var(--lf-text-secondary)", fontSize: 13, display: "grid", gap: 2 }}>
                 <div>Description: {String(row.metadata?.description ?? "No description")}</div>
                 <div>Acquired: {String(row.metadata?.acquired_date ?? "Not set")}</div>
                 <div>Reference / serial: {String(row.metadata?.serial_number ?? "Not set")}</div>
                 <div>Location: {String(row.metadata?.location ?? "Not set")}</div>
               </div>
             ) : isCanonicalDigital ? (
-              <div style={{ color: "#475569", fontSize: 13, display: "grid", gap: 2 }}>
+              <div style={{ color: "var(--lf-text-secondary)", fontSize: 13, display: "grid", gap: 2 }}>
                 <div>Asset type: {canonicalDigitalAsset?.digital_asset_type || "Not set"}</div>
                 <div>Platform / provider: {canonicalDigitalAsset?.platform_provider || "Not set"}</div>
                 <div>Jurisdiction: {canonicalDigitalAsset?.jurisdiction || "Not set"}</div>
@@ -3731,7 +3699,7 @@ export default function UniversalRecordWorkspace({
                 <div>Notes: {canonicalDigitalAsset?.notes || "No additional notes."}</div>
               </div>
             ) : isCanonicalBeneficiary ? (
-              <div style={{ color: "#475569", fontSize: 13, display: "grid", gap: 2 }}>
+              <div style={{ color: "var(--lf-text-secondary)", fontSize: 13, display: "grid", gap: 2 }}>
                 <div>Relationship: {canonicalBeneficiaryAsset?.relationship_to_user || "Not set"}</div>
                 <div>Beneficiary type: {canonicalBeneficiaryAsset?.beneficiary_type || "Not set"}</div>
                 <div>Status: {canonicalBeneficiaryAsset?.beneficiary_status || "Not set"}</div>
@@ -3750,7 +3718,7 @@ export default function UniversalRecordWorkspace({
                 <div>Notes: {canonicalBeneficiaryAsset?.notes || "No additional notes."}</div>
               </div>
             ) : isCanonicalExecutor ? (
-              <div style={{ color: "#475569", fontSize: 13, display: "grid", gap: 2 }}>
+              <div style={{ color: "var(--lf-text-secondary)", fontSize: 13, display: "grid", gap: 2 }}>
                 <div>Role / type: {canonicalExecutorAsset?.executor_type || "Not set"}</div>
                 <div>Relationship: {primaryContact?.relationship || canonicalExecutorAsset?.relationship_to_user || "Not set"}</div>
                 <div>Authority level: {canonicalExecutorAsset?.authority_level || "Not set"}</div>
@@ -3774,7 +3742,7 @@ export default function UniversalRecordWorkspace({
                 <div>Notes: {canonicalExecutorAsset?.notes || "No additional notes."}</div>
               </div>
             ) : isCanonicalTask ? (
-              <div style={{ color: "#475569", fontSize: 13, display: "grid", gap: 2 }}>
+              <div style={{ color: "var(--lf-text-secondary)", fontSize: 13, display: "grid", gap: 2 }}>
                 <div>Description: {canonicalTaskAsset?.description || "No description."}</div>
                 <div>Related asset / record: {canonicalTaskAsset?.related_asset_label || "Not set"}</div>
                 <div>Assigned executor: {canonicalTaskAsset?.assigned_executor_label || "Not set"}</div>
@@ -3787,7 +3755,7 @@ export default function UniversalRecordWorkspace({
                 <div>Notes: {canonicalTaskAsset?.notes || "No additional notes."}</div>
               </div>
             ) : isCanonicalBusiness ? (
-              <div style={{ color: "#475569", fontSize: 13, display: "grid", gap: 2 }}>
+              <div style={{ color: "var(--lf-text-secondary)", fontSize: 13, display: "grid", gap: 2 }}>
                 <div>Business type: {canonicalBusinessAsset?.business_type || "Not set"}</div>
                 <div>Jurisdiction: {canonicalBusinessAsset?.jurisdiction || "Not set"}</div>
                 <div>Ownership: {canonicalBusinessAsset?.ownership_percentage ? `${canonicalBusinessAsset.ownership_percentage}%` : "Not set"}</div>
@@ -3800,7 +3768,7 @@ export default function UniversalRecordWorkspace({
                 <div>Notes: {canonicalBusinessAsset?.notes || "No additional notes."}</div>
               </div>
             ) : isCanonicalProperty ? (
-              <div style={{ color: "#475569", fontSize: 13, display: "grid", gap: 2 }}>
+              <div style={{ color: "var(--lf-text-secondary)", fontSize: 13, display: "grid", gap: 2 }}>
                 <div>Property type: {canonicalPropertyAsset?.property_type || "Not set"}</div>
                 <div>Ownership type: {canonicalPropertyAsset?.ownership_type || "Not set"}</div>
                 <div>Address: {canonicalPropertyAsset?.property_address || "Not set"}</div>
@@ -3820,25 +3788,14 @@ export default function UniversalRecordWorkspace({
                 <div>Notes: {canonicalPropertyAsset?.notes || "No additional notes."}</div>
               </div>
             ) : isFinanceSection ? (
-              <div style={{ color: "#475569", fontSize: 13, display: "grid", gap: 2 }}>
+              <div style={{ color: "var(--lf-text-secondary)", fontSize: 13, display: "grid", gap: 2 }}>
                 {categoryKey === "bank" ? (
                   <>
                     <div>Provider: {canonicalBankAsset?.provider_name || "Not set"}</div>
-                    <div>Provider key: {canonicalBankAsset?.provider_key || "Not set"}</div>
                     <div>Account type: {bankAccountTypeLabel || "Not set"}</div>
                     <div>Account holder: {canonicalBankAsset?.account_holder || "Not set"}</div>
                     <div>Country: {canonicalBankAsset?.country || "Not set"}</div>
                     <div>Currency: {canonicalBankAsset?.currency || "Not set"}</div>
-                    <div>
-                      Current balance:{" "}
-                      {canonicalBankAsset?.current_balance
-                        ? formatCurrency(
-                            canonicalBankAsset.current_balance,
-                            canonicalBankAsset.currency || (row.currency_code ?? "GBP").toUpperCase(),
-                          )
-                        : "Not set"}
-                    </div>
-                    <div>Valuation date: {canonicalBankAsset?.valuation_date || "Not set"}</div>
                     <div>
                       <MaskedField label="Account number" value={canonicalBankAsset?.account_number ?? ""} />
                     </div>
@@ -3862,7 +3819,7 @@ export default function UniversalRecordWorkspace({
                 <div>Notes: {categoryKey === "bank" ? canonicalBankAsset?.notes || "No additional notes." : String(row.metadata?.notes ?? "No additional notes.")}</div>
               </div>
             ) : isIdentityDocuments ? (
-              <div style={{ color: "#475569", fontSize: 13, display: "grid", gap: 2 }}>
+              <div style={{ color: "var(--lf-text-secondary)", fontSize: 13, display: "grid", gap: 2 }}>
                 <div>Document type: {String(row.metadata?.identity_document_type ?? "Not set")}</div>
                 <div>
                   <MaskedField label="Document number" value={String(row.metadata?.identity_document_number ?? "")} />
@@ -3873,15 +3830,18 @@ export default function UniversalRecordWorkspace({
                 <div>Notes: {String(row.metadata?.notes ?? "No additional notes.")}</div>
               </div>
             ) : (
-              <div style={{ color: "#475569", fontSize: 13 }}>
+              <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
+                {row.summary ? <p>{row.summary}</p> : null}
                 {(row.metadata?.notes as string | undefined) || "No additional notes."}
               </div>
             )}
 
-            <div style={{ display: "grid", gap: 6 }}>
-              <div style={{ fontSize: 13, fontWeight: 700 }}>Attachments & photos</div>
+            <div className="lf-v52-record-documents">
+              <div className="lf-v52-record-documents-heading"><h2>Documents</h2>
+                {canEditWorkspaceRow(row.id) ? <AddDocumentControl accept={DOCUMENT_UPLOAD_ACCEPT} disabled={uploadingFor === row.id} onFilesSelected={(files) => files.forEach((file) => void uploadAttachment(row.id, file, "document"))} multiple /> : null}
+              </div>
               {isFinanceSection || isPossessions || usesCanonicalAssets ? (
-                <div style={{ color: "#64748b", fontSize: 13 }}>
+                <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                   Parent asset: {getCanonicalAssetDocumentParentLabel({
                     assetTitle: canonicalBankAsset?.title || canonicalPropertyAsset?.title || canonicalBusinessAsset?.title || canonicalDigitalAsset?.title || row.title || "",
                     sectionKey,
@@ -3890,7 +3850,7 @@ export default function UniversalRecordWorkspace({
                 </div>
               ) : null}
               {rowAttachments.length === 0 ? (
-                <div style={{ color: "#64748b", fontSize: 13 }}>No files uploaded.</div>
+                <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>No files uploaded.</div>
               ) : (
                 <AttachmentGallery
                   items={attachmentGalleryItems}
@@ -3992,8 +3952,13 @@ export default function UniversalRecordWorkspace({
 
   return (
     <section id={sectionId} style={{ display: "grid", gap: 14 }}>
-      <div style={{ display: "grid", gap: 6 }}>
-        {showPageHeading ? <LFPageHeader title={title} description={displaySubtitle} /> : <p style={{ margin: 0, color: "#6b7280" }}>{displaySubtitle}</p>}
+      {!selectedWorkspaceRecordId ? <div className="lf-v52-category-heading">
+        <Link href={categoryParentHref} className="lf-v52-record-page-back"><Icon name="chevron_left" size={20} /> {sectionKey === "finances" ? "Finances" : sectionKey === "legal" ? "Legal" : sectionKey === "personal" ? "Personal" : "Home"}</Link>
+        <div className="lf-v52-category-title-row"><h1 ref={existingRecordsHeadingRef} tabIndex={-1}>{title.replace(/^Legal · /, "").replace(/^Finances · Bank accounts$/, "Banks").replace(/^Property · Assets$/, "Property")}</h1>
+          {canCreateRecords ? <button ref={addRecordButtonRef} type="button" className="lf-v52-category-add" onClick={startCreate} aria-label={addLabel} aria-expanded={isCreatingRecord} aria-controls={createFormRegionId}><Icon name="add" size={20} /> Add record</button> : null}
+        </div>
+        <p>{categoryActiveCount} record{categoryActiveCount === 1 ? "" : "s"}{viewer.mode !== "linked" && assetFormFamily !== "document" ? ` · ${formatCurrency(totals.active, "GBP")}` : ""}</p>
+        {displaySubtitle ? <p className="lf-v52-category-description">{displaySubtitle}</p> : null}
         {showPageHeading && helpMessage ? <InfoTip label={`Explain ${title}`} message={helpMessage} /> : null}
         {viewer.mode === "linked" ? (
           <div style={linkedPanelChipStyle}>
@@ -4001,21 +3966,16 @@ export default function UniversalRecordWorkspace({
             {viewer.readOnly ? "Read-only shared panel" : "Shared panel"}
           </div>
         ) : null}
-      </div>
+      </div> : null}
 
-      {isPossessions ? (
+      {!selectedWorkspaceRecordId && isPossessions ? (
         <div style={{ color: "#64748b", fontSize: 13 }}>
           Completion: {activeRecords.length} active · {archivedRecords.length} archived · {totals.missingValue} missing value
         </div>
       ) : null}
 
-      {!isTrustedContacts && assetFormFamily !== "document" ? (
-        <div style={{ color: "#64748b", fontSize: 13 }}>
-          Active value: {formatCurrency(totals.active, "GBP")} · Archived value: {formatCurrency(totals.archived, "GBP")}
-        </div>
-      ) : null}
 
-      {status ? <div style={{ color: "#475569", fontSize: 13 }}>{status}</div> : null}
+      {status ? <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{status}</div> : null}
       {savedConfirmation ? (
         <div className="lf-save-confirmation" role="status" aria-live="polite">
           <div className="lf-save-confirmation-card">
@@ -4145,28 +4105,31 @@ export default function UniversalRecordWorkspace({
         </aside>
       ) : null}
 
-      {shouldShowExistingRecords ? (
-      <section style={cardStyle}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          <div style={{ display: "grid", gap: 4 }}>
-            <h2 ref={existingRecordsHeadingRef} tabIndex={-1} style={{ margin: 0, fontSize: 17, outline: "none" }}>Existing records</h2>
-            <div style={progressCueStyle}>{recordProgressText}</div>
+      {selectedWorkspaceRecordId && !loading ? selectedRecord ? (
+        <section className="lf-v52-record-page" aria-label="Record detail">
+          <div className="lf-v52-record-page-nav">
+            <Link href={pathname} className="lf-v52-record-page-back"><Icon name="chevron_left" size={20} /> {title}</Link>
+            {canEditWorkspaceRow(selectedRecord.id) ? <button type="button" className="lf-v52-record-page-edit" onClick={() => startEdit(selectedRecord)}><Icon name="edit" size={18} /> Edit</button> : null}
           </div>
-          {canCreateRecords ? <button
-            ref={addRecordButtonRef}
-            type="button"
-            style={primaryBtn}
-            onClick={startCreate}
-            title={`Recommended next action: ${addLabel}`}
-            aria-expanded={isCreatingRecord}
-            aria-controls={createFormRegionId}
-          >
-            {addLabel}
-          </button> : null}
-        </div>
+          <div className="lf-v52-record-page-heading">
+            <ProviderBadge provider={findProviderByKey(selectedRecord.provider_key, catalog) ?? detectProvider(selectedRecord.provider_name ?? selectedRecord.title ?? "", catalog)} fallbackLabel={selectedRecord.provider_name ?? selectedRecord.title ?? "Record"} categoryKey={categoryKey} />
+            <div><h1>{selectedRecord.title || "Untitled record"}</h1><p>{selectedRecord.provider_name || title} · Updated {formatDate(selectedRecord.updated_at)}</p></div>
+          </div>
+          {renderRow(selectedRecord, true)}
+          {viewer.mode !== "linked" ? <details className="lf-v52-record-more-actions"><summary>More record actions</summary>
+            {!isWillsWorkspace && canEditWorkspaceRow(selectedRecord.id) ? <Link href={`/access-sharing?asset=${encodeURIComponent(selectedRecord.id)}`}>Manage record access</Link> : null}
+            {!isPossessions && !isTrustedContacts && !usesCanonicalAssets && !isFinanceSection && selectedRecord.status !== "archived" ? <button type="button" disabled={archivingFor === selectedRecord.id} onClick={() => void archiveRecord(selectedRecord.id)}>{archivingFor === selectedRecord.id ? "Archiving..." : "Archive record"}</button> : null}
+            <button type="button" className="lf-v52-record-delete" onClick={() => void deleteRecord(selectedRecord.id)}>Delete record</button>
+          </details> : null}
+        </section>
+      ) : <p role="alert">This record is unavailable or you do not have access. <Link href={pathname}>Back to {title}</Link></p> : null}
+
+      {!selectedWorkspaceRecordId && shouldShowExistingRecords ? (
+      <section className="lf-v52-category-list-shell">
+        {hasDiscoveryFilters ? <p role="status">{recordProgressText}</p> : null}
 
         {!isTrustedContacts ? (
-          <div className="lf-content-grid lf-v52-record-toolbar">
+          <div className="lf-v52-record-toolbar">
             <label style={fieldStyle}>
               <span style={labelStyle}>
                 <Icon name="search" size={16} />
@@ -4174,12 +4137,7 @@ export default function UniversalRecordWorkspace({
               </span>
               <input
                 style={inputStyle}
-                placeholder={getWorkspaceSearchPlaceholder({
-                  isPossessions,
-                  isCanonicalTask,
-                  isCanonicalBeneficiary,
-                  isCanonicalExecutor,
-                })}
+                placeholder="Search records"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
@@ -4220,6 +4178,7 @@ export default function UniversalRecordWorkspace({
                 ) : null}
               </div>
             </details>
+            {hasDiscoveryFilters ? <button type="button" className="lf-v52-record-clear" onClick={() => { setSearch(""); setRecordStatusFilter("all"); setCategoryFilter("all"); }}>Clear search and filters</button> : null}
           </div>
         ) : null}
 
@@ -4239,15 +4198,14 @@ export default function UniversalRecordWorkspace({
             ) : null}
           </div>
         ) : null}
-        {!loading && activeRecords.length > 0 ? <div className="lf-v52-record-list"><div className="lf-v52-record-list-head" aria-hidden="true"><span></span><span>Name and type</span><span>Updated</span><span>Value</span><span></span></div>{activeRecords.map(renderRow)}</div> : null}
+        {!loading && activeRecords.length > 0 ? <div className="lf-v52-record-list"><div className="lf-v52-record-list-head" aria-hidden="true"><span></span><span>Name and type</span><span>Updated</span><span>Value</span><span></span></div>{activeRecords.map((row) => renderRow(row))}</div> : null}
         </section>
       ) : null}
 
-      {archivedRecords.length > 0 ? (
-        <section style={cardStyle}>
-          <h2 style={{ margin: 0, fontSize: 17 }}>Archived records</h2>
-          <div style={{ display: "grid", gap: 10 }}>{archivedRecords.map(renderRow)}</div>
-        </section>
+      {!selectedWorkspaceRecordId && archivedRecords.length > 0 ? (
+        <details className="lf-v52-record-closed"><summary>Archived records ({archivedRecords.length})</summary>
+          <div className="lf-v52-record-list">{archivedRecords.map((row) => renderRow(row))}</div>
+        </details>
       ) : null}
 
       {formVisible ? (
@@ -5929,24 +5887,6 @@ function buildTaskRelatedAssetLabel(row: Record<string, unknown>) {
   return [title, sectionKey, categoryKey].filter(Boolean).join(" · ");
 }
 
-function getWorkspaceSearchPlaceholder({
-  isPossessions,
-  isCanonicalTask,
-  isCanonicalBeneficiary,
-  isCanonicalExecutor,
-}: {
-  isPossessions: boolean;
-  isCanonicalTask: boolean;
-  isCanonicalBeneficiary: boolean;
-  isCanonicalExecutor: boolean;
-}) {
-  if (isPossessions) return "Find by title, summary, or category...";
-  if (isCanonicalTask) return "Search title, linked asset, or assignee...";
-  if (isCanonicalBeneficiary) return "Search beneficiary name, type, or status...";
-  if (isCanonicalExecutor) return "Search executor name, role, or status...";
-  return "Search title, provider, or summary...";
-}
-
 function toSelectableValue(
   config: ReturnType<typeof getAssetCategoryFormConfig>,
   fieldKey: string,
@@ -7099,11 +7039,8 @@ async function requireUser(router: ReturnType<typeof useRouter>) {
 }
 
 function formatDate(value: string) {
-  try {
-    return new Date(value).toLocaleString();
-  } catch {
-    return value;
-  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Date not recorded" : new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(date);
 }
 
 const cardStyle: CSSProperties = {
@@ -7125,34 +7062,10 @@ const linkedPanelChipStyle: CSSProperties = {
   borderRadius: 999,
   border: "1px solid #cbd5e1",
   background: "#f8fafc",
-  color: "#475569",
+  color: "var(--lf-text-secondary)",
   padding: "4px 10px",
   fontSize: 12,
   fontWeight: 700,
-};
-
-const recordCardStyle: CSSProperties = {
-  border: "1px solid #e8e1dc",
-  borderRadius: 12,
-  background: "#fff",
-  padding: 20,
-  display: "grid",
-  gap: 16,
-  boxShadow: "0 1px 2px rgba(33, 17, 13, 0.025)",
-};
-
-const selectedRecordCardStyle: CSSProperties = {
-  ...recordCardStyle,
-  borderColor: "#3a2118",
-  boxShadow: "0 0 0 2px rgba(58, 33, 24, 0.1)",
-};
-
-const recordActionsStyle: CSSProperties = {
-  display: "flex",
-  flexWrap: "wrap",
-  gap: 10,
-  justifyContent: "flex-end",
-  alignItems: "center",
 };
 
 const detailsPanelStyle: CSSProperties = {
@@ -7200,18 +7113,12 @@ const documentInputModeStyle: CSSProperties = {
   lineHeight: 1.45,
 };
 
-const progressCueStyle: CSSProperties = {
-  color: "#64748b",
-  fontSize: 12,
-  fontWeight: 600,
-};
-
 const archivedPillStyle: CSSProperties = {
   ...activePillStyle,
   borderRadius: 999,
   border: "1px solid #d9dde3",
   background: "#e2e8f0",
-  color: "#475569",
+  color: "var(--lf-text-secondary)",
 };
 
 const thumbWrapStyle: CSSProperties = {

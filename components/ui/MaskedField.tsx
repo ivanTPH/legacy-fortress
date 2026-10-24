@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import IconButton from "./IconButton";
 
 type MaskedFieldProps = {
@@ -18,6 +18,11 @@ export default function MaskedField({
 }: MaskedFieldProps) {
   const [revealed, setRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!revealed) return;
+    const timeout = window.setTimeout(() => setRevealed(false), 30_000);
+    return () => window.clearTimeout(timeout);
+  }, [revealed]);
 
   const cleanValue = (value ?? "").trim();
   const displayValue = useMemo(() => {
@@ -26,14 +31,14 @@ export default function MaskedField({
   }, [cleanValue, revealed, placeholder, preserveLast]);
 
   return (
-    <span style={wrapStyle}>
-      {label ? <span>{label}: </span> : null}
-      <span style={valueStyle}>{displayValue}</span>
+    <span style={cleanValue ? wrapStyle : emptyWrapStyle}>
+      <span style={textStyle}>{label ? <span>{label}: </span> : null}<span style={valueStyle}>{displayValue}</span></span>
       {cleanValue ? (
         <>
           <IconButton
             icon={revealed ? "visibility" : "visibility_off"}
             label={revealed ? "Hide protected information" : "Reveal protected information"}
+            aria-pressed={revealed}
             onClick={() => setRevealed((prev) => !prev)}
             style={iconBtnStyle}
           />
@@ -65,11 +70,22 @@ export function maskAllButLast(value: string, preserveLast = 4) {
 }
 
 const wrapStyle: CSSProperties = {
-  display: "inline-flex",
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) 44px 44px",
   alignItems: "center",
-  gap: 10,
-  rowGap: 8,
-  flexWrap: "wrap",
+  gap: 8,
+  width: "100%",
+  minWidth: 0,
+};
+
+const emptyWrapStyle: CSSProperties = {
+  display: "block",
+  minWidth: 0,
+};
+
+const textStyle: CSSProperties = {
+  minWidth: 0,
+  overflowWrap: "anywhere",
 };
 
 const valueStyle: CSSProperties = {
@@ -77,8 +93,7 @@ const valueStyle: CSSProperties = {
 };
 
 const iconBtnStyle: CSSProperties = {
-  width: 36,
-  height: 36,
+  width: 44,
+  height: 44,
   borderRadius: 10,
-  marginInlineStart: 2,
 };

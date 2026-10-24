@@ -121,7 +121,7 @@ export default function LegalOverviewPage() {
   const latest = populated.flatMap((section) => section.records.map((row) => row.created_at)).filter((value): value is string => Boolean(value))
     .sort((a, b) => Date.parse(b) - Date.parse(a))[0];
 
-  return <section className="lf-v3-area-page">
+  return <section className="lf-v3-area-page lf-v52-legal-page">
     <PageHeader title="Legal" description="Keep wills, trusts, powers of attorney and other legal records easy to find." />
     {status ? <p role="alert">{status}</p> : null}
     {loading ? <p role="status">Loading legal records…</p> : null}
