@@ -3658,7 +3658,6 @@ export default function UniversalRecordWorkspace({
                     )}
                     Updated {formatDate(row.updated_at)}
                   </div>
-                  {legalLinkedContactDefinition ? linkedContactsTable : null}
                 </>
               )}
               {attachmentGalleryItems.length > 0 ? (
@@ -3701,7 +3700,7 @@ export default function UniversalRecordWorkspace({
         </div>
 
         {isOpen ? (
-          <div style={detailsPanelStyle}>
+          <div style={detailsPanelStyle} className={`lf-v52-record-detail-grid${linkedContactsTable ? " has-people" : ""}`}>
             {viewer.mode !== "linked" && (isFinanceSection || isCanonicalProperty || isCanonicalBusiness || isCanonicalDigital || isPossessions) ? (
               <section className="lf-v52-record-value" aria-label="Record value">
                 <div><strong>Value</strong><span>Owner-recorded estimate</span></div>
