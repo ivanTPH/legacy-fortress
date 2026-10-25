@@ -1563,7 +1563,7 @@ const legalSummary = useMemo(() => {
   }
 
   const v3Areas: VaultAreaSummary[] = ([
-    { title: "Finances", icon: "account_balance_wallet", href: "/finances", count: financeRecordCount, updatedAt: financialSummary.addedAt, visible: showFinancialCard },
+    { title: "Finances", icon: "account_balance_wallet", href: "/finances", count: financeRecordCount, value: financialSummary.valueText, updatedAt: financialSummary.addedAt, visible: showFinancialCard },
     { title: "Legal", icon: "gavel", href: "/legal", count: legalRecordCount, updatedAt: legalSummary.addedAt, visible: showLegalCard },
     { title: "Property", icon: "home", href: "/property", count: propertyRecordCount, updatedAt: propertySummary.addedAt, visible: showPropertyCard },
     { title: "Business", icon: "work", href: "/business", count: businessRecordCount, updatedAt: businessSummary.addedAt, visible: showBusinessCard },

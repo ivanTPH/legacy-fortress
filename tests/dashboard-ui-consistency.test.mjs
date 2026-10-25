@@ -11,6 +11,7 @@ const root = process.cwd();
 test("dashboard uses authorised Version 3 area summaries and keeps live actions", () => {
   const dashboardPage = fs.readFileSync(path.join(root, "app/(app)/dashboard/page.tsx"), "utf8");
   const v3Overview = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/V3DashboardOverview.tsx"), "utf8");
+  const sectionGrid = fs.readFileSync(path.join(root, "components/vault/VaultSectionGrid.tsx"), "utf8");
   const summaryCard = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/DashboardAssetSummaryCard.tsx"), "utf8");
   const actionSummary = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/DashboardActionSummary.tsx"), "utf8");
   const actionQueue = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/ActionQueuePanel.tsx"), "utf8");
@@ -45,7 +46,7 @@ test("dashboard uses authorised Version 3 area summaries and keeps live actions"
   assert.doesNotMatch(shellCss, /\.lf-nav-item\.is-active \{[^}]*linear-gradient/);
   assert.match(v3Overview, /aria-label="Vault areas"/);
   assert.doesNotMatch(v3Overview, /Your vault|Next steps|Action Centre/);
-  assert.match(v3Overview, /No records yet/);
+  assert.match(sectionGrid, /No records yet/);
   assert.doesNotMatch(dashboardPage, /showFullActionCentre/);
   assert.match(dashboardPage, /actionCentreNeedsYouCount/);
   assert.doesNotMatch(summaryCard, /icon=\{actionIcon\}/);
@@ -133,7 +134,8 @@ test("dashboard uses authorised Version 3 area summaries and keeps live actions"
   assert.match(dashboardPage, /type: "review_overdue"/);
   assert.match(dashboardPage, /const handleAction = useCallback\(\(actionKey: string, destination\?: string\)/);
   assert.match(dashboardPage, /deriveBlockingState\(/);
-  assert.match(v3Overview, /lf-v3-vault-tile/);
+  assert.match(v3Overview, /<VaultSectionGrid sections=/);
+  assert.doesNotMatch(v3Overview, /lf-v3-vault-tile/);
   assert.match(summaryCard, /<IconButton/);
   assert.doesNotMatch(summaryCard, /actionIcon/);
   assert.match(summaryCard, /className="lf-dashboard-summary-value" style=\{valueStyle\}/);

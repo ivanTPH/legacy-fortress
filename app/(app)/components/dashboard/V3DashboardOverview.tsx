@@ -1,14 +1,15 @@
 "use client";
 
-import Link from "next/link";
-import { Card, IconTile, PageHeader } from "../../../../components/ui/V3Primitives";
+import { Card, PageHeader } from "../../../../components/ui/V3Primitives";
 import { AddAssetLink } from "../../../../components/ui/LFDesignSystem";
+import VaultSectionGrid from "../../../../components/vault/VaultSectionGrid";
 
 export type VaultAreaSummary = {
   title: string;
   icon: string;
   href: string;
   count: number;
+  value?: string;
   updatedAt?: string | null;
 };
 
@@ -41,10 +42,11 @@ export default function V3DashboardOverview({ loading, areas, recordCount, peopl
       <span>Total recorded value</span><strong>{loading ? "…" : recordedValue}</strong>
     </Card>
     <section aria-label="Vault areas" className="lf-v3-vault-overview">
-      <div className="lf-v3-vault-grid">{areas.map((area) => <Link key={area.href} href={area.href} className="lf-v3-vault-tile">
-        <span className="lf-v3-vault-tile-heading"><IconTile icon={area.icon} /><strong>{area.title}</strong><span aria-hidden="true">›</span></span>
-        <span className="lf-v3-vault-tile-meta"><strong>{loading ? "Loading" : area.count ? `${area.count} record${area.count === 1 ? "" : "s"}` : "No records yet"}</strong></span>
-      </Link>)}</div>
+      <VaultSectionGrid sections={areas.map((area) => ({
+        key: area.href, title: area.title, icon: area.icon, href: area.href,
+        count: loading ? null : area.count, value: area.value, updatedAt: area.updatedAt,
+        description: "Loading records…", addHref: canAddRecords ? `/add?area=${area.title.toLowerCase()}` : undefined,
+      }))} />
     </section>
   </div>;
 }

@@ -1,5 +1,12 @@
 # Codex Handover
 
+## 25 October 2026 — Release 84 structural Dashboard and Finances correction
+
+- Isolated branch `fix/v52-finance-cards-release84` starts from protected TEST/staging `03c4a64209442e9169c1669ea818744c1df31744`; the owner's main worktree is untouched. Owner screenshots reject #83 visual structure.
+- Dashboard and all area pages now reuse `VaultSectionGrid` for compact upper icon/title/chevron and lower count/value or empty/Add rows. Finances replaces the tall statistics panel with breadcrumb, count/value subtitle and one `Add to Finances` action linked into the existing area → section → form flow. The mobile pushed header shows the current area title and uses its canonical breadcrumb parent for Back.
+- Synthetic authenticated local desktop Chromium and mobile WebKit journeys at `/dashboard`, `/finances` and `/add?area=finances` passed. Local screenshots and MATCH/DEVIATION notes are in `docs/design-implementation/V52_COMPLIANCE_LEDGER.md`; they are not hosted owner acceptance. The specific mobile Add icon visibility issue found during screenshot review was corrected in the shared CSS.
+- No Auth, RLS, schema, storage, recipient-grant, founder-launcher or production changes. Protected release and hosted iPhone owner acceptance remain separate gates.
+
 ## 25 October 2026 — Vault Master compliance worktree
 
 - Isolated branch `feat/v52-vault-compliance` starts at protected TEST/staging `fb452af1eaec6276f0a012a235d565acb8ee3f12`; the owner's dirty main worktree is untouched. The one-time route/state inventory is `docs/design-implementation/V52_COMPLIANCE_LEDGER.md`.

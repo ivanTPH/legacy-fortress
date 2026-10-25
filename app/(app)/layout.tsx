@@ -771,11 +771,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
 
   function navigateBack() {
     closeNavigationState("item_select", false);
-    if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
-      return;
-    }
-    router.push("/dashboard");
+    router.push(breadcrumbs.length > 1 ? breadcrumbs[breadcrumbs.length - 2].path : "/dashboard");
   }
 
   function submitShellSearch() {
@@ -1173,13 +1169,12 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                 governanceContext="Mobile header · role-aware workspace switch"
               /></div> : null}
               {showBackButton ? (
-                <button className="lf-topbar-back" type="button" onClick={navigateBack} aria-label="Go back">
+                <button className="lf-topbar-back" type="button" onClick={navigateBack} aria-label={`Back to ${topbarBreadcrumbs.at(-1)?.label ?? "Home"}`}>
                   <b aria-hidden="true" style={{ fontSize: 20, fontWeight: 400, lineHeight: 1 }}>←</b>
                   <span>Back</span>
                 </button>
               ) : null}
               <div className="lf-topbar-title">{topbarTitle}</div>
-              {showBackButton ? <div className="lf-topbar-parent-title">{topbarBreadcrumbs.at(-1)?.label ?? "Home"}</div> : null}
             </div>
             {!showBackButton && canViewPath("/add", resolvedViewerAccess) ? <Link href="/add" className="lf-mobile-add-record" aria-label="Add to my Vault"><Icon name="add" size={22} /></Link> : null}
           </div>

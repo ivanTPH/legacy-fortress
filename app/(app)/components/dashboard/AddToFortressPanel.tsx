@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useViewerAccess } from "../../../../components/access/ViewerAccessContext";
 import Icon from "../../../../components/ui/Icon";
 import { RestrictedState } from "../../../../components/ui/V3Primitives";
@@ -42,7 +43,8 @@ const PEOPLE_CHOICES: AddChoice[] = [
 
 export default function AddToFortressPanel() {
   const { viewer } = useViewerAccess();
-  const [selectedArea, setSelectedArea] = useState<string | null>(null);
+  const requestedArea = useSearchParams().get("area");
+  const [selectedArea, setSelectedArea] = useState<string | null>(() => ADD_AREAS.some((item) => item.key === requestedArea) ? requestedArea : null);
 
   if (viewer.mode === "linked") return <RestrictedState reason="Adding records is available in your own vault." />;
 

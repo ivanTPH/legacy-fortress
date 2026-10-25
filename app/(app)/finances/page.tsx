@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, PageHeader } from "../../../components/ui/V3Primitives";
+import Link from "next/link";
+import Icon from "../../../components/ui/Icon";
+import { PageHeader } from "../../../components/ui/V3Primitives";
 import VaultSectionGrid from "../../../components/vault/VaultSectionGrid";
 import { formatCurrency } from "../../../lib/currency";
-import { latestTimestamp } from "../../../lib/dashboard/summary";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
 import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
 import { waitForActiveUser } from "../../../lib/auth/session";
@@ -129,29 +130,22 @@ export default function FinancesOverviewPage() {
   const recordCount = populated.reduce((sum, section) => sum + section.summary.includedCount, 0);
   const total = populated.reduce((sum, section) => sum + section.summary.totalMajor, 0);
   const currencies = new Set(assetRows.map((row) => getFinanceRowCurrencyCode(row) || currency));
-  const updatedAt = latestTimestamp(populated.map((section) => section.summary.addedAt));
+  const totalText = currencies.size > 1 ? "Multiple currencies" : formatCurrency(total, currency);
   return <section className="lf-v3-area-page lf-v52-finance-page">
-    <PageHeader title="Finances" description="Keep accounts, pensions, investments, insurance and debts together for trusted review." />
+    <PageHeader title="Finances" description={loading ? "Loading records…" : `${recordCount} record${recordCount === 1 ? "" : "s"} · ${totalText}`}
+      action={viewer.mode !== "linked" ? <Link href="/add?area=finances" className="lf-v52-finance-add"><Icon name="add" size={20} /><span>Add to Finances</span></Link> : undefined}>
+      <nav className="lf-v52-finance-breadcrumb" aria-label="Breadcrumb"><Link href="/dashboard">Dashboard</Link><Icon name="chevron_right" size={18} /><span aria-current="page">Finances</span></nav>
+    </PageHeader>
     {status ? <p role="alert">{status}</p> : null}
     {loading ? <p role="status">Loading finance summary…</p> : null}
-    {!loading && recordCount > 0 ? <Card className="lf-v3-stats-strip" aria-label="Finance summary">
-      <div><span>Total recorded</span><strong>{currencies.size > 1 ? "Multiple currencies" : formatCurrency(total, currency)}</strong></div>
-      <div><span>Records</span><strong>{recordCount}</strong><small>in {populated.length} of {summaries.length} sections</small></div>
-      <div><span>Last updated</span><strong>{formatFinanceDate(updatedAt)}</strong></div>
-    </Card> : null}
     <VaultSectionGrid sections={(viewer.mode === "linked" ? populated : summaries).map((section) => ({
       key: section.href, title: section.title, icon: section.icon, href: section.href,
       count: section.summary.includedCount,
       value: new Set(getAssetsForFinanceCategory(assetRows, section.key).map((row) => getFinanceRowCurrencyCode(row) || currency)).size > 1
         ? "Multiple currencies" : section.summary.valueText,
       addHref: viewer.mode === "linked" ? undefined : `${section.href}?add=1`,
+      updatedAt: section.summary.addedAt,
     }))} />
     {!loading && viewer.mode === "linked" && !recordCount ? <p>No finance records are assigned to you.</p> : null}
   </section>;
-}
-
-function formatFinanceDate(value: string | null | undefined) {
-  if (!value) return "Not recorded";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "Not recorded" : new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(date);
 }
