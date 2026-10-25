@@ -945,11 +945,19 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                   <Icon name="unfold_more" size={18} />
                 </div>
               </div>
+              <div className="lf-loading-nav" aria-hidden="true">{Array.from({ length: 9 }, (_, index) => <span key={index} />)}</div>
             </aside>
           </div>
           <div className="lf-content-wrap">
-            <div className="lf-topbar" aria-hidden="true" />
-            <main className="lf-main-content"><p>Checking session…</p></main>
+            <div className="lf-topbar lf-loading-topbar" aria-hidden="true"><span /><span /></div>
+            <main className="lf-main-content">
+              <p className="lf-loading-announcement">Checking session…</p>
+              <div className="lf-loading-heading" aria-hidden="true"><span /><span /></div>
+              {normalizePath(pathname) === "/dashboard" ? <>
+                <div className="lf-loading-summary" aria-hidden="true">{Array.from({ length: 4 }, (_, index) => <span key={index} />)}</div>
+                <div className="lf-loading-cards" aria-hidden="true">{Array.from({ length: 6 }, (_, index) => <span key={index} />)}</div>
+              </> : <div className="lf-loading-panel" aria-hidden="true" />}
+            </main>
           </div>
         </div>
       );

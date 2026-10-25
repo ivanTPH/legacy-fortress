@@ -53,6 +53,40 @@ test.describe("V5.2 Dashboard and Finances structure on real local routes", () =
     }
   });
 
+  test("captures one authenticated initial-load layout trace", async ({ page }) => {
+    const signedIn = await anon.auth.signInWithPassword({ email, password });
+    if (signedIn.error || !signedIn.data.session) throw signedIn.error ?? new Error("Synthetic sign-in failed");
+    await page.addInitScript((session) => {
+      localStorage.setItem("sb-127-auth-token", JSON.stringify(session));
+      const trace: Array<Record<string, unknown>> = [];
+      (window as typeof window & { __lfLoadTrace?: typeof trace }).__lfLoadTrace = trace;
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          const shift = entry as PerformanceEntry & { value?: number; hadRecentInput?: boolean };
+          if (!shift.hadRecentInput) trace.push({ at: Math.round(entry.startTime), shift: shift.value });
+        }
+      }).observe({ type: "layout-shift", buffered: true });
+      const sample = () => {
+        const shell = document.querySelector<HTMLElement>(".lf-shell");
+        const main = document.querySelector<HTMLElement>(".lf-main-content");
+        if (shell && main) trace.push({ at: Math.round(performance.now()), shell: shell.className, mainTop: Math.round(main.getBoundingClientRect().top), mainHeight: Math.round(main.getBoundingClientRect().height), skeletonCards: document.querySelectorAll(".lf-loading-cards span").length, cardCount: document.querySelectorAll(".lf-v52-section-tile").length, iconsReady: document.documentElement.dataset.lfIconsReady });
+      };
+      const interval = window.setInterval(sample, 70);
+      window.setTimeout(() => window.clearInterval(interval), 20000);
+    }, signedIn.data.session);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".lf-v52-section-tile")).toHaveCount(6);
+    await page.waitForTimeout(350);
+    const trace = await page.evaluate(() => (window as typeof window & { __lfLoadTrace?: Array<Record<string, unknown>> }).__lfLoadTrace ?? []);
+    const loading = trace.find((event) => event.shell === "lf-shell lf-shell-loading" && event.skeletonCards === 6);
+    const ready = trace.find((event) => event.shell === "lf-shell" && event.cardCount === 6);
+    expect(loading).toBeDefined();
+    expect(ready).toBeDefined();
+    expect(loading?.mainTop).toBe(ready?.mainTop);
+    console.log("INITIAL_LOAD_TRACE", JSON.stringify(trace.filter((event, index) => "shift" in event || index === 0 || index === trace.length - 1 || event.shell !== trace[index - 1]?.shell || event.cardCount !== trace[index - 1]?.cardCount)));
+  });
+
   test("owner sees the approved shared cards and working Add path", async ({ page, isMobile }, testInfo) => {
     const signedIn = await anon.auth.signInWithPassword({ email, password });
     if (signedIn.error || !signedIn.data.session) throw signedIn.error ?? new Error("Synthetic sign-in failed");

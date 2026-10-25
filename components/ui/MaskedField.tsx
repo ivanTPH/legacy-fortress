@@ -8,6 +8,7 @@ type MaskedFieldProps = {
   value: string | null | undefined;
   placeholder?: string;
   preserveLast?: number;
+  showLabel?: boolean;
 };
 
 export default function MaskedField({
@@ -15,6 +16,7 @@ export default function MaskedField({
   value,
   placeholder = "Not set",
   preserveLast = 4,
+  showLabel = true,
 }: MaskedFieldProps) {
   const [revealed, setRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -32,19 +34,19 @@ export default function MaskedField({
 
   return (
     <span style={cleanValue ? wrapStyle : emptyWrapStyle}>
-      <span style={textStyle}>{label ? <span>{label}: </span> : null}<span style={valueStyle}>{displayValue}</span></span>
+      <span style={textStyle}>{label && showLabel ? <span>{label}: </span> : null}<span style={valueStyle}>{displayValue}</span></span>
       {cleanValue ? (
         <>
           <IconButton
             icon={revealed ? "visibility" : "visibility_off"}
-            label={revealed ? "Hide protected information" : "Reveal protected information"}
+            label={`${revealed ? "Hide" : "Reveal"} ${label || "protected information"}`}
             aria-pressed={revealed}
             onClick={() => setRevealed((prev) => !prev)}
             style={iconBtnStyle}
           />
           <IconButton
             icon={copied ? "check" : "content_copy"}
-            label={copied ? "Details copied" : "Copy details"}
+            label={copied ? `${label || "Details"} copied` : `Copy ${label || "details"}`}
             onClick={async () => {
               try {
                 await navigator.clipboard.writeText(cleanValue);

@@ -3680,7 +3680,8 @@ export default function UniversalRecordWorkspace({
         </div> : null}
 
         {isOpen ? (
-          <div style={detailsPanelStyle} className={`lf-v52-record-detail-grid${linkedContactsTable ? " has-people" : ""}`}>
+          <div style={detailsPanelStyle} className="lf-v52-record-detail-grid">
+            <div className="lf-v52-record-main">
             {viewer.mode !== "linked" && (isFinanceSection || isCanonicalProperty || isCanonicalBusiness || isCanonicalDigital || isPossessions) ? (
               <section className="lf-v52-record-value" aria-label="Record value">
                 <div><strong>Value</strong><span>Owner-recorded estimate</span></div>
@@ -3798,36 +3799,28 @@ export default function UniversalRecordWorkspace({
                 <div>Notes: {canonicalPropertyAsset?.notes || "No additional notes."}</div>
               </div>
             ) : isFinanceSection ? (
-              <div style={{ color: "var(--lf-text-secondary)", fontSize: 13, display: "grid", gap: 2 }}>
+              <section className={categoryKey === "bank" ? "lf-v52-account-details" : "lf-v52-record-generic-details"}>
+                <h2>{categoryKey === "bank" ? "Account details" : "Details"}</h2>
                 {categoryKey === "bank" ? (
-                  <>
-                    <div>Provider: {canonicalBankAsset?.provider_name || "Not set"}</div>
-                    <div>Account type: {bankAccountTypeLabel || "Not set"}</div>
-                    <div>Account holder: {canonicalBankAsset?.account_holder || "Not set"}</div>
-                    <div>Country: {canonicalBankAsset?.country || "Not set"}</div>
-                    <div>Currency: {canonicalBankAsset?.currency || "Not set"}</div>
-                    <div>
-                      <MaskedField label="Account number" value={canonicalBankAsset?.account_number ?? ""} />
-                    </div>
-                    <div>
-                      <MaskedField label="Sort code" value={canonicalBankAsset?.sort_code ?? ""} />
-                    </div>
-                    <div>
-                      <MaskedField label="IBAN" value={canonicalBankAsset?.iban ?? ""} />
-                    </div>
-                  </>
-                ) : null}
-                {categoryKey === "bank" ? (
-                  <div>
-                    <MaskedField label="SWIFT / BIC" value={String(row.metadata?.swift_bic ?? "")} />
-                  </div>
+                  <dl className="lf-v52-account-rows">
+                    <div><dt>Provider</dt><dd>{canonicalBankAsset?.provider_name || "Not set"}</dd></div>
+                    <div><dt>Account type</dt><dd>{bankAccountTypeLabel || "Not set"}</dd></div>
+                    <div><dt>Account holder</dt><dd>{canonicalBankAsset?.account_holder || "Not set"}</dd></div>
+                    <div><dt>Country</dt><dd>{canonicalBankAsset?.country || "Not set"}</dd></div>
+                    <div><dt>Currency</dt><dd>{canonicalBankAsset?.currency || "Not set"}</dd></div>
+                    <div><dt>Account number</dt><dd><MaskedField label="Account number" showLabel={false} value={canonicalBankAsset?.account_number ?? ""} /></dd></div>
+                    <div><dt>Sort code</dt><dd><MaskedField label="Sort code" showLabel={false} value={canonicalBankAsset?.sort_code ?? ""} /></dd></div>
+                    <div><dt>IBAN</dt><dd><MaskedField label="IBAN" showLabel={false} value={canonicalBankAsset?.iban ?? ""} /></dd></div>
+                    <div><dt>SWIFT / BIC</dt><dd><MaskedField label="SWIFT / BIC" showLabel={false} value={String(row.metadata?.swift_bic ?? "")} /></dd></div>
+                    {canonicalBankAsset?.notes ? <div><dt>Notes</dt><dd>{canonicalBankAsset.notes}</dd></div> : null}
+                  </dl>
                 ) : null}
                 {categoryKey === "investments" ? <div>Ownership: {String(row.metadata?.ownership_type ?? "Not set")}</div> : null}
                 {categoryKey === "pensions" ? <div>Scheme: {String(row.metadata?.scheme_name ?? "Not set")}</div> : null}
                 {categoryKey === "insurance" ? <div>Renewal date: {String(row.metadata?.renewal_date ?? "Not set")}</div> : null}
                 {categoryKey === "debts" ? <div>Repayment: {String(row.metadata?.repayment_amount ?? "Not set")} ({String(row.metadata?.repayment_frequency ?? "frequency not set")})</div> : null}
-                <div>Notes: {categoryKey === "bank" ? canonicalBankAsset?.notes || "No additional notes." : String(row.metadata?.notes ?? "No additional notes.")}</div>
-              </div>
+                {categoryKey !== "bank" ? <div>Notes: {String(row.metadata?.notes ?? "No additional notes.")}</div> : null}
+              </section>
             ) : isIdentityDocuments ? (
               <div style={{ color: "var(--lf-text-secondary)", fontSize: 13, display: "grid", gap: 2 }}>
                 <div>Document type: {String(row.metadata?.identity_document_type ?? "Not set")}</div>
@@ -3874,14 +3867,34 @@ export default function UniversalRecordWorkspace({
                 />
               )}
             </div>
-
-
-            {linkedContactsTable ? (
-              <div className="lf-linked-contact-panel-list" aria-label="Linked contacts">
-                <div style={{ fontSize: 13, fontWeight: 700 }}>Linked contacts</div>
-                {linkedContactsTable}
-              </div>
-            ) : null}
+            </div>
+            <aside className="lf-v52-record-rail" aria-label="Record context">
+              <section className="lf-v52-record-people" aria-label="People linked to this record">
+                <h2>People linked to this record</h2>
+                {rowContacts.length ? (
+                  <>
+                    <ul className="lf-v52-record-person-list">
+                      {rowContacts.map((contact) => {
+                        const name = contact.contact_name || "Linked contact";
+                        const role = contact.relationship || contact.contact_role || defaultLegalContactRole;
+                        return <li key={contact.id}>
+                          <span className="lf-v52-record-person-avatar" aria-hidden="true">{name.trim().split(/\s+/).map((part) => part[0]).slice(0, 2).join("").toUpperCase()}</span>
+                          <span className="lf-v52-record-person-copy">
+                            {contact.contact_id ? <Link href={buildContactsWorkspaceHref(contact.contact_id)}>{name}</Link> : <strong>{name}</strong>}
+                            <small>{formatLinkedContactRole(role || "Role not set")} · {getRecordContactInviteLabel(getRecordContactInviteState(contact))}</small>
+                          </span>
+                        </li>;
+                      })}
+                    </ul>
+                    <details className="lf-v52-record-people-manage"><summary>Contact details and actions</summary>{linkedContactsTable}</details>
+                  </>
+                ) : <p>No linked people available in this view.</p>}
+              </section>
+              <details className="lf-v52-record-history">
+                <summary>Record history</summary>
+                <p>Event history is not available for this record.</p>
+              </details>
+            </aside>
           </div>
         ) : null}
         </div> : null}

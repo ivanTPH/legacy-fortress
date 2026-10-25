@@ -3364,6 +3364,30 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-main-content h1 { color: var(--lf-text); font-size: 28px; line-height: 34px; letter-spacing: -.02em; }
 .lf-main-content h2, .lf-main-content h3 { color: var(--lf-text); }
 .lf-main-content p { color: var(--lf-text-secondary); }
+.lf-shell-loading .lf-loading-announcement { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.lf-loading-nav { display: grid; align-content: start; gap: 12px; padding: 18px 8px; }
+.lf-loading-nav span { width: 85%; height: 44px; border-radius: var(--lf-radius-card); background: var(--lf-surface-card); }
+.lf-loading-nav span:nth-child(2), .lf-loading-nav span:nth-child(6) { width: 72%; }
+.lf-loading-topbar { display: flex; justify-content: space-between; }
+.lf-loading-topbar span { display: block; width: min(32vw, 420px); height: 40px; border-radius: var(--lf-radius-card); background: var(--lf-surface-card); }
+.lf-loading-topbar span:last-child { width: 140px; }
+.lf-loading-heading { display: grid; gap: 10px; margin-bottom: 28px; }
+.lf-loading-heading span { display: block; width: 210px; max-width: 65%; height: 34px; border-radius: var(--lf-radius-card); background: var(--lf-surface-card); }
+.lf-loading-heading span:last-child { width: 320px; height: 20px; }
+.lf-loading-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 30px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); }
+.lf-loading-summary span { min-height: 164px; border-right: 1px solid var(--lf-divider); }
+.lf-loading-summary span:last-child { border-right: 0; }
+.lf-loading-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.lf-loading-cards span, .lf-loading-panel { min-height: 164px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); }
+@media (max-width: 767px) {
+  .lf-loading-topbar span { width: 50%; }
+  .lf-loading-topbar span:last-child { width: 44px; }
+  .lf-loading-summary { grid-template-columns: minmax(0, 1fr); }
+  .lf-loading-summary span { min-height: 124px; border: 0; }
+  .lf-loading-summary span:not(:first-child) { display: none; }
+  .lf-loading-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .lf-loading-cards span { min-height: 112px; }
+}
 .lf-dashboard-overview-panel { border-color: var(--lf-border) !important; border-radius: 12px !important; background: var(--lf-surface) !important; padding: 20px !important; }
 .lf-dashboard-overview-title-row h2 { font-size: 17px !important; line-height: 22px; }
 .lf-dashboard-overview-copy { font-size: 15px !important; line-height: 22px; }
@@ -8305,10 +8329,9 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-v52-record-expanded { display: grid; gap: 16px; padding: 16px; border-top: 1px solid var(--lf-divider); }
 .lf-v52-record-detail-grid { min-width: 0; border-color: var(--lf-border) !important; background: var(--lf-surface-card) !important; }
 .lf-v52-record-detail-grid > * { min-width: 0; }
+.lf-v52-record-main, .lf-v52-record-rail { display: grid; align-content: start; gap: 16px; min-width: 0; }
 @media (min-width: 1000px) {
-  .lf-v52-record-detail-grid.has-people { grid-template-columns: minmax(0, 1fr) minmax(280px, 36%); align-items: start; column-gap: 20px; }
-  .lf-v52-record-detail-grid.has-people > :not(.lf-linked-contact-panel-list) { grid-column: 1; }
-  .lf-v52-record-detail-grid.has-people > .lf-linked-contact-panel-list { grid-column: 2; grid-row: 1 / span 3; min-width: 0; }
+  .lf-v52-record-detail-grid { grid-template-columns: minmax(0, 1fr) minmax(280px, 380px); align-items: start; column-gap: 24px; }
 }
 .lf-v52-record-entry .lf-v52-record-summary-date { display: none; }
 .lf-v52-category-heading { display: grid; gap: 8px; min-width: 0; color: var(--lf-text); }
@@ -8336,7 +8359,26 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-v52-detail-view > .lf-v52-record-summary { display: none; }
 .lf-v52-detail-view .lf-v52-record-expanded { padding: 0; border: 0; }
 .lf-v52-detail-view .lf-v52-record-detail-grid { border: 0 !important; padding: 0 !important; background: transparent !important; }
-.lf-v52-detail-view .lf-v52-record-detail-grid > div:not(.lf-linked-contact-panel-list):not(.lf-v52-record-documents) { padding: 16px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); }
+.lf-v52-detail-view .lf-v52-record-main > div:not(.lf-v52-record-documents),
+.lf-v52-detail-view .lf-v52-record-main > section:not(.lf-v52-record-value) { padding: 16px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); }
+.lf-v52-account-details h2, .lf-v52-record-generic-details h2, .lf-v52-record-rail h2 { margin: 0 0 12px; font-size: 17px; line-height: 1.3; }
+.lf-v52-account-rows { margin: 0; }
+.lf-v52-account-rows > div { display: grid; grid-template-columns: minmax(120px, 32%) minmax(0, 1fr); align-items: center; gap: 12px; min-height: 52px; padding: 6px 0; border-top: 1px solid var(--lf-divider); }
+.lf-v52-account-rows dt { color: var(--lf-text-secondary); font-size: 14px; }
+.lf-v52-account-rows dd { margin: 0; min-width: 0; color: var(--lf-text); overflow-wrap: anywhere; }
+.lf-v52-record-people, .lf-v52-record-history { padding: 16px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); }
+.lf-v52-record-people p, .lf-v52-record-history p { margin: 0; color: var(--lf-text-secondary); font-size: 14px; }
+.lf-v52-record-history summary, .lf-v52-record-people-manage summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; font-weight: 600; }
+.lf-v52-record-history summary:focus-visible, .lf-v52-record-people-manage summary:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 2px; }
+.lf-v52-record-person-list { margin: 0; padding: 0; list-style: none; }
+.lf-v52-record-person-list li { display: flex; align-items: center; gap: 12px; min-height: 60px; border-top: 1px solid var(--lf-divider); }
+.lf-v52-record-person-avatar { display: inline-grid; place-items: center; flex: 0 0 40px; height: 40px; border-radius: 50%; background: var(--lf-tint); color: var(--lf-tint-icon); font-size: 13px; font-weight: 700; }
+.lf-v52-record-person-copy { display: grid; min-width: 0; gap: 2px; }
+.lf-v52-record-person-copy a, .lf-v52-record-person-copy strong { color: var(--lf-text); font-weight: 600; overflow-wrap: anywhere; }
+.lf-v52-record-person-copy small { color: var(--lf-text-secondary); font-size: 13px; }
+.lf-v52-record-people-manage { margin-top: 8px; }
+.lf-v52-record-people-manage .lf-linked-contact-table-wrap { max-width: 100%; overflow-x: auto; }
+@media (max-width: 600px) { .lf-v52-account-rows > div { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
 .lf-v52-detail-view .lf-v52-record-duplicate-title { display: none !important; }
 .lf-v52-record-documents { display: grid; gap: 8px; padding: 16px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); }
 .lf-v52-record-documents h2 { margin: 0; font-size: 17px; }

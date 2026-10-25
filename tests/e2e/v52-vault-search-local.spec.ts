@@ -92,6 +92,30 @@ test.describe("V5.2 authorised local Vault search", () => {
     await expect(page.getByText(`Other Person Savings ${runId}`)).toHaveCount(0);
   });
 
+  test("Barclays detail uses structured rows and a truthful responsive context rail", async ({ page, isMobile }, testInfo) => {
+    const signedIn = await anon.auth.signInWithPassword({ email, password });
+    if (signedIn.error || !signedIn.data.session) throw signedIn.error ?? new Error("Synthetic sign-in failed");
+    await page.addInitScript((session) => localStorage.setItem("sb-127-auth-token", JSON.stringify(session)), signedIn.data.session);
+    await page.setViewportSize(isMobile ? { width: 390, height: 844 } : { width: 1440, height: 900 });
+    await page.goto(`/finances/bank?asset=${ids.barclays}`, { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: `Barclays Savings Account ${runId}` })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Account details" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Documents" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "People linked to this record" })).toBeVisible();
+    await expect(page.getByText("No linked people available in this view.")).toBeVisible();
+    await expect(page.getByText("Event history is not available for this record.")).toBeHidden();
+    await expect(page.getByRole("button", { name: "Edit", exact: true })).toHaveCount(1);
+    await expect(page.getByText("12345678", { exact: true })).toHaveCount(0);
+    const geometry = await page.locator(".lf-v52-record-detail-grid").evaluate((grid) => {
+      const main = grid.querySelector<HTMLElement>(".lf-v52-record-main")!;
+      const rail = grid.querySelector<HTMLElement>(".lf-v52-record-rail")!;
+      return { sideBySide: rail.getBoundingClientRect().left > main.getBoundingClientRect().right, overflow: document.documentElement.scrollWidth > innerWidth };
+    });
+    expect(geometry.sideBySide).toBe(!isMobile);
+    expect(geometry.overflow).toBe(false);
+    await page.screenshot({ path: testInfo.outputPath(isMobile ? "barclays-detail-release85-mobile.png" : "barclays-detail-release85-desktop.png"), fullPage: true });
+  });
+
   test("global search finds the saved Will, provider and updated account", async ({ page, isMobile }, testInfo) => {
     const signedIn = await anon.auth.signInWithPassword({ email, password });
     if (signedIn.error || !signedIn.data.session) throw signedIn.error ?? new Error("Synthetic sign-in failed");

@@ -1,5 +1,12 @@
 # Codex Handover
 
+## 25 October 2026 — Release 85 visual stability and bank detail candidate
+
+- Branch `fix/v52-release85-visual-record-detail` starts at deployed TEST/staging `dc453bffeb0a81141590c69f5f5ca14450f16be0`; the owner's dirty main worktree is untouched.
+- A single authenticated local load trace found a stable shell top but an empty loading main followed by all six dashboard cards after session/viewer hydration. A noninteractive geometry-matched loading shell replaces the lone text while preserving authentication timing and checks.
+- Barclays detail now uses structured account rows and a desktop context rail. The rail uses only contacts loaded for the authorised record; it shows a truthful empty state otherwise. Collapsed record history states that events are unavailable because no verified record audit feed exists. Existing masked fields, Edit, documents and More actions remain.
+- Focused synthetic local desktop Chromium and mobile WebKit detail checks passed, as did the desktop load-stability trace. These are not hosted owner acceptance. Reveal/copy audit and append-only record history remain unverified backend dependencies; see the compliance ledger.
+
 ## 25 October 2026 — Release 84 structural Dashboard and Finances correction
 
 - Isolated branch `fix/v52-finance-cards-release84` starts from protected TEST/staging `03c4a64209442e9169c1669ea818744c1df31744`; the owner's main worktree is untouched. Owner screenshots reject #83 visual structure.
