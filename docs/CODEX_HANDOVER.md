@@ -1,5 +1,13 @@
 # Codex Handover
 
+## 25 October 2026 — Vault Master compliance worktree
+
+- Isolated branch `feat/v52-vault-compliance` starts at protected TEST/staging `fb452af1eaec6276f0a012a235d565acb8ee3f12`; the owner's dirty main worktree is untouched. The one-time route/state inventory is `docs/design-implementation/V52_COMPLIANCE_LEDGER.md`.
+- Release C already supplied the Needs you badge, compact To do rows and filters, mobile My Vault context control and grouped drawer. This work reuses those components and does not touch the founder TEST gate or access policies.
+- Supported presentation changes: Add to my Vault now presents area then section using existing add routes; Settings has the current grouped destinations and device-local Automatic/Light/Dark appearance; shared section grids include Property Documents and Employment without inventing counts; record sections use the current empty state with existing Add action. The V5.2 token theme now reaches the shared customer shell.
+- Appearance tests and targeted Add/route/settings tests passed locally. The mandatory `release:check -- --ci` passed once: npm audit found zero vulnerabilities, lint and TypeScript passed, core/platform tests passed, route/link checks found no missing links, and the production build completed. Lint emitted warnings but no errors. Protected TEST deployment and owner iPhone acceptance must be recorded separately before claiming live compliance.
+- Ledger rows for document extraction, audited reveal/copy, monthly summary, daily first-open sheet and other backend-dependent behaviour remain partial or blocked. No Auth, RLS, schema, storage policy, founder authorisation or production changes were made.
+
 ## 25 October 2026 — Vault Master Release C candidate
 
 - Based on Release B staging `f425dcc08a7723c6bec6ba152511324e9ef69613` in an isolated worktree. The old `fix/v52-switcher-stability` branch was reviewed for compatibility and remains isolated; this release does not change the founder TEST gate.
