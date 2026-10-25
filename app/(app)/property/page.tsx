@@ -1,9 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import Link from "next/link";
 import CanonicalAssetOverviewGrid, { type CanonicalAssetOverviewTile } from "../components/dashboard/CanonicalAssetOverviewGrid";
-import { PageHeader, IconTile } from "../../../components/ui/V3Primitives";
+import { PageHeader } from "../../../components/ui/V3Primitives";
 import { AddAssetLink } from "../../../components/ui/LFDesignSystem";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
 import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
@@ -38,10 +37,9 @@ export default function PropertyOverviewPage() {
       <PageHeader title="Property" description="Record properties, deeds, valuations and supporting documents for your estate."
         action={viewer.mode === "linked" || !propertyRecordTiles.length ? undefined : <AddAssetLink href={propertyRecordTiles[0].addHref} />} />
       {visibleItems.length ? (
-      <><CanonicalAssetOverviewGrid tiles={propertyRecordTiles} />
-      {viewer.mode !== "linked" ? <div className="lf-v3-area-extra">{visibleItems.filter((item) => item.href !== "/vault/property").map((item) => (
-        <Link key={item.href} href={item.href} className="lf-v3-area-empty-tile"><IconTile icon={item.icon} size={32} /><strong>{item.label}</strong><small>{item.desc}</small><span aria-hidden="true">›</span></Link>
-      ))}</div> : null}</>
+      <CanonicalAssetOverviewGrid tiles={propertyRecordTiles} extraSections={visibleItems.filter((item) => item.href !== "/vault/property").map((item) => ({
+        key: item.href, title: item.label, icon: item.icon, href: item.href, count: null, description: "Browse supporting files",
+      }))} />
       ) : (
         <div style={{ color: "#64748b", fontSize: 13 }}>
           Property subsections are currently hidden by My Vault preferences. Re-enable them in Account / My Vault at any time.

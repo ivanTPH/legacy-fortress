@@ -1,7 +1,7 @@
 @import "tailwindcss";
-@import "../design_handoff_legacy_fortress/tokens.css" layer(lf-v52-tokens);
+@import "../design_handoff_legacy_fortress/tokens.css";
 
-/* V5.2 components use the handoff tokens without changing older light surfaces. */
+/* V5.2 theme selectors must outrank the older :root compatibility variables. */
 .lf-v52-value-block { display: grid; gap: 12px; padding: 16px; min-width: 0; border: 1px solid var(--lf-border-control); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); }
 .lf-v52-value-block h3 { margin: 0; color: var(--lf-text); font-size: var(--lf-text-section); font-weight: 700; }
 .lf-v52-value-block p { margin: 0; color: var(--lf-text-secondary); font-size: var(--lf-text-small); line-height: 1.4; }

@@ -290,7 +290,9 @@ test("add-to-fortress uses the page header once and renders grouped creation cho
 
   assert.match(page, /<PageHeader title="Add to my Vault"/);
   assert.match(panel, /aria-label="Choose what to add"/);
-  assert.match(panel, /className="lf-v3-destination-grid"/);
+  assert.match(panel, /className="lf-v3-destination-grid lf-v52-add-area-grid"/);
+  assert.match(panel, /setSelectedArea\(item\.key\)/);
+  assert.match(panel, /setSelectedArea\(null\)/);
   assert.doesNotMatch(panel, /Build this at your pace/);
   assert.doesNotMatch(panel, /<h2 id="add-to-fortress-title">Add to my Fortress<\/h2>/);
   assert.match(fs.readFileSync(path.join(root, "app/v3-screens.css"), "utf8"), /\.lf-v3-destination-grid/);

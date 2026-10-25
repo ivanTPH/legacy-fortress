@@ -4192,20 +4192,17 @@ export default function UniversalRecordWorkspace({
           </div>
         ) : null}
 
-        {loading ? <div style={{ color: "#64748b" }}>Loading records...</div> : null}
+        {loading ? <div role="status" className="lf-v52-record-loading">Loading records…</div> : null}
         {!loading && filteredRecords.length === 0 ? (
-          <div style={emptyStateStyle}>
-            <div style={{ fontWeight: 700, color: "#334155" }}>
-              {hasDiscoveryFilters ? "No matching records" : "Nothing saved here yet"}
-            </div>
-            <div>
+          <div className="lf-v52-record-empty">
+            <span className="lf-v52-add-icon" aria-hidden="true"><Icon name={sectionKey === "legal" ? "gavel" : sectionKey === "finances" ? "account_balance_wallet" : "folder"} size={24} /></span>
+            <strong>{hasDiscoveryFilters ? "No matching records" : "No records yet"}</strong>
+            <p>
               {hasDiscoveryFilters
                 ? "Try adjusting the search or filters to see more of this section."
-                : `Use this section to keep these details and supporting files in your secure vault.`}
-            </div>
-            {!hasDiscoveryFilters && canCreateRecords ? (
-              <div style={{ color: "#334155" }}>Start with {addLabel.toLowerCase()} when you are ready.</div>
-            ) : null}
+                : "Add a record here when you are ready. You can include details and documents later."}
+            </p>
+            {!hasDiscoveryFilters && canCreateRecords ? <button type="button" className="lf-v52-record-empty-add" onClick={startCreate}>Add first record</button> : null}
           </div>
         ) : null}
         {!loading && activeRecords.length > 0 ? <div className="lf-v52-record-list"><div className="lf-v52-record-list-head" aria-hidden="true"><span></span><span>Name and type</span><span>Updated</span><span>Value</span><span></span></div>{activeRecords.map((row) => renderRow(row))}</div> : null}
@@ -7097,18 +7094,6 @@ const activePillStyle: CSSProperties = {
   fontWeight: 700,
   padding: "5px 10px",
   whiteSpace: "nowrap",
-};
-
-const emptyStateStyle: CSSProperties = {
-  border: "1px solid #eee8e3",
-  borderRadius: 12,
-  background: "#fffefd",
-  color: "#64748b",
-  padding: 16,
-  display: "grid",
-  gap: 6,
-  fontSize: 13,
-  lineHeight: 1.45,
 };
 
 const documentInputModeStyle: CSSProperties = {

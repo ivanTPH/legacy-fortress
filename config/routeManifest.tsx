@@ -152,10 +152,12 @@ export const ACCOUNT_ROUTE_MANIFEST: AppRouteNode[] = [
   {
     id: "account-profile",
     label: "Settings",
-    path: "/profile",
+    path: "/settings",
     icon: <SettingsIcon />,
     enabled: on,
     children: [
+      { id: "settings-profile", label: "Profile", path: "/profile", enabled: on },
+      { id: "settings-appearance", label: "Appearance", path: "/account/appearance", enabled: on },
       { id: "settings-accessibility", label: "Accessibility", path: "/account/accessibility", enabled: on },
       { id: "settings-security", label: "Security", path: "/account/security", enabled: on },
       { id: "settings-billing", label: "Billing and Account", path: "/account/billing", enabled: on },

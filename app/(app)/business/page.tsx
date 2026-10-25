@@ -1,9 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import Link from "next/link";
 import CanonicalAssetOverviewGrid, { type CanonicalAssetOverviewTile } from "../components/dashboard/CanonicalAssetOverviewGrid";
-import { IconTile, PageHeader } from "../../../components/ui/V3Primitives";
+import { PageHeader } from "../../../components/ui/V3Primitives";
 import { AddAssetLink } from "../../../components/ui/LFDesignSystem";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
 import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
@@ -35,8 +34,7 @@ export default function BusinessOverviewPage() {
         action={viewer.mode === "linked" || !businessTiles.length ? undefined : <AddAssetLink href={businessTiles[0].addHref} />} />
 
       {showBusinessInterests || showEmployment ? (
-        <><CanonicalAssetOverviewGrid tiles={businessTiles} />
-          {showEmployment && viewer.mode !== "linked" ? <div className="lf-v3-area-extra"><Link href="/employment" className="lf-v3-area-empty-tile"><IconTile icon="work" size={32} /><strong>Employment</strong><small>Workplace records, death-in-service details and employer-linked documents.</small><span aria-hidden="true">›</span></Link></div> : null}</>
+        <CanonicalAssetOverviewGrid tiles={businessTiles} extraSections={showEmployment ? [{ key: "employment", title: "Employment", icon: "work", href: "/employment", count: null, description: "Workplace records and benefits" }] : []} />
       ) : null}
       {!showBusinessInterests && !showEmployment ? (
         <div style={{ color: "#64748b", fontSize: 13 }}>

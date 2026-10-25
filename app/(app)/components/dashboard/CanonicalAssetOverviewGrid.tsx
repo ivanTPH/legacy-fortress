@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Card } from "../../../../components/ui/V3Primitives";
-import VaultSectionGrid from "../../../../components/vault/VaultSectionGrid";
+import VaultSectionGrid, { type VaultSectionTile } from "../../../../components/vault/VaultSectionGrid";
 import { useViewerAccess } from "../../../../components/access/ViewerAccessContext";
 import { filterAssetIdsForViewer } from "../../../../lib/access-control/viewerAccess";
 import { waitForActiveUser } from "../../../../lib/auth/session";
@@ -29,6 +29,7 @@ export type CanonicalAssetOverviewTile = {
 
 type CanonicalAssetOverviewGridProps = {
   tiles: CanonicalAssetOverviewTile[];
+  extraSections?: VaultSectionTile[];
   emptyMessage?: ReactNode;
 };
 
@@ -37,7 +38,7 @@ type LoadState =
   | { status: "ready"; rows: CanonicalAssetOverviewRow[]; error: null }
   | { status: "error"; rows: CanonicalAssetOverviewRow[]; error: string };
 
-export default function CanonicalAssetOverviewGrid({ tiles, emptyMessage }: CanonicalAssetOverviewGridProps) {
+export default function CanonicalAssetOverviewGrid({ tiles, extraSections = [], emptyMessage }: CanonicalAssetOverviewGridProps) {
   const { viewer } = useViewerAccess();
   const [state, setState] = useState<LoadState>({ status: "loading", rows: [], error: null });
   const sectionKeys = useMemo(() => [...new Set(tiles.map((tile) => tile.sectionKey))], [tiles]);
@@ -47,6 +48,10 @@ export default function CanonicalAssetOverviewGrid({ tiles, emptyMessage }: Cano
 
     async function loadRows() {
       try {
+        if (!sectionKeys.length) {
+          setState({ status: "ready", rows: [], error: null });
+          return;
+        }
         const user = await waitForActiveUser(supabase);
         if (!user) {
           setState({ status: "error", rows: [], error: "Sign in is required to load dashboard records." });
@@ -80,7 +85,7 @@ export default function CanonicalAssetOverviewGrid({ tiles, emptyMessage }: Cano
     };
   }, [sectionKeys, viewer]);
 
-  if (!tiles.length) {
+  if (!tiles.length && !extraSections.length) {
     return emptyMessage ? <>{emptyMessage}</> : null;
   }
 
@@ -100,10 +105,10 @@ export default function CanonicalAssetOverviewGrid({ tiles, emptyMessage }: Cano
       <div><span>Sections</span><strong>{populated.length} of {tiles.length}</strong></div>
       <div><span>Last updated</span><strong>{formatAreaDate(updatedAt)}</strong></div>
     </Card> : null}
-    <VaultSectionGrid sections={(viewer.mode === "linked" ? populated : sections).map(({ tile, rows }) => ({
+    <VaultSectionGrid sections={[...(viewer.mode === "linked" ? populated : sections).map(({ tile, rows }) => ({
       key: tile.key, title: tile.title, icon: tile.icon, href: tile.href, count: rows.length,
       addHref: viewer.mode === "linked" ? undefined : tile.addHref,
-    }))} />
+    })), ...(viewer.mode === "linked" ? [] : extraSections)]} />
     {state.status === "ready" && viewer.mode === "linked" && !recordCount ? <p>No records are assigned in this area.</p> : null}
   </div>;
 }

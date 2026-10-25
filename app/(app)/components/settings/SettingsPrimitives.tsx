@@ -1,9 +1,12 @@
 import type { CSSProperties, ReactNode } from "react";
+import Link from "next/link";
+import Icon from "../../../../components/ui/Icon";
 import { LFPageHeader } from "../../../../components/ui/LFDesignSystem";
 
 export function SettingsPageShell({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return (
     <div className="lf-settings-page-shell">
+      <Link href="/settings" className="lf-v52-settings-back"><Icon name="arrow_back" size={20} />Settings</Link>
       <LFPageHeader title={title} description={subtitle} />
       {children}
     </div>
@@ -37,10 +40,10 @@ export function StatusNote({ message }: { message: string }) {
 }
 
 export const cardStyle: CSSProperties = {
-  border: "1px solid #EBE4DE",
-  borderRadius: 12,
+  border: "1px solid var(--lf-border)",
+  borderRadius: "var(--lf-radius-card)",
   padding: 22,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   display: "grid",
   gap: 18,
   boxShadow: "none",
@@ -55,10 +58,11 @@ export const gridStyle: CSSProperties = {
 export const inputStyle: CSSProperties = {
   width: "100%",
   padding: 12,
-  border: "1px solid #E6DFD9",
-  borderRadius: 8,
-  fontSize: 15,
-  background: "#FFFFFF",
+  border: "1px solid var(--lf-border-input)",
+  borderRadius: "var(--lf-radius-input)",
+  fontSize: 16,
+  background: "var(--lf-surface-card)",
+  color: "var(--lf-text)",
 };
 
 export const textAreaStyle: CSSProperties = {
@@ -69,22 +73,22 @@ export const textAreaStyle: CSSProperties = {
 
 export const primaryBtn: CSSProperties = {
   padding: "10px 12px",
-  minHeight: 36,
-  borderRadius: 8,
-  border: "1px solid #2B1714",
-  background: "#2B1714",
-  color: "white",
+  minHeight: 44,
+  borderRadius: "var(--lf-radius-input)",
+  border: "1px solid var(--lf-primary-bg)",
+  background: "var(--lf-primary-bg)",
+  color: "var(--lf-primary-text)",
   cursor: "pointer",
-  fontSize: 13,
+  fontSize: 16,
 };
 
 export const ghostBtn: CSSProperties = {
   padding: "10px 12px",
-  minHeight: 36,
-  borderRadius: 8,
-  border: "1px solid #E6DFD9",
-  background: "#FFFFFF",
-  color: "#2B1714",
+  minHeight: 44,
+  borderRadius: "var(--lf-radius-input)",
+  border: "1px solid var(--lf-border-control)",
+  background: "var(--lf-surface-card)",
+  color: "var(--lf-text)",
   cursor: "pointer",
-  fontSize: 13,
+  fontSize: 16,
 };

@@ -344,3 +344,80 @@
   .lf-mobile-drawer .lf-workspace-links a { background: var(--lf-surface-card); color: var(--lf-text); font-size: var(--lf-text-small); }
   .lf-mobile-drawer .lf-workspace-links .lf-workspace-linked-group a small { display: block; font-size: var(--lf-text-small); }
 }
+
+/* Vault Master P: supported Add and Settings routes use the same grouped rows. */
+.lf-v52-add-flow, .lf-v52-settings-page { display: grid; gap: 16px; min-width: 0; width: min(100%, var(--lf-web-content-max)); margin-inline: auto; color: var(--lf-text); }
+.lf-v52-add-flow h2, .lf-v52-settings-group h2 { margin: 0; font-size: var(--lf-text-section); }
+.lf-v52-add-flow > p, .lf-v52-settings-heading p, .lf-v52-settings-hint { margin: 0; color: var(--lf-text-secondary); font-size: var(--lf-text-body); }
+.lf-v52-add-area-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.lf-v52-add-area { display: grid; grid-template-columns: 40px minmax(0, 1fr) 20px; align-items: center; gap: 10px; min-height: 104px; padding: 16px; border: 1px solid var(--lf-border-control); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); color: var(--lf-text); text-align: left; font: inherit; cursor: pointer; }
+.lf-v52-add-area strong { font-size: var(--lf-text-row); overflow-wrap: anywhere; }
+.lf-v52-add-area small { grid-column: 2 / 4; align-self: start; color: var(--lf-text-secondary); font-size: var(--lf-text-small); line-height: 1.35; }
+.lf-v52-add-icon, .lf-v52-settings-icon { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: var(--lf-radius-input); background: var(--lf-task-todo-bg); color: var(--lf-task-todo-icon); }
+.lf-v52-add-choice-list, .lf-v52-settings-list, .lf-v52-appearance-options { display: grid; min-width: 0; overflow: hidden; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); }
+.lf-v52-add-choice, .lf-v52-settings-list a, .lf-v52-appearance-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) 20px; align-items: center; gap: 12px; min-height: 64px; padding: 10px 16px; border-bottom: 1px solid var(--lf-divider); color: var(--lf-text); text-decoration: none; }
+.lf-v52-add-choice:last-child, .lf-v52-settings-list a:last-child, .lf-v52-appearance-row:last-child { border-bottom: 0; }
+.lf-v52-add-choice > span:nth-child(2), .lf-v52-settings-row-copy, .lf-v52-appearance-row > span:nth-child(2) { display: grid; gap: 2px; min-width: 0; }
+.lf-v52-add-choice strong, .lf-v52-settings-row-copy strong, .lf-v52-appearance-row strong { font-size: var(--lf-text-row); font-weight: var(--lf-weight-semibold); overflow-wrap: anywhere; }
+.lf-v52-add-choice small, .lf-v52-settings-row-copy small, .lf-v52-appearance-row small { color: var(--lf-text-secondary); font-size: var(--lf-text-small); line-height: 1.35; overflow-wrap: anywhere; }
+.lf-v52-add-back, .lf-v52-settings-back, .lf-v52-add-people, .lf-v52-settings-support { display: inline-flex; align-items: center; gap: 8px; min-height: var(--lf-target-min); width: fit-content; padding: 8px 12px; border: 1px solid var(--lf-border-control); border-radius: var(--lf-radius-input); background: var(--lf-surface-card); color: var(--lf-text); font: inherit; font-size: var(--lf-text-row); text-decoration: none; cursor: pointer; }
+.lf-v52-add-people { width: 100%; justify-content: space-between; }
+.lf-v52-add-note { font-size: var(--lf-text-small) !important; }
+.lf-v52-settings-page { gap: 20px; max-width: 800px; }
+.lf-v52-settings-heading h1 { margin: 0 0 4px; font-size: var(--lf-text-title-web); }
+.lf-v52-settings-profile { display: flex; align-items: center; gap: 14px; min-width: 0; min-height: 96px; padding: 16px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); color: var(--lf-text); text-decoration: none; }
+.lf-v52-settings-avatar { display: grid; place-items: center; flex: 0 0 64px; width: 64px; height: 64px; border-radius: 50%; background: var(--lf-avatar-family-bg); color: var(--lf-avatar-family-text); font-size: var(--lf-text-sheet-title); font-weight: var(--lf-weight-semibold); }
+.lf-v52-settings-profile-copy { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.lf-v52-settings-profile-copy strong { font-size: var(--lf-text-sheet-title); overflow-wrap: anywhere; }
+.lf-v52-settings-profile-copy small { color: var(--lf-text-secondary); font-size: var(--lf-text-small); overflow-wrap: anywhere; }
+.lf-v52-settings-profile-copy > span { color: var(--lf-link); font-size: var(--lf-text-small); font-weight: var(--lf-weight-semibold); }
+.lf-v52-settings-group { display: grid; gap: 8px; }
+.lf-v52-settings-support { width: 100%; justify-content: space-between; }
+.lf-v52-settings-page a:hover, .lf-v52-add-flow a:hover, .lf-v52-add-flow button:hover, .lf-v52-appearance-row:hover { background: var(--lf-surface-hover); }
+.lf-v52-settings-page a:active, .lf-v52-add-flow a:active, .lf-v52-add-flow button:active { background: var(--lf-surface-pressed); }
+.lf-v52-settings-page a:focus-visible, .lf-v52-add-flow a:focus-visible, .lf-v52-add-flow button:focus-visible, .lf-v52-appearance-row:focus-within, .lf-v52-settings-back:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 2px; }
+.lf-v52-appearance-options { padding: 0; margin: 0; }
+.lf-v52-appearance-options legend { padding: 0 0 8px; color: var(--lf-text-secondary); font-size: var(--lf-text-small); font-weight: var(--lf-weight-semibold); }
+.lf-v52-appearance-row { grid-template-columns: 40px minmax(0, 1fr) 24px; cursor: pointer; }
+.lf-v52-appearance-row input { width: 20px; height: 20px; accent-color: var(--lf-primary-bg); }
+@media (max-width: 767px) {
+  .lf-v52-add-area-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .lf-v52-add-area { grid-template-columns: 40px minmax(0, 1fr); min-height: 104px; padding: 12px; }
+  .lf-v52-add-area > .lf-icon { display: none; }
+  .lf-v52-add-area small { grid-column: 1 / 3; }
+  .lf-v52-settings-heading h1 { font-size: var(--lf-text-title-mobile); }
+}
+@media (max-width: 339px) {
+  .lf-v52-add-area-grid { grid-template-columns: minmax(0, 1fr); }
+}
+.lf-shell[data-lf-text-size="large"] .lf-v52-add-area-grid,
+.lf-shell[data-lf-text-size="xlarge"] .lf-v52-add-area-grid { grid-template-columns: minmax(0, 1fr); }
+.lf-settings-page-shell { color: var(--lf-text); }
+.lf-settings-page-shell .lf-settings-card { border-color: var(--lf-border) !important; background: var(--lf-surface-card); color: var(--lf-text); }
+.lf-settings-page-shell .lf-settings-card-heading h2 { color: var(--lf-text); font-size: var(--lf-text-section); }
+.lf-settings-page-shell .lf-settings-card-heading p { color: var(--lf-text-secondary); font-size: var(--lf-text-small); }
+.lf-settings-page-shell input:not([type="checkbox"]):not([type="radio"]),
+.lf-settings-page-shell select, .lf-settings-page-shell textarea { min-height: var(--lf-target-min); font-size: var(--lf-text-row); }
+.lf-settings-page-shell .lf-settings-toggle-card { background: var(--lf-surface-card); border-color: var(--lf-border); }
+.lf-settings-page-shell .lf-settings-toggle-card:hover { background: var(--lf-surface-hover); }
+.lf-settings-page-shell .lf-settings-toggle input:focus-visible + .lf-settings-toggle-track { box-shadow: var(--lf-focus-ring); }
+.lf-v52-record-loading { color: var(--lf-text-secondary); font-size: var(--lf-text-small); }
+.lf-v52-record-empty { display: grid; justify-items: center; gap: 8px; padding: 28px 16px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); color: var(--lf-text); text-align: center; }
+.lf-v52-record-empty .lf-v52-add-icon { width: 48px; height: 48px; }
+.lf-v52-record-empty strong { font-size: var(--lf-text-section); }
+.lf-v52-record-empty p { max-width: 38ch; margin: 0; color: var(--lf-text-secondary); font-size: var(--lf-text-small); }
+.lf-v52-record-empty-add { min-height: var(--lf-target-min); margin-top: 8px; padding: 8px 16px; border: 1px solid var(--lf-primary-bg); border-radius: var(--lf-radius-input); background: var(--lf-primary-bg); color: var(--lf-primary-text); font: inherit; font-size: var(--lf-text-row); font-weight: var(--lf-weight-semibold); cursor: pointer; }
+.lf-v52-record-empty-add:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 2px; }
+
+/* Map the old customer-shell surface aliases to the current semantic theme. */
+.lf-shell {
+  --lf-surface: var(--lf-surface-card);
+  --lf-canvas: var(--lf-surface-page);
+  --lf-sidebar: var(--lf-surface-sidebar);
+  --lf-interaction-hover: var(--lf-surface-hover);
+  --lf-interaction-pressed: var(--lf-surface-pressed);
+  background: var(--lf-surface-page);
+}
+.lf-shell .lf-sidebar { background: var(--lf-surface-sidebar); border-color: var(--lf-border); }
+.lf-shell .lf-topbar { background: var(--lf-surface-card); border-color: var(--lf-border); }
+.lf-shell .lf-mobile-drawer { background: var(--lf-surface-card); color: var(--lf-text); }

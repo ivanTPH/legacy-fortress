@@ -111,7 +111,7 @@ export default function MyVaultPage() {
         description="Hide the sections you do not use today, then refine subsection visibility and turn them back on later without losing any saved records."
       >
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-          <div style={{ fontSize: 13, color: "#64748b" }}>
+          <div style={{ fontSize: 13, color: "var(--lf-text-secondary)" }}>
             {enabledCount} of {VAULT_CATEGORY_DEFINITIONS.length} areas shown
           </div>
         </div>
@@ -133,7 +133,7 @@ export default function MyVaultPage() {
                   <span className="lf-settings-toggle-track" aria-hidden="true" />
                 </label>
               </div>
-              <div style={{ color: "#6B5F5A", fontSize: 13, lineHeight: "18px" }}>{category.description}</div>
+              <div style={{ color: "var(--lf-text-secondary)", fontSize: 13, lineHeight: "18px" }}>{category.description}</div>
               {getVaultSubsectionsForGroup(category.key).length ? (
                 <div style={{ display: "grid", gap: 8, marginTop: 4 }}>
                   {getVaultSubsectionsForGroup(category.key).map((subsection) => (
@@ -150,7 +150,7 @@ export default function MyVaultPage() {
                           <span className="lf-settings-toggle-track" aria-hidden="true" />
                         </span>
                       </span>
-                      <span style={{ color: "#6B5F5A", fontSize: 12 }}>{subsection.description}</span>
+                      <span style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{subsection.description}</span>
                     </label>
                   ))}
                 </div>
@@ -183,9 +183,9 @@ const toggleIconStyle = {
   width: 28,
   height: 28,
   borderRadius: 10,
-  border: "1px solid #dbe3eb",
-  background: "#f8fafc",
-  color: "#0f172a",
+  border: "1px solid var(--lf-border-control)",
+  background: "var(--lf-task-todo-bg)",
+  color: "var(--lf-task-todo-icon)",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -193,7 +193,7 @@ const toggleIconStyle = {
 } as const;
 
 const subToggleRowStyle = {
-  borderTop: "1px solid #e5e7eb",
+  borderTop: "1px solid var(--lf-divider)",
   paddingTop: 8,
   display: "grid",
   gap: 4,

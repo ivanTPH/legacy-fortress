@@ -23,6 +23,7 @@ import { appendProfileAvatarTrace, maskAvatarUrl } from "../../lib/profile/avata
 import { loadProfileIdentityChip, resolveProfileIdentityDisplayName } from "../../lib/profile/workspace";
 import { buildDashboardSearchHref } from "../../lib/records/discovery";
 import { supabase } from "../../lib/supabaseClient";
+import { applyAppearancePreference, readAppearancePreference } from "../../lib/appearancePreference";
 import { ViewerAccessProvider } from "../../components/access/ViewerAccessContext";
 import { VaultPreferencesProvider } from "../../components/vault/VaultPreferencesContext";
 import { AccessibilityPreferencesProvider } from "../../components/accessibility/AccessibilityPreferencesContext";
@@ -82,6 +83,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
+  useEffect(() => { applyAppearancePreference(readAppearancePreference()); }, []);
   const requestedGrantId = searchParams.get("grant") ?? "";
 
   const [email, setEmail] = useState("");
