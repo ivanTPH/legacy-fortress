@@ -8,6 +8,12 @@
 - Appearance tests and targeted Add/route/settings tests passed locally. The mandatory `release:check -- --ci` passed once: npm audit found zero vulnerabilities, lint and TypeScript passed, core/platform tests passed, route/link checks found no missing links, and the production build completed. Lint emitted warnings but no errors. Protected TEST deployment and owner iPhone acceptance must be recorded separately before claiming live compliance.
 - Ledger rows for document extraction, audited reveal/copy, monthly summary, daily first-open sheet and other backend-dependent behaviour remain partial or blocked. No Auth, RLS, schema, storage policy, founder authorisation or production changes were made.
 
+## 25 October 2026 — follow-up area/profile presentation candidate
+
+- Starts from the promoted `bfed6b6281baa94731f509461f316818ba8fb170` release candidate on a separate branch, without moving staging while its protected dispatch is pending.
+- Finances now uses one summary above the current section grid, removing duplicate V5.1 total/info wrappers and redundant first-account card. The existing section Add links and all data calculations remain. Profile's 72px circular avatar gains a labelled photo-edit entry that opens the existing editor; upload and Save handlers are unchanged.
+- TypeScript and changed-file lint passed (one pre-existing profile effect warning). Focused finance calculation tests passed. Older V3 source-assertion tests were accidentally run; six assertions still expect superseded cards, inline add handlers or Action Centre code, so they do not validate this V5.2 presentation change and were not repeated. This follow-up is not deployed or owner-accepted.
+
 ## 25 October 2026 — Vault Master Release C candidate
 
 - Based on Release B staging `f425dcc08a7723c6bec6ba152511324e9ef69613` in an isolated worktree. The old `fix/v52-switcher-stability` branch was reviewed for compatibility and remains isolated; this release does not change the founder TEST gate.

@@ -488,33 +488,20 @@ export default function ProfilePage() {
         ) : (
           <div style={{ display: "grid", gap: 12 }}>
             <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-              <div
-                style={{
-                  width: 72,
-                  height: 72,
-                  borderRadius: 12,
-                  border: "1px solid #e8e1dc",
-                  overflow: "hidden",
-                  background: "#f8fafc",
-                  display: "grid",
-                  placeItems: "center",
-                  color: "#6b7280",
-                  fontSize: 12,
-                }}
-              >
+              <div className="lf-v52-profile-avatar-wrap"><div className="lf-v52-profile-avatar">
                 {savedSummaryAvatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={savedSummaryAvatarUrl} alt="Saved profile picture" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 ) : (
                   <span style={{ fontWeight: 700, fontSize: 16 }}>{summaryAvatarFallback}</span>
                 )}
-              </div>
+              </div>{!viewer.readOnly ? <button type="button" className="lf-v52-profile-photo-action" aria-label={hasSavedAvatar ? "Change profile photo" : "Add profile photo"} onClick={() => setEditorOpen(true)}><Icon name="photo_camera" size={18} /></button> : null}</div>
               <div style={{ display: "grid", gap: 4 }}>
                 <div style={{ fontWeight: 700, fontSize: 16 }}>
                   {summaryName}
                 </div>
-                <div style={{ color: "#64748b", fontSize: 13 }}>{form.primary_email || "No email saved"}</div>
-                <div style={{ color: "#64748b", fontSize: 13 }}>
+                <div style={{ color: "var(--lf-text-secondary)", fontSize: 14 }}>{form.primary_email || "No email saved"}</div>
+                <div style={{ color: "var(--lf-text-secondary)", fontSize: 14 }}>
                   {[form.house_name_or_number, form.street_name, form.town, form.city, form.post_code, form.country]
                     .filter(Boolean)
                     .join(", ") || "No address saved"}
@@ -529,10 +516,10 @@ export default function ProfilePage() {
               <span style={microPillStyle}>Contact {profileReadiness.contactReady ? "saved" : "needs review"}</span>
               <span style={microPillStyle}>Address {profileReadiness.addressReady ? "saved" : "needs review"}</span>
             </div>
-            <div style={{ color: "#64748b", fontSize: 13 }}>
+            <div style={{ color: "var(--lf-text-secondary)", fontSize: 14 }}>
               Main phone: {form.mobile_number || form.telephone || "Not set"} · Notification email: {form.notification_email || "Not set"}
             </div>
-            <div style={{ color: "#64748b", fontSize: 13 }}>National Insurance: {maskedNi}</div>
+            <div style={{ color: "var(--lf-text-secondary)", fontSize: 14 }}>National Insurance: {maskedNi}</div>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
               {!viewer.readOnly ? (
                 <button

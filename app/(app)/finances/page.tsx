@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, PageHeader, Row } from "../../../components/ui/V3Primitives";
+import { Card, PageHeader } from "../../../components/ui/V3Primitives";
 import VaultSectionGrid from "../../../components/vault/VaultSectionGrid";
 import { formatCurrency } from "../../../lib/currency";
 import { latestTimestamp } from "../../../lib/dashboard/summary";
@@ -130,25 +130,15 @@ export default function FinancesOverviewPage() {
   const total = populated.reduce((sum, section) => sum + section.summary.totalMajor, 0);
   const currencies = new Set(assetRows.map((row) => getFinanceRowCurrencyCode(row) || currency));
   const updatedAt = latestTimestamp(populated.map((section) => section.summary.addedAt));
-  const bankRecordCount = assetRows.filter((row) => String(row.category_key ?? "").trim() === "bank").length;
-  const recommendedFinanceAction = bankRecordCount === 0 && viewer.mode !== "linked"
-    ? { href: "/finances/bank?add=1", label: "Add your first account", description: "Start with a bank account so your financial picture has a clear foundation." }
-    : null;
-
-  return <section className="lf-v3-area-page lf-v51-finance-page">
-    <div className="lf-v51-finance-heading"><PageHeader title="Finances" description="Keep accounts, pensions, investments, insurance and debts together for trusted review." />
-      <details className="lf-v51-finance-info"><summary aria-label="About Finances">ⓘ</summary><p>Keep accounts, pensions, investments, insurance and debts together for trusted review.</p></details>
-    </div>
+  return <section className="lf-v3-area-page lf-v52-finance-page">
+    <PageHeader title="Finances" description="Keep accounts, pensions, investments, insurance and debts together for trusted review." />
     {status ? <p role="alert">{status}</p> : null}
     {loading ? <p role="status">Loading finance summary…</p> : null}
-    {!loading && recordCount > 0 ? <div className="lf-v51-finance-total" aria-label="Finance recorded total"><strong>{currencies.size > 1 ? "Multiple currencies" : formatCurrency(total, currency)}</strong><span>{recordCount} record{recordCount === 1 ? "" : "s"} · updated {formatFinanceDate(updatedAt)}</span></div> : null}
     {!loading && recordCount > 0 ? <Card className="lf-v3-stats-strip" aria-label="Finance summary">
       <div><span>Total recorded</span><strong>{currencies.size > 1 ? "Multiple currencies" : formatCurrency(total, currency)}</strong></div>
       <div><span>Records</span><strong>{recordCount}</strong><small>in {populated.length} of {summaries.length} sections</small></div>
       <div><span>Last updated</span><strong>{formatFinanceDate(updatedAt)}</strong></div>
     </Card> : null}
-    {!loading && recommendedFinanceAction ? <Card><Row icon="account_balance" title={recommendedFinanceAction.label}
-      description={recommendedFinanceAction.description} href={recommendedFinanceAction.href} /></Card> : null}
     <VaultSectionGrid sections={(viewer.mode === "linked" ? populated : summaries).map((section) => ({
       key: section.href, title: section.title, icon: section.icon, href: section.href,
       count: section.summary.includedCount,
