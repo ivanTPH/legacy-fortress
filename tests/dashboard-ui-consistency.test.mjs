@@ -47,7 +47,7 @@ test("dashboard uses authorised Version 3 area summaries and keeps live actions"
   assert.doesNotMatch(v3Overview, /Your vault|Next steps|Action Centre/);
   assert.match(v3Overview, /No records yet/);
   assert.doesNotMatch(dashboardPage, /showFullActionCentre/);
-  assert.match(dashboardPage, /actionCentreCount/);
+  assert.match(dashboardPage, /actionCentreNeedsYouCount/);
   assert.doesNotMatch(summaryCard, /icon=\{actionIcon\}/);
   assert.doesNotMatch(dashboardPage, /<LegacyGuidancePanel/);
   assert.doesNotMatch(dashboardPage, /<AddToFortressPanel/);

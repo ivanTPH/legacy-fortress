@@ -43,6 +43,7 @@ type WorkspaceSwitcherProps = {
   compact?: boolean;
   branded?: boolean;
   mobileContextOnly?: boolean;
+  drawerEntry?: boolean;
   showDetails?: boolean;
   governanceContext?: string;
   alwaysShow?: boolean;
@@ -68,6 +69,7 @@ export default function WorkspaceSwitcher({
   compact = false,
   branded = false,
   mobileContextOnly = false,
+  drawerEntry = false,
   showDetails = false,
   governanceContext = "workspace route guard",
   alwaysShow = false,
@@ -163,7 +165,7 @@ export default function WorkspaceSwitcher({
     : null;
   const hasMultipleContexts = workspaces.length > 1;
   const singleCustomerContext = customerOnly && !hasMultipleContexts && linkedFortresses.length === 0;
-  const plainCurrentContext = singleCustomerContext && !founderTestLauncherAvailable;
+  const plainCurrentContext = singleCustomerContext && !founderTestLauncherAvailable && !mobileContextOnly;
   const activeRole = activeWorkspace?.roleContext ?? primaryRole;
 
   useEffect(() => {
@@ -282,14 +284,14 @@ export default function WorkspaceSwitcher({
     <span className="lf-workspace-current-copy">
       {mobileContextOnly ? null : branded ? <span className="lf-workspace-brand-name">Legacy Fortress</span>
         : <span className="lf-workspace-label">{activeLinkedFortress ? "Linked Fortress" : "Workspace"}</span>}
-      <strong>{activeLinkedFortress?.ownerName ?? (customerOnly && activeWorkspace?.id === "application" ? "My Vault" : activeWorkspace?.label) ?? "Personal Vault"}</strong>
+      <strong>{drawerEntry ? "Switch" : activeLinkedFortress?.ownerName ?? (customerOnly && activeWorkspace?.id === "application" ? "My Vault" : activeWorkspace?.label) ?? "Personal Vault"}</strong>
     </span>
   </>;
 
   return (
     <section
       ref={menuRef}
-      className={["lf-workspace-switcher", compact && "compact", branded && "branded", mobileContextOnly && "mobile-context-only"].filter(Boolean).join(" ")}
+      className={["lf-workspace-switcher", compact && "compact", branded && "branded", mobileContextOnly && "mobile-context-only", drawerEntry && "drawer-entry"].filter(Boolean).join(" ")}
       aria-label={plainCurrentContext ? "Current Vault" : founderTestLauncherAvailable ? "Vault contexts and TEST interfaces" : "Switch Vault"}
     >
       <div className="lf-workspace-menu">
@@ -312,14 +314,28 @@ export default function WorkspaceSwitcher({
           <><button type="button" tabIndex={-1} className="lf-workspace-scrim" aria-label="Close workspace menu" onClick={() => { setOpen(false); triggerRef.current?.focus(); }} />
           <nav id={menuId} className="lf-workspace-links" aria-label="Available workspaces" onKeyDown={onMenuKeyDown}>
             <div className="lf-workspace-menu-heading">
-              <span>Switch context</span>
-              <small>{workspaces.length + linkedFortresses.length} available</small>
+              <span>{customerOnly ? "Switch Vault" : "Switch context"}</span>
+              <small>{customerOnly ? `${linkedFortresses.length} linked` : `${workspaces.length + linkedFortresses.length} available`}</small>
             </div>
-            <div className="lf-workspace-session-summary">
+            {!customerOnly ? <div className="lf-workspace-session-summary">
               <span>Signed in as <strong>{session.displayName}</strong></span>
               <span>Role: <strong>{formatRole(activeRole)}</strong></span>
-            </div>
-            {workspaces.map((workspace) => (
+            </div> : null}
+            {customerOnly ? <div className="lf-workspace-linked-group">
+              {workspaces.some((workspace) => workspace.id === "application") ? <Link href="/dashboard" className={!activeLinkedFortress ? "is-active" : ""} aria-current={!activeLinkedFortress ? "page" : undefined} onClick={(event) => openOwnVault(event, "/dashboard")}>
+                <Icon name="home" size={20} />
+                <span><strong>My Vault</strong><small>Your own records</small></span>
+                {!activeLinkedFortress ? <Icon name="check_circle" size={20} /> : null}
+              </Link> : null}
+              {linkedFortresses.length ? <div className="lf-workspace-menu-heading"><span>Linked to you</span></div> : null}
+              {linkedFortresses.map((linked) => (
+                <Link key={linked.grantId} href={`/contact-wallet?grant=${encodeURIComponent(linked.grantId)}`} className={activeLinkedFortress?.grantId === linked.grantId ? "is-active" : ""} aria-current={activeLinkedFortress?.grantId === linked.grantId ? "page" : undefined} onClick={() => { setStoredLinkedGrantId(linked.grantId); closeAfterSelection(); }}>
+                  <Icon name={linked.accessState === "estate_locked" ? "lock" : "verified_user"} size={20} />
+                  <span><strong>{linked.ownerName}&apos;s Fortress</strong><small>{getRoleLabel(linked.role)} · {getLinkedFortressAccessLabel(linked)}</small></span>
+                  {activeLinkedFortress?.grantId === linked.grantId ? <Icon name="check_circle" size={20} /> : null}
+                </Link>
+              ))}
+            </div> : workspaces.map((workspace) => (
               <Link
                 key={workspace.id}
                 href={workspace.href}
@@ -335,7 +351,7 @@ export default function WorkspaceSwitcher({
                 <span className="lf-workspace-route-meta">{workspace.shortLabel}</span>
               </Link>
             ))}
-            {linkedFortresses.length ? (
+            {!customerOnly && linkedFortresses.length ? (
               <div className="lf-workspace-linked-group">
                 <div className="lf-workspace-menu-heading"><span>Linked Fortresses</span></div>
                 <Link href="/dashboard" onClick={(event) => openOwnVault(event, "/dashboard")}>

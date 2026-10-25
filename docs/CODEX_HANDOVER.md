@@ -1,5 +1,12 @@
 # Codex Handover
 
+## 25 October 2026 — Vault Master Release C candidate
+
+- Based on Release B staging `f425dcc08a7723c6bec6ba152511324e9ef69613` in an isolated worktree. The old `fix/v52-switcher-stability` branch was reviewed for compatibility and remains isolated; this release does not change the founder TEST gate.
+- The mobile To do badge now counts only open Needs you rows from the same authorised Action Centre data, with a user-scoped short-lived count shared between the page and navigation. The 3 Needs you, 0 Waiting, 9 Suggested case yields 3. Task rows and filters use compact V5.2 states while retaining their existing action sheets.
+- The mobile header exposes the existing Vault context sheet; it lists My Vault and only linked Fortresses returned by the established grant loader, including role and access state. The drawer groups Profile, Switch, Vault areas, People & Access, Support, Settings and Sign out in a scrollable safe-area layout. Admin and Partner permissions remain separate.
+- Focused task/dashboard/workspace tests pass (19), and one `release:check -- --ci` pass completed audit (0 vulnerabilities), lint, TypeScript, core and platform regressions, route/link checks and production build. Hosted owner iPhone and desktop acceptance remains required after protected TEST release.
+
 ## 24 October 2026 — Vault Master Release B integration
 
 - Release A is confirmed live on TEST at `b2a37989d0d115c349716cbdab6215b0a045006c`. The isolated `feat/v52-vault-master-24oct` worktree merged that exact staging commit, retaining its Linux lockfile and Vault record/search fixes.

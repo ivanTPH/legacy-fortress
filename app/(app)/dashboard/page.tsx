@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import ActionQueuePanel, { getActionCentreActionCount, getActionCentreToDoCount, type ActionCentreContext, type ActionCentreTask } from "../components/dashboard/ActionQueuePanel";
+import ActionQueuePanel, { getActionCentreToDoCount, type ActionCentreContext, type ActionCentreTask } from "../components/dashboard/ActionQueuePanel";
 import V3DashboardOverview, { type VaultAreaSummary } from "../components/dashboard/V3DashboardOverview";
 import Icon from "../../../components/ui/Icon";
-import { Card, PageHeader } from "../../../components/ui/V3Primitives";
+import { PageHeader } from "../../../components/ui/V3Primitives";
 import AttachmentGallery, { type AttachmentGalleryItem } from "../../../components/documents/AttachmentGallery";
 import { FormField, NumberInput, TextInput } from "../../../components/forms/asset/AssetFormControls";
 import { formatCurrency } from "../../../lib/currency";
@@ -875,16 +875,17 @@ const legalSummary = useMemo(() => {
     }, preferences),
     [contactRows.length, digitalRecordCount, executorContactCount, financeRecordCount, possessionsRecordCount, preferences, powerOfAttorneyCount, willRecordCount, wishesCount],
   );
-  const actionCentreCount = useMemo(
-    () => getActionCentreActionCount(dashboardState.actions.items, dashboardState.actions.context, guidanceItems),
+  const actionCentreNeedsYouCount = useMemo(
+    () => getActionCentreToDoCount(dashboardState.actions.items, dashboardState.actions.context, guidanceItems),
     [dashboardState.actions.context, dashboardState.actions.items, guidanceItems],
   );
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.sessionStorage.setItem("lf:action-centre-count", String(actionCentreCount));
-    window.dispatchEvent(new CustomEvent("lf-action-centre-count", { detail: { count: actionCentreCount } }));
-  }, [actionCentreCount]);
+    if (typeof window === "undefined" || loading || viewer.mode !== "owner" || !viewer.sessionUserId) return;
+    const detail = { userId: viewer.sessionUserId, count: actionCentreNeedsYouCount };
+    window.sessionStorage.setItem(`lf:needs-you-count:${detail.userId}`, JSON.stringify({ count: detail.count, at: Date.now() }));
+    window.dispatchEvent(new CustomEvent("lf-needs-you-count", { detail }));
+  }, [actionCentreNeedsYouCount, loading, viewer.mode, viewer.sessionUserId]);
 
   const markDashboardTaskComplete = useCallback(async (taskId: string) => {
     const task = assetRows.find((row) => row.id === taskId && String(row.category_key ?? "") === "tasks");
@@ -1587,7 +1588,7 @@ const legalSummary = useMemo(() => {
     return (
       <div className="lf-action-centre-page lf-v3-area-page">
         <PageHeader title="To do" description="Everything that needs you, in one place." />
-        <Card className="lf-v3-actions-workspace"><ActionQueuePanel
+        <ActionQueuePanel
           items={dashboardState.actions.items}
           context={dashboardState.actions.context}
           guidanceItems={guidanceItems}
@@ -1595,7 +1596,7 @@ const legalSummary = useMemo(() => {
           onAction={handleAction}
           onGuidanceDecision={(item, action) => void handleGuidanceDecision(item, action)}
           onGuidanceApplicability={handleGuidanceApplicability}
-        /></Card>
+        />
         {status ? <p role="status" className="lf-action-centre-save-status">{stripStatusPrefix(status)}</p> : null}
         {reviewPanel ? <section className="lf-action-centre-follow-up" role="status"><strong>{reviewPanel.title}</strong><p>{reviewPanel.description}</p><button type="button" onClick={() => router.push(reviewPanel.href)}>{reviewPanel.ctaLabel}</button></section> : null}
       </div>

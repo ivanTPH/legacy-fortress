@@ -128,26 +128,38 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
   const accountTriggerRef = useRef<HTMLButtonElement | null>(null);
   const accountMenuId = useId();
   const shellSearchInputRef = useRef<HTMLInputElement | null>(null);
-  const [actionCentreCount, setActionCentreCount] = useState(0);
+  const [needsYouCount, setNeedsYouCount] = useState(0);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const userId = viewerAccess?.mode === "owner" ? viewerAccess.sessionUserId : "";
+    if (!userId) {
+      setNeedsYouCount(0);
+      return;
+    }
     const readCount = () => {
-      const stored = Number(window.sessionStorage.getItem("lf:action-centre-count") ?? 0);
-      setActionCentreCount(Number.isFinite(stored) && stored > 0 ? stored : 0);
+      try {
+        const stored = JSON.parse(window.sessionStorage.getItem(`lf:needs-you-count:${userId}`) ?? "null") as { count?: number; at?: number } | null;
+        const fresh = stored && typeof stored.at === "number" && Date.now() - stored.at < 5 * 60_000;
+        setNeedsYouCount(fresh && Number.isFinite(stored.count) && stored.count! > 0 ? stored.count! : 0);
+      } catch {
+        setNeedsYouCount(0);
+      }
     };
     const handleCountChange = (event: Event) => {
-      const count = Number((event as CustomEvent<{ count?: number }>).detail?.count ?? 0);
-      setActionCentreCount(Number.isFinite(count) && count > 0 ? count : 0);
+      const detail = (event as CustomEvent<{ userId?: string; count?: number }>).detail;
+      if (detail?.userId !== userId) return;
+      const count = Number(detail.count ?? 0);
+      setNeedsYouCount(Number.isFinite(count) && count > 0 ? count : 0);
     };
     readCount();
-    window.addEventListener("lf-action-centre-count", handleCountChange);
+    window.addEventListener("lf-needs-you-count", handleCountChange);
     window.addEventListener("storage", readCount);
     return () => {
-      window.removeEventListener("lf-action-centre-count", handleCountChange);
+      window.removeEventListener("lf-needs-you-count", handleCountChange);
       window.removeEventListener("storage", readCount);
     };
-  }, []);
+  }, [viewerAccess?.mode, viewerAccess?.sessionUserId]);
 
   useEffect(() => {
     if (!effectiveAvatarUrl) {
@@ -248,9 +260,9 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
   );
   const dashboardNavigationItems = useMemo(
     () => stripNavigationChildren(topLevelItems).filter((item) => item.id !== "support").map((item) => item.id === "action-centre"
-      ? { ...item, badge: actionCentreCount > 0 ? String(actionCentreCount) : undefined }
+      ? { ...item, badge: needsYouCount > 0 ? String(needsYouCount) : undefined }
       : item),
-    [actionCentreCount, topLevelItems],
+    [needsYouCount, topLevelItems],
   );
   const accountItems = useMemo(
     () => [
@@ -1235,22 +1247,36 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
             />
             <aside className="lf-mobile-drawer" aria-label="Mobile Navigation">
               <div className="lf-mobile-drawer-heading"><strong>My Vault</strong><button type="button" onClick={() => closeNavigationState("escape")} aria-label="Close navigation"><Icon name="close" size={20} /></button></div>
-
-              <MobileNavTree
-                items={dashboardNavigationItems.filter((item) => ["finances", "legal", "property", "business", "digital", "possessions", "add", "add-to-fortress", "support"].includes(item.id))}
+              <div className="lf-mobile-drawer-scroll">
+                <div className="lf-mobile-drawer-profile">
+                  <Link href="/profile" className="lf-mobile-drawer-profile-link" onClick={() => closeNavigationState("item_select")}>
+                    <span className="lf-admin-shell-avatar" aria-hidden="true">
+                      {renderedAvatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={renderedAvatarUrl} alt="" />
+                      ) : effectiveInitials || "LF"}
+                    </span>
+                    <span><strong>{effectiveDisplayName}</strong><small>Profile</small></span>
+                  </Link>
+                  <WorkspaceSwitcher currentPathname={pathname} compact mobileContextOnly drawerEntry alwaysShow customerOnly founderTestLauncherAvailable={founderLauncherAvailable} onSelect={() => closeNavigationState("item_select")} />
+                </div>
+                <div className="lf-mobile-drawer-section-label">Vault areas</div>
+                <MobileNavTree
+                items={dashboardNavigationItems.filter((item) => ["finances", "legal", "property", "business", "digital", "possessions"].includes(item.id))}
                 expandedIds={new Set([...activeChainIds, ...menuState.mobileExpandedIds])}
                 activeChainIds={activeChainIds}
                 onToggle={(id) => {
                   dispatchMenu({ type: "toggle_mobile_expand", id });
                 }}
                 onNavigate={() => closeNavigationState("item_select")}
-              />
-
-              <div className="lf-mobile-drawer-footer">
-                {accountItems.filter((item) => item.id === "support" || item.id === "account-profile").map((item) => <Link key={item.id} href={item.path} className="lf-mobile-drawer-support" onClick={() => closeNavigationState("item_select")}><span className="lf-nav-icon">{item.icon}</span>{item.label}</Link>)}
-                <FounderTestLauncher current="vault" available={founderLauncherAvailable} />
+                />
+                <div className="lf-mobile-drawer-footer">
+                {canViewPath("/people-access", resolvedViewerAccess) ? <Link href="/people-access" className="lf-mobile-drawer-support" onClick={() => closeNavigationState("item_select")}><Icon name="group" size={20} />People &amp; Access</Link> : null}
+                {accountItems.some((item) => item.id === "support") ? <Link href="/support" className="lf-mobile-drawer-support" onClick={() => closeNavigationState("item_select")}><Icon name="help" size={20} />Support</Link> : null}
+                {canViewPath("/settings", resolvedViewerAccess) ? <Link href="/settings" className="lf-mobile-drawer-support" onClick={() => closeNavigationState("item_select")}><Icon name="settings" size={20} />Settings</Link> : null}
                 <button type="button" className="lf-mobile-drawer-signout" onClick={() => void signOut()}><Icon name="logout" size={20} />Sign out</button>
                 {signOutError ? <p role="alert" className="lf-signout-error">{signOutError}</p> : null}
+                </div>
               </div>
             </aside>
           </>
@@ -1316,9 +1342,10 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
           ].filter(([href]) => canViewPath(href, resolvedViewerAccess)).map(([href, label, icon]) => {
             const active = pathname === href || (href === "/people-access" && ["/contacts", "/access-requests", "/access"].includes(pathname)) || (href === "/actions" && pathname === "/action-centre") || (href === "/settings" && (pathname === "/profile" || pathname.startsWith("/account/"))) || (href !== "/dashboard" && pathname.startsWith(`${href}/`));
             return (
-              <Link key={href} href={href} className={`lf-mobile-bottom-nav-item${active ? " is-active" : ""}`} aria-current={active ? "page" : undefined}>
+              <Link key={href} href={href} className={`lf-mobile-bottom-nav-item${active ? " is-active" : ""}`} aria-current={active ? "page" : undefined} aria-label={href === "/actions" && needsYouCount > 0 ? `To do, ${needsYouCount} open Needs you items` : label}>
                 <Icon name={icon} size={21} filled={active} />
                 <span>{label}</span>
+                {href === "/actions" && needsYouCount > 0 ? <span className="lf-mobile-tab-badge" aria-hidden="true">{needsYouCount > 99 ? "99+" : needsYouCount}</span> : null}
               </Link>
             );
           })}

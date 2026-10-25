@@ -4,6 +4,8 @@ import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from "
 import type { BlockingItem } from "../../../../lib/workflow/blockingModel";
 import type { GuidanceAction, GuidanceItem } from "../../../../lib/readiness/guidance";
 import type { VaultApplicabilityState } from "../../../../lib/vaultPreferences";
+import { countOpenNeedsYou, getVaultTaskGroup } from "../../../../lib/workflow/taskGroups";
+import Icon from "../../../../components/ui/Icon";
 
 type ActionQueuePanelProps = {
   items: BlockingItem[];
@@ -81,9 +83,18 @@ type ActionPriorityLevel = "Critical" | "High" | "Medium" | "Low";
 type ActionCentreTaskType = "user_created" | "system_generated" | "reminder";
 
 function actionGroup(row: ActionCentreRow): "todo" | "waiting" | "suggested" {
-  if (row.status === "Pending") return "waiting";
-  if (["Required", "Failed", "Plan limit reached"].includes(row.status) || row.taskType === "user_created") return "todo";
-  return "suggested";
+  return getVaultTaskGroup(row);
+}
+
+function taskIcon(row: ActionCentreRow) {
+  const key = `${row.actionKey} ${row.title}`.toLowerCase();
+  if (key.includes("invite")) return "send";
+  if (key.includes("access") || key.includes("share")) return "key";
+  if (key.includes("will") || key.includes("legal")) return "gavel";
+  if (key.includes("document") || key.includes("statement")) return "note_add";
+  if (key.includes("verif")) return "verified_user";
+  if (row.taskType === "reminder" || actionGroup(row) === "waiting") return "schedule";
+  return actionGroup(row) === "suggested" ? "lightbulb" : "task_alt";
 }
 
 export type ActionCentreTask = {
@@ -258,7 +269,6 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
   const [willChoice, setWillChoice] = useState<"yes" | "no" | "unsure" | null>(null);
   const requestedActionHandled = useRef(false);
   const [filter, setFilter] = useState<"all" | "todo" | "waiting" | "suggested">("all");
-  const [readActionKeys, setReadActionKeys] = useState<Set<string>>(new Set());
   const selectedRow = rows.find((row) => row.actionKey === selectedActionKey) ?? null;
 
   useEffect(() => {
@@ -270,20 +280,6 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
       setSelectedActionKey(requestedAction);
     }
   }, [rows]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const stored = window.sessionStorage.getItem("lf:action-centre-read");
-    if (!stored) return;
-    try {
-      const parsed: unknown = JSON.parse(stored);
-      if (Array.isArray(parsed)) {
-        setReadActionKeys(new Set(parsed.filter((value): value is string => typeof value === "string")));
-      }
-    } catch {
-      window.sessionStorage.removeItem("lf:action-centre-read");
-    }
-  }, []);
 
   useEffect(() => {
     if (selectedActionKey && !rows.some((row) => row.actionKey === selectedActionKey)) setSelectedActionKey(null);
@@ -300,9 +296,6 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
 
   function openRow(row: ActionCentreRow) {
     setWillChoice(null);
-    const next = new Set(readActionKeys).add(row.actionKey);
-    setReadActionKeys(next);
-    window.sessionStorage.setItem("lf:action-centre-read", JSON.stringify([...next]));
     setSelectedActionKey(row.actionKey);
   }
 
@@ -313,26 +306,23 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
   };
 
   function renderInboxRow(item: ActionCentreRow) {
-    const isRead = readActionKeys.has(item.actionKey);
     return (
-      <article key={item.actionKey} className={`lf-action-centre-row${isRead ? " is-read" : " is-new"}`} data-task-group={actionGroup(item)} style={inboxRowStyle}>
-        <button type="button" className="lf-action-centre-row-summary" style={rowSummaryButtonStyle} onClick={() => openRow(item)} aria-label={`${actionGroup(item)} task: Show details for ${item.title}`}>
-          <span className={`lf-action-centre-row-indicator${isRead ? " is-read" : ""}`} aria-hidden="true" />
-          <span style={{ display: "grid", gap: 3, minWidth: 0, textAlign: "left" }}>
-            <strong style={rowTitleStyle}>{item.title}</strong>
-            <span style={rowReasonStyle}>{item.blockerLabel}</span>
+      <article key={item.actionKey} className="lf-v52-todo-row" data-task-group={actionGroup(item)}>
+        <button type="button" className="lf-v52-todo-row-button" onClick={() => openRow(item)} aria-label={`${actionGroup(item) === "todo" ? "Needs you" : actionGroup(item) === "waiting" ? "Waiting on others" : "Suggested"}: ${item.title}. ${item.status}. Open details`}>
+          <span className="lf-v52-todo-icon" aria-hidden="true"><Icon name={taskIcon(item)} size={22} /></span>
+          <span className="lf-v52-todo-row-copy">
+            <strong>{item.title}</strong>
+            <small>{item.blockerLabel}</small>
+            <span className="lf-v52-todo-status">{item.status}</span>
           </span>
-          <span style={inboxRowMetaStyle}>{isRead ? "Read" : "New"}</span>
+          <Icon name="chevron_right" size={20} />
         </button>
-        <div className="lf-action-centre-row-actions" style={rowActionsStyle}>
-          <button type="button" style={primaryActionStyle} onClick={() => openRow(item)}>{item.primaryActionLabel}</button>
-        </div>
       </article>
     );
   }
 
   return (
-    <section id="action-centre" className="lf-action-centre" style={panelStyle} aria-label="To do">
+    <section id="action-centre" className="lf-action-centre lf-v52-todo" style={panelStyle} aria-label="To do">
       <div className="lf-v51-action-filters" aria-label="Filter To do">
         {([ ["all", "All", rows.length], ["todo", "Needs you", groupedRows.todo.length], ["waiting", "Waiting on others", groupedRows.waiting.length], ["suggested", "Suggested", groupedRows.suggested.length] ] as const).map(([key, label, count]) =>
           <button key={key} type="button" aria-pressed={filter === key} onClick={() => setFilter(key)}>{label} <span>{count}</span></button>)}
@@ -362,8 +352,8 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
               </div>
               <button type="button" style={closeButtonStyle} onClick={() => setSelectedActionKey(null)} aria-label="Close action details">×</button>
             </div>
-            <p style={{ margin: 0, color: "#475569", lineHeight: 1.55 }}>{selectedRow.whyItMatters}</p>
-            <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}>{selectedRow.blockerLabel}</p>
+            <p style={{ margin: 0, color: "var(--lf-text)", lineHeight: 1.55 }}>{selectedRow.whyItMatters}</p>
+            <p style={{ margin: 0, color: "var(--lf-text-secondary)", fontSize: 13 }}>{selectedRow.blockerLabel}</p>
             {selectedRow.guidanceItem?.key === "will" && selectedRow.guidanceItem.state === "unknown" && onGuidanceApplicability ? (
               <div style={drawerChoiceStyle}>
                 <fieldset className="lf-action-will-choices">
@@ -601,7 +591,7 @@ export function getActionCentreActionCount(
 }
 
 export function getActionCentreToDoCount(items: BlockingItem[], context?: ActionCentreContext, guidanceItems: GuidanceItem[] = []) {
-  return getActiveActionRows(items, context ? { ...context, guidanceItems } : undefined).filter((row) => actionGroup(row) === "todo").length;
+  return countOpenNeedsYou(getActiveActionRows(items, context ? { ...context, guidanceItems } : undefined));
 }
 
 export function buildActionCentrePreview(
@@ -939,40 +929,12 @@ function getSectionPriorityLevel(rows: ActionCentreRow[]): ActionPriorityLevel {
 }
 
 const panelStyle = {
-  border: "1px solid #e8e1dc",
-  borderRadius: 12,
-  background: "#fff",
-  padding: 22,
-  display: "grid",
-  gap: 14,
-} satisfies CSSProperties;
-
-const inboxRowStyle = {
-  display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) auto",
-  gap: 12,
-  alignItems: "center",
-  borderBottom: "1px solid #eee8e3",
-  padding: "13px 2px",
-} satisfies CSSProperties;
-
-const rowSummaryButtonStyle = {
-  minWidth: 0,
   border: 0,
+  borderRadius: 0,
   background: "transparent",
   padding: 0,
   display: "grid",
-  gridTemplateColumns: "10px minmax(0, 1fr) auto",
-  alignItems: "center",
-  gap: 10,
-  textAlign: "left",
-  cursor: "pointer",
-} satisfies CSSProperties;
-
-const inboxRowMetaStyle = {
-  color: "#7c7068",
-  fontSize: 11,
-  whiteSpace: "nowrap",
+  gap: 16,
 } satisfies CSSProperties;
 
 const resolvedRowStyle = {
@@ -1001,12 +963,12 @@ const drawerChoiceStyle = {
 } satisfies CSSProperties;
 
 const closeButtonStyle = {
-  border: "1px solid #ded6cf",
-  borderRadius: 8,
-  background: "#fff",
-  color: "#3a2118",
-  width: 36,
-  height: 36,
+  border: "1px solid var(--lf-border-control)",
+  borderRadius: "var(--lf-radius-input)",
+  background: "var(--lf-surface-card)",
+  color: "var(--lf-text)",
+  width: 44,
+  height: 44,
   fontSize: 22,
   lineHeight: 1,
   cursor: "pointer",
