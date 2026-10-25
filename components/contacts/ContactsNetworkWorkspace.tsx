@@ -711,7 +711,7 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
 
       {!viewer.readOnly && addContactGroupKey ? (
         <section className={embedded ? "lf-pa-add-panel" : undefined} style={embedded ? undefined : addContactGroupKey === "executors" ? { display: "grid", gap: 12 } : addContactPanelStyle} aria-label={addContactGroupKey === "executors" ? "Invite an Executor" : "Add contact and permissions"}>
-          {addContactGroupKey === "executors" ? null : (
+          {addContactGroupKey === "executors" || embedded ? null : (
           <div style={{ display: "grid", gap: 4 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
               <h2 style={{ margin: 0, fontSize: 18 }}>{isNextOfKinAddMode ? "Add Next of Kin" : "Add contact"}</h2>

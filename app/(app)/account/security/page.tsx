@@ -182,6 +182,7 @@ export default function SecurityPage() {
     <SettingsPageShell
       title="Security"
       subtitle="Secure your account credentials and maintain verified contact channels for recovery."
+      compact
     >
       <SettingsCard title="Mobile verification" description="OTP verification is required before using this number for secure notifications.">
         {loading ? <div style={{ color: "#6b7280" }}>Loading...</div> : null}

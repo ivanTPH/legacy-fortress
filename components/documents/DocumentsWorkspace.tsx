@@ -368,7 +368,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
   }
 
   return (
-    <section style={{ display: "grid", gap: 16 }}>
+    <section className="lf-v52-documents-workspace" style={{ display: "grid", gap: 16 }}>
       <div style={{ display: "grid", gap: 6 }}>
         {showPageHeading ? (
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -392,6 +392,8 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
       </div>
 
       {canManageAnyDocuments ? (
+      <details className="lf-v52-document-upload">
+      <summary><Icon name="add" size={20} />Add document</summary>
       <div style={workspaceCardStyle}>
         <div style={{ display: "grid", gap: 6 }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontWeight: 700 }}>
@@ -494,9 +496,10 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
           {status ? <div style={{ color: "#475569", fontSize: 13, alignSelf: "center" }}>{status}</div> : null}
         </div>
       </div>
+      </details>
       ) : null}
 
-      <div style={workspaceCardStyle}>
+      <div className="lf-v52-document-collection" style={workspaceCardStyle}>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontWeight: 700 }}>
           <Icon name="folder_managed" size={18} />
           Linked documents
@@ -535,7 +538,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
               fileName: item.fileName,
               mimeType: item.mimeType,
               createdAt: item.createdAt,
-              metaLabel: `Linked to ${item.parentLabel} in ${formatDiscoverySectionLabel(item.sectionKey)} / ${formatDiscoveryCategoryLabel(item.categoryKey)}`,
+              metaLabel: item.parentLabel,
               document: item,
             }))}
             emptyText={hasDocumentFilters ? "No linked documents match the current search or filters." : "No linked documents yet."}

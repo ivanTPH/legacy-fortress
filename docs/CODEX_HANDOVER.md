@@ -1,5 +1,13 @@
 # Codex Handover
 
+## 25 October 2026 — Attached V5.2 screen visual pass candidate
+
+- Isolated branch `fix/v52-visual-match-25oct` starts from staging `49bff6d70ca4963c29cba90c8e43fd7fb3bc342f`; the owner's dirty main worktree and separate security branches remain untouched. Hosted TEST was still `dc453bffeb0a81141590c69f5f5ca14450f16be0` when work began.
+- The active Vault search now opens a dedicated before-typing/results/empty view using the existing authorised discovery results. Document rows/viewer, Add person, Profile, Notifications, and the Will empty state were brought closer to the 14 attached web/mobile references. Existing CRUD, storage, masking, sign-in and access checks remain in place.
+- Focused synthetic local desktop Chromium and mobile WebKit checks passed for search, settings, person creation, document list/viewer/uploader, and menu routes. Proof PNGs are in `/private/tmp/legacy-fortress-v52-proof/`. These are local layout evidence, not hosted or installed-iPhone acceptance.
+- Screenshot-only Face ID/device controls and document extraction/suggestion decisions are not implemented because their security and persistence backends are unverified. Real OTP/password/passkey, reminder preferences, and secure attachment flows remain operational. See the V5.2 compliance ledger for exact partial states.
+- Protected release and hosted owner acceptance must be checked separately. Self-hosted TEST Supabase runs through Coolify; do not use the separate hosted Supabase website.
+
 ## 25 October 2026 — Release 85 visual stability and bank detail candidate
 
 - Branch `fix/v52-release85-visual-record-detail` starts at deployed TEST/staging `dc453bffeb0a81141590c69f5f5ca14450f16be0`; the owner's dirty main worktree is untouched.

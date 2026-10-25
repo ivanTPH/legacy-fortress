@@ -775,7 +775,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
   }
 
   function submitShellSearch() {
-    const destination = buildDashboardSearchHref(shellSearch);
+    const destination = shellSearch.trim() ? buildDashboardSearchHref(shellSearch) : "/dashboard?search=";
     closeNavigationState("item_select", false);
     router.push(destination);
   }
@@ -1144,6 +1144,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                 placeholder="Search your vault"
                 aria-label="Search your vault"
                 value={shellSearch}
+                onFocus={() => { if (!searchParams.has("search")) router.push("/dashboard?search="); }}
                 onChange={(event) => setShellSearchState({ pathname, value: event.target.value })}
               />
               <kbd aria-label="Keyboard shortcut Command K">⌘K</kbd>
@@ -1159,8 +1160,8 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
               aria-label="Search your vault"
               aria-expanded={mobileSearchOpen}
               onClick={() => {
-                setMobileSearchOpen(true);
-                window.requestAnimationFrame(() => shellSearchInputRef.current?.focus());
+                setMobileSearchOpen(false);
+                router.push("/dashboard?search=");
               }}
             >
               <Icon name="search" size={20} />

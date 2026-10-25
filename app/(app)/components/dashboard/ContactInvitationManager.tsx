@@ -121,7 +121,7 @@ export default function ContactInvitationManager({
   const [sendInvitationNow, setSendInvitationNow] = useState(true);
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [role, setRole] = useState<CollaboratorRole>("professional_advisor");
+  const [role, setRole] = useState<CollaboratorRole>(contactOnly ? "friend_or_family" : "professional_advisor");
   const [ownerNotes, setOwnerNotes] = useState("");
   const [allowedSections, setAllowedSections] = useState<SectionKey[]>([]);
   const [allowedAssetIds, setAllowedAssetIds] = useState<string[]>([]);
@@ -430,7 +430,7 @@ export default function ContactInvitationManager({
       setLastName("");
       setEmail("");
       setPhone("");
-      setRole("professional_advisor");
+      setRole(contactOnly ? "friend_or_family" : "professional_advisor");
       setOwnerNotes("");
       setAllowedSections([]);
       setAllowedAssetIds([]);
@@ -504,7 +504,7 @@ export default function ContactInvitationManager({
     setLastName("");
     setEmail("");
     setPhone("");
-    setRole("professional_advisor");
+    setRole(contactOnly ? "friend_or_family" : "professional_advisor");
     setOwnerNotes("");
     setAllowedSections([]);
     setAllowedAssetIds([]);
@@ -674,7 +674,7 @@ export default function ContactInvitationManager({
 
   return (
     <section
-      style={panelStyle}
+      style={contactOnly ? { display: "grid", gap: 14 } : panelStyle}
       aria-label="Contact invitation management"
     >
       {!guidedExecutor && !contactOnly ? <div style={panelHeaderStyle}>
@@ -762,7 +762,7 @@ export default function ContactInvitationManager({
       ) : null}
 
       {!isDashboardMode && !guidedExecutor ? (
-      <div style={sectionBlockStyle}>
+      <div className={contactOnly ? "lf-v52-add-person" : undefined} style={contactOnly ? undefined : sectionBlockStyle}>
         <div style={sectionHeaderStyle}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -772,18 +772,16 @@ export default function ContactInvitationManager({
                 message="Invite trusted people, choose the categories they can review, and allow edit access only on the specific records that really need it."
               /> : null}
             </div>
-            <p style={sectionIntroStyle}>
-              {contactOnly ? "Adding or inviting a person does not share any Vault records. You can give access after they connect." : "Save the selected contact here, then manage role, invitation state, internal notes, category access, and exact linked-record scope from the same shared admin surface."}
-            </p>
+            {!contactOnly ? <p style={sectionIntroStyle}>Save the selected contact here, then manage role, invitation state, internal notes, category access, and exact linked-record scope from the same shared admin surface.</p> : null}
           </div>
         </div>
 
-        <div className="lf-content-grid" style={{ gap: 10 }}>
+        <div className={contactOnly ? "lf-v52-add-person-fields" : "lf-content-grid"} style={{ gap: 10 }}>
           {contactOnly ? <><label style={fieldStyle}>
-            <span style={fieldLabelStyle}>First name <span className="lf-v4-required-tag">Required</span></span>
+            <span style={fieldLabelStyle}>First name</span>
             <input value={firstName} onChange={(e) => setFirstName(e.target.value)} style={inputStyle} autoComplete="given-name" />
           </label><label style={fieldStyle}>
-            <span style={fieldLabelStyle}>Last name <span className="lf-v4-required-tag">Required</span></span>
+            <span style={fieldLabelStyle}>Last name</span>
             <input value={lastName} onChange={(e) => setLastName(e.target.value)} style={inputStyle} autoComplete="family-name" />
           </label></> : <label style={fieldStyle}>
             <span style={fieldLabelStyle}>Name</span>
@@ -794,7 +792,7 @@ export default function ContactInvitationManager({
             <input value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} type="email" placeholder="name@example.com" />
           </label>
           <label style={fieldStyle}>
-              <span style={fieldLabelStyle}>Role {contactOnly ? <span className="lf-v4-required-tag">Required</span> : null}</span>
+              <span style={fieldLabelStyle}>{contactOnly ? "Relationship / access role" : "Role"}</span>
               <span className="lf-v4-select-wrap"><select value={role} onChange={(e) => setRole(e.target.value as CollaboratorRole)} style={inputStyle}>
               {roleOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -803,6 +801,7 @@ export default function ContactInvitationManager({
               ))}
             </select><Icon name="expand_more" size={20} className="lf-v4-select-chevron" /></span>
           </label>
+          {contactOnly ? <fieldset className="lf-v52-add-person-type"><legend>Type</legend><button type="button" aria-pressed={!["professional_advisor", "accountant", "financial_advisor", "lawyer"].includes(role)} onClick={() => setRole("friend_or_family")}>Family &amp; friends</button><button type="button" aria-pressed={["professional_advisor", "accountant", "financial_advisor", "lawyer"].includes(role)} onClick={() => setRole("professional_advisor")}>Professional</button></fieldset> : null}
           {contactOnly ? <details className="lf-v4-optional-group" style={{ gridColumn: "1 / -1" }}><summary><Icon name="contact_phone" size={20} /><span><strong>Optional details</strong><small>Phone</small></span><Icon name="expand_more" size={20} /></summary><div className="lf-v4-form-grid" style={{ padding: 14 }}><label style={fieldStyle}><span style={fieldLabelStyle}>Phone <span className="lf-v4-optional-tag">Optional</span></span><input value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} type="tel" autoComplete="tel" /></label></div></details> : <label style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
             <span style={fieldLabelStyle}>Owner notes</span>
             <textarea
@@ -849,7 +848,8 @@ export default function ContactInvitationManager({
                 })}
             </div>
           </div> : null}
-          {contactOnly ? <label className="lf-pa-send-invite-now" style={{ gridColumn: "1 / -1" }}><input type="checkbox" checked={sendInvitationNow} onChange={(event) => setSendInvitationNow(event.target.checked)} /><span>Send invitation now <small>This does not share any records.</small></span></label> : null}
+          {contactOnly ? <label className="lf-pa-send-invite-now lf-v52-add-person-invite" style={{ gridColumn: "1 / -1" }}><input type="checkbox" checked={sendInvitationNow} onChange={(event) => setSendInvitationNow(event.target.checked)} /><span>Send invitation now <small>You can invite later from their page.</small></span></label> : null}
+          {contactOnly ? <p className="lf-v52-add-person-notice"><Icon name="lock" size={20} />Adding or inviting someone doesn&apos;t share any records. You choose what they can see later, record by record.</p> : null}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button
               type="button"

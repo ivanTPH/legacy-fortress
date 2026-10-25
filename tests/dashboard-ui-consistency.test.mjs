@@ -202,11 +202,13 @@ test("dashboard uses authorised Version 3 area summaries and keeps live actions"
   assert.doesNotMatch(dashboardPage, /progressTrackStyle/);
   assert.doesNotMatch(dashboardPage, /% ready|% complete/);
   assert.match(dashboardPage, /storedDocumentCount/);
-  assert.match(dashboardPage, /aria-label="Vault search results"/);
-  assert.match(dashboardPage, />Search your vault<\/h2>/);
-  assert.match(dashboardPage, /Clear search/);
-  assert.match(dashboardPage, /No permitted records, contacts, documents, or destinations match this search/);
-  assert.match(dashboardPage, /permitted records, documents, contacts, and destinations/);
+  const searchResults = fs.readFileSync(path.join(root, "components/search/VaultSearchResults.tsx"), "utf8");
+  assert.match(dashboardPage, /<VaultSearchResults/);
+  assert.match(searchResults, /aria-label="Vault search results"/);
+  assert.match(searchResults, /aria-label="Search your vault"/);
+  assert.match(searchResults, /Clear search/);
+  assert.match(searchResults, /Nothing matches/);
+  assert.match(searchResults, /Searches record names, people, document titles and To do/);
   assert.match(fs.readFileSync(path.join(root, "app/(app)/layout.tsx"), "utf8"), /placeholder="Search your vault"/);
   assert.match(v3Overview, /aria-label="Vault areas"/);
   assert.match(dashboardPage, /guidanceItems=\{guidanceItems\}/);
@@ -300,13 +302,14 @@ test("add-to-fortress uses the page header once and renders grouped creation cho
   assert.match(fs.readFileSync(path.join(root, "app/v3-screens.css"), "utf8"), /\.lf-v3-destination-grid/);
 });
 
-test("shared attachment gallery uses icon buttons with tooltips instead of ad hoc text action buttons", () => {
+test("shared attachment gallery preserves accessible actions in compact document rows", () => {
   const attachmentGallery = fs.readFileSync(path.join(root, "components/documents/AttachmentGallery.tsx"), "utf8");
   const css = fs.readFileSync(path.join(root, "app/globals.css"), "utf8");
   const actionQueue = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/ActionQueuePanel.tsx"), "utf8");
 
-  assert.match(attachmentGallery, /className="lf-attachment-gallery"/);
-  assert.match(attachmentGallery, /className="lf-attachment-card-main"/);
+  assert.match(attachmentGallery, /className="lf-attachment-gallery lf-v52-document-list"/);
+  assert.match(attachmentGallery, /className="lf-v52-document-open"/);
+  assert.match(attachmentGallery, /className="lf-v52-document-options"/);
   assert.match(attachmentGallery, /className="lf-attachment-actions"/);
   assert.match(attachmentGallery, /className=\{danger \? "lf-attachment-action is-danger" : "lf-attachment-action"\}/);
   assert.match(actionQueue, /className="lf-action-centre"/);
@@ -367,9 +370,9 @@ test("shared attachment gallery uses icon buttons with tooltips instead of ad ho
   assert.match(attachmentGallery, /article/);
   assert.match(attachmentGallery, /table_chart/);
   assert.match(attachmentGallery, /calendar_month/);
-  assert.match(attachmentGallery, /fileTypePillStyle/);
+  assert.match(attachmentGallery, /lf-v52-document-copy/);
   assert.match(attachmentGallery, /statusLabel/);
-  assert.match(attachmentGallery, /Uploaded \{formatDate\(item\.createdAt\)\}/);
+  assert.match(attachmentGallery, /formatDate\(item\.createdAt\)/);
   assert.doesNotMatch(attachmentGallery, /window\.open/);
   assert.doesNotMatch(attachmentGallery, /<IconButton/);
   assert.doesNotMatch(attachmentGallery, /style=\{miniGhostBtn\}/);

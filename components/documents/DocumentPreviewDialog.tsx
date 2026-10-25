@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from "react";
 import { IconButton } from "../ui/IconButton";
+import Icon from "../ui/Icon";
 
 export type DocumentPreviewDialogItem = {
   fileName: string;
@@ -16,13 +17,23 @@ export type DocumentPreviewDialogItem = {
 export default function DocumentPreviewDialog({
   item,
   onClose,
+  onDownload,
+  onPrint,
+  onReplace,
+  onRemove,
+  replaceAccept,
 }: {
   item: DocumentPreviewDialogItem;
   onClose: () => void;
+  onDownload?: () => void;
+  onPrint?: () => void;
+  onReplace?: (file: File) => void;
+  onRemove?: () => void;
+  replaceAccept?: string;
 }) {
   return (
-    <div style={overlayStyle} role="dialog" aria-modal="true" aria-label={`${item.fileName} preview`}>
-      <div style={dialogStyle}>
+    <div className="lf-v52-document-overlay" style={overlayStyle} role="dialog" aria-modal="true" aria-label={`${item.fileName} preview`}>
+      <div className="lf-v52-document-dialog" style={dialogStyle}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 700, wordBreak: "break-word" }}>{item.fileName || "Attachment preview"}</div>
@@ -31,7 +42,7 @@ export default function DocumentPreviewDialog({
           </div>
           <IconButton icon="close" label="Close preview" onClick={onClose} />
         </div>
-        <div style={viewerStyle}>
+        <div className="lf-v52-document-viewer" style={viewerStyle}>
           {isImageMime(item.mimeType) ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={item.previewUrl} alt={item.fileName || "Attachment preview"} style={viewerImageStyle} />
@@ -45,6 +56,12 @@ export default function DocumentPreviewDialog({
             </div>
           )}
         </div>
+        {onDownload || onPrint || onReplace || onRemove ? <div className="lf-v52-document-dialog-actions">
+          {onDownload ? <button type="button" onClick={onDownload}><Icon name="download" size={18} />Download</button> : null}
+          {onPrint ? <button type="button" onClick={onPrint}><Icon name="print" size={18} />Print</button> : null}
+          {onReplace ? <label><Icon name="upload_file" size={18} />Replace<input type="file" accept={replaceAccept} onChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) onReplace(file); event.currentTarget.value = ""; }} /></label> : null}
+          {onRemove ? <button type="button" className="is-danger" onClick={onRemove}><Icon name="delete" size={18} />Delete</button> : null}
+        </div> : null}
         {item.helperText || item.relatedHref ? (
           <div style={{ display: "grid", gap: 10 }}>
             {item.helperText ? <div style={{ color: "#475569", fontSize: 14 }}>{item.helperText}</div> : null}

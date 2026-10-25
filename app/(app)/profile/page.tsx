@@ -479,15 +479,17 @@ export default function ProfilePage() {
     <SettingsPageShell
       title="Profile"
       subtitle="Keep your identity, contact, and address details clear for trusted people who may need them."
+      compact
     >
       {!editorOpen ? (
       <div id="profile-summary">
-      <SettingsCard title="Saved profile summary" description="These are the core details someone would rely on first to confirm identity, make contact, and trust the record.">
+      <SettingsCard title="Your details" description="Saved identity and contact details for your Vault.">
         {loading ? (
           <div style={{ color: "#6b7280" }}>Loading saved profile...</div>
         ) : (
-          <div style={{ display: "grid", gap: 12 }}>
-            <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <div className="lf-v52-profile-summary">
+            {!viewer.readOnly ? <button type="button" className="lf-v52-profile-edit" onClick={() => setEditorOpen(true)}><Icon name="edit" size={18} />Edit</button> : null}
+            <div className="lf-v52-profile-photo-row">
               <div className="lf-v52-profile-avatar-wrap"><div className="lf-v52-profile-avatar">
                 {savedSummaryAvatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -496,51 +498,18 @@ export default function ProfilePage() {
                   <span style={{ fontWeight: 700, fontSize: 16 }}>{summaryAvatarFallback}</span>
                 )}
               </div>{!viewer.readOnly ? <button type="button" className="lf-v52-profile-photo-action" aria-label={hasSavedAvatar ? "Change profile photo" : "Add profile photo"} onClick={() => setEditorOpen(true)}><Icon name="photo_camera" size={18} /></button> : null}</div>
-              <div style={{ display: "grid", gap: 4 }}>
-                <div style={{ fontWeight: 700, fontSize: 16 }}>
-                  {summaryName}
-                </div>
-                <div style={{ color: "var(--lf-text-secondary)", fontSize: 14 }}>{form.primary_email || "No email saved"}</div>
-                <div style={{ color: "var(--lf-text-secondary)", fontSize: 14 }}>
-                  {[form.house_name_or_number, form.street_name, form.town, form.city, form.post_code, form.country]
-                    .filter(Boolean)
-                    .join(", ") || "No address saved"}
-                </div>
-              </div>
+              <div><strong>{hasSavedAvatar ? "Change photo" : "Add a photo"}</strong><p>Optional. Your initials are used until you add one.</p></div>
             </div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <span style={profileReadiness.completed === 3 ? readyPillStyle : reviewPillStyle}>
-                {profileReadiness.completed === 3 ? "Profile ready for trusted review" : `${profileReadiness.completed} of 3 essentials in place`}
-              </span>
-              <span style={microPillStyle}>Identity {profileReadiness.identityReady ? "saved" : "needs review"}</span>
-              <span style={microPillStyle}>Contact {profileReadiness.contactReady ? "saved" : "needs review"}</span>
-              <span style={microPillStyle}>Address {profileReadiness.addressReady ? "saved" : "needs review"}</span>
-            </div>
-            <div style={{ color: "var(--lf-text-secondary)", fontSize: 14 }}>
-              Main phone: {form.mobile_number || form.telephone || "Not set"} · Notification email: {form.notification_email || "Not set"}
-            </div>
-            <div style={{ color: "var(--lf-text-secondary)", fontSize: 14 }}>National Insurance: {maskedNi}</div>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-              {!viewer.readOnly ? (
-                <button
-                  type="button"
-                  style={profileReadiness.completed === 3 ? ghostBtn : primaryBtn}
-                  onClick={() => {
-                    appendProfileAvatarTrace("[edit-open] yes");
-                    setEditorOpen(true);
-                  }}
-                  title={profileReadiness.completed === 3 ? "Edit profile details" : "Add remaining profile details"}
-                >
-                  <Icon name="edit" size={18} />
-                  {profileReadiness.completed === 3 ? "Edit profile" : "Add remaining details"}
-                </button>
-              ) : (
-                <span style={{ color: "#475569", fontSize: 13 }}>
-                  Read-only access. The vault owner controls profile changes.
-                </span>
-              )}
-              <StatusNote message={status} />
-            </div>
+            <dl className="lf-v52-profile-fields">
+              <div><dt>Full name</dt><dd>{summaryName}</dd></div>
+              <div><dt>Date of birth</dt><dd>{form.date_of_birth ? new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(`${form.date_of_birth}T00:00:00`)) : "Not saved"}</dd></div>
+              <div><dt>Address</dt><dd>{[form.house_name_or_number, form.street_name, form.town, form.city, form.post_code, form.country].filter(Boolean).join(", ") || "Not saved"}</dd></div>
+              <div><dt>Email</dt><dd>{form.primary_email || "Not saved"}</dd></div>
+              <div><dt>Mobile</dt><dd>{form.mobile_number || form.telephone || "Not saved"}</dd></div>
+            </dl>
+            <p className="lf-v52-profile-help">Your name and date of birth help verify you. Changes to your name may require another identity check.</p>
+            <div className="lf-v52-profile-identity"><strong>Identity</strong><div><Icon name="verified_user" size={20} /><span>Identity details {profileReadiness.identityReady ? "saved" : "need review"}<small>National Insurance: {maskedNi}</small></span></div></div>
+            <StatusNote message={status} />
           </div>
         )}
       </SettingsCard>
@@ -813,26 +782,6 @@ export default function ProfilePage() {
     </SettingsPageShell>
   );
 }
-
-const microPillStyle = {
-  borderRadius: 999,
-  padding: "5px 9px",
-  fontSize: 12,
-  background: "#f3f4f6",
-  color: "#334155",
-} as const;
-
-const reviewPillStyle = {
-  ...microPillStyle,
-  background: "#fff7ed",
-  color: "#9a3412",
-};
-
-const readyPillStyle = {
-  ...microPillStyle,
-  background: "#ecfdf3",
-  color: "#166534",
-};
 
 const profileIconWrapStyle = {
   width: 40,

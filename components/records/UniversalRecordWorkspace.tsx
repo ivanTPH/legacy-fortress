@@ -4208,14 +4208,14 @@ export default function UniversalRecordWorkspace({
         {loading ? <div role="status" className="lf-v52-record-loading">Loading records…</div> : null}
         {!loading && filteredRecords.length === 0 ? (
           <div className="lf-v52-record-empty">
-            <span className="lf-v52-add-icon" aria-hidden="true"><Icon name={sectionKey === "legal" ? "gavel" : sectionKey === "finances" ? "account_balance_wallet" : "folder"} size={24} /></span>
-            <strong>{hasDiscoveryFilters ? "No matching records" : "No records yet"}</strong>
+            <span className="lf-v52-add-icon" aria-hidden="true"><Icon name={isWillsWorkspace ? "history_edu" : sectionKey === "legal" ? "gavel" : sectionKey === "finances" ? "account_balance_wallet" : "folder"} size={24} /></span>
+            <strong>{hasDiscoveryFilters ? "No matching records" : isWillsWorkspace ? "No Wills recorded yet" : "No records yet"}</strong>
             <p>
               {hasDiscoveryFilters
                 ? "Try adjusting the search or filters to see more of this section."
-                : "Add a record here when you are ready. You can include details and documents later."}
+                : isWillsWorkspace ? "Record where your Will is kept, who your executors are and the solicitor who holds it. You can add the document later." : "Add a record here when you are ready. You can include details and documents later."}
             </p>
-            {!hasDiscoveryFilters && canCreateRecords ? <button type="button" className="lf-v52-record-empty-add" onClick={startCreate}>Add first record</button> : null}
+            {!hasDiscoveryFilters && canCreateRecords ? <button type="button" className="lf-v52-record-empty-add" onClick={startCreate}>{isWillsWorkspace ? "Add a Will" : "Add first record"}</button> : null}
           </div>
         ) : null}
         {!loading && activeRecords.length > 0 ? <div className="lf-v52-record-list"><div className="lf-v52-record-list-head" aria-hidden="true"><span></span><span>Name and type</span><span>Updated</span><span>Value</span><span></span></div>{activeRecords.map((row) => renderRow(row))}</div> : null}

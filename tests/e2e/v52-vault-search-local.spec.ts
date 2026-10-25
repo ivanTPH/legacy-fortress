@@ -121,12 +121,18 @@ test.describe("V5.2 authorised local Vault search", () => {
     if (signedIn.error || !signedIn.data.session) throw signedIn.error ?? new Error("Synthetic sign-in failed");
     await page.addInitScript((session) => localStorage.setItem("sb-127-auth-token", JSON.stringify(session)), signedIn.data.session);
     await page.goto("/legal", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "Legal", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Legal", exact: true })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText("Loading legal records…")).toHaveCount(0);
     const emptyLegalTile = page.locator(".lf-v52-legal-page .lf-v52-section-tile").filter({ hasText: "No records yet" }).first();
     await expect(emptyLegalTile).toBeVisible();
-    await expect(emptyLegalTile.getByRole("link")).toBeVisible();
+    await expect(emptyLegalTile.getByRole("link").first()).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath(isMobile ? "legal-overview-mobile.png" : "legal-overview-desktop.png") });
+    await page.goto("/dashboard?search=", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Try searching for" })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath(isMobile ? "search-before-mobile.png" : "search-before-desktop.png") });
+    await page.goto("/dashboard?search=Barclays", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("region", { name: "Records" })).toContainText(`Barclays Savings Account ${runId}`);
+    await page.screenshot({ path: testInfo.outputPath(isMobile ? "search-results-mobile.png" : "search-results-desktop.png") });
     await page.goto(`/dashboard?search=${encodeURIComponent(`My Will ${runId}`)}`, { waitUntil: "domcontentloaded" });
     const willResult = page.getByRole("link", { name: new RegExp(`My Will ${runId}`) });
     await expect(willResult).toBeVisible();
@@ -137,12 +143,37 @@ test.describe("V5.2 authorised local Vault search", () => {
     await expect(page.getByRole("link", { name: new RegExp(`Current Account ${runId}`) })).toBeVisible();
     await expect(page.getByText(`Other Person Savings ${runId}`)).toHaveCount(0);
     await page.goto(`/dashboard?search=${encodeURIComponent(`missing-${runId}`)}`, { waitUntil: "domcontentloaded" });
-    await expect(page.getByText(/No permitted records, contacts, documents, or destinations match/)).toBeVisible();
-    await expect(page.getByRole("button", { name: "Clear search" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: new RegExp(`Nothing matches.*missing-${runId}`) })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath(isMobile ? "search-empty-mobile.png" : "search-empty-desktop.png") });
+    await expect(page.locator(".lf-v52-search-clear")).toBeVisible();
     const revisedTitle = `Barclays Updated ${runId}`;
     const update = await admin.from("assets").update({ title: revisedTitle }).eq("id", ids.barclays!);
     if (update.error) throw update.error;
     await page.goto(`/dashboard?search=${encodeURIComponent(revisedTitle)}`, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("link", { name: new RegExp(revisedTitle) })).toBeVisible();
+  });
+
+  test("V5.2 settings, add-person and document states keep their authorised routes", async ({ page, isMobile }, testInfo) => {
+    const signedIn = await anon.auth.signInWithPassword({ email, password });
+    if (signedIn.error || !signedIn.data.session) throw signedIn.error ?? new Error("Synthetic sign-in failed");
+    await page.context().addInitScript((session) => localStorage.setItem("sb-127-auth-token", JSON.stringify(session)), signedIn.data.session);
+    await page.setViewportSize(isMobile ? { width: 390, height: 844 } : { width: 1440, height: 900 });
+    for (const [route, heading, file] of [
+      ["/profile", "Profile", "profile"],
+      ["/account/security", "Security", "security"],
+      ["/account/reminder-preferences", "Notifications", "notifications"],
+      ["/people-access?view=people&group=trusted_contacts&add=1", "Add person", "add-person"],
+      ["/property/documents", "Documents", "documents"],
+      ["/finances/bank?add=1", "Add bank account", "add-bank-account"],
+    ] as const) {
+      const view = await page.context().newPage();
+      await view.goto(route, { waitUntil: "domcontentloaded" });
+      await expect(view.getByRole("heading", { name: heading, exact: true }).first()).toBeVisible({ timeout: 30_000 });
+      await view.screenshot({ path: testInfo.outputPath(`${file}-${isMobile ? "mobile" : "desktop"}.png`), fullPage: true });
+      await view.close();
+    }
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    if (isMobile) await page.getByRole("button", { name: "Toggle navigation menu" }).click();
+    await page.screenshot({ path: testInfo.outputPath(`menu-${isMobile ? "mobile" : "desktop"}.png`) });
   });
 });

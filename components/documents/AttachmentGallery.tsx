@@ -113,29 +113,22 @@ export default function AttachmentGallery<T extends AttachmentGalleryItem>({
   }
 
   return (
-    <div className="lf-attachment-gallery" style={{ display: "grid", gap: 10 }}>
+    <div className="lf-attachment-gallery lf-v52-document-list">
       {sortedItems.length === 0 ? (
         <div style={emptyStateStyle}>{emptyText}</div>
       ) : (
-        <div style={{ display: "grid", gap: 10 }}>
+        <div className="lf-v52-document-rows">
           {sortedItems.map((item, index) => {
             const printable = isPrintableMime(item.mimeType);
             const fileKind = getFileTypeLabel(item.mimeType, item.fileName);
             return (
-              <article key={getAttachmentItemKey(item, index)} className="lf-attachment-card" style={cardStyle}>
-                <div className="lf-attachment-card-main" style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                  <AttachmentVisual item={item} size="large" />
-                  <div style={{ display: "grid", gap: 4, minWidth: 0, flex: 1 }}>
-                    <div style={{ fontWeight: 700, wordBreak: "break-word" }}>{item.fileName || "Untitled file"}</div>
-                    <div style={metadataRowStyle}>
-                      <span style={fileTypePillStyle}>{fileKind}</span>
-                      {item.createdAt ? <span>Uploaded {formatDate(item.createdAt)}</span> : null}
-                      {item.statusLabel ? <span style={statusPillStyle}>{item.statusLabel}</span> : null}
-                    </div>
-                    {item.metaLabel ? <div style={{ color: "#475569", fontSize: 12 }}>{item.metaLabel}</div> : null}
-                  </div>
-                </div>
-                <div className="lf-attachment-actions" style={actionRowStyle}>
+              <article key={getAttachmentItemKey(item, index)} className="lf-v52-document-row">
+                <button type="button" className="lf-v52-document-open" onClick={() => void openPreview(item)} aria-label={`Open ${item.fileName || "this document"}`}>
+                  <span className="lf-v52-document-icon"><Icon name={getFileIcon(item.mimeType, item.fileName)} size={22} /></span>
+                  <span className="lf-v52-document-copy"><strong>{item.fileName || "Untitled file"}</strong><small>{item.metaLabel || fileKind}{item.createdAt ? ` · ${formatDate(item.createdAt)}` : ""}{item.statusLabel ? ` · ${item.statusLabel}` : ""}</small></span>
+                  <Icon name="chevron_right" size={20} />
+                </button>
+                <details className="lf-v52-document-options"><summary aria-label={`More actions for ${item.fileName || "this document"}`}>More actions</summary><div className="lf-attachment-actions" style={actionRowStyle}>
                   <AttachmentActionButton
                     icon="visibility"
                     label="View"
@@ -168,7 +161,7 @@ export default function AttachmentGallery<T extends AttachmentGalleryItem>({
                   {onRemove ? (
                     <AttachmentActionButton icon="delete" label="Remove" ariaLabel={`Remove ${item.fileName || "this file"}`} danger onClick={() => onRemove(item)} />
                   ) : null}
-                </div>
+                </div></details>
               </article>
             );
           })}
@@ -189,6 +182,11 @@ export default function AttachmentGallery<T extends AttachmentGalleryItem>({
               : undefined,
           }}
           onClose={() => setPreview(null)}
+          onDownload={onDownload ? () => onDownload(preview.item) : undefined}
+          onPrint={onPrint && isPrintableMime(preview.item.mimeType) ? () => onPrint(preview.item) : undefined}
+          onReplace={onReplace ? (file) => onReplace(preview.item, file) : undefined}
+          onRemove={onRemove ? () => { onRemove(preview.item); setPreview(null); } : undefined}
+          replaceAccept={replaceAccept}
         />
       ) : null}
     </div>
@@ -371,20 +369,11 @@ function getFileIcon(mimeType: string | null | undefined, fileName?: string | nu
 
 function formatDate(value: string) {
   try {
-    return new Date(value).toLocaleString();
+    return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(value));
   } catch {
     return value;
   }
 }
-
-const cardStyle: CSSProperties = {
-  border: "1px solid #eee8e3",
-  borderRadius: 12,
-  padding: 14,
-  background: "#fff",
-  display: "grid",
-  gap: 10,
-};
 
 const thumbStyle: CSSProperties = {
   width: 68,
@@ -419,25 +408,6 @@ const fileBadgeLabelStyle: CSSProperties = {
   textTransform: "uppercase",
 };
 
-const metadataRowStyle: CSSProperties = {
-  color: "#64748b",
-  fontSize: 12,
-  display: "flex",
-  gap: 6,
-  alignItems: "center",
-  flexWrap: "wrap",
-};
-
-const statusPillStyle: CSSProperties = {
-  border: "1px solid #d7eadb",
-  borderRadius: 999,
-  background: "#f7fbf7",
-  color: "#166534",
-  padding: "2px 7px",
-  fontSize: 11,
-  fontWeight: 800,
-};
-
 const actionRowStyle: CSSProperties = {
   display: "flex",
   gap: 8,
@@ -465,16 +435,6 @@ const dangerActionButtonStyle: CSSProperties = {
   border: "1px solid #fecaca",
   background: "#fff",
   color: "#991b1b",
-};
-
-const fileTypePillStyle: CSSProperties = {
-  border: "1px solid #eadfd8",
-  borderRadius: 999,
-  background: "#fffefd",
-  color: "#5f4b3f",
-  padding: "2px 7px",
-  fontSize: 11,
-  fontWeight: 800,
 };
 
 const emptyStateStyle: CSSProperties = {

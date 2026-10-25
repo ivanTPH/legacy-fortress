@@ -38,6 +38,8 @@ import { getPlanLimitRedirectHref } from "../../../lib/accountPlan";
 import { sendContactInvite } from "../../../lib/contacts/sendContactInvite";
 import { loadProfileWorkspace, saveProfileWorkspace } from "../../../lib/profile/workspace";
 import { buildDashboardDiscoveryResults } from "../../../lib/records/discovery";
+import { buildDashboardSearchHref } from "../../../lib/records/discovery";
+import VaultSearchResults from "../../../components/search/VaultSearchResults";
 import {
   shouldRefreshDashboardForAssetMutation,
   subscribeToCanonicalAssetMutation,
@@ -1603,6 +1605,16 @@ const legalSummary = useMemo(() => {
     );
   }
 
+  if (searchParams.has("search")) {
+    return <VaultSearchResults
+      query={searchQuery}
+      results={discoveryResults}
+      loading={loading}
+      canAddRecords={viewer.mode !== "linked"}
+      onSearch={(value) => router.push(value.trim() ? buildDashboardSearchHref(value) : "/dashboard?search=")}
+    />;
+  }
+
   return (
     <div className="lf-dashboard-shell">
       <V3DashboardOverview loading={loading} areas={v3Areas} recordCount={recordIds.size}
@@ -1626,41 +1638,6 @@ const legalSummary = useMemo(() => {
         )
       ) : null}
       {loading ? <div style={{ color: "#6b7280" }}>Loading dashboard summary...</div> : null}
-      {searchQuery && !loading ? (
-          <section style={searchResultsPanelStyle} aria-label="Vault search results">
-          <div style={{ display: "grid", gap: 4 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={overviewIconStyle}>
-                <Icon name="search" size={16} />
-              </div>
-              <h2 style={{ margin: 0, fontSize: 18 }}>Search your vault</h2>
-            </div>
-            <div style={{ color: "#64748b", fontSize: 13 }}>
-              Results for <strong>{searchQuery}</strong> across your permitted records, documents, contacts, and destinations.
-            </div>
-            <button type="button" onClick={() => router.push("/dashboard")} style={searchResetButtonStyle}>
-              Clear search
-            </button>
-          </div>
-          {discoveryResults.length === 0 ? (
-            <div style={searchEmptyStateStyle}>No permitted records, contacts, documents, or destinations match this search. Clear the search to return to your dashboard.</div>
-          ) : (
-            <div style={{ display: "grid", gap: 10 }}>
-              {discoveryResults.map((result) => (
-                <Link key={result.id} href={result.href} style={searchResultStyle}>
-                  <span style={searchResultIconStyle}>
-                    <Icon name={result.icon} size={16} />
-                  </span>
-                  <span style={{ display: "grid", gap: 3, minWidth: 0 }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>{result.label}</span>
-                    <span style={{ fontSize: 13, color: "#64748b" }}>{result.description || "Open this destination"}</span>
-                  </span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
-      ) : null}
       {devBankTraceEnabled ? (
         <section
           style={{

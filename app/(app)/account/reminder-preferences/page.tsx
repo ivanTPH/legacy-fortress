@@ -91,17 +91,19 @@ export default function ReminderPreferencesPage() {
 
   return (
     <SettingsPageShell
-      title="Reminder Preferences"
-      subtitle="Configure periodic reminders for profile updates, document checks, and estate record reviews."
+      title="Notifications"
+      subtitle="Choose how you receive record and review reminders."
+      compact
     >
-      <SettingsCard title="Reminder schedule" description="Choose where reminders are sent and how far in advance.">
+      <SettingsCard title="Alerts" description="These choices control existing reminder channels. Push alerts and summary email delivery are not configured here.">
         {loading ? <div style={{ color: "#6b7280" }}>Loading...</div> : null}
-        <div className="lf-content-grid">
-          <Toggle label="Email reminders" checked={prefs.email_enabled} onChange={(checked) => setPrefs({ ...prefs, email_enabled: checked })} />
-          <Toggle label="SMS reminders" checked={prefs.sms_enabled} onChange={(checked) => setPrefs({ ...prefs, sms_enabled: checked })} />
-          <Toggle label="In-app reminders" checked={prefs.in_app_enabled} onChange={(checked) => setPrefs({ ...prefs, in_app_enabled: checked })} />
+        <div className="lf-v52-settings-rows">
+          <Toggle label="In-app reminders" description="Updates inside your Vault" checked={prefs.in_app_enabled} onChange={(checked) => setPrefs({ ...prefs, in_app_enabled: checked })} />
+          <Toggle label="Email reminders" description="Reminder emails without record details" checked={prefs.email_enabled} onChange={(checked) => setPrefs({ ...prefs, email_enabled: checked })} />
+          <Toggle label="SMS reminders" description="Text reminders to your verified number" checked={prefs.sms_enabled} onChange={(checked) => setPrefs({ ...prefs, sms_enabled: checked })} />
         </div>
-
+      </SettingsCard>
+      <SettingsCard title="Review reminder schedule" description="Choose the date and advance notice for the existing monthly review reminder.">
         <div className="lf-content-grid">
           <label style={{ display: "grid", gap: 6 }}>
             <span style={{ color: "#64748b", fontSize: 12 }}>Monthly review day (1-28)</span>
@@ -136,20 +138,10 @@ export default function ReminderPreferencesPage() {
   );
 }
 
-function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
+function Toggle({ label, description, checked, onChange }: { label: string; description: string; checked: boolean; onChange: (checked: boolean) => void }) {
   return (
-    <label
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        border: "1px solid #e5e7eb",
-        borderRadius: 12,
-        padding: 12,
-        background: "#fff",
-      }}
-    >
-      <span style={{ fontSize: 14 }}>{label}</span>
+    <label className="lf-v52-settings-toggle">
+      <span><strong>{label}</strong><small>{description}</small></span>
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
     </label>
   );
