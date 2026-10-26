@@ -1184,7 +1184,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
               {showBackButton ? (
                 <button className="lf-topbar-back" type="button" onClick={navigateBack} aria-label={`Back to ${topbarBreadcrumbs.at(-1)?.label ?? "Home"}`}>
                   <b aria-hidden="true" style={{ fontSize: 20, fontWeight: 400, lineHeight: 1 }}>←</b>
-                  <span>Back</span>
+                  <span>{topbarBreadcrumbs.at(-1)?.label ?? "Home"}</span>
                 </button>
               ) : null}
               <div className="lf-topbar-title">{topbarTitle}</div>
@@ -1256,7 +1256,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
               onClick={() => closeNavigationState("outside_click")}
             />
             <aside className="lf-mobile-drawer" aria-label="Mobile Navigation">
-              <div className="lf-mobile-drawer-heading"><strong>My Vault</strong><button type="button" onClick={() => closeNavigationState("escape")} aria-label="Close navigation"><Icon name="close" size={20} /></button></div>
+              <div className="lf-mobile-drawer-heading"><button type="button" onClick={() => closeNavigationState("escape")} aria-label="Close navigation and return to page"><Icon name="chevron_left" size={20} /> Home</button></div>
               <div className="lf-mobile-drawer-scroll">
                 <div className="lf-mobile-drawer-profile">
                   <Link href="/profile" className="lf-mobile-drawer-profile-link" onClick={() => closeNavigationState("item_select")}>

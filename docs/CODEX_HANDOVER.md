@@ -1,5 +1,12 @@
 # Codex Handover
 
+## Release #90 mobile responsive and navigation slice — 26 October 2026
+
+- Baseline staging/live TEST: `df0d1e33fb8fedf0ea9aacc10f0d5daf2e5d540a`. Work is isolated on `fix/v52-release90-mobile-responsive` in `/private/tmp/legacy-fortress-release89`; the owner's dirty main worktree was untouched.
+- Shared record-list width and Add action wrapping, mobile search width, full-screen scrollable Vault drawer, parent Back label, and full-screen authorised Vault switcher were adjusted. Wills Add now says “Add a Will”. No Auth, RLS, role, storage, schema or production changes.
+- Focused synthetic local WebKit and Chromium checks cover 320/390/402/1440px list controls, Will form/save/footer, drawer scroll and tabs, switcher and mobile search. See the Release #90 section in `docs/design-implementation/V52_COMPLIANCE_LEDGER.md` for PASS/PARTIAL/BLOCKED and remaining owner acceptance.
+- Original document filename remains immutable; editable document title needs the separately reviewed metadata/schema change described in the Release #89 ledger. Linked/locked Vault presentation needs an authorised TEST fixture before it can be accepted on hosted TEST.
+
 ## 26 October 2026 — Release #89 search and document naming decision
 
 - Started from protected Release #88 staging/live `e76ff075951fb5bc27e6a6373d949b72f4b2b633` on isolated `fix/v52-release89-search-doc-titles`; the dirty owner checkout is untouched. TEST Supabase is self-hosted in Coolify. Browser fixtures used only local `127.0.0.1:55421` and app `127.0.0.1:3012`.

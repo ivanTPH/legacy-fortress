@@ -199,4 +199,107 @@ test.describe("V5.2 authorised local Vault search", () => {
     if (isMobile) await page.getByRole("button", { name: "Toggle navigation menu" }).click();
     await page.screenshot({ path: testInfo.outputPath(`menu-${isMobile ? "mobile" : "desktop"}.png`) });
   });
+
+  test("Release 90 shared mobile navigation and list controls fit the viewport", async ({ page, isMobile }, testInfo) => {
+    const signedIn = await anon.auth.signInWithPassword({ email, password });
+    if (signedIn.error || !signedIn.data.session) throw signedIn.error ?? new Error("Synthetic sign-in failed");
+    await page.context().addInitScript((session) => localStorage.setItem("sb-127-auth-token", JSON.stringify(session)), signedIn.data.session);
+    const widths = isMobile ? [320, 390, 402] : [1440];
+    for (const width of widths) {
+      for (const route of ["/legal/wills", "/finances/bank", "/legal/trusts"]) {
+        const view = await page.context().newPage();
+        await view.setViewportSize({ width, height: isMobile ? 844 : 900 });
+        await view.goto(route, { waitUntil: "domcontentloaded" });
+        const heading = view.locator(".lf-v52-category-title-row h1");
+        await expect(heading).toBeVisible();
+        if (route === "/legal/wills") await expect(view.getByRole("button", { name: new RegExp(`My Will ${runId}`) })).toBeVisible();
+        if (route === "/finances/bank") await expect(view.getByRole("button", { name: new RegExp(`Barclays Savings Account ${runId}`) })).toBeVisible();
+        const add = view.locator(".lf-v52-category-add");
+        await expect(add).toBeVisible();
+        if (route === "/legal/wills" && isMobile) {
+          await expect(view.getByRole("button", { name: "Back to Legal" })).toBeVisible();
+          await expect(view.locator(".lf-v52-category-heading > .lf-v52-record-page-back")).toBeHidden();
+        }
+        const fit = await add.evaluate((element) => {
+          const rect = element.getBoundingClientRect();
+          const headingRect = document.querySelector(".lf-v52-category-title-row")!.getBoundingClientRect();
+          return { left: rect.left, right: rect.right, headingRight: headingRect.right, viewport: innerWidth };
+        });
+        expect(fit.left, `${route} at ${width}: ${JSON.stringify(fit)}`).toBeGreaterThanOrEqual(0);
+        expect(fit.right, `${route} at ${width}: ${JSON.stringify(fit)}`).toBeLessThanOrEqual(width);
+        expect(fit.headingRight, `${route} at ${width}: ${JSON.stringify(fit)}`).toBeLessThanOrEqual(width);
+        if (route === "/legal/wills" || (route === "/finances/bank" && width === 390)) {
+          await view.screenshot({ path: testInfo.outputPath(`${route.split("/").at(-1)}-${width}.png`) });
+        }
+        if (route === "/legal/wills" && width === 390) {
+          await add.click();
+          const form = view.locator(".lf-v4-record-form");
+          await expect(form).toBeVisible();
+          await expect(view.locator(".lf-mobile-bottom-nav")).toBeHidden();
+          await expect(form.getByLabel("Will title (required)")).toBeVisible();
+          await expect(form.locator("input[type=file]")).toHaveAttribute("accept", /image/);
+          const uploadBounds = await form.locator(".lf-shared-document-upload-field").boundingBox();
+          expect((uploadBounds?.x ?? 0) + (uploadBounds?.width ?? 0)).toBeLessThanOrEqual(width);
+          await view.screenshot({ path: testInfo.outputPath("add-will-390.png") });
+          await view.setViewportSize({ width, height: 520 });
+          await form.getByLabel("Will title (required)").focus();
+          const footer = await form.locator(".lf-v4-form-footer").boundingBox();
+          expect(footer?.x).toBeGreaterThanOrEqual(0);
+          expect((footer?.x ?? 0) + (footer?.width ?? 0)).toBeLessThanOrEqual(width);
+          expect((footer?.y ?? 0) + (footer?.height ?? 0)).toBeLessThanOrEqual(520);
+        }
+        await view.close();
+      }
+    }
+    if (isMobile) {
+      await page.setViewportSize({ width: 320, height: 568 });
+      await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+      await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Toggle navigation menu" })).toBeVisible();
+      await page.getByRole("button", { name: "Toggle navigation menu" }).click();
+      const drawer = page.getByRole("complementary", { name: "Mobile Navigation" });
+      await expect(drawer).toBeVisible();
+      await expect(drawer.getByRole("link", { name: "Finances" })).toBeVisible();
+      await expect(drawer.getByRole("link", { name: "Legal" })).toBeVisible();
+      await expect(drawer.getByRole("link", { name: "Finances" })).toBeInViewport();
+      await expect(drawer.getByRole("link", { name: "People & Access" })).toBeVisible();
+      await expect(drawer.getByRole("link", { name: "Settings" })).toBeVisible();
+      await expect(page.locator(".lf-mobile-bottom-nav")).toBeVisible();
+      const menuGeometry = await drawer.evaluate((element) => {
+        const tree = element.querySelector(".lf-mobile-tree")!;
+        const lastArea = tree.lastElementChild!;
+        const footer = element.querySelector(".lf-mobile-drawer-footer")!;
+        return { treeBottom: tree.getBoundingClientRect().bottom, lastAreaBottom: lastArea.getBoundingClientRect().bottom, footerTop: footer.getBoundingClientRect().top };
+      });
+      expect(menuGeometry.treeBottom, JSON.stringify(menuGeometry)).toBeGreaterThanOrEqual(menuGeometry.lastAreaBottom);
+      expect(menuGeometry.footerTop, JSON.stringify(menuGeometry)).toBeGreaterThanOrEqual(menuGeometry.lastAreaBottom);
+      await page.screenshot({ path: testInfo.outputPath("menu-320.png") });
+      await drawer.getByRole("button", { name: "Sign out" }).scrollIntoViewIfNeeded();
+      await expect(drawer.getByRole("button", { name: "Sign out" })).toBeInViewport();
+      await drawer.locator(".lf-workspace-current").click();
+      const vaultSwitcher = page.getByRole("navigation", { name: "Available workspaces" });
+      await expect(vaultSwitcher).toContainText("My Vault");
+      await expect(vaultSwitcher).toContainText("Owner");
+      await expect(vaultSwitcher.getByRole("link", { name: /My Vault.*Owner/ })).toBeInViewport();
+      await expect(page.locator(".lf-mobile-bottom-nav")).toBeVisible();
+      await page.screenshot({ path: testInfo.outputPath("switcher-320.png") });
+      await vaultSwitcher.getByRole("button", { name: "Menu" }).click();
+      await drawer.getByRole("button", { name: "Close navigation and return to page" }).click();
+      await expect(drawer).toBeHidden();
+      await page.getByRole("button", { name: "Search your vault" }).click();
+      const search = page.locator(".lf-global-search");
+      await expect(search.getByRole("button", { name: "Submit Vault search" })).toBeVisible();
+      await expect(search.getByRole("button", { name: "Close search" })).toBeVisible();
+      await search.getByRole("searchbox", { name: "Search your vault" }).focus();
+      await page.setViewportSize({ width: 320, height: 400 });
+      await expect(search.getByRole("button", { name: "Submit Vault search" })).toBeInViewport();
+      const searchBox = await search.boundingBox();
+      expect((searchBox?.x ?? 0) + (searchBox?.width ?? 0)).toBeLessThanOrEqual(320);
+      await page.setViewportSize({ width: 320, height: 568 });
+      await search.getByRole("searchbox", { name: "Search your vault" }).fill("Barclays");
+      await search.getByRole("button", { name: "Submit Vault search" }).click();
+      await expect(page.getByRole("region", { name: "Records" })).toContainText(`Barclays Savings Account ${runId}`);
+      await page.screenshot({ path: testInfo.outputPath("search-320.png") });
+    }
+  });
 });

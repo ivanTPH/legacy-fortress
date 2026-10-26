@@ -942,6 +942,8 @@ export default function UniversalRecordWorkspace({
   const financeTypeName = ({ bank: "bank account", pensions: "pension", investments: "investment", insurance: "insurance policy", debts: "debt" } as Record<string, string>)[categoryKey];
   const addLabel = isPossessions
     ? "Add possession"
+    : isWillsWorkspace
+      ? "Add a Will"
     : isTrustedContacts
       ? "Add contact"
       : isBankCategory
@@ -3978,11 +3980,11 @@ export default function UniversalRecordWorkspace({
   ) : null;
 
   return (
-    <section id={sectionId} style={{ display: "grid", gap: 14 }}>
+    <section id={sectionId} className="lf-v52-record-workspace" style={{ display: "grid", gap: 14 }}>
       {!selectedWorkspaceRecordId ? <div className="lf-v52-category-heading">
         <Link href={categoryParentHref} className="lf-v52-record-page-back"><Icon name="chevron_left" size={20} /> {sectionKey === "finances" ? "Finances" : sectionKey === "legal" ? "Legal" : sectionKey === "personal" ? "Personal" : "Home"}</Link>
         <div className="lf-v52-category-title-row"><h1 ref={existingRecordsHeadingRef} tabIndex={-1}>{title.replace(/^Legal · /, "").replace(/^Finances · Bank accounts$/, "Banks").replace(/^Property · Assets$/, "Property")}</h1>
-          {canCreateRecords ? <button ref={addRecordButtonRef} type="button" className="lf-v52-category-add" onClick={startCreate} aria-label={addLabel} aria-expanded={isCreatingRecord} aria-controls={createFormRegionId}><Icon name="add" size={20} /> Add record</button> : null}
+          {canCreateRecords ? <button ref={addRecordButtonRef} type="button" className="lf-v52-category-add" onClick={startCreate} aria-label={addLabel} aria-expanded={isCreatingRecord} aria-controls={createFormRegionId}><Icon name="add" size={20} /> {isWillsWorkspace ? "Add a Will" : "Add record"}</button> : null}
         </div>
         <p>{categoryActiveCount} record{categoryActiveCount === 1 ? "" : "s"}{viewer.mode !== "linked" && assetFormFamily !== "document" ? ` · ${formatCurrency(totals.active, "GBP")}` : ""}</p>
         {displaySubtitle ? <p className="lf-v52-category-description">{displaySubtitle}</p> : null}

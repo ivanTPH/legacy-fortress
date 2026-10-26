@@ -1,5 +1,20 @@
 # Personal Vault V5.2 compliance ledger
 
+## Release #90 bounded mobile comparison (26 October 2026)
+
+Compared against the owner-supplied Wills, Add Will, menu, switcher and search references and Vault Master V5.2. Evidence below is from synthetic local WebKit/Chromium; installed-iPhone acceptance is still pending.
+
+| Screen | Active source | Local result | Remaining acceptance |
+|---|---|---|---|
+| Wills, Banks and Trusts lists | `UniversalRecordWorkspace.tsx`, `app/globals.css`; p3/s4 | **PASS:** shared grid and wrapping header keep Add controls within 320, 390 and 402px; Wills uses “Add a Will”. No button is concealed by overflow clipping. | Owner installed-iPhone visual check. |
+| Add Will form | `UniversalRecordWorkspace.tsx`, shared form CSS; Vault Master Section P | **PARTIAL:** full-screen form, reachable native photo/file picker, upload field and Save footer fit at 390px and reduced viewport height. | Editable document title is **BLOCKED** on the separate metadata/schema decision recorded under Release #89. |
+| Menu drawer | `app/(app)/layout.tsx`, `app/globals.css`; qm1 | **PASS:** full-width mobile view, profile/Switch, six area rows, People & Access, Support, Settings and scroll-reachable Sign out. Four tabs remain visible; Back closes. A collapsed grid track previously let footer rows overlap Vault areas. | Owner installed-iPhone visual check. |
+| Vault switcher | `WorkspaceSwitcher.tsx`, `app/globals.css`; qm2 | **PARTIAL:** full-screen mobile view shows the owner Vault and role from the authenticated context, with a Back control. Linked Vaults and lock labels remain data-driven; no fake membership added. | Linked/locked state requires an authorised TEST fixture and owner iPhone check. |
+| Global search | `app/(app)/layout.tsx`, `components/search/VaultSearchResults.tsx`, `app/globals.css`; qs1–qs3 | **PASS:** the mobile header search action, clear/close controls and results fit 320px with a reduced-height keyboard simulation; saved record navigation remains tested. | Real iOS keyboard accessory and installed-PWA acceptance remain owner checks. |
+| Desktop smoke | Shared list/navigation CSS; x1/qm1 | **PASS:** 1440px Wills/Banks/Trusts Add controls fit; desktop navigation structure retained. | Owner desktop visual acceptance. |
+
+The causes were intrinsic width in the shared record grid/title row, a desktop width retained by the open mobile search form, and a mobile drawer grid track that collapsed while its area rows overflowed. The mobile list back label now names its parent; its in-page duplicate back link is hidden. Customer Vault membership and linked access enforcement were not changed.
+
 ## Release #89 owner UAT decision (26 October 2026)
 
 - The shared Personal Vault sub-asset list toolbar is suppressed on Banks and the other Vault record lists; its search, sort and status-filter logic remains in `UniversalRecordWorkspace.tsx` for a later product decision. Global Vault search remains in the header and search page.
