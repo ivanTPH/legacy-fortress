@@ -1,5 +1,15 @@
 # Personal Vault V5.2 compliance ledger
 
+## Release #91 targeted correction (26 October 2026)
+
+| Screen | Status | Evidence and remaining check |
+|---|---|---|
+| Mobile global search | **LOCAL PASS; HOSTED PENDING** | One page search form stays below the UAT banner and topbar in empty, focused, Barclays results, cleared and reopened states. The Search and clear controls fit 390px and a reduced-height WebKit viewport. Owner must confirm in the installed iPhone PWA. |
+| Add Will executor action | **LOCAL PASS; HOSTED PENDING** | The existing extra-executor handler now has a visible “Add another executor” button and 44px target. Synthetic WebKit added a second executor row. Owner visual check remains. |
+| Desktop global search | **LOCAL PASS** | Chromium retained the header search and the authorised Barclays result. |
+
+The underlying mobile drift was two search forms changing places across query states plus an absolutely positioned header form using safe-area offsets. The form action was an unlabeled 32px control for a real business function. These changes leave search permission handling and Will save logic in place.
+
 ## Release #90 bounded mobile comparison (26 October 2026)
 
 Compared against the owner-supplied Wills, Add Will, menu, switcher and search references and Vault Master V5.2. Evidence below is from synthetic local WebKit/Chromium; installed-iPhone acceptance is still pending.

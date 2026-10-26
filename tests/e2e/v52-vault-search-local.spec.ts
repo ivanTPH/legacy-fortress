@@ -302,4 +302,89 @@ test.describe("V5.2 authorised local Vault search", () => {
       await page.screenshot({ path: testInfo.outputPath("search-320.png") });
     }
   });
+
+  test("Release 91 search layout and Will executor action stay accessible", async ({ page, isMobile }, testInfo) => {
+    const signedIn = await anon.auth.signInWithPassword({ email, password });
+    if (signedIn.error || !signedIn.data.session) throw signedIn.error ?? new Error("Synthetic sign-in failed");
+    await page.context().addInitScript((session) => localStorage.setItem("sb-127-auth-token", JSON.stringify(session)), signedIn.data.session);
+    await page.setViewportSize(isMobile ? { width: 390, height: 844 } : { width: 1440, height: 900 });
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+    if (!isMobile) {
+      const desktopSearch = page.locator(".lf-global-search");
+      await expect(desktopSearch).toBeVisible();
+      await desktopSearch.getByRole("searchbox", { name: "Search your vault" }).fill("Barclays");
+      await desktopSearch.getByRole("searchbox", { name: "Search your vault" }).press("Enter");
+      await expect(page.getByRole("region", { name: "Records" })).toContainText(`Barclays Savings Account ${runId}`);
+      await expect(desktopSearch).toBeVisible();
+      await expect(page.locator(".lf-v52-search-mobile-field")).toBeHidden();
+      await page.screenshot({ path: testInfo.outputPath("release91-desktop-search.png") });
+      return;
+    }
+    await page.getByRole("button", { name: "Search your vault" }).click();
+    await expect(page).toHaveURL(/\/dashboard\?search=/);
+    await expect(page.getByRole("button", { name: "Back to Home" })).toBeVisible();
+    await expect(page.locator(".lf-global-search")).toBeHidden();
+    const pageSearch = page.locator(".lf-v52-search-mobile-field");
+    await expect(pageSearch).toBeVisible();
+    const geometry = async () => page.evaluate(() => {
+      const box = (selector: string) => {
+        const element = document.querySelector<HTMLElement>(selector);
+        if (!element || getComputedStyle(element).display === "none") return null;
+        const rect = element.getBoundingClientRect();
+        return { x: Math.round(rect.x), y: Math.round(rect.y), right: Math.round(rect.right), bottom: Math.round(rect.bottom) };
+      };
+      return { banner: box(".lf-uat-environment-banner"), header: box(".lf-topbar"), headerSearch: box(".lf-global-search"), pageSearch: box(".lf-v52-search-mobile-field"), viewport: innerWidth };
+    });
+    const assertMobileSearchFit = async (expectedY?: number) => {
+      const layout = await geometry();
+      expect(layout.headerSearch).toBeNull();
+      expect(layout.pageSearch).not.toBeNull();
+      expect(layout.pageSearch!.y).toBeGreaterThanOrEqual(layout.header!.bottom);
+      expect(layout.header!.y).toBeGreaterThanOrEqual(layout.banner!.bottom);
+      expect(layout.pageSearch!.right).toBeLessThanOrEqual(layout.viewport);
+      if (expectedY !== undefined) expect(layout.pageSearch!.y).toBe(expectedY);
+      for (const button of await pageSearch.locator("button:visible").all()) {
+        const rect = await button.boundingBox();
+        expect(rect!.x).toBeGreaterThanOrEqual(0);
+        expect(rect!.x + rect!.width).toBeLessThanOrEqual(layout.viewport);
+        expect(rect!.height).toBeGreaterThanOrEqual(44);
+      }
+      return layout.pageSearch!.y;
+    };
+    const searchY = await assertMobileSearchFit();
+    await page.screenshot({ path: testInfo.outputPath("release91-search-empty.png") });
+    await pageSearch.getByRole("searchbox", { name: "Search your vault" }).focus();
+    await assertMobileSearchFit(searchY);
+    await page.setViewportSize({ width: 390, height: 520 });
+    await assertMobileSearchFit(searchY);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await pageSearch.getByRole("searchbox", { name: "Search your vault" }).fill("Barclays");
+    await pageSearch.getByRole("button", { name: "Submit Vault search" }).click();
+    await expect(page.getByRole("region", { name: "Records" })).toContainText(`Barclays Savings Account ${runId}`);
+    await assertMobileSearchFit(searchY);
+    await page.screenshot({ path: testInfo.outputPath("release91-search-results.png") });
+    await pageSearch.getByRole("button", { name: "Clear search" }).click();
+    await expect(page.getByRole("heading", { name: "Try searching for" })).toBeVisible();
+    await assertMobileSearchFit(searchY);
+    await page.getByRole("button", { name: "Back to Home" }).click();
+    await expect(page).toHaveURL(/\/dashboard$/);
+    await page.getByRole("button", { name: "Search your vault" }).click();
+    await expect(pageSearch).toBeVisible();
+    await assertMobileSearchFit(searchY);
+    const willPage = await page.context().newPage();
+    await willPage.setViewportSize({ width: 390, height: 844 });
+    await willPage.goto("/legal/wills", { waitUntil: "domcontentloaded" });
+    await willPage.getByRole("button", { name: "Add a Will" }).click();
+    const addExecutor = willPage.getByRole("button", { name: "Add another executor" });
+    await expect(addExecutor).toBeVisible();
+    await expect(addExecutor).toContainText("Add another executor");
+    const addBox = await addExecutor.boundingBox();
+    expect(addBox!.height).toBeGreaterThanOrEqual(44);
+    expect(addBox!.x + addBox!.width).toBeLessThanOrEqual(390);
+    await addExecutor.click();
+    await expect(willPage.getByLabel("Executor name")).toHaveCount(2);
+    await willPage.screenshot({ path: testInfo.outputPath("release91-add-will.png") });
+    await willPage.close();
+  });
 });

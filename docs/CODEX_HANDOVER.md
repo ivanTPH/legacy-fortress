@@ -1,5 +1,12 @@
 # Codex Handover
 
+## Release #91 iPhone search and Will controls — 26 October 2026
+
+- Started from deployed TEST/staging `224c770fb22b8d13bb34ecf383fd4f4589ff66df` in isolated `/private/tmp/legacy-fortress-release91`; the owner's dirty main worktree and Release #90 proof were not changed.
+- Mobile search previously switched from an absolutely positioned header form at y=29 to a separate page form at y=97 after submission. The approved page form now remains below the header in empty, focused, results, cleared and reopened states; the desktop header search remains. The mobile search page has a Back to Home control.
+- The dark + in Add Will was the existing `addLegalContactRow` action. It now reads “Add another executor”, has a 44px target, and retains the verified extra-executor form behaviour. No Auth, RLS, storage, schema or production changes.
+- Focused synthetic local WebKit search/form and desktop Chromium search checks passed. Hosted search layout and installed-iPhone acceptance remain pending the protected release and owner review.
+
 ## Release #90 mobile responsive and navigation slice — 26 October 2026
 
 - Baseline staging/live TEST: `df0d1e33fb8fedf0ea9aacc10f0d5daf2e5d540a`. Work is isolated on `fix/v52-release90-mobile-responsive` in `/private/tmp/legacy-fortress-release89`; the owner's dirty main worktree was untouched.

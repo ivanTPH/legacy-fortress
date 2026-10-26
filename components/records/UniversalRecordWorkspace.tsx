@@ -3965,12 +3965,13 @@ export default function UniversalRecordWorkspace({
             {index === legalContactRowsForForm.length - 1 ? (
               <button
                 type="button"
-                style={addLinkedContactIconButtonStyle}
+                className="lf-legal-contact-add"
                 onClick={addLegalContactRow}
                 aria-label={addLinkedContactLabel}
                 title={addLinkedContactLabel}
               >
-                <Icon name="add" size={16} />
+                <Icon name="add" size={18} />
+                <span>{addLinkedContactLabel}</span>
               </button>
             ) : null}
           </div>
@@ -7250,28 +7251,14 @@ const ghostBtn: CSSProperties = {
   gap: 6,
 };
 
-const addLinkedContactIconButtonStyle: CSSProperties = {
-  border: "1px solid #111827",
-  background: "#111827",
-  color: "#ffffff",
-  borderRadius: 999,
-  width: 32,
-  height: 32,
-  padding: 0,
-  cursor: "pointer",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-};
-
 const removeLinkedContactIconButtonStyle: CSSProperties = {
   borderColor: "#fecaca",
   border: "1px solid #fecaca",
   color: "#991b1b",
   background: "#fff1f2",
   borderRadius: 999,
-  width: 32,
-  height: 32,
+  width: 44,
+  height: 44,
   padding: 0,
   cursor: "pointer",
   display: "inline-flex",

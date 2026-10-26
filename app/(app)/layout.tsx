@@ -101,7 +101,6 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     pathname,
     value: readShellSearchFromLocation(pathname),
   }));
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const devSmokeMode = useSyncExternalStore(subscribeToDevSmokeQuery, getDevSmokeQuery, () => false);
   const [prototypePreviewMode, setPrototypePreviewMode] = useState(false);
   const effectiveAuthState = devSmokeMode || prototypePreviewMode ? "ready" : authState;
@@ -742,13 +741,18 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     const handleSearchShortcut = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        setMobileSearchOpen(true);
-        window.requestAnimationFrame(() => shellSearchInputRef.current?.focus());
+        if (window.matchMedia("(max-width: 767px)").matches) {
+          const mobileInput = document.querySelector<HTMLInputElement>(".lf-v52-search-mobile-field input");
+          if (mobileInput) mobileInput.focus();
+          else router.push("/dashboard?search=");
+        } else {
+          shellSearchInputRef.current?.focus();
+        }
       }
     };
     window.addEventListener("keydown", handleSearchShortcut);
     return () => window.removeEventListener("keydown", handleSearchShortcut);
-  }, []);
+  }, [router]);
 
   function resolveFlyoutTop(anchorEl: HTMLElement | undefined, itemCount: number) {
     if (!anchorEl || !navWrapRef.current || !window) return null;
@@ -920,6 +924,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     : currentNode?.label ?? "Dashboard";
   const topbarBreadcrumbs = normalizedPathname === "/dashboard" ? [] : breadcrumbs.slice(0, -1);
   const showBackButton = !["/dashboard", "/add", "/add-to-fortress", "/actions", "/action-centre", "/contacts", "/people-access", "/profile"].includes(normalizedPathname);
+  const searchPageOpen = normalizedPathname === "/dashboard" && searchParams.has("search");
 
   function toggleAccountMenu() {
     setAccountMenuOpen((current) => {
@@ -1114,7 +1119,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
       </div>
 
       <div className="lf-content-wrap">
-        <header className={`lf-topbar${showBackButton ? " is-pushed" : " is-root"}`}>
+        <header className={`lf-topbar${showBackButton ? " is-pushed" : " is-root"}${searchPageOpen ? " is-search" : ""}`}>
           <button
             className="lf-menu-btn"
             type="button"
@@ -1129,10 +1134,9 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
 
           <div className="lf-topbar-main">
             <form
-              className={`lf-global-search${mobileSearchOpen ? " is-mobile-open" : ""}`}
+              className="lf-global-search"
               onSubmit={(event) => {
                 event.preventDefault();
-                setMobileSearchOpen(false);
                 submitShellSearch();
               }}
               role="search"
@@ -1151,28 +1155,22 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
               />
               <kbd aria-label="Keyboard shortcut Command K">⌘K</kbd>
               <button type="submit" className="lf-global-search-submit" aria-label="Submit Vault search">Search</button>
-              {mobileSearchOpen ? (
-                <button type="button" className="lf-global-search-close" onClick={() => setMobileSearchOpen(false)} aria-label="Close search">
-                  <Icon name="close" size={18} />
-                </button>
-              ) : null}
             </form>
             <button
               className="lf-mobile-search-toggle"
               type="button"
               aria-label="Search your vault"
-              aria-expanded={mobileSearchOpen}
               onClick={() => {
-                setMobileSearchOpen(true);
-                router.push("/dashboard?search=");
-                window.requestAnimationFrame(() => shellSearchInputRef.current?.focus());
+                const mobileInput = document.querySelector<HTMLInputElement>(".lf-v52-search-mobile-field input");
+                if (mobileInput) mobileInput.focus();
+                else router.push("/dashboard?search=");
               }}
             >
               <Icon name="search" size={20} />
             </button>
             <div className="lf-topbar-heading">
               <Breadcrumbs items={topbarBreadcrumbs} />
-              {!showBackButton ? <div className="lf-mobile-workspace-trigger"><WorkspaceSwitcher
+              {!showBackButton && !searchPageOpen ? <div className="lf-mobile-workspace-trigger"><WorkspaceSwitcher
                 currentPathname={pathname}
                 compact
                 mobileContextOnly
@@ -1187,6 +1185,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                   <span>{topbarBreadcrumbs.at(-1)?.label ?? "Home"}</span>
                 </button>
               ) : null}
+              {searchPageOpen ? <button className="lf-topbar-back lf-topbar-search-back" type="button" onClick={() => router.push("/dashboard")} aria-label="Back to Home"><b aria-hidden="true" style={{ fontSize: 20, fontWeight: 400, lineHeight: 1 }}>←</b><span>Home</span></button> : null}
               <div className="lf-topbar-title">{topbarTitle}</div>
             </div>
             {!showBackButton && canViewPath("/add", resolvedViewerAccess) ? <Link href="/add" className="lf-mobile-add-record" aria-label="Add to my Vault"><Icon name="add" size={22} /></Link> : null}
