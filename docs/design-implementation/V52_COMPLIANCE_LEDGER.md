@@ -4,6 +4,8 @@
 
 Compared against the owner-supplied Wills, Add Will, menu, switcher and search references and Vault Master V5.2. Evidence below is from synthetic local WebKit/Chromium; installed-iPhone acceptance is still pending.
 
+Release #90 staging and live TEST SHA: `224c770fb22b8d13bb34ecf383fd4f4589ff66df`. The local mandatory gate passed. Protected workflow [40363590572](https://github.com/ivanTPH/legacy-fortress/actions/runs/40363590572) failed after Coolify deployed this SHA because its hosted IDV acceptance version request received HTTP 504; the later admin browser step did not run. TEST `/api/version` subsequently returned HTTP 200 with the exact SHA. Thus deployment is verified, while protected hosted acceptance and installed-iPhone owner acceptance remain **BLOCKED**. Synthetic local proof screenshots remain uncommitted because they include a development overlay.
+
 | Screen | Active source | Local result | Remaining acceptance |
 |---|---|---|---|
 | Wills, Banks and Trusts lists | `UniversalRecordWorkspace.tsx`, `app/globals.css`; p3/s4 | **PASS:** shared grid and wrapping header keep Add controls within 320, 390 and 402px; Wills uses “Add a Will”. No button is concealed by overflow clipping. | Owner installed-iPhone visual check. |
