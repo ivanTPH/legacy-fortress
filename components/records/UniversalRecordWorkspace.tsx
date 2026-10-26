@@ -3440,7 +3440,11 @@ export default function UniversalRecordWorkspace({
           : isCanonicalDigital
             ? canonicalDigitalAsset?.digital_asset_type || "Digital record"
             : categoryLabel || title;
-    const showListValue = viewer.mode !== "linked" && !isNarrativeDocumentWorkspace && !isTrustedContacts && row.value_minor != null;
+    const hasRecordedValue = row.value_minor != null && (row.value_minor !== 0 || ["current_balance", "balance", "value_major", "estimated_value", "outstanding_balance", "cover_amount"].some((key) => {
+      const value = row.metadata?.[key];
+      return value !== null && value !== undefined && value !== "";
+    }));
+    const showListValue = viewer.mode !== "linked" && !isNarrativeDocumentWorkspace && !isTrustedContacts && hasRecordedValue;
     const valueAsOf = canonicalBankAsset?.valuation_date || canonicalPropertyAsset?.valuation_date || canonicalBusinessAsset?.valuation_date || canonicalDigitalAsset?.valuation_date || String(row.metadata?.valuation_date ?? "");
     return (
       <article key={row.id} className={`lf-record-card lf-v52-record-entry${detailMode ? " is-open lf-v52-detail-view" : ""}${detailMode && isFinanceSection ? " lf-v52-finance-detail" : ""}`} data-record-id={row.id}>
@@ -3685,7 +3689,7 @@ export default function UniversalRecordWorkspace({
             {viewer.mode !== "linked" && (isFinanceSection || isCanonicalProperty || isCanonicalBusiness || isCanonicalDigital || isPossessions) ? (
               <section className="lf-v52-record-value" aria-label="Record value">
                 <div><strong>Value</strong><span>Owner-recorded estimate</span></div>
-                <p>{formatCurrency(canonicalBankAsset?.current_balance ?? canonicalPropertyAsset?.estimated_value_major ?? canonicalBusinessAsset?.estimated_value_major ?? canonicalDigitalAsset?.estimated_value_major ?? toMajorUnits(row.value_minor), (row.currency_code ?? "GBP").toUpperCase())}</p>
+                <p>{hasRecordedValue ? formatCurrency(canonicalBankAsset?.current_balance ?? canonicalPropertyAsset?.estimated_value_major ?? canonicalBusinessAsset?.estimated_value_major ?? canonicalDigitalAsset?.estimated_value_major ?? toMajorUnits(row.value_minor), (row.currency_code ?? "GBP").toUpperCase()) : "Value not recorded"}</p>
                 <div><span>{valueAsOf ? `As of ${formatDate(valueAsOf)}` : "As of date not recorded"}</span></div>
               </section>
             ) : null}
@@ -4156,11 +4160,11 @@ export default function UniversalRecordWorkspace({
             <label style={fieldStyle}>
               <span style={labelStyle}>
                 <Icon name="search" size={16} />
-                Search
+                Search {title}
               </span>
               <input
                 style={inputStyle}
-                placeholder="Search records"
+                placeholder={`Search ${title.toLowerCase()} records`}
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
@@ -4584,7 +4588,7 @@ export default function UniversalRecordWorkspace({
               <label style={confirmationCardStyle}>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontWeight: 700 }}>
                   <Icon name="fact_check" size={18} />
-                  Extraction confirmation
+                  Review before saving
                 </span>
                 <span style={{ color: "#64748b", fontSize: 13 }}>
                   {isCanonicalTask

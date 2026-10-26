@@ -5,6 +5,8 @@ import {
   stripSensitiveMetadata,
 } from "../canonicalPersistence";
 import { normalizeCanonicalBankMetadata } from "./bankAsset";
+import { validateBankAssetMetadata } from "./validateBankAssetMetadata";
+import { normalizeSensitivePayloadPersistenceError } from "./sensitivePayloadErrors";
 import { normalizeCanonicalBusinessMetadata } from "./businessAsset";
 import { normalizeCanonicalDigitalMetadata } from "./digitalAsset";
 import { normalizeCanonicalPropertyMetadata } from "./propertyAsset";
@@ -68,7 +70,6 @@ type CategoryLookup = {
   token: string;
 };
 
-const ASSET_PGCRYPTO_REPAIR_MIGRATION = "supabase/migrations/20260321123000_fix_asset_payload_pgcrypto_schema_qualification.sql";
 
 async function assertCanonicalAssetWriteSchema(client: AnySupabaseClient) {
   const requiredColumns = [
@@ -130,27 +131,6 @@ export async function lookupCategoryBySlug(client: AnySupabaseClient, slug: stri
     id: null,
     token: normalizedSlug,
   };
-}
-
-function normalizeSensitivePayloadPersistenceError(message: string) {
-  const normalized = message.trim();
-
-  if (
-    normalized.includes("pgp_sym_encrypt(text, text) does not exist")
-    || normalized.includes("function extensions.pgp_sym_encrypt")
-    || normalized.includes("function pgp_sym_decrypt(bytea, text) does not exist")
-  ) {
-    return `Sensitive field encryption is unavailable in the active database. Apply ${ASSET_PGCRYPTO_REPAIR_MIGRATION} to the active project.`;
-  }
-
-  if (
-    normalized.includes("asset_payload_encryption_key")
-    || normalized.includes("Sensitive field encryption is not configured")
-  ) {
-    return "Sensitive field encryption is not configured.";
-  }
-
-  return normalized;
 }
 
 async function upsertSensitiveAssetPayload(
@@ -588,23 +568,6 @@ export { normalizeSensitivePayloadPersistenceError };
 function validateUpdateAssetInput(input: UpdateAssetInput) {
   if (!input.assetId?.trim()) throw new Error("Asset id is required.");
   validateCreateAssetInput(input);
-}
-
-function validateBankAssetMetadata(metadata: Record<string, unknown>) {
-  const isDashboardQuickRecord = metadata["dashboard_quick_record"] === true;
-  const providerName = String(metadata["provider_name"] ?? metadata["institution_name"] ?? "").trim();
-  const accountType = String(metadata["account_type"] ?? "").trim();
-  const accountHolder = String(metadata["account_holder"] ?? metadata["account_holder_name"] ?? "").trim();
-  const accountNumber = String(metadata["account_number"] ?? "").trim();
-  const country = String(metadata["country"] ?? metadata["country_code"] ?? "").trim();
-  const currency = String(metadata["currency"] ?? metadata["currency_code"] ?? "").trim();
-
-  if (!providerName) throw new Error("Provider Name is required.");
-  if (!accountType) throw new Error("Account Type is required.");
-  if (!isDashboardQuickRecord && !accountHolder) throw new Error("Account Holder is required.");
-  if (!isDashboardQuickRecord && !accountNumber) throw new Error("Account Number is required.");
-  if (!country) throw new Error("Country is required.");
-  if (!currency) throw new Error("Currency is required.");
 }
 
 function validatePropertyAssetMetadata(metadata: Record<string, unknown>) {

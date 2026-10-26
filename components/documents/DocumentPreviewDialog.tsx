@@ -34,13 +34,13 @@ export default function DocumentPreviewDialog({
   return (
     <div className="lf-v52-document-overlay" style={overlayStyle} role="dialog" aria-modal="true" aria-label={`${item.fileName} preview`}>
       <div className="lf-v52-document-dialog" style={dialogStyle}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
+        <div className="lf-v52-document-dialog-header" style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 700, wordBreak: "break-word" }}>{item.fileName || "Attachment preview"}</div>
             <div style={{ color: "#64748b", fontSize: 12 }}>{formatMime(item.mimeType)}</div>
             {item.metaLabel ? <div style={{ color: "#475569", fontSize: 12, marginTop: 4 }}>{item.metaLabel}</div> : null}
           </div>
-          <IconButton icon="close" label="Close preview" onClick={onClose} />
+          <IconButton icon="close" label="Close preview" className="lf-v52-document-dialog-close" onClick={onClose} />
         </div>
         <div className="lf-v52-document-viewer" style={viewerStyle}>
           {isImageMime(item.mimeType) ? (

@@ -3338,7 +3338,7 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
   border: 1px solid var(--lf-border-input);
   border-radius: 8px;
 }
-.lf-global-search:focus-within { border-color: var(--lf-accent); box-shadow: 0 0 0 3px rgba(140, 74, 50, .12); }
+.lf-global-search:focus-within { border-color: var(--lf-border-input); box-shadow: 0 0 0 2px var(--lf-focus); }
 .lf-global-search input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--lf-text); font: inherit; font-size: 14px; }
 .lf-global-search input::placeholder { color: var(--lf-text-tertiary); }
 .lf-global-search kbd { padding: 2px 5px; border: 1px solid var(--lf-border); border-radius: 4px; color: var(--lf-text-tertiary); font: 11px/1 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; }
@@ -7801,7 +7801,7 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-topbar { min-height: 60px; padding: 12px 32px; background: rgba(250, 248, 246, .96); border-bottom-color: #EBE4DE; }
 .lf-topbar-main { display: contents; }
 .lf-global-search { grid-column: 1; width: min(100%, 380px); height: 36px; display: flex; align-items: center; gap: 9px; padding: 0 10px; color: #6B5F5A; background: #FFFFFF; border: 1px solid #E6DFD9; border-radius: 8px; }
-.lf-global-search:focus-within { border-color: #8C4A32; box-shadow: 0 0 0 3px rgba(140, 74, 50, .12); }
+.lf-global-search:focus-within { border-color: var(--lf-border-input); box-shadow: 0 0 0 2px var(--lf-focus); }
 .lf-global-search input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: #1F1715; font: inherit; font-size: 14px; }
 .lf-global-search kbd { padding: 2px 5px; border: 1px solid #EBE4DE; border-radius: 4px; color: #9A8F8A; font: 11px/1 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; }
 .lf-topbar-heading { grid-column: 2; min-width: 0; }
@@ -8143,6 +8143,7 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-v51-optional-groups h4 { margin: 0; color: var(--lf-text); font-size: var(--lf-type-body); font-weight: 600; }
 .lf-v4-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--lf-space-16); min-width: 0; }
 .lf-v4-form-grid > * { min-width: 0; }
+.lf-v4-form-control { min-width: 0; max-width: 100%; box-sizing: border-box; }
 .lf-v4-form-span { grid-column: 1 / -1; }
 .lf-v4-form-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
 .lf-v4-form-body { display: grid; gap: var(--lf-space-16); min-width: 0; }
@@ -8526,6 +8527,8 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-v52-document-options summary { display: flex; align-items: center; min-height: 44px; width: fit-content; padding: 6px 14px; color: var(--lf-link); cursor: pointer; font-size: 13px; }
 .lf-v52-document-options .lf-attachment-actions { padding: 10px 14px; }
 .lf-v52-document-dialog, .lf-v52-document-viewer { background: var(--lf-surface-card) !important; color: var(--lf-text); border-color: var(--lf-border) !important; }
+.lf-v52-document-dialog-header { position: sticky; top: -16px; z-index: 2; padding-block: 8px; background: var(--lf-surface-card); }
+.lf-v52-document-dialog-close { width: var(--lf-target-min); min-width: var(--lf-target-min); height: var(--lf-target-min); touch-action: manipulation; }
 .lf-v52-document-viewer { background: var(--lf-surface-muted) !important; }
 .lf-v52-document-dialog-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .lf-v52-document-dialog-actions :is(button,label) { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: var(--lf-target-min); padding: 8px 14px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-input); background: var(--lf-surface-card); color: var(--lf-text); font: inherit; font-weight: 600; cursor: pointer; }

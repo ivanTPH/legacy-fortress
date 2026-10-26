@@ -2,7 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { buildCanonicalBankEditSeed, normalizeBankAssetRow, normalizeCanonicalBankMetadata } from "../lib/assets/bankAsset.ts";
-import { normalizeSensitivePayloadPersistenceError } from "../lib/assets/createAsset.ts";
+import { normalizeSensitivePayloadPersistenceError } from "../lib/assets/sensitivePayloadErrors.ts";
+import { validateBankAssetMetadata } from "../lib/assets/validateBankAssetMetadata.ts";
 import { getAssetCategoryFormConfig, validateAssetFormValues } from "../lib/assets/fieldDictionary.ts";
 
 test("bank create normalization writes canonical metadata keys without legacy duplicates", () => {
@@ -263,12 +264,18 @@ test("bank form validation uses canonical bank keys", () => {
 
   assert.equal(errors.provider_name, "Bank / provider name is required.");
   assert.equal(errors.account_type, "Account type is required.");
-  assert.equal(errors.account_number, "Account number is required.");
+  assert.equal(errors.account_number, undefined);
   assert.equal(errors.country, "Country is required.");
   assert.equal(errors.currency, "Currency is required.");
   assert.equal("institution_name" in errors, false);
   assert.equal("estimated_value" in errors, false);
   assert.equal("last_updated_on" in errors, false);
+});
+
+test("bank service accepts an omitted account number while retaining required owner-reviewed fields", () => {
+  const metadata = { provider_name: "Synthetic Bank", account_type: "savings_account", account_holder: "Test Owner", account_number: null, country: "UK", currency: "GBP" };
+  assert.doesNotThrow(() => validateBankAssetMetadata(metadata));
+  assert.throws(() => validateBankAssetMetadata({ ...metadata, account_holder: null }), /Account Holder is required/);
 });
 
 test("bank field dictionary includes the canonical create fields", () => {

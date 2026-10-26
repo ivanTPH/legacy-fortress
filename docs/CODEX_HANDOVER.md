@@ -1,5 +1,12 @@
 # Codex Handover
 
+## 26 October 2026 — Release #88 safe UAT correction
+
+- Staging and live TEST started at protected Release #87 `c729c061961e0d3ce549ef3d29f470de7d1d230e`. The main owner checkout is dirty and untouched; work is isolated on `fix/v52-release88-uat`.
+- Bank account number was labelled optional but `validateBankAssetMetadata` rejected an empty value. The service now matches the form while retaining provider, type, holder, country and currency checks. Staged uploads say “Review before saving” because no extraction occurs.
+- Vault category search states its category scope, global search uses one visible focus ring, unknown financial values no longer masquerade as £0.00 on V5.2 list/detail, mobile form controls fit their grid, and the document-preview close target is 44px and remains above the viewer while scrolling.
+- Genuine digital PDF processing, owner-confirmed extracted record creation, investment classification and OCR remain blocked by the exact security/infrastructure gates in `docs/design-implementation/DOCUMENT_INTELLIGENCE_CAPABILITY.md`. No extraction path was enabled, no migrations or role changes were made.
+
 ## 26 October 2026 — Document intelligence and search foundation
 
 - Isolated `feat/v52-document-intelligence` starts from protected Coolify TEST/staging `4c10033d4167de17c41dc51c1834ff0011bbd6bc`; the owner's dirty main worktree and unrelated security branches are untouched.

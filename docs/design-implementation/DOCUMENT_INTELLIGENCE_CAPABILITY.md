@@ -1,5 +1,13 @@
 # Document intelligence capability and release gate — 26 October 2026
 
+## Release #88 decision
+
+Digital-PDF-to-record creation remains **BACKEND BLOCKED**. Release #87's parser accepts text supplied by a trusted caller, but there is still no isolated PDF byte processor or authorised extraction job. The active browser upload writes to Coolify TEST Supabase Storage before any server-side byte validation, malware scan or quarantine. Bucket privacy, deployed document RLS, immutable original retention and accepted-decision audit have not been verified end to end. An operational extraction endpoint or prepopulated review form would therefore present unverified sensitive financial data and provenance. The feature stays disabled; there is no fake suggestion UI or automatic record mutation.
+
+The safe Release #88 slice fixes owner-reported account-number validation, truthful staged-upload copy, search scope/focus, unknown-value presentation, mobile form fit and the document-preview close target. The close target and form fit still require installed-iPhone owner acceptance after protected TEST deployment. No uploaded PDF, scanned image or investment valuation has been processed by this slice. Investment classification and OCR remain the later deliverable B once digital-PDF deliverable A passes its security gate.
+
+To unblock A, provision and verify a TEST-only isolated digital-PDF worker with resource/time limits and deletion of temporary bytes; server-side owner/document checks against the Coolify TEST Supabase private bucket; byte validation and scan/quarantine; immutable original and decision audit/retention; and synthetic statement fixtures for bank and non-bank classification. Only then can a disabled-by-default owner-reviewed proposal be connected to the existing Add Bank form and authorised persistence. OCR additionally needs an approved secure provider and equivalent retention checks.
+
 Baseline inspected: current staging and Coolify TEST `4c10033d4167de17c41dc51c1834ff0011bbd6bc`. The owner worktree and separate security branches were untouched. This is a one-time review of the active attachment, document and Vault search paths.
 
 | Capability | State | Evidence and release limit |
