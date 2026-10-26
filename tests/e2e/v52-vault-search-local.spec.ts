@@ -12,7 +12,7 @@ const runId = randomUUID().slice(0, 8);
 const email = `v52-search-${runId}@legacyfortress.test`;
 const otherEmail = `v52-search-other-${runId}@legacyfortress.test`;
 const password = "V52Search123!";
-const ids: { user?: string; otherUser?: string; org?: string; wallet?: string; otherOrg?: string; otherWallet?: string; barclays?: string; current?: string; will?: string; otherAsset?: string } = {};
+const ids: { user?: string; otherUser?: string; org?: string; wallet?: string; otherOrg?: string; otherWallet?: string; barclays?: string; current?: string; will?: string; release92Will?: string; otherAsset?: string } = {};
 
 test.describe("V5.2 authorised local Vault search", () => {
   test.beforeAll(async () => {
@@ -49,6 +49,7 @@ test.describe("V5.2 authorised local Vault search", () => {
 
   test.afterAll(async () => {
     if (!localOnly) return;
+    if (ids.release92Will) await admin.from("records").delete().eq("id", ids.release92Will);
     if (ids.will) await admin.from("records").delete().eq("id", ids.will);
     for (const key of ["barclays", "current", "otherAsset"] as const) if (ids[key]) await admin.from("assets").delete().eq("id", ids[key]);
     for (const key of ["wallet", "otherWallet"] as const) if (ids[key]) await admin.from("wallets").delete().eq("id", ids[key]);
@@ -303,7 +304,7 @@ test.describe("V5.2 authorised local Vault search", () => {
     }
   });
 
-  test("Release 91 search layout and Will executor action stay accessible", async ({ page, isMobile }, testInfo) => {
+  test("Release 92 search framing, Legal grid and Will executor boundary", async ({ page, isMobile }, testInfo) => {
     const signedIn = await anon.auth.signInWithPassword({ email, password });
     if (signedIn.error || !signedIn.data.session) throw signedIn.error ?? new Error("Synthetic sign-in failed");
     await page.context().addInitScript((session) => localStorage.setItem("sb-127-auth-token", JSON.stringify(session)), signedIn.data.session);
@@ -318,6 +319,12 @@ test.describe("V5.2 authorised local Vault search", () => {
       await expect(page.getByRole("region", { name: "Records" })).toContainText(`Barclays Savings Account ${runId}`);
       await expect(desktopSearch).toBeVisible();
       await expect(page.locator(".lf-v52-search-mobile-field")).toBeHidden();
+      await page.goto("/legal", { waitUntil: "domcontentloaded" });
+      await expect(page.locator(".lf-v52-legal-summary")).toContainText("sections");
+      await expect(page.locator(".lf-v52-legal-page .lf-v3-stats-strip")).toHaveCount(0);
+      const desktopGrid = page.locator(".lf-v52-legal-page .lf-v52-section-grid");
+      await expect(desktopGrid).toBeVisible();
+      expect(await desktopGrid.evaluate((grid) => getComputedStyle(grid).gridTemplateColumns.split(" ").length)).toBe(3);
       await page.screenshot({ path: testInfo.outputPath("release91-desktop-search.png") });
       return;
     }
@@ -353,18 +360,33 @@ test.describe("V5.2 authorised local Vault search", () => {
       return layout.pageSearch!.y;
     };
     const searchY = await assertMobileSearchFit();
+    const input = pageSearch.getByRole("searchbox", { name: "Search your vault" });
+    const clear = pageSearch.locator(".lf-v52-search-input-clear");
+    const submit = pageSearch.getByRole("button", { name: "Submit Vault search" });
+    const emptyFrame = await pageSearch.boundingBox();
+    await expect(clear).toBeDisabled();
+    const frameStyle = await pageSearch.evaluate((form) => ({ border: getComputedStyle(form).borderWidth, ring: getComputedStyle(form).boxShadow }));
+    expect(frameStyle.border).toBe("1px");
     await page.screenshot({ path: testInfo.outputPath("release91-search-empty.png") });
-    await pageSearch.getByRole("searchbox", { name: "Search your vault" }).focus();
+    await input.focus();
     await assertMobileSearchFit(searchY);
+    const focusedStyle = await pageSearch.evaluate((form) => ({ ring: getComputedStyle(form).boxShadow, inputOutline: getComputedStyle(form.querySelector("input")!).outlineStyle }));
+    expect(focusedStyle.ring).toContain("inset");
+    expect(focusedStyle.inputOutline).toBe("none");
     await page.setViewportSize({ width: 390, height: 520 });
     await assertMobileSearchFit(searchY);
     await page.setViewportSize({ width: 390, height: 844 });
-    await pageSearch.getByRole("searchbox", { name: "Search your vault" }).fill("Barclays");
-    await pageSearch.getByRole("button", { name: "Submit Vault search" }).click();
+    await input.fill("Barclays");
+    await submit.click();
     await expect(page.getByRole("region", { name: "Records" })).toContainText(`Barclays Savings Account ${runId}`);
     await assertMobileSearchFit(searchY);
+    const submittedFrame = await pageSearch.boundingBox();
+    expect(submittedFrame?.x).toBe(emptyFrame?.x);
+    expect(submittedFrame?.width).toBe(emptyFrame?.width);
+    expect(submittedFrame?.height).toBe(emptyFrame?.height);
+    expect((await submit.boundingBox())!.width).toBeLessThanOrEqual(60);
     await page.screenshot({ path: testInfo.outputPath("release91-search-results.png") });
-    await pageSearch.getByRole("button", { name: "Clear search" }).click();
+    await clear.click();
     await expect(page.getByRole("heading", { name: "Try searching for" })).toBeVisible();
     await assertMobileSearchFit(searchY);
     await page.getByRole("button", { name: "Back to Home" }).click();
@@ -374,17 +396,33 @@ test.describe("V5.2 authorised local Vault search", () => {
     await assertMobileSearchFit(searchY);
     const willPage = await page.context().newPage();
     await willPage.setViewportSize({ width: 390, height: 844 });
-    await willPage.goto("/legal/wills", { waitUntil: "domcontentloaded" });
+    await willPage.goto("/legal", { waitUntil: "domcontentloaded" });
+    await expect(willPage.getByRole("heading", { name: "Legal", exact: true })).toBeVisible();
+    await expect(willPage.locator(".lf-v52-legal-summary")).toContainText("sections");
+    await expect(willPage.locator(".lf-v52-legal-page .lf-v3-stats-strip")).toHaveCount(0);
+    const legalGrid = willPage.locator(".lf-v52-legal-page .lf-v52-section-grid");
+    await expect(legalGrid).toBeVisible();
+    expect(await legalGrid.evaluate((grid) => getComputedStyle(grid).gridTemplateColumns.split(" ").length)).toBe(2);
+    await willPage.screenshot({ path: testInfo.outputPath("release92-legal-mobile.png") });
+    await legalGrid.getByRole("link", { name: /Wills/ }).first().click();
+    await expect(willPage).toHaveURL(/\/legal\/wills/);
     await willPage.getByRole("button", { name: "Add a Will" }).click();
-    const addExecutor = willPage.getByRole("button", { name: "Add another executor" });
-    await expect(addExecutor).toBeVisible();
-    await expect(addExecutor).toContainText("Add another executor");
-    const addBox = await addExecutor.boundingBox();
-    expect(addBox!.height).toBeGreaterThanOrEqual(44);
-    expect(addBox!.x + addBox!.width).toBeLessThanOrEqual(390);
-    await addExecutor.click();
-    await expect(willPage.getByLabel("Executor name")).toHaveCount(2);
-    await willPage.screenshot({ path: testInfo.outputPath("release91-add-will.png") });
+    await expect(willPage.getByLabel("Executor name")).toHaveCount(1);
+    await expect(willPage.getByRole("button", { name: "Add another executor" })).toHaveCount(0);
+    await willPage.screenshot({ path: testInfo.outputPath("release92-add-will.png") });
+    const willTitle = `Release 92 Will ${runId}`;
+    await willPage.getByLabel("Will title (required)").fill(willTitle);
+    await willPage.getByLabel("Executor name").fill(`Alex Executor ${runId}`);
+    await willPage.getByRole("button", { name: "Add notes" }).click();
+    await willPage.locator(".lf-v4-record-form textarea").fill("Synthetic Will location recorded for TEST.");
+    await willPage.getByRole("button", { name: "Save record" }).click();
+    await expect(willPage.getByText("Record added securely.")).toBeVisible();
+    const savedWill = await admin.from("records").select("id").eq("owner_user_id", ids.user!).eq("title", willTitle).single();
+    if (savedWill.error || !savedWill.data) throw savedWill.error ?? new Error("Saved Will missing");
+    ids.release92Will = savedWill.data.id;
+    await willPage.goto(`/legal/wills?record=${ids.release92Will}`, { waitUntil: "domcontentloaded" });
+    await expect(willPage.getByRole("heading", { name: "Executors" })).toBeVisible();
+    await expect(willPage.locator(".lf-v52-record-person-list")).toContainText(`Alex Executor ${runId}`);
     await willPage.close();
   });
 });

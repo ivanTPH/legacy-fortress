@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, PageHeader } from "../../../components/ui/V3Primitives";
+import { PageHeader } from "../../../components/ui/V3Primitives";
 import VaultSectionGrid from "../../../components/vault/VaultSectionGrid";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
 import { filterAssetIdsForViewer, filterRecordIdsForViewer } from "../../../lib/access-control/viewerAccess";
@@ -116,30 +116,17 @@ export default function LegalOverviewPage() {
   ].map((section) => ({ ...section, records: rows.filter((row) => (row.category_key || "other-legal-documents") === section.slug) }));
   const populated = sections.filter((section) => section.records.length > 0);
   const recordCount = new Set(populated.flatMap((section) => section.records.map((row) => `${row.source}:${row.id}`))).size;
-  const latest = populated.flatMap((section) => section.records.map((row) => row.created_at)).filter((value): value is string => Boolean(value))
-    .sort((a, b) => Date.parse(b) - Date.parse(a))[0];
-
   return <section className="lf-v3-area-page lf-v52-legal-page">
     <PageHeader title="Legal" description="Keep wills, trusts, powers of attorney and other legal records easy to find." />
     {status ? <p role="alert">{status}</p> : null}
     {loading ? <p role="status">Loading legal records…</p> : null}
-    {!loading && recordCount > 0 ? <Card className="lf-v3-stats-strip" aria-label="Legal summary">
-      <div><span>Records</span><strong>{recordCount}</strong></div>
-      <div><span>Sections</span><strong>{populated.length} of {sections.length}</strong></div>
-      <div><span>Last updated</span><strong>{formatLegalDate(latest)}</strong></div>
-    </Card> : null}
+    {!loading ? <p className="lf-v52-legal-summary" aria-label="Legal summary">{recordCount} record{recordCount === 1 ? "" : "s"} · {populated.length} of {sections.length} sections</p> : null}
     <VaultSectionGrid sections={(viewer.mode === "linked" ? populated : sections).map((section) => ({
       key: section.slug, title: section.title, icon: section.icon, href: section.href, count: section.records.length,
       addHref: viewer.mode === "linked" ? undefined : `${section.href}?add=1`,
     }))} />
     {!loading && viewer.mode === "linked" && !recordCount ? <p>No legal records are assigned to you.</p> : null}
   </section>;
-}
-
-function formatLegalDate(value: string | null | undefined) {
-  if (!value) return "Not recorded";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "Not recorded" : new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(date);
 }
 
 function mapLegalSlugToPreferenceKey(slug: string): VaultSubsectionKey {

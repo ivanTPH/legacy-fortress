@@ -1,5 +1,15 @@
 # Personal Vault V5.2 compliance ledger
 
+## Release #92 bounded owner corrections (26 October 2026)
+
+| Screen | Status | Evidence and remaining check |
+|---|---|---|
+| Mobile global search | **LOCAL PASS; OWNER PENDING** | One persistent page form has a 1px border and inset focus treatment; Search/clear keep their slots across empty, submitted, cleared and reopened states. Synthetic WebKit checked 390px and reduced height; owner must confirm installed iPhone PWA. |
+| Desktop global search | **LOCAL PASS** | Chromium retained direct authorised Barclays search and the separate desktop header field. |
+| Legal overview | **LOCAL PASS; OWNER PENDING** | Removed the tall legacy Records/Sections/Last updated strip. Record and populated-section counts now sit above the existing two-column mobile and three-column desktop card grid. |
+| Saved Will / Executors | **PARTIAL; MULTIPLE EXECUTORS BLOCKED** | A synthetic Will with one executor saved and displayed an Executors section. The extra-executor control is withheld and multi-executor draft saves are blocked because `contact_links_owner_source_unique_idx` and the repository's source-level lookup/upsert collapse distinct canonical contacts. A reviewed schema/service change is required for post-save add/correct/remove and per-link audit. No invitations or access grants were introduced. |
+
+
 ## Release #91 targeted correction (26 October 2026)
 
 | Screen | Status | Evidence and remaining check |

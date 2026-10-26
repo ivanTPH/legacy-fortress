@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Icon from "../ui/Icon";
 import type { DashboardDiscoveryResult } from "../../lib/records/discovery";
@@ -29,7 +29,7 @@ type VaultSearchResultsProps = {
 };
 
 export default function VaultSearchResults(props: VaultSearchResultsProps) {
-  return <VaultSearchContent key={props.query} {...props} />;
+  return <VaultSearchContent {...props} />;
 }
 
 function VaultSearchContent({
@@ -40,12 +40,13 @@ function VaultSearchContent({
   onSearch,
 }: VaultSearchResultsProps) {
   const [draft, setDraft] = useState(query);
+  useEffect(() => setDraft(query), [query]);
 
   return <section className="lf-v52-search-page" aria-label="Vault search results">
     <form className="lf-v52-search-mobile-field" role="search" onSubmit={(event) => { event.preventDefault(); onSearch(draft); }}>
       <Icon name="search" size={20} />
       <input type="search" enterKeyHint="search" aria-label="Search your vault" placeholder="Search your vault" value={draft} onChange={(event) => setDraft(event.target.value)} />
-      {draft ? <button type="button" aria-label="Clear search" onClick={() => { setDraft(""); onSearch(""); }}><Icon name="cancel" size={20} /></button> : null}
+      <button type="button" className="lf-v52-search-input-clear" aria-label="Clear search" disabled={!draft} onClick={() => { setDraft(""); onSearch(""); }}><Icon name="cancel" size={20} /></button>
       <button type="submit" className="lf-v52-search-submit" aria-label="Submit Vault search">Search</button>
     </form>
     {!query ? <div className="lf-v52-search-intro">

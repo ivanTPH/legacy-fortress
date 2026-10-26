@@ -1,5 +1,15 @@
 # Codex Handover
 
+## Release #92 search, Legal and Will executor boundary — 26 October 2026
+
+- Baseline staging/live TEST `866e4d3dea6df857b06a620110fe7e2acffa5e6e`; isolated worktree `/private/tmp/legacy-fortress-release92`. The owner's dirty main worktree remains untouched.
+- The mobile search form had conflicting one/two-pixel border rules and an exterior focus shadow inside a clipped mobile scroll shell. The field now keeps one border with an inset focus treatment, a reserved clear-control slot and a compact visible Search action. The same mounted form serves empty and results states; authorised discovery and desktop search are unchanged.
+- Legal replaces the legacy three-row mobile stats strip with a concise record/section summary above the shared two-column section cards. The record loader, counts and routes are unchanged.
+- A Will can save its first optional executor through the existing owner-scoped `record_contacts` path, and the saved page labels those rows “Executors”. The extra-executor button is withheld because `contact_links_owner_source_unique_idx` permits only one canonical contact link per Will; `syncCanonicalContact` also resolves a link with `.maybeSingle()` and upserts on that same three-column key. Multiple names can therefore collapse onto one canonical contact. A validation guard prevents saving a multi-executor draft until the schema and repository can preserve distinct links. No invitation or access grant is triggered.
+- To finish post-save add/correct/remove, a separately approved schema/service change must permit unique `(owner_user_id, source_kind, source_id, contact_id)` links, update link lookup/upsert and per-contact unlink, reconcile existing `record_contacts` rows, and verify owner-scoped audit and no self-invitation/access grant. No migration is included here.
+- Focused local synthetic mobile WebKit and desktop Chromium search/Legal checks passed. Mobile WebKit also saved a Will with one executor and displayed that executor on its saved detail page. Installed-iPhone and hosted TEST visual acceptance remain pending release.
+- Mandatory `release:check -- --ci` passed once: zero audit advisories, lint with warnings and zero errors, TypeScript, core/stabilisation tests, route/link checks and production build. The separate legacy `design:check` script fails on an unchanged V4 assertion looking for `lf-v3-area-section` and `AddAssetLink` in Finances; the deployed baseline already uses `VaultSectionGrid`. This is a stale design assertion, not a failure in the Release #92 UI or protected gate.
+
 ## Release #91 iPhone search and Will controls — 26 October 2026
 
 - Started from deployed TEST/staging `224c770fb22b8d13bb34ecf383fd4f4589ff66df` in isolated `/private/tmp/legacy-fortress-release91`; the owner's dirty main worktree and Release #90 proof were not changed.

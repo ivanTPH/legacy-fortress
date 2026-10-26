@@ -2208,6 +2208,10 @@ export default function UniversalRecordWorkspace({
                 phone: "",
                 role: form.contact_role || defaultLegalContactRole,
               })];
+      if (isWillsWorkspace && normalizeLegalContactRows(legalContactRowsForValidation, defaultLegalContactRole).length > 1) {
+        stopSaveForValidation("This Will has multiple executors. Save is unavailable until each executor can be linked to the Will separately.");
+        return;
+      }
       const invalidEmailRow = findInvalidLegalContactEmail(legalContactRowsForValidation);
       if (invalidEmailRow) {
         const message = `${legalLinkedContactDefinition.contactEmailLabel} must be a valid email address.`;
@@ -3876,7 +3880,7 @@ export default function UniversalRecordWorkspace({
             </div>
             <aside className="lf-v52-record-rail" aria-label="Record context">
               <section className="lf-v52-record-people" aria-label="People linked to this record">
-                <h2>People linked to this record</h2>
+                <h2>{isWillsWorkspace ? "Executors" : "People linked to this record"}</h2>
                 {rowContacts.length ? (
                   <>
                     <ul className="lf-v52-record-person-list">
@@ -3894,7 +3898,7 @@ export default function UniversalRecordWorkspace({
                     </ul>
                     <details className="lf-v52-record-people-manage"><summary>Contact details and actions</summary>{linkedContactsTable}</details>
                   </>
-                ) : <p>No linked people available in this view.</p>}
+                ) : <p>{isWillsWorkspace ? "No executor recorded." : "No linked people available in this view."}</p>}
               </section>
               <details className="lf-v52-record-history">
                 <summary>Record history</summary>
@@ -3962,7 +3966,7 @@ export default function UniversalRecordWorkspace({
                 <Icon name="remove" size={16} />
               </button>
             ) : null}
-            {index === legalContactRowsForForm.length - 1 ? (
+            {index === legalContactRowsForForm.length - 1 && !isWillsWorkspace ? (
               <button
                 type="button"
                 className="lf-legal-contact-add"
