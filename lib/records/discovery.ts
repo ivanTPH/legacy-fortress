@@ -48,7 +48,7 @@ export type DiscoveryContactRow = {
 
 export type DashboardDiscoveryResult = {
   id: string;
-  kind: "asset" | "document" | "attachment" | "contact" | "navigation";
+  kind: "asset" | "task" | "document" | "attachment" | "contact" | "navigation";
   label: string;
   description: string;
   href: string;
@@ -197,13 +197,13 @@ export function buildDashboardDiscoveryResults<
   const assetResults = filterDiscoveryRecords(assets, { query: normalizedQuery })
     .map((asset) => ({
     id: `asset-${asset.id}`,
-    kind: "asset" as const,
+    kind: normalizeDiscoveryToken(asset.category_key) === "tasks" ? "task" as const : "asset" as const,
     label: getDiscoveryAssetLabel(asset),
     description: [formatDiscoverySectionLabel(asset.section_key), formatDiscoveryCategoryLabel(asset.category_key)]
       .filter(Boolean)
       .join(" · "),
     href: assetHref(asset),
-    icon: assetIcon(asset),
+    icon: normalizeDiscoveryToken(asset.category_key) === "tasks" ? "task_alt" : assetIcon(asset),
     }))
     .filter((asset) => Boolean(asset.href));
 

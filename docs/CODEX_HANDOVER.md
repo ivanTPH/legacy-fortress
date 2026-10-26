@@ -1,5 +1,12 @@
 # Codex Handover
 
+## 26 October 2026 — Document intelligence and search foundation
+
+- Isolated `feat/v52-document-intelligence` starts from protected Coolify TEST/staging `4c10033d4167de17c41dc51c1834ff0011bbd6bc`; the owner's dirty main worktree and unrelated security branches are untouched.
+- One-time capability and release-gate record: `docs/design-implementation/DOCUMENT_INTELLIGENCE_CAPABILITY.md`. Canonical upload, signed preview and authorised title search exist. There is no bank PDF text worker, OCR, scanner/quarantine, verified document decision audit or version/retention enforcement in the active path. Current owner replace/remove deletes originals, so it must not be presented as immutable version history.
+- Saved authorised task records now group under To do in Vault search. The old `/vault/financial` statement screen no longer labels filename-derived/manual details as extraction. A pure bank-statement text parser and owner-scoped exact identifier matcher have synthetic tests; neither is wired into upload, UI or a network endpoint. Extraction remains disabled.
+- Do not enable document suggestions or claim a full statement journey until the Coolify TEST processing, storage and owner-decision gates in the capability record are satisfied. No Auth, RLS, schema or production changes were made.
+
 ## 25 October 2026 — Attached V5.2 screen visual pass candidate
 
 - Isolated branch `fix/v52-visual-match-25oct` starts from staging `49bff6d70ca4963c29cba90c8e43fd7fb3bc342f`; the owner's dirty main worktree and separate security branches remain untouched. Hosted TEST was still `dc453bffeb0a81141590c69f5f5ca14450f16be0` when work began.

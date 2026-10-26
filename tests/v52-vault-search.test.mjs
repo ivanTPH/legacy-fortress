@@ -36,3 +36,14 @@ test("global discovery keeps cross-category results distinct and links to saved 
   assert.deepEqual(results.map((result) => [result.label, result.href]), [["My Will", "/legal/wills?record=will"]]);
   assert.equal(results[0]?.description.includes("secret testament"), false);
 });
+
+test("authorised saved tasks appear as To do results without indexing private notes", () => {
+  const task = { id: "task-1", title: "Invite executor", section_key: "personal", category_key: "tasks", metadata: { private_notes: "account 12345678" } };
+  const search = (query) => buildDashboardDiscoveryResults({
+    query, assets: [task], contacts: [], documents: [], attachments: [],
+    assetHref: (row) => `/personal/tasks?asset=${row.id}`, assetIcon: () => "description",
+    contactHref: () => "", documentHref: () => "", attachmentHref: () => "",
+  });
+  assert.deepEqual(search("invite").map(({ kind, href }) => [kind, href]), [["task", "/personal/tasks?asset=task-1"]]);
+  assert.deepEqual(search("12345678"), []);
+});

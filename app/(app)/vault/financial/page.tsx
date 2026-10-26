@@ -532,10 +532,9 @@ export default function FinancialVaultPage() {
 
 <section style={card}>
   <div style={{ display: "grid", gap: 4 }}>
-    <h2 style={cardTitle}>Upload statement</h2>
+    <h2 style={cardTitle}>Use a statement as a reference</h2>
     <p style={cardText}>
-      Upload a bank statement or financial document, review the extracted details,
-      then save the account securely.
+      Enter account details yourself while referring to a statement. Selecting a file here does not upload it or extract its contents.
     </p>
   </div>
 
@@ -551,7 +550,7 @@ export default function FinancialVaultPage() {
   >
     <label style={{ display: "grid", gap: 8 }}>
       <span style={{ fontSize: 13, color: "#374151" }}>
-        Choose PDF, JPG or PNG statement
+        Choose a local PDF, JPG or PNG reference
       </span>
       <input
         type="file"
@@ -560,9 +559,8 @@ export default function FinancialVaultPage() {
             const file = e.target.files?.[0];
             if (!file) return;
 
-            const baseName = file.name.replace(/\.[^/.]+$/, "");
             setUploadedFileName(file.name);
-            setExtractedForm({ ...emptyExtractedForm(), provider: baseName });
+            setExtractedForm(emptyExtractedForm());
           }}
         style={inputStyle}
       />
@@ -581,7 +579,7 @@ export default function FinancialVaultPage() {
 
   {uploadedFileName && (
     <div style={{ display: "grid", gap: 12 }}>
-      <div style={{ fontWeight: 800 }}>Review extracted details</div>
+      <div style={{ fontWeight: 800 }}>Enter details from your statement</div>
 
       <div style={fieldGrid}>
         <Field label="Account type">
@@ -701,7 +699,7 @@ export default function FinancialVaultPage() {
           }}
           style={primaryBtn}
         >
-          Save extracted account
+          Save account details
         </button>
 
         <button

@@ -9,6 +9,7 @@ const GROUPS = [
   { title: "Records", kinds: ["asset"] },
   { title: "Documents", kinds: ["document", "attachment"] },
   { title: "People", kinds: ["contact"] },
+  { title: "To do", kinds: ["task"] },
   { title: "Pages", kinds: ["navigation"] },
 ] as const;
 

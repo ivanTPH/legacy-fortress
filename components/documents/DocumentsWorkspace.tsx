@@ -205,7 +205,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
 
     setPendingFile(null);
     setReviewConfirmed(false);
-    setStatus(`Document uploaded securely to ${asset?.parentLabel ?? "the selected record"}.`);
+    setStatus(`Document linked to ${asset?.parentLabel ?? "the selected record"}.`);
     await reloadDocuments();
   }
 
