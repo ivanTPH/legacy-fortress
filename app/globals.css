@@ -8529,6 +8529,23 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-v52-document-dialog, .lf-v52-document-viewer { background: var(--lf-surface-card) !important; color: var(--lf-text); border-color: var(--lf-border) !important; }
 .lf-v52-document-dialog-header { position: sticky; top: -16px; z-index: 2; padding-block: 8px; background: var(--lf-surface-card); }
 .lf-v52-document-dialog-close { width: var(--lf-target-min); min-width: var(--lf-target-min); height: var(--lf-target-min); touch-action: manipulation; }
+
+/* Customer Vault uses the global search. Keep local filtering code available for later use. */
+.lf-v52-category-list-shell > .lf-v52-record-toolbar { display: none; }
+
+/* One visible focus ring belongs to the search form, not its native input. */
+.lf-global-search input:focus,
+.lf-global-search input:focus-visible,
+.lf-v52-search-mobile-field input:focus,
+.lf-v52-search-mobile-field input:focus-visible { border: 0 !important; outline: 0 !important; box-shadow: none !important; -webkit-appearance: none; appearance: none; }
+.lf-global-search-submit { display: none; }
+@media (max-width: 767px) {
+  .lf-global-search-submit,
+  .lf-v52-search-mobile-field .lf-v52-search-submit { display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: 64px; min-height: var(--lf-target-min); padding: 0 10px; border: 0; border-radius: var(--lf-radius-input); background: var(--lf-primary-bg); color: var(--lf-primary-text); font: inherit; font-weight: 600; cursor: pointer; }
+  .lf-v52-search-mobile-field { border: 1px solid var(--lf-border-input); }
+  .lf-v52-search-mobile-field:focus-within { border-color: var(--lf-border-input); box-shadow: 0 0 0 2px var(--lf-focus); }
+  .lf-shell:has(.lf-global-search.is-mobile-open) .lf-v52-search-mobile-field { display: none; }
+}
 .lf-v52-document-viewer { background: var(--lf-surface-muted) !important; }
 .lf-v52-document-dialog-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .lf-v52-document-dialog-actions :is(button,label) { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: var(--lf-target-min); padding: 8px 14px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-input); background: var(--lf-surface-card); color: var(--lf-text); font: inherit; font-weight: 600; cursor: pointer; }

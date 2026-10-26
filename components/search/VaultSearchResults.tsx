@@ -44,8 +44,9 @@ function VaultSearchContent({
   return <section className="lf-v52-search-page" aria-label="Vault search results">
     <form className="lf-v52-search-mobile-field" role="search" onSubmit={(event) => { event.preventDefault(); onSearch(draft); }}>
       <Icon name="search" size={20} />
-      <input aria-label="Search your vault" placeholder="Search your vault" value={draft} onChange={(event) => setDraft(event.target.value)} />
+      <input type="search" enterKeyHint="search" aria-label="Search your vault" placeholder="Search your vault" value={draft} onChange={(event) => setDraft(event.target.value)} />
       {draft ? <button type="button" aria-label="Clear search" onClick={() => { setDraft(""); onSearch(""); }}><Icon name="cancel" size={20} /></button> : null}
+      <button type="submit" className="lf-v52-search-submit" aria-label="Submit Vault search">Search</button>
     </form>
     {!query ? <div className="lf-v52-search-intro">
       <h1>Try searching for</h1>

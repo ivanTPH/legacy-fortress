@@ -1,5 +1,11 @@
 # Codex Handover
 
+## 26 October 2026 — Release #89 search and document naming decision
+
+- Started from protected Release #88 staging/live `e76ff075951fb5bc27e6a6373d949b72f4b2b633` on isolated `fix/v52-release89-search-doc-titles`; the dirty owner checkout is untouched. TEST Supabase is self-hosted in Coolify. Browser fixtures used only local `127.0.0.1:55421` and app `127.0.0.1:3012`.
+- Owner-requested local Vault record Search/Sort/More filters are suppressed across shared sub-asset lists without deleting their logic. Global search has a single visible focus ring, a visible mobile Search action, `enterKeyHint=search`, and a header search field opened from its mobile icon.
+- Document title/rename is blocked by the canonical table's lack of a separate title column. `file_name` is original-filename provenance and must not be overloaded. The V5.2 ledger records the smallest reviewed schema change; no migration, metadata workaround or mock Rename was added. Existing iOS picker and selected-image preview remain.
+
 ## 26 October 2026 — Release #88 safe UAT correction
 
 - Staging and live TEST started at protected Release #87 `c729c061961e0d3ce549ef3d29f470de7d1d230e`. The main owner checkout is dirty and untouched; work is isolated on `fix/v52-release88-uat`.

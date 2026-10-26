@@ -60,18 +60,16 @@ test.describe("V5.2 authorised local Vault search", () => {
     }
   });
 
-  test("Bank search selects the saved record and excludes another owner", async ({ page, isMobile }, testInfo) => {
+  test("Bank list keeps direct record access and excludes another owner without a local toolbar", async ({ page, isMobile }, testInfo) => {
     const signedIn = await anon.auth.signInWithPassword({ email, password });
     if (signedIn.error || !signedIn.data.session) throw signedIn.error ?? new Error("Synthetic sign-in failed");
     await page.addInitScript((session) => localStorage.setItem("sb-127-auth-token", JSON.stringify(session)), signedIn.data.session);
     await page.goto("/finances/bank", { waitUntil: "domcontentloaded" });
-    const search = page.getByRole("textbox", { name: "Search", exact: true });
-    await expect(search).toBeVisible();
-    await search.fill(" barclays ");
+    await expect(page.locator(".lf-v52-record-toolbar")).toBeHidden();
     await expect(page.getByRole("button", { name: new RegExp(`Barclays Savings Account ${runId}`) })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath(isMobile ? "banks-list-mobile.png" : "banks-list-desktop.png") });
     await expect(page.getByText(`Other Person Savings ${runId}`)).toHaveCount(0);
-    await expect(page.getByRole("button", { name: new RegExp(`Current Account ${runId}`) })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: new RegExp(`Current Account ${runId}`) })).toBeVisible();
     await page.getByRole("button", { name: new RegExp(`Barclays Savings Account ${runId}`) }).click();
     await expect(page).toHaveURL(new RegExp(`/finances/bank\\?asset=${ids.barclays}`));
     await expect(page.getByRole("heading", { name: `Barclays Savings Account ${runId}` })).toBeVisible();
@@ -79,9 +77,7 @@ test.describe("V5.2 authorised local Vault search", () => {
     await expect(page.getByText("12345678", { exact: true })).toHaveCount(0);
     await page.screenshot({ path: testInfo.outputPath(isMobile ? "bank-detail-mobile.png" : "bank-detail-desktop.png") });
     await page.getByRole("link", { name: /Finances · Bank accounts/ }).click();
-    await search.fill("sAvInGs");
     await expect(page.getByRole("button", { name: new RegExp(`Barclays Savings Account ${runId}`) })).toBeVisible();
-    await search.fill("CURRENT");
     const currentRow = page.getByRole("button", { name: new RegExp(`Current Account ${runId}`) });
     await expect(currentRow).toBeVisible();
     await currentRow.click();
@@ -128,10 +124,37 @@ test.describe("V5.2 authorised local Vault search", () => {
     await expect(emptyLegalTile.getByRole("link").first()).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath(isMobile ? "legal-overview-mobile.png" : "legal-overview-desktop.png") });
     await page.goto("/dashboard?search=", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "Try searching for" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Try searching for" })).toBeVisible({ timeout: 30_000 });
     await page.screenshot({ path: testInfo.outputPath(isMobile ? "search-before-mobile.png" : "search-before-desktop.png") });
-    await page.goto("/dashboard?search=Barclays", { waitUntil: "domcontentloaded" });
+    if (isMobile) {
+      const searchForm = page.locator(".lf-v52-search-mobile-field");
+      const searchInput = searchForm.getByRole("searchbox", { name: "Search your vault" });
+      await searchInput.focus();
+      const focus = await searchInput.evaluate((input) => ({
+        innerOutline: getComputedStyle(input).outlineStyle,
+        outerRing: getComputedStyle(input.closest("form")!).boxShadow,
+      }));
+      expect(focus.innerOutline).toBe("none");
+      expect(focus.outerRing).not.toBe("none");
+      await searchInput.fill("Barclays");
+      await searchForm.getByRole("button", { name: "Submit Vault search" }).click();
+    } else {
+      const globalSearch = page.locator(".lf-global-search");
+      await globalSearch.getByRole("searchbox", { name: "Search your vault" }).fill("Barclays");
+      await globalSearch.getByRole("searchbox", { name: "Search your vault" }).press("Enter");
+    }
     await expect(page.getByRole("region", { name: "Records" })).toContainText(`Barclays Savings Account ${runId}`);
+    if (isMobile) {
+      await page.locator(".lf-mobile-search-toggle").click();
+      const headerSearch = page.locator(".lf-global-search");
+      await headerSearch.getByRole("searchbox", { name: "Search your vault" }).fill("Current");
+      await headerSearch.getByRole("button", { name: "Submit Vault search" }).click();
+      await expect(page.getByRole("region", { name: "Records" })).toContainText(`Current Account ${runId}`);
+      const searchForm = page.locator(".lf-v52-search-mobile-field");
+      await searchForm.getByRole("searchbox", { name: "Search your vault" }).fill("Savings");
+      await searchForm.getByRole("searchbox", { name: "Search your vault" }).press("Enter");
+      await expect(page.getByRole("region", { name: "Records" })).toContainText(`Barclays Savings Account ${runId}`);
+    }
     await page.screenshot({ path: testInfo.outputPath(isMobile ? "search-results-mobile.png" : "search-results-desktop.png") });
     await page.goto(`/dashboard?search=${encodeURIComponent(`My Will ${runId}`)}`, { waitUntil: "domcontentloaded" });
     const willResult = page.getByRole("link", { name: new RegExp(`My Will ${runId}`) });

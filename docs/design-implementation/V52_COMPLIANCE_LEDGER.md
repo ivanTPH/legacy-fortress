@@ -1,5 +1,11 @@
 # Personal Vault V5.2 compliance ledger
 
+## Release #89 owner UAT decision (26 October 2026)
+
+- The shared Personal Vault sub-asset list toolbar is suppressed on Banks and the other Vault record lists; its search, sort and status-filter logic remains in `UniversalRecordWorkspace.tsx` for a later product decision. Global Vault search remains in the header and search page.
+- Mobile search now has a visible Search action and a search keyboard hint. The header icon opens the header field; the page field is hidden while it is open. Both Search/Return paths retain authorised grouped results and direct saved-record links. The focused local WebKit/Chromium checks are recorded in the release handover; installed-iPhone acceptance remains pending.
+- **Document title: BACKEND BLOCKED.** The canonical `documents` table has `file_name` (the original filename) and `document_kind`, but no separate editable title or description. Renaming `file_name` would erase original-filename provenance. The smallest schema change is a nullable, length-checked `display_title` column (and `description` only if approved), with owner-scoped mutation, audit and viewer permission review. The loader, gallery, viewer and authorised search should then display `display_title` with `file_name` fallback. No migration or fake Rename control is included in this release. The existing iOS file input and `FileDropzone` already offer platform photo/file selection and selected-image preview.
+
 Baseline inspected once: TEST/staging `fb452af1eaec6276f0a012a235d565acb8ee3f12` (25 Oct 2026). Source precedence: security decisions, `V5.2.md` and 24 Oct update, Vault Master P/M/W, then unaffected earlier rules. `DESIGNED` means the prototype has a reference; the last column records the implementation state. A route's existence alone does not prove its authenticated state or owner acceptance.
 
 | Route or interactive state | Active source | Design reference | State and remaining gap |

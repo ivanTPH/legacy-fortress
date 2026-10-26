@@ -1141,6 +1141,8 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
               <Icon name="search" size={18} />
               <input
                 ref={shellSearchInputRef}
+                type="search"
+                enterKeyHint="search"
                 placeholder="Search your vault"
                 aria-label="Search your vault"
                 value={shellSearch}
@@ -1148,6 +1150,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                 onChange={(event) => setShellSearchState({ pathname, value: event.target.value })}
               />
               <kbd aria-label="Keyboard shortcut Command K">⌘K</kbd>
+              <button type="submit" className="lf-global-search-submit" aria-label="Submit Vault search">Search</button>
               {mobileSearchOpen ? (
                 <button type="button" className="lf-global-search-close" onClick={() => setMobileSearchOpen(false)} aria-label="Close search">
                   <Icon name="close" size={18} />
@@ -1160,8 +1163,9 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
               aria-label="Search your vault"
               aria-expanded={mobileSearchOpen}
               onClick={() => {
-                setMobileSearchOpen(false);
+                setMobileSearchOpen(true);
                 router.push("/dashboard?search=");
+                window.requestAnimationFrame(() => shellSearchInputRef.current?.focus());
               }}
             >
               <Icon name="search" size={20} />
