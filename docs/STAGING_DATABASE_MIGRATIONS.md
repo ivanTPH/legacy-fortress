@@ -6,15 +6,25 @@ This procedure applies only to the Coolify TEST application at `https://test.myl
 
 | Item | Evidence | State |
 | --- | --- | --- |
-| TEST application | `docs/STAGING_OPERATIONS.md` names Coolify app `yka9huzmm56hjpz1gno448fb`, staging branch `hosted-uat-preparation-20260715`, and TEST URL. | Documented; verify in current Coolify UI. |
+| TEST application | Owner confirms Coolify v4.5.0, project `My first project`, environment `staging_legacy_fortress`, application `Legacy Fortress Staging`, UUID `yka9huzmm56hjpz1gno448fb`. | Owner-reported; API verification pending. |
 | Supabase API | `docs/STAGING_ENVIRONMENT_SETUP.md` names `supabase-test.mylegacyfortress.com`. | API origin only; does not identify PostgreSQL. |
-| Candidate DB container | `scripts/staging/reconcile-phase7-migration-history.sh` names `supabase-db-wdf2fyo7hrewev6hnqypd2vc`, database `postgres`, operator role `supabase_admin`. | Historical script; current resource association unverified. Do not run its write path. |
+| TEST Supabase | Owner confirms service `Legacy Fortress Staging Supabase`; volume identifier `wdf2fyo7hrewev6hnqypd2vc`; data/config mounts at `/var/lib/postgresql/data` and `/etc/postgresql-custom`. Historical script names `supabase-db-wdf2fyo7hrewev6hnqypd2vc`, database `postgres`. | Owner-reported; current API/container/cluster association unverified. Do not run the old script's write path. |
 | DB history, policy definitions, drift | No approved current read-only DB connection available in this workspace. | Unverified. |
 | Production separation | No current Coolify resource/network/volume comparison or cluster ID evidence. | Unverified. |
-| Recovery | No named backup owner, completed backup ID, archive verification or restore drill evidence. | Unverified. |
+| Recovery | Owner reports an enabled daily `supabase-db` schedule, 13 executions, and a successful 27 October 2026 00:01 UTC backup of about 1.53 MB that they downloaded. No S3 destination or isolated restore is verified. | Backup existence is owner-reported; recoverability unverified. |
 | Migration authority | Protected GitHub release secrets are app-deploy/acceptance credentials, not DB migration authority. | Named Coolify TEST DB operator required. |
 
 The last verified staging/live app SHA is `9db40543d01e54f211f17cb850b6112cf71cf318`. The proposed security migration is `20261027070000_restrict_linked_grants_to_explicit_scope.sql`; the separately pending document-title migration is `20261027071500_document_display_titles.sql`. Neither is recorded here as applied.
+
+## Repeatable read-only diagnostic
+
+`scripts/staging/verify-test-infrastructure.mjs` calls only documented Coolify `GET` endpoints and PostgreSQL `SELECT` statements. It checks the exact project/environment/application/service, the `supabase-db` component and expected mounts, backup executions, GitHub staging SHA and public `/api/version`. If a separate read-only PostgreSQL connection is configured, it reports the cluster identifier, migration versions and linked-grant/title schema state. Its output is an allowlisted summary; API response bodies, Compose content, backup paths and credentials are never emitted. It exits nonzero when identity, recovery or schema evidence is incomplete. A successful diagnostic is **not** migration approval.
+
+The manual `.github/workflows/staging-infrastructure-diagnostic.yml` job uses the existing `legacy-fortress-staging` environment and branch restriction, `contents: read`, and no deployment or migration token. Its `COOLIFY_READ_TOKEN` secret must refer to an **existing read-capable token** on the correct Coolify team; do not use the deploy token simply because it can also read. Set `COOLIFY_READ_URL` as a protected environment variable for the self-hosted Coolify control-plane origin. Optional `TEST_DB_RO_*` secrets must be a separate read-only PostgreSQL identity; never use `SUPABASE_SERVICE_ROLE_KEY` or migration credentials. An optional `TEST_RESTORE_EVIDENCE_JSON` secret can record a successful isolated drill's backup execution UUID, timestamp, disposable cluster ID, operator and `result: passed` without private rows.
+
+Repository inspection confirms the protected GitHub environment currently permits only `hosted-uat-preparation-20260715` and the repository default branch is `main`. GitHub API access available to this session returned HTTP 403 for *secret-name metadata*, so it could not prove whether `COOLIFY_READ_TOKEN` is already in that environment; no secret values were requested. For manual dispatch, install the same diagnostic workflow and script on `main` (workflow discovery) and staging (the allowed run ref), then select staging in Actions. Do not relax the environment branch policy. The existing staging-release workflow exposes `COOLIFY_DEPLOY_TOKEN`, not a proven separate read-only token, and never applies SQL.
+
+Official Coolify API references: [read token permissions](https://coolify.io/docs/api/permissions), [service database listing](https://coolify.io/docs/api/endpoints/service-databases/list-service-databases-by-service-uuid), [service storage listing](https://coolify.io/docs/api/endpoints/services/list-storages-by-service-uuid), and [backup executions](https://coolify.io/docs/api/endpoints/databases/list-backup-executions).
 
 ## Gate 1: identify the resource without revealing secrets
 
@@ -60,6 +70,10 @@ Record aggregate counts only for active grants with explicit `asset_ids`/`record
 The Coolify TEST DB operator records the backup owner, backup job/resource ID, latest successful backup ID and timestamp, storage location, retention, and how to restore **only TEST**. Verify the archive is readable and perform a restore drill to an isolated non-production target, or provide an already documented recent successful drill with matching backup format and schema. A scheduled job or file listing alone is not a usable recovery point. Record the rollback decision-maker and expected recovery time.
 
 For each migration, the owner approves the **exact SHA-256 of the reviewed SQL file**, target DB resource/cluster identity, named operator, backup ID, execution window and recovery plan. Approval for one migration does not approve the next. Do not apply migrations while the target or approval is ambiguous.
+
+### Isolated restore drill (not yet authorised or performed)
+
+The owner/operator first confirms the downloaded backup belongs to the verified TEST database and remains inside approved non-production storage. Determine whether Coolify produced a single-database PostgreSQL custom-format dump (`pg_restore --list`) or an all-database gzip SQL dump (`gzip -t`, inspect headers without printing rows). On an **isolated disposable** PostgreSQL instance with no public port, no production network route and distinct data volume/cluster ID, restore a copy of that backup. Verify `supabase_migrations.schema_migrations`, core table definitions, policy/function presence and row-count totals only; do not output customer rows or filenames. Record the backup execution UUID, disposable cluster ID, successful restore time, operator and cleanup owner. Do not run `pg_restore`, `psql`, `createdb`, or a container command against the live TEST DB for this drill. Destroy the disposable target only under the operator's approved cleanup procedure. A downloaded archive or successful schedule alone does not satisfy this gate.
 
 ## Gate 4: apply one reviewed migration
 

@@ -1,5 +1,12 @@
 # Codex Handover
 
+## Read-only Coolify TEST infrastructure diagnostic — 27 October 2026
+
+- Added `scripts/staging/verify-test-infrastructure.mjs` and a manually dispatched `staging-infrastructure-diagnostic.yml` job. They use Coolify GET, public `/api/version`, GitHub ref read and optional read-only PostgreSQL SELECT only; they never receive the deploy or migration credential. The script reports allowlisted identity, volume, backup, migration and schema state and exits nonzero on incomplete proof. Focused mocked tests pass; without configured protected read credentials, the CLI fails closed.
+- Owner confirms Coolify v4.5.0 project `My first project`, environment `staging_legacy_fortress`, TEST app UUID `yka9huzmm56hjpz1gno448fb`, Supabase service identifier `wdf2fyo7hrewev6hnqypd2vc`, two named DB volumes, a daily backup and 13 executions. The latest owner-downloaded backup is reported successful at 27 Oct 00:01 UTC; no isolated restore has been proven. These are owner-reported, not yet API/DB-verified.
+- The existing release workflow supplies `COOLIFY_DEPLOY_TOKEN` but no proven separate read secret. GitHub environment metadata shows only staging is allowed; this session's GitHub token receives HTTP 403 when listing environment secret *names*, so it cannot verify whether an existing read token is already mapped. The repo default branch is `main`: manual workflow discovery requires the diagnostic workflow there as well as on staging for the protected staging-ref run.
+- The remaining minimum integration step is for the GitHub environment operator to map an **existing** Coolify read-capable token to `COOLIFY_READ_TOKEN` and set the self-hosted control-plane origin as `COOLIFY_READ_URL` without sharing values. A distinct read-only PostgreSQL path (or approved restricted SSH tunnel to the TEST service) is still required for cluster ID, migration history and RLS definitions. No hosted migrations, deployments, service changes or restore were performed.
+
 ## Coolify TEST database migration procedure — 27 October 2026
 
 - `docs/STAGING_DATABASE_MIGRATIONS.md` records a repeatable, gated path for exact TEST DB identification, read-only migration/schema inspection, usable backup evidence, owner approval, one-at-a-time SQL application, hosted synthetic security checks and protected app release. It does not authorize or execute SQL.
