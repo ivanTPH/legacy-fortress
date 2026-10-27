@@ -12,6 +12,10 @@ Legacy Fortress is a Next.js/Supabase estate-record vault for customer records, 
 
 ## Pre-Work Checks
 
+Start every session with `node scripts/dev/bootstrap.mjs`, then read the next authorised task in `docs/CAPABILITY_BACKLOG.json` and the latest `docs/CODEX_HANDOVER.md` entry. The bootstrap reports the current branch/SHA, remote staging SHA, live TEST SHA, tracked feature branches, security blockers and next action. Run `node scripts/dev/preflight.mjs` before any staging proposal; its failure is a blocker, not permission to bypass a gate. Use `--json` for machine output. Never use cached evidence to authorise a write.
+
+The authoritative operating references are `docs/BUILD_AND_RELEASE.md` (application release), `docs/STAGING_DATABASE_MIGRATIONS.md` (database approvals), `docs/AI_PROJECT_STATE.md` (architecture background), and `docs/CAPABILITY_BACKLOG.json` (current capability/release state). For current Personal Vault presentation use `design/Vault Master V5.2.dc.html`; for Linked People and Vault Access use `design_handoff_legacy_fortress 5.21/` when available in the authorised design workspace. Check `docs/design-implementation/V52_COMPLIANCE_LEDGER.md` for accepted deviations. Historical design instructions below do not override newer approved handoffs or security rules.
+
 Before meaningful work, run targeted checks:
 
 - `pwd`
@@ -47,7 +51,7 @@ Prefer targeted tests before full suites.
 
 ## Design authority
 
-- Use [`docs/design-implementation/DESIGN_SOURCE_OF_TRUTH.md`](docs/design-implementation/DESIGN_SOURCE_OF_TRUTH.md) as the concise index to the complete [`design_handoff_legacy_fortress 5/`](design_handoff_legacy_fortress%205/) handoff. It supersedes older V4/V3 visual guidance where they conflict. Retain [`docs/design-implementation/V4_CANONICAL.md`](docs/design-implementation/V4_CANONICAL.md), the V4 mobile supplement, [`design_handoff_legacy_fortress 4/`](design_handoff_legacy_fortress%204/) and [`design_update_v4/`](design_update_v4/) as design history.
+- Use the latest approved V5.2 Vault Master and the 5.21 Linked People/Vault Access handoff identified above for current work. `docs/design-implementation/DESIGN_SOURCE_OF_TRUTH.md` and earlier V4/V5 handoffs are history where they conflict with current approved screens. Never override security or owner decisions with visual guidance.
 - Preserve the project, security, database and release instructions above. Brand Guardian guidance in [`design/brand-guardian/DESIGN_AUTHORITY.md`](design/brand-guardian/DESIGN_AUTHORITY.md) and [`design/brand-guardian/BRAND_APPLICATION_GUIDE.md`](design/brand-guardian/BRAND_APPLICATION_GUIDE.md) applies where consistent with V5. Existing enterprise, admin, probate and linked-access boundaries remain in force until explicitly approved changes are implemented and verified.
 - Every UI change should identify its V5 source screen/state, use shared tokens and components, preserve canonical data and security behaviour, check relevant desktop and mobile states, and run `npm run design:check` plus focused tests when relevant. Record a concrete browser blocker if rendering cannot be checked.
 
@@ -69,4 +73,4 @@ Prefer targeted tests before full suites.
 
 ## Incremental delivery
 
-Implement one approved stage at a time from the latest confirmed staging code: Personal Vault mobile; People & Access and mobile forms; Platform Admin mobile; Partner Portal mobile; then desktop consistency and separately approved architecture changes. Commit and push focused work, deploy to TEST only with owner authorisation through the protected process, verify the live SHA and hosted acceptance, and wait for owner visual review before the next stage.
+Implement the next authorised item in `docs/CAPABILITY_BACKLOG.json` on an isolated branch. Commit and push focused work; use the protected TEST release and database approval processes, verify the live SHA and hosted acceptance, and wait at genuine owner review checkpoints.

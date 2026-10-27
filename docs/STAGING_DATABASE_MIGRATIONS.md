@@ -1,5 +1,17 @@
 # Coolify TEST database migration procedure
 
+## Automation entry point (proposed, disabled pending owner review)
+
+Run `node scripts/dev/bootstrap.mjs` for current refs and `node scripts/dev/preflight.mjs --json` for a fresh read-only TEST report. Both use the single capability tracker at `docs/CAPABILITY_BACKLOG.json`. The preflight's ignored `.local-state/` report is a timestamped convenience only; `scripts/staging/migration-guard.mjs` recollects evidence immediately before any SQL. Neither command applies a migration.
+
+The proposed `.github/workflows/staging-database-migration.yml` is a manual, **disabled** TEST-only workflow. It is independent of `.github/workflows/staging-release.yml`, which is unchanged. Its new environment `legacy-fortress-staging-db-migrations` must be created by the owner with required reviewers and a branch policy allowing only `hosted-uat-preparation-20260715`. `STAGING_DB_MIGRATIONS_ENABLED` defaults absent/false. Do not enable until the workflow, SQL, network isolation, restore drill and hosted synthetic test procedure are reviewed.
+
+Each run accepts one filename and its SHA-256. The protected environment must hold matching `MIGRATION_APPROVED_SHA256`, `MIGRATION_APPROVED_TARGET_DB` (Coolify PostgreSQL resource UUID), `MIGRATION_APPROVED_TEST_CLUSTER_ID`, and named `MIGRATION_APPROVED_OPERATOR`. A different migration requires a new owner approval and updated exact values. The runner uses the existing read-only Coolify integration via `COOLIFY_READ_URL`/`COOLIFY_READ_TOKEN`, a separate `TEST_DB_RO_*` identity for inspection, and separate `TEST_DB_MIGRATE_*` operator credentials for the write. Do not map `COOLIFY_DEPLOY_TOKEN`, service-role keys or production credentials. The migration role needs only the reviewed TEST schema/function/table/trigger privileges and migration-history insert needed for the exact SQL; an operator must verify those grants. Its connection must match the read-only verified host/port/database and cluster. No credential value appears in a report.
+
+The guard rejects unallowlisted SQL, changed bytes, history/schema drift, unexpected pending migrations, an unproven isolated restore, an unverified TEST/production split, a changed live/staging SHA, or missing approval. It applies the SQL and history row in one transaction, verifies the history row and the changed schema objects, then emits a sanitized JSON receipt. These object checks do **not** replace the hosted synthetic security acceptance below. Keep the execution receipt in the restricted GitHub run; append the non-sensitive SHA/backup/operator/result to the handover and tracker in a reviewed follow-up commit.
+
+The two current SQL files remain on their independent reviewed branches. Promote each SQL artifact to staging only after its own review, then dispatch the workflow with that artifact's exact filename/checksum. Apply and accept the explicit-grant-scope migration first. A separate review and approval is required before the title migration. Do not use the earlier `reconcile-phase7-migration-history.sh` write path for these releases.
+
 This procedure applies only to the Coolify TEST application at `https://test.mylegacyfortress.com` and its separately verified Supabase PostgreSQL service. It does not authorize a migration. Never use the Supabase Cloud connector, production credentials, or the protected application release workflow to apply SQL: that workflow deploys the app only.
 
 ## Evidence currently held (27 October 2026)

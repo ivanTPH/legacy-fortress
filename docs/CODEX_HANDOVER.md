@@ -1,5 +1,11 @@
 # Codex Handover
 
+## Permanent development/release automation candidate — 27 October 2026
+
+- Isolated branch `feat/permanent-dev-release-automation` adds a root operating entry point, `scripts/dev/bootstrap.mjs`, a fail-closed read-only `scripts/dev/preflight.mjs`, `scripts/staging/release-readiness.mjs`, and the authoritative `docs/CAPABILITY_BACKLOG.json`. Existing protected app release workflow is unchanged.
+- Proposed exact-file TEST migration workflow and guard are disabled by default and require a new reviewer-protected environment, fresh TEST/production cluster and isolated restore evidence, exact owner-approved SQL checksum/DB UUID/cluster/operator, and distinct read-only/migration credentials. No SQL, release or production action was performed. The current security and Release #93 SQL stay on their separate branches.
+- Read-only Coolify/DB inspection, isolated restore and environment secret mapping remain one-time setup gaps. The first next action is to review/merge the diagnostic onto default and staging branches, map an existing read-capable Coolify token, establish restricted TEST PostgreSQL inspection, and run the diagnostic. Do not enable migration writes until a separate owner review.
+
 ## Read-only Coolify TEST infrastructure diagnostic — 27 October 2026
 
 - Added `scripts/staging/verify-test-infrastructure.mjs` and a manually dispatched `staging-infrastructure-diagnostic.yml` job. They use Coolify GET, public `/api/version`, GitHub ref read and optional read-only PostgreSQL SELECT only; they never receive the deploy or migration credential. The script reports allowlisted identity, volume, backup, migration and schema state and exits nonzero on incomplete proof. Focused mocked tests pass; without configured protected read credentials, the CLI fails closed.

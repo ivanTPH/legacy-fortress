@@ -1,0 +1,65 @@
+name: Legacy Fortress TEST exact database migration (disabled pending owner review)
+
+on:
+  workflow_dispatch:
+    inputs:
+      migration_filename:
+        description: One separately reviewed SQL filename from supabase/migrations
+        required: true
+        type: string
+      migration_sha256:
+        description: Exact SHA-256 approved by the owner
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: legacy-fortress-staging
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: legacy-fortress-staging-db-migrations
+    steps:
+      - name: Require approved staging ref and explicit enablement
+        env:
+          ENABLED: ${{ vars.STAGING_DB_MIGRATIONS_ENABLED }}
+        run: |
+          test "$GITHUB_REF_NAME" = "hosted-uat-preparation-20260715"
+          test "$ENABLED" = "true"
+
+      - name: Check out exact staging commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Install PostgreSQL client only
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+
+      - name: Revalidate TEST identity, approval and apply one SQL file
+        env:
+          STAGING_DB_MIGRATIONS_ENABLED: ${{ vars.STAGING_DB_MIGRATIONS_ENABLED }}
+          MIGRATION_FILENAME: ${{ inputs.migration_filename }}
+          MIGRATION_SHA256: ${{ inputs.migration_sha256 }}
+          MIGRATION_APPROVED_SHA256: ${{ vars.MIGRATION_APPROVED_SHA256 }}
+          MIGRATION_APPROVED_TARGET_DB: ${{ vars.MIGRATION_APPROVED_TARGET_DB }}
+          MIGRATION_APPROVED_TEST_CLUSTER_ID: ${{ vars.MIGRATION_APPROVED_TEST_CLUSTER_ID }}
+          MIGRATION_APPROVED_OPERATOR: ${{ vars.MIGRATION_APPROVED_OPERATOR }}
+          COOLIFY_READ_URL: ${{ vars.COOLIFY_READ_URL }}
+          COOLIFY_READ_TOKEN: ${{ secrets.COOLIFY_READ_TOKEN }}
+          TEST_DB_RO_HOST: ${{ secrets.TEST_DB_RO_HOST }}
+          TEST_DB_RO_PORT: ${{ secrets.TEST_DB_RO_PORT }}
+          TEST_DB_RO_NAME: ${{ secrets.TEST_DB_RO_NAME }}
+          TEST_DB_RO_USER: ${{ secrets.TEST_DB_RO_USER }}
+          TEST_DB_RO_PASSWORD: ${{ secrets.TEST_DB_RO_PASSWORD }}
+          TEST_DB_MIGRATE_HOST: ${{ secrets.TEST_DB_MIGRATE_HOST }}
+          TEST_DB_MIGRATE_PORT: ${{ secrets.TEST_DB_MIGRATE_PORT }}
+          TEST_DB_MIGRATE_NAME: ${{ secrets.TEST_DB_MIGRATE_NAME }}
+          TEST_DB_MIGRATE_USER: ${{ secrets.TEST_DB_MIGRATE_USER }}
+          TEST_DB_MIGRATE_PASSWORD: ${{ secrets.TEST_DB_MIGRATE_PASSWORD }}
+          PRODUCTION_DB_CLUSTER_ID: ${{ vars.PRODUCTION_DB_CLUSTER_ID }}
+          TEST_RESTORE_EVIDENCE_JSON: ${{ secrets.TEST_RESTORE_EVIDENCE_JSON }}
+        run: node scripts/staging/migration-guard.mjs
