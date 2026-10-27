@@ -28,6 +28,8 @@ export type SendContactInviteInput = {
   invitedAt?: string | null;
   activationStatus?: AccessActivationStatus;
   permissionsOverride?: Record<string, unknown> | null;
+  /** Record Links invitations must not create legacy contact_links, which can affect grant scope. */
+  skipLegacyContactLink?: boolean;
   resend?: boolean;
   origin?: string | null;
 };
@@ -149,7 +151,7 @@ export async function sendContactInvite(
       sourceType: "invitation",
       inviteStatus: "invite_sent",
       verificationStatus: mapActivationStatusToVerificationStatus(activationStatus),
-      link: {
+      link: input.skipLegacyContactLink ? undefined : {
         sourceKind: "invitation",
         sourceId: invitationId,
         sectionKey: "dashboard",
@@ -215,7 +217,7 @@ async function markInvitationDeliveryFailed(
       sourceType: "invitation",
       inviteStatus: "failed",
       verificationStatus: "not_verified",
-      link: {
+      link: input.skipLegacyContactLink ? undefined : {
         sourceKind: "invitation",
         sourceId: invitationId,
         sectionKey: "dashboard",

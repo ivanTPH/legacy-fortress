@@ -357,6 +357,7 @@ type ContactSyncLink = {
 
 export type SyncCanonicalContactInput = {
   ownerUserId: string;
+  createOnly?: boolean;
   existingContactId?: string | null;
   fullName: string;
   email?: string | null;
@@ -486,6 +487,9 @@ export async function syncCanonicalContact(
 
   const mergeMode = existingLookup?.matchedBy ?? "none";
   const existing = existingLookup?.contact ?? null;
+  if (input.createOnly && existing) {
+    throw new Error("This email is already in People. Choose the existing person instead.");
+  }
   const payload = buildCanonicalContactWritePayload({
     existing,
     incoming: prepared,
