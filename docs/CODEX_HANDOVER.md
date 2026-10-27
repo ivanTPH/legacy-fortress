@@ -1,5 +1,12 @@
 # Codex Handover
 
+## Coolify TEST database migration procedure — 27 October 2026
+
+- `docs/STAGING_DATABASE_MIGRATIONS.md` records a repeatable, gated path for exact TEST DB identification, read-only migration/schema inspection, usable backup evidence, owner approval, one-at-a-time SQL application, hosted synthetic security checks and protected app release. It does not authorize or execute SQL.
+- Existing documents prove the TEST app UUID and public Supabase API origin; `scripts/staging/reconcile-phase7-migration-history.sh` names a historical candidate PostgreSQL container. Current container-to-app linkage, production separation, DB migration history, backup restore proof and named operator remain unverified because approved remote database access was not available. Do not infer them from the API URL or historical script.
+- Security migration `20261027070000_restrict_linked_grants_to_explicit_scope.sql` and Release #93 title migration `20261027071500_document_display_titles.sql` are independently proposed. Their SQL has no direct object-name conflict, but hosted schema drift and history compatibility must be checked before either apply. Security remediation comes first; neither migration nor Release #93 code is deployed.
+- Owner/operator action: supply current Coolify TEST Supabase resource and production-separation evidence, read-only DB history/schema results, a verified restorable backup and named SQL operator; then approve each exact migration separately. Staging and TEST remain at `9db40543d01e54f211f17cb850b6112cf71cf318` pending those gates.
+
 ## Release #92 search, Legal and Will executor boundary — 26 October 2026
 
 - Baseline staging/live TEST `866e4d3dea6df857b06a620110fe7e2acffa5e6e`; isolated worktree `/private/tmp/legacy-fortress-release92`. The owner's dirty main worktree remains untouched.

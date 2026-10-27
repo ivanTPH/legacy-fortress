@@ -1,0 +1,83 @@
+# Coolify TEST database migration procedure
+
+This procedure applies only to the Coolify TEST application at `https://test.mylegacyfortress.com` and its separately verified Supabase PostgreSQL service. It does not authorize a migration. Never use the Supabase Cloud connector, production credentials, or the protected application release workflow to apply SQL: that workflow deploys the app only.
+
+## Evidence currently held (27 October 2026)
+
+| Item | Evidence | State |
+| --- | --- | --- |
+| TEST application | `docs/STAGING_OPERATIONS.md` names Coolify app `yka9huzmm56hjpz1gno448fb`, staging branch `hosted-uat-preparation-20260715`, and TEST URL. | Documented; verify in current Coolify UI. |
+| Supabase API | `docs/STAGING_ENVIRONMENT_SETUP.md` names `supabase-test.mylegacyfortress.com`. | API origin only; does not identify PostgreSQL. |
+| Candidate DB container | `scripts/staging/reconcile-phase7-migration-history.sh` names `supabase-db-wdf2fyo7hrewev6hnqypd2vc`, database `postgres`, operator role `supabase_admin`. | Historical script; current resource association unverified. Do not run its write path. |
+| DB history, policy definitions, drift | No approved current read-only DB connection available in this workspace. | Unverified. |
+| Production separation | No current Coolify resource/network/volume comparison or cluster ID evidence. | Unverified. |
+| Recovery | No named backup owner, completed backup ID, archive verification or restore drill evidence. | Unverified. |
+| Migration authority | Protected GitHub release secrets are app-deploy/acceptance credentials, not DB migration authority. | Named Coolify TEST DB operator required. |
+
+The last verified staging/live app SHA is `9db40543d01e54f211f17cb850b6112cf71cf318`. The proposed security migration is `20261027070000_restrict_linked_grants_to_explicit_scope.sql`; the separately pending document-title migration is `20261027071500_document_display_titles.sql`. Neither is recorded here as applied.
+
+## Gate 1: identify the resource without revealing secrets
+
+The named Coolify operator records the current TEST application resource UUID, environment group, repository, branch, deployment SHA and its referenced Supabase resource UUID from Coolify. Verify that the DB container/service and persistent volume actually belong to that Supabase resource. Compare the TEST and production Supabase resource UUIDs, container identities, database network/volume IDs and PostgreSQL cluster identifiers; they must be distinct. The public API hostname alone is insufficient.
+
+Using a read-only session to the **verified TEST container**, record `current_database()`, `current_user`, `inet_server_addr()`, `inet_server_port()`, server version and `pg_postmaster_start_time()`. If permitted, record the cluster system identifier from `pg_control_system()`; otherwise use the Coolify resource and persistent-volume identities. Record identifiers in the restricted operator evidence location, with a redacted summary in the handover. Do not print environment variables, keys, passwords, connection strings, customer rows or document contents.
+
+Stop if the app resource cannot be tied to exactly one non-production Supabase/PostgreSQL resource, or if TEST/production separation remains uncertain.
+
+## Gate 2: read-only schema and migration comparison
+
+The operator uses the approved TEST DB connection, ideally a read-only role. If only `supabase_admin` is available, open an explicit read-only transaction before inspection. Query only system catalogues and count aggregates. Save a timestamped, access-restricted evidence bundle containing:
+
+```sql
+BEGIN READ ONLY;
+SELECT version FROM supabase_migrations.schema_migrations ORDER BY version DESC;
+SELECT proname, md5(pg_get_functiondef(p.oid)) AS definition_hash
+FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public' AND proname IN (
+  'linked_grant_allows_asset', 'linked_grant_allows_record',
+  'linked_grant_allows_document', 'linked_grant_allows_storage_object',
+  'lf_linked_grant_satisfies_identity');
+SELECT schemaname, tablename, policyname, cmd, qual
+FROM pg_policies
+WHERE (schemaname = 'public' AND tablename IN
+  ('assets','records','documents','attachments','contact_links','record_contacts'))
+   OR (schemaname = 'storage' AND tablename = 'objects' AND policyname = 'vault_docs_linked_select')
+ORDER BY schemaname, tablename, policyname;
+SELECT column_name, data_type FROM information_schema.columns
+WHERE table_schema = 'public' AND table_name = 'documents'
+  AND column_name IN ('display_title','file_name','storage_path','document_kind');
+SELECT tgname FROM pg_trigger
+WHERE tgrelid = 'public.documents'::regclass AND NOT tgisinternal;
+ROLLBACK;
+```
+
+Compare the **full** TEST function/policy definitions privately with `20260820120000_phase1_verified_access_policy_foundation.sql` and the proposed security migration; a hash alone is not compatibility proof. Confirm the identity/Vault-state helper still gates linked access. Confirm `documents_owner_update`, `audit_events`, and `lf_internal` match Release #93's title migration prerequisites. Check whether either proposed migration version, column, constraint, function or trigger already exists. Stop on drift rather than relying on `CREATE OR REPLACE` or `IF NOT EXISTS` to conceal it.
+
+Record aggregate counts only for active grants with explicit `asset_ids`/`record_ids` and active grants with empty explicit scope but matching legacy `contact_links`/`record_contacts`. This establishes potential sharing impact without exposing owner, contact or asset identities. Investigate owner intent separately; never backfill all associations into grants.
+
+## Gate 3: recoverability and approval
+
+The Coolify TEST DB operator records the backup owner, backup job/resource ID, latest successful backup ID and timestamp, storage location, retention, and how to restore **only TEST**. Verify the archive is readable and perform a restore drill to an isolated non-production target, or provide an already documented recent successful drill with matching backup format and schema. A scheduled job or file listing alone is not a usable recovery point. Record the rollback decision-maker and expected recovery time.
+
+For each migration, the owner approves the **exact SHA-256 of the reviewed SQL file**, target DB resource/cluster identity, named operator, backup ID, execution window and recovery plan. Approval for one migration does not approve the next. Do not apply migrations while the target or approval is ambiguous.
+
+## Gate 4: apply one reviewed migration
+
+1. Freeze the exact SQL artifact and verify its checksum on the operator host. Recheck the TEST resource identity, migration history and backup immediately before execution.
+2. Use the established Supabase migration tool with an explicit TEST DB connection and a migration directory containing **only the approved pending migration**. Compare its pending list first; abort if it would apply any other version. Alternatively, use the established operator's transactional `psql` procedure only after confirming the actual `schema_migrations` column convention, with SQL application and history recording in the **same transaction**. Never run a broad `db push` against the full repository or guess history-table columns.
+3. Verify one history row for the approved version, expected function/column/trigger definitions and no unrelated schema changes. Store execution timestamp, operator, migration checksum, history result and DB resource ID in restricted release evidence. Do not place secrets or private data in GitHub logs.
+4. If verification fails, halt app promotion; the named operator uses the reviewed TEST restore or forward-recovery plan. Do not improvise a down migration.
+
+**Order:** Apply and verify `20261027070000_restrict_linked_grants_to_explicit_scope.sql` first. Its only intended change is requiring IDs selected in `account_access_grants.permissions_override`; it must not broaden grants. Then, after separate approval, apply and verify `20261027071500_document_display_titles.sql`. The latter adds display metadata, original-file immutability and title-change audit; it must not change document bytes, storage path or original filename.
+
+## Gate 5: hosted synthetic acceptance and application release
+
+After the security migration, test with approved synthetic TEST accounts: explicit asset/record grants still work; unselected canonical assets, legacy records, linked documents, attachments and storage URLs deny; direct IDs and search do not disclose; revocation, Vault locks, insufficient IDV and cross-owner access deny. Check known legitimate grants with explicit scope. Record pass/fail and evidence without private identifiers.
+
+After the separate title migration, verify owner title creation/rename and append-only audit; immutable original file identity; existing document reads; linked-reader read-only behaviour; cross-owner denial. Confirm the security migration remains effective. Do not deploy the Release #93 application before these database checks pass.
+
+Promote only compatible reviewed application commits to `hosted-uat-preparation-20260715`, using fast-forward/PR checks that preserve unrelated work. Dispatch `.github/workflows/staging-release.yml` with the exact `expected_sha`; its protected environment performs the app deploy and hosted IDV/Admin acceptance. Confirm the workflow succeeds and `https://test.mylegacyfortress.com/api/version` equals the released SHA. Record workflow run, SHA, hosted security results and owner acceptance separately.
+
+## Current blocker and owner action
+
+The named Coolify TEST DB operator must provide current resource/production-separation evidence, read-only history and schema comparison, a restorable backup with owner, and the established exact-migration execution method. The owner must then explicitly approve the security migration; Release #93 requires a second approval. Until these gates pass, no hosted SQL or Release #93 application promotion is authorised.
