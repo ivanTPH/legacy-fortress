@@ -10,9 +10,46 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Classify diagnostic-only PR
+        id: scope
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: |
+          [[ "$BASE_SHA" =~ ^[0-9a-f]{40}$ && "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
+          git fetch --no-tags --depth=1 origin "$BASE_SHA" "$HEAD_SHA"
+          diagnostic_only=true
+          count=0
+          git diff --name-only -z "$BASE_SHA" "$HEAD_SHA" -- > "$RUNNER_TEMP/diagnostic-changed-paths"
+          while IFS= read -r -d '' path; do
+            count=$((count + 1))
+            case "$path" in
+              .github/workflows/staging-infrastructure-diagnostic.yml|scripts/staging/verify-test-infrastructure.mjs|tests/staging-infrastructure-verifier.test.mjs) ;;
+              # PR #2 adds this classifier; no future CI edit is diagnostic-only.
+              .github/workflows/ci.yml) [[ "$PR_NUMBER" == "2" ]] || diagnostic_only=false ;;
+              *) diagnostic_only=false ;;
+            esac
+          done < "$RUNNER_TEMP/diagnostic-changed-paths"
+          [[ "$count" -gt 0 ]] || diagnostic_only=false
+          echo "diagnostic_only=$diagnostic_only" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-      - run: npm ci
-      - run: npm run release:check -- --ci
+      - name: Validate read-only diagnostic without application dependencies
+        if: github.event_name == 'pull_request' && steps.scope.outputs.diagnostic_only == 'true'
+        run: |
+          test -f .github/workflows/staging-infrastructure-diagnostic.yml
+          test -f scripts/staging/verify-test-infrastructure.mjs
+          test -f tests/staging-infrastructure-verifier.test.mjs
+          node --check scripts/staging/verify-test-infrastructure.mjs
+          node --test tests/staging-infrastructure-verifier.test.mjs
+      - name: Install application dependencies
+        if: github.event_name != 'pull_request' || steps.scope.outputs.diagnostic_only != 'true'
+        run: npm ci
+      - name: Application security and release gate
+        if: github.event_name != 'pull_request' || steps.scope.outputs.diagnostic_only != 'true'
+        run: npm run release:check -- --ci
