@@ -17,3 +17,26 @@
 10. **Customer workspace labels:** Confirm “Personal” and “Linked to you” labels for existing authorised customer contexts. “Work” and “Legacy Fortress staff” are excluded from the ordinary customer switcher by decision 6.
 11. **Mobile form presentation:** V5 specifies full-screen Add/Edit modals without the customer tab bar. Confirm whether existing deep links and back behavior should stay on their current URLs while adopting that presentation.
 12. **Admin action reasons:** Identify any V5 risky actions whose current canonical service does not store an audited reason. Do not add an unaudited field or claim an action is reversible.
+
+## Vault Access and Nominations — owner decisions (27 October 2026)
+
+These 14 items are open in `design_handoff_legacy_fortress 5.21/OWNER_DECISIONS_VAULT_ACCESS.md`. The classifications below identify the first gate; they are not approvals. The architecture is in [VAULT_ACCESS_PLAN.md](VAULT_ACCESS_PLAN.md).
+
+| # | Classification / first gate | Exact decision requested; recommended safe interim position |
+|---|---|---|
+| 1 | Legal/policy confirmation; before nomination release options in PR 3 and release service | Should grant of probate be optional, default or unavailable? Obtain solicitor view. Until then, do not offer a probate switch or release on probate assumptions. Releasing on death alone may disclose the estate too early. |
+| 2 | Required before later PR 6 / death-report path | Who may report a death: executor, any nominee or another connected person? Recommend accepting reports as untrusted claims from a defined set, with no access consequence; broader reporting raises false-report/harassment risk. |
+| 3 | Legal/policy confirmation; before PoA PR 5 | What proves loss of capacity, who decides and when must the owner be told? Obtain solicitor view. Defer capacity-based activation; self-assertion or document upload cannot activate it. |
+| 4 | Required before later PR 4 and release integration | Does lifetime access pause or end on death report? Recommend immediate pause on protective lock, with reviewer-controlled resumption or transition; ending permanently may break authorised support, continuing may expose a disputed Vault. Apply consistently in RLS. |
+| 5 | Legal/policy confirmation; before PoA PR 5 | Are Wills excluded from attorney scope or read-only? Obtain solicitor view. Recommend exclusion until resolved; broad access risks disclosing wishes outside authority. |
+| 6 | Required before PR 1 recipient projection | May a nominee see only nomination kind/status, or also scope? Recommend kind/status only as the design's privacy limit; showing scope can reveal inventory or intent. PR 1 projection must be approved before schema is exposed. |
+| 7 | Legal/policy confirmation; before any estate release service | Is verified death sufficient or is confirmed executor authority/probate also required? Obtain solicitor view. Require separate reviewer approval and keep grants absent until policy is resolved. |
+| 8 | Required before PoA PR 5 | Which Personal Vault areas, if any, may a health/welfare LPA cover when there is no health area? Recommend no current Vault access for this type until a lawful area map is approved. |
+| 9 | Legal/policy confirmation; before PoA PR 5 | Is OPG register verification manual reviewer evidence or an approved integration? Obtain solicitor view; default to no automated claim of registration. Unverified references must not activate access. |
+| 10 | Required before later release implementation (model option reviewed at PR 1) | Do multiple nominees release together or in owner-set order? Recommend no automatic fan-out; an ordered policy needs precedence, failure and revocation rules. Schema should not hard-code either before approval. |
+| 11 | Required before PR 6 nominee invitations | Confirm expiry and reminder timing. Existing `contact_invitations.expires_at` defaults to 30 days, but that technical default does not approve the nominee communication policy. Recommend no reminders until content and timing are approved. |
+| 12 | Required before PR 4 Share now | Is “view and suggest changes” available to everyone or only professionals? Recommend view-only at first; any suggestion capability needs separate authorised workflow and must not imply edit rights. |
+| 13 | **Required before PR 1** | Approve or amend `vault_nominations`, `vault_nomination_records`, `legal_authorities` and additive source/expiry fields on the actual `account_access_grants` table. Specifically decide whole-Vault grant representation, recipient projection, owner/Vault FK integrity, retention and policy gates. No migration or grant change until approved. |
+| 14 | Required before Linked People contact entry and PoA PR 5 | Is a solicitors' firm a person or an organisation? Recommend keep firms out of a natural-person identity/nomination until organisation representation and accountable individual are defined; treating a firm as one person could defeat IDV and authority checks. |
+
+**Existing service already establishes only technical baselines, not these policy answers:** contact invitation expiry currently has a 30-day default; current Give access stores explicit grant scope; IDV, probate reviewer capability and append-only audit primitives exist. These do not settle decisions 1–14.
