@@ -1,0 +1,37 @@
+name: Legacy Fortress TEST infrastructure diagnostic
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: legacy-fortress-staging-readonly
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    environment: legacy-fortress-staging
+    steps:
+      - name: Confirm staging branch
+        run: test "${GITHUB_REF_NAME}" = "hosted-uat-preparation-20260715"
+
+      - name: Check out staging diagnostics
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Inspect TEST resources and migration state (GET/SELECT only)
+        env:
+          COOLIFY_READ_URL: ${{ vars.COOLIFY_READ_URL }}
+          COOLIFY_READ_TOKEN: ${{ secrets.COOLIFY_READ_TOKEN }}
+          TEST_DB_RO_HOST: ${{ secrets.TEST_DB_RO_HOST }}
+          TEST_DB_RO_PORT: ${{ secrets.TEST_DB_RO_PORT }}
+          TEST_DB_RO_NAME: ${{ secrets.TEST_DB_RO_NAME }}
+          TEST_DB_RO_USER: ${{ secrets.TEST_DB_RO_USER }}
+          TEST_DB_RO_PASSWORD: ${{ secrets.TEST_DB_RO_PASSWORD }}
+          PRODUCTION_DB_CLUSTER_ID: ${{ vars.PRODUCTION_DB_CLUSTER_ID }}
+          TEST_RESTORE_EVIDENCE_JSON: ${{ secrets.TEST_RESTORE_EVIDENCE_JSON }}
+        run: node scripts/staging/verify-test-infrastructure.mjs
