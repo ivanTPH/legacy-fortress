@@ -5,7 +5,8 @@ BEGIN;
 -- Synthetic fixtures exist only until ROLLBACK.
 INSERT INTO auth.users (id) VALUES
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),
-  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),
+  ('98989898-9898-4989-8989-989898989898');
 INSERT INTO public.contacts (id, owner_user_id, full_name) VALUES
   ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Synthetic Alice'),
   ('12121212-1212-4212-8212-121212121212', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Synthetic Carol'),
@@ -18,6 +19,19 @@ INSERT INTO public.organisations (id, owner_user_id, name) VALUES
   ('14141414-1414-4414-8414-141414141414', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Synthetic organisation');
 INSERT INTO public.wallets (id, organisation_id, owner_user_id) VALUES
   ('15151515-1515-4515-8515-151515151515', '14141414-1414-4414-8414-141414141414', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+-- A pre-existing, identity-verified grant with empty scope must stay empty when
+-- the owner adds or changes a Linked People association for its contact.
+INSERT INTO public.identity_assurance_states (user_id, identity_level) VALUES
+  ('98989898-9898-4989-8989-989898989898', 2);
+INSERT INTO public.account_access_grants (
+  owner_user_id, linked_user_id, contact_id, assigned_role,
+  activation_status, permissions_override
+) VALUES (
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  '98989898-9898-4989-8989-989898989898',
+  'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+  'friend_or_family', 'active', '{}'::jsonb
+);
 INSERT INTO public.assets (id, organisation_id, wallet_id, owner_user_id, section_key, category_key, title) VALUES
   ('16161616-1616-4616-8616-161616161616', '14141414-1414-4414-8414-141414141414',
    '15151515-1515-4515-8515-151515151515', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -114,6 +128,30 @@ BEGIN
 END;
 $$;
 
+SET LOCAL request.jwt.claim.sub = '98989898-9898-4989-8989-989898989898';
+DO $$
+BEGIN
+  IF public.linked_grant_allows_record(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'
+  ) OR public.linked_grant_allows_record(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    '13131313-1313-4313-8313-131313131313'
+  ) THEN
+    RAISE EXCEPTION 'Linked People association expanded an existing active grant';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.records
+    WHERE id IN (
+      'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+      '13131313-1313-4313-8313-131313131313'
+    )
+  ) THEN
+    RAISE EXCEPTION 'Linked user can read records outside the explicit grant scope';
+  END IF;
+END;
+$$;
+
 SET LOCAL request.jwt.claim.sub = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 DO $$
 BEGIN
@@ -145,11 +183,9 @@ BEGIN
   IF has_table_privilege('authenticated', 'public.extraction_suggestions', 'INSERT') THEN
     RAISE EXCEPTION 'Browser clients can fabricate extraction suggestions';
   END IF;
-  IF EXISTS (
-    SELECT 1 FROM public.account_access_grants
-    WHERE owner_user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
-  ) THEN
-    RAISE EXCEPTION 'Link creation granted access';
+  IF (SELECT count(*) FROM public.account_access_grants
+      WHERE owner_user_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa') <> 1 THEN
+    RAISE EXCEPTION 'Link creation changed the existing access-grant count';
   END IF;
 END;
 $$;
