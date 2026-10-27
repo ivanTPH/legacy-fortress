@@ -11,6 +11,7 @@ const DocumentPreviewDialog = dynamic(() => import("./DocumentPreviewDialog"), {
 export type AttachmentGalleryItem = {
   id: string;
   fileName: string;
+  originalFileName?: string;
   mimeType: string;
   createdAt?: string;
   thumbnailUrl?: string;
@@ -65,6 +66,7 @@ type AttachmentGalleryProps<T extends AttachmentGalleryItem> = {
   onPrint?: (item: T) => void;
   onReplace?: (item: T, file: File) => void;
   onRemove?: (item: T) => void;
+  onRename?: (item: T, title: string) => Promise<boolean>;
   onOpenRelated?: (item: T) => void;
   openRelatedLabel?: string;
   replaceAccept?: string;
@@ -84,6 +86,7 @@ export default function AttachmentGallery<T extends AttachmentGalleryItem>({
   onPrint,
   onReplace,
   onRemove,
+  onRename,
   onOpenRelated,
   openRelatedLabel = "Open related record",
   replaceAccept,
@@ -155,6 +158,9 @@ export default function AttachmentGallery<T extends AttachmentGalleryItem>({
                       onReplace={onReplace}
                     />
                   ) : null}
+                  {onRename ? (
+                    <AttachmentActionButton icon="edit" label="Edit details" ariaLabel={`Edit details for ${item.fileName || "this file"}`} onClick={() => void openPreview(item)} />
+                  ) : null}
                   {onOpenRelated ? (
                     <AttachmentActionButton icon="open_in_new" label={openRelatedLabel} ariaLabel={openRelatedLabel} onClick={() => onOpenRelated(item)} />
                   ) : null}
@@ -174,6 +180,7 @@ export default function AttachmentGallery<T extends AttachmentGalleryItem>({
         <DocumentPreviewDialog
           item={{
             fileName: preview.item.fileName || "Attachment preview",
+            originalFileName: preview.item.originalFileName,
             mimeType: preview.item.mimeType,
             previewUrl: preview.url,
             metaLabel: formatMime(preview.item.mimeType),
@@ -186,6 +193,11 @@ export default function AttachmentGallery<T extends AttachmentGalleryItem>({
           onPrint={onPrint && isPrintableMime(preview.item.mimeType) ? () => onPrint(preview.item) : undefined}
           onReplace={onReplace ? (file) => onReplace(preview.item, file) : undefined}
           onRemove={onRemove ? () => { onRemove(preview.item); setPreview(null); } : undefined}
+          onRename={onRename ? async (title) => {
+            const saved = await onRename(preview.item, title);
+            if (saved) setPreview(null);
+            return saved;
+          } : undefined}
           replaceAccept={replaceAccept}
         />
       ) : null}

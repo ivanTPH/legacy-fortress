@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchCanonicalAssets } from "./fetchCanonicalAssets";
 import { sanitizeFileName } from "../validation/upload";
+import { normalizeDocumentDisplayTitle } from "../documents/displayTitle";
 
 type AnySupabaseClient = SupabaseClient;
 export const SUPPORTED_DOCUMENT_SECTION_KEYS = ["finances", "property", "business", "digital", "personal"] as const;
@@ -33,6 +34,7 @@ export type CanonicalDocumentWorkspaceItem = {
   storageBucket: string;
   storagePath: string;
   fileName: string;
+  displayTitle: string | null;
   mimeType: string;
   sizeBytes: number;
   checksum: string | null;
@@ -120,7 +122,7 @@ export async function loadCanonicalDocumentWorkspaceData(
 
   const documentsResult = await client
     .from("documents")
-    .select("id,asset_id,owner_user_id,storage_bucket,storage_path,file_name,mime_type,size_bytes,checksum,created_at,document_kind")
+    .select("id,asset_id,owner_user_id,storage_bucket,storage_path,file_name,display_title,mime_type,size_bytes,checksum,created_at,document_kind")
     .eq("owner_user_id", normalizedOwnerUserId)
     .in("asset_id", assetIds)
     .is("deleted_at", null)
@@ -143,6 +145,7 @@ export async function loadCanonicalDocumentWorkspaceData(
         storageBucket: String(row.storage_bucket ?? ""),
         storagePath: String(row.storage_path ?? ""),
         fileName: String(row.file_name ?? ""),
+        displayTitle: typeof row.display_title === "string" ? row.display_title : null,
         mimeType: String(row.mime_type ?? ""),
         sizeBytes: Number(row.size_bytes ?? 0),
         checksum: typeof row.checksum === "string" ? row.checksum : null,
@@ -211,15 +214,23 @@ export async function createCanonicalAssetDocument(
     context,
     file,
     kind,
+    displayTitle,
   }: {
     context: CanonicalAssetDocumentContext;
     file: File;
     kind: "document" | "photo";
+    displayTitle?: string;
   },
 ): Promise<{ ok: true; storagePath: string } | { ok: false; error: string }> {
   const storageBucket = "vault-docs";
   const folder = kind === "photo" ? "photos" : "documents";
   const storagePath = buildCanonicalDocumentStoragePath(context, file.name, folder);
+  let normalizedTitle: string | null;
+  try {
+    normalizedTitle = normalizeDocumentDisplayTitle(displayTitle, file.name);
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Invalid document title." };
+  }
 
   const uploadResult = await client.storage.from(storageBucket).upload(storagePath, file, { upsert: false });
   if (uploadResult.error) {
@@ -234,6 +245,7 @@ export async function createCanonicalAssetDocument(
     storage_bucket: storageBucket,
     storage_path: storagePath,
     file_name: file.name,
+    display_title: normalizedTitle,
     mime_type: file.type || "application/octet-stream",
     size_bytes: file.size,
     checksum: null,
@@ -246,6 +258,25 @@ export async function createCanonicalAssetDocument(
   }
 
   return { ok: true, storagePath };
+}
+
+export async function renameCanonicalAssetDocument(
+  client: AnySupabaseClient,
+  { documentId, ownerUserId, originalFileName, displayTitle }: { documentId: string; ownerUserId: string; originalFileName: string; displayTitle: string },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  let normalizedTitle: string | null;
+  try {
+    normalizedTitle = normalizeDocumentDisplayTitle(displayTitle, originalFileName);
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Invalid document title." };
+  }
+  const result = await client.from("documents")
+    .update({ display_title: normalizedTitle, updated_at: new Date().toISOString() })
+    .eq("id", documentId).eq("owner_user_id", ownerUserId).is("deleted_at", null)
+    .select("id").maybeSingle();
+  if (result.error) return { ok: false, error: result.error.message };
+  if (!result.data) return { ok: false, error: "Document unavailable or you cannot rename it." };
+  return { ok: true };
 }
 
 export async function getStoredFileSignedUrl(
