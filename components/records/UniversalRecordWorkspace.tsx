@@ -16,6 +16,7 @@ import Icon from "../ui/Icon";
 import InfoTip from "../ui/InfoTip";
 import { AddDocumentControl } from "../ui/LFDesignSystem";
 import AttachmentGallery, { AttachmentGallerySummary } from "../documents/AttachmentGallery";
+import LinkedPeopleSection from "./LinkedPeopleSection";
 import { waitForActiveUser } from "../../lib/auth/session";
 import { formatCurrency } from "../../lib/currency";
 import {
@@ -3907,7 +3908,14 @@ export default function UniversalRecordWorkspace({
             </div>
             </div>
             <aside className="lf-v52-record-rail" aria-label="Record context">
-              <section className="lf-v52-record-people" aria-label="People linked to this record">
+              {process.env.NEXT_PUBLIC_LINKED_PEOPLE_V52 === "true" && viewer.mode !== "linked" && !isTrustedContacts && !isCanonicalTask && !isCanonicalExecutor && !isCanonicalBeneficiary && !isIdentityDocuments ? <LinkedPeopleSection
+                ownerUserId={row.owner_user_id}
+                recordId={row.id}
+                recordType={usesCanonicalAssetReadPath ? "asset" : "record"}
+                sectionKey={sectionKey}
+                categoryKey={categoryKey}
+                canManage={canEditWorkspaceRow(row.id)}
+              /> : <section className="lf-v52-record-people" aria-label="People linked to this record">
                 <h2>{isWillsWorkspace ? "Executors" : "People linked to this record"}</h2>
                 {rowContacts.length ? (
                   <>
@@ -3927,7 +3935,7 @@ export default function UniversalRecordWorkspace({
                     <details className="lf-v52-record-people-manage"><summary>Contact details and actions</summary>{linkedContactsTable}</details>
                   </>
                 ) : <p>{isWillsWorkspace ? "No executor recorded." : "No linked people available in this view."}</p>}
-              </section>
+              </section>}
               <details className="lf-v52-record-history">
                 <summary>Record history</summary>
                 <p>Event history is not available for this record.</p>
