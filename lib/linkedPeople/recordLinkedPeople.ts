@@ -95,10 +95,10 @@ export async function loadRecordLinkedPeople(client: SupabaseClient, ownerUserId
   const sourceDocumentIds = [...new Set(links.map((link) => link.source_document_id).filter((id): id is string => Boolean(id)))];
   const documentTitles: Record<string, string> = {};
   if (sourceDocumentIds.length) {
-    const documents = await client.from("documents").select("id,file_name")
+    const documents = await client.from("documents").select("id,file_name,display_title")
       .eq("owner_user_id", ownerUserId).eq("asset_id", recordId).is("deleted_at", null)
       .in("id", sourceDocumentIds);
-    if (!documents.error) for (const document of documents.data ?? []) documentTitles[document.id] = document.file_name;
+    if (!documents.error) for (const document of documents.data ?? []) documentTitles[document.id] = document.display_title || document.file_name;
   }
   const accessByPerson: Record<string, LinkedRecordAccessState> = {};
   for (const link of links) accessByPerson[link.person_id] = grantsResult.error ? "unavailable" : "none";

@@ -8,7 +8,7 @@ function syntheticClient({ userId = "owner-1", rpcError = null } = {}) {
       { id: "suggestion-1", owner_user_id: "owner-1", record_id: "asset-1", document_id: "document-1", page: 3, extracted_name: "Robert Smith", extracted_role: "Executor", match_person_id: "bob", match_kind: "possible", status: "pending" },
       { id: "suggestion-other", owner_user_id: "other", record_id: "asset-1", document_id: "document-other", page: 2, extracted_name: "Private Person", match_kind: "none", status: "pending" },
     ],
-    documents: [{ id: "document-1", owner_user_id: "owner-1", asset_id: "asset-1", deleted_at: null, file_name: "Will.pdf" }],
+    documents: [{ id: "document-1", owner_user_id: "owner-1", asset_id: "asset-1", deleted_at: null, file_name: "scan.pdf", display_title: "Will of Ivan Yardley" }],
   };
   const rpcCalls = [];
   class Query {
@@ -37,7 +37,7 @@ test("only owner-record pending suggestions with a readable source document are 
   const { client } = syntheticClient();
   const rows = await loadLinkedPersonSuggestions(client, "owner-1", "asset-1");
   assert.equal(rows.length, 1);
-  assert.equal(rows[0].document_title, "Will.pdf");
+  assert.equal(rows[0].document_title, "Will of Ivan Yardley");
   assert.equal(rows[0].match_kind, "possible");
   assert.equal(rows[0].page, 3);
 });

@@ -21,11 +21,11 @@ export async function loadLinkedPersonSuggestions(client: SupabaseClient, ownerU
   if (result.error) throw new Error("Document suggestions are unavailable.");
   const rows = result.data ?? [];
   if (!rows.length) return [];
-  const documents = await client.from("documents").select("id,file_name")
+  const documents = await client.from("documents").select("id,file_name,display_title")
     .eq("owner_user_id", ownerUserId).eq("asset_id", recordId).is("deleted_at", null)
     .in("id", rows.map((row) => row.document_id));
   if (documents.error) throw new Error("Source documents are unavailable.");
-  const titles = new Map((documents.data ?? []).map((row) => [row.id, row.file_name]));
+  const titles = new Map((documents.data ?? []).map((row) => [row.id, row.display_title || row.file_name]));
   return rows.filter((row) => titles.has(row.document_id)).map((row) => ({
     ...row,
     document_title: titles.get(row.document_id) || "Document",

@@ -1,5 +1,7 @@
 \set ON_ERROR_STOP on
 BEGIN;
+\ir ../../supabase/migrations/20261027070000_restrict_linked_grants_to_explicit_scope.sql
+\ir ../../supabase/migrations/20261027071500_document_display_titles.sql
 \ir ../../supabase/migrations/20261027104509_linked_people_data_foundation.sql
 \ir ../../supabase/migrations/20261027211900_linked_people_suggestion_review.sql
 
