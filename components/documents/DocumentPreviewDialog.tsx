@@ -1,11 +1,12 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { IconButton } from "../ui/IconButton";
 import Icon from "../ui/Icon";
 
 export type DocumentPreviewDialogItem = {
   fileName: string;
+  originalFileName?: string;
   mimeType: string;
   previewUrl: string;
   metaLabel?: string;
@@ -21,6 +22,7 @@ export default function DocumentPreviewDialog({
   onPrint,
   onReplace,
   onRemove,
+  onRename,
   replaceAccept,
 }: {
   item: DocumentPreviewDialogItem;
@@ -29,8 +31,13 @@ export default function DocumentPreviewDialog({
   onPrint?: () => void;
   onReplace?: (file: File) => void;
   onRemove?: () => void;
+  onRename?: (title: string) => Promise<boolean>;
   replaceAccept?: string;
 }) {
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleInput, setTitleInput] = useState(item.fileName);
+  const [titleError, setTitleError] = useState("");
+  const [titleSaving, setTitleSaving] = useState(false);
   return (
     <div className="lf-v52-document-overlay" style={overlayStyle} role="dialog" aria-modal="true" aria-label={`${item.fileName} preview`}>
       <div className="lf-v52-document-dialog" style={dialogStyle}>
@@ -39,6 +46,7 @@ export default function DocumentPreviewDialog({
             <div style={{ fontWeight: 700, wordBreak: "break-word" }}>{item.fileName || "Attachment preview"}</div>
             <div style={{ color: "#64748b", fontSize: 12 }}>{formatMime(item.mimeType)}</div>
             {item.metaLabel ? <div style={{ color: "#475569", fontSize: 12, marginTop: 4 }}>{item.metaLabel}</div> : null}
+            {item.originalFileName ? <div style={{ color: "#475569", fontSize: 13, marginTop: 4 }}>Original filename: {item.originalFileName}</div> : null}
           </div>
           <IconButton icon="close" label="Close preview" className="lf-v52-document-dialog-close" onClick={onClose} />
         </div>
@@ -56,7 +64,26 @@ export default function DocumentPreviewDialog({
             </div>
           )}
         </div>
-        {onDownload || onPrint || onReplace || onRemove ? <div className="lf-v52-document-dialog-actions">
+        {onRename ? (
+          editingTitle ? <form onSubmit={(event) => {
+            event.preventDefault();
+            setTitleSaving(true);
+            setTitleError("");
+            void onRename(titleInput).then((saved) => {
+              if (!saved) setTitleError("Could not save title. Check the title and try again.");
+            }).finally(() => setTitleSaving(false));
+          }} style={{ display: "grid", gap: 8 }}>
+            <label htmlFor="lf-document-display-title">Document title</label>
+            <input id="lf-document-display-title" value={titleInput} onChange={(event) => setTitleInput(event.target.value)} maxLength={160} style={{ minHeight: 44, fontSize: 16, padding: 10 }} />
+            {titleError ? <span role="alert">{titleError}</span> : null}
+            <div className="lf-v52-document-dialog-actions">
+              <button type="submit" disabled={titleSaving}>{titleSaving ? "Saving…" : "Save title"}</button>
+              <button type="button" onClick={() => setEditingTitle(false)}>Cancel</button>
+            </div>
+          </form> : null
+        ) : null}
+        {onDownload || onPrint || onReplace || onRemove || onRename ? <div className="lf-v52-document-dialog-actions">
+          {onRename && !editingTitle ? <button type="button" onClick={() => setEditingTitle(true)}><Icon name="edit" size={18} />Edit details</button> : null}
           {onDownload ? <button type="button" onClick={onDownload}><Icon name="download" size={18} />Download</button> : null}
           {onPrint ? <button type="button" onClick={onPrint}><Icon name="print" size={18} />Print</button> : null}
           {onReplace ? <label><Icon name="upload_file" size={18} />Replace<input type="file" accept={replaceAccept} onChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) onReplace(file); event.currentTarget.value = ""; }} /></label> : null}

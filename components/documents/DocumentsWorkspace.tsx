@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { waitForActiveUser } from "../../lib/auth/session";
 import {
   createCanonicalAssetDocument,
+  renameCanonicalAssetDocument,
   resolveCanonicalAssetDocumentContext,
   getStoredFileSignedUrl,
   isPrintableDocumentMimeType,
@@ -51,6 +52,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
   const [selectedAssetId, setSelectedAssetId] = useState("");
   const [selectedKind, setSelectedKind] = useState<"document" | "photo">("document");
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingTitle, setPendingTitle] = useState("");
   const [reviewConfirmed, setReviewConfirmed] = useState(false);
   const [formError, setFormError] = useState("");
   const [search, setSearch] = useState("");
@@ -106,7 +108,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
 
   const filteredDocuments = useMemo(
     () =>
-      filterDiscoveryDocuments(documents, {
+      filterDiscoveryDocuments(documents.map((item) => ({ ...item, title: item.displayTitle })), {
         query: search,
         kindFilter: documentKindFilter,
         sectionFilter: sectionFilter ?? documentSectionFilter,
@@ -195,6 +197,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
       context: resolvedContext,
       file: pendingFile,
       kind: selectedKind,
+      displayTitle: pendingTitle,
     });
 
     setSaving(false);
@@ -204,6 +207,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
     }
 
     setPendingFile(null);
+    setPendingTitle("");
     setReviewConfirmed(false);
     setStatus(`Document linked to ${asset?.parentLabel ?? "the selected record"}.`);
     await reloadDocuments();
@@ -238,6 +242,25 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
     } catch (error) {
       setStatus(`Could not download file: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
+  }
+
+  async function renameDocument(item: CanonicalDocumentWorkspaceItem, displayTitle: string) {
+    if (viewer.mode === "linked") return false;
+    const user = await requireUser(router);
+    if (!user) return false;
+    const result = await renameCanonicalAssetDocument(supabase, {
+      documentId: item.id,
+      ownerUserId: user.id,
+      originalFileName: item.fileName,
+      displayTitle,
+    });
+    if (!result.ok) {
+      setStatus(`Could not save document title: ${result.error}`);
+      return false;
+    }
+    setStatus("Document title saved.");
+    await reloadDocuments();
+    return true;
   }
 
   async function printDocument(item: CanonicalDocumentWorkspaceItem) {
@@ -459,14 +482,20 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
             helperText={selectedKind === "photo" ? "Drop a photo here or choose one from your device. JPG and PNG are supported up to 15MB." : "Drop a document here or choose one from your device. PDF, DOCX, XLSX, CSV, JPG, and PNG are supported up to 15MB."}
             onFileSelect={(file) => {
               setPendingFile(file);
+              setPendingTitle(file.name.replace(/\.[^.]+$/, ""));
               setFormError("");
             }}
             onClear={() => {
               setPendingFile(null);
+              setPendingTitle("");
               setFormError("");
             }}
             disabled={saving}
           />
+        </FormField>
+
+        <FormField label="Document title" iconName="edit" helpText="A name people can recognise. The original filename stays with the document.">
+          <TextInput value={pendingTitle} onChange={setPendingTitle} placeholder={pendingFile?.name || "e.g. My Will"} />
         </FormField>
 
         <UploadConfirmationPanel
@@ -535,7 +564,8 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
           <AttachmentGallery
             items={filteredDocuments.map((item) => ({
               id: item.id,
-              fileName: item.fileName,
+              fileName: item.displayTitle || item.fileName,
+              originalFileName: item.fileName,
               mimeType: item.mimeType,
               createdAt: item.createdAt,
               metaLabel: item.parentLabel,
@@ -552,6 +582,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
             onReplace={viewer.mode === "linked" ? undefined : (entry, file) => void replaceDocument(entry.document, file)}
             replaceAccept={DOCUMENT_UPLOAD_ACCEPT}
             onRemove={viewer.mode === "linked" ? undefined : (entry) => void removeDocument(entry.document)}
+            onRename={viewer.mode === "linked" ? undefined : (entry, title) => renameDocument(entry.document, title)}
             onOpenRelated={(entry) => router.push(getAssetWorkspaceHref(entry.document.sectionKey, entry.document.categoryKey))}
             openRelatedLabel="Open asset"
           />
