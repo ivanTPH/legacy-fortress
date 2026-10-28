@@ -95,6 +95,7 @@ type DocumentRow = {
   category_key?: string | null;
   document_type?: string | null;
   file_name?: string | null;
+  display_title?: string | null;
   document_kind?: string | null;
   storage_bucket?: string | null;
   storage_path?: string | null;
@@ -816,9 +817,9 @@ const legalSummary = useMemo(() => {
         })),
         documents: documentRows.map((row) => ({
           id: row.id,
-          title: row.title ?? null,
+          title: row.display_title ?? row.title ?? null,
           fileName: row.file_name ?? row.title ?? null,
-          parentLabel: resolveParentLabel(row.asset_id, assetRows, row.title ?? row.document_type ?? null),
+          parentLabel: resolveParentLabel(row.asset_id, assetRows, row.display_title ?? row.title ?? row.document_type ?? null),
           sectionKey: resolveDocumentSectionKey(row, assetRows),
           categoryKey: row.category_key ?? null,
           documentKind: row.document_kind ?? row.document_type ?? null,
@@ -1309,7 +1310,7 @@ const legalSummary = useMemo(() => {
       const objectUrl = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = objectUrl;
-      anchor.download = item.fileName || "document";
+      anchor.download = item.originalFileName || item.fileName || "document";
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
@@ -2860,7 +2861,8 @@ function buildDashboardDocumentItems({
       return {
         id: `document-${row.id}`,
         source: "document" as const,
-        fileName: row.file_name || row.title || row.document_type || "Untitled document",
+        fileName: row.display_title || row.file_name || row.title || row.document_type || "Untitled document",
+        originalFileName: row.file_name || undefined,
         mimeType: row.mime_type || "application/octet-stream",
         createdAt: row.created_at ?? undefined,
         metaLabel: `${formatDocumentStatus(row)} · Linked to ${linkedLabel}`,

@@ -8382,6 +8382,25 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-v52-record-person-copy small { color: var(--lf-text-secondary); font-size: 13px; }
 .lf-v52-record-people-manage { margin-top: 8px; }
 .lf-v52-record-people-manage .lf-linked-contact-table-wrap { max-width: 100%; overflow-x: auto; }
+.lf-linked-people { min-width: 0; }
+.lf-linked-people h2, .lf-linked-people h3 { margin: 0 0 12px; }
+.lf-linked-people .lf-v52-record-person-list { margin-bottom: 12px; }
+.lf-linked-people .lf-v52-record-person-list li { min-width: 0; padding: 10px 0; }
+.lf-linked-people .lf-v52-record-person-copy small { overflow-wrap: anywhere; }
+.lf-linked-people-action, .lf-linked-people-actions :is(button,a), .lf-linked-people-choice button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 8px 14px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-input); background: var(--lf-surface-card); color: var(--lf-text); font: inherit; cursor: pointer; text-decoration: none; }
+.lf-linked-people-action:focus-visible, .lf-linked-people-actions :is(button,a):focus-visible, .lf-linked-people-choice button:focus-visible, .lf-linked-people-form :is(input,select):focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 2px; }
+.lf-linked-people-form { display: grid; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--lf-divider); }
+.lf-linked-people-form label { display: grid; gap: 5px; min-width: 0; font-weight: 600; }
+.lf-linked-people-form :is(input,select) { width: 100%; min-width: 0; min-height: 44px; padding: 8px 12px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-input); background: var(--lf-surface-card); color: var(--lf-text); font: inherit; }
+.lf-linked-people-choice, .lf-linked-people-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.lf-linked-people-choice button[aria-pressed="true"] { background: var(--lf-tint); }
+.lf-linked-people :is(button,a):disabled { opacity: .55; cursor: not-allowed; }
+.lf-linked-people .lf-linked-people-error { color: var(--lf-error, #b42318); }
+.lf-linked-people-suggestions { margin: 16px 0; padding: 14px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); }
+.lf-linked-people-suggestions > p { margin: 0 0 12px; }
+.lf-linked-people-suggestions ul { list-style: none; margin: 0; padding: 0; }
+.lf-linked-people-suggestions li { display: grid; gap: 5px; padding: 12px 0; border-top: 1px solid var(--lf-divider); min-width: 0; }
+.lf-linked-people-suggestions li span { overflow-wrap: anywhere; }
 @media (max-width: 600px) { .lf-v52-account-rows > div { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
 
 /* Vault Master search states share the existing authorised discovery results. */

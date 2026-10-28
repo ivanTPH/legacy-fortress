@@ -1,5 +1,11 @@
 # Document intelligence capability and release gate — 26 October 2026
 
+## Release #93 title-management checkpoint — 27 October 2026
+
+The isolated Release #93 candidate adds a separate canonical document display title, preserving `file_name`, private storage path, MIME, size and checksum. Owner upload and Edit details use the existing `documents` row; owner RLS and the estate mutation lock remain authoritative. A migration records title creation/changes in append-only `audit_events` without title text and blocks retargeting original metadata. Existing document list, viewer, record attachment views and authorised dashboard search use the title. This is **not live**: the protected TEST release workflow does not apply migrations, and the Coolify TEST schema has not been changed. Local migration syntax and the title-normalisation tests passed; hosted owner/linked-user acceptance remains pending.
+
+The bank-statement parser/matcher status below is unchanged. PDF byte processing, scan/quarantine, private owner-scoped retrieval, encrypted temporary result storage, accepted-decision audit and OCR remain blocked; no extraction UI or automatic asset creation was enabled.
+
 ## Release #88 decision
 
 Digital-PDF-to-record creation remains **BACKEND BLOCKED**. Release #87's parser accepts text supplied by a trusted caller, but there is still no isolated PDF byte processor or authorised extraction job. The active browser upload writes to Coolify TEST Supabase Storage before any server-side byte validation, malware scan or quarantine. Bucket privacy, deployed document RLS, immutable original retention and accepted-decision audit have not been verified end to end. An operational extraction endpoint or prepopulated review form would therefore present unverified sensitive financial data and provenance. The feature stays disabled; there is no fake suggestion UI or automatic record mutation.

@@ -17,3 +17,15 @@
 10. **Customer workspace labels:** Confirm “Personal” and “Linked to you” labels for existing authorised customer contexts. “Work” and “Legacy Fortress staff” are excluded from the ordinary customer switcher by decision 6.
 11. **Mobile form presentation:** V5 specifies full-screen Add/Edit modals without the customer tab bar. Confirm whether existing deep links and back behavior should stay on their current URLs while adopting that presentation.
 12. **Admin action reasons:** Identify any V5 risky actions whose current canonical service does not store an audited reason. Do not add an unaudited field or claim an action is reversible.
+
+## Linked people V5.2 — PR 1 decisions before later stages
+
+13. **Role vocabulary:** Confirm the role lists and contextual headings in `LINKED_PEOPLE.md`, especially firms versus individual people and the meaning of “Other”. PR 1 stores a validated role label without granting access.
+14. **Existing relationships:** `record_contacts` and `contact_links` already hold legacy links; the latter enforces one contact per source. Confirm the provenance and deduplication rules for a later additive backfill into `record_links`. PR 1 leaves both tables and all existing readers unchanged.
+15. **Document provenance for legacy records:** Canonical `documents` belong to `assets`, while older `records` use `attachments`. PR 1 permits manual links on either parent but confines extraction suggestions to canonical asset documents. Confirm how evidence from a legacy attachment should be represented before PR 4.
+16. **Invitation association:** Existing `contact_invitations` are primarily contact/role scoped and have an active email/role uniqueness rule. Confirm whether one invitation should be shown across every record linked to that person, or whether later invitation events must reference a particular `record_link`. No invitation sender or access grant changes are in PR 1.
+17. **Expiry and retention:** Confirm the intended resend interval, seven-day delivery handling, thirty-day expiry, and whether deleting a contact or source document must be blocked while a relationship/audit source exists. PR 1 adds statuses but changes no timers or retention behaviour.
+
+## Linked access security blocker (27 October 2026)
+
+18. **Legacy association widens an active grant:** A rollback-only synthetic local test showed that `linked_grant_allows_asset` treats `contact_links` as access and `linked_grant_allows_record` treats `record_contacts` as access when the linked contact already has an active, identity-qualified `account_access_grants` row with empty explicit scope. Both paths also allow the related document/storage reads. The new `record_links` table does not participate in those functions, and changing its role did not widen the grant. Revoking the grant stopped subsequent reads. Approve a **separate security remediation** of the legacy grant-scope/RLS functions, with compatibility review for existing intentional shares, before any new permission integration or legacy backfill. Do not use legacy contact associations as a substitute for explicit Give access.

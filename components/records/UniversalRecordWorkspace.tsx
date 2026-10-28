@@ -16,6 +16,7 @@ import Icon from "../ui/Icon";
 import InfoTip from "../ui/InfoTip";
 import { AddDocumentControl } from "../ui/LFDesignSystem";
 import AttachmentGallery, { AttachmentGallerySummary } from "../documents/AttachmentGallery";
+import LinkedPeopleSection from "./LinkedPeopleSection";
 import { waitForActiveUser } from "../../lib/auth/session";
 import { formatCurrency } from "../../lib/currency";
 import {
@@ -83,6 +84,7 @@ import {
 import { loadSensitiveAssetPayloads, resolveWalletContextForRead } from "../../lib/canonicalPersistence";
 import {
   createCanonicalAssetDocument,
+  renameCanonicalAssetDocument,
   getCanonicalAssetDocumentParentLabel,
   getStoredFileSignedUrl,
   isPrintableDocumentMimeType,
@@ -164,6 +166,7 @@ type RecordAttachment = {
   storage_bucket: string;
   storage_path: string;
   file_name: string;
+  display_title?: string | null;
   mime_type: string;
   size_bytes: number;
   checksum: string | null;
@@ -1134,7 +1137,7 @@ export default function UniversalRecordWorkspace({
       const [documentsResult, attachmentsResult, contactsResult] = await Promise.all([
         supabase
           .from("documents")
-          .select("id,asset_id,owner_user_id,storage_bucket,storage_path,file_name,mime_type,size_bytes,checksum,created_at,document_kind")
+          .select("id,asset_id,owner_user_id,storage_bucket,storage_path,file_name,display_title,mime_type,size_bytes,checksum,created_at,document_kind")
           .eq("owner_user_id", targetOwnerUserId)
           .in("asset_id", ids)
           .is("deleted_at", null)
@@ -3116,6 +3119,30 @@ export default function UniversalRecordWorkspace({
     });
   }
 
+  async function renameAttachment(item: RecordAttachment, title: string) {
+    if (item.source_table !== "documents" || !canEditWorkspaceRow(item.record_id)) return false;
+    const user = await requireUser(router);
+    if (!user) return false;
+    const result = await renameCanonicalAssetDocument(supabase, {
+      documentId: item.id,
+      ownerUserId: user.id,
+      originalFileName: item.file_name,
+      displayTitle: title,
+    });
+    if (!result.ok) {
+      setStatus(`Could not save document title: ${result.error}`);
+      return false;
+    }
+    await reloadWorkspace(router, sectionKey, categoryKey, setRecords, setAttachments, setContacts, setStatus, {
+      targetOwnerUserId: viewer.targetOwnerUserId,
+      forceCanonicalRead,
+      recordFilter,
+      viewer,
+    });
+    setStatus("Document title saved.");
+    return true;
+  }
+
   async function downloadAttachment(item: RecordAttachment) {
     const signedUrl = await getAttachmentSignedUrl(item, 120);
     if (!signedUrl) {
@@ -3281,7 +3308,8 @@ export default function UniversalRecordWorkspace({
     const rowAttachments = attachments.filter((item) => item.record_id === row.id);
     const attachmentGalleryItems = rowAttachments.map((item) => ({
       id: item.id,
-      fileName: item.file_name,
+      fileName: item.display_title || item.file_name,
+      originalFileName: item.file_name,
       mimeType: item.mime_type,
       createdAt: item.created_at,
       thumbnailUrl: isImageAttachment(item) ? photoPreviews[row.id] ?? "" : "",
@@ -3874,12 +3902,20 @@ export default function UniversalRecordWorkspace({
                   onReplace={canEditWorkspaceRow(row.id) ? (entry, file) => void replaceAttachment(entry.attachment, file) : undefined}
                   replaceAccept={DOCUMENT_UPLOAD_ACCEPT}
                   onRemove={canEditWorkspaceRow(row.id) ? (entry) => void removeAttachment(entry.attachment) : undefined}
+                  onRename={canEditWorkspaceRow(row.id) ? (entry, title) => renameAttachment(entry.attachment, title) : undefined}
                 />
               )}
             </div>
             </div>
             <aside className="lf-v52-record-rail" aria-label="Record context">
-              <section className="lf-v52-record-people" aria-label="People linked to this record">
+              {process.env.NEXT_PUBLIC_LINKED_PEOPLE_V52 === "true" && viewer.mode !== "linked" && !isTrustedContacts && !isCanonicalTask && !isCanonicalExecutor && !isCanonicalBeneficiary && !isIdentityDocuments ? <LinkedPeopleSection
+                ownerUserId={row.owner_user_id}
+                recordId={row.id}
+                recordType={usesCanonicalAssetReadPath ? "asset" : "record"}
+                sectionKey={sectionKey}
+                categoryKey={categoryKey}
+                canManage={canEditWorkspaceRow(row.id)}
+              /> : <section className="lf-v52-record-people" aria-label="People linked to this record">
                 <h2>{isWillsWorkspace ? "Executors" : "People linked to this record"}</h2>
                 {rowContacts.length ? (
                   <>
@@ -3899,7 +3935,7 @@ export default function UniversalRecordWorkspace({
                     <details className="lf-v52-record-people-manage"><summary>Contact details and actions</summary>{linkedContactsTable}</details>
                   </>
                 ) : <p>{isWillsWorkspace ? "No executor recorded." : "No linked people available in this view."}</p>}
-              </section>
+              </section>}
               <details className="lf-v52-record-history">
                 <summary>Record history</summary>
                 <p>Event history is not available for this record.</p>
@@ -4688,7 +4724,8 @@ export default function UniversalRecordWorkspace({
                   .filter((item) => item.record_id === editingId)
                   .map((item) => ({
                     id: item.id,
-                    fileName: item.file_name,
+                    fileName: item.display_title || item.file_name,
+                    originalFileName: item.file_name,
                     mimeType: item.mime_type,
                     createdAt: item.created_at,
                     thumbnailUrl: isImageAttachment(item) ? photoPreviews[item.record_id] ?? "" : "",
@@ -4699,6 +4736,7 @@ export default function UniversalRecordWorkspace({
                 onDownload={(entry) => void downloadAttachment(entry.attachment)}
                 onPrint={(entry) => void printAttachment(entry.attachment)}
                 onRemove={viewer.mode === "linked" || viewer.readOnly ? undefined : (entry) => void removeAttachment(entry.attachment)}
+                onRename={viewer.mode === "linked" || viewer.readOnly ? undefined : (entry, title) => renameAttachment(entry.attachment, title)}
               />
             )}
           </div>
@@ -6604,6 +6642,7 @@ function mapDocumentRowsToAttachments(rows: Array<Record<string, unknown>>): Rec
     storage_bucket: String(item.storage_bucket ?? ""),
     storage_path: String(item.storage_path ?? ""),
     file_name: String(item.file_name ?? ""),
+    display_title: typeof item.display_title === "string" ? item.display_title : null,
     mime_type: String(item.mime_type ?? ""),
     size_bytes: Number(item.size_bytes ?? 0),
     checksum: typeof item.checksum === "string" ? item.checksum : null,
@@ -6930,7 +6969,7 @@ async function reloadWorkspace(
   const [documentsResult, attachmentsResult, contactsResult] = await Promise.all([
     supabase
       .from("documents")
-      .select("id,asset_id,owner_user_id,storage_bucket,storage_path,file_name,mime_type,size_bytes,checksum,created_at,document_kind")
+      .select("id,asset_id,owner_user_id,storage_bucket,storage_path,file_name,display_title,mime_type,size_bytes,checksum,created_at,document_kind")
       .eq("owner_user_id", effectiveOwnerUserId)
       .in("asset_id", ids)
       .is("deleted_at", null)
