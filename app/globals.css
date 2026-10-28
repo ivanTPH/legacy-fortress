@@ -8396,6 +8396,11 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-linked-people-choice button[aria-pressed="true"] { background: var(--lf-tint); }
 .lf-linked-people :is(button,a):disabled { opacity: .55; cursor: not-allowed; }
 .lf-linked-people .lf-linked-people-error { color: var(--lf-error, #b42318); }
+.lf-linked-people-suggestions { margin: 16px 0; padding: 14px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); }
+.lf-linked-people-suggestions > p { margin: 0 0 12px; }
+.lf-linked-people-suggestions ul { list-style: none; margin: 0; padding: 0; }
+.lf-linked-people-suggestions li { display: grid; gap: 5px; padding: 12px 0; border-top: 1px solid var(--lf-divider); min-width: 0; }
+.lf-linked-people-suggestions li span { overflow-wrap: anywhere; }
 @media (max-width: 600px) { .lf-v52-account-rows > div { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
 
 /* Vault Master search states share the existing authorised discovery results. */

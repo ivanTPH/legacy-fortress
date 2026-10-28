@@ -6,6 +6,7 @@ import { useEffect, useId, useState } from "react";
 import { buildContactsWorkspaceHref } from "../../lib/contacts/contactRouting";
 import type { PeopleContactEntity } from "../../lib/contacts/contactRepository";
 import { LinkedPersonRecoveryError, linkedPeopleConfig, loadRecordLinkedPeople, normalizeLinkedPersonEmail, normalizeLinkedPersonPhone, saveRecordLinkedPerson, sendRecordLinkedPersonInvitation, type LinkedPerson, type LinkedRecordAccessState, type LinkedRecordType } from "../../lib/linkedPeople/recordLinkedPeople";
+import { loadLinkedPersonSuggestions, reviewLinkedPersonSuggestion, type LinkedPersonSuggestion } from "../../lib/linkedPeople/suggestions";
 import { supabase } from "../../lib/supabaseClient";
 
 export default function LinkedPeopleSection({ ownerUserId, recordId, recordType, sectionKey, categoryKey, canManage, client = supabase }: {
@@ -22,7 +23,12 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
   const [links, setLinks] = useState<LinkedPerson[]>([]);
   const [contacts, setContacts] = useState<PeopleContactEntity[]>([]);
   const [accessByPerson, setAccessByPerson] = useState<Record<string, LinkedRecordAccessState>>({});
-  const [mode, setMode] = useState<"closed" | "existing" | "new" | "saved" | "confirmInvite">("closed");
+  const [documentTitles, setDocumentTitles] = useState<Record<string, string>>({});
+  const [mode, setMode] = useState<"closed" | "existing" | "new" | "saved" | "confirmInvite" | "reviewSuggestion">("closed");
+  const [suggestions, setSuggestions] = useState<LinkedPersonSuggestion[]>([]);
+  const [suggestionId, setSuggestionId] = useState("");
+  const [suggestionChoice, setSuggestionChoice] = useState<"" | "existing" | "new">("");
+  const [suggestionError, setSuggestionError] = useState("");
   const [personId, setPersonId] = useState("");
   const [savedPersonId, setSavedPersonId] = useState("");
   const [recoveryPersonId, setRecoveryPersonId] = useState("");
@@ -41,11 +47,20 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
   useEffect(() => {
     let current = true;
     loadRecordLinkedPeople(client, ownerUserId, recordType, recordId)
-      .then((data) => { if (current) { setLinks(data.links); setContacts(data.contacts); setAccessByPerson(data.accessByPerson); setError(""); } })
+      .then((data) => { if (current) { setLinks(data.links); setContacts(data.contacts); setAccessByPerson(data.accessByPerson); setDocumentTitles(data.documentTitles); setError(""); } })
       .catch(() => { if (current) setError("Linked people are unavailable. Please try again."); })
       .finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
   }, [client, ownerUserId, recordType, recordId]);
+
+  useEffect(() => {
+    if (recordType !== "asset" || !canManage) return;
+    let current = true;
+    loadLinkedPersonSuggestions(client, ownerUserId, recordId)
+      .then((rows) => { if (current) setSuggestions(rows); })
+      .catch(() => { if (current) setSuggestionError("Document suggestions are unavailable."); });
+    return () => { current = false; };
+  }, [client, ownerUserId, recordId, recordType, canManage]);
 
   if (!config) return null;
   const saved = contacts.find((contact) => contact.id === savedPersonId);
@@ -56,11 +71,45 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
   const duplicateEmailContact = mode === "new" && email.trim()
     ? contacts.find((contact) => contact.email?.toLowerCase() === email.trim().toLowerCase())
     : null;
+  const selectedSuggestion = suggestions.find((item) => item.id === suggestionId);
 
   const resetForm = () => {
     setMode("closed"); setPersonId(""); setName(""); setEmail(""); setPhone("");
     setRelationship(""); setRole(config.roles[0]); setOtherRole(""); setError("");
     setContactSearch(""); setRecoveryPersonId("");
+    setSuggestionId(""); setSuggestionChoice("");
+  };
+  const openSuggestion = (suggestion: LinkedPersonSuggestion) => {
+    const suggestedRole = config.roles.find((item) => item.toLowerCase() === suggestion.extracted_role?.toLowerCase());
+    setSuggestionId(suggestion.id); setSuggestionChoice(""); setPersonId("");
+    setName(suggestion.extracted_name); setRole(suggestedRole || (suggestion.extracted_role ? "Other" : config.roles[0]));
+    setOtherRole(suggestedRole ? "" : suggestion.extracted_role || "");
+    setEmail(""); setPhone(""); setError(""); setNotice(""); setMode("reviewSuggestion");
+  };
+  const decideSuggestion = async (decision: "confirm" | "dismiss", targetSuggestion = selectedSuggestion) => {
+    if (!canManage || busy || !targetSuggestion) return;
+    setBusy(true); setError("");
+    try {
+      const result = await reviewLinkedPersonSuggestion(client, {
+        ownerUserId, suggestionId: targetSuggestion.id, decision,
+        choice: suggestionChoice || undefined, personId, name, role,
+        roleOtherText: otherRole, email, phone,
+      });
+      setSuggestions((current) => current.filter((item) => item.id !== targetSuggestion.id));
+      if (decision === "dismiss") {
+        resetForm(); setNotice("Suggestion dismissed. No person or relationship was added.");
+      } else {
+        setSavedPersonId(result.person_id || ""); setMode("saved");
+        try {
+          const data = await loadRecordLinkedPeople(client, ownerUserId, recordType, recordId);
+          setLinks(data.links); setContacts(data.contacts); setAccessByPerson(data.accessByPerson); setDocumentTitles(data.documentTitles);
+        } catch {
+          setError("The relationship was saved, but the display could not refresh. Reopen this record before inviting.");
+        }
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not review this suggestion.");
+    } finally { setBusy(false); }
   };
   const save = async () => {
     if (!canManage || busy) return;
@@ -79,7 +128,7 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
       setMode("saved");
       try {
         const data = await loadRecordLinkedPeople(client, ownerUserId, recordType, recordId);
-        setLinks(data.links); setContacts(data.contacts); setAccessByPerson(data.accessByPerson);
+        setLinks(data.links); setContacts(data.contacts); setAccessByPerson(data.accessByPerson); setDocumentTitles(data.documentTitles);
       } catch {
         setError("The relationship was saved, but its display could not be refreshed. Reopen this record to check it.");
       }
@@ -98,7 +147,7 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
       });
       try {
         const data = await loadRecordLinkedPeople(client, ownerUserId, recordType, recordId);
-        setLinks(data.links); setContacts(data.contacts); setAccessByPerson(data.accessByPerson);
+        setLinks(data.links); setContacts(data.contacts); setAccessByPerson(data.accessByPerson); setDocumentTitles(data.documentTitles);
       } catch { /* The accepted request remains authoritative; avoid a second dispatch. */ }
       resetForm();
       setNotice(result.deliveryState === "auth_request_accepted"
@@ -112,6 +161,7 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
   return <section className="lf-v52-record-people lf-linked-people" aria-label={config.heading}>
     <h2>{config.heading}</h2>
     {notice ? <p className="lf-linked-people-notice" role="status">{notice}</p> : null}
+    {suggestionError ? <p role="status">{suggestionError}</p> : null}
     {loading ? <p role="status">Loading linked people…</p> : links.length === 0 ? <p>{config.heading === "Executors" ? "No executors linked yet. Add them one at a time." : "No people linked yet. Add them one at a time."}</p> :
       <ul className="lf-v52-record-person-list">{links.map((link) => {
         const contact = contacts.find((item) => item.id === link.person_id);
@@ -131,10 +181,23 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
             {contact ? <small>{[contact.email, contact.phone].filter(Boolean).join(" · ") || "No contact details recorded"}</small> : null}
             <small>Invitation: {invitationLabel} · Identity: {verified ? "Verified" : "Not verified"}</small>
             <small>Access: {accessByPerson[link.person_id] === "explicit" ? "Explicit record access selected" : accessByPerson[link.person_id] === "unavailable" ? "Status unavailable" : "No explicit record access"}</small>
-            <small>{link.source === "extraction" ? `Confirmed from document · page ${link.source_page}` : link.manual_origin === "people" ? "Added by you from People" : "Added by you"}</small>
+            <small>{link.source === "extraction" ? `From ${documentTitles[link.source_document_id || ""] || "document"} · page ${link.source_page} · confirmed by you` : link.manual_origin === "people" ? "Added by you from People" : "Added by you"}</small>
           </span>
         </li>;
       })}</ul>}
+    {canManage && suggestions.length ? <div className="lf-linked-people-suggestions">
+      <h3>We found in this document</h3>
+      <p>Review each saved suggestion against its source. Nothing changes until you confirm.</p>
+      <ul>{suggestions.map((suggestion) => {
+        const match = contacts.find((contact) => contact.id === suggestion.match_person_id);
+        return <li key={suggestion.id}>
+          <strong>{suggestion.extracted_name}</strong>
+          <span>{suggestion.extracted_role || "Role needs review"} · {suggestion.document_title} · page {suggestion.page}</span>
+          {match ? <span>{suggestion.match_kind === "possible" ? "Possible match" : "Matched in People"}: {match.full_name}. Confirm who this is before linking.</span> : null}
+          <div className="lf-linked-people-actions"><button type="button" disabled={busy} onClick={() => openSuggestion(suggestion)}>Review person</button><button type="button" disabled={busy} onClick={() => void decideSuggestion("dismiss", suggestion)}>Not now</button></div>
+        </li>;
+      })}</ul>
+    </div> : null}
     {canManage && mode === "closed" ? <button type="button" className="lf-linked-people-action" disabled={loading} onClick={() => { setError(""); setNotice(""); setMode(availableContacts.length ? "existing" : "new"); }}>{addAction}</button> : null}
     {canManage && (mode === "existing" || mode === "new") ? <div className="lf-linked-people-form" id={formId}>
       <h3>{config.heading === "Executors" ? "Add an executor" : "Add a person to this record"}</h3>
@@ -173,6 +236,24 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
       <p>Email: <strong>{saved?.email}</strong></p>
       <p>They will receive a request to create an account and connect with you. They will not receive this record, its documents, or access to your Vault. Access must be shared separately.</p>
       <div className="lf-linked-people-actions"><button type="button" disabled={busy} onClick={() => { setError(""); setMode("saved"); }}>Back</button><button type="button" disabled={busy || !saved?.email} onClick={() => void sendInvitation()}>{busy ? "Submitting…" : "Send invitation"}</button></div>
+    </div> : null}
+    {canManage && mode === "reviewSuggestion" && selectedSuggestion ? <div className="lf-linked-people-form" role="group" aria-label="Review suggested person">
+      <h3>Review {selectedSuggestion.extracted_name}</h3>
+      <p>Suggested by {selectedSuggestion.document_title} · page {selectedSuggestion.page}. Check the document before confirming; this suggestion has not created a contact or link.</p>
+      <div className="lf-linked-people-choice" role="group" aria-label="Match this person">
+        <button type="button" aria-pressed={suggestionChoice === "existing"} onClick={() => setSuggestionChoice("existing")}>Choose from People</button>
+        <button type="button" aria-pressed={suggestionChoice === "new"} onClick={() => setSuggestionChoice("new")}>Add new person</button>
+      </div>
+      {suggestionChoice === "existing" ? <label>Person<select value={personId} onChange={(event) => setPersonId(event.target.value)}><option value="">Choose a person</option>{contacts.map((contact) => <option key={contact.id} value={contact.id}>{contact.full_name}{contact.id === selectedSuggestion.match_person_id ? " · suggested match" : ""}</option>)}</select></label> : null}
+      {suggestionChoice === "new" ? <>
+        <label>Full name<input value={name} onChange={(event) => setName(event.target.value)} maxLength={120} /></label>
+        <label>Email (optional)<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label>
+        <label>Telephone (optional)<input type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} /></label>
+      </> : null}
+      <label>Role on this record<select value={role} onChange={(event) => setRole(event.target.value)}>{config.roles.map((option) => <option key={option}>{option}</option>)}</select></label>
+      {role === "Other" ? <label>Describe role<input value={otherRole} onChange={(event) => setOtherRole(event.target.value)} maxLength={60} /></label> : null}
+      <p>Confirming saves the person and relationship together. It does not send an invitation or grant access.</p>
+      <div className="lf-linked-people-actions"><button type="button" disabled={busy} onClick={resetForm}>Back</button><button type="button" disabled={busy} onClick={() => void decideSuggestion("dismiss")}>Dismiss suggestion</button><button type="button" disabled={busy || !suggestionChoice || (suggestionChoice === "existing" ? !personId : !name.trim()) || (role === "Other" && !otherRole.trim())} onClick={() => void decideSuggestion("confirm")}>Save person and relationship</button></div>
     </div> : null}
     {error ? <p className="lf-linked-people-error" role="alert">{error}</p> : null}
   </section>;
