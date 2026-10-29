@@ -4,6 +4,8 @@ import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createPortal } from "react-dom";
 import { useEffect, useId, useRef, useState } from "react";
+import Icon from "../ui/Icon";
+import { Sheet } from "../ui/V3Primitives";
 import { buildContactsWorkspaceHref } from "../../lib/contacts/contactRouting";
 import type { PeopleContactEntity } from "../../lib/contacts/contactRepository";
 import { LinkedPersonRecoveryError, changeRecordLinkedPersonRole, linkedPeopleConfig, linkedPersonFormIssues, loadRecordLinkedPeople, loadRecordLinkedPeopleHistory, normalizeLinkedPersonEmail, normalizeLinkedPersonPhone, saveRecordLinkedPerson, searchLinkedPeopleContacts, sendRecordLinkedPersonInvitation, unlinkRecordLinkedPerson, type LinkedPerson, type LinkedPersonHistoryEvent, type LinkedRecordAccessState, type LinkedRecordType } from "../../lib/linkedPeople/recordLinkedPeople";
@@ -38,6 +40,8 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const closeRef = useRef<() => void>(() => {});
   const [managedLinkId, setManagedLinkId] = useState("");
+  const [rowActionLinkId, setRowActionLinkId] = useState("");
+  const rowActionTriggerRef = useRef<HTMLElement | null>(null);
   const [history, setHistory] = useState<LinkedPersonHistoryEvent[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -110,6 +114,8 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
   const selectedSuggestion = suggestions.find((item) => item.id === suggestionId);
   const managedLink = links.find((link) => link.id === managedLinkId);
   const managedContact = contacts.find((contact) => contact.id === managedLink?.person_id);
+  const rowActionLink = links.find((link) => link.id === rowActionLinkId);
+  const rowActionContact = contacts.find((contact) => contact.id === rowActionLink?.person_id);
   const validationIssues = mode === "existing" || mode === "new" || mode === "editRole" ? linkedPersonFormIssues({
     mode, personId, recoveryPersonId, name, email, phone, role, roleOtherText: otherRole,
     duplicateEmail: Boolean(duplicateEmailContact), online, recordLabel,
@@ -278,6 +284,18 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
     } finally { setBusy(false); }
   };
 
+  const closeRowActions = () => setRowActionLinkId("");
+  const renderRowActions = (link: LinkedPerson, contact: PeopleContactEntity, mobile: boolean) => <>
+    <Link href={buildContactsWorkspaceHref(contact.id)} onClick={mobile ? closeRowActions : undefined}>View / Edit contact</Link>
+    {canManage ? <>
+      <button type="button" disabled={busy || mode !== "closed"} onClick={(event) => { returnFocusRef.current = mobile ? rowActionTriggerRef.current : event.currentTarget; if (mobile) closeRowActions(); setManagedLinkId(link.id); setRole(link.role); setOtherRole(link.role_other_text ?? ""); setNotice(""); setError(""); setMode("editRole"); }}>Change role on this record</button>
+      <Link href={buildContactsWorkspaceHref(contact.id, true)} onClick={mobile ? closeRowActions : undefined}>Manage access</Link>
+      {contact.email && !["accepted", "invite_sent"].includes(contact.invite_status) ? <button type="button" disabled={busy || mode !== "closed"} onClick={(event) => { returnFocusRef.current = mobile ? rowActionTriggerRef.current : event.currentTarget; if (mobile) closeRowActions(); setSavedPersonId(contact.id); setError(""); setMode("saved"); }}>Invite to connect</button> : null}
+      {!contact.email ? <Link href={buildContactsWorkspaceHref(contact.id)} onClick={mobile ? closeRowActions : undefined}>Add email to invite</Link> : null}
+      <button type="button" disabled={busy || mode !== "closed"} onClick={(event) => { returnFocusRef.current = mobile ? rowActionTriggerRef.current : event.currentTarget; if (mobile) closeRowActions(); setManagedLinkId(link.id); setNotice(""); setError(""); setMode("confirmUnlink"); }}>Remove from this record</button>
+    </> : null}
+  </>;
+
   return <section className="lf-v52-record-people lf-linked-people" aria-label={config.heading}>
     <h2>{config.heading}</h2>
     {notice ? <p className="lf-linked-people-notice" role="status">{notice}</p> : null}
@@ -306,19 +324,14 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
             <span className="lf-linked-people-states"><span className={`lf-linked-people-chip ${contact?.invite_status === "accepted" ? "is-good" : contact?.invite_status === "failed" || contact?.invite_status === "not_delivered" ? "is-error" : contact?.invite_status === "invite_sent" ? "is-pending" : ""}`}>{invitationLabel}</span>{!contact?.email ? <span className="lf-linked-people-chip">No email</span> : null}{verified ? <span className="lf-linked-people-chip is-good">ID verified</span> : contact?.verification_status === "pending_verification" || contact?.verification_status === "verification_submitted" ? <span className="lf-linked-people-chip is-pending">Checking ID</span> : null}{accessByPerson[link.person_id] === "explicit" ? <span className="lf-linked-people-chip is-good">Can see this record</span> : null}</span>
             {accessByPerson[link.person_id] === "unavailable" ? <small>Record access status unavailable</small> : null}
             <small>{link.source === "extraction" ? `From ${documentTitles[link.source_document_id || ""] || "document"} · page ${link.source_page} · confirmed by you` : link.manual_origin === "people" ? "Added by you from People" : "Added by you"}</small>
-            {contact ? <details className="lf-linked-people-row-menu"><summary aria-label={`Actions for ${displayName}`}>More actions</summary><span className="lf-linked-people-row-actions">
-              <Link href={buildContactsWorkspaceHref(contact.id)}>View / Edit contact</Link>
-              {canManage ? <>
-                <button type="button" disabled={busy || mode !== "closed"} onClick={(event) => { returnFocusRef.current = event.currentTarget; setManagedLinkId(link.id); setRole(link.role); setOtherRole(link.role_other_text ?? ""); setNotice(""); setError(""); setMode("editRole"); }}>Edit record role</button>
-                <Link href={buildContactsWorkspaceHref(contact.id, true)}>Manage access</Link>
-                {contact.email && !["accepted", "invite_sent"].includes(contact.invite_status) ? <button type="button" disabled={busy || mode !== "closed"} onClick={(event) => { returnFocusRef.current = event.currentTarget; setSavedPersonId(contact.id); setError(""); setMode("saved"); }}>Invite to connect</button> : null}
-                {!contact.email ? <Link href={buildContactsWorkspaceHref(contact.id)}>Add email to invite</Link> : null}
-                <button type="button" disabled={busy || mode !== "closed"} onClick={(event) => { returnFocusRef.current = event.currentTarget; setManagedLinkId(link.id); setNotice(""); setError(""); setMode("confirmUnlink"); }}>Unlink from record</button>
-              </> : null}
-            </span></details> : null}
+            {contact ? <details className="lf-linked-people-row-menu"><summary aria-label={`Actions for ${displayName}`}>More actions</summary><span className="lf-linked-people-row-actions">{renderRowActions(link, contact, false)}</span></details> : null}
           </div>
+          {contact ? <button type="button" className="lf-linked-people-mobile-actions" aria-label={`Actions for ${displayName}`} aria-haspopup="dialog" onClick={(event) => { rowActionTriggerRef.current = event.currentTarget; setRowActionLinkId(link.id); }}><Icon name="more_vert" size={20} /></button> : null}
         </li>;
       })}</ul>}
+    <Sheet open={Boolean(rowActionLink && rowActionContact)} title={`Actions for ${rowActionContact?.full_name ?? "person"}`} onClose={closeRowActions} returnFocusTo={rowActionTriggerRef}>
+      {rowActionLink && rowActionContact ? <div className="lf-linked-people-row-actions lf-linked-people-mobile-sheet-actions">{renderRowActions(rowActionLink, rowActionContact, true)}</div> : null}
+    </Sheet>
     {canManage ? <div className="lf-linked-people-history">
       <button type="button" className="lf-linked-people-history-toggle" aria-expanded={historyOpen} onClick={() => void openHistory()}>{historyOpen ? "Hide record-link history" : "Show record-link history"}</button>
       {historyOpen ? historyLoading ? <p role="status">Loading history…</p> : historyError ? <p role="status">{historyError}</p> : history.length ? <ol>{history.map((event) => {
