@@ -288,13 +288,19 @@ test("contacts keeps legacy invitation management only for add-person setup whil
   assert.match(contactsWorkspace, /This designation does not grant vault access/);
 });
 
-test("add-to-fortress uses the page header once and renders grouped creation choices", () => {
+test("add-to-fortress keeps one contextual heading and the approved area and section cards", () => {
   const page = fs.readFileSync(path.join(root, "app/(app)/add-to-fortress/page.tsx"), "utf8");
   const panel = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/AddToFortressPanel.tsx"), "utf8");
 
-  assert.match(page, /<PageHeader title="Add to my Vault"/);
+  assert.match(page, /<AddToFortressPanel \/>/);
+  assert.doesNotMatch(page, /<PageHeader/);
+  assert.match(panel, /<h1>\{area\?\.title/);
+  assert.match(panel, /What would you like to record\?/);
+  assert.match(panel, /Choose a section/);
   assert.match(panel, /aria-label="Choose what to add"/);
   assert.match(panel, /className="lf-v3-destination-grid lf-v52-add-area-grid"/);
+  assert.match(panel, /className="lf-v52-add-choice-grid"/);
+  assert.match(panel, /href=\{choice\.href\}/);
   assert.match(panel, /setSelectedArea\(item\.key\)/);
   assert.match(panel, /setSelectedArea\(null\)/);
   assert.doesNotMatch(panel, /Build this at your pace/);
