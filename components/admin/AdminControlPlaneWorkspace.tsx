@@ -662,6 +662,7 @@ export default function AdminControlPlaneWorkspace({
       if (item.key === "support") setSupport(item.json.support ?? null);
       if (item.key === "verification") setVerificationQueue(item.json.queue ?? []);
       if (item.key === "probate") setProbateCases(item.json.cases ?? []);
+      if (item.key === "estate") setEstateOperations({ deathReports: item.json.deathReports ?? [], estateClaims: item.json.estateClaims ?? [] });
       if (item.key === "audit") setAuditEvents(item.json.events ?? []);
       if (item.key === "enterprise") setEnterprisePortfolio(item.json.portfolio ?? null);
     }

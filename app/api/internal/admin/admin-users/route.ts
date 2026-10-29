@@ -235,5 +235,6 @@ export async function PATCH(request: Request) {
   }
 
   const admins = await listAdminUsers(admin.adminClient);
-  return noStoreJson({ ok: true, admin: result.after, admins });
+  const invitations = await listAdminInvitations(admin.adminClient).catch(() => []);
+  return noStoreJson({ ok: true, admin: result.after, admins, invitations });
 }

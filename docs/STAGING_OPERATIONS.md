@@ -52,6 +52,24 @@ EXPECTED_STAGING_SHA=<commit> npm run staging:ops -- verify
 
 The workflow is preferred because it keeps deployment and acceptance secrets in GitHub's protected environment. Local operators should not copy those secrets into a developer terminal. The old `COOLIFY_BASE_URL` and `COOLIFY_API_TOKEN` secrets are no longer used by this workflow.
 
+## Automated local dispatch
+
+After committing and pushing the exact staging-branch HEAD, an authorized development environment can dispatch and monitor the protected workflow without using the GitHub Actions UI:
+
+```bash
+EXPECTED_STAGING_SHA=<full-40-character-commit> GITHUB_TOKEN=<protected-token> npm run staging:release
+```
+
+The token is read only from the process environment and is never printed or stored by the script. Use a repository-scoped fine-grained GitHub token with `Actions: Read and write` and `Contents: Read` for `ivanTPH/legacy-fortress`; no Coolify, server, production, or repository-write permission is required for dispatch. Store it in the developer machine's protected credential store or CI secret manager, not in `.env` or the repository. `--validate` runs the local branch/HEAD/origin checks without making a GitHub request.
+
+The dispatcher passes the exact SHA to the existing `workflow_dispatch`, waits for the matching run, and reports only run metadata and failed step names. The workflow still owns protected-environment approval, Coolify deployment, exact `/api/version` verification, hosted acceptance, and cleanup.
+
+## Release warnings
+
+`npm audit` currently reports five dependency findings: one moderate transitive `@humanfs/node`, three high findings involving `brace-expansion`, `js-yaml`, and `sharp`, and one critical direct `next` finding. These are not changed by the staging dispatcher; do not run an unreviewed `npm audit fix`. The Next.js and image-processing upgrades require a separate compatibility review and release validation.
+
+GitHub also reports the existing `actions/checkout@v4` Node 20 deprecation warning. It is retained in this bounded change because changing action runtime versions is independent of dispatch authorization and should be upgraded in a dedicated workflow-maintenance change.
+
 ## Failure and rollback
 
 The workflow fails closed when the webhook is not HTTPS, does not contain the fixed staging application UUID, or when staging origin, environment markers, or live SHA do not match. It never exposes the Coolify control plane, restarts Docker, prunes resources, touches Supabase services, or deploys production.

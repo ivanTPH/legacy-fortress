@@ -1,6 +1,14 @@
 # Codex Handover
 
-Updated: 2026-08-30 16:30 BST
+## Version 3 design planning checkpoint — 14 October 2026
+
+- Read the authoritative `design_handoff_legacy_fortress 3/` handoff and rendered all three HTML design boards locally in Chrome.
+- Added `docs/design-implementation/PLAN.md` and `docs/design-implementation/QUESTIONS.md`. The plan maps the core desktop/mobile screens, all 46 journey badges, existing routes/components, backend evidence, security gates and phases 1–17. The questions record unresolved product, provider and route decisions for owner review.
+- Preserved root `AGENTS.md`, the dirty working tree and the three untracked test files. No application code, production, hosted staging, branch, commit or deployment was changed.
+- Local browser tooling is available (Chrome, Playwright Chromium and WebKit), and the app responds on `127.0.0.1:3012`. Local Supabase at `127.0.0.1:55421` was unreachable, so authenticated journey tests were not attempted. Verify the running app's local runtime target and restore the local Supabase stack before future auth/database browser tests.
+- Stop here for owner answers and explicit approval to begin phase 1. Existing historical handover sections below remain as prior-work context.
+
+Updated: 2026-10-14 (Version 3 planning checkpoint)
 
 ## Latest Prompt 21 IDV Simulator Remediation
 

@@ -55,3 +55,28 @@ test("cleanup checks mutable deletes and retains audit history", () => {
   assert.doesNotMatch(runner, /identity_verification_requests"\)\.delete/);
   assert.match(runner, /auth_users_and_contact_rows: "retained_for_audit_integrity"/);
 });
+
+test("decision persistence assertions use the canonical achieved identity level", () => {
+  assert.match(runner, /requested_identity_level,achieved_identity_level/);
+  assert.match(runner, /decision\?\.decision, "verified"/);
+  assert.match(runner, /decision\?\.achieved_identity_level/);
+  assert.doesNotMatch(runner, /identity_verification_decisions", "request_id,decision,identity_level/);
+  assert.doesNotMatch(runner, /decision\?\.decision, "approved"/);
+});
+
+test("document-failed scenario preserves manual-review semantics and fail-closed access", () => {
+  assert.match(runner, /simulatorScenario: "document-failed"/);
+  assert.match(runner, /failedComplete\.payload\.decision\?\.status, "review_required"/);
+  assert.match(runner, /NON_ACTIVE_GRANT_STATUSES\.has\(grantAfterReview\.activation_status\)/);
+  assert.match(runner, /reviewDecision\.decision, "review_required"/);
+  assert.match(runner, /reviewDecision\.requires_manual_review, true/);
+  assert.match(runner, /failedVerification: \{ decision: "review_required", grant: grantAfterReview\.activation_status/);
+});
+
+test("hosted IDV assertions separate persisted lifecycle from effective access", () => {
+  assert.match(runner, /persistedInvitation\.invitation_status, "accepted"/);
+  assert.match(runner, /NON_ACTIVE_GRANT_STATUSES\.has\(initialGrant\.activation_status\)/);
+  assert.match(runner, /premature_access/);
+  assert.doesNotMatch(runner, /initialGrant\.activation_status, "(?:identity_required|pending_verification)"/);
+  assert.doesNotMatch(runner, /grantAfterReview\.activation_status, "(?:identity_required|pending_verification)"/);
+});

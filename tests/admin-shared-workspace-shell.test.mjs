@@ -82,6 +82,8 @@ test("admin navigation is capability-filtered without defining a second role mat
   assert.doesNotMatch(source, /support_agent:/);
   assert.match(source, /admin_users:manage/);
   assert.match(source, /organisation:view/);
+  assert.match(source, /admin\.probate\.summary\.read/);
+  assert.doesNotMatch(source, /capability: "probate:read"/);
   assert.match(source, /verification:read/);
 });
 
@@ -102,7 +104,7 @@ test("platform, enterprise and probate entry surfaces use the shared shell", () 
   assert.match(enterpriseOrgDetail, /AdminWorkspaceShell/);
   assert.match(enterpriseOrgDetail, /filterAdminNavigation\(ENTERPRISE_ADMIN_NAVIGATION/);
   assert.match(enterpriseLicenceDetail, /AdminWorkspaceShell/);
-  assert.match(enterpriseLicenceDetail, /filterAdminNavigation\(ENTERPRISE_ADMIN_NAVIGATION/);
+  assert.match(enterpriseLicenceDetail, /filterAdminNavigation\(platformAdmin \? PLATFORM_ADMIN_NAVIGATION : ENTERPRISE_ADMIN_NAVIGATION/);
   assert.match(probatePage, /section="probate"/);
 });
 

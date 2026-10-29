@@ -41,6 +41,10 @@ test("canonical admin users page owns invitation and lifecycle controls without 
   assert.match(workspace, /Admin invitation revoked and audit recorded/);
   assert.match(workspace, /Admin invitation resent and audit recorded/);
   assert.match(workspace, /Admin lifecycle action completed and audit recorded/);
+  assert.match(workspace, /Reason is required before confirming an administrator lifecycle action/);
+  assert.match(workspace, /expectedUpdatedAt/);
+  assert.match(workspace, /Loaded admin row version/);
+  assert.match(workspace, /Stale-update protection/);
   assert.match(workspace, /Suspend access/);
   assert.match(workspace, /Reactivate access/);
   assert.match(workspace, /Edit role/);

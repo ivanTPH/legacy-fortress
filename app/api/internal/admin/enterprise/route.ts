@@ -238,11 +238,13 @@ export async function POST(request: Request) {
         admin.adminClient,
         String(body.invitationId ?? ""),
         String(body.status ?? ""),
+        body.reason,
       );
       await recordEnterpriseAudit(request, admin, `Enterprise invitation ${invitation.status}`, "access_policy", invitation.id, invitation.email, "success", {
         organisation_id: invitation.organisationId,
         licence_id: invitation.licenceId,
         seat_released: ["revoked", "expired", "failed"].includes(invitation.status),
+        reason_present: Boolean(String(body.reason ?? "").trim()),
         synthetic_run_marker: body.syntheticRunMarker ?? null,
       });
       return NextResponse.json({ ok: true, invitation, portfolio: await loadEnterprisePortfolio(admin.adminClient, admin.access) });

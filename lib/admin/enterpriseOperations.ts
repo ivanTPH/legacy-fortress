@@ -866,9 +866,13 @@ export async function createEnterpriseInvitation(
   return { ...mapInvitation(insert.data as EnterpriseInvitationRow), stagingAcceptPath: buildEnterpriseInvitationAcceptPath(token) };
 }
 
-export async function updateEnterpriseInvitationStatus(client: AnySupabaseClient, id: string, status: string) {
+export async function updateEnterpriseInvitationStatus(client: AnySupabaseClient, id: string, status: string, reason?: unknown) {
   const normalized = normalizeChoice(status, ENTERPRISE_INVITATION_STATUSES, "Choose a valid invitation status.");
   const current = await getInvitationRow(client, id);
+  if (!isValidInvitationTransition(current.status, normalized)) {
+    throw new EnterpriseOperationError("invalid_invitation_transition", `Cannot move invitation from ${current.status} to ${normalized}.`, 409);
+  }
+  const operatorReason = optionalText(reason);
   const patch: Record<string, unknown> = { status: normalized, updated_at: new Date().toISOString() };
   if (normalized === "revoked") patch.revoked_at = new Date().toISOString();
   if (normalized === "sent") {
@@ -876,7 +880,9 @@ export async function updateEnterpriseInvitationStatus(client: AnySupabaseClient
     patch.last_resent_at = new Date().toISOString();
     patch.resend_count = Number(current.resend_count ?? 0) + 1;
   }
-  if (normalized === "expired") patch.failure_reason = appendReason(current.failure_reason, "Expired by administrator");
+  if (normalized === "revoked" || normalized === "expired" || normalized === "failed") {
+    patch.failure_reason = appendReason(current.failure_reason, operatorReason ?? `${labelForInvitationStatus(normalized)} by administrator`);
+  }
   const update = await client
     .from("enterprise_invitations")
     .update(patch)
@@ -1809,6 +1815,21 @@ function isValidMembershipTransition(from: string, to: string) {
     removed: [],
   };
   return (allowed[from] ?? []).includes(to);
+}
+
+function isValidInvitationTransition(from: string, to: string) {
+  if (from === to) return true;
+  if (["accepted", "revoked", "expired"].includes(from)) return false;
+  if (to === "sent") return ["draft", "scheduled", "sent", "delivered", "failed"].includes(from);
+  if (["revoked", "expired", "failed"].includes(to)) return ["draft", "scheduled", "sent", "delivered", "failed"].includes(from);
+  return false;
+}
+
+function labelForInvitationStatus(status: string) {
+  if (status === "revoked") return "Revoked";
+  if (status === "expired") return "Expired";
+  if (status === "failed") return "Marked failed";
+  return "Updated";
 }
 
 function buildEnterpriseInvitationAcceptPath(token: string) {

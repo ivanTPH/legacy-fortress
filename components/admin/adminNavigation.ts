@@ -34,7 +34,7 @@ export const PLATFORM_ADMIN_NAVIGATION: AdminNavigationGroup[] = [
   {
     label: "Platform Probate",
     items: [
-      { key: "probate", label: "Probate queue", href: "/admin/probate", icon: "gavel", capability: "probate:read" },
+      { key: "probate", label: "Probate queue", href: "/admin/probate", icon: "gavel", capability: "admin.probate.summary.read" },
       { key: "verification", label: "Verification", href: "/admin/verification", icon: "fact_check", capability: "verification:read" },
     ],
   },
@@ -67,7 +67,7 @@ export const PROBATE_REVIEW_NAVIGATION: AdminNavigationGroup[] = [
   {
     label: "Probate Review",
     items: [
-      { key: "probate", label: "Review queue", href: "/admin/probate", icon: "gavel", capability: "probate:read" },
+      { key: "probate", label: "Review queue", href: "/admin/probate", icon: "gavel", capability: "admin.probate.summary.read" },
       { key: "verification", label: "Verification / evidence", href: "/admin/verification", icon: "fact_check", capability: "verification:read" },
       { key: "probate-audit", label: "Probate audit", href: "/admin/audit?scope=probate", icon: "history", capability: "audit:read" },
     ],

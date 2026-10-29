@@ -465,6 +465,8 @@ test("admin-users route is no-store, rate-limited, audit-gated, and suppresses r
   assert.match(route, /recordAdminAuditEvent[\s\S]*applyAdminUserLifecycleUpdate/);
   assert.match(route, /recordAdminLifecycleDenied/);
   assert.match(route, /expectedUpdatedAt/);
+  assert.match(route, /const invitations = await listAdminInvitations/);
+  assert.match(route, /ok: true, admin: result\.after, admins, invitations/);
   assert.match(route, /safeAdminErrorResponse\(error\)/);
   assert.doesNotMatch(route, /error instanceof Error \? error\.message/);
 });
