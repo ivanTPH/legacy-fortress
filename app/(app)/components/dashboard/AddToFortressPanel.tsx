@@ -12,24 +12,24 @@ type AddChoice = { label: string; description: string; href: string; icon: strin
 type AddArea = { key: string; title: string; description: string; icon: string; choices: AddChoice[] };
 
 const ADD_AREAS: AddArea[] = [
-  { key: "finances", title: "Finances", description: "Accounts, pensions, investments and insurance.", icon: "account_balance_wallet", choices: FINANCE_RECORD_CHOICES },
-  { key: "legal", title: "Legal", description: "Wills, powers of attorney and important papers.", icon: "gavel", choices: [
+  { key: "finances", title: "Finances", description: "Bank accounts, pensions, investments, insurance, debts", icon: "account_balance_wallet", choices: FINANCE_RECORD_CHOICES },
+  { key: "legal", title: "Legal", description: "Wills, powers of attorney, trusts, funeral wishes", icon: "gavel", choices: [
     { label: "Will", description: "Record that it exists and add the document when ready.", href: "/legal/wills?add=1", icon: "history_edu" },
     { label: "Capacity arrangement", description: "Record a power of attorney or related arrangement.", href: "/legal/power-of-attorney?add=1", icon: "shield_person" },
     { label: "Important document", description: "Add a document to the appropriate workspace.", href: "/property/documents?add=1", icon: "description" },
   ] },
-  { key: "property", title: "Property", description: "Homes, deeds and valuations.", icon: "home", choices: [
+  { key: "property", title: "Property", description: "Homes, land, mortgages, rentals", icon: "home", choices: [
     { label: "Property record", description: "Record ownership, location and value.", href: "/vault/property?add=1", icon: "home" },
     { label: "Property document", description: "Keep a deed or supporting file.", href: "/property/documents?add=1", icon: "folder" },
   ] },
-  { key: "business", title: "Business", description: "Interests and employment records.", icon: "work", choices: [
+  { key: "business", title: "Business", description: "Companies, shareholdings, partnerships", icon: "work", choices: [
     { label: "Business interest", description: "Add a company or business interest.", href: "/vault/business?add=1", icon: "domain" },
     { label: "Employment", description: "Keep workplace and death-in-service details.", href: "/employment?add=1", icon: "work" },
   ] },
-  { key: "digital", title: "Digital", description: "Accounts, platforms and online services.", icon: "devices", choices: [
+  { key: "digital", title: "Digital", description: "Email, social media, subscriptions, devices", icon: "devices", choices: [
     { label: "Digital account", description: "Email, cloud or online services. Do not store passwords.", href: "/vault/digital/records?add=1&digitalType=__other", icon: "devices" },
   ] },
-  { key: "possessions", title: "Possessions", description: "Things you own and wishes you want recorded.", icon: "inventory_2", choices: [
+  { key: "possessions", title: "Possessions", description: "Vehicles, jewellery, art, other items", icon: "inventory_2", choices: [
     { label: "Meaningful possession", description: "Jewellery, watches, collections, art or heirlooms.", href: "/vault/personal/records?add=1&possessionCategory=other", icon: "inventory_2" },
     { label: "Wish or instruction", description: "Personal guidance, funeral wishes or pet-care notes.", href: "/personal/wishes?add=1", icon: "edit_note" },
   ] },
@@ -41,6 +41,14 @@ const PEOPLE_CHOICES: AddChoice[] = [
   { label: "Family or loved one", description: "Keep a relationship clear without granting access.", href: "/contacts?group=family&add=1", icon: "family_restroom" },
 ];
 
+const FINANCE_CHOICE_COPY: Record<string, { title: string; description: string }> = {
+  "Bank account": { title: "Banks", description: "Current and savings accounts" },
+  Pension: { title: "Pensions", description: "Workplace, personal, state" },
+  Investment: { title: "Investments", description: "ISAs, shares, funds, bonds" },
+  Insurance: { title: "Insurance", description: "Life, home, health, travel" },
+  Debt: { title: "Debts", description: "Loans, credit cards, mortgages" },
+};
+
 export default function AddToFortressPanel() {
   const { viewer } = useViewerAccess();
   const requestedArea = useSearchParams().get("area");
@@ -51,22 +59,24 @@ export default function AddToFortressPanel() {
   const area = ADD_AREAS.find((item) => item.key === selectedArea);
   const choices = selectedArea === "people" ? PEOPLE_CHOICES : area?.choices;
   return <section className="lf-v52-add-flow" aria-label="Choose what to add">
+    <nav className="lf-v52-add-breadcrumb" aria-label="Breadcrumb">
+      {choices ? <button type="button" onClick={() => setSelectedArea(null)}><Icon name="chevron_left" size={18} />Add to my Vault</button> : <Link href="/dashboard"><Icon name="chevron_left" size={18} />Home</Link>}
+    </nav>
+    <header className="lf-v52-add-heading">
+      <h1>{area?.title ?? (selectedArea === "people" ? "People" : "Add to my Vault")}</h1>
+      <p>{choices ? "Choose a section" : "What would you like to record?"}</p>
+    </header>
     {choices ? <>
-      <button type="button" className="lf-v52-add-back" onClick={() => setSelectedArea(null)}><Icon name="arrow_back" size={20} />Areas</button>
-      <h2>{area?.title ?? "People"}</h2>
-      <p>Choose a section, then add a record using its existing form.</p>
-      <div className="lf-v52-add-choice-list">{choices.map((choice) => <Link key={choice.href} href={choice.href} className="lf-v52-add-choice">
-        <span className="lf-v52-add-icon"><Icon name={choice.icon} size={20} /></span>
-        <span><strong>{choice.label}</strong><small>{choice.description}</small></span>
-        <Icon name="chevron_right" size={20} />
+      <div className="lf-v52-add-choice-grid">{choices.map((choice) => <Link key={choice.href} href={choice.href} className="lf-v52-add-choice">
+        <span className="lf-v52-add-choice-head"><span className="lf-v52-add-icon"><Icon name={choice.icon} size={20} /></span><strong>{selectedArea === "finances" ? FINANCE_CHOICE_COPY[choice.label]?.title ?? choice.label : choice.label}</strong><Icon name="chevron_right" size={20} /></span>
+        <small>{selectedArea === "finances" ? FINANCE_CHOICE_COPY[choice.label]?.description ?? choice.description : choice.description}</small>
       </Link>)}</div>
     </> : <>
-      <h2>Choose an area</h2>
       <div className="lf-v3-destination-grid lf-v52-add-area-grid">{ADD_AREAS.map((item) => <button key={item.key} type="button" className="lf-v52-add-area" onClick={() => setSelectedArea(item.key)}>
-        <span className="lf-v52-add-icon"><Icon name={item.icon} size={22} /></span>
-        <strong>{item.title}</strong><Icon name="chevron_right" size={20} />
+        <span className="lf-v52-add-area-head"><span className="lf-v52-add-icon"><Icon name={item.icon} size={22} /></span><strong>{item.title}</strong><Icon name="chevron_right" size={20} /></span>
         <small>{item.description}</small>
       </button>)}</div>
+      <p className="lf-v52-add-summary">You only need a name to save a record. Details, values and documents can be added later.</p>
       <button type="button" className="lf-v52-add-people" onClick={() => setSelectedArea("people")}><Icon name="person_add" size={20} />Add a person<Icon name="chevron_right" size={20} /></button>
       <p className="lf-v52-add-note">Adding or inviting a person never shares your records automatically.</p>
     </>}
