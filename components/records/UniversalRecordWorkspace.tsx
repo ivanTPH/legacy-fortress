@@ -17,6 +17,7 @@ import InfoTip from "../ui/InfoTip";
 import { AddDocumentControl } from "../ui/LFDesignSystem";
 import AttachmentGallery, { AttachmentGallerySummary } from "../documents/AttachmentGallery";
 import LinkedPeopleSection from "./LinkedPeopleSection";
+import { linkedPeopleConfig } from "../../lib/linkedPeople/recordLinkedPeople";
 import { waitForActiveUser } from "../../lib/auth/session";
 import { formatCurrency } from "../../lib/currency";
 import {
@@ -925,6 +926,10 @@ export default function UniversalRecordWorkspace({
   const defaultLegalContactRole = legalLinkedContactDefinition?.defaultRole ?? "";
   const usesStructuredWorkspaceForm = isFinanceSection || usesCanonicalAssets || isIdentityDocuments || isSocialMedia;
   const canCreateRecords = viewer.mode !== "linked";
+  const canShowLinkedPeople = process.env.NEXT_PUBLIC_LINKED_PEOPLE_V52 === "true"
+    && viewer.mode !== "linked" && !isTrustedContacts && !isCanonicalTask
+    && !isCanonicalExecutor && !isCanonicalBeneficiary && !isIdentityDocuments
+    && Boolean(linkedPeopleConfig(sectionKey, categoryKey));
   const canEditWorkspaceRow = (recordId: string) =>
     usesCanonicalAssets || canonicalLegalDocumentCategorySlug ? canEditAssetForViewer(recordId, viewer) : canEditRecordForViewer(recordId, viewer);
   const helpMessage = getWorkspaceHelpMessage(sectionKey, categoryKey);
@@ -1923,7 +1928,7 @@ export default function UniversalRecordWorkspace({
     }
   }
 
-  async function saveRecord() {
+  async function saveRecord(addPersonAfterSave = false) {
     if (saving) return;
     if (!editingId && !canCreateRecords) {
       setStatus("This shared view is read-only. The vault owner controls who can add records.");
@@ -2823,9 +2828,15 @@ export default function UniversalRecordWorkspace({
       pushBankSubmitTrace("router.refresh triggered");
       router.refresh();
     }
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-    setSavedConfirmation("");
-    resetFormState({ focusExistingRecords: true });
+    if (addPersonAfterSave && recordId && canShowLinkedPeople) {
+      setSavedConfirmation("");
+      resetFormState();
+      router.push(`${recordHref(recordId)}&addPerson=1`);
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      setSavedConfirmation("");
+      resetFormState({ focusExistingRecords: true });
+    }
     pushBankSubmitTrace(`reload completed: asset_id="${recordId ?? ""}"`);
     mergeDevBankContextTrace({
       source: "UniversalRecordWorkspace.saveRecord",
@@ -3908,13 +3919,17 @@ export default function UniversalRecordWorkspace({
             </div>
             </div>
             <aside className="lf-v52-record-rail" aria-label="Record context">
-              {process.env.NEXT_PUBLIC_LINKED_PEOPLE_V52 === "true" && viewer.mode !== "linked" && !isTrustedContacts && !isCanonicalTask && !isCanonicalExecutor && !isCanonicalBeneficiary && !isIdentityDocuments ? <LinkedPeopleSection
+              {canShowLinkedPeople ? <LinkedPeopleSection
+                key={`${usesCanonicalAssetReadPath ? "asset" : "record"}:${row.id}`}
                 ownerUserId={row.owner_user_id}
                 recordId={row.id}
                 recordType={usesCanonicalAssetReadPath ? "asset" : "record"}
+                recordTitle={row.title ?? undefined}
                 sectionKey={sectionKey}
                 categoryKey={categoryKey}
                 canManage={canEditWorkspaceRow(row.id)}
+                autoOpen={selectedWorkspaceRecordId === row.id && searchParams.get("addPerson") === "1"}
+                onAutoOpened={() => router.replace(recordHref(row.id))}
               /> : <section className="lf-v52-record-people" aria-label="People linked to this record">
                 <h2>{isWillsWorkspace ? "Executors" : "People linked to this record"}</h2>
                 {rowContacts.length ? (
@@ -4743,6 +4758,11 @@ export default function UniversalRecordWorkspace({
         ) : null}
         {!showNarrativeNotes && !usesStructuredWorkspaceForm ? <button type="button" style={ghostBtn} onClick={() => setShowNarrativeNotes(true)}><Icon name="add" size={16} /> Add notes</button> : null}
         </div>
+        {!editingId && canShowLinkedPeople && canCreateRecords ? <section className="lf-v52-form-people" aria-label="People on this record">
+          <h3>People (optional)</h3>
+          <p>Add people and their roles after this record is saved. Linking a person does not give them access.</p>
+          <button type="button" disabled={saving} onClick={() => void saveRecord(true)}>{saving ? "Saving…" : "Save and add person"}</button>
+        </section> : null}
         <div className="lf-v4-form-footer">
           <span className="lf-v4-form-security"><Icon name="lock" size={16} />Stored securely. Not shared with anyone.</span>
           <div className="lf-v4-form-actions">

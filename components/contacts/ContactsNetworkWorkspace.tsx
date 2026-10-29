@@ -899,9 +899,9 @@ function getInvitationDisplay(contact: ContactRow) {
   if (contact.invite_status === "revoked") return { label: "Revoked", icon: "block", tone: "danger" as const };
   if (contact.invite_status === "rejected") return { label: "Declined", icon: "block", tone: "danger" as const };
   if (contact.invite_status === "accepted") {
-    return { label: "Accepted", icon: "check_circle", tone: "success" as const };
+    return { label: "Joined", icon: "check_circle", tone: "success" as const };
   }
-  if (contact.invite_status === "invite_sent") return { label: "Pending", icon: "hourglass_top", tone: "warning" as const };
+  if (contact.invite_status === "invite_sent") return { label: "Invite sent", icon: "hourglass_top", tone: "warning" as const };
   return { label: "Not invited", icon: "schedule_send", tone: "neutral" as const };
 }
 
