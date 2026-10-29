@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import { useEffect, useId, useRef, useState } from "react";
 import { buildContactsWorkspaceHref } from "../../lib/contacts/contactRouting";
 import type { PeopleContactEntity } from "../../lib/contacts/contactRepository";
-import { LinkedPersonRecoveryError, changeRecordLinkedPersonRole, linkedPeopleConfig, loadRecordLinkedPeople, loadRecordLinkedPeopleHistory, normalizeLinkedPersonEmail, normalizeLinkedPersonPhone, saveRecordLinkedPerson, searchLinkedPeopleContacts, sendRecordLinkedPersonInvitation, unlinkRecordLinkedPerson, type LinkedPerson, type LinkedPersonHistoryEvent, type LinkedRecordAccessState, type LinkedRecordType } from "../../lib/linkedPeople/recordLinkedPeople";
+import { LinkedPersonRecoveryError, changeRecordLinkedPersonRole, linkedPeopleConfig, linkedPersonFormIssues, loadRecordLinkedPeople, loadRecordLinkedPeopleHistory, normalizeLinkedPersonEmail, normalizeLinkedPersonPhone, saveRecordLinkedPerson, searchLinkedPeopleContacts, sendRecordLinkedPersonInvitation, unlinkRecordLinkedPerson, type LinkedPerson, type LinkedPersonHistoryEvent, type LinkedRecordAccessState, type LinkedRecordType } from "../../lib/linkedPeople/recordLinkedPeople";
 import { loadLinkedPersonSuggestions, reviewLinkedPersonSuggestion, type LinkedPersonSuggestion } from "../../lib/linkedPeople/suggestions";
 import { supabase } from "../../lib/supabaseClient";
 
@@ -33,7 +33,7 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
   const [discardReturnMode, setDiscardReturnMode] = useState<"existing" | "new">("new");
   const [online, setOnline] = useState(true);
   const dialogRef = useRef<HTMLDivElement>(null);
-  const validationRef = useRef<HTMLParagraphElement>(null);
+  const validationRef = useRef<HTMLDivElement>(null);
   const autoOpenHandledRef = useRef(false);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const closeRef = useRef<() => void>(() => {});
@@ -110,15 +110,13 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
   const selectedSuggestion = suggestions.find((item) => item.id === suggestionId);
   const managedLink = links.find((link) => link.id === managedLinkId);
   const managedContact = contacts.find((contact) => contact.id === managedLink?.person_id);
-  let invalidContactField = "";
-  if (mode === "new" && !recoveryPersonId) {
-    try { normalizeLinkedPersonEmail(email); } catch { invalidContactField = "Enter a valid email address, or leave it blank."; }
-    if (!invalidContactField) try { normalizeLinkedPersonPhone(phone); } catch { invalidContactField = "Enter a valid telephone number, or leave it blank."; }
-  }
-  const saveBlocker = mode === "existing" && !personId ? "Select a person from the matching results."
-    : mode === "new" && !name.trim() && !recoveryPersonId ? "Full name is required."
-    : mode === "new" && duplicateEmailContact && !recoveryPersonId ? "Use the existing person with this email."
-    : invalidContactField || (!role ? `Choose their role on ${recordLabel}.` : role === "Other" && !otherRole.trim() ? "Describe this person's role on this record." : !online ? "You are offline. Your entries remain here until you can save." : "");
+  const validationIssues = mode === "existing" || mode === "new" || mode === "editRole" ? linkedPersonFormIssues({
+    mode, personId, recoveryPersonId, name, email, phone, role, roleOtherText: otherRole,
+    duplicateEmail: Boolean(duplicateEmailContact), online, recordLabel,
+  }) : [];
+  const saveBlocker = validationIssues[0]?.message ?? "";
+  const showValidationIssues = Boolean(error && error === saveBlocker && validationIssues.length);
+  const issueFor = (field: typeof validationIssues[number]["field"]) => showValidationIssues ? validationIssues.find((issue) => issue.field === field)?.message : undefined;
 
   const requestClose = () => {
     if (busy) return;
@@ -350,31 +348,31 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
     {mode === "choose" ? <div className="lf-linked-people-choose"><p>{links.length ? "People already linked remain saved while you add another." : "Choose someone already in your People, or add a new person."}</p><button type="button" disabled={!availableContacts.length} onClick={() => setMode("existing")}><strong>Choose from People</strong><small>{availableContacts.length} available in your Vault</small></button><button type="button" onClick={() => setMode("new")}><strong>Add someone new</strong><small>Name and contact details, if you have them</small></button></div> : null}
     {(mode === "existing" || mode === "new") ? <div className="lf-linked-people-form" id={formId}>
       <h3>{config.heading === "Executors" ? "Add an executor" : "Add a person to this record"}</h3>
-      {error ? <p ref={validationRef} tabIndex={-1} className="lf-linked-people-error" role="alert">Check the details below: {error}</p> : null}
+      {error ? <div ref={validationRef} tabIndex={-1} className="lf-linked-people-error" role="alert">{showValidationIssues ? <><strong>There {validationIssues.length === 1 ? "is 1 thing" : `are ${validationIssues.length} things`} to fix</strong><ul>{validationIssues.map((issue, index) => <li key={`${issue.field}-${index}`}>{issue.field === "connection" ? issue.message : <button type="button" onClick={() => document.getElementById(`${formId}-${issue.field}`)?.focus()}>{issue.message}</button>}</li>)}</ul></> : error}</div> : null}
       {links.length ? <p>Already saved: {links.map((link) => contacts.find((contact) => contact.id === link.person_id)?.full_name).filter(Boolean).join(", ")}</p> : null}
       <div className="lf-linked-people-choice" role="group" aria-label="Person source">
-        <button type="button" aria-pressed={mode === "existing"} onClick={() => setMode("existing")} disabled={!availableContacts.length}>Choose from People</button>
-        <button type="button" aria-pressed={mode === "new"} onClick={() => { if (mode === "existing" && contactSearch.trim() && !name.trim()) setName(contactSearch.trim()); setMode("new"); }}>Add new person</button>
+        <button type="button" aria-pressed={mode === "existing"} onClick={() => { setError(""); setMode("existing"); }} disabled={!availableContacts.length}>Choose from People</button>
+        <button type="button" aria-pressed={mode === "new"} onClick={() => { if (mode === "existing" && contactSearch.trim() && !name.trim()) setName(contactSearch.trim()); setError(""); setMode("new"); }}>Add new person</button>
       </div>
       {mode === "existing" ? <>
-        <label>Search your People<input type="search" value={contactSearch} onChange={(event) => { setContactSearch(event.target.value); setPersonId(""); }} placeholder="Name, email or telephone" /></label>
+        <label>Search your People<input id={`${formId}-person`} type="search" value={contactSearch} onChange={(event) => { setContactSearch(event.target.value); setPersonId(""); setError(""); }} aria-invalid={Boolean(issueFor("person"))} aria-describedby={issueFor("person") ? `${formId}-person-error` : undefined} placeholder="Name, email or telephone" />{issueFor("person") ? <small id={`${formId}-person-error`} className="lf-linked-people-field-error">{issueFor("person")}</small> : null}</label>
         <div className="lf-linked-people-picker" role="group" aria-label="Matching people">
-          {matchingContacts.map((contact) => <button key={contact.id} type="button" aria-pressed={personId === contact.id} onClick={() => setPersonId(contact.id)}>
+          {matchingContacts.map((contact) => <button key={contact.id} type="button" aria-pressed={personId === contact.id} onClick={() => { setPersonId(contact.id); setError(""); }}>
             <strong>{contact.full_name}</strong><span>{[contact.relationship, contact.email, contact.phone].filter(Boolean).join(" · ") || "No contact details recorded"}</span><small>{otherRecordCounts[contact.id] ? `Also on ${otherRecordCounts[contact.id]} other ${otherRecordCounts[contact.id] === 1 ? "record" : "records"} · ` : ""}{personId === contact.id ? "Selected" : "Select person"}</small>
           </button>)}
         </div>
         {matchingContacts.length === 0 ? <p>No matching people in your Vault.</p> : null}
       </> : <div className="lf-linked-people-person-fields">
         <h4>About this person</h4>
-        <label>Full name<input name="lp_full_name" value={name} onChange={(event) => { setName(event.target.value); setError(""); }} autoComplete="off" aria-invalid={Boolean(error && !name.trim())} aria-describedby={error && !name.trim() ? `${formId}-name-error` : undefined} required maxLength={120} />{error && !name.trim() ? <small id={`${formId}-name-error`} className="lf-linked-people-field-error">Enter their full name.</small> : null}</label>
+        <label>Full name<input id={`${formId}-name`} name="lp_full_name" value={name} onChange={(event) => { setName(event.target.value); setError(""); }} autoComplete="off" aria-invalid={showValidationIssues && validationIssues.some((issue) => issue.field === "name")} aria-describedby={showValidationIssues && !name.trim() ? `${formId}-name-error` : undefined} required maxLength={120} />{showValidationIssues && !name.trim() ? <small id={`${formId}-name-error`} className="lf-linked-people-field-error">Enter their full name.</small> : null}</label>
         {possibleNameMatch ? <div className="lf-linked-people-duplicate"><p>Possible match in your People: {possibleNameMatch.full_name}. Check their details before creating someone new.</p><button type="button" onClick={() => { setMode("existing"); setContactSearch(possibleNameMatch.full_name); setPersonId(possibleNameMatch.id); setError(""); }}>Use existing person</button></div> : null}
         <label>Relationship to you (optional)<input value={relationship} onChange={(event) => setRelationship(event.target.value)} maxLength={80} /></label>
-        <label>Email (optional to save)<input name="lp_email" type="email" inputMode="email" value={email} onChange={(event) => { setEmail(event.target.value); setError(""); }} autoComplete="off" aria-invalid={Boolean(error && invalidContactField.startsWith("Enter a valid email"))} /></label>
+        <label>Email (optional to save)<input id={`${formId}-email`} name="lp_email" type="email" inputMode="email" value={email} onChange={(event) => { setEmail(event.target.value); setError(""); }} autoComplete="off" aria-invalid={Boolean(issueFor("email"))} aria-describedby={issueFor("email") ? `${formId}-email-error` : undefined} />{issueFor("email") ? <small id={`${formId}-email-error`} className="lf-linked-people-field-error">{issueFor("email")}</small> : null}</label>
         {duplicateEmailContact ? <div role="alert" className="lf-linked-people-duplicate"><p>This email belongs to {duplicateEmailContact.full_name}.</p>{activeIds.has(duplicateEmailContact.id) ? <Link href={buildContactsWorkspaceHref(duplicateEmailContact.id)}>View linked person</Link> : <button type="button" onClick={() => { setMode("existing"); setContactSearch(duplicateEmailContact.full_name); setPersonId(duplicateEmailContact.id); }}>Use existing person</button>}</div> : null}
-        <label>Telephone (optional)<input name="lp_phone" type="tel" inputMode="tel" value={phone} onChange={(event) => { setPhone(event.target.value); setError(""); }} autoComplete="off" aria-invalid={Boolean(error && invalidContactField.startsWith("Enter a valid telephone"))} placeholder="07700 900123" /></label>
+        <label>Telephone (optional)<input id={`${formId}-phone`} name="lp_phone" type="tel" inputMode="tel" value={phone} onChange={(event) => { setPhone(event.target.value); setError(""); }} autoComplete="off" aria-invalid={Boolean(issueFor("phone"))} aria-describedby={issueFor("phone") ? `${formId}-phone-error` : undefined} placeholder="07700 900123" />{issueFor("phone") ? <small id={`${formId}-phone-error`} className="lf-linked-people-field-error">{issueFor("phone")}</small> : null}</label>
       </div>}
-      <fieldset className="lf-linked-people-role-choices"><legend>Their role on {recordLabel}</legend>{config.roles.map((option) => <button key={option} type="button" aria-pressed={role === option} onClick={() => setRole(option)}>{option}</button>)}</fieldset>
-      {role === "Other" ? <label>Describe role<input value={otherRole} onChange={(event) => { setOtherRole(event.target.value); setError(""); }} aria-invalid={Boolean(error && !otherRole.trim())} required maxLength={60} /></label> : null}
+      <fieldset className="lf-linked-people-role-choices"><legend>Their role on {recordLabel}</legend>{showValidationIssues && validationIssues.some((issue) => issue.field === "role") ? <small className="lf-linked-people-field-error">Choose their role on {recordLabel}.</small> : null}{config.roles.map((option, index) => <button key={option} id={index === 0 ? `${formId}-role` : undefined} type="button" aria-pressed={role === option} onClick={() => { setRole(option); setError(""); }}>{option}</button>)}</fieldset>
+      {role === "Other" ? <label>Describe role<input id={`${formId}-other`} value={otherRole} onChange={(event) => { setOtherRole(event.target.value); setError(""); }} aria-invalid={Boolean(issueFor("other"))} aria-describedby={issueFor("other") ? `${formId}-other-error` : undefined} required maxLength={60} />{issueFor("other") ? <small id={`${formId}-other-error`} className="lf-linked-people-field-error">{issueFor("other")}</small> : null}</label> : null}
       <p>The People relationship describes how you know them. Their role applies only to this record. Linking does not grant access.</p>
       {recoveryPersonId ? <p role="status">The person is saved in People. Retry the link without creating them again.</p> : null}
       {!online ? <p className="lf-linked-people-offline" role="status">You are offline. Your details remain here; save when your connection returns.</p> : null}

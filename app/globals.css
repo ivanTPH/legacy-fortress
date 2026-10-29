@@ -8424,6 +8424,9 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-linked-people-person-fields { display: grid; gap: 12px; }
 .lf-linked-people-person-fields h4 { margin: 4px 0 0; font-size: 14px; color: var(--lf-text); }
 .lf-linked-people-field-error { color: var(--lf-status-rejected-text); font-size: 13px; }
+.lf-linked-people-dialog .lf-linked-people-error ul { margin: 6px 0 0; padding-left: 20px; }
+.lf-linked-people-dialog .lf-linked-people-error li { margin: 2px 0; }
+.lf-linked-people-dialog .lf-linked-people-error li button { min-height: 44px; padding: 4px 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; text-decoration: underline; cursor: pointer; }
 .lf-v52-form-people { display: grid; gap: 8px; margin: 12px 0; padding: 16px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); }
 .lf-v52-form-people h3, .lf-v52-form-people p { margin: 0; }
 .lf-v52-form-people p { color: var(--lf-text-secondary); font-size: 14px; line-height: 1.5; }
