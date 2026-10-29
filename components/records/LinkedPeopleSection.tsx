@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { useEffect, useId, useState } from "react";
+import { createPortal } from "react-dom";
+import { useEffect, useId, useRef, useState } from "react";
 import { buildContactsWorkspaceHref } from "../../lib/contacts/contactRouting";
 import type { PeopleContactEntity } from "../../lib/contacts/contactRepository";
 import { LinkedPersonRecoveryError, changeRecordLinkedPersonRole, linkedPeopleConfig, loadRecordLinkedPeople, loadRecordLinkedPeopleHistory, normalizeLinkedPersonEmail, normalizeLinkedPersonPhone, saveRecordLinkedPerson, searchLinkedPeopleContacts, sendRecordLinkedPersonInvitation, unlinkRecordLinkedPerson, type LinkedPerson, type LinkedPersonHistoryEvent, type LinkedRecordAccessState, type LinkedRecordType } from "../../lib/linkedPeople/recordLinkedPeople";
@@ -24,7 +25,13 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
   const [contacts, setContacts] = useState<PeopleContactEntity[]>([]);
   const [accessByPerson, setAccessByPerson] = useState<Record<string, LinkedRecordAccessState>>({});
   const [documentTitles, setDocumentTitles] = useState<Record<string, string>>({});
-  const [mode, setMode] = useState<"closed" | "existing" | "new" | "saved" | "confirmInvite" | "reviewSuggestion" | "editRole" | "confirmUnlink">("closed");
+  const [otherRecordCounts, setOtherRecordCounts] = useState<Record<string, number>>({});
+  const [mode, setMode] = useState<"closed" | "choose" | "existing" | "new" | "saved" | "confirmInvite" | "reviewSuggestion" | "editRole" | "confirmUnlink" | "discard">("closed");
+  const [discardReturnMode, setDiscardReturnMode] = useState<"existing" | "new">("new");
+  const [online, setOnline] = useState(true);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+  const closeRef = useRef<() => void>(() => {});
   const [managedLinkId, setManagedLinkId] = useState("");
   const [history, setHistory] = useState<LinkedPersonHistoryEvent[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -52,7 +59,7 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
   useEffect(() => {
     let current = true;
     loadRecordLinkedPeople(client, ownerUserId, recordType, recordId)
-      .then((data) => { if (current) { setLinks(data.links); setContacts(data.contacts); setAccessByPerson(data.accessByPerson); setDocumentTitles(data.documentTitles); setError(""); } })
+      .then((data) => { if (current) { setLinks(data.links); setContacts(data.contacts); setAccessByPerson(data.accessByPerson); setDocumentTitles(data.documentTitles); setOtherRecordCounts(data.otherRecordCounts); setError(""); } })
       .catch(() => { if (current) setError("Linked people are unavailable. Please try again."); })
       .finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
@@ -67,11 +74,18 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
     return () => { current = false; };
   }, [client, ownerUserId, recordId, recordType, canManage]);
 
-  if (!config) return null;
+  useEffect(() => {
+    const updateOnline = () => setOnline(navigator.onLine);
+    updateOnline();
+    window.addEventListener("online", updateOnline);
+    window.addEventListener("offline", updateOnline);
+    return () => { window.removeEventListener("online", updateOnline); window.removeEventListener("offline", updateOnline); };
+  }, []);
+
   const saved = contacts.find((contact) => contact.id === savedPersonId);
   const activeIds = new Set(links.map((link) => link.person_id));
   const availableContacts = contacts.filter((contact) => !activeIds.has(contact.id));
-  const addAction = links.length ? config.action.replace(/^Add person$/, "Add another person") : config.action.replace("another ", "");
+  const addAction = links.length ? (config?.action ?? "Add person").replace(/^Add person$/, "Add another person") : (config?.action ?? "Add person").replace("another ", "");
   const matchingContacts = searchLinkedPeopleContacts(contacts, activeIds, contactSearch);
   const duplicateEmailContact = mode === "new" && email.trim()
     ? contacts.find((contact) => contact.email?.toLowerCase() === email.trim().toLowerCase())
@@ -87,18 +101,52 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
   const saveBlocker = mode === "existing" && !personId ? "Select a person from the matching results."
     : mode === "new" && !name.trim() && !recoveryPersonId ? "Full name is required."
     : mode === "new" && duplicateEmailContact && !recoveryPersonId ? "Use the existing person with this email."
-    : invalidContactField || (role === "Other" && !otherRole.trim() ? "Describe this person's role on this record." : "");
+    : invalidContactField || (role === "Other" && !otherRole.trim() ? "Describe this person's role on this record." : !online ? "You are offline. Your entries remain here until you can save." : "");
+
+  const requestClose = () => {
+    if (busy) return;
+    if (mode === "discard") { setMode(discardReturnMode); return; }
+    if (mode === "confirmInvite") { setMode("saved"); return; }
+    if (mode === "saved") {
+      resetForm(); setNotice(`${saved?.full_name ?? "Person"} remains linked. No invitation was sent.`); return;
+    }
+    if ((mode === "new" || mode === "existing") && (name.trim() || email.trim() || phone.trim() || relationship.trim() || otherRole.trim())) {
+      setDiscardReturnMode(mode); setMode("discard"); return;
+    }
+    resetForm();
+  };
 
   const resetForm = () => {
     setMode("closed"); setPersonId(""); setName(""); setEmail(""); setPhone("");
-    setRelationship(""); setRole(config.roles[0]); setOtherRole(""); setError("");
+    setRelationship(""); setRole(config?.roles[0] ?? "Contact"); setOtherRole(""); setError("");
     setContactSearch(""); setRecoveryPersonId("");
     setSuggestionId(""); setSuggestionChoice("");
     setManagedLinkId("");
   };
+  useEffect(() => { closeRef.current = requestClose; });
+  useEffect(() => {
+    if (mode === "closed") { returnFocusRef.current?.focus(); return; }
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const dialog = dialogRef.current;
+    dialog?.querySelector<HTMLElement>("button, input, a, select")?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); closeRef.current(); return; }
+      if (event.key !== "Tab" || !dialog) return;
+      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])'));
+      if (!focusable.length) return;
+      const first = focusable[0]; const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => { document.body.style.overflow = previousOverflow; document.removeEventListener("keydown", onKeyDown); };
+  }, [mode]);
+
+  if (!config) return null;
   const refreshLinks = async () => {
     const data = await loadRecordLinkedPeople(client, ownerUserId, recordType, recordId);
-    setLinks(data.links); setContacts(data.contacts); setAccessByPerson(data.accessByPerson); setDocumentTitles(data.documentTitles);
+    setLinks(data.links); setContacts(data.contacts); setAccessByPerson(data.accessByPerson); setDocumentTitles(data.documentTitles); setOtherRecordCounts(data.otherRecordCounts);
   };
   const openHistory = async () => {
     if (historyOpen) { setHistoryOpen(false); return; }
@@ -150,7 +198,7 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
         setSavedPersonId(result.person_id || ""); setMode("saved");
         try {
           const data = await loadRecordLinkedPeople(client, ownerUserId, recordType, recordId);
-          setLinks(data.links); setContacts(data.contacts); setAccessByPerson(data.accessByPerson); setDocumentTitles(data.documentTitles);
+          setLinks(data.links); setContacts(data.contacts); setAccessByPerson(data.accessByPerson); setDocumentTitles(data.documentTitles); setOtherRecordCounts(data.otherRecordCounts);
         } catch {
           setError("The relationship was saved, but the display could not refresh. Reopen this record before inviting.");
         }
@@ -176,7 +224,7 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
       setMode("saved");
       try {
         const data = await loadRecordLinkedPeople(client, ownerUserId, recordType, recordId);
-        setLinks(data.links); setContacts(data.contacts); setAccessByPerson(data.accessByPerson); setDocumentTitles(data.documentTitles);
+        setLinks(data.links); setContacts(data.contacts); setAccessByPerson(data.accessByPerson); setDocumentTitles(data.documentTitles); setOtherRecordCounts(data.otherRecordCounts);
       } catch {
         setError("The relationship was saved, but its display could not be refreshed. Reopen this record to check it.");
       }
@@ -195,7 +243,7 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
       });
       try {
         const data = await loadRecordLinkedPeople(client, ownerUserId, recordType, recordId);
-        setLinks(data.links); setContacts(data.contacts); setAccessByPerson(data.accessByPerson); setDocumentTitles(data.documentTitles);
+        setLinks(data.links); setContacts(data.contacts); setAccessByPerson(data.accessByPerson); setDocumentTitles(data.documentTitles); setOtherRecordCounts(data.otherRecordCounts);
       } catch { /* The accepted request remains authoritative; avoid a second dispatch. */ }
       resetForm();
       setNotice(result.deliveryState === "auth_request_accepted"
@@ -215,8 +263,8 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
         const contact = contacts.find((item) => item.id === link.person_id);
         const displayName = contact?.full_name || "Person unavailable";
         const verified = contact?.verification_status === "verified" || contact?.verification_status === "active";
-        const invitationLabel = contact?.invite_status === "accepted" ? "Accepted"
-          : contact?.invite_status === "invite_sent" ? "Invited"
+        const invitationLabel = contact?.invite_status === "accepted" ? "Joined"
+          : contact?.invite_status === "invite_sent" ? "Invite sent"
           : contact?.invite_status === "failed" ? "Delivery failed"
           : contact?.invite_status === "not_delivered" ? "Not delivered"
           : contact?.invite_status === "expired" ? "Expired"
@@ -225,23 +273,26 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
           : "Not invited";
         return <li key={link.id}>
           <span className="lf-v52-record-person-avatar" aria-hidden="true">{displayName.trim().split(/\s+/).map((part) => part[0]).slice(0, 2).join("").toUpperCase()}</span>
-          <span className="lf-v52-record-person-copy">
+          <div className="lf-v52-record-person-copy">
             {contact ? <Link href={buildContactsWorkspaceHref(contact.id)}>{displayName}</Link> : <strong>{displayName}</strong>}
             <small>Role on this record: {link.role === "Other" ? link.role_other_text : link.role}</small>
             {contact?.relationship ? <small>Relationship in People: {contact.relationship}</small> : null}
+            {otherRecordCounts[link.person_id] ? <small>Also linked to {otherRecordCounts[link.person_id]} other {otherRecordCounts[link.person_id] === 1 ? "record" : "records"}</small> : null}
             {contact ? <small>{[contact.email, contact.phone].filter(Boolean).join(" · ") || "No contact details recorded"}</small> : null}
-            <small>Invitation: {invitationLabel} · Identity: {verified ? "Verified" : "Not verified"}</small>
-            <small>Access: {accessByPerson[link.person_id] === "explicit" ? "Explicit record access selected" : accessByPerson[link.person_id] === "unavailable" ? "Status unavailable" : "No explicit record access"}</small>
+            <span className="lf-linked-people-states"><span className={`lf-linked-people-chip ${contact?.invite_status === "accepted" ? "is-good" : contact?.invite_status === "failed" || contact?.invite_status === "not_delivered" ? "is-error" : contact?.invite_status === "invite_sent" ? "is-pending" : ""}`}>{invitationLabel}</span>{!contact?.email ? <span className="lf-linked-people-chip">No email</span> : null}{verified ? <span className="lf-linked-people-chip is-good">ID verified</span> : contact?.verification_status === "pending_verification" || contact?.verification_status === "verification_submitted" ? <span className="lf-linked-people-chip is-pending">Checking ID</span> : null}{accessByPerson[link.person_id] === "explicit" ? <span className="lf-linked-people-chip is-good">Can see this record</span> : null}</span>
+            {accessByPerson[link.person_id] === "unavailable" ? <small>Record access status unavailable</small> : null}
             <small>{link.source === "extraction" ? `From ${documentTitles[link.source_document_id || ""] || "document"} · page ${link.source_page} · confirmed by you` : link.manual_origin === "people" ? "Added by you from People" : "Added by you"}</small>
-            {contact ? <span className="lf-linked-people-row-actions">
+            {contact ? <details className="lf-linked-people-row-menu"><summary aria-label={`Actions for ${displayName}`}>More actions</summary><span className="lf-linked-people-row-actions">
               <Link href={buildContactsWorkspaceHref(contact.id)}>View / Edit contact</Link>
               {canManage ? <>
-                <button type="button" disabled={busy || mode !== "closed"} onClick={() => { setManagedLinkId(link.id); setRole(link.role); setOtherRole(link.role_other_text ?? ""); setNotice(""); setError(""); setMode("editRole"); }}>Edit record role</button>
+                <button type="button" disabled={busy || mode !== "closed"} onClick={(event) => { returnFocusRef.current = event.currentTarget; setManagedLinkId(link.id); setRole(link.role); setOtherRole(link.role_other_text ?? ""); setNotice(""); setError(""); setMode("editRole"); }}>Edit record role</button>
                 <Link href={buildContactsWorkspaceHref(contact.id, true)}>Manage access</Link>
-                <button type="button" disabled={busy || mode !== "closed"} onClick={() => { setManagedLinkId(link.id); setNotice(""); setError(""); setMode("confirmUnlink"); }}>Unlink from record</button>
+                {contact.email && !["accepted", "invite_sent"].includes(contact.invite_status) ? <button type="button" disabled={busy || mode !== "closed"} onClick={(event) => { returnFocusRef.current = event.currentTarget; setSavedPersonId(contact.id); setError(""); setMode("saved"); }}>Invite to connect</button> : null}
+                {!contact.email ? <Link href={buildContactsWorkspaceHref(contact.id)}>Add email to invite</Link> : null}
+                <button type="button" disabled={busy || mode !== "closed"} onClick={(event) => { returnFocusRef.current = event.currentTarget; setManagedLinkId(link.id); setNotice(""); setError(""); setMode("confirmUnlink"); }}>Unlink from record</button>
               </> : null}
-            </span> : null}
-          </span>
+            </span></details> : null}
+          </div>
         </li>;
       })}</ul>}
     {canManage ? <div className="lf-linked-people-history">
@@ -265,8 +316,13 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
         </li>;
       })}</ul>
     </div> : null}
-    {canManage && mode === "closed" ? <button type="button" className="lf-linked-people-action" disabled={loading} onClick={() => { setError(""); setNotice(""); setMode(availableContacts.length ? "existing" : "new"); }}>{addAction}</button> : null}
-    {canManage && (mode === "existing" || mode === "new") ? <div className="lf-linked-people-form" id={formId}>
+    {canManage && mode === "closed" ? <button type="button" className="lf-linked-people-action" disabled={loading} onClick={(event) => { returnFocusRef.current = event.currentTarget; setError(""); setNotice(""); setMode("choose"); }}>{addAction}</button> : null}
+    {canManage && mode !== "closed" ? createPortal(<div className="lf-linked-people-overlay" onClick={(event) => { if (event.target === event.currentTarget) requestClose(); }}>
+      <div ref={dialogRef} className={`lf-linked-people-dialog ${["saved", "confirmInvite", "confirmUnlink", "discard"].includes(mode) ? "is-offer" : "is-entry"} ${["existing", "new", "reviewSuggestion"].includes(mode) ? "is-full-mobile" : ""}`} role="dialog" aria-modal="true" aria-labelledby={`${formId}-title`}>
+        <div className="lf-linked-people-dialog-header"><div className="lf-linked-people-drag-handle" aria-hidden="true" /><h3 id={`${formId}-title`}>{mode === "choose" ? (config.heading === "Executors" ? "Add an executor" : "Add a person") : mode === "existing" ? "Choose a person" : mode === "new" ? (config.heading === "Executors" ? "New executor" : "New person") : mode === "saved" ? `${saved?.full_name ?? "Person"} added` : mode === "confirmInvite" ? `Invite ${saved?.full_name ?? "this person"}` : mode === "editRole" ? "Change role on this record" : mode === "confirmUnlink" ? "Remove from this record?" : mode === "discard" ? "Discard these details?" : "Review suggested person"}</h3><button type="button" className="lf-linked-people-dialog-close" onClick={requestClose} aria-label="Close linked people dialog">×</button></div>
+        <div className="lf-linked-people-dialog-body">
+    {mode === "choose" ? <div className="lf-linked-people-choose"><p>{links.length ? "People already linked remain saved while you add another." : "Choose someone already in your People, or add a new person."}</p><button type="button" disabled={!availableContacts.length} onClick={() => setMode("existing")}><strong>Choose from People</strong><small>{availableContacts.length} available in your Vault</small></button><button type="button" onClick={() => setMode("new")}><strong>Add someone new</strong><small>Name and contact details, if you have them</small></button></div> : null}
+    {(mode === "existing" || mode === "new") ? <div className="lf-linked-people-form" id={formId}>
       <h3>{config.heading === "Executors" ? "Add an executor" : "Add a person to this record"}</h3>
       {links.length ? <p>Already saved: {links.map((link) => contacts.find((contact) => contact.id === link.person_id)?.full_name).filter(Boolean).join(", ")}</p> : null}
       <div className="lf-linked-people-choice" role="group" aria-label="Person source">
@@ -277,7 +333,7 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
         <label>Search your People<input type="search" value={contactSearch} onChange={(event) => { setContactSearch(event.target.value); setPersonId(""); }} placeholder="Name, email or telephone" /></label>
         <div className="lf-linked-people-picker" role="group" aria-label="Matching people">
           {matchingContacts.map((contact) => <button key={contact.id} type="button" aria-pressed={personId === contact.id} onClick={() => setPersonId(contact.id)}>
-            <strong>{contact.full_name}</strong><span>{[contact.relationship, contact.email, contact.phone].filter(Boolean).join(" · ") || "No contact details recorded"}</span><small>{personId === contact.id ? "Selected" : "Select person"}</small>
+            <strong>{contact.full_name}</strong><span>{[contact.relationship, contact.email, contact.phone].filter(Boolean).join(" · ") || "No contact details recorded"}</span><small>{otherRecordCounts[contact.id] ? `Also on ${otherRecordCounts[contact.id]} other ${otherRecordCounts[contact.id] === 1 ? "record" : "records"} · ` : ""}{personId === contact.id ? "Selected" : "Select person"}</small>
           </button>)}
         </div>
         {matchingContacts.length === 0 ? <p>No matching people in your Vault.</p> : null}
@@ -288,17 +344,18 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
         {duplicateEmailContact ? <div role="alert" className="lf-linked-people-duplicate"><p>This email belongs to {duplicateEmailContact.full_name}.</p>{activeIds.has(duplicateEmailContact.id) ? <Link href={buildContactsWorkspaceHref(duplicateEmailContact.id)}>View linked person</Link> : <button type="button" onClick={() => { setMode("existing"); setContactSearch(duplicateEmailContact.full_name); setPersonId(duplicateEmailContact.id); }}>Use existing person</button>}</div> : null}
         <label>Telephone (optional)<input type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} autoComplete="tel" placeholder="07700 900123" /></label>
       </>}
-      <label>Role on this record<select value={role} onChange={(event) => setRole(event.target.value)}>{config.roles.map((option) => <option key={option}>{option}</option>)}</select></label>
+      <fieldset className="lf-linked-people-role-choices"><legend>Role on this record</legend>{config.roles.map((option) => <button key={option} type="button" aria-pressed={role === option} onClick={() => setRole(option)}>{option}</button>)}</fieldset>
       {role === "Other" ? <label>Describe role<input value={otherRole} onChange={(event) => setOtherRole(event.target.value)} required maxLength={60} /></label> : null}
       <p>The People relationship describes how you know them. Their role applies only to this record. Linking does not grant access.</p>
       {recoveryPersonId ? <p role="status">The person is saved in People. Retry the link without creating them again.</p> : null}
+      {!online ? <p className="lf-linked-people-offline" role="status">You are offline. Your details remain here; save when your connection returns.</p> : null}
       {saveBlocker ? <p className="lf-linked-people-validation" role="status">To save: {saveBlocker}</p> : null}
-      <div className="lf-linked-people-actions"><button type="button" onClick={resetForm}>Cancel</button><button type="button" disabled={busy || Boolean(saveBlocker)} onClick={() => void save()}>{busy ? "Saving…" : recoveryPersonId ? "Retry relationship" : "Save person and relationship"}</button></div>
+      <div className="lf-linked-people-actions"><button type="button" onClick={requestClose}>Cancel</button><button type="button" disabled={busy || Boolean(saveBlocker)} onClick={() => void save()}>{busy ? "Saving…" : recoveryPersonId ? "Retry relationship" : "Save person and relationship"}</button></div>
     </div> : null}
     {canManage && mode === "editRole" && managedLink ? <div className="lf-linked-people-form" role="group" aria-label="Edit record role">
       <h3>Edit {managedContact?.full_name ?? "person"}&apos;s role</h3>
       <p>This changes only the role on this record. Their People relationship, invitation and access remain separate.</p>
-      <label>Role on this record<select value={role} onChange={(event) => setRole(event.target.value)}>{!config.roles.includes(managedLink.role) ? <option value={managedLink.role}>{managedLink.role}</option> : null}{config.roles.map((option) => <option key={option}>{option}</option>)}</select></label>
+      <fieldset className="lf-linked-people-role-choices"><legend>Role on this record</legend>{[...new Set([managedLink.role, ...config.roles])].map((option) => <button key={option} type="button" aria-pressed={role === option} onClick={() => setRole(option)}>{option}</button>)}</fieldset>
       {role === "Other" ? <label>Describe role<input value={otherRole} onChange={(event) => setOtherRole(event.target.value)} maxLength={60} /></label> : null}
       {saveBlocker ? <p role="status">To save: {saveBlocker}</p> : null}
       <div className="lf-linked-people-actions"><button type="button" onClick={resetForm} disabled={busy}>Cancel</button><button type="button" disabled={busy || Boolean(saveBlocker)} onClick={() => void saveRole()}>{busy ? "Saving…" : "Save record role"}</button></div>
@@ -331,21 +388,26 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
     {canManage && mode === "reviewSuggestion" && selectedSuggestion ? <div className="lf-linked-people-form" role="group" aria-label="Review suggested person">
       <h3>Review {selectedSuggestion.extracted_name}</h3>
       <p>Suggested by {selectedSuggestion.document_title} · page {selectedSuggestion.page}. Check the document before confirming; this suggestion has not created a contact or link.</p>
+      {selectedSuggestion.match_kind === "possible" && selectedSuggestion.match_person_id ? <div className="lf-linked-people-comparison"><div><small>In the document</small><strong>{selectedSuggestion.extracted_name}</strong><span>{selectedSuggestion.extracted_role || "Role needs review"} · page {selectedSuggestion.page}</span></div><div><small>In your People</small><strong>{contacts.find((contact) => contact.id === selectedSuggestion.match_person_id)?.full_name || "Person unavailable"}</strong><span>{contacts.find((contact) => contact.id === selectedSuggestion.match_person_id)?.relationship || "Relationship not recorded"}</span></div><p>Names are similar but may refer to different people. Choose the correct person before saving.</p></div> : null}
       <div className="lf-linked-people-choice" role="group" aria-label="Match this person">
         <button type="button" aria-pressed={suggestionChoice === "existing"} onClick={() => setSuggestionChoice("existing")}>Choose from People</button>
         <button type="button" aria-pressed={suggestionChoice === "new"} onClick={() => setSuggestionChoice("new")}>Add new person</button>
       </div>
-      {suggestionChoice === "existing" ? <label>Person<select value={personId} onChange={(event) => setPersonId(event.target.value)}><option value="">Choose a person</option>{contacts.map((contact) => <option key={contact.id} value={contact.id}>{contact.full_name}{contact.id === selectedSuggestion.match_person_id ? " · suggested match" : ""}</option>)}</select></label> : null}
+      {suggestionChoice === "existing" ? <><label>Search your People<input type="search" value={contactSearch} onChange={(event) => { setContactSearch(event.target.value); setPersonId(""); }} placeholder="Name, email or telephone" /></label><div className="lf-linked-people-picker" role="group" aria-label="Possible matching people">{matchingContacts.map((contact) => <button key={contact.id} type="button" aria-pressed={personId === contact.id} onClick={() => setPersonId(contact.id)}><strong>{contact.full_name}{contact.id === selectedSuggestion.match_person_id ? " · suggested match" : ""}</strong><span>{[contact.relationship, contact.email, contact.phone].filter(Boolean).join(" · ") || "No contact details recorded"}</span><small>{personId === contact.id ? "Selected" : "Select this person"}</small></button>)}</div></> : null}
       {suggestionChoice === "new" ? <>
         <label>Full name<input value={name} onChange={(event) => setName(event.target.value)} maxLength={120} /></label>
         <label>Email (optional)<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label>
         <label>Telephone (optional)<input type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} /></label>
       </> : null}
-      <label>Role on this record<select value={role} onChange={(event) => setRole(event.target.value)}>{config.roles.map((option) => <option key={option}>{option}</option>)}</select></label>
+      <fieldset className="lf-linked-people-role-choices"><legend>Role on this record</legend>{config.roles.map((option) => <button key={option} type="button" aria-pressed={role === option} onClick={() => setRole(option)}>{option}</button>)}</fieldset>
       {role === "Other" ? <label>Describe role<input value={otherRole} onChange={(event) => setOtherRole(event.target.value)} maxLength={60} /></label> : null}
       <p>Confirming saves the person and relationship together. It does not send an invitation or grant access.</p>
       <div className="lf-linked-people-actions"><button type="button" disabled={busy} onClick={resetForm}>Back</button><button type="button" disabled={busy} onClick={() => void decideSuggestion("dismiss")}>Dismiss suggestion</button><button type="button" disabled={busy || !suggestionChoice || (suggestionChoice === "existing" ? !personId : !name.trim()) || (role === "Other" && !otherRole.trim())} onClick={() => void decideSuggestion("confirm")}>Save person and relationship</button></div>
     </div> : null}
+    {mode === "discard" ? <div className="lf-linked-people-form"><p>The people already saved to this record will stay linked.</p><div className="lf-linked-people-actions"><button type="button" onClick={() => setMode(discardReturnMode)}>Keep editing</button><button type="button" onClick={resetForm}>Discard details</button></div></div> : null}
     {error ? <p className="lf-linked-people-error" role="alert">{error}</p> : null}
+        </div>
+      </div>
+    </div>, document.body) : null}
   </section>;
 }

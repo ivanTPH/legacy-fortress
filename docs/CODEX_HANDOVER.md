@@ -1,5 +1,12 @@
 # Codex Handover
 
+## Linked People A–H/S design compliance update — 29 October 2026
+
+- Continued on isolated `feat/v52-linked-people-pr5` after PR #7, preserving all existing PR 5 service, history and security work. The shared record section now uses a mobile chooser sheet/full-height entry, desktop right panel, centred desktop invitation offer, compact person states, contextual row menu, role chips, duplicate-contact reuse, offline notice, discard confirmation and possible-match comparison. Owner-scoped other-record counts distinguish a person already linked elsewhere. No grant or legacy contact-link write was added.
+- `docs/design-implementation/LINKED_PEOPLE_COMPLIANCE.md` maps A–H/S to the shared component and focused tests. The screen comparison remains **partial** pending authenticated TEST/mobile evidence. Canonical contacts do not expose address/notes fields; the existing immutable suggestion trigger prevents returning a decided suggestion to pending on unlink; invitation resend/expiry timing remains an owner decision. Do not represent OCR as operational.
+- Focused synthetic Node tests, TypeScript and changed-file lint passed; WebKit/Chromium geometry tests passed at 320/390px, light/dark and 200% text, plus 390×430 keyboard-sized viewport. These geometry fixtures are not authenticated application acceptance. No hosted SQL or app deployment was performed.
+- Existing `20261028234443_linked_people_history.sql` is unchanged and still requires separate owner approval before TEST execution or deployment of PR 5 app code. The founder Admin-first/Personal Vault switching defect remains separate navigation work.
+
 ## Linked People PR 5 mobile and management correction — 29 October 2026
 
 - Isolated branch `feat/v52-linked-people-pr5` builds on verified TEST/staging `ac208c8dd28b6d559068a7efb14128c78409cb32`; product commit `081c62479041f1b012ed254f534e542be44d564f`. The dirty main checkout was untouched. Shared Linked People now shows selectable contact search results, an explicit duplicate-contact reuse action, separate People relationship and record role, clear validation, saved-contact next actions, canonical contact/access routes, record-role editing, soft unlink and owner-scoped link history. Existing invitation and identity states remain separate from grants; OCR remains disabled.

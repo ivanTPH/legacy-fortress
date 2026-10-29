@@ -106,6 +106,16 @@ export async function loadRecordLinkedPeople(client: SupabaseClient, ownerUserId
   if (linksResult.error) throw new Error(linksResult.error.message);
   const links = (linksResult.data ?? []) as LinkedPerson[];
   const sourceDocumentIds = [...new Set(links.map((link) => link.source_document_id).filter((id): id is string => Boolean(id)))];
+  const otherRecordCounts: Record<string, number> = {};
+  if (contacts.length) {
+    const otherLinks = await client.from("record_links").select("person_id,record_id,record_type")
+      .eq("owner_user_id", ownerUserId).is("removed_at", null)
+      .in("person_id", contacts.map((contact) => contact.id));
+    if (!otherLinks.error) for (const otherLink of otherLinks.data ?? []) {
+      if (otherLink.record_type === recordType && otherLink.record_id === recordId) continue;
+      otherRecordCounts[otherLink.person_id] = (otherRecordCounts[otherLink.person_id] ?? 0) + 1;
+    }
+  }
   const documentTitles: Record<string, string> = {};
   if (sourceDocumentIds.length) {
     const documents = await client.from("documents").select("id,file_name,display_title")
@@ -125,7 +135,7 @@ export async function loadRecordLinkedPeople(client: SupabaseClient, ownerUserId
       if (Array.isArray(ids) && ids.includes(recordId)) accessByPerson[personId] = "explicit";
     }
   }
-  return { links, contacts, accessByPerson, documentTitles };
+  return { links, contacts, accessByPerson, documentTitles, otherRecordCounts };
 }
 
 export async function saveRecordLinkedPerson(client: SupabaseClient, input: {

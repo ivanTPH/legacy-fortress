@@ -8412,6 +8412,60 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-linked-people-suggestions ul { list-style: none; margin: 0; padding: 0; }
 .lf-linked-people-suggestions li { display: grid; gap: 5px; padding: 12px 0; border-top: 1px solid var(--lf-divider); min-width: 0; }
 .lf-linked-people-suggestions li span { overflow-wrap: anywhere; }
+.lf-linked-people-overlay { position: fixed; inset: 0; z-index: 1100; display: flex; justify-content: flex-end; background: rgba(31, 23, 21, .44); }
+.lf-linked-people-dialog { box-sizing: border-box; display: flex; flex-direction: column; width: min(440px, 100vw); min-width: 0; max-height: 100dvh; background: var(--lf-surface); color: var(--lf-text); box-shadow: -10px 0 32px rgba(31, 23, 21, .14); }
+.lf-linked-people-dialog.is-offer { align-self: center; margin: auto; width: min(520px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); box-shadow: 0 16px 50px rgba(31, 23, 21, .22); }
+.lf-linked-people-dialog-header { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 20px; border-bottom: 1px solid var(--lf-border); background: var(--lf-surface-card); }
+.lf-linked-people-dialog-header h3 { flex: 1; min-width: 0; margin: 0; font-size: 20px; line-height: 1.3; }
+.lf-linked-people-dialog-close { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border: 0; border-radius: var(--lf-radius-input); background: transparent; color: var(--lf-text); font: inherit; font-size: 26px; cursor: pointer; }
+.lf-linked-people-dialog-body { display: flex; flex: 1; flex-direction: column; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px 20px calc(20px + env(safe-area-inset-bottom)); -webkit-overflow-scrolling: touch; }
+.lf-linked-people-dialog .lf-linked-people-form { display: flex; flex: 1; flex-direction: column; margin: 0; padding: 0; border: 0; }
+.lf-linked-people-dialog .lf-linked-people-form > p { line-height: 1.5; }
+.lf-linked-people-dialog .lf-linked-people-offline { padding: 12px; border-radius: var(--lf-radius-input); background: var(--lf-warning-bg, #fff1d7); color: var(--lf-warning-text, #8b5b0b); }
+.lf-linked-people-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.lf-linked-people-comparison > div { display: grid; gap: 3px; min-width: 0; padding: 12px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-input); background: var(--lf-surface-card); }
+.lf-linked-people-comparison :is(small, span) { color: var(--lf-text-secondary); overflow-wrap: anywhere; }
+.lf-linked-people-comparison > p { grid-column: 1 / -1; padding: 10px; border-radius: var(--lf-radius-input); background: var(--lf-surface-muted); }
+.lf-linked-people-dialog .lf-linked-people-form .lf-linked-people-actions { margin-top: auto; padding-top: 16px; }
+.lf-linked-people-dialog :is(button, a):focus-visible, .lf-linked-people-role-choices button:focus-visible, .lf-linked-people-row-menu summary:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 2px; }
+.lf-linked-people-dialog :is(input, select):focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 1px; }
+.lf-linked-people-drag-handle { display: none; }
+.lf-linked-people-choose { display: grid; gap: 10px; }
+.lf-linked-people-choose > p { margin: 0 0 4px; color: var(--lf-text-secondary); }
+.lf-linked-people-choose > button { display: grid; gap: 2px; min-height: 72px; width: 100%; padding: 12px 16px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); color: var(--lf-text); text-align: left; font: inherit; cursor: pointer; }
+.lf-linked-people-choose small { color: var(--lf-text-secondary); }
+.lf-linked-people-role-choices { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; border: 0; }
+.lf-linked-people-role-choices legend { width: 100%; margin-bottom: 8px; font-weight: 600; }
+.lf-linked-people-role-choices button { min-height: 44px; padding: 8px 14px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-pill); background: var(--lf-surface-card); color: var(--lf-text); font: inherit; cursor: pointer; }
+.lf-linked-people-role-choices button[aria-pressed="true"] { border-color: var(--lf-primary-bg); background: var(--lf-primary-bg); color: var(--lf-primary-text); }
+.lf-linked-people .lf-v52-record-person-list { overflow: hidden; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); }
+.lf-linked-people .lf-v52-record-person-list li { align-items: flex-start; padding: 12px; }
+.lf-linked-people .lf-v52-record-person-list li:first-child { border-top: 0; }
+.lf-linked-people .lf-v52-record-person-copy { flex: 1; }
+.lf-linked-people-states { display: flex; flex-wrap: wrap; gap: 5px; margin: 4px 0; }
+.lf-linked-people-chip { display: inline-flex; align-items: center; min-height: 24px; padding: 2px 7px; border-radius: var(--lf-radius-input); background: var(--lf-surface-muted); color: var(--lf-text-secondary); font-size: 13px; font-weight: 600; }
+.lf-linked-people-chip.is-good { background: var(--lf-success-bg, #e5f4eb); color: var(--lf-success-text, #287342); }
+.lf-linked-people-chip.is-pending { background: var(--lf-warning-bg, #fff1d7); color: var(--lf-warning-text, #8b5b0b); }
+.lf-linked-people-chip.is-error { background: var(--lf-error-bg, #ffebea); color: var(--lf-error, #b42318); }
+.lf-linked-people-row-menu { margin-top: 4px; }
+.lf-linked-people-row-menu summary { display: inline-flex; align-items: center; min-height: 44px; color: var(--lf-link); cursor: pointer; font-size: 13px; font-weight: 600; }
+.lf-linked-people-row-actions { display: grid; align-items: stretch; margin: 0; overflow: hidden; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-input); background: var(--lf-surface-card); }
+.lf-linked-people-row-actions :is(button,a) { justify-content: flex-start; width: 100%; min-height: 44px; border: 0; border-radius: 0; border-top: 1px solid var(--lf-divider); font-size: 14px; }
+.lf-linked-people-row-actions :first-child { border-top: 0; }
+.lf-linked-people-action { width: 100%; justify-content: flex-start; gap: 10px; color: var(--lf-link); font-weight: 600; }
+.lf-linked-people-action::before { content: "+"; display: grid; place-items: center; flex: none; width: 32px; height: 32px; border: 1px solid currentColor; border-radius: 50%; font-size: 22px; font-weight: 400; }
+@media (max-width: 767px) {
+  .lf-linked-people-overlay { align-items: flex-end; }
+  .lf-linked-people-dialog, .lf-linked-people-dialog.is-offer { align-self: flex-end; width: 100%; max-height: min(90dvh, 840px); margin: 0; border: 0; border-radius: 16px 16px 0 0; box-shadow: 0 -12px 32px rgba(31, 23, 21, .2); }
+  .lf-linked-people-dialog.is-full-mobile { height: calc(100dvh - 28px); max-height: calc(100dvh - 28px); border-radius: 0; }
+  .lf-linked-people-dialog-header { position: relative; min-height: 58px; padding: 14px 16px 8px; }
+  .lf-linked-people-dialog-header h3 { font-size: 19px; }
+  .lf-linked-people-drag-handle { position: absolute; top: 5px; left: 50%; display: block; width: 36px; height: 4px; transform: translateX(-50%); border-radius: 99px; background: var(--lf-border); }
+  .lf-linked-people-dialog-body { padding: 16px 16px calc(20px + env(safe-area-inset-bottom)); }
+  .lf-linked-people-dialog .lf-linked-people-actions { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .lf-linked-people-dialog .lf-linked-people-actions :is(button,a) { width: 100%; }
+  .lf-linked-people-dialog .lf-linked-people-actions button:last-child { background: var(--lf-primary-bg); border-color: var(--lf-primary-bg); color: var(--lf-primary-text); }
+}
 @media (max-width: 600px) { .lf-v52-account-rows > div { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
 
 /* Vault Master search states share the existing authorised discovery results. */
