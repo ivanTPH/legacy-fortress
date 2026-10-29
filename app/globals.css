@@ -8429,6 +8429,9 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-v52-form-people p { color: var(--lf-text-secondary); font-size: 14px; line-height: 1.5; }
 .lf-v52-form-people button { justify-self: start; min-height: 44px; padding: 8px 16px; border: 1px solid var(--lf-primary-bg); border-radius: var(--lf-radius-input); background: var(--lf-primary-bg); color: var(--lf-primary-text); font: inherit; font-weight: 600; cursor: pointer; }
 .lf-v52-form-people button:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 2px; }
+.lf-v52-add-person-matches { display: grid; gap: 8px; grid-column: 1 / -1; padding: 12px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-input); background: var(--lf-surface-card); }
+.lf-v52-add-person-matches > div { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.lf-v52-add-person-matches a { display: inline-flex; align-items: center; min-height: 44px; color: var(--lf-link); font-weight: 600; }
 .lf-linked-people-dialog .lf-linked-people-offline { padding: 12px; border-radius: var(--lf-radius-input); background: var(--lf-status-pending-bg); color: var(--lf-status-pending-text); }
 .lf-linked-people-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .lf-linked-people-comparison > div { display: grid; gap: 3px; min-width: 0; padding: 12px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-input); background: var(--lf-surface-card); }

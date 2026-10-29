@@ -241,7 +241,7 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
         origin: typeof window === "undefined" ? null : window.location.origin,
       });
       setContacts((current) => current.map((item) => item.id === contact.id ? { ...item, invite_status: "invite_sent" } : item));
-      setStatus(`Invitation sent to ${contact.email}.`);
+      setStatus(`Invitation request submitted for ${contact.email}. Delivery is not yet confirmed.`);
     } catch {
       setStatus("Could not send this invitation.");
     } finally {
@@ -739,7 +739,8 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
               mode="full"
               guidedExecutor={!embedded && addContactGroupKey === "executors"}
               contactOnly={embedded}
-              onContactSaved={embedded ? () => { setAddContactGroupKey(null); router.replace("/people-access?view=people"); void loadContacts(); } : undefined}
+              existingPeople={embedded ? contacts : []}
+              onContactSaved={embedded ? (contactId) => { setAddContactGroupKey(null); router.replace(`/people-access?view=people&contact=${encodeURIComponent(contactId)}`); void loadContacts(); } : undefined}
               initialRole={getAddContactPreset(addContactGroupKey).role}
               initialAllowedSections={embedded ? [] : getAddContactPreset(addContactGroupKey).sections}
             />
@@ -1162,7 +1163,7 @@ function PersonDetailDrawer({
               <span style={drawerExplanationStyle}>Identity verification does not grant access to any records.</span>
               {getRelationshipDocumentLabel(contact) ? <span style={drawerExplanationStyle}>Will access stays locked while the owner is living.</span> : null}
               <InvitationProgressTracker contact={contact} />
-              {!readOnly && ["invite_sent", "not_invited", "failed", "not_delivered", "expired"].includes(contact.invite_status) ? <Button variant="secondary" onClick={() => setManagementView("invitation")}>{contact.invite_status === "not_invited" ? "Send invitation" : "Manage invitation"}</Button> : null}
+              {!readOnly && ["invite_sent", "not_invited", "failed", "not_delivered", "expired"].includes(contact.invite_status) ? contact.email ? <Button variant="secondary" onClick={() => setManagementView("invitation")}>{contact.invite_status === "not_invited" ? "Send invitation" : "Manage invitation"}</Button> : <Button variant="secondary" onClick={() => setManagementView("edit")}>Add email to invite</Button> : null}
             </section>
             <PersonVaultAccessSummary key={`${contact.id}:${accessRevision}`} contact={contact} ownerUserId={ownerUserId} readOnly={readOnly} onManage={() => setManagementView("access")} onRevoke={() => { setRevokeRequested(true); setManagementView("access"); }} />
             {pendingRequestId ? <section className="lf-person-detail-section" aria-label="Request awaiting decision"><h3>Request awaiting decision</h3><p style={drawerExplanationStyle}>Review this person&apos;s request and current sharing in People &amp; Access.</p><Link href={`/people-access?view=requests&request=${encodeURIComponent(pendingRequestId)}`} className="lf-pa-text-action">Review request</Link></section> : null}

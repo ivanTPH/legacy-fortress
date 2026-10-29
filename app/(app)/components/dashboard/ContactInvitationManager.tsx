@@ -27,6 +27,7 @@ import {
   type CanonicalContactRow,
 } from "../../../../lib/contacts/contactRepository";
 import { buildContactsWorkspaceHref, buildLinkedContactRecordHref } from "../../../../lib/contacts/contactRouting";
+import { findPotentialPeopleMatches, type PeopleMatchCandidate } from "../../../../lib/contacts/peopleMatching";
 import { getExistingContactInvitationNotice, getSafeContactInvitationErrorMessage } from "../../../../lib/contacts/invitationLifecycle.ts";
 import { sendContactInvite } from "../../../../lib/contacts/sendContactInvite";
 import { resolveInvitationBadgeState, type InvitationStatus } from "../../../../lib/contacts/invitationStatus";
@@ -96,6 +97,7 @@ export default function ContactInvitationManager({
   initialRole,
   initialAllowedSections = DEFAULT_INITIAL_ALLOWED_SECTIONS,
   contactOnly = false,
+  existingPeople = [],
   onContactSaved,
 }: {
   mode?: "full" | "dashboard";
@@ -105,7 +107,8 @@ export default function ContactInvitationManager({
   initialRole?: CollaboratorRole;
   initialAllowedSections?: SectionKey[];
   contactOnly?: boolean;
-  onContactSaved?: () => void;
+  existingPeople?: PeopleMatchCandidate[];
+  onContactSaved?: (contactId: string) => void;
 }) {
   const router = useRouter();
   const { preferences } = useVaultPreferences();
@@ -118,9 +121,9 @@ export default function ContactInvitationManager({
   const [name, setName] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [sendInvitationNow, setSendInvitationNow] = useState(true);
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [relationship, setRelationship] = useState("");
   const [role, setRole] = useState<CollaboratorRole>(contactOnly ? "friend_or_family" : "professional_advisor");
   const [ownerNotes, setOwnerNotes] = useState("");
   const [allowedSections, setAllowedSections] = useState<SectionKey[]>([]);
@@ -131,6 +134,8 @@ export default function ContactInvitationManager({
   const [scopeItems, setScopeItems] = useState<ScopeItem[]>([]);
   const [guidedStep, setGuidedStep] = useState<"person" | "role" | "access" | "review">("person");
   const [recentInvitation, setRecentInvitation] = useState<RecentInvitation | null>(null);
+  const enteredContactName = [firstName.trim(), lastName.trim()].filter(Boolean).join(" ");
+  const matchingPeople = contactOnly ? findPotentialPeopleMatches(existingPeople, enteredContactName, email) : [];
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftContactId, setDraftContactId] = useState<string | null>(null);
@@ -257,8 +262,8 @@ export default function ContactInvitationManager({
     try {
       const nameTrim = contactOnly ? [firstName.trim(), lastName.trim()].filter(Boolean).join(" ") : name.trim();
       const emailTrim = email.trim().toLowerCase();
-      if (!nameTrim || !emailTrim || (contactOnly && (!firstName.trim() || !lastName.trim()))) {
-        setStatus("First name, last name and email are required.");
+      if (!nameTrim || (!contactOnly && !emailTrim) || (contactOnly && (!firstName.trim() || !lastName.trim()))) {
+        setStatus(contactOnly ? "First name and last name are required. Email is optional." : "Name and email are required.");
         return;
       }
 
@@ -269,6 +274,21 @@ export default function ContactInvitationManager({
       }
 
       const userId = userData.user.id;
+      if (contactOnly) {
+        const contact = await savePeopleContact(supabase, {
+          ownerUserId: userId,
+          createOnly: true,
+          fullName: nameTrim,
+          email: emailTrim || null,
+          phone: phone.trim() || null,
+          relationship: relationship.trim() || null,
+          contactRole: role,
+          sourceType: "manual",
+        });
+        notifyContactsUpdated();
+        onContactSaved?.(contact.id);
+        return;
+      }
       const now = new Date().toISOString();
       const currentEditingRow = editingId ? rows.find((row) => row.id === editingId) ?? null : null;
       const existingDraftInvitation = !currentEditingRow
@@ -408,7 +428,7 @@ export default function ContactInvitationManager({
           }, false);
           if (sent) {
             clearInvitationForm();
-            onContactSaved?.();
+            onContactSaved?.(canonicalContact.id);
           }
           return;
         }
@@ -430,6 +450,7 @@ export default function ContactInvitationManager({
       setLastName("");
       setEmail("");
       setPhone("");
+      setRelationship("");
       setRole(contactOnly ? "friend_or_family" : "professional_advisor");
       setOwnerNotes("");
       setAllowedSections([]);
@@ -440,7 +461,7 @@ export default function ContactInvitationManager({
       setStatus(`✅ ${managedInvitation ? getExistingContactInvitationNotice(managedInvitation.invitation_status) : "Invitation prepared — ready to send."}`);
       await loadRows();
       notifyContactsUpdated();
-      onContactSaved?.();
+      onContactSaved?.(canonicalContact.id);
     } catch (error) {
       setStatus(`❌ Save failed: ${getSafeContactInvitationErrorMessage(error)}`);
     } finally {
@@ -788,11 +809,15 @@ export default function ContactInvitationManager({
             <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} placeholder="Full name" />
           </label>}
           <label style={fieldStyle}>
-            <span style={fieldLabelStyle}>Email {contactOnly ? <span className="lf-v4-required-tag">Required</span> : null}</span>
+            <span style={fieldLabelStyle}>Email {contactOnly ? <span className="lf-v4-optional-tag">Optional</span> : null}</span>
             <input value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} type="email" placeholder="name@example.com" />
           </label>
+          {contactOnly && matchingPeople.length ? <div className="lf-v52-add-person-matches" role="status">
+            <strong>{email.trim() && matchingPeople.some((person) => person.email?.toLocaleLowerCase() === email.trim().toLocaleLowerCase()) ? "This email is already in People" : "Possible people already saved"}</strong>
+            {matchingPeople.map((person) => <div key={person.id}><span>{person.full_name}{person.email ? ` · ${person.email}` : person.phone ? ` · ${person.phone}` : " · no contact details"}</span><Link href={buildContactsWorkspaceHref(person.id)}>Use existing person</Link></div>)}
+          </div> : null}
           <label style={fieldStyle}>
-              <span style={fieldLabelStyle}>{contactOnly ? "Relationship / access role" : "Role"}</span>
+              <span style={fieldLabelStyle}>{contactOnly ? "Contact type" : "Role"}</span>
               <span className="lf-v4-select-wrap"><select value={role} onChange={(e) => setRole(e.target.value as CollaboratorRole)} style={inputStyle}>
               {roleOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -802,7 +827,7 @@ export default function ContactInvitationManager({
             </select><Icon name="expand_more" size={20} className="lf-v4-select-chevron" /></span>
           </label>
           {contactOnly ? <fieldset className="lf-v52-add-person-type"><legend>Type</legend><button type="button" aria-pressed={!["professional_advisor", "accountant", "financial_advisor", "lawyer"].includes(role)} onClick={() => setRole("friend_or_family")}>Family &amp; friends</button><button type="button" aria-pressed={["professional_advisor", "accountant", "financial_advisor", "lawyer"].includes(role)} onClick={() => setRole("professional_advisor")}>Professional</button></fieldset> : null}
-          {contactOnly ? <details className="lf-v4-optional-group" style={{ gridColumn: "1 / -1" }}><summary><Icon name="contact_phone" size={20} /><span><strong>Optional details</strong><small>Phone</small></span><Icon name="expand_more" size={20} /></summary><div className="lf-v4-form-grid" style={{ padding: 14 }}><label style={fieldStyle}><span style={fieldLabelStyle}>Phone <span className="lf-v4-optional-tag">Optional</span></span><input value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} type="tel" autoComplete="tel" /></label></div></details> : <label style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
+          {contactOnly ? <><label style={fieldStyle}><span style={fieldLabelStyle}>Relationship to you <span className="lf-v4-optional-tag">Optional</span></span><input value={relationship} onChange={(e) => setRelationship(e.target.value)} style={inputStyle} maxLength={80} /></label><label style={fieldStyle}><span style={fieldLabelStyle}>Telephone <span className="lf-v4-optional-tag">Optional</span></span><input name="lp_contact_phone" value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} type="tel" inputMode="tel" autoComplete="off" /></label></> : <label style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
             <span style={fieldLabelStyle}>Owner notes</span>
             <textarea
               value={ownerNotes}
@@ -848,7 +873,7 @@ export default function ContactInvitationManager({
                 })}
             </div>
           </div> : null}
-          {contactOnly ? <label className="lf-pa-send-invite-now lf-v52-add-person-invite" style={{ gridColumn: "1 / -1" }}><input type="checkbox" checked={sendInvitationNow} onChange={(event) => setSendInvitationNow(event.target.checked)} /><span>Send invitation now <small>You can invite later from their page.</small></span></label> : null}
+          {contactOnly ? <p>Save the person first. Their details page will offer a separate invitation action if they have an email.</p> : null}
           {contactOnly ? <p className="lf-v52-add-person-notice"><Icon name="lock" size={20} />Adding or inviting someone doesn&apos;t share any records. You choose what they can see later, record by record.</p> : null}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button
@@ -856,10 +881,10 @@ export default function ContactInvitationManager({
               style={primaryBtnStyle}
               title={editingId ? "Save contact changes" : draftContactId ? "Save this contact setup" : "Add this contact"}
               disabled={saving}
-              onClick={() => void saveContact({ sendAfterSave: contactOnly && sendInvitationNow })}
+              onClick={() => void saveContact()}
             >
               <Icon name={(editingId || draftContactId) ? "save" : "person_add"} size={16} />
-              {saving ? "Saving..." : contactOnly ? sendInvitationNow ? "Add and invite" : "Add person" : (editingId || draftContactId) ? "Save" : "Add contact"}
+              {saving ? "Saving..." : contactOnly ? "Save person" : (editingId || draftContactId) ? "Save" : "Add contact"}
             </button>
             {!contactOnly && !editingId && draftContactId && email.trim() ? (
               <button type="button" style={ghostBtnStyle} title="Save this contact and send the invite email" disabled={saving} onClick={() => void saveContact({ sendAfterSave: true })}>
