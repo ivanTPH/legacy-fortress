@@ -8421,11 +8421,11 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-linked-people-dialog-body { display: flex; flex: 1; flex-direction: column; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px 20px calc(20px + env(safe-area-inset-bottom)); -webkit-overflow-scrolling: touch; }
 .lf-linked-people-dialog .lf-linked-people-form { display: flex; flex: 1; flex-direction: column; margin: 0; padding: 0; border: 0; }
 .lf-linked-people-dialog .lf-linked-people-form > p { line-height: 1.5; }
-.lf-linked-people-dialog .lf-linked-people-offline { padding: 12px; border-radius: var(--lf-radius-input); background: var(--lf-warning-bg, #fff1d7); color: var(--lf-warning-text, #8b5b0b); }
+.lf-linked-people-dialog .lf-linked-people-offline { padding: 12px; border-radius: var(--lf-radius-input); background: var(--lf-status-pending-bg); color: var(--lf-status-pending-text); }
 .lf-linked-people-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .lf-linked-people-comparison > div { display: grid; gap: 3px; min-width: 0; padding: 12px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-input); background: var(--lf-surface-card); }
 .lf-linked-people-comparison :is(small, span) { color: var(--lf-text-secondary); overflow-wrap: anywhere; }
-.lf-linked-people-comparison > p { grid-column: 1 / -1; padding: 10px; border-radius: var(--lf-radius-input); background: var(--lf-surface-muted); }
+.lf-linked-people-comparison > p { grid-column: 1 / -1; padding: 10px; border-radius: var(--lf-radius-input); background: var(--lf-status-pending-bg); color: var(--lf-status-pending-text); }
 .lf-linked-people-dialog .lf-linked-people-form .lf-linked-people-actions { margin-top: auto; padding-top: 16px; }
 .lf-linked-people-dialog :is(button, a):focus-visible, .lf-linked-people-role-choices button:focus-visible, .lf-linked-people-row-menu summary:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 2px; }
 .lf-linked-people-dialog :is(input, select):focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 1px; }
@@ -8443,10 +8443,10 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-linked-people .lf-v52-record-person-list li:first-child { border-top: 0; }
 .lf-linked-people .lf-v52-record-person-copy { flex: 1; }
 .lf-linked-people-states { display: flex; flex-wrap: wrap; gap: 5px; margin: 4px 0; }
-.lf-linked-people-chip { display: inline-flex; align-items: center; min-height: 24px; padding: 2px 7px; border-radius: var(--lf-radius-input); background: var(--lf-surface-muted); color: var(--lf-text-secondary); font-size: 13px; font-weight: 600; }
-.lf-linked-people-chip.is-good { background: var(--lf-success-bg, #e5f4eb); color: var(--lf-success-text, #287342); }
-.lf-linked-people-chip.is-pending { background: var(--lf-warning-bg, #fff1d7); color: var(--lf-warning-text, #8b5b0b); }
-.lf-linked-people-chip.is-error { background: var(--lf-error-bg, #ffebea); color: var(--lf-error, #b42318); }
+.lf-linked-people-chip { display: inline-flex; align-items: center; min-height: 24px; padding: 2px 7px; border-radius: var(--lf-radius-input); background: var(--lf-status-applied-bg); color: var(--lf-status-applied-text); font-size: 13px; font-weight: 600; }
+.lf-linked-people-chip.is-good { background: var(--lf-status-approved-bg); color: var(--lf-status-approved-text); }
+.lf-linked-people-chip.is-pending { background: var(--lf-status-pending-bg); color: var(--lf-status-pending-text); }
+.lf-linked-people-chip.is-error { background: var(--lf-status-rejected-bg); color: var(--lf-status-rejected-text); }
 .lf-linked-people-row-menu { margin-top: 4px; }
 .lf-linked-people-row-menu summary { display: inline-flex; align-items: center; min-height: 44px; color: var(--lf-link); cursor: pointer; font-size: 13px; font-weight: 600; }
 .lf-linked-people-row-actions { display: grid; align-items: stretch; margin: 0; overflow: hidden; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-input); background: var(--lf-surface-card); }

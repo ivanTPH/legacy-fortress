@@ -28,6 +28,14 @@ test("mobile picker fits 320px and 390px with accessible controls in light, dark
   await render(page);
   for (const theme of ["light", "dark"]) {
     await page.evaluate((value) => document.documentElement.setAttribute("data-theme", value), theme);
+    const chipContrast = await page.locator(".lf-linked-people-chip.is-good").first().evaluate((chip) => {
+      const color = (value: string) => value.match(/[\d.]+/g)!.slice(0, 3).map(Number).map((channel) => { const srgb = channel / 255; return srgb <= 0.04045 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4; });
+      const luminance = (value: string) => { const [r, g, b] = color(value); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+      const style = getComputedStyle(chip);
+      const values = [luminance(style.color), luminance(style.backgroundColor)].sort((a, b) => b - a);
+      return (values[0] + 0.05) / (values[1] + 0.05);
+    });
+    expect(chipContrast).toBeGreaterThanOrEqual(4.5);
     for (const [width, textScale] of [[320, 1], [390, 1], [320, 2], [390, 2]]) {
       await page.evaluate((scale) => { document.documentElement.style.fontSize = `${16 * scale}px`; }, textScale);
       await page.setViewportSize({ width, height: 760 });

@@ -6,7 +6,7 @@ Authority: `design_handoff_legacy_fortress 5.21/LINKED_PEOPLE.md` and the approv
 | --- | --- | --- |
 | A a1–a2: four separate states, source | `LinkedPeopleSection` invitation, ID and grant chips; manual/document provenance. `linked-people-record-section.test.mjs` | Implemented locally; hosted view pending |
 | B b1–b4: empty/populated, add, row actions | Shared record section, compact cards, contextual add, action menu, role edit, unlink confirmation. Management tests | Partially implemented: exact card comparison and authenticated mobile still pending |
-| B b5: dark | Shared V5.2 tokens; 320/390 WebKit light/dark geometry test | Partially implemented: authenticated dark screenshot pending |
+| B b5: dark | Shared V5.2 status tokens; 320/390 WebKit light/dark geometry and chip contrast test | Partially implemented: authenticated dark screenshot pending |
 | C c1–c9: record types and role words | `linkedPeopleConfig`; same component on eligible saved records; Will, Property and finance service tests | Implemented locally; full record-type visual sweep pending |
 | D d1–d4: save first, empty, choose, picker | Saved record guard; mobile chooser sheet and full-height searchable picker with role chips. Service and WebKit geometry tests | Partially implemented: authenticated iPhone flow pending |
 | D d5–d10: saved offer, confirm, repeat | Saved dialog, explicit invitation confirmation, Invite later, no-email path, repeatable independent links. Three-person Will test | Partially implemented: authenticated iPhone flow pending |
