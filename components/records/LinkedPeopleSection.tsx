@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { useEffect, useId, useState } from "react";
 import { buildContactsWorkspaceHref } from "../../lib/contacts/contactRouting";
 import type { PeopleContactEntity } from "../../lib/contacts/contactRepository";
-import { LinkedPersonRecoveryError, linkedPeopleConfig, loadRecordLinkedPeople, normalizeLinkedPersonEmail, normalizeLinkedPersonPhone, saveRecordLinkedPerson, sendRecordLinkedPersonInvitation, type LinkedPerson, type LinkedRecordAccessState, type LinkedRecordType } from "../../lib/linkedPeople/recordLinkedPeople";
+import { LinkedPersonRecoveryError, changeRecordLinkedPersonRole, linkedPeopleConfig, loadRecordLinkedPeople, loadRecordLinkedPeopleHistory, normalizeLinkedPersonEmail, normalizeLinkedPersonPhone, saveRecordLinkedPerson, searchLinkedPeopleContacts, sendRecordLinkedPersonInvitation, unlinkRecordLinkedPerson, type LinkedPerson, type LinkedPersonHistoryEvent, type LinkedRecordAccessState, type LinkedRecordType } from "../../lib/linkedPeople/recordLinkedPeople";
 import { loadLinkedPersonSuggestions, reviewLinkedPersonSuggestion, type LinkedPersonSuggestion } from "../../lib/linkedPeople/suggestions";
 import { supabase } from "../../lib/supabaseClient";
 
@@ -24,7 +24,12 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
   const [contacts, setContacts] = useState<PeopleContactEntity[]>([]);
   const [accessByPerson, setAccessByPerson] = useState<Record<string, LinkedRecordAccessState>>({});
   const [documentTitles, setDocumentTitles] = useState<Record<string, string>>({});
-  const [mode, setMode] = useState<"closed" | "existing" | "new" | "saved" | "confirmInvite" | "reviewSuggestion">("closed");
+  const [mode, setMode] = useState<"closed" | "existing" | "new" | "saved" | "confirmInvite" | "reviewSuggestion" | "editRole" | "confirmUnlink">("closed");
+  const [managedLinkId, setManagedLinkId] = useState("");
+  const [history, setHistory] = useState<LinkedPersonHistoryEvent[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState("");
   const [suggestions, setSuggestions] = useState<LinkedPersonSuggestion[]>([]);
   const [suggestionId, setSuggestionId] = useState("");
   const [suggestionChoice, setSuggestionChoice] = useState<"" | "existing" | "new">("");
@@ -67,17 +72,60 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
   const activeIds = new Set(links.map((link) => link.person_id));
   const availableContacts = contacts.filter((contact) => !activeIds.has(contact.id));
   const addAction = links.length ? config.action.replace(/^Add person$/, "Add another person") : config.action.replace("another ", "");
-  const matchingContacts = availableContacts.filter((contact) => `${contact.full_name} ${contact.email ?? ""} ${contact.phone ?? ""}`.toLowerCase().includes(contactSearch.trim().toLowerCase()));
+  const matchingContacts = searchLinkedPeopleContacts(contacts, activeIds, contactSearch);
   const duplicateEmailContact = mode === "new" && email.trim()
     ? contacts.find((contact) => contact.email?.toLowerCase() === email.trim().toLowerCase())
     : null;
   const selectedSuggestion = suggestions.find((item) => item.id === suggestionId);
+  const managedLink = links.find((link) => link.id === managedLinkId);
+  const managedContact = contacts.find((contact) => contact.id === managedLink?.person_id);
+  let invalidContactField = "";
+  if (mode === "new" && !recoveryPersonId) {
+    try { normalizeLinkedPersonEmail(email); } catch { invalidContactField = "Enter a valid email address, or leave it blank."; }
+    if (!invalidContactField) try { normalizeLinkedPersonPhone(phone); } catch { invalidContactField = "Enter a valid telephone number, or leave it blank."; }
+  }
+  const saveBlocker = mode === "existing" && !personId ? "Select a person from the matching results."
+    : mode === "new" && !name.trim() && !recoveryPersonId ? "Full name is required."
+    : mode === "new" && duplicateEmailContact && !recoveryPersonId ? "Use the existing person with this email."
+    : invalidContactField || (role === "Other" && !otherRole.trim() ? "Describe this person's role on this record." : "");
 
   const resetForm = () => {
     setMode("closed"); setPersonId(""); setName(""); setEmail(""); setPhone("");
     setRelationship(""); setRole(config.roles[0]); setOtherRole(""); setError("");
     setContactSearch(""); setRecoveryPersonId("");
     setSuggestionId(""); setSuggestionChoice("");
+    setManagedLinkId("");
+  };
+  const refreshLinks = async () => {
+    const data = await loadRecordLinkedPeople(client, ownerUserId, recordType, recordId);
+    setLinks(data.links); setContacts(data.contacts); setAccessByPerson(data.accessByPerson); setDocumentTitles(data.documentTitles);
+  };
+  const openHistory = async () => {
+    if (historyOpen) { setHistoryOpen(false); return; }
+    setHistoryOpen(true); setHistoryLoading(true); setHistoryError("");
+    try { setHistory(await loadRecordLinkedPeopleHistory(client, { ownerUserId, recordType, recordId })); }
+    catch { setHistoryError("Record-link history is unavailable. No history has been inferred."); }
+    finally { setHistoryLoading(false); }
+  };
+  const saveRole = async () => {
+    if (!canManage || busy || !managedLinkId || saveBlocker) return;
+    setBusy(true); setError("");
+    try {
+      await changeRecordLinkedPersonRole(client, { ownerUserId, recordType, recordId, linkId: managedLinkId, role, roleOtherText: otherRole });
+      await refreshLinks(); setHistoryOpen(false); resetForm();
+      setNotice(`Role on this record updated for ${managedContact?.full_name ?? "this person"}. Their People relationship and access were not changed.`);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not update this record role."); }
+    finally { setBusy(false); }
+  };
+  const removeLink = async () => {
+    if (!canManage || busy || !managedLinkId) return;
+    setBusy(true); setError("");
+    try {
+      await unlinkRecordLinkedPerson(client, { ownerUserId, recordType, recordId, linkId: managedLinkId });
+      await refreshLinks(); setHistoryOpen(false); resetForm();
+      setNotice(`${managedContact?.full_name ?? "Person"} was unlinked from this record. Their contact and any separate access grant were not changed.`);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not unlink this person."); }
+    finally { setBusy(false); }
   };
   const openSuggestion = (suggestion: LinkedPersonSuggestion) => {
     const suggestedRole = config.roles.find((item) => item.toLowerCase() === suggestion.extracted_role?.toLowerCase());
@@ -116,7 +164,7 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
     setBusy(true); setError("");
     try {
       if (duplicateEmailContact && !recoveryPersonId) throw new Error(`This email belongs to ${duplicateEmailContact.full_name}. Choose that person from People.`);
-      normalizeLinkedPersonEmail(email); normalizeLinkedPersonPhone(phone);
+      if (mode === "new" && !recoveryPersonId) { normalizeLinkedPersonEmail(email); normalizeLinkedPersonPhone(phone); }
       const result = await saveRecordLinkedPerson(client, {
         ownerUserId, recordId, recordType,
         existingPersonId: mode === "existing" ? personId : undefined,
@@ -170,6 +218,8 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
         const invitationLabel = contact?.invite_status === "accepted" ? "Accepted"
           : contact?.invite_status === "invite_sent" ? "Invited"
           : contact?.invite_status === "failed" ? "Delivery failed"
+          : contact?.invite_status === "not_delivered" ? "Not delivered"
+          : contact?.invite_status === "expired" ? "Expired"
           : contact?.invite_status === "revoked" ? "Revoked"
           : contact?.invite_status === "rejected" ? "Declined"
           : "Not invited";
@@ -177,14 +227,31 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
           <span className="lf-v52-record-person-avatar" aria-hidden="true">{displayName.trim().split(/\s+/).map((part) => part[0]).slice(0, 2).join("").toUpperCase()}</span>
           <span className="lf-v52-record-person-copy">
             {contact ? <Link href={buildContactsWorkspaceHref(contact.id)}>{displayName}</Link> : <strong>{displayName}</strong>}
-            <small>{link.role === "Other" ? link.role_other_text : link.role}{contact?.relationship ? ` · ${contact.relationship}` : ""} · Recorded</small>
+            <small>Role on this record: {link.role === "Other" ? link.role_other_text : link.role}</small>
+            {contact?.relationship ? <small>Relationship in People: {contact.relationship}</small> : null}
             {contact ? <small>{[contact.email, contact.phone].filter(Boolean).join(" · ") || "No contact details recorded"}</small> : null}
             <small>Invitation: {invitationLabel} · Identity: {verified ? "Verified" : "Not verified"}</small>
             <small>Access: {accessByPerson[link.person_id] === "explicit" ? "Explicit record access selected" : accessByPerson[link.person_id] === "unavailable" ? "Status unavailable" : "No explicit record access"}</small>
             <small>{link.source === "extraction" ? `From ${documentTitles[link.source_document_id || ""] || "document"} · page ${link.source_page} · confirmed by you` : link.manual_origin === "people" ? "Added by you from People" : "Added by you"}</small>
+            {contact ? <span className="lf-linked-people-row-actions">
+              <Link href={buildContactsWorkspaceHref(contact.id)}>View / Edit contact</Link>
+              {canManage ? <>
+                <button type="button" disabled={busy || mode !== "closed"} onClick={() => { setManagedLinkId(link.id); setRole(link.role); setOtherRole(link.role_other_text ?? ""); setNotice(""); setError(""); setMode("editRole"); }}>Edit record role</button>
+                <Link href={buildContactsWorkspaceHref(contact.id, true)}>Manage access</Link>
+                <button type="button" disabled={busy || mode !== "closed"} onClick={() => { setManagedLinkId(link.id); setNotice(""); setError(""); setMode("confirmUnlink"); }}>Unlink from record</button>
+              </> : null}
+            </span> : null}
           </span>
         </li>;
       })}</ul>}
+    {canManage ? <div className="lf-linked-people-history">
+      <button type="button" className="lf-linked-people-history-toggle" aria-expanded={historyOpen} onClick={() => void openHistory()}>{historyOpen ? "Hide record-link history" : "Show record-link history"}</button>
+      {historyOpen ? historyLoading ? <p role="status">Loading history…</p> : historyError ? <p role="status">{historyError}</p> : history.length ? <ol>{history.map((event) => {
+        const contact = contacts.find((item) => item.id === event.person_id);
+        const action = event.action === "link.created" ? "Linked to record" : event.action === "link.role_changed" ? "Record role changed" : "Unlinked from record";
+        return <li key={event.id}><span>{action}{contact ? ` · ${contact.full_name}` : ""}</span><time dateTime={event.created_at}>{new Date(event.created_at).toLocaleString()}</time></li>;
+      })}</ol> : <p>No recorded link changes yet.</p> : null}
+    </div> : null}
     {canManage && suggestions.length ? <div className="lf-linked-people-suggestions">
       <h3>We found in this document</h3>
       <p>Review each saved suggestion against its source. Nothing changes until you confirm.</p>
@@ -208,27 +275,51 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
       </div>
       {mode === "existing" ? <>
         <label>Search your People<input type="search" value={contactSearch} onChange={(event) => { setContactSearch(event.target.value); setPersonId(""); }} placeholder="Name, email or telephone" /></label>
-        <label>Person<select value={personId} onChange={(event) => setPersonId(event.target.value)} required><option value="">Choose a person</option>{matchingContacts.map((contact) => <option key={contact.id} value={contact.id}>{contact.full_name}{contact.relationship ? ` · ${contact.relationship}` : ""}</option>)}</select></label>
+        <div className="lf-linked-people-picker" role="group" aria-label="Matching people">
+          {matchingContacts.map((contact) => <button key={contact.id} type="button" aria-pressed={personId === contact.id} onClick={() => setPersonId(contact.id)}>
+            <strong>{contact.full_name}</strong><span>{[contact.relationship, contact.email, contact.phone].filter(Boolean).join(" · ") || "No contact details recorded"}</span><small>{personId === contact.id ? "Selected" : "Select person"}</small>
+          </button>)}
+        </div>
         {matchingContacts.length === 0 ? <p>No matching people in your Vault.</p> : null}
       </> : <>
         <label>Full name<input value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" required maxLength={120} /></label>
-        <label>Relationship<input value={relationship} onChange={(event) => setRelationship(event.target.value)} maxLength={80} /></label>
+        <label>Relationship in People (optional)<input value={relationship} onChange={(event) => setRelationship(event.target.value)} maxLength={80} /></label>
         <label>Email (optional to save)<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></label>
-        {duplicateEmailContact ? <p role="alert">This email belongs to {duplicateEmailContact.full_name}. Choose that person from People.</p> : null}
+        {duplicateEmailContact ? <div role="alert" className="lf-linked-people-duplicate"><p>This email belongs to {duplicateEmailContact.full_name}.</p>{activeIds.has(duplicateEmailContact.id) ? <Link href={buildContactsWorkspaceHref(duplicateEmailContact.id)}>View linked person</Link> : <button type="button" onClick={() => { setMode("existing"); setContactSearch(duplicateEmailContact.full_name); setPersonId(duplicateEmailContact.id); }}>Use existing person</button>}</div> : null}
         <label>Telephone (optional)<input type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} autoComplete="tel" placeholder="07700 900123" /></label>
       </>}
       <label>Role on this record<select value={role} onChange={(event) => setRole(event.target.value)}>{config.roles.map((option) => <option key={option}>{option}</option>)}</select></label>
       {role === "Other" ? <label>Describe role<input value={otherRole} onChange={(event) => setOtherRole(event.target.value)} required maxLength={60} /></label> : null}
-      <p>Linking a person records their role. It does not let them see this record. You choose access separately.</p>
+      <p>The People relationship describes how you know them. Their role applies only to this record. Linking does not grant access.</p>
       {recoveryPersonId ? <p role="status">The person is saved in People. Retry the link without creating them again.</p> : null}
-      <div className="lf-linked-people-actions"><button type="button" onClick={resetForm}>Cancel</button><button type="button" disabled={busy || (mode === "existing" ? !personId : !name.trim()) || Boolean(duplicateEmailContact && !recoveryPersonId) || (role === "Other" && !otherRole.trim())} onClick={() => void save()}>{busy ? "Saving…" : recoveryPersonId ? "Retry relationship" : "Save person and relationship"}</button></div>
+      {saveBlocker ? <p className="lf-linked-people-validation" role="status">To save: {saveBlocker}</p> : null}
+      <div className="lf-linked-people-actions"><button type="button" onClick={resetForm}>Cancel</button><button type="button" disabled={busy || Boolean(saveBlocker)} onClick={() => void save()}>{busy ? "Saving…" : recoveryPersonId ? "Retry relationship" : "Save person and relationship"}</button></div>
+    </div> : null}
+    {canManage && mode === "editRole" && managedLink ? <div className="lf-linked-people-form" role="group" aria-label="Edit record role">
+      <h3>Edit {managedContact?.full_name ?? "person"}&apos;s role</h3>
+      <p>This changes only the role on this record. Their People relationship, invitation and access remain separate.</p>
+      <label>Role on this record<select value={role} onChange={(event) => setRole(event.target.value)}>{!config.roles.includes(managedLink.role) ? <option value={managedLink.role}>{managedLink.role}</option> : null}{config.roles.map((option) => <option key={option}>{option}</option>)}</select></label>
+      {role === "Other" ? <label>Describe role<input value={otherRole} onChange={(event) => setOtherRole(event.target.value)} maxLength={60} /></label> : null}
+      {saveBlocker ? <p role="status">To save: {saveBlocker}</p> : null}
+      <div className="lf-linked-people-actions"><button type="button" onClick={resetForm} disabled={busy}>Cancel</button><button type="button" disabled={busy || Boolean(saveBlocker)} onClick={() => void saveRole()}>{busy ? "Saving…" : "Save record role"}</button></div>
+    </div> : null}
+    {canManage && mode === "confirmUnlink" && managedLink ? <div className="lf-linked-people-form" role="group" aria-label="Confirm unlink">
+      <h3>Unlink {managedContact?.full_name ?? "this person"}?</h3>
+      <p>Their contact and links to other records remain. Any explicit access grant must be reviewed separately in Manage access.</p>
+      {accessByPerson[managedLink.person_id] === "explicit" && managedContact ? <p role="alert">This person still has explicit access to this record. <Link href={buildContactsWorkspaceHref(managedContact.id, true)}>Manage access</Link> separately if you want to stop it.</p> : null}
+      <div className="lf-linked-people-actions"><button type="button" onClick={resetForm} disabled={busy}>Cancel</button><button type="button" disabled={busy} onClick={() => void removeLink()}>{busy ? "Unlinking…" : "Unlink from this record"}</button></div>
     </div> : null}
     {canManage && mode === "saved" ? <div className="lf-linked-people-form" role="status">
       <h3>{saved?.full_name ?? "Person"} saved to this record</h3>
       <p>Invite {saved?.full_name ?? "this person"} to connect in Legacy Fortress? It will not share this record or any other record.</p>
       <div className="lf-linked-people-actions">
-        {saved?.email && !["invite_sent", "accepted"].includes(saved.invite_status) ? <button type="button" onClick={() => { setError(""); setMode("confirmInvite"); }}>Send invitation</button> : saved?.email ? <p>This person is already invited or connected.</p> : <Link href={buildContactsWorkspaceHref(savedPersonId)}>Add email and invite</Link>}
+        {saved?.email && !["invite_sent", "accepted"].includes(saved.invite_status) ? <button type="button" onClick={() => { setError(""); setMode("confirmInvite"); }}>Invite to connect</button> : saved?.email ? <p>This person is already invited or connected.</p> : <Link href={buildContactsWorkspaceHref(savedPersonId)}>Add email and invite</Link>}
         <button type="button" onClick={() => { resetForm(); setNotice(`${saved?.full_name ?? "Person"} remains linked. No invitation was sent.`); }}>{saved?.email && ["invite_sent", "accepted"].includes(saved.invite_status) ? "Back to record" : "Invite later"}</button>
+      </div>
+      <div className="lf-linked-people-actions">
+        {saved ? <Link href={buildContactsWorkspaceHref(saved.id)}>View / Edit contact</Link> : null}
+        {links.find((link) => link.person_id === savedPersonId) ? <button type="button" onClick={() => { const link = links.find((item) => item.person_id === savedPersonId); if (!link) return; setManagedLinkId(link.id); setRole(link.role); setOtherRole(link.role_other_text ?? ""); setMode("editRole"); }}>Edit record role</button> : null}
+        {saved ? <Link href={buildContactsWorkspaceHref(saved.id, true)}>Manage access</Link> : null}
       </div>
     </div> : null}
     {canManage && mode === "confirmInvite" ? <div className="lf-linked-people-form" role="group" aria-label="Confirm invitation">

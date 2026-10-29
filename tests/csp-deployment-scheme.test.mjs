@@ -87,5 +87,6 @@ test("browser bundles receive only public Supabase configuration from build env"
   assert.deepEqual(JSON.parse(JSON.stringify(config.env)), {
     NEXT_PUBLIC_SUPABASE_URL: "https://staging.example.supabase.co",
     NEXT_PUBLIC_SUPABASE_ANON_KEY: "public-anon-key",
+    NEXT_PUBLIC_LINKED_PEOPLE_V52: "false",
   });
 });
