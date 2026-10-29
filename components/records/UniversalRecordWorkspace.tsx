@@ -4759,7 +4759,7 @@ export default function UniversalRecordWorkspace({
         {!showNarrativeNotes && !usesStructuredWorkspaceForm ? <button type="button" style={ghostBtn} onClick={() => setShowNarrativeNotes(true)}><Icon name="add" size={16} /> Add notes</button> : null}
         </div>
         {!editingId && canShowLinkedPeople && canCreateRecords ? <section className="lf-v52-form-people" aria-label="People on this record">
-          <h3>People (optional)</h3>
+          <h3>{linkedPeopleConfig(sectionKey, categoryKey)?.heading} (optional)</h3>
           <p>Add people and their roles after this record is saved. Linking a person does not give them access.</p>
           <button type="button" disabled={saving} onClick={() => void saveRecord(true)}>{saving ? "Saving…" : "Save and add person"}</button>
         </section> : null}

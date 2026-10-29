@@ -354,7 +354,7 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
       {links.length ? <p>Already saved: {links.map((link) => contacts.find((contact) => contact.id === link.person_id)?.full_name).filter(Boolean).join(", ")}</p> : null}
       <div className="lf-linked-people-choice" role="group" aria-label="Person source">
         <button type="button" aria-pressed={mode === "existing"} onClick={() => setMode("existing")} disabled={!availableContacts.length}>Choose from People</button>
-        <button type="button" aria-pressed={mode === "new"} onClick={() => setMode("new")}>Add new person</button>
+        <button type="button" aria-pressed={mode === "new"} onClick={() => { if (mode === "existing" && contactSearch.trim() && !name.trim()) setName(contactSearch.trim()); setMode("new"); }}>Add new person</button>
       </div>
       {mode === "existing" ? <>
         <label>Search your People<input type="search" value={contactSearch} onChange={(event) => { setContactSearch(event.target.value); setPersonId(""); }} placeholder="Name, email or telephone" /></label>
@@ -396,9 +396,12 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
     </div> : null}
     {canManage && mode === "saved" ? <div className="lf-linked-people-form" role="status">
       <h3>{saved?.full_name ?? "Person"} added as {links.find((link) => link.person_id === savedPersonId)?.role || "a linked person"}</h3>
-      <p>Invite {saved?.full_name ?? "this person"} to connect in Legacy Fortress? It will not share this record or any other record.</p>
+      <p>Saved to {recordLabel}. Linking records their role; it does not let them see this record.</p>
+      {saved?.invite_status === "accepted" ? <p>{saved.full_name} is already connected. No invitation is needed.</p>
+        : saved?.invite_status === "invite_sent" ? <p>An invitation request is already recorded for {saved.full_name}. No duplicate invitation will be sent.</p>
+        : <p>Invite {saved?.full_name ?? "this person"} to connect in Legacy Fortress? The invitation will not mention {recordLabel} or share any record.</p>}
       <div className="lf-linked-people-actions">
-        {saved?.email && !["invite_sent", "accepted"].includes(saved.invite_status) ? <button type="button" onClick={() => { setError(""); setMode("confirmInvite"); }}>Invite to connect</button> : saved?.email ? <p>This person is already invited or connected.</p> : <Link href={buildContactsWorkspaceHref(savedPersonId)}>Add email and invite</Link>}
+        {saved?.email && !["invite_sent", "accepted"].includes(saved.invite_status) ? <button type="button" onClick={() => { setError(""); setMode("confirmInvite"); }}>Send invitation…</button> : !saved?.email ? <Link href={buildContactsWorkspaceHref(savedPersonId)}>Add email in People to invite</Link> : null}
         <button type="button" onClick={() => { resetForm(); setNotice(`${saved?.full_name ?? "Person"} remains linked. No invitation was sent.`); }}>{saved?.email && ["invite_sent", "accepted"].includes(saved.invite_status) ? "Back to record" : "Invite later"}</button>
       </div>
       <div className="lf-linked-people-actions">
