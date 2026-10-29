@@ -9,6 +9,8 @@ export type CanonicalContactInviteStatus =
   | "accepted"
   | "rejected"
   | "failed"
+  | "not_delivered"
+  | "expired"
   | "revoked";
 
 export type CanonicalContactVerificationStatus =
@@ -60,6 +62,8 @@ export const CANONICAL_CONTACT_INVITE_STATUSES: CanonicalContactInviteStatus[] =
   "accepted",
   "rejected",
   "failed",
+  "not_delivered",
+  "expired",
   "revoked",
 ];
 
@@ -994,8 +998,10 @@ export function mapInvitationStatusToCanonicalInviteStatus(status: string): Cano
   if (normalized === "accepted") return "accepted";
   if (normalized === "rejected") return "rejected";
   if (normalized === "failed") return "failed";
+  if (normalized === "not_delivered" || normalized === "delivery_failed") return "not_delivered";
+  if (normalized === "expired") return "expired";
   if (normalized === "revoked") return "revoked";
-  if (normalized === "pending") return "invite_sent";
+  if (normalized === "pending" || normalized === "sent") return "invite_sent";
   return "not_invited";
 }
 
@@ -1459,6 +1465,8 @@ function resolveInviteStatus(
     not_invited: 0,
     invite_sent: 1,
     failed: 1,
+    not_delivered: 1,
+    expired: 1,
     accepted: 2,
     rejected: 2,
     revoked: 3,

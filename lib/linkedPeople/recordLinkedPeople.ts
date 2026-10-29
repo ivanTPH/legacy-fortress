@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { PeopleContactEntity } from "../contacts/contactRepository.ts";
 import { listPeopleContactsForOwner, loadPeopleContactsByIds, savePeopleContact } from "../contacts/contactRepository.ts";
 import type { SendContactInviteResult } from "../contacts/sendContactInvite.ts";
 import type { CollaboratorRole } from "../access-control/roles.ts";
@@ -17,6 +18,18 @@ export type LinkedPerson = {
   created_at: string;
 };
 export type LinkedRecordAccessState = "explicit" | "none" | "unavailable";
+export function searchLinkedPeopleContacts(contacts: PeopleContactEntity[], activeIds: Set<string>, search: string) {
+  const query = search.trim().toLocaleLowerCase();
+  return contacts.filter((contact) => !activeIds.has(contact.id) &&
+    `${contact.full_name} ${contact.email ?? ""} ${contact.phone ?? ""}`.toLocaleLowerCase().includes(query));
+}
+export type LinkedPersonHistoryEvent = {
+  id: string;
+  link_id: string;
+  person_id: string;
+  action: "link.created" | "link.role_changed" | "link.removed";
+  created_at: string;
+};
 
 export class LinkedPersonRecoveryError extends Error {
   readonly personId: string;
@@ -93,6 +106,16 @@ export async function loadRecordLinkedPeople(client: SupabaseClient, ownerUserId
   if (linksResult.error) throw new Error(linksResult.error.message);
   const links = (linksResult.data ?? []) as LinkedPerson[];
   const sourceDocumentIds = [...new Set(links.map((link) => link.source_document_id).filter((id): id is string => Boolean(id)))];
+  const otherRecordCounts: Record<string, number> = {};
+  if (contacts.length) {
+    const otherLinks = await client.from("record_links").select("person_id,record_id,record_type")
+      .eq("owner_user_id", ownerUserId).is("removed_at", null)
+      .in("person_id", contacts.map((contact) => contact.id));
+    if (!otherLinks.error) for (const otherLink of otherLinks.data ?? []) {
+      if (otherLink.record_type === recordType && otherLink.record_id === recordId) continue;
+      otherRecordCounts[otherLink.person_id] = (otherRecordCounts[otherLink.person_id] ?? 0) + 1;
+    }
+  }
   const documentTitles: Record<string, string> = {};
   if (sourceDocumentIds.length) {
     const documents = await client.from("documents").select("id,file_name,display_title")
@@ -112,7 +135,7 @@ export async function loadRecordLinkedPeople(client: SupabaseClient, ownerUserId
       if (Array.isArray(ids) && ids.includes(recordId)) accessByPerson[personId] = "explicit";
     }
   }
-  return { links, contacts, accessByPerson, documentTitles };
+  return { links, contacts, accessByPerson, documentTitles, otherRecordCounts };
 }
 
 export async function saveRecordLinkedPerson(client: SupabaseClient, input: {
@@ -134,8 +157,9 @@ export async function saveRecordLinkedPerson(client: SupabaseClient, input: {
   if (!role || role.length > 60) throw new Error("Choose a role for this record.");
   const roleOtherText = role === "Other" ? input.roleOtherText?.trim() : null;
   if (role === "Other" && (!roleOtherText || roleOtherText.length > 60)) throw new Error("Enter a role of up to 60 characters.");
-  const email = normalizeLinkedPersonEmail(input.email ?? "");
-  const phone = normalizeLinkedPersonPhone(input.phone ?? "");
+  const creatingContact = !input.existingPersonId && !input.recoveryPersonId;
+  const email = creatingContact ? normalizeLinkedPersonEmail(input.email ?? "") : "";
+  const phone = creatingContact ? normalizeLinkedPersonPhone(input.phone ?? "") : "";
   let personId = input.recoveryPersonId || input.existingPersonId;
   if (!personId) {
     const name = input.name?.trim() ?? "";
@@ -187,6 +211,62 @@ export async function saveRecordLinkedPerson(client: SupabaseClient, input: {
     if (!input.existingPersonId) throw new LinkedPersonRecoveryError("Person is saved in People, but the record link could not be confirmed. Retry this relationship; the person will not be created again.", personId);
     throw cause;
   }
+}
+
+export async function changeRecordLinkedPersonRole(client: SupabaseClient, input: {
+  ownerUserId: string;
+  recordType: LinkedRecordType;
+  recordId: string;
+  linkId: string;
+  role: string;
+  roleOtherText?: string;
+}) {
+  await assertOwnerMayManage(client, input.ownerUserId);
+  await assertSavedOwnerRecord(client, input.ownerUserId, input.recordType, input.recordId);
+  const role = input.role.trim();
+  if (!role || role.length > 60) throw new Error("Choose a role for this record.");
+  const roleOtherText = role === "Other" ? input.roleOtherText?.trim() : null;
+  if (role === "Other" && (!roleOtherText || roleOtherText.length > 60)) throw new Error("Enter a role of up to 60 characters.");
+  const result = await client.from("record_links")
+    .update({ role, role_other_text: roleOtherText || null })
+    .eq("id", input.linkId).eq("owner_user_id", input.ownerUserId)
+    .eq("record_type", input.recordType).eq("record_id", input.recordId)
+    .is("removed_at", null).select("id").maybeSingle();
+  if (result.error) throw new Error(result.error.message);
+  if (!result.data) throw new Error("This active relationship is unavailable. Refresh the record.");
+}
+
+export async function unlinkRecordLinkedPerson(client: SupabaseClient, input: {
+  ownerUserId: string;
+  recordType: LinkedRecordType;
+  recordId: string;
+  linkId: string;
+}) {
+  await assertOwnerMayManage(client, input.ownerUserId);
+  await assertSavedOwnerRecord(client, input.ownerUserId, input.recordType, input.recordId);
+  const result = await client.from("record_links")
+    .update({ removed_at: new Date().toISOString() })
+    .eq("id", input.linkId).eq("owner_user_id", input.ownerUserId)
+    .eq("record_type", input.recordType).eq("record_id", input.recordId)
+    .is("removed_at", null).select("id").maybeSingle();
+  if (result.error) throw new Error(result.error.message);
+  if (!result.data) throw new Error("This active relationship is unavailable. Refresh the record.");
+}
+
+export async function loadRecordLinkedPeopleHistory(client: SupabaseClient, input: {
+  ownerUserId: string;
+  recordType: LinkedRecordType;
+  recordId: string;
+}): Promise<LinkedPersonHistoryEvent[]> {
+  const auth = await client.auth.getUser();
+  if (auth.error || auth.data.user?.id !== input.ownerUserId) throw new Error("Only the owner can view relationship history.");
+  await assertSavedOwnerRecord(client, input.ownerUserId, input.recordType, input.recordId);
+  const result = await client.rpc("lf_record_link_history", {
+    p_record_type: input.recordType,
+    p_record_id: input.recordId,
+  });
+  if (result.error) throw new Error("Record-link history is unavailable.");
+  return (result.data ?? []) as LinkedPersonHistoryEvent[];
 }
 
 function collaboratorRole(value: string | null): CollaboratorRole {

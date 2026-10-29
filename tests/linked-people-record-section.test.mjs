@@ -52,6 +52,7 @@ test("same canonical person links to multiple Property and financial assets", as
   for (const recordId of ["asset-1", "asset-2"]) await saveRecordLinkedPerson(client, { ownerUserId, recordType: "asset", recordId, existingPersonId: person.id, role: "Joint owner" });
   assert.equal(db.contacts.length, 1);
   assert.deepEqual(db.record_links.map((row) => row.record_id), ["asset-1", "asset-2"]);
+  assert.equal((await loadRecordLinkedPeople(client, ownerUserId, "asset", "asset-1")).otherRecordCounts[person.id], 1);
 });
 
 test("failed link retains a recovery ID; retry neither duplicates contact nor link", async () => {

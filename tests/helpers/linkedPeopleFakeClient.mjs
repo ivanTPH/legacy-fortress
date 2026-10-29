@@ -4,7 +4,7 @@ export function createLinkedPeopleFakeClient({ ownerId = "owner-1", sessionUserI
   const db = {
     assets: [{ id: "asset-1", owner_user_id: ownerId, deleted_at: null }, { id: "asset-2", owner_user_id: ownerId, deleted_at: null }],
     records: [{ id: "record-1", owner_user_id: ownerId }, { id: "record-2", owner_user_id: ownerId }],
-    contacts: [], record_links: [], contact_links: [], contact_invitations: [], role_assignments: [], account_access_grants: [],
+    contacts: [], record_links: [], contact_links: [], contact_invitations: [], role_assignments: [], account_access_grants: [], audit_events: [],
   };
   const writes = [];
   let failLinkOnce = false;
@@ -37,10 +37,15 @@ export function createLinkedPeopleFakeClient({ ownerId = "owner-1", sessionUserI
         }
         const row = { id: `${this.table}-${nextId++}`, created_at: "2026-10-27T10:00:00Z", updated_at: "2026-10-27T10:00:00Z", removed_at: null, ...this.payload };
         rows.push(row);
+        if (this.table === "record_links") db.audit_events.push({ id: `audit-${nextId++}`, link_id: row.id, person_id: row.person_id, action: "link.created", created_at: row.created_at, owner_user_id: row.owner_user_id, record_type: row.record_type, record_id: row.record_id });
         return { data: row, error: null };
       }
       const matched = rows.filter((row) => this.filters.every((filter) => filter(row)));
-      for (const row of matched) Object.assign(row, this.payload);
+      for (const row of matched) {
+        const action = this.table === "record_links" ? this.payload.removed_at && !row.removed_at ? "link.removed" : this.payload.role && (this.payload.role !== row.role || this.payload.role_other_text !== row.role_other_text) ? "link.role_changed" : null : null;
+        Object.assign(row, this.payload);
+        if (action) db.audit_events.push({ id: `audit-${nextId++}`, link_id: row.id, person_id: row.person_id, action, created_at: new Date().toISOString(), owner_user_id: row.owner_user_id, record_type: row.record_type, record_id: row.record_id });
+      }
       writes.push({ table: this.table, payload: this.payload });
       return { data: matched, error: null };
     }
@@ -52,8 +57,9 @@ export function createLinkedPeopleFakeClient({ ownerId = "owner-1", sessionUserI
   const client = {
     auth: { getUser: async () => ({ data: { user: { id: sessionUserId, email: "owner@example.test" } }, error: null }) },
     rpc: async (name, args) => {
-      assert.equal(name, "lf_vault_allows_owner_mutation");
-      return { data: !locked && sessionUserId === args.p_owner_user_id, error: null };
+      if (name === "lf_vault_allows_owner_mutation") return { data: !locked && sessionUserId === args.p_owner_user_id, error: null };
+      if (name === "lf_record_link_history") return { data: db.audit_events.filter((row) => row.owner_user_id === sessionUserId && row.record_type === args.p_record_type && row.record_id === args.p_record_id).slice().reverse(), error: null };
+      assert.fail(`unexpected rpc ${name}`);
     },
     from(table) { return new Query(table); },
   };

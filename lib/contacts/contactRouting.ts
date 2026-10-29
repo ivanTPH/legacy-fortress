@@ -1,12 +1,17 @@
 import type { CanonicalContactContext } from "./canonicalContacts";
 
-export function buildContactsWorkspaceHref(contactId?: string | null) {
+export function buildContactsWorkspaceHref(contactId?: string | null, manageAccess = false) {
   const normalizedContactId = String(contactId ?? "").trim();
   if (!normalizedContactId) return "/contacts";
 
   const params = new URLSearchParams({
     contact: normalizedContactId,
   });
+  if (manageAccess) {
+    params.set("view", "people");
+    params.set("access", "1");
+    return `/people-access?${params.toString()}`;
+  }
   return `/contacts?${params.toString()}`;
 }
 

@@ -877,6 +877,11 @@ function getContactSummaryStatus(contact: ContactRow) {
   if (contact.linked_user_id || contact.verification_status === "active") return "Linked";
   if (["accepted", "pending_verification", "verification_submitted", "verified"].includes(contact.verification_status)) return "Invitation accepted";
   if (contact.invite_status === "invite_sent") return "Invitation awaiting acceptance";
+  if (contact.invite_status === "failed") return "Invitation failed";
+  if (contact.invite_status === "not_delivered") return "Invitation not delivered";
+  if (contact.invite_status === "expired") return "Invitation expired";
+  if (contact.invite_status === "rejected") return "Invitation declined";
+  if (contact.invite_status === "revoked") return "Invitation revoked";
   if (contact.email) return "Invitation not sent";
   return "Recorded";
 }
@@ -889,7 +894,10 @@ function getContactCardStatus(contact: ContactRow) {
 
 function getInvitationDisplay(contact: ContactRow) {
   if (contact.invite_status === "failed") return { label: "Failed", icon: "error", tone: "danger" as const };
-  if (contact.invite_status === "revoked" || contact.invite_status === "rejected") return { label: "Revoked", icon: "block", tone: "danger" as const };
+  if (contact.invite_status === "not_delivered") return { label: "Not delivered", icon: "error", tone: "danger" as const };
+  if (contact.invite_status === "expired") return { label: "Expired", icon: "schedule_send", tone: "warning" as const };
+  if (contact.invite_status === "revoked") return { label: "Revoked", icon: "block", tone: "danger" as const };
+  if (contact.invite_status === "rejected") return { label: "Declined", icon: "block", tone: "danger" as const };
   if (contact.invite_status === "accepted") {
     return { label: "Accepted", icon: "check_circle", tone: "success" as const };
   }
@@ -906,6 +914,7 @@ function getIdentityDisplay(contact: ContactRow) {
 
 function getPrimaryContactAction(contact: ContactRow) {
   if (contact.invite_status === "invite_sent") return "Follow up";
+  if (["failed", "not_delivered", "expired"].includes(contact.invite_status)) return "Review invitation";
   if (contact.invite_status === "not_invited" && contact.email) return "Send invitation";
   return "";
 }
@@ -1153,7 +1162,7 @@ function PersonDetailDrawer({
               <span style={drawerExplanationStyle}>Identity verification does not grant access to any records.</span>
               {getRelationshipDocumentLabel(contact) ? <span style={drawerExplanationStyle}>Will access stays locked while the owner is living.</span> : null}
               <InvitationProgressTracker contact={contact} />
-              {!readOnly && ["invite_sent", "not_invited", "failed"].includes(contact.invite_status) ? <Button variant="secondary" onClick={() => setManagementView("invitation")}>{contact.invite_status === "not_invited" ? "Send invitation" : "Manage invitation"}</Button> : null}
+              {!readOnly && ["invite_sent", "not_invited", "failed", "not_delivered", "expired"].includes(contact.invite_status) ? <Button variant="secondary" onClick={() => setManagementView("invitation")}>{contact.invite_status === "not_invited" ? "Send invitation" : "Manage invitation"}</Button> : null}
             </section>
             <PersonVaultAccessSummary key={`${contact.id}:${accessRevision}`} contact={contact} ownerUserId={ownerUserId} readOnly={readOnly} onManage={() => setManagementView("access")} onRevoke={() => { setRevokeRequested(true); setManagementView("access"); }} />
             {pendingRequestId ? <section className="lf-person-detail-section" aria-label="Request awaiting decision"><h3>Request awaiting decision</h3><p style={drawerExplanationStyle}>Review this person&apos;s request and current sharing in People &amp; Access.</p><Link href={`/people-access?view=requests&request=${encodeURIComponent(pendingRequestId)}`} className="lf-pa-text-action">Review request</Link></section> : null}
@@ -1508,10 +1517,10 @@ function PersonManagementPanel({
       ) : null}
       {view === "invitation" ? (
         <div className="lf-person-focused-panel">
-          <span style={drawerExplanationStyle}>{contact.invite_status === "invite_sent" ? "Status: Awaiting response" : contact.invite_status === "failed" ? "The invitation request failed. You can retry using the existing invitation." : "This person is recorded but has not been invited."}</span>
+          <span style={drawerExplanationStyle}>{contact.invite_status === "invite_sent" ? "Status: Awaiting response" : ["failed", "not_delivered"].includes(contact.invite_status) ? "The invitation was not delivered. You can retry using the existing invitation." : contact.invite_status === "expired" ? "The invitation expired. You can send a new request using the existing invitation." : "This person is recorded but has not been invited."}</span>
           {contact.email ? <span style={drawerContactLineStyle}>{contact.email}</span> : <span style={drawerExplanationStyle}>Add an email address in Edit details before sending an invitation.</span>}
           {contact.invite_status === "not_invited" && contact.email ? <button type="button" style={rowPrimaryActionStyle} disabled={readOnly || inviting} onClick={() => void onInvite()}>{inviting ? "Sending…" : "Send invitation"}</button> : null}
-          {(contact.invite_status === "invite_sent" || contact.invite_status === "failed") ? <button type="button" style={rowPrimaryActionStyle} disabled={saving || !contact.email} onClick={() => void resendInvitation()}>Resend invitation</button> : null}
+          {(["invite_sent", "failed", "not_delivered", "expired"].includes(contact.invite_status)) ? <button type="button" style={rowPrimaryActionStyle} disabled={saving || !contact.email} onClick={() => void resendInvitation()}>Resend invitation</button> : null}
           {contact.invite_status === "invite_sent" ? <button type="button" style={rowSecondaryActionStyle} disabled={saving} onClick={() => void updateInvitation("revoked")}>Cancel invitation</button> : null}
         </div>
       ) : null}
@@ -1695,6 +1704,8 @@ function resolveInvitationProjectionStatus(
   const activationStatus = String(row.activation_status ?? "").trim().toLowerCase();
   if (["revoked", "rejected"].includes(invitationStatus) || ["revoked", "rejected"].includes(activationStatus)) return "revoked";
   if (invitationStatus === "accepted" || ["accepted", "pending_verification", "verification_submitted", "verified", "active"].includes(activationStatus)) return "accepted";
+  if (["failed", "delivery_failed", "not_delivered"].includes(invitationStatus)) return "not_delivered";
+  if (invitationStatus === "expired") return "expired";
   if (row.sent_at || ["pending", "sent"].includes(invitationStatus) || ["invited", "pending_verification"].includes(activationStatus)) return "invite_sent";
   return fallback;
 }

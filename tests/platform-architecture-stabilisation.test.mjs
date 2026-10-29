@@ -82,7 +82,7 @@ test("canonical contact architecture documents the shared people entity and migr
   );
   assert.equal(isCanonicalContactEntityField("invite_status"), true);
   assert.equal(isCanonicalContactEntityField("section_entries"), false);
-  assert.deepEqual(CANONICAL_CONTACT_INVITE_STATUSES, ["not_invited", "invite_sent", "accepted", "rejected", "failed", "revoked"]);
+  assert.deepEqual(CANONICAL_CONTACT_INVITE_STATUSES, ["not_invited", "invite_sent", "accepted", "rejected", "failed", "not_delivered", "expired", "revoked"]);
   assert.ok(CANONICAL_CONTACT_VERIFICATION_STATUSES.includes("pending_verification"));
   assert.ok(CANONICAL_CONTACT_SOURCE_TYPES.includes("probate_contact"));
   assert.ok(CANONICAL_CONTACT_SOURCE_TYPES.includes("enterprise_contact"));
