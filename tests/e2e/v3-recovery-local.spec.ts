@@ -208,7 +208,7 @@ test.describe("V3 recovery local owner journey", () => {
     }
   });
 
-  test("V4 Add person saves a contact without granting record access", async ({ page, isMobile }) => {
+  test("V5.2 Add person saves a contact without inviting or granting record access", async ({ page, isMobile }) => {
     const addedEmail = `v4-no-access-${runId}@legacyfortress.test`;
     await signIn(page, ownerEmail);
     await page.goto("/people-access?view=people&group=trusted_contacts&add=1", { waitUntil: "domcontentloaded" });
@@ -216,11 +216,10 @@ test.describe("V3 recovery local owner journey", () => {
     await page.getByRole("textbox", { name: /First name/ }).fill("V4");
     await page.getByRole("textbox", { name: /Last name/ }).fill("Unshared");
     await page.getByRole("textbox", { name: /Email/ }).fill(addedEmail);
-    await expect(page.getByRole("checkbox", { name: /Send invitation now/ })).toBeChecked();
-    await page.getByRole("checkbox", { name: /Send invitation now/ }).uncheck();
+    await expect(page.getByText(/Save the person first.*separate invitation action/)).toBeVisible();
     await page.screenshot({ path: `/private/tmp/lf-v4-add-person-${isMobile ? "mobile" : "desktop"}.png` });
     try {
-      await page.getByRole("button", { name: "Add person", exact: true }).click();
+      await page.getByRole("button", { name: "Save person", exact: true }).click();
       await expect.poll(async () => (await admin.from("contacts").select("id").eq("owner_user_id", ids.owner!).eq("email_normalized", addedEmail).maybeSingle()).data?.id).toBeTruthy();
       const contact = await admin.from("contacts").select("id,invite_status").eq("owner_user_id", ids.owner!).eq("email_normalized", addedEmail).single();
       expect(contact.data?.invite_status).toBe("not_invited");

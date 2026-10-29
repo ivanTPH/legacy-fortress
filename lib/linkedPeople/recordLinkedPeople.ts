@@ -54,6 +54,36 @@ export function normalizeLinkedPersonPhone(value: string) {
   return normalizePhone(trimmed);
 }
 
+export type LinkedPersonFormIssue = { field: "person" | "name" | "email" | "phone" | "role" | "other" | "connection"; message: string };
+
+export function linkedPersonFormIssues(input: {
+  mode: "existing" | "new" | "editRole";
+  personId?: string;
+  recoveryPersonId?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  role?: string;
+  roleOtherText?: string;
+  duplicateEmail?: boolean;
+  online?: boolean;
+  recordLabel: string;
+}): LinkedPersonFormIssue[] {
+  const issues: LinkedPersonFormIssue[] = [];
+  if (input.mode === "existing" && !input.personId) issues.push({ field: "person", message: "Select a person from the matching results." });
+  if (input.mode === "new" && !input.recoveryPersonId) {
+    const name = input.name?.trim() ?? "";
+    if (!name || name.length > 120) issues.push({ field: "name", message: "Enter their full name (up to 120 characters)." });
+    try { normalizeLinkedPersonEmail(input.email ?? ""); } catch { issues.push({ field: "email", message: "Enter an email like name@example.com, or leave it blank." }); }
+    try { normalizeLinkedPersonPhone(input.phone ?? ""); } catch { issues.push({ field: "phone", message: "Enter a valid telephone number, or leave it blank." }); }
+    if (input.duplicateEmail) issues.push({ field: "email", message: "Use the existing person with this email, or change the email." });
+  }
+  if (!input.role?.trim()) issues.push({ field: "role", message: `Choose their role on ${input.recordLabel}.` });
+  if (input.role === "Other" && (!input.roleOtherText?.trim() || input.roleOtherText.trim().length > 60)) issues.push({ field: "other", message: "Describe the role (up to 60 characters)." });
+  if (input.mode !== "editRole" && input.online === false) issues.push({ field: "connection", message: "You are offline. Your entries remain here until you can save." });
+  return issues;
+}
+
 async function assertOwnerMayManage(client: SupabaseClient, ownerUserId: string) {
   const auth = await client.auth.getUser();
   if (auth.error || auth.data.user?.id !== ownerUserId) throw new Error("Only the owner can manage linked people.");
