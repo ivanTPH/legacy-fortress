@@ -319,6 +319,8 @@
 .lf-v52-settings-heading h1 { margin: 0 0 4px; font-size: var(--lf-text-title-web); }
 .lf-v52-settings-profile { display: flex; align-items: center; gap: 14px; min-width: 0; min-height: 96px; padding: 16px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); color: var(--lf-text); text-decoration: none; }
 .lf-v52-settings-avatar { display: grid; place-items: center; flex: 0 0 64px; width: 64px; height: 64px; border-radius: 50%; background: var(--lf-avatar-family-bg); color: var(--lf-avatar-family-text); font-size: var(--lf-text-sheet-title); font-weight: var(--lf-weight-semibold); }
+.lf-v52-settings-avatar { overflow: hidden; }
+.lf-v52-settings-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .lf-v52-settings-profile-copy { display: grid; gap: 2px; flex: 1; min-width: 0; }
 .lf-v52-settings-profile-copy strong { font-size: var(--lf-text-sheet-title); overflow-wrap: anywhere; }
 .lf-v52-settings-profile-copy small { color: var(--lf-text-secondary); font-size: var(--lf-text-small); overflow-wrap: anywhere; }

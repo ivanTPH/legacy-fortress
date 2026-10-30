@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import Icon from "../../../components/ui/Icon";
 import { getSafeUserData } from "../../../lib/auth/requireActiveUser";
 import { supabase } from "../../../lib/supabaseClient";
+import { loadProfileIdentityChip } from "../../../lib/profile/workspace";
 
 const GROUPS = [
   { title: "Account", items: [
@@ -24,7 +25,7 @@ const GROUPS = [
 ] as const;
 
 export default function SettingsOverviewPage() {
-  const [profile, setProfile] = useState({ name: "Your profile", email: "" });
+  const [profile, setProfile] = useState({ name: "Your profile", email: "", avatarUrl: "" });
 
   useEffect(() => {
     let active = true;
@@ -32,7 +33,11 @@ export default function SettingsOverviewPage() {
       if (!active || !data.user) return;
       const metadata = data.user.user_metadata as Record<string, unknown>;
       const name = [metadata.full_name, metadata.display_name, metadata.name].find((value): value is string => typeof value === "string" && value.trim().length > 0);
-      setProfile({ name: name?.trim() || "Your profile", email: data.user.email ?? "" });
+      setProfile({ name: name?.trim() || "Your profile", email: data.user.email ?? "", avatarUrl: "" });
+      const user = data.user;
+      void loadProfileIdentityChip(supabase, { userId: user.id, email: user.email ?? "" })
+        .then((chip) => { if (active) setProfile((current) => ({ ...current, name: chip.displayName || current.name, avatarUrl: chip.avatarUrl })); })
+        .catch(() => undefined);
     });
     return () => { active = false; };
   }, []);
@@ -41,7 +46,10 @@ export default function SettingsOverviewPage() {
   return <section className="lf-v52-settings-page" aria-labelledby="settings-title">
     <header className="lf-v52-settings-heading"><h1 id="settings-title">Settings</h1><p>Manage your profile, account and Vault preferences.</p></header>
     <Link href="/profile" className="lf-v52-settings-profile">
-      <span className="lf-v52-settings-avatar" aria-hidden="true">{initials}</span>
+      <span className="lf-v52-settings-avatar" aria-hidden="true">{profile.avatarUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={profile.avatarUrl} alt="" />
+      ) : initials}</span>
       <span className="lf-v52-settings-profile-copy"><strong>{profile.name}</strong>{profile.email ? <small>{profile.email}</small> : null}<span>Edit profile</span></span>
       <Icon name="chevron_right" size={20} />
     </Link>
