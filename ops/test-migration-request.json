@@ -1,11 +1,8 @@
 {
-  "approvedBy": "Ivan (owner), 30 Oct 2026: four Linked People / extraction migrations for TEST only",
+  "approvedBy": "Ivan (owner), 30 Oct 2026: Vault access data model (nominations, nomination records, legal authorities, grant source fields) for TEST only",
   "mode": "apply",
-  "attempt": 6,
+  "attempt": 7,
   "files": [
-    { "file": "20261030090000_linked_people_atomic_save.sql", "sha256": "cf769ea514211934cc6ce309f4cecf7a087ea1c8b1979f06f7842c7f36bd3009" },
-    { "file": "20261030090050_extraction_for_record_attachments.sql", "sha256": "1ad37e68a9ad2b6107abde951457e0f97b88f1d71fb343d6e145b9f45c78a648" },
-    { "file": "20261030090100_linked_people_undo_and_rereview.sql", "sha256": "80dadd4ec1795e0bd493ae02bc689eac81e665094d74ba740460227c03067c61" },
-    { "file": "20261030090200_contacts_address_notes.sql", "sha256": "4c232e0a656609e1d41a393ed4bb9c21105bb059c23db285face3efb394e5e95" }
+    { "file": "20261030200000_vault_access_foundation.sql", "sha256": "cc4f58bb133a03a74c5e026c36620baa53c907d46f0c5d89425acd6340759d7d" }
   ]
 }
