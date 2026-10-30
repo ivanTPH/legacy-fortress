@@ -1682,10 +1682,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 }
 
 .lf-admin-shell--partner { background: var(--lf-surface-page); color: var(--lf-text); }
-.lf-admin-shell--partner > .lf-admin-shell-sidebar { background: #fff; color: #1f1715; border-right: 1px solid #ebe4de; }
-.lf-admin-shell--partner .lf-admin-shell-nav-label { color: #766962; }
-.lf-admin-shell--partner .lf-admin-shell-nav-link { color: #453934; }
-.lf-admin-shell--partner .lf-admin-shell-nav-link.active { background: #e4f0f0; color: #205e5b; }
+.lf-admin-shell--partner > .lf-admin-shell-sidebar { background: var(--lf-surface-sidebar); color: var(--lf-text); border-right: 1px solid var(--lf-border); }
+.lf-admin-shell--partner .lf-admin-shell-nav-label { color: var(--lf-text-secondary); }
+.lf-admin-shell--partner .lf-admin-shell-nav-link { color: var(--lf-text); }
+.lf-admin-shell--partner .lf-admin-shell-nav-link.active { background: var(--lf-surface-card); color: var(--lf-text); font-weight: var(--lf-weight-semibold); box-shadow: inset 0 0 0 1px var(--lf-border); }
+.lf-admin-shell--partner .lf-admin-shell-nav-link:hover { background: var(--lf-surface-hover); }
 .lf-admin-shell--partner .lf-admin-shell-content { gap: 16px; }
 .lf-admin-shell--partner .lf-admin-shell-header { padding: 0; border: 0; background: transparent; }
 .lf-partner-scope-chip { display: inline-flex; align-items: center; gap: 6px; width: fit-content; max-width: 100%; padding: 5px 10px; border-radius: 20px; color: var(--lf-avatar-pro-text); background: var(--lf-avatar-pro-bg); font-weight: 700; overflow-wrap: anywhere; }
@@ -1729,9 +1730,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
   .lf-partner-mobile-filters > summary { display: flex; align-items: center; min-height: 44px; padding: 10px 14px; border: 1px solid var(--lf-border); border-radius: 10px; color: var(--lf-text); background: var(--lf-surface-card); font-weight: 700; cursor: pointer; }
   .lf-partner-mobile-filters[open] > summary { border-radius: 10px 10px 0 0; }
   .lf-partner-mobile-filters > section { min-width: 0; }
-  .lf-admin-shell--partner .lf-admin-shell-mobile-bar { position: sticky; top: 0; z-index: 35; display: flex; align-items: center; gap: 6px; width: 100%; height: 56px; min-width: 0; padding: 0 max(4px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left)); border-bottom: 1px solid #ebe4de; background: #fff; }
-  .lf-admin-shell--partner .lf-admin-shell-mobile-toggle { position: static; flex: 0 0 44px; justify-content: center; margin: 0; padding: 0; border: 0; color: #1f1715; background: transparent; }
-  .lf-admin-shell--partner .lf-admin-shell-mobile-brand { display: inline-flex; align-items: center; gap: 7px; min-width: 0; color: #1f1715; font-size: 13px; font-weight: 800; text-decoration: none; }
+  .lf-admin-shell--partner .lf-admin-shell-mobile-bar { position: sticky; top: 0; z-index: 35; display: flex; align-items: center; gap: 6px; width: 100%; height: 56px; min-width: 0; padding: 0 max(4px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left)); border-bottom: 1px solid var(--lf-border); background: var(--lf-surface-card); }
+  .lf-admin-shell--partner .lf-admin-shell-mobile-toggle { position: static; flex: 0 0 44px; justify-content: center; margin: 0; padding: 0; border: 0; color: var(--lf-text); background: transparent; }
+  .lf-admin-shell--partner .lf-admin-shell-mobile-brand { display: inline-flex; align-items: center; gap: 7px; min-width: 0; color: var(--lf-text); font-size: 13px; font-weight: 800; text-decoration: none; }
   .lf-admin-shell--partner .lf-admin-shell-mobile-logo { flex: 0 0 28px; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 6px; color: var(--lf-primary-text); background: #111; }
   .lf-admin-shell--partner .lf-admin-shell-mobile-brand-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .lf-admin-shell--partner .lf-admin-shell-mobile-badge { flex: 0 0 auto; padding: 3px 5px; border-radius: 4px; color: var(--lf-avatar-pro-text); background: var(--lf-avatar-pro-bg); font-size: 9px; font-weight: 900; }
@@ -1744,13 +1745,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
   .lf-admin-shell--partner .lf-admin-shell-account-popover { left: auto; right: 0; }
   .lf-admin-shell--partner .lf-admin-shell-content { padding: 20px max(16px, env(safe-area-inset-right)) calc(92px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
   .lf-admin-shell--partner .lf-admin-shell-breadcrumb { display: none; }
-  .lf-admin-shell--partner .lf-admin-shell-drawer-panel { width: 100vw; max-width: 100vw; background: #f7f3f1; color: #1f1715; }
-  .lf-admin-shell--partner .lf-admin-shell-drawer-panel .lf-admin-shell-sidebar { min-height: 0; background: #f7f3f1; color: #1f1715; }
-  .lf-admin-shell--partner .lf-admin-shell-drawer-close { color: #1f1715; background: #fff; border-color: #ebe4de; }
-  .lf-admin-shell--partner .lf-admin-shell-drawer-account .lf-admin-shell-identity { color: #1f1715; background: #fff; border-color: #ebe4de; }
-  .lf-admin-shell--partner .lf-admin-shell-mobile-tabs { position: fixed; right: 0; bottom: 0; left: 0; z-index: 30; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); min-height: calc(64px + env(safe-area-inset-bottom)); padding: 4px max(4px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(4px, env(safe-area-inset-left)); border-top: 1px solid #ebe4de; background: #fff; }
-  .lf-admin-shell--partner .lf-admin-shell-mobile-tabs a { display: grid; justify-items: center; align-content: center; gap: 2px; min-width: 0; min-height: 54px; padding: 4px; color: #766962; font-size: 11px; text-align: center; text-decoration: none; }
-  .lf-admin-shell--partner .lf-admin-shell-mobile-tabs a[aria-current="page"] { color: #2b1714; font-weight: 800; }
+  .lf-admin-shell--partner .lf-admin-shell-drawer-panel { width: 100vw; max-width: 100vw; background: var(--lf-surface-page); color: var(--lf-text); }
+  .lf-admin-shell--partner .lf-admin-shell-drawer-panel .lf-admin-shell-sidebar { min-height: 0; background: var(--lf-surface-page); color: var(--lf-text); }
+  .lf-admin-shell--partner .lf-admin-shell-drawer-close { color: var(--lf-text); background: var(--lf-surface-card); border-color: var(--lf-border); }
+  .lf-admin-shell--partner .lf-admin-shell-drawer-account .lf-admin-shell-identity { color: var(--lf-text); background: var(--lf-surface-card); border-color: var(--lf-border); }
+  .lf-admin-shell--partner .lf-admin-shell-mobile-tabs { position: fixed; right: 0; bottom: 0; left: 0; z-index: 30; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); min-height: calc(64px + env(safe-area-inset-bottom)); padding: 4px max(4px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(4px, env(safe-area-inset-left)); border-top: 1px solid var(--lf-border); background: var(--lf-surface-card); }
+  .lf-admin-shell--partner .lf-admin-shell-mobile-tabs a { display: grid; justify-items: center; align-content: center; gap: 2px; min-width: 0; min-height: 54px; padding: 4px; color: var(--lf-text-secondary); font-size: 11px; text-align: center; text-decoration: none; }
+  .lf-admin-shell--partner .lf-admin-shell-mobile-tabs a[aria-current="page"] { color: var(--lf-text); font-weight: 800; }
   .lf-partner-overview-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .lf-partner-overview-metrics .lf-admin-metric-card { min-height: 88px; padding: 12px; }
   .lf-partner-primary { width: 100%; }
