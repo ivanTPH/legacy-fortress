@@ -29,6 +29,7 @@ import { VaultPreferencesProvider } from "../../components/vault/VaultPreference
 import { AccessibilityPreferencesProvider } from "../../components/accessibility/AccessibilityPreferencesContext";
 import WorkspaceSwitcher from "../../components/navigation/WorkspaceSwitcher";
 import FounderTestLauncher, { useFounderTestLauncherAccess } from "../../components/navigation/FounderTestLauncher";
+import WorkspaceAccountLinks from "../../components/navigation/WorkspaceAccountLinks";
 import NotificationBell from "../../components/notifications/NotificationBell";
 import { DEMO_EXPERIENCE_LABEL, DEMO_EXPERIENCE_SUBLABEL, isDemoSessionUser } from "../../lib/demo/config";
 import {
@@ -1235,6 +1236,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                     <Link href="/account/security" role="menuitem" onClick={() => setAccountMenuOpen(false)} prefetch={false}><Icon name="shield_lock" size={17} /><span>Account security</span></Link>
                   </div>
                   <div className="lf-admin-shell-account-menu-section" role="none">
+                    <WorkspaceAccountLinks current="vault" onNavigate={() => setAccountMenuOpen(false)} />
                     <FounderTestLauncher current="vault" available={founderLauncherAvailable} accountMenuItem />
                   </div>
                   <div className="lf-admin-shell-account-menu-section" role="none">
@@ -1283,6 +1285,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                 {canViewPath("/people-access", resolvedViewerAccess) ? <Link href="/people-access" className="lf-mobile-drawer-support" onClick={() => closeNavigationState("item_select")}><Icon name="group" size={20} />People &amp; Access</Link> : null}
                 {accountItems.some((item) => item.id === "support") ? <Link href="/support" className="lf-mobile-drawer-support" onClick={() => closeNavigationState("item_select")}><Icon name="help" size={20} />Support</Link> : null}
                 {canViewPath("/settings", resolvedViewerAccess) ? <Link href="/settings" className="lf-mobile-drawer-support" onClick={() => closeNavigationState("item_select")}><Icon name="settings" size={20} />Settings</Link> : null}
+                <WorkspaceAccountLinks current="vault" linkClassName="lf-mobile-drawer-support" iconSize={20} asMenuItems={false} onNavigate={() => closeNavigationState("item_select")} />
                 <button type="button" className="lf-mobile-drawer-signout" onClick={() => void signOut()}><Icon name="logout" size={20} />Sign out</button>
                 {signOutError ? <p role="alert" className="lf-signout-error">{signOutError}</p> : null}
                 </div>

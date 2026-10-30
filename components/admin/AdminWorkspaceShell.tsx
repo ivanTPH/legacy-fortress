@@ -5,6 +5,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import FounderTestLauncher, { useFounderTestLauncherAccess } from "@/components/navigation/FounderTestLauncher";
 import Icon from "@/components/ui/Icon";
+import WorkspaceAccountLinks from "@/components/navigation/WorkspaceAccountLinks";
 import type { AdminNavigationGroup, AdminNavigationItem } from "./adminNavigation";
 
 type AdminWorkspaceShellProps = {
@@ -229,6 +230,7 @@ export default function AdminWorkspaceShell({
             </Link>
           </div>
           <div className="lf-admin-shell-account-menu-section" role="none">
+            <WorkspaceAccountLinks current={isPartner || isInternalEnterprise ? "partner" : "admin"} onNavigate={() => setAccountMenuOpen(false)} />
             <FounderTestLauncher current={isPartner ? "partner" : "admin"} available={founderLauncherAvailable} accountMenuItem />
           </div>
           <div className="lf-admin-shell-account-menu-section" role="none">
