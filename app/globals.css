@@ -8892,3 +8892,30 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 /* My Vault (Settings › My Vault): one card per area, stacked; switches are ink when on. */
 .lf-my-vault-settings-grid { grid-template-columns: minmax(0, 1fr) !important; max-width: 760px; }
 .lf-my-vault-settings-grid .lf-settings-toggle-card { min-height: 0; }
+/* Admin detail page: header, main column and a 380px decision rail (V5.2 web adaptation). */
+.lf-admin-detail { display: grid; gap: 16px; }
+.lf-admin-detail-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.lf-admin-detail-head h2 { margin: 0; font-size: 22px; font-weight: var(--lf-weight-semibold); overflow-wrap: anywhere; }
+.lf-admin-detail-head p { margin: 4px 0 0; color: var(--lf-text-secondary); font-size: var(--lf-text-small); }
+.lf-admin-detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 380px); gap: 16px; align-items: start; }
+.lf-admin-detail-main, .lf-admin-detail-rail { display: grid; gap: 16px; min-width: 0; }
+@media (max-width: 1100px) { .lf-admin-detail-grid { grid-template-columns: minmax(0, 1fr); } .lf-admin-detail-rail { order: -1; } }
+.lf-admin-keyvalues { margin: 0; padding: 4px 18px 14px; display: grid; }
+.lf-admin-keyvalues > div { display: grid; grid-template-columns: minmax(120px, 200px) minmax(0, 1fr); gap: 12px; padding: 10px 0; border-top: 1px solid var(--lf-border); }
+.lf-admin-keyvalues > div:first-child { border-top: 0; }
+.lf-admin-keyvalues dt { color: var(--lf-text-secondary); font-size: var(--lf-text-small); }
+.lf-admin-keyvalues dd { margin: 0; overflow-wrap: anywhere; }
+.lf-admin-keyvalues dd small { display: block; color: var(--lf-text-secondary); font-size: 13px; }
+@media (max-width: 560px) { .lf-admin-keyvalues > div { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
+.lf-admin-history > summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 0 18px 0 0; cursor: pointer; list-style: none; }
+.lf-admin-history > summary::-webkit-details-marker { display: none; }
+.lf-admin-history > summary > span { color: var(--lf-text-secondary); font-size: var(--lf-text-small); }
+.lf-admin-history ol { margin: 0; padding: 0 18px 16px 36px; display: grid; gap: 10px; }
+.lf-admin-history li { display: grid; gap: 2px; }
+.lf-admin-history li span, .lf-admin-history li small { color: var(--lf-text-secondary); font-size: 13px; }
+.lf-admin-muted { margin: 0; color: var(--lf-text-secondary); font-size: var(--lf-text-small); }
+.lf-admin-decision-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.lf-admin-decision-footer { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-top: 12px; border-top: 1px solid var(--lf-border); }
+.lf-admin-danger-button { min-height: 44px; padding: 10px 14px; border: 1px solid var(--lf-border-control, var(--lf-border)); border-radius: 8px; background: var(--lf-surface-card); color: var(--lf-destructive); font: inherit; font-weight: var(--lf-weight-semibold); cursor: pointer; }
+.lf-admin-danger-button:hover { background: var(--lf-surface-hover); }
+.lf-admin-plain-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; } .lf-admin-plain-list li { display: grid; gap: 2px; } .lf-admin-plain-list small { color: var(--lf-text-secondary); font-size: 13px; }

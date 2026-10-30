@@ -1812,15 +1812,16 @@ function permissionSummaryForRole(role: string) {
 
 function renderAdminDetail(item: AdminUser) {
   return (
-    <section style={rowStyle}>
-      <h2 style={h2Style}>{item.display_name || item.email_normalized}</h2>
-      <dl style={definitionGridStyle}>
-        <div><dt>Email</dt><dd>{item.email_normalized}</dd></div>
+    <section className="lf-admin-table-card" aria-label="Administrator details">
+      <header className="lf-admin-detail-head" style={{ padding: "16px 18px 0" }}>
+        <div><h2>{item.display_name || item.email_normalized}</h2><p>{item.email_normalized}</p></div>
+        <AdminStatusBadge status={item.status} />
+      </header>
+      <dl className="lf-admin-keyvalues">
         <div><dt>Role</dt><dd>{formatRoleLabel(item.role, item.is_master)}</dd></div>
-        <div><dt>Status</dt><dd><AdminStatusBadge status={item.status} /></dd></div>
-        <div><dt>Environment scope</dt><dd>{isSyntheticAdmin(item) ? "Synthetic staging/local review" : "Staging operational admin"}</dd></div>
-        <div><dt>Created</dt><dd>{formatDate(item.created_at)}</dd></div>
-        <div><dt>Updated</dt><dd>{formatDate(item.updated_at)}</dd></div>
+        <div><dt>Account type</dt><dd>{isSyntheticAdmin(item) ? "Test account" : "Staff account"}</dd></div>
+        <div><dt>Added</dt><dd>{formatDate(item.created_at)}</dd></div>
+        <div><dt>Last changed</dt><dd>{formatDate(item.updated_at)}</dd></div>
       </dl>
     </section>
   );
@@ -1864,113 +1865,88 @@ function renderUsers(
 }
 
 function renderUserOperationalDetail(detail: UserOperationalDetail | null, loading: boolean, userId: string) {
-  if (loading) {
-    return (
-      <section style={panelStyle} aria-live="polite">
-        <h2 style={h2Style}>Loading user detail</h2>
-        <p style={mutedStyle}>Fetching privacy-bounded operational metadata.</p>
-      </section>
-    );
-  }
-
-  if (!detail) {
-    return (
-      <section style={panelStyle}>
-        <h2 style={h2Style}>User detail unavailable</h2>
-        <p style={mutedStyle}>No safe operational detail is loaded for user `{userId}`. Search for the user or check that the account exists.</p>
-      </section>
-    );
-  }
-
+  if (loading) return <section className="lf-admin-table-card lf-admin-form-card" aria-live="polite"><h2>Loading customer</h2><p className="lf-admin-muted">Getting account details…</p></section>;
+  if (!detail) return <AdminEmptyState icon="person_search" title="Customer not found">No account details are available for <code>{userId.slice(0, 8)}</code>. Search again, or check the account exists.</AdminEmptyState>;
   return (
-    <section style={panelStyle}>
-      <div style={sectionHeaderStyle}>
+    <div className="lf-admin-detail">
+      <header className="lf-admin-detail-head">
         <div>
-          <h2 style={h2Style}>{detail.displayName}</h2>
-          <p style={mutedStyle}>{detail.email || "No email recorded"} · created {formatDate(detail.createdAt)} · last sign-in {formatDate(detail.lastSignInAt ?? "")}</p>
+          <h2>{detail.displayName}</h2>
+          <p>{detail.email || "No email recorded"} · joined {formatDate(detail.createdAt)} · last signed in {detail.lastSignInAt ? formatDate(detail.lastSignInAt) : "never"}</p>
         </div>
-        <AdminStatusBadge status={detail.commercial.planStatus} />
+        <AdminStatusBadge status={detail.commercial.planStatus} label={sentenceCaseStatus(detail.commercial.accountPlan)} />
+      </header>
+      {/* Privacy-bounded account summary: Secure notes, document contents, storage paths and recovery data are not exposed. */}
+      <AdminNote icon="shield_lock">Counts only. Record names, values, documents, notes and recovery details are never shown in admin.</AdminNote>
+      <AdminStatStrip label="Account summary" items={[
+        { label: "Records", value: detail.counts.assets },
+        { label: "Documents", value: detail.counts.documents },
+        { label: "People", value: detail.counts.contacts },
+        { label: "Invitations", value: detail.counts.invitations },
+        { label: "Access given", value: detail.counts.linkedAccessGrants },
+        { label: "Identity checks", value: detail.counts.verificationRequests },
+      ]} />
+      <div className="lf-admin-detail-grid">
+        <div className="lf-admin-detail-main">
+          <div className="lf-admin-table-card">
+            <h2>Trusted people</h2>
+            <AdminDataTable
+              caption="User contacts and linked access"
+              columns={[
+                { key: "contact", header: "Person", render: (item) => <><span className="lf-admin-cell-title">{item.fullName}</span><small>{item.email || "No email"} · {item.relationship || "Relationship not recorded"}</small></> },
+                { key: "invite", header: "Invitation", render: (item) => <AdminStatusBadge status={item.inviteStatus || "not invited"} /> },
+                { key: "verification", header: "Identity", render: (item) => <AdminStatusBadge status={item.verificationStatus || "not started"} /> },
+              ]}
+              rows={detail.contacts}
+              getRowKey={(item) => item.id}
+              emptyState={<AdminEmptyState icon="group" title="No trusted people">This customer hasn’t added anyone yet.</AdminEmptyState>}
+            />
+          </div>
+          <div className="lf-admin-table-card">
+            <h2>Invitations</h2>
+            <AdminDataTable
+              caption="User invitations"
+              columns={[
+                { key: "recipient", header: "Recipient", render: (item) => <><span className="lf-admin-cell-title">{item.contactName}</span><small>{item.contactEmail || "No email"} · {labelise(item.assignedRole)}</small></> },
+                { key: "status", header: "Status", render: (item) => <AdminStatusBadge status={item.invitationStatus} /> },
+                { key: "sent", header: "Sent", render: (item) => item.sentAt ? formatDate(item.sentAt) : "Not sent" },
+                { key: "actions", header: "", render: () => <Link className="lf-admin-row-button" href="/admin/support" prefetch={false}>Open support queue</Link> },
+              ]}
+              rows={detail.invitations}
+              getRowKey={(item) => item.id}
+              emptyState={<AdminEmptyState icon="forward_to_inbox" title="No invitations">No invitations have been sent from this account.</AdminEmptyState>}
+            />
+          </div>
+          <div className="lf-admin-table-card">
+            <h2>Identity checks</h2>
+            <AdminDataTable
+              caption="User verification requests"
+              columns={[
+                { key: "type", header: "Type", render: (item) => labelise(item.requestType) },
+                { key: "status", header: "Status", render: (item) => <AdminStatusBadge status={item.requestStatus} /> },
+                { key: "submitted", header: "Started", render: (item) => formatDate(item.submittedAt) },
+              ]}
+              rows={detail.verificationRequests}
+              getRowKey={(item) => item.id}
+              emptyState={<AdminEmptyState icon="verified_user" title="No identity checks">No executor or probate checks are linked to this account.</AdminEmptyState>}
+            />
+          </div>
+        </div>
+        <aside className="lf-admin-detail-rail">
+          <section className="lf-admin-table-card lf-admin-form-card" aria-label="Organisation context">
+            <h2>Organisation</h2>
+            {detail.organisations.length ? detail.organisations.map((organisation) => <p key={organisation.id} className="lf-admin-muted"><Link href={`/admin/organisations/${organisation.id}`} prefetch={false}>{organisation.name}</Link> · {labelise(organisation.role).toLowerCase()} · {labelise(organisation.status).toLowerCase()}</p>) : <p className="lf-admin-muted">Personal account, not part of an organisation.</p>}
+          </section>
+          <section className="lf-admin-table-card lf-admin-form-card" aria-label="Unavailable actions">
+            <h2>Not available in admin</h2>
+            <ul className="lf-admin-plain-list">
+              {detail.unavailableActions.map((item) => <li key={item.action}><strong>{sentenceCaseStatus(item.action)}</strong><small>{item.reason}</small></li>)}
+            </ul>
+          </section>
+          <Link className="lf-admin-row-button" href="/admin/audit" prefetch={false}>Open audit history</Link>
+        </aside>
       </div>
-      <p style={mutedStyle}>Privacy-bounded account summary. Secure notes, document contents, storage paths and recovery data are not exposed.</p>
-      <div style={gridStyle}>
-        <Metric label="Assets" value={detail.counts.assets} />
-        <Metric label="Documents" value={detail.counts.documents} />
-        <Metric label="Contacts" value={detail.counts.contacts} />
-        <Metric label="Invitations" value={detail.counts.invitations} />
-        <Metric label="Linked access grants" value={detail.counts.linkedAccessGrants} />
-        <Metric label="Verification requests" value={detail.counts.verificationRequests} />
-      </div>
-      <div style={detailGridStyle}>
-        <Detail label="Account plan" value={detail.commercial.accountPlan.replace(/_/g, " ")} />
-        <Detail label="Plan status" value={detail.commercial.planStatus.replace(/_/g, " ")} />
-        <Detail label="Profile" value={detail.profile.hasProfile ? detail.profile.displayName || "Profile present" : "Profile missing"} />
-        <Detail label="Monthly charge" value={`${detail.commercial.billingCurrency} ${detail.commercial.monthlyCharge}`} />
-      </div>
-      <section style={contextPanelStyle}>
-        <h3 style={h3Style}>Organisation context</h3>
-        <p style={mutedStyle}>Membership context is operational metadata only. Opening an organisation remains inside Platform Administration.</p>
-        {detail.organisations.length ? <div style={eventListStyle}>{detail.organisations.map((organisation) => <div key={organisation.id}><Link href={`/admin/organisations/${organisation.id}`} prefetch={false}>{organisation.name}</Link><small>{labelise(organisation.role)} · {labelise(organisation.status)}</small></div>)}</div> : <AdminEmptyState title="No organisation membership">This user is not linked to an enterprise organisation.</AdminEmptyState>}
-      </section>
-      <section style={contextPanelStyle}>
-        <h3 style={h3Style}>Contacts and linked access</h3>
-        <AdminDataTable
-          caption="User contacts and linked access"
-          columns={[
-            { key: "contact", header: "Contact", render: (item) => <>{item.fullName}<small>{item.email || "No email"} · {item.relationship || "Relationship not recorded"}</small></> },
-            { key: "invite", header: "Invite", render: (item) => <AdminStatusBadge status={item.inviteStatus || "not invited"} /> },
-            { key: "verification", header: "Verification", render: (item) => <AdminStatusBadge status={item.verificationStatus || "not started"} /> },
-          ]}
-          rows={detail.contacts}
-          getRowKey={(item) => item.id}
-          emptyState={<AdminEmptyState title="No contacts found">No contact records are linked to this account.</AdminEmptyState>}
-        />
-      </section>
-      <section style={contextPanelStyle}>
-        <h3 style={h3Style}>Invitations</h3>
-        <AdminDataTable
-          caption="User invitations"
-          columns={[
-            { key: "recipient", header: "Recipient", render: (item) => <>{item.contactName}<small>{item.contactEmail || "No email"} · {item.assignedRole.replace(/_/g, " ")}</small></> },
-            { key: "status", header: "Status", render: (item) => <AdminStatusBadge status={item.invitationStatus} /> },
-            { key: "sent", header: "Sent", render: (item) => formatDate(item.sentAt) },
-            { key: "actions", header: "Actions", render: () => <Link href="/admin/support" prefetch={false}>Open support queue</Link> },
-          ]}
-          rows={detail.invitations}
-          getRowKey={(item) => item.id}
-          emptyState={<AdminEmptyState title="No invitations found">No invitations have been created for this account.</AdminEmptyState>}
-        />
-      </section>
-      <section style={contextPanelStyle}>
-        <h3 style={h3Style}>Verification requests</h3>
-        <AdminDataTable
-          caption="User verification requests"
-          columns={[
-            { key: "type", header: "Type", render: (item) => item.requestType.replace(/_/g, " ") },
-            { key: "status", header: "Status", render: (item) => <AdminStatusBadge status={item.requestStatus} /> },
-            { key: "submitted", header: "Submitted", render: (item) => formatDate(item.submittedAt) },
-          ]}
-          rows={detail.verificationRequests}
-          getRowKey={(item) => item.id}
-          emptyState={<AdminEmptyState title="No verification requests">No executor or probate verification requests are linked to this account.</AdminEmptyState>}
-        />
-      </section>
-      <section style={contextPanelStyle}>
-        <h3 style={h3Style}>Unavailable actions</h3>
-        <ul style={eventListStyle}>
-          {detail.unavailableActions.map((item) => (
-            <li key={item.action}>
-              <strong>{item.action}</strong>
-              <small>{item.reason}</small>
-            </li>
-          ))}
-        </ul>
-      </section>
-      <section style={contextPanelStyle}>
-        <h3 style={h3Style}>Audit history</h3>
-        <p style={mutedStyle}>Use the canonical audit page for filtered event review. This detail page records that it was inspected but does not duplicate audit-history retrieval.</p>
-        <Link href="/admin/audit" prefetch={false}>Open audit history</Link>
-      </section>
-    </section>
+    </div>
   );
 }
 
@@ -2322,37 +2298,45 @@ function renderVerification(
   return (
     <div style={stackStyle}>
       {selected ? (
-        <section style={panelStyle}>
-          <div style={sectionHeaderStyle}>
-            <div><p style={eyebrowStyle}>Platform identity review</p><h2 style={h2Style}>{selected.ownerName}</h2><p style={mutedStyle}>Verification reference {selected.id.slice(0, 8)} · {labelise(selected.purpose ?? selected.requestType)}</p></div>
-            <AdminStatusBadge status={selected.requestStatus} />
-          </div>
-          <p style={mutedStyle}>Status metadata only. Raw identity documents, selfies, biometric templates and unrestricted provider payloads are not available here.</p>
-          <div style={compactDetailGridStyle}>
-            <Detail label="Subject" value={selected.ownerName} />
-            <Detail label="Purpose" value={labelise(selected.purpose ?? selected.requestType)} />
-            <Detail label="Provider" value={selected.providerKey ?? "Unavailable"} />
-            <Detail label="Document" value={selected.documentType ? labelise(selected.documentType) : "Not processed"} />
-            <Detail label="Liveness" value={selected.livenessStatus ? labelise(selected.livenessStatus) : "Not processed"} />
-            <Detail label="Face match" value={selected.faceMatchResult ? labelise(selected.faceMatchResult) : "Not processed"} />
-            <Detail label="Review reason" value={selected.reasonCode ? labelise(selected.reasonCode) : "Not recorded"} />
-            <Detail label="Assigned reviewer" value={selected.assignedReviewerName ?? "Unassigned"} />
-            <Detail label="Started" value={formatDate(selected.submittedAt)} />
-          </div>
-          <p className="lf-admin-verification-boundary"><Icon name="lock" size={20} />Approving identity confirms who someone is. It never gives access to records.</p>
-          {canReview ? <section style={contextPanelStyle}>
-            <h3 style={h3Style}>Review actions</h3>
-            <p style={mutedStyle}>These actions manage the verification workflow only. They cannot activate access or override identity policy.</p>
-            <label style={labelStyle}>Operational note or retry reason
-              <textarea value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} rows={3} placeholder="Do not enter document numbers, vault contents or biometric evidence." />
-            </label>
-            <div style={rowStyle}>
-              {!selected.assignedReviewerUserId ? <button type="button" style={secondaryButtonStyle} onClick={() => void runAction(selected.id, "assign_to_me")} disabled={actionLoading === `${selected.id}:assign_to_me`}>{actionLoading === `${selected.id}:assign_to_me` ? "Assigning..." : "Assign to me"}</button> : null}
-              {selected.requestStatus === "failed" || selected.requestStatus === "expired" || selected.requestStatus === "review_required" ? <button type="button" style={secondaryButtonStyle} onClick={() => void runAction(selected.id, "retry")} disabled={!reviewNote.trim() || actionLoading === `${selected.id}:retry`}>{actionLoading === `${selected.id}:retry` ? "Requesting..." : "Request retry"}</button> : null}
-              <button type="button" style={secondaryButtonStyle} onClick={() => void runAction(selected.id, "add_note")} disabled={!reviewNote.trim() || actionLoading === `${selected.id}:add_note`}>{actionLoading === `${selected.id}:add_note` ? "Saving..." : "Add review note"}</button>
+        <div className="lf-admin-detail">
+          <header className="lf-admin-detail-head">
+            <div>
+              <h2>{selected.ownerName}</h2>
+              <p>Reference <code>{selected.id.slice(0, 8)}</code> · {labelise(selected.purpose ?? selected.requestType)} · started {formatDate(selected.submittedAt)}</p>
             </div>
-          </section> : null}
-        </section>
+            <AdminStatusBadge status={selected.requestStatus} />
+          </header>
+          <div className="lf-admin-detail-grid">
+            <div className="lf-admin-detail-main">
+              <section className="lf-admin-table-card" aria-labelledby="verification-checks-title">
+                <h2 id="verification-checks-title">Checks</h2>
+                <dl className="lf-admin-keyvalues">
+                  <div><dt>Document</dt><dd>{selected.documentType ? labelise(selected.documentType) : "Not checked yet"}</dd></div>
+                  <div><dt>Liveness</dt><dd>{selected.livenessStatus ? labelise(selected.livenessStatus) : "Not checked yet"}</dd></div>
+                  <div><dt>Face match</dt><dd>{selected.faceMatchResult ? labelise(selected.faceMatchResult) : "Not checked yet"}</dd></div>
+                  <div><dt>Why it needs review</dt><dd>{selected.reasonCode ? labelise(selected.reasonCode) : "Not recorded"}</dd></div>
+                  <div><dt>Checked by</dt><dd>{selected.providerKey ? labelise(selected.providerKey) : "–"}</dd></div>
+                  <div><dt>Reviewer</dt><dd>{selected.assignedReviewerName ?? "Unassigned"}</dd></div>
+                </dl>
+              </section>
+              <AdminNote icon="shield_lock">Only check results are shown here. Document images, selfies and face data are never displayed in admin.</AdminNote>
+            </div>
+            <aside className="lf-admin-detail-rail">
+              {canReview ? <section className="lf-admin-table-card lf-admin-form-card" aria-label="Review actions">
+                <h2>Review</h2>
+                <label style={labelStyle}>Note or reason for a retry
+                  <textarea value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} rows={3} placeholder="Don’t enter document numbers or Vault details." />
+                </label>
+                <div className="lf-admin-decision-actions">
+                  {!selected.assignedReviewerUserId ? <button type="button" className="lf-admin-row-button" onClick={() => void runAction(selected.id, "assign_to_me")} disabled={actionLoading === `${selected.id}:assign_to_me`}>{actionLoading === `${selected.id}:assign_to_me` ? "Assigning…" : "Assign to me"}</button> : null}
+                  <button type="button" className="lf-admin-row-button" onClick={() => void runAction(selected.id, "add_note")} disabled={!reviewNote.trim() || actionLoading === `${selected.id}:add_note`}>{actionLoading === `${selected.id}:add_note` ? "Saving…" : "Add review note"}</button>
+                </div>
+                {selected.requestStatus === "failed" || selected.requestStatus === "expired" || selected.requestStatus === "review_required" ? <div className="lf-admin-decision-footer"><span /><button type="button" style={primaryButtonStyle} onClick={() => void runAction(selected.id, "retry")} disabled={!reviewNote.trim() || actionLoading === `${selected.id}:retry`}>{actionLoading === `${selected.id}:retry` ? "Requesting…" : "Request retry"}</button></div> : null}
+              </section> : null}
+              <p className="lf-admin-verification-boundary"><Icon name="lock" size={20} />Approving identity confirms who someone is. It never gives access to records.</p>
+            </aside>
+          </div>
+        </div>
       ) : null}
       {resourceId && !selected ? <AdminEmptyState title="Case unavailable">This case is not available to your role.</AdminEmptyState> : null}
       {!resourceId ? <section className="lf-admin-verification-queue">
@@ -2537,86 +2521,103 @@ function renderProbateDetail(
   const updateNotes = (value: string) => setDecisionNotes((current) => ({ ...current, [item.id]: value }));
   const history = buildProbateHistory(item);
   return (
-    <section style={panelStyle}>
-      <h2 style={h2Style}>{item.ownerName} / {item.contactName}</h2>
-      <dl style={definitionGridStyle}>
-        <div><dt>Status</dt><dd><AdminStatusBadge status={item.status} /></dd></div>
-        <div><dt>Applicant</dt><dd>{item.contactEmail ?? "No email"}</dd></div>
-        <div><dt>Role</dt><dd>{item.assignedRole.replace(/_/g, " ")}</dd></div>
-        <div><dt>Evidence count</dt><dd>{item.evidence.length}</dd></div>
-        <div><dt>Case type</dt><dd>{labelise(item.caseType)}</dd></div>
-        <div><dt>Applicant message</dt><dd>{item.applicantStatusMessage || "Not available"}</dd></div>
-      </dl>
-      {actions.terminal ? (
-        <section style={contextPanelStyle}>
-          <h3 style={h3Style}>Terminal state</h3>
-          <p style={mutedStyle}>This case is {labelise(item.status)}. Terminal approve/reject actions are unavailable; evidence and history remain inspectable.</p>
-          {actions.canRevoke && canDecide ? (
-            <>
-              <label style={labelStyle}>Revocation notes
-                <textarea value={notes} onChange={(event) => updateNotes(event.target.value)} placeholder="Record the operational reason before revoking access." rows={3} />
-              </label>
-              <button type="button" style={dangerButtonStyle} onClick={() => void runAction(item.id, "revoke")} disabled={actionLoading === `${item.id}:revoke`}>
-                {actionLoading === `${item.id}:revoke` ? "Revoking..." : "Revoke access"}
-              </button>
-            </>
-          ) : null}
-        </section>
-      ) : null}
-      {!actions.terminal ? (
-        <section style={contextPanelStyle}>
-          <h3 style={h3Style}>Decision controls</h3>
-          {canDecide ? (
-            <>
-              <label style={labelStyle}>Decision notes
-                <textarea value={notes} onChange={(event) => updateNotes(event.target.value)} placeholder="Record the operational reason for this probate case action." rows={3} />
-              </label>
-              <div style={rowStyle}>
-                {actions.canReview ? <button type="button" style={secondaryButtonStyle} onClick={() => void runAction(item.id, "review")} disabled={actionLoading === `${item.id}:review`}>{actionLoading === `${item.id}:review` ? "Saving..." : "Mark under review"}</button> : null}
-                {actions.canRequestInformation ? <button type="button" style={secondaryButtonStyle} onClick={() => void runAction(item.id, "request_information")} disabled={actionLoading === `${item.id}:request_information`}>{actionLoading === `${item.id}:request_information` ? "Saving..." : "Request information"}</button> : null}
-                {actions.canApprove ? <button type="button" style={primaryButtonStyle} onClick={() => void runAction(item.id, "approve")} disabled={actionLoading === `${item.id}:approve`}>{actionLoading === `${item.id}:approve` ? "Approving..." : "Approve"}</button> : null}
-                {actions.canReject ? <button type="button" style={dangerButtonStyle} onClick={() => void runAction(item.id, "reject")} disabled={actionLoading === `${item.id}:reject`}>{actionLoading === `${item.id}:reject` ? "Rejecting..." : "Reject"}</button> : null}
-              </div>
-            </>
-          ) : <p style={mutedStyle}>You can inspect this case but do not have permission to change probate state.</p>}
-        </section>
-      ) : null}
-      <h3 style={h3Style}>Evidence review</h3>
-      <AdminDataTable
-        caption="Probate evidence review"
-        description={<p style={mutedStyle}>Open files through audited, short-lived signed links. Evidence remains case-scoped and is never exposed as a public bucket URL.</p>}
-        columns={[
-          { key: "file", header: "File", render: (evidence) => <>{evidence.fileName}<small>{labelise(evidence.evidenceType)}</small></> },
-          { key: "status", header: "Review status", render: (evidence) => <AdminStatusBadge status={evidence.reviewStatus ?? "submitted"} /> },
-          { key: "type", header: "Type", render: (evidence) => <>{evidence.mimeType}<small>{formatFileSize(evidence.sizeBytes ?? 0)}</small></> },
-          { key: "created", header: "Submitted", render: (evidence) => formatDate(evidence.createdAt) },
-          {
-            key: "open",
-            header: "Action",
-            render: (evidence) => canDecide ? (
-              <button type="button" style={secondaryButtonStyle} onClick={() => void openEvidence(item.id, evidence.id)} disabled={evidenceLoading === `${item.id}:${evidence.id}`}>
-                {evidenceLoading === `${item.id}:${evidence.id}` ? "Opening..." : "Open evidence"}
-              </button>
-            ) : <span style={mutedInlineStyle}>Review permission required</span>,
-          },
-        ]}
-        rows={item.evidence}
-        getRowKey={(evidence) => evidence.id}
-        emptyState={<AdminEmptyState title="No evidence metadata">No evidence metadata is linked to this case.</AdminEmptyState>}
-      />
-      <section style={contextPanelStyle}>
-        <h3 style={h3Style}>Case history</h3>
-        <ol style={eventListStyle}>
-          {history.map((entry) => (
-            <li key={entry.key}>
-              <strong>{entry.label}</strong>
-              <span>{entry.detail}</span>
-              <small>{formatDate(entry.at)}</small>
-            </li>
-          ))}
-        </ol>
-      </section>
-    </section>
+    <div className="lf-admin-detail">
+      <header className="lf-admin-detail-head">
+        <div>
+          <h2>{item.ownerName}</h2>
+          <p>Case {item.id.slice(0, 8)} · reported by {item.contactName} ({labelise(item.assignedRole).toLowerCase()}) · {formatDate(item.submittedAt)}</p>
+        </div>
+        <AdminStatusBadge status={item.status} />
+      </header>
+      <div className="lf-admin-detail-grid">
+        <div className="lf-admin-detail-main">
+          <section className="lf-admin-table-card" aria-labelledby="probate-details-title">
+            <h2 id="probate-details-title">Details</h2>
+            <dl className="lf-admin-keyvalues">
+              <div><dt>Reported by</dt><dd>{item.contactName}<small>{item.contactEmail ?? "No email"}</small></dd></div>
+              <div><dt>Role</dt><dd>{labelise(item.assignedRole)}</dd></div>
+              <div><dt>Case type</dt><dd>{labelise(item.caseType)}</dd></div>
+              <div><dt>Evidence</dt><dd>{item.evidence.length} file{item.evidence.length === 1 ? "" : "s"}</dd></div>
+              <div><dt>Message to the reporter</dt><dd>{item.applicantStatusMessage || "None yet"}</dd></div>
+            </dl>
+          </section>
+          <div className="lf-admin-table-card">
+            <h2>Evidence review</h2>
+            <p className="lf-admin-table-card-note">Files open in a secure viewer through a short-lived link, and every view is recorded.</p>
+            <AdminDataTable
+              caption="Probate evidence review"
+              columns={[
+                { key: "file", header: "File", render: (evidence) => <><span className="lf-admin-cell-title">{evidence.fileName}</span><small>{labelise(evidence.evidenceType)} · {formatFileSize(evidence.sizeBytes ?? 0)}</small></> },
+                { key: "status", header: "Status", render: (evidence) => <AdminStatusBadge status={evidence.reviewStatus ?? "submitted"} /> },
+                { key: "created", header: "Added", render: (evidence) => formatDate(evidence.createdAt) },
+                {
+                  key: "open",
+                  header: "",
+                  render: (evidence) => canDecide ? (
+                    <button type="button" className="lf-admin-row-button" onClick={() => void openEvidence(item.id, evidence.id)} disabled={evidenceLoading === `${item.id}:${evidence.id}`}>
+                      {evidenceLoading === `${item.id}:${evidence.id}` ? "Opening…" : "Open evidence"}
+                    </button>
+                  ) : null,
+                },
+              ]}
+              rows={item.evidence}
+              getRowKey={(evidence) => evidence.id}
+              emptyState={<AdminEmptyState icon="description" title="No evidence yet">Files the reporter adds appear here.</AdminEmptyState>}
+            />
+          </div>
+          <details className="lf-admin-table-card lf-admin-history">
+            <summary><h2>Case history</h2><span>{history.length} event{history.length === 1 ? "" : "s"}</span></summary>
+            <ol>
+              {history.map((entry) => (
+                <li key={entry.key}>
+                  <strong>{entry.label}</strong>
+                  <span>{entry.detail}</span>
+                  <small>{formatDate(entry.at)}</small>
+                </li>
+              ))}
+            </ol>
+          </details>
+        </div>
+        <aside className="lf-admin-detail-rail">
+          {actions.terminal ? (
+            <section className="lf-admin-table-card lf-admin-form-card" aria-label="Terminal state">
+              <h2>Case closed</h2>
+              <p className="lf-admin-muted">This case is {labelise(item.status).toLowerCase()}. It can’t be approved or rejected again; its evidence and history stay available.</p>
+              {actions.canRevoke && canDecide ? (
+                <>
+                  <label style={labelStyle}>Reason for revoking access
+                    <textarea value={notes} onChange={(event) => updateNotes(event.target.value)} placeholder="Why access is being revoked" rows={3} />
+                  </label>
+                  <button type="button" className="lf-admin-danger-button" onClick={() => void runAction(item.id, "revoke")} disabled={actionLoading === `${item.id}:revoke`}>
+                    {actionLoading === `${item.id}:revoke` ? "Revoking…" : "Revoke access"}
+                  </button>
+                </>
+              ) : null}
+            </section>
+          ) : (
+            <section className="lf-admin-table-card lf-admin-form-card" aria-label="Decision">
+              <h2>Decision</h2>
+              {canDecide ? (
+                <>
+                  <label style={labelStyle}>Reason (required)
+                    <textarea value={notes} onChange={(event) => updateNotes(event.target.value)} placeholder="What you checked and why you decided" rows={4} />
+                  </label>
+                  <div className="lf-admin-decision-actions">
+                    {actions.canReview ? <button type="button" className="lf-admin-row-button" onClick={() => void runAction(item.id, "review")} disabled={actionLoading === `${item.id}:review`}>{actionLoading === `${item.id}:review` ? "Saving…" : "Mark under review"}</button> : null}
+                    {actions.canRequestInformation ? <button type="button" className="lf-admin-row-button" onClick={() => void runAction(item.id, "request_information")} disabled={actionLoading === `${item.id}:request_information`}>{actionLoading === `${item.id}:request_information` ? "Saving…" : "Request more information"}</button> : null}
+                  </div>
+                  <div className="lf-admin-decision-footer">
+                    {actions.canReject ? <button type="button" className="lf-admin-danger-button" onClick={() => void runAction(item.id, "reject")} disabled={actionLoading === `${item.id}:reject`}>{actionLoading === `${item.id}:reject` ? "Rejecting…" : "Reject"}</button> : <span />}
+                    {actions.canApprove ? <button type="button" style={primaryButtonStyle} onClick={() => void runAction(item.id, "approve")} disabled={actionLoading === `${item.id}:approve`}>{actionLoading === `${item.id}:approve` ? "Accepting…" : "Accept evidence"}</button> : null}
+                  </div>
+                </>
+              ) : <p className="lf-admin-muted">You can look at this case but your role can’t change it.</p>}
+            </section>
+          )}
+          <AdminNote icon="lock">Accepting evidence confirms the death and the executor’s authority. It never opens Vault records by itself; the owner’s release choices still apply.</AdminNote>
+        </aside>
+      </div>
+    </div>
   );
 }
 
