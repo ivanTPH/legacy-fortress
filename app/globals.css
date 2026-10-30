@@ -8814,3 +8814,15 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-v52-finding-actions > .lf-v52-finding-primary { border-color: var(--lf-primary-bg); background: var(--lf-primary-bg); color: var(--lf-primary-text); }
 .lf-v52-finding-actions > :focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 2px; }
 .lf-v52-finding-note { margin: 0; color: var(--lf-text-secondary); font-size: 13px; }
+
+/* Linked People: Undo / review-again row and optional address+notes. */
+.lf-linked-people-undo { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 8px; }
+.lf-linked-people-undo button { min-height: var(--lf-target-min); padding: 0 14px; border: 1px solid var(--lf-border-control); border-radius: var(--lf-radius-input); background: var(--lf-surface-card); color: var(--lf-link); font: inherit; font-weight: 600; cursor: pointer; }
+.lf-linked-people-undo button:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 2px; }
+.lf-linked-people-more { display: grid; gap: 10px; }
+.lf-linked-people-more > summary { min-height: var(--lf-target-min); display: flex; align-items: center; color: var(--lf-link); font-weight: 600; cursor: pointer; }
+.lf-linked-people-more textarea { width: 100%; min-height: 64px; padding: 10px 12px; border: 1px solid var(--lf-border-input); border-radius: var(--lf-radius-input); background: var(--lf-surface-card); color: var(--lf-text); font: inherit; font-size: 16px; }
+.lf-linked-people-more small { color: var(--lf-text-secondary); font-size: 13px; }
+
+/* V5.2: section titles use the same bold weight as the Dashboard. */
+.lf-v52-category-title-row h1 { font-weight: var(--lf-weight-bold, 700); }

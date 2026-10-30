@@ -341,3 +341,66 @@ export async function sendRecordLinkedPersonInvitation(client: SupabaseClient, i
     origin: input.origin,
   });
 }
+
+/**
+ * True once the 30 Oct 2026 Linked People migrations are live (one-step save, Undo,
+ * re-review, private address/notes). Before that, callers keep the earlier behaviour.
+ */
+export async function linkedPeopleV2Available(client: SupabaseClient) {
+  const probe = await client.from("record_link_requests").select("request_id").limit(1);
+  return !probe.error;
+}
+
+/** New person + record link in one database transaction; safe to retry with the same requestId. */
+export async function saveRecordLinkedPersonAtomic(client: SupabaseClient, input: {
+  requestId: string;
+  recordType: LinkedRecordType;
+  recordId: string;
+  existingPersonId?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  relationship?: string;
+  role: string;
+  roleOtherText?: string;
+}) {
+  const result = await client.rpc("lf_save_record_linked_person", {
+    p_request_id: input.requestId,
+    p_record_type: input.recordType,
+    p_record_id: input.recordId,
+    p_person_id: input.existingPersonId || null,
+    p_name: input.existingPersonId ? null : input.name?.trim() || null,
+    p_email: input.existingPersonId ? null : normalizeLinkedPersonEmail(input.email ?? "") || null,
+    p_phone: input.existingPersonId ? null : normalizeLinkedPersonPhone(input.phone ?? "") || null,
+    p_relationship: input.existingPersonId ? null : input.relationship?.trim() || null,
+    p_role: input.role.trim(),
+    p_role_other_text: input.role.trim() === "Other" ? input.roleOtherText?.trim() || null : null,
+  });
+  if (result.error || !Array.isArray(result.data) || result.data.length !== 1) {
+    throw new Error(result.error?.message || "Could not save this person. Nothing was changed; try again.");
+  }
+  const row = result.data[0] as { person_id: string; link_id: string; created_person: boolean };
+  return { personId: row.person_id, linkId: row.link_id, createdPerson: row.created_person };
+}
+
+export async function undoRecordLinkRemoval(client: SupabaseClient, linkId: string) {
+  const result = await client.rpc("lf_undo_record_link_removal", { p_link_id: linkId });
+  if (result.error) throw new Error(result.error.message || "Undo is no longer available.");
+}
+
+export async function reopenLinkedPersonSuggestion(client: SupabaseClient, linkId: string) {
+  const result = await client.rpc("lf_reopen_linked_person_suggestion", { p_link_id: linkId });
+  if (result.error) throw new Error(result.error.message || "Could not put this suggestion back for review.");
+}
+
+/** Owner-only address and notes, kept apart from the contact row a linked person can read. */
+export async function savePersonPrivateDetails(client: SupabaseClient, input: { ownerUserId: string; personId: string; address?: string; notes?: string }) {
+  const address = input.address?.trim().slice(0, 300) || null;
+  const notes = input.notes?.trim().slice(0, 1000) || null;
+  if (!address && !notes) return;
+  const result = await client.from("contact_private_details").upsert(
+    { contact_id: input.personId, owner_user_id: input.ownerUserId, address, notes },
+    { onConflict: "contact_id" },
+  );
+  if (result.error) throw new Error("The person was saved, but their address and notes were not.");
+}

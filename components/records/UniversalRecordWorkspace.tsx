@@ -4596,7 +4596,8 @@ export default function UniversalRecordWorkspace({
               <input style={inputStyle} value={form.location} onChange={(event) => setForm((prev) => ({ ...prev, location: event.target.value }))} />
             </label>
           ) : null}
-          {!isTrustedContacts ? (
+          {/* V5.2 rule 48: people are added through the People section ("Save and add person"), not inline fields. */}
+          {!isTrustedContacts && !canShowLinkedPeople ? (
             legalLinkedContactDefinition ? (
               legalContactFields
             ) : (
@@ -6454,7 +6455,8 @@ function detectProvider(input: string, catalog: ProviderCatalogRow[]) {
     const terms = [item.provider_key.toLowerCase(), item.display_name.toLowerCase(), ...(item.match_terms ?? []).map((term) => term.toLowerCase())];
     for (const term of terms) {
       if (!term) continue;
-      if (normalized === term || normalized.includes(term)) {
+      // Whole words only: a one-letter term such as "x" must not match "extraction".
+      if (normalized === term || new RegExp(`(^|[^a-z0-9])${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^a-z0-9])`).test(normalized)) {
         const score = term.length;
         if (!best || score > best.score) best = { score, row: item };
       }
@@ -6782,11 +6784,12 @@ async function createLegacyRecordAttachment({
     mime_type: file.type || "application/octet-stream",
     size_bytes: file.size,
     checksum: null,
-  });
+  }).select("id").maybeSingle();
   if (insertResult.error) {
     await supabase.storage.from(storageBucket).remove([storagePath]);
     return { ok: false, error: `Attachment link failed: ${insertResult.error.message}.` };
   }
+  void startDocumentExtraction((insertResult.data as { id?: string } | null)?.id, recordId, "attachment");
 
   return { ok: true };
 }

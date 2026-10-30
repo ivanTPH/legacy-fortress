@@ -26,7 +26,7 @@ export function isDocumentExtractionEnabled() {
 }
 
 /** Fire-and-forget after an upload. Findings arrive as an event on the record page. */
-export async function startDocumentExtraction(documentId: string | null | undefined, recordId: string) {
+export async function startDocumentExtraction(documentId: string | null | undefined, recordId: string, source: "document" | "attachment" = "document") {
   if (!documentId || !recordId || !isDocumentExtractionEnabled() || typeof window === "undefined") return;
   const emit = (detail: DocumentExtractionEventDetail) => window.dispatchEvent(new CustomEvent(DOCUMENT_EXTRACTION_EVENT, { detail }));
   emit({ recordId, documentId, status: "reading" });
@@ -34,7 +34,7 @@ export async function startDocumentExtraction(documentId: string | null | undefi
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     if (!token) throw new Error("no_session");
-    const response = await fetch(`/api/documents/${encodeURIComponent(documentId)}/extract`, {
+    const response = await fetch(`/api/documents/${encodeURIComponent(documentId)}/extract${source === "attachment" ? "?source=attachment" : ""}`, {
       method: "POST",
       headers: { authorization: `Bearer ${token}` },
       cache: "no-store",
