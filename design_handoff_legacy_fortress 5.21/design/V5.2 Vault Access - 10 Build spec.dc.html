@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Vault access build spec</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#efebe7;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;color:#1f1715;-webkit-font-smoothing:antialiased}
+a{color:#7a3d27}a:hover{color:#2b1714}
+.sec{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px}
+.tag{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px}
+.blk{background:#fff;border:1px solid #ebe4de;border-radius:12px;padding:20px 24px;display:flex;flex-direction:column;gap:10px}
+h2{margin:0;font-size:19px;line-height:26px}
+p,li{font-size:14.5px;line-height:22px}
+p{margin:0;color:#3a2c28}
+ol,ul{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px}
+code{font:13px ui-monospace,Menlo,monospace;background:#f3eeea;padding:1px 5px;border-radius:4px}
+th,td{text-align:left;vertical-align:top;padding:9px 12px;border-top:1px solid #f0ebe7;font-size:14px;line-height:20px}
+th{font-size:13px;color:#6b5f5a;font-weight:600;border-top:0}
+.tc{display:inline-block;font-size:12px;font-weight:700;padding:2px 7px;border-radius:5px;background:#fbf0dc;color:#7a4f00}
+</style>
+</helmet>
+<div style="width:1600px;min-height:3600px;box-sizing:border-box;padding:40px 48px;display:flex;flex-direction:column;gap:22px">
+<div style="display:flex;flex-direction:column;gap:8px;max-width:1100px">
+<div style="display:flex;align-items:baseline;gap:10px"><b class="sec">X</b><span style="font-size:15px;font-weight:600">Build spec, acceptance and open questions</span></div>
+<p>The same content is in <code>design_handoff_legacy_fortress 5.21/VAULT_ACCESS.md</code> for the coding agent. This is a design addition: the data model below is a proposal to identify what's needed, not an instruction to build it. It needs owner approval first. Linked People PR 1 (<code>feat/v52-linked-people-data</code>, <code>ccde902</code>) is kept as it is.</p>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;align-items:start">
+<div class="blk"><h2><b class="tag">x1</b>Rules</h2>
+<ol>
+<li>Five separate facts: contact and links, invitation, identity, nomination (later), access (now). Only access opens anything.</li>
+<li>Access is created only by the permission service: the owner's Give access, an approved release, or a confirmed and activated legal authority. Links, invitations, ID checks and nominations never create it.</li>
+<li>A whole-Vault nomination is one Vault-level record. Never simulate it with record links.</li>
+<li>Every confirmation states current access in words: "Access now: none" (nomination, authority) or "Access starts as soon as you confirm" (sharing now).</li>
+<li>Before release a nominee sees only that they're nominated, the kind and the state. Never record names, counts, values, documents or scope.</li>
+<li>Emails and notifications carry no record names, values or scope.</li>
+<li>Release needs all four steps: death reported, evidence checked, death verified, release approved. The nominee must be ID verified. Reporting a death alone never opens anything.</li>
+<li>Power of Attorney: the type limits what can ever be seen; the owner can narrow it, never widen it. Identity, validity of the authority and "usable now" are three separate checks.</li>
+<li>The owner can stop, cancel or withdraw any access at any time. It takes effect immediately, is written to Record history, and the person is told without details.</li>
+<li>Whole-Vault scope includes records added later, minus the owner's exceptions. Exceptions are never shown or counted to the nominee.</li>
+<li>Other Vaults the owner is linked to, the Partner portal and Platform Admin are never part of Vault access.</li>
+<li>Family default is "After I die". Sharing the whole Vault now is allowed but warned; selected records is the default for sharing now.</li>
+</ol></div>
+
+<div class="blk"><h2><b class="tag">x2</b>Where it lives</h2>
+<ul>
+<li>People &amp; Access › new <b>Vault access</b> tab (va-v1 mobile, va-w1 web): Can see now · Nominated for later · Legal authority · Ended.</li>
+<li>Person page › Vault access card gains <b>Now</b> and <b>Later</b> rows (va-n1, va-n7). Primary action: Set up Vault access.</li>
+<li>Set-up steps: kind → scope → release → plain-English check → confirm (va-n2–n6). Web: one centred dialog (va-w3, va-w4).</li>
+<li>Sharing now ends in the existing Give access save (va-s3). Shown on each record with the existing access badge (va-s5, AGENTS rule 27).</li>
+<li>Recipient: invitation and ID check reuse Journeys 2 and 3; locked state in the Vault switcher (qm2); release tracker joins Journeys 6c (va-r7).</li>
+<li>Early access requests become a Needs you item in the owner's To do (va-v7).</li>
+</ul>
+<h2 style="margin-top:8px"><b class="tag">x3</b>Field rules</h2>
+<table style="border-collapse:collapse;width:100%"><thead><tr><th>Field</th><th>Rule</th></tr></thead><tbody>
+<tr><td>Kind</td><td>Required: after death · now · Power of Attorney · contact only</td></tr>
+<tr><td>Scope</td><td>Required: whole Vault · selected records (at least 1)</td></tr>
+<tr><td>Exceptions</td><td>Optional, whole Vault only; records chosen from the Vault</td></tr>
+<tr><td>Wait for probate</td><td>Optional switch <span class="tc">To confirm</span></td></tr>
+<tr><td>Tell the person</td><td>On by default if they've joined; content-free notification</td></tr>
+<tr><td>Permission (now)</td><td>View only (default) · view and suggest changes (approval path 7a–7f)</td></tr>
+<tr><td>Documents (now)</td><td>Include each record's documents, default on</td></tr>
+<tr><td>Until (now)</td><td>Until stopped · until a date (tomorrow or later)</td></tr>
+<tr><td>Authority type</td><td>Required: LPA property and finances · LPA health and welfare · Enduring PoA · General PoA · other</td></tr>
+<tr><td>Authority document</td><td>Required; uses the existing document upload</td></tr>
+<tr><td>Registered</td><td>Required: yes · not yet · not sure; reference optional</td></tr>
+<tr><td>Usable when</td><td>Required; health and welfare is always "only if I lack capacity"</td></tr>
+<tr><td>Areas</td><td>Pre-ticked from the type; can only be narrowed</td></tr>
+</tbody></table></div>
+</div>
+
+<div class="blk"><h2><b class="tag">x4</b>Proposed data (needs approval; do not build silently)</h2>
+<table style="border-collapse:collapse;width:100%"><thead><tr><th style="width:22%">Table</th><th>Fields</th><th style="width:28%">Notes</th></tr></thead><tbody>
+<tr><td><code>vault_nominations</code></td><td>id, vault_id, person_id, kind (estate | attorney), scope (whole_vault | selected), view_level, release_condition (death_release | death_release_and_probate), status (active | cancelled | released | ended), notify_person, created_by, created_at, cancelled_by, cancelled_at, released_at</td><td>One row per person and kind. Whole Vault is one row, never per record.</td></tr>
+<tr><td><code>vault_nomination_records</code></td><td>nomination_id, record_id, record_type, mode (include | exclude)</td><td>include = selected records; exclude = whole-Vault exceptions.</td></tr>
+<tr><td><code>legal_authorities</code></td><td>id, vault_id, person_id, authority_type, registered (yes | no | unknown), registration_ref, usable_when (with_consent | lacks_capacity_only), restrictions_note, document_id, scope_areas[], status (pending_check | confirmed | needs_attention | rejected | withdrawn | ended), activated_at, activated_by, withdrawn_at, withdrawn_reason</td><td>registration_ref and restrictions_note are sensitive: encrypt; reviewers and the attorney only.</td></tr>
+<tr><td><code>access_grants</code> (existing)</td><td>Unchanged rules. Proposed: a source (owner_grant | estate_release | legal_authority), source_id, ends_at, paused_at</td><td>A whole-Vault grant may need a Vault-level grant type. Flag, don't assume.</td></tr>
+<tr><td>Access requests (existing)</td><td>New request type: nominee early access</td><td>Owner decides; creates nothing by itself.</td></tr>
+<tr><td>Release (existing)</td><td>Reuse death report and probate review (Admin › Probate &amp; deaths)</td><td>One release per Vault applies to all active nominations; nominee ID must be verified.</td></tr>
+</tbody></table>
+<p>RLS: owners see their own nominations and authorities; a nominee sees only their own nomination's kind and state through a narrow view (no scope, no records); reviewers through Platform Admin only; nothing across Vaults. Audit (no values or document text): nomination.created / changed / cancelled / released, nomination.exception_added / removed, authority.recorded / checked / confirmed / needs_attention / activated / withdrawn, access.given / changed / stopped / ended / paused, early_access.requested / declined / shared.</p></div>
+
+<div class="blk"><h2><b class="tag">x5</b>Acceptance criteria (adds 13–26; Linked People 1–12 unchanged)</h2>
+<ol start="13">
+<li>From People &amp; Access, the owner nominates a person for the whole Vault after death. It's saved as one Vault-level nomination and no record links are created.</li>
+<li>A whole-Vault nomination includes records added later; exceptions are never visible or counted to the nominee.</li>
+<li>A selected-records nomination covers only the chosen records; new records aren't added.</li>
+<li>Confirming a nomination or recording an authority creates no access grant, and the check screen says "Access now: none".</li>
+<li>Before release, the nominee's screens and API return no record names, counts, values, documents or scope.</li>
+<li>Reporting a death changes no access. Access starts only after release approval, and only for an ID-verified nominee.</li>
+<li>Sharing now grants access only on Give access, only to the selected records, and stops automatically on its end date.</li>
+<li>Power of Attorney: access only when ID is verified, the authority is confirmed and activation is recorded; scope never exceeds the authority type; withdrawal stops access at once.</li>
+<li>The owner can stop access, cancel a nomination or withdraw an authority at any time; it's immediate, recorded in Record history, and the person is told without details.</li>
+<li>Executor, attorney, spouse, child, beneficiary or nominee status never grants access by itself (tested in combination).</li>
+<li>Vault access never includes other Vaults, the Partner portal or Platform Admin.</li>
+<li>An early-access request creates an owner To do item; nothing is shared unless the owner completes Give access.</li>
+<li>Emails and notifications contain no record names, values or scope.</li>
+<li>V5.2 accessibility on every new screen: 13px minimum, 44px targets, light and dark, labelled controls, logical focus order.</li>
+</ol></div>
+
+<div class="blk"><h2><b class="tag">x6</b>Open questions for the owner (and a solicitor where legal)</h2>
+<ol>
+<li>"Wait for the grant of probate": offered as an option, the default, or not at all?</li>
+<li>Who can report a death: the executor only, any nominee, or anyone connected?</li>
+<li>"Only if I lack mental capacity": what evidence is needed, who decides, and is the owner told first?</li>
+<li>Does access given during the owner's lifetime pause or end when a death is reported? (Drawn: paused.)</li>
+<li>Are Wills excluded from an attorney's scope, or shown read-only?</li>
+<li>Is a nominee told the scope (whole Vault or selected) before release? (Drawn: no.)</li>
+<li>Does an estate release need confirmed executor authority, or is a verified death enough?</li>
+<li>Health and welfare LPA: which Vault areas does it map to? There's no health area today.</li>
+<li>Checking the register: done by a reviewer by hand, or through the Office of the Public Guardian's service?</li>
+<li>Several nominees: released together (drawn) or in an order the owner sets?</li>
+<li>Nominee invitation expiry (drawn: 30 days) and reminders.</li>
+<li>"View and suggest changes" when sharing now: allowed for everyone or professionals only?</li>
+<li>Carried over: a firm as a person or an organisation.</li>
+</ol></div>
+
+<div class="blk"><h2><b class="tag">x7</b>Screen IDs</h2>
+<p>va-a1–a4 overview · va-n1–n7 nominate (mobile, plus dark n6) · va-w1–w4 web · va-s1–s5 share now · va-l1–l8 Power of Attorney · va-r1–r9 recipient (r9 dark) · va-v1–v7 review and stop · va-p1–p2 property · va-g1–g15 edge cases. The va- prefix avoids clashing with existing ids (Records Access uses p1–p3 and s1–s6). Mapping to approved boards: va-a4.</p></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":3600}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

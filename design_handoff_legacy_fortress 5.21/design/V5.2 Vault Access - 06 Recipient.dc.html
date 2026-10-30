@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>What the nominee sees</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&amp;display=block">
+<style>
+body{margin:0;background:#efebe7;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;color:#1f1715;-webkit-font-smoothing:antialiased}
+a{color:#7a3d27}a:hover{color:#2b1714}
+.ms{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;width:1em;height:1em;overflow:hidden;flex:none;letter-spacing:normal;text-transform:none;white-space:nowrap;display:inline-block}
+.ph{--pg:#f7f4f1;--hdr:#fff;--cd:#fff;--bd:#ebe4de;--dv:#f0ebe7;--tx:#1f1715;--t2:#6b5f5a;--t3:#4a3f3a;--lk:#7a3d27;--pb:#2b1714;--pt:#fff;--ob:#e3dad3;--ib:#8c7f79;--nt:#f0ebe7;--avb:#f3e6df;--avt:#6e3a28;--amb:#fbf0dc;--amt:#7a4f00;--gnb:#e6f2ea;--gnt:#1e6b3a;--tlb:#e3eef0;--tlt:#1f5a55;--nb:#f0ebe7;--ntx:#4a3f3a;--rd:#b3261e}
+.dk{--pg:#171210;--hdr:#1c1613;--cd:#241c19;--bd:#3a302b;--dv:#2f2622;--tx:#f3ece7;--t2:#bcaea6;--t3:#d8ccc5;--lk:#f0a98a;--pb:#efe3da;--pt:#1b1411;--ob:#4d413b;--ib:#a89a92;--nt:#2f2622;--avb:#4a2e22;--avt:#f4c3ad;--amb:#3d2e0f;--amt:#f3c56b;--gnb:#183a26;--gnt:#8fd6a8;--tlb:#173d3a;--tlt:#9fd9d2;--nb:#2f2622;--ntx:#e6dad3;--rd:#f2a59f}
+.scr{display:flex;flex-direction:column;gap:12px;flex:none}
+.lbl{font-size:13px;color:#6b5f5a}
+.tag{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px;color:#1f1715}
+.sec{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px}
+.ph{width:390px;height:844px;flex:none;border-radius:44px;overflow:hidden;background:var(--pg);color:var(--tx);box-shadow:0 0 0 10px #1a1a1a,0 24px 60px rgba(0,0,0,.25);display:flex;flex-direction:column;position:relative}
+.sb{height:47px;flex:none;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 8px 40px;box-sizing:border-box;font-size:16px;font-weight:600;background:var(--hdr)}
+.uat{height:28px;flex:none;background:#8c1d18;color:#fffffe;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.hd{height:56px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 8px;background:var(--hdr);border-bottom:1px solid var(--bd)}
+.bk{height:44px;display:flex;align-items:center;padding:0 10px 0 2px;color:var(--lk);font:inherit;font-size:16px;background:none;border:0}
+.bd{flex:1;min-height:0;overflow:auto;padding:14px 16px 24px;display:flex;flex-direction:column;gap:14px}
+.ft{flex:none;background:var(--hdr);border-top:1px solid var(--bd);padding:12px 16px 34px;display:flex;flex-direction:column;gap:8px}
+.h1{margin:0;font-size:28px;line-height:34px;font-weight:700}
+.st{font-size:14px;color:var(--t2)}
+.p{margin:0;font-size:15px;line-height:22px;color:var(--t3)}
+.gh{font-size:13px;font-weight:600;color:var(--t2);padding:0 4px}
+.card{flex:none;background:var(--cd);border:1px solid var(--bd);border-radius:12px;overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;min-height:52px;padding:8px 14px;border-top:1px solid var(--dv);font-size:16px;box-sizing:border-box}
+.row:first-child{border-top:0}
+.rk{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.rs{font-size:14px;line-height:19px;color:var(--t2)}
+.av{flex:none;width:40px;height:40px;border-radius:20px;background:var(--avb);color:var(--avt);font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.it{flex:none;width:36px;height:36px;border-radius:9px;background:var(--pb);color:var(--pt);display:flex;align-items:center;justify-content:center}
+.io{flex:none;width:36px;height:36px;border-radius:18px;border:1.5px solid var(--ib);box-sizing:border-box;color:var(--t2);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600}
+.chip{flex:none;display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border-radius:6px;font-size:13px;font-weight:600;white-space:nowrap}
+.cn{background:var(--nb);color:var(--ntx)}.ca{background:var(--amb);color:var(--amt)}.cg{background:var(--gnb);color:var(--gnt)}.ct{background:var(--tlb);color:var(--tlt)}.co{background:var(--cd);color:var(--tx);box-shadow:inset 0 0 0 1px var(--ib)}
+.btn{flex:none;height:48px;padding:0 16px;box-sizing:border-box;border-radius:12px;font:inherit;font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;width:100%;border:0;cursor:pointer}
+.bp{background:var(--pb);color:var(--pt)}.bo{background:var(--cd);color:var(--tx);border:1px solid var(--ob)}.bt{background:transparent;color:var(--lk);height:44px}
+.note{flex:none;display:flex;gap:10px;padding:12px 14px;background:var(--nt);border-radius:10px;font-size:14px;line-height:20px;color:var(--tx)}
+.done{background:#1e6b3a;color:#fff;border-radius:18px}
+.cur{background:var(--tlt);color:#fff;border-radius:18px}
+.hdr2{display:flex;align-items:center;justify-content:space-between;padding:0 8px;height:56px;flex:none;background:var(--hdr);border-bottom:1px solid var(--bd)}
+.ib{width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:0;background:none;color:var(--tx)}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--cd);border-radius:20px 20px 0 0;box-shadow:0 -12px 40px rgba(0,0,0,.2);padding:10px 16px 34px;display:flex;flex-direction:column;gap:12px}
+.grab{width:40px;height:5px;border-radius:3px;background:var(--ob);align-self:center}
+.scrim{position:absolute;inset:0;background:rgba(31,23,21,.4)}
+</style>
+</helmet>
+<div style="width:3930px;height:1120px;box-sizing:border-box;padding:40px 48px;display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:8px;max-width:1200px">
+<div style="display:flex;align-items:baseline;gap:10px"><b class="sec">R</b><span style="font-size:15px;font-weight:600">What the nominee sees, from invitation to release</span></div>
+<p style="margin:0;font-size:14px;line-height:21px;color:#4a3f3a">Lucy's side. Before release she sees that she's nominated and what happens next, never record names, values, counts, documents or what the nomination covers. Emails and notifications carry no details. Joins the approved Journeys 2 (invitation), 3 (ID check) and 6 (death reporting and release).</p>
+</div>
+<div style="display:flex;gap:40px;align-items:flex-start">
+
+<div class="scr"><span class="lbl"><b class="tag">va-r1</b>1 · Invitation email (no details)</span>
+<div class="ph"><div class="sb"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="ms" aria-hidden="true" style="font-size:18px">signal_cellular_alt</span><span class="ms" aria-hidden="true" style="font-size:18px">wifi</span><span class="ms" aria-hidden="true" style="font-size:20px">battery_full</span></span></div>
+<div class="hd"><span class="bk"><span class="ms" aria-hidden="true" style="font-size:26px">chevron_left</span>Inbox</span></div>
+<div class="bd" style="background:var(--cd)">
+<div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:20px;font-weight:700;line-height:26px">Ivan Yardley invited you to Legacy Fortress</span><span class="st">Legacy Fortress · no-reply@legacyfortress.example</span></div>
+<div style="display:flex;align-items:center;gap:10px;padding:8px 0"><span style="flex:none;width:36px;height:36px;border-radius:9px;background:#111;color:#fff;display:flex;align-items:center;justify-content:center"><span class="ms" aria-hidden="true" style="font-size:22px;font-variation-settings:'FILL' 1">apps</span></span><span style="font-weight:600">Legacy Fortress</span></div>
+<p class="p">Hello Lucy,</p>
+<p class="p">Ivan Yardley would like to connect with you on Legacy Fortress, a secure place to keep important records.</p>
+<p class="p">This email doesn't contain any of Ivan's information. To see what he's asked, accept the invitation and sign in.</p>
+<span class="btn bp" style="width:auto;align-self:flex-start">Accept invitation</span>
+<p class="p" style="font-size:14px;color:var(--t2)">This link works for 30 days. If you weren't expecting it, you can ignore this email.</p>
+</div>
+</div></div>
+
+<div class="scr"><span class="lbl"><b class="tag">va-r2</b>2 · Landing (reuses Journeys 2)</span>
+<div class="ph"><div class="sb"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="ms" aria-hidden="true" style="font-size:18px">signal_cellular_alt</span><span class="ms" aria-hidden="true" style="font-size:18px">wifi</span><span class="ms" aria-hidden="true" style="font-size:20px">battery_full</span></span></div><div class="uat">UAT · synthetic data only</div>
+<div class="bd" style="padding-top:28px">
+<span class="st">Step 1 of 4</span>
+<h1 class="h1">Ivan Yardley wants to connect with you</h1>
+<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:10px"><span style="font-weight:600">What you can do</span><ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:15px;line-height:21px"><li>Create your own account</li><li>See what Ivan has asked of you</li><li>Start your own Vault, if you want to</li></ul></div>
+<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:10px"><span style="font-weight:600">What stays private</span><ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:15px;line-height:21px"><li>Ivan's records, unless he shares them</li><li>Your own Vault, which Ivan can't see</li></ul></div>
+</div>
+<div class="ft"><button type="button" class="btn bp">Create account</button><button type="button" class="btn bt">Decline</button></div>
+</div></div>
+
+<div class="scr"><span class="lbl"><b class="tag">va-r3</b>3 · ID check needed (reuses Journeys 3a)</span>
+<div class="ph"><div class="sb"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="ms" aria-hidden="true" style="font-size:18px">signal_cellular_alt</span><span class="ms" aria-hidden="true" style="font-size:18px">wifi</span><span class="ms" aria-hidden="true" style="font-size:20px">battery_full</span></span></div><div class="uat">UAT · synthetic data only</div>
+<div class="bd" style="padding-top:28px">
+<span class="st">Step 3 of 4</span>
+<h1 class="h1">Prove who you are</h1>
+<p class="p">Ivan asks everyone he connects with to check their ID.</p>
+<div class="card">
+<div class="row"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">badge</span></span><span class="rk">A passport, driving licence or national ID</span></div>
+<div class="row"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">photo_camera</span></span><span class="rk">A quick selfie video</span></div>
+<div class="row"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">lock</span></span><span class="rk">Used only to confirm it's you</span></div>
+</div>
+<div class="note"><span class="ms" aria-hidden="true" style="font-size:18px;color:var(--t3);margin-top:1px">info</span><span>Checking your ID doesn't give you access to anything of Ivan's.</span></div>
+</div>
+<div class="ft"><button type="button" class="btn bp">Start ID check</button><button type="button" class="btn bt">Do this later</button></div>
+</div></div>
+
+<div class="scr"><span class="lbl"><b class="tag">va-r4</b>4 · Nominated, locked until release</span>
+<div class="ph"><div class="sb"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="ms" aria-hidden="true" style="font-size:18px">signal_cellular_alt</span><span class="ms" aria-hidden="true" style="font-size:18px">wifi</span><span class="ms" aria-hidden="true" style="font-size:20px">battery_full</span></span></div><div class="uat">UAT · synthetic data only</div>
+<div class="hdr2"><button type="button" class="ib" aria-label="Menu"><span class="ms" aria-hidden="true" style="font-size:24px">menu</span></button><span style="display:flex;align-items:center;gap:4px;font-size:17px;font-weight:600">Ivan Yardley's Vault<span class="ms" aria-hidden="true" style="font-size:20px">expand_more</span></span><span style="width:44px"></span></div>
+<div class="bd">
+<div style="display:flex;flex-direction:column;gap:8px"><h1 class="h1">Ivan has nominated you</h1><span style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip co"><span class="ms" aria-hidden="true" style="font-size:15px">bookmark_added</span>After Ivan's death</span><span class="chip cn"><span class="ms" aria-hidden="true" style="font-size:15px">lock</span>Locked until release</span></span></div>
+<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:8px"><span style="font-weight:600">What this means</span><p class="p">If Ivan dies and the release is approved, you'll be able to see what he chose for you. Until then you can't see anything in his Vault, including what's in it.</p></div>
+<div class="card"><div class="row"><span class="rk">You joined</span><span class="chip cg"><span class="ms" aria-hidden="true" style="font-size:15px">check</span>Done</span></div><div class="row"><span class="rk">Your ID</span><span class="chip cg"><span class="ms" aria-hidden="true" style="font-size:15px">verified_user</span>Verified</span></div><div class="row"><span class="rk">Nothing else is needed now</span></div></div>
+<span class="gh">If you need to</span>
+<div class="card">
+<div class="row"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">contact_support</span></span><span class="rk"><span>Ask Ivan for access now</span><span class="rs">Ivan decides</span></span><span class="ms" aria-hidden="true" style="font-size:22px;color:var(--t2)">chevron_right</span></div>
+<div class="row"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">assignment_late</span></span><span class="rk"><span>Report a death</span><span class="rs">Starts the release checks</span></span><span class="ms" aria-hidden="true" style="font-size:22px;color:var(--t2)">chevron_right</span></div>
+</div>
+</div>
+</div></div>
+
+<div class="scr"><span class="lbl"><b class="tag">va-r5</b>5 · Vault switcher (reuses qm2)</span>
+<div class="ph"><div class="sb"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="ms" aria-hidden="true" style="font-size:18px">signal_cellular_alt</span><span class="ms" aria-hidden="true" style="font-size:18px">wifi</span><span class="ms" aria-hidden="true" style="font-size:20px">battery_full</span></span></div><div class="uat">UAT · synthetic data only</div>
+<div class="hdr2"><span style="width:44px"></span><span style="font-size:17px;font-weight:600">My Vault</span><span style="width:44px"></span></div>
+<div class="bd"><div class="card" style="height:160px"></div><div class="card" style="height:160px"></div></div>
+<div class="scrim"></div>
+<div class="sheet" role="dialog" aria-label="Switch Vault">
+<span class="grab"></span>
+<span style="font-size:20px;font-weight:700">Switch Vault</span>
+<div class="card">
+<div class="row"><span class="av">LY</span><span class="rk"><span style="font-weight:600">Your Vault</span><span class="rs">Lucy Yardley</span></span><span class="ms" aria-hidden="true" style="font-size:22px">check</span></div>
+<div class="row" style="align-items:flex-start;padding:12px 14px"><span class="av" style="background:#e9e2dc;color:#3a2c28">IY</span><span class="rk"><span style="font-weight:600">Ivan Yardley</span><span class="rs">You're nominated · Locked until release</span></span><span class="ms" aria-hidden="true" style="font-size:20px;color:var(--t2)">lock</span></div>
+</div>
+<span class="st">Partner and Admin never appear here. They're separate sign-ins.</span>
+</div>
+</div></div>
+
+<div class="scr"><span class="lbl"><b class="tag">va-r6</b>6 · Asking for access early</span>
+<div class="ph"><div class="sb"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="ms" aria-hidden="true" style="font-size:18px">signal_cellular_alt</span><span class="ms" aria-hidden="true" style="font-size:18px">wifi</span><span class="ms" aria-hidden="true" style="font-size:20px">battery_full</span></span></div><div class="uat">UAT · synthetic data only</div>
+<div class="hd"><button type="button" class="bk"><span class="ms" aria-hidden="true" style="font-size:26px">chevron_left</span>Ivan Yardley's Vault</button><span></span></div>
+<div class="bd">
+<h1 class="h1">Ask Ivan for access now</h1>
+<p class="p">Ivan gets a request in his To do. He decides whether to share anything. Asking doesn't give you access.</p>
+<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:15px;font-weight:600">Message to Ivan · Optional</span><span style="min-height:120px;box-sizing:border-box;border-radius:10px;border:1px solid var(--ib);background:var(--cd);padding:12px;font-size:16px;line-height:22px">I'm sorting the house insurance with Mum and need the policy details.</span></label>
+<div class="note"><span class="ms" aria-hidden="true" style="font-size:18px;color:var(--t3);margin-top:1px">info</span><span>If Ivan can't respond because he's ill, a Power of Attorney may apply instead. If Ivan has died, report a death.</span></div>
+</div>
+<div class="ft"><button type="button" class="btn bp">Send request</button><button type="button" class="btn bt">Cancel</button></div>
+</div></div>
+
+<div class="scr"><span class="lbl"><b class="tag">va-r7</b>7 · Release in progress (joins Journeys 6c)</span>
+<div class="ph"><div class="sb"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="ms" aria-hidden="true" style="font-size:18px">signal_cellular_alt</span><span class="ms" aria-hidden="true" style="font-size:18px">wifi</span><span class="ms" aria-hidden="true" style="font-size:20px">battery_full</span></span></div><div class="uat">UAT · synthetic data only</div>
+<div class="hdr2"><button type="button" class="ib" aria-label="Menu"><span class="ms" aria-hidden="true" style="font-size:24px">menu</span></button><span style="display:flex;align-items:center;gap:4px;font-size:17px;font-weight:600">Ivan Yardley's Vault<span class="ms" aria-hidden="true" style="font-size:20px">expand_more</span></span><span style="width:44px"></span></div>
+<div class="bd">
+<div style="display:flex;flex-direction:column;gap:8px"><h1 class="h1">Release in progress</h1><span><span class="chip ca"><span class="ms" aria-hidden="true" style="font-size:15px">hourglass_top</span>Being checked</span></span></div>
+<ol class="card" style="margin:0;padding:0;list-style:none">
+<li class="row"><span class="it done"><span class="ms" aria-hidden="true" style="font-size:20px">check</span></span><span class="rk"><span>Death reported</span><span class="rs">3 Nov · by Bob Smith</span></span></li>
+<li class="row"><span class="it cur"><span class="ms" aria-hidden="true" style="font-size:20px">hourglass_top</span></span><span class="rk"><span style="font-weight:600">Evidence being reviewed</span><span class="rs">Death certificate received</span></span></li>
+<li class="row"><span class="io">3</span><span class="rk"><span>Death verified</span></span></li>
+<li class="row"><span class="io">4</span><span class="rk"><span>Release approved</span></span></li>
+</ol>
+<div class="note"><span class="ms" aria-hidden="true" style="font-size:18px;color:var(--t3);margin-top:1px">lock</span><span>You can't see anything in Ivan's Vault until the release is approved. We'll let you know.</span></div>
+<div class="card"><div class="row"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">upload_file</span></span><span class="rk"><span>Add evidence</span><span class="rs">If you have the grant of probate</span></span><span class="ms" aria-hidden="true" style="font-size:22px;color:var(--t2)">chevron_right</span></div></div>
+</div>
+</div></div>
+
+<div class="scr"><span class="lbl"><b class="tag">va-r8</b>8 · Released: access available</span>
+<div class="ph"><div class="sb"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="ms" aria-hidden="true" style="font-size:18px">signal_cellular_alt</span><span class="ms" aria-hidden="true" style="font-size:18px">wifi</span><span class="ms" aria-hidden="true" style="font-size:20px">battery_full</span></span></div><div class="uat">UAT · synthetic data only</div>
+<div class="hdr2"><button type="button" class="ib" aria-label="Menu"><span class="ms" aria-hidden="true" style="font-size:24px">menu</span></button><span style="display:flex;align-items:center;gap:4px;font-size:17px;font-weight:600">Ivan Yardley's Vault<span class="ms" aria-hidden="true" style="font-size:20px">expand_more</span></span><button type="button" class="ib" aria-label="Search"><span class="ms" aria-hidden="true" style="font-size:24px">search</span></button></div>
+<div class="bd">
+<div style="display:flex;flex-direction:column;gap:8px"><h1 class="h1">Ivan's Vault</h1><span style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip cg"><span class="ms" aria-hidden="true" style="font-size:15px">lock_open</span>Released · view only</span><span class="chip cn">Released 21 Nov</span></span></div>
+<div class="note"><span class="ms" aria-hidden="true" style="font-size:18px;color:var(--t3);margin-top:1px">info</span><span>You can see what Ivan chose to share with you. You can view, not change or delete.</span></div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+<div class="card" style="padding:14px;display:flex;flex-direction:column;gap:10px"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">account_balance_wallet</span></span><span style="font-size:16px;font-weight:600">Finances</span><span class="rs">12 records</span></div>
+<div class="card" style="padding:14px;display:flex;flex-direction:column;gap:10px"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">gavel</span></span><span style="font-size:16px;font-weight:600">Legal</span><span class="rs">3 records</span></div>
+<div class="card" style="padding:14px;display:flex;flex-direction:column;gap:10px"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">home</span></span><span style="font-size:16px;font-weight:600">Property</span><span class="rs">2 records</span></div>
+<div class="card" style="padding:14px;display:flex;flex-direction:column;gap:10px"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">work</span></span><span style="font-size:16px;font-weight:600">Business</span><span class="rs">1 record</span></div>
+<div class="card" style="padding:14px;display:flex;flex-direction:column;gap:10px"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">devices</span></span><span style="font-size:16px;font-weight:600">Digital</span><span class="rs">6 records</span></div>
+<div class="card" style="padding:14px;display:flex;flex-direction:column;gap:10px"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">diamond</span></span><span style="font-size:16px;font-weight:600">Possessions</span><span class="rs">4 records</span></div>
+</div>
+</div>
+</div></div>
+
+<div class="scr"><span class="lbl"><b class="tag">va-r9</b>9 · Ended or not approved (dark)</span>
+<div class="ph dk"><div class="sb"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="ms" aria-hidden="true" style="font-size:18px">signal_cellular_alt</span><span class="ms" aria-hidden="true" style="font-size:18px">wifi</span><span class="ms" aria-hidden="true" style="font-size:20px">battery_full</span></span></div><div class="uat">UAT · synthetic data only</div>
+<div class="hdr2"><button type="button" class="ib" aria-label="Menu"><span class="ms" aria-hidden="true" style="font-size:24px">menu</span></button><span style="font-size:17px;font-weight:600">My Vault</span><span style="width:44px"></span></div>
+<div class="bd">
+<span class="gh">Three ways it can end, each in plain words</span>
+<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:8px"><span style="display:flex;align-items:center;gap:8px"><span class="chip cn"><span class="ms" aria-hidden="true" style="font-size:15px">block</span>Nomination ended</span></span><span style="font-size:17px;font-weight:600">Ivan has changed his arrangements</span><p class="p">You're no longer nominated for Ivan's Vault. You can still use your own Vault.</p></div>
+<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:8px"><span style="display:flex;align-items:center;gap:8px"><span class="chip cn"><span class="ms" aria-hidden="true" style="font-size:15px">block</span>Access stopped</span></span><span style="font-size:17px;font-weight:600">You can no longer see Ivan's records</span><p class="p">Access was stopped on 12 Oct.</p></div>
+<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:8px"><span style="display:flex;align-items:center;gap:8px"><span class="chip ca"><span class="ms" aria-hidden="true" style="font-size:15px">error</span>More evidence needed</span></span><span style="font-size:17px;font-weight:600">We couldn't approve the release yet</span><p class="p">The death certificate couldn't be read. Upload a clearer copy to continue.</p><span class="btn bo" style="margin-top:4px">Upload a new copy</span></div>
+</div>
+</div></div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3930,"height":1120}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

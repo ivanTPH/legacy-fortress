@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Vault access edge cases</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&amp;display=block">
+<style>
+body{margin:0;background:#efebe7;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;color:#1f1715;-webkit-font-smoothing:antialiased}
+a{color:#7a3d27}a:hover{color:#2b1714}
+.ms{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;width:1em;height:1em;overflow:hidden;flex:none;letter-spacing:normal;text-transform:none;white-space:nowrap;display:inline-block}
+.tag{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px;color:#1f1715}
+.sec{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px}
+.case{display:flex;flex-direction:column;gap:10px;min-width:0}
+.ttl{font-size:15px;font-weight:600}
+.why{font-size:13px;line-height:19px;color:#4a3f3a}
+.crop{background:#f7f4f1;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 0 0 1px rgba(0,0,0,.06)}
+.card{background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;min-height:52px;padding:8px 14px;border-top:1px solid #f0ebe7;font-size:16px;box-sizing:border-box}
+.row:first-child{border-top:0}
+.rk{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.rs{font-size:14px;line-height:19px;color:#6b5f5a}
+.av{flex:none;width:40px;height:40px;border-radius:20px;background:#f3e6df;color:#6e3a28;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.it{flex:none;width:36px;height:36px;border-radius:9px;background:#2b1714;color:#fff;display:flex;align-items:center;justify-content:center}
+.chip{flex:none;display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border-radius:6px;font-size:13px;font-weight:600;white-space:nowrap}
+.cn{background:#f0ebe7;color:#4a3f3a}.ca{background:#fbf0dc;color:#7a4f00}.cg{background:#e6f2ea;color:#1e6b3a}.ct{background:#e3eef0;color:#1f5a55}.co{background:#fff;color:#1f1715;box-shadow:inset 0 0 0 1px #8c7f79}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.note{display:flex;gap:10px;padding:12px 14px;background:#f0ebe7;border-radius:10px;font-size:14px;line-height:20px}
+.warn{display:flex;gap:10px;padding:12px 14px;background:#fbf0dc;color:#5c3b00;border-radius:10px;font-size:14px;line-height:20px}
+.toast{display:flex;align-items:center;gap:10px;min-height:48px;padding:10px 14px;border-radius:12px;background:#2b1714;color:#fff;font-size:15px}
+.btn{height:44px;padding:0 14px;box-sizing:border-box;border-radius:12px;font:inherit;font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;border:0;cursor:pointer}
+.bp{background:#2b1714;color:#fff}.bo{background:#fff;color:#1f1715;border:1px solid #e3dad3}.bt{background:transparent;color:#7a3d27}
+</style>
+</helmet>
+<div style="width:1700px;min-height:1900px;box-sizing:border-box;padding:40px 48px;display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:8px;max-width:1100px">
+<div style="display:flex;align-items:baseline;gap:10px"><b class="sec">G</b><span style="font-size:15px;font-weight:600">Edge cases (only the part of the screen that changes)</span></div>
+<p style="margin:0;font-size:14px;line-height:21px;color:#4a3f3a">Linked People G already covers no email, failed or expired invitations, similar names and wrong document matches for record links. These add the Vault access cases. Items marked To confirm are owner decisions, listed again in X.</p>
+</div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:36px 32px;align-items:start">
+
+<div class="case"><span class="ttl"><b class="tag">va-g1</b>One person, several roles</span><span class="why">Each role keeps its own access. Being executor and attorney gives nothing extra.</span>
+<div class="crop"><div class="card">
+<div class="row"><span class="av">BS</span><span class="rk"><span style="font-weight:600">Bob Smith</span><span class="rs">Brother</span></span></div>
+<div class="row"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">description</span></span><span class="rk"><span>Executor</span><span class="rs">Will of Ivan Yardley · link only</span></span></div>
+<div class="row"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">gavel</span></span><span class="rk"><span>Attorney</span><span class="rs">LPA property and finances</span></span><span class="chip cn">Not in effect</span></div>
+<div class="row"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">visibility_off</span></span><span class="rk"><span>Now</span></span><span class="chip cn">No access</span></div>
+</div></div></div>
+
+<div class="case"><span class="ttl"><b class="tag">va-g2</b>Two people nominated for the whole Vault</span><span class="why">Allowed. Both get the same access when released. Neither is told about the other.</span>
+<div class="crop"><div class="card">
+<div class="row"><span class="av">LY</span><span class="rk"><span style="font-weight:600">Lucy Yardley</span><span class="rs">Whole Vault, except 1</span></span><span class="chip co">Nominated</span></div>
+<div class="row"><span class="av">SY</span><span class="rk"><span style="font-weight:600">Sarah Yardley</span><span class="rs">Whole Vault</span></span><span class="chip co">Nominated</span></div>
+</div><div class="note"><span class="ms" aria-hidden="true" style="font-size:18px;color:#4a3f3a">info</span><span>Released together, after the same checks.</span></div></div></div>
+
+<div class="case"><span class="ttl"><b class="tag">va-g3</b>Access now and a nomination for later</span><span class="why">Shown as two lines. Neither changes the other.</span>
+<div class="crop"><div class="card">
+<div class="row"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">visibility</span></span><span class="rk"><span style="font-weight:600">Now</span><span class="rs">14 Elm Grove · view only</span></span><span class="chip cg">Can see 1 record</span></div>
+<div class="row"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">event_upcoming</span></span><span class="rk"><span style="font-weight:600">Later</span><span class="rs">Whole Vault after your death</span></span><span class="chip co">Nominated</span></div>
+</div></div></div>
+
+<div class="case"><span class="ttl"><b class="tag">va-g4</b>Removed from a record, nomination stays</span><span class="why">Record links and Vault access are separate. The toast says so.</span>
+<div class="crop"><div class="toast" role="status"><span class="ms" aria-hidden="true" style="font-size:20px">check_circle</span><span style="flex:1">Bob removed from the Will. His Vault access hasn't changed.</span></div></div></div>
+
+<div class="case"><span class="ttl"><b class="tag">va-g5</b>Joined but ID not checked</span><span class="why">The nomination stands, but nothing can be released until the ID check passes.</span>
+<div class="crop"><div class="card"><div class="row" style="align-items:flex-start;padding:12px 14px"><span class="av">SY</span><span class="rk"><span style="font-weight:600">Sarah Yardley</span><span class="chips"><span class="chip cg">Joined</span><span class="chip cn">ID not checked</span><span class="chip co">Nominated</span></span></span></div></div>
+<div class="warn"><span class="ms" aria-hidden="true" style="font-size:18px">error</span><span>Sarah needs to check her ID before anything can be released to her.</span></div>
+<button type="button" class="btn bo">Remind Sarah</button></div></div>
+
+<div class="case"><span class="ttl"><b class="tag">va-g6</b>Invitation expired or never sent</span><span class="why">A person can be nominated without joining. They join and check ID at release.</span>
+<div class="crop"><div class="card"><div class="row" style="align-items:flex-start;padding:12px 14px"><span class="av">LY</span><span class="rk"><span style="font-weight:600">Lucy Yardley</span><span class="chips"><span class="chip cn">Expired</span><span class="chip co">Nominated</span></span></span></div></div>
+<div class="note"><span class="ms" aria-hidden="true" style="font-size:18px;color:#4a3f3a">info</span><span>If Lucy hasn't joined by the time of release, she'll be asked to join and check her ID first.</span></div>
+<button type="button" class="btn bo">Send a new invitation</button></div></div>
+
+<div class="case"><span class="ttl"><b class="tag">va-g7</b>Nominated person with no email</span><span class="why">Saving is allowed. We need a way to reach them at release.</span>
+<div class="crop"><div class="card"><div class="row" style="align-items:flex-start;padding:12px 14px"><span class="av">PN</span><span class="rk"><span style="font-weight:600">Priya Nair</span><span class="chips"><span class="chip cn">No email</span><span class="chip co">Nominated</span></span></span></div>
+<div class="row" style="color:#7a3d27;font-weight:600"><span class="rk">Add email or phone</span><span class="ms" aria-hidden="true" style="font-size:22px">chevron_right</span></div></div></div></div>
+
+<div class="case"><span class="ttl"><b class="tag">va-g8</b>Access reached its end date</span><span class="why">Stops automatically. Shown in Ended with the reason in words.</span>
+<div class="crop"><div class="card"><div class="row" style="align-items:flex-start;padding:12px 14px"><span class="av" style="background:#d9ecea;color:#173d3a">ME</span><span class="rk"><span style="font-weight:600">Mark Ellis</span><span class="rs">3 records</span><span class="chips"><span class="chip cn"><span class="ms" aria-hidden="true" style="font-size:15px">event_busy</span>Ended · 31 Mar 2027 (end date)</span></span></span></div></div>
+<button type="button" class="btn bo">Give access again</button></div></div>
+
+<div class="case"><span class="ttl"><b class="tag">va-g9</b>Power of Attorney withdrawn or ended</span><span class="why">Access under it stops straight away. Bob's other roles stay.</span>
+<div class="crop"><div class="card">
+<div class="row"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">gavel</span></span><span class="rk"><span style="font-weight:600">Lasting Power of Attorney</span><span class="rs">Property and finances</span></span></div>
+<div class="row"><span class="rk">Status</span><span class="chip cn"><span class="ms" aria-hidden="true" style="font-size:15px">block</span>Withdrawn · 12 Oct</span></div>
+<div class="row"><span class="rk">Now</span><span class="chip cn">Access stopped</span></div>
+</div></div></div>
+
+<div class="case"><span class="ttl"><b class="tag">va-g10</b>Authority can't be confirmed</span><span class="why">Plain reason and a next step. Nothing opens.</span>
+<div class="crop"><div class="card"><div class="row"><span class="rk">The authority</span><span class="chip ca"><span class="ms" aria-hidden="true" style="font-size:15px">error</span>Needs attention</span></div></div>
+<div class="warn"><span class="ms" aria-hidden="true" style="font-size:18px">error</span><span>The LPA isn't registered yet. Once the Office of the Public Guardian registers it, send the registered copy.</span></div>
+<button type="button" class="btn bo">Send registered copy</button></div></div>
+
+<div class="case"><span class="ttl"><b class="tag">va-g11</b>New record and whole-Vault nominations</span><span class="why">New records are covered automatically. The save toast says so and offers to keep it out.</span>
+<div class="crop"><div class="toast" role="status"><span class="ms" aria-hidden="true" style="font-size:20px">check_circle</span><span style="flex:1">Saved. Covered by 2 nominations for later.</span><span style="font-weight:600;text-decoration:underline">Keep out</span></div></div></div>
+
+<div class="case"><span class="ttl"><b class="tag">va-g12</b>Nominating someone who's already nominated</span><span class="why">One nomination per person and kind. Offer to change it instead of adding a second.</span>
+<div class="crop"><div class="card" style="padding:16px;display:flex;flex-direction:column;gap:10px"><span style="font-size:17px;font-weight:600">Lucy is already nominated</span><span class="rs">Whole Vault after your death. Change it to add or remove records.</span><span style="display:flex;gap:8px"><button type="button" class="btn bp" style="flex:1">Change nomination</button><button type="button" class="btn bt">Cancel</button></span></div></div></div>
+
+<div class="case"><span class="ttl"><b class="tag">va-g13</b>Owner dies while someone has access now</span><span class="why">Proposed: access given in your lifetime pauses when a death is reported, until the release is decided.</span>
+<div class="crop"><div class="card"><div class="row"><span class="av" style="background:#d9ecea;color:#173d3a">ME</span><span class="rk"><span style="font-weight:600">Mark Ellis</span><span class="rs">3 records</span></span><span class="chip ca">Paused</span></div></div>
+<span><span class="chip ca">To confirm with owner</span></span></div></div>
+
+<div class="case"><span class="ttl"><b class="tag">va-g14</b>Restricted records</span><span class="why">Records the owner keeps out are never shown to a nominee, before or after release, and aren't counted.</span>
+<div class="crop"><div class="card"><div class="row"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">description</span></span><span class="rk"><span>Personal letters</span><span class="rs">Kept out of Lucy's nomination</span></span><span class="ms" aria-hidden="true" style="font-size:20px;color:#6b5f5a">lock</span></div></div></div></div>
+
+<div class="case"><span class="ttl"><b class="tag">va-g15</b>Similar names or a wrong document match</span><span class="why">Unchanged: Linked People G (possible match never auto-links) and F (confirm, edit or dismiss).</span>
+<div class="crop"><div class="note"><span class="ms" aria-hidden="true" style="font-size:18px;color:#4a3f3a">link</span><span>See V5.2 Linked People › g-series and f1–f4.</span></div></div></div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1700,"height":1900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

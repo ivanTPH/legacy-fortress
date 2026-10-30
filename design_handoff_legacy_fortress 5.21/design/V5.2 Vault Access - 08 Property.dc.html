@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Property with several linked people</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&amp;display=block">
+<style>
+body{margin:0;background:#efebe7;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;color:#1f1715;-webkit-font-smoothing:antialiased}
+a{color:#7a3d27}a:hover{color:#2b1714}
+.ms{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;width:1em;height:1em;overflow:hidden;flex:none;letter-spacing:normal;text-transform:none;white-space:nowrap;display:inline-block}
+.scr{display:flex;flex-direction:column;gap:12px;flex:none}
+.lbl{font-size:13px;color:#6b5f5a}
+.tag{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px;color:#1f1715}
+.sec{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px}
+.ph{width:390px;height:844px;flex:none;border-radius:44px;overflow:hidden;background:#f7f4f1;color:#1f1715;box-shadow:0 0 0 10px #1a1a1a,0 24px 60px rgba(0,0,0,.25);display:flex;flex-direction:column;position:relative}
+.sb{height:47px;flex:none;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 8px 40px;box-sizing:border-box;font-size:16px;font-weight:600;background:#fff}
+.uat{height:28px;flex:none;background:#8c1d18;color:#fffffe;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.hd{height:56px;flex:none;display:flex;align-items:center;padding:0 4px;background:#fff;border-bottom:1px solid #ebe4de}
+.bk{height:44px;display:flex;align-items:center;padding:0 10px 0 2px;color:#7a3d27;font:inherit;font-size:16px;background:none;border:0}
+.bd{flex:1;min-height:0;overflow:auto;padding:14px 16px 24px;display:flex;flex-direction:column;gap:14px}
+.st{font-size:14px;color:#6b5f5a}
+.card{flex:none;background:#fff;border:1px solid #ebe4de;border-radius:12px;overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;min-height:52px;padding:8px 14px;border-top:1px solid #f0ebe7;font-size:16px;box-sizing:border-box}
+.row:first-child{border-top:0}
+.rk{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.rs{font-size:14px;line-height:19px;color:#6b5f5a}
+.lp{display:flex;align-items:flex-start;gap:12px;padding:12px 4px 12px 14px;border-top:1px solid #f0ebe7}
+.lp:first-child{border-top:0}
+.av{flex:none;width:40px;height:40px;border-radius:20px;background:#f3e6df;color:#6e3a28;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.avp{background:#d9ecea;color:#173d3a}
+.nm{font-size:16px;font-weight:600;line-height:21px}
+.src{display:flex;align-items:center;gap:5px;font-size:13px;line-height:18px;color:#6b5f5a}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.chip{flex:none;display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border-radius:6px;font-size:13px;font-weight:600;white-space:nowrap}
+.cn{background:#f0ebe7;color:#4a3f3a}.ca{background:#fbf0dc;color:#7a4f00}.cg{background:#e6f2ea;color:#1e6b3a}.ct{background:#e3eef0;color:#1f5a55}
+.more{flex:none;width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:#6b5f5a;border:0;background:none}
+.add{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 14px;border-top:1px solid #f0ebe7;color:#7a3d27;font-size:16px;font-weight:600}
+.addc{flex:none;width:40px;height:40px;border-radius:20px;border:1.5px solid #8c7f79;box-sizing:border-box;display:flex;align-items:center;justify-content:center}
+.note{flex:none;display:flex;gap:10px;padding:12px 14px;background:#f0ebe7;border-radius:10px;font-size:14px;line-height:20px}
+.it{flex:none;width:36px;height:36px;border-radius:9px;background:#2b1714;color:#fff;display:flex;align-items:center;justify-content:center}
+.web{width:1280px;height:820px;flex:none;border-radius:12px;overflow:hidden;background:#faf8f6;color:#1f1715;box-shadow:0 0 0 1px rgba(0,0,0,.08),0 24px 60px rgba(0,0,0,.18);display:flex;flex-direction:column}
+.side{background:#f5f1ed;border-right:1px solid #ebe4de;display:flex;flex-direction:column;padding:18px 12px;gap:2px}
+.ni{display:flex;align-items:center;gap:12px;height:44px;padding:0 10px;border-radius:8px;font-size:15px}
+.nt{flex:none;width:30px;height:30px;border-radius:8px;color:#3a2c28;display:flex;align-items:center;justify-content:center}
+.nis{background:#fff;box-shadow:0 1px 2px rgba(43,23,20,.08);font-weight:600}
+.nis .nt{background:#2b1714;color:#fff}
+</style>
+</helmet>
+<div style="width:1810px;height:1120px;box-sizing:border-box;padding:40px 48px;display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:8px;max-width:1100px">
+<div style="display:flex;align-items:baseline;gap:10px"><b class="sec">P</b><span style="font-size:15px;font-weight:600">Property with several linked people (existing component, new example)</span></div>
+<p style="margin:0;font-size:14px;line-height:21px;color:#4a3f3a">The Linked People component from Linked People B on a property. Heading and roles come from the role table. Each row keeps its facts separate: Sarah is linked, joined, verified and can see this record because you gave her access; the solicitor is only linked. Whole-Vault nominations aren't listed on each record. A Will with three executors is unchanged: Linked People D (d1–d10) and E (e1–e4).</p>
+</div>
+<div style="display:flex;gap:40px;align-items:flex-start">
+
+<div class="scr"><span class="lbl"><b class="tag">va-p1</b>14 Elm Grove, mobile</span>
+<div class="ph"><div class="sb"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="ms" aria-hidden="true" style="font-size:18px">signal_cellular_alt</span><span class="ms" aria-hidden="true" style="font-size:18px">wifi</span><span class="ms" aria-hidden="true" style="font-size:20px">battery_full</span></span></div><div class="uat">UAT · synthetic data only</div>
+<div class="hd"><button type="button" class="bk"><span class="ms" aria-hidden="true" style="font-size:26px">chevron_left</span>Homes</button></div>
+<div class="bd">
+<div style="display:flex;align-items:center;gap:12px"><span class="it" style="width:48px;height:48px;border-radius:12px"><span class="ms" aria-hidden="true" style="font-size:24px">home</span></span><span style="display:flex;flex-direction:column"><span style="font-size:24px;line-height:30px;font-weight:700">14 Elm Grove</span><span class="st">Main home · freehold</span></span></div>
+<div class="card"><div class="row"><span class="rk"><span class="rs">Value</span><span style="font-size:20px;font-weight:600">£485,000</span><span class="rs">As of Oct 2026</span></span></div></div>
+<div style="display:flex;align-items:baseline;gap:8px;padding:0 4px"><span style="font-size:17px;font-weight:600">People linked to this property</span><span class="st">3</span></div>
+<div class="card">
+<div class="lp"><span class="av">SY</span><span class="rk"><span class="nm">Sarah Yardley</span><span class="rs">Joint owner · Spouse</span><span class="chips"><span class="chip cg"><span class="ms" aria-hidden="true" style="font-size:15px">check</span>Joined</span><span class="chip cg"><span class="ms" aria-hidden="true" style="font-size:15px">verified_user</span>ID verified</span><span class="chip cg"><span class="ms" aria-hidden="true" style="font-size:15px">visibility</span>Can see this record</span></span><span class="src"><span class="ms" aria-hidden="true" style="font-size:16px">edit_note</span>Added by you from People · 27 Oct</span></span><button type="button" class="more" aria-label="More for Sarah Yardley"><span class="ms" aria-hidden="true" style="font-size:22px">more_vert</span></button></div>
+<div class="lp"><span class="av avp">OC</span><span class="rk"><span class="nm">Okoro &amp; Co Solicitors</span><span class="rs">Solicitor</span><span class="chips"><span class="chip cn">Not invited</span></span><span class="src"><span class="ms" aria-hidden="true" style="font-size:16px">edit_note</span>Added by you · 27 Oct</span></span><button type="button" class="more" aria-label="More for Okoro and Co Solicitors"><span class="ms" aria-hidden="true" style="font-size:22px">more_vert</span></button></div>
+<div class="lp"><span class="av avp">HL</span><span class="rk"><span class="nm">Harris Lettings</span><span class="rs">Managing agent</span><span class="chips"><span class="chip ca"><span class="ms" aria-hidden="true" style="font-size:15px">schedule</span>Invite sent · 27 Oct</span></span><span class="src"><span class="ms" aria-hidden="true" style="font-size:16px">description</span>From Title register.pdf · page 2 · confirmed by you</span></span><button type="button" class="more" aria-label="More for Harris Lettings"><span class="ms" aria-hidden="true" style="font-size:22px">more_vert</span></button></div>
+<div class="add"><span class="addc"><span class="ms" aria-hidden="true" style="font-size:22px">add</span></span>Add another person</div>
+</div>
+<div class="note"><span class="ms" aria-hidden="true" style="font-size:18px;color:#4a3f3a;margin-top:1px">lock</span><span>Linking a person records their role. It doesn't let them see this record. You choose who can see what in Access.</span></div>
+</div>
+</div></div>
+
+<div class="scr"><span class="lbl"><b class="tag">va-p2</b>14 Elm Grove, web (main column + 380px right rail)</span>
+<div class="web"><div style="flex:none;height:28px;background:#8c1d18;color:#fffffe;font-size:13px;display:flex;align-items:center;justify-content:center;font-weight:600">UAT / TEST · Synthetic data only</div>
+<div style="flex:1;min-height:0;display:grid;grid-template-columns:264px minmax(0,1fr)">
+<aside class="side">
+<div style="display:flex;align-items:center;gap:10px;padding:4px 8px 12px"><span style="flex:none;width:36px;height:36px;border-radius:9px;background:#111;color:#fff;display:flex;align-items:center;justify-content:center"><span class="ms" aria-hidden="true" style="font-size:22px;font-variation-settings:'FILL' 1">apps</span></span><span style="flex:1;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">Legacy Fortress</span><span style="font-size:13px;color:#6b5f5a">My Vault</span></span></div>
+<div class="ni"><span class="nt"><span class="ms" aria-hidden="true" style="font-size:20px">space_dashboard</span></span>Dashboard</div>
+<div class="ni"><span class="nt"><span class="ms" aria-hidden="true" style="font-size:20px">account_balance_wallet</span></span>Finances</div>
+<div class="ni"><span class="nt"><span class="ms" aria-hidden="true" style="font-size:20px">gavel</span></span>Legal</div>
+<div class="ni nis"><span class="nt"><span class="ms" aria-hidden="true" style="font-size:20px">home</span></span>Property</div>
+<div class="ni"><span class="nt"><span class="ms" aria-hidden="true" style="font-size:20px">work</span></span>Business</div>
+<div class="ni"><span class="nt"><span class="ms" aria-hidden="true" style="font-size:20px">group</span></span>People &amp; Access</div>
+</aside>
+<div style="min-width:0;display:grid;grid-template-columns:minmax(0,1fr) 380px">
+<main style="padding:24px 32px;display:flex;flex-direction:column;gap:16px;min-width:0">
+<nav aria-label="Breadcrumb" style="font-size:14px;color:#6b5f5a">Property › Homes › 14 Elm Grove</nav>
+<div style="display:flex;align-items:center;gap:14px"><span class="it" style="width:48px;height:48px;border-radius:12px"><span class="ms" aria-hidden="true" style="font-size:24px">home</span></span><span style="flex:1;display:flex;flex-direction:column"><span style="font-size:28px;line-height:34px;font-weight:700">14 Elm Grove</span><span class="st">Main home · freehold</span></span><span style="height:36px;padding:0 14px;border-radius:18px;border:1px solid #e3dad3;display:flex;align-items:center;gap:6px;font-size:15px;font-weight:600"><span class="ms" aria-hidden="true" style="font-size:18px">edit</span>Edit</span></div>
+<div class="card"><div class="row"><span class="rk"><span class="rs">Value</span><span style="font-size:22px;font-weight:600">£485,000</span><span class="rs">As of Oct 2026</span></span></div><div class="row"><span class="rk"><span class="rs">Ownership</span><span>Joint tenants</span></span></div><div class="row"><span class="rk"><span class="rs">Title number</span><span>ending 4410</span></span></div></div>
+<div class="card"><div class="row"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">description</span></span><span class="rk"><span>Title register.pdf</span><span class="rs">3 pages · added by you · 27 Oct</span></span></div></div>
+</main>
+<aside style="border-left:1px solid #ebe4de;background:#fff;padding:24px 20px;display:flex;flex-direction:column;gap:14px;min-width:0">
+<div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:17px;font-weight:600">People linked to this property</span><span class="st">3</span></div>
+<div class="card">
+<div class="lp"><span class="av">SY</span><span class="rk"><span class="nm">Sarah Yardley</span><span class="rs">Joint owner · Spouse</span><span class="chips"><span class="chip cg">ID verified</span><span class="chip cg"><span class="ms" aria-hidden="true" style="font-size:15px">visibility</span>Can see this record</span></span></span></div>
+<div class="lp"><span class="av avp">OC</span><span class="rk"><span class="nm">Okoro &amp; Co Solicitors</span><span class="rs">Solicitor</span><span class="chips"><span class="chip cn">Not invited</span></span></span></div>
+<div class="lp"><span class="av avp">HL</span><span class="rk"><span class="nm">Harris Lettings</span><span class="rs">Managing agent</span><span class="chips"><span class="chip ca">Invite sent · 27 Oct</span></span></span></div>
+<div class="add"><span class="addc"><span class="ms" aria-hidden="true" style="font-size:22px">add</span></span>Add another person</div>
+</div>
+<details class="card"><summary style="min-height:52px;padding:0 14px;display:flex;align-items:center;gap:8px;font-size:16px;font-weight:600;cursor:pointer"><span style="flex:1">Record history</span><span class="ms" aria-hidden="true" style="font-size:20px">expand_more</span></summary></details>
+</aside>
+</div>
+</div></div></div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1810,"height":1120}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

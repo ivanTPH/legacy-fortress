@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Power of Attorney</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&amp;display=block">
+<style>
+body{margin:0;background:#efebe7;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;color:#1f1715;-webkit-font-smoothing:antialiased}
+a{color:#7a3d27}a:hover{color:#2b1714}
+.ms{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;width:1em;height:1em;overflow:hidden;flex:none;letter-spacing:normal;text-transform:none;white-space:nowrap;display:inline-block}
+.ph{--pg:#f7f4f1;--hdr:#fff;--cd:#fff;--bd:#ebe4de;--dv:#f0ebe7;--tx:#1f1715;--t2:#6b5f5a;--t3:#4a3f3a;--lk:#7a3d27;--pb:#2b1714;--pt:#fff;--ob:#e3dad3;--ib:#8c7f79;--nt:#f0ebe7;--avb:#f3e6df;--avt:#6e3a28;--amb:#fbf0dc;--amt:#7a4f00;--gnb:#e6f2ea;--gnt:#1e6b3a;--tlb:#e3eef0;--tlt:#1f5a55;--nb:#f0ebe7;--ntx:#4a3f3a;--rd:#b3261e}
+.scr{display:flex;flex-direction:column;gap:12px;flex:none}
+.lbl{font-size:13px;color:#6b5f5a}
+.tag{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px;color:#1f1715}
+.sec{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px}
+.ph{width:390px;height:844px;flex:none;border-radius:44px;overflow:hidden;background:var(--pg);color:var(--tx);box-shadow:0 0 0 10px #1a1a1a,0 24px 60px rgba(0,0,0,.25);display:flex;flex-direction:column;position:relative}
+.sb{height:47px;flex:none;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 8px 40px;box-sizing:border-box;font-size:16px;font-weight:600;background:var(--hdr)}
+.uat{height:28px;flex:none;background:#8c1d18;color:#fffffe;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.hd{height:56px;flex:none;display:flex;align-items:center;padding:0 4px;background:var(--hdr);border-bottom:1px solid var(--bd)}
+.bk{height:44px;display:flex;align-items:center;padding:0 10px 0 2px;color:var(--lk);font:inherit;font-size:16px;background:none;border:0}
+.bd{flex:1;min-height:0;overflow:auto;padding:14px 16px 24px;display:flex;flex-direction:column;gap:14px}
+.ft{flex:none;background:var(--hdr);border-top:1px solid var(--bd);padding:12px 16px 34px;display:flex;flex-direction:column;gap:8px}
+.h1{margin:0;font-size:28px;line-height:34px;font-weight:700}
+.st{font-size:14px;color:var(--t2)}
+.p{margin:0;font-size:15px;line-height:22px;color:var(--t3)}
+.gh{font-size:13px;font-weight:600;color:var(--t2);padding:0 4px}
+.card{flex:none;background:var(--cd);border:1px solid var(--bd);border-radius:12px;overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;min-height:52px;padding:8px 14px;border-top:1px solid var(--dv);font-size:16px;box-sizing:border-box}
+.row:first-child{border-top:0}
+.rk{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.rs{font-size:14px;line-height:19px;color:var(--t2)}
+.av{flex:none;width:40px;height:40px;border-radius:20px;background:var(--avb);color:var(--avt);font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.it{flex:none;width:36px;height:36px;border-radius:9px;background:var(--pb);color:var(--pt);display:flex;align-items:center;justify-content:center}
+.io{flex:none;width:36px;height:36px;border-radius:18px;border:1.5px solid var(--ib);box-sizing:border-box;color:var(--t2);display:flex;align-items:center;justify-content:center}
+.chip{flex:none;display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border-radius:6px;font-size:13px;font-weight:600;white-space:nowrap}
+.cn{background:var(--nb);color:var(--ntx)}.ca{background:var(--amb);color:var(--amt)}.cg{background:var(--gnb);color:var(--gnt)}.ct{background:var(--tlb);color:var(--tlt)}.co{background:var(--cd);color:var(--tx);box-shadow:inset 0 0 0 1px var(--ib)}
+.btn{flex:none;height:48px;padding:0 16px;box-sizing:border-box;border-radius:12px;font:inherit;font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;width:100%;border:0;cursor:pointer}
+.bp{background:var(--pb);color:var(--pt)}.bo{background:var(--cd);color:var(--tx);border:1px solid var(--ob)}.bt{background:transparent;color:var(--lk);height:44px}.bx{background:transparent;color:var(--rd);height:44px}
+.note{flex:none;display:flex;gap:10px;padding:12px 14px;background:var(--nt);border-radius:10px;font-size:14px;line-height:20px;color:var(--tx)}
+.opt{flex:none;display:flex;gap:12px;align-items:flex-start;padding:14px;background:var(--cd);border:1px solid var(--bd);border-radius:12px;cursor:pointer}
+.opt.on{border:2px solid var(--pb);padding:13px}
+.opt input{width:22px;height:22px;margin:1px 0 0;accent-color:var(--pb);flex:none}
+.ot{font-size:16px;font-weight:600;line-height:21px}
+.od{font-size:14px;line-height:20px;color:var(--t2)}
+.cb{width:22px;height:22px;accent-color:var(--pb);flex:none;margin:0}
+.fld{display:flex;flex-direction:column;gap:6px}
+.fl{font-size:15px;font-weight:600}
+.in{min-height:48px;box-sizing:border-box;border-radius:10px;border:1px solid var(--ib);background:var(--cd);display:flex;align-items:center;padding:0 12px;font-size:16px;color:var(--tx)}
+.step{font-size:13px;font-weight:600;color:var(--t2)}
+.toast{flex:none;display:flex;align-items:center;gap:10px;min-height:48px;padding:10px 14px;border-radius:12px;background:var(--pb);color:var(--pt);font-size:15px}
+</style>
+</helmet>
+<div style="width:3500px;height:1120px;box-sizing:border-box;padding:40px 48px;display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:8px;max-width:1200px">
+<div style="display:flex;align-items:baseline;gap:10px"><b class="sec">L</b><span style="font-size:15px;font-weight:600">Power of Attorney: recorded by the owner, checked, and only then in effect</span></div>
+<p style="margin:0;font-size:14px;line-height:21px;color:#4a3f3a">Chosen from va-n2 as "Under a Power of Attorney". Different authorities give different powers, so the type sets what the attorney could ever see. Three things are kept apart: the attorney's identity, whether the authority is valid, and whether it can be used now. Access starts only when all three are met and the review team confirms it. UK terms used; legal wording to be confirmed with a solicitor.</p>
+</div>
+<div style="display:flex;gap:40px;align-items:flex-start">
+
+<div class="scr"><span class="lbl"><b class="tag">va-l1</b>1 · Kind of authority</span>
+<div class="ph"><div class="sb"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="ms" aria-hidden="true" style="font-size:18px">signal_cellular_alt</span><span class="ms" aria-hidden="true" style="font-size:18px">wifi</span><span class="ms" aria-hidden="true" style="font-size:20px">battery_full</span></span></div><div class="uat">UAT · synthetic data only</div>
+<div class="hd"><button type="button" class="bk"><span class="ms" aria-hidden="true" style="font-size:26px">chevron_left</span>Back</button></div>
+<div class="bd">
+<span class="step">Step 2 of 5</span>
+<h1 class="h1">What authority have you given Bob?</h1>
+<fieldset style="border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:10px"><legend style="position:absolute;width:1px;height:1px;overflow:hidden">Kind of authority</legend>
+<label class="opt on"><input type="radio" name="l1" checked><span style="display:flex;flex-direction:column;gap:4px"><span class="ot">Lasting Power of Attorney: property and financial affairs</span><span class="od">Money, property and bills.</span></span></label>
+<label class="opt"><input type="radio" name="l1"><span style="display:flex;flex-direction:column;gap:4px"><span class="ot">Lasting Power of Attorney: health and welfare</span><span class="od">Care and medical decisions. Only usable if you lack mental capacity.</span></span></label>
+<label class="opt"><input type="radio" name="l1"><span style="display:flex;flex-direction:column;gap:4px"><span class="ot">Enduring Power of Attorney</span><span class="od">Made before 1 October 2007. Property and finances only.</span></span></label>
+<label class="opt"><input type="radio" name="l1"><span style="display:flex;flex-direction:column;gap:4px"><span class="ot">General Power of Attorney</span><span class="od">Ends if you lose mental capacity.</span></span></label>
+<label class="opt"><input type="radio" name="l1"><span style="display:flex;flex-direction:column;gap:4px"><span class="ot">Something else</span><span class="od">For example a court order. Our team will check it.</span></span></label>
+</fieldset>
+</div>
+<div class="ft"><button type="button" class="btn bp">Continue</button></div>
+</div></div>
+
+<div class="scr"><span class="lbl"><b class="tag">va-l2</b>2 · The document and when it can be used</span>
+<div class="ph"><div class="sb"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="ms" aria-hidden="true" style="font-size:18px">signal_cellular_alt</span><span class="ms" aria-hidden="true" style="font-size:18px">wifi</span><span class="ms" aria-hidden="true" style="font-size:20px">battery_full</span></span></div><div class="uat">UAT · synthetic data only</div>
+<div class="hd"><button type="button" class="bk"><span class="ms" aria-hidden="true" style="font-size:26px">chevron_left</span>Back</button></div>
+<div class="bd">
+<span class="step">Step 3 of 5</span>
+<h1 class="h1">About Bob's authority</h1>
+<p class="p">Required: the document. Everything else helps the check.</p>
+<div class="card"><div class="row"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">description</span></span><span class="rk"><span>LPA property and finances.pdf</span><span class="rs">18 pages · added by you</span></span><button type="button" class="bk" style="padding:0 8px">Replace</button></div></div>
+<fieldset style="border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px"><legend class="fl" style="padding:0 0 6px">Registered with the Office of the Public Guardian?</legend>
+<div style="display:flex;gap:8px"><label class="opt on" style="flex:1;padding:10px 12px"><input type="radio" name="l2r" checked><span class="ot">Yes</span></label><label class="opt" style="flex:1;padding:11px 12px"><input type="radio" name="l2r"><span class="ot">Not yet</span></label><label class="opt" style="flex:1;padding:11px 12px"><input type="radio" name="l2r"><span class="ot">Not sure</span></label></div>
+</fieldset>
+<label class="fld"><span class="fl">Reference number · Optional</span><span class="in">7000-1234-5678</span></label>
+<fieldset style="border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px"><legend class="fl" style="padding:0 0 6px">When can Bob use it?</legend>
+<label class="opt"><input type="radio" name="l2w"><span style="display:flex;flex-direction:column;gap:4px"><span class="ot">While I have mental capacity, with my agreement</span></span></label>
+<label class="opt on"><input type="radio" name="l2w" checked><span style="display:flex;flex-direction:column;gap:4px"><span class="ot">Only if I lack mental capacity</span></span></label>
+</fieldset>
+<details class="card"><summary style="min-height:52px;padding:0 14px;display:flex;align-items:center;gap:8px;font-size:16px;font-weight:600;cursor:pointer"><span style="flex:1">Restrictions or instructions in the LPA · Optional</span><span class="ms" aria-hidden="true" style="font-size:20px">expand_more</span></summary></details>
+</div>
+<div class="ft"><button type="button" class="btn bp">Continue</button></div>
+</div></div>
+
+<div class="scr"><span class="lbl"><b class="tag">va-l3</b>3 · What Bob could see when it's in effect</span>
+<div class="ph"><div class="sb"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="ms" aria-hidden="true" style="font-size:18px">signal_cellular_alt</span><span class="ms" aria-hidden="true" style="font-size:18px">wifi</span><span class="ms" aria-hidden="true" style="font-size:20px">battery_full</span></span></div><div class="uat">UAT · synthetic data only</div>
+<div class="hd"><button type="button" class="bk"><span class="ms" aria-hidden="true" style="font-size:26px">chevron_left</span>Back</button></div>
+<div class="bd">
+<span class="step">Step 4 of 5</span>
+<h1 class="h1">What could Bob see?</h1>
+<p class="p">Ticked to match a property and finances LPA. You can untick areas. You can't add areas the LPA doesn't cover.</p>
+<div class="card">
+<label class="row"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">account_balance_wallet</span></span><span class="rk"><span>Finances</span><span class="rs">12 records</span></span><input type="checkbox" class="cb" checked aria-label="Finances"></label>
+<label class="row"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">home</span></span><span class="rk"><span>Property</span><span class="rs">2 records</span></span><input type="checkbox" class="cb" checked aria-label="Property"></label>
+<label class="row"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">work</span></span><span class="rk"><span>Business</span><span class="rs">1 record</span></span><input type="checkbox" class="cb" checked aria-label="Business"></label>
+<div class="row" style="opacity:.62"><span class="io"><span class="ms" aria-hidden="true" style="font-size:20px">gavel</span></span><span class="rk"><span>Legal</span><span class="rs">Not covered by this LPA</span></span><span class="ms" aria-hidden="true" style="font-size:20px">lock</span></div>
+<div class="row" style="opacity:.62"><span class="io"><span class="ms" aria-hidden="true" style="font-size:20px">devices</span></span><span class="rk"><span>Digital</span><span class="rs">Not covered by this LPA</span></span><span class="ms" aria-hidden="true" style="font-size:20px">lock</span></div>
+</div>
+<div class="note"><span class="ms" aria-hidden="true" style="font-size:18px;color:var(--t3);margin-top:1px">info</span><span>An attorney can't make or change your Will, so Wills are never included. <span class="chip ca" style="margin-top:4px">To confirm</span></span></div>
+</div>
+<div class="ft"><button type="button" class="btn bp">Continue</button></div>
+</div></div>
+
+<div class="scr"><span class="lbl"><b class="tag">va-l4</b>4 · What has to happen first</span>
+<div class="ph"><div class="sb"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="ms" aria-hidden="true" style="font-size:18px">signal_cellular_alt</span><span class="ms" aria-hidden="true" style="font-size:18px">wifi</span><span class="ms" aria-hidden="true" style="font-size:20px">battery_full</span></span></div><div class="uat">UAT · synthetic data only</div>
+<div class="hd"><button type="button" class="bk"><span class="ms" aria-hidden="true" style="font-size:26px">chevron_left</span>Back</button></div>
+<div class="bd">
+<span class="step">Step 5 of 5</span>
+<h1 class="h1">Before it takes effect</h1>
+<p class="p">Three separate checks. Bob can't see anything until all three are met.</p>
+<ol class="card" style="margin:0;padding:0;list-style:none">
+<li class="row" style="align-items:flex-start;padding:12px 14px"><span class="it" style="border-radius:18px">1</span><span class="rk"><span style="font-weight:600">Bob proves who he is</span><span class="rs">An ID check after he joins. It proves identity only.</span></span></li>
+<li class="row" style="align-items:flex-start;padding:12px 14px"><span class="it" style="border-radius:18px">2</span><span class="rk"><span style="font-weight:600">We check the authority</span><span class="rs">Our team reviews the LPA and checks the register where we can.</span></span></li>
+<li class="row" style="align-items:flex-start;padding:12px 14px"><span class="it" style="border-radius:18px">3</span><span class="rk"><span style="font-weight:600">It can be used now</span><span class="rs">You chose "only if I lack mental capacity". Bob asks for access and gives evidence; our team decides.</span><span style="margin-top:6px"><span class="chip ca">Evidence rules to confirm</span></span></span></li>
+</ol>
+<div class="note"><span class="ms" aria-hidden="true" style="font-size:18px;color:var(--t3);margin-top:1px">notifications</span><span>Where we can, we'll tell you before Bob's access starts.</span></div>
+</div>
+<div class="ft"><button type="button" class="btn bp">Continue</button></div>
+</div></div>
+
+<div class="scr"><span class="lbl"><b class="tag">va-l5</b>5 · Check and record</span>
+<div class="ph"><div class="sb"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="ms" aria-hidden="true" style="font-size:18px">signal_cellular_alt</span><span class="ms" aria-hidden="true" style="font-size:18px">wifi</span><span class="ms" aria-hidden="true" style="font-size:20px">battery_full</span></span></div><div class="uat">UAT · synthetic data only</div>
+<div class="hd"><button type="button" class="bk"><span class="ms" aria-hidden="true" style="font-size:26px">chevron_left</span>Back</button></div>
+<div class="bd">
+<h1 class="h1">Check and confirm</h1>
+<div class="card">
+<div class="row"><span class="rk"><span class="rs">Attorney</span><span>Bob Smith · Brother</span></span></div>
+<div class="row"><span class="rk"><span class="rs">Authority</span><span>Lasting Power of Attorney, property and financial affairs · registered</span></span></div>
+<div class="row"><span class="rk"><span class="rs">Can be used</span><span>Only if you lack mental capacity</span></span></div>
+<div class="row"><span class="rk"><span class="rs">Could see</span><span>Finances, Property, Business · view only</span></span><button type="button" class="bk" style="padding:0 8px">Change</button></div>
+</div>
+<div class="note" style="border:1px solid var(--ib);background:var(--cd)"><span class="ms" aria-hidden="true" style="font-size:18px;margin-top:1px">lock</span><span><b>Access now: none.</b> Recording the authority doesn't let Bob see anything. It starts only after the checks.</span></div>
+</div>
+<div class="ft"><button type="button" class="btn bp">Record authority</button><button type="button" class="btn bt">Back</button></div>
+</div></div>
+
+<div class="scr"><span class="lbl"><b class="tag">va-l6</b>6 · Owner sees the checks</span>
+<div class="ph"><div class="sb"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="ms" aria-hidden="true" style="font-size:18px">signal_cellular_alt</span><span class="ms" aria-hidden="true" style="font-size:18px">wifi</span><span class="ms" aria-hidden="true" style="font-size:20px">battery_full</span></span></div><div class="uat">UAT · synthetic data only</div>
+<div class="hd"><button type="button" class="bk"><span class="ms" aria-hidden="true" style="font-size:26px">chevron_left</span>People &amp; Access</button></div>
+<div class="bd">
+<div role="status" class="toast"><span class="ms" aria-hidden="true" style="font-size:20px">check_circle</span><span style="flex:1">Bob's authority recorded. It isn't in effect yet.</span></div>
+<div style="display:flex;align-items:center;gap:14px"><span class="av" style="width:64px;height:64px;border-radius:32px;font-size:20px">BS</span><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:24px;line-height:30px;font-weight:700">Bob Smith</span><span class="st">Brother · Family</span></span></div>
+<span class="gh">Legal authority</span>
+<div class="card">
+<div class="row"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">gavel</span></span><span class="rk"><span style="font-weight:600">Lasting Power of Attorney</span><span class="rs">Property and finances · registered</span></span></div>
+<div class="row"><span class="rk">Bob's identity</span><span class="chip ct"><span class="ms" aria-hidden="true" style="font-size:15px">hourglass_top</span>Checking ID</span></div>
+<div class="row"><span class="rk">The authority</span><span class="chip ct"><span class="ms" aria-hidden="true" style="font-size:15px">hourglass_top</span>Being checked</span></div>
+<div class="row"><span class="rk">In effect</span><span class="chip cn"><span class="ms" aria-hidden="true" style="font-size:15px">pause_circle</span>Not in effect</span></div>
+<div class="row"><span class="rk"><span class="rs">Could see</span><span>Finances, Property, Business</span></span></div>
+</div>
+<span class="gh">Vault access</span>
+<div class="card"><div class="row"><span class="rk"><span style="font-weight:600">Now</span><span class="rs">Bob can't see any of your records.</span></span><span class="chip cn"><span class="ms" aria-hidden="true" style="font-size:15px">lock</span>No access</span></div></div>
+<button type="button" class="btn bx">Mark the authority as withdrawn</button>
+</div>
+</div></div>
+
+<div class="scr"><span class="lbl"><b class="tag">va-l7</b>7 · Attorney's view, before it's in effect</span>
+<div class="ph"><div class="sb"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="ms" aria-hidden="true" style="font-size:18px">signal_cellular_alt</span><span class="ms" aria-hidden="true" style="font-size:18px">wifi</span><span class="ms" aria-hidden="true" style="font-size:20px">battery_full</span></span></div><div class="uat">UAT · synthetic data only</div>
+<div class="hd" style="justify-content:space-between;padding:0 8px"><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><span class="ms" aria-hidden="true" style="font-size:24px">menu</span></span><span style="display:flex;align-items:center;gap:4px;font-size:17px;font-weight:600">Ivan Yardley's Vault<span class="ms" aria-hidden="true" style="font-size:20px">expand_more</span></span><span style="width:44px"></span></div>
+<div class="bd">
+<div style="display:flex;flex-direction:column;gap:6px"><h1 class="h1">Your authority for Ivan</h1><span style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip co"><span class="ms" aria-hidden="true" style="font-size:15px">gavel</span>Attorney</span><span class="chip cn"><span class="ms" aria-hidden="true" style="font-size:15px">pause_circle</span>Not in effect</span></span></div>
+<ol class="card" style="margin:0;padding:0;list-style:none">
+<li class="row"><span class="it" style="border-radius:18px;background:#1e6b3a"><span class="ms" aria-hidden="true" style="font-size:20px">check</span></span><span class="rk"><span>You joined</span><span class="rs">27 Oct</span></span></li>
+<li class="row"><span class="it" style="border-radius:18px;background:#1e6b3a"><span class="ms" aria-hidden="true" style="font-size:20px">check</span></span><span class="rk"><span>ID verified</span><span class="rs">28 Oct</span></span></li>
+<li class="row"><span class="it" style="border-radius:18px;background:var(--tlt)"><span class="ms" aria-hidden="true" style="font-size:20px">hourglass_top</span></span><span class="rk"><span style="font-weight:600">Authority being checked</span><span class="rs">We'll tell you when it's done</span></span></li>
+<li class="row"><span class="io">4</span><span class="rk"><span>In effect</span><span class="rs">Only if Ivan lacks mental capacity. You'll be able to ask for access once the check is done.</span></span></li>
+</ol>
+<div class="note"><span class="ms" aria-hidden="true" style="font-size:18px;color:var(--t3);margin-top:1px">lock</span><span>You can't see any of Ivan's records yet, or what's in his Vault.</span></div>
+</div>
+<div class="ft"><button type="button" class="btn bo" disabled style="opacity:.55">Ask for access</button><span class="st" style="text-align:center">Available once the authority is checked</span></div>
+</div></div>
+
+<div class="scr"><span class="lbl"><b class="tag">va-l8</b>8 · Attorney's view, in effect (limited scope)</span>
+<div class="ph"><div class="sb"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="ms" aria-hidden="true" style="font-size:18px">signal_cellular_alt</span><span class="ms" aria-hidden="true" style="font-size:18px">wifi</span><span class="ms" aria-hidden="true" style="font-size:20px">battery_full</span></span></div><div class="uat">UAT · synthetic data only</div>
+<div class="hd" style="justify-content:space-between;padding:0 8px"><span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center"><span class="ms" aria-hidden="true" style="font-size:24px">menu</span></span><span style="display:flex;align-items:center;gap:4px;font-size:17px;font-weight:600">Ivan Yardley's Vault<span class="ms" aria-hidden="true" style="font-size:20px">expand_more</span></span><span style="width:44px"></span></div>
+<div class="bd">
+<div style="display:flex;flex-direction:column;gap:6px"><h1 class="h1">Ivan's Vault</h1><span style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip co"><span class="ms" aria-hidden="true" style="font-size:15px">gavel</span>Attorney</span><span class="chip cg"><span class="ms" aria-hidden="true" style="font-size:15px">visibility</span>In effect · view only</span></span></div>
+<div class="note"><span class="ms" aria-hidden="true" style="font-size:18px;color:var(--t3);margin-top:1px">info</span><span>Under the LPA for property and finances. You see only the areas it covers.</span></div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+<div class="card" style="padding:14px;display:flex;flex-direction:column;gap:10px"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">account_balance_wallet</span></span><span style="font-size:16px;font-weight:600">Finances</span><span class="rs">12 records</span></div>
+<div class="card" style="padding:14px;display:flex;flex-direction:column;gap:10px"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">home</span></span><span style="font-size:16px;font-weight:600">Property</span><span class="rs">2 records</span></div>
+<div class="card" style="padding:14px;display:flex;flex-direction:column;gap:10px"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">work</span></span><span style="font-size:16px;font-weight:600">Business</span><span class="rs">1 record</span></div>
+</div>
+</div>
+</div></div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3500,"height":1120}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

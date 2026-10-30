@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Vault access: overview</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&amp;display=block">
+<style>
+body{margin:0;background:#efebe7;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;color:#1f1715;-webkit-font-smoothing:antialiased}
+a{color:#7a3d27}a:hover{color:#2b1714}
+.ms{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;width:1em;height:1em;overflow:hidden;flex:none;letter-spacing:normal;text-transform:none;white-space:nowrap;display:inline-block}
+.chip{flex:none;display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border-radius:6px;font-size:13px;font-weight:600;white-space:nowrap}
+.cn{background:#f0ebe7;color:#4a3f3a}.ca{background:#fbf0dc;color:#7a4f00}.cg{background:#e6f2ea;color:#1e6b3a}.ct{background:#e3eef0;color:#1f5a55}.co{background:#fff;color:#1f1715;box-shadow:inset 0 0 0 1px #8c7f79}
+.card{background:#fff;border:1px solid #ebe4de;border-radius:12px}
+.tag{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px}
+.sec{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-top:1px solid #f0ebe7;font-size:14px;line-height:20px}
+th{font-size:13px;color:#6b5f5a;font-weight:600;border-top:0}
+</style>
+</helmet>
+<div style="width:1600px;min-height:1900px;box-sizing:border-box;padding:48px;display:flex;flex-direction:column;gap:36px">
+<header style="display:flex;flex-direction:column;gap:10px;max-width:1100px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font:700 11px ui-monospace,Menlo,monospace;padding:4px 8px;background:#2b1714;color:#fff;border-radius:5px;white-space:nowrap">V5.2 · VAULT ACCESS AND NOMINATIONS</span><span style="font-size:13px;color:#4a3f3a">Extends Vault Master V5.2 and V5.2 Linked People · 27 Oct 2026 · Names are synthetic</span></div>
+<h1 style="margin:0;font-size:30px;line-height:36px;font-weight:700">Who can see your Vault, now and later</h1>
+<p style="margin:0;font-size:15px;line-height:23px;color:#4a3f3a;max-width:960px">An owner can nominate someone for their whole Vault or selected records after their death, share selected records now, and record a Power of Attorney. Every one of these is separate from being a contact, being linked to a record, being invited and having your identity checked. Nothing on this board replaces an approved screen: it adds the missing states and joins them up. Where this board and Vault Master V5.2 differ on styling, Vault Master wins. Security and data-protection decisions win over both.</p>
+<nav aria-label="Sections" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">
+<a href="V5.2%20Vault%20Access%20-%2002%20Nominate%20for%20later.dc.html" style="display:flex;align-items:center;gap:8px;min-height:40px;padding:0 14px 0 8px;border-radius:20px;background:#fff;border:1px solid #e3dad3;color:#1f1715;text-decoration:none;font-size:14px"><b class="sec">N</b>Nominate for later</a>
+<a href="V5.2%20Vault%20Access%20-%2003%20Web.dc.html" style="display:flex;align-items:center;gap:8px;min-height:40px;padding:0 14px 0 8px;border-radius:20px;background:#fff;border:1px solid #e3dad3;color:#1f1715;text-decoration:none;font-size:14px"><b class="sec">W</b>Vault access on web</a>
+<a href="V5.2%20Vault%20Access%20-%2004%20Share%20now.dc.html" style="display:flex;align-items:center;gap:8px;min-height:40px;padding:0 14px 0 8px;border-radius:20px;background:#fff;border:1px solid #e3dad3;color:#1f1715;text-decoration:none;font-size:14px"><b class="sec">S</b>Share now</a>
+<a href="V5.2%20Vault%20Access%20-%2005%20Power%20of%20Attorney.dc.html" style="display:flex;align-items:center;gap:8px;min-height:40px;padding:0 14px 0 8px;border-radius:20px;background:#fff;border:1px solid #e3dad3;color:#1f1715;text-decoration:none;font-size:14px"><b class="sec">L</b>Power of Attorney</a>
+<a href="V5.2%20Vault%20Access%20-%2006%20Recipient.dc.html" style="display:flex;align-items:center;gap:8px;min-height:40px;padding:0 14px 0 8px;border-radius:20px;background:#fff;border:1px solid #e3dad3;color:#1f1715;text-decoration:none;font-size:14px"><b class="sec">R</b>What the nominee sees</a>
+<a href="V5.2%20Vault%20Access%20-%2007%20Review%20and%20stop.dc.html" style="display:flex;align-items:center;gap:8px;min-height:40px;padding:0 14px 0 8px;border-radius:20px;background:#fff;border:1px solid #e3dad3;color:#1f1715;text-decoration:none;font-size:14px"><b class="sec">V</b>Review and stop</a>
+<a href="V5.2%20Vault%20Access%20-%2008%20Property.dc.html" style="display:flex;align-items:center;gap:8px;min-height:40px;padding:0 14px 0 8px;border-radius:20px;background:#fff;border:1px solid #e3dad3;color:#1f1715;text-decoration:none;font-size:14px"><b class="sec">P</b>Property example</a>
+<a href="V5.2%20Vault%20Access%20-%2009%20Edge%20cases.dc.html" style="display:flex;align-items:center;gap:8px;min-height:40px;padding:0 14px 0 8px;border-radius:20px;background:#fff;border:1px solid #e3dad3;color:#1f1715;text-decoration:none;font-size:14px"><b class="sec">G</b>Edge cases</a>
+<a href="V5.2%20Vault%20Access%20-%2010%20Build%20spec.dc.html" style="display:flex;align-items:center;gap:8px;min-height:40px;padding:0 14px 0 8px;border-radius:20px;background:#fff;border:1px solid #e3dad3;color:#1f1715;text-decoration:none;font-size:14px"><b class="sec">X</b>Build spec</a>
+</nav>
+</header>
+
+<section style="display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:baseline;gap:10px"><b class="sec">A</b><span style="font-size:15px;font-weight:600">Five separate facts about every person</span></div>
+<p style="margin:0;font-size:14px;line-height:21px;color:#4a3f3a;max-width:1000px">Linked People V5.2 tracks four facts (Recorded, Invited, Verified, Authorised). This board splits Authorised into what the owner has arranged for later (Nomination) and what the person can see today (Access), so a nominee is never shown as having access. Each fact changes only when the owner or the release process acts, and none implies another.</p>
+<div id="va-a1" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px">
+<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:10px"><span style="font-size:13px;color:#6b5f5a"><b class="tag">va-a1</b>1</span><span style="font-size:17px;font-weight:600">Contact and links</span><span style="font-size:14px;line-height:20px;color:#4a3f3a">The person is in People, and may be linked to records with a role (executor, joint owner…).</span><span style="display:flex;flex-wrap:wrap;gap:6px"><span class="chip cn">Contact saved</span><span class="chip cn">Linked to 2 records</span></span><span style="font-size:13px;line-height:18px;color:#6b5f5a">Changes when the owner adds, links or removes them. Reuses Linked People A–D.</span></div>
+<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:10px"><span style="font-size:13px;color:#6b5f5a">2</span><span style="font-size:17px;font-weight:600">Invitation</span><span style="font-size:14px;line-height:20px;color:#4a3f3a">Whether they've been asked to join Legacy Fortress and connect with the owner.</span><span style="display:flex;flex-wrap:wrap;gap:6px"><span class="chip cn">Not invited</span><span class="chip ca"><span class="ms" aria-hidden="true" style="font-size:15px">schedule</span>Invite sent</span><span class="chip cn"><span class="ms" aria-hidden="true" style="font-size:15px">error</span>Not delivered</span><span class="chip cn">Expired</span><span class="chip cg"><span class="ms" aria-hidden="true" style="font-size:15px">check</span>Joined</span></span><span style="font-size:13px;line-height:18px;color:#6b5f5a">Changes when the owner sends and the person accepts. Reuses Linked People d5–d7.</span></div>
+<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:10px"><span style="font-size:13px;color:#6b5f5a">3</span><span style="font-size:17px;font-weight:600">Identity</span><span style="font-size:14px;line-height:20px;color:#4a3f3a">Whether the person has proved who they are. It proves identity only, never authority.</span><span style="display:flex;flex-wrap:wrap;gap:6px"><span class="chip cn">ID not checked</span><span class="chip ct"><span class="ms" aria-hidden="true" style="font-size:15px">hourglass_top</span>Checking ID</span><span class="chip cg"><span class="ms" aria-hidden="true" style="font-size:15px">verified_user</span>ID verified</span><span class="chip cn">ID check failed</span></span><span style="font-size:13px;line-height:18px;color:#6b5f5a">Changes when the person completes the check. Reuses Journeys 3a–3i.</span></div>
+<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:10px"><span style="font-size:13px;color:#6b5f5a">4 · New</span><span style="font-size:17px;font-weight:600">Nomination (later)</span><span style="font-size:14px;line-height:20px;color:#4a3f3a">What the owner has arranged for the future: the whole Vault or selected records after death, or a legal authority.</span><span style="display:flex;flex-wrap:wrap;gap:6px"><span class="chip cn">Not nominated</span><span class="chip co"><span class="ms" aria-hidden="true" style="font-size:15px">bookmark_added</span>Nominated · whole Vault</span><span class="chip co"><span class="ms" aria-hidden="true" style="font-size:15px">bookmark_added</span>Nominated · 4 records</span><span class="chip co"><span class="ms" aria-hidden="true" style="font-size:15px">gavel</span>Attorney · not in effect</span></span><span style="font-size:13px;line-height:18px;color:#6b5f5a">Changes only when the owner confirms, changes or cancels it.</span></div>
+<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:10px"><span style="font-size:13px;color:#6b5f5a">5 · New</span><span style="font-size:17px;font-weight:600">Access (now)</span><span style="font-size:14px;line-height:20px;color:#4a3f3a">What the person can actually see today. The only fact that opens anything.</span><span style="display:flex;flex-wrap:wrap;gap:6px"><span class="chip cn"><span class="ms" aria-hidden="true" style="font-size:15px">lock</span>No access</span><span class="chip ca"><span class="ms" aria-hidden="true" style="font-size:15px">hourglass_top</span>Release in progress</span><span class="chip cg"><span class="ms" aria-hidden="true" style="font-size:15px">visibility</span>Can see 3 records</span><span class="chip cg"><span class="ms" aria-hidden="true" style="font-size:15px">lock_open</span>Released</span><span class="chip cn"><span class="ms" aria-hidden="true" style="font-size:15px">block</span>Access stopped</span></span><span style="font-size:13px;line-height:18px;color:#6b5f5a">Changes only through the permission service: the owner's Give access, an approved release, or a confirmed legal authority.</span></div>
+</div>
+<div style="display:flex;gap:10px;padding:12px 14px;background:#f0ebe7;border-radius:10px;font-size:14px;line-height:20px;max-width:1100px"><span class="ms" aria-hidden="true" style="font-size:18px;color:#4a3f3a;margin-top:1px">lock</span><span>Being a spouse, child, executor, attorney, beneficiary or nominee never opens the Vault by itself. A nomination waits for its condition; reporting a death never opens anything. lock_open is shown only after an approved release (AGENTS rule 27).</span></div>
+</section>
+
+<section style="display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:28px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:12px">
+<span style="font-size:13px;color:#6b5f5a"><b class="tag">va-a2</b>The statuses in the brief, mapped to the five facts</span>
+<div class="card" style="overflow:hidden">
+<table style="border-collapse:collapse;width:100%">
+<thead><tr><th>Status asked for</th><th>Shown as</th><th>Fact</th></tr></thead>
+<tbody>
+<tr><td>Contact saved</td><td>Contact saved</td><td>1 Contact and links</td></tr>
+<tr><td>Not invited</td><td>Not invited</td><td>2 Invitation</td></tr>
+<tr><td>Invitation pending</td><td>Invite sent · {date}</td><td>2 Invitation</td></tr>
+<tr><td>Invitation delivery failed</td><td>Not delivered</td><td>2 Invitation</td></tr>
+<tr><td>Invitation accepted</td><td>Joined</td><td>2 Invitation</td></tr>
+<tr><td>Identity verification pending</td><td>Checking ID</td><td>3 Identity</td></tr>
+<tr><td>Identity verified</td><td>ID verified</td><td>3 Identity</td></tr>
+<tr><td>Nominated for future access</td><td>Nominated · whole Vault / N records</td><td>4 Nomination</td></tr>
+<tr><td>Access pending release</td><td>Release in progress</td><td>5 Access</td></tr>
+<tr><td>Access active</td><td>Can see N records / Can see whole Vault / Released</td><td>5 Access</td></tr>
+<tr><td>Access revoked</td><td>Access stopped · {date}</td><td>5 Access</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px">
+<span style="font-size:13px;color:#6b5f5a"><b class="tag">va-a3</b>One person, all five facts (Vault access card)</span>
+<div class="card" style="overflow:hidden">
+<div style="display:flex;align-items:center;gap:12px;padding:14px 16px"><span style="flex:none;width:48px;height:48px;border-radius:24px;background:#f3e6df;color:#6e3a28;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center">LY</span><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:17px;font-weight:600">Lucy Yardley</span><span style="font-size:14px;color:#6b5f5a">Daughter · Family</span></span></div>
+<div style="display:flex;align-items:center;gap:10px;min-height:48px;padding:6px 16px;border-top:1px solid #f0ebe7;font-size:15px"><span style="flex:1">Linked to</span><span style="color:#6b5f5a">2 records</span></div>
+<div style="display:flex;align-items:center;gap:10px;min-height:48px;padding:6px 16px;border-top:1px solid #f0ebe7;font-size:15px"><span style="flex:1">Invitation</span><span class="chip cg"><span class="ms" aria-hidden="true" style="font-size:15px">check</span>Joined</span></div>
+<div style="display:flex;align-items:center;gap:10px;min-height:48px;padding:6px 16px;border-top:1px solid #f0ebe7;font-size:15px"><span style="flex:1">Identity</span><span class="chip cg"><span class="ms" aria-hidden="true" style="font-size:15px">verified_user</span>ID verified</span></div>
+<div style="display:flex;align-items:center;gap:10px;min-height:48px;padding:6px 16px;border-top:1px solid #f0ebe7;font-size:15px"><span style="flex:1">Later</span><span class="chip co"><span class="ms" aria-hidden="true" style="font-size:15px">bookmark_added</span>Nominated · whole Vault</span></div>
+<div style="display:flex;align-items:center;gap:10px;min-height:48px;padding:6px 16px;border-top:1px solid #f0ebe7;font-size:15px"><span style="flex:1">Now</span><span class="chip cn"><span class="ms" aria-hidden="true" style="font-size:15px">lock</span>No access</span></div>
+</div>
+</div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:12px">
+<span style="font-size:13px;color:#6b5f5a"><b class="tag">va-a4</b>Reused vs new. No approved screen is redrawn.</span>
+<div class="card" style="overflow:hidden;max-width:1500px">
+<table style="border-collapse:collapse;width:100%">
+<thead><tr><th style="width:30%">Need in the brief</th><th style="width:34%">Where it's drawn</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td>Linked people on any record; Will with three executors</td><td>V5.2 Linked People · B, C, D (d1–d10), E (e1–e4)</td><td><span class="chip cg">Reused as is</span></td></tr>
+<tr><td>Existing contact or new contact; invitation after saving</td><td>Linked People d2–d7; Vault Master qi1 (Add a person)</td><td><span class="chip cg">Reused as is</span></td></tr>
+<tr><td>Document-extracted people</td><td>Linked People F (f1–f4); Vault Master u1, u2</td><td><span class="chip cg">Reused as is</span></td></tr>
+<tr><td>Identity verification</td><td>Legacy Fortress Journeys 3a–3i</td><td><span class="chip cg">Reused as is</span></td></tr>
+<tr><td>Death reporting and release tracker</td><td>Legacy Fortress Journeys 6a–6d</td><td><span class="chip cg">Reused; nominee view added (va-r7)</span></td></tr>
+<tr><td>Record access sheet and avatar badges</td><td>V5.2 Records Access and Approvals · 6m / W2; AGENTS rule 27</td><td><span class="chip cg">Reused as is</span></td></tr>
+<tr><td>Person panel with Vault access card</td><td>README › Person panel; Vault Master People</td><td><span class="chip ca">Extended: Now / Later rows (va-n1, va-n7)</span></td></tr>
+<tr><td>Vault switcher "Locked until release"</td><td>Vault Master qm2</td><td><span class="chip cg">Reused (va-r5)</span></td></tr>
+<tr><td>Whole-Vault and selected-record nomination after death</td><td>This board · N (va-n1–va-n7), W (va-w1–va-w4)</td><td><span class="chip co">New</span></td></tr>
+<tr><td>Share selected records now</td><td>This board · S (va-s1–va-s5)</td><td><span class="chip co">New flow, reuses Give access</span></td></tr>
+<tr><td>Power of Attorney</td><td>This board · L (va-l1–va-l8)</td><td><span class="chip co">New</span></td></tr>
+<tr><td>Recipient states before and after release</td><td>This board · R (va-r1–va-r9)</td><td><span class="chip co">New, joins Journeys 2, 3, 6</span></td></tr>
+<tr><td>Review, change and stop access</td><td>This board · V (va-v1–va-v7)</td><td><span class="chip co">New</span></td></tr>
+<tr><td>Property with several linked people</td><td>This board · P (va-p1, va-p2)</td><td><span class="chip co">New example, existing component</span></td></tr>
+</tbody>
+</table>
+</div>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":1900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

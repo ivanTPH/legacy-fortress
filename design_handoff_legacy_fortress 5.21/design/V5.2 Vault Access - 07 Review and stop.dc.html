@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Review, change and stop access</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&amp;display=block">
+<style>
+body{margin:0;background:#efebe7;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;color:#1f1715;-webkit-font-smoothing:antialiased}
+a{color:#7a3d27}a:hover{color:#2b1714}
+.ms{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;line-height:1;width:1em;height:1em;overflow:hidden;flex:none;letter-spacing:normal;text-transform:none;white-space:nowrap;display:inline-block}
+.ph{--pg:#f7f4f1;--hdr:#fff;--cd:#fff;--bd:#ebe4de;--dv:#f0ebe7;--tx:#1f1715;--t2:#6b5f5a;--t3:#4a3f3a;--lk:#7a3d27;--pb:#2b1714;--pt:#fff;--ob:#e3dad3;--ib:#8c7f79;--nt:#f0ebe7;--avb:#f3e6df;--avt:#6e3a28;--amb:#fbf0dc;--amt:#7a4f00;--gnb:#e6f2ea;--gnt:#1e6b3a;--tlb:#e3eef0;--tlt:#1f5a55;--nb:#f0ebe7;--ntx:#4a3f3a;--rd:#b3261e}
+.scr{display:flex;flex-direction:column;gap:12px;flex:none}
+.lbl{font-size:13px;color:#6b5f5a}
+.tag{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;margin-right:6px;color:#1f1715}
+.sec{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px}
+.ph{width:390px;height:844px;flex:none;border-radius:44px;overflow:hidden;background:var(--pg);color:var(--tx);box-shadow:0 0 0 10px #1a1a1a,0 24px 60px rgba(0,0,0,.25);display:flex;flex-direction:column;position:relative}
+.sb{height:47px;flex:none;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 8px 40px;box-sizing:border-box;font-size:16px;font-weight:600;background:var(--hdr)}
+.uat{height:28px;flex:none;background:#8c1d18;color:#fffffe;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.hd{height:56px;flex:none;display:flex;align-items:center;padding:0 4px;background:var(--hdr);border-bottom:1px solid var(--bd)}
+.bk{height:44px;display:flex;align-items:center;padding:0 10px 0 2px;color:var(--lk);font:inherit;font-size:16px;background:none;border:0}
+.bd{flex:1;min-height:0;overflow:auto;padding:14px 16px 24px;display:flex;flex-direction:column;gap:14px}
+.h1{margin:0;font-size:28px;line-height:34px;font-weight:700}
+.st{font-size:14px;color:var(--t2)}
+.p{margin:0;font-size:15px;line-height:22px;color:var(--t3)}
+.gh{font-size:13px;font-weight:600;color:var(--t2);padding:0 4px}
+.card{flex:none;background:var(--cd);border:1px solid var(--bd);border-radius:12px;overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;min-height:52px;padding:8px 14px;border-top:1px solid var(--dv);font-size:16px;box-sizing:border-box}
+.row:first-child{border-top:0}
+.rk{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.rs{font-size:14px;line-height:19px;color:var(--t2)}
+.av{flex:none;width:40px;height:40px;border-radius:20px;background:var(--avb);color:var(--avt);font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.avp{background:#d9ecea;color:#173d3a}
+.it{flex:none;width:36px;height:36px;border-radius:9px;background:var(--pb);color:var(--pt);display:flex;align-items:center;justify-content:center}
+.logo{flex:none;width:36px;height:36px;border-radius:9px;background:#fff;box-shadow:inset 0 0 0 1px var(--bd);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#00395d}
+.chip{flex:none;display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border-radius:6px;font-size:13px;font-weight:600;white-space:nowrap}
+.cn{background:var(--nb);color:var(--ntx)}.ca{background:var(--amb);color:var(--amt)}.cg{background:var(--gnb);color:var(--gnt)}.ct{background:var(--tlb);color:var(--tlt)}.co{background:var(--cd);color:var(--tx);box-shadow:inset 0 0 0 1px var(--ib)}
+.btn{flex:none;height:48px;padding:0 16px;box-sizing:border-box;border-radius:12px;font:inherit;font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;width:100%;border:0;cursor:pointer}
+.bp{background:var(--pb);color:var(--pt)}.bo{background:var(--cd);color:var(--tx);border:1px solid var(--ob)}.bt{background:transparent;color:var(--lk);height:44px}.bx{background:var(--rd);color:#fff}.bxt{background:transparent;color:var(--rd);height:44px}
+.note{flex:none;display:flex;gap:10px;padding:12px 14px;background:var(--nt);border-radius:10px;font-size:14px;line-height:20px;color:var(--tx)}
+.opt{flex:none;display:flex;gap:12px;align-items:flex-start;padding:12px 14px;background:var(--cd);border:1px solid var(--bd);border-radius:12px;cursor:pointer;font-size:16px}
+.opt.on{border:2px solid var(--pb);padding:11px 13px}
+.opt input{width:22px;height:22px;margin:0;accent-color:var(--pb);flex:none}
+.sw{width:44px;height:26px;accent-color:var(--pb);flex:none;margin:0}
+.toast{flex:none;display:flex;align-items:center;gap:10px;min-height:48px;padding:10px 14px;border-radius:12px;background:var(--pb);color:var(--pt);font-size:15px}
+.seg{display:flex;background:var(--nt);border-radius:10px;padding:3px;gap:3px}
+.sg{flex:1;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:var(--t3)}
+.sg.on{background:var(--cd);color:var(--tx);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.scrim{position:absolute;inset:0;background:rgba(31,23,21,.4)}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--cd);border-radius:20px 20px 0 0;box-shadow:0 -12px 40px rgba(0,0,0,.2);padding:10px 16px 34px;display:flex;flex-direction:column;gap:12px}
+.grab{width:40px;height:5px;border-radius:3px;background:var(--ob);align-self:center}
+.hdr2{display:flex;align-items:center;justify-content:space-between;padding:0 8px;height:56px;flex:none;background:var(--hdr);border-bottom:1px solid var(--bd)}
+.ib{width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:0;background:none;color:var(--tx)}
+</style>
+</helmet>
+<div style="width:3070px;height:1120px;box-sizing:border-box;padding:40px 48px;display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:8px;max-width:1200px">
+<div style="display:flex;align-items:baseline;gap:10px"><b class="sec">V</b><span style="font-size:15px;font-weight:600">Review, change and stop access</span></div>
+<p style="margin:0;font-size:14px;line-height:21px;color:#4a3f3a">One list of everyone's Vault access, grouped by what they can see now and what's arranged for later. Stopping or cancelling is always available to the owner, takes effect straight away, and is written to Record history. The person is told only that it ended, never why or what it covered.</p>
+</div>
+<div style="display:flex;gap:40px;align-items:flex-start">
+
+<div class="scr"><span class="lbl"><b class="tag">va-v1</b>1 · Vault access list</span>
+<div class="ph"><div class="sb"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="ms" aria-hidden="true" style="font-size:18px">signal_cellular_alt</span><span class="ms" aria-hidden="true" style="font-size:18px">wifi</span><span class="ms" aria-hidden="true" style="font-size:20px">battery_full</span></span></div><div class="uat">UAT · synthetic data only</div>
+<div class="hdr2"><button type="button" class="ib" aria-label="Menu"><span class="ms" aria-hidden="true" style="font-size:24px">menu</span></button><span style="font-size:17px;font-weight:600">People &amp; Access</span><button type="button" class="ib" aria-label="Set up Vault access"><span class="ms" aria-hidden="true" style="font-size:24px">key</span></button></div>
+<div class="bd">
+<div class="seg" role="tablist"><span class="sg" role="tab">People</span><span class="sg on" role="tab" aria-selected="true">Vault access</span><span class="sg" role="tab">Requests</span></div>
+<span class="st">1 can see records now · 2 nominated · 1 legal authority</span>
+<span class="gh">Can see now</span>
+<div class="card"><div class="row" style="align-items:flex-start;padding:12px 4px 12px 14px"><span class="av avp">ME</span><span class="rk"><span style="font-weight:600">Mark Ellis</span><span class="rs">3 records · until 31 Mar 2027</span><span style="margin-top:4px"><span class="chip cg"><span class="ms" aria-hidden="true" style="font-size:15px">visibility</span>Can see 3 records</span></span></span><span class="ms" aria-hidden="true" style="font-size:22px;color:var(--t2);margin:10px 10px 0 0">chevron_right</span></div></div>
+<span class="gh">Nominated for later</span>
+<div class="card">
+<div class="row" style="align-items:flex-start;padding:12px 4px 12px 14px"><span class="av">LY</span><span class="rk"><span style="font-weight:600">Lucy Yardley</span><span class="rs">Whole Vault, except 1 · after your death</span><span style="margin-top:4px;display:flex;gap:6px"><span class="chip co"><span class="ms" aria-hidden="true" style="font-size:15px">bookmark_added</span>Nominated</span><span class="chip cn">No access now</span></span></span><span class="ms" aria-hidden="true" style="font-size:22px;color:var(--t2);margin:10px 10px 0 0">chevron_right</span></div>
+<div class="row" style="align-items:flex-start;padding:12px 4px 12px 14px"><span class="av">SY</span><span class="rk"><span style="font-weight:600">Sarah Yardley</span><span class="rs">Whole Vault · after your death</span><span style="margin-top:4px;display:flex;gap:6px"><span class="chip co"><span class="ms" aria-hidden="true" style="font-size:15px">bookmark_added</span>Nominated</span><span class="chip ct">Checking ID</span></span></span><span class="ms" aria-hidden="true" style="font-size:22px;color:var(--t2);margin:10px 10px 0 0">chevron_right</span></div>
+</div>
+<span class="gh">Legal authority</span>
+<div class="card"><div class="row" style="align-items:flex-start;padding:12px 4px 12px 14px"><span class="av">BS</span><span class="rk"><span style="font-weight:600">Bob Smith</span><span class="rs">LPA property and finances</span><span style="margin-top:4px"><span class="chip cn"><span class="ms" aria-hidden="true" style="font-size:15px">pause_circle</span>Not in effect</span></span></span><span class="ms" aria-hidden="true" style="font-size:22px;color:var(--t2);margin:10px 10px 0 0">chevron_right</span></div></div>
+<details class="card"><summary style="min-height:52px;padding:0 14px;display:flex;align-items:center;gap:8px;font-size:16px;font-weight:600;cursor:pointer"><span style="flex:1">Ended · 1</span><span class="ms" aria-hidden="true" style="font-size:20px">expand_more</span></summary></details>
+</div>
+</div></div>
+
+<div class="scr"><span class="lbl"><b class="tag">va-v2</b>2 · Mark's access</span>
+<div class="ph"><div class="sb"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="ms" aria-hidden="true" style="font-size:18px">signal_cellular_alt</span><span class="ms" aria-hidden="true" style="font-size:18px">wifi</span><span class="ms" aria-hidden="true" style="font-size:20px">battery_full</span></span></div><div class="uat">UAT · synthetic data only</div>
+<div class="hd"><button type="button" class="bk"><span class="ms" aria-hidden="true" style="font-size:26px">chevron_left</span>Vault access</button></div>
+<div class="bd">
+<div style="display:flex;align-items:center;gap:14px"><span class="av avp" style="width:56px;height:56px;border-radius:28px;font-size:18px">ME</span><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:22px;line-height:28px;font-weight:700">Mark Ellis</span><span class="st">Financial adviser</span></span></div>
+<div class="card">
+<div class="row"><span class="rk"><span style="font-weight:600">Can see now</span><span class="rs">Given by you · 27 Oct 2026</span></span><span class="chip cg">Active</span></div>
+<div class="row"><span class="logo">BAR</span><span class="rk">Barclays current account</span></div>
+<div class="row"><span class="logo" style="color:#96151d">VG</span><span class="rk">Vanguard ISA</span></div>
+<div class="row"><span class="logo" style="color:#004b8d">AV</span><span class="rk">Aviva pension</span></div>
+<div class="row"><span class="rk"><span class="rs">Mark can</span><span>View only, with documents</span></span></div>
+<div class="row"><span class="rk"><span class="rs">Until</span><span>31 Mar 2027</span></span></div>
+</div>
+<div class="card">
+<div class="row" style="color:var(--lk);font-weight:600"><span class="rk">Change records</span><span class="ms" aria-hidden="true" style="font-size:22px">chevron_right</span></div>
+<div class="row" style="color:var(--lk);font-weight:600"><span class="rk">Change end date</span><span class="ms" aria-hidden="true" style="font-size:22px">chevron_right</span></div>
+</div>
+<button type="button" class="btn bxt">Stop access</button>
+</div>
+</div></div>
+
+<div class="scr"><span class="lbl"><b class="tag">va-v3</b>3 · Stop access: confirm</span>
+<div class="ph"><div class="sb"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="ms" aria-hidden="true" style="font-size:18px">signal_cellular_alt</span><span class="ms" aria-hidden="true" style="font-size:18px">wifi</span><span class="ms" aria-hidden="true" style="font-size:20px">battery_full</span></span></div><div class="uat">UAT · synthetic data only</div>
+<div class="hd"><span class="bk"><span class="ms" aria-hidden="true" style="font-size:26px">chevron_left</span>Vault access</span></div>
+<div class="bd"><div class="card" style="height:220px"></div></div>
+<div class="scrim"></div>
+<div class="sheet" role="dialog" aria-label="Stop Mark's access">
+<span class="grab"></span>
+<span style="font-size:22px;font-weight:700;line-height:28px">Stop Mark's access?</span>
+<p class="p">Mark won't be able to see Barclays, Vanguard ISA or Aviva pension any more. This happens straight away.</p>
+<p class="p">He's told his access has ended, without details.</p>
+<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:15px;font-weight:600">Note for your Record history · Optional</span><span style="min-height:48px;box-sizing:border-box;border-radius:10px;border:1px solid var(--ib);padding:12px;font-size:16px;color:var(--t2)">Changed adviser</span></label>
+<button type="button" class="btn bx">Stop access</button>
+<button type="button" class="btn bt">Keep access</button>
+</div>
+</div></div>
+
+<div class="scr"><span class="lbl"><b class="tag">va-v4</b>4 · Stopped</span>
+<div class="ph"><div class="sb"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="ms" aria-hidden="true" style="font-size:18px">signal_cellular_alt</span><span class="ms" aria-hidden="true" style="font-size:18px">wifi</span><span class="ms" aria-hidden="true" style="font-size:20px">battery_full</span></span></div><div class="uat">UAT · synthetic data only</div>
+<div class="hd"><button type="button" class="bk"><span class="ms" aria-hidden="true" style="font-size:26px">chevron_left</span>Vault access</button></div>
+<div class="bd">
+<div role="status" class="toast"><span class="ms" aria-hidden="true" style="font-size:20px">check_circle</span><span style="flex:1">Mark's access stopped</span><span class="ms" aria-hidden="true" style="font-size:20px">close</span></div>
+<div style="display:flex;align-items:center;gap:14px"><span class="av avp" style="width:56px;height:56px;border-radius:28px;font-size:18px">ME</span><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:22px;line-height:28px;font-weight:700">Mark Ellis</span><span class="st">Financial adviser</span></span></div>
+<div class="card"><div class="row"><span class="rk"><span style="font-weight:600">Now</span><span class="rs">Mark can't see any of your records.</span></span><span class="chip cn"><span class="ms" aria-hidden="true" style="font-size:15px">block</span>Access stopped · 27 Oct</span></div></div>
+<span class="gh">Record history</span>
+<div class="card">
+<div class="row"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">block</span></span><span class="rk"><span>Access stopped by you</span><span class="rs">27 Oct 2026 · 3 records · note added</span></span></div>
+<div class="row"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">visibility</span></span><span class="rk"><span>Access given by you</span><span class="rs">27 Oct 2026 · 3 records</span></span></div>
+</div>
+<button type="button" class="btn bo">Give access again</button>
+</div>
+</div></div>
+
+<div class="scr"><span class="lbl"><b class="tag">va-v5</b>5 · Cancel a nomination</span>
+<div class="ph"><div class="sb"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="ms" aria-hidden="true" style="font-size:18px">signal_cellular_alt</span><span class="ms" aria-hidden="true" style="font-size:18px">wifi</span><span class="ms" aria-hidden="true" style="font-size:20px">battery_full</span></span></div><div class="uat">UAT · synthetic data only</div>
+<div class="hd"><span class="bk"><span class="ms" aria-hidden="true" style="font-size:26px">chevron_left</span>Lucy Yardley</span></div>
+<div class="bd"><div class="card" style="height:220px"></div></div>
+<div class="scrim"></div>
+<div class="sheet" role="dialog" aria-label="Cancel Lucy's nomination">
+<span class="grab"></span>
+<span style="font-size:22px;font-weight:700;line-height:28px">Cancel Lucy's nomination?</span>
+<p class="p">Lucy won't get access to your Vault after your death. She has no access now, so nothing changes today.</p>
+<p class="p">She stays in People and on the records she's linked to.</p>
+<div class="card"><label class="row" style="min-height:64px"><span class="rk"><span>Tell Lucy</span><span class="rs">She's told her nomination ended, without details.</span></span><input type="checkbox" role="switch" class="sw" aria-label="Tell Lucy"></label></div>
+<button type="button" class="btn bx">Cancel nomination</button>
+<button type="button" class="btn bt">Keep it</button>
+</div>
+</div></div>
+
+<div class="scr"><span class="lbl"><b class="tag">va-v6</b>6 · Power of Attorney withdrawn</span>
+<div class="ph"><div class="sb"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="ms" aria-hidden="true" style="font-size:18px">signal_cellular_alt</span><span class="ms" aria-hidden="true" style="font-size:18px">wifi</span><span class="ms" aria-hidden="true" style="font-size:20px">battery_full</span></span></div><div class="uat">UAT · synthetic data only</div>
+<div class="hd"><button type="button" class="bk"><span class="ms" aria-hidden="true" style="font-size:26px">chevron_left</span>Bob Smith</button></div>
+<div class="bd">
+<h1 class="h1">Mark the authority as withdrawn</h1>
+<p class="p">If Bob can see records under this LPA, his access stops straight away.</p>
+<fieldset style="border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px"><legend style="font-size:15px;font-weight:600;padding:0 0 6px">What happened?</legend>
+<label class="opt on"><input type="radio" name="v6" checked>I've cancelled the LPA</label>
+<label class="opt"><input type="radio" name="v6">Bob has stepped down</label>
+<label class="opt"><input type="radio" name="v6">Something else</label>
+</fieldset>
+<div class="card"><div class="row"><span class="it"><span class="ms" aria-hidden="true" style="font-size:20px">note_add</span></span><span class="rk"><span>Add the cancellation document</span><span class="rs">Optional. Helps our team close the check.</span></span></div></div>
+<div class="note"><span class="ms" aria-hidden="true" style="font-size:18px;color:var(--t3);margin-top:1px">info</span><span>Bob stays in People, and his other roles (executor on your Will) don't change.</span></div>
+</div>
+<div style="flex:none;background:var(--hdr);border-top:1px solid var(--bd);padding:12px 16px 34px;display:flex;flex-direction:column;gap:8px"><button type="button" class="btn bx">Mark as withdrawn</button><button type="button" class="btn bt">Cancel</button></div>
+</div></div>
+
+<div class="scr"><span class="lbl"><b class="tag">va-v7</b>7 · Owner's To do: early access request</span>
+<div class="ph"><div class="sb"><span>9:41</span><span style="display:flex;gap:5px;align-items:center"><span class="ms" aria-hidden="true" style="font-size:18px">signal_cellular_alt</span><span class="ms" aria-hidden="true" style="font-size:18px">wifi</span><span class="ms" aria-hidden="true" style="font-size:20px">battery_full</span></span></div><div class="uat">UAT · synthetic data only</div>
+<div class="hd"><button type="button" class="bk"><span class="ms" aria-hidden="true" style="font-size:26px">chevron_left</span>To do</button></div>
+<div class="bd">
+<span><span class="chip ca"><span class="ms" aria-hidden="true" style="font-size:15px">priority_high</span>Needs you</span></span>
+<h1 class="h1">Lucy asked for access now</h1>
+<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:8px"><span class="rs">Lucy's message · 2 Nov</span><p class="p" style="color:var(--tx)">I'm sorting the house insurance with Mum and need the policy details.</p></div>
+<div class="card">
+<div class="row"><span class="rk"><span class="rs">Lucy can see now</span><span>Nothing</span></span></div>
+<div class="row"><span class="rk"><span class="rs">Arranged for later</span><span>Whole Vault after your death</span></span></div>
+</div>
+<p class="p">Nothing changes unless you share something. If you do, you choose exactly which records.</p>
+</div>
+<div style="flex:none;background:var(--hdr);border-top:1px solid var(--bd);padding:12px 16px 34px;display:flex;flex-direction:column;gap:8px"><button type="button" class="btn bp">Choose records to share</button><button type="button" class="btn bt">Not now</button></div>
+</div></div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3070,"height":1120}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

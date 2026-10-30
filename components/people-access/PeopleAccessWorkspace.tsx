@@ -8,6 +8,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { useViewerAccess } from "../access/ViewerAccessContext";
 import AccessRequestsWorkspace from "../access-requests/AccessRequestsWorkspace";
 import ContactsNetworkWorkspace from "../contacts/ContactsNetworkWorkspace";
+import VaultAccessWorkspace from "./VaultAccessWorkspace";
 import Icon from "../ui/Icon";
 import { PageHeader } from "../ui/V3Primitives";
 
@@ -20,7 +21,7 @@ export default function PeopleAccessWorkspace() {
   const [pendingByContact, setPendingByContact] = useState<Record<string, string>>({});
   const [requestRevision, setRequestRevision] = useState(0);
   const requestedView = params.get("view");
-  const view = requestedView === "sharing" ? "sharing"
+  const view = requestedView === "vault-access" ? "vault-access" : requestedView === "sharing" ? "sharing"
     : requestedView === "requests" || ((pathname === "/access-requests" || pathname === "/access") && requestedView !== "people") ? "requests" : "people";
   const addPersonMode = view === "people" && params.get("add") === "1" && !viewer.readOnly;
 
@@ -71,15 +72,16 @@ export default function PeopleAccessWorkspace() {
   return <section className={addPersonMode ? "lf-pa-page is-add-person" : "lf-pa-page"}>
     {addPersonMode ? <div className="lf-v52-add-person-page-header"><Link href="/people-access?view=people"><Icon name="chevron_left" size={20} />People</Link><h1>Add a person</h1></div> : <PageHeader
       title="People & Access"
-      description="Keep relationships, requests and record sharing in one place."
+      description={view === "vault-access" ? "Who can see your Vault now, and who you’ve arranged access for later." : "Keep relationships, requests and record sharing in one place."}
       action={view === "people" && !viewer.readOnly ? <Link className="lf-pa-add" href="/people-access?view=people&group=trusted_contacts&add=1"><Icon name="person_add" size={18} />Add person</Link> : undefined}
     />}
     {!addPersonMode ? <nav className="lf-pa-tabs" aria-label="People and access views">
       <Link href="/people-access?view=people" className={view === "people" ? "is-active" : ""} aria-current={view === "people" ? "page" : undefined}>People</Link>
+      <Link href="/people-access?view=vault-access" className={view === "vault-access" ? "is-active" : ""} aria-current={view === "vault-access" ? "page" : undefined}>Vault access</Link>
       <Link href="/people-access?view=requests" className={view === "requests" ? "is-active" : ""} aria-current={view === "requests" ? "page" : undefined}>Requests{pendingCount ? <span className="lf-pa-count">{pendingCount}</span> : null}</Link>
       <Link href="/people-access?view=sharing" className={view === "sharing" ? "is-active" : ""} aria-current={view === "sharing" ? "page" : undefined}>Sharing</Link>
     </nav> : null}
-    {view === "requests"
+    {view === "vault-access" ? <VaultAccessWorkspace /> : view === "requests"
       ? <AccessRequestsWorkspace embedded onRequestChanged={() => setRequestRevision((current) => current + 1)} onOpenPerson={(contactId) => router.push(`/people-access?view=people&contact=${encodeURIComponent(contactId)}`)} />
       : <ContactsNetworkWorkspace embedded sharingView={view === "sharing"} basePath="/people-access" pendingByContact={pendingByContact} />}
   </section>;
