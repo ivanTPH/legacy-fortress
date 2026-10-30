@@ -56,7 +56,7 @@ test("admin account menu uses separated avatar identity rows and avoids fused ac
   assert.doesNotMatch(source, /ProfileAccount securitySign out/);
   assert.match(globalCss, /\.lf-admin-shell-account-popover\s*\{[\s\S]+position: absolute/);
   assert.match(globalCss, /\.lf-admin-shell-account-summary-copy\s*\{[\s\S]+display: grid/);
-  assert.match(globalCss, /\.lf-admin-shell-account-menu-section\s*\{[\s\S]+border-top: 1px solid #e2e8f0/);
+  assert.match(globalCss, /\.lf-admin-shell-account-menu-section\s*\{[\s\S]+border-top: 1px solid var\(--lf-border\)/);
   assert.match(globalCss, /\.lf-admin-shell-account-popover a > span,[\s\S]+white-space: nowrap/);
   assert.match(globalCss, /@media \(max-width: 860px\)[\s\S]+\.lf-admin-shell-account-popover[\s\S]+width: min\(320px, calc\(100vw - 32px\)\)/);
 });
@@ -125,17 +125,17 @@ test("Personal Vault uses the same account-menu dismissal contract with explicit
   assert.doesNotMatch(layout, /className="lf-signout" onClick=\{signOut\}/);
 });
 
-test("platform overview exposes capability-filtered resources without entering enterprise context", () => {
+test("platform overview shows capability-filtered decisions and never exposes Vault contents", () => {
   const source = read("components/admin/AdminControlPlaneWorkspace.tsx");
-  assert.match(source, /platform-control-map-title/);
-  assert.match(source, /System Admin boundary/);
-  assert.match(source, /\/admin\/organisations/);
-  assert.match(source, /\/admin\/users/);
-  assert.match(source, /\/admin\/invitations/);
-  assert.match(source, /\/admin\/licences/);
-  assert.match(source, /\/admin\/verification/);
-  assert.match(source, /capabilities\.includes\(resource\.capability\)/);
-  assert.match(source, /Enterprise operations remain organisation-scoped at \/enterprise/);
+  const navigation = read("components/admin/adminNavigation.ts");
+  assert.match(source, /What needs a decision today\. Customer Vault contents and documents are never shown in admin\./);
+  assert.match(source, /canVerify && pending > 0/);
+  assert.match(source, /canViewInvitations && \(support\?\.counts\.readyToSendInvitations/);
+  assert.match(source, /caption="Across all Vaults"/);
+  for (const href of ["/admin/organisations", "/admin/users", "/admin/invitations", "/admin/licences", "/admin/verification"]) {
+    assert.match(navigation, new RegExp(href.replace(/\//g, "\\/")));
+  }
+  assert.match(navigation, /capabilit/);
 });
 
 test("users and invitations expose safe organisation context and lifecycle data", () => {

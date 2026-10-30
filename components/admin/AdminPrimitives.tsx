@@ -180,7 +180,7 @@ const adminPrimitiveCss = `
   }
   .lf-admin-data-table th,
   .lf-admin-data-table td {
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--lf-border);
     padding: 10px;
     text-align: left;
     vertical-align: top;
@@ -188,7 +188,7 @@ const adminPrimitiveCss = `
     word-break: normal;
   }
   .lf-admin-data-table th {
-    color: #334155;
+    color: var(--lf-text);
     font-size: 12px;
     letter-spacing: .02em;
     text-transform: uppercase;
@@ -197,7 +197,7 @@ const adminPrimitiveCss = `
   }
   .lf-admin-data-table small,
   .lf-admin-data-card small {
-    color: #64748b;
+    color: var(--lf-text-secondary);
     display: block;
     line-height: 1.35;
     overflow-wrap: break-word;
@@ -205,7 +205,7 @@ const adminPrimitiveCss = `
   }
   .lf-admin-status-badge {
     align-items: center;
-    border: 1px solid #cbd5e1;
+    border: 1px solid var(--lf-border-input);
     border-radius: 999px;
     display: inline-flex;
     font-size: 12px;
@@ -217,30 +217,30 @@ const adminPrimitiveCss = `
     word-break: keep-all;
   }
   .lf-admin-status-badge.success {
-    background: #ecfdf5;
-    border-color: #bbf7d0;
-    color: #166534;
+    background: var(--lf-status-approved-bg);
+    border-color: var(--lf-status-approved-bg);
+    color: var(--lf-status-approved-text);
   }
   .lf-admin-status-badge.warning {
-    background: #fffbeb;
-    border-color: #fde68a;
-    color: #92400e;
+    background: var(--lf-status-pending-bg);
+    border-color: var(--lf-status-pending-bg);
+    color: var(--lf-status-pending-text);
   }
   .lf-admin-status-badge.danger {
-    background: #fef2f2;
-    border-color: #fecaca;
-    color: #991b1b;
+    background: var(--lf-status-rejected-bg);
+    border-color: var(--lf-status-rejected-bg);
+    color: var(--lf-status-rejected-text);
   }
   .lf-admin-status-badge.neutral {
-    background: #f8fafc;
-    color: #334155;
+    background: var(--lf-surface-page);
+    color: var(--lf-text);
   }
   .lf-admin-data-cards {
     display: none;
   }
   .lf-admin-metric-card {
     position: relative;
-    background: #fff;
+    background: var(--lf-surface-card);
     border: 1px solid #e3dad3;
     border-radius: 12px;
     color: inherit;
@@ -257,25 +257,25 @@ const adminPrimitiveCss = `
     font: inherit;
   }
   .lf-admin-metric-card--interactive { padding-right: 36px; }
-  .lf-admin-metric-card--interactive:hover { background: #f6efea; }
-  .lf-admin-metric-card--interactive:active { background: #ebe0d8; }
-  .lf-admin-metric-card--interactive:focus-visible { outline: 2px solid #8c4a32; outline-offset: 2px; }
-  .lf-admin-metric-chevron { position: absolute; top: 14px; right: 12px; color: #766962; }
+  .lf-admin-metric-card--interactive:hover { background: var(--lf-surface-hover); }
+  .lf-admin-metric-card--interactive:active { background: var(--lf-surface-pressed); }
+  .lf-admin-metric-card--interactive:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 2px; }
+  .lf-admin-metric-chevron { position: absolute; top: 14px; right: 12px; color: var(--lf-text-secondary); }
   .lf-admin-metric-card--informational { min-height: 0; padding: 8px 0; border: 0; border-radius: 0; background: transparent; }
   .lf-admin-metric-label {
-    color: #6b5f5a;
+    color: var(--lf-text-secondary);
     font-size: 13px;
     font-weight: 500;
   }
   .lf-admin-metric-value {
-    color: #1f1715;
+    color: var(--lf-text);
     display: block;
     font-size: 22px;
     line-height: 1.1;
     overflow-wrap: break-word;
   }
   .lf-admin-metric-detail {
-    color: #64748b;
+    color: var(--lf-text-secondary);
     display: block;
     line-height: 1.35;
   }
@@ -286,16 +286,16 @@ const adminPrimitiveCss = `
   }
   .lf-admin-context-help {
     align-items: flex-start;
-    background: #f8fafc;
-    border: 1px solid #dbe3ef;
+    background: var(--lf-surface-page);
+    border: 1px solid var(--lf-border);
     border-radius: 8px;
-    color: #334155;
+    color: var(--lf-text);
     display: inline-flex;
     gap: 8px;
     padding: 9px 10px;
   }
   .lf-admin-context-help .material-symbols-outlined {
-    color: #475569;
+    color: var(--lf-text-secondary);
     font-size: 18px;
     line-height: 1.3;
   }
@@ -304,14 +304,14 @@ const adminPrimitiveCss = `
     display: block;
   }
   .lf-admin-context-help small {
-    color: #64748b;
+    color: var(--lf-text-secondary);
     line-height: 1.35;
   }
   .lf-admin-empty-state {
-    background: #f8fafc;
-    border: 1px dashed #cbd5e1;
+    background: var(--lf-surface-page);
+    border: 1px dashed var(--lf-border-input);
     border-radius: 8px;
-    color: #475569;
+    color: var(--lf-text-secondary);
     display: grid;
     gap: 4px;
     padding: 14px;
@@ -333,8 +333,8 @@ const adminPrimitiveCss = `
       justify-content: flex-start;
     }
     .lf-admin-data-card {
-      background: #fff;
-      border: 1px solid #e2e8f0;
+      background: var(--lf-surface-card);
+      border: 1px solid var(--lf-border);
       border-radius: 8px;
       display: grid;
       gap: 10px;
@@ -346,7 +346,7 @@ const adminPrimitiveCss = `
       min-width: 0;
     }
     .lf-admin-data-card > div > span {
-      color: #64748b;
+      color: var(--lf-text-secondary);
       font-size: 12px;
       font-weight: 800;
       text-transform: uppercase;

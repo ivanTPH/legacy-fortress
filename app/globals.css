@@ -408,8 +408,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 }
 
 .lf-admin-prototype-content a:hover {
-  background: #f8f5f2 !important;
-  border-color: #d8cec3 !important;
+  background: var(--lf-surface-page) !important;
+  border-color: var(--lf-border) !important;
 }
 
 .lf-admin-prototype-sidebar a[aria-current="page"]:hover {
@@ -452,14 +452,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 }
 
 .lf-admin-prototype-content tbody tr:hover {
-  background: #fbfaf8;
+  background: var(--lf-surface-card);
 }
 
 .lf-admin-prototype-content input,
 .lf-admin-prototype-content select,
 .lf-admin-prototype-content textarea {
   border-color: var(--lf-border) !important;
-  background: #fffefd !important;
+  background: var(--lf-surface-card) !important;
   color: var(--lf-text);
 }
 
@@ -673,8 +673,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
   min-height: 100dvh;
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
-  background: #f4f6f8;
-  color: #0f172a;
+  background: var(--lf-surface-page);
+  color: var(--lf-text);
 }
 
 .lf-admin-shell-sidebar {
@@ -807,8 +807,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
   gap: 16px;
   align-items: flex-start;
   flex-wrap: wrap;
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: var(--lf-surface-card);
+  border: 1px solid var(--lf-border);
   border-radius: 8px;
   padding: 20px;
 }
@@ -823,18 +823,19 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 .lf-admin-shell-title h1 {
   margin: 0;
   font-size: 28px;
+  font-weight: 700;
   line-height: 1.15;
   overflow-wrap: anywhere;
 }
 
 .lf-admin-shell-title p {
   margin: 0;
-  color: #64748b;
+  color: var(--lf-text-secondary);
   line-height: 1.45;
 }
 
 .lf-admin-shell-eyebrow {
-  color: #64748b;
+  color: var(--lf-text-secondary);
   text-transform: uppercase;
   font-size: 12px;
   font-weight: 800;
@@ -851,22 +852,22 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 }
 
 .lf-admin-shell-secondary {
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--lf-border-input);
   border-radius: 6px;
   padding: 9px 12px;
-  color: #0f172a;
+  color: var(--lf-text);
   text-decoration: none;
   font-weight: 700;
-  background: #fff;
+  background: var(--lf-surface-card);
   min-height: 40px;
   cursor: pointer;
   white-space: nowrap;
 }
 
 .lf-admin-shell-stage {
-  background: #fff7ed;
-  color: #9a3412;
-  border: 1px solid #fed7aa;
+  background: var(--lf-status-pending-bg);
+  color: var(--lf-status-pending-text);
+  border: 1px solid var(--lf-status-pending-bg);
   border-radius: 6px;
   padding: 7px 10px;
   font-size: 12px;
@@ -880,10 +881,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid #dbe3ef;
+  border: 1px solid var(--lf-border);
   border-radius: 6px;
   padding: 7px 10px;
-  background: #f8fafc;
+  background: var(--lf-surface-page);
   min-width: 0;
   max-width: 260px;
 }
@@ -914,10 +915,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 
 .lf-admin-shell-account-trigger {
   align-items: center;
-  background: #fff;
-  border: 1px solid #cbd5e1;
+  background: var(--lf-surface-card);
+  border: 1px solid var(--lf-border-input);
   border-radius: 12px;
-  color: #0f172a;
+  color: var(--lf-text);
   cursor: pointer;
   display: inline-flex;
   gap: 10px;
@@ -928,17 +929,17 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 }
 
 .lf-admin-shell-account-trigger:focus-visible {
-  border-color: #2563eb;
+  border-color: var(--lf-focus);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
   outline: none;
 }
 
 .lf-admin-shell-avatar {
   align-items: center;
-  background: #f8fafc;
-  border: 1px solid #d1d5db;
+  background: var(--lf-surface-page);
+  border: 1px solid var(--lf-border-input);
   border-radius: 999px;
-  color: #334155;
+  color: var(--lf-text);
   display: inline-flex;
   flex: 0 0 auto;
   font-size: 13px;
@@ -967,22 +968,22 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 }
 
 .lf-admin-shell-account-copy strong {
-  color: #0f172a;
+  color: var(--lf-text);
   font-size: 13px;
   font-weight: 800;
   line-height: 1.1;
 }
 
 .lf-admin-shell-account-copy small {
-  color: #64748b;
+  color: var(--lf-text-secondary);
   font-size: 11px;
   font-weight: 700;
   line-height: 1.1;
 }
 
 .lf-admin-shell-account-popover {
-  background: #fff;
-  border: 1px solid #dbe3ef;
+  background: var(--lf-surface-card);
+  border: 1px solid var(--lf-border);
   border-radius: 12px;
   box-shadow: 0 20px 48px rgba(15, 23, 42, 0.14);
   display: grid;
@@ -997,7 +998,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 
 .lf-admin-shell-account-summary {
   align-items: center;
-  color: #0f172a;
+  color: var(--lf-text);
   display: grid;
   gap: 10px;
   grid-template-columns: auto minmax(0, 1fr);
@@ -1020,7 +1021,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 }
 
 .lf-admin-shell-account-summary strong {
-  color: #0f172a;
+  color: var(--lf-text);
   font-size: 14px;
   font-weight: 850;
   line-height: 1.15;
@@ -1028,18 +1029,18 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 
 .lf-admin-shell-account-email,
 .lf-admin-shell-account-role {
-  color: #64748b;
+  color: var(--lf-text-secondary);
   font-size: 12px;
   line-height: 1.3;
 }
 
 .lf-admin-shell-account-role {
-  color: #475569;
+  color: var(--lf-text-secondary);
   font-weight: 750;
 }
 
 .lf-admin-shell-account-menu-section {
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--lf-border);
   display: grid;
   gap: 3px;
   padding: 7px 0 0;
@@ -1052,10 +1053,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 .lf-admin-shell-account-popover a,
 .lf-admin-shell-account-popover button {
   align-items: center;
-  background: #fff;
+  background: var(--lf-surface-card);
   border: 1px solid transparent;
   border-radius: 8px;
-  color: #0f172a;
+  color: var(--lf-text);
   cursor: pointer;
   display: flex;
   font: inherit;
@@ -1082,8 +1083,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 .lf-admin-shell-account-popover a:focus-visible,
 .lf-admin-shell-account-popover button:hover,
 .lf-admin-shell-account-popover button:focus-visible {
-  background: #f8fafc;
-  border-color: #cbd5e1;
+  background: var(--lf-surface-page);
+  border-color: var(--lf-border-input);
   outline: none;
 }
 
@@ -1092,13 +1093,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
   gap: 8px;
   flex-wrap: wrap;
   font-size: 13px;
-  color: #64748b;
+  color: var(--lf-text-secondary);
 }
 
 .lf-admin-shell-breadcrumb span + span::before {
   content: "/";
   margin-right: 8px;
-  color: #94a3b8;
+  color: var(--lf-text-secondary);
 }
 
 .lf-admin-shell-mobile-toggle,
@@ -1154,7 +1155,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 
 .lf-admin-data-table th,
 .lf-admin-data-table td {
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--lf-border);
   padding: 10px;
   text-align: left;
   vertical-align: top;
@@ -1162,7 +1163,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 }
 
 .lf-admin-data-table th {
-  color: #334155;
+  color: var(--lf-text);
   font-size: 12px;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -1171,7 +1172,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 
 .lf-admin-data-table small,
 .lf-admin-data-card small {
-  color: #64748b;
+  color: var(--lf-text-secondary);
   display: block;
   line-height: 1.35;
   overflow-wrap: anywhere;
@@ -1179,7 +1180,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 
 .lf-admin-status-badge {
   align-items: center;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--lf-border-input);
   border-radius: 999px;
   display: inline-flex;
   font-size: 12px;
@@ -1190,26 +1191,26 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 }
 
 .lf-admin-status-badge.success {
-  background: #ecfdf5;
-  border-color: #bbf7d0;
-  color: #166534;
+  background: var(--lf-status-approved-bg);
+  border-color: var(--lf-status-approved-bg);
+  color: var(--lf-status-approved-text);
 }
 
 .lf-admin-status-badge.warning {
-  background: #fffbeb;
-  border-color: #fde68a;
-  color: #92400e;
+  background: var(--lf-status-pending-bg);
+  border-color: var(--lf-status-pending-bg);
+  color: var(--lf-status-pending-text);
 }
 
 .lf-admin-status-badge.danger {
-  background: #fef2f2;
-  border-color: #fecaca;
-  color: #991b1b;
+  background: var(--lf-status-rejected-bg);
+  border-color: var(--lf-status-rejected-bg);
+  color: var(--lf-status-rejected-text);
 }
 
 .lf-admin-status-badge.neutral {
-  background: #f8fafc;
-  color: #334155;
+  background: var(--lf-surface-page);
+  color: var(--lf-text);
 }
 
 .lf-admin-data-cards {
@@ -1247,10 +1248,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 }
 
 .lf-admin-empty-state {
-  background: #f8fafc;
-  border: 1px dashed #cbd5e1;
+  background: var(--lf-surface-page);
+  border: 1px dashed var(--lf-border-input);
   border-radius: 8px;
-  color: #475569;
+  color: var(--lf-text-secondary);
   display: grid;
   gap: 4px;
   padding: 14px;
@@ -1479,8 +1480,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
   }
 
   .lf-admin-data-card {
-    background: #fff;
-    border: 1px solid #e2e8f0;
+    background: var(--lf-surface-card);
+    border: 1px solid var(--lf-border);
     border-radius: 8px;
     display: grid;
     gap: 10px;
@@ -1494,7 +1495,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
   }
 
   .lf-admin-data-card > div > span {
-    color: #64748b;
+    color: var(--lf-text-secondary);
     font-size: 12px;
     font-weight: 800;
     text-transform: uppercase;
@@ -1504,8 +1505,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 /* V5 Platform Admin presentation. Enterprise keeps its existing shell until V5-B. */
 .lf-admin-shell--platform {
   grid-template-columns: 256px minmax(0, 1fr);
-  background: #faf8f6;
-  color: #1f1715;
+  background: var(--lf-surface-page);
+  color: var(--lf-text);
 }
 .lf-admin-shell--platform .lf-admin-shell-sidebar { background: #261c1a; padding: 24px 16px; gap: 28px; }
 .lf-admin-shell--platform .lf-admin-shell-brand { gap: 12px; padding: 0 8px; }
@@ -1527,61 +1528,68 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 .lf-admin-shell--platform .lf-admin-shell-title { gap: 8px; }
 .lf-admin-shell--platform .lf-admin-shell-title h1 { font-size: 28px; letter-spacing: -.02em; }
 .lf-admin-shell--platform .lf-admin-shell-title p,
-.lf-admin-shell--platform .lf-admin-shell-breadcrumb { color: #6f625e; }
+.lf-admin-shell--platform .lf-admin-shell-breadcrumb { color: var(--lf-text-secondary); }
 .lf-admin-shell--platform .lf-admin-shell-actions { flex: 0 1 auto; }
-.lf-admin-shell--platform .lf-admin-shell-account-trigger { border-color: #e4dcd7; border-radius: 9px; }
+.lf-admin-shell--platform .lf-admin-shell-account-trigger { border-color: var(--lf-border); border-radius: 9px; }
 .lf-admin-shell--platform .lf-admin-shell-account-trigger:focus-visible,
-.lf-admin-shell--platform .lf-admin-shell-content :is(input, select, textarea):focus { border-color: #8c4a32; box-shadow: 0 0 0 3px rgba(140, 74, 50, .18); }
-.lf-admin-shell--platform .lf-admin-shell-content :is(input, select, textarea) { min-height: 44px; border-color: #d9cfca; border-radius: 8px; color: #1f1715; }
-.lf-admin-shell--platform .lf-admin-shell-stage { color: #8c4a32; border-color: #ead5cd; background: #f9eee9; }
+.lf-admin-shell--platform .lf-admin-shell-content :is(input, select, textarea):focus { border-color: var(--lf-focus); box-shadow: 0 0 0 3px rgba(140, 74, 50, .18); }
+.lf-admin-shell--platform .lf-admin-shell-content :is(input, select, textarea) { min-height: 44px; border-color: var(--lf-border-input); border-radius: 8px; color: var(--lf-text); }
+.lf-admin-shell--platform .lf-admin-shell-stage { color: var(--lf-link); border-color: var(--lf-border); background: var(--lf-surface-subtle); }
 .lf-admin-shell--platform .lf-admin-shell-content :is(section, article, form, nav, dl, div) { min-width: 0; }
 .lf-admin-shell--platform .lf-admin-data-table th,
-.lf-admin-shell--platform .lf-admin-data-table td { border-color: #e6ded9; padding: 14px 12px; }
-.lf-admin-shell--platform .lf-admin-data-table th { color: #6f625e; font-size: 11px; letter-spacing: .04em; text-transform: none; }
+.lf-admin-shell--platform .lf-admin-data-table td { border-color: var(--lf-border); padding: 14px 12px; }
+.lf-admin-shell--platform .lf-admin-data-table th { color: var(--lf-text-secondary); font-size: 11px; letter-spacing: .04em; text-transform: none; }
 .lf-admin-shell--platform .lf-admin-data-table small,
-.lf-admin-shell--platform .lf-admin-data-card small { color: #6f625e; }
+.lf-admin-shell--platform .lf-admin-data-card small { color: var(--lf-text-secondary); }
 .lf-admin-shell--platform .lf-admin-metric-card,
-.lf-admin-shell--platform .lf-admin-data-card { border: 1px solid #e6ded9; border-radius: 12px; }
+.lf-admin-shell--platform .lf-admin-data-card { border: 1px solid var(--lf-border); border-radius: 12px; }
 .lf-admin-shell--platform .lf-admin-metric-card--informational,
 .lf-admin-shell--partner .lf-admin-metric-card--informational { min-height: 0; padding: 8px 0; border: 0; border-radius: 0; background: transparent; }
-.lf-admin-shell--platform .lf-admin-metric-label { color: #6f625e; text-transform: none; font-size: 13px; }
-.lf-admin-shell--platform .lf-admin-metric-value { color: #1f1715; }
-.lf-admin-shell--platform .lf-admin-metric-detail { color: #6f625e; }
-.lf-admin-shell--platform .lf-admin-metric-action-label { color: #8c4a32; }
-.lf-admin-shell--platform .lf-admin-status-badge.neutral { background: #f5efeb; color: #594b46; border-color: #e6ded9; }
+.lf-admin-shell--platform .lf-admin-metric-label { color: var(--lf-text-secondary); text-transform: none; font-size: 13px; }
+.lf-admin-shell--platform .lf-admin-metric-value { color: var(--lf-text); }
+.lf-admin-shell--platform .lf-admin-metric-detail { color: var(--lf-text-secondary); }
+.lf-admin-shell--platform .lf-admin-metric-action-label { color: var(--lf-link); }
+.lf-admin-shell--platform .lf-admin-status-badge.neutral { background: var(--lf-surface-subtle); color: var(--lf-text-secondary); border-color: var(--lf-border); }
 .lf-admin-shell--platform .lf-admin-shell-mobile-bar,
 .lf-admin-shell--platform .lf-admin-shell-mobile-tabs { display: none; }
 .lf-admin-shell--platform .lf-admin-shell-mobile-account { display: none; }
 .lf-admin-overview-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.lf-admin-overview-decisions { display: grid; gap: 0; border: 1px solid #e6ded9; border-radius: 12px; background: #fff; overflow: hidden; }
-.lf-admin-overview-decisions h2 { margin: 0; padding: 16px; }
-.lf-admin-decision-row { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 10px 16px; border-top: 1px solid #eee8e4; color: #1f1715; text-decoration: none; }
-.lf-admin-decision-row span { flex: 1; min-width: 0; }
-.lf-admin-decision-row strong { display: grid; place-items: center; min-width: 28px; height: 28px; padding: 0 6px; border-radius: 20px; color: #fff; background: #2b1714; }
-.lf-admin-decision-row:hover { background: #f6efea; }
-.lf-admin-overview-operational-metrics > summary,
-.lf-admin-overview-resources-details > summary { min-height: 44px; padding: 12px 16px; border: 1px solid #e6ded9; border-radius: 12px; color: #7a3d27; background: #fff; font-weight: 600; cursor: pointer; }
-.lf-admin-overview-operational-metrics[open] > summary,
-.lf-admin-overview-resources-details[open] > summary { border-radius: 12px 12px 0 0; }
-.lf-admin-overview-operational-metrics > div,
-.lf-admin-overview-resources-details > section { margin-top: 8px; }
+.lf-admin-overview-decisions,
+.lf-admin-overview-measures { display: grid; gap: 0; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); overflow: hidden; }
+.lf-admin-overview-decisions h2,
+.lf-admin-overview-measures h2 { margin: 0; padding: 16px 18px; color: var(--lf-text); font-size: 16px; font-weight: var(--lf-weight-semibold); }
+.lf-admin-decision-row { display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 10px 18px; border-top: 1px solid var(--lf-divider); color: var(--lf-text); text-decoration: none; }
+.lf-admin-decision-row:hover { background: var(--lf-surface-hover); }
+.lf-admin-decision-row:active { background: var(--lf-surface-pressed); }
+.lf-admin-decision-row:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: -2px; }
+.lf-admin-decision-icon { display: grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; border-radius: 10px; background: var(--lf-task-todo-bg); color: var(--lf-task-todo-icon); }
+.lf-admin-decision-copy { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.lf-admin-decision-copy strong { font-size: 15px; font-weight: var(--lf-weight-semibold); overflow-wrap: anywhere; }
+.lf-admin-decision-copy small { color: var(--lf-text-secondary); font-size: 13px; }
+.lf-admin-decision-count { display: grid; place-items: center; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 12px; background: var(--lf-status-pending-bg); color: var(--lf-status-pending-text); font-size: 12px; font-weight: 700; }
+.lf-admin-decision-row > :last-child { color: var(--lf-icon); }
+.lf-admin-decision-empty { margin: 0; padding: 16px 18px; border-top: 1px solid var(--lf-divider); color: var(--lf-text-secondary); }
+.lf-admin-overview-measures .lf-admin-data-table { border: 0; border-radius: 0; }
+.lf-admin-overview-measures caption { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.lf-admin-measure-link { display: grid; gap: 2px; color: var(--lf-text); font-weight: var(--lf-weight-semibold); text-decoration: none; }
+.lf-admin-measure-link small { color: var(--lf-text-secondary); font-weight: 400; }
+.lf-admin-measure-link:hover { color: var(--lf-link); text-decoration: underline; }
 .lf-admin-verification-mobile { display: none; }
-.lf-admin-verification-boundary { display: flex; align-items: flex-start; gap: 10px; padding: 12px; border-radius: 10px; background: #f1ebe7; color: #1f1715; }
+.lf-admin-verification-boundary { display: flex; align-items: flex-start; gap: 10px; padding: 12px; border-radius: 10px; background: var(--lf-surface-subtle); color: var(--lf-text); }
 .lf-admin-verification-boundary > *:first-child { flex: 0 0 auto; }
 
 @media (max-width: 860px) {
   .lf-admin-verification-mobile { display: grid; gap: 12px; }
-  .lf-admin-overview-operational-metrics, .lf-admin-overview-resources-details { display: none !important; }
   .lf-admin-verification-queue .lf-admin-data-cards,
   .lf-admin-verification-queue .lf-admin-empty-state { display: none; }
   .lf-admin-verification-filters { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
-  .lf-admin-verification-filters button { flex: 0 0 auto; min-height: 44px; padding: 8px 12px; border: 1px solid #e6ded9; border-radius: 24px; color: #1f1715; background: #fff; font: inherit; }
-  .lf-admin-verification-filters button[aria-pressed="true"] { color: #fff; background: #2b1714; border-color: #2b1714; }
-  .lf-admin-verification-list { display: grid; border: 1px solid #e6ded9; border-radius: 12px; overflow: hidden; }
-  .lf-admin-verification-row { position: relative; display: grid; gap: 3px; min-height: 76px; padding: 12px 40px 12px 14px; border-bottom: 1px solid #eee8e4; color: #1f1715; background: #fff; text-decoration: none; }
+  .lf-admin-verification-filters button { flex: 0 0 auto; min-height: 44px; padding: 8px 12px; border: 1px solid var(--lf-border); border-radius: 24px; color: var(--lf-text); background: var(--lf-surface-card); font: inherit; }
+  .lf-admin-verification-filters button[aria-pressed="true"] { color: var(--lf-primary-text); background: var(--lf-primary-bg); border-color: var(--lf-primary-bg); }
+  .lf-admin-verification-list { display: grid; border: 1px solid var(--lf-border); border-radius: 12px; overflow: hidden; }
+  .lf-admin-verification-row { position: relative; display: grid; gap: 3px; min-height: 76px; padding: 12px 40px 12px 14px; border-bottom: 1px solid var(--lf-divider); color: var(--lf-text); background: var(--lf-surface-card); text-decoration: none; }
   .lf-admin-verification-row:last-child { border-bottom: 0; }
   .lf-admin-verification-row > span { min-width: 0; overflow-wrap: anywhere; }
-  .lf-admin-verification-row small { color: #6f625e; }
+  .lf-admin-verification-row small { color: var(--lf-text-secondary); }
   .lf-admin-verification-row > svg, .lf-admin-verification-row > .material-symbols-rounded { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); }
   .lf-admin-overview-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .lf-admin-overview-metrics .lf-admin-metric-card { min-height: 88px; padding: 12px; }
@@ -1601,21 +1609,21 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
     color: #fff;
   }
   .lf-admin-shell--platform .lf-admin-shell-mobile-brand { color: inherit; display: inline-flex; align-items: center; gap: 7px; min-width: 0; text-decoration: none; font-size: 13px; font-weight: 800; }
-  .lf-admin-shell--platform .lf-admin-shell-mobile-logo { flex: 0 0 28px; width: 28px; height: 28px; display: grid; place-items: center; color: #1f1715; background: #fff; border-radius: 6px; }
+  .lf-admin-shell--platform .lf-admin-shell-mobile-logo { flex: 0 0 28px; width: 28px; height: 28px; display: grid; place-items: center; color: var(--lf-text); background: var(--lf-surface-card); border-radius: 6px; }
   .lf-admin-shell--platform .lf-admin-shell-mobile-brand-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .lf-admin-shell--platform .lf-admin-shell-mobile-badge { flex: 0 0 auto; padding: 3px 5px; border-radius: 4px; color: #fff; background: #b3261e; font-size: 9px; font-weight: 900; letter-spacing: .04em; }
+  .lf-admin-shell--platform .lf-admin-shell-mobile-badge { flex: 0 0 auto; padding: 3px 5px; border-radius: 4px; color: var(--lf-primary-text); background: var(--lf-destructive); font-size: 9px; font-weight: 900; letter-spacing: .04em; }
   .lf-admin-shell--platform .lf-admin-shell-mobile-toggle { position: static; margin: 0; flex: 0 0 44px; justify-content: center; border: 0; background: transparent; color: #fff; padding: 0; }
-  .lf-admin-shell--platform .lf-admin-shell-mobile-search { display: grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; margin-left: auto; color: #fff; }
+  .lf-admin-shell--platform .lf-admin-shell-mobile-search { display: grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; margin-left: auto; color: var(--lf-primary-text); }
   .lf-admin-shell--platform .lf-admin-shell-content { padding: 20px max(16px, env(safe-area-inset-right)) calc(92px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
   .lf-admin-shell--platform .lf-admin-shell-header { padding: 0; gap: 12px; }
   .lf-admin-shell--platform .lf-admin-shell-title h1 { font-size: 24px; }
   .lf-admin-shell--platform .lf-admin-shell-actions { display: contents; }
   .lf-admin-shell--platform .lf-admin-shell-actions > .lf-admin-shell-account-menu { display: none; }
   .lf-admin-shell--platform .lf-admin-shell-mobile-account { display: block; flex: 0 0 44px; width: 44px; }
-  .lf-admin-shell--platform .lf-admin-shell-account-trigger { width: 44px; min-height: 44px; padding: 2px; border: 0; background: transparent; color: #fff; }
+  .lf-admin-shell--platform .lf-admin-shell-account-trigger { width: 44px; min-height: 44px; padding: 2px; border: 0; background: transparent; color: var(--lf-primary-text); }
   .lf-admin-shell--platform .lf-admin-shell-account-copy { display: none; }
   .lf-admin-shell-mobile-account .lf-admin-shell-account-trigger > .lf-icon { display: none; }
-  .lf-admin-shell--platform .lf-admin-shell-account-popover { left: auto; right: 0; color: #1f1715; }
+  .lf-admin-shell--platform .lf-admin-shell-account-popover { left: auto; right: 0; color: var(--lf-text); }
   .lf-admin-shell--platform .lf-admin-shell-breadcrumb { display: none; }
   .lf-admin-shell--platform .lf-admin-shell-drawer-panel { box-sizing: border-box; width: 100vw; max-width: 100vw; background: #f7f3f1; }
   .lf-admin-shell--platform .lf-admin-shell-drawer-heading { color: #1f1715; }
@@ -1631,7 +1639,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
   .lf-admin-shell--platform .lf-admin-data-table { display: none; }
   .lf-admin-shell--platform .lf-admin-data-cards { display: grid; gap: 12px; }
   .lf-admin-shell--platform .lf-admin-data-card { padding: 16px; }
-  .lf-admin-shell--platform .lf-admin-data-card > div > span { color: #6f625e; text-transform: none; }
+  .lf-admin-shell--platform .lf-admin-data-card > div > span { color: var(--lf-text-secondary); text-transform: none; }
   .lf-admin-shell--platform .lf-admin-data-card :is(a, button) { min-height: 44px; }
   .lf-admin-shell--platform .lf-admin-shell-mobile-tabs {
     position: fixed;
@@ -1673,40 +1681,40 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
   .lf-admin-shell--platform section[aria-label="Organisation search and filters"] { grid-template-columns: minmax(0, 1fr) !important; }
 }
 
-.lf-admin-shell--partner { background: #f7f3f1; color: #1f1715; }
+.lf-admin-shell--partner { background: var(--lf-surface-page); color: var(--lf-text); }
 .lf-admin-shell--partner > .lf-admin-shell-sidebar { background: #fff; color: #1f1715; border-right: 1px solid #ebe4de; }
 .lf-admin-shell--partner .lf-admin-shell-nav-label { color: #766962; }
 .lf-admin-shell--partner .lf-admin-shell-nav-link { color: #453934; }
 .lf-admin-shell--partner .lf-admin-shell-nav-link.active { background: #e4f0f0; color: #205e5b; }
 .lf-admin-shell--partner .lf-admin-shell-content { gap: 16px; }
 .lf-admin-shell--partner .lf-admin-shell-header { padding: 0; border: 0; background: transparent; }
-.lf-partner-scope-chip { display: inline-flex; align-items: center; gap: 6px; width: fit-content; max-width: 100%; padding: 5px 10px; border-radius: 20px; color: #205e5b; background: #e4f0f0; font-weight: 700; overflow-wrap: anywhere; }
+.lf-partner-scope-chip { display: inline-flex; align-items: center; gap: 6px; width: fit-content; max-width: 100%; padding: 5px 10px; border-radius: 20px; color: var(--lf-avatar-pro-text); background: var(--lf-avatar-pro-bg); font-weight: 700; overflow-wrap: anywhere; }
 .lf-admin-shell--partner .lf-admin-shell-mobile-bar,
 .lf-admin-shell--partner .lf-admin-shell-mobile-account,
 .lf-admin-shell--partner .lf-admin-shell-mobile-tabs { display: none; }
 .lf-partner-overview { display: grid; gap: 18px; }
 .lf-partner-overview-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.lf-partner-attention { display: grid; overflow: hidden; border: 1px solid #ebe4de; border-radius: 12px; background: #fff; }
+.lf-partner-attention { display: grid; overflow: hidden; border: 1px solid var(--lf-border); border-radius: 12px; background: var(--lf-surface-card); }
 .lf-partner-attention h2 { margin: 0; padding: 16px; font-size: 18px; }
-.lf-partner-attention button { display: flex; justify-content: space-between; gap: 12px; width: 100%; min-height: 56px; padding: 12px 16px; border: 0; border-top: 1px solid #f1ebe7; color: #1f1715; background: #fff; font: inherit; text-align: left; cursor: pointer; }
+.lf-partner-attention button { display: flex; justify-content: space-between; gap: 12px; width: 100%; min-height: 56px; padding: 12px 16px; border: 0; border-top: 1px solid var(--lf-divider); color: var(--lf-text); background: var(--lf-surface-card); font: inherit; text-align: left; cursor: pointer; }
 .lf-partner-team { display: grid; gap: 14px; }
-.lf-partner-primary { min-height: 48px; padding: 10px 16px; border: 0; border-radius: 10px; color: #fff; background: #2b1714; font: inherit; font-weight: 700; cursor: pointer; }
-.lf-partner-seat-card { display: grid; gap: 8px; padding: 16px; border: 1px solid #ebe4de; border-radius: 12px; background: #fff; }
-.lf-partner-seat-card span { color: #766962; }
+.lf-partner-primary { min-height: 48px; padding: 10px 16px; border: 0; border-radius: 10px; color: var(--lf-primary-text); background: var(--lf-primary-bg); font: inherit; font-weight: 700; cursor: pointer; }
+.lf-partner-seat-card { display: grid; gap: 8px; padding: 16px; border: 1px solid var(--lf-border); border-radius: 12px; background: var(--lf-surface-card); }
+.lf-partner-seat-card span { color: var(--lf-text-secondary); }
 .lf-partner-seat-card progress { width: 100%; height: 8px; accent-color: #205e5b; }
 .lf-partner-filter-chips { display: flex; gap: 8px; overflow-x: auto; }
-.lf-partner-filter-chips button { flex: 0 0 auto; min-height: 44px; padding: 8px 12px; border: 1px solid #ebe4de; border-radius: 22px; color: #1f1715; background: #fff; font: inherit; cursor: pointer; }
-.lf-partner-filter-chips button[aria-pressed="true"] { color: #fff; background: #2b1714; border-color: #2b1714; }
-.lf-partner-team-list { display: grid; overflow: hidden; border: 1px solid #ebe4de; border-radius: 12px; background: #fff; }
-.lf-partner-person-row { display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 10px 14px; border-bottom: 1px solid #f1ebe7; }
+.lf-partner-filter-chips button { flex: 0 0 auto; min-height: 44px; padding: 8px 12px; border: 1px solid var(--lf-border); border-radius: 22px; color: var(--lf-text); background: var(--lf-surface-card); font: inherit; cursor: pointer; }
+.lf-partner-filter-chips button[aria-pressed="true"] { color: var(--lf-primary-text); background: var(--lf-primary-bg); border-color: var(--lf-primary-bg); }
+.lf-partner-team-list { display: grid; overflow: hidden; border: 1px solid var(--lf-border); border-radius: 12px; background: var(--lf-surface-card); }
+.lf-partner-person-row { display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 10px 14px; border-bottom: 1px solid var(--lf-divider); }
 .lf-partner-person-row:last-child { border-bottom: 0; }
-.lf-partner-person-avatar { flex: 0 0 42px; display: grid; place-items: center; height: 42px; border-radius: 50%; color: #205e5b; background: #e4f0f0; font-weight: 700; }
+.lf-partner-person-avatar { flex: 0 0 42px; display: grid; place-items: center; height: 42px; border-radius: 50%; color: var(--lf-avatar-pro-text); background: var(--lf-avatar-pro-bg); font-weight: 700; }
 .lf-partner-person-row > span:nth-child(2) { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .lf-partner-person-row strong, .lf-partner-person-row small { display: block; }
-.lf-partner-person-row small { color: #766962; }
-.lf-partner-person-row button { min-width: 44px; min-height: 44px; border: 0; color: #8c4a32; background: transparent; font: inherit; font-weight: 700; }
+.lf-partner-person-row small { color: var(--lf-text-secondary); }
+.lf-partner-person-row button { min-width: 44px; min-height: 44px; border: 0; color: var(--lf-link); background: transparent; font: inherit; font-weight: 700; }
 .lf-partner-advanced { min-width: 0; }
-.lf-partner-advanced summary { min-height: 44px; padding: 12px; border: 1px solid #ebe4de; border-radius: 10px; background: #fff; cursor: pointer; }
+.lf-partner-advanced summary { min-height: 44px; padding: 12px; border: 1px solid var(--lf-border); border-radius: 10px; background: var(--lf-surface-card); cursor: pointer; }
 .lf-partner-mobile-filters { display: none; }
 .lf-partner-mobile-invitations { display: none; }
 
@@ -1714,20 +1722,20 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
   .lf-partner-desktop-invitations { display: none; }
   .lf-partner-mobile-invitations { display: grid; gap: 14px; }
   .lf-partner-invite-form { min-width: 0; }
-  .lf-partner-invite-form > summary { display: grid; place-items: center; min-height: 48px; padding: 10px 14px; border-radius: 10px; color: #fff; background: #2b1714; font-weight: 700; cursor: pointer; }
+  .lf-partner-invite-form > summary { display: grid; place-items: center; min-height: 48px; padding: 10px 14px; border-radius: 10px; color: var(--lf-primary-text); background: var(--lf-primary-bg); font-weight: 700; cursor: pointer; }
   .lf-partner-invite-form[open] > div { margin-top: 12px; }
   .lf-partner-desktop-filters { display: none; }
   .lf-partner-mobile-filters { display: block; min-width: 0; }
-  .lf-partner-mobile-filters > summary { display: flex; align-items: center; min-height: 44px; padding: 10px 14px; border: 1px solid #ebe4de; border-radius: 10px; color: #1f1715; background: #fff; font-weight: 700; cursor: pointer; }
+  .lf-partner-mobile-filters > summary { display: flex; align-items: center; min-height: 44px; padding: 10px 14px; border: 1px solid var(--lf-border); border-radius: 10px; color: var(--lf-text); background: var(--lf-surface-card); font-weight: 700; cursor: pointer; }
   .lf-partner-mobile-filters[open] > summary { border-radius: 10px 10px 0 0; }
   .lf-partner-mobile-filters > section { min-width: 0; }
   .lf-admin-shell--partner .lf-admin-shell-mobile-bar { position: sticky; top: 0; z-index: 35; display: flex; align-items: center; gap: 6px; width: 100%; height: 56px; min-width: 0; padding: 0 max(4px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left)); border-bottom: 1px solid #ebe4de; background: #fff; }
   .lf-admin-shell--partner .lf-admin-shell-mobile-toggle { position: static; flex: 0 0 44px; justify-content: center; margin: 0; padding: 0; border: 0; color: #1f1715; background: transparent; }
   .lf-admin-shell--partner .lf-admin-shell-mobile-brand { display: inline-flex; align-items: center; gap: 7px; min-width: 0; color: #1f1715; font-size: 13px; font-weight: 800; text-decoration: none; }
-  .lf-admin-shell--partner .lf-admin-shell-mobile-logo { flex: 0 0 28px; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 6px; color: #fff; background: #111; }
+  .lf-admin-shell--partner .lf-admin-shell-mobile-logo { flex: 0 0 28px; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 6px; color: var(--lf-primary-text); background: #111; }
   .lf-admin-shell--partner .lf-admin-shell-mobile-brand-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .lf-admin-shell--partner .lf-admin-shell-mobile-badge { flex: 0 0 auto; padding: 3px 5px; border-radius: 4px; color: #205e5b; background: #e4f0f0; font-size: 9px; font-weight: 900; }
-  .lf-admin-shell--partner .lf-admin-shell-mobile-search { display: grid; place-items: center; flex: 0 0 44px; height: 44px; margin-left: auto; color: #1f1715; }
+  .lf-admin-shell--partner .lf-admin-shell-mobile-badge { flex: 0 0 auto; padding: 3px 5px; border-radius: 4px; color: var(--lf-avatar-pro-text); background: var(--lf-avatar-pro-bg); font-size: 9px; font-weight: 900; }
+  .lf-admin-shell--partner .lf-admin-shell-mobile-search { display: grid; place-items: center; flex: 0 0 44px; height: 44px; margin-left: auto; color: var(--lf-text); }
   .lf-admin-shell--partner .lf-admin-shell-mobile-account { display: block; flex: 0 0 44px; width: 44px; }
   .lf-admin-shell--partner .lf-admin-shell-actions { display: contents; }
   .lf-admin-shell--partner .lf-admin-shell-actions > .lf-admin-shell-account-menu { display: none; }
@@ -3014,8 +3022,8 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 
 .lf-admin-page {
   min-height: 100vh;
-  background: #f8fafc;
-  color: #0f172a;
+  background: var(--lf-surface-page);
+  color: var(--lf-text);
   padding: clamp(20px, 4vw, 48px);
   display: grid;
   align-content: start;
@@ -3027,9 +3035,9 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-admin-local-harness,
 .lf-admin-filter-shell,
 .lf-admin-metric {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--lf-border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--lf-surface-card);
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
 }
 
@@ -3052,13 +3060,13 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-admin-panel p,
 .lf-admin-local-harness p,
 .lf-admin-metric p {
-  color: #64748b;
+  color: var(--lf-text-secondary);
   line-height: 1.5;
 }
 
 .lf-admin-eyebrow {
   margin: 0 0 6px;
-  color: #64748b;
+  color: var(--lf-text-secondary);
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.05em;
@@ -3088,16 +3096,16 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 }
 
 .lf-admin-primary-button {
-  border: 1px solid #111827;
-  background: #111827;
-  color: #fff;
+  border: 1px solid var(--lf-primary-bg);
+  background: var(--lf-primary-bg);
+  color: var(--lf-primary-text);
 }
 
 .lf-admin-secondary-button,
 .lf-admin-secondary-link {
-  border: 1px solid #e5e7eb;
-  background: #fff;
-  color: #111827;
+  border: 1px solid var(--lf-border);
+  background: var(--lf-surface-card);
+  color: var(--lf-text);
 }
 
 .lf-admin-primary-button:disabled,
@@ -3120,10 +3128,10 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 
 .lf-admin-identity span,
 .lf-admin-alert {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--lf-border);
   border-radius: 999px;
-  background: #fff;
-  color: #475569;
+  background: var(--lf-surface-card);
+  color: var(--lf-text-secondary);
   padding: 8px 12px;
   font-size: 13px;
   font-weight: 750;
@@ -3131,8 +3139,8 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 
 .lf-admin-alert {
   border-radius: 10px;
-  background: #fff7ed;
-  color: #9a3412;
+  background: var(--lf-status-pending-bg);
+  color: var(--lf-status-pending-text);
 }
 
 .lf-admin-local-harness {
@@ -3146,7 +3154,7 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-admin-filter-shell label {
   display: grid;
   gap: 5px;
-  color: #64748b;
+  color: var(--lf-text-secondary);
   font-size: 12px;
   font-weight: 800;
 }
@@ -3154,10 +3162,10 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-admin-filter-row select,
 .lf-admin-filter-shell select {
   min-height: 42px;
-  border: 1px solid #d8d2cc;
+  border: 1px solid var(--lf-border);
   border-radius: 10px;
-  background: #fff;
-  color: #111827;
+  background: var(--lf-surface-card);
+  color: var(--lf-text);
   padding: 0 12px;
   font: inherit;
 }
@@ -3170,7 +3178,7 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 }
 
 .lf-admin-filter-shell > span {
-  color: #64748b;
+  color: var(--lf-text-secondary);
   font-size: 13px;
 }
 
@@ -3197,7 +3205,7 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 }
 
 .lf-admin-metric-header span {
-  color: #64748b;
+  color: var(--lf-text-secondary);
   font-size: 12px;
   font-weight: 800;
   text-transform: capitalize;
@@ -3209,17 +3217,17 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 }
 
 .lf-admin-metric small {
-  color: #64748b;
+  color: var(--lf-text-secondary);
   line-height: 1.45;
 }
 
 .lf-admin-metric.is-warning {
-  border-color: #fed7aa;
-  background: #fffaf3;
+  border-color: var(--lf-status-pending-bg);
+  background: var(--lf-status-pending-bg);
 }
 
 .lf-admin-metric.is-unavailable {
-  background: #f8fafc;
+  background: var(--lf-surface-page);
 }
 
 .lf-admin-placeholder-grid {
@@ -3229,7 +3237,7 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 }
 
 .lf-admin-placeholder {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--lf-border);
   border-radius: 10px;
   padding: 14px;
   display: grid;
@@ -3237,7 +3245,7 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 }
 
 .lf-admin-placeholder span {
-  color: #64748b;
+  color: var(--lf-text-secondary);
 }
 
 @media (max-width: 760px) {

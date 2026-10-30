@@ -450,7 +450,7 @@ const PAGE_COPY: Record<AdminControlPlaneSection, { title: string; eyebrow: stri
   overview: {
     title: "Overview",
     eyebrow: "Legacy Fortress Admin",
-    description: "Queues that need a decision.",
+    description: "What needs a decision today. Customer Vault contents and documents are never shown in admin.",
   },
   users: {
     title: "Customer users",
@@ -1211,97 +1211,45 @@ function buildPlatformBreadcrumbs(section: AdminControlPlaneSection, resourceId:
   return crumbs;
 }
 
-function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | null, verification: VerificationItem[], probate: ProbateCase[], portfolio: EnterprisePortfolio | null, capabilities: string[]) {
+function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | null, verification: VerificationItem[], probate: ProbateCase[], _portfolio: EnterprisePortfolio | null, capabilities: string[]) {
   const canVerify = capabilities.includes("verification:read");
-  const canViewOrganisations = capabilities.includes("organisation:view");
   const canViewInvitations = capabilities.includes("support:read");
-  const canViewSeats = capabilities.includes("licence:view");
-  const summaryCards = [
-    { label: "Verification requests", value: canVerify ? (support?.counts.verificationAwaitingReview ?? verification.length) : null, href: canVerify ? "/admin/verification" : undefined },
-    { label: "Organisations", value: canViewOrganisations ? portfolio?.organisations.length ?? null : null, href: canViewOrganisations ? "/admin/organisations" : undefined },
-    { label: "Active seats", value: canViewSeats ? portfolio?.licences.reduce((sum, licence) => sum + licence.activeSeats, 0) ?? null : null, href: undefined },
-    { label: "Pending invitations", value: canViewInvitations ? support?.counts.pendingInvitations ?? null : null, href: canViewInvitations ? "/admin/invitations" : undefined },
-  ];
-  const visibleSummaryCards = summaryCards.filter((card) => card.href || card.value !== null);
-  const usersMetric = metrics.find((metric) => metric.key === "totalUsers");
-  const supportFallbackCards = [
-    { label: "Customer users", value: capabilities.includes("users:lookup") && usersMetric?.available ? usersMetric.value : null, href: capabilities.includes("users:lookup") ? "/admin/users" : undefined },
-    { label: "Ready to send", value: canViewInvitations ? support?.counts.readyToSendInvitations ?? null : null, href: canViewInvitations ? "/admin/invitations?status=ready" : undefined },
-    { label: "Access issues", value: canViewInvitations ? support?.counts.invitationIssues ?? null : null, href: canViewInvitations ? "/admin/support" : undefined },
-  ];
-  for (const card of supportFallbackCards) {
-    if (visibleSummaryCards.length >= 4) break;
-    if (card.href) visibleSummaryCards.push(card);
-  }
+  const pending = support?.counts.verificationAwaitingReview ?? verification.length;
   const decisions = [
-    canVerify && (support?.counts.verificationAwaitingReview ?? verification.length) > 0 ? { label: "Checks waiting for a reviewer", count: support?.counts.verificationAwaitingReview ?? verification.length, href: "/admin/verification" } : null,
-    canVerify && probate.length > 0 ? { label: "Probate cases to review", count: probate.length, href: "/admin/probate" } : null,
-    canViewInvitations && (support?.counts.invitationIssues ?? 0) > 0 ? { label: "Invitation issues", count: support?.counts.invitationIssues ?? 0, href: "/admin/access" } : null,
-  ].filter((item): item is { label: string; count: number; href: string } => item !== null).slice(0, 3);
+    canVerify && pending > 0 ? { icon: "verified_user", label: "Identity checks to review", detail: "Waiting for a reviewer", count: pending, href: "/admin/verification" } : null,
+    canVerify && probate.length > 0 ? { icon: "gavel", label: "Probate evidence to review", detail: `${probate.length === 1 ? "1 case" : `${probate.length} cases`} awaiting a decision`, count: probate.length, href: "/admin/probate" } : null,
+    canViewInvitations && (support?.counts.readyToSendInvitations ?? 0) > 0 ? { icon: "schedule_send", label: "Invitations saved but not sent", detail: "Customers added people without sending", count: support?.counts.readyToSendInvitations ?? 0, href: "/admin/invitations?status=ready" } : null,
+    canViewInvitations && (support?.counts.invitationIssues ?? 0) > 0 ? { icon: "forward_to_inbox", label: "Invitation issues", detail: "Delivery or acceptance problems", count: support?.counts.invitationIssues ?? 0, href: "/admin/access" } : null,
+  ].filter((item): item is { icon: string; label: string; detail: string; count: number; href: string } => item !== null);
   return (
     <div style={stackStyle} className="lf-admin-overview">
-      <section className="lf-admin-overview-metrics" aria-label="Overview metrics">
-        {visibleSummaryCards.map((card) => (
-          <AdminMetricCard
-            key={card.label}
-            label={card.label}
-            value={card.value === null ? "Unavailable" : card.value.toLocaleString()}
-            href={card.href}
-          />
+      <section className="lf-admin-overview-decisions" aria-labelledby="admin-decisions-title">
+        <h2 id="admin-decisions-title">Needs a decision</h2>
+        {decisions.map((item) => (
+          <Link key={item.href} href={item.href} className="lf-admin-decision-row">
+            <span className="lf-admin-decision-icon" aria-hidden="true"><Icon name={item.icon} size={20} /></span>
+            <span className="lf-admin-decision-copy"><strong>{item.label}</strong><small>{item.detail}</small></span>
+            <span className="lf-admin-decision-count" aria-label={`${item.count} waiting`}>{item.count}</span>
+            <Icon name="chevron_right" size={20} />
+          </Link>
         ))}
-        {!visibleSummaryCards.length ? <p style={mutedStyle}>No summary metrics are available for this role.</p> : null}
+        {!decisions.length ? <p className="lf-admin-decision-empty">Nothing needs a decision right now.</p> : null}
       </section>
-      {decisions.length ? <section className="lf-admin-overview-decisions" aria-labelledby="admin-decisions-title"><h2 id="admin-decisions-title" style={h2Style}>Needs a decision</h2>{decisions.map((item) => <Link key={item.href} href={item.href} className="lf-admin-decision-row"><span>{item.label}</span><strong>{item.count}</strong><Icon name="chevron_right" size={20} /></Link>)}</section> : null}
-      <details className="lf-admin-overview-operational-metrics">
-        <summary>All operational metrics</summary>
-        <div style={panelStyle}>
+      <section className="lf-admin-overview-measures" aria-labelledby="admin-measures-title">
+        <h2 id="admin-measures-title">Across all Vaults</h2>
         <AdminDataTable
-          caption="Operational metrics"
+          caption="Across all Vaults"
           columns={[
-            { key: "metric", header: "Metric", render: (metric) => <>{metric.label}<small>{metric.definition}</small></> },
+            { key: "metric", header: "Measure", render: (metric) => <Link href={metricDestination(metric.key)} className="lf-admin-measure-link">{metric.label}<small>{metric.definition}</small></Link> },
+            { key: "value", header: "Count", render: (metric) => metric.available ? metric.value?.toLocaleString() : "–" },
             { key: "status", header: "Status", render: (metric) => <AdminStatusBadge status={metric.status} /> },
-            { key: "value", header: "Value", render: (metric) => metric.available ? metric.value?.toLocaleString() : "Unavailable" },
-            { key: "destination", header: "Destination", render: (metric) => <Link href={metricDestination(metric.key)}>Open queue</Link> },
           ]}
           rows={metrics}
           getRowKey={(metric) => metric.key}
-          emptyState={<AdminEmptyState title="No metrics">No summary metrics are available.</AdminEmptyState>}
+          emptyState={<AdminEmptyState title="No measures">No measures are available for this role.</AdminEmptyState>}
         />
-        </div>
-      </details>
-      <details className="lf-admin-overview-resources-details">
-        <summary>Platform resources</summary>
-        {renderPlatformControlMap(capabilities)}
-      </details>
+      </section>
     </div>
-  );
-}
-
-function renderPlatformControlMap(capabilities: string[]) {
-  const resources = [
-    { label: "Organisations", detail: "Inspect organisation status, licences and administrator lifecycle.", href: "/admin/organisations", capability: "organisation:view" },
-    { label: "Users", detail: "Find platform users and review safe account state.", href: "/admin/users", capability: "users:lookup" },
-    { label: "Invitations", detail: "Review platform invitation and access lifecycle queues.", href: "/admin/invitations", capability: "support:read" },
-    { label: "Licences", detail: "Review organisation entitlement and seat position.", href: "/admin/licences", capability: "licence:view" },
-    { label: "Verification", detail: "Review verification operations without exposing evidence.", href: "/admin/verification", capability: "verification:read" },
-  ].filter((resource) => capabilities.includes(resource.capability));
-
-  return (
-    <section style={panelStyle} className="lf-admin-overview-resources" aria-labelledby="platform-control-map-title">
-      <div style={sectionHeaderStyle}>
-        <div>
-          <p style={eyebrowStyle}>Platform resources</p>
-          <h2 id="platform-control-map-title" style={h2Style}>Control plane</h2>
-          <p style={mutedStyle}>Manage platform resources from the System Admin workspace. Opening an organisation keeps this administrator context and does not enter a customer workspace.</p>
-        </div>
-        <AdminContextHelp label="System Admin boundary">Enterprise operations remain organisation-scoped at /enterprise. These platform resource links never switch the current administrator into an organisation workspace.</AdminContextHelp>
-      </div>
-      <div style={gridStyle}>
-        {resources.map((resource) => (
-          <AdminMetricCard key={resource.href} label={resource.label} value="Open" detail={resource.detail} actionLabel="View resource" href={resource.href} />
-        ))}
-      </div>
-    </section>
   );
 }
 
@@ -2940,12 +2888,12 @@ const loadingPageStyle = {
   minHeight: "100dvh",
   display: "grid",
   placeItems: "center",
-  background: "#f4f6f8",
+  background: "var(--lf-surface-page)",
   padding: 24,
 } satisfies CSSProperties;
 
-const panelStyle = { background: "#fff", border: "1px solid #e6ded9", borderRadius: 12, padding: 20, display: "grid", gap: 14 } satisfies CSSProperties;
-const alertStyle = { ...panelStyle, color: "#991b1b", background: "#fff7ed" } satisfies CSSProperties;
+const panelStyle = { background: "var(--lf-surface-card)", border: "1px solid var(--lf-border)", borderRadius: 12, padding: 20, display: "grid", gap: 14 } satisfies CSSProperties;
+const alertStyle = { ...panelStyle, color: "var(--lf-status-rejected-text)", background: "var(--lf-status-pending-bg)" } satisfies CSSProperties;
 const stackStyle = { display: "grid", gap: 16 } satisfies CSSProperties;
 const gridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 154px), 1fr))", gap: 12 } satisfies CSSProperties;
 const toolbarStyle = { ...panelStyle, display: "flex", alignItems: "end", justifyContent: "space-between", gap: 12, flexWrap: "wrap" } satisfies CSSProperties;
@@ -2953,34 +2901,34 @@ const fieldStackStyle = { display: "grid", gap: 6, minWidth: 0, flex: "1 1 260px
 const formGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 190px), 1fr))", gap: 12 } satisfies CSSProperties;
 const definitionGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", gap: 12 } satisfies CSSProperties;
 const settingsCardStyle = { ...panelStyle, gap: 8 } satisfies CSSProperties;
-const rowStyle = { border: "1px solid #e6ded9", borderRadius: 10, padding: 12, display: "grid", gap: 4 } satisfies CSSProperties;
-const eyebrowStyle = { margin: 0, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 12, fontWeight: 800 } satisfies CSSProperties;
+const rowStyle = { border: "1px solid var(--lf-border)", borderRadius: 10, padding: 12, display: "grid", gap: 4 } satisfies CSSProperties;
+const eyebrowStyle = { margin: 0, color: "var(--lf-text-secondary)", textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 12, fontWeight: 800 } satisfies CSSProperties;
 const h1Style = { margin: 0, fontSize: 28, lineHeight: 1.15 } satisfies CSSProperties;
 const h2Style = { margin: 0, fontSize: 20 } satisfies CSSProperties;
 const h3Style = { margin: 0, fontSize: 16 } satisfies CSSProperties;
-const mutedStyle = { margin: 0, color: "#6f625e", lineHeight: 1.45 } satisfies CSSProperties;
-const mutedInlineStyle = { color: "#6f625e", fontSize: 13 } satisfies CSSProperties;
-const secondaryLinkStyle = { border: "1px solid #d9cfca", borderRadius: 8, padding: "10px 13px", color: "#1f1715", textDecoration: "none", fontWeight: 700, background: "#fff", minHeight: 44 } satisfies CSSProperties;
+const mutedStyle = { margin: 0, color: "var(--lf-text-secondary)", lineHeight: 1.45 } satisfies CSSProperties;
+const mutedInlineStyle = { color: "var(--lf-text-secondary)", fontSize: 13 } satisfies CSSProperties;
+const secondaryLinkStyle = { border: "1px solid var(--lf-border-input)", borderRadius: 8, padding: "10px 13px", color: "var(--lf-text)", textDecoration: "none", fontWeight: 700, background: "var(--lf-surface-card)", minHeight: 44 } satisfies CSSProperties;
 const secondaryButtonStyle = { ...secondaryLinkStyle, cursor: "pointer" } satisfies CSSProperties;
-const primaryButtonStyle = { border: 0, borderRadius: 8, padding: "10px 14px", color: "#fff", background: "#8c4a32", fontWeight: 800, cursor: "pointer", minHeight: 44 } satisfies CSSProperties;
-const dangerButtonStyle = { ...primaryButtonStyle, background: "#991b1b" } satisfies CSSProperties;
+const primaryButtonStyle = { border: 0, borderRadius: 8, padding: "10px 14px", color: "var(--lf-primary-text)", background: "#8c4a32", fontWeight: 800, cursor: "pointer", minHeight: 44 } satisfies CSSProperties;
+const dangerButtonStyle = { ...primaryButtonStyle, background: "var(--lf-destructive)" } satisfies CSSProperties;
 const checkboxLineStyle = { display: "flex", gap: 8, alignItems: "center", fontWeight: 700 } satisfies CSSProperties;
-const permissionSummaryStyle = { border: "1px solid #bfdbfe", borderRadius: 8, padding: 12, background: "#eff6ff", color: "#1e3a8a", display: "grid", gap: 4 } satisfies CSSProperties;
+const permissionSummaryStyle = { border: "1px solid var(--lf-border)", borderRadius: 8, padding: 12, background: "var(--lf-surface-subtle)", color: "#1e3a8a", display: "grid", gap: 4 } satisfies CSSProperties;
 const sectionHeaderStyle = { display: "flex", justifyContent: "space-between", alignItems: "start", gap: 12, flexWrap: "wrap" } satisfies CSSProperties;
-const caseHeaderStyle = { ...sectionHeaderStyle, padding: "4px 0 10px", borderBottom: "1px solid #e2e8f0" } satisfies CSSProperties;
+const caseHeaderStyle = { ...sectionHeaderStyle, padding: "4px 0 10px", borderBottom: "1px solid var(--lf-border)" } satisfies CSSProperties;
 const caseActionBarStyle = { display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", padding: "0 0 4px" } satisfies CSSProperties;
 const twoColumnDetailStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))", gap: 14 } satisfies CSSProperties;
 const compactDetailGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 140px), 1fr))", gap: 8 } satisfies CSSProperties;
-const emptyCaseStyle = { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 14, flexWrap: "wrap", border: "1px dashed #94a3b8", borderRadius: 8, padding: 14, background: "#f8fafc" } satisfies CSSProperties;
-const noteComposerStyle = { display: "grid", gap: 10, padding: 12, border: "1px solid #bfdbfe", borderRadius: 8, background: "#eff6ff" } satisfies CSSProperties;
+const emptyCaseStyle = { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 14, flexWrap: "wrap", border: "1px dashed var(--lf-border-input)", borderRadius: 8, padding: 14, background: "var(--lf-surface-page)" } satisfies CSSProperties;
+const noteComposerStyle = { display: "grid", gap: 10, padding: 12, border: "1px solid var(--lf-border)", borderRadius: 8, background: "var(--lf-surface-subtle)" } satisfies CSSProperties;
 const modalBackdropStyle = { position: "fixed", inset: 0, zIndex: 50, display: "grid", placeItems: "center", padding: 20, background: "rgba(15, 23, 42, 0.52)" } satisfies CSSProperties;
-const modalStyle = { width: "min(100%, 520px)", maxHeight: "calc(100dvh - 40px)", overflowY: "auto", display: "grid", gap: 14, padding: 20, borderRadius: 10, background: "#fff", boxShadow: "0 20px 60px rgba(15, 23, 42, 0.25)" } satisfies CSSProperties;
-const contextPanelStyle = { border: "1px solid #cbd5e1", borderRadius: 8, padding: 14, display: "grid", gap: 12, background: "#f8fafc" } satisfies CSSProperties;
+const modalStyle = { width: "min(100%, 520px)", maxHeight: "calc(100dvh - 40px)", overflowY: "auto", display: "grid", gap: 14, padding: 20, borderRadius: 10, background: "var(--lf-surface-card)", boxShadow: "0 20px 60px rgba(15, 23, 42, 0.25)" } satisfies CSSProperties;
+const contextPanelStyle = { border: "1px solid var(--lf-border-input)", borderRadius: 8, padding: 14, display: "grid", gap: 12, background: "var(--lf-surface-page)" } satisfies CSSProperties;
 const actionsCellStyle = { display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" } satisfies CSSProperties;
 const actionRowStyle = { display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" } satisfies CSSProperties;
 const detailGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10 } satisfies CSSProperties;
-const detailItemStyle = { display: "grid", gap: 4, border: "1px solid #e2e8f0", borderRadius: 8, padding: 10, background: "#fff", minWidth: 0 } satisfies CSSProperties;
+const detailItemStyle = { display: "grid", gap: 4, border: "1px solid var(--lf-border)", borderRadius: 8, padding: 10, background: "var(--lf-surface-card)", minWidth: 0 } satisfies CSSProperties;
 const eventListStyle = { margin: 0, paddingLeft: 18, display: "grid", gap: 8 } satisfies CSSProperties;
 const compactFilterStyle = { ...panelStyle, display: "grid", gap: 10, alignItems: "end" } satisfies CSSProperties;
 const contextNavStyle = { display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 } satisfies CSSProperties;
-const labelStyle = { display: "grid", gap: 5, color: "#334155", fontSize: 13, fontWeight: 700 } satisfies CSSProperties;
+const labelStyle = { display: "grid", gap: 5, color: "var(--lf-text)", fontSize: 13, fontWeight: 700 } satisfies CSSProperties;

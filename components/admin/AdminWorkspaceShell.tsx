@@ -391,8 +391,8 @@ const adminShellCss = `
     min-height: 100dvh;
     display: grid;
     grid-template-columns: 280px minmax(0, 1fr);
-    background: #f4f6f8;
-    color: #0f172a;
+    background: var(--lf-surface-page);
+    color: var(--lf-text);
   }
   .lf-admin-shell-sidebar {
     position: sticky;
@@ -510,10 +510,10 @@ const adminShellCss = `
   .lf-admin-shell-content select,
   .lf-admin-shell-content textarea {
     appearance: auto;
-    background: #fff;
-    border: 1px solid #cbd5e1;
+    background: var(--lf-surface-card);
+    border: 1px solid var(--lf-border-input);
     border-radius: 6px;
-    color: #0f172a;
+    color: var(--lf-text);
     min-height: 40px;
     padding: 9px 10px;
     width: 100%;
@@ -524,7 +524,7 @@ const adminShellCss = `
   .lf-admin-shell-content input:focus,
   .lf-admin-shell-content select:focus,
   .lf-admin-shell-content textarea:focus {
-    border-color: #2563eb;
+    border-color: var(--lf-focus);
     box-shadow: 0 0 0 3px rgba(37, 99, 235, .18);
     outline: none;
   }
@@ -532,7 +532,7 @@ const adminShellCss = `
   .lf-admin-shell-content select:disabled,
   .lf-admin-shell-content textarea:disabled {
     background: #f1f5f9;
-    color: #64748b;
+    color: var(--lf-text-secondary);
   }
   .lf-admin-shell-content button,
   .lf-admin-shell-content a {
@@ -551,8 +551,8 @@ const adminShellCss = `
     gap: 16px;
     align-items: flex-start;
     flex-wrap: wrap;
-    background: #fff;
-    border: 1px solid #e2e8f0;
+    background: var(--lf-surface-card);
+    border: 1px solid var(--lf-border);
     border-radius: 8px;
     padding: 20px;
   }
@@ -571,11 +571,11 @@ const adminShellCss = `
   }
   .lf-admin-shell-title p {
     margin: 0;
-    color: #64748b;
+    color: var(--lf-text-secondary);
     line-height: 1.45;
   }
   .lf-admin-shell-eyebrow {
-    color: #64748b;
+    color: var(--lf-text-secondary);
     text-transform: uppercase;
     font-size: 12px;
     font-weight: 800;
@@ -596,21 +596,21 @@ const adminShellCss = `
     grid-template-columns: minmax(220px, 1.5fr) repeat(4, minmax(150px, 1fr)) auto;
   }
   .lf-admin-shell-secondary {
-    border: 1px solid #cbd5e1;
+    border: 1px solid var(--lf-border-input);
     border-radius: 6px;
     padding: 9px 12px;
-    color: #0f172a;
+    color: var(--lf-text);
     text-decoration: none;
     font-weight: 700;
-    background: #fff;
+    background: var(--lf-surface-card);
     min-height: 40px;
     cursor: pointer;
     white-space: nowrap;
   }
   .lf-admin-shell-stage {
-    background: #fff7ed;
-    color: #9a3412;
-    border: 1px solid #fed7aa;
+    background: var(--lf-status-pending-bg);
+    color: var(--lf-status-pending-text);
+    border: 1px solid var(--lf-status-pending-bg);
     border-radius: 6px;
     padding: 7px 10px;
     font-size: 12px;
@@ -623,10 +623,10 @@ const adminShellCss = `
     display: flex;
     align-items: center;
     gap: 8px;
-    border: 1px solid #dbe3ef;
+    border: 1px solid var(--lf-border);
     border-radius: 6px;
     padding: 7px 10px;
-    background: #f8fafc;
+    background: var(--lf-surface-page);
     min-width: 0;
     max-width: 260px;
   }
@@ -642,10 +642,10 @@ const adminShellCss = `
   }
   .lf-admin-shell-account-trigger {
     align-items: center;
-    background: #fff;
-    border: 1px solid #cbd5e1;
+    background: var(--lf-surface-card);
+    border: 1px solid var(--lf-border-input);
     border-radius: 12px;
-    color: #0f172a;
+    color: var(--lf-text);
     cursor: pointer;
     display: inline-flex;
     gap: 10px;
@@ -655,16 +655,16 @@ const adminShellCss = `
     text-align: left;
   }
   .lf-admin-shell-account-trigger:focus-visible {
-    border-color: #2563eb;
+    border-color: var(--lf-focus);
     box-shadow: 0 0 0 3px rgba(37, 99, 235, .18);
     outline: none;
   }
   .lf-admin-shell-avatar {
     align-items: center;
-    background: #f8fafc;
-    border: 1px solid #d1d5db;
+    background: var(--lf-surface-page);
+    border: 1px solid var(--lf-border-input);
     border-radius: 999px;
-    color: #334155;
+    color: var(--lf-text);
     display: inline-flex;
     flex: 0 0 auto;
     font-size: 13px;
@@ -692,7 +692,7 @@ const adminShellCss = `
     white-space: nowrap;
   }
   .lf-admin-shell-account-copy small {
-    color: #64748b;
+    color: var(--lf-text-secondary);
     font-size: 11px;
     font-weight: 700;
     line-height: 1.1;
@@ -703,8 +703,8 @@ const adminShellCss = `
     white-space: nowrap;
   }
   .lf-admin-shell-account-popover {
-    background: #fff;
-    border: 1px solid #dbe3ef;
+    background: var(--lf-surface-card);
+    border: 1px solid var(--lf-border);
     border-radius: 12px;
     box-shadow: 0 20px 48px rgba(15, 23, 42, .14);
     display: grid;
@@ -718,7 +718,7 @@ const adminShellCss = `
   }
   .lf-admin-shell-account-summary {
     align-items: center;
-    color: #0f172a;
+    color: var(--lf-text);
     display: grid;
     gap: 10px;
     grid-template-columns: auto minmax(0, 1fr);
@@ -738,23 +738,23 @@ const adminShellCss = `
     white-space: nowrap;
   }
   .lf-admin-shell-account-summary strong {
-    color: #0f172a;
+    color: var(--lf-text);
     font-size: 14px;
     font-weight: 850;
     line-height: 1.15;
   }
   .lf-admin-shell-account-email,
   .lf-admin-shell-account-role {
-    color: #64748b;
+    color: var(--lf-text-secondary);
     font-size: 12px;
     line-height: 1.3;
   }
   .lf-admin-shell-account-role {
-    color: #475569;
+    color: var(--lf-text-secondary);
     font-weight: 750;
   }
   .lf-admin-shell-account-menu-section {
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid var(--lf-border);
     display: grid;
     gap: 3px;
     padding: 7px 0 0;
@@ -765,10 +765,10 @@ const adminShellCss = `
   .lf-admin-shell-account-popover a,
   .lf-admin-shell-account-popover button {
     align-items: center;
-    background: #fff;
+    background: var(--lf-surface-card);
     border: 1px solid transparent;
     border-radius: 8px;
-    color: #0f172a;
+    color: var(--lf-text);
     cursor: pointer;
     display: flex;
     font: inherit;
@@ -793,8 +793,8 @@ const adminShellCss = `
   .lf-admin-shell-account-popover a:focus-visible,
   .lf-admin-shell-account-popover button:hover,
   .lf-admin-shell-account-popover button:focus-visible {
-    background: #f8fafc;
-    border-color: #cbd5e1;
+    background: var(--lf-surface-page);
+    border-color: var(--lf-border-input);
     outline: none;
   }
   .lf-admin-shell-breadcrumb {
@@ -802,12 +802,12 @@ const adminShellCss = `
     gap: 8px;
     flex-wrap: wrap;
     font-size: 13px;
-    color: #64748b;
+    color: var(--lf-text-secondary);
   }
   .lf-admin-shell-breadcrumb span + span::before {
     content: "/";
     margin-right: 8px;
-    color: #94a3b8;
+    color: var(--lf-text-secondary);
   }
   .lf-admin-shell-mobile-toggle,
   .lf-admin-shell-drawer {
