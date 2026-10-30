@@ -1228,7 +1228,13 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
               {accountMenuOpen ? (
                 <div id={accountMenuId} className="lf-admin-shell-account-popover" role="menu" aria-label="Account menu">
                   <div className="lf-admin-shell-account-summary">
-                    <span className="lf-admin-shell-avatar" aria-hidden="true">{effectiveInitials || "LF"}</span>
+                    <span className="lf-admin-shell-avatar" aria-hidden="true">
+                      {renderedAvatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img className="lf-topbar-user-avatar-img" src={renderedAvatarUrl} alt="" />
+                      ) : null}
+                      <span className="lf-topbar-user-avatar-fallback">{effectiveInitials || "LF"}</span>
+                    </span>
                     <div className="lf-admin-shell-account-summary-copy"><strong>{effectiveDisplayName}</strong><span className="lf-admin-shell-account-email">{effectiveEmail || "Signed in"}</span><span className="lf-admin-shell-account-role">Personal Vault</span></div>
                   </div>
                   <div className="lf-admin-shell-account-menu-section" role="none">
@@ -1378,7 +1384,7 @@ function isPersonalOnlyPath(pathname: string) {
 function makeInitials(email: string) {
   if (!email) return "LF";
   const local = email.split("@")[0] || "lf";
-  const parts = local.split(/[._-]/).filter(Boolean);
+  const parts = local.split(/[\s._-]+/).filter(Boolean);
   if (parts.length >= 2) {
     return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
   }
