@@ -38,7 +38,9 @@ export async function bootstrapAuthenticatedUser(
   const terms = canBypassOnboarding ? null : await getTermsAcceptanceState(client, userId);
   const access = resolveBootstrapDestination({
     nextPath,
-    completedDestination: roles.length > 0 ? getDefaultLandingForRoles(roles) : completedDestination,
+    // A person with their own Vault always lands in it; Admin and Partner are opened
+    // explicitly (account menu or a next= link) and keep their own server-side checks.
+    completedDestination: roles.length > 0 && !onboarding.is_completed ? getDefaultLandingForRoles(roles) : completedDestination,
     canBypassOnboarding,
     onboardingCompleted: onboarding.is_completed,
     termsAccepted: isCurrentTermsAcceptance(terms),
