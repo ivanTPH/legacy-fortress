@@ -1,0 +1,32 @@
+name: Legacy Fortress TEST migrations
+
+# Runs only when an owner-approved request file changes on the staging branch.
+# Applies listed migration files (hash-pinned) to the TEST Supabase database only.
+on:
+  push:
+    branches: [hosted-uat-preparation-20260715]
+    paths: [ops/test-migration-request.json]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: legacy-fortress-staging
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: legacy-fortress-staging
+    steps:
+      - name: Confirm staging branch
+        run: test "${GITHUB_REF_NAME}" = "hosted-uat-preparation-20260715"
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify or apply approved TEST migrations
+        env:
+          SUPABASE_URL: https://supabase-test.mylegacyfortress.com
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+          PRODUCTION_DB_CLUSTER_ID: ${{ vars.PRODUCTION_DB_CLUSTER_ID }}
+        run: node scripts/staging/apply-test-migrations.mjs
