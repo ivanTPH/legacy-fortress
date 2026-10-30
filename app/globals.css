@@ -8816,6 +8816,10 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-v52-finding-actions > .lf-v52-finding-primary { border-color: var(--lf-primary-bg); background: var(--lf-primary-bg); color: var(--lf-primary-text); }
 .lf-v52-finding-actions > :focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 2px; }
 .lf-v52-finding-note { margin: 0; color: var(--lf-text-secondary); font-size: 13px; }
+.lf-v52-finding-question { margin: 0; color: var(--lf-ink); font-size: var(--lf-text-body); }
+.lf-v52-prefill-banner { display: flex; gap: 12px; align-items: flex-start; margin: 0 0 16px; padding: 14px 16px; border: 1px solid var(--lf-border); border-left: 4px solid var(--lf-primary-bg); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); color: var(--lf-ink); }
+.lf-v52-prefill-banner > div { display: grid; gap: 4px; }
+.lf-v52-prefill-banner span { color: var(--lf-text-tertiary); font-size: var(--lf-text-small); }
 
 /* Linked People: Undo / review-again row and optional address+notes. */
 .lf-linked-people-undo { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 8px; }
