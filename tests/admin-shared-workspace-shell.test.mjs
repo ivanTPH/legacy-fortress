@@ -146,14 +146,14 @@ test("users and invitations expose safe organisation context and lifecycle data"
   assert.match(workspace, /Organisation context/);
   assert.match(workspace, /href=\{`\/admin\/organisations\/\$\{organisation\.id\}`\}/);
   assert.match(workspace, /platform-invitation-register-title/);
-  assert.match(workspace, /Organisation invitation lifecycle/);
-  assert.match(workspace, /Tokens and private identity evidence are never displayed/);
+  assert.match(workspace, /caption="Organisation invitations"/);
+  assert.match(workspace, /Invitation links and identity evidence are never shown/);
   assert.match(workspace, /item\.sentAt/);
   assert.match(workspace, /item\.acceptedAt/);
   assert.match(workspace, /action: "update_invitation"/);
   assert.match(workspace, /status: action === "revoke" \? "revoked" : "sent"/);
   assert.match(workspace, /enterprise\.invitation\.manage/);
-  assert.match(workspace, /Terminal invitation states cannot be changed here/);
+  assert.match(workspace, /const terminal = \["accepted", "expired", "revoked"\]\.includes\(item\.status\);\s*if \(!canManage \|\| terminal\) return null;/);
   assert.match(workspace, /Organisation invitation revoked and audit recorded/);
 });
 

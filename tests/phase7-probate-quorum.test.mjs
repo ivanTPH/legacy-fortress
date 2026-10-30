@@ -38,5 +38,5 @@ test("death-state operations remain separate from authority and access", () => {
   assert.match(adminApi, /applyDeathReportAction/);
   assert.match(workspace, /Death and estate-state queue/);
   assert.match(workspace, /No automatic authority or access/);
-  assert.match(workspace, /Identity, authority, evidence, quorum, estate state, and access remain separate/);
+  assert.match(workspace, /Identity, authority, evidence and access are separate/);
 });

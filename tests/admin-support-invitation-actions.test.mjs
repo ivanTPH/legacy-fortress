@@ -44,7 +44,7 @@ test("support queue UI exposes inspect and permission-aware lifecycle actions", 
   assert.match(workspace, /loadSupportInvitationDetail/);
   assert.match(workspace, /runSupportInvitationAction/);
   assert.match(workspace, /SupportInvitationDetail/);
-  assert.match(workspace, />View case<\/button>/);
+  assert.match(workspace, /aria-label=\{`Open case for /);
   assert.match(workspace, /canManageSupport/);
   assert.match(workspace, /Resend invitation/);
   assert.match(workspace, /Revoke invitation/);

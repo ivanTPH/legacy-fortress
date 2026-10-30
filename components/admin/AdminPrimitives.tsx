@@ -70,16 +70,58 @@ export default function AdminDataTable<T>({
   );
 }
 
+const STATUS_ICON: Record<string, string> = { success: "check_circle", warning: "hourglass_top", danger: "cancel", neutral: "" };
+
+/** Sentence case for status words: "review_required" → "Review required". */
+export function sentenceCaseStatus(value: string) {
+  const text = String(value || "Unknown").replace(/[_-]+/g, " ").trim().toLowerCase();
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 export function AdminStatusBadge({ status, label }: { status: string; label?: string }) {
   const normalized = String(status || "unknown").toLowerCase();
-  const tone = normalized === "ok" || normalized === "healthy" || normalized.includes("active") || normalized.includes("success") || normalized.includes("accepted")
+  const tone = normalized === "ok" || normalized === "healthy" || normalized.includes("active") || normalized.includes("success") || normalized.includes("accepted") || normalized.includes("verified") || normalized.includes("approved")
     ? "success"
-    : normalized === "warning" || normalized === "attention" || normalized.includes("pending") || normalized.includes("sent") || normalized.includes("review")
+    : normalized === "warning" || normalized === "attention" || normalized.includes("pending") || normalized.includes("sent") || normalized.includes("review") || normalized.includes("required") || normalized.includes("waiting")
       ? "warning"
-      : normalized === "error" || normalized === "critical" || normalized.includes("revoked") || normalized.includes("inactive") || normalized.includes("failed")
+      : normalized === "error" || normalized === "critical" || normalized.includes("revoked") || normalized.includes("inactive") || normalized.includes("failed") || normalized.includes("rejected")
         ? "danger"
         : "neutral";
-  return <span className={`lf-admin-status-badge ${tone}`}>{label ?? String(status || "Unknown").replace(/_/g, " ")}</span>;
+  // CONSISTENCY.md: chips carry an icon and a word, never colour alone.
+  const icon = normalized === "not measured" || normalized === "unavailable" ? "" : STATUS_ICON[tone];
+  return <span className={`lf-admin-status-badge ${tone}`}>{icon ? <Icon name={icon} size={14} /> : null}{label ?? sentenceCaseStatus(status)}</span>;
+}
+
+/** Filter chips with counts (V5 admin page template). The selected chip is ink. */
+export function AdminFilterChips<K extends string>({ label, options, value, onChange }: {
+  label: string;
+  options: Array<{ key: K; label: string; count?: number }>;
+  value: K;
+  onChange: (key: K) => void;
+}) {
+  return (
+    <div className="lf-admin-chips" role="group" aria-label={label}>
+      {options.map((option) => (
+        <button key={option.key} type="button" aria-pressed={value === option.key} onClick={() => onChange(option.key)}>
+          {option.label}{typeof option.count === "number" ? ` · ${option.count}` : ""}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** One white card of equal stat columns: label 13 secondary, value 22/600. */
+export function AdminStatStrip({ label, items }: { label: string; items: Array<{ label: string; value: ReactNode }> }) {
+  return (
+    <section className="lf-admin-stat-strip" aria-label={label}>
+      {items.map((item) => <div key={item.label}><span>{item.label}</span><strong>{item.value}</strong></div>)}
+    </section>
+  );
+}
+
+/** Neutral note box with an icon (info, lock, shield_lock). */
+export function AdminNote({ icon = "info", children }: { icon?: string; children: ReactNode }) {
+  return <p className="lf-admin-note"><Icon name={icon} size={18} /><span>{children}</span></p>;
 }
 
 export function AdminMetricCard({
@@ -131,9 +173,10 @@ export function AdminContextHelp({ label, children }: { label: string; children:
   );
 }
 
-export function AdminEmptyState({ title, children }: { title: string; children: ReactNode }) {
+export function AdminEmptyState({ title, children, icon }: { title: string; children: ReactNode; icon?: string }) {
   return (
     <div className="lf-admin-empty-state">
+      {icon ? <span className="lf-admin-empty-icon" aria-hidden="true"><Icon name={icon} size={22} /></span> : null}
       <strong>{title}</strong>
       <span>{children}</span>
     </div>
@@ -183,15 +226,15 @@ const adminPrimitiveCss = `
     border-bottom: 1px solid var(--lf-border);
     padding: 10px;
     text-align: left;
-    vertical-align: top;
+    vertical-align: middle;
     overflow-wrap: break-word;
     word-break: normal;
   }
   .lf-admin-data-table th {
     color: var(--lf-text);
-    font-size: 12px;
-    letter-spacing: .02em;
-    text-transform: uppercase;
+    color: var(--lf-text-secondary);
+    font-size: 13px;
+    font-weight: 600;
     white-space: nowrap;
     word-break: keep-all;
   }
@@ -212,7 +255,7 @@ const adminPrimitiveCss = `
     font-weight: 800;
     min-height: 26px;
     padding: 3px 9px;
-    text-transform: capitalize;
+    gap: 4px;
     white-space: nowrap;
     word-break: keep-all;
   }
@@ -347,9 +390,8 @@ const adminPrimitiveCss = `
     }
     .lf-admin-data-card > div > span {
       color: var(--lf-text-secondary);
-      font-size: 12px;
-      font-weight: 800;
-      text-transform: uppercase;
+      font-size: 13px;
+      font-weight: 600;
     }
   }
 `;

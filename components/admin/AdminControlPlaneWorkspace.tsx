@@ -5,7 +5,7 @@ import BrandMark from "@/components/ui/BrandMark";
 import type { CSSProperties, FormEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import AdminDataTable, { AdminContextHelp, AdminEmptyState, AdminMetricCard, AdminStatusBadge } from "@/components/admin/AdminPrimitives";
+import AdminDataTable, { AdminContextHelp, AdminEmptyState, AdminFilterChips, AdminMetricCard, AdminNote, AdminStatStrip, AdminStatusBadge, sentenceCaseStatus } from "@/components/admin/AdminPrimitives";
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell";
 import InfoTip from "@/components/ui/InfoTip";
 import Icon from "@/components/ui/Icon";
@@ -449,113 +449,113 @@ type HealthState = {
 const PAGE_COPY: Record<AdminControlPlaneSection, { title: string; eyebrow: string; description: string }> = {
   overview: {
     title: "Overview",
-    eyebrow: "Legacy Fortress Admin",
+    eyebrow: "Platform Admin",
     description: "What needs a decision today. Customer Vault contents and documents are never shown in admin.",
   },
   users: {
     title: "Customer users",
     eyebrow: "Operations",
-    description: "Search safe customer metadata for support context without exposing private vault contents.",
+    description: "Find a customer to help with their account. Record names, values and documents are never shown.",
   },
   "user-detail": {
-    title: "Customer user detail",
+    title: "Customer user",
     eyebrow: "Operations",
-    description: "Privacy-bounded user support summary. Detailed private records remain outside admin browsing.",
+    description: "Account details for support. Record names, values and documents are never shown.",
   },
   "admin-users": {
     title: "Admin users",
-    eyebrow: "Administration",
-    description: "Manage admin access through audited, server-authorised lifecycle controls.",
+    eyebrow: "Oversight",
+    description: "Legacy Fortress staff who can sign in to Platform Admin, and what each one can do.",
   },
   "admin-user-detail": {
-    title: "Admin user detail",
-    eyebrow: "Administration",
-    description: "Review role, status, effective permission context, and recent governance events.",
+    title: "Administrator",
+    eyebrow: "Oversight",
+    description: "Role, status and recent changes for this administrator.",
   },
   invitations: {
-    title: "Invitation queue",
+    title: "Invitations",
     eyebrow: "Operations",
-    description: "Review invitation and linked-access signals from the support snapshot.",
+    description: "Every invitation on the platform: customers inviting trusted people, organisations and administrators.",
   },
   organisations: {
-    title: "Enterprise organisations",
-    eyebrow: "Platform Administration",
-    description: "Global licensed organisation portfolio. Select an organisation before managing its licence, users, invitations, seats, or audit history.",
+    title: "Organisations",
+    eyebrow: "Commercial",
+    description: "Partner organisations, their licences and administrators. Members’ Vaults are never shown.",
   },
   "organisation-detail": {
-    title: "Organisation detail",
-    eyebrow: "Platform Administration",
-    description: "Organisation context, licence position, users, invitations, and audit links for the selected enterprise account.",
+    title: "Organisation",
+    eyebrow: "Commercial",
+    description: "Licence, seats, people and invitations for this organisation.",
   },
   "organisation-users": {
-    title: "Organisation users and seats",
-    eyebrow: "Platform Administration",
-    description: "Scoped users and seat status for the selected organisation.",
+    title: "Users & seats",
+    eyebrow: "Commercial",
+    description: "People using this organisation’s seats.",
   },
   "organisation-invitations": {
-    title: "Organisation invitations",
-    eyebrow: "Platform Administration",
-    description: "Scoped organisation administrator and user invitations.",
+    title: "Invitations",
+    eyebrow: "Commercial",
+    description: "Invitations sent by or for this organisation.",
   },
   "organisation-licences": {
-    title: "Organisation licences",
-    eyebrow: "Platform Administration",
-    description: "Licences attached to the selected organisation.",
+    title: "Licences",
+    eyebrow: "Commercial",
+    description: "Licences held by this organisation.",
   },
   licences: {
-    title: "Enterprise licences",
-    eyebrow: "Platform Administration",
-    description: "Platform-level licence register linked back to the owning organisation before detail actions.",
+    title: "Licences",
+    eyebrow: "Commercial",
+    description: "Seats each organisation has bought, and when they renew.",
   },
   "licence-detail": {
-    title: "Licence detail",
-    eyebrow: "Platform Administration",
-    description: "Licence entitlement, seat usage, renewal state, and linked organisation context.",
+    title: "Licence",
+    eyebrow: "Commercial",
+    description: "Seats, renewal and the organisation this licence belongs to.",
   },
   access: {
     title: "Access requests",
     eyebrow: "Operations",
-    description: "Review linked-access issues and verification handoffs without exposing unrelated vault content.",
+    description: "Requests to see more of someone’s Vault, and executor requests after a death. Admins route cases; Vault owners decide on access.",
   },
   verification: {
-    title: "Verification",
-    eyebrow: "Operations",
-    description: "Review executor verification requests and evidence presence.",
+    title: "Identity verification",
+    eyebrow: "Probate & verification",
+    description: "Check people who failed an automatic identity check. Approving confirms who someone is; it doesn’t give them access to anything.",
   },
   "verification-detail": {
-    title: "Verification detail",
-    eyebrow: "Operations",
-    description: "Inspect one verification request in context.",
+    title: "Identity check",
+    eyebrow: "Probate & verification",
+    description: "Approving confirms who someone is. It never gives access to records.",
   },
   probate: {
     title: "Probate cases",
-    eyebrow: "Operations",
-    description: "Review probate cases with terminal actions derived from server transition rules.",
+    eyebrow: "Probate & verification",
+    description: "Review death reports and executor authority. Identity, authority, evidence and access are separate decisions, and each one is recorded.",
   },
   "probate-detail": {
-    title: "Probate case detail",
-    eyebrow: "Operations",
-    description: "Inspect one probate case, its evidence metadata, decision state, and valid next actions.",
+    title: "Probate case",
+    eyebrow: "Probate & verification",
+    description: "Evidence, decisions and the next step for this case.",
   },
   support: {
-    title: "Support queue",
+    title: "Support",
     eyebrow: "Operations",
-    description: "Invitation, linked access, and verification issues that need operational follow-up.",
+    description: "Problems with invitations, linked access and identity checks that need someone to follow up.",
   },
   audit: {
-    title: "Audit history",
-    eyebrow: "Governance",
-    description: "Read-only, sanitised admin audit trail with filters for actor, route, action, and outcome.",
+    title: "Audit",
+    eyebrow: "Oversight",
+    description: "Every admin, commercial and probate action in one read-only log.",
   },
   "system-health": {
     title: "System health",
-    eyebrow: "Governance",
-    description: "Non-secret application, schema, deployment, and queue health signals.",
+    eyebrow: "Oversight",
+    description: "Whether each part of the platform is working. Secrets, tokens and passwords are never displayed.",
   },
   settings: {
     title: "Settings",
-    eyebrow: "Configuration",
-    description: "Governed configuration surface. High-risk settings remain read-only until dedicated audited APIs exist.",
+    eyebrow: "Oversight",
+    description: "How the platform is configured.",
   },
 };
 
@@ -1187,7 +1187,8 @@ function currentHrefForSection(section: AdminControlPlaneSection, resourceId: st
 }
 
 function buildPlatformBreadcrumbs(section: AdminControlPlaneSection, resourceId: string | null, portfolio: EnterprisePortfolio | null, fallbackTitle: string) {
-  const crumbs: Array<{ label: string; href?: string }> = [{ label: "Platform Administration", href: "/admin" }];
+  const group = PAGE_COPY[section]?.eyebrow ?? "Platform Admin";
+  const crumbs: Array<{ label: string; href?: string }> = [{ label: group, href: section === "overview" ? undefined : undefined }];
   if (["organisations", "organisation-detail", "organisation-users", "organisation-invitations", "organisation-licences"].includes(section)) {
     crumbs.push({ label: "Organisations", href: "/admin/organisations" });
     if (resourceId && section !== "organisations") {
@@ -1442,25 +1443,40 @@ function renderPlatformOrganisationDetail(section: AdminControlPlaneSection, org
 }
 
 function renderPlatformLicences(views: { organisations: EnterpriseOrganisation[]; licences: EnterpriseLicence[] }) {
+  return <PlatformLicences views={views} />;
+}
+
+const LICENCE_FILTERS: Array<{ key: "all" | "approval" | "active" | "renewing"; label: string; matches: (licence: EnterpriseLicence) => boolean }> = [
+  { key: "all", label: "All", matches: () => true },
+  { key: "approval", label: "Waiting for approval", matches: (licence) => /pending|draft|approval/i.test(licence.status) },
+  { key: "active", label: "Active", matches: (licence) => licence.status === "active" },
+  { key: "renewing", label: "Renewing soon", matches: (licence) => /due|soon|high|at_risk/i.test(String(licence.renewalRisk ?? "")) },
+];
+
+function PlatformLicences({ views }: { views: { organisations: EnterpriseOrganisation[]; licences: EnterpriseLicence[] } }) {
+  const [filter, setFilter] = useState<"all" | "approval" | "active" | "renewing">("all");
   const portfolio = { organisations: views.organisations, licences: views.licences };
+  const active = LICENCE_FILTERS.find((option) => option.key === filter) ?? LICENCE_FILTERS[0];
   return (
-    <section style={panelStyle}>
-      <AdminDataTable
-        caption="Platform enterprise licences"
-        description={<p style={mutedStyle}>Licence register with organisation context preserved. Open a licence only after selecting a record.</p>}
-        columns={[
-          { key: "organisation", header: "Organisation", render: (licence) => orgLink(licence.organisationId, views.organisations) },
-          { key: "plan", header: "Plan", render: (licence) => <><Link href={`/admin/licences/${licence.id}`}>{licenceLabel(licence)}</Link><small>{labelise(licence.billingStatus)}</small></> },
-          { key: "status", header: "Status", render: (licence) => <AdminStatusBadge status={licence.status} /> },
-          { key: "seats", header: "Seats", render: (licence) => <>{licence.activeSeats}/{licence.purchasedSeats}<small>{licence.availableSeats} available · {licence.invitedSeats} invited</small></> },
-          { key: "renewal", header: "Renewal", render: (licence) => <>{formatDate(licence.renewalDate)}<small>{labelise(licence.renewalRisk)}</small></> },
-          { key: "actions", header: "Actions", render: (licence) => renderLicenceActions(licence, portfolio) },
-        ]}
-        rows={views.licences}
-        getRowKey={(licence) => licence.id}
-        emptyState={<AdminEmptyState title="No licences found">No enterprise licences match the current filters.</AdminEmptyState>}
-      />
-    </section>
+    <div style={stackStyle}>
+      <AdminFilterChips label="Filter licences" value={filter} onChange={setFilter} options={LICENCE_FILTERS.map((option) => ({ key: option.key, label: option.label, count: views.licences.filter(option.matches).length }))} />
+      <div className="lf-admin-table-card">
+        <AdminDataTable
+          caption="Licences"
+          columns={[
+            { key: "organisation", header: "Organisation", render: (licence) => orgLink(licence.organisationId, views.organisations) },
+            { key: "plan", header: "Plan", render: (licence) => <><Link href={`/admin/licences/${licence.id}`}>{licenceLabel(licence)}</Link><small>{sentenceCaseStatus(licence.billingStatus)}</small></> },
+            { key: "seats", header: "Seats", render: (licence) => <>{licence.activeSeats} of {licence.purchasedSeats}<small>{licence.availableSeats} available</small></> },
+            { key: "renewal", header: "Renews", render: (licence) => formatDate(licence.renewalDate) },
+            { key: "status", header: "Status", render: (licence) => <AdminStatusBadge status={licence.status} /> },
+            { key: "actions", header: "", render: (licence) => renderLicenceActions(licence, portfolio) },
+          ]}
+          rows={views.licences.filter(active.matches)}
+          getRowKey={(licence) => licence.id}
+          emptyState={<AdminEmptyState icon="workspace_premium" title="No licences here">Licences appear here when an organisation buys seats.</AdminEmptyState>}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -1911,50 +1927,28 @@ function renderUsers(
 ) {
   return (
     <div style={stackStyle}>
-      <section style={toolbarStyle}>
-        <label style={fieldStackStyle}>Search users
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Email or display name" />
+      <form className="lf-admin-toolbar" role="search" onSubmit={(event) => { event.preventDefault(); void runLookup(); }}>
+        <label className="lf-admin-search"><Icon name="search" size={18} /><span className="lf-visually-hidden">Search customers</span>
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by email or name" />
         </label>
-        <button type="button" onClick={() => void runLookup()}>Search</button>
-      </section>
+        <button type="submit" className="lf-admin-row-button">Search</button>
+      </form>
       {resourceId ? renderUserOperationalDetail(detail, detailLoading, resourceId) : null}
-      <section style={panelStyle}>
-        <h2 style={h2Style}>Safe lookup results</h2>
+      <div className="lf-admin-table-card">
         <AdminDataTable
-          caption="Safe lookup results"
+          caption="Customer users"
           columns={[
-            {
-              key: "user",
-              header: "User",
-              render: (item) => <>{item.displayName}<small>{item.email ?? "No email"} · {item.hasProfile ? "Profile present" : "Profile missing"}</small></>,
-            },
-            {
-              key: "organisations",
-              header: "Organisation context",
-              render: (item) => item.organisations.length ? <>{item.organisations.map((organisation) => <Link key={organisation.id} href={`/admin/organisations/${organisation.id}`} prefetch={false}>{organisation.name}<small>{labelise(organisation.role)} · {labelise(organisation.status)}</small></Link>)}</> : "No organisation membership",
-            },
-            {
-              key: "plan",
-              header: "Plan",
-              render: (item) => `${item.commercial.accountPlan.replace(/_/g, " ")} · ${item.commercial.planStatus.replace(/_/g, " ")}`,
-            },
-            {
-              key: "counts",
-              header: "Counts",
-              render: (item) => `Assets ${item.counts.assets} · Documents ${item.counts.documents} · Contacts ${item.counts.contacts}`,
-            },
-            { key: "last-sign-in", header: "Last sign-in", render: (item) => formatDate(item.lastSignInAt ?? "") },
-            {
-              key: "actions",
-              header: "Actions",
-              render: (item) => <Link href={`/admin/users/${encodeURIComponent(item.userId)}`} prefetch={false}>View</Link>,
-            },
+            { key: "user", header: "Customer", render: (item) => <><span className="lf-admin-cell-title">{item.displayName}</span><small>{item.email ?? "No email"}</small></> },
+            { key: "organisations", header: "Organisation", render: (item) => item.organisations.length ? <>{item.organisations.map((organisation) => <Link key={organisation.id} href={`/admin/organisations/${organisation.id}`} prefetch={false}>{organisation.name}</Link>)}</> : "Personal" },
+            { key: "last-sign-in", header: "Last sign-in", render: (item) => item.lastSignInAt ? formatDate(item.lastSignInAt) : "Never" },
+            { key: "plan", header: "Plan", render: (item) => <AdminStatusBadge status={item.commercial.planStatus} label={sentenceCaseStatus(item.commercial.accountPlan)} /> },
+            { key: "open", header: "", render: (item) => <Link className="lf-admin-row-chevron" href={`/admin/users/${encodeURIComponent(item.userId)}`} prefetch={false} aria-label={`Open ${item.displayName}`}><Icon name="chevron_right" size={20} /></Link> },
           ]}
           rows={results}
           getRowKey={(item) => item.userId}
-          emptyState={<AdminEmptyState title="No lookup results">Search to load live customer metadata.</AdminEmptyState>}
+          emptyState={<AdminEmptyState icon="person_search" title="Search for a customer">Enter an email address or name. Results show account details only.</AdminEmptyState>}
         />
-      </section>
+      </div>
     </div>
   );
 }
@@ -2088,49 +2082,52 @@ function renderSupport(
 ) {
   const title = section === "invitations" ? "Invitation issues" : section === "access" ? "Linked-access issues" : "Support issues";
   const canManageSupport = capabilities.includes("support:manage");
+  const counts = support?.counts;
+  const statItems = section === "invitations"
+    ? [
+      { label: "Waiting for recipient", value: counts?.pendingInvitations ?? "–" },
+      { label: "Saved, not sent", value: counts?.readyToSendInvitations ?? "–" },
+      { label: "Organisation invitations", value: enterprisePortfolio?.invitations.length ?? "–" },
+      { label: "Need follow-up", value: counts?.invitationIssues ?? "–" },
+    ]
+    : [
+      { label: "Invitation problems", value: counts?.invitationIssues ?? "–" },
+      { label: "Saved, not sent", value: counts?.readyToSendInvitations ?? "–" },
+      { label: "Verification hand-offs", value: counts?.verificationAwaitingReview ?? "–" },
+      { label: "Active linked accounts", value: counts?.linkedAccountsActive ?? "–" },
+    ];
   return (
     <div style={stackStyle}>
-      {section === "invitations" ? renderPlatformInvitationRegister(enterprisePortfolio, capabilities, enterpriseInvitationActionLoading, runEnterpriseInvitationAction) : null}
-      <section style={panelStyle}>
-        <h2 style={h2Style}>{title}</h2>
-        <div style={gridStyle}>
-          <AdminMetricCard label="Pending invitations" value={support?.counts.pendingInvitations ?? "Unavailable"} detail="Contact invitations awaiting recipient action" />
-          <AdminMetricCard label="Ready to send" value={support?.counts.readyToSendInvitations ?? "Unavailable"} detail="Saved contact invitations without dispatch" />
-          <AdminMetricCard label="Verification awaiting review" value={support?.counts.verificationAwaitingReview ?? "Unavailable"} detail="Executor verification handoffs" />
-          <AdminMetricCard label="Active linked accounts" value={support?.counts.linkedAccountsActive ?? "Unavailable"} detail="Accepted linked-access relationships" />
-          <AdminMetricCard label="Invitation/access issues" value={support?.counts.invitationIssues ?? "Unavailable"} detail="Operational items requiring follow-up" />
-        </div>
+      <AdminStatStrip label={title} items={statItems} />
+      <div className="lf-admin-table-card">
+        {section === "invitations" ? <h2>Trusted people</h2> : null}
         <AdminDataTable
           caption={`${title} table`}
-          description={<p style={mutedStyle}>Rows open the live invitation detail panel. Available resend and revoke actions use the canonical support lifecycle API.</p>}
           columns={[
-            { key: "contact", header: "Contact", render: (item) => <>{item.contactName || item.contactEmail || "Unknown contact"}<small>{item.contactEmail || "No email recorded"}</small></> },
-            { key: "owner", header: "Owner", render: (item) => item.ownerName },
-            { key: "role", header: "Role", render: (item) => labelise(item.assignedRole) },
-            { key: "status", header: "Access state", render: (item) => <><AdminStatusBadge status={item.activationStatus ?? "invited"} /><small>Invitation: {labelise(item.invitationStatus ?? "unknown")}</small></> },
-            { key: "issue", header: "Issue", render: (item) => item.issueLabel },
-            { key: "case", header: "Case", render: (item) => <><AdminStatusBadge status={item.caseStatus ?? "not opened"} /><small>{item.casePriority ? `Priority: ${item.casePriority}` : "No operational case"}</small></> },
-            { key: "next", header: "Next step", render: (item) => getSupportNextStep(item.invitationStatus ?? "", item.activationStatus ?? "") },
-            { key: "actions", header: "Actions", render: (item) => (
+            { key: "contact", header: "Person", render: (item) => <><span className="lf-admin-cell-title">{item.contactName || item.contactEmail || "Unknown person"}</span><small>{item.contactEmail || "No email recorded"} · {labelise(item.assignedRole)}</small></> },
+            { key: "owner", header: "Vault owner", render: (item) => item.ownerName },
+            { key: "issue", header: "Problem", render: (item) => <>{item.issueLabel}<small>{getSupportNextStep(item.invitationStatus ?? "", item.activationStatus ?? "")}</small></> },
+            { key: "status", header: "Status", render: (item) => <AdminStatusBadge status={item.invitationStatus ?? item.activationStatus ?? "invited"} /> },
+            { key: "actions", header: "", render: (item) => (
               <div style={actionsCellStyle}>
-                <button type="button" onClick={() => void loadDetail(item.invitationId)} disabled={detailLoading}>View case</button>
-                {getSupportOperationalState(item.invitationStatus ?? "", item.activationStatus ?? "") === "verification_required" ? <Link href="/admin/verification" prefetch={false}>Verification queue</Link> : null}
                 {canManageSupport && item.invitationStatus !== "revoked" && item.invitationStatus !== "accepted" ? (
-                  <button type="button" onClick={() => void runAction(item.invitationId, "resend")} disabled={actionLoading === `${item.invitationId}:resend`}>
-                    {actionLoading === `${item.invitationId}:resend` ? "Sending..." : item.sentAt ? "Resend" : "Send"}
+                  <button type="button" className="lf-admin-row-button" onClick={() => void runAction(item.invitationId, "resend")} disabled={actionLoading === `${item.invitationId}:resend`}>
+                    {actionLoading === `${item.invitationId}:resend` ? "Sending…" : item.sentAt ? "Resend" : "Send"}
                   </button>
                 ) : null}
+                <button type="button" className="lf-admin-row-chevron" onClick={() => void loadDetail(item.invitationId)} disabled={detailLoading} aria-label={`Open case for ${item.contactName || item.contactEmail || "this person"}`}><Icon name="chevron_right" size={20} /></button>
               </div>
             ) },
           ]}
           rows={support?.issues ?? []}
           getRowKey={(item) => item.invitationId}
-          emptyState={support ? <AdminEmptyState title="No support issues">No support issues match this queue.</AdminEmptyState> : <AdminEmptyState title="Support unavailable">Support snapshot is unavailable for this role or environment.</AdminEmptyState>}
+          emptyState={support ? <AdminEmptyState icon={section === "invitations" ? "forward_to_inbox" : "support_agent"} title={section === "invitations" ? "No invitation problems" : "No support issues"}>Each issue appears here with a suggested next step, such as resending an invitation or restarting an identity check.</AdminEmptyState> : <AdminEmptyState title="Support unavailable">Support isn’t available for your role.</AdminEmptyState>}
         />
-      </section>
+      </div>
+      {section === "invitations" ? renderPlatformInvitationRegister(enterprisePortfolio, capabilities, enterpriseInvitationActionLoading, runEnterpriseInvitationAction) : null}
       {detail || detailLoading ? (
         <section style={panelStyle} aria-live="polite">
-          {detailLoading ? <p style={mutedStyle}>Loading invitation detail...</p> : null}
+          {detailLoading ? <p style={mutedStyle}>Loading invitation…</p> : null}
           {detail ? renderSupportInvitationDetail(detail, canManageSupport, actionLoading, runAction, createCase, runCaseAction, addCaseNote) : null}
         </section>
       ) : null}
@@ -2148,35 +2145,27 @@ function renderPlatformInvitationRegister(
   const organisations = portfolio?.organisations ?? [];
   const canManage = capabilities.includes("enterprise.invitation.manage");
   return (
-    <section style={panelStyle} aria-labelledby="platform-invitation-register-title">
-      <div style={sectionHeaderStyle}>
-        <div>
-          <p style={eyebrowStyle}>Platform resources</p>
-          <h2 id="platform-invitation-register-title" style={h2Style}>Organisation invitations</h2>
-          <p style={mutedStyle}>Lifecycle register for enterprise invitations. Tokens and private identity evidence are never displayed.</p>
-        </div>
-        <AdminContextHelp label="Invitation boundary">Acceptance remains bound to the canonical invitation flow. Resend and revoke actions are available only through their audited lifecycle surfaces.</AdminContextHelp>
-      </div>
+    <div className="lf-admin-table-card" aria-labelledby="platform-invitation-register-title">
+      <h2 id="platform-invitation-register-title">Organisations and administrators</h2>
+      <p className="lf-admin-table-card-note">Invitation links and identity evidence are never shown.</p>
       <AdminDataTable
-        caption="Organisation invitation lifecycle"
+        caption="Organisation invitations"
         columns={[
-          { key: "recipient", header: "Recipient", render: (item) => <>{item.fullName || item.email}<small>{item.email} · {labelise(item.roleTemplate)}</small></> },
-          { key: "organisation", header: "Organisation", render: (item) => { const organisation = organisations.find((candidate) => candidate.id === item.organisationId); return organisation ? <Link href={`/admin/organisations/${organisation.id}`} prefetch={false}>{organisation.name}</Link> : "Organisation unavailable"; } },
-          { key: "status", header: "Lifecycle", render: (item) => <AdminStatusBadge status={item.status} /> },
+          { key: "recipient", header: "Recipient", render: (item) => <><span className="lf-admin-cell-title">{item.fullName || item.email}</span><small>{item.email}</small></> },
+          { key: "type", header: "Type", render: (item) => sentenceCaseStatus(item.roleTemplate) },
+          { key: "organisation", header: "Organisation", render: (item) => { const organisation = organisations.find((candidate) => candidate.id === item.organisationId); return organisation ? <Link href={`/admin/organisations/${organisation.id}`} prefetch={false}>{organisation.name}</Link> : "–"; } },
+          { key: "status", header: "Status", render: (item) => <><AdminStatusBadge status={item.status} />{item.acceptedAt ? <small>Accepted {formatDate(item.acceptedAt)}</small> : item.sentAt ? <small>Sent {formatDate(item.sentAt)}</small> : null}</> },
           { key: "created", header: "Created", render: (item) => formatDate(item.createdAt ?? "") },
-          { key: "sent", header: "Sent", render: (item) => formatDate(item.sentAt ?? "") },
-          { key: "accepted", header: "Accepted", render: (item) => formatDate(item.acceptedAt ?? "") },
-          { key: "actions", header: "Actions", render: (item) => {
+          { key: "actions", header: "", render: (item) => {
             const terminal = ["accepted", "expired", "revoked"].includes(item.status);
-            if (!canManage) return <span title="This administrator has read-only invitation access.">Read only</span>;
-            if (terminal) return <span title="Terminal invitation states cannot be changed here.">No actions</span>;
+            if (!canManage || terminal) return null;
             return (
               <div style={actionsCellStyle}>
-                <button type="button" aria-label={`Resend invitation to ${item.email}`} onClick={() => void runAction(item.id, "resend")} disabled={actionLoading === `${item.id}:resend`}>
-                  {actionLoading === `${item.id}:resend` ? "Sending..." : "Resend"}
+                <button type="button" className="lf-admin-row-button" aria-label={`Resend invitation to ${item.email}`} onClick={() => void runAction(item.id, "resend")} disabled={actionLoading === `${item.id}:resend`}>
+                  {actionLoading === `${item.id}:resend` ? "Sending…" : "Resend"}
                 </button>
-                <button type="button" aria-label={`Revoke invitation for ${item.email}`} onClick={() => void runAction(item.id, "revoke")} disabled={actionLoading === `${item.id}:revoke`}>
-                  {actionLoading === `${item.id}:revoke` ? "Revoking..." : "Revoke"}
+                <button type="button" className="lf-admin-row-button" aria-label={`Revoke invitation for ${item.email}`} onClick={() => void runAction(item.id, "revoke")} disabled={actionLoading === `${item.id}:revoke`}>
+                  {actionLoading === `${item.id}:revoke` ? "Revoking…" : "Revoke"}
                 </button>
               </div>
             );
@@ -2184,9 +2173,9 @@ function renderPlatformInvitationRegister(
         ]}
         rows={invitations}
         getRowKey={(item) => item.id}
-        emptyState={<AdminEmptyState title="No organisation invitations">No enterprise invitation records are available for this platform scope.</AdminEmptyState>}
+        emptyState={<AdminEmptyState icon="forward_to_inbox" title="No organisation invitations">Invitations to organisation admins and team members appear here.</AdminEmptyState>}
       />
-    </section>
+    </div>
   );
 }
 
@@ -2456,24 +2445,51 @@ function renderVerification(
         </section>
       ) : null}
       {resourceId && !selected ? <AdminEmptyState title="Case unavailable">This case is not available to your role.</AdminEmptyState> : null}
-      {!resourceId ? <section style={panelStyle} className="lf-admin-verification-queue">
+      {!resourceId ? <section className="lf-admin-verification-queue">
         <VerificationMobileQueue queue={queue} />
+        <VerificationDesktopQueue queue={queue} />
+      </section> : null}
+    </div>
+  );
+}
+
+const VERIFICATION_FILTERS: Array<{ key: "review" | "waiting" | "verified" | "all"; label: string; matches: (item: VerificationItem) => boolean }> = [
+  { key: "review", label: "Needs review", matches: (item) => item.manualReviewRequired || item.requestStatus === "review_required" },
+  { key: "waiting", label: "Waiting on claimant", matches: (item) => ["pending", "requires_input", "retry_requested", "document_required", "camera_required"].includes(item.requestStatus) },
+  { key: "verified", label: "Verified", matches: (item) => item.requestStatus === "verified" },
+  { key: "all", label: "All", matches: () => true },
+];
+
+function verificationChecks(item: VerificationItem) {
+  const parts = [item.documentType ? labelise(item.documentType) : "Document not checked", item.livenessStatus ? `liveness ${labelise(item.livenessStatus).toLowerCase()}` : null, item.faceMatchResult ? labelise(item.faceMatchResult).toLowerCase() : null].filter(Boolean);
+  return parts.join(" · ");
+}
+
+function VerificationDesktopQueue({ queue }: { queue: VerificationItem[] }) {
+  const [filter, setFilter] = useState<"review" | "waiting" | "verified" | "all">("review");
+  const active = VERIFICATION_FILTERS.find((option) => option.key === filter) ?? VERIFICATION_FILTERS[0];
+  const rows = queue.filter(active.matches);
+  return (
+    <div className="lf-admin-verification-desktop" style={stackStyle}>
+      <AdminFilterChips label="Filter identity checks" value={filter} onChange={setFilter} options={VERIFICATION_FILTERS.map((option) => ({ key: option.key, label: option.label, count: queue.filter(option.matches).length }))} />
+      <div className="lf-admin-table-card">
         <AdminDataTable
-          caption="Verification queue"
+          caption="Identity verification queue"
           columns={[
-            { key: "reference", header: "Reference", render: (item) => <code>{item.id.slice(0, 8)}</code> },
-            { key: "type", header: "Type", render: (item) => labelise(item.purpose ?? item.requestType) },
-            { key: "action", header: "Pending action", render: (item) => item.manualReviewRequired ? "Manual review" : labelise(item.requestStatus) },
+            { key: "claimant", header: "Claimant", render: (item) => <><span className="lf-admin-cell-title">{item.ownerName || <code>{item.id.slice(0, 8)}</code>}</span><small>{formatDate(item.submittedAt)}</small></> },
+            { key: "type", header: "Linked to", render: (item) => labelise(item.purpose ?? item.requestType) },
+            { key: "checks", header: "Checks", render: (item) => verificationChecks(item) },
             { key: "status", header: "Status", render: (item) => <AdminStatusBadge status={item.requestStatus} /> },
             { key: "assigned", header: "Reviewer", render: (item) => item.assignedReviewerName ?? "Unassigned" },
-            { key: "age", header: "Submitted", render: (item) => formatDate(item.submittedAt) },
-            { key: "detail", header: "Detail", render: (item) => <Link href={`/admin/verification/${item.id}`}>Inspect</Link> },
+            { key: "detail", header: "", render: (item) => item.manualReviewRequired || item.requestStatus === "review_required"
+              ? <Link className="lf-admin-row-button" href={`/admin/verification/${item.id}`}>Review</Link>
+              : <Link className="lf-admin-row-chevron" href={`/admin/verification/${item.id}`} aria-label={`Open check for ${item.ownerName}`}><Icon name="chevron_right" size={20} /></Link> },
           ]}
-          rows={queue}
+          rows={rows}
           getRowKey={(item) => item.id}
-          emptyState={<AdminEmptyState title="No verification requests">No verification requests are waiting.</AdminEmptyState>}
+          emptyState={<AdminEmptyState icon="verified_user" title="Nothing to review">Identity checks that need a person to look at them appear here.</AdminEmptyState>}
         />
-      </section> : null}
+      </div>
     </div>
   );
 }
@@ -2523,28 +2539,41 @@ function renderProbate(
       </div>
     );
   }
+  return <ProbateQueue cases={cases} estate={estate} />;
+}
+
+const PROBATE_FILTERS: Array<{ key: "review" | "waiting" | "closed"; label: string; matches: (item: ProbateCase) => boolean }> = [
+  { key: "review", label: "Needs review", matches: (item) => !getAllowedProbateActions(item.status).terminal && !/waiting|requested_more|awaiting_executor/i.test(item.status) },
+  { key: "waiting", label: "Waiting on executor", matches: (item) => /waiting|requested_more|awaiting_executor/i.test(item.status) },
+  { key: "closed", label: "Closed", matches: (item) => getAllowedProbateActions(item.status).terminal },
+];
+
+function ProbateQueue({ cases, estate }: { cases: ProbateCase[]; estate: EstateOperations | null }) {
+  const [filter, setFilter] = useState<"review" | "waiting" | "closed">("review");
+  const active = PROBATE_FILTERS.find((option) => option.key === filter) ?? PROBATE_FILTERS[0];
+  const rows = cases.filter(active.matches);
   return (
     <div style={stackStyle}>
-      {estate ? renderEstateOperations(estate) : null}
-      <section style={panelStyle}>
-        <h2 style={h2Style}>{heading}</h2>
-        <p style={mutedStyle}>Identity, authority, evidence, quorum, estate state, and access remain separate decisions. Use the case record and audited actions for the next required step.</p>
+      <AdminFilterChips label="Filter probate cases" value={filter} onChange={setFilter} options={PROBATE_FILTERS.map((option) => ({ key: option.key, label: option.label, count: cases.filter(option.matches).length }))} />
+      <div className="lf-admin-table-card">
         <AdminDataTable
           caption="Probate review queue"
-          description={<p style={mutedStyle}>Open a case before making a terminal decision. Review actions are enforced by the canonical probate case API.</p>}
           columns={[
-            { key: "case", header: "Case", render: (item) => <><Link href={`/admin/probate/${item.id}`}>{item.ownerName}</Link><small>{item.contactName} · {formatDate(item.submittedAt)}</small></> },
-            { key: "status", header: "Status", render: (item) => <AdminStatusBadge status={item.status} /> },
-            { key: "role", header: "Role", render: (item) => labelise(item.assignedRole) },
+            { key: "case", header: "Case", render: (item) => <><Link className="lf-admin-cell-title" href={`/admin/probate/${item.id}`}>{item.ownerName}</Link><small>Case {item.id.slice(0, 8)}</small></> },
+            { key: "reporter", header: "Reported by", render: (item) => <>{item.contactName}<small>{labelise(item.assignedRole)}</small></> },
             { key: "evidence", header: "Evidence", render: (item) => `${item.evidence.length} file${item.evidence.length === 1 ? "" : "s"}` },
-            { key: "next", header: "Next action", render: (item) => getAllowedProbateActions(item.status).terminal ? "Terminal: inspect only" : "Open case to review" },
-            { key: "actions", header: "Actions", render: (item) => <Link href={`/admin/probate/${item.id}`}>Review case</Link> },
+            { key: "status", header: "Stage", render: (item) => <AdminStatusBadge status={item.status} /> },
+            { key: "updated", header: "Updated", render: (item) => formatDate(item.submittedAt) },
+            { key: "actions", header: "", render: (item) => getAllowedProbateActions(item.status).terminal
+              ? <Link className="lf-admin-row-chevron" href={`/admin/probate/${item.id}`} aria-label={`Open case for ${item.ownerName}`}><Icon name="chevron_right" size={20} /></Link>
+              : <Link className="lf-admin-row-button" href={`/admin/probate/${item.id}`}>Review</Link> },
           ]}
-          rows={cases}
+          rows={rows}
           getRowKey={(item) => item.id}
-          emptyState={<AdminEmptyState title="No probate cases">No probate cases are available.</AdminEmptyState>}
+          emptyState={<AdminEmptyState icon="gavel" title="No cases here">Death reports and executor requests appear here when someone starts the process.</AdminEmptyState>}
         />
-      </section>
+      </div>
+      {estate ? renderEstateOperations(estate) : null}
     </div>
   );
 }
@@ -2682,34 +2711,48 @@ function renderProbateDetail(
 }
 
 function renderAudit(events: AuditEvent[], filter: string, setFilter: (value: string) => void) {
+  return <AuditLog events={events} filter={filter} setFilter={setFilter} />;
+}
+
+const AUDIT_SOURCES: Array<{ key: "all" | "admin" | "commercial" | "probate" | "failed"; label: string; matches: (item: AuditEvent) => boolean }> = [
+  { key: "all", label: "All sources", matches: () => true },
+  { key: "admin", label: "Admin", matches: (item) => /admin|security|support|system/i.test(item.category) },
+  { key: "commercial", label: "Commercial", matches: (item) => /enterprise|commercial|organisation|licence/i.test(item.category) },
+  { key: "probate", label: "Probate", matches: (item) => /probate|verification|estate/i.test(item.category) },
+  { key: "failed", label: "Failed only", matches: (item) => !/success|allowed|ok/i.test(item.result) },
+];
+
+function AuditLog({ events, filter, setFilter }: { events: AuditEvent[]; filter: string; setFilter: (value: string) => void }) {
+  const [source, setSource] = useState<"all" | "admin" | "commercial" | "probate" | "failed">("all");
   const normalized = filter.trim().toLowerCase();
-  const filtered = normalized
-    ? events.filter((item) => JSON.stringify(item).toLowerCase().includes(normalized))
-    : events;
+  const sourceFilter = AUDIT_SOURCES.find((option) => option.key === source) ?? AUDIT_SOURCES[0];
+  const filtered = events
+    .filter(sourceFilter.matches)
+    .filter((item) => !normalized || JSON.stringify(item).toLowerCase().includes(normalized));
   return (
-    <section style={panelStyle}>
-      <div style={toolbarStyle}>
-        <label>Filter audit
-          <input value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Actor, route, action, target" />
+    <div style={stackStyle}>
+      <div className="lf-admin-toolbar">
+        <label className="lf-admin-search"><Icon name="search" size={18} /><span className="lf-visually-hidden">Search audit</span>
+          <input value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Search person, action or target" />
         </label>
-        <span>{filtered.length} events</span>
+        <AdminFilterChips label="Filter audit by source" value={source} onChange={setSource} options={AUDIT_SOURCES.map((option) => ({ key: option.key, label: option.label }))} />
       </div>
-      <AdminDataTable
-        caption="Admin audit history"
-        description={<p style={mutedStyle}>Read-only audit events. Actor, result, target and route are separated so long labels do not run together.</p>}
-        columns={[
-          { key: "action", header: "Action", render: (item) => <>{item.action}<small>{labelise(item.category)}</small></> },
-          { key: "result", header: "Result", render: (item) => <AdminStatusBadge status={item.result} /> },
-          { key: "actor", header: "Actor", render: (item) => <>{item.actorEmail ?? "Unknown"}<small>{item.actorRole ?? "unknown role"}</small></> },
-          { key: "target", header: "Target", render: (item) => <>{labelise(item.resourceType)}<small>{item.resourceLabel ?? "No label"}</small></> },
-          { key: "route", header: "Route", render: (item) => <code>{item.route}</code> },
-          { key: "time", header: "Time", render: (item) => formatDate(item.createdAt) },
-        ]}
-        rows={filtered}
-        getRowKey={(item) => item.id}
-        emptyState={<AdminEmptyState title="No audit events">No audit events match this filter.</AdminEmptyState>}
-      />
-    </section>
+      <div className="lf-admin-table-card">
+        <AdminDataTable
+          caption="Audit"
+          columns={[
+            { key: "action", header: "Event", render: (item) => <><span className="lf-admin-cell-title">{sentenceCaseStatus(item.action)}</span><small>{sentenceCaseStatus(item.category)}</small></> },
+            { key: "result", header: "Result", render: (item) => <AdminStatusBadge status={item.result} /> },
+            { key: "actor", header: "Who", render: (item) => <>{item.actorEmail ?? "Unknown"}<small>{item.actorRole ? sentenceCaseStatus(item.actorRole) : "–"}</small></> },
+            { key: "target", header: "Target", render: (item) => <>{sentenceCaseStatus(item.resourceType)}<small>{item.resourceLabel ?? ""}</small></> },
+            { key: "time", header: "Time", render: (item) => formatDate(item.createdAt) },
+          ]}
+          rows={filtered}
+          getRowKey={(item) => item.id}
+          emptyState={<AdminEmptyState icon="receipt_long" title="No audit events">No events match this search.</AdminEmptyState>}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -2720,71 +2763,69 @@ function renderSystemHealth(health: HealthState, metrics: DashboardMetric[], sup
   };
   return (
     <div style={stackStyle}>
-      <section style={gridStyle}>
-        <AdminMetricCard label="Subsystem checks" value={health.checks.length ? health.checks.length.toLocaleString() : "Unavailable"} detail={health.status ? `Overall: ${labelise(health.status)}` : "Awaiting health response"} />
-        <Metric label="Warnings" value={counts.warning} />
-        <Metric label="Unavailable checks" value={counts.unavailable} />
-        <Metric label="Support backlog" value={support?.counts.invitationIssues ?? null} />
-      </section>
-      <section style={panelStyle}>
-        <h2 style={h2Style}>Environment</h2>
-        <dl style={definitionGridStyle}>
-          <div><dt>Build ID</dt><dd>{health.deployment?.buildId ?? "Unavailable"}</dd></div>
-          <div><dt>Commit SHA</dt><dd>{health.deployment?.commitSha ?? "Unavailable"}</dd></div>
-          <div><dt>Runtime environment</dt><dd>{health.deployment?.environment ?? "Unavailable"}</dd></div>
+      <AdminStatStrip label="System health summary" items={[
+        { label: "Checks", value: health.checks.length || "–" },
+        { label: "Warnings", value: counts.warning },
+        { label: "Unavailable", value: counts.unavailable },
+        { label: "Support backlog", value: support?.counts.invitationIssues ?? "–" },
+      ]} />
+      <section className="lf-admin-table-card" aria-labelledby="admin-environment-title">
+        <h2 id="admin-environment-title">Environment</h2>
+        <dl className="lf-admin-environment">
+          <div><dt>Build</dt><dd><code>{health.deployment?.buildId ?? "–"}</code></dd></div>
+          <div><dt>Commit</dt><dd><code>{health.deployment?.commitSha ?? "–"}</code></dd></div>
+          <div><dt>Environment</dt><dd>{health.deployment?.environment ? sentenceCaseStatus(health.deployment.environment) : "–"}</dd></div>
           <div><dt>Last checked</dt><dd>{formatDate(health.generatedAt)}</dd></div>
-          <div><dt>Metric count</dt><dd>{metrics.length}</dd></div>
-          <div><dt>Secret exposure</dt><dd>Connection strings, tokens, and passwords are not displayed.</dd></div>
         </dl>
       </section>
-      <section style={panelStyle}>
-        <div style={sectionHeaderStyle}>
-          <div>
-            <h2 style={h2Style}>Subsystem checks</h2>
-            <p style={mutedStyle}>Read-only health signals from canonical admin storage and runtime configuration. Counts are aggregate metadata only.</p>
-          </div>
-        </div>
+      <div className="lf-admin-table-card">
         <AdminDataTable
-          caption="Subsystem checks"
+          caption="Parts of the platform"
           columns={[
-            { key: "subsystem", header: "Subsystem", render: (check) => check.label },
-            { key: "status", header: "Status", render: (check) => <AdminStatusBadge status={check.status} /> },
-            { key: "count", header: "Count", render: (check) => typeof check.count === "number" ? check.count.toLocaleString() : "Not counted" },
-            { key: "detail", header: "Detail", render: (check) => check.detail },
+            { key: "subsystem", header: "Part of the platform", render: (check) => <span className="lf-admin-cell-title">{check.label}</span> },
+            { key: "status", header: "Status", render: (check) => <AdminStatusBadge status={check.status} label={MEASURE_STATUS_LABEL[check.status]} /> },
+            { key: "count", header: "Records", render: (check) => typeof check.count === "number" ? check.count.toLocaleString() : "–" },
+            { key: "detail", header: "What it covers", render: (check) => check.detail },
           ]}
           rows={health.checks}
           getRowKey={(check) => check.key}
-          emptyState={<AdminEmptyState title="Health unavailable">System health checks are unavailable.</AdminEmptyState>}
+          emptyState={<AdminEmptyState icon="monitor_heart" title="Health unavailable">Health checks didn’t respond. Try again shortly.</AdminEmptyState>}
         />
-      </section>
+      </div>
+      <p className="lf-visually-hidden">{metrics.length} summary measures loaded.</p>
     </div>
   );
 }
 
 function renderSettings(capabilities: string[]) {
   const settings = [
-    ["General", "Environment identity and admin shell presentation are read-only."],
-    ["Security", "Role changes, final-master protection, and reason capture remain server-authorised."],
-    ["Invitations", "Expiry, resend, and revocation settings require dedicated audited APIs before editing."],
-    ["Verification", "Reviewer decision rules remain enforced by existing verification endpoints."],
-    ["Probate", "Terminal state transitions remain derived from canonical transition rules."],
-    ["Documents", "Evidence review uses case-scoped signed URL routes; no public bucket changes are exposed here."],
-    ["Audit and retention", "Audit history is immutable and read-only in this interface."],
+    ["General", "Environment name and how the admin console looks"],
+    ["Security", "Role changes, protecting the last master admin, reasons for changes"],
+    ["Invitations", "How long invitations last, resending and cancelling"],
+    ["Identity verification", "Rules reviewers follow when approving or rejecting"],
+    ["Probate", "Which case decisions are allowed at each stage"],
+    ["Documents", "Evidence opens through secure, time-limited links only"],
+    ["Audit & retention", "How long audit history is kept; it can’t be edited"],
   ];
   return (
-    <section style={panelStyle}>
-      <h2 style={h2Style}>Governed settings</h2>
-      <p style={mutedStyle}>This page intentionally avoids a generic key/value editor. Editable controls should be added only with dedicated permissions, confirmation, reason capture, and audit events.</p>
-      <div style={gridStyle}>
-        {settings.map(([title, copy]) => (
-          <article key={title} style={settingsCardStyle}>
-            <strong>{title}</strong>
-            <span>{copy}</span>
-          </article>
-        ))}
+    <div style={stackStyle}>
+      {/* This page intentionally avoids a generic key/value editor. */}
+      <AdminNote icon="lock">Settings are read-only until each one has its own change screen with confirmation, a reason and an audit entry.</AdminNote>
+      <div className="lf-admin-table-card">
+        <AdminDataTable
+          caption="Platform settings"
+          columns={[
+            { key: "area", header: "Area", render: (row) => <span className="lf-admin-cell-title">{row[0]}</span> },
+            { key: "controls", header: "What it controls", render: (row) => row[1] },
+            { key: "status", header: "Status", render: () => <span className="lf-admin-status-badge neutral"><Icon name="lock" size={14} />Read-only</span> },
+          ]}
+          rows={settings}
+          getRowKey={(row) => row[0]}
+          emptyState={null}
+        />
       </div>
-      <p style={mutedStyle}>Effective permissions: {capabilities.length}</p>
-    </section>
+      <p className="lf-visually-hidden">Your role has {capabilities.length} permissions.</p>
+    </div>
   );
 }
 
@@ -2913,7 +2954,7 @@ const mutedStyle = { margin: 0, color: "var(--lf-text-secondary)", lineHeight: 1
 const mutedInlineStyle = { color: "var(--lf-text-secondary)", fontSize: 13 } satisfies CSSProperties;
 const secondaryLinkStyle = { border: "1px solid var(--lf-border-input)", borderRadius: 8, padding: "10px 13px", color: "var(--lf-text)", textDecoration: "none", fontWeight: 700, background: "var(--lf-surface-card)", minHeight: 44 } satisfies CSSProperties;
 const secondaryButtonStyle = { ...secondaryLinkStyle, cursor: "pointer" } satisfies CSSProperties;
-const primaryButtonStyle = { border: 0, borderRadius: 8, padding: "10px 14px", color: "var(--lf-primary-text)", background: "#8c4a32", fontWeight: 800, cursor: "pointer", minHeight: 44 } satisfies CSSProperties;
+const primaryButtonStyle = { border: 0, borderRadius: 8, padding: "10px 14px", color: "var(--lf-primary-text)", background: "var(--lf-primary-bg)", fontWeight: 700, cursor: "pointer", minHeight: 44 } satisfies CSSProperties;
 const dangerButtonStyle = { ...primaryButtonStyle, background: "var(--lf-destructive)" } satisfies CSSProperties;
 const checkboxLineStyle = { display: "flex", gap: 8, alignItems: "center", fontWeight: 700 } satisfies CSSProperties;
 const permissionSummaryStyle = { border: "1px solid var(--lf-border)", borderRadius: 8, padding: 12, background: "var(--lf-surface-subtle)", color: "#1e3a8a", display: "grid", gap: 4 } satisfies CSSProperties;

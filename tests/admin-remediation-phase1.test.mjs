@@ -142,10 +142,10 @@ test("admin dashboard completion uses shared responsive primitives for operation
   for (const caption of [
     "Across all Vaults",
     "${title} table",
-    "Verification queue",
+    "Identity verification queue",
     "Probate review queue",
-    "Admin audit history",
-    "Subsystem checks",
+    "Audit",
+    "Parts of the platform",
   ]) {
     const escaped = caption.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     assert.match(workspace, new RegExp(`caption=(?:"${escaped}|\\{\\\`${escaped})`));

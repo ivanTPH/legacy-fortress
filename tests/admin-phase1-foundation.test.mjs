@@ -69,7 +69,7 @@ test("admin command dashboard foundation has protected route, access denied page
   assert.match(workspace, /\/admin\/admin-users/);
   assert.match(workspace, /\/admin\/probate/);
   assert.match(workspace, /\/admin\/system-health/);
-  assert.match(workspace, /High-risk settings remain read-only/);
+  assert.match(workspace, /Settings are read-only until each one has its own change screen/);
   assert.doesNotMatch(workspace, /local-role-override/);
   assert.doesNotMatch(workspace, /Local UAT role testing/);
   assert.doesNotMatch(deniedPage, /local-role-override/);
@@ -177,7 +177,7 @@ test("admin control plane splits live admin operations into permission-aware rou
   assert.match(controlPlane, /\/api\/internal\/admin\/system-health/);
   assert.match(controlPlane, /Synthetic staging admin/);
   assert.match(controlPlane, /No summary metrics are available/);
-  assert.match(controlPlane, /No audit events match this filter/);
+  assert.match(controlPlane, /No events match this search/);
   assert.match(controlPlane, /This page intentionally avoids a generic key\/value editor/);
   assert.doesNotMatch(controlPlane, /mockData|prototypeDataService|adminUsers\]/);
 });

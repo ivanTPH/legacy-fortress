@@ -43,7 +43,7 @@ test("platform admin high-value lists use shared responsive data primitives", ()
   assert.match(workspace, /AdminDataTable/);
   assert.match(workspace, /Administrator invitations/);
   assert.match(workspace, /Admin users/);
-  assert.match(workspace, /Safe lookup results/);
+  assert.match(workspace, /caption="Customer users"/);
 });
 
 test("platform admin lifecycle controls remain on canonical authorised APIs", () => {
