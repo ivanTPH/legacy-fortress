@@ -1695,6 +1695,22 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 .lf-admin-shell--partner .lf-admin-shell-mobile-tabs { display: none; }
 .lf-partner-overview { display: grid; gap: 18px; }
 .lf-partner-overview-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.lf-partner-overview { display: grid; gap: 16px; }
+.lf-partner-stat-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); overflow: hidden; }
+.lf-partner-stat-strip > * { display: grid; gap: 4px; min-height: 76px; padding: 14px 18px; border: 0; border-left: 1px solid var(--lf-divider); color: var(--lf-text); background: transparent; font: inherit; text-align: left; }
+.lf-partner-stat-strip > :first-child { border-left: 0; }
+.lf-partner-stat-strip button { cursor: pointer; }
+.lf-partner-stat-strip button:hover { background: var(--lf-surface-hover); }
+.lf-partner-stat-strip button:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: -2px; }
+.lf-partner-stat-strip span { color: var(--lf-text-secondary); font-size: 13px; }
+.lf-partner-stat-strip strong { font-size: 22px; font-weight: 700; overflow-wrap: anywhere; }
+button.lf-admin-decision-row { width: 100%; border-left: 0; border-right: 0; border-bottom: 0; background: transparent; font: inherit; text-align: left; cursor: pointer; }
+@media (max-width: 860px) {
+  .lf-partner-stat-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lf-partner-stat-strip > :nth-child(3) { border-left: 0; }
+  .lf-partner-stat-strip > :nth-child(n+3) { border-top: 1px solid var(--lf-divider); }
+}
+
 .lf-partner-attention { display: grid; overflow: hidden; border: 1px solid var(--lf-border); border-radius: 12px; background: var(--lf-surface-card); }
 .lf-partner-attention h2 { margin: 0; padding: 16px; font-size: 18px; }
 .lf-partner-attention button { display: flex; justify-content: space-between; gap: 12px; width: 100%; min-height: 56px; padding: 12px 16px; border: 0; border-top: 1px solid var(--lf-divider); color: var(--lf-text); background: var(--lf-surface-card); font: inherit; text-align: left; cursor: pointer; }

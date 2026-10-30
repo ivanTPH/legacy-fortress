@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Icon from "@/components/ui/Icon";
 import BrandMark from "@/components/ui/BrandMark";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
@@ -766,17 +767,41 @@ function renderPartnerOverview(portfolio: EnterprisePortfolio, setActiveTab: (ta
   const expiresSoon = (value: string) => { const time = new Date(value).getTime(); return time >= now && time < now + 7 * 86400000; };
   const expiringInvitations = portfolio.invitations.filter((item) => ["sent", "delivered"].includes(item.status) && expiresSoon(item.expiresAt));
   const expiringLinks = activeLinks.filter((link) => expiresSoon(link.expiresAt));
+  const seats = portfolio.summary.seats;
+  const freeSeats = Math.max(seats.purchased - seats.active, 0);
+  const renewal = portfolio.licences
+    .filter((licence) => licence.status === "active" && (licence.renewalDate || licence.endDate))
+    .map((licence) => String(licence.renewalDate || licence.endDate))
+    .sort()[0];
+  const attention = [
+    expiringInvitations.length ? { key: "invitations", icon: "forward_to_inbox", label: "Invitations expire this week", detail: "Remind or resend before they lapse", count: expiringInvitations.length, tab: "invitations" as EnterpriseTab } : null,
+    expiringLinks.length ? { key: "links", icon: "link", label: "Sign-up links expire this week", detail: "Extend or replace the link", count: expiringLinks.length, tab: "registration-links" as EnterpriseTab } : null,
+    freeSeats > 0 ? { key: "seats", icon: "event_seat", label: "Seats available", detail: "Invite advisers to use them", count: freeSeats, tab: "users" as EnterpriseTab } : null,
+  ].filter((item): item is { key: string; icon: string; label: string; detail: string; count: number; tab: EnterpriseTab } => item !== null);
+  const stats = [
+    { label: "Seats in use", value: `${seats.active} of ${seats.purchased}`, tab: "users" as EnterpriseTab },
+    { label: "Invitations waiting", value: String(portfolio.summary.pendingInvitations), tab: "invitations" as EnterpriseTab },
+    { label: "Active sign-up links", value: String(activeLinks.length), tab: "registration-links" as EnterpriseTab },
+    { label: "Renews", value: renewal ? new Date(renewal).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "Not set", tab: null },
+  ];
   return <div className="lf-partner-overview">
-    <section className="lf-partner-overview-metrics" aria-label="Organisation metrics">
-      <AdminMetricCard label="Seats used" value={`${portfolio.summary.seats.active}/${portfolio.summary.seats.purchased}`} onClick={() => setActiveTab("users")} />
-      <AdminMetricCard label="Pending invitations" value={String(portfolio.summary.pendingInvitations)} onClick={() => setActiveTab("invitations")} />
-      <AdminMetricCard label="Active sign-up links" value={String(activeLinks.length)} onClick={() => setActiveTab("registration-links")} />
-      <AdminMetricCard label="Registration claims" value={String(portfolio.enrolmentLinks.reduce((sum, link) => sum + link.claimsUsed, 0))} detail="Claims used across your sign-up links" />
+    <section className="lf-partner-stat-strip" aria-label="Organisation summary">
+      {stats.map((stat) => stat.tab
+        ? <button key={stat.label} type="button" onClick={() => setActiveTab(stat.tab as EnterpriseTab)}><span>{stat.label}</span><strong>{stat.value}</strong></button>
+        : <div key={stat.label}><span>{stat.label}</span><strong>{stat.value}</strong></div>)}
     </section>
-    {expiringInvitations.length || expiringLinks.length ? <section className="lf-partner-attention"><h2>Needs attention</h2>
-      {expiringInvitations.length ? <button type="button" onClick={() => setActiveTab("invitations")}>{expiringInvitations.length} invitation{expiringInvitations.length === 1 ? "" : "s"} expire this week <span aria-hidden="true">›</span></button> : null}
-      {expiringLinks.length ? <button type="button" onClick={() => setActiveTab("registration-links")}>{expiringLinks.length} sign-up link{expiringLinks.length === 1 ? "" : "s"} expire this week <span aria-hidden="true">›</span></button> : null}
-    </section> : null}
+    <section className="lf-admin-overview-decisions" aria-labelledby="partner-attention-title">
+      <h2 id="partner-attention-title">Needs attention</h2>
+      {attention.map((item) => (
+        <button key={item.key} type="button" className="lf-admin-decision-row" onClick={() => setActiveTab(item.tab)}>
+          <span className="lf-admin-decision-icon" aria-hidden="true"><Icon name={item.icon} size={20} /></span>
+          <span className="lf-admin-decision-copy"><strong>{item.label}</strong><small>{item.detail}</small></span>
+          <span className="lf-admin-decision-count" aria-label={`${item.count}`}>{item.count}</span>
+          <Icon name="chevron_right" size={20} />
+        </button>
+      ))}
+      {!attention.length ? <p className="lf-admin-decision-empty">Nothing needs your attention right now.</p> : null}
+    </section>
   </div>;
 }
 
