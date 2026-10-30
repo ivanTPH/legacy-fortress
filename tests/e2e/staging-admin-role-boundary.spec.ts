@@ -89,8 +89,8 @@ test("platform admin remains in admin context while using users, invitations, or
   await page.goto(`${BASE_URL}/admin/users`, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Customer users" })).toBeVisible();
   await page.goto(`${BASE_URL}/admin/invitations`, { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("heading", { name: "Invitation queue" })).toBeVisible();
-  await expect(page.getByText("Platform Administration").first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Invitations", exact: true })).toBeVisible();
+  await expect(page.getByText("Platform Admin", { exact: true }).first()).toBeVisible();
   await page.goto(`${BASE_URL}/admin/organisations/${organisationId}`, { waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL(new RegExp(`/admin/organisations/${organisationId}`));
   await expect(page).not.toHaveURL(/\/enterprise/);

@@ -8873,3 +8873,4 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-admin-more-filters { flex-basis: 100%; }
 .lf-admin-more-filters > summary { cursor: pointer; color: var(--lf-text-secondary); font-size: var(--lf-text-small); font-weight: var(--lf-weight-medium); min-height: 32px; display: inline-flex; align-items: center; }
 .lf-admin-more-filters > div { margin-top: 10px; }
+.lf-enterprise-create-link > summary { list-style: none; width: max-content; gap: 6px; margin-top: 14px; } .lf-enterprise-create-link > summary::-webkit-details-marker { display: none; } .lf-enterprise-create-link:not([open]) { padding-bottom: 14px; }

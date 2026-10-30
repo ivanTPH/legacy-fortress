@@ -5,7 +5,7 @@ import Icon from "@/components/ui/Icon";
 import BrandMark from "@/components/ui/BrandMark";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { AdminMetricCard, AdminStatusBadge } from "@/components/admin/AdminPrimitives";
+import { AdminEmptyState, AdminMetricCard, AdminNote, AdminStatStrip, AdminStatusBadge } from "@/components/admin/AdminPrimitives";
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell";
 import { ENTERPRISE_ADMIN_NAVIGATION, filterAdminNavigation, labelPartnerNavigation } from "@/components/admin/adminNavigation";
 import { waitForActiveUser } from "@/lib/auth/session";
@@ -664,7 +664,22 @@ export default function EnterpriseOperationsWorkspace() {
     return partnerMode ? labelPartnerNavigation(allowed) : allowed;
   }, [navigationCapabilities, partnerMode]);
   const can = useCallback((capability: string) => navigationCapabilities.includes(capability), [navigationCapabilities]);
-  const partnerTitle = activeTab === "users" ? "Team & seats" : activeTab === "overview" ? "Overview" : activeTab === "invitations" ? "Invitations" : labelise(activeTab);
+  const TAB_COPY: Record<string, { title: string; partnerTitle?: string; description: string; partnerDescription?: string }> = {
+    overview: { title: "Commercial overview", partnerTitle: "Overview", description: "Organisations, licences and invitations across the platform.", partnerDescription: "Your organisation’s seats, invitations and renewal. Clients’ Vaults stay private unless they share records with you." },
+    organisations: { title: "Organisations", description: "Partner organisations, their licences and administrators. Members’ Vaults are never shown." },
+    licences: { title: "Licences", partnerTitle: "Licence", description: "Seats each organisation has bought, and when they renew.", partnerDescription: "Your plan and seats. Changes are made by your Legacy Fortress account manager." },
+    users: { title: "Users & seats", partnerTitle: "Team & seats", description: "Everyone using an organisation seat. Removing someone frees the seat; it never deletes their own Vault.", partnerDescription: "People in your organisation and the seats they use." },
+    invitations: { title: "Invitations", description: "Invitations to organisation admins, team members and clients.", partnerDescription: "Invitations sent to team members and clients." },
+    "registration-links": { title: "Registration links", description: "Links that let people join an organisation and claim a seat. Each link is limited by its licence and settings.", partnerDescription: "Share a link so clients or staff can join and claim a seat." },
+    reports: { title: "Reports", description: "Organisation-level reports you can export.", partnerDescription: "Reports about your organisation that you can export." },
+    adoption: { title: "Adoption", description: "How many seats are in use, by organisation." },
+    consent: { title: "Reporting consent", description: "Members who agreed to organisation reporting." },
+    renewals: { title: "Renewals", description: "Licences renewing in the next 90 days." },
+    settings: { title: "Organisation settings", partnerTitle: "Settings", description: "Contact details and preferences for the organisation." },
+  };
+  const tabCopy = TAB_COPY[activeTab] ?? { title: labelise(activeTab), description: "" };
+  const partnerTitle = partnerMode ? (tabCopy.partnerTitle ?? tabCopy.title) : tabCopy.title;
+  const pageDescription = partnerMode ? (tabCopy.partnerDescription ?? tabCopy.description) : tabCopy.description;
   const partnerScope = portfolio.organisations.length === 1 ? portfolio.organisations[0].name : `${portfolio.organisations.length} authorised organisations`;
   const openPartnerTab = (tab: EnterpriseTab) => {
     setActiveTab(tab);
@@ -721,20 +736,20 @@ export default function EnterpriseOperationsWorkspace() {
       workspaceLabel={partnerMode ? "Partner Portal" : "Enterprise operations"}
       eyebrow="Legacy Fortress Enterprise"
       title={partnerTitle}
-      description={partnerMode ? "Manage your organisation and its team." : "Manage organisations, licences, invitations and reports."}
-      contextLabel={partnerMode ? partnerScope : undefined}
+      description={pageDescription}
+      contextLabel={partnerMode ? partnerScope : `All organisations · ${portfolio.organisations.length}`}
       currentPathname={currentPathname}
       navigation={visibleNavigation}
       onSignOut={signOut}
       identityLabel={identity.label}
       identityDetail={identity.detail}
-      breadcrumbs={partnerMode ? [] : [{ label: "Enterprise operations", href: "/enterprise" }, { label: labelise(activeTab) }]}
-      stagingLabel={partnerMode ? "" : "STAGING — synthetic test data may be present"}
+      breadcrumbs={partnerMode ? [{ label: partnerScope }, { label: partnerTitle }] : [{ label: "Commercial" }, { label: partnerTitle }]}
+      stagingLabel=""
     >
 
       {message ? <section style={alertStyle}>{message}</section> : null}
 
-      {(!partnerMode || activeTab !== "overview") ? partnerMode ? <><div className="lf-partner-desktop-filters">{filterPanel}</div><details className="lf-partner-mobile-filters"><summary>Filters and saved views</summary>{filterPanel}</details></> : filterPanel : null}
+      {(!partnerMode || activeTab !== "overview") && portfolio.organisations.length > 1 ? <details className="lf-admin-more-filters" open={Object.values(filters).some(Boolean)}><summary>Filter by organisation, status and more</summary>{filterPanel}</details> : null}
 
       {activeTab === "overview" ? partnerMode ? renderPartnerOverview(portfolio, openPartnerTab) : renderOverview(portfolio, filteredOrganisations, filteredLicences, filteredInvitations, openPartnerTab, setFilters) : null}
       {activeTab === "organisations" ? renderOrganisations(filteredOrganisations, portfolio, orgForm, setOrgForm, runAction, async () => {
@@ -753,7 +768,7 @@ export default function EnterpriseOperationsWorkspace() {
       {activeTab === "invitations" ? partnerMode ? <PartnerInvitations invitations={filteredInvitations} source={renderInvitations(filteredInvitations, portfolio, inviteForm, setInviteForm, enrolmentForm, setEnrolmentForm, bulkRows, setBulkRows, runAction, invitationLifecycleForm, setInvitationLifecycleForm, false, can("enterprise.invitation.manage"))} canInvite={can("enterprise.invitation.manage")} openForm={partnerInviteIntent} /> : renderInvitations(filteredInvitations, portfolio, inviteForm, setInviteForm, enrolmentForm, setEnrolmentForm, bulkRows, setBulkRows, runAction, invitationLifecycleForm, setInvitationLifecycleForm, false, can("enterprise.invitation.manage")) : null}
       {activeTab === "registration-links" ? renderRegistrationLinks(portfolio, enrolmentForm, setEnrolmentForm, runAction, copiedLinkId, copyRegistrationLink) : null}
       {activeTab === "adoption" ? renderAdoption(portfolio, filteredOrganisations) : null}
-      {activeTab === "reports" ? renderReports(portfolio, reportType, setReportType, () => runAction("export_report", { reportType, filters })) : null}
+      {activeTab === "reports" ? renderReports(portfolio, reportType, setReportType, (type: string) => runAction("export_report", { reportType: type, filters })) : null}
       {activeTab === "consent" ? renderConsent(portfolio, filteredOrganisations) : null}
       {activeTab === "renewals" ? renderRenewals(filteredLicences, portfolio) : null}
       {activeTab === "settings" ? renderEnterpriseSettings(portfolio, settingsForm, setSettingsForm, runAction, can("organisation:manage")) : null}
@@ -1326,30 +1341,27 @@ function renderRegistrationLinks(
 ) {
   const licences = portfolio.licences.filter((item) => item.organisationId === form.organisationId);
   return <div style={stackStyle}>
-    <section style={panelStyle}>
-      <div style={sectionHeaderStyle}><div><h2 style={h2Style}>Registration links</h2><p style={mutedStyle}>Create and monitor organisation enrolment links. Claims are limited by the selected licence and link policy.</p></div><span style={privacyStyle}>Enterprise operations</span></div>
-      <div style={twoColumnStyle}>
-        <section style={contextPanelStyle} aria-label="Create registration link">
-          <h3 style={h3Style}>Create registration link</h3>
-          <label style={labelStyle}>Organisation<select value={form.organisationId} onChange={(event) => setForm({ ...form, organisationId: event.target.value, licenceId: "" })}><option value="">Select organisation</option>{portfolio.organisations.map((org) => <option key={org.id} value={org.id}>{organisationOptionLabel(org)}</option>)}</select></label>
-          <label style={labelStyle}>Licence<select value={form.licenceId} onChange={(event) => setForm({ ...form, licenceId: event.target.value })}><option value="">Select licence</option>{licences.map((licence) => <option key={licence.id} value={licence.id}>{licence.plan} · {licence.availableSeats} available</option>)}</select></label>
-          <FormInput label="Link name" required value={form.displayName} onChange={(displayName) => setForm({ ...form, displayName })} />
-          <FormInput label="Maximum claims" type="number" value={String(form.maxClaims)} onChange={(value) => setForm({ ...form, maxClaims: Number(value) })} />
-          <FormInput label="Expiry days" type="number" value={String(form.expiryDays)} onChange={(value) => setForm({ ...form, expiryDays: Number(value) })} />
-          <FormInput label="Allowed email domain" value={form.allowedEmailDomain} onChange={(allowedEmailDomain) => setForm({ ...form, allowedEmailDomain })} />
-          <button type="button" style={primaryButtonStyle} disabled={!form.organisationId || !form.licenceId || !form.displayName.trim()} onClick={() => runAction("create_enrolment_link", form)}>Create registration link</button>
-        </section>
-        <section style={contextPanelStyle}>
-          <h3 style={h3Style}>How registration is progressing</h3>
-          <div style={gridStyle}><AdminMetricCard label="Links" value={portfolio.enrolmentLinks.length} detail="Created for the current enterprise scope" /><AdminMetricCard label="Claims used" value={portfolio.enrolmentLinks.reduce((sum, item) => sum + item.claimsUsed, 0)} detail="Accepted enrolment claims" /><AdminMetricCard label="Active links" value={portfolio.enrolmentLinks.filter((item) => item.status === "active").length} detail="Links currently available to claim" /></div>
-          <p style={privacyStyle}>Registration status is operational metadata. Engagement analytics and Personal Vault adoption are not measured here.</p>
-        </section>
-      </div>
+    <AdminStatStrip label="Registration links" items={[
+      { label: "Links", value: portfolio.enrolmentLinks.length },
+      { label: "Claims used", value: portfolio.enrolmentLinks.reduce((sum, item) => sum + item.claimsUsed, 0) },
+      { label: "Active", value: portfolio.enrolmentLinks.filter((item) => item.status === "active").length },
+    ]} />
+    <details className="lf-admin-table-card lf-admin-form-card lf-enterprise-create-link">
+      <summary className="lf-admin-row-button"><Icon name="add_link" size={18} />Create link</summary>
+      <section aria-label="Create registration link" style={gridStyle}>
+        <label style={labelStyle}>Organisation<select value={form.organisationId} onChange={(event) => setForm({ ...form, organisationId: event.target.value, licenceId: "" })}><option value="">Select organisation</option>{portfolio.organisations.map((org) => <option key={org.id} value={org.id}>{organisationOptionLabel(org)}</option>)}</select></label>
+        <label style={labelStyle}>Licence<select value={form.licenceId} onChange={(event) => setForm({ ...form, licenceId: event.target.value })}><option value="">Select licence</option>{licences.map((licence) => <option key={licence.id} value={licence.id}>{labelise(licence.plan)} · {licence.availableSeats} available</option>)}</select></label>
+        <FormInput label="Link name" required value={form.displayName} onChange={(displayName) => setForm({ ...form, displayName })} />
+        <FormInput label="Maximum claims" type="number" value={String(form.maxClaims)} onChange={(value) => setForm({ ...form, maxClaims: Number(value) })} />
+        <FormInput label="Expires after (days)" type="number" value={String(form.expiryDays)} onChange={(value) => setForm({ ...form, expiryDays: Number(value) })} />
+        <FormInput label="Only for email domain (optional)" value={form.allowedEmailDomain} onChange={(allowedEmailDomain) => setForm({ ...form, allowedEmailDomain })} />
+      </section>
+      <div><button type="button" style={primaryButtonStyle} disabled={!form.organisationId || !form.licenceId || !form.displayName.trim()} onClick={() => runAction("create_enrolment_link", form)}>Create registration link</button></div>
+    </details>
+    <section className="lf-admin-table-card" style={{ overflowX: "auto" }}>
+      <table className="lf-admin-data-table"><caption>Organisation registration links</caption><thead><tr><th>Link</th><th>Organisation</th><th>Claims</th><th>Expires</th><th>Status</th><th><span className="lf-visually-hidden">Actions</span></th></tr></thead><tbody>{portfolio.enrolmentLinks.map((link) => <tr key={link.id}><td><span className="lf-admin-cell-title">{link.displayName}</span><small>{link.allowedEmailDomain || "Any email domain"}</small>{link.stagingClaimPath ? <code style={linkCodeStyle}>{link.stagingClaimPath}</code> : null}</td><td>{portfolio.organisations.find((org) => org.id === link.organisationId)?.name || "–"}</td><td>{link.claimsUsed} of {link.maxClaims}</td><td>{formatDate(link.expiresAt)}</td><td><AdminStatusBadge status={link.status} /></td><td style={actionsCellStyle}>{link.stagingClaimPath ? <button type="button" className="lf-admin-row-button" onClick={() => void copyLink(link)}>{copiedLinkId === link.id ? "Copied" : "Copy link"}</button> : null}{["active", "paused"].includes(link.status) ? <button type="button" className="lf-admin-row-button" onClick={() => runAction("update_enrolment_link", { enrolmentLinkId: link.id, status: link.status === "active" ? "paused" : "active" })}>{link.status === "active" ? "Pause" : "Reactivate"}</button> : null}</td></tr>)}{portfolio.enrolmentLinks.length === 0 ? <tr><td colSpan={6}><AdminEmptyState icon="link" title="No registration links">Create a link to share with a group, for example an employer’s staff or a firm’s new clients.</AdminEmptyState></td></tr> : null}</tbody></table>
     </section>
-    <section style={panelStyle}>
-      <h2 style={h2Style}>Available registration links</h2>
-      <div style={tableWrapStyle}><table style={tableStyle}><caption>Organisation registration links</caption><thead><tr><th>Link</th><th>Organisation</th><th>Status</th><th>Claims</th><th>Expires</th><th>Action</th></tr></thead><tbody>{portfolio.enrolmentLinks.map((link) => <tr key={link.id}><td><strong>{link.displayName}</strong><small>{link.allowedEmailDomain || "Any email domain"}</small>{link.stagingClaimPath ? <code style={linkCodeStyle}>{link.stagingClaimPath}</code> : null}</td><td>{portfolio.organisations.find((org) => org.id === link.organisationId)?.name || "Unknown organisation"}</td><td><AdminStatusBadge status={link.status} /></td><td>{link.claimsUsed} / {link.maxClaims}</td><td>{formatDate(link.expiresAt)}</td><td style={actionsCellStyle}>{link.stagingClaimPath ? <button type="button" onClick={() => void copyLink(link)}>{copiedLinkId === link.id ? "Copied" : "Copy link"}</button> : null}{["active", "paused"].includes(link.status) ? <button type="button" onClick={() => runAction("update_enrolment_link", { enrolmentLinkId: link.id, status: link.status === "active" ? "paused" : "active" })}>{link.status === "active" ? "Pause" : "Reactivate"}</button> : <span style={mutedInlineStyle}>No lifecycle action</span>}</td></tr>)}{portfolio.enrolmentLinks.length === 0 ? <tr><td colSpan={6}>No registration links have been created yet.</td></tr> : null}</tbody></table></div>
-    </section>
+    <p className="lf-admin-table-card-note">Registration shows who joined and claimed a seat. It never measures what people keep in their Vault.</p>
   </div>;
 }
 
@@ -1477,48 +1489,54 @@ function renderReports(
   portfolio: EnterprisePortfolio,
   reportType: string,
   setReportType: (value: string) => void,
-  requestExport: () => void,
+  requestExport: (reportType: string) => void,
 ) {
-  const selected = portfolio.reports.find((report) => report.type === reportType) ?? portfolio.reports[0];
+  const hidden = portfolio.summary.consentRestricted;
   return (
-    <section style={panelStyle}>
-      <h2 style={h2Style}>Consent-aware reports</h2>
-      <p style={mutedStyle}>Choose a governed catalogue report. Reports use organisation, licence, invitation, membership, consent and audit metadata only.</p>
-      <label style={labelStyle}>Report type
-        <select value={reportType} onChange={(event) => setReportType(event.target.value)}>
-          {(portfolio.reports.length ? portfolio.reports : [{ type: "portfolio", label: "Portfolio", exportAllowed: false, minimumCohort: portfolio.privacyBoundary.reportingMinimumCohort, aggregation: "organisation_aggregate", privateVaultFieldsExcluded: true }]).map((report) => (
-            <option key={report.type} value={report.type}>{report.label}</option>
-          ))}
-        </select>
-      </label>
-      <div style={gridStyle}>
-        <AdminMetricCard label="Licence utilisation" value={`${portfolio.summary.seats.allocated}/${portfolio.summary.seats.purchased}`} detail="Allocated against purchased seats" />
-        <AdminMetricCard label="Invitation acceptance" value={`${portfolio.invitations.filter((item) => item.status === "accepted").length}/${portfolio.invitations.length}`} detail="Accepted invitations" />
-        <AdminMetricCard label="Renewal pipeline" value={String(portfolio.summary.renewalsDue)} detail="Renewals requiring attention" />
-        <AdminMetricCard label="Consent restricted" value={String(portfolio.summary.consentRestricted)} detail="Suppressed from governed reports" />
-      </div>
-      <div style={tableWrapStyle}>
-        <table style={tableStyle}>
-          <thead><tr><th>Report</th><th>Aggregation</th><th>Minimum cohort</th><th>Export</th><th>Privacy boundary</th></tr></thead>
+    <div style={stackStyle}>
+      <AdminNote icon="shield_lock">Reports use organisation totals only. Groups smaller than {portfolio.privacyBoundary.reportingMinimumCohort} people are hidden, and private Vault fields are never included.</AdminNote>
+      <AdminStatStrip label="Report summary" items={[
+        { label: "Seats in use", value: `${portfolio.summary.seats.allocated} / ${portfolio.summary.seats.purchased}` },
+        { label: "Invitations accepted", value: `${portfolio.invitations.filter((item) => item.status === "accepted").length} / ${portfolio.invitations.length}` },
+        { label: "Renewals due", value: portfolio.summary.renewalsDue },
+        { label: "Hidden for consent", value: hidden },
+      ]} />
+      <section className="lf-admin-table-card" style={{ overflowX: "auto" }}>
+        <table className="lf-admin-data-table">
+          <caption>Reports you can export</caption>
+          <thead><tr><th>Report</th><th>What it shows</th><th>Smallest group</th><th>Format</th><th><span className="lf-visually-hidden">Export</span></th></tr></thead>
           <tbody>
             {portfolio.reports.map((report) => (
               <tr key={report.type}>
-                <td>{report.label}</td>
-                <td>{labelise(report.aggregation)}</td>
-                <td>{report.minimumCohort}</td>
-                <td>{report.exportAllowed ? "Governed CSV" : "View only"}</td>
-                <td>{report.privateVaultFieldsExcluded ? "Private vault fields excluded" : "Blocked"}</td>
+                <td><span className="lf-admin-cell-title">{report.label}</span></td>
+                <td>{REPORT_DESCRIPTIONS[report.type] ?? labelise(report.aggregation)}</td>
+                <td>{report.minimumCohort} people</td>
+                <td>{report.exportAllowed ? "CSV" : "View only"}</td>
+                <td>{report.exportAllowed && report.privateVaultFieldsExcluded ? <button type="button" className="lf-admin-row-button" onClick={() => { setReportType(report.type); requestExport(report.type); }} aria-label={`Export ${report.label}`}>Export</button> : null}</td>
               </tr>
             ))}
-            {portfolio.reports.length === 0 ? <tr><td colSpan={5}>No report definitions are available for this role.</td></tr> : null}
+            {portfolio.reports.length === 0 ? <tr><td colSpan={5}><AdminEmptyState icon="bar_chart" title="No reports available">Your role doesn’t include any reports.</AdminEmptyState></td></tr> : null}
           </tbody>
         </table>
-      </div>
-      <p style={privacyStyle}>Exports require explicit permission, reporting consent, export consent, minimum cohort size, audit logging, and CSV formula-injection protection. Export payloads exclude private vault values, document contents, legal content, wishes, notes, account numbers and policy details.</p>
-      <button type="button" style={primaryButtonStyle} disabled={!selected?.exportAllowed} onClick={requestExport}>Request governed export (CSV)</button>
-    </section>
+      </section>
+      <p className="lf-admin-table-card-note">Exports need permission and reporting consent, are recorded in the audit log and never include Vault values, documents, wishes, notes, account numbers or policy details.</p>
+    </div>
   );
 }
+
+const REPORT_DESCRIPTIONS: Record<string, string> = {
+  portfolio: "Organisations, licences and seats in one summary",
+  licence_utilisation: "Seats used against seats bought",
+  seat_availability: "Seats still available, by organisation",
+  invitation_status: "Invitations sent and accepted",
+  invitation_acceptance: "Invitations accepted, by organisation",
+  membership_status: "Members by status",
+  onboarding_completion: "Organisations that finished set-up",
+  renewal_pipeline: "Licences renewing in the next 90 days",
+  adoption_bands: "Organisations grouped by seat use",
+  organisation_risk: "Low use or overdue renewal",
+  consent_readiness: "Members who agreed to reporting",
+};
 
 function renderConsent(portfolio: EnterprisePortfolio, organisations: EnterpriseOrganisation[]) {
   return (

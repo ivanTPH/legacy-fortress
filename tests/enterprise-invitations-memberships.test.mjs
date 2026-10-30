@@ -153,7 +153,7 @@ test("Phase 3 UI exposes operational invitations, users, seats, enrolment links 
   assert.match(acceptClient, /Private vault|private vault/i);
   assert.match(workspace, /registration-links/);
   assert.match(workspace, /Create registration link/);
-  assert.match(workspace, /Available registration links/);
+  assert.match(workspace, /caption>Organisation registration links/);
 });
 
 test("enterprise invitation and membership lifecycle controls require reasoned audited actions", () => {
