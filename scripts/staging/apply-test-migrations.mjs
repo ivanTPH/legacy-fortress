@@ -61,7 +61,7 @@ for (const item of request.files ?? []) {
   try {
     // No BEGIN/COMMIT: a multi-statement simple query runs as one transaction and rolls back on error.
     // Same owner as earlier migrations: run as postgres for this transaction only.
-    await query(`set local role postgres;\n${sql}\n${record}`);
+    await query(`set local role postgres;\n${sql}\nreset role;\n${record}`);
     report.files.push({ file, status: "applied" });
   } catch (error) {
     report.ok = false;
