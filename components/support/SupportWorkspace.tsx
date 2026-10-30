@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "../ui/Icon";
 import InfoTip from "../ui/InfoTip";
-import { SettingsCard, SettingsPageShell, StatusNote, ghostBtn, gridStyle, inputStyle, primaryBtn, textAreaStyle } from "../../app/(app)/components/settings/SettingsPrimitives";
+import { SettingsCard, StatusNote, ghostBtn, gridStyle, inputStyle, primaryBtn, textAreaStyle } from "../../app/(app)/components/settings/SettingsPrimitives";
 import { supabase } from "../../lib/supabaseClient";
 import { waitForActiveUser } from "../../lib/auth/session";
 import { useAccessibilityPreferences } from "../accessibility/AccessibilityPreferencesContext";
@@ -202,10 +202,7 @@ export default function SupportWorkspace() {
   }
 
   return (
-    <SettingsPageShell
-      title="Support"
-      subtitle="Ask for guidance, report issues, request follow-up, or get a quick walkthrough of the key tasks in the application."
-    >
+    <div className="lf-page-stack lf-support-workspace">
       <SettingsCard
         title="Help assistant"
         description="Start with the guided assistant for quick application help, then send a support request if you still need a person to follow up."
@@ -354,7 +351,7 @@ export default function SupportWorkspace() {
         </div>
         <StatusNote message={status} />
       </SettingsCard>
-    </SettingsPageShell>
+    </div>
   );
 }
 
