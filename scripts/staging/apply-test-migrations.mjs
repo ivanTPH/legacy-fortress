@@ -10,7 +10,11 @@ import { readFileSync } from "node:fs";
 const TEST_URL = "https://supabase-test.mylegacyfortress.com";
 const PRODUCTION_CLUSTER_ID = String(process.env.PRODUCTION_DB_CLUSTER_ID ?? "").trim();
 
-const fail = (message) => { console.error(JSON.stringify({ ok: false, error: message })); process.exit(1); };
+// Results go to workflow annotations (no keys or row data), so they can be read without log access.
+const annotate = (level, text) => console.log(`::${level} title=TEST migrations::${String(text).replace(/[\r\n]+/g, " ").slice(0, 900)}`);
+const fail = (message) => { annotate("error", message); process.exit(1); };
+process.on("uncaughtException", (error) => fail(error instanceof Error ? error.message : "failed"));
+process.on("unhandledRejection", (error) => fail(error instanceof Error ? error.message : "failed"));
 const url = String(process.env.SUPABASE_URL ?? "").replace(/\/$/, "");
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 if (url !== TEST_URL) fail("target_is_not_test");
@@ -65,4 +69,5 @@ for (const item of request.files ?? []) {
   }
 }
 console.log(JSON.stringify(report, null, 2));
+annotate(report.ok ? "notice" : "error", JSON.stringify(report));
 if (!report.ok) process.exit(1);
