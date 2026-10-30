@@ -2768,7 +2768,12 @@ function labelise(value: string) {
 function formatDate(value: string | null) {
   if (!value) return "Not available";
   try {
-    return new Date(value).toLocaleString();
+    // CONSISTENCY.md dates: "17 Oct 2026, 21:58" — never 17/10/2026.
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    const day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(date);
+    const time = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" }).format(date);
+    return /T00:00(:00)?/.test(value) || /^\d{4}-\d{2}-\d{2}$/.test(value) ? day : `${day}, ${time}`;
   } catch {
     return value;
   }
