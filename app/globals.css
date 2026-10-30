@@ -8462,6 +8462,7 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-linked-people-chip.is-pending { background: var(--lf-status-pending-bg); color: var(--lf-status-pending-text); }
 .lf-linked-people-chip.is-error { background: var(--lf-status-rejected-bg); color: var(--lf-status-rejected-text); }
 .lf-linked-people-row-menu { margin-top: 4px; }
+.lf-linked-people-mobile-actions { display: none; }
 .lf-linked-people-row-menu summary { display: inline-flex; align-items: center; min-height: 44px; color: var(--lf-link); cursor: pointer; font-size: 13px; font-weight: 600; }
 .lf-linked-people-row-actions { display: grid; align-items: stretch; margin: 0; overflow: hidden; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-input); background: var(--lf-surface-card); }
 .lf-linked-people-row-actions :is(button,a) { justify-content: flex-start; width: 100%; min-height: 44px; border: 0; border-radius: 0; border-top: 1px solid var(--lf-divider); font-size: 14px; }
@@ -8469,6 +8470,11 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-linked-people-action { width: 100%; justify-content: flex-start; gap: 10px; color: var(--lf-link); font-weight: 600; }
 .lf-linked-people-action::before { content: "+"; display: grid; place-items: center; flex: none; width: 32px; height: 32px; border: 1px solid currentColor; border-radius: 50%; font-size: 22px; font-weight: 400; }
 @media (max-width: 767px) {
+  .lf-linked-people-row-menu { display: none; }
+  .lf-linked-people-mobile-actions { display: grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; margin: -6px -6px 0 0; border: 0; border-radius: var(--lf-radius-input); background: transparent; color: var(--lf-text-secondary); cursor: pointer; }
+  .lf-linked-people-mobile-actions:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 2px; }
+  .lf-linked-people-mobile-sheet-actions { width: 100%; }
+  .lf-linked-people-mobile-sheet-actions :is(a,button) { min-height: 48px; }
   .lf-linked-people-overlay { align-items: flex-end; }
   .lf-linked-people-dialog, .lf-linked-people-dialog.is-offer { align-self: flex-end; width: 100%; max-height: min(90dvh, 840px); margin: 0; border: 0; border-radius: 16px 16px 0 0; box-shadow: 0 -12px 32px rgba(31, 23, 21, .2); }
   .lf-linked-people-dialog.is-full-mobile { height: calc(100dvh - 28px); max-height: calc(100dvh - 28px); border-radius: 0; }
