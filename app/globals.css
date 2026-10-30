@@ -1186,7 +1186,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
   font-weight: 700;
   min-height: 26px;
   padding: 3px 9px;
-  text-transform: capitalize;
+  gap: 4px;
 }
 
 .lf-admin-status-badge.success {
@@ -1221,12 +1221,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 }
 
 .lf-platform-organisation-card {
-  background: var(--lf-surface-card);
-  border: 1px solid var(--lf-border);
-  border-radius: 8px;
+  align-items: center;
+  border-bottom: 1px solid var(--lf-border);
+  color: var(--lf-text);
   display: grid;
   gap: 10px;
-  padding: 14px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  min-height: 68px;
+  padding: 12px 4px;
+  text-decoration: none;
 }
 
 .lf-platform-organisation-card > div {
@@ -1236,9 +1239,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 
 .lf-platform-organisation-card > div > span {
   color: var(--lf-text-secondary);
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .lf-platform-organisation-card small {
@@ -1247,14 +1249,17 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 }
 
 .lf-admin-empty-state {
-  background: var(--lf-surface-page);
-  border: 1px dashed var(--lf-border-input);
+  background: var(--lf-surface-card);
+  border: 1px solid var(--lf-border);
   border-radius: 8px;
   color: var(--lf-text-secondary);
   display: grid;
   gap: 4px;
-  padding: 14px;
+  justify-items: center;
+  padding: 24px 16px;
+  text-align: center;
 }
+.lf-admin-empty-state > strong { color: var(--lf-text); }
 
 @media (max-width: 860px) {
   .lf-admin-shell {
@@ -3221,9 +3226,8 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 
 .lf-admin-metric-header span {
   color: var(--lf-text-secondary);
-  font-size: 12px;
-  font-weight: 800;
-  text-transform: capitalize;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .lf-admin-metric > strong {
@@ -8865,3 +8869,8 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-admin-verification-desktop { display: grid; }
 @media (max-width: 767px) { .lf-admin-verification-desktop { display: none; } }
 .lf-admin-table-card-note { margin: 0; padding: 0 18px 8px; color: var(--lf-text-secondary); font-size: var(--lf-text-small); }
+.lf-admin-form-card { display: grid; gap: 14px; padding: 0 18px 18px; } .lf-admin-form-card > h2 { padding: 16px 0 0 !important; }
+.lf-admin-more-filters { flex-basis: 100%; }
+.lf-admin-more-filters > summary { cursor: pointer; color: var(--lf-text-secondary); font-size: var(--lf-text-small); font-weight: var(--lf-weight-medium); min-height: 32px; display: inline-flex; align-items: center; }
+.lf-admin-more-filters > div { margin-top: 10px; }
+.lf-enterprise-create-link > summary { list-style: none; width: max-content; gap: 6px; margin-top: 14px; } .lf-enterprise-create-link > summary::-webkit-details-marker { display: none; } .lf-enterprise-create-link:not([open]) { padding-bottom: 14px; }

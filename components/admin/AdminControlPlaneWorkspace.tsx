@@ -1108,6 +1108,7 @@ export default function AdminControlPlaneWorkspace({
       identityDetail={admin ? `${admin.role.replace(/_/g, " ")} · ${admin.email}` : undefined}
       adminRole={admin?.role}
       breadcrumbs={buildPlatformBreadcrumbs(section, resourceId, enterprisePortfolio, page.title)}
+      primaryAction={section === "admin-users" ? <button type="button" style={primaryButtonStyle} onClick={() => setAdminInviteOpen(true)}><Icon name="person_add" size={18} /> Invite administrator</button> : undefined}
     >
         {message ? <section style={alertStyle}>{message}</section> : null}
         {confirmation ? <AdminConfirmationDialog confirmation={confirmation} onCancel={() => setConfirmation(null)} onConfirm={() => { const action = confirmation.onConfirm; setConfirmation(null); void action(); }} /> : null}
@@ -1704,189 +1705,98 @@ function renderAdminUsers(
       </div>
     );
   }
+  const adminFilters: Array<{ key: "real-active" | "inactive" | "synthetic" | "all"; label: string; count: number }> = [
+    { key: "real-active", label: "Active", count: admins.filter((item) => !isSyntheticAdmin(item) && item.status === "active").length },
+    { key: "inactive", label: "Suspended", count: admins.filter((item) => item.status !== "active").length },
+    { key: "synthetic", label: "Test accounts", count: admins.filter(isSyntheticAdmin).length },
+    { key: "all", label: "All", count: admins.length },
+  ];
   return (
     <div style={stackStyle}>
-      <section style={panelStyle}>
-        <div style={sectionHeaderStyle}>
-          <div>
-            <h2 style={h2Style}>Administrator access</h2>
-            <p style={mutedStyle}>Create invitations and run lifecycle actions from the canonical admin route. Recipients are not active until acceptance and required checks succeed.</p>
+      <AdminNote icon="shield_person">You can’t remove the last master admin or suspend your own account. Every role change needs a reason.</AdminNote>
+      {inviteOpen ? (
+        <section className="lf-admin-table-card lf-admin-form-card" aria-label="Invite administrator form">
+          <h2>Invite administrator</h2>
+          <div style={formGridStyle}>
+            <label>Email address
+              <input type="email" value={inviteForm.email} onChange={(event) => setInviteForm({ ...inviteForm, email: event.target.value })} required />
+            </label>
+            <label>Full name (optional)
+              <input value={inviteForm.fullName} onChange={(event) => setInviteForm({ ...inviteForm, fullName: event.target.value })} />
+            </label>
+            <label>Role
+              <select value={inviteForm.roleTemplate} onChange={(event) => setInviteForm({ ...inviteForm, roleTemplate: event.target.value })}>
+                <option value="super_admin">Super administrator</option>
+                <option value="support_agent">Support agent</option>
+                <option value="probate_reviewer">Probate reviewer</option>
+                <option value="auditor">Auditor</option>
+                <option value="enterprise_admin">Enterprise administrator</option>
+                <option value="read_only_operations">Read-only operations user</option>
+              </select>
+            </label>
+            <label>What they can reach
+              <select value={inviteForm.scopeType} onChange={(event) => setInviteForm({ ...inviteForm, scopeType: event.target.value })}>
+                <option value="platform">Whole platform</option>
+                <option value="organisation">One organisation</option>
+                <option value="support_only">Support only</option>
+                <option value="probate_only">Probate only</option>
+                <option value="read_only">Read-only</option>
+                <option value="time_limited">For a limited time</option>
+              </select>
+            </label>
+            <label>Invitation lasts (days)
+              <input type="number" min={1} max={90} value={inviteForm.expiryDays} onChange={(event) => setInviteForm({ ...inviteForm, expiryDays: Number(event.target.value) })} />
+            </label>
+            <label style={checkboxLineStyle}>
+              <input type="checkbox" checked={inviteForm.requireMfa} onChange={(event) => setInviteForm({ ...inviteForm, requireMfa: event.target.checked })} />
+              Require two-step verification
+            </label>
           </div>
-          <button type="button" onClick={() => setInviteOpen(true)} style={primaryButtonStyle}>Invite administrator</button>
-        </div>
-        {inviteOpen ? (
-          <section style={contextPanelStyle} aria-label="Invite administrator form">
-            <div style={formGridStyle}>
-              <label>Email address *
-                <input value={inviteForm.email} onChange={(event) => setInviteForm({ ...inviteForm, email: event.target.value })} />
-              </label>
-              <label>Full name
-                <input value={inviteForm.fullName} onChange={(event) => setInviteForm({ ...inviteForm, fullName: event.target.value })} />
-              </label>
-              <label>Role template
-                <select value={inviteForm.roleTemplate} onChange={(event) => setInviteForm({ ...inviteForm, roleTemplate: event.target.value })}>
-                  <option value="super_admin">Super administrator</option>
-                  <option value="support_agent">Support agent</option>
-                  <option value="probate_reviewer">Probate reviewer</option>
-                  <option value="auditor">Auditor</option>
-                  <option value="enterprise_admin">Enterprise administrator</option>
-                  <option value="read_only_operations">Read-only operations user</option>
-                </select>
-              </label>
-              <label>Access scope
-                <select value={inviteForm.scopeType} onChange={(event) => setInviteForm({ ...inviteForm, scopeType: event.target.value })}>
-                  <option value="platform">Platform-wide</option>
-                  <option value="organisation">Specific organisation</option>
-                  <option value="support_only">Support-only</option>
-                  <option value="probate_only">Probate-only</option>
-                  <option value="read_only">Read-only</option>
-                  <option value="time_limited">Time-limited</option>
-                </select>
-              </label>
-              <label>Invitation expiry days
-                <input type="number" min={1} max={90} value={inviteForm.expiryDays} onChange={(event) => setInviteForm({ ...inviteForm, expiryDays: Number(event.target.value) })} />
-              </label>
-              <label style={checkboxLineStyle}>
-                <input type="checkbox" checked={inviteForm.requireMfa} onChange={(event) => setInviteForm({ ...inviteForm, requireMfa: event.target.checked })} />
-                Require MFA
-              </label>
-            </div>
-            <section style={permissionSummaryStyle}>
-              <strong>Permission summary</strong>
-              <span>{permissionSummaryForRole(inviteForm.roleTemplate)}</span>
-            </section>
-            <div style={rowStyle}>
-              <button type="button" onClick={() => void sendAdminInvitation()} style={primaryButtonStyle}>Review and send invitation</button>
-              <button type="button" onClick={() => setInviteOpen(false)} style={secondaryButtonStyle}>Cancel</button>
-            </div>
-          </section>
-        ) : null}
-      </section>
-
-      <section style={panelStyle}>
-        <h2 style={h2Style}>Administrator invitations</h2>
-        <AdminDataTable
-          caption="Administrator invitations"
-          columns={[
-            {
-              key: "recipient",
-              header: "Recipient",
-              render: (item) => <>{item.full_name || item.email_normalized}<small>{item.email_normalized}</small></>,
-            },
-            {
-              key: "role",
-              header: "Role",
-              render: (item) => formatRoleLabel(item.role_template, item.role_template === "super_admin"),
-            },
-            { key: "scope", header: "Scope", render: (item) => item.scope_type.replace(/_/g, " ") },
-            { key: "status", header: "Status", render: (item) => <AdminStatusBadge status={item.status} /> },
-            { key: "mfa", header: "MFA", render: (item) => item.require_mfa ? "Required" : "Not required" },
-            { key: "expires", header: "Expires", render: (item) => formatDate(item.expires_at) },
-            {
-              key: "actions",
-              header: "Actions",
-              render: (item) => (
-                <div style={actionsCellStyle}>
-                  {["draft", "pending", "sent", "delivered", "failed"].includes(item.status) ? <button type="button" onClick={() => void runAdminInvitationLifecycle(item.id, "resend_invitation")}>Resend</button> : null}
-                  {["draft", "pending", "sent", "delivered", "failed"].includes(item.status) ? <button type="button" onClick={() => requestConfirmation({ title: "Revoke admin invitation", message: "The recipient will not become active and no authentication account will be deleted.", confirmLabel: "Revoke invitation" }, () => runAdminInvitationLifecycle(item.id, "revoke_invitation"))}>Revoke</button> : null}
-                  {["accepted", "revoked", "expired"].includes(item.status) ? <span style={mutedInlineStyle}>No pending action</span> : null}
-                </div>
-              ),
-            },
-          ]}
-          rows={invitations}
-          getRowKey={(item) => item.id}
-          emptyState={<AdminEmptyState title="No administrator invitations">No administrator invitations have been created.</AdminEmptyState>}
-        />
-      </section>
-
-      <section style={toolbarStyle}>
-        <label>Admin filter
-          <select value={filter} onChange={(event) => setFilter(event.target.value as "real-active" | "all" | "synthetic" | "inactive")}>
-            <option value="real-active">Real active</option>
-            <option value="all">All</option>
-            <option value="synthetic">Synthetic</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </label>
-        <span>{filtered.length} shown · {admins.length} total</span>
-      </section>
-      {selected ? renderAdminDetail(selected) : null}
-      <section style={panelStyle}>
-        <h2 style={h2Style}>Admin users</h2>
+          <AdminNote><strong>Permission summary.</strong> {permissionSummaryForRole(inviteForm.roleTemplate)}</AdminNote>
+          <div style={actionRowStyle}>
+            <button type="button" onClick={() => void sendAdminInvitation()} style={primaryButtonStyle}>Review and send invitation</button>
+            <button type="button" onClick={() => setInviteOpen(false)} className="lf-admin-row-button">Cancel</button>
+          </div>
+        </section>
+      ) : null}
+      <AdminFilterChips label="Filter administrators" value={filter as "real-active" | "inactive" | "synthetic" | "all"} onChange={setFilter} options={adminFilters} />
+      <div className="lf-admin-table-card">
         <AdminDataTable
           caption="Admin users"
           columns={[
-            {
-              key: "name",
-              header: "Name",
-              render: (item) => <>{item.display_name || item.email_normalized}<small>{item.email_normalized}{isSyntheticAdmin(item) ? " · Synthetic staging admin" : ""}</small></>,
-            },
+            { key: "name", header: "Name", render: (item) => <><span className="lf-admin-cell-title">{item.display_name || item.email_normalized}</span><small>{item.email_normalized}{isSyntheticAdmin(item) ? " · Synthetic staging admin" : ""}</small></> },
             { key: "role", header: "Role", render: (item) => formatRoleLabel(item.role, item.is_master) },
             { key: "status", header: "Status", render: (item) => <AdminStatusBadge status={item.status} /> },
-            { key: "created", header: "Created", render: (item) => formatDate(item.created_at) },
-            {
-              key: "actions",
-              header: "Actions",
-              render: (item) => (
-                <div style={actionsCellStyle}>
-                  <Link href={`/admin/admin-users/${item.id}`}>Inspect</Link>
-                  <button type="button" disabled={lifecycleActionLoading} onClick={() => setLifecycleForm({ ...lifecycleForm, adminUserId: item.id, action: item.status === "active" ? "deactivate" : "activate", role: item.role ?? "support_agent", reason: "", expectedUpdatedAt: item.updated_at })}>{item.status === "active" ? "Suspend access" : "Reactivate access"}</button>
-                  <button type="button" disabled={lifecycleActionLoading} onClick={() => setLifecycleForm({ ...lifecycleForm, adminUserId: item.id, action: "change_role", role: item.role ?? "support_agent", reason: "", expectedUpdatedAt: item.updated_at })}>Edit role</button>
-                </div>
-              ),
-            },
+            { key: "created", header: "Added", render: (item) => formatDate(item.created_at) },
+            { key: "open", header: "", render: (item) => <Link className="lf-admin-row-chevron" href={`/admin/admin-users/${item.id}`} aria-label={`Open ${item.display_name || item.email_normalized}`}><Icon name="chevron_right" size={20} /></Link> },
           ]}
           rows={filtered}
           getRowKey={(item) => item.id}
-          emptyState={<AdminEmptyState title="No matching administrators">No admin users match this filter.</AdminEmptyState>}
+          emptyState={<AdminEmptyState icon="admin_panel_settings" title="No administrators here">No administrators match this filter.</AdminEmptyState>}
         />
-      </section>
-      <section style={panelStyle}>
-        <h2 style={h2Style}>Lifecycle controls</h2>
-        <p style={mutedStyle}>Role change, activation, deactivation, final-master protection, self-lockout protection, and audit recording are served by the canonical admin lifecycle API.</p>
-        <div style={formGridStyle}>
-          <label>Selected administrator
-            <select value={lifecycleForm.adminUserId} onChange={(event) => {
-              const nextAdmin = admins.find((item) => item.id === event.target.value);
-              setLifecycleForm({
-                ...lifecycleForm,
-                adminUserId: event.target.value,
-                role: nextAdmin?.role ?? lifecycleForm.role,
-                expectedUpdatedAt: nextAdmin?.updated_at ?? "",
-              });
-            }}>
-              <option value="">Select administrator</option>
-              {admins.map((item) => <option key={item.id} value={item.id}>{item.display_name || item.email_normalized}</option>)}
-            </select>
-          </label>
-          <label>Action
-            <select value={lifecycleForm.action} onChange={(event) => setLifecycleForm({ ...lifecycleForm, action: event.target.value })}>
-              <option value="activate">Reactivate access</option>
-              <option value="deactivate">Suspend access</option>
-              <option value="change_role">Edit role</option>
-            </select>
-          </label>
-          <label>New role
-            <select value={lifecycleForm.role} disabled={lifecycleForm.action !== "change_role"} onChange={(event) => setLifecycleForm({ ...lifecycleForm, role: event.target.value })}>
-              <option value="super_admin">Super administrator</option>
-              <option value="support_agent">Support agent</option>
-              <option value="probate_reviewer">Probate reviewer</option>
-              <option value="auditor">Auditor</option>
-              <option value="enterprise_admin">Enterprise administrator</option>
-            </select>
-          </label>
-          <label>Reason
-            <input value={lifecycleForm.reason} onChange={(event) => setLifecycleForm({ ...lifecycleForm, reason: event.target.value })} />
-          </label>
-        </div>
-        <section style={permissionSummaryStyle}>
-          <strong>Consequence</strong>
-          <span>{lifecycleForm.action === "deactivate" ? "Suspends platform administrator access only. It does not delete the person’s authentication account or personal vault." : lifecycleForm.action === "change_role" ? "Changes the platform role after server-side final-super-admin and self-lockout checks." : "Restores administrator access if the account is eligible."}</span>
-          {lifecycleForm.expectedUpdatedAt ? <span>Loaded admin row version: {formatDate(lifecycleForm.expectedUpdatedAt)}.</span> : null}
-        </section>
-        <button type="button" onClick={() => void runAdminLifecycle()} disabled={lifecycleActionLoading || !lifecycleForm.adminUserId || !lifecycleForm.reason.trim()} style={primaryButtonStyle}>{lifecycleActionLoading ? "Applying..." : "Confirm lifecycle action"}</button>
-      </section>
+      </div>
+      <div className="lf-admin-table-card">
+        <h2>Administrator invitations</h2>
+        <AdminDataTable
+          caption="Administrator invitations"
+          columns={[
+            { key: "recipient", header: "Recipient", render: (item) => <><span className="lf-admin-cell-title">{item.full_name || item.email_normalized}</span><small>{item.email_normalized}</small></> },
+            { key: "role", header: "Role", render: (item) => formatRoleLabel(item.role_template, item.role_template === "super_admin") },
+            { key: "status", header: "Status", render: (item) => <AdminStatusBadge status={item.status} /> },
+            { key: "mfa", header: "Two-step verification", render: (item) => item.require_mfa ? "Required" : "Not required" },
+            { key: "expires", header: "Expires", render: (item) => formatDate(item.expires_at) },
+            { key: "actions", header: "", render: (item) => ["draft", "pending", "sent", "delivered", "failed"].includes(item.status) ? (
+              <div style={actionsCellStyle}>
+                <button type="button" className="lf-admin-row-button" onClick={() => void runAdminInvitationLifecycle(item.id, "resend_invitation")}>Resend</button>
+                <button type="button" className="lf-admin-row-button" onClick={() => requestConfirmation({ title: "Revoke admin invitation", message: "The recipient will not become active and no authentication account will be deleted.", confirmLabel: "Revoke invitation" }, () => runAdminInvitationLifecycle(item.id, "revoke_invitation"))}>Revoke</button>
+              </div>
+            ) : null },
+          ]}
+          rows={invitations}
+          getRowKey={(item) => item.id}
+          emptyState={<AdminEmptyState icon="forward_to_inbox" title="No administrator invitations">Invitations you send appear here until they’re accepted.</AdminEmptyState>}
+        />
+      </div>
     </div>
   );
 }
@@ -2851,7 +2761,8 @@ function formatRoleLabel(role: string | null, isMaster: boolean) {
 }
 
 function labelise(value: string) {
-  return String(value || "unknown").replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+  // Sentence case everywhere (CONSISTENCY.md): "linked_access" → "Linked access".
+  return sentenceCaseStatus(value || "unknown");
 }
 
 function formatDate(value: string | null) {

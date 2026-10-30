@@ -75,7 +75,7 @@ test("enterprise workspace replaces disabled prototype with functional controls"
   assert.match(workspace, /Add organisation/);
   assert.match(workspace, /Create licence/);
   assert.match(workspace, /Send invitation/);
-  assert.match(workspace, /Request governed export/);
+  assert.match(workspace, /aria-label=\{`Export \$\{report\.label\}`\}/);
   assert.match(workspace, /Private Vault contents are never shown here/);
   assert.match(workspace, /AdminWorkspaceShell/);
   assert.match(workspace, /onSignOut=\{signOut\}/);
@@ -144,7 +144,6 @@ test("enterprise organisation UI exposes operational navigation, create form and
     "Consent and compliance",
     "Renewals",
     "Organisation settings",
-    "STAGING — synthetic test data may be present",
     "No licence configured",
     "Prepare administrator invitation",
     "Archive/delete",

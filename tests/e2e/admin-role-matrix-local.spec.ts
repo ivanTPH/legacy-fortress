@@ -301,7 +301,7 @@ test.describe.serial("admin role matrix local proof", () => {
 
     await page.goto(`${BASE_URL}/admin/invitations`, { waitUntil: "networkidle" });
     await expect(page.getByRole("heading", { name: "Organisation invitations" })).toBeVisible();
-    await expect(page.getByText("Platform Administration").first()).toBeVisible();
+    await expect(page.getByText("Platform Admin", { exact: true }).first()).toBeVisible();
     await expect(page).not.toHaveURL(/\/enterprise/);
 
     const accountTrigger = page.getByRole("button", { name: /Open account menu for UAT Super Admin/i });

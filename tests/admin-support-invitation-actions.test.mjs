@@ -67,7 +67,7 @@ test("access support distinguishes terminal security state from operational next
 
   assert.match(operations, /getSupportOperationalState/);
   assert.match(operations, /getSupportNextStep/);
-  assert.match(operations, /canonical Contacts workflow/);
+  assert.match(operations, /The Vault owner can send a new one from People & Access/);
   assert.match(workspace, /Issue and next step/);
   assert.match(workspace, /Operational status/);
   assert.match(workspace, /Open verification review queue/);
