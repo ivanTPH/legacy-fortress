@@ -1334,6 +1334,8 @@ export default function UniversalRecordWorkspace({
         nextForm.value_major = prefill.value_major ?? "";
         nextForm.last_updated_on = prefill.last_updated_on ?? "";
         if (prefill.currency) nextForm.currency_code = prefill.currency;
+        // A UK sort code means a UK account; the owner can still change it.
+        if (prefill.sort_code) nextForm.country = "UK";
       }
     }
     if (isCanonicalDigital) {
