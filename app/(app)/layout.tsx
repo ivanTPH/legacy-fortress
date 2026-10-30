@@ -1316,7 +1316,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
               }}
             >
               <div style={{ fontWeight: 700 }}>{DEMO_EXPERIENCE_LABEL} · {DEMO_EXPERIENCE_SUBLABEL}</div>
-              <div style={{ color: "#475569", fontSize: 13 }}>
+              <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                 You are viewing synthetic review data in a separate demo account. Admin controls and owner credentials are not part of this session.
               </div>
             </section>
@@ -1325,7 +1325,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
             <section
               style={{
                 border: "1px solid #d8e0e8",
-                background: "#f8fafc",
+                background: "var(--lf-surface-page)",
                 borderRadius: 10,
                 padding: "9px 12px",
                 marginBottom: 14,
@@ -1338,7 +1338,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
             >
               <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
                 <strong>{resolvedViewerAccess.accountHolderName}&apos;s Fortress</strong>
-                <span style={{ color: "#475569", fontSize: 13 }}>
+                <span style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                   {getRoleLabel(resolvedViewerAccess.viewerRole)} · {getLinkedFortressAccessLabel({ accessState: linkedAccessState, sharedRecordCount: linkedSharedRecordCount })} 🔒
                 </span>
               </div>
@@ -1544,9 +1544,9 @@ const linkedOwnerAvatarStyle: CSSProperties = {
   width: 42,
   height: 42,
   borderRadius: "50%",
-  border: "1px solid #cbd5e1",
-  background: "#e2e8f0",
-  color: "#0f172a",
+  border: "1px solid var(--lf-border-input)",
+  background: "var(--lf-surface-subtle)",
+  color: "var(--lf-text)",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",

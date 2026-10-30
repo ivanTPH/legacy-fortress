@@ -87,7 +87,7 @@ function Info({ label, value }: { label: string; value: string }) {
 }
 
 const caseHeaderStyle: CSSProperties = {
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   border: "1px solid var(--lf-border)",
   borderRadius: 8,
   padding: 16,
@@ -104,7 +104,7 @@ const detailGridStyle: CSSProperties = {
 };
 
 const panelStyle: CSSProperties = {
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   border: "1px solid var(--lf-border)",
   borderRadius: 8,
   padding: 16,
@@ -147,7 +147,7 @@ const checkRowStyle: CSSProperties = {
   display: "flex",
   gap: 10,
   alignItems: "center",
-  border: "1px solid #f1ece8",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 8,
   padding: 10,
 };
@@ -173,7 +173,7 @@ const decisionPanelStyle: CSSProperties = {
 };
 
 const unlockPanelStyle: CSSProperties = {
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   border: "1px solid var(--lf-border)",
   borderRadius: 8,
   padding: 16,

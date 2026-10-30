@@ -20,10 +20,10 @@ export default function PersonalOverviewPage() {
   return (
     <section style={{ display: "grid", gap: 14 }}>
       <div style={{ display: "grid", gap: 6 }}>
-        <p style={{ margin: "6px 0 0", color: "#6b7280" }}>
+        <p style={{ margin: "6px 0 0", color: "var(--lf-text-secondary)" }}>
           Store and manage your personal accounts, subscriptions, wishes, and digital access in one trusted place.
         </p>
-        <p style={{ margin: "6px 0 0", color: "#64748b", fontSize: 13 }}>
+        <p style={{ margin: "6px 0 0", color: "var(--lf-text-secondary)", fontSize: 13 }}>
           This area focuses on possessions, subscriptions, social accounts, wishes, and follow-up work. Contacts, next of kin, executors, and advisers now live in the shared contacts network.
         </p>
         <div style={progressCueStyle}>
@@ -48,7 +48,7 @@ export default function PersonalOverviewPage() {
         ))}
       </div>
       ) : (
-        <div style={{ color: "#64748b", fontSize: 13 }}>
+        <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
           Personal subsections are currently hidden by My Vault preferences. Re-enable them in Account / My Vault at any time.
         </div>
       )}
@@ -57,7 +57,7 @@ export default function PersonalOverviewPage() {
 }
 
 const progressCueStyle = {
-  color: "#64748b",
+  color: "var(--lf-text-secondary)",
   fontSize: 12,
   fontWeight: 600,
 } as const;

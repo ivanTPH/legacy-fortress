@@ -160,10 +160,10 @@ export default function SignUpForm({
         </div>
       ) : null}
 
-      <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#9ca3af", fontSize: 12 }}>
-        <span style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
+      <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--lf-text-secondary)", fontSize: 12 }}>
+        <span style={{ flex: 1, height: 1, background: "var(--lf-surface-subtle)" }} />
         or
-        <span style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
+        <span style={{ flex: 1, height: 1, background: "var(--lf-surface-subtle)" }} />
       </div>
 
       <OAuthButtons nextPath={nextPath || "/onboarding"} />
@@ -205,7 +205,7 @@ const passwordToggleStyle: CSSProperties = {
   height: 40,
   border: "none",
   background: "transparent",
-  color: "#475569",
+  color: "var(--lf-text-secondary)",
   cursor: "pointer",
   display: "inline-flex",
   alignItems: "center",

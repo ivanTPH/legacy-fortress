@@ -92,7 +92,7 @@ export default function TermsPageClient() {
     >
       <SettingsCard title="Terms status" description="Terms acceptance is required for account use.">
         {searchParams.get("required") === "1" ? (
-          <div style={{ color: "#475569", fontSize: 13 }}>
+          <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
             Your account needs terms acceptance before you can continue into the main workspace.
           </div>
         ) : null}
@@ -101,11 +101,11 @@ export default function TermsPageClient() {
           <div><strong>Status:</strong> {row?.accepted ? "Accepted" : "Pending acceptance"}</div>
           <div><strong>Accepted at:</strong> {row?.accepted_at ? new Date(row.accepted_at).toLocaleString() : "Not available"}</div>
         </div>
-        <div style={{ color: "#6b7280", fontSize: 13 }}>
+        <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
           Latest terms are reviewed during onboarding and can be re-reviewed when versions change.
         </div>
         {row?.accepted ? (
-          <div style={{ color: "#6b7280", fontSize: 13 }}>
+          <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
             Terms are already accepted for this account. <Link href="/dashboard">Return to the dashboard</Link>.
           </div>
         ) : (
@@ -113,7 +113,7 @@ export default function TermsPageClient() {
             {saving ? "Saving..." : "Accept terms and continue"}
           </button>
         )}
-        {status ? <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div> : null}
+        {status ? <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{status}</div> : null}
       </SettingsCard>
     </SettingsPageShell>
   );

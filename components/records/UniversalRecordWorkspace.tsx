@@ -3537,36 +3537,36 @@ export default function UniversalRecordWorkspace({
               />
             )}
             <div style={{ display: "grid", gap: 5, minWidth: 0 }}>
-              <div className="lf-v52-record-duplicate-title" style={{ fontWeight: 800, color: "#111827", lineHeight: 1.25, fontSize: 15 }}>
+              <div className="lf-v52-record-duplicate-title" style={{ fontWeight: 800, color: "var(--lf-text)", lineHeight: 1.25, fontSize: 15 }}>
                 {primaryRecordTitle}
               </div>
               {isTrustedContacts ? (
                 <>
-                  <div style={{ color: "#64748b", fontSize: 13 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     {primaryContact?.contact_role || String(row.metadata?.relationship ?? "Relationship not set")}
                     {" · "}
                     {primaryContact?.contact_email || "No email"}
                   </div>
-                  <div style={{ color: "#64748b", fontSize: 13 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     Mobile: {String(row.metadata?.mobile_phone ?? row.provider_name ?? "Not set")}
                     {" · "}
                     Secondary: {String(row.metadata?.secondary_phone ?? "Not set")}
                   </div>
-                  <div style={{ color: "#64748b", fontSize: 13 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     Address: {String(row.metadata?.address ?? "Not set")}
                   </div>
-                  <div style={{ color: "#94a3b8", fontSize: 12 }}>Updated {formatDate(row.updated_at)}</div>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>Updated {formatDate(row.updated_at)}</div>
                 </>
               ) : isCanonicalDigital ? (
                 <>
-                  <div style={{ color: "#64748b", fontSize: 13 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     {canonicalDigitalAsset?.digital_summary || "Digital asset"}
                   </div>
-                  <div style={{ color: "#64748b", fontSize: 13 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     {canonicalDigitalAsset?.jurisdiction || "Jurisdiction not set"}
                     {canonicalDigitalAsset?.wallet_reference ? " · Reference on file" : ""}
                   </div>
-                  <div style={{ color: "#94a3b8", fontSize: 12 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
                     {formatCurrency(
                       canonicalDigitalAsset?.estimated_value_major ?? toMajorUnits(row.value_minor),
                       canonicalDigitalAsset?.currency_code || (row.currency_code ?? "GBP").toUpperCase(),
@@ -3576,44 +3576,44 @@ export default function UniversalRecordWorkspace({
                 </>
               ) : isCanonicalBeneficiary ? (
                 <>
-                  <div style={{ color: "#64748b", fontSize: 13 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     {canonicalBeneficiaryAsset?.beneficiary_summary || "Beneficiary"}
                   </div>
-                  <div style={{ color: "#64748b", fontSize: 13 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     {canonicalBeneficiaryAsset?.contact_email || "No email"}
                     {" · "}
                     {canonicalBeneficiaryAsset?.contact_phone || "No phone"}
                   </div>
-                  <div style={{ color: "#94a3b8", fontSize: 12 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
                     {canonicalBeneficiaryAsset?.preferred_name ? `${canonicalBeneficiaryAsset.preferred_name} · ` : ""}
                     Updated {formatDate(row.updated_at)}
                   </div>
                 </>
               ) : isCanonicalExecutor ? (
                 <>
-                  <div style={{ color: "#64748b", fontSize: 13 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     {primaryContact?.contact_role || canonicalExecutorAsset?.executor_summary || "Executor / trusted contact"}
                   </div>
-                  <div style={{ color: "#64748b", fontSize: 13 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     {canonicalExecutorAsset?.jurisdiction || primaryContact?.relationship || "Jurisdiction not set"}
                     {" · "}
                     {primaryContact?.verification_status || canonicalExecutorAsset?.executor_status || "Status not set"}
                   </div>
-                  <div style={{ color: "#94a3b8", fontSize: 12 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
                     {canonicalExecutorAsset?.appointed_on ? `Appointed ${canonicalExecutorAsset.appointed_on} · ` : ""}
                     Updated {formatDate(row.updated_at)}
                   </div>
                 </>
               ) : isCanonicalTask ? (
                 <>
-                  <div style={{ color: "#64748b", fontSize: 13 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     {canonicalTaskAsset?.task_summary || "Task"}
                   </div>
-                  <div style={{ color: "#64748b", fontSize: 13 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     {canonicalTaskAsset?.related_asset_label || "No related asset"}
                     {canonicalTaskAsset?.due_date ? ` · Due ${canonicalTaskAsset.due_date}` : ""}
                   </div>
-                  <div style={{ color: "#94a3b8", fontSize: 12 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
                     {canonicalTaskAsset?.assigned_executor_label || canonicalTaskAsset?.assigned_beneficiary_label || "Unassigned"}
                     {" · "}
                     Updated {formatDate(row.updated_at)}
@@ -3621,14 +3621,14 @@ export default function UniversalRecordWorkspace({
                 </>
               ) : isCanonicalBusiness ? (
                 <>
-                  <div style={{ color: "#64748b", fontSize: 13 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     {canonicalBusinessAsset?.business_summary || "Business interest"}
                   </div>
-                  <div style={{ color: "#64748b", fontSize: 13 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     {canonicalBusinessAsset?.jurisdiction || "Jurisdiction not set"}
                     {canonicalBusinessAsset?.registration_number ? " · Registration on file" : ""}
                   </div>
-                  <div style={{ color: "#94a3b8", fontSize: 12 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
                     {formatCurrency(
                       canonicalBusinessAsset?.estimated_value_major ?? toMajorUnits(row.value_minor),
                       canonicalBusinessAsset?.currency_code || (row.currency_code ?? "GBP").toUpperCase(),
@@ -3638,13 +3638,13 @@ export default function UniversalRecordWorkspace({
                 </>
               ) : isCanonicalProperty ? (
                 <>
-                  <div style={{ color: "#64748b", fontSize: 13 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     {canonicalPropertyAsset?.property_summary || "Property"}
                   </div>
-                  <div style={{ color: "#64748b", fontSize: 13 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     {canonicalPropertyAsset?.property_address || "Address not set"}
                   </div>
-                  <div style={{ color: "#94a3b8", fontSize: 12 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
                     {formatCurrency(
                       canonicalPropertyAsset?.estimated_value_major ?? toMajorUnits(row.value_minor),
                       canonicalPropertyAsset?.currency_code || (row.currency_code ?? "GBP").toUpperCase(),
@@ -3655,7 +3655,7 @@ export default function UniversalRecordWorkspace({
               ) : isFinanceSection ? (
                 <>
                   {categoryKey === "bank" ? (
-                    <div style={{ color: "#64748b", fontSize: 13 }}>
+                    <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                       {bankProviderName}
                       {" · "}
                       {bankAccountTypeLabel || "Account"}
@@ -3670,26 +3670,26 @@ export default function UniversalRecordWorkspace({
                     </div>
                   ) : null}
                   {categoryKey === "investments" ? (
-                    <div style={{ color: "#64748b", fontSize: 13 }}>
+                    <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                       {getCategoryTypeLabel("finances", "investments", row.metadata?.investment_type ?? "Investment")} · Ref: {String(row.metadata?.investment_reference ?? "Not set")}
                     </div>
                   ) : null}
                   {categoryKey === "pensions" ? (
-                    <div style={{ color: "#64748b", fontSize: 13 }}>
+                    <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                       {getCategoryTypeLabel("finances", "pensions", row.metadata?.pension_type ?? "Pension")} · Member no: {String(row.metadata?.pension_member_number ?? "Not set")}
                     </div>
                   ) : null}
                   {categoryKey === "insurance" ? (
-                    <div style={{ color: "#64748b", fontSize: 13 }}>
+                    <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                       {getCategoryTypeLabel("finances", "insurance", row.metadata?.policy_type ?? "Policy")} · {String(row.metadata?.policy_number ?? "No policy number")} · {String(row.metadata?.insured_item ?? "Insured item not set")}
                     </div>
                   ) : null}
                   {categoryKey === "debts" ? (
-                    <div style={{ color: "#64748b", fontSize: 13 }}>
+                    <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                       {getCategoryTypeLabel("finances", "debts", row.metadata?.debt_type ?? "Debt")} · Ref: {String(row.metadata?.debt_reference ?? "Not set")}
                     </div>
                   ) : null}
-                  <div style={{ color: "#94a3b8", fontSize: 12 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
                     {formatCurrency(
                       canonicalBankAsset?.current_balance ?? toMajorUnits(row.value_minor),
                       canonicalBankAsset?.currency || (row.currency_code ?? "GBP").toUpperCase(),
@@ -3698,12 +3698,12 @@ export default function UniversalRecordWorkspace({
                 </>
               ) : (
                 <>
-                  <div style={{ color: "#64748b", fontSize: 13 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     {isIdentityDocuments
                       ? [String(row.metadata?.identity_document_type ?? ""), String(row.metadata?.identity_document_number ?? "").trim() ? "Reference on file" : ""].filter(Boolean).join(" · ") || "Identity document"
                       : row.summary || "No summary provided."}
                   </div>
-                  <div style={{ color: "#94a3b8", fontSize: 12 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
                     {categoryLabel ? `${categoryLabel} · ` : ""}
                     {isNarrativeDocumentWorkspace ? null : (
                       <>
@@ -4054,7 +4054,7 @@ export default function UniversalRecordWorkspace({
       </div> : null}
 
       {!selectedWorkspaceRecordId && isPossessions ? (
-        <div style={{ color: "#64748b", fontSize: 13 }}>
+        <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
           Completion: {activeRecords.length} active · {archivedRecords.length} archived · {totals.missingValue} missing value
         </div>
       ) : null}
@@ -4077,7 +4077,7 @@ export default function UniversalRecordWorkspace({
           style={{
             border: "1px dashed #f59e0b",
             borderRadius: 12,
-            background: "#fff7ed",
+            background: "var(--lf-status-pending-bg)",
             padding: 12,
             display: "grid",
             gap: 10,
@@ -4165,7 +4165,7 @@ export default function UniversalRecordWorkspace({
             zIndex: 70,
             border: "1px solid #f59e0b",
             borderRadius: 12,
-            background: "#111827",
+            background: "var(--lf-primary-bg)",
             color: "#f8fafc",
             padding: 12,
             boxShadow: "0 16px 40px rgba(15, 23, 42, 0.3)",
@@ -4185,7 +4185,7 @@ export default function UniversalRecordWorkspace({
               <code key={`${index}-${step}`} style={{ whiteSpace: "pre-wrap", fontSize: 11, color: "#fde68a" }}>{step}</code>
             ))
           ) : (
-            <div style={{ fontSize: 12, color: "#94a3b8" }}>No PostgREST assets requests captured yet.</div>
+            <div style={{ fontSize: 12, color: "var(--lf-text-secondary)" }}>No PostgREST assets requests captured yet.</div>
           )}
         </aside>
       ) : null}
@@ -4330,7 +4330,7 @@ export default function UniversalRecordWorkspace({
 
         {!formVisible ? (
           <div style={{ display: "grid", gap: 10 }}>
-            <div style={{ color: "#64748b", fontSize: 13 }}>
+            <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
               Add a record when you are ready. It stays in your vault, and you control who can access it.
             </div>
             {!hasAnyRecords ? (
@@ -4625,9 +4625,9 @@ export default function UniversalRecordWorkspace({
             {submitError ? (
               <div
                 style={{
-                  border: "1px solid #fecaca",
-                  background: "#fef2f2",
-                  color: "#991b1b",
+                  border: "1px solid var(--lf-status-rejected-bg)",
+                  background: "var(--lf-status-rejected-bg)",
+                  color: "var(--lf-status-rejected-text)",
                   borderRadius: 10,
                   padding: 12,
                   fontSize: 13,
@@ -4648,7 +4648,7 @@ export default function UniversalRecordWorkspace({
                   <Icon name="fact_check" size={18} />
                   Review before saving
                 </span>
-                <span style={{ color: "#64748b", fontSize: 13 }}>
+                <span style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                   {isCanonicalTask
                     ? "Confirm the task details and any staged document uploads before saving this record."
                     : isCanonicalExecutor
@@ -4663,7 +4663,7 @@ export default function UniversalRecordWorkspace({
                         ? "Confirm the digital record details and any staged document uploads before saving this record."
                     : "Confirm the account details and any staged document uploads before saving this record."}
                 </span>
-                <span style={{ color: "#334155", fontSize: 13 }}>
+                <span style={{ color: "var(--lf-text)", fontSize: 13 }}>
                   {isCanonicalTask
                     ? [
                         form.title.trim() || "Task",
@@ -4732,7 +4732,7 @@ export default function UniversalRecordWorkspace({
           <div style={{ display: "grid", gap: 8 }}>
             <div style={{ fontSize: 13, fontWeight: 700 }}>Current attachments</div>
             {attachments.filter((item) => item.record_id === editingId).length === 0 ? (
-              <div style={{ color: "#64748b", fontSize: 13 }}>No documents attached to this record yet.</div>
+              <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>No documents attached to this record yet.</div>
             ) : (
               <AttachmentGallery
                 items={attachments
@@ -4877,7 +4877,7 @@ function FinanceFields({
   const fieldErrors = (config: AssetCategoryFormConfig, values: Record<string, string>) => showValidation ? validateAssetFormValues(config, values) : {};
   if (sectionKey === "personal" && categoryKey === "tasks") {
     if (!TASK_FORM_CONFIG) {
-      return <div style={{ color: "#b91c1c", fontSize: 13 }}>Task form configuration is unavailable.</div>;
+      return <div style={{ color: "var(--lf-destructive)", fontSize: 13 }}>Task form configuration is unavailable.</div>;
     }
     const taskValues = taskFormToConfigValues(form);
     const taskConfig = buildTaskConfig(TASK_FORM_CONFIG, {
@@ -4925,7 +4925,7 @@ function FinanceFields({
 
   if (sectionKey === "legal" && categoryKey === "identity-documents") {
     if (!IDENTITY_DOCUMENT_FORM_CONFIG) {
-      return <div style={{ color: "#b91c1c", fontSize: 13 }}>Identity document form configuration is unavailable.</div>;
+      return <div style={{ color: "var(--lf-destructive)", fontSize: 13 }}>Identity document form configuration is unavailable.</div>;
     }
     const legalContactDefinition = getLegalLinkedContactDefinition(categoryKey);
     const identityValues = identityDocumentFormToConfigValues(form);
@@ -4969,7 +4969,7 @@ function FinanceFields({
 
   if (sectionKey === "digital" && categoryKey === "digital") {
     if (!DIGITAL_FORM_CONFIG) {
-      return <div style={{ color: "#b91c1c", fontSize: 13 }}>Digital form configuration is unavailable.</div>;
+      return <div style={{ color: "var(--lf-destructive)", fontSize: 13 }}>Digital form configuration is unavailable.</div>;
     }
     const digitalValues = digitalFormToConfigValues(form);
     const digitalErrors = fieldErrors(DIGITAL_FORM_CONFIG, digitalValues);
@@ -4988,7 +4988,7 @@ function FinanceFields({
 
   if (sectionKey === "personal" && categoryKey === "social-media") {
     if (!SOCIAL_MEDIA_FORM_CONFIG) {
-      return <div style={{ color: "#b91c1c", fontSize: 13 }}>Social media form configuration is unavailable.</div>;
+      return <div style={{ color: "var(--lf-destructive)", fontSize: 13 }}>Social media form configuration is unavailable.</div>;
     }
     const socialValues = socialMediaFormToConfigValues(form);
     const socialErrors = fieldErrors(SOCIAL_MEDIA_FORM_CONFIG, socialValues);
@@ -5021,7 +5021,7 @@ function FinanceFields({
 
   if (sectionKey === "personal" && categoryKey === "beneficiaries") {
     if (!BENEFICIARY_FORM_CONFIG) {
-      return <div style={{ color: "#b91c1c", fontSize: 13 }}>Beneficiary form configuration is unavailable.</div>;
+      return <div style={{ color: "var(--lf-destructive)", fontSize: 13 }}>Beneficiary form configuration is unavailable.</div>;
     }
     const beneficiaryValues = beneficiaryFormToConfigValues(form);
     const beneficiaryErrors = fieldErrors(BENEFICIARY_FORM_CONFIG, beneficiaryValues);
@@ -5084,7 +5084,7 @@ function FinanceFields({
 
   if (sectionKey === "personal" && categoryKey === "executors") {
     if (!EXECUTOR_FORM_CONFIG) {
-      return <div style={{ color: "#b91c1c", fontSize: 13 }}>Executor form configuration is unavailable.</div>;
+      return <div style={{ color: "var(--lf-destructive)", fontSize: 13 }}>Executor form configuration is unavailable.</div>;
     }
     const executorValues = executorFormToConfigValues(form);
     const executorErrors = fieldErrors(EXECUTOR_FORM_CONFIG, executorValues);
@@ -5137,7 +5137,7 @@ function FinanceFields({
 
   if (sectionKey === "business" && categoryKey === "business") {
     if (!BUSINESS_FORM_CONFIG) {
-      return <div style={{ color: "#b91c1c", fontSize: 13 }}>Business form configuration is unavailable.</div>;
+      return <div style={{ color: "var(--lf-destructive)", fontSize: 13 }}>Business form configuration is unavailable.</div>;
     }
     const businessValues = businessFormToConfigValues(form);
     const businessErrors = fieldErrors(BUSINESS_FORM_CONFIG, businessValues);
@@ -5156,7 +5156,7 @@ function FinanceFields({
 
   if (sectionKey === "property" && categoryKey === "property") {
     if (!PROPERTY_FORM_CONFIG) {
-      return <div style={{ color: "#b91c1c", fontSize: 13 }}>Property form configuration is unavailable.</div>;
+      return <div style={{ color: "var(--lf-destructive)", fontSize: 13 }}>Property form configuration is unavailable.</div>;
     }
     const propertyValues = propertyFormToConfigValues(form);
     const propertyErrors = fieldErrors(PROPERTY_FORM_CONFIG, propertyValues);
@@ -5175,7 +5175,7 @@ function FinanceFields({
 
   if (categoryKey === "bank") {
     if (!BANK_FORM_CONFIG) {
-      return <div style={{ color: "#b91c1c", fontSize: 13 }}>Bank form configuration is unavailable.</div>;
+      return <div style={{ color: "var(--lf-destructive)", fontSize: 13 }}>Bank form configuration is unavailable.</div>;
     }
     const bankValues = bankFormToConfigValues(form);
     const bankErrors = fieldErrors(BANK_FORM_CONFIG, bankValues);
@@ -5396,7 +5396,7 @@ function FormSection({
     <section style={{ display: "grid", gap: 10 }}>
       <div style={{ display: "grid", gap: 4 }}>
         <div style={{ fontWeight: 700, fontSize: 14 }}>{title}</div>
-        <div style={{ color: "#64748b", fontSize: 13 }}>{description}</div>
+        <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{description}</div>
       </div>
       <div className="lf-content-grid">{children}</div>
     </section>
@@ -7135,9 +7135,9 @@ function formatDate(value: string) {
 }
 
 const cardStyle: CSSProperties = {
-  border: "1px solid #e8e1dc",
+  border: "1px solid var(--lf-border)",
   borderRadius: 12,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   padding: 22,
   display: "grid",
   gap: 18,
@@ -7151,8 +7151,8 @@ const linkedPanelChipStyle: CSSProperties = {
   width: "fit-content",
   marginTop: 8,
   borderRadius: 999,
-  border: "1px solid #cbd5e1",
-  background: "#f8fafc",
+  border: "1px solid var(--lf-border-input)",
+  background: "var(--lf-surface-page)",
   color: "var(--lf-text-secondary)",
   padding: "4px 10px",
   fontSize: 12,
@@ -7160,9 +7160,9 @@ const linkedPanelChipStyle: CSSProperties = {
 };
 
 const detailsPanelStyle: CSSProperties = {
-  border: "1px solid #eee8e3",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 10,
-  background: "#fffefd",
+  background: "var(--lf-surface-card)",
   padding: 10,
   display: "grid",
   gap: 10,
@@ -7172,7 +7172,7 @@ const activePillStyle: CSSProperties = {
   borderRadius: 999,
   border: "1px solid #cfe8dc",
   background: "#f0f8f4",
-  color: "#166534",
+  color: "var(--lf-status-approved-text)",
   fontSize: 12,
   fontWeight: 700,
   padding: "5px 10px",
@@ -7181,9 +7181,9 @@ const activePillStyle: CSSProperties = {
 
 const documentInputModeStyle: CSSProperties = {
   gridColumn: "1 / -1",
-  border: "1px solid #eadfd8",
+  border: "1px solid var(--lf-border)",
   borderRadius: 12,
-  background: "#fffefd",
+  background: "var(--lf-surface-card)",
   color: "#5f4b3f",
   padding: 12,
   display: "grid",
@@ -7196,7 +7196,7 @@ const archivedPillStyle: CSSProperties = {
   ...activePillStyle,
   borderRadius: 999,
   border: "1px solid #d9dde3",
-  background: "#e2e8f0",
+  background: "var(--lf-surface-subtle)",
   color: "var(--lf-text-secondary)",
 };
 
@@ -7204,16 +7204,16 @@ const thumbWrapStyle: CSSProperties = {
   width: 48,
   height: 48,
   borderRadius: 12,
-  border: "1px solid #e8e1dc",
+  border: "1px solid var(--lf-border)",
   overflow: "hidden",
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
 };
 
 const maskedRowStyle: CSSProperties = {
-  color: "#64748b",
+  color: "var(--lf-text-secondary)",
   fontSize: 13,
   display: "flex",
   flexWrap: "wrap",
@@ -7235,9 +7235,9 @@ const linkedContactLinkStyle: CSSProperties = {
 const confirmationCardStyle: CSSProperties = {
   display: "grid",
   gap: 8,
-  border: "1px solid #cbd5e1",
+  border: "1px solid var(--lf-border-input)",
   borderRadius: 12,
-  background: "#f8fafc",
+  background: "var(--lf-surface-page)",
   padding: 12,
 };
 
@@ -7247,7 +7247,7 @@ const fieldStyle: CSSProperties = {
 };
 
 const labelStyle: CSSProperties = {
-  color: "#64748b",
+  color: "var(--lf-text-secondary)",
   fontSize: 12,
   display: "inline-flex",
   alignItems: "center",
@@ -7255,14 +7255,14 @@ const labelStyle: CSSProperties = {
 };
 
 const inputStyle: CSSProperties = {
-  border: "1px solid #d8d2cc",
+  border: "1px solid var(--lf-border)",
   borderRadius: 10,
   padding: "11px 12px",
   fontSize: 14,
   width: "100%",
   minHeight: 44,
   height: 44,
-  background: "#fffefd",
+  background: "var(--lf-surface-card)",
 };
 
 const textAreaStyle: CSSProperties = {
@@ -7287,9 +7287,9 @@ const linkedContactActionsStyle: CSSProperties = {
 };
 
 const primaryBtn: CSSProperties = {
-  border: "1px solid #111827",
-  background: "#111827",
-  color: "#fff",
+  border: "1px solid var(--lf-primary-bg)",
+  background: "var(--lf-primary-bg)",
+  color: "var(--lf-primary-text)",
   borderRadius: 10,
   padding: "8px 12px",
   fontSize: 13,
@@ -7302,8 +7302,8 @@ const primaryBtn: CSSProperties = {
 
 const ghostBtn: CSSProperties = {
   border: "1px solid #e3ded9",
-  background: "#fffefd",
-  color: "#111827",
+  background: "var(--lf-surface-card)",
+  color: "var(--lf-text)",
   borderRadius: 10,
   padding: "10px 13px",
   fontSize: 13,
@@ -7315,9 +7315,9 @@ const ghostBtn: CSSProperties = {
 };
 
 const removeLinkedContactIconButtonStyle: CSSProperties = {
-  borderColor: "#fecaca",
-  border: "1px solid #fecaca",
-  color: "#991b1b",
+  borderColor: "var(--lf-status-rejected-bg)",
+  border: "1px solid var(--lf-status-rejected-bg)",
+  color: "var(--lf-status-rejected-text)",
   background: "#fff1f2",
   borderRadius: 999,
   width: 44,
@@ -7331,7 +7331,7 @@ const removeLinkedContactIconButtonStyle: CSSProperties = {
 
 const dangerBtn: CSSProperties = {
   ...ghostBtn,
-  borderColor: "#fecaca",
-  color: "#991b1b",
+  borderColor: "var(--lf-status-rejected-bg)",
+  color: "var(--lf-status-rejected-text)",
   background: "#fff1f2",
 };

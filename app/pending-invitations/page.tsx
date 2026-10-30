@@ -71,8 +71,8 @@ const invitationCardStyle = {
   justifyContent: "space-between",
   gap: 16,
   flexWrap: "wrap",
-  border: "1px solid #e2e8f0",
+  border: "1px solid var(--lf-border)",
   borderRadius: 12,
   padding: 16,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
 } as const;

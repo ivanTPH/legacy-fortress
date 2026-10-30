@@ -609,7 +609,7 @@ export default function SectionWorkspace({
             {helpMessage ? <InfoTip label={`Explain ${title}`} message={helpMessage} /> : null}
           </div>
         ) : null}
-        <p style={{ margin: showPageHeading ? "6px 0 0" : 0, color: "#6b7280" }}>{subtitle}</p>
+        <p style={{ margin: showPageHeading ? "6px 0 0" : 0, color: "var(--lf-text-secondary)" }}>{subtitle}</p>
         {viewer.mode === "linked" ? (
           <div style={linkedPanelChipStyle}>
             <Icon name="visibility_lock" size={14} />
@@ -621,10 +621,10 @@ export default function SectionWorkspace({
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
         {canCreateRecords ? <button style={primaryBtn} onClick={() => setShowForm(true)} disabled={tableUnavailable}>{addLabel}</button> : null}
         {showForm ? <button style={ghostBtn} onClick={() => { setShowForm(false); setEditingId(null); setForm(EMPTY_FORM); setExtraFieldValues({}); }}>Cancel</button> : null}
-        <span style={{ color: "#64748b", fontSize: 13 }}>Total tracked value: {formatCurrency(totalValue, "GBP")}</span>
+        <span style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>Total tracked value: {formatCurrency(totalValue, "GBP")}</span>
       </div>
 
-      {status ? <div style={{ color: "#64748b", fontSize: 13 }}>{status}</div> : null}
+      {status ? <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{status}</div> : null}
 
       {showForm && !tableUnavailable ? (
         <section style={cardStyle}>
@@ -667,15 +667,15 @@ export default function SectionWorkspace({
             />
           </label>
         ) : null}
-        {loading ? <div style={{ color: "#64748b" }}>Loading records...</div> : null}
-        {!loading && tableUnavailable ? <div style={{ color: "#64748b" }}>Section table unavailable. Run latest migrations and refresh.</div> : null}
+        {loading ? <div style={{ color: "var(--lf-text-secondary)" }}>Loading records...</div> : null}
+        {!loading && tableUnavailable ? <div style={{ color: "var(--lf-text-secondary)" }}>Section table unavailable. Run latest migrations and refresh.</div> : null}
         {!loading && !tableUnavailable && rows.length === 0 ? (
-          <div style={{ color: "#64748b", fontSize: 13, lineHeight: 1.45 }}>
+          <div style={{ color: "var(--lf-text-secondary)", fontSize: 13, lineHeight: 1.45 }}>
             No saved records yet. Use this section to keep your details together in your vault, then start with <strong>{addLabel.toLowerCase()}</strong>.
           </div>
         ) : null}
         {!loading && !tableUnavailable && rows.length > 0 && filteredRows.length === 0 ? (
-          <div style={{ color: "#64748b", fontSize: 13 }}>
+          <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
             No matching records. Try another title, detail, or attachment name.
           </div>
         ) : null}
@@ -685,12 +685,12 @@ export default function SectionWorkspace({
               <article key={row.id} style={selectedEntryId === row.id ? selectedRowCardStyle : rowCardStyle} data-record-id={row.id}>
                 <div style={{ display: "grid", gap: 3 }}>
                   <div style={{ fontWeight: 700 }}>{row.title || "Untitled record"}</div>
-                  <div style={{ color: "#64748b", fontSize: 13 }}>{row.summary || "No summary provided."}</div>
-                  <div style={{ color: "#94a3b8", fontSize: 12 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{row.summary || "No summary provided."}</div>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
                     Added {formatDate(row.created_at)} · {formatCurrency(row.estimated_value, "GBP")}
                   </div>
                   {extraFields.length > 0 ? (
-                    <div style={{ color: "#64748b", fontSize: 13, display: "grid", gap: 2 }}>
+                    <div style={{ color: "var(--lf-text-secondary)", fontSize: 13, display: "grid", gap: 2 }}>
                       {extraFields.map((field) => (
                         <div key={`${row.id}-${field.key}`}>
                           {field.label}: {row.extra_fields[field.key] || "Not set"}
@@ -709,7 +709,7 @@ export default function SectionWorkspace({
                     />
                   ) : null}
                   {!directUploadsEnabled ? (
-                    <div style={{ color: "#64748b", fontSize: 13 }}>
+                    <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                       Parent asset required: attach documents from the relevant asset workspace.
                     </div>
                   ) : null}
@@ -855,18 +855,18 @@ function isPrintableMimeType(mimeType: string) {
 }
 
 const cardStyle: CSSProperties = {
-  border: "1px solid #e5e7eb",
+  border: "1px solid var(--lf-border)",
   borderRadius: 16,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   padding: 14,
   display: "grid",
   gap: 12,
 };
 
 const rowCardStyle: CSSProperties = {
-  border: "1px solid #eef2f7",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 12,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   padding: 12,
   display: "grid",
   gap: 10,
@@ -874,7 +874,7 @@ const rowCardStyle: CSSProperties = {
 
 const selectedRowCardStyle: CSSProperties = {
   ...rowCardStyle,
-  borderColor: "#2563eb",
+  borderColor: "var(--lf-focus)",
   boxShadow: "0 0 0 2px rgba(37, 99, 235, 0.12)",
 };
 
@@ -884,12 +884,12 @@ const fieldStyle: CSSProperties = {
 };
 
 const labelStyle: CSSProperties = {
-  color: "#64748b",
+  color: "var(--lf-text-secondary)",
   fontSize: 12,
 };
 
 const inputStyle: CSSProperties = {
-  border: "1px solid #d1d5db",
+  border: "1px solid var(--lf-border-input)",
   borderRadius: 10,
   padding: "9px 10px",
   fontSize: 14,
@@ -903,9 +903,9 @@ const textAreaStyle: CSSProperties = {
 };
 
 const primaryBtn: CSSProperties = {
-  border: "1px solid #111827",
-  background: "#111827",
-  color: "#fff",
+  border: "1px solid var(--lf-primary-bg)",
+  background: "var(--lf-primary-bg)",
+  color: "var(--lf-primary-text)",
   borderRadius: 10,
   padding: "8px 12px",
   fontSize: 13,
@@ -920,18 +920,18 @@ const linkedPanelChipStyle: CSSProperties = {
   width: "fit-content",
   marginTop: 8,
   borderRadius: 999,
-  border: "1px solid #cbd5e1",
-  background: "#f8fafc",
-  color: "#475569",
+  border: "1px solid var(--lf-border-input)",
+  background: "var(--lf-surface-page)",
+  color: "var(--lf-text-secondary)",
   padding: "4px 10px",
   fontSize: 12,
   fontWeight: 700,
 };
 
 const ghostBtn: CSSProperties = {
-  border: "1px solid #d1d5db",
-  background: "#fff",
-  color: "#111827",
+  border: "1px solid var(--lf-border-input)",
+  background: "var(--lf-surface-card)",
+  color: "var(--lf-text)",
   borderRadius: 10,
   padding: "8px 12px",
   fontSize: 13,
@@ -944,7 +944,7 @@ const ghostBtn: CSSProperties = {
 
 const dangerBtn: CSSProperties = {
   ...ghostBtn,
-  borderColor: "#fecaca",
-  color: "#991b1b",
+  borderColor: "var(--lf-status-rejected-bg)",
+  color: "var(--lf-status-rejected-text)",
   background: "#fff1f2",
 };

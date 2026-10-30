@@ -402,8 +402,8 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
             />
           </div>
         ) : null}
-        <p style={{ margin: 0, color: "#64748b" }}>{subtitle}</p>
-        <div style={{ color: "#64748b", fontSize: 13 }}>
+        <p style={{ margin: 0, color: "var(--lf-text-secondary)" }}>{subtitle}</p>
+        <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
           Files stay attached to the right record in your vault so trusted people can understand them when needed.
         </div>
         {viewer.mode === "linked" ? (
@@ -423,7 +423,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
             <Icon name="upload_file" size={18} />
             Link a document
           </div>
-          <div style={{ color: "#64748b", fontSize: 13 }}>
+          <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
             Choose the parent asset first, then drag in the file you want to attach.
           </div>
         </div>
@@ -514,7 +514,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
             />
             I confirm this file and the selected parent asset are correct before linking.
           </label>
-          {formError ? <div role="alert" style={{ color: "#b91c1c", fontSize: 12, fontWeight: 700 }}>{formError}</div> : null}
+          {formError ? <div role="alert" style={{ color: "var(--lf-destructive)", fontSize: 12, fontWeight: 700 }}>{formError}</div> : null}
         </UploadConfirmationPanel>
 
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -522,7 +522,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
             <Icon name="save" size={16} />
             {saving ? "Linking..." : "Link document"}
           </button>
-          {status ? <div style={{ color: "#475569", fontSize: 13, alignSelf: "center" }}>{status}</div> : null}
+          {status ? <div style={{ color: "var(--lf-text-secondary)", fontSize: 13, alignSelf: "center" }}>{status}</div> : null}
         </div>
       </div>
       </details>
@@ -555,9 +555,9 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
           </FormField>
         </div>
         {loading ? (
-          <div style={{ color: "#64748b", fontSize: 13 }}>Loading documents...</div>
+          <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>Loading documents...</div>
         ) : filteredDocuments.length === 0 ? (
-          <div style={{ color: "#64748b", fontSize: 13 }}>
+          <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
             {hasDocumentFilters ? "No linked documents match the current search or filters." : "No linked documents yet."}
           </div>
         ) : (
@@ -614,10 +614,10 @@ function getAssetWorkspaceHref(sectionKey: string, categoryKey: string) {
 }
 
 const workspaceCardStyle: CSSProperties = {
-  border: "1px solid #e2e8f0",
+  border: "1px solid var(--lf-border)",
   borderRadius: 16,
   padding: 14,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   display: "grid",
   gap: 12,
 };
@@ -628,18 +628,18 @@ const linkedPanelChipStyle: CSSProperties = {
   gap: 6,
   width: "fit-content",
   borderRadius: 999,
-  border: "1px solid #cbd5e1",
-  background: "#f8fafc",
-  color: "#475569",
+  border: "1px solid var(--lf-border-input)",
+  background: "var(--lf-surface-page)",
+  color: "var(--lf-text-secondary)",
   padding: "4px 10px",
   fontSize: 12,
   fontWeight: 700,
 };
 
 const primaryBtnStyle: CSSProperties = {
-  border: "1px solid #111827",
-  background: "#111827",
-  color: "#fff",
+  border: "1px solid var(--lf-primary-bg)",
+  background: "var(--lf-primary-bg)",
+  color: "var(--lf-primary-text)",
   borderRadius: 10,
   padding: "9px 12px",
   display: "inline-flex",
@@ -655,6 +655,6 @@ const confirmWrapStyle: CSSProperties = {
   alignItems: "center",
   gap: 8,
   fontSize: 13,
-  color: "#334155",
+  color: "var(--lf-text)",
   flexWrap: "wrap",
 };

@@ -41,7 +41,7 @@ export default function PropertyOverviewPage() {
         key: item.href, title: item.label, icon: item.icon, href: item.href, count: null, description: "Browse supporting files",
       }))} />
       ) : (
-        <div style={{ color: "#64748b", fontSize: 13 }}>
+        <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
           Property subsections are currently hidden by My Vault preferences. Re-enable them in Account / My Vault at any time.
         </div>
       )}

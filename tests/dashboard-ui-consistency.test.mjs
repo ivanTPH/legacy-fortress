@@ -42,7 +42,7 @@ test("dashboard uses authorised Version 3 area summaries and keeps live actions"
   assert.match(actionSummary, /lf-dashboard-action-summary-status/);
   assert.match(shellCss, /\.lf-main-content \{[\s\S]*max-width: none/);
   assert.match(shellCss, /\.lf-page-content \{[\s\S]*max-width: 960px/);
-  assert.match(shellCss, /\.lf-nav-item\.is-active \{[\s\S]*background: #FFFFFF/);
+  assert.match(shellCss, /\.lf-nav-item\.is-active \{[\s\S]*background: var\(--lf-surface-card\)/);
   assert.doesNotMatch(shellCss, /\.lf-nav-item\.is-active \{[^}]*linear-gradient/);
   assert.match(v3Overview, /aria-label="Vault areas"/);
   assert.doesNotMatch(v3Overview, /Your vault|Next steps|Action Centre/);

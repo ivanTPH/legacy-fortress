@@ -63,7 +63,7 @@ export default function LegalCategoryPage() {
   }, [category, viewer.targetOwnerUserId]);
 
   if (!category) {
-    return <div style={{ color: "#6b7280" }}>Unknown legal category.</div>;
+    return <div style={{ color: "var(--lf-text-secondary)" }}>Unknown legal category.</div>;
   }
 
   const associationAlert = getLegalLinkedContactDefinition(category.slug) && missingAssociationCount > 0 ? (
@@ -71,8 +71,8 @@ export default function LegalCategoryPage() {
       style={{
         border: "1px solid #fcd34d",
         borderRadius: 12,
-        background: "#fffbeb",
-        color: "#92400e",
+        background: "var(--lf-status-pending-bg)",
+        color: "var(--lf-status-pending-text)",
         fontSize: 13,
         padding: "10px 12px",
         marginBottom: 12,

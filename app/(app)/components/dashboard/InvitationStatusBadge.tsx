@@ -37,10 +37,10 @@ function getTone(status: ReturnType<typeof resolveInvitationBadgeState>) {
     case "success":
       return { border: "#a7f3d0", text: "#065f46", bg: "#ecfdf5" };
     case "danger":
-      return { border: "#fecaca", text: "#991b1b", bg: "#fef2f2" };
+      return { border: "var(--lf-status-rejected-bg)", text: "#991b1b", bg: "#fef2f2" };
     case "neutral":
-      return { border: "#e5e7eb", text: "#374151", bg: "#f9fafb" };
+      return { border: "var(--lf-border)", text: "#374151", bg: "#f9fafb" };
     default:
-      return { border: "#fde68a", text: "#92400e", bg: "#fffbeb" };
+      return { border: "var(--lf-status-pending-bg)", text: "#92400e", bg: "#fffbeb" };
   }
 }

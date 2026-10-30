@@ -18,8 +18,8 @@ export default function TestAssetModalPage() {
           border: "none",
           borderRadius: 10,
           padding: "12px 16px",
-          background: "#0f172a",
-          color: "#fff",
+          background: "var(--lf-primary-bg)",
+          color: "var(--lf-primary-text)",
           fontWeight: 600,
           cursor: "pointer",
         }}

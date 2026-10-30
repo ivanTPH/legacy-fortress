@@ -213,7 +213,7 @@ const metricsGridStyle: CSSProperties = {
 };
 
 const metricStyle: CSSProperties = {
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   border: "1px solid var(--lf-border)",
   borderRadius: 8,
   padding: 14,
@@ -229,7 +229,7 @@ const metricLabelStyle: CSSProperties = {
 };
 
 const panelStyle: CSSProperties = {
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   border: "1px solid var(--lf-border)",
   borderRadius: 8,
   padding: 16,
@@ -251,7 +251,7 @@ const opportunityGridStyle: CSSProperties = {
 };
 
 const opportunityTileStyle: CSSProperties = {
-  border: "1px solid #f1ece8",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 8,
   padding: 11,
   display: "grid",
@@ -264,7 +264,7 @@ const miniListStyle: CSSProperties = {
 };
 
 const miniRowStyle: CSSProperties = {
-  border: "1px solid #f1ece8",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 8,
   padding: 10,
   display: "flex",
@@ -276,8 +276,8 @@ const miniRowStyle: CSSProperties = {
 };
 
 const invalidFilterStyle: CSSProperties = {
-  background: "#fff",
-  border: "1px solid #e1d5cd",
+  background: "var(--lf-surface-card)",
+  border: "1px solid var(--lf-border)",
   borderRadius: 8,
   color: "var(--lf-bronze)",
   padding: 14,
@@ -300,7 +300,7 @@ const h2Style: CSSProperties = {
 const reportLinkStyle: CSSProperties = {
   textDecoration: "none",
   color: "var(--lf-text)",
-  border: "1px solid #f1ece8",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 8,
   padding: 12,
   display: "flex",

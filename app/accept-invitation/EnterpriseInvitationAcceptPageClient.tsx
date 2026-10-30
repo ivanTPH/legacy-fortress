@@ -172,8 +172,8 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(value));
 }
 
-const panelStyle = { display: "grid", gap: 8, border: "1px solid #dbe3ef", borderRadius: 8, padding: 12, background: "#f8fafc" };
+const panelStyle = { display: "grid", gap: 8, border: "1px solid var(--lf-border)", borderRadius: 8, padding: 12, background: "var(--lf-surface-page)" };
 const rowStyle = { display: "flex", gap: 8, flexWrap: "wrap" as const };
 const checkStyle = { display: "flex", gap: 8, alignItems: "flex-start", lineHeight: 1.45 };
-const privacyStyle = { margin: 0, color: "#334155", background: "#f1f5f9", border: "1px solid #dbe3ef", borderRadius: 6, padding: 10 };
-const alertStyle = { margin: 0, color: "#92400e", background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 6, padding: 10 };
+const privacyStyle = { margin: 0, color: "var(--lf-text)", background: "var(--lf-surface-subtle)", border: "1px solid var(--lf-border)", borderRadius: 6, padding: 10 };
+const alertStyle = { margin: 0, color: "var(--lf-status-pending-text)", background: "var(--lf-status-pending-bg)", border: "1px solid #fcd34d", borderRadius: 6, padding: 10 };

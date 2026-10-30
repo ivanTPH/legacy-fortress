@@ -196,9 +196,9 @@ function BillingPageContent() {
   return (
     <SettingsPageShell title="Subscription and billing" subtitle="Review owner plan status, subscription readiness, and billing controls in one place.">
       <SettingsCard title="Subscription overview" description="Review the current owner plan, live status labels, and the secure subscription-management entry point without exposing provider secrets in the client.">
-        {loading ? <div style={{ color: "#6b7280" }}>Loading...</div> : null}
+        {loading ? <div style={{ color: "var(--lf-text-secondary)" }}>Loading...</div> : null}
         {reason === "plan-limit" || reason === "invite-status" ? (
-          <div style={{ marginBottom: 14, padding: 12, border: "1px solid #fed7aa", borderRadius: 14, background: "#fff7ed", color: "#9a3412", fontSize: 13, display: "grid", gap: 4 }}>
+          <div style={{ marginBottom: 14, padding: 12, border: "1px solid var(--lf-status-pending-bg)", borderRadius: 14, background: "var(--lf-status-pending-bg)", color: "var(--lf-status-pending-text)", fontSize: 13, display: "grid", gap: 4 }}>
             <strong>{reason === "invite-status" ? "Invitation limit or delivery issue" : "Starter plan limit reached"}</strong>
             <span>
               {reason === "invite-status"
@@ -208,12 +208,12 @@ function BillingPageContent() {
           </div>
         ) : null}
 
-        <div style={{ display: "grid", gap: 10, marginBottom: 14, padding: 14, border: "1px solid #e5e7eb", borderRadius: 14, background: "#f8fafc" }}>
+        <div style={{ display: "grid", gap: 10, marginBottom: 14, padding: 14, border: "1px solid var(--lf-border)", borderRadius: 14, background: "var(--lf-surface-page)" }}>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             <span style={{ ...primaryBtn, cursor: "default" }}>{getOwnerPlanLabel(form.account_plan)}</span>
             <span style={{ ...inputStyle, cursor: "default", width: "auto", paddingInline: 12 }}>{formatPlanStatusLabel(form.plan_status)}</span>
           </div>
-          <div style={{ color: "#475569", fontSize: 14 }}>
+          <div style={{ color: "var(--lf-text-secondary)", fontSize: 14 }}>
             {getOwnerPlanSupportMessage({
               userId: "",
               accountPlan: form.account_plan,
@@ -226,19 +226,19 @@ function BillingPageContent() {
               billingCurrency: form.billing_currency || "GBP",
             })}
           </div>
-          <div style={{ color: "#64748b", fontSize: 13 }}>
+          <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
             Linked invitees stay separate from your owner subscription. Use the secure subscription controls below to upgrade or manage billing when entitlements change.
           </div>
         </div>
 
-        <div style={{ display: "grid", gap: 10, marginBottom: 14, padding: 14, border: "1px dashed #d8d1cc", borderRadius: 14, background: "#fffefd" }}>
+        <div style={{ display: "grid", gap: 10, marginBottom: 14, padding: 14, border: "1px dashed #d8d1cc", borderRadius: 14, background: "var(--lf-surface-card)" }}>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <strong style={{ color: "#1f1712" }}>Test subscription state</strong>
-            <span style={{ border: "1px solid #e7ded7", borderRadius: 999, background: "#f8f5f2", color: "#5b4a40", padding: "3px 8px", fontSize: 12, fontWeight: 700 }}>
+            <strong style={{ color: "var(--lf-text)" }}>Test subscription state</strong>
+            <span style={{ border: "1px solid #e7ded7", borderRadius: 999, background: "var(--lf-surface-page)", color: "#5b4a40", padding: "3px 8px", fontSize: 12, fontWeight: 700 }}>
               Safe test/admin controls
             </span>
           </div>
-          <div style={{ color: "#64748b", fontSize: 13, lineHeight: 1.45 }}>
+          <div style={{ color: "var(--lf-text-secondary)", fontSize: 13, lineHeight: 1.45 }}>
             These fields simulate plan status and limits for testing plan-gated flows. They do not process payments or expose payment provider data. The secure billing portal button only redirects when server-side Stripe settings are configured.
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10 }}>
@@ -331,16 +331,16 @@ function formatPlanStatusLabel(status: OwnerPlanStatus) {
 }
 
 const limitCardStyle = {
-  border: "1px solid #ece5df",
+  border: "1px solid var(--lf-border)",
   borderRadius: 12,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   padding: 12,
   display: "grid",
   gap: 4,
 } satisfies CSSProperties;
 
 const limitLabelStyle = {
-  color: "#64748b",
+  color: "var(--lf-text-secondary)",
   fontSize: 12,
   fontWeight: 700,
 } satisfies CSSProperties;

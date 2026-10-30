@@ -158,7 +158,7 @@ export default function AuthCallbackPage() {
               <Link className="lf-primary-btn" href="/sign-in">
                 Go to sign in
               </Link>
-              <Link className="lf-primary-btn" style={{ background: "#fff", color: "#111827", border: "1px solid #d1d5db" }} href="/sign-up">
+              <Link className="lf-primary-btn" style={{ background: "var(--lf-surface-card)", color: "var(--lf-text)", border: "1px solid var(--lf-border-input)" }} href="/sign-up">
                 Create account
               </Link>
             </div>

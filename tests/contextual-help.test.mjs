@@ -33,7 +33,7 @@ test("contextual help popover stays reusable, accessible, and mobile safe", () =
   assert.match(infoTip, /height: 22/);
   assert.match(infoTip, /border: 0/);
   assert.match(infoTip, /background: "#f4f2ef"/);
-  assert.match(infoTip, /color: "#111827"/);
+  assert.match(infoTip, /color: "var\(--lf-text\)"/);
   assert.match(infoTip, /fontWeight: 800/);
   assert.doesNotMatch(infoTip, /<Icon name="info"/);
   assert.match(infoTip, /width: "min\(280px, calc\(100vw - 32px\)\)"/);

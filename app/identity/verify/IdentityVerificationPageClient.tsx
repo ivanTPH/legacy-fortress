@@ -333,8 +333,8 @@ function labelise(value: string) {
 }
 
 const panelStyle = {
-  border: "1px solid #e2e8f0",
-  background: "#f8fafc",
+  border: "1px solid var(--lf-border)",
+  background: "var(--lf-surface-page)",
   borderRadius: 8,
   padding: 14,
   display: "grid",
@@ -342,8 +342,8 @@ const panelStyle = {
 } as const;
 
 const confirmationStyle = {
-  border: "1px solid #bbf7d0",
-  background: "#f0fdf4",
+  border: "1px solid var(--lf-status-approved-bg)",
+  background: "var(--lf-status-approved-bg)",
   borderRadius: 8,
   padding: 12,
   display: "grid",

@@ -248,7 +248,7 @@ const miniListStyle: CSSProperties = {
 };
 
 const miniRowStyle: CSSProperties = {
-  border: "1px solid #f1ece8",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 8,
   padding: 10,
   display: "flex",
@@ -289,7 +289,7 @@ const activityRowStyle: CSSProperties = {
   gridTemplateColumns: "auto minmax(0, 1fr)",
   alignItems: "start",
   gap: 9,
-  border: "1px solid #f1ece8",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 8,
   padding: "9px 10px",
   color: "var(--lf-text)",
@@ -305,7 +305,7 @@ const userManagementActionsStyle: CSSProperties = {
 const primaryCtaStyle: CSSProperties = {
   ...platformCtaStyle,
   background: "var(--lf-text)",
-  color: "#fff",
+  color: "var(--lf-primary-text)",
 };
 
 function activityDotStyle(tone: "default" | "success" | "warning" | "danger"): CSSProperties {

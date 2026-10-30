@@ -55,11 +55,11 @@ export default function LegalVaultPage() {
         <Link href="/legal/wills" style={ghostStyle}>Add legal document</Link>
       </div>
 
-      {status ? <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div> : null}
-      {loading ? <div style={{ color: "#6b7280" }}>Loading records...</div> : null}
+      {status ? <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{status}</div> : null}
+      {loading ? <div style={{ color: "var(--lf-text-secondary)" }}>Loading records...</div> : null}
 
       {!loading && rows.length === 0 ? (
-        <div style={{ color: "#6b7280" }}>No legal records yet.</div>
+        <div style={{ color: "var(--lf-text-secondary)" }}>No legal records yet.</div>
       ) : null}
 
       {!loading && rows.length > 0 ? (
@@ -68,7 +68,7 @@ export default function LegalVaultPage() {
             <article key={row.id} style={cardStyle}>
               <div>
                 <div style={{ fontWeight: 700 }}>{row.title || row.document_type || "Legal document"}</div>
-                <div style={{ color: "#64748b", fontSize: 13 }}>
+                <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                   {row.document_type || "Document"} · Added {formatDate(row.created_at)}
                 </div>
               </div>
@@ -105,9 +105,9 @@ function formatDate(value: string | null) {
 }
 
 const primaryStyle: CSSProperties = {
-  border: "1px solid #111827",
-  background: "#111827",
-  color: "#fff",
+  border: "1px solid var(--lf-primary-bg)",
+  background: "var(--lf-primary-bg)",
+  color: "var(--lf-primary-text)",
   borderRadius: 10,
   padding: "8px 12px",
   textDecoration: "none",
@@ -116,9 +116,9 @@ const primaryStyle: CSSProperties = {
 };
 
 const ghostStyle: CSSProperties = {
-  border: "1px solid #d1d5db",
-  background: "#fff",
-  color: "#111827",
+  border: "1px solid var(--lf-border-input)",
+  background: "var(--lf-surface-card)",
+  color: "var(--lf-text)",
   borderRadius: 10,
   padding: "8px 12px",
   textDecoration: "none",
@@ -127,10 +127,10 @@ const ghostStyle: CSSProperties = {
 };
 
 const cardStyle: CSSProperties = {
-  border: "1px solid #e5e7eb",
+  border: "1px solid var(--lf-border)",
   borderRadius: 12,
   padding: 12,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   display: "grid",
   gap: 10,
 };

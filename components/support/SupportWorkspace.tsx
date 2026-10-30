@@ -237,7 +237,7 @@ export default function SupportWorkspace() {
               <div style={wizardPanelStyle} className="lf-support-card">
                 <div style={{ display: "grid", gap: 4 }}>
                   <strong>{activeWizard.label}</strong>
-                  <span style={{ color: "#64748b", fontSize: 13 }}>
+                  <span style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     Step {activeWizardStep + 1} of {activeWizard.steps.length}
                   </span>
                   <span>{activeWizard.steps[activeWizardStep]}</span>
@@ -295,7 +295,7 @@ export default function SupportWorkspace() {
             </button>
           ) : null}
           {preferences.readAloudEnabled && !speechSupported ? (
-            <div style={{ color: "#92400e", fontSize: 12 }}>
+            <div style={{ color: "var(--lf-status-pending-text)", fontSize: 12 }}>
               Read aloud is unavailable in this browser, so the control stays hidden here.
             </div>
           ) : null}
@@ -315,7 +315,7 @@ export default function SupportWorkspace() {
         </div>
         <div style={gridStyle}>
           <label style={{ display: "grid", gap: 6 }}>
-            <span style={{ fontSize: 13, color: "#374151" }}>Request type</span>
+            <span style={{ fontSize: 13, color: "var(--lf-text)" }}>Request type</span>
             <select value={requestType} onChange={(event) => setRequestType(event.target.value)} style={inputStyle}>
               <option value="problem">Report a problem</option>
               <option value="callback">Request a callback</option>
@@ -324,7 +324,7 @@ export default function SupportWorkspace() {
             </select>
           </label>
           <label style={{ display: "grid", gap: 6 }}>
-            <span style={{ fontSize: 13, color: "#374151" }}>Subject</span>
+            <span style={{ fontSize: 13, color: "var(--lf-text)" }}>Subject</span>
             <input
               value={requestTitle}
               onChange={(event) => setRequestTitle(event.target.value)}
@@ -334,7 +334,7 @@ export default function SupportWorkspace() {
           </label>
         </div>
         <label style={{ display: "grid", gap: 6 }}>
-          <span style={{ fontSize: 13, color: "#374151" }}>Message</span>
+          <span style={{ fontSize: 13, color: "var(--lf-text)" }}>Message</span>
           <textarea
             value={requestBody}
             onChange={(event) => setRequestBody(event.target.value)}
@@ -359,9 +359,9 @@ export default function SupportWorkspace() {
 }
 
 const chatPanelStyle = {
-  border: "1px solid #e5e7eb",
+  border: "1px solid var(--lf-border)",
   borderRadius: 16,
-  background: "#f8fafc",
+  background: "var(--lf-surface-page)",
   padding: 14,
   display: "grid",
   gap: 10,
@@ -371,25 +371,25 @@ const assistantMessageStyle = {
   justifySelf: "start",
   maxWidth: "80%",
   borderRadius: 14,
-  background: "#ffffff",
-  border: "1px solid #dbe3eb",
+  background: "var(--lf-surface-card)",
+  border: "1px solid var(--lf-border)",
   padding: "10px 12px",
-  color: "#0f172a",
+  color: "var(--lf-text)",
 } as const;
 
 const userMessageStyle = {
   justifySelf: "end",
   maxWidth: "80%",
   borderRadius: 14,
-  background: "#111827",
+  background: "var(--lf-primary-bg)",
   padding: "10px 12px",
-  color: "#ffffff",
+  color: "var(--lf-primary-text)",
 } as const;
 
 const wizardPanelStyle = {
-  border: "1px solid #dbe3eb",
+  border: "1px solid var(--lf-border)",
   borderRadius: 16,
-  background: "#ffffff",
+  background: "var(--lf-surface-card)",
   padding: 14,
   display: "grid",
   gap: 12,
@@ -400,9 +400,9 @@ const wizardNoteStyle = {
   alignItems: "center",
   gap: 8,
   borderRadius: 999,
-  border: "1px solid #cbd5e1",
-  background: "#f8fafc",
-  color: "#334155",
+  border: "1px solid var(--lf-border-input)",
+  background: "var(--lf-surface-page)",
+  color: "var(--lf-text)",
   padding: "7px 10px",
   fontSize: 13,
 } as const;

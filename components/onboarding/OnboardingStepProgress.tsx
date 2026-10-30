@@ -7,11 +7,11 @@ export default function OnboardingStepProgress({ currentStep }: { currentStep: O
 
   return (
     <div style={{ display: "grid", gap: 8 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6b7280" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--lf-text-secondary)" }}>
         <span>Onboarding progress</span>
         <span>{progress}%</span>
       </div>
-      <div style={{ width: "100%", height: 8, borderRadius: 999, background: "#e5e7eb", overflow: "hidden" }}>
+      <div style={{ width: "100%", height: 8, borderRadius: 999, background: "var(--lf-surface-subtle)", overflow: "hidden" }}>
         <div style={{ width: `${progress}%`, height: "100%", background: "linear-gradient(90deg, #2563eb, #0ea5a4)" }} />
       </div>
     </div>

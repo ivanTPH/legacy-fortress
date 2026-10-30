@@ -61,11 +61,11 @@ export default function LinkedFortressesPage() {
             <Link key={fortress.grantId} href={`/linked-fortresses/${fortress.grantId}`} style={cardLinkStyle}>
               <div style={{ display: "grid", gap: 3, minWidth: 0 }}>
                 <strong>{fortress.ownerName}&apos;s Fortress</strong>
-                <span style={{ color: "#475569", fontSize: 13 }}>{getRoleLabel(fortress.role)}</span>
+                <span style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{getRoleLabel(fortress.role)}</span>
               </div>
               <div style={{ display: "grid", gap: 3, textAlign: "right" }}>
                 <strong>{getLinkedFortressAccessLabel(fortress)}</strong>
-                <span style={{ color: "#64748b", fontSize: 12 }}>{fortress.activationStatus === "active" || fortress.activationStatus === "verified" ? "Linked" : "Connection in progress"}</span>
+                <span style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>{fortress.activationStatus === "active" || fortress.activationStatus === "verified" ? "Linked" : "Connection in progress"}</span>
               </div>
             </Link>
           ))}
@@ -81,9 +81,9 @@ const cardLinkStyle = {
   gap: 12,
   alignItems: "center",
   padding: "14px 16px",
-  border: "1px solid #e2e8f0",
+  border: "1px solid var(--lf-border)",
   borderRadius: 10,
-  color: "#0f172a",
+  color: "var(--lf-text)",
   textDecoration: "none",
-  background: "#fff",
+  background: "var(--lf-surface-card)",
 };

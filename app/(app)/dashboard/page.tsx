@@ -1446,8 +1446,8 @@ const legalSummary = useMemo(() => {
               <Icon name="supervisor_account" size={16} />
             </span>
             <span style={{ display: "grid", gap: 3, minWidth: 0 }}>
-              <strong style={{ color: "#1f1712" }}>Executor details</strong>
-              <span style={{ color: "#64748b", fontSize: 13 }}>
+              <strong style={{ color: "var(--lf-text)" }}>Executor details</strong>
+              <span style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                 {dashboardState.legalReadiness.executorSummary.name ?? "No executor added yet"} · Invite {dashboardState.legalReadiness.executorSummary.inviteStatus}
               </span>
             </span>
@@ -1458,8 +1458,8 @@ const legalSummary = useMemo(() => {
               {executorRows.map((contactRow) => (
                 <div key={contactRow.id} style={miniStatusRowStyle}>
                   <span style={{ display: "grid", gap: 2, minWidth: 0 }}>
-                    <strong style={{ fontSize: 13, color: "#1f2937" }}>{contactRow.name}</strong>
-                    <span style={{ color: "#64748b", fontSize: 12 }}>
+                    <strong style={{ fontSize: 13, color: "var(--lf-text)" }}>{contactRow.name}</strong>
+                    <span style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
                       {formatDashboardContactStatus(contactRow.status)} · {contactRow.invite.detail}
                     </span>
                   </span>
@@ -1503,8 +1503,8 @@ const legalSummary = useMemo(() => {
               <Icon name="folder_open" size={16} />
             </span>
             <span style={{ display: "grid", gap: 3, minWidth: 0 }}>
-              <strong style={{ color: "#1f1712" }}>Document readiness</strong>
-              <span style={{ color: "#64748b", fontSize: 13 }}>
+              <strong style={{ color: "var(--lf-text)" }}>Document readiness</strong>
+              <span style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                 Will: {dashboardState.legalReadiness.documentSummary.will} · ID: {dashboardState.legalReadiness.documentSummary.identityDocument} · Financial/property: {dashboardState.legalReadiness.documentSummary.financialOrPropertyDocuments} · Wishes: {dashboardState.legalReadiness.documentSummary.supportingLegalInfo}
               </span>
             </span>
@@ -1554,8 +1554,8 @@ const legalSummary = useMemo(() => {
                 <Icon name={item.complete ? "check" : "add"} size={16} />
               </span>
               <span style={{ display: "grid", gap: 3, minWidth: 0 }}>
-                <strong style={{ color: "#1f1712" }}>{item.label}</strong>
-                <span style={{ color: "#64748b", fontSize: 12 }}>{item.status}</span>
+                <strong style={{ color: "var(--lf-text)" }}>{item.label}</strong>
+                <span style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>{item.status}</span>
               </span>
             </div>
           ))}
@@ -1635,16 +1635,16 @@ const legalSummary = useMemo(() => {
             <strong>Review subscription</strong>
           </button>
         ) : (
-          <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div>
+          <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{status}</div>
         )
       ) : null}
-      {loading ? <div style={{ color: "#6b7280" }}>Loading dashboard summary...</div> : null}
+      {loading ? <div style={{ color: "var(--lf-text-secondary)" }}>Loading dashboard summary...</div> : null}
       {devBankTraceEnabled ? (
         <section
           style={{
             border: "1px dashed #f59e0b",
             borderRadius: 12,
-            background: "#fff7ed",
+            background: "var(--lf-status-pending-bg)",
             padding: 12,
             display: "grid",
             gap: 10,
@@ -1678,7 +1678,7 @@ const legalSummary = useMemo(() => {
             </span>
             <span style={{ display: "grid", gap: 3, minWidth: 0 }}>
               <span style={commandEyebrowStyle}>Why this matters</span>
-              <strong style={{ color: "#1f1712" }}>{reviewPanel.title}</strong>
+              <strong style={{ color: "var(--lf-text)" }}>{reviewPanel.title}</strong>
             </span>
           </div>
           <p style={commandDescriptionStyle}>{reviewPanel.description}</p>
@@ -1704,7 +1704,7 @@ function ReadinessSnapshot({ label, value }: { label: string; value: string }) {
   return (
     <div style={readinessSnapshotStyle}>
       <span style={commandEyebrowStyle}>{label}</span>
-      <strong style={{ color: "#1f1712", fontSize: 14 }}>{value}</strong>
+      <strong style={{ color: "var(--lf-text)", fontSize: 14 }}>{value}</strong>
     </div>
   );
 }
@@ -1716,8 +1716,8 @@ function ReadinessUploadAction({ label, detail, href }: { label: string; detail:
         <Icon name="upload_file" size={16} />
       </span>
       <span style={{ display: "grid", gap: 3, minWidth: 0 }}>
-        <strong style={{ color: "#1f1712" }}>{label}</strong>
-        <span style={{ color: "#64748b", fontSize: 12 }}>{detail}</span>
+        <strong style={{ color: "var(--lf-text)" }}>{label}</strong>
+        <span style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>{detail}</span>
       </span>
       <Icon name="arrow_forward" size={15} />
     </a>
@@ -3408,9 +3408,9 @@ const overviewIconStyle = {
   width: 28,
   height: 28,
   borderRadius: 10,
-  background: "#f7f3f0",
-  border: "1px solid #eadfd8",
-  color: "#3a2118",
+  background: "var(--lf-surface-page)",
+  border: "1px solid var(--lf-border)",
+  color: "var(--lf-text)",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -3418,10 +3418,10 @@ const overviewIconStyle = {
 } satisfies CSSProperties;
 
 const planLimitStatusButtonStyle = {
-  border: "1px solid #fed7aa",
+  border: "1px solid var(--lf-status-pending-bg)",
   borderRadius: 12,
-  background: "#fff7ed",
-  color: "#9a3412",
+  background: "var(--lf-status-pending-bg)",
+  color: "var(--lf-status-pending-text)",
   padding: "10px 12px",
   display: "flex",
   alignItems: "center",
@@ -3441,10 +3441,10 @@ const commandCardHeaderStyle = {
 
 function commandIconStyle(tone: DashboardReviewPanel["tone"] | ContactInviteDisplay["tone"] = "default"): CSSProperties {
   const styles = {
-    default: { background: "#f7f3f0", color: "#3a2118", border: "1px solid #eadfd8" },
-    warning: { background: "#fff7ed", color: "#9a3412", border: "1px solid #fed7aa" },
-    success: { background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0" },
-    danger: { background: "#fef2f2", color: "#991b1b", border: "1px solid #fecaca" },
+    default: { background: "var(--lf-surface-page)", color: "var(--lf-text)", border: "1px solid var(--lf-border)" },
+    warning: { background: "var(--lf-status-pending-bg)", color: "var(--lf-status-pending-text)", border: "1px solid var(--lf-status-pending-bg)" },
+    success: { background: "var(--lf-status-approved-bg)", color: "var(--lf-status-approved-text)", border: "1px solid var(--lf-status-approved-bg)" },
+    danger: { background: "var(--lf-status-rejected-bg)", color: "var(--lf-status-rejected-text)", border: "1px solid var(--lf-status-rejected-bg)" },
   }[tone ?? "default"];
 
   return {
@@ -3460,7 +3460,7 @@ function commandIconStyle(tone: DashboardReviewPanel["tone"] | ContactInviteDisp
 }
 
 const commandEyebrowStyle = {
-  color: "#64748b",
+  color: "var(--lf-text-secondary)",
   fontSize: 11,
   fontWeight: 800,
   letterSpacing: 0,
@@ -3469,23 +3469,23 @@ const commandEyebrowStyle = {
 
 const commandDescriptionStyle = {
   margin: 0,
-  color: "#475569",
+  color: "var(--lf-text-secondary)",
   fontSize: 13,
   lineHeight: 1.45,
 } satisfies CSSProperties;
 
 const trustCueStyle = {
   borderRadius: 10,
-  background: "#f8f5f2",
+  background: "var(--lf-surface-page)",
   color: "#5b4a40",
   padding: "8px 10px",
   fontSize: 12,
 } satisfies CSSProperties;
 
 const quickFormStyle = {
-  border: "1px solid #ece5df",
+  border: "1px solid var(--lf-border)",
   borderRadius: 12,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   padding: 14,
   display: "grid",
   gap: 12,
@@ -3503,10 +3503,10 @@ const quickFormActionWrapStyle = {
 } satisfies CSSProperties;
 
 const quickFormErrorStyle = {
-  border: "1px solid #fecaca",
+  border: "1px solid var(--lf-status-rejected-bg)",
   borderRadius: 10,
-  background: "#fef2f2",
-  color: "#991b1b",
+  background: "var(--lf-status-rejected-bg)",
+  color: "var(--lf-status-rejected-text)",
   padding: "8px 10px",
   fontSize: 13,
   fontWeight: 700,
@@ -3516,7 +3516,7 @@ const primaryCommandButtonStyle = {
   border: "1px solid #2b201b",
   borderRadius: 10,
   background: "#2b201b",
-  color: "#fff",
+  color: "var(--lf-primary-text)",
   minHeight: 40,
   padding: "0 14px",
   display: "inline-flex",
@@ -3531,8 +3531,8 @@ const primaryCommandButtonStyle = {
 const ghostCommandButtonStyle = {
   border: "1px solid #d9d1cb",
   borderRadius: 10,
-  background: "#fff",
-  color: "#3a2118",
+  background: "var(--lf-surface-card)",
+  color: "var(--lf-text)",
   minHeight: 40,
   padding: "0 14px",
   display: "inline-flex",
@@ -3551,15 +3551,15 @@ const miniStatusRowStyle = {
   border: "1px solid #f0e9e3",
   borderRadius: 10,
   padding: 10,
-  background: "#fffefd",
+  background: "var(--lf-surface-card)",
 } satisfies CSSProperties;
 
 function statusBadgeStyle(tone: ContactInviteDisplay["tone"], mode: "button" | "disabled" | "status" = "button"): CSSProperties {
   const palette = {
-    default: { background: "#f8f5f2", color: "#3a2118", border: "1px solid #e7ded7" },
-    warning: { background: "#fff7ed", color: "#9a3412", border: "1px solid #fed7aa" },
-    success: { background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0" },
-    danger: { background: "#fef2f2", color: "#991b1b", border: "1px solid #fecaca" },
+    default: { background: "var(--lf-surface-page)", color: "var(--lf-text)", border: "1px solid #e7ded7" },
+    warning: { background: "var(--lf-status-pending-bg)", color: "var(--lf-status-pending-text)", border: "1px solid var(--lf-status-pending-bg)" },
+    success: { background: "var(--lf-status-approved-bg)", color: "var(--lf-status-approved-text)", border: "1px solid var(--lf-status-approved-bg)" },
+    danger: { background: "var(--lf-status-rejected-bg)", color: "var(--lf-status-rejected-text)", border: "1px solid var(--lf-status-rejected-bg)" },
   }[tone];
 
   return {
@@ -3584,7 +3584,7 @@ function statusBadgeStyle(tone: ContactInviteDisplay["tone"], mode: "button" | "
 const compactEmptyStateStyle = {
   border: "1px dashed #d8d1cc",
   borderRadius: 12,
-  background: "#fffefd",
+  background: "var(--lf-surface-card)",
   color: "#6f645d",
   padding: 12,
   fontSize: 13,
@@ -3593,10 +3593,10 @@ const compactEmptyStateStyle = {
 
 function reviewPanelStyle(tone: DashboardReviewPanel["tone"] = "default"): CSSProperties {
   const palette = tone === "success"
-    ? { border: "#bbf7d0", background: "#f7fbf7" }
+    ? { border: "var(--lf-status-approved-bg)", background: "#f7fbf7" }
     : tone === "warning"
-      ? { border: "#fed7aa", background: "#fffaf4" }
-      : { border: "#d7cabe", background: "#fff" };
+      ? { border: "var(--lf-status-pending-bg)", background: "#fffaf4" }
+      : { border: "#d7cabe", background: "var(--lf-surface-card)" };
 
   return {
     border: `1px solid ${palette.border}`,
@@ -3615,18 +3615,18 @@ const readinessSnapshotGridStyle = {
 } satisfies CSSProperties;
 
 const readinessSnapshotStyle = {
-  border: "1px solid #ece5df",
+  border: "1px solid var(--lf-border)",
   borderRadius: 12,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   padding: 12,
   display: "grid",
   gap: 4,
 } satisfies CSSProperties;
 
 const readinessActionPanelStyle = {
-  border: "1px solid #ece5df",
+  border: "1px solid var(--lf-border)",
   borderRadius: 14,
-  background: "#fffefd",
+  background: "var(--lf-surface-card)",
   padding: 14,
   display: "grid",
   gap: 12,
@@ -3647,11 +3647,11 @@ const readinessUploadGridStyle = {
 
 const readinessUploadActionStyle = {
   textDecoration: "none",
-  border: "1px solid #ece5df",
+  border: "1px solid var(--lf-border)",
   borderRadius: 12,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   padding: 12,
-  color: "#1f1712",
+  color: "var(--lf-text)",
   display: "grid",
   gridTemplateColumns: "auto minmax(0, 1fr) auto",
   alignItems: "center",
@@ -3670,7 +3670,7 @@ function readinessItemStyle(complete: boolean): CSSProperties {
     borderRadius: 12,
     background: complete ? "#f7fbf7" : "#fff",
     padding: 12,
-    color: "#1f1712",
+    color: "var(--lf-text)",
     display: "grid",
     gridTemplateColumns: "auto minmax(0, 1fr)",
     alignItems: "center",
@@ -3699,7 +3699,7 @@ function readinessItemIconStyle(complete: boolean): CSSProperties {
 const searchResultsPanelStyle = {
   border: "1px solid #e5e0dc",
   borderRadius: 16,
-  background: "#fffefd",
+  background: "var(--lf-surface-card)",
   padding: 16,
   display: "grid",
   gap: 12,
@@ -3710,14 +3710,14 @@ const searchEmptyStateStyle = {
   borderRadius: 14,
   padding: 14,
   color: "#6f645d",
-  background: "#fffefd",
+  background: "var(--lf-surface-card)",
 } satisfies CSSProperties;
 
 const searchResetButtonStyle = {
   border: "1px solid #ded6d1",
   borderRadius: 999,
-  background: "#fff",
-  color: "#3a2118",
+  background: "var(--lf-surface-card)",
+  color: "var(--lf-text)",
   padding: "7px 12px",
   fontSize: 13,
   fontWeight: 700,
@@ -3727,10 +3727,10 @@ const searchResetButtonStyle = {
 
 const searchResultStyle = {
   textDecoration: "none",
-  color: "#0f172a",
-  border: "1px solid #e8e1dc",
+  color: "var(--lf-text)",
+  border: "1px solid var(--lf-border)",
   borderRadius: 14,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   padding: 12,
   display: "flex",
   alignItems: "center",
@@ -3741,12 +3741,12 @@ const searchResultIconStyle = {
   width: 32,
   height: 32,
   borderRadius: 10,
-  background: "#f7f3f0",
-  border: "1px solid #eadfd8",
+  background: "var(--lf-surface-page)",
+  border: "1px solid var(--lf-border)",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  color: "#3a2118",
+  color: "var(--lf-text)",
   flexShrink: 0,
 } satisfies CSSProperties;
 

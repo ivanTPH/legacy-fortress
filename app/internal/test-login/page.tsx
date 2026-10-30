@@ -158,8 +158,8 @@ const gridStyle = {
 } as const;
 
 const disabledPanelStyle = {
-  background: "#fff7ed",
-  border: "1px solid #fed7aa",
+  background: "var(--lf-status-pending-bg)",
+  border: "1px solid var(--lf-status-pending-bg)",
   borderRadius: 12,
   padding: 18,
   marginBottom: 24,
@@ -243,7 +243,7 @@ const primaryButtonStyle = {
   border: 0,
   borderRadius: 10,
   background: "var(--lf-bronze-strong)",
-  color: "#fff",
+  color: "var(--lf-primary-text)",
   minHeight: 40,
   padding: "0 16px",
   fontWeight: 800,
@@ -264,7 +264,7 @@ const secondaryLinkStyle = {
 
 const statusStyle = {
   margin: 0,
-  color: "#166534",
+  color: "var(--lf-status-approved-text)",
   fontSize: 13,
   fontWeight: 800,
 } as const;

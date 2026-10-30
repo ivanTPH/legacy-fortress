@@ -267,7 +267,7 @@ export default function FinancialVaultPage() {
     <div style={{ display: "grid", gap: 16, maxWidth: 1040 }}>
       <div>
         <h1 style={{ fontSize: 26, margin: 0 }}>Financial Vault</h1>
-        <p style={{ marginTop: 6, color: "#6b7280" }}>
+        <p style={{ marginTop: 6, color: "var(--lf-text-secondary)" }}>
           Record bank accounts, savings, pensions, investments and liabilities so key financial
           information is easy to find.
         </p>
@@ -279,7 +279,7 @@ export default function FinancialVaultPage() {
         currency={displayCurrency}
       />
       {!showAccountForm && status ? (
-        <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div>
+        <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{status}</div>
       ) : null}
       
    <section style={card}>
@@ -292,9 +292,9 @@ export default function FinancialVaultPage() {
         </div>
 
         {loading ? (
-          <div style={{ color: "#6b7280" }}>Loading...</div>
+          <div style={{ color: "var(--lf-text-secondary)" }}>Loading...</div>
         ) : items.length === 0 ? (
-          <div style={{ color: "#6b7280" }}>No financial records added yet.</div>
+          <div style={{ color: "var(--lf-text-secondary)" }}>No financial records added yet.</div>
         ) : (
           <div style={{ display: "grid", gap: 10 }}>
             {items.map((a) => (
@@ -305,10 +305,10 @@ export default function FinancialVaultPage() {
                     <div style={{ fontWeight: 800 }}>
                       {a.account_name || "(Unnamed account)"}
                     </div>
-                    <div style={{ color: "#6b7280", fontSize: 13, marginTop: 2 }}>
+                    <div style={{ color: "var(--lf-text-secondary)", fontSize: 13, marginTop: 2 }}>
                       {getBankLogoFromRecord({ bank_name: a.provider, provider: a.provider }).bankLabel}
                     </div>
-                    <div style={{ color: "#6b7280", fontSize: 13, marginTop: 2 }}>
+                    <div style={{ color: "var(--lf-text-secondary)", fontSize: 13, marginTop: 2 }}>
                       {[
                         a.account_type === "other" ? a.custom_account_type || "Other account" : labelForType(a.account_type),
                         a.account_subtype
@@ -325,13 +325,13 @@ export default function FinancialVaultPage() {
                         .join(" · ")}
                     </div>
                     {a.account_number_last4 ? (
-                      <div style={{ color: "#9ca3af", fontSize: 12, marginTop: 4 }}>
+                      <div style={{ color: "var(--lf-text-secondary)", fontSize: 12, marginTop: 4 }}>
                         ****{a.account_number_last4}
                       </div>
                     ) : null}
                   </div>
                   {a.notes ? (
-                    <div style={{ color: "#6b7280", fontSize: 13, marginTop: 6 }}>{a.notes}</div>
+                    <div style={{ color: "var(--lf-text-secondary)", fontSize: 13, marginTop: 6 }}>{a.notes}</div>
                   ) : null}
                 </div>
 
@@ -520,11 +520,11 @@ export default function FinancialVaultPage() {
               </button>
             )}
 
-            {status && <span style={{ color: "#6b7280", fontSize: 13 }}>{status}</span>}
+            {status && <span style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{status}</span>}
           </div>
 
           {status.includes("table may not exist") && (
-            <div style={{ color: "#6b7280", fontSize: 13 }}>
+            <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
               The layout is ready. Next we can create the underlying Supabase table if needed.
             </div>
           )}
@@ -540,16 +540,16 @@ export default function FinancialVaultPage() {
 
   <div
     style={{
-      border: "1px dashed #d1d5db",
+      border: "1px dashed var(--lf-border-input)",
       borderRadius: 14,
       padding: 16,
-      background: "#f9fafb",
+      background: "var(--lf-surface-page)",
       display: "grid",
       gap: 10,
     }}
   >
     <label style={{ display: "grid", gap: 8 }}>
-      <span style={{ fontSize: 13, color: "#374151" }}>
+      <span style={{ fontSize: 13, color: "var(--lf-text)" }}>
         Choose a local PDF, JPG or PNG reference
       </span>
       <input
@@ -725,7 +725,7 @@ export default function FinancialVaultPage() {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label style={{ display: "grid", gap: 6 }}>
-      <span style={{ fontSize: 13, color: "#374151" }}>{label}</span>
+      <span style={{ fontSize: 13, color: "var(--lf-text)" }}>{label}</span>
       {children}
     </label>
   );
@@ -760,10 +760,10 @@ const twoCol: React.CSSProperties = {
 };
 
 const card: React.CSSProperties = {
-  border: "1px solid #e5e7eb",
+  border: "1px solid var(--lf-border)",
   borderRadius: 16,
   padding: 16,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   display: "grid",
   gap: 12,
 };
@@ -782,7 +782,7 @@ const cardTitle: React.CSSProperties = {
 
 const cardText: React.CSSProperties = {
   margin: 0,
-  color: "#6b7280",
+  color: "var(--lf-text-secondary)",
   fontSize: 14,
   lineHeight: 1.5,
 };
@@ -790,9 +790,9 @@ const cardText: React.CSSProperties = {
 const softNote: React.CSSProperties = {
   padding: 12,
   borderRadius: 12,
-  background: "#f9fafb",
-  border: "1px solid #e5e7eb",
-  color: "#6b7280",
+  background: "var(--lf-surface-page)",
+  border: "1px solid var(--lf-border)",
+  color: "var(--lf-text-secondary)",
   fontSize: 13,
   lineHeight: 1.5,
 };
@@ -800,10 +800,10 @@ const softNote: React.CSSProperties = {
 const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: 12,
-  border: "1px solid #e5e7eb",
+  border: "1px solid var(--lf-border)",
   borderRadius: 12,
   fontSize: 15,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
 };
 
 const rowStyle: React.CSSProperties = {
@@ -829,8 +829,8 @@ const ghostBtn: React.CSSProperties = {
 const primaryBtn: React.CSSProperties = {
   padding: "10px 12px",
   borderRadius: 10,
-  border: "1px solid #111827",
-  background: "#111827",
+  border: "1px solid var(--lf-primary-bg)",
+  background: "var(--lf-primary-bg)",
   color: "white",
   cursor: "pointer",
   fontSize: 13,

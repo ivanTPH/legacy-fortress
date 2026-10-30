@@ -324,7 +324,7 @@ const metricsGridStyle: CSSProperties = {
 };
 
 const metricStyle: CSSProperties = {
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   border: "1px solid var(--lf-border)",
   borderRadius: 8,
   padding: 14,
@@ -346,7 +346,7 @@ const twoColumnStyle: CSSProperties = {
 };
 
 const panelStyle: CSSProperties = {
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   border: "1px solid var(--lf-border)",
   borderRadius: 8,
   padding: 16,
@@ -355,8 +355,8 @@ const panelStyle: CSSProperties = {
 };
 
 const invalidFilterStyle: CSSProperties = {
-  background: "#fff",
-  border: "1px solid #e1d5cd",
+  background: "var(--lf-surface-card)",
+  border: "1px solid var(--lf-border)",
   borderRadius: 8,
   color: "var(--lf-bronze)",
   padding: 14,
@@ -379,7 +379,7 @@ const h2Style: CSSProperties = {
 const infoStyle: CSSProperties = {
   display: "grid",
   gap: 4,
-  borderBottom: "1px solid #f1ece8",
+  borderBottom: "1px solid var(--lf-divider)",
   paddingBottom: 9,
 };
 
@@ -418,7 +418,7 @@ function opportunityCardStyle(level: ClientOpportunityScore["scoreLevel"]): CSSP
   return {
     border: level === "blocked" ? "1px solid #fecaca" : level === "high" ? "1px solid #e1d5cd" : "1px solid var(--lf-border)",
     borderRadius: 8,
-    background: "#fff",
+    background: "var(--lf-surface-card)",
     padding: 12,
     display: "grid",
     gap: 6,
@@ -429,7 +429,7 @@ function signalCardStyle(severity: ClientInsightSeverity): CSSProperties {
   return {
     border: severity === "critical" ? "1px solid #fecaca" : severity === "high" ? "1px solid #e1d5cd" : "1px solid var(--lf-border)",
     borderRadius: 8,
-    background: "#fff",
+    background: "var(--lf-surface-card)",
     padding: 12,
     display: "grid",
     gap: 6,
@@ -437,7 +437,7 @@ function signalCardStyle(severity: ClientInsightSeverity): CSSProperties {
 }
 
 const restrictedCardStyle: CSSProperties = {
-  border: "1px solid #e1d5cd",
+  border: "1px solid var(--lf-border)",
   borderRadius: 8,
   background: "var(--lf-surface-muted)",
   padding: 12,
@@ -490,7 +490,7 @@ const thStyle: CSSProperties = {
 
 const tdStyle: CSSProperties = {
   padding: "10px 11px",
-  borderBottom: "1px solid #f1ece8",
+  borderBottom: "1px solid var(--lf-divider)",
   whiteSpace: "nowrap",
 };
 
@@ -498,5 +498,5 @@ const emptyTableCellStyle: CSSProperties = {
   padding: 18,
   color: "var(--lf-text-soft)",
   textAlign: "center",
-  borderBottom: "1px solid #f1ece8",
+  borderBottom: "1px solid var(--lf-divider)",
 };

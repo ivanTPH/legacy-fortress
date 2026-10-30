@@ -68,7 +68,7 @@ export default function MarketingPreferencePage() {
   return (
     <SettingsPageShell title="Marketing Preference" subtitle="Control whether product and campaign updates are sent to your account contacts.">
       <SettingsCard title="Marketing consent" description="You can update this at any time.">
-        {loading ? <div style={{ color: "#6b7280" }}>Loading...</div> : null}
+        {loading ? <div style={{ color: "var(--lf-text-secondary)" }}>Loading...</div> : null}
         <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <input type="checkbox" checked={marketingAllowed} onChange={(e) => setMarketingAllowed(e.target.checked)} />
           <span style={{ fontSize: 14 }}>Allow marketing emails and product offers</span>
