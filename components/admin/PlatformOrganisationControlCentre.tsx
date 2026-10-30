@@ -291,7 +291,7 @@ function availableFor(org: Organisation, licences: Licence[]) { return licences.
 function sentence(value: string) { const text = String(value || "").replace(/_/g, " ").toLowerCase(); return text.charAt(0).toUpperCase() + text.slice(1); }
 function pluralType(type: string) { const map: Record<string, string> = { employer: "Employers", law_firm: "Law firms", wealth_manager: "Advisers", insurer: "Insurers", funeral_provider: "Funeral providers", employee_benefit_provider: "Benefit providers", enterprise_reseller: "Resellers", other: "Other" }; return map[type] ?? sentence(type); }
 function labelise(value: string) { return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }
-function formatDate(value: string) { if (!value) return "Not available"; return new Date(value).toLocaleDateString("en-GB"); }
+function formatDate(value: string) { if (!value) return "Not available"; return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(value)); }
 function nextYearDate() { const next = new Date(); next.setFullYear(next.getFullYear() + 1); return next.toISOString().slice(0, 10); }
 function badgeStatus(value: string): "Active" | "Suspended" | "Pending" | "Restricted" | "Blocked" | "High" | "Urgent" | "Normal" | "Review" {
   if (value === "active") return "Active";

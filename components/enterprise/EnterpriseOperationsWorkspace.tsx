@@ -1508,7 +1508,7 @@ function renderReports(
           <tbody>
             {portfolio.reports.map((report) => (
               <tr key={report.type}>
-                <td><span className="lf-admin-cell-title">{report.label}</span></td>
+                <td><span className="lf-admin-cell-title">{report.label.charAt(0) + report.label.slice(1).toLowerCase()}</span></td>
                 <td>{REPORT_DESCRIPTIONS[report.type] ?? labelise(report.aggregation)}</td>
                 <td>{report.minimumCohort} people</td>
                 <td>{report.exportAllowed ? "CSV" : "View only"}</td>
@@ -2038,7 +2038,7 @@ function normalizeEnterpriseTab(value: string | null): EnterpriseTab | null {
 
 function formatDate(value: string | null) {
   if (!value) return "Not set";
-  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
+  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(value));
 }
 
 function parseBulkRows(value: string) {
