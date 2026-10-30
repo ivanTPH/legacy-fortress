@@ -1211,6 +1211,8 @@ function buildPlatformBreadcrumbs(section: AdminControlPlaneSection, resourceId:
   return crumbs;
 }
 
+const MEASURE_STATUS_LABEL: Record<string, string> = { ok: "Healthy", warning: "Attention", error: "Problem", unavailable: "Not measured" };
+
 function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | null, verification: VerificationItem[], probate: ProbateCase[], _portfolio: EnterprisePortfolio | null, capabilities: string[]) {
   const canVerify = capabilities.includes("verification:read");
   const canViewInvitations = capabilities.includes("support:read");
@@ -1242,7 +1244,7 @@ function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | n
           columns={[
             { key: "metric", header: "Measure", render: (metric) => <Link href={metricDestination(metric.key)} className="lf-admin-measure-link">{metric.label}<small>{metric.definition}</small></Link> },
             { key: "value", header: "Count", render: (metric) => metric.available ? metric.value?.toLocaleString() : "–" },
-            { key: "status", header: "Status", render: (metric) => <AdminStatusBadge status={metric.status} /> },
+            { key: "status", header: "Status", render: (metric) => <AdminStatusBadge status={metric.status} label={MEASURE_STATUS_LABEL[String(metric.status).toLowerCase()]} /> },
           ]}
           rows={metrics}
           getRowKey={(metric) => metric.key}

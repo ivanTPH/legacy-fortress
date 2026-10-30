@@ -70,16 +70,16 @@ export default function AdminDataTable<T>({
   );
 }
 
-export function AdminStatusBadge({ status }: { status: string }) {
+export function AdminStatusBadge({ status, label }: { status: string; label?: string }) {
   const normalized = String(status || "unknown").toLowerCase();
-  const tone = normalized.includes("active") || normalized.includes("success") || normalized.includes("accepted")
+  const tone = normalized === "ok" || normalized === "healthy" || normalized.includes("active") || normalized.includes("success") || normalized.includes("accepted")
     ? "success"
-    : normalized.includes("pending") || normalized.includes("sent") || normalized.includes("review")
+    : normalized === "warning" || normalized === "attention" || normalized.includes("pending") || normalized.includes("sent") || normalized.includes("review")
       ? "warning"
-      : normalized.includes("revoked") || normalized.includes("inactive") || normalized.includes("failed")
+      : normalized === "error" || normalized === "critical" || normalized.includes("revoked") || normalized.includes("inactive") || normalized.includes("failed")
         ? "danger"
         : "neutral";
-  return <span className={`lf-admin-status-badge ${tone}`}>{String(status || "Unknown").replace(/_/g, " ")}</span>;
+  return <span className={`lf-admin-status-badge ${tone}`}>{label ?? String(status || "Unknown").replace(/_/g, " ")}</span>;
 }
 
 export function AdminMetricCard({
