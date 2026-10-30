@@ -776,6 +776,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
 
   function navigateBack() {
     closeNavigationState("item_select", false);
+    if (searchParams.has("asset") || searchParams.has("record")) { router.push(normalizedPathname); return; }
     router.push(breadcrumbs.length > 1 ? breadcrumbs[breadcrumbs.length - 2].path : "/dashboard");
   }
 
@@ -920,10 +921,12 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
   }, [pathname, resolvedViewerAccess.mode, viewerContextValue]);
 
   const normalizedPathname = normalizePath(pathname);
+  // A record opened from a list (?asset=) is one level below the list: back goes to the list.
+  const recordDetailOpen = (searchParams.has("asset") || searchParams.has("record")) && normalizedPathname !== "/dashboard";
   const topbarTitle = normalizedPathname === "/dashboard"
     ? "Home"
-    : currentNode?.label ?? "Dashboard";
-  const topbarBreadcrumbs = normalizedPathname === "/dashboard" ? [] : breadcrumbs.slice(0, -1);
+    : recordDetailOpen ? "" : currentNode?.label ?? "Dashboard";
+  const topbarBreadcrumbs = normalizedPathname === "/dashboard" ? [] : recordDetailOpen ? breadcrumbs : breadcrumbs.slice(0, -1);
   const showBackButton = !["/dashboard", "/add", "/add-to-fortress", "/actions", "/action-centre", "/contacts", "/people-access", "/profile", "/settings"].includes(normalizedPathname);
   const searchPageOpen = normalizedPathname === "/dashboard" && searchParams.has("search");
 
