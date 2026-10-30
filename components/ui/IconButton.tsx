@@ -69,24 +69,24 @@ export function StatusIcon({
 
 const statusToneStyle: Record<NonNullable<Parameters<typeof StatusIcon>[0]["tone"]>, CSSProperties> = {
   neutral: {
-    color: "#334155",
-    background: "#f1f5f9",
-    borderColor: "#cbd5e1",
+    color: "var(--lf-text)",
+    background: "var(--lf-surface-subtle)",
+    borderColor: "var(--lf-border-input)",
   },
   success: {
-    color: "#166534",
+    color: "var(--lf-status-approved-text)",
     background: "#dcfce7",
-    borderColor: "#bbf7d0",
+    borderColor: "var(--lf-status-approved-bg)",
   },
   warning: {
-    color: "#92400e",
+    color: "var(--lf-status-pending-text)",
     background: "#fef3c7",
-    borderColor: "#fde68a",
+    borderColor: "var(--lf-status-pending-bg)",
   },
   danger: {
-    color: "#991b1b",
+    color: "var(--lf-status-rejected-text)",
     background: "#fee2e2",
-    borderColor: "#fecaca",
+    borderColor: "var(--lf-status-rejected-bg)",
   },
 };
 

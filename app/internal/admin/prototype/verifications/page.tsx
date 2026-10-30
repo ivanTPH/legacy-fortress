@@ -104,7 +104,7 @@ const timelineGridStyle: CSSProperties = {
 };
 
 const timelineCardStyle: CSSProperties = {
-  border: "1px solid #f1ece8",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 8,
   padding: 12,
   display: "grid",

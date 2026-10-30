@@ -32,10 +32,10 @@ export function AttachmentGallerySummary<T extends AttachmentGalleryItem>({
   return (
     <div style={{ display: "grid", gap: 6 }}>
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        <span style={{ fontSize: 12, fontWeight: 700, color: "#334155" }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--lf-text)" }}>
           {items.length} attachment{items.length === 1 ? "" : "s"}
         </span>
-        <span style={{ fontSize: 12, color: "#64748b" }}>Ready to open from this record</span>
+        <span style={{ fontSize: 12, color: "var(--lf-text-secondary)" }}>Ready to open from this record</span>
       </div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {visibleItems.map((item, index) => {
@@ -44,10 +44,10 @@ export function AttachmentGallerySummary<T extends AttachmentGalleryItem>({
             <div key={getAttachmentItemKey(item, index)} style={summaryCardStyle}>
               <AttachmentVisual item={item} size="summary" />
               <div style={{ minWidth: 0, display: "grid", gap: 2 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--lf-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {item.fileName || "Untitled file"}
                 </div>
-                <div style={{ fontSize: 11, color: "#64748b" }}>{fileKind}</div>
+                <div style={{ fontSize: 11, color: "var(--lf-text-secondary)" }}>{fileKind}</div>
               </div>
             </div>
           );
@@ -174,7 +174,7 @@ export default function AttachmentGallery<T extends AttachmentGalleryItem>({
         </div>
       )}
 
-      {previewError ? <div style={{ color: "#b91c1c", fontSize: 13 }}>{previewError}</div> : null}
+      {previewError ? <div style={{ color: "var(--lf-destructive)", fontSize: 13 }}>{previewError}</div> : null}
 
       {preview ? (
         <DocumentPreviewDialog
@@ -392,8 +392,8 @@ const thumbStyle: CSSProperties = {
   height: 68,
   borderRadius: 10,
   objectFit: "cover",
-  border: "1px solid #eadfd8",
-  background: "#fffefd",
+  border: "1px solid var(--lf-border)",
+  background: "var(--lf-surface-card)",
   flexShrink: 0,
 };
 
@@ -406,9 +406,9 @@ const fileBadgeStyle: CSSProperties = {
   alignItems: "center",
   justifyContent: "center",
   gap: 4,
-  background: "#f7f3f0",
-  border: "1px solid #eadfd8",
-  color: "#3a2118",
+  background: "var(--lf-surface-page)",
+  border: "1px solid var(--lf-border)",
+  color: "var(--lf-text)",
   flexShrink: 0,
 };
 
@@ -429,7 +429,7 @@ const actionRowStyle: CSSProperties = {
 const actionButtonStyle: CSSProperties = {
   border: "1px solid #d9d1cb",
   borderRadius: 10,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   color: "#2b201b",
   minHeight: 38,
   padding: "0 12px",
@@ -444,24 +444,24 @@ const actionButtonStyle: CSSProperties = {
 
 const dangerActionButtonStyle: CSSProperties = {
   ...actionButtonStyle,
-  border: "1px solid #fecaca",
-  background: "#fff",
-  color: "#991b1b",
+  border: "1px solid var(--lf-status-rejected-bg)",
+  background: "var(--lf-surface-card)",
+  color: "var(--lf-status-rejected-text)",
 };
 
 const emptyStateStyle: CSSProperties = {
-  border: "1px solid #eee8e3",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 12,
-  background: "#fffefd",
-  color: "#64748b",
+  background: "var(--lf-surface-card)",
+  color: "var(--lf-text-secondary)",
   fontSize: 13,
   padding: 12,
   lineHeight: 1.45,
 };
 
 const summaryCardStyle: CSSProperties = {
-  border: "1px solid #eee8e3",
-  background: "#fff",
+  border: "1px solid var(--lf-divider)",
+  background: "var(--lf-surface-card)",
   borderRadius: 10,
   padding: "6px 8px",
   display: "flex",
@@ -476,8 +476,8 @@ const summaryThumbStyle: CSSProperties = {
   height: 34,
   borderRadius: 8,
   objectFit: "cover",
-  border: "1px solid #eadfd8",
-  background: "#fffefd",
+  border: "1px solid var(--lf-border)",
+  background: "var(--lf-surface-card)",
   flexShrink: 0,
 };
 
@@ -487,8 +487,8 @@ const summaryFileBadgeStyle: CSSProperties = {
   borderRadius: 8,
   display: "grid",
   placeItems: "center",
-  background: "#f7f3f0",
-  border: "1px solid #eadfd8",
-  color: "#3a2118",
+  background: "var(--lf-surface-page)",
+  border: "1px solid var(--lf-border)",
+  color: "var(--lf-text)",
   flexShrink: 0,
 };

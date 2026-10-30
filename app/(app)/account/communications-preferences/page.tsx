@@ -93,7 +93,7 @@ export default function CommunicationsPreferencesPage() {
       subtitle="Choose the channels allowed for account, security, and estate lifecycle communication."
     >
       <SettingsCard title="Allowed channels" description="Toggle channels on or off as needed.">
-        {loading ? <div style={{ color: "#6b7280" }}>Loading...</div> : null}
+        {loading ? <div style={{ color: "var(--lf-text-secondary)" }}>Loading...</div> : null}
 
         <div className="lf-content-grid">
           <Toggle label="Text (SMS)" checked={comms.sms_enabled} onChange={(checked) => setComms({ ...comms, sms_enabled: checked })} />
@@ -119,10 +119,10 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        border: "1px solid #e5e7eb",
+        border: "1px solid var(--lf-border)",
         borderRadius: 12,
         padding: 12,
-        background: "#fff",
+        background: "var(--lf-surface-card)",
       }}
     >
       <span style={{ fontSize: 14 }}>{label}</span>

@@ -126,8 +126,8 @@ const summaryGridStyle = {
 } as const;
 
 const disabledPanelStyle = {
-  background: "#fff7ed",
-  border: "1px solid #fed7aa",
+  background: "var(--lf-status-pending-bg)",
+  border: "1px solid var(--lf-status-pending-bg)",
   borderRadius: 10,
   padding: 14,
   display: "grid",
@@ -162,7 +162,7 @@ const actionsStyle = {
 const primaryLinkStyle = {
   borderRadius: 10,
   background: "var(--lf-bronze-strong)",
-  color: "#fff",
+  color: "var(--lf-primary-text)",
   minHeight: 42,
   padding: "0 16px",
   display: "inline-flex",

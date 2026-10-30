@@ -280,12 +280,12 @@ export default function AccessRequestsWorkspace({ embedded = false, onOpenPerson
       <section style={{ display: "grid", gap: 14 }}>
         <div style={{ display: "grid", gap: 6 }}>
           <h1 style={{ margin: 0, fontSize: 28 }}>Request elevated access</h1>
-          <p style={{ margin: 0, color: "#6b7280" }}>
+          <p style={{ margin: 0, color: "var(--lf-text-secondary)" }}>
             Use this only when you were invited into another person&apos;s wallet and need elevated access, such as executor access after bereavement. Evidence is routed to the application verification dashboard, not the wallet owner&apos;s personal account.
           </p>
         </div>
 
-        {status ? <div style={{ color: "#64748b", fontSize: 13 }}>{status}</div> : null}
+        {status ? <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{status}</div> : null}
 
         <section style={workflowGridStyle}>
           {[
@@ -295,16 +295,16 @@ export default function AccessRequestsWorkspace({ embedded = false, onOpenPerson
           ].map(([title, description]) => (
             <article key={title} style={stepCardStyle}>
               <div style={{ fontWeight: 700 }}>{title}</div>
-              <div style={{ color: "#64748b", fontSize: 13 }}>{description}</div>
+              <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{description}</div>
             </article>
           ))}
         </section>
 
         <section style={cardStyle}>
           <h2 style={{ margin: 0, fontSize: 18 }}>Submit death certificate evidence</h2>
-          {loading ? <div style={{ color: "#64748b" }}>Loading...</div> : null}
+          {loading ? <div style={{ color: "var(--lf-text-secondary)" }}>Loading...</div> : null}
           {!loading && assignments.length === 0 ? (
-            <div style={{ color: "#64748b", fontSize: 13 }}>
+            <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
               No executor or power-of-attorney assignment is available for evidence submission yet.
             </div>
           ) : null}
@@ -312,7 +312,7 @@ export default function AccessRequestsWorkspace({ embedded = false, onOpenPerson
           {!loading && assignments.length > 0 ? (
             <>
               <label style={{ display: "grid", gap: 6 }}>
-                <span style={{ color: "#64748b", fontSize: 12 }}>Role assignment</span>
+                <span style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>Role assignment</span>
                 <select value={selectedAssignment} onChange={(event) => setSelectedAssignment(event.target.value)} style={inputStyle}>
                   {assignments.map((item) => (
                     <option key={item.id} value={item.id}>
@@ -342,16 +342,16 @@ export default function AccessRequestsWorkspace({ embedded = false, onOpenPerson
         <section style={cardStyle}>
           <h2 style={{ margin: 0, fontSize: 18 }}>Submitted evidence</h2>
           {deathCertificateRequests.length === 0 ? (
-            <div style={{ color: "#64748b", fontSize: 13 }}>No death certificate evidence has been submitted from this linked access view.</div>
+            <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>No death certificate evidence has been submitted from this linked access view.</div>
           ) : null}
           <div style={{ display: "grid", gap: 8 }}>
             {deathCertificateRequests.map((item) => (
               <article key={item.id} style={rowStyle}>
                 <div style={{ fontWeight: 700 }}>{formatLabel(item.request_type)}</div>
-                <div style={{ color: "#64748b", fontSize: 13 }}>
+                <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                   Status: {formatLabel(item.request_status)} - Submitted {new Date(item.submitted_at).toLocaleString()}
                 </div>
-                {item.evidence_document_path ? <div style={{ color: "#166534", fontSize: 13 }}>Evidence received for application review.</div> : null}
+                {item.evidence_document_path ? <div style={{ color: "var(--lf-status-approved-text)", fontSize: 13 }}>Evidence received for application review.</div> : null}
               </article>
             ))}
           </div>
@@ -411,12 +411,12 @@ export default function AccessRequestsWorkspace({ embedded = false, onOpenPerson
     <section style={{ display: "grid", gap: 14 }}>
       <div style={{ display: "grid", gap: 6 }}>
         <h1 style={{ margin: 0, fontSize: 28 }}>Access Requests</h1>
-        <p style={{ margin: 0, color: "#6b7280" }}>
+        <p style={{ margin: 0, color: "var(--lf-text-secondary)" }}>
           Review people who have asked for access beyond what you already gave them. Say yes or no here; use Contacts to manage existing people, names, emails, deletion, and detailed permission toggles.
         </p>
       </div>
 
-      {status ? <div style={{ color: "#64748b", fontSize: 13 }}>{status}</div> : null}
+      {status ? <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{status}</div> : null}
 
       <details className="lf-access-request-guidance">
         <summary>How access requests work</summary>
@@ -429,7 +429,7 @@ export default function AccessRequestsWorkspace({ embedded = false, onOpenPerson
         ].map(([title, description]) => (
           <article key={title} style={stepCardStyle}>
             <div style={{ fontWeight: 700 }}>{title}</div>
-            <div style={{ color: "#64748b", fontSize: 13 }}>{description}</div>
+            <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{description}</div>
           </article>
         ))}
         </section>
@@ -438,12 +438,12 @@ export default function AccessRequestsWorkspace({ embedded = false, onOpenPerson
       <section style={cardStyle}>
         <div style={{ display: "grid", gap: 4 }}>
           <h2 style={{ margin: 0, fontSize: 18 }}>Requests awaiting your decision</h2>
-          <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}>
+          <p style={{ margin: 0, color: "var(--lf-text-secondary)", fontSize: 13 }}>
             This is only for new or changed access requests. People who already have access are managed from Contacts.
           </p>
         </div>
 
-        {loading ? <div style={{ color: "#64748b" }}>Loading...</div> : null}
+        {loading ? <div style={{ color: "var(--lf-text-secondary)" }}>Loading...</div> : null}
         {!loading && ownerAccessRequests.length === 0 ? (
           <div style={emptyStateStyle}>
             <strong>No access requests waiting.</strong>
@@ -457,7 +457,7 @@ export default function AccessRequestsWorkspace({ embedded = false, onOpenPerson
               <div style={requestRowHeaderStyle}>
                 <div style={{ display: "grid", gap: 3 }}>
                   <strong>{item.requester_name || "Unknown requester"}</strong>
-                  <span style={{ color: "#64748b", fontSize: 13 }}>{item.requester_email || "No email on request"}</span>
+                  <span style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{item.requester_email || "No email on request"}</span>
                 </div>
                 <span style={statusPillStyle}>{formatLabel(item.request_status)}</span>
               </div>
@@ -466,7 +466,7 @@ export default function AccessRequestsWorkspace({ embedded = false, onOpenPerson
                 <Info label="Role" value={formatLabel(item.assigned_role || "linked contact")} />
                 <Info label="Submitted" value={new Date(item.submitted_at).toLocaleString()} />
               </div>
-              {item.review_notes ? <div style={{ color: "#64748b", fontSize: 13 }}>Note: {item.review_notes}</div> : null}
+              {item.review_notes ? <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>Note: {item.review_notes}</div> : null}
               <div className="lf-access-owner-actions" style={ownerActionRowStyle}>
                 <button
                   type="button"
@@ -495,7 +495,7 @@ export default function AccessRequestsWorkspace({ embedded = false, onOpenPerson
 
       <section style={cardStyle}>
         <h2 style={{ margin: 0, fontSize: 18 }}>Current access lives in Contacts</h2>
-        <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}>
+        <p style={{ margin: 0, color: "var(--lf-text-secondary)", fontSize: 13 }}>
           Contacts is where you view everyone already invited or stored, update their name or email, delete them, and tick or toggle exactly what wallet sections they can view or edit.
         </p>
         <Link href="/contacts" style={buttonLabelStyle}>
@@ -505,7 +505,7 @@ export default function AccessRequestsWorkspace({ embedded = false, onOpenPerson
 
       <section style={cardStyle}>
         <h2 style={{ margin: 0, fontSize: 18 }}>Death certificate escalation</h2>
-        <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}>
+        <p style={{ margin: 0, color: "var(--lf-text-secondary)", fontSize: 13 }}>
           You do not submit or approve death certificate evidence for your own wallet. If an invited executor or attorney needs post-death access, they submit evidence from their linked view and application administrators review it in the verification dashboard.
         </p>
       </section>
@@ -516,8 +516,8 @@ export default function AccessRequestsWorkspace({ embedded = false, onOpenPerson
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ display: "grid", gap: 2 }}>
-      <span style={{ color: "#64748b", fontSize: 11, fontWeight: 800, textTransform: "uppercase" }}>{label}</span>
-      <span style={{ color: "#111827", fontSize: 13, fontWeight: 700 }}>{value}</span>
+      <span style={{ color: "var(--lf-text-secondary)", fontSize: 11, fontWeight: 800, textTransform: "uppercase" }}>{label}</span>
+      <span style={{ color: "var(--lf-text)", fontSize: 13, fontWeight: 700 }}>{value}</span>
     </div>
   );
 }
@@ -537,25 +537,25 @@ const workflowGridStyle: CSSProperties = {
 };
 
 const stepCardStyle: CSSProperties = {
-  border: "1px solid #e5e7eb",
+  border: "1px solid var(--lf-border)",
   borderRadius: 14,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   padding: 12,
   display: "grid",
   gap: 6,
 };
 
 const cardStyle: CSSProperties = {
-  border: "1px solid #e5e7eb",
+  border: "1px solid var(--lf-border)",
   borderRadius: 16,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   padding: 14,
   display: "grid",
   gap: 12,
 };
 
 const rowStyle: CSSProperties = {
-  border: "1px solid #eef2f7",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 12,
   padding: 12,
   display: "grid",
@@ -577,10 +577,10 @@ const requestDetailGridStyle: CSSProperties = {
 };
 
 const emptyStateStyle: CSSProperties = {
-  border: "1px dashed #cbd5e1",
+  border: "1px dashed var(--lf-border-input)",
   borderRadius: 12,
-  background: "#f8fafc",
-  color: "#64748b",
+  background: "var(--lf-surface-page)",
+  color: "var(--lf-text-secondary)",
   padding: 12,
   display: "grid",
   gap: 4,
@@ -594,7 +594,7 @@ const ownerActionRowStyle: CSSProperties = {
 };
 
 const inputStyle: CSSProperties = {
-  border: "1px solid #d1d5db",
+  border: "1px solid var(--lf-border-input)",
   borderRadius: 10,
   padding: "9px 10px",
   width: "100%",
@@ -602,9 +602,9 @@ const inputStyle: CSSProperties = {
 };
 
 const buttonLabelStyle: CSSProperties = {
-  border: "1px solid #111827",
-  background: "#111827",
-  color: "#fff",
+  border: "1px solid var(--lf-primary-bg)",
+  background: "var(--lf-primary-bg)",
+  color: "var(--lf-primary-text)",
   borderRadius: 10,
   padding: "9px 12px",
   fontSize: 13,
@@ -626,21 +626,21 @@ const approveButtonStyle: CSSProperties = {
 const rejectButtonStyle: CSSProperties = {
   ...buttonLabelStyle,
   borderColor: "#991b1b",
-  background: "#991b1b",
+  background: "var(--lf-destructive)",
 };
 
 const secondaryLinkStyle: CSSProperties = {
   ...buttonLabelStyle,
-  borderColor: "#d1d5db",
-  background: "#fff",
-  color: "#111827",
+  borderColor: "var(--lf-border-input)",
+  background: "var(--lf-surface-card)",
+  color: "var(--lf-text)",
 };
 
 const statusPillStyle: CSSProperties = {
-  border: "1px solid #cbd5e1",
+  border: "1px solid var(--lf-border-input)",
   borderRadius: 999,
-  background: "#f8fafc",
-  color: "#334155",
+  background: "var(--lf-surface-page)",
+  color: "var(--lf-text)",
   padding: "4px 8px",
   fontSize: 11,
   fontWeight: 800,

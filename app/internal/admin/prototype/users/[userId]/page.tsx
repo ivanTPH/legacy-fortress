@@ -335,7 +335,7 @@ const returnNavStyle: CSSProperties = {
 
 const secondaryLinkStyle: CSSProperties = {
   ...platformCtaStyle,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
 };
 
 const h3Style: CSSProperties = {
@@ -346,7 +346,7 @@ const h3Style: CSSProperties = {
 const infoStyle: CSSProperties = {
   display: "grid",
   gap: 4,
-  borderBottom: "1px solid #f1ece8",
+  borderBottom: "1px solid var(--lf-divider)",
   paddingBottom: 10,
 };
 
@@ -378,7 +378,7 @@ const permissionGridStyle: CSSProperties = {
 };
 
 const permissionGroupStyle: CSSProperties = {
-  border: "1px solid #f1ece8",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 8,
   padding: 12,
   display: "grid",
@@ -394,7 +394,7 @@ const toggleRowStyle: CSSProperties = {
 };
 
 const auditRowStyle: CSSProperties = {
-  border: "1px solid #f1ece8",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 8,
   padding: 12,
   display: "flex",
@@ -418,7 +418,7 @@ const ctaStyle: CSSProperties = {
   border: "1px solid var(--lf-border)",
   borderRadius: 8,
   background: "var(--lf-text)",
-  color: "#fff",
+  color: "var(--lf-primary-text)",
   textDecoration: "none",
   padding: "9px 11px",
   fontSize: 13,

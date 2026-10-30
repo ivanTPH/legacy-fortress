@@ -5,12 +5,12 @@ export default function RoleBadge({ role }: { role: CollaboratorRole }) {
   return (
     <span
       style={{
-        border: "1px solid #d1d5db",
+        border: "1px solid var(--lf-border-input)",
         borderRadius: 999,
         padding: "2px 8px",
         fontSize: 12,
-        color: "#374151",
-        background: "#f9fafb",
+        color: "var(--lf-text)",
+        background: "var(--lf-surface-page)",
       }}
     >
       {label}

@@ -13,7 +13,7 @@ export default function ExecutorsRedirectPage() {
   return (
     <main style={{ padding: 24 }}>
       <h1 style={{ margin: "0 0 8px", fontSize: 20 }}>Opening executor contacts</h1>
-      <p style={{ margin: 0, color: "#64748b" }}>
+      <p style={{ margin: 0, color: "var(--lf-text-secondary)" }}>
         Executors now live in Contacts. Taking you to that grouped view.
       </p>
     </main>

@@ -213,7 +213,7 @@ export const platformCtaStyle: CSSProperties = {
 };
 
 export const platformPanelStyle: CSSProperties = {
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   border: "1px solid var(--lf-border)",
   borderRadius: 8,
   padding: 16,
@@ -234,7 +234,7 @@ export const platformResponsiveGridStyle: CSSProperties = {
 };
 
 export const platformToolbarStyle: CSSProperties = {
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   border: "1px solid var(--lf-border)",
   borderRadius: 8,
   padding: 12,
@@ -249,7 +249,7 @@ export const platformInputStyle: CSSProperties = {
   border: "1px solid var(--lf-border)",
   borderRadius: 8,
   padding: "9px 11px",
-  background: "#fff",
+  background: "var(--lf-surface-card)",
 };
 
 const labelStyle: CSSProperties = {
@@ -259,7 +259,7 @@ const labelStyle: CSSProperties = {
 };
 
 const statCardStyle: CSSProperties = {
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   border: "1px solid var(--lf-border)",
   borderRadius: 8,
   padding: 12,
@@ -296,7 +296,7 @@ const detailBlockStyle: CSSProperties = {
 };
 
 const restrictedStateStyle: CSSProperties = {
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   border: "1px solid var(--lf-border)",
   borderRadius: 8,
   padding: 16,
@@ -313,7 +313,7 @@ const restrictedMetaStyle: CSSProperties = {
 };
 
 const actionRowStyle: CSSProperties = {
-  border: "1px solid #f1ece8",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 8,
   padding: "10px 11px",
   display: "flex",
@@ -353,7 +353,7 @@ const emptyStateStyle: CSSProperties = {
 
 function sectionStyle(emphasis: "primary" | "secondary"): CSSProperties {
   return {
-    background: "#fff",
+    background: "var(--lf-surface-card)",
     border: emphasis === "primary" ? "1px solid #ded5ce" : "1px solid var(--lf-border)",
     borderRadius: 8,
     padding: emphasis === "primary" ? 18 : 15,
@@ -469,7 +469,7 @@ function getTonePalette(tone: PlatformTone) {
       border: "#d8eadc",
       background: "#f7fbf7",
       softBackground: "#f0f8f1",
-      color: "#166534",
+      color: "var(--lf-status-approved-text)",
       text: "#365f3a",
     };
   }
@@ -478,7 +478,7 @@ function getTonePalette(tone: PlatformTone) {
       border: "#ead8c7",
       background: "#fffaf5",
       softBackground: "#fff6ed",
-      color: "#9a3412",
+      color: "var(--lf-status-pending-text)",
       text: "#7c3f16",
     };
   }
@@ -487,13 +487,13 @@ function getTonePalette(tone: PlatformTone) {
       border: "#f0c7c7",
       background: "#fff7f7",
       softBackground: "#fef2f2",
-      color: "#991b1b",
+      color: "var(--lf-status-rejected-text)",
       text: "#7f1d1d",
     };
   }
   return {
     border: "var(--lf-border)",
-    background: "#fffefd",
+    background: "var(--lf-surface-card)",
     softBackground: "#f5f1ec",
     color: "var(--lf-bronze)",
     text: "var(--lf-text-soft)",

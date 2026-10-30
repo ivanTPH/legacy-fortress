@@ -218,17 +218,17 @@ export default function InvitationAcceptPageClient() {
             <section style={{ display: "grid", gap: 12 }}>
               <div style={invitePanelStyle}>
                 <div style={{ fontWeight: 700 }}>{summary.account_holder_name}</div>
-                <div style={{ color: "#475569", fontSize: 13 }}>
+                <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                   Role: {getRoleLabel(summary.assigned_role as never)}
                 </div>
-                <div style={{ color: "#475569", fontSize: 13 }}>
+                <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                   Connection: Contact Wallet first; protected records and documents require separate permission and verification
                 </div>
-                <div style={{ color: "#475569", fontSize: 13 }}>
+                <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                   Email: {summary.contact_email}
                 </div>
                 {summary.relationship ? (
-                  <div style={{ color: "#475569", fontSize: 13 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     Relationship: {summary.relationship}
                   </div>
                 ) : null}
@@ -282,8 +282,8 @@ export default function InvitationAcceptPageClient() {
 }
 
 const invitePanelStyle = {
-  border: "1px solid #e2e8f0",
-  background: "#f8fafc",
+  border: "1px solid var(--lf-border)",
+  background: "var(--lf-surface-page)",
   borderRadius: 12,
   padding: 12,
   display: "grid",
@@ -291,8 +291,8 @@ const invitePanelStyle = {
 } as const;
 
 const recoveryPanelStyle = {
-  border: "1px solid #fed7aa",
-  background: "#fff7ed",
+  border: "1px solid var(--lf-status-pending-bg)",
+  background: "var(--lf-status-pending-bg)",
   color: "#7c2d12",
   borderRadius: 12,
   padding: 12,

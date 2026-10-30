@@ -96,7 +96,7 @@ export default function ReminderPreferencesPage() {
       compact
     >
       <SettingsCard title="Alerts" description="These choices control existing reminder channels. Push alerts and summary email delivery are not configured here.">
-        {loading ? <div style={{ color: "#6b7280" }}>Loading...</div> : null}
+        {loading ? <div style={{ color: "var(--lf-text-secondary)" }}>Loading...</div> : null}
         <div className="lf-v52-settings-rows">
           <Toggle label="In-app reminders" description="Updates inside your Vault" checked={prefs.in_app_enabled} onChange={(checked) => setPrefs({ ...prefs, in_app_enabled: checked })} />
           <Toggle label="Email reminders" description="Reminder emails without record details" checked={prefs.email_enabled} onChange={(checked) => setPrefs({ ...prefs, email_enabled: checked })} />
@@ -106,7 +106,7 @@ export default function ReminderPreferencesPage() {
       <SettingsCard title="Review reminder schedule" description="Choose the date and advance notice for the existing monthly review reminder.">
         <div className="lf-content-grid">
           <label style={{ display: "grid", gap: 6 }}>
-            <span style={{ color: "#64748b", fontSize: 12 }}>Monthly review day (1-28)</span>
+            <span style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>Monthly review day (1-28)</span>
             <input
               style={inputStyle}
               type="number"
@@ -117,7 +117,7 @@ export default function ReminderPreferencesPage() {
             />
           </label>
           <label style={{ display: "grid", gap: 6 }}>
-            <span style={{ color: "#64748b", fontSize: 12 }}>Advance notice days (1-30)</span>
+            <span style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>Advance notice days (1-30)</span>
             <input
               style={inputStyle}
               type="number"

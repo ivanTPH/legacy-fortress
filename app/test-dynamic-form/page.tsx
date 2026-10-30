@@ -6,7 +6,7 @@ export default function TestDynamicFormPage() {
       <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>
         Dynamic Asset Form Test
       </h1>
-      <p style={{ marginBottom: 24, color: "#475569" }}>
+      <p style={{ marginBottom: 24, color: "var(--lf-text-secondary)" }}>
         Testing the generated form for bank-account asset type.
       </p>
 

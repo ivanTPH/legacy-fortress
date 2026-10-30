@@ -190,13 +190,13 @@ export default function DashboardAssetSummaryCard({
                 <Icon name="chevron_right" size={16} />
                 {item.label}
               </span>
-              {item.meta ? <span style={{ color: "#94a3b8", fontSize: 12 }}>{item.meta}</span> : null}
+              {item.meta ? <span style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>{item.meta}</span> : null}
             </Link>
           ))
         ) : !emptyState && !hideItems && onEmptyActionClick ? (
           <button
             type="button"
-            style={{ ...itemLinkStyle, background: "#fff", width: "100%", textAlign: "left", cursor: "pointer" }}
+            style={{ ...itemLinkStyle, background: "var(--lf-surface-card)", width: "100%", textAlign: "left", cursor: "pointer" }}
             onPointerDown={(event) => {
               event.preventDefault();
               event.stopPropagation();
@@ -250,12 +250,12 @@ const cardStyle: CSSProperties = {
   alignContent: "start",
   gap: 12,
   height: "100%",
-  border: "1px solid #e8e1dc",
+  border: "1px solid var(--lf-border)",
   borderRadius: 12,
   padding: 22,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   textDecoration: "none",
-  color: "#111827",
+  color: "var(--lf-text)",
   boxShadow: "0 1px 2px rgba(33,17,13,0.025)",
 };
 
@@ -280,7 +280,7 @@ const iconStyle: CSSProperties = {
   height: 40,
   borderRadius: 12,
   background: "linear-gradient(180deg, #3a2118 0%, #21110d 100%)",
-  color: "#fff",
+  color: "var(--lf-primary-text)",
   display: "inline-grid",
   placeItems: "center",
   flexShrink: 0,
@@ -293,7 +293,7 @@ const titleStyle: CSSProperties = {
 
 const dateStyle: CSSProperties = {
   fontSize: 12,
-  color: "#6b7280",
+  color: "var(--lf-text-secondary)",
 };
 
 const footerStyle: CSSProperties = {
@@ -322,7 +322,7 @@ const valueStyle: CSSProperties = {
 
 const detailStyle: CSSProperties = {
   fontSize: 13,
-  color: "#6b7280",
+  color: "var(--lf-text-secondary)",
 };
 
 const inlineSummaryStyle: CSSProperties = {
@@ -337,11 +337,11 @@ const itemLinkStyle: CSSProperties = {
   justifyContent: "space-between",
   alignItems: "center",
   gap: 8,
-  border: "1px solid #eee8e3",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 10,
   padding: "9px 10px",
   textDecoration: "none",
-  color: "#0f172a",
+  color: "var(--lf-text)",
   fontSize: 13,
 };
 
@@ -351,7 +351,7 @@ const emptyPrimaryActionStyle: CSSProperties = {
   border: 0,
   padding: 0,
   background: "transparent",
-  color: "#94a3b8",
+  color: "var(--lf-text-secondary)",
   textDecoration: "none",
   fontSize: 24,
   fontWeight: 800,
@@ -371,7 +371,7 @@ const emptyPrimaryIconStyle: CSSProperties = {
   height: 32,
   borderRadius: 999,
   border: "1px solid #e5e0dc",
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   color: "#7f8794",
   display: "inline-flex",
   alignItems: "center",
@@ -381,8 +381,8 @@ const emptyPrimaryIconStyle: CSSProperties = {
 };
 
 const overviewWrapStyle: CSSProperties = {
-  border: "1px solid #eee8e3",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 12,
-  background: "#fffefd",
+  background: "var(--lf-surface-card)",
   padding: 10,
 };

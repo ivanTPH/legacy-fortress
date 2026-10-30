@@ -258,7 +258,7 @@ function Td({ children }: { children: ReactNode }) {
 
 const filterStyle: CSSProperties = {
   border: "1px solid var(--lf-border)",
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   borderRadius: 8,
   padding: 12,
   display: "flex",
@@ -269,9 +269,9 @@ const filterStyle: CSSProperties = {
 };
 
 const warningStyle: CSSProperties = {
-  border: "1px solid #fed7aa",
-  background: "#fff7ed",
-  color: "#9a3412",
+  border: "1px solid var(--lf-status-pending-bg)",
+  background: "var(--lf-status-pending-bg)",
+  color: "var(--lf-status-pending-text)",
   borderRadius: 8,
   padding: 14,
   display: "grid",
@@ -286,7 +286,7 @@ const metricsGridStyle: CSSProperties = {
 };
 
 const metricStyle: CSSProperties = {
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   border: "1px solid var(--lf-border)",
   borderRadius: 8,
   padding: 14,
@@ -308,7 +308,7 @@ const panelGridStyle: CSSProperties = {
 };
 
 const panelStyle: CSSProperties = {
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   border: "1px solid var(--lf-border)",
   borderRadius: 8,
   padding: 16,
@@ -336,7 +336,7 @@ const tierGridStyle: CSSProperties = {
 };
 
 const tierCardStyle: CSSProperties = {
-  border: "1px solid #f1ece8",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 8,
   padding: 10,
   display: "grid",
@@ -349,7 +349,7 @@ const miniListStyle: CSSProperties = {
 };
 
 const miniRowStyle: CSSProperties = {
-  border: "1px solid #f1ece8",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 8,
   padding: 10,
   display: "flex",
@@ -395,7 +395,7 @@ const thStyle: CSSProperties = {
 
 const tdStyle: CSSProperties = {
   padding: "10px 11px",
-  borderBottom: "1px solid #f1ece8",
+  borderBottom: "1px solid var(--lf-divider)",
   verticalAlign: "top",
   whiteSpace: "nowrap",
 };
@@ -425,7 +425,7 @@ const featureGridStyle: CSSProperties = {
 };
 
 const featureCardStyle: CSSProperties = {
-  border: "1px solid #f1ece8",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 8,
   padding: 12,
   display: "grid",

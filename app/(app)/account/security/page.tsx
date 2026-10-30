@@ -185,7 +185,7 @@ export default function SecurityPage() {
       compact
     >
       <SettingsCard title="Mobile verification" description="OTP verification is required before using this number for secure notifications.">
-        {loading ? <div style={{ color: "#6b7280" }}>Loading...</div> : null}
+        {loading ? <div style={{ color: "var(--lf-text-secondary)" }}>Loading...</div> : null}
 
         <Field label="Mobile number">
           <input value={mobile} onChange={(e) => setMobile(normalizePhone(e.target.value))} style={inputStyle} placeholder="+447700900123" />
@@ -236,7 +236,7 @@ export default function SecurityPage() {
           <button type="button" style={ghostBtn} onClick={() => void changePassword()}>
             Change password now
           </button>
-          <div style={{ color: "#6b7280", fontSize: 13 }}>
+          <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
             Recovery options: verified email reset and verified mobile OTP workflows.
           </div>
         </div>
@@ -244,7 +244,7 @@ export default function SecurityPage() {
 
       {isPasskeyEnrollmentEnabled() ? (
         <SettingsCard title="Passkeys" description="Use a device passkey for a faster, phishing-resistant step-up. Passkeys are separate from government-ID verification.">
-          <p style={{ color: "#475569", fontSize: 13, margin: 0 }}>
+          <p style={{ color: "var(--lf-text-secondary)", fontSize: 13, margin: 0 }}>
             Use your device&apos;s passkey, such as Face ID, fingerprint, Windows Hello or a device PIN. Legacy Fortress does not receive or store your biometric template.
           </p>
           <button type="button" style={primaryBtn} onClick={() => void addPasskey()} disabled={passkeyBusy || !supportsPasskeyBrowser()}>
@@ -252,7 +252,7 @@ export default function SecurityPage() {
           </button>
           {!supportsPasskeyBrowser() ? <StatusNote message="This browser does not support passkeys." /> : null}
           <StatusNote message={passkeyStatus} />
-          <div style={{ color: "#6b7280", fontSize: 13 }}>Current client capability: {getPasskeyCapability().passwordlessSignIn ? "passwordless sign-in" : "enrollment and future step-up only"}.</div>
+          <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>Current client capability: {getPasskeyCapability().passwordlessSignIn ? "passwordless sign-in" : "enrollment and future step-up only"}.</div>
         </SettingsCard>
       ) : null}
     </SettingsPageShell>

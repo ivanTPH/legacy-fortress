@@ -37,7 +37,7 @@ export default function BusinessOverviewPage() {
         <CanonicalAssetOverviewGrid tiles={businessTiles} extraSections={showEmployment ? [{ key: "employment", title: "Employment", icon: "work", href: "/employment", count: null, description: "Workplace records and benefits" }] : []} />
       ) : null}
       {!showBusinessInterests && !showEmployment ? (
-        <div style={{ color: "#64748b", fontSize: 13 }}>
+        <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
           Business subsections are currently hidden by My Vault preferences. Re-enable them in Account / My Vault at any time.
         </div>
       ) : null}

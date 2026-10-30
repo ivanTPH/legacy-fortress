@@ -466,8 +466,8 @@ export default function ProfilePage() {
         <SettingsCard title={`About ${viewer.accountHolderName}`} description="Only relationship-safe information is shown in a linked Fortress context.">
           <div style={{ display: "grid", gap: 8 }}>
             <strong>Your relationship: {viewer.viewerRole === "owner" ? "Linked relationship" : viewer.viewerRole.replace(/_/g, " ")}</strong>
-            <span style={{ color: "#64748b" }}>Connection: Linked</span>
-            <span style={{ color: "#64748b" }}>Private profile details remain with the Fortress owner.</span>
+            <span style={{ color: "var(--lf-text-secondary)" }}>Connection: Linked</span>
+            <span style={{ color: "var(--lf-text-secondary)" }}>Private profile details remain with the Fortress owner.</span>
             {viewer.grantId ? <Link href={`/linked-fortresses/${viewer.grantId}`} className="lf-link-btn">Relationship details</Link> : null}
           </div>
         </SettingsCard>
@@ -485,7 +485,7 @@ export default function ProfilePage() {
       <div id="profile-summary">
       <SettingsCard title="Your details" description="Saved identity and contact details for your Vault.">
         {loading ? (
-          <div style={{ color: "#6b7280" }}>Loading saved profile...</div>
+          <div style={{ color: "var(--lf-text-secondary)" }}>Loading saved profile...</div>
         ) : (
           <div className="lf-v52-profile-summary">
             {!viewer.readOnly ? <button type="button" className="lf-v52-profile-edit" onClick={() => setEditorOpen(true)}><Icon name="edit" size={18} />Edit</button> : null}
@@ -519,9 +519,9 @@ export default function ProfilePage() {
       {editorOpen ? (
       <SettingsCard title="Edit profile" description="Keep your saved identity, contact, and address details clear enough for someone else to trust and use.">
         <section id="profile-editor" ref={editorPanelRef}>
-        {loading ? <div style={{ color: "#6b7280" }}>Loading...</div> : null}
+        {loading ? <div style={{ color: "var(--lf-text-secondary)" }}>Loading...</div> : null}
 
-        <div style={{ display: "grid", gap: 16, padding: 18, border: "1px solid #e8e1dc", borderRadius: 12, background: "#fffefd" }}>
+        <div style={{ display: "grid", gap: 16, padding: 18, border: "1px solid var(--lf-border)", borderRadius: 12, background: "var(--lf-surface-card)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700 }}>
               <span style={profileIconWrapStyle}>
@@ -529,7 +529,7 @@ export default function ProfilePage() {
               </span>
               Profile photo
             </div>
-            <div style={{ color: "#64748b", fontSize: 13 }}>
+            <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
               Upload PNG, JPG, or WebP up to 2MB.
             </div>
           </div>
@@ -540,13 +540,13 @@ export default function ProfilePage() {
               width: 104,
               height: 104,
               borderRadius: 16,
-              border: "1px solid #e8e1dc",
+              border: "1px solid var(--lf-border)",
               overflow: "hidden",
-              background: "#f8fafc",
+              background: "var(--lf-surface-page)",
               display: "grid",
               placeItems: "center",
               fontSize: 11,
-              color: "#6b7280",
+              color: "var(--lf-text-secondary)",
             }}
           >
             {displayedAvatarUrl ? (
@@ -599,7 +599,7 @@ export default function ProfilePage() {
               </div>
             ) : (
               <>
-                <div style={{ color: "#64748b", fontSize: 13 }}>
+                <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                   Staged preview ready: {pendingAvatarFile?.name}
                 </div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -624,7 +624,7 @@ export default function ProfilePage() {
             )}
 
             {avatarPathToDelete && !hasStagedAvatarSelection ? (
-              <div style={{ color: "#64748b", fontSize: 13 }}>
+              <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                 Saved photo will be removed when you save.
               </div>
             ) : null}
@@ -760,7 +760,7 @@ export default function ProfilePage() {
             Send password reset
           </button>
         </div>
-        <div style={{ color: "#6b7280", fontSize: 13 }}>
+        <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
           For password change, recovery options, and mobile verification controls, open Security settings.
         </div>
       </SettingsCard>
@@ -774,7 +774,7 @@ export default function ProfilePage() {
             {avatarTraceLines.length ? avatarTraceLines.map((line, index) => (
               <div key={`${index}-${line}`}>{line}</div>
             )) : (
-              <div style={{ color: "#64748b" }}>No avatar trace entries yet.</div>
+              <div style={{ color: "var(--lf-text-secondary)" }}>No avatar trace entries yet.</div>
             )}
           </div>
         </SettingsCard>
@@ -787,9 +787,9 @@ const profileIconWrapStyle = {
   width: 40,
   height: 40,
   borderRadius: 12,
-  border: "1px solid #eadfd8",
-  background: "#f7f3f0",
-  color: "#3a2118",
+  border: "1px solid var(--lf-border)",
+  background: "var(--lf-surface-page)",
+  color: "var(--lf-text)",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",

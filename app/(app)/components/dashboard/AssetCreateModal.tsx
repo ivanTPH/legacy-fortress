@@ -106,9 +106,9 @@ function AssetCreateModalContent({
         style={{
           width: "100%",
           maxWidth: 560,
-          background: "#fff",
+          background: "var(--lf-surface-card)",
           borderRadius: 14,
-          border: "1px solid #e2e8f0",
+          border: "1px solid var(--lf-border)",
           padding: 16,
           display: "grid",
           gap: 12,
@@ -127,8 +127,8 @@ function AssetCreateModalContent({
           }}
         />
 
-        {error ? <div style={{ color: "#b91c1c", fontSize: 13 }}>{error}</div> : null}
-        {success ? <div style={{ color: "#166534", fontSize: 13 }}>{success}</div> : null}
+        {error ? <div style={{ color: "var(--lf-destructive)", fontSize: 13 }}>{error}</div> : null}
+        {success ? <div style={{ color: "var(--lf-status-approved-text)", fontSize: 13 }}>{success}</div> : null}
 
         <div className="lf-mobile-create-footer" style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
           <button type="button" className="lf-mobile-create-desktop-cancel" onClick={onClose} disabled={saving} style={secondaryButtonStyle}>Cancel</button>
@@ -151,16 +151,16 @@ const primaryButtonStyle: CSSProperties = {
   border: "none",
   borderRadius: 10,
   padding: "9px 14px",
-  background: "#111827",
-  color: "#fff",
+  background: "var(--lf-primary-bg)",
+  color: "var(--lf-primary-text)",
   cursor: "pointer",
 };
 
 const secondaryButtonStyle: CSSProperties = {
-  border: "1px solid #cbd5e1",
+  border: "1px solid var(--lf-border-input)",
   borderRadius: 10,
   padding: "9px 14px",
-  background: "#fff",
-  color: "#0f172a",
+  background: "var(--lf-surface-card)",
+  color: "var(--lf-text)",
   cursor: "pointer",
 };

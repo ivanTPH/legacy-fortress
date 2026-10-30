@@ -720,7 +720,7 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
                 Cancel
               </button>
             </div>
-            <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}>
+            <p style={{ margin: 0, color: "var(--lf-text-secondary)", fontSize: 13 }}>
               {isNextOfKinAddMode
                 ? "Next of Kin is stored as a canonical contact designation. It does not grant vault access; invitations and permissions stay separate."
                 : embedded ? "Adding or inviting someone does not share records. Give access separately after they connect." : "The role preset comes from the selected contact group. You can still change the role, tick categories, use My wallet - all, and set view/edit permissions before sending the invite."}
@@ -748,8 +748,8 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
         </section>
       ) : null}
 
-      {status ? <div style={{ color: "#b91c1c", fontSize: 13 }}>{status}</div> : null}
-      {loading ? <div style={{ color: "#64748b" }}>Loading contacts network...</div> : null}
+      {status ? <div style={{ color: "var(--lf-destructive)", fontSize: 13 }}>{status}</div> : null}
+      {loading ? <div style={{ color: "var(--lf-text-secondary)" }}>Loading contacts network...</div> : null}
 
       {!loading && !addContactGroupKey && !sharingView ? (
         <div style={{ display: "grid", gap: 18 }}>
@@ -1974,7 +1974,7 @@ function NextOfKinContactForm({
           <Icon name="person_add" size={16} />
           {saving ? "Saving..." : "Save Next of Kin"}
         </button>
-        <span style={{ color: "#64748b", fontSize: 13 }}>
+        <span style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
           Access is granted only through a separate invitation or permission change.
         </span>
       </div>
@@ -1996,9 +1996,9 @@ function StatusPill({ label, tone }: { label: string; tone: "neutral" | "success
 }
 
 const panelStyle: CSSProperties = {
-  border: "1px solid #e5e7eb",
+  border: "1px solid var(--lf-border)",
   borderRadius: 16,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   padding: 14,
   display: "grid",
   gap: 12,
@@ -2007,14 +2007,14 @@ const panelStyle: CSSProperties = {
 const alertPanelStyle: CSSProperties = {
   border: "1px solid #fcd34d",
   borderRadius: 16,
-  background: "#fffbeb",
+  background: "var(--lf-status-pending-bg)",
   padding: 14,
   display: "grid",
   gap: 10,
 };
 
 const addContactPanelStyle: CSSProperties = {
-  border: "1px solid #bfdbfe",
+  border: "1px solid var(--lf-border)",
   borderRadius: 16,
   background: "#f8fbff",
   padding: 14,
@@ -2023,10 +2023,10 @@ const addContactPanelStyle: CSSProperties = {
 };
 
 const primaryMenuActionStyle: CSSProperties = {
-  border: "1px solid #111827",
+  border: "1px solid var(--lf-primary-bg)",
   borderRadius: 999,
-  background: "#111827",
-  color: "#fff",
+  background: "var(--lf-primary-bg)",
+  color: "var(--lf-primary-text)",
   padding: "10px 14px",
   minHeight: 44,
   fontSize: 13,
@@ -2039,8 +2039,8 @@ const primaryMenuActionStyle: CSSProperties = {
 
 const addPersonActionStyle: CSSProperties = {
   border: 0,
-  background: "#f7f2ee",
-  color: "#7c4a35",
+  background: "var(--lf-surface-page)",
+  color: "var(--lf-link)",
   borderRadius: 8,
   padding: "8px 11px",
   minHeight: 40,
@@ -2048,9 +2048,9 @@ const addPersonActionStyle: CSSProperties = {
 };
 
 const emptyGroupStyle: CSSProperties = {
-  border: "1px dashed #cbd5e1",
+  border: "1px dashed var(--lf-border-input)",
   borderRadius: 12,
-  background: "#f8fafc",
+  background: "var(--lf-surface-page)",
   padding: 12,
   display: "flex",
   justifyContent: "space-between",
@@ -2075,8 +2075,8 @@ const groupCountStyle: CSSProperties = {
   padding: "3px 8px",
   fontSize: 12,
   fontWeight: 700,
-  background: "#e2e8f0",
-  color: "#0f172a",
+  background: "var(--lf-surface-subtle)",
+  color: "var(--lf-text)",
 };
 
 const groupWarningStyle: CSSProperties = {
@@ -2085,13 +2085,13 @@ const groupWarningStyle: CSSProperties = {
   fontSize: 12,
   fontWeight: 700,
   background: "#fef3c7",
-  color: "#92400e",
+  color: "var(--lf-status-pending-text)",
 };
 
 const contactRowStyle: CSSProperties = {
-  border: "1px solid #e2e8f0",
+  border: "1px solid var(--lf-border)",
   borderRadius: 12,
-  background: "#f8fafc",
+  background: "var(--lf-surface-page)",
   padding: 10,
   display: "grid",
   gridTemplateColumns: "minmax(0, 1.6fr) auto auto",
@@ -2101,7 +2101,7 @@ const contactRowStyle: CSSProperties = {
 
 const selectedContactRowStyle: CSSProperties = {
   ...contactRowStyle,
-  borderColor: "#2563eb",
+  borderColor: "var(--lf-focus)",
   boxShadow: "0 0 0 2px rgba(37, 99, 235, 0.12)",
 };
 
@@ -2114,41 +2114,41 @@ const neutralPillStyle: CSSProperties = {
   borderRadius: 999,
   padding: "4px 8px",
   fontSize: 11,
-  background: "#e2e8f0",
-  color: "#0f172a",
+  background: "var(--lf-surface-subtle)",
+  color: "var(--lf-text)",
 };
 
 const positivePillStyle: CSSProperties = {
   ...neutralPillStyle,
   background: "#dcfce7",
-  color: "#166534",
+  color: "var(--lf-status-approved-text)",
 };
 
 const warningPillStyle: CSSProperties = {
   ...neutralPillStyle,
   background: "#fef3c7",
-  color: "#92400e",
+  color: "var(--lf-status-pending-text)",
 };
 
 const dangerPillStyle: CSSProperties = {
   ...neutralPillStyle,
   background: "#fee2e2",
-  color: "#991b1b",
+  color: "var(--lf-status-rejected-text)",
 };
 
 const moreLinksStyle: CSSProperties = {
   fontSize: 11,
-  color: "#64748b",
+  color: "var(--lf-text-secondary)",
   fontWeight: 600,
 };
 
 const linkPillStyle: CSSProperties = {
-  border: "1px solid #cbd5e1",
+  border: "1px solid var(--lf-border-input)",
   borderRadius: 999,
   padding: "10px 14px",
   minHeight: 44,
   textDecoration: "none",
-  color: "#0f172a",
+  color: "var(--lf-text)",
   fontSize: 13,
   display: "inline-flex",
   alignItems: "center",
@@ -2156,7 +2156,7 @@ const linkPillStyle: CSSProperties = {
 
 const contactTitleLinkStyle: CSSProperties = {
   fontWeight: 700,
-  color: "#0f172a",
+  color: "var(--lf-text)",
   textDecoration: "none",
 };
 
@@ -2169,9 +2169,9 @@ const rowActionsStyle: CSSProperties = {
 };
 
 const rowPrimaryActionStyle: CSSProperties = {
-  border: "1px solid #cbd5e1",
-  background: "#fff",
-  color: "#0f172a",
+  border: "1px solid var(--lf-border-input)",
+  background: "var(--lf-surface-card)",
+  color: "var(--lf-text)",
   borderRadius: 999,
   padding: "7px 10px",
   fontSize: 12,
@@ -2184,7 +2184,7 @@ const rowPrimaryActionStyle: CSSProperties = {
 
 const rowSecondaryActionStyle: CSSProperties = {
   ...rowPrimaryActionStyle,
-  background: "#f8fafc",
+  background: "var(--lf-surface-page)",
   fontWeight: 600,
 };
 
@@ -2196,7 +2196,7 @@ const rowTertiaryActionStyle: CSSProperties = {
 };
 
 const selectedAdminStyle: CSSProperties = {
-  border: "1px solid #bfdbfe",
+  border: "1px solid var(--lf-border)",
   borderTop: "none",
   borderRadius: "0 0 14px 14px",
   background: "#f8fbff",
@@ -2217,8 +2217,8 @@ const selectedActionSummaryStyle: CSSProperties = {
 const selectedActionChipStyle: CSSProperties = {
   borderRadius: 999,
   border: "1px solid #dbeafe",
-  background: "#fff",
-  color: "#0f172a",
+  background: "var(--lf-surface-card)",
+  color: "var(--lf-text)",
   padding: "5px 9px",
   fontSize: 12,
   fontWeight: 600,
@@ -2230,14 +2230,14 @@ const selectedActionChipStyle: CSSProperties = {
 const personSummaryStyle: CSSProperties = {
   display: "grid",
   gap: 10,
-  border: "1px solid #e8e1dc",
+  border: "1px solid var(--lf-border)",
   borderRadius: 10,
-  background: "#fffefd",
+  background: "var(--lf-surface-card)",
   padding: 14,
 };
 
 const personSummaryLabelStyle: CSSProperties = {
-  color: "#7c4a35",
+  color: "var(--lf-link)",
   fontSize: 11,
   fontWeight: 800,
   letterSpacing: "0.06em",
@@ -2257,9 +2257,9 @@ const contactSummaryRowStyle: CSSProperties = {
   gridTemplateColumns: "minmax(150px, 0.9fr) minmax(180px, 1fr) minmax(190px, 1.3fr) auto",
   gap: 14,
   alignItems: "center",
-  border: "1px solid #e8e1dc",
+  border: "1px solid var(--lf-border)",
   borderRadius: 12,
-  background: "#fffefd",
+  background: "var(--lf-surface-card)",
   padding: "12px 14px",
 };
 
@@ -2275,7 +2275,7 @@ const contactSummaryButtonStyle: CSSProperties = {
 };
 
 const contactSummaryNameStyle: CSSProperties = {
-  color: "#1f1712",
+  color: "var(--lf-text)",
   fontSize: 15,
   overflow: "hidden",
   textOverflow: "ellipsis",
@@ -2283,18 +2283,18 @@ const contactSummaryNameStyle: CSSProperties = {
 };
 
 const contactSummaryRelationshipStyle: CSSProperties = {
-  color: "#64748b",
+  color: "var(--lf-text-secondary)",
   fontSize: 13,
 };
 
 const contactSummaryStatusStyle: CSSProperties = {
-  color: "#475569",
+  color: "var(--lf-text-secondary)",
   fontSize: 13,
   fontWeight: 650,
 };
 
 const contactNextActionStyle: CSSProperties = {
-  color: "#7c4a35",
+  color: "var(--lf-link)",
   fontSize: 12,
   fontWeight: 700,
   whiteSpace: "nowrap",
@@ -2307,23 +2307,23 @@ const emptyPeopleStyle: CSSProperties = {
   border: "1px dashed #d7cec7",
   borderRadius: 12,
   padding: 20,
-  color: "#475569",
+  color: "var(--lf-text-secondary)",
 };
 
 const drawerContactLineStyle: CSSProperties = {
-  color: "#475569",
+  color: "var(--lf-text-secondary)",
   fontSize: 14,
 };
 
 const drawerExplanationStyle: CSSProperties = {
   margin: 0,
-  color: "#64748b",
+  color: "var(--lf-text-secondary)",
   fontSize: 13,
   lineHeight: 1.55,
 };
 
 const drawerRelatedItemStyle: CSSProperties = {
-  color: "#1f2937",
+  color: "var(--lf-text)",
   fontSize: 14,
 };
 
@@ -2335,9 +2335,9 @@ const linkedDocumentWrapStyle: CSSProperties = {
 };
 
 const linkedDocumentIconButtonStyle: CSSProperties = {
-  border: "1px solid #cbd5e1",
-  background: "#fff",
-  color: "#0f172a",
+  border: "1px solid var(--lf-border-input)",
+  background: "var(--lf-surface-card)",
+  color: "var(--lf-text)",
   borderRadius: 999,
   padding: "4px 8px",
   fontSize: 11,
@@ -2350,8 +2350,8 @@ const linkedDocumentIconButtonStyle: CSSProperties = {
 
 const unavailableLinkedDocumentStyle: CSSProperties = {
   ...linkedDocumentIconButtonStyle,
-  background: "#f8fafc",
-  color: "#94a3b8",
+  background: "var(--lf-surface-page)",
+  color: "var(--lf-text-secondary)",
   cursor: "not-allowed",
   borderStyle: "dashed",
 };
@@ -2370,13 +2370,13 @@ const contactSearchLabelStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   gap: 6,
-  color: "#475569",
+  color: "var(--lf-text-secondary)",
   fontSize: 12,
   fontWeight: 700,
 };
 
 const contactSearchInputStyle: CSSProperties = {
-  border: "1px solid #d1d5db",
+  border: "1px solid var(--lf-border-input)",
   borderRadius: 10,
   padding: "9px 10px",
   fontSize: 14,
@@ -2390,13 +2390,13 @@ const contactFormFieldStyle: CSSProperties = {
 };
 
 const contactFormLabelStyle: CSSProperties = {
-  color: "#475569",
+  color: "var(--lf-text-secondary)",
   fontSize: 12,
   fontWeight: 800,
 };
 
 const contactFormInputStyle: CSSProperties = {
-  border: "1px solid #d1d5db",
+  border: "1px solid var(--lf-border-input)",
   borderRadius: 10,
   padding: "10px 11px",
   minHeight: 44,

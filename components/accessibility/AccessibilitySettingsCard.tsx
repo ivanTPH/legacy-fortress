@@ -141,7 +141,7 @@ export default function AccessibilitySettingsCard() {
           Reset changes
         </button>
       </div>
-      {status ? <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div> : null}
+      {status ? <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{status}</div> : null}
     </SettingsCard>
   );
 }
@@ -150,15 +150,15 @@ const preferenceToggleStyle = {
   display: "flex",
   alignItems: "flex-start",
   gap: 10,
-  border: "1px solid #e5e7eb",
+  border: "1px solid var(--lf-border)",
   borderRadius: 12,
   padding: 12,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
 } as const;
 
 const preferenceHelpStyle = {
   display: "block",
-  color: "#64748b",
+  color: "var(--lf-text-secondary)",
   fontSize: 13,
   marginTop: 4,
 } as const;

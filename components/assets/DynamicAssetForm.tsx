@@ -48,7 +48,7 @@ export default function DynamicAssetForm({
                 onChange={(e) => updateValue(field.id, e.target.value)}
                 rows={4}
                 style={{
-                  border: "1px solid #cbd5e1",
+                  border: "1px solid var(--lf-border-input)",
                   borderRadius: 8,
                   padding: 12,
                 }}
@@ -70,7 +70,7 @@ export default function DynamicAssetForm({
                 value={value}
                 onChange={(e) => updateValue(field.id, e.target.value)}
                 style={{
-                  border: "1px solid #cbd5e1",
+                  border: "1px solid var(--lf-border-input)",
                   borderRadius: 8,
                   padding: 12,
                 }}
@@ -106,7 +106,7 @@ export default function DynamicAssetForm({
               placeholder={field.placeholder ?? ""}
               onChange={(e) => updateValue(field.id, e.target.value)}
               style={{
-                border: "1px solid #cbd5e1",
+                border: "1px solid var(--lf-border-input)",
                 borderRadius: 8,
                 padding: 12,
               }}
@@ -121,8 +121,8 @@ export default function DynamicAssetForm({
           border: "none",
           borderRadius: 10,
           padding: "12px 16px",
-          background: "#0f172a",
-          color: "#fff",
+          background: "var(--lf-primary-bg)",
+          color: "var(--lf-primary-text)",
           fontWeight: 600,
           cursor: "pointer",
         }}

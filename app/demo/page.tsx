@@ -106,35 +106,35 @@ export default function DemoAccessPage() {
 
           <section
             style={{
-              border: "1px solid #dbe3eb",
+              border: "1px solid var(--lf-border)",
               borderRadius: 14,
               padding: 14,
-              background: "#f8fafc",
+              background: "var(--lf-surface-page)",
               display: "grid",
               gap: 8,
             }}
           >
             <div style={{ fontWeight: 700 }}>What you will see</div>
-            <div style={{ color: "#475569", fontSize: 14 }}>
+            <div style={{ color: "var(--lf-text-secondary)", fontSize: 14 }}>
               A populated Bill Smith review account with linked, view-only access.
             </div>
-            <ul style={{ margin: 0, paddingLeft: 18, color: "#334155", display: "grid", gap: 6 }}>
+            <ul style={{ margin: 0, paddingLeft: 18, color: "var(--lf-text)", display: "grid", gap: 6 }}>
               {highlights.map((item) => <li key={item}>{item}</li>)}
             </ul>
           </section>
 
           <section
             style={{
-              border: "1px solid #e5e7eb",
+              border: "1px solid var(--lf-border)",
               borderRadius: 14,
               padding: 14,
-              background: "#fff",
+              background: "var(--lf-surface-card)",
               display: "grid",
               gap: 6,
             }}
           >
             <div style={{ fontWeight: 700 }}>Start here</div>
-            <div style={{ color: "#475569", fontSize: 14 }}>
+            <div style={{ color: "var(--lf-text-secondary)", fontSize: 14 }}>
               Begin on the dashboard, then open Finances, Legal, and Contacts to see the clearest examples of records, attachments, and trusted access.
             </div>
           </section>

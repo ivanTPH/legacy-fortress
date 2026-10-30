@@ -706,7 +706,7 @@ export default function ContactInvitationManager({
             </div>
             <h2 style={{ margin: 0, fontSize: 18 }}>{isDashboardMode ? "Contacts and invitations" : "Contacts, invitations and roles"}</h2>
           </div>
-          <p style={{ margin: 0, color: "#6b7280", fontSize: 13 }}>
+          <p style={{ margin: 0, color: "var(--lf-text-secondary)", fontSize: 13 }}>
             {isDashboardMode
               ? "Review invitation progress here, then open Contacts for contact editing, removal, access notes, and richer controls."
               : "Keep trusted contacts, invitation progress, and assigned access roles easy to review in one place."}
@@ -838,7 +838,7 @@ export default function ContactInvitationManager({
           </label>}
           {!contactOnly ? <div style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
             <span style={fieldLabelStyle}>Category access</span>
-            <div style={{ color: "#64748b", fontSize: 12 }}>
+            <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
               Choose the visible categories this contact can review. Records beneath each selected category start as view only, then you can allow editing record by record.
             </div>
             <button
@@ -897,15 +897,15 @@ export default function ContactInvitationManager({
           {!contactOnly && allowedSections.length ? (
             <div style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
               <span style={fieldLabelStyle}>Linked records and document permissions</span>
-              <div style={{ color: "#64748b", fontSize: 12 }}>
+              <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
                 Each selected category expands into the actual visible record types and saved records in the vault. Every linked record starts on View, and Edit must be enabled explicitly record by record.
               </div>
               <div style={{ display: "grid", gap: 8 }}>
                 {getScopedResourceGroups(scopeItems, allowedSections, preferences).map((group) => (
                   <div key={group.key} style={resourceGroupStyle}>
                     <div style={{ display: "grid", gap: 2 }}>
-                      <strong style={{ fontSize: 13, color: "#0f172a" }}>{group.label}</strong>
-                      <span style={{ color: "#64748b", fontSize: 12 }}>{group.description}</span>
+                      <strong style={{ fontSize: 13, color: "var(--lf-text)" }}>{group.label}</strong>
+                      <span style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>{group.description}</span>
                     </div>
                     {group.items.length ? (
                       <div style={{ display: "grid", gap: 8 }}>
@@ -926,7 +926,7 @@ export default function ContactInvitationManager({
                             <div key={`${group.key}-${option.sourceKind}:${option.sourceId}`} style={scopePermissionRowStyle}>
                               <div style={{ display: "grid", gap: 2 }}>
                                 <span style={{ fontWeight: 600 }}>{option.label}</span>
-                                <span style={{ color: "#64748b", fontSize: 12 }}>{option.meta}</span>
+                                <span style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>{option.meta}</span>
                               </div>
                               {href ? (
                                 <Link href={href} style={{ color: "#1d4ed8", textDecoration: "none", fontWeight: 600 }}>
@@ -956,14 +956,14 @@ export default function ContactInvitationManager({
                         })}
                       </div>
                     ) : (
-                      <div style={{ color: "#64748b", fontSize: 12 }}>
+                      <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
                         No saved records are visible here yet, but this resource type remains linked to the selected category.
                       </div>
                     )}
                   </div>
                 ))}
                 {getScopedResourceGroups(scopeItems, allowedSections, preferences).length === 0 ? (
-                  <div style={{ color: "#64748b", fontSize: 12 }}>No visible record types are available yet in the selected categories.</div>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>No visible record types are available yet in the selected categories.</div>
                 ) : null}
               </div>
             </div>
@@ -1074,7 +1074,7 @@ export default function ContactInvitationManager({
         </div>
 
         {loading ? (
-          <div style={{ color: "#6b7280" }}>Loading invitations...</div>
+          <div style={{ color: "var(--lf-text-secondary)" }}>Loading invitations...</div>
         ) : rows.length === 0 ? (
           <div style={emptyStateStyle}>
             <Icon name="mail" size={16} />
@@ -1085,7 +1085,7 @@ export default function ContactInvitationManager({
             <div style={{ overflowX: "auto" }} className="lf-contact-invitations-table-wrap lf-desktop-only">
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }} className="lf-contact-invitations-table">
                 <thead>
-                  <tr style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>
+                  <tr style={{ textAlign: "left", borderBottom: "1px solid var(--lf-border)" }}>
                     <th style={thStyle}>Contact</th>
                     <th style={thStyle}>Status</th>
                     <th style={thStyle}>Role</th>
@@ -1101,7 +1101,7 @@ export default function ContactInvitationManager({
                           <Link href={buildContactsWorkspaceHref(row.contact_id ?? "")} style={contactLinkStyle} title={`Open ${row.contact_name || row.contact_email} in Contacts`}>
                             {row.contact_name}
                           </Link>
-                          <div style={{ color: "#6b7280" }}>{row.contact_email}</div>
+                          <div style={{ color: "var(--lf-text-secondary)" }}>{row.contact_email}</div>
                         </div>
                       </td>
                       <td style={tdStyle} data-label="Status">
@@ -1115,12 +1115,12 @@ export default function ContactInvitationManager({
                                 onClick={() => void sendInvite(row, false)}
                               >
                                 <StatusIcon icon="send" tone="neutral" label={`Send invite to ${row.contact_email}`} />
-                                <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>Send invite</span>
+                                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--lf-text)" }}>Send invite</span>
                               </button>
                             ) : (
                               <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                                 <StatusIcon {...getInvitationStatusIcon(row, isRecentlySent(row.id))} />
-                                <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>{getDashboardInvitationStatusLabel(row, isRecentlySent(row.id))}</span>
+                                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--lf-text)" }}>{getDashboardInvitationStatusLabel(row, isRecentlySent(row.id))}</span>
                               </div>
                             )
                           ) : (
@@ -1176,7 +1176,7 @@ export default function ContactInvitationManager({
                         <Link href={buildContactsWorkspaceHref(row.contact_id ?? "")} style={contactLinkStyle} title={`Open ${row.contact_name || row.contact_email} in Contacts`}>
                           {row.contact_name}
                         </Link>
-                        <div style={{ color: "#6b7280", fontSize: 13 }}>{row.contact_email}</div>
+                        <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{row.contact_email}</div>
                       </div>
                       <RoleBadge role={row.assigned_role} />
                     </div>
@@ -1189,12 +1189,12 @@ export default function ContactInvitationManager({
                           onClick={() => void sendInvite(row, false)}
                         >
                           <StatusIcon icon="send" tone="neutral" label={`Send invite to ${row.contact_email}`} />
-                          <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>Send invite</span>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--lf-text)" }}>Send invite</span>
                         </button>
                       ) : (
                         <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                           <StatusIcon {...getInvitationStatusIcon(row, isRecentlySent(row.id))} />
-                          <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>{getDashboardInvitationStatusLabel(row, isRecentlySent(row.id))}</span>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--lf-text)" }}>{getDashboardInvitationStatusLabel(row, isRecentlySent(row.id))}</span>
                         </div>
                       )
                     ) : (
@@ -1323,11 +1323,11 @@ function GuidedExecutorFlow({
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
           <div>
             <p style={eyebrowStyle}>People I Trust · Executor</p>
-            <h3 style={{ margin: 0, color: "#0f172a", fontSize: 22 }}>Add an executor</h3>
+            <h3 style={{ margin: 0, color: "var(--lf-text)", fontSize: 22 }}>Add an executor</h3>
           </div>
           <button type="button" style={guidedSecondaryButtonStyle} onClick={onCancel}>Cancel</button>
         </div>
-        <p style={{ margin: 0, color: "#475569", fontSize: 14 }}>
+        <p style={{ margin: 0, color: "var(--lf-text-secondary)", fontSize: 14 }}>
           Add this person to People I Trust first. You can decide separately whether to invite them to connect with your Fortress.
         </p>
         {status ? <div style={statusMessageStyle} role="status">{status}</div> : null}
@@ -1353,7 +1353,7 @@ function GuidedExecutorFlow({
             <input value={email} onChange={(event) => onEmailChange(event.target.value)} style={guidedInputStyle} type="email" placeholder="name@example.com" />
           </label>
           <label style={guidedFieldStyle}>
-            <span style={guidedLabelStyle}>Phone number <span style={{ color: "#64748b", fontWeight: 400 }}>(optional)</span></span>
+            <span style={guidedLabelStyle}>Phone number <span style={{ color: "var(--lf-text-secondary)", fontWeight: 400 }}>(optional)</span></span>
             <input value={phone} onChange={(event) => onPhoneChange(event.target.value)} style={guidedInputStyle} type="tel" placeholder="Phone number" aria-describedby="executor-phone-help" />
             <span id="executor-phone-help" style={guidedHelpStyle}>You can add this later in contact details.</span>
           </label>
@@ -1390,7 +1390,7 @@ function GuidedExecutorFlow({
         <div style={{ display: "grid", gap: 14 }}>
           <div>
             <p style={guidedLabelStyle}>Information this person may eventually be able to VIEW</p>
-            <p style={{ margin: "4px 0 12px", color: "#475569", fontSize: 14 }}>
+            <p style={{ margin: "4px 0 12px", color: "var(--lf-text-secondary)", fontSize: 14 }}>
               These choices describe what this person may eventually be allowed to view. Access remains subject to your instructions, their accepted role and estate-access controls.
             </p>
             <div style={categoryGridStyle}>
@@ -1425,7 +1425,7 @@ function GuidedExecutorFlow({
 
       {step === "review" ? (
         <div style={{ display: "grid", gap: 14 }}>
-          <h3 style={{ margin: 0, color: "#0f172a", fontSize: 20 }}>Review invitation</h3>
+          <h3 style={{ margin: 0, color: "var(--lf-text)", fontSize: 20 }}>Review invitation</h3>
           <div style={reviewSectionStyle}><strong>PERSON</strong><span>{name || "Not provided"}</span><span>{email || "Not provided"}</span>{phone ? <span>{phone}</span> : null}</div>
           <div style={reviewSectionStyle}><strong>ROLE</strong><span>{roleOptions.find((option) => option.value === role)?.label ?? "Selected role"}</span><span style={guidedHelpStyle}>{getRoleDescription(role)}</span></div>
           <div style={reviewSectionStyle}><strong>INFORMATION THEY MAY EVENTUALLY VIEW</strong>{allowedSections.length ? allowedSections.map((section) => <span key={section}>{accessLabel(section)} — View only</span>) : <span>No categories selected</span>}</div>
@@ -1502,7 +1502,7 @@ function InvitationStatusPanel({ row }: { row: InvitationRow }) {
       <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline", flexWrap: "wrap" }}>
         <div>
           <p style={eyebrowStyle}>Role status</p>
-          <h3 style={{ margin: 0, fontSize: 18, color: "#0f172a" }}>{row.contact_name}</h3>
+          <h3 style={{ margin: 0, fontSize: 18, color: "var(--lf-text)" }}>{row.contact_name}</h3>
         </div>
         <span style={statusPanelRoleStyle}>{ROLE_RULES[row.assigned_role].label}</span>
       </div>
@@ -1517,7 +1517,7 @@ function InvitationStatusPanel({ row }: { row: InvitationRow }) {
           </div>
         ))}
       </div>
-      <p style={{ margin: 0, color: "#475569", fontSize: 13 }}>
+      <p style={{ margin: 0, color: "var(--lf-text-secondary)", fontSize: 13 }}>
         Being linked does not automatically give this person access to your private Vault while you are alive. Identity verification does not establish legal authority or guarantee access.
       </p>
     </section>
@@ -1800,9 +1800,9 @@ function normalizeActivationStatus(value: unknown): AccessActivationStatus {
 }
 
 const panelStyle: CSSProperties = {
-  border: "1px solid #e5e7eb",
+  border: "1px solid var(--lf-border)",
   borderRadius: 16,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   padding: 16,
   display: "grid",
   gap: 14,
@@ -1816,7 +1816,7 @@ const panelHeaderStyle: CSSProperties = {
 };
 
 const sectionBlockStyle: CSSProperties = {
-  border: "1px solid #eef2f7",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 14,
   background: "#fcfdff",
   padding: 14,
@@ -1835,26 +1835,26 @@ const sectionTitleStyle: CSSProperties = {
   margin: 0,
   fontSize: 15,
   fontWeight: 700,
-  color: "#0f172a",
+  color: "var(--lf-text)",
 };
 
 const sectionIntroStyle: CSSProperties = {
   margin: "4px 0 0",
-  color: "#64748b",
+  color: "var(--lf-text-secondary)",
   fontSize: 13,
 };
 
 const guidedFlowStyle: CSSProperties = {
-  border: "1px solid #cbd5e1",
+  border: "1px solid var(--lf-border-input)",
   borderRadius: 12,
-  background: "#ffffff",
+  background: "var(--lf-surface-card)",
   padding: 18,
   display: "grid",
   gap: 18,
 };
 const eyebrowStyle: CSSProperties = {
   margin: 0,
-  color: "#475569",
+  color: "var(--lf-text-secondary)",
   fontSize: 12,
   fontWeight: 700,
   letterSpacing: "0.04em",
@@ -1872,13 +1872,13 @@ const activeStepStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: 7,
-  color: "#0f172a",
+  color: "var(--lf-text)",
   fontWeight: 700,
   fontSize: 12,
   borderBottom: "2px solid #0f172a",
   padding: "7px 2px",
 };
-const completedStepStyle: CSSProperties = { ...activeStepStyle, color: "#64748b", fontWeight: 500, borderBottomColor: "#e2e8f0" };
+const completedStepStyle: CSSProperties = { ...activeStepStyle, color: "var(--lf-text-secondary)", fontWeight: 500, borderBottomColor: "#e2e8f0" };
 const stepNumberStyle: CSSProperties = {
   width: 24,
   height: 24,
@@ -1886,39 +1886,39 @@ const stepNumberStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  background: "#f1f5f9",
-  border: "1px solid #cbd5e1",
+  background: "var(--lf-surface-subtle)",
+  border: "1px solid var(--lf-border-input)",
   flex: "0 0 auto",
 };
 const guidedFormGridStyle: CSSProperties = { display: "grid", gap: 14, maxWidth: 620 };
 const guidedFieldStyle: CSSProperties = { display: "grid", gap: 6 };
-const guidedLabelStyle: CSSProperties = { color: "#334155", fontSize: 13, fontWeight: 700 };
-const guidedInputStyle: CSSProperties = { width: "100%", minHeight: 44, boxSizing: "border-box", padding: 10, borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff" };
-const guidedHelpStyle: CSSProperties = { color: "#64748b", fontSize: 13, lineHeight: 1.45 };
+const guidedLabelStyle: CSSProperties = { color: "var(--lf-text)", fontSize: 13, fontWeight: 700 };
+const guidedInputStyle: CSSProperties = { width: "100%", minHeight: 44, boxSizing: "border-box", padding: 10, borderRadius: 8, border: "1px solid var(--lf-border-input)", background: "var(--lf-surface-card)" };
+const guidedHelpStyle: CSSProperties = { color: "var(--lf-text-secondary)", fontSize: 13, lineHeight: 1.45 };
 const guidedActionBarStyle: CSSProperties = { display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 4 };
-const guidedPrimaryButtonStyle: CSSProperties = { border: "1px solid #111827", background: "#111827", color: "#fff", borderRadius: 8, minHeight: 44, padding: "10px 16px", fontWeight: 700, cursor: "pointer" };
-const guidedSecondaryButtonStyle: CSSProperties = { border: "1px solid #cbd5e1", background: "#fff", color: "#0f172a", borderRadius: 8, minHeight: 44, padding: "10px 14px", fontWeight: 700, cursor: "pointer" };
-const roleExplanationStyle: CSSProperties = { display: "grid", gap: 2, marginTop: 10, padding: 12, border: "1px solid #cbd5e1", borderRadius: 8, background: "#f8fafc", color: "#0f172a" };
-const masterCheckboxStyle: CSSProperties = { display: "flex", alignItems: "center", gap: 10, minHeight: 48, padding: "8px 10px", border: "1px solid #cbd5e1", borderRadius: 8, background: "#f8fafc", color: "#0f172a", fontWeight: 700 };
-const guidedNoticeStyle: CSSProperties = { margin: 0, padding: 12, borderLeft: "3px solid #64748b", background: "#f8fafc", color: "#475569", fontSize: 13, lineHeight: 1.5 };
+const guidedPrimaryButtonStyle: CSSProperties = { border: "1px solid var(--lf-primary-bg)", background: "var(--lf-primary-bg)", color: "var(--lf-primary-text)", borderRadius: 8, minHeight: 44, padding: "10px 16px", fontWeight: 700, cursor: "pointer" };
+const guidedSecondaryButtonStyle: CSSProperties = { border: "1px solid var(--lf-border-input)", background: "var(--lf-surface-card)", color: "var(--lf-text)", borderRadius: 8, minHeight: 44, padding: "10px 14px", fontWeight: 700, cursor: "pointer" };
+const roleExplanationStyle: CSSProperties = { display: "grid", gap: 2, marginTop: 10, padding: 12, border: "1px solid var(--lf-border-input)", borderRadius: 8, background: "var(--lf-surface-page)", color: "var(--lf-text)" };
+const masterCheckboxStyle: CSSProperties = { display: "flex", alignItems: "center", gap: 10, minHeight: 48, padding: "8px 10px", border: "1px solid var(--lf-border-input)", borderRadius: 8, background: "var(--lf-surface-page)", color: "var(--lf-text)", fontWeight: 700 };
+const guidedNoticeStyle: CSSProperties = { margin: 0, padding: 12, borderLeft: "3px solid #64748b", background: "var(--lf-surface-page)", color: "var(--lf-text-secondary)", fontSize: 13, lineHeight: 1.5 };
 const categoryGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 10 };
-const categoryStyle: CSSProperties = { display: "flex", alignItems: "center", gap: 10, minHeight: 48, padding: "8px 10px", border: "1px solid #cbd5e1", borderRadius: 8, background: "#fff", color: "#0f172a", cursor: "pointer" };
-const selectedCategoryStyle: CSSProperties = { ...categoryStyle, borderColor: "#0f172a", background: "#f1f5f9", fontWeight: 700 };
+const categoryStyle: CSSProperties = { display: "flex", alignItems: "center", gap: 10, minHeight: 48, padding: "8px 10px", border: "1px solid var(--lf-border-input)", borderRadius: 8, background: "var(--lf-surface-card)", color: "var(--lf-text)", cursor: "pointer" };
+const selectedCategoryStyle: CSSProperties = { ...categoryStyle, borderColor: "#0f172a", background: "var(--lf-surface-subtle)", fontWeight: 700 };
 const categoryActionStyle: CSSProperties = { display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 };
-const guidedTextButtonStyle: CSSProperties = { border: "1px solid #cbd5e1", background: "#fff", color: "#334155", borderRadius: 8, minHeight: 40, padding: "8px 11px", fontSize: 13, fontWeight: 700, cursor: "pointer" };
-const customizeDetailsStyle: CSSProperties = { marginTop: 14, padding: 12, border: "1px solid #e2e8f0", borderRadius: 8, color: "#334155" };
-const reviewSectionStyle: CSSProperties = { display: "grid", gap: 5, padding: 14, border: "1px solid #e2e8f0", borderRadius: 8, background: "#fff", color: "#0f172a" };
-const recentInvitationStyle: CSSProperties = { border: "1px solid #86efac", borderRadius: 12, background: "#f0fdf4", color: "#166534", padding: 18, display: "grid", gap: 16 };
-const statusPanelStyle: CSSProperties = { border: "1px solid #cbd5e1", borderRadius: 10, background: "#f8fafc", padding: 14, display: "grid", gap: 14 };
-const statusPanelRoleStyle: CSSProperties = { border: "1px solid #cbd5e1", borderRadius: 999, padding: "5px 9px", color: "#334155", fontSize: 12, fontWeight: 700 };
+const guidedTextButtonStyle: CSSProperties = { border: "1px solid var(--lf-border-input)", background: "var(--lf-surface-card)", color: "var(--lf-text)", borderRadius: 8, minHeight: 40, padding: "8px 11px", fontSize: 13, fontWeight: 700, cursor: "pointer" };
+const customizeDetailsStyle: CSSProperties = { marginTop: 14, padding: 12, border: "1px solid var(--lf-border)", borderRadius: 8, color: "var(--lf-text)" };
+const reviewSectionStyle: CSSProperties = { display: "grid", gap: 5, padding: 14, border: "1px solid var(--lf-border)", borderRadius: 8, background: "var(--lf-surface-card)", color: "var(--lf-text)" };
+const recentInvitationStyle: CSSProperties = { border: "1px solid #86efac", borderRadius: 12, background: "var(--lf-status-approved-bg)", color: "var(--lf-status-approved-text)", padding: 18, display: "grid", gap: 16 };
+const statusPanelStyle: CSSProperties = { border: "1px solid var(--lf-border-input)", borderRadius: 10, background: "var(--lf-surface-page)", padding: 14, display: "grid", gap: 14 };
+const statusPanelRoleStyle: CSSProperties = { border: "1px solid var(--lf-border-input)", borderRadius: 999, padding: "5px 9px", color: "var(--lf-text)", fontSize: 12, fontWeight: 700 };
 const statusPanelGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8 };
-const statusPanelStepStyle: CSSProperties = { display: "flex", alignItems: "flex-start", gap: 8, padding: 9, border: "1px solid #e2e8f0", borderRadius: 8, background: "#fff" };
-const statusCheckStyle: CSSProperties = { color: "#166534", fontWeight: 800, fontSize: 17 };
-const statusPendingStyle: CSSProperties = { color: "#64748b", fontWeight: 800, fontSize: 17 };
+const statusPanelStepStyle: CSSProperties = { display: "flex", alignItems: "flex-start", gap: 8, padding: 9, border: "1px solid var(--lf-border)", borderRadius: 8, background: "var(--lf-surface-card)" };
+const statusCheckStyle: CSSProperties = { color: "var(--lf-status-approved-text)", fontWeight: 800, fontSize: 17 };
+const statusPendingStyle: CSSProperties = { color: "var(--lf-text-secondary)", fontWeight: 800, fontSize: 17 };
 
 const contactLinkStyle: CSSProperties = {
   fontWeight: 700,
-  color: "#0f172a",
+  color: "var(--lf-text)",
   textDecoration: "none",
 };
 
@@ -1927,25 +1927,25 @@ const contactsLinkStyle: CSSProperties = {
   alignItems: "center",
   gap: 8,
   textDecoration: "none",
-  color: "#0f172a",
+  color: "var(--lf-text)",
   fontSize: 13,
   fontWeight: 600,
-  border: "1px solid #cbd5e1",
+  border: "1px solid var(--lf-border-input)",
   borderRadius: 999,
   padding: "7px 10px",
-  background: "#fff",
+  background: "var(--lf-surface-card)",
 };
 
 const sectionIconStyle: CSSProperties = {
   width: 28,
   height: 28,
   borderRadius: 10,
-  background: "#f1f5f9",
-  border: "1px solid #e2e8f0",
+  background: "var(--lf-surface-subtle)",
+  border: "1px solid var(--lf-border)",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  color: "#0f172a",
+  color: "var(--lf-text)",
 };
 
 const summaryGridStyle: CSSProperties = {
@@ -1955,9 +1955,9 @@ const summaryGridStyle: CSSProperties = {
 };
 
 const summaryCardStyle: CSSProperties = {
-  border: "1px solid #eef2f7",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 14,
-  background: "#f8fafc",
+  background: "var(--lf-surface-page)",
   padding: 12,
   display: "grid",
   gap: 4,
@@ -1965,7 +1965,7 @@ const summaryCardStyle: CSSProperties = {
 
 const summaryLabelStyle: CSSProperties = {
   fontSize: 12,
-  color: "#64748b",
+  color: "var(--lf-text-secondary)",
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.02em",
@@ -1974,31 +1974,31 @@ const summaryLabelStyle: CSSProperties = {
 const summaryValueStyle: CSSProperties = {
   fontSize: 24,
   lineHeight: 1,
-  color: "#0f172a",
+  color: "var(--lf-text)",
 };
 
 const summaryHelpStyle: CSSProperties = {
   fontSize: 12,
-  color: "#64748b",
+  color: "var(--lf-text-secondary)",
 };
 
 const fieldStyle: CSSProperties = { display: "grid", gap: 6 };
-const fieldLabelStyle: CSSProperties = { fontSize: 12, color: "#374151" };
+const fieldLabelStyle: CSSProperties = { fontSize: 12, color: "var(--lf-text)" };
 const scopeChipStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   gap: 8,
   padding: "8px 10px",
   borderRadius: 999,
-  border: "1px solid #dbe3eb",
-  background: "#fff",
+  border: "1px solid var(--lf-border)",
+  background: "var(--lf-surface-card)",
   fontSize: 13,
-  color: "#0f172a",
+  color: "var(--lf-text)",
 };
 const walletAllButtonStyle: CSSProperties = {
   border: "1px solid #0f172a",
-  background: "#0f172a",
-  color: "#fff",
+  background: "var(--lf-primary-bg)",
+  color: "var(--lf-primary-text)",
   borderRadius: 999,
   padding: "8px 11px",
   fontSize: 13,
@@ -2011,7 +2011,7 @@ const walletAllButtonStyle: CSSProperties = {
 };
 const inlineActionPanelStyle: CSSProperties = {
   border: "1px solid #dbeafe",
-  background: "#eff6ff",
+  background: "var(--lf-surface-subtle)",
   borderRadius: 14,
   padding: 12,
   display: "flex",
@@ -2024,13 +2024,13 @@ const inputStyle: CSSProperties = {
   width: "100%",
   padding: 10,
   borderRadius: 10,
-  border: "1px solid #e5e7eb",
-  background: "#fff",
+  border: "1px solid var(--lf-border)",
+  background: "var(--lf-surface-card)",
 };
 const primaryBtnStyle: CSSProperties = {
-  border: "1px solid #111827",
-  background: "#111827",
-  color: "#fff",
+  border: "1px solid var(--lf-primary-bg)",
+  background: "var(--lf-primary-bg)",
+  color: "var(--lf-primary-text)",
   borderRadius: 10,
   padding: "9px 12px",
   fontSize: 13,
@@ -2038,9 +2038,9 @@ const primaryBtnStyle: CSSProperties = {
 };
 
 const mobileCardStyle: CSSProperties = {
-  border: "1px solid #e5e7eb",
+  border: "1px solid var(--lf-border)",
   borderRadius: 12,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   padding: 12,
   display: "grid",
   gap: 10,
@@ -2061,19 +2061,19 @@ const mobileMetaLabelStyle: CSSProperties = {
   fontWeight: 700,
   letterSpacing: "0.02em",
   textTransform: "uppercase",
-  color: "#64748b",
+  color: "var(--lf-text-secondary)",
 };
 const emptyStateStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   gap: 8,
   fontSize: 13,
-  color: "#64748b",
+  color: "var(--lf-text-secondary)",
 };
 const ghostBtnStyle: CSSProperties = {
-  border: "1px solid #d1d5db",
-  background: "#fff",
-  color: "#111827",
+  border: "1px solid var(--lf-border-input)",
+  background: "var(--lf-surface-card)",
+  color: "var(--lf-text)",
   borderRadius: 10,
   padding: "9px 12px",
   fontSize: 13,
@@ -2082,9 +2082,9 @@ const ghostBtnStyle: CSSProperties = {
 const scopePermissionRowStyle: CSSProperties = {
   display: "grid",
   gap: 10,
-  border: "1px solid #e5e7eb",
+  border: "1px solid var(--lf-border)",
   borderRadius: 12,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   padding: 12,
 };
 const permissionToggleStyle: CSSProperties = {
@@ -2093,18 +2093,18 @@ const permissionToggleStyle: CSSProperties = {
   flexWrap: "wrap",
 };
 const permissionOnButtonStyle: CSSProperties = {
-  border: "1px solid #111827",
-  background: "#111827",
-  color: "#fff",
+  border: "1px solid var(--lf-primary-bg)",
+  background: "var(--lf-primary-bg)",
+  color: "var(--lf-primary-text)",
   borderRadius: 999,
   padding: "7px 10px",
   fontSize: 12,
   cursor: "pointer",
 };
 const permissionOffButtonStyle: CSSProperties = {
-  border: "1px solid #d1d5db",
-  background: "#fff",
-  color: "#111827",
+  border: "1px solid var(--lf-border-input)",
+  background: "var(--lf-surface-card)",
+  color: "var(--lf-text)",
   borderRadius: 999,
   padding: "7px 10px",
   fontSize: 12,
@@ -2112,17 +2112,17 @@ const permissionOffButtonStyle: CSSProperties = {
 };
 const dangerBtnStyle: CSSProperties = {
   border: "1px solid #dc2626",
-  background: "#fff",
-  color: "#b91c1c",
+  background: "var(--lf-surface-card)",
+  color: "var(--lf-destructive)",
   borderRadius: 10,
   padding: "9px 12px",
   fontSize: 13,
   cursor: "pointer",
 };
 const resourceGroupStyle: CSSProperties = {
-  border: "1px solid #dbe3eb",
+  border: "1px solid var(--lf-border)",
   borderRadius: 14,
-  background: "#f8fafc",
+  background: "var(--lf-surface-page)",
   padding: 12,
   display: "grid",
   gap: 10,
@@ -2132,10 +2132,10 @@ const dashboardStatusActionStyle: CSSProperties = {
   alignItems: "center",
   gap: 8,
   width: "fit-content",
-  border: "1px solid #cbd5e1",
+  border: "1px solid var(--lf-border-input)",
   borderRadius: 999,
-  background: "#fff",
-  color: "#0f172a",
+  background: "var(--lf-surface-card)",
+  color: "var(--lf-text)",
   padding: "6px 10px",
   cursor: "pointer",
 };
@@ -2143,7 +2143,7 @@ const statusMessageStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: 10,
-  color: "#475569",
+  color: "var(--lf-text-secondary)",
   fontSize: 13,
   flexWrap: "wrap",
 };
@@ -2153,17 +2153,17 @@ const planLimitStatusStyle: CSSProperties = {
   justifyContent: "space-between",
   gap: 10,
   flexWrap: "wrap",
-  color: "#991b1b",
-  background: "#fef2f2",
-  border: "1px solid #fecaca",
+  color: "var(--lf-status-rejected-text)",
+  background: "var(--lf-status-rejected-bg)",
+  border: "1px solid var(--lf-status-rejected-bg)",
   borderRadius: 12,
   padding: "10px 12px",
   fontSize: 13,
 };
 const planLimitCtaStyle: CSSProperties = {
   border: "1px solid #b91c1c",
-  background: "#fff",
-  color: "#991b1b",
+  background: "var(--lf-surface-card)",
+  color: "var(--lf-status-rejected-text)",
   borderRadius: 999,
   padding: "7px 10px",
   fontSize: 12,
@@ -2173,5 +2173,5 @@ const planLimitCtaStyle: CSSProperties = {
   alignItems: "center",
   gap: 8,
 };
-const thStyle: CSSProperties = { padding: "8px 6px", fontSize: 12, color: "#64748b", fontWeight: 600 };
+const thStyle: CSSProperties = { padding: "8px 6px", fontSize: 12, color: "var(--lf-text-secondary)", fontWeight: 600 };
 const tdStyle: CSSProperties = { padding: "10px 6px", verticalAlign: "top" };

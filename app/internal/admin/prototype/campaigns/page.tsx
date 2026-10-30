@@ -182,7 +182,7 @@ const metricsGridStyle: CSSProperties = {
 };
 
 const metricStyle: CSSProperties = {
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   border: "1px solid var(--lf-border)",
   borderRadius: 8,
   padding: 14,
@@ -204,7 +204,7 @@ const panelGridStyle: CSSProperties = {
 };
 
 const panelStyle: CSSProperties = {
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   border: "1px solid var(--lf-border)",
   borderRadius: 8,
   padding: 16,
@@ -214,7 +214,7 @@ const panelStyle: CSSProperties = {
 
 const builderStyle: CSSProperties = {
   ...panelStyle,
-  background: "#fffefd",
+  background: "var(--lf-surface-card)",
 };
 
 const builderGridStyle: CSSProperties = {
@@ -248,7 +248,7 @@ const mutedBlockStyle: CSSProperties = {
 };
 
 const audienceRowStyle: CSSProperties = {
-  borderBottom: "1px solid #f1ece8",
+  borderBottom: "1px solid var(--lf-divider)",
   paddingBottom: 9,
   display: "flex",
   alignItems: "center",
@@ -259,12 +259,12 @@ const audienceRowStyle: CSSProperties = {
 const infoStyle: CSSProperties = {
   display: "grid",
   gap: 4,
-  borderBottom: "1px solid #f1ece8",
+  borderBottom: "1px solid var(--lf-divider)",
   paddingBottom: 9,
 };
 
 const templateStyle: CSSProperties = {
-  border: "1px solid #f1ece8",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 8,
   background: "var(--lf-surface-muted)",
   color: "var(--lf-text)",
@@ -281,9 +281,9 @@ const checklistItemStyle: CSSProperties = {
 };
 
 const checkStyle: CSSProperties = {
-  border: "1px solid #bbf7d0",
-  background: "#f0fdf4",
-  color: "#166534",
+  border: "1px solid var(--lf-status-approved-bg)",
+  background: "var(--lf-status-approved-bg)",
+  color: "var(--lf-status-approved-text)",
   borderRadius: 999,
   padding: "3px 7px",
   fontSize: 11,
@@ -319,7 +319,7 @@ const auditGridStyle: CSSProperties = {
 };
 
 const auditItemStyle: CSSProperties = {
-  border: "1px solid #f1ece8",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 8,
   padding: 12,
   display: "grid",

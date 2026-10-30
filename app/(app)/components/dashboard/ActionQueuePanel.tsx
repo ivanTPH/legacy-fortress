@@ -147,7 +147,7 @@ function ActionQueuePanel({ items, onAction, context, guidanceItems, onGuidanceD
             message="Actions are grouped prompts from your vault data. Completing them can make records easier for trusted people to understand."
           />
         </div>
-        <div className="lf-action-centre-intro" style={{ color: "#64748b", fontSize: 13 }}>
+        <div className="lf-action-centre-intro" style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
           See the next actions that make your vault easier for trusted people to understand and use. Things to do,
           reminders, and user-created tasks live here instead of the dashboard overview.
         </div>
@@ -159,7 +159,7 @@ function ActionQueuePanel({ items, onAction, context, guidanceItems, onGuidanceD
             <Icon name="verified" size={22} />
             <strong>All up to date</strong>
           </div>
-          <div style={{ color: "#166534", fontSize: 13 }}>
+          <div style={{ color: "var(--lf-status-approved-text)", fontSize: 13 }}>
             No urgent dashboard actions need attention right now. You can still review or add records at any time.
           </div>
         </section>
@@ -941,13 +941,13 @@ const resolvedRowStyle = {
   display: "flex",
   justifyContent: "space-between",
   gap: 12,
-  color: "#475569",
+  color: "var(--lf-text-secondary)",
   fontSize: 13,
   padding: "8px 0",
 } satisfies CSSProperties;
 
 const drawerEyebrowStyle = {
-  color: "#7c4a35",
+  color: "var(--lf-link)",
   fontSize: 11,
   fontWeight: 800,
   letterSpacing: "0.08em",
@@ -957,8 +957,8 @@ const drawerEyebrowStyle = {
 const drawerChoiceStyle = {
   display: "grid",
   gap: 8,
-  borderTop: "1px solid #eee8e3",
-  borderBottom: "1px solid #eee8e3",
+  borderTop: "1px solid var(--lf-divider)",
+  borderBottom: "1px solid var(--lf-divider)",
   padding: "12px 0",
 } satisfies CSSProperties;
 
@@ -978,9 +978,9 @@ const iconWrapStyle = {
   width: 40,
   height: 40,
   borderRadius: 12,
-  background: "#f7f3f0",
-  border: "1px solid #eadfd8",
-  color: "#3a2118",
+  background: "var(--lf-surface-page)",
+  border: "1px solid var(--lf-border)",
+  color: "var(--lf-text)",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -991,8 +991,8 @@ const activeBadgeStyle = {
   display: "inline-flex",
   alignItems: "center",
   borderRadius: 999,
-  border: "1px solid #eadfd8",
-  background: "#fffefd",
+  border: "1px solid var(--lf-border)",
+  background: "var(--lf-surface-card)",
   color: "#5d2d1f",
   fontSize: 11,
   fontWeight: 700,
@@ -1001,16 +1001,16 @@ const activeBadgeStyle = {
 
 const clearBadgeStyle = {
   ...activeBadgeStyle,
-  border: "1px solid #bbf7d0",
-  background: "#f0fdf4",
-  color: "#166534",
+  border: "1px solid var(--lf-status-approved-bg)",
+  background: "var(--lf-status-approved-bg)",
+  color: "var(--lf-status-approved-text)",
 } satisfies CSSProperties;
 
 const clearStateStyle = {
-  border: "1px solid #bbf7d0",
+  border: "1px solid var(--lf-status-approved-bg)",
   borderRadius: 14,
-  background: "#f0fdf4",
-  color: "#166534",
+  background: "var(--lf-status-approved-bg)",
+  color: "var(--lf-status-approved-text)",
   padding: 12,
   display: "grid",
   gap: 4,
@@ -1024,31 +1024,31 @@ const sectionHeaderStyle = {
 function sectionCardStyle(tone: ActionCentreSection["tone"]): CSSProperties {
   if (tone === "clear") {
     return {
-      border: "1px solid #bbf7d0",
+      border: "1px solid var(--lf-status-approved-bg)",
       borderRadius: 12,
       padding: 14,
       display: "grid",
       gap: 8,
-      background: "#f0fdf4",
+      background: "var(--lf-status-approved-bg)",
     };
   }
   if (tone === "alert") {
     return {
-      border: "1px solid #eadfd8",
+      border: "1px solid var(--lf-border)",
       borderRadius: 12,
       padding: 14,
       display: "grid",
       gap: 8,
-      background: "#fffefd",
+      background: "var(--lf-surface-card)",
     };
   }
   return {
-    border: "1px solid #e8e1dc",
+    border: "1px solid var(--lf-border)",
     borderRadius: 12,
     padding: 14,
     display: "grid",
     gap: 8,
-    background: "#fffefd",
+    background: "var(--lf-surface-card)",
   };
 }
 
@@ -1067,7 +1067,7 @@ function sectionPillStyle(tone: ActionCentreSection["tone"]): CSSProperties {
   }
   return {
     ...activeBadgeStyle,
-    border: "1px solid #e8e1dc",
+    border: "1px solid var(--lf-border)",
     background: "#f8f6f4",
     color: "#5f5852",
     padding: "2px 7px",
@@ -1075,22 +1075,22 @@ function sectionPillStyle(tone: ActionCentreSection["tone"]): CSSProperties {
 }
 
 const itemRowStyle = {
-  border: "1px solid #eee8e3",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 10,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   padding: "11px 12px",
   display: "grid",
   gap: 10,
 } satisfies CSSProperties;
 
 const sectionTitleStyle = {
-  color: "#0f172a",
+  color: "var(--lf-text)",
   fontSize: 13,
   fontWeight: 700,
 } satisfies CSSProperties;
 
 const sectionSummaryStyle = {
-  color: "#64748b",
+  color: "var(--lf-text-secondary)",
   fontSize: 12,
   lineHeight: 1.4,
   overflow: "hidden",
@@ -1104,7 +1104,7 @@ function sectionIconStyle(tone: ActionCentreSection["tone"]): CSSProperties {
       width: 34,
       height: 34,
       borderRadius: 10,
-      background: "#f7f3f0",
+      background: "var(--lf-surface-page)",
       color: "#5d2d1f",
       display: "inline-flex",
       alignItems: "center",
@@ -1129,8 +1129,8 @@ function sectionIconStyle(tone: ActionCentreSection["tone"]): CSSProperties {
     width: 34,
     height: 34,
     borderRadius: 10,
-    background: "#f0fdf4",
-    color: "#166534",
+    background: "var(--lf-status-approved-bg)",
+    color: "var(--lf-status-approved-text)",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
@@ -1139,9 +1139,9 @@ function sectionIconStyle(tone: ActionCentreSection["tone"]): CSSProperties {
 }
 
 const stageChipStyle = {
-  color: "#475569",
-  background: "#f8fafc",
-  border: "1px solid #e2e8f0",
+  color: "var(--lf-text-secondary)",
+  background: "var(--lf-surface-page)",
+  border: "1px solid var(--lf-border)",
   borderRadius: 999,
   fontSize: 11,
   fontWeight: 700,
@@ -1149,27 +1149,27 @@ const stageChipStyle = {
 } satisfies CSSProperties;
 
 const rowCountStyle = {
-  color: "#64748b",
+  color: "var(--lf-text-secondary)",
   fontSize: 11,
   fontWeight: 600,
 } satisfies CSSProperties;
 
 const rowTitleStyle = {
-  color: "#1f1712",
+  color: "var(--lf-text)",
   fontSize: 14,
   fontWeight: 800,
   lineHeight: 1.25,
 } satisfies CSSProperties;
 
 const rowLabelStyle = {
-  color: "#334155",
+  color: "var(--lf-text)",
   fontSize: 13,
   fontWeight: 600,
   lineHeight: 1.35,
 } satisfies CSSProperties;
 
 const rowReasonStyle = {
-  color: "#64748b",
+  color: "var(--lf-text-secondary)",
   fontSize: 12,
   lineHeight: 1.4,
 } satisfies CSSProperties;
@@ -1186,7 +1186,7 @@ const primaryActionStyle = {
   border: "1px solid #2b201b",
   borderRadius: 9,
   background: "#2b201b",
-  color: "#fff",
+  color: "var(--lf-primary-text)",
   minHeight: 36,
   padding: "0 12px",
   display: "inline-flex",
@@ -1201,8 +1201,8 @@ const secondaryActionStyle = {
   textDecoration: "none",
   border: "1px solid #ded6cf",
   borderRadius: 9,
-  background: "#fffefd",
-  color: "#3a2118",
+  background: "var(--lf-surface-card)",
+  color: "var(--lf-text)",
   minHeight: 36,
   padding: "0 12px",
   display: "inline-flex",
@@ -1214,12 +1214,12 @@ const secondaryActionStyle = {
 
 function statusPillStyle(status: ActionCentreStatus): CSSProperties {
   const palette: Record<ActionCentreStatus, { border: string; background: string; color: string }> = {
-    Required: { border: "#eadfd8", background: "#fff7ed", color: "#7c2d12" },
-    Recommended: { border: "#e8e1dc", background: "#f8f6f4", color: "#5f5852" },
-    Pending: { border: "#bfdbfe", background: "#eff6ff", color: "#1d4ed8" },
-    Complete: { border: "#bbf7d0", background: "#f0fdf4", color: "#166534" },
-    Failed: { border: "#fecaca", background: "#fef2f2", color: "#991b1b" },
-    "Plan limit reached": { border: "#fed7aa", background: "#fff7ed", color: "#9a3412" },
+    Required: { border: "var(--lf-border)", background: "var(--lf-status-pending-bg)", color: "#7c2d12" },
+    Recommended: { border: "var(--lf-border)", background: "#f8f6f4", color: "#5f5852" },
+    Pending: { border: "var(--lf-border)", background: "var(--lf-surface-subtle)", color: "#1d4ed8" },
+    Complete: { border: "var(--lf-status-approved-bg)", background: "var(--lf-status-approved-bg)", color: "var(--lf-status-approved-text)" },
+    Failed: { border: "var(--lf-status-rejected-bg)", background: "var(--lf-status-rejected-bg)", color: "var(--lf-status-rejected-text)" },
+    "Plan limit reached": { border: "var(--lf-status-pending-bg)", background: "var(--lf-status-pending-bg)", color: "var(--lf-status-pending-text)" },
   };
   const tone = palette[status];
   return {
@@ -1236,10 +1236,10 @@ function statusPillStyle(status: ActionCentreStatus): CSSProperties {
 
 function priorityPillStyle(priority: ActionPriorityLevel): CSSProperties {
   const palette: Record<ActionPriorityLevel, { border: string; background: string; color: string }> = {
-    Critical: { border: "#d6b59b", background: "#2b201b", color: "#ffffff" },
-    High: { border: "#fed7aa", background: "#fff7ed", color: "#9a3412" },
-    Medium: { border: "#e8e1dc", background: "#f8f6f4", color: "#5f5852" },
-    Low: { border: "#e2e8f0", background: "#f8fafc", color: "#475569" },
+    Critical: { border: "#d6b59b", background: "#2b201b", color: "var(--lf-primary-text)" },
+    High: { border: "var(--lf-status-pending-bg)", background: "var(--lf-status-pending-bg)", color: "var(--lf-status-pending-text)" },
+    Medium: { border: "var(--lf-border)", background: "#f8f6f4", color: "#5f5852" },
+    Low: { border: "var(--lf-border)", background: "var(--lf-surface-page)", color: "var(--lf-text-secondary)" },
   };
   const tone = palette[priority];
   return {

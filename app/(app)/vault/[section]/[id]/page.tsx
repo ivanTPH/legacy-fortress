@@ -145,7 +145,7 @@ export default function VaultAssetDetailPage() {
   }, [config, row]);
 
   if (!config) {
-    return <div style={{ color: "#6b7280" }}>Unknown asset section.</div>;
+    return <div style={{ color: "var(--lf-text-secondary)" }}>Unknown asset section.</div>;
   }
 
   async function remove() {
@@ -256,11 +256,11 @@ export default function VaultAssetDetailPage() {
         {!loading && row ? <Link className="lf-ui-button lf-ui-button-primary" href={`${config.basePath}?edit=${id}`}><Icon name="edit" size={18} />Edit</Link> : null}
       </div>
 
-      {loading ? <div style={{ color: "#6b7280" }}>Loading...</div> : null}
+      {loading ? <div style={{ color: "var(--lf-text-secondary)" }}>Loading...</div> : null}
 
       {!loading && !row ? (
         <section style={cardStyle}>
-          <div style={{ color: "#6b7280" }}>No record found.</div>
+          <div style={{ color: "var(--lf-text-secondary)" }}>No record found.</div>
           <Link href={config.basePath} style={linkStyle}>Return to section</Link>
         </section>
       ) : null}
@@ -286,15 +286,15 @@ export default function VaultAssetDetailPage() {
                 .filter(([key]) => !["id", "user_id", "owner_user_id", "created_at", "updated_at", "metadata_json", "section_key", "category_key"].includes(key))
                 .map(([key, value]) => (
                   <div key={key} style={{ display: "grid", gap: 2 }}>
-                    <div style={{ fontSize: 12, color: "#64748b", textTransform: "capitalize" }}>{key.replace(/_/g, " ")}</div>
-                    <div style={{ fontSize: 14, color: "#111827" }}>{formatValue(value)}</div>
+                    <div style={{ fontSize: 12, color: "var(--lf-text-secondary)", textTransform: "capitalize" }}>{key.replace(/_/g, " ")}</div>
+                    <div style={{ fontSize: 14, color: "var(--lf-text)" }}>{formatValue(value)}</div>
                   </div>
                 ))}
               {(section === "property" || section === "business" || section === "digital") && row.metadata_json && typeof row.metadata_json === "object"
                 ? Object.entries(row.metadata_json as Record<string, unknown>).map(([key, value]) => (
                     <div key={`meta-${key}`} style={{ display: "grid", gap: 2 }}>
-                      <div style={{ fontSize: 12, color: "#64748b", textTransform: "capitalize" }}>{key.replace(/_/g, " ")}</div>
-                      <div style={{ fontSize: 14, color: "#111827" }}>{formatValue(value)}</div>
+                      <div style={{ fontSize: 12, color: "var(--lf-text-secondary)", textTransform: "capitalize" }}>{key.replace(/_/g, " ")}</div>
+                      <div style={{ fontSize: 14, color: "var(--lf-text)" }}>{formatValue(value)}</div>
                     </div>
                   ))
                 : null}
@@ -331,7 +331,7 @@ export default function VaultAssetDetailPage() {
               />
             ) : null}
             {!row.file_path && section === "legal" ? <p className="lf-record-detail-note">No document is attached to this record.</p> : null}
-            {status ? <div style={{ color: "#6b7280", fontSize: 13 }}>{status}</div> : null}
+            {status ? <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{status}</div> : null}
           </section>
 
           <section id="history" className="lf-record-detail-card lf-record-detail-history" style={cardStyle}>
@@ -348,8 +348,8 @@ export default function VaultAssetDetailPage() {
 function Meta({ label, value }: { label: string; value: string | null }) {
   return (
     <div>
-      <div style={{ fontSize: 12, color: "#6b7280" }}>{label}</div>
-      <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{value ?? "-"}</div>
+      <div style={{ fontSize: 12, color: "var(--lf-text-secondary)" }}>{label}</div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: "var(--lf-text)" }}>{value ?? "-"}</div>
     </div>
   );
 }
@@ -384,10 +384,10 @@ function inferMimeTypeFromPath(path: string) {
 }
 
 const cardStyle: CSSProperties = {
-  border: "1px solid #e5e7eb",
+  border: "1px solid var(--lf-border)",
   borderRadius: 16,
   padding: 14,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   display: "grid",
   gap: 12,
 };
@@ -399,9 +399,9 @@ const metaGridStyle: CSSProperties = {
 };
 
 const buttonStyle: CSSProperties = {
-  border: "1px solid #d1d5db",
-  background: "#fff",
-  color: "#111827",
+  border: "1px solid var(--lf-border-input)",
+  background: "var(--lf-surface-card)",
+  color: "var(--lf-text)",
   borderRadius: 10,
   padding: "8px 10px",
   fontSize: 13,
@@ -410,13 +410,13 @@ const buttonStyle: CSSProperties = {
 
 const deleteBtnStyle: CSSProperties = {
   ...buttonStyle,
-  borderColor: "#fecaca",
-  color: "#991b1b",
+  borderColor: "var(--lf-status-rejected-bg)",
+  color: "var(--lf-status-rejected-text)",
   background: "#fff1f2",
 };
 
 const linkStyle: CSSProperties = {
-  color: "#0f172a",
+  color: "var(--lf-text)",
   textDecoration: "none",
   fontWeight: 600,
 };

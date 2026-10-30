@@ -125,7 +125,7 @@ function Td({ children }: { children: ReactNode }) {
 }
 
 const toolbarStyle: CSSProperties = {
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   border: "1px solid var(--lf-border)",
   borderRadius: 8,
   padding: 12,
@@ -146,11 +146,11 @@ const selectStyle: CSSProperties = {
   border: "1px solid var(--lf-border)",
   borderRadius: 8,
   padding: "9px 11px",
-  background: "#fff",
+  background: "var(--lf-surface-card)",
 };
 
 const panelStyle: CSSProperties = {
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   border: "1px solid var(--lf-border)",
   borderRadius: 8,
   overflow: "hidden",
@@ -184,7 +184,7 @@ const thStyle: CSSProperties = {
 
 const tdStyle: CSSProperties = {
   padding: "12px",
-  borderBottom: "1px solid #f1ece8",
+  borderBottom: "1px solid var(--lf-divider)",
   verticalAlign: "top",
 };
 
@@ -215,7 +215,7 @@ const timelineGridStyle: CSSProperties = {
 };
 
 const timelineCardStyle: CSSProperties = {
-  border: "1px solid #f1ece8",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 8,
   padding: 12,
   display: "grid",

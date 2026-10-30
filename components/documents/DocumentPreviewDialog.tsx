@@ -44,9 +44,9 @@ export default function DocumentPreviewDialog({
         <div className="lf-v52-document-dialog-header" style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 700, wordBreak: "break-word" }}>{item.fileName || "Attachment preview"}</div>
-            <div style={{ color: "#64748b", fontSize: 12 }}>{formatMime(item.mimeType)}</div>
-            {item.metaLabel ? <div style={{ color: "#475569", fontSize: 12, marginTop: 4 }}>{item.metaLabel}</div> : null}
-            {item.originalFileName ? <div style={{ color: "#475569", fontSize: 13, marginTop: 4 }}>Original filename: {item.originalFileName}</div> : null}
+            <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>{formatMime(item.mimeType)}</div>
+            {item.metaLabel ? <div style={{ color: "var(--lf-text-secondary)", fontSize: 12, marginTop: 4 }}>{item.metaLabel}</div> : null}
+            {item.originalFileName ? <div style={{ color: "var(--lf-text-secondary)", fontSize: 13, marginTop: 4 }}>Original filename: {item.originalFileName}</div> : null}
           </div>
           <IconButton icon="close" label="Close preview" className="lf-v52-document-dialog-close" onClick={onClose} />
         </div>
@@ -58,7 +58,7 @@ export default function DocumentPreviewDialog({
             <iframe title={item.fileName || "Attachment preview"} src={item.previewUrl} style={viewerFrameStyle} />
           ) : (
             <div style={{ display: "grid", gap: 10, justifyItems: "start" }}>
-              <div style={{ color: "#475569", fontSize: 14 }}>
+              <div style={{ color: "var(--lf-text-secondary)", fontSize: 14 }}>
                 This file cannot be previewed safely in the app yet. Open the related record to inspect it.
               </div>
             </div>
@@ -91,7 +91,7 @@ export default function DocumentPreviewDialog({
         </div> : null}
         {item.helperText || item.relatedHref ? (
           <div style={{ display: "grid", gap: 10 }}>
-            {item.helperText ? <div style={{ color: "#475569", fontSize: 14 }}>{item.helperText}</div> : null}
+            {item.helperText ? <div style={{ color: "var(--lf-text-secondary)", fontSize: 14 }}>{item.helperText}</div> : null}
             {item.relatedHref ? (
               <a href={item.relatedHref} style={relatedLinkStyle}>
                 {item.relatedLabel || "Open related record"}
@@ -137,7 +137,7 @@ const dialogStyle: CSSProperties = {
   width: "min(980px, 100%)",
   maxHeight: "90vh",
   overflow: "auto",
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   borderRadius: 18,
   padding: 16,
   display: "grid",
@@ -147,9 +147,9 @@ const dialogStyle: CSSProperties = {
 
 const viewerStyle: CSSProperties = {
   minHeight: 320,
-  border: "1px solid #e2e8f0",
+  border: "1px solid var(--lf-border)",
   borderRadius: 14,
-  background: "#f8fafc",
+  background: "var(--lf-surface-page)",
   padding: 12,
   display: "grid",
   placeItems: "center",
@@ -167,7 +167,7 @@ const viewerFrameStyle: CSSProperties = {
   minHeight: "72vh",
   border: "none",
   borderRadius: 10,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
 };
 
 const relatedLinkStyle: CSSProperties = {
@@ -176,9 +176,9 @@ const relatedLinkStyle: CSSProperties = {
   gap: 8,
   width: "fit-content",
   borderRadius: 999,
-  border: "1px solid #cbd5e1",
+  border: "1px solid var(--lf-border-input)",
   padding: "8px 12px",
   textDecoration: "none",
-  color: "#0f172a",
+  color: "var(--lf-text)",
   fontWeight: 700,
 };

@@ -256,9 +256,9 @@ export default function OnboardingPageClient() {
           {vaultPreferences ? (
             <section
               style={{
-                border: "1px solid #dbe3eb",
+                border: "1px solid var(--lf-border)",
                 borderRadius: 14,
-                background: "#fff",
+                background: "var(--lf-surface-card)",
                 padding: 14,
                 display: "grid",
                 gap: 12,
@@ -266,7 +266,7 @@ export default function OnboardingPageClient() {
             >
               <div style={{ display: "grid", gap: 4 }}>
                 <div style={{ fontWeight: 700 }}>Choose your vault categories</div>
-                <div style={{ color: "#475569", fontSize: 14 }}>
+                <div style={{ color: "var(--lf-text-secondary)", fontSize: 14 }}>
                   Keep only the sections you want to focus on right now. You can change these later in My Vault settings.
                 </div>
               </div>
@@ -290,7 +290,7 @@ export default function OnboardingPageClient() {
                       />
                       <span style={{ fontWeight: 700 }}>{category.label}</span>
                     </span>
-                    <span style={{ color: "#64748b", fontSize: 13 }}>{category.description}</span>
+                    <span style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{category.description}</span>
                     {getVaultSubsectionsForGroup(category.key).length ? (
                       <span style={{ display: "grid", gap: 6, paddingLeft: 24 }}>
                         {getVaultSubsectionsForGroup(category.key).map((subsection) => (
@@ -304,7 +304,7 @@ export default function OnboardingPageClient() {
                               />
                               <span style={{ fontWeight: 600, fontSize: 13 }}>{subsection.label}</span>
                             </span>
-                            <span style={{ color: "#64748b", fontSize: 12 }}>{subsection.description}</span>
+                            <span style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>{subsection.description}</span>
                           </label>
                         ))}
                       </span>
@@ -319,7 +319,7 @@ export default function OnboardingPageClient() {
             <section className="lf-onboarding-adaptive-panel" aria-labelledby="adaptive-onboarding-title">
               <div style={{ display: "grid", gap: 4 }}>
                 <div id="adaptive-onboarding-title" style={{ fontWeight: 700 }}>What matters to you right now?</div>
-                <div style={{ color: "#475569", fontSize: 14 }}>
+                <div style={{ color: "var(--lf-text-secondary)", fontSize: 14 }}>
                   This helps your Vault suggest useful next steps without assuming that every area applies to you. You can change these choices later.
                 </div>
               </div>
@@ -410,7 +410,7 @@ const categoryCardStyle: CSSProperties = {
   border: "1px solid var(--lf-border)",
   borderRadius: 8,
   padding: 12,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   display: "grid",
   gap: 6,
   boxShadow: "0 1px 2px rgba(33,17,13,0.018)",

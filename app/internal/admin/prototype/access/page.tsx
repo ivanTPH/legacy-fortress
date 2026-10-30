@@ -71,7 +71,7 @@ function Td({ children }: { children: ReactNode }) {
 }
 
 const panelStyle: CSSProperties = {
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   border: "1px solid var(--lf-border)",
   borderRadius: 8,
   overflow: "hidden",
@@ -84,7 +84,7 @@ const flowGridStyle: CSSProperties = {
 };
 
 const flowCardStyle: CSSProperties = {
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   border: "1px solid var(--lf-border)",
   borderRadius: 8,
   padding: 12,
@@ -112,7 +112,7 @@ const thStyle: CSSProperties = {
 
 const tdStyle: CSSProperties = {
   padding: "12px",
-  borderBottom: "1px solid #f1ece8",
+  borderBottom: "1px solid var(--lf-divider)",
 };
 
 const disabledButtonStyle: CSSProperties = {

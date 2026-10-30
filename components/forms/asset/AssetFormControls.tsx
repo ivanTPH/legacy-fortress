@@ -320,7 +320,7 @@ export function UploadConfirmationPanel({
         </span>
         <strong>{status === "ready" ? "Review file and record" : "Attach a document"}</strong>
       </div>
-      <p style={{ margin: 0, color: "#64748b", fontSize: 13, lineHeight: 1.45 }}>{message}</p>
+      <p style={{ margin: 0, color: "var(--lf-text-secondary)", fontSize: 13, lineHeight: 1.45 }}>{message}</p>
       {children ? <div style={{ display: "grid", gap: 10 }}>{children}</div> : null}
     </section>
   );
@@ -424,7 +424,7 @@ export function FileDropzone({
           </span>
           <strong style={{ fontSize: 13 }}>{label}</strong>
         </div>
-        <div style={{ color: "#64748b", fontSize: 12 }}>
+        <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
           {helperText ?? "Drop a file here or choose one from your device. PDF, PNG, JPG, DOCX, XLSX, and ICS files can be stored where supported."}
         </div>
         {file ? (
@@ -438,7 +438,7 @@ export function FileDropzone({
               <span style={{ fontSize: 13 }}>{file.name}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ color: "#64748b", fontSize: 12 }}>{formatBytes(file.size)}</span>
+              <span style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>{formatBytes(file.size)}</span>
               {onClear ? (
                 <button
                   type="button"
@@ -510,9 +510,9 @@ const labelIconStyle: CSSProperties = {
   width: 30,
   height: 30,
   borderRadius: 9,
-  border: "1px solid #eadfd8",
-  background: "#f7f3f0",
-  color: "#3a2118",
+  border: "1px solid var(--lf-border)",
+  background: "var(--lf-surface-page)",
+  color: "var(--lf-text)",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -520,18 +520,18 @@ const labelIconStyle: CSSProperties = {
 };
 
 const toggleStyle: CSSProperties = {
-  border: "1px solid #cbd5e1",
+  border: "1px solid var(--lf-border-input)",
   borderRadius: 999,
   padding: "6px 10px",
   fontSize: 12,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
 };
 
 const toggleActiveStyle: CSSProperties = {
   ...toggleStyle,
-  background: "#111827",
-  borderColor: "#111827",
-  color: "#fff",
+  background: "var(--lf-primary-bg)",
+  borderColor: "var(--lf-primary-bg)",
+  color: "var(--lf-primary-text)",
 };
 
 const segmentedWrapStyle: CSSProperties = {
@@ -541,10 +541,10 @@ const segmentedWrapStyle: CSSProperties = {
 };
 
 const segmentedButtonStyle: CSSProperties = {
-  border: "1px solid #d8d2cc",
+  border: "1px solid var(--lf-border)",
   borderRadius: 999,
-  background: "#fff",
-  color: "#334155",
+  background: "var(--lf-surface-card)",
+  color: "var(--lf-text)",
   minHeight: 36,
   padding: "0 12px",
   fontSize: 13,
@@ -556,19 +556,19 @@ const segmentedActiveStyle: CSSProperties = {
   ...segmentedButtonStyle,
   background: "#2b201b",
   borderColor: "#2b201b",
-  color: "#fff",
+  color: "var(--lf-primary-text)",
 };
 
 const filePlaceholderStyle: CSSProperties = {
-  border: "1px dashed #cbd5e1",
+  border: "1px dashed var(--lf-border-input)",
   borderRadius: 10,
   padding: "10px 12px",
   fontSize: 12,
-  color: "#64748b",
+  color: "var(--lf-text-secondary)",
 };
 
 const dropzoneStyle: CSSProperties = {
-  border: "1px dashed #d8d2cc",
+  border: "1px dashed var(--lf-border)",
   borderRadius: 12,
   padding: 16,
   outline: "none",
@@ -580,7 +580,7 @@ function extractionPanelStyle(status: "idle" | "extracting" | "ready" | "failed"
     ? { border: "#d8eadc", background: "#f7fbf7" }
     : status === "failed"
       ? { border: "#f0c7c7", background: "#fff7f7" }
-      : { border: "#e8e1dc", background: "#fffefd" };
+      : { border: "var(--lf-border)", background: "var(--lf-surface-card)" };
   return {
     border: `1px solid ${tone.border}`,
     borderRadius: 12,
@@ -598,10 +598,10 @@ const filePreviewStyle: CSSProperties = {
   gap: 10,
   flexWrap: "wrap",
   alignItems: "center",
-  border: "1px solid #e8e1dc",
+  border: "1px solid var(--lf-border)",
   borderRadius: 10,
   padding: "10px 12px",
-  background: "#fff",
+  background: "var(--lf-surface-card)",
 };
 
 const previewImageStyle: CSSProperties = {
@@ -609,13 +609,13 @@ const previewImageStyle: CSSProperties = {
   height: 36,
   objectFit: "cover",
   borderRadius: 6,
-  border: "1px solid #d8d2cc",
+  border: "1px solid var(--lf-border)",
 };
 
 const clearButtonStyle: CSSProperties = {
   border: "1px solid #e3ded9",
-  background: "#fffefd",
-  color: "#0f172a",
+  background: "var(--lf-surface-card)",
+  color: "var(--lf-text)",
   borderRadius: 8,
   padding: "7px 10px",
   display: "inline-flex",

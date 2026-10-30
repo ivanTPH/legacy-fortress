@@ -336,8 +336,8 @@ const noticeStyle: CSSProperties = {
 };
 
 const notFoundStyle: CSSProperties = {
-  background: "#fff",
-  border: "1px solid #e1d5cd",
+  background: "var(--lf-surface-card)",
+  border: "1px solid var(--lf-border)",
   borderRadius: 8,
   color: "var(--lf-bronze)",
   padding: 18,
@@ -353,7 +353,7 @@ const summaryGridStyle: CSSProperties = {
 };
 
 const metricStyle: CSSProperties = {
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   border: "1px solid var(--lf-border)",
   borderRadius: 8,
   padding: 14,
@@ -375,7 +375,7 @@ const twoColumnStyle: CSSProperties = {
 };
 
 const panelStyle: CSSProperties = {
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   border: "1px solid var(--lf-border)",
   borderRadius: 8,
   padding: 16,
@@ -405,7 +405,7 @@ const infoGridStyle: CSSProperties = {
 const infoStyle: CSSProperties = {
   display: "grid",
   gap: 4,
-  border: "1px solid #f1ece8",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 8,
   padding: 10,
 };
@@ -423,10 +423,10 @@ const ctaStyle: CSSProperties = {
 };
 
 const warningStyle: CSSProperties = {
-  border: "1px solid #e1d5cd",
+  border: "1px solid var(--lf-border)",
   borderRadius: 8,
-  background: "#fff7ed",
-  color: "#9a3412",
+  background: "var(--lf-status-pending-bg)",
+  color: "var(--lf-status-pending-text)",
   padding: 11,
   fontSize: 13,
   fontWeight: 700,
@@ -481,7 +481,7 @@ const activityListStyle: CSSProperties = {
 };
 
 const activityRowStyle: CSSProperties = {
-  border: "1px solid #f1ece8",
+  border: "1px solid var(--lf-divider)",
   borderRadius: 8,
   padding: 10,
   display: "grid",
@@ -522,7 +522,7 @@ const thStyle: CSSProperties = {
 
 const tdStyle: CSSProperties = {
   padding: "10px 11px",
-  borderBottom: "1px solid #f1ece8",
+  borderBottom: "1px solid var(--lf-divider)",
   verticalAlign: "top",
   whiteSpace: "nowrap",
 };
