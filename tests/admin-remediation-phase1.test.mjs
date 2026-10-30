@@ -140,7 +140,7 @@ test("admin dashboard completion uses shared responsive primitives for operation
   const audit = read("docs/admin/ADMIN_PRODUCT_AUDIT.md");
 
   for (const caption of [
-    "Operational metrics",
+    "Across all Vaults",
     "${title} table",
     "Verification queue",
     "Probate review queue",

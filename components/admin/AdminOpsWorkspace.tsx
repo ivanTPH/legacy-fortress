@@ -417,7 +417,7 @@ export default function AdminOpsWorkspace() {
       <main style={pageStyle}>
         <section style={panelStyle}>
           <div style={{ fontSize: 22, fontWeight: 700 }}>Access denied</div>
-          <div style={{ color: "#64748b", fontSize: 14 }}>
+          <div style={{ color: "var(--lf-text-secondary)", fontSize: 14 }}>
             {status || "This operational area is restricted to authorised admin users."}
           </div>
           <Link href="/dashboard" style={linkBtnStyle}>Return to dashboard</Link>
@@ -431,11 +431,11 @@ export default function AdminOpsWorkspace() {
       {reasonDialog ? <AdminReasonDialog action={reasonDialog.action} reason={reasonDraft} setReason={setReasonDraft} onCancel={() => setReasonDialog(null)} onSubmit={() => { const dialog = reasonDialog; setReasonDialog(null); void applyAdminUserAction(dialog.adminUserId, dialog.action, dialog.role, reasonDraft.trim()); }} /> : null}
       <section style={panelStyle}>
         <div style={{ display: "grid", gap: 4 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#64748b" }}>
+          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--lf-text-secondary)" }}>
             Internal admin operations
           </div>
           <h1 style={{ margin: 0, fontSize: 28 }}>Admin operations</h1>
-          <div style={{ color: "#64748b", fontSize: 14 }}>
+          <div style={{ color: "var(--lf-text-secondary)", fontSize: 14 }}>
             Operational access for support, verification review, and controlled admin user management. This area is intentionally isolated from the standard customer application.
           </div>
         </div>
@@ -668,7 +668,7 @@ export default function AdminOpsWorkspace() {
                 <div style={{ display: "grid", gap: 6 }}>
                   <div style={{ fontWeight: 700, fontSize: 13 }}>Evidence</div>
                   {item.evidence.map((evidence) => (
-                    <div key={evidence.id} style={{ ...rowStyle, background: "#fff" }}>
+                    <div key={evidence.id} style={{ ...rowStyle, background: "var(--lf-surface-card)" }}>
                       <div style={{ fontWeight: 700 }}>{evidence.fileName}</div>
                       <div style={mutedStyle}>{evidence.evidenceType.replace(/_/g, " ")} · {evidence.mimeType} · {formatDate(evidence.createdAt)}</div>
                       <button type="button" style={ghostBtnStyle} onClick={() => void openProbateEvidence(item.id, evidence.id)}>
@@ -806,7 +806,7 @@ function AdminReasonDialog({
     <div style={modalBackdropStyle} role="presentation">
       <div role="dialog" aria-modal="true" aria-labelledby="admin-reason-title" style={modalStyle}>
         <h2 id="admin-reason-title" style={{ margin: 0, fontSize: 20 }}>{title}</h2>
-        <p style={{ margin: 0, color: "#64748b", lineHeight: 1.45 }}>The server will record this action in the admin audit trail. A reason is required.</p>
+        <p style={{ margin: 0, color: "var(--lf-text-secondary)", lineHeight: 1.45 }}>The server will record this action in the admin audit trail. A reason is required.</p>
         <label style={{ display: "grid", gap: 6, fontWeight: 700 }}>
           Reason
           <textarea autoFocus value={reason} onChange={(event) => setReason(event.target.value)} rows={4} maxLength={1000} />
@@ -844,7 +844,7 @@ const modalStyle: CSSProperties = {
   gap: 14,
   padding: 20,
   borderRadius: 12,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   boxShadow: "0 20px 60px rgba(15, 23, 42, 0.25)",
 };
 
@@ -855,9 +855,9 @@ const gridStyle: CSSProperties = {
 };
 
 const navStyle: CSSProperties = {
-  border: "1px solid #d8dee8",
+  border: "1px solid var(--lf-border)",
   borderRadius: 12,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   padding: 10,
   display: "flex",
   gap: 8,
@@ -866,9 +866,9 @@ const navStyle: CSSProperties = {
 };
 
 const navLinkStyle: CSSProperties = {
-  border: "1px solid #cbd5e1",
+  border: "1px solid var(--lf-border-input)",
   borderRadius: 999,
-  color: "#0f172a",
+  color: "var(--lf-text)",
   textDecoration: "none",
   padding: "7px 10px",
   fontSize: 13,
@@ -876,9 +876,9 @@ const navLinkStyle: CSSProperties = {
 };
 
 const panelStyle: CSSProperties = {
-  border: "1px solid #d8dee8",
+  border: "1px solid var(--lf-border)",
   borderRadius: 16,
-  background: "#fff",
+  background: "var(--lf-surface-card)",
   padding: 16,
   display: "grid",
   gap: 12,
@@ -898,22 +898,22 @@ const h2Style: CSSProperties = {
 };
 
 const mutedStyle: CSSProperties = {
-  color: "#64748b",
+  color: "var(--lf-text-secondary)",
   fontSize: 13,
 };
 
 const inputStyle: CSSProperties = {
   flex: "1 1 280px",
-  border: "1px solid #cbd5e1",
+  border: "1px solid var(--lf-border-input)",
   borderRadius: 10,
   padding: "10px 12px",
   fontSize: 14,
 };
 
 const primaryBtnStyle: CSSProperties = {
-  border: "1px solid #111827",
-  background: "#111827",
-  color: "#fff",
+  border: "1px solid var(--lf-primary-bg)",
+  background: "var(--lf-primary-bg)",
+  color: "var(--lf-primary-text)",
   borderRadius: 10,
   padding: "10px 12px",
   cursor: "pointer",
@@ -922,9 +922,9 @@ const primaryBtnStyle: CSSProperties = {
 };
 
 const ghostBtnStyle: CSSProperties = {
-  border: "1px solid #cbd5e1",
-  background: "#fff",
-  color: "#0f172a",
+  border: "1px solid var(--lf-border-input)",
+  background: "var(--lf-surface-card)",
+  color: "var(--lf-text)",
   borderRadius: 10,
   padding: "10px 12px",
   cursor: "pointer",
@@ -934,24 +934,24 @@ const ghostBtnStyle: CSSProperties = {
 
 const dangerBtnStyle: CSSProperties = {
   ...ghostBtnStyle,
-  borderColor: "#fecaca",
-  color: "#991b1b",
+  borderColor: "var(--lf-status-rejected-bg)",
+  color: "var(--lf-status-rejected-text)",
   background: "#fff7f7",
 };
 
 const rowStyle: CSSProperties = {
-  border: "1px solid #e2e8f0",
+  border: "1px solid var(--lf-border)",
   borderRadius: 12,
-  background: "#f8fafc",
+  background: "var(--lf-surface-page)",
   padding: 12,
   display: "grid",
   gap: 6,
 };
 
 const metricCardStyle: CSSProperties = {
-  border: "1px solid #e2e8f0",
+  border: "1px solid var(--lf-border)",
   borderRadius: 12,
-  background: "#f8fafc",
+  background: "var(--lf-surface-page)",
   padding: 12,
   display: "grid",
   gap: 4,
@@ -959,14 +959,14 @@ const metricCardStyle: CSSProperties = {
 
 const metricCardLinkStyle: CSSProperties = {
   ...metricCardStyle,
-  color: "#0f172a",
+  color: "var(--lf-text)",
   textDecoration: "none",
 };
 
 const pillStyle: CSSProperties = {
   borderRadius: 999,
-  background: "#e2e8f0",
-  color: "#0f172a",
+  background: "var(--lf-surface-subtle)",
+  color: "var(--lf-text)",
   padding: "5px 9px",
   fontSize: 12,
   fontWeight: 600,
@@ -975,13 +975,13 @@ const pillStyle: CSSProperties = {
 const masterPillStyle: CSSProperties = {
   ...pillStyle,
   background: "#fee2e2",
-  color: "#991b1b",
+  color: "var(--lf-status-rejected-text)",
 };
 
 const positivePillStyle: CSSProperties = {
   ...pillStyle,
   background: "#dcfce7",
-  color: "#166534",
+  color: "var(--lf-status-approved-text)",
 };
 
 const linkBtnStyle: CSSProperties = {
