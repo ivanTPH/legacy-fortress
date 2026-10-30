@@ -924,7 +924,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     ? "Home"
     : currentNode?.label ?? "Dashboard";
   const topbarBreadcrumbs = normalizedPathname === "/dashboard" ? [] : breadcrumbs.slice(0, -1);
-  const showBackButton = !["/dashboard", "/add", "/add-to-fortress", "/actions", "/action-centre", "/contacts", "/people-access", "/profile"].includes(normalizedPathname);
+  const showBackButton = !["/dashboard", "/add", "/add-to-fortress", "/actions", "/action-centre", "/contacts", "/people-access", "/profile", "/settings"].includes(normalizedPathname);
   const searchPageOpen = normalizedPathname === "/dashboard" && searchParams.has("search");
 
   function toggleAccountMenu() {
