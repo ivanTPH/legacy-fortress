@@ -351,13 +351,15 @@ const adminPrimitiveCss = `
     line-height: 1.35;
   }
   .lf-admin-empty-state {
-    background: var(--lf-surface-page);
-    border: 1px dashed var(--lf-border-input);
+    background: var(--lf-surface-card);
+    border: 1px solid var(--lf-border);
     border-radius: 8px;
     color: var(--lf-text-secondary);
     display: grid;
     gap: 4px;
-    padding: 14px;
+    justify-items: center;
+    padding: 24px 16px;
+    text-align: center;
   }
   @media (max-width: 720px) {
     .lf-admin-data-table {
