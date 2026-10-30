@@ -180,7 +180,7 @@ export default function EnterpriseLicenceDetailWorkspace({ licenceId, platformAd
   }
 
   if (state === "checking") return <main style={pageStyle}><section style={panelStyle}><h1>Checking licence access</h1><p>Confirming your signed-in session and role permissions.</p></section></main>;
-  if (state !== "ready" || !detail) return <main style={pageStyle}><section style={panelStyle}><h1>{state === "denied" ? "Access denied" : "Licence unavailable"}</h1><p>{message}</p><Link href={platformAdmin ? "/admin/licences" : "/enterprise"}>Back to {platformAdmin ? "Platform Administration" : "Enterprise Operations"}</Link></section></main>;
+  if (state !== "ready" || !detail) return <main style={pageStyle}><section style={panelStyle}><h1>{state === "denied" ? "Access denied" : "Licence unavailable"}</h1><p>{message}</p><Link href={platformAdmin ? "/admin/licences" : "/enterprise"}>Back to {platformAdmin ? "Platform Administration" : "Enterprise operations"}</Link></section></main>;
 
   const licence = detail.licence;
   const workspaceBase = platformAdmin ? "/admin" : "/enterprise";
@@ -189,7 +189,7 @@ export default function EnterpriseLicenceDetailWorkspace({ licenceId, platformAd
   const navigation = partnerMode ? labelPartnerNavigation(allowedNavigation) : allowedNavigation;
   return (
     <AdminWorkspaceShell
-      workspaceLabel={platformAdmin ? "Platform Administration" : partnerMode ? "Partner Portal" : "Enterprise Operations"}
+      workspaceLabel={platformAdmin ? "Platform Administration" : partnerMode ? "Partner Portal" : "Enterprise operations"}
       eyebrow={platformAdmin ? "Platform commercial controls" : "Legacy Fortress Enterprise"}
       title={licence.plan === "custom" ? licence.customPlanName || "Custom licence" : labelise(licence.plan)}
       description={`${detail.organisation?.name ?? "Unknown organisation"} · ${labelise(licence.status)} · ${licence.availableSeats} seats available`}
@@ -199,7 +199,7 @@ export default function EnterpriseLicenceDetailWorkspace({ licenceId, platformAd
       identityLabel={identity.label}
       identityDetail={identity.detail}
       breadcrumbs={[
-        { label: platformAdmin ? "Platform Administration" : "Enterprise Operations", href: workspaceBase },
+        { label: platformAdmin ? "Platform Administration" : "Enterprise operations", href: workspaceBase },
         { label: "Licences", href: platformAdmin ? "/admin/licences" : "/enterprise?tab=licences" },
         ...(detail.organisation ? [{ label: detail.organisation.name, href: `${workspaceBase}/organisations/${detail.organisation.id}` }] : []),
         { label: licence.plan === "custom" ? licence.customPlanName || "Custom licence" : labelise(licence.plan) },

@@ -62,14 +62,14 @@ export const LEGAL_CATEGORIES: LegalCategoryMeta[] = [
   },
   {
     slug: "identity-documents",
-    label: "Identity Documents",
+    label: "Identity documents",
     description: "Keep key identity documents and supporting references.",
     documentType: "identity_document",
     matchTypes: ["identity", "identity_document", "identity_documents"],
   },
   {
     slug: "other-legal-documents",
-    label: "Other Legal Documents",
+    label: "Other legal documents",
     description: "Store legal records that do not fit another legal category.",
     documentType: "other",
     matchTypes: ["other"],

@@ -132,7 +132,7 @@ export function getAvailableWorkspaces(
     },
     {
       id: "enterprise_admin",
-      label: "Enterprise Operations",
+      label: "Enterprise operations",
       shortLabel: "Enterprise",
       description: "Your authorised enterprise organisation context, licensing, reporting, and commercial signals.",
       href: buildPrototypeWorkspaceUrl("enterprise_admin", { ...options, currentRole: primaryRole }),

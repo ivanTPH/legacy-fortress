@@ -56,7 +56,7 @@ export const PLATFORM_ADMIN_NAVIGATION: AdminNavigationGroup[] = [
 
 export const ENTERPRISE_ADMIN_NAVIGATION: AdminNavigationGroup[] = [
   {
-    label: "Enterprise Operations",
+    label: "Enterprise operations",
     items: [
       { key: "enterprise-overview", label: "Overview", href: "/enterprise", icon: "space_dashboard", capability: "enterprise.workspace.access" },
       { key: "enterprise-organisations", label: "Organisations", href: "/enterprise?tab=organisations", icon: "domain", capability: "organisation:view" },
@@ -72,7 +72,7 @@ export const ENTERPRISE_ADMIN_NAVIGATION: AdminNavigationGroup[] = [
 
 export const PROBATE_REVIEW_NAVIGATION: AdminNavigationGroup[] = [
   {
-    label: "Probate Review",
+    label: "Probate review",
     items: [
       { key: "probate", label: "Review queue", href: "/admin/probate", icon: "gavel", capability: "admin.probate.summary.read" },
       { key: "verification", label: "Verification / evidence", href: "/admin/verification", icon: "fact_check", capability: "verification:read" },

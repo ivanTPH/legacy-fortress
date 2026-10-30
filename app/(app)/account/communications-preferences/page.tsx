@@ -89,7 +89,7 @@ export default function CommunicationsPreferencesPage() {
 
   return (
     <SettingsPageShell
-      title="Communications Preferences"
+      title="Communications preferences"
       subtitle="Choose the channels allowed for account, security, and estate lifecycle communication."
     >
       <SettingsCard title="Allowed channels" description="Toggle channels on or off as needed.">

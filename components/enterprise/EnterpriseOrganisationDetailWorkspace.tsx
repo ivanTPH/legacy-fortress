@@ -214,7 +214,7 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
   const navigation = partnerMode ? labelPartnerNavigation(allowedNavigation) : allowedNavigation;
   return (
     <AdminWorkspaceShell
-      workspaceLabel={partnerMode ? "Partner Portal" : "Enterprise Operations"}
+      workspaceLabel={partnerMode ? "Partner Portal" : "Enterprise operations"}
       eyebrow="Legacy Fortress Enterprise"
       title={org.name}
       description={`${labelise(org.status)} · ${labelise(org.risk)} · ${org.accountOwner || "No account owner"}`}
@@ -223,7 +223,7 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
       onSignOut={signOut}
       identityLabel={identity.label}
       identityDetail={identity.detail}
-      breadcrumbs={[{ label: "Enterprise Operations", href: "/enterprise" }, { label: "Organisations", href: "/enterprise?tab=organisations" }, { label: org.name }]}
+      breadcrumbs={[{ label: "Enterprise operations", href: "/enterprise" }, { label: "Organisations", href: "/enterprise?tab=organisations" }, { label: org.name }]}
       stagingLabel="STAGING - synthetic test data may be present"
     >
       {message ? <section style={alertStyle}>{message}</section> : null}

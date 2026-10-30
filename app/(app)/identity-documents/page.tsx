@@ -7,7 +7,7 @@ export default function IdentityDocumentsPage() {
     <UniversalRecordWorkspace
       sectionKey="legal"
       categoryKey="identity-documents"
-      title="Identity Documents"
+      title="Identity documents"
       subtitle="Keep passports, driving licences, and other proof-of-identity documents together in one place."
       forceCanonicalRead
     />

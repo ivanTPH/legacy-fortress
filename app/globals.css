@@ -1558,6 +1558,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 .lf-admin-overview-measures { display: grid; gap: 0; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); overflow: hidden; }
 .lf-admin-overview-decisions h2,
 .lf-admin-overview-measures h2 { margin: 0; padding: 16px 18px; color: var(--lf-text); font-size: 16px; font-weight: var(--lf-weight-semibold); }
+.lf-admin-measures-note { margin: -8px 0 0; padding: 0 18px 12px; color: var(--lf-text-secondary); font-size: var(--lf-text-small); }
 .lf-admin-decision-row { display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 10px 18px; border-top: 1px solid var(--lf-divider); color: var(--lf-text); text-decoration: none; }
 .lf-admin-decision-row:hover { background: var(--lf-surface-hover); }
 .lf-admin-decision-row:active { background: var(--lf-surface-pressed); }
@@ -8173,7 +8174,7 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-v4-form-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
 .lf-v4-form-body { display: grid; gap: var(--lf-space-16); min-width: 0; }
 .lf-v4-form-back-mobile { display: none; }
-.lf-v4-form-header h2 { margin: 6px 0 0; color: var(--lf-ink); font-size: 23px; line-height: 1.3; }
+.lf-v4-form-header h2 { margin: 6px 0 0; color: var(--lf-ink); font-size: 23px; line-height: 1.3; font-weight: var(--lf-weight-bold); }
 .lf-v4-form-back, .lf-v4-form-close { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; border: 0; background: transparent; color: var(--lf-text-secondary); cursor: pointer; }
 .lf-v4-form-back { padding: 0; font-size: 13px; }
 .lf-v4-form-close { justify-content: center; width: 44px; padding: 0; }
@@ -8217,7 +8218,7 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
   .lf-v4-record-form { position: fixed; top: var(--lf-form-visual-top, 0px); right: 0; bottom: auto; left: 0; z-index: 70; display: grid !important; grid-template-rows: auto minmax(0, 1fr) auto; width: 100%; height: var(--lf-form-visual-height, 100dvh); min-width: 0; max-width: none; overflow: hidden; padding: 0 !important; gap: 0 !important; border: 0 !important; border-radius: 0 !important; background: var(--lf-surface) !important; }
   .lf-v4-form-header { position: relative; z-index: 2; display: grid; grid-template-columns: minmax(74px, 1fr) minmax(0, 3fr) minmax(74px, 1fr); align-items: center; min-height: calc(52px + env(safe-area-inset-top)); gap: 4px; margin: 0; padding: env(safe-area-inset-top) 12px 0; border-bottom: 1px solid var(--lf-border); background: var(--lf-surface); }
   .lf-v4-form-header > div { display: contents; }
-  .lf-v4-form-header h2 { grid-column: 2; grid-row: 1; min-width: 0; margin: 0; overflow: hidden; font-size: 17px; line-height: 1.25; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+  .lf-v4-form-header h2 { grid-column: 2; grid-row: 1; min-width: 0; margin: 0; overflow: hidden; font-size: 17px; line-height: 1.25; text-align: center; text-overflow: ellipsis; white-space: nowrap; font-weight: var(--lf-weight-semibold); }
   .lf-v4-form-back { grid-column: 1; grid-row: 1; min-width: 0; font-size: 16px; }
   .lf-v4-form-back .lf-icon, .lf-v4-form-back-parent, .lf-v4-form-close { display: none; }
   .lf-v4-form-back-mobile { display: inline; }
@@ -8455,6 +8456,7 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-linked-people-dialog .lf-linked-people-error li button { min-height: 44px; padding: 4px 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; text-decoration: underline; cursor: pointer; }
 .lf-v52-form-people { display: grid; gap: 8px; margin: 12px 0; padding: 16px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); }
 .lf-v52-form-people h3, .lf-v52-form-people p { margin: 0; }
+.lf-v52-form-people h3 { font-size: var(--lf-text-section); font-weight: var(--lf-weight-semibold); color: var(--lf-ink); }
 .lf-v52-form-people p { color: var(--lf-text-secondary); font-size: 14px; line-height: 1.5; }
 .lf-v52-form-people button { justify-self: start; min-height: 44px; padding: 8px 16px; border: 1px solid var(--lf-primary-bg); border-radius: var(--lf-radius-input); background: var(--lf-primary-bg); color: var(--lf-primary-text); font: inherit; font-weight: 600; cursor: pointer; }
 .lf-v52-form-people button:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 2px; }

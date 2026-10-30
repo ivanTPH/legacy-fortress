@@ -47,7 +47,7 @@ type AdminPrototypeNavSection = {
 
 const navItems: AdminPrototypeNavSection[] = [
   {
-    label: "Probate Review",
+    label: "Probate review",
     capability: "probate_review" as const,
     items: [
       { href: "/internal/admin/prototype/cases", label: "Cases", icon: "folder_managed" },
@@ -279,7 +279,7 @@ function getAdminPrototypeContext(pathname: string) {
 
   return {
     mode: "probate" as const,
-    label: "Probate Operations",
+    label: "Probate operations",
     subtitle: "Operational case management and verification workflows",
     searchPlaceholder: "Search cases, verifications, users",
   };

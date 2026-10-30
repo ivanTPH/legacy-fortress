@@ -96,7 +96,7 @@ export function normalizeBankAssetRow(source: BankAssetSource): CanonicalBankAss
     account_number: accountNumber,
     masked_account_number: maskSensitiveValue(accountNumber),
     sort_code: sortCode,
-    masked_sort_code: maskSensitiveValue(sortCode),
+    masked_sort_code: maskSortCode(sortCode),
     iban,
     masked_iban: maskSensitiveValue(iban, 6),
     current_balance: currentBalance,
@@ -248,6 +248,12 @@ function readNumber(...values: Array<unknown>) {
     }
   }
   return 0;
+}
+
+function maskSortCode(value: string) {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length !== 6) return maskSensitiveValue(value, 2);
+  return `••-••-${digits.slice(-2)}`;
 }
 
 function maskSensitiveValue(value: string, preserveLast = 4) {

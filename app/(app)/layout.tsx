@@ -1265,7 +1265,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
               aria-label="Close navigation menu"
               onClick={() => closeNavigationState("outside_click")}
             />
-            <aside className="lf-mobile-drawer" aria-label="Mobile Navigation">
+            <aside className="lf-mobile-drawer" aria-label="Mobile navigation">
               <div className="lf-mobile-drawer-heading"><button type="button" onClick={() => closeNavigationState("escape")} aria-label="Close navigation and return to page"><Icon name="chevron_left" size={20} /> Home</button></div>
               <div className="lf-mobile-drawer-scroll">
                 <div className="lf-mobile-drawer-profile">

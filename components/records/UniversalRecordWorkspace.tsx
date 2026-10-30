@@ -3914,15 +3914,6 @@ export default function UniversalRecordWorkspace({
                 {canEditWorkspaceRow(row.id) ? <AddDocumentControl accept={DOCUMENT_UPLOAD_ACCEPT} disabled={uploadingFor === row.id} onFilesSelected={(files) => files.forEach((file) => void uploadAttachment(row.id, file, "document"))} multiple /> : null}
               </div>
               {canEditWorkspaceRow(row.id) ? <DocumentFindings recordId={row.id} /> : null}
-              {isFinanceSection || isPossessions || usesCanonicalAssets ? (
-                <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
-                  Parent asset: {getCanonicalAssetDocumentParentLabel({
-                    assetTitle: canonicalBankAsset?.title || canonicalPropertyAsset?.title || canonicalBusinessAsset?.title || canonicalDigitalAsset?.title || row.title || "",
-                    sectionKey,
-                    categoryKey,
-                  })}
-                </div>
-              ) : null}
               {rowAttachments.length === 0 ? (
                 <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>No files uploaded.</div>
               ) : (

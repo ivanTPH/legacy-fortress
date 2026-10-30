@@ -17,7 +17,7 @@ export default function BusinessOverviewPage() {
     showBusinessInterests
       ? [{
         key: "business-interests",
-        title: "Business Interests",
+        title: "Business interests",
         description: "Manage business ownership, registrations, advisers, values, and supporting files.",
         href: "/vault/business",
         addHref: "/vault/business?add=1",

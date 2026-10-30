@@ -66,7 +66,7 @@ export default function MarketingPreferencePage() {
   };
 
   return (
-    <SettingsPageShell title="Marketing Preference" subtitle="Control whether product and campaign updates are sent to your account contacts.">
+    <SettingsPageShell title="Marketing preference" subtitle="Control whether product and campaign updates are sent to your account contacts.">
       <SettingsCard title="Marketing consent" description="You can update this at any time.">
         {loading ? <div style={{ color: "var(--lf-text-secondary)" }}>Loading...</div> : null}
         <label style={{ display: "flex", alignItems: "center", gap: 10 }}>

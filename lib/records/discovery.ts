@@ -71,10 +71,10 @@ export function buildDashboardSearchHref(query: string | null | undefined) {
 
 export function formatDiscoverySectionLabel(value: string | null | undefined) {
   const normalized = normalizeDiscoveryToken(value);
-  if (normalized === "finances") return "Bank Accounts";
+  if (normalized === "finances") return "Bank accounts";
   if (normalized === "property") return "Property";
-  if (normalized === "business") return "Business Interests";
-  if (normalized === "digital") return "Digital Assets";
+  if (normalized === "business") return "Business interests";
+  if (normalized === "digital") return "Digital assets";
   if (normalized === "personal") return "Personal";
   return formatDiscoveryCategoryLabel(normalized || "assets");
 }

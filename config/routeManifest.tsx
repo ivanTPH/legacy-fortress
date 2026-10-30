@@ -79,9 +79,9 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
       { id: "legal-wills", label: "Wills", path: "/legal/wills", vaultSubsectionKey: "legal_wills", enabled: on },
       { id: "legal-trusts", label: "Trusts", path: "/legal/trusts", vaultSubsectionKey: "legal_trusts", enabled: on },
       { id: "legal-poa", label: "Power of Attorney", path: "/legal/power-of-attorney", vaultSubsectionKey: "legal_power_of_attorney", enabled: on },
-      { id: "legal-identity", label: "Identity Documents", path: "/identity-documents", vaultSubsectionKey: "legal_identity_documents", enabled: on },
-      { id: "legal-wishes", label: "Personal Wishes", path: "/personal/wishes", vaultSubsectionKey: "personal_wishes", enabled: on },
-      { id: "legal-other", label: "Other Legal Documents", path: "/legal/other-legal-documents", vaultSubsectionKey: "legal_other_legal_documents", enabled: on },
+      { id: "legal-identity", label: "Identity documents", path: "/identity-documents", vaultSubsectionKey: "legal_identity_documents", enabled: on },
+      { id: "legal-wishes", label: "Personal wishes", path: "/personal/wishes", vaultSubsectionKey: "personal_wishes", enabled: on },
+      { id: "legal-other", label: "Other legal documents", path: "/legal/other-legal-documents", vaultSubsectionKey: "legal_other_legal_documents", enabled: on },
     ],
   },
   {
@@ -92,8 +92,8 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     vaultCategoryKey: "property",
     enabled: on,
     children: [
-      { id: "property-records", label: "Property Records", path: "/vault/property", vaultSubsectionKey: "property_records", enabled: on },
-      { id: "property-documents", label: "Property Documents", path: "/property/documents", vaultSubsectionKey: "property_documents", enabled: on },
+      { id: "property-records", label: "Property records", path: "/vault/property", vaultSubsectionKey: "property_records", enabled: on },
+      { id: "property-documents", label: "Property documents", path: "/property/documents", vaultSubsectionKey: "property_documents", enabled: on },
     ],
   },
   {
@@ -104,7 +104,7 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
     vaultCategoryKey: "business",
     enabled: on,
     children: [
-      { id: "business-interests", label: "Business Interests", path: "/business", vaultSubsectionKey: "business_interests", enabled: on },
+      { id: "business-interests", label: "Business interests", path: "/business", vaultSubsectionKey: "business_interests", enabled: on },
       { id: "business-employment", label: "Employment", path: "/employment", vaultSubsectionKey: "business_employment", enabled: on },
     ],
   },
@@ -163,8 +163,8 @@ export const ACCOUNT_ROUTE_MANIFEST: AppRouteNode[] = [
       { id: "settings-billing", label: "Billing and Account", path: "/account/billing", enabled: on },
       { id: "settings-my-vault", label: "My Vault", path: "/account/my-vault", enabled: on },
       { id: "settings-terms", label: "Terms and Conditions", path: "/account/terms", enabled: on },
-      { id: "settings-comms", label: "Communications Preferences", path: "/account/communications-preferences", enabled: on },
-      { id: "settings-reminders", label: "Reminder Preferences", path: "/account/reminder-preferences", enabled: on },
+      { id: "settings-comms", label: "Communications preferences", path: "/account/communications-preferences", enabled: on },
+      { id: "settings-reminders", label: "Reminder preferences", path: "/account/reminder-preferences", enabled: on },
     ],
   },
 ];

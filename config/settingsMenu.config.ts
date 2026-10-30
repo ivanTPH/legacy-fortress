@@ -26,13 +26,13 @@ export const SETTINGS_MENU_ITEMS: SettingsMenuItem[] = [
   },
   {
     id: "communications",
-    label: "Communications Preferences",
+    label: "Communications preferences",
     path: "/account/communications-preferences",
     description: "Control how Legacy Fortress contacts you",
   },
   {
     id: "reminders",
-    label: "Reminder Preferences",
+    label: "Reminder preferences",
     path: "/account/reminder-preferences",
     description: "Configure reminder cadence and notification lead times",
   },
