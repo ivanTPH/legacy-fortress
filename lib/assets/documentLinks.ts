@@ -221,7 +221,7 @@ export async function createCanonicalAssetDocument(
     kind: "document" | "photo";
     displayTitle?: string;
   },
-): Promise<{ ok: true; storagePath: string } | { ok: false; error: string }> {
+): Promise<{ ok: true; storagePath: string; documentId: string | null } | { ok: false; error: string }> {
   const storageBucket = "vault-docs";
   const folder = kind === "photo" ? "photos" : "documents";
   const storagePath = buildCanonicalDocumentStoragePath(context, file.name, folder);
@@ -250,14 +250,14 @@ export async function createCanonicalAssetDocument(
     size_bytes: file.size,
     checksum: null,
     document_kind: kind,
-  });
+  }).select("id").maybeSingle();
 
   if (insertResult.error) {
     await client.storage.from(storageBucket).remove([storagePath]);
     return { ok: false, error: `Document link failed: ${insertResult.error.message}` };
   }
 
-  return { ok: true, storagePath };
+  return { ok: true, storagePath, documentId: (insertResult.data as { id?: string } | null)?.id ?? null };
 }
 
 export async function renameCanonicalAssetDocument(

@@ -9,6 +9,7 @@ import { Sheet } from "../ui/V3Primitives";
 import { buildContactsWorkspaceHref } from "../../lib/contacts/contactRouting";
 import type { PeopleContactEntity } from "../../lib/contacts/contactRepository";
 import { LinkedPersonRecoveryError, changeRecordLinkedPersonRole, linkedPeopleConfig, linkedPersonFormIssues, loadRecordLinkedPeople, loadRecordLinkedPeopleHistory, normalizeLinkedPersonEmail, normalizeLinkedPersonPhone, saveRecordLinkedPerson, searchLinkedPeopleContacts, sendRecordLinkedPersonInvitation, unlinkRecordLinkedPerson, type LinkedPerson, type LinkedPersonHistoryEvent, type LinkedRecordAccessState, type LinkedRecordType } from "../../lib/linkedPeople/recordLinkedPeople";
+import { DOCUMENT_EXTRACTION_EVENT, type DocumentExtractionEventDetail } from "../../lib/documents/extraction/client";
 import { loadLinkedPersonSuggestions, reviewLinkedPersonSuggestion, type LinkedPersonSuggestion } from "../../lib/linkedPeople/suggestions";
 import { supabase } from "../../lib/supabaseClient";
 
@@ -82,6 +83,7 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
     onAutoOpened?.();
   }, [autoOpen, canManage, loading, onAutoOpened]);
 
+  const [suggestionsVersion, setSuggestionsVersion] = useState(0);
   useEffect(() => {
     if (recordType !== "asset" || !canManage) return;
     let current = true;
@@ -89,7 +91,17 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
       .then((rows) => { if (current) setSuggestions(rows); })
       .catch(() => { if (current) setSuggestionError("Document suggestions are unavailable."); });
     return () => { current = false; };
-  }, [client, ownerUserId, recordId, recordType, canManage]);
+  }, [client, ownerUserId, recordId, recordType, canManage, suggestionsVersion]);
+
+  // Reload when a document on this record has just been read.
+  useEffect(() => {
+    const onExtraction = (event: Event) => {
+      const detail = (event as CustomEvent<DocumentExtractionEventDetail>).detail;
+      if (detail?.recordId === recordId && detail.status === "done" && (detail.result?.peopleSuggested ?? 0) > 0) setSuggestionsVersion((value) => value + 1);
+    };
+    window.addEventListener(DOCUMENT_EXTRACTION_EVENT, onExtraction);
+    return () => window.removeEventListener(DOCUMENT_EXTRACTION_EVENT, onExtraction);
+  }, [recordId]);
 
   useEffect(() => {
     const updateOnline = () => setOnline(navigator.onLine);

@@ -1,5 +1,6 @@
 "use client";
 
+import { startDocumentExtraction } from "@/lib/documents/extraction/client";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { waitForActiveUser } from "../../lib/auth/session";
@@ -210,6 +211,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
     setPendingTitle("");
     setReviewConfirmed(false);
     setStatus(`Document linked to ${asset?.parentLabel ?? "the selected record"}.`);
+    void startDocumentExtraction(result.documentId, resolvedContext.assetId);
     await reloadDocuments();
   }
 
