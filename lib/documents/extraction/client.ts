@@ -47,11 +47,14 @@ export async function startDocumentExtraction(documentId: string | null | undefi
 }
 
 /** Hand bank details to the Add bank account form without putting them in the URL. */
-export function stageBankPrefill(prefill: BankAccountFinding["prefill"]) {
-  try { window.sessionStorage.setItem(BANK_PREFILL_STORAGE_KEY, JSON.stringify(prefill)); } catch { /* storage unavailable */ }
+export type StagedBankPrefill = Partial<BankAccountFinding["prefill"]> & { source_document_id?: string | null };
+
+/** The statement's document id travels with the details so it can move to the new record once the owner confirms. */
+export function stageBankPrefill(prefill: BankAccountFinding["prefill"], sourceDocumentId?: string | null) {
+  try { window.sessionStorage.setItem(BANK_PREFILL_STORAGE_KEY, JSON.stringify({ ...prefill, source_document_id: sourceDocumentId ?? null })); } catch { /* storage unavailable */ }
 }
 
-export function takeBankPrefill(): Partial<BankAccountFinding["prefill"]> | null {
+export function takeBankPrefill(): StagedBankPrefill | null {
   try {
     const raw = window.sessionStorage.getItem(BANK_PREFILL_STORAGE_KEY);
     window.sessionStorage.removeItem(BANK_PREFILL_STORAGE_KEY);

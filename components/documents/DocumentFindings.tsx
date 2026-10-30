@@ -49,6 +49,29 @@ export default function DocumentFindings({ recordId }: { recordId: string }) {
   const balance = d.closingBalance ? new Intl.NumberFormat("en-GB", { style: "currency", currency: d.currency || "GBP" }).format(Number(d.closingBalance)) : null;
   const asOf = d.asOf ? new Date(d.asOf).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : null;
 
+  // A new account is a question first: nothing is added until the owner says yes and then checks the details.
+  if (account.status === "new_account") {
+    return (
+      <section className="lf-v52-findings" aria-labelledby={`findings-${recordId}`}>
+        <h3 id={`findings-${recordId}`}>This looks like a new bank account</h3>
+        <div className="lf-v52-finding-row">
+          <span className="lf-v52-finding-icon" aria-hidden="true"><Icon name="account_balance" size={20} /></span>
+          <div className="lf-v52-finding-copy">
+            <strong>{title}{ending ? ` ${ending}` : ""}</strong>
+            <small>Not in your Vault yet.{balance ? ` Closing balance ${balance}${asOf ? ` on ${asOf}` : ""}.` : ""} Page {account.page}.</small>
+          </div>
+        </div>
+        <p className="lf-v52-finding-question">Do you want to add it to your Vault? You’ll check every detail before anything is saved, and this statement will move to the new account.</p>
+        <div className="lf-v52-finding-actions">
+          <button type="button" className="lf-v52-finding-primary" onClick={() => { stageBankPrefill(account.prefill, state.documentId); router.push("/finances/bank?add=1&prefill=document"); }}>Yes, check the details</button>
+          <button type="button" onClick={() => setDismissed(true)}>No, keep it here</button>
+        </div>
+        {people ? <p className="lf-v52-finding-note">We also found {people === 1 ? "1 person" : `${people} people`} to review under People linked to this record.</p> : null}
+        <p className="lf-v52-finding-note">Read inside Legacy Fortress and never shared. It can make mistakes, so check before you save.</p>
+      </section>
+    );
+  }
+
   return (
     <section className="lf-v52-findings" aria-labelledby={`findings-${recordId}`}>
       <h3 id={`findings-${recordId}`}>We found in this document</h3>
@@ -57,15 +80,12 @@ export default function DocumentFindings({ recordId }: { recordId: string }) {
         <div className="lf-v52-finding-copy">
           <strong>{title}{ending ? ` ${ending}` : ""}</strong>
           <small>
-            {account.status === "matches_this_record" ? "Matches this account." : account.status === "matches_other_record" ? "Matches a different account in your Vault." : "Not in your Vault yet."}
+            {account.status === "matches_this_record" ? "Matches this account." : "Matches a different account in your Vault."}
             {balance ? ` Closing balance ${balance}${asOf ? ` on ${asOf}` : ""}.` : ""} Page {account.page}.
           </small>
         </div>
       </div>
       <div className="lf-v52-finding-actions">
-        {account.status === "new_account" ? (
-          <button type="button" className="lf-v52-finding-primary" onClick={() => { stageBankPrefill(account.prefill); router.push("/finances/bank?add=1&prefill=document"); }}>Add as new record</button>
-        ) : null}
         {account.status === "matches_other_record" && account.otherRecordId ? (
           <Link className="lf-v52-finding-primary" href={`/finances/bank?asset=${encodeURIComponent(account.otherRecordId)}`}>Open that account</Link>
         ) : null}

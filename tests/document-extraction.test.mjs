@@ -106,3 +106,14 @@ test("bank matching reads asset details from the assets.metadata_json column", (
   const route = fs.readFileSync(new URL("../app/api/documents/[documentId]/extract/route.ts", import.meta.url), "utf8");
   assert.match(route, /select\("id,owner_user_id,metadata_json"\)/);
 });
+
+test("a statement asks before adding, the owner checks the details, and the statement moves on confirm", () => {
+  const findings = fs.readFileSync(new URL("../components/documents/DocumentFindings.tsx", import.meta.url), "utf8");
+  assert.match(findings, /This looks like a new bank account/);
+  assert.match(findings, /Do you want to add it to your Vault\?/);
+  assert.match(findings, /stageBankPrefill\(account\.prefill, state\.documentId\)/);
+  const workspace = fs.readFileSync(new URL("../components/records/UniversalRecordWorkspace.tsx", import.meta.url), "utf8");
+  assert.match(workspace, /Check these details are correct/);
+  assert.match(workspace, /Confirm and add to Vault/);
+  assert.match(workspace, /from\("documents"\)\.update\(\{ asset_id: recordId \}\)\.eq\("id", statementPrefill\.documentId\)\.eq\("owner_user_id", user\.id\)/);
+});

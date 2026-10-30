@@ -856,6 +856,9 @@ export default function UniversalRecordWorkspace({
   const [devBankTraceEntries, setDevBankTraceEntries] = useState<CanonicalBankTraceEntry[]>([]);
   const [devBankContextTrace, setDevBankContextTrace] = useState<CanonicalBankContextTrace | null>(null);
   const [devBankRequestTrace, setDevBankRequestTrace] = useState<string[]>([]);
+  // Set when the form was filled from a statement: shows the check-before-saving banner and moves the statement on save.
+  const [statementPrefill, setStatementPrefill] = useState<{ documentId: string | null } | null>(null);
+
   const [submitError, setSubmitError] = useState("");
   const [devBankSubmitTrace, setDevBankSubmitTrace] = useState<string[]>([]);
   const formSectionRef = useRef<HTMLElement | null>(null);
@@ -1323,6 +1326,7 @@ export default function UniversalRecordWorkspace({
     }
     if (sectionKey === "finances" && categoryKey === "bank" && searchParams.get("prefill") === "document") {
       const prefill = takeBankPrefill();
+      setStatementPrefill(prefill ? { documentId: prefill.source_document_id ?? null } : null);
       if (prefill) {
         nextForm.bank_name = prefill.bank_name ?? "";
         nextForm.account_holder_name = prefill.account_holder_name ?? "";
@@ -1685,6 +1689,7 @@ export default function UniversalRecordWorkspace({
   }
 
   function cancelForm() {
+    setStatementPrefill(null);
     if (hasUnsavedFormChanges() && !window.confirm(getDiscardPrompt())) {
       return;
     }
@@ -2474,6 +2479,7 @@ export default function UniversalRecordWorkspace({
     let recordId = editingId;
     let trustInvitationSuccessCount = 0;
     let trustInvitationWarning = "";
+    let statementMoveNote = "";
     try {
       if (writesCanonicalAsset) {
         const assetCategorySlug = (canonicalCategorySlug ?? canonicalLegalDocumentCategorySlug) as CanonicalAssetCategorySlug;
@@ -2593,6 +2599,11 @@ export default function UniversalRecordWorkspace({
               }
             }
           }
+        }
+        if (!editingId && recordId && statementPrefill?.documentId && sectionKey === "finances" && categoryKey === "bank") {
+          // The owner confirmed the details: move the statement to the account it describes.
+          const moved = await supabase.from("documents").update({ asset_id: recordId }).eq("id", statementPrefill.documentId).eq("owner_user_id", user.id).select("id");
+          statementMoveNote = moved.error || !moved.data?.length ? "The statement stayed on the record you uploaded it to." : "The statement has moved to this account.";
         }
         pushBankSubmitTrace(`createAsset success: asset_id="${recordId}"`);
         mergeDevBankContextTrace({
@@ -2817,7 +2828,8 @@ export default function UniversalRecordWorkspace({
       : trustInvitationSuccessCount > 0
         ? `${trustInvitationSuccessCount} Trust invitation${trustInvitationSuccessCount === 1 ? "" : "s"} sent.`
         : "";
-    setStatus([savedMessage, uploadWarning, trustInviteMessage].filter(Boolean).join(" "));
+    setStatus([savedMessage, statementMoveNote, uploadWarning, trustInviteMessage].filter(Boolean).join(" "));
+    setStatementPrefill(null);
     setSavedConfirmation(editingId ? "Changes saved" : "Saved record");
     setSavedRecordId(recordId);
     pushBankSubmitTrace(`reload started: asset_id="${recordId ?? ""}"`);
@@ -4340,6 +4352,12 @@ export default function UniversalRecordWorkspace({
           <button type="button" className="lf-v4-form-close" onClick={cancelForm} aria-label="Close form" title="Close form"><Icon name="close" size={20} /></button>
         </div>
         <div className="lf-v4-form-body">
+        {statementPrefill && !editingId ? (
+          <div className="lf-v52-prefill-banner" role="note">
+            <Icon name="fact_check" size={20} />
+            <div><strong>Check these details are correct</strong><span>We filled this in from your statement. Correct anything that’s wrong, then confirm to add it to your Vault. The statement will move to this account.</span></div>
+          </div>
+        ) : null}
 
         {!formVisible ? (
           <div style={{ display: "grid", gap: 10 }}>
@@ -4783,7 +4801,7 @@ export default function UniversalRecordWorkspace({
             <button type="button" className="lf-v4-form-cancel" style={ghostBtn} onClick={cancelForm}><Icon name="close" size={16} />Cancel</button>
             {(!editingId ? canCreateRecords : canEditWorkspaceRow(editingId)) ? <button type="button" className="lf-v4-form-save" style={primaryBtn} disabled={saving} onClick={() => void saveRecord()} title={editingId ? "Save changes to this record" : "Save this new record"}>
               <Icon name="save" size={16} style={{ marginRight: 6, verticalAlign: "text-bottom" }} />
-              {saving ? "Saving..." : <><span className="lf-v4-form-save-desktop">{editingId ? "Save changes" : saveLabel}</span><span className="lf-v4-form-save-mobile">{editingId ? "Save changes" : "Save record"}</span></>}
+              {saving ? "Saving..." : <><span className="lf-v4-form-save-desktop">{editingId ? "Save changes" : statementPrefill ? "Confirm and add to Vault" : saveLabel}</span><span className="lf-v4-form-save-mobile">{editingId ? "Save changes" : statementPrefill ? "Confirm and add" : "Save record"}</span></>}
             </button> : null}
             {editingId && viewer.mode !== "linked" ? <button type="button" className="lf-v4-form-delete" style={dangerBtn} onClick={() => void deleteRecord(editingId)}><Icon name="delete" size={16} />Delete</button> : null}
           </div>
