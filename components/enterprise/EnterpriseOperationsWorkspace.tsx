@@ -687,7 +687,7 @@ export default function EnterpriseOperationsWorkspace() {
     return (
       <main style={pageStyle}>
         <section style={panelStyle}>
-          <p style={eyebrowStyle}>Enterprise Operations</p>
+          <p style={eyebrowStyle}>Enterprise operations</p>
           <h1 style={h1Style}>{state === "denied" ? "Access denied" : "Enterprise workspace unavailable"}</h1>
           <p style={mutedStyle}>{message}</p>
           <div style={rowStyle}>
@@ -718,7 +718,7 @@ export default function EnterpriseOperationsWorkspace() {
 
   return (
     <AdminWorkspaceShell
-      workspaceLabel={partnerMode ? "Partner Portal" : "Enterprise Operations"}
+      workspaceLabel={partnerMode ? "Partner Portal" : "Enterprise operations"}
       eyebrow="Legacy Fortress Enterprise"
       title={partnerTitle}
       description={partnerMode ? "Manage your organisation and its team." : "Manage organisations, licences, invitations and reports."}
@@ -728,7 +728,7 @@ export default function EnterpriseOperationsWorkspace() {
       onSignOut={signOut}
       identityLabel={identity.label}
       identityDetail={identity.detail}
-      breadcrumbs={partnerMode ? [] : [{ label: "Enterprise Operations", href: "/enterprise" }, { label: labelise(activeTab) }]}
+      breadcrumbs={partnerMode ? [] : [{ label: "Enterprise operations", href: "/enterprise" }, { label: labelise(activeTab) }]}
       stagingLabel={partnerMode ? "" : "STAGING — synthetic test data may be present"}
     >
 
@@ -1327,7 +1327,7 @@ function renderRegistrationLinks(
   const licences = portfolio.licences.filter((item) => item.organisationId === form.organisationId);
   return <div style={stackStyle}>
     <section style={panelStyle}>
-      <div style={sectionHeaderStyle}><div><h2 style={h2Style}>Registration links</h2><p style={mutedStyle}>Create and monitor organisation enrolment links. Claims are limited by the selected licence and link policy.</p></div><span style={privacyStyle}>Enterprise Operations</span></div>
+      <div style={sectionHeaderStyle}><div><h2 style={h2Style}>Registration links</h2><p style={mutedStyle}>Create and monitor organisation enrolment links. Claims are limited by the selected licence and link policy.</p></div><span style={privacyStyle}>Enterprise operations</span></div>
       <div style={twoColumnStyle}>
         <section style={contextPanelStyle} aria-label="Create registration link">
           <h3 style={h3Style}>Create registration link</h3>

@@ -56,7 +56,7 @@ export default function AdminWorkspaceShell({
   const drawerPanelRef = useRef<HTMLDivElement | null>(null);
   const accountMenuId = useId();
   const isPartner = workspaceLabel === "Partner Portal";
-  const isInternalEnterprise = workspaceLabel === "Enterprise Operations";
+  const isInternalEnterprise = workspaceLabel === "Enterprise operations";
   const isPlatform = !isPartner;
   const founderLauncherAvailable = useFounderTestLauncherAccess();
 

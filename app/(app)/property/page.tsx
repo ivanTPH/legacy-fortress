@@ -9,8 +9,8 @@ import { useVaultPreferences } from "../../../components/vault/VaultPreferencesC
 import { isVaultSubsectionEnabled, type VaultSubsectionKey } from "../../../lib/vaultPreferences";
 
 const items = [
-  { href: "/vault/property", label: "Property Records", desc: "Manage owned properties, deeds, valuations, mortgages, and ownership notes.", icon: "home", preferenceKey: "property_records" as VaultSubsectionKey },
-  { href: "/property/documents", label: "Property Documents", desc: "Store property-specific files, references, photos, and supporting paperwork.", icon: "folder", preferenceKey: "property_documents" as VaultSubsectionKey },
+  { href: "/vault/property", label: "Property records", desc: "Manage owned properties, deeds, valuations, mortgages, and ownership notes.", icon: "home", preferenceKey: "property_records" as VaultSubsectionKey },
+  { href: "/property/documents", label: "Property documents", desc: "Store property-specific files, references, photos, and supporting paperwork.", icon: "folder", preferenceKey: "property_documents" as VaultSubsectionKey },
 ];
 
 export default function PropertyOverviewPage() {
@@ -21,7 +21,7 @@ export default function PropertyOverviewPage() {
     isVaultSubsectionEnabled(preferences, "property_records")
       ? [{
         key: "property-records",
-        title: "Property Records",
+        title: "Property records",
         description: "Manage owned properties, deeds, valuations, mortgages, and ownership notes.",
         icon: "home",
         href: "/vault/property",

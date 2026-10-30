@@ -111,7 +111,7 @@ export default function LegalOverviewPage() {
   const sections = [
     ...visibleCategories.map((category) => ({ slug: category.slug, title: category.label, description: category.description,
       href: getLegalCategoryHref(category.slug), icon: getLegalCategoryIcon(category.slug) })),
-    ...(isVaultSubsectionEnabled(preferences, "personal_wishes") ? [{ slug: "personal-wishes", title: "Personal Wishes",
+    ...(isVaultSubsectionEnabled(preferences, "personal_wishes") ? [{ slug: "personal-wishes", title: "Personal wishes",
       description: "Guidance and wishes for your trusted people.", href: "/personal/wishes", icon: "volunteer_activism" }] : []),
   ].map((section) => ({ ...section, records: rows.filter((row) => (row.category_key || "other-legal-documents") === section.slug) }));
   const populated = sections.filter((section) => section.records.length > 0);

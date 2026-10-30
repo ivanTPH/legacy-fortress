@@ -167,7 +167,7 @@ test("admin control plane splits live admin operations into permission-aware rou
   assert.match(controlPlane, /workspaceLabel=\{section === "probate" \|\| section === "probate-detail" \? "Platform Probate Review" : "Platform Administration"\}/);
   assert.match(controlPlane, /AdminWorkspaceShell/);
   assert.match(adminShell, /aria-label=\{`\$\{workspaceLabel\} navigation`\}/);
-  assert.match(adminShell, /WorkspaceSwitcher/);
+  assert.match(adminShell, /WorkspaceAccountLinks/);
   assert.match(controlPlane, /\/api\/internal\/admin\/session/);
   assert.match(controlPlane, /\/api\/internal\/admin\/admin-users/);
   assert.match(controlPlane, /\/api\/internal\/admin\/support/);

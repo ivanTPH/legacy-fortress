@@ -145,8 +145,8 @@ export const VAULT_SUBSECTION_DEFINITIONS: VaultSubsectionDefinition[] = [
   { key: "legal_power_of_attorney", groupKey: "legal", label: "Power of Attorney", description: "Show power of attorney records." },
   { key: "legal_funeral_wishes", groupKey: "legal", label: "Funeral Wishes", description: "Show funeral guidance and instructions." },
   { key: "legal_marriage_divorce_documents", groupKey: "legal", label: "Marriage / Divorce", description: "Show marriage and divorce records." },
-  { key: "legal_identity_documents", groupKey: "legal", label: "Identity Documents", description: "Show passport, licence, and identity records." },
-  { key: "legal_other_legal_documents", groupKey: "legal", label: "Other Legal Documents", description: "Show other legal paperwork." },
+  { key: "legal_identity_documents", groupKey: "legal", label: "Identity documents", description: "Show passport, licence, and identity records." },
+  { key: "legal_other_legal_documents", groupKey: "legal", label: "Other legal documents", description: "Show other legal paperwork." },
   { key: "legal_death_certificate", groupKey: "legal", label: "Death Certificate Verification", description: "Show death certificate verification." },
   { key: "finances_bank", groupKey: "finances", label: "Bank", description: "Show bank accounts and related files." },
   { key: "finances_pensions", groupKey: "finances", label: "Pensions", description: "Show pension providers and values." },
@@ -158,9 +158,9 @@ export const VAULT_SUBSECTION_DEFINITIONS: VaultSubsectionDefinition[] = [
   { key: "personal_social_media", groupKey: "personal", label: "Social media", description: "Show social profiles and handover details." },
   { key: "personal_wishes", groupKey: "personal", label: "Personal wishes", description: "Show wishes and personal guidance." },
   { key: "tasks_follow_up", groupKey: "tasks", label: "Tasks & follow-up", description: "Show outstanding tasks." },
-  { key: "property_records", groupKey: "property", label: "Property Records", description: "Show property assets and notes." },
-  { key: "property_documents", groupKey: "property", label: "Property Documents", description: "Show property documents." },
-  { key: "business_interests", groupKey: "business", label: "Business Interests", description: "Show business interests and ownership records." },
+  { key: "property_records", groupKey: "property", label: "Property records", description: "Show property assets and notes." },
+  { key: "property_documents", groupKey: "property", label: "Property documents", description: "Show property documents." },
+  { key: "business_interests", groupKey: "business", label: "Business interests", description: "Show business interests and ownership records." },
   { key: "business_employment", groupKey: "business", label: "Employment", description: "Show employment and workplace records." },
 ];
 

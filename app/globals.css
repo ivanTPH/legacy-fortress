@@ -1558,6 +1558,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 .lf-admin-overview-measures { display: grid; gap: 0; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); overflow: hidden; }
 .lf-admin-overview-decisions h2,
 .lf-admin-overview-measures h2 { margin: 0; padding: 16px 18px; color: var(--lf-text); font-size: 16px; font-weight: var(--lf-weight-semibold); }
+.lf-admin-measures-note { margin: -8px 0 0; padding: 0 18px 12px; color: var(--lf-text-secondary); font-size: var(--lf-text-small); }
 .lf-admin-decision-row { display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 10px 18px; border-top: 1px solid var(--lf-divider); color: var(--lf-text); text-decoration: none; }
 .lf-admin-decision-row:hover { background: var(--lf-surface-hover); }
 .lf-admin-decision-row:active { background: var(--lf-surface-pressed); }

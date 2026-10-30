@@ -1239,6 +1239,7 @@ function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | n
       </section>
       <section className="lf-admin-overview-measures" aria-labelledby="admin-measures-title">
         <h2 id="admin-measures-title">Across all Vaults</h2>
+        <p className="lf-admin-measures-note">Counts only. Customer vault contents and private documents are not shown here.</p>
         <AdminDataTable
           caption="Across all Vaults"
           columns={[
@@ -1248,7 +1249,7 @@ function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | n
           ]}
           rows={metrics}
           getRowKey={(metric) => metric.key}
-          emptyState={<AdminEmptyState title="No measures">No measures are available for this role.</AdminEmptyState>}
+          emptyState={<AdminEmptyState title="No measures">No summary metrics are available for this role.</AdminEmptyState>}
         />
       </section>
     </div>

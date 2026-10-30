@@ -68,7 +68,7 @@ export default async function EnterpriseDashboardPage({ searchParams }: Enterpri
         </PlatformSection>
       ) : null}
 
-      <section style={platformKpiGridStyle} aria-label="Operational Summary">
+      <section style={platformKpiGridStyle} aria-label="Operational summary">
         <PlatformStatCard icon="corporate_fare" label="Licensed organisations" value={String(data.totalLicensedOrganisations)} detail="Professional accounts" />
         <PlatformStatCard icon="verified" label="Active licences" value={String(data.activeLicences)} detail={`${data.licenceMetrics.suspendedOrExpiredLicences} need attention`} tone={data.licenceMetrics.suspendedOrExpiredLicences ? "warning" : "success"} />
         <PlatformStatCard icon="event_seat" label="Seats used" value={`${data.seatsUsed}/${data.totalSeats}`} detail={`${data.seatsAvailable} available`} />
@@ -80,7 +80,7 @@ export default async function EnterpriseDashboardPage({ searchParams }: Enterpri
       <section className="lf-enterprise-command-centre" style={commandCentreStyle} aria-label="Enterprise command centre">
         <div style={primaryColumnStyle}>
           <PlatformSection
-            title="Organisation Health"
+            title="Organisation health"
             detail={`${data.organisations.length} organisations are represented in this mock portfolio. ${data.organisationHealth.atRisk} at risk, ${data.organisationHealth.watch} on watch, ${data.rolloutStates.needsSetup} needing setup.`}
             icon="corporate_fare"
             emphasis="primary"
@@ -137,7 +137,7 @@ export default async function EnterpriseDashboardPage({ searchParams }: Enterpri
 
         <aside style={secondaryColumnStyle}>
           <PlatformSection
-            title="Commercial Activity"
+            title="Commercial activity"
             detail="Strategic signals use consent-gated insight and banded values only. Non-consented clients are blocked before planning reasons are calculated."
             icon="trending_up"
             emphasis="primary"

@@ -13,7 +13,7 @@ export const ASSET_FIELDS: AssetField[] = [
 
   {
     id: "bank-name",
-    label: "Bank Name",
+    label: "Bank name",
     assetTypeId: "bank-account",
     type: "text",
     required: true,
@@ -22,7 +22,7 @@ export const ASSET_FIELDS: AssetField[] = [
 
   {
     id: "account-type",
-    label: "Account Type",
+    label: "Account type",
     assetTypeId: "bank-account",
     type: "dropdown",
     required: true
@@ -30,7 +30,7 @@ export const ASSET_FIELDS: AssetField[] = [
 
   {
     id: "account-number",
-    label: "Account Number",
+    label: "Account number",
     assetTypeId: "bank-account",
     type: "text",
     required: true
@@ -38,7 +38,7 @@ export const ASSET_FIELDS: AssetField[] = [
 
   {
     id: "sort-code",
-    label: "Sort Code",
+    label: "Sort code",
     assetTypeId: "bank-account",
     type: "text",
     required: true
@@ -62,7 +62,7 @@ export const ASSET_FIELDS: AssetField[] = [
 
   {
     id: "balance",
-    label: "Current Balance",
+    label: "Current balance",
     assetTypeId: "bank-account",
     type: "currency",
     required: false
@@ -72,7 +72,7 @@ export const ASSET_FIELDS: AssetField[] = [
 
   {
     id: "property-address",
-    label: "Property Address",
+    label: "Property address",
     assetTypeId: "property",
     type: "text",
     required: true
@@ -80,7 +80,7 @@ export const ASSET_FIELDS: AssetField[] = [
 
   {
     id: "property-value",
-    label: "Estimated Value",
+    label: "Estimated value",
     assetTypeId: "property",
     type: "currency",
     required: false
@@ -88,7 +88,7 @@ export const ASSET_FIELDS: AssetField[] = [
 
   {
     id: "purchase-date",
-    label: "Purchase Date",
+    label: "Purchase date",
     assetTypeId: "property",
     type: "date",
     required: false
@@ -114,7 +114,7 @@ export const ASSET_FIELDS: AssetField[] = [
 
   {
     id: "vehicle-registration",
-    label: "Registration Number",
+    label: "Registration number",
     assetTypeId: "vehicle",
     type: "text",
     required: true
@@ -122,7 +122,7 @@ export const ASSET_FIELDS: AssetField[] = [
 
   {
     id: "vehicle-value",
-    label: "Estimated Value",
+    label: "Estimated value",
     assetTypeId: "vehicle",
     type: "currency",
     required: false
@@ -132,7 +132,7 @@ export const ASSET_FIELDS: AssetField[] = [
 
   {
     id: "possession-name",
-    label: "Item Name",
+    label: "Item name",
     assetTypeId: "possession",
     type: "text",
     required: true
@@ -140,7 +140,7 @@ export const ASSET_FIELDS: AssetField[] = [
 
   {
     id: "possession-value",
-    label: "Estimated Value",
+    label: "Estimated value",
     assetTypeId: "possession",
     type: "currency",
     required: false
