@@ -65,6 +65,8 @@ export default function MaskedField({
 }
 
 export function maskAllButLast(value: string, preserveLast = 4) {
+  // UK sort codes keep their shape: ••-••-77, never ••••5-77.
+  if (/^\d{2}-?\d{2}-?\d{2}$/.test(value.trim())) return `••-••-${value.replace(/\D/g, "").slice(-2)}`;
   const compact = value.replace(/\s+/g, "");
   if (!compact) return "";
   if (compact.length <= preserveLast) return "•".repeat(compact.length);
