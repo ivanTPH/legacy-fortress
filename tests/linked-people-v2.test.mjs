@@ -53,3 +53,9 @@ test("provider logos match whole words, so 'extraction' is not X", () => {
   assert.equal(matches("my x account", "x"), true);
   assert.equal(matches("barclays savings", "barclays"), true);
 });
+
+test("a suggestion is matched again against today's People and an exact match is pre-selected, not linked", () => {
+  const section = read("components/records/LinkedPeopleSection.tsx");
+  assert.match(section, /matchOwnerContact\(item\.extracted_name, contacts\)/);
+  assert.match(section, /setSuggestionChoice\(exact \? "existing" : ""\); setPersonId\(exact\)/);
+});
