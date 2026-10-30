@@ -138,7 +138,9 @@ export default function AdminWorkspaceShell({
   const workspaceHome = isInternalEnterprise || isPartner ? "/enterprise" : "/admin";
   const visibleItems = navigation.flatMap((group) => group.items);
   const currentRoute = currentPathname.split("?")[0];
-  const detailParent = isPlatform
+  // A page in the menu is a root screen (menu + logo); only pages below one get a back link.
+  const isRootScreen = visibleItems.some((item) => item.href.split("?")[0] === currentRoute);
+  const detailParent = isPlatform && !isRootScreen
     ? visibleItems
         .filter((item) => currentRoute.startsWith(`${item.href.split("?")[0]}/`))
         .sort((a, b) => b.href.length - a.href.length)[0]

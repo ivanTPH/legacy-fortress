@@ -177,7 +177,8 @@ test("shared admin data table supports toolbar and mobile card rows", () => {
   assert.match(source, /description\?: ReactNode/);
   assert.match(source, /actions\?: ReactNode/);
   assert.match(source, /lf-admin-data-toolbar/);
-  assert.match(source, /lf-admin-data-card-row/);
+  assert.match(source, /lf-admin-data-card-main/);
+  assert.match(source, /lf-admin-data-card-status/);
   assert.match(source, /overflow-wrap: break-word/);
   assert.match(source, /word-break: keep-all/);
   assert.match(globalCss, /\.lf-admin-data-table\s*\{/);

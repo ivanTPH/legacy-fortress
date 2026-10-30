@@ -7,7 +7,11 @@ export type AdminDataColumn<T> = {
   header: string;
   render: (row: T) => ReactNode;
   cardLabel?: string;
+  /** Phone list rows: hide a column that adds nothing on a small screen. */
+  mobile?: "hide";
 };
+
+const STATUS_HEADERS = new Set(["Status", "Stage", "Result"]);
 
 export default function AdminDataTable<T>({
   caption,
@@ -52,17 +56,24 @@ export default function AdminDataTable<T>({
           ) : null}
         </tbody>
       </table>
-      <div className="lf-admin-data-cards" aria-label={`${caption} mobile cards`}>
-        {rows.map((row) => (
-          <article key={getRowKey(row)} className="lf-admin-data-card">
-            {columns.map((column) => (
-              <div key={column.key} className="lf-admin-data-card-row">
-                <span>{column.cardLabel ?? column.header}</span>
-                <div>{column.render(row)}</div>
+      <div className="lf-admin-data-cards" aria-label={`${caption} list`}>
+        {rows.map((row) => {
+          // V5.1 phone rows: title, one sub-line, status chip, action or chevron. No field labels.
+          const [titleColumn, ...rest] = columns;
+          const statusColumn = rest.find((column) => STATUS_HEADERS.has(column.header));
+          const actionColumn = rest.find((column) => column.header === "" || column.header === "Actions");
+          const metaColumns = rest.filter((column) => column !== statusColumn && column !== actionColumn && column.mobile !== "hide").slice(0, 2);
+          return (
+            <article key={getRowKey(row)} className="lf-admin-data-card">
+              <div className="lf-admin-data-card-main">
+                <div className="lf-admin-data-card-title">{titleColumn?.render(row)}</div>
+                {metaColumns.length ? <div className="lf-admin-data-card-meta">{metaColumns.map((column) => <span key={column.key}>{column.render(row)}</span>)}</div> : null}
+                {statusColumn ? <div className="lf-admin-data-card-status">{statusColumn.render(row)}</div> : null}
               </div>
-            ))}
-          </article>
-        ))}
+              {actionColumn ? <div className="lf-admin-data-card-action">{actionColumn.render(row)}</div> : null}
+            </article>
+          );
+        })}
         {rows.length === 0 ? <div className="lf-admin-empty-state">{emptyState}</div> : null}
       </div>
       <style jsx global>{adminPrimitiveCss}</style>
