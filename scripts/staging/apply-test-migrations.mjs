@@ -8,7 +8,8 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 const TEST_URL = "https://supabase-test.mylegacyfortress.com";
-const PRODUCTION_CLUSTER_ID = String(process.env.PRODUCTION_DB_CLUSTER_ID ?? "").trim();
+// Production cluster recorded in the TEST infrastructure evidence; the repository variable wins when set.
+const PRODUCTION_CLUSTER_ID = String(process.env.PRODUCTION_DB_CLUSTER_ID || "7662004891128127525").trim();
 
 // Results go to workflow annotations (no keys or row data), so they can be read without log access.
 const annotate = (level, text) => console.log(`::${level} title=TEST migrations::${String(text).replace(/[\r\n]+/g, " ").slice(0, 900)}`);

@@ -1,7 +1,7 @@
 {
   "approvedBy": "Ivan (owner), 30 Oct 2026: four Linked People / extraction migrations for TEST only",
   "mode": "verify",
-  "attempt": 2,
+  "attempt": 3,
   "files": [
     { "file": "20261030090000_linked_people_atomic_save.sql", "sha256": "cf769ea514211934cc6ce309f4cecf7a087ea1c8b1979f06f7842c7f36bd3009" },
     { "file": "20261030090050_extraction_for_record_attachments.sql", "sha256": "1ad37e68a9ad2b6107abde951457e0f97b88f1d71fb343d6e145b9f45c78a648" },
