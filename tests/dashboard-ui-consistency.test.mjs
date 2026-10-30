@@ -396,8 +396,9 @@ test("hosted UAT customer category cards and bank records keep canonical shared 
   assert.ok(bankConfig);
   assert.equal(bankConfig.fields.some((field) => field.key === "title"), false);
   assert.equal(bankConfig.fields.some((field) => field.key === "account_nickname" && field.required === false), true);
-  assert.equal(buildBankDisplayName("Barclays", "current_account"), "Barclays — Current Account");
-  assert.equal(buildBankDisplayName("HSBC", "savings"), "HSBC — Savings");
+  assert.equal(buildBankDisplayName("Barclays", "current_account"), "Barclays — Current account");
+  assert.equal(buildBankDisplayName("Riverside", "isa_cash"), "Riverside — Cash ISA");
+  assert.equal(buildBankDisplayName("HSBC", "savings"), "HSBC — Savings account");
   assert.equal(buildBankDisplayName("", "", "Legacy imported account"), "Legacy imported account");
   assert.match(universalWorkspace, /account_nickname/);
   assert.match(universalWorkspace, /buildBankDisplayName\(resolvedBankName, displayAccountType, form\.title\)/);

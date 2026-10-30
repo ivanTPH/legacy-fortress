@@ -1,3 +1,5 @@
+import { resolveCategoryTypeOption } from "./categoryTypeIntegrity.mjs";
+
 type BankAssetSource = {
   title?: string | null;
   provider_name?: string | null;
@@ -212,6 +214,9 @@ function readBankOtherAccountType(metadata: Record<string, unknown>) {
 export function formatBankAccountType(value: string | null | undefined) {
   const raw = readString(value);
   if (!raw) return "";
+  // Known types use their proper label ("Cash ISA", "Savings account"), not a title-cased token.
+  const known = resolveCategoryTypeOption("finances", "bank", raw);
+  if (known && !known.key.startsWith("other_")) return known.label;
   return raw
     .replace(/[_-]+/g, " ")
     .replace(/\s+/g, " ")

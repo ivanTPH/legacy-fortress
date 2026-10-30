@@ -305,3 +305,44 @@ function buildCanonicalDocumentStoragePath(
 ) {
   return `users/${context.ownerUserId}/assets/${context.assetId}/${folder}/${Date.now()}-${sanitizeFileName(fileName)}`;
 }
+
+/**
+ * Files a statement on the bank account it describes, once the owner has confirmed that account.
+ * Document rows are immutable (documents_protect_original), so this never re-points the original:
+ * it files a fresh copy on the new account through the normal upload path, then removes the
+ * original from the old record the same way an owner removal does. If removal fails, both stay.
+ */
+export async function moveDocumentToAsset(
+  client: AnySupabaseClient,
+  { documentId, ownerUserId, targetAssetId }: { documentId: string; ownerUserId: string; targetAssetId: string },
+): Promise<{ ok: true; removedOriginal: boolean } | { ok: false; error: string }> {
+  const original = await client
+    .from("documents")
+    .select("id,asset_id,storage_bucket,storage_path,file_name,display_title,mime_type,document_kind")
+    .eq("id", documentId)
+    .eq("owner_user_id", ownerUserId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  const row = original.data as { id: string; asset_id: string; storage_bucket: string | null; storage_path: string; file_name: string; display_title: string | null; mime_type: string | null; document_kind: string | null } | null;
+  if (original.error || !row) return { ok: false, error: "document_not_found" };
+  if (row.asset_id === targetAssetId) return { ok: true, removedOriginal: false };
+
+  const context = await resolveCanonicalAssetDocumentContext(client, { assetId: targetAssetId, ownerUserId });
+  if (!context) return { ok: false, error: "target_not_found" };
+  const bucket = row.storage_bucket || "vault-docs";
+  const download = await client.storage.from(bucket).download(row.storage_path);
+  if (download.error || !download.data) return { ok: false, error: "download_failed" };
+  const file = new File([download.data], row.file_name, { type: row.mime_type || "application/octet-stream" });
+  const copy = await createCanonicalAssetDocument(client, {
+    context,
+    file,
+    kind: row.document_kind === "photo" ? "photo" : "document",
+    displayTitle: row.display_title ?? undefined,
+  });
+  if (!copy.ok) return { ok: false, error: copy.error };
+
+  const removed = await client.from("documents").delete().eq("id", row.id).eq("owner_user_id", ownerUserId).select("id");
+  if (removed.error || !removed.data?.length) return { ok: true, removedOriginal: false };
+  await client.storage.from(bucket).remove([row.storage_path]);
+  return { ok: true, removedOriginal: true };
+}

@@ -115,5 +115,8 @@ test("a statement asks before adding, the owner checks the details, and the stat
   const workspace = fs.readFileSync(new URL("../components/records/UniversalRecordWorkspace.tsx", import.meta.url), "utf8");
   assert.match(workspace, /Check these details are correct/);
   assert.match(workspace, /Confirm and add to Vault/);
-  assert.match(workspace, /from\("documents"\)\.update\(\{ asset_id: recordId \}\)\.eq\("id", statementPrefill\.documentId\)\.eq\("owner_user_id", user\.id\)/);
+  assert.match(workspace, /moveDocumentToAsset\(supabase, \{ documentId: statementPrefill\.documentId, ownerUserId: user\.id, targetAssetId: recordId \}\)/);
+  const links = fs.readFileSync(new URL("../lib/assets/documentLinks.ts", import.meta.url), "utf8");
+  // Original rows stay immutable: a copy is filed on the new account, never an asset_id update.
+  assert.doesNotMatch(links, /update\(\{ asset_id/);
 });

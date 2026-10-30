@@ -89,6 +89,7 @@ import {
   createCanonicalAssetDocument,
   renameCanonicalAssetDocument,
   getCanonicalAssetDocumentParentLabel,
+  moveDocumentToAsset,
   getStoredFileSignedUrl,
   isPrintableDocumentMimeType,
   resolveCanonicalAssetDocumentContext,
@@ -2601,9 +2602,13 @@ export default function UniversalRecordWorkspace({
           }
         }
         if (!editingId && recordId && statementPrefill?.documentId && sectionKey === "finances" && categoryKey === "bank") {
-          // The owner confirmed the details: move the statement to the account it describes.
-          const moved = await supabase.from("documents").update({ asset_id: recordId }).eq("id", statementPrefill.documentId).eq("owner_user_id", user.id).select("id");
-          statementMoveNote = moved.error || !moved.data?.length ? "The statement stayed on the record you uploaded it to." : "The statement has moved to this account.";
+          // The owner confirmed the details: file the statement on the account it describes.
+          const moved = await moveDocumentToAsset(supabase, { documentId: statementPrefill.documentId, ownerUserId: user.id, targetAssetId: recordId });
+          statementMoveNote = !moved.ok
+            ? "The statement stayed on the record you uploaded it to."
+            : moved.removedOriginal
+              ? "The statement has moved to this account."
+              : "The statement is now on this account. A copy also stayed on the record you uploaded it to.";
         }
         pushBankSubmitTrace(`createAsset success: asset_id="${recordId}"`);
         mergeDevBankContextTrace({
