@@ -101,3 +101,8 @@ test("a scanned PDF with no text layer is rendered and read with OCR", async () 
   assert.equal(pages[0].source, "ocr");
   assert.ok(extractNamedPeople(pages).some((p) => p.name === "Tom Scanned" && p.role === "Executor"));
 });
+
+test("bank matching reads asset details from the assets.metadata_json column", () => {
+  const route = fs.readFileSync(new URL("../app/api/documents/[documentId]/extract/route.ts", import.meta.url), "utf8");
+  assert.match(route, /select\("id,owner_user_id,metadata_json"\)/);
+});

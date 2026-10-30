@@ -112,11 +112,11 @@ export async function POST(request: Request, context: { params: Promise<{ docume
   let account = null;
   const statement = extractBankStatementCandidate(read.pages);
   if (statement.fields.accountNumber || statement.fields.iban) {
-    const banks = await admin.from("assets").select("id,owner_user_id,metadata")
+    const banks = await admin.from("assets").select("id,owner_user_id,metadata_json")
       .eq("owner_user_id", user.id).eq("section_key", "finances").eq("category_key", "bank").is("deleted_at", null).limit(500);
     if (!banks.error) {
       const records = (banks.data ?? []).map((row) => {
-        const metadata = (row.metadata ?? {}) as Record<string, unknown>;
+        const metadata = (row.metadata_json ?? {}) as Record<string, unknown>;
         return { id: row.id, ownerUserId: row.owner_user_id, accountNumber: String(metadata.account_number ?? ""), sortCode: String(metadata.sort_code ?? ""), iban: String(metadata.iban ?? "") };
       });
       account = buildBankAccountFinding(statement, matchBankStatementToAuthorisedAccounts(statement, user.id, records), record.id);
