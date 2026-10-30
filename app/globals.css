@@ -8874,3 +8874,18 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-admin-more-filters > summary { cursor: pointer; color: var(--lf-text-secondary); font-size: var(--lf-text-small); font-weight: var(--lf-weight-medium); min-height: 32px; display: inline-flex; align-items: center; }
 .lf-admin-more-filters > div { margin-top: 10px; }
 .lf-enterprise-create-link > summary { list-style: none; width: max-content; gap: 6px; margin-top: 14px; } .lf-enterprise-create-link > summary::-webkit-details-marker { display: none; } .lf-enterprise-create-link:not([open]) { padding-bottom: 14px; }
+/* V5.1 phone list rows for admin and partner tables (ADMIN_PARTNER.md › Mobile presentation). */
+@media (max-width: 720px) {
+  .lf-admin-shell .lf-admin-data-cards { display: grid; gap: 0; }
+  .lf-admin-shell .lf-admin-data-cards > .lf-admin-data-card { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 64px; padding: 12px 16px; border: 0; border-bottom: 1px solid var(--lf-border); border-radius: 0; background: transparent; }
+  .lf-admin-shell .lf-admin-data-cards > .lf-admin-data-card:last-of-type { border-bottom: 0; }
+  .lf-admin-data-card-main { display: grid; gap: 4px; min-width: 0; }
+  .lf-admin-data-card-title { font-size: var(--lf-text-body); font-weight: var(--lf-weight-semibold); color: var(--lf-text); overflow-wrap: anywhere; }
+  .lf-admin-data-card-title small { font-weight: var(--lf-weight-regular); }
+  .lf-admin-data-card-meta { display: flex; flex-wrap: wrap; gap: 2px 8px; color: var(--lf-text-secondary); font-size: 13px; }
+  .lf-admin-data-card-meta > span + span::before { content: "·"; margin-right: 8px; }
+  .lf-admin-data-card-meta small { display: inline; }
+  .lf-admin-data-card-status { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .lf-admin-data-card-action { display: flex; gap: 8px; align-items: center; }
+  .lf-admin-table-card .lf-admin-data-cards { padding: 0; }
+}
