@@ -13,13 +13,14 @@ export type LinkedPersonSuggestion = {
   document_title: string;
 };
 
-export async function loadLinkedPersonSuggestions(client: SupabaseClient, ownerUserId: string, recordId: string): Promise<LinkedPersonSuggestion[]> {
+export async function loadLinkedPersonSuggestions(client: SupabaseClient, ownerUserId: string, recordId: string, recordType: "asset" | "record" = "asset"): Promise<LinkedPersonSuggestion[]> {
+  if (recordType === "record") return loadRecordAttachmentSuggestions(client, ownerUserId, recordId);
   const result = await client.from("extraction_suggestions")
     .select("id,document_id,record_id,page,extracted_name,extracted_role,match_person_id,match_kind")
     .eq("owner_user_id", ownerUserId).eq("record_id", recordId).eq("status", "pending")
     .order("created_at", { ascending: true });
   if (result.error) throw new Error("Document suggestions are unavailable.");
-  const rows = result.data ?? [];
+  const rows = (result.data ?? []).filter((row) => row.document_id);
   if (!rows.length) return [];
   const documents = await client.from("documents").select("id,file_name,display_title")
     .eq("owner_user_id", ownerUserId).eq("asset_id", recordId).is("deleted_at", null)
@@ -30,6 +31,26 @@ export async function loadLinkedPersonSuggestions(client: SupabaseClient, ownerU
     ...row,
     document_title: titles.get(row.document_id) || "Document",
   })) as LinkedPersonSuggestion[];
+}
+
+/** Legal records keep files in attachments. Before that schema change is live this quietly returns none. */
+async function loadRecordAttachmentSuggestions(client: SupabaseClient, ownerUserId: string, recordId: string): Promise<LinkedPersonSuggestion[]> {
+  const result = await client.from("extraction_suggestions")
+    .select("id,attachment_id,record_id,page,extracted_name,extracted_role,match_person_id,match_kind")
+    .eq("owner_user_id", ownerUserId).eq("record_type", "record").eq("record_id", recordId).eq("status", "pending")
+    .order("created_at", { ascending: true });
+  if (result.error) return [];
+  const rows = (result.data ?? []) as Array<{ id: string; attachment_id: string; record_id: string; page: number; extracted_name: string; extracted_role: string | null; match_person_id: string | null; match_kind: "exact" | "possible" | "none" }>;
+  if (!rows.length) return [];
+  const files = await client.from("attachments").select("id,file_name")
+    .eq("owner_user_id", ownerUserId).eq("record_id", recordId).in("id", rows.map((row) => row.attachment_id));
+  if (files.error) return [];
+  const titles = new Map((files.data ?? []).map((row) => [row.id, row.file_name]));
+  return rows.filter((row) => titles.has(row.attachment_id)).map(({ attachment_id, ...row }) => ({
+    ...row,
+    document_id: attachment_id,
+    document_title: titles.get(attachment_id) || "Document",
+  }));
 }
 
 export async function reviewLinkedPersonSuggestion(client: SupabaseClient, input: {

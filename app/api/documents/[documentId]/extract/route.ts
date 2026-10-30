@@ -31,19 +31,36 @@ export async function POST(request: Request, context: { params: Promise<{ docume
   if (!admin) return fail(503, "extraction_unavailable");
 
   // Ownership is checked here and again by the suggestion triggers.
-  const doc = await admin.from("documents")
-    .select("id,owner_user_id,asset_id,storage_bucket,storage_path,size_bytes")
-    .eq("id", documentId).eq("owner_user_id", user.id).is("deleted_at", null).maybeSingle();
-  if (doc.error || !doc.data?.asset_id) return fail(404, "document_not_found");
-  if (Number(doc.data.size_bytes ?? 0) > EXTRACTION_LIMITS.maxBytes) return fail(413, "too_large");
+  // Assets keep files in documents; Legal records (Wills, LPAs...) keep them in attachments.
+  const fromAttachment = new URL(request.url).searchParams.get("source") === "attachment";
+  let file: { bucket: string; path: string; size: number; recordId: string };
+  let record: { id: string; section_key: string | null; category_key: string | null };
+  if (fromAttachment) {
+    const attachment = await admin.from("attachments")
+      .select("id,owner_user_id,record_id,storage_bucket,storage_path,size_bytes")
+      .eq("id", documentId).eq("owner_user_id", user.id).maybeSingle();
+    if (attachment.error || !attachment.data) return fail(404, "document_not_found");
+    const owned = await admin.from("records").select("id,section_key,category_key")
+      .eq("id", attachment.data.record_id).eq("owner_user_id", user.id).maybeSingle();
+    if (owned.error || !owned.data) return fail(404, "record_not_found");
+    file = { bucket: attachment.data.storage_bucket, path: attachment.data.storage_path, size: Number(attachment.data.size_bytes ?? 0), recordId: owned.data.id };
+    record = owned.data;
+  } else {
+    const doc = await admin.from("documents")
+      .select("id,owner_user_id,asset_id,storage_bucket,storage_path,size_bytes")
+      .eq("id", documentId).eq("owner_user_id", user.id).is("deleted_at", null).maybeSingle();
+    if (doc.error || !doc.data?.asset_id) return fail(404, "document_not_found");
+    const asset = await admin.from("assets")
+      .select("id,owner_user_id,section_key,category_key")
+      .eq("id", doc.data.asset_id).eq("owner_user_id", user.id).is("deleted_at", null).maybeSingle();
+    if (asset.error || !asset.data) return fail(404, "record_not_found");
+    file = { bucket: doc.data.storage_bucket, path: doc.data.storage_path, size: Number(doc.data.size_bytes ?? 0), recordId: asset.data.id };
+    record = asset.data;
+  }
+  if (file.size > EXTRACTION_LIMITS.maxBytes) return fail(413, "too_large");
+  const recordType = fromAttachment ? "record" : "asset";
 
-  const asset = await admin.from("assets")
-    .select("id,owner_user_id,section_key,category_key")
-    .eq("id", doc.data.asset_id).eq("owner_user_id", user.id).is("deleted_at", null).maybeSingle();
-  if (asset.error || !asset.data) return fail(404, "record_not_found");
-  const record = asset.data;
-
-  const download = await admin.storage.from(doc.data.storage_bucket || "vault-docs").download(doc.data.storage_path);
+  const download = await admin.storage.from(file.bucket || "vault-docs").download(file.path);
   if (download.error || !download.data) return fail(404, "document_unavailable");
   const bytes = new Uint8Array(await download.data.arrayBuffer());
 
@@ -62,8 +79,8 @@ export async function POST(request: Request, context: { params: Promise<{ docume
   if (people.length) {
     const [contacts, existing, links] = await Promise.all([
       admin.from("contacts").select("id,full_name").eq("owner_user_id", user.id).limit(1000),
-      admin.from("extraction_suggestions").select("extracted_name").eq("owner_user_id", user.id).eq("document_id", documentId),
-      admin.from("record_links").select("person_id").eq("owner_user_id", user.id).eq("record_id", record.id).is("removed_at", null),
+      admin.from("extraction_suggestions").select("extracted_name").eq("owner_user_id", user.id).eq(fromAttachment ? "attachment_id" : "document_id", documentId),
+      admin.from("record_links").select("person_id").eq("owner_user_id", user.id).eq("record_type", recordType).eq("record_id", record.id).is("removed_at", null),
     ]);
     if (contacts.error || existing.error || links.error) return fail(500, "suggestions_unavailable");
     const alreadySuggested = new Set((existing.data ?? []).map((row) => normalisePersonName(row.extracted_name)));
@@ -74,7 +91,7 @@ export async function POST(request: Request, context: { params: Promise<{ docume
       .filter(({ match }) => !(match.kind === "exact" && match.personId && linkedPeople.has(match.personId)))
       .map(({ person, match }) => ({
         owner_user_id: user.id,
-        document_id: documentId,
+        ...(fromAttachment ? { record_type: "record", attachment_id: documentId } : { document_id: documentId }),
         record_id: record.id,
         page: person.page,
         extracted_name: person.name.slice(0, 120),
@@ -84,6 +101,8 @@ export async function POST(request: Request, context: { params: Promise<{ docume
       }));
     if (rows.length) {
       const inserted = await admin.from("extraction_suggestions").insert(rows).select("id");
+      // Legal-record suggestions need the 30 Oct schema change; until it is live, say nothing rather than fail.
+      if (inserted.error && fromAttachment) return NextResponse.json({ ok: true, readable: true, pagesRead: read.pages.length, usedOcr, peopleSuggested: 0, account: null, pendingSchema: true }, { headers: NO_STORE });
       if (inserted.error) return fail(500, "suggestions_not_saved");
       peopleSuggested = inserted.data?.length ?? 0;
     }

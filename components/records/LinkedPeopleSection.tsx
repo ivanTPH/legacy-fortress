@@ -8,7 +8,7 @@ import Icon from "../ui/Icon";
 import { Sheet } from "../ui/V3Primitives";
 import { buildContactsWorkspaceHref } from "../../lib/contacts/contactRouting";
 import type { PeopleContactEntity } from "../../lib/contacts/contactRepository";
-import { LinkedPersonRecoveryError, changeRecordLinkedPersonRole, linkedPeopleConfig, linkedPersonFormIssues, loadRecordLinkedPeople, loadRecordLinkedPeopleHistory, normalizeLinkedPersonEmail, normalizeLinkedPersonPhone, saveRecordLinkedPerson, searchLinkedPeopleContacts, sendRecordLinkedPersonInvitation, unlinkRecordLinkedPerson, type LinkedPerson, type LinkedPersonHistoryEvent, type LinkedRecordAccessState, type LinkedRecordType } from "../../lib/linkedPeople/recordLinkedPeople";
+import { linkedPeopleV2Available, saveRecordLinkedPersonAtomic, undoRecordLinkRemoval, reopenLinkedPersonSuggestion, savePersonPrivateDetails, LinkedPersonRecoveryError, changeRecordLinkedPersonRole, linkedPeopleConfig, linkedPersonFormIssues, loadRecordLinkedPeople, loadRecordLinkedPeopleHistory, normalizeLinkedPersonEmail, normalizeLinkedPersonPhone, saveRecordLinkedPerson, searchLinkedPeopleContacts, sendRecordLinkedPersonInvitation, unlinkRecordLinkedPerson, type LinkedPerson, type LinkedPersonHistoryEvent, type LinkedRecordAccessState, type LinkedRecordType } from "../../lib/linkedPeople/recordLinkedPeople";
 import { DOCUMENT_EXTRACTION_EVENT, type DocumentExtractionEventDetail } from "../../lib/documents/extraction/client";
 import { loadLinkedPersonSuggestions, reviewLinkedPersonSuggestion, type LinkedPersonSuggestion } from "../../lib/linkedPeople/suggestions";
 import { supabase } from "../../lib/supabaseClient";
@@ -62,6 +62,13 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
   const [relationship, setRelationship] = useState("");
   const [role, setRole] = useState("");
   const [otherRole, setOtherRole] = useState("");
+  const [address, setAddress] = useState("");
+  const [personNotes, setPersonNotes] = useState("");
+  const [v2, setV2] = useState(false);
+  const requestIdRef = useRef("");
+  const [undo, setUndo] = useState<{ linkId: string; name: string; fromDocument: boolean } | null>(null);
+  const [undoExpired, setUndoExpired] = useState(false);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -83,11 +90,17 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
     onAutoOpened?.();
   }, [autoOpen, canManage, loading, onAutoOpened]);
 
+  useEffect(() => {
+    let current = true;
+    void linkedPeopleV2Available(client).then((available) => { if (current) setV2(available); }).catch(() => undefined);
+    return () => { current = false; };
+  }, [client]);
+  useEffect(() => () => { if (undoTimerRef.current) clearTimeout(undoTimerRef.current); }, []);
   const [suggestionsVersion, setSuggestionsVersion] = useState(0);
   useEffect(() => {
-    if (recordType !== "asset" || !canManage) return;
+    if (!canManage) return;
     let current = true;
-    loadLinkedPersonSuggestions(client, ownerUserId, recordId)
+    loadLinkedPersonSuggestions(client, ownerUserId, recordId, recordType)
       .then((rows) => { if (current) setSuggestions(rows); })
       .catch(() => { if (current) setSuggestionError("Document suggestions are unavailable."); });
     return () => { current = false; };
@@ -150,7 +163,7 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
 
   const resetForm = () => {
     setMode("closed"); setPersonId(""); setName(""); setEmail(""); setPhone("");
-    setRelationship(""); setRole(""); setOtherRole(""); setError("");
+    setRelationship(""); setRole(""); setOtherRole(""); setError(""); setAddress(""); setPersonNotes(""); requestIdRef.current = "";
     setContactSearch(""); setRecoveryPersonId(""); setSavedPersonId("");
     setSuggestionId(""); setSuggestionChoice("");
     setManagedLinkId("");
@@ -206,10 +219,42 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
     if (!canManage || busy || !managedLinkId) return;
     setBusy(true); setError("");
     try {
+      const removed = links.find((link) => link.id === managedLinkId);
+      const removedName = managedContact?.full_name ?? "Person";
       await unlinkRecordLinkedPerson(client, { ownerUserId, recordType, recordId, linkId: managedLinkId });
       await refreshLinks(); setHistoryOpen(false); resetForm();
-      setNotice(`${managedContact?.full_name ?? "Person"} was unlinked from this record. Their contact and any separate access grant were not changed.`);
+      setNotice(`${removedName} was unlinked from this record. Their contact and any separate access grant were not changed.`);
+      if (v2 && removed) {
+        if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+        const fromDocument = removed.source === "extraction";
+        setUndo({ linkId: removed.id, name: removedName, fromDocument });
+        setUndoExpired(false);
+        // Undo is offered for 10 seconds (V5.2 asset sequence); review-again stays until the next action.
+        undoTimerRef.current = setTimeout(() => { setUndoExpired(true); if (!fromDocument) setUndo(null); }, 10_000);
+      }
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not unlink this person."); }
+    finally { setBusy(false); }
+  };
+  const undoRemoval = async () => {
+    if (!undo || busy) return;
+    setBusy(true); setError("");
+    try {
+      await undoRecordLinkRemoval(client, undo.linkId);
+      await refreshLinks();
+      setNotice(`${undo.name} is linked to this record again.`);
+      setUndo(null);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Undo is no longer available."); setUndo(null); }
+    finally { setBusy(false); }
+  };
+  const reviewAgain = async () => {
+    if (!undo || busy) return;
+    setBusy(true); setError("");
+    try {
+      await reopenLinkedPersonSuggestion(client, undo.linkId);
+      setSuggestionsVersion((value) => value + 1);
+      setNotice(`${undo.name} is back under “We found in this document” for you to review.`);
+      setUndo(null);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not put this suggestion back for review."); }
     finally { setBusy(false); }
   };
   const openSuggestion = (suggestion: LinkedPersonSuggestion) => {
@@ -255,12 +300,28 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
     try {
       if (duplicateEmailContact && !recoveryPersonId) throw new Error(`This email belongs to ${duplicateEmailContact.full_name}. Choose that person from People.`);
       if (mode === "new" && !recoveryPersonId) { normalizeLinkedPersonEmail(email); normalizeLinkedPersonPhone(phone); }
-      const result = await saveRecordLinkedPerson(client, {
-        ownerUserId, recordId, recordType,
-        existingPersonId: mode === "existing" ? personId : undefined,
-        recoveryPersonId: recoveryPersonId || undefined,
-        name, email, phone, relationship, role, roleOtherText: otherRole,
-      });
+      let result: { personId: string; linkId: string };
+      if (v2 && !recoveryPersonId) {
+        // One transaction: the person is never left saved without the link. Retries reuse the request id.
+        if (!requestIdRef.current) requestIdRef.current = crypto.randomUUID();
+        result = await saveRecordLinkedPersonAtomic(client, {
+          requestId: requestIdRef.current, recordType, recordId,
+          existingPersonId: mode === "existing" ? personId : undefined,
+          name, email, phone, relationship, role, roleOtherText: otherRole,
+        });
+        requestIdRef.current = "";
+        if (mode === "new" && (address.trim() || personNotes.trim())) {
+          try { await savePersonPrivateDetails(client, { ownerUserId, personId: result.personId, address, notes: personNotes }); }
+          catch (detailsError) { setError(detailsError instanceof Error ? detailsError.message : "Address and notes were not saved."); }
+        }
+      } else {
+        result = await saveRecordLinkedPerson(client, {
+          ownerUserId, recordId, recordType,
+          existingPersonId: mode === "existing" ? personId : undefined,
+          recoveryPersonId: recoveryPersonId || undefined,
+          name, email, phone, relationship, role, roleOtherText: otherRole,
+        });
+      }
       setSavedPersonId(result.personId);
       setRecoveryPersonId(""); setNotice("");
       setMode("saved");
@@ -311,6 +372,10 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
   return <section className="lf-v52-record-people lf-linked-people" aria-label={config.heading}>
     <h2>{config.heading}</h2>
     {notice ? <p className="lf-linked-people-notice" role="status">{notice}</p> : null}
+    {undo ? <div className="lf-linked-people-undo" role="group" aria-label="After removing a person">
+      {!undoExpired ? <button type="button" disabled={busy} onClick={() => void undoRemoval()}>Undo</button> : null}
+      {undo.fromDocument ? <button type="button" disabled={busy} onClick={() => void reviewAgain()}>Review the document suggestion again</button> : null}
+    </div> : null}
     {suggestionError ? <p role="status">{suggestionError}</p> : null}
     {loading ? <p role="status">Loading linked people…</p> : links.length === 0 ? <p>{config.heading === "Executors" ? "No executors linked yet. Add them one at a time." : "No people linked yet. Add them one at a time."}</p> :
       <ul className="lf-v52-record-person-list">{links.map((link) => {
@@ -395,6 +460,10 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
         <label>Email (optional to save)<input id={`${formId}-email`} name="lp_email" type="email" inputMode="email" value={email} onChange={(event) => { setEmail(event.target.value); setError(""); }} autoComplete="off" aria-invalid={Boolean(issueFor("email"))} aria-describedby={issueFor("email") ? `${formId}-email-error` : undefined} />{issueFor("email") ? <small id={`${formId}-email-error`} className="lf-linked-people-field-error">{issueFor("email")}</small> : null}</label>
         {duplicateEmailContact ? <div role="alert" className="lf-linked-people-duplicate"><p>This email belongs to {duplicateEmailContact.full_name}.</p>{activeIds.has(duplicateEmailContact.id) ? <Link href={buildContactsWorkspaceHref(duplicateEmailContact.id)}>View linked person</Link> : <button type="button" onClick={() => { setMode("existing"); setContactSearch(duplicateEmailContact.full_name); setPersonId(duplicateEmailContact.id); }}>Use existing person</button>}</div> : null}
         <label>Telephone (optional)<input id={`${formId}-phone`} name="lp_phone" type="tel" inputMode="tel" value={phone} onChange={(event) => { setPhone(event.target.value); setError(""); }} autoComplete="off" aria-invalid={Boolean(issueFor("phone"))} aria-describedby={issueFor("phone") ? `${formId}-phone-error` : undefined} placeholder="07700 900123" />{issueFor("phone") ? <small id={`${formId}-phone-error`} className="lf-linked-people-field-error">{issueFor("phone")}</small> : null}</label>
+        {v2 ? <details className="lf-linked-people-more"><summary>Address and notes (optional)</summary>
+          <label>Address<textarea name="lp_address" value={address} onChange={(event) => setAddress(event.target.value)} maxLength={300} rows={2} autoComplete="off" /></label>
+          <label>Notes for you<textarea name="lp_notes" value={personNotes} onChange={(event) => setPersonNotes(event.target.value)} maxLength={1000} rows={3} /><small>Only you can see these. They are never shown to this person.</small></label>
+        </details> : null}
       </div>}
       <fieldset className="lf-linked-people-role-choices"><legend>Their role on {recordLabel}</legend>{showValidationIssues && validationIssues.some((issue) => issue.field === "role") ? <small className="lf-linked-people-field-error">Choose their role on {recordLabel}.</small> : null}{config.roles.map((option, index) => <button key={option} id={index === 0 ? `${formId}-role` : undefined} type="button" aria-pressed={role === option} onClick={() => { setRole(option); setError(""); }}>{option}</button>)}</fieldset>
       {role === "Other" ? <label>Describe role<input id={`${formId}-other`} value={otherRole} onChange={(event) => { setOtherRole(event.target.value); setError(""); }} aria-invalid={Boolean(issueFor("other"))} aria-describedby={issueFor("other") ? `${formId}-other-error` : undefined} required maxLength={60} />{issueFor("other") ? <small id={`${formId}-other-error`} className="lf-linked-people-field-error">{issueFor("other")}</small> : null}</label> : null}
