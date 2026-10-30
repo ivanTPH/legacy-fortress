@@ -8790,3 +8790,12 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
   .lf-workspace-switcher.mobile-context-only .lf-workspace-links a small { display: block; font-size: 13px; }
   .lf-workspace-customer-note { margin: 4px 4px 0; color: var(--lf-text-secondary); font-size: 13px; line-height: 1.4; }
 }
+
+/* V5.2 record page (s5/x2): bold title, ink value, single back link on mobile. */
+.lf-v52-record-page-heading h1 { font-weight: var(--lf-weight-bold, 700); }
+.lf-v52-record-main .lf-v52-record-value > p,
+.lf-v52-record-value > p { color: var(--lf-text); }
+@media (max-width: 860px) {
+  .lf-v52-record-page-nav { justify-content: flex-end; }
+  .lf-v52-record-page-nav > .lf-v52-record-page-back { display: none; }
+}
