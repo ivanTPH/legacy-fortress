@@ -37,13 +37,13 @@ test("system health reports real safe subsystem checks without exposing secrets"
 test("oversight UI renders deployment identity and structured subsystem rows", () => {
   const workspace = read("components/admin/AdminControlPlaneWorkspace.tsx");
 
-  assert.match(workspace, /Subsystem checks/);
-  assert.match(workspace, /Build ID/);
-  assert.match(workspace, /Commit SHA/);
-  assert.match(workspace, /Secret exposure/);
+  assert.match(workspace, /Part of the platform/);
+  assert.match(workspace, /<dt>Build<\/dt>/);
+  assert.match(workspace, /<dt>Commit<\/dt>/);
+  assert.match(workspace, /Secrets, tokens and passwords are never displayed/);
   assert.match(workspace, /AdminStatusBadge status=\{check\.status\}/);
-  assert.match(workspace, /Counts are aggregate metadata only/);
-  assert.match(workspace, /System health checks are unavailable/);
+  assert.match(workspace, /header: "What it covers"/);
+  assert.match(workspace, /Health checks didn’t respond/);
 });
 
 test("audit history remains read-only and uses the canonical audit endpoint", () => {
@@ -54,7 +54,7 @@ test("audit history remains read-only and uses the canonical audit endpoint", ()
   assert.doesNotMatch(auditRoute, /export async function POST|export async function PUT|export async function PATCH|export async function DELETE/);
   assert.match(auditRoute, /requireAdminCapability\(admin\.access, "audit:read"\)/);
   assert.match(workspace, /\/api\/internal\/admin\/audit-history\?limit=50/);
-  assert.match(workspace, /No audit events match this filter/);
+  assert.match(workspace, /No events match this search/);
 });
 
 test("admin destructive actions use accessible in-app confirmations instead of native browser dialogs", () => {

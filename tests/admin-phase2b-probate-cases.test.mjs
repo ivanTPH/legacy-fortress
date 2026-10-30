@@ -124,7 +124,7 @@ test("access administration reuses the canonical probate case queue", () => {
 
   assert.match(workspace, /section === "access" \|\| section === "probate"/);
   assert.match(workspace, /section === "access" \? "Access and estate cases"/);
-  assert.match(workspace, /Identity, authority, evidence, quorum, estate state, and access remain separate decisions/);
+  assert.match(workspace, /Identity, authority, evidence and access are separate decisions/);
   assert.doesNotMatch(workspace, /section === "support" \|\| section === "invitations" \|\| section === "access" \? renderSupport/);
 });
 

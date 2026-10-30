@@ -1156,17 +1156,16 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
 .lf-admin-data-table th,
 .lf-admin-data-table td {
   border-bottom: 1px solid var(--lf-border);
-  padding: 10px;
+  padding: 12px 14px;
   text-align: left;
-  vertical-align: top;
+  vertical-align: middle;
   overflow-wrap: anywhere;
 }
 
 .lf-admin-data-table th {
-  color: var(--lf-text);
-  font-size: 12px;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  color: var(--lf-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
   white-space: nowrap;
 }
 
@@ -8832,3 +8831,37 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 
 /* V5.2: section titles use the same bold weight as the Dashboard. */
 .lf-v52-category-title-row h1 { font-weight: var(--lf-weight-bold, 700); }
+
+/* V5 admin and partner page template: chips, stat strip, notes, table card (ADMIN_PARTNER.md). */
+.lf-admin-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.lf-admin-chips button { min-height: 36px; padding: 6px 14px; border: 1px solid var(--lf-border-control, var(--lf-border)); border-radius: 999px; background: var(--lf-surface-card); color: var(--lf-text); font: inherit; font-size: var(--lf-text-small); font-weight: var(--lf-weight-medium); cursor: pointer; transition: background-color 120ms; }
+.lf-admin-chips button:hover { background: var(--lf-surface-hover); }
+.lf-admin-chips button[aria-pressed="true"] { background: var(--lf-primary-bg); border-color: var(--lf-primary-bg); color: var(--lf-primary-text); }
+.lf-admin-stat-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); overflow: hidden; }
+.lf-admin-stat-strip > div { display: grid; gap: 4px; padding: 16px 20px; border-left: 1px solid var(--lf-border); }
+.lf-admin-stat-strip > div:first-child { border-left: 0; }
+.lf-admin-stat-strip span { color: var(--lf-text-secondary); font-size: 13px; }
+.lf-admin-stat-strip strong { color: var(--lf-text); font-size: 22px; font-weight: var(--lf-weight-semibold); font-variant-numeric: tabular-nums; }
+.lf-admin-note { display: flex; gap: 10px; align-items: flex-start; margin: 0; padding: 12px 16px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-subtle, var(--lf-surface-page)); color: var(--lf-text); font-size: var(--lf-text-small); }
+.lf-admin-note > :first-child { flex: none; color: var(--lf-text-secondary); margin-top: 1px; }
+.lf-admin-table-card { border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); overflow: hidden; }
+.lf-admin-table-card .lf-admin-data-table th, .lf-admin-table-card .lf-admin-data-table td { border-bottom-color: var(--lf-border); }
+.lf-admin-table-card .lf-admin-data-table tr:last-child td { border-bottom: 0; }
+.lf-admin-table-card .lf-admin-data-cards { padding: 12px; }
+.lf-admin-table-card > h2 { margin: 0; padding: 16px 18px 4px; font-size: var(--lf-text-section); font-weight: var(--lf-weight-semibold); }
+.lf-admin-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+.lf-admin-search { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; border: 1px solid var(--lf-border-input); border-radius: 8px; background: var(--lf-surface-card); flex: 0 1 340px; }
+.lf-admin-search input { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 16px; color: var(--lf-text); outline: none; }
+.lf-admin-search:focus-within { outline: 2px solid var(--lf-focus); outline-offset: 1px; }
+.lf-admin-row-button { min-height: 36px; padding: 6px 14px; border: 1px solid var(--lf-border-control, var(--lf-border)); border-radius: 8px; background: var(--lf-surface-card); color: var(--lf-text); font: inherit; font-size: var(--lf-text-small); font-weight: var(--lf-weight-semibold); text-decoration: none; cursor: pointer; display: inline-flex; align-items: center; }
+.lf-admin-row-button:hover { background: var(--lf-surface-hover); }
+.lf-admin-row-chevron { display: inline-flex; color: var(--lf-text-secondary); }
+.lf-admin-empty-icon { display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 999px; background: var(--lf-surface-tile, var(--lf-surface-subtle)); color: var(--lf-text-secondary); margin: 0 auto 4px; }
+.lf-admin-cell-title { font-weight: var(--lf-weight-semibold); color: var(--lf-text); }
+.lf-visually-hidden { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.lf-admin-environment { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 12px 20px; margin: 0; padding: 8px 18px 18px; }
+.lf-admin-environment dt { color: var(--lf-text-secondary); font-size: 13px; }
+.lf-admin-environment dd { margin: 2px 0 0; overflow-wrap: anywhere; }
+.lf-admin-verification-desktop { display: grid; }
+@media (max-width: 767px) { .lf-admin-verification-desktop { display: none; } }
+.lf-admin-table-card-note { margin: 0; padding: 0 18px 8px; color: var(--lf-text-secondary); font-size: var(--lf-text-small); }
