@@ -166,7 +166,7 @@ test("probate case detail exposes canonical decision controls without bypassing 
   assert.match(workspace, /setProbateCases\(\(current\) => current\.map/);
   assert.match(workspace, /verification:decide/);
   assert.match(workspace, /Mark under review/);
-  assert.match(workspace, /Request information/);
+  assert.match(workspace, /Request more information/);
   assert.match(workspace, /Approve/);
   assert.match(workspace, /Reject/);
   assert.match(route, /requireAdminCapability\(admin\.access, capability\)/);
