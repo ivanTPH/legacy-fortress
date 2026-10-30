@@ -8,6 +8,11 @@ const linkedPeopleFlag = process.env.NEXT_PUBLIC_LINKED_PEOPLE_V52;
 const linkedPeopleEnabled = linkedPeopleFlag === "true" || (
   linkedPeopleFlag === undefined && publicSupabaseUrl === "https://supabase-test.mylegacyfortress.com"
 );
+const extractionFlag = process.env.NEXT_PUBLIC_DOCUMENT_EXTRACTION;
+// In-house document reading is enabled on the TEST environment only until the owner approves wider use.
+const documentExtractionEnabled = extractionFlag === "true" || (
+  extractionFlag === undefined && publicSupabaseUrl === "https://supabase-test.mylegacyfortress.com"
+);
 const buildCommitSha = getBuildCommitSha();
 const buildId = buildCommitSha.slice(0, 12) || process.env.LF_BUILD_ID || "unknown";
 const localDevelopmentConnectSrc = isProduction ? [] : ["http://127.0.0.1:55421"];
@@ -80,11 +85,13 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  serverExternalPackages: ["pdfjs-dist", "tesseract.js", "tesseract.js-core", "@tesseract.js-data/eng", "@napi-rs/canvas"],
   allowedDevOrigins: ["127.0.0.1"],
   env: {
     ...(publicSupabaseUrl ? { NEXT_PUBLIC_SUPABASE_URL: publicSupabaseUrl } : {}),
     ...(publicSupabaseAnonKey ? { NEXT_PUBLIC_SUPABASE_ANON_KEY: publicSupabaseAnonKey } : {}),
     NEXT_PUBLIC_LINKED_PEOPLE_V52: linkedPeopleEnabled ? "true" : "false",
+    NEXT_PUBLIC_DOCUMENT_EXTRACTION: documentExtractionEnabled ? "true" : "false",
   },
   generateBuildId: async () => buildId,
   async headers() {

@@ -52,6 +52,13 @@ export function extractBankStatementCandidate(pages: StatementPage[]): BankState
         const value = clean ? clean(match[1]) : cleanLabel(match[1]);
         if (value) add(candidates, key, { value, page: page.page, evidence: line, confidence: "high" });
       }
+      // Unlabelled or combined lines, e.g. "Sort code 20-45-77   Account number 41207781".
+      const inlineSort = line.match(/\bsort[ -]?code\s*[:：]?\s*(\d{2}[ -]?\d{2}[ -]?\d{2})\b/i);
+      if (inlineSort) { const value = cleanSortCode(inlineSort[1]); if (value) add(candidates, "sortCode", { value, page: page.page, evidence: line, confidence: "high" }); }
+      const inlineAccount = line.match(/\b(?:account (?:number|no\.?)|a\/c no\.?)\s*[:：]?\s*(\d[\d ]{4,14}\d)\b/i);
+      if (inlineAccount) { const value = cleanAccountNumber(inlineAccount[1]); if (value) add(candidates, "accountNumber", { value, page: page.page, evidence: line, confidence: "high" }); }
+      const holder = line.match(/^(?:statement for|prepared for)\s*[:：]\s*(.+)$/i);
+      if (holder) { const value = cleanLabel(holder[1].replace(/^(?:mr|mrs|ms|miss|mx|dr)\.?\s+/i, "")); if (value) add(candidates, "accountHolder", { value, page: page.page, evidence: line, confidence: "medium" }); }
       const period = line.match(/^(?:statement\s+)?period\s*[:：]\s*(.+?)\s+(?:to|–|—)\s+(.+)$/i);
       if (period) {
         const start = cleanDate(period[1]);
@@ -77,6 +84,13 @@ export function extractBankStatementCandidate(pages: StatementPage[]): BankState
       const currency = line.match(/^currency\s*[:：]\s*(GBP|EUR|USD)$/i);
       if (currency) add(candidates, "currency", { value: currency[1].toUpperCase(), page: page.page, evidence: line, confidence: "high" });
     }
+  }
+
+  if (!candidates.has("provider")) {
+    const first = pages.find((page) => page.page === 1);
+    const heading = first?.text.split(/\r?\n/).slice(0, 6).map((line) => line.replace(/\s+/g, " ").trim())
+      .find((line) => line.length <= 60 && !/\d/.test(line) && /\b(?:bank|building society|nationwide|monzo|starling|revolut|halifax|santander|barclays|lloyds|natwest|hsbc|metro)\b/i.test(line));
+    if (heading && first) add(candidates, "provider", { value: heading.replace(/\s+(?:plc|limited|ltd|uk)\.?$/i, ""), page: 1, evidence: heading, confidence: "medium" });
   }
 
   const fields: BankStatementCandidate["fields"] = {};

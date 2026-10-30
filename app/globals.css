@@ -8799,3 +8799,18 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
   .lf-v52-record-page-nav { justify-content: flex-end; }
   .lf-v52-record-page-nav > .lf-v52-record-page-back { display: none; }
 }
+
+/* V5.2 "We found in this document" (u1/u2): suggestions only, owner chooses. */
+.lf-v52-finding-status { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; padding: 10px 12px; border-radius: var(--lf-radius-input); background: var(--lf-surface-subtle); color: var(--lf-text-secondary); font-size: 14px; }
+.lf-v52-findings { display: grid; gap: 10px; margin-top: 10px; padding: 14px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); }
+.lf-v52-findings h3 { margin: 0; color: var(--lf-text); font-size: 15px; font-weight: var(--lf-weight-semibold); }
+.lf-v52-finding-row { display: flex; align-items: flex-start; gap: 12px; }
+.lf-v52-finding-icon { display: grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; border-radius: 10px; background: var(--lf-task-todo-bg); color: var(--lf-task-todo-icon); }
+.lf-v52-finding-copy { display: grid; gap: 2px; min-width: 0; }
+.lf-v52-finding-copy strong { color: var(--lf-text); font-size: 15px; overflow-wrap: anywhere; }
+.lf-v52-finding-copy small { color: var(--lf-text-secondary); font-size: 13px; }
+.lf-v52-finding-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.lf-v52-finding-actions > * { display: inline-flex; align-items: center; justify-content: center; min-height: var(--lf-target-min); padding: 0 14px; border: 1px solid var(--lf-border-control); border-radius: var(--lf-radius-input); background: var(--lf-surface-card); color: var(--lf-text); font: inherit; font-weight: 600; text-decoration: none; cursor: pointer; }
+.lf-v52-finding-actions > .lf-v52-finding-primary { border-color: var(--lf-primary-bg); background: var(--lf-primary-bg); color: var(--lf-primary-text); }
+.lf-v52-finding-actions > :focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 2px; }
+.lf-v52-finding-note { margin: 0; color: var(--lf-text-secondary); font-size: 13px; }

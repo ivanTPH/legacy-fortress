@@ -1,5 +1,7 @@
 "use client";
 
+import { startDocumentExtraction, takeBankPrefill } from "../../lib/documents/extraction/client";
+import DocumentFindings from "../documents/DocumentFindings";
 import Image from "next/image";
 import Link from "next/link";
 import { Fragment, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
@@ -1319,6 +1321,21 @@ export default function UniversalRecordWorkspace({
       if (hasCategory) nextForm.possession_category = possessionCategory;
       if (hasSubtype) nextForm.possession_subtype = possessionSubtype;
     }
+    if (sectionKey === "finances" && categoryKey === "bank" && searchParams.get("prefill") === "document") {
+      const prefill = takeBankPrefill();
+      if (prefill) {
+        nextForm.bank_name = prefill.bank_name ?? "";
+        nextForm.account_holder_name = prefill.account_holder_name ?? "";
+        nextForm.account_number = prefill.account_number ?? "";
+        nextForm.sort_code = prefill.sort_code ?? "";
+        nextForm.iban = prefill.iban ?? "";
+        nextForm.bank_account_type = prefill.bank_account_type ?? "";
+        nextForm.bank_account_type_other = prefill.bank_account_type_other ?? "";
+        nextForm.value_major = prefill.value_major ?? "";
+        nextForm.last_updated_on = prefill.last_updated_on ?? "";
+        if (prefill.currency) nextForm.currency_code = prefill.currency;
+      }
+    }
     if (isCanonicalDigital) {
       const digitalType = searchParams.get("digitalType") ?? "";
       const hasDigitalType = DIGITAL_FORM_CONFIG?.fields
@@ -1338,7 +1355,7 @@ export default function UniversalRecordWorkspace({
     requestAnimationFrame(() => {
       formSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
-  }, [canCreateRecords, defaultLegalContactRole, editingId, formVisible, isCanonicalDigital, isPossessions, legalLinkedContactDefinition, searchParams]);
+  }, [canCreateRecords, categoryKey, defaultLegalContactRole, editingId, formVisible, isCanonicalDigital, isPossessions, legalLinkedContactDefinition, searchParams, sectionKey]);
 
   function createEmptyForm() {
     if (!legalLinkedContactDefinition) return { ...EMPTY_FORM };
@@ -2998,6 +3015,7 @@ export default function UniversalRecordWorkspace({
     }
 
     setStatus(kind === "photo" ? `Photo uploaded securely to ${parentLabel}.` : `Document uploaded securely to ${parentLabel}.`);
+    if (assetContext && "documentId" in metadataResult) void startDocumentExtraction(String(metadataResult.documentId ?? ""), assetContext.assetId);
     await reloadWorkspace(router, sectionKey, categoryKey, setRecords, setAttachments, setContacts, setStatus, {
       targetOwnerUserId: viewer.targetOwnerUserId,
       forceCanonicalRead,
@@ -3096,6 +3114,7 @@ export default function UniversalRecordWorkspace({
       return;
     }
 
+    if (assetContext && "documentId" in replacement) void startDocumentExtraction(String(replacement.documentId ?? ""), assetContext.assetId);
     await supabase.storage.from(item.storage_bucket).remove([item.storage_path]);
     const deleteResult =
       item.source_table === "documents"
@@ -3892,6 +3911,7 @@ export default function UniversalRecordWorkspace({
               <div className="lf-v52-record-documents-heading"><h2>Documents</h2>
                 {canEditWorkspaceRow(row.id) ? <AddDocumentControl accept={DOCUMENT_UPLOAD_ACCEPT} disabled={uploadingFor === row.id} onFilesSelected={(files) => files.forEach((file) => void uploadAttachment(row.id, file, "document"))} multiple /> : null}
               </div>
+              {canEditWorkspaceRow(row.id) ? <DocumentFindings recordId={row.id} /> : null}
               {isFinanceSection || isPossessions || usesCanonicalAssets ? (
                 <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                   Parent asset: {getCanonicalAssetDocumentParentLabel({
@@ -6729,6 +6749,7 @@ async function uploadAttachmentAfterSave({
   if (!uploadResult.ok) {
     return { ok: false, error: `${uploadResult.error}.` };
   }
+  void startDocumentExtraction(uploadResult.documentId, assetContext.assetId);
 
   return { ok: true };
 }
