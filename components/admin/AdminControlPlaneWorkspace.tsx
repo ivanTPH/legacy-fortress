@@ -2761,7 +2761,8 @@ function formatRoleLabel(role: string | null, isMaster: boolean) {
 }
 
 function labelise(value: string) {
-  return String(value || "unknown").replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+  // Sentence case everywhere (CONSISTENCY.md): "linked_access" → "Linked access".
+  return sentenceCaseStatus(value || "unknown");
 }
 
 function formatDate(value: string | null) {

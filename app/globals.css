@@ -1186,7 +1186,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
   font-weight: 700;
   min-height: 26px;
   padding: 3px 9px;
-  text-transform: capitalize;
+  gap: 4px;
 }
 
 .lf-admin-status-badge.success {
@@ -3226,9 +3226,8 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 
 .lf-admin-metric-header span {
   color: var(--lf-text-secondary);
-  font-size: 12px;
-  font-weight: 800;
-  text-transform: capitalize;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .lf-admin-metric > strong {

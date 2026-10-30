@@ -363,9 +363,9 @@ export function getSupportOperationalState(invitationStatus: string, activationS
 
 export function getSupportNextStep(invitationStatus: string, activationStatus: string) {
   const state = getSupportOperationalState(invitationStatus, activationStatus);
-  if (state === "terminal") return "Review lifecycle; create a new invitation through the owner's canonical Contacts workflow if another attempt is required.";
-  if (state === "verification_required") return "Open the verification queue; access remains gated until the canonical verification workflow completes.";
-  return "Review the invitation detail and resend or revoke when the invitation state permits.";
+  if (state === "terminal") return "This invitation is closed. The Vault owner can send a new one from People & Access.";
+  if (state === "verification_required") return "Waiting for an identity check. Access stays closed until it’s approved.";
+  return "Resend the invitation, or open the case to see what happened.";
 }
 
 const ACCESS_CASE_SELECT = "id,invitation_id,case_type,status,priority,assigned_admin_user_id,reason_code,reason_summary,resolution_code,created_by,updated_by,resolved_at,closed_at,created_at,updated_at";
