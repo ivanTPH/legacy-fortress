@@ -12,6 +12,7 @@ import { linkedPeopleV2Available, saveRecordLinkedPersonAtomic, undoRecordLinkRe
 import { DOCUMENT_EXTRACTION_EVENT, type DocumentExtractionEventDetail } from "../../lib/documents/extraction/client";
 import { loadLinkedPersonSuggestions, reviewLinkedPersonSuggestion, type LinkedPersonSuggestion } from "../../lib/linkedPeople/suggestions";
 import { supabase } from "../../lib/supabaseClient";
+import { matchOwnerContact } from "../../lib/documents/extraction/personMatching";
 
 export default function LinkedPeopleSection({ ownerUserId, recordId, recordType, recordTitle, sectionKey, categoryKey, canManage, autoOpen = false, onAutoOpened, client = supabase }: {
   ownerUserId: string;
@@ -136,7 +137,13 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
   const possibleNameMatch = mode === "new" && enteredName.length >= 3
     ? contacts.find((contact) => contact.full_name.trim().toLocaleLowerCase() === enteredName && contact.id !== duplicateEmailContact?.id)
     : null;
-  const selectedSuggestion = suggestions.find((item) => item.id === suggestionId);
+  // A suggestion saved before the person existed (or reopened later) is matched again against today's People.
+  const reviewSuggestions = suggestions.map((item) => {
+    if (item.match_kind !== "none" || !contacts.length) return item;
+    const match = matchOwnerContact(item.extracted_name, contacts);
+    return match.personId ? { ...item, match_person_id: match.personId, match_kind: match.kind } : item;
+  });
+  const selectedSuggestion = reviewSuggestions.find((item) => item.id === suggestionId);
   const managedLink = links.find((link) => link.id === managedLinkId);
   const managedContact = contacts.find((contact) => contact.id === managedLink?.person_id);
   const rowActionLink = links.find((link) => link.id === rowActionLinkId);
@@ -259,7 +266,9 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
   };
   const openSuggestion = (suggestion: LinkedPersonSuggestion) => {
     const suggestedRole = config.roles.find((item) => item.toLowerCase() === suggestion.extracted_role?.toLowerCase());
-    setSuggestionId(suggestion.id); setSuggestionChoice(""); setPersonId("");
+    // An exact name match is pre-selected; the owner still confirms before anything is linked.
+    const exact = suggestion.match_kind === "exact" && suggestion.match_person_id ? suggestion.match_person_id : "";
+    setSuggestionId(suggestion.id); setSuggestionChoice(exact ? "existing" : ""); setPersonId(exact);
     setName(suggestion.extracted_name); setRole(suggestedRole || (suggestion.extracted_role ? "Other" : config.roles[0]));
     setOtherRole(suggestedRole ? "" : suggestion.extracted_role || "");
     setEmail(""); setPhone(""); setError(""); setNotice(""); setMode("reviewSuggestion");
@@ -420,7 +429,7 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
     {canManage && suggestions.length ? <div className="lf-linked-people-suggestions">
       <h3>We found in this document</h3>
       <p>Review each saved suggestion against its source. Nothing changes until you confirm.</p>
-      <ul>{suggestions.map((suggestion) => {
+      <ul>{reviewSuggestions.map((suggestion) => {
         const match = contacts.find((contact) => contact.id === suggestion.match_person_id);
         return <li key={suggestion.id}>
           <strong>{suggestion.extracted_name}</strong>
