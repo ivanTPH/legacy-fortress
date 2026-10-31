@@ -29,6 +29,8 @@ export type ActionCentreContext = {
     willUploaded: boolean;
     keyDocumentsPresent: boolean;
   };
+  /** Nominees asking for access now (va-v7). */
+  earlyAccessRequests?: Array<{ id: string; name: string }>;
 };
 
 type ActionCentreSection = {
@@ -697,6 +699,23 @@ function getActionReason(item: BlockingItem) {
 function buildDashboardActionRows(context?: ActionCentreContext): ActionCentreRow[] {
   if (!context) return [];
   const seeds: DashboardActionSeed[] = [];
+
+  for (const request of context.earlyAccessRequests ?? []) {
+    const first = request.name.trim().split(/\s+/)[0] || request.name;
+    seeds.push({
+      key: `early-access-${request.id}`,
+      title: `${first} asked for access now`,
+      stageName: "People & Access",
+      blockerLabel: `${first} is nominated for later and asked to see something now. Nothing changes unless you share.`,
+      whyItMatters: "You decide. If you share, you choose exactly which records.",
+      status: "Required",
+      actionKey: `early-access:${request.id}`,
+      href: `/people-access?view=vault-access&request=${encodeURIComponent(request.id)}`,
+      requiredRole: "owner",
+      primaryActionLabel: "Review request",
+      secondaryActionLabel: "Open Vault access",
+    });
+  }
 
   if (context.estateReadiness?.willUploaded && !context.hasExecutor) {
     seeds.push({

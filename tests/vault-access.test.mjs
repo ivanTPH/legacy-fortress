@@ -110,3 +110,24 @@ test("sharing now can end on a date, stop at once, and is written to Record hist
   assert.match(ui, /Note for your Record history/);
   assert.match(ui, /Record history/);
 });
+
+test("asking early or reporting a death never shares anything", () => {
+  const sql = read("supabase/migrations/20261031170000_nominee_requests_and_release_state.sql");
+  assert.match(sql, /REVOKE INSERT, DELETE ON public\.vault_early_access_requests FROM authenticated/);
+  assert.doesNotMatch(sql, /INSERT INTO public\.account_access_grants/);
+  assert.doesNotMatch(sql, /UPDATE public\.account_access_grants/);
+  const status = sql.slice(sql.indexOf("CREATE FUNCTION public.my_vault_nomination_status"), sql.indexOf("REVOKE ALL ON FUNCTION public.my_vault_nomination_status"));
+  assert.doesNotMatch(status, /vault_nomination_records|scope|record_id|asset/);
+  assert.match(status, /AND \(n\.notify_person OR n\.status = 'released'\)/);
+  const route = read("app/api/estate/death-reports/route.ts");
+  assert.match(route, /eq\("notify_person", true\)/);
+  assert.match(route, /accepted_user_id", userId/);
+  const page = read("app/(app)/vault-nominations/page.tsx");
+  assert.match(page, /Asking doesn’t give you access/);
+  const report = read("app/estate/report-death/EstateDeathReportPageClient.tsx");
+  assert.doesNotMatch(report, /Account owner user ID/);
+  assert.match(report, /doesn’t give me access/);
+  const panel = read("app/(app)/components/dashboard/ActionQueuePanel.tsx");
+  assert.match(panel, /asked for access now/);
+  assert.match(panel, /status: "Required"/);
+});

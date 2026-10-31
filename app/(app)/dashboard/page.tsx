@@ -23,6 +23,7 @@ import {
 import { canViewPath, filterAssetIdsForViewer, filterRecordIdsForViewer } from "../../../lib/access-control/viewerAccess";
 import { buildProtectedSignInRedirect, waitForActiveUser } from "../../../lib/auth/session";
 import { supabase } from "../../../lib/supabaseClient";
+import { loadOpenEarlyAccessRequests } from "../../../lib/vaultAccess/vaultAccess";
 import { isMissingColumnError, isMissingRelationError } from "../../../lib/supabaseErrors";
 import { fetchCanonicalAssets } from "../../../lib/assets/fetchCanonicalAssets";
 import { loadFinanceDashboardRows } from "../../../lib/dashboard/financeRows";
@@ -878,9 +879,27 @@ const legalSummary = useMemo(() => {
     }, preferences),
     [contactRows.length, digitalRecordCount, executorContactCount, financeRecordCount, possessionsRecordCount, preferences, powerOfAttorneyCount, willRecordCount, wishesCount],
   );
+  // Early-access requests from nominees are Needs you items (va-v7). Asking never shares anything.
+  const [earlyAccessRequests, setEarlyAccessRequests] = useState<Array<{ id: string; name: string }>>([]);
+  useEffect(() => {
+    let active = true;
+    if (viewer.mode !== "owner" || !viewer.sessionUserId) return;
+    void (async () => {
+      const requests = await loadOpenEarlyAccessRequests(supabase, viewer.sessionUserId);
+      if (!requests.length) { if (active) setEarlyAccessRequests([]); return; }
+      const people = await supabase.from("contacts").select("id,full_name").eq("owner_user_id", viewer.sessionUserId).in("id", requests.map((item) => item.personId));
+      const names = new Map((people.data ?? []).map((row) => [row.id, String(row.full_name ?? "").trim()]));
+      if (active) setEarlyAccessRequests(requests.map((item) => ({ id: item.id, name: names.get(item.personId) || "Someone you nominated" })));
+    })();
+    return () => { active = false; };
+  }, [viewer.mode, viewer.sessionUserId]);
+  const actionContext = useMemo(
+    () => (dashboardState.actions.context ? { ...dashboardState.actions.context, earlyAccessRequests } : dashboardState.actions.context),
+    [dashboardState.actions.context, earlyAccessRequests],
+  );
   const actionCentreNeedsYouCount = useMemo(
-    () => getActionCentreToDoCount(dashboardState.actions.items, dashboardState.actions.context, guidanceItems),
-    [dashboardState.actions.context, dashboardState.actions.items, guidanceItems],
+    () => getActionCentreToDoCount(dashboardState.actions.items, actionContext, guidanceItems),
+    [actionContext, dashboardState.actions.items, guidanceItems],
   );
 
   useEffect(() => {
@@ -939,6 +958,10 @@ const legalSummary = useMemo(() => {
         router.push(action.href);
         return;
       }
+    }
+    if (actionKey.startsWith("early-access:")) {
+      router.push(`/people-access?view=vault-access&request=${encodeURIComponent(actionKey.slice("early-access:".length))}`);
+      return;
     }
     if (actionKey.startsWith("task:complete:")) {
       void markDashboardTaskComplete(actionKey.replace("task:complete:", ""));
@@ -1593,7 +1616,7 @@ const legalSummary = useMemo(() => {
         <PageHeader title="To do" description="Everything that needs you, in one place." />
         <ActionQueuePanel
           items={dashboardState.actions.items}
-          context={dashboardState.actions.context}
+          context={actionContext}
           guidanceItems={guidanceItems}
           guidanceBusyKey={guidanceBusyKey}
           onAction={handleAction}
@@ -1620,7 +1643,7 @@ const legalSummary = useMemo(() => {
     <div className="lf-dashboard-shell">
       <V3DashboardOverview loading={loading} areas={v3Areas} recordCount={recordIds.size}
         peopleCount={viewer.mode === "linked" ? undefined : contactRows.length} recordedValue={recordedValue}
-        actionCount={viewer.mode === "linked" ? undefined : getActionCentreToDoCount(dashboardState.actions.items, dashboardState.actions.context, guidanceItems)}
+        actionCount={viewer.mode === "linked" ? undefined : getActionCentreToDoCount(dashboardState.actions.items, actionContext, guidanceItems)}
         canAddRecords={viewer.mode !== "linked"} />
       {status ? (
         isPlanLimitStatus(status) ? (
