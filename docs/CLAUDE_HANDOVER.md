@@ -27,3 +27,8 @@ Concise running state. Newest first. Codex history stays in `CODEX_HANDOVER.md`.
 - Cloud Playwright occasionally gets 404 for `/_next/static/chunks/app/(app)/legal/%5Bcategory%5D/...` through the agent proxy; the same page loads normally in a real browser. Not an app defect.
 
 **Next:** finish V5.2 Vault drift review (record pages, forms, Add to my Vault, profile), mobile/dark screenshots; then database-dependent Linked People items (atomic contact+link save, timed Undo, suggestion re-review) — each migration needs the owner's explicit approval before it is applied to TEST.
+
+## Vault access status (31 Oct 2026)
+- Live on TEST: Vault access tab (nominations for later), Power of Attorney recording (pending check, owner can withdraw), nominee view (`/vault-nominations`, locked rows in the Vault switcher).
+- Verified on TEST with synthetic person Sam Testperson: authority recorded as "Authority being checked · Not in effect", areas narrowed, no access created, then withdrawn (now under Ended).
+- Not built yet: notifications to the person, share now with end date (needs grants work), early-access requests (va-r6), death reporting by nominees, Admin review/activation of authorities, Record history entries.

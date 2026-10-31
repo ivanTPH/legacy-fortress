@@ -179,7 +179,7 @@ export default function VaultAccessWorkspace() {
 
       {panelRow ? (
         <SidePanel title={panelRow.person?.name ?? "Vault access"} subtitle={panelRow.person?.relationship ?? undefined} onClose={() => setPanelKey("")}>
-          <PersonAccess row={panelRow} snapshot={snapshot} onCancel={(nomination) => setConfirmCancel(nomination)} onWithdraw={async (authorityId, reason) => { await withdrawLegalAuthority(supabase, ownerId, authorityId, reason); setPanelKey(""); setToast("Authority marked as withdrawn. It can’t be used, and the person is told without details."); await reload(); }} />
+          <PersonAccess row={panelRow} snapshot={snapshot} onCancel={(nomination) => setConfirmCancel(nomination)} onWithdraw={async (authorityId, reason) => { await withdrawLegalAuthority(supabase, ownerId, authorityId, reason); setPanelKey(""); setToast("Authority marked as withdrawn. It can’t be used."); await reload(); }} />
         </SidePanel>
       ) : null}
 
@@ -409,7 +409,7 @@ function AttorneyDialog({ snapshot, ownerId, personId, onClose, onSaved }: { sna
             <p className="lf-va-note"><Icon name="info" size={18} />Upload the signed authority to Legal › Power of Attorney first, then come back.</p>
           ) : (
             <div className="lf-va-records">{documents.slice(0, 100).map((item) => (
-              <label key={`${item.type}:${item.id}`} className="lf-va-record"><input type="radio" name="va-authority-doc" checked={documentKey === `${item.type}:${item.id}`} onChange={() => setDocumentKey(`${item.type}:${item.id}`)} /><span><strong>{item.name}</strong><small>{item.where}</small></span></label>
+              <label key={`${item.type}:${item.id}`} className="lf-va-record"><input type="radio" name="va-authority-doc" checked={documentKey === `${item.type}:${item.id}`} onChange={() => setDocumentKey(`${item.type}:${item.id}`)} /><span><strong>{item.name}</strong><small>{item.where}{item.added ? ` · added ${item.added}` : ""}</small></span></label>
             ))}</div>
           )}
           <h3 className="lf-va-subhead">Registered with the Office of the Public Guardian?</h3>
