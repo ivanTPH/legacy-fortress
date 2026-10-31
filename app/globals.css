@@ -9089,3 +9089,34 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-va-request-facts > div { display: flex; justify-content: space-between; gap: 12px; min-height: 44px; align-items: center; border-bottom: 1px solid var(--lf-border); }
 .lf-va-request-facts dt { color: var(--lf-text-secondary); }
 .lf-va-request-facts dd { margin: 0; font-weight: 600; text-align: right; }
+/* Platform Admin · reviewer identity check */
+.lf-admin-idv-compare { display: grid; gap: 14px; }
+.lf-admin-idv-prompt { display: flex; gap: 8px; align-items: center; margin: 0; }
+.lf-admin-idv-photos { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.lf-admin-idv-photos figure { margin: 0; display: grid; gap: 6px; }
+.lf-admin-idv-photos img { width: 100%; max-height: 360px; object-fit: contain; border-radius: 8px; border: 1px solid var(--lf-border); background: var(--lf-surface-subtle, #f4f4f4); }
+.lf-admin-idv-photos figcaption { font-size: 13px; color: var(--lf-text-secondary); }
+.lf-admin-idv-checks { border: 0; margin: 0; padding: 0; display: grid; gap: 8px; }
+.lf-admin-idv-checks legend { font-weight: 700; margin-bottom: 6px; }
+.lf-admin-idv-checks label { display: flex; gap: 8px; align-items: center; min-height: 32px; }
+/* Identity check (reviewer path) */
+.lf-idv { display: grid; gap: 16px; max-width: 560px; }
+.lf-idv h1 { margin: 0; }
+.lf-idv-progress { list-style: none; margin: 0; padding: 0; display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--lf-text-secondary); }
+.lf-idv-progress li { display: inline-flex; align-items: center; gap: 6px; }
+.lf-idv-progress li > span { width: 22px; height: 22px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--lf-border-input); font-weight: 700; font-size: 12px; }
+.lf-idv-progress li.is-current { color: var(--lf-text); font-weight: 600; }
+.lf-idv-progress li.is-done > span { background: var(--lf-status-approved-bg); border-color: var(--lf-status-approved-bg); color: var(--lf-status-approved-text); }
+.lf-idv-needs { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.lf-idv-needs li { display: flex; gap: 10px; align-items: center; }
+.lf-idv-note { display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 10px 12px; border-radius: 8px; background: var(--lf-surface-subtle, var(--lf-surface-page)); color: var(--lf-text-secondary); font-size: 14px; }
+.lf-idv-consent { display: flex; gap: 10px; align-items: flex-start; }
+.lf-idv-doc-types { border: 0; margin: 0; padding: 0; display: grid; gap: 8px; }
+.lf-idv-doc-types legend { font-weight: 700; margin-bottom: 6px; }
+.lf-idv-doc-types label { display: flex; gap: 10px; align-items: center; min-height: 48px; padding: 0 12px; border: 1px solid var(--lf-border); border-radius: 10px; cursor: pointer; }
+.lf-idv-doc-types label.is-selected { border-color: var(--lf-text); }
+.lf-idv-file { position: relative; display: flex; gap: 10px; align-items: center; justify-content: center; min-height: 96px; border: 1px dashed var(--lf-border-input); border-radius: 12px; cursor: pointer; text-align: center; padding: 12px; }
+.lf-idv-file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.lf-idv-prompt { display: flex; gap: 10px; align-items: center; margin: 0; padding: 12px; border-radius: 10px; background: var(--lf-status-pending-bg); color: var(--lf-status-pending-text, var(--lf-text)); }
+.lf-idv-camera { display: grid; gap: 12px; }
+.lf-idv-camera video { width: 100%; max-height: 420px; border-radius: 12px; background: #000; transform: scaleX(-1); object-fit: cover; }

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { applyVerificationAction, loadVerificationQueue, type VerificationAction } from "@/lib/admin/operations";
 import { requireAdminAccess, requireAdminCapability } from "@/lib/admin/access";
 import { recordAdminAuditEvent } from "@/lib/admin/audit";
+import { INHOUSE_REVIEW_PROVIDER_KEY } from "@/lib/identity-verification/inhouseReviewProvider";
+import { recordReviewerDecision } from "@/lib/identity-verification/service";
 
 export async function GET(request: Request) {
   const admin = await requireAdminAccess(request);
@@ -44,6 +46,34 @@ export async function POST(request: Request) {
   }
   if (action === "add_note" && !String(body.reviewNotes ?? "").trim()) {
     return NextResponse.json({ ok: false, message: "A review note is required." }, { status: 400 });
+  }
+
+  // Reviewer check (document photo + live selfie compared by a person): decided here, server only.
+  const identityRequest = ["approve", "reject"].includes(action)
+    ? await admin.adminClient.from("identity_verification_requests").select("id,provider_key").eq("id", requestId).maybeSingle()
+    : { data: null };
+  if (identityRequest.data && identityRequest.data.provider_key === INHOUSE_REVIEW_PROVIDER_KEY) {
+    try {
+      await recordReviewerDecision(admin.adminClient, { requestId, reviewerUserId: admin.access.user.id, approve: action === "approve", reasonCode: "reviewer_notes_recorded" });
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "identity_review_failed";
+      const message = code === "identity_self_review_not_permitted" ? "You can’t review your own ID check." : code === "identity_review_not_pending" ? "This check has already been decided." : "The decision didn’t save.";
+      return NextResponse.json({ ok: false, message }, { status: 409 });
+    }
+    const note = String(body.reviewNotes ?? "").trim().slice(0, 4000);
+    if (note) await admin.adminClient.from("identity_verification_review_notes").insert({ request_id: requestId, note, created_by: admin.access.user.id });
+    await recordAdminAuditEvent(admin.adminClient, admin.access, {
+      category: action === "approve" ? "admin_approval" : "admin_review",
+      action: `Identity check ${action === "approve" ? "approved" : "rejected"}`,
+      result: action === "approve" ? "success" : "rejected",
+      resourceType: "verification",
+      resourceId: requestId,
+      resourceLabel: "Reviewer identity check",
+      route: "/api/internal/admin/verifications",
+      metadata: { action, review_notes_present: true, evidence_deleted: true },
+    });
+    const queue = await loadVerificationQueue(admin.adminClient);
+    return NextResponse.json({ ok: true, queue });
   }
 
   await applyVerificationAction(admin.adminClient, {

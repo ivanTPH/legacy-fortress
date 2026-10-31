@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import BrandMark from "../../(app)/components/BrandMark";
 import Icon from "../../../components/ui/Icon";
 import { supabase } from "../../../lib/supabaseClient";
+import { PresenceCodeCheck, ReviewerIdentityCheck } from "../../../components/identity/ReviewerIdentityCheck";
 
 type VerificationResponse = {
   ok: boolean;
@@ -39,7 +40,39 @@ type VerificationResponse = {
   error?: string;
 };
 
+/**
+ * Identity checks. Real people use the reviewer check (document photo + live selfie compared by a
+ * person) and, for sensitive steps, a one-time email code. The staging simulator stays available
+ * with ?simulator=1 for automated tests only.
+ */
 export default function IdentityVerificationPageClient() {
+  const params = useSearchParams();
+  if (params.get("simulator") === "1") return <SimulatorVerification />;
+  const next = params.get("next");
+  const returnTo = next && next.startsWith("/") && !next.startsWith("//") ? next : params.get("grant") ? `/contact-wallet?grant=${encodeURIComponent(params.get("grant") ?? "")}` : null;
+  const stepUp = params.get("purpose") === "step_up_presence";
+  return (
+    <main className="lf-auth lf-trust-journey">
+      <header className="lf-trust-header">
+        <div className="lf-auth-brand-card">
+          <BrandMark size={38} />
+          <div>
+            <div className="lf-auth-brand-title">Legacy Fortress</div>
+            <div className="lf-auth-brand-sub">{stepUp ? "Confirm it’s you" : "Check your ID"}</div>
+          </div>
+        </div>
+      </header>
+      {stepUp ? <PresenceCodeCheck returnTo={returnTo} /> : <ReviewerIdentityCheck
+        purpose={params.get("grant") || params.get("invitation") ? "linked_access" : "registration_required"}
+        accessGrantId={params.get("grant")}
+        invitationId={params.get("invitation")}
+        returnTo={returnTo}
+      />}
+    </main>
+  );
+}
+
+function SimulatorVerification() {
   const router = useRouter();
   const params = useSearchParams();
   const [token, setToken] = useState("");

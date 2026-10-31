@@ -62,7 +62,7 @@ async function mustFail(promise, label) {
 
 let admin;
 let config;
-const created = { owners: [], users: [] };
+const created = { owners: [], users: [], admins: [], identityRequests: [] };
 
 async function createPerson(run, role, password) {
   const email = `${run}-${role}@example.test`;
@@ -98,10 +98,19 @@ async function visibleAssets(person) {
   return (await must(person.client.from("assets").select("id,title"), "visible_assets")).map((row) => row.id);
 }
 
-async function api(person, path, body) {
-  const response = await fetch(`${config.baseUrl}${path}`, { method: "POST", headers: { authorization: `Bearer ${person.token}`, "content-type": "application/json" }, body: JSON.stringify(body) });
+async function api(person, path, body, method = "POST") {
+  const init = { method, headers: { authorization: `Bearer ${person.token}` } };
+  if (body instanceof FormData) init.body = body;
+  else if (body !== undefined) { init.headers["content-type"] = "application/json"; init.body = JSON.stringify(body); }
+  const response = await fetch(`${config.baseUrl}${path}`, init);
   const payload = await response.json().catch(() => ({}));
   return { status: response.status, payload };
+}
+
+// A synthetic image file: valid header, padded past the reviewer check's minimum size. Not a real face or document.
+function syntheticImage(type) {
+  const header = type === "image/png" ? Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]) : Buffer.from([0xff, 0xd8, 0xff, 0xe0]);
+  return new Blob([Buffer.concat([header, crypto.randomBytes(4096)])], { type });
 }
 
 async function main() {
@@ -113,7 +122,11 @@ async function main() {
   const nominee = await createPerson(run, "nominee", password);
   const attorney = await createPerson(run, "attorney", password);
   const stranger = await createPerson(run, "stranger", password);
+  const reviewer = await createPerson(run, "reviewer", password);
+  const applicant = await createPerson(run, "applicant", password);
   created.owners.push(owner.id);
+  await must(admin.from("admin_users").insert({ email_normalized: reviewer.email, user_id: reviewer.id, display_name: "Synthetic reviewer", status: "active", is_master: false, role: "super_admin" }), "reviewer_admin");
+  created.admins.push(reviewer.id);
 
   const org = await must(admin.from("organisations").insert({ owner_user_id: owner.id, name: `${run} org` }).select("id").single(), "org");
   const wallet = await must(admin.from("wallets").insert({ organisation_id: org.id, owner_user_id: owner.id }).select("id").single(), "wallet");
@@ -169,8 +182,14 @@ async function main() {
   assert.deepEqual(await visibleAssets(attorney), [], "recording an authority opened records");
   await mustFail(owner.client.from("legal_authorities").update({ status: "confirmed" }).eq("id", authority.id), "owner_confirm");
   await mustFail(owner.client.rpc("lf_activate_legal_authority", { p_authority_id: authority.id, p_reviewer_user_id: owner.id }), "owner_activate");
-  await must(admin.from("legal_authorities").update({ status: "confirmed" }).eq("id", authority.id), "review_confirm");
-  await must(admin.rpc("lf_activate_legal_authority", { p_authority_id: authority.id, p_reviewer_user_id: owner.id }), "review_activate");
+  // Review team, through the hosted Admin API.
+  const ownerDenied = await api(owner, `/api/internal/admin/legal-authorities/${authority.id}/actions`, { action: "confirm", reason: "x" });
+  assert.ok([401, 403].includes(ownerDenied.status), "owner reached the Admin API");
+  const confirmed = await api(reviewer, `/api/internal/admin/legal-authorities/${authority.id}/actions`, { action: "confirm", reason: "Synthetic acceptance check" });
+  assert.equal(confirmed.status, 200, `confirm failed: ${safeError(confirmed.payload)}`);
+  assert.deepEqual(await visibleAssets(attorney), [], "confirming opened records");
+  const activated = await api(reviewer, `/api/internal/admin/legal-authorities/${authority.id}/actions`, { action: "activate", reason: "Synthetic acceptance check" });
+  assert.equal(activated.status, 200, `activate failed: ${safeError(activated.payload)}`);
   assert.deepEqual((await visibleAssets(attorney)).sort(), [finance, house].sort(), "attorney scope wrong");
   await must(owner.client.from("legal_authorities").update({ status: "withdrawn", withdrawn_reason: "Synthetic acceptance" }).eq("id", authority.id), "withdraw");
   assert.deepEqual(await visibleAssets(attorney), [], "attorney still sees records after withdrawal");
@@ -208,7 +227,46 @@ async function main() {
   assert.deepEqual(await visibleAssets(attorney), [], "lifetime access survived the death");
   results.push("estate release: waits for probate, whole Vault minus exception, view only");
 
+  // 7. Reviewer ID check: document photo + live selfie → waits for a person → approved in Admin → photos deleted.
+  const started = await api(applicant, "/api/identity-verification", { purpose: "registration_required", requestedIdentityLevel: 2, consentAcknowledged: true });
+  assert.equal(started.status, 201, `idv start failed: ${safeError(started.payload)}`);
+  assert.equal(started.payload.verification.providerKey, "lf_inhouse_review_v1");
+  const requestId = started.payload.verification.id;
+  created.identityRequests.push(requestId);
+  const docForm = new FormData();
+  docForm.set("file", syntheticImage("image/png"), "synthetic-document.png");
+  docForm.set("side", "front");
+  const doc = await api(applicant, `/api/identity-verification/${requestId}/document`, docForm);
+  assert.equal(doc.status, 200, `document upload failed: ${safeError(doc.payload)}`);
+  const challenge = await api(applicant, `/api/identity-verification/${requestId}/challenge`, {});
+  assert.ok(challenge.payload.challenge?.prompt, "no selfie prompt");
+  const selfieForm = new FormData();
+  selfieForm.set("file", syntheticImage("image/jpeg"), "synthetic-selfie.jpg");
+  selfieForm.set("challengeId", challenge.payload.challenge.id);
+  const selfie = await api(applicant, `/api/identity-verification/${requestId}/camera`, selfieForm);
+  assert.equal(selfie.status, 200, `selfie upload failed: ${safeError(selfie.payload)}`);
+  const completed = await api(applicant, `/api/identity-verification/${requestId}/complete`, {});
+  assert.equal(completed.payload.decision?.status ?? completed.payload.decision?.decision, "review_required", "reviewer check decided automatically");
+  const levelBefore = await must(admin.from("identity_assurance_states").select("identity_level").eq("user_id", applicant.id).maybeSingle(), "level_before");
+  assert.ok(!levelBefore || Number(levelBefore.identity_level) < 2, "ID verified before a person reviewed it");
+  const applicantPeek = await api(applicant, `/api/internal/admin/verifications/${requestId}/evidence`, undefined, "GET");
+  assert.ok([401, 403].includes(applicantPeek.status), "applicant reached reviewer evidence");
+  const evidence = await api(reviewer, `/api/internal/admin/verifications/${requestId}/evidence`, undefined, "GET");
+  assert.equal(evidence.status, 200, `evidence failed: ${safeError(evidence.payload)}`);
+  assert.ok(evidence.payload.documentUrl && evidence.payload.selfieUrl && evidence.payload.prompt, "reviewer can't see both photos and the prompt");
+  const missingNotes = await api(reviewer, "/api/internal/admin/verifications", { requestId, action: "approve" });
+  assert.equal(missingNotes.status, 400, "approved without notes");
+  const approved = await api(reviewer, "/api/internal/admin/verifications", { requestId, action: "approve", reviewNotes: "Synthetic acceptance: photos compared" });
+  assert.equal(approved.status, 200, `approve failed: ${safeError(approved.payload)}`);
+  const levelAfter = await must(admin.from("identity_assurance_states").select("identity_level,provider_key").eq("user_id", applicant.id).maybeSingle(), "level_after");
+  assert.equal(Number(levelAfter?.identity_level), 2, "approval didn't verify ID");
+  const afterDecision = await api(reviewer, `/api/internal/admin/verifications/${requestId}/evidence`, undefined, "GET");
+  assert.equal(afterDecision.status, 409, "photos still available after the decision");
+  results.push("ID check: waits for a person, reviewer-only photos, approval with notes verifies ID, photos deleted");
+
   console.log(JSON.stringify({ hosted: true, run, nominationId: String(nominationId).slice(0, 8), checks: results }, null, 2));
+  // Visible on the workflow run (job logs aren't always readable): one line, no personal data.
+  if (process.env.GITHUB_ACTIONS === "true") console.log(`::notice title=Vault access acceptance::passed ${results.length} journeys: ${results.map((item) => item.split(":")[0]).join(", ")}`);
 }
 
 async function cleanup() {
@@ -223,8 +281,12 @@ async function cleanup() {
     if (invitations.error) failures.push("invitations");
   }
   for (const userId of created.users) {
-    const identity = await admin.from("identity_assurance_states").delete().eq("user_id", userId).eq("provider_key", "synthetic_acceptance");
+    const identity = await admin.from("identity_assurance_states").delete().eq("user_id", userId);
     if (identity.error) failures.push("identity");
+  }
+  for (const userId of created.admins) {
+    const removed = await admin.from("admin_users").delete().eq("user_id", userId);
+    if (removed.error) failures.push("admin_user");
   }
   return failures;
 }
@@ -233,6 +295,7 @@ try {
   await main();
 } catch (error) {
   console.error(JSON.stringify({ hosted: false, error: safeError(error) }));
+  if (process.env.GITHUB_ACTIONS === "true") console.log(`::error title=Vault access acceptance::${safeError(error).replace(/[\r\n]+/g, " ")}`);
   process.exitCode = 1;
 } finally {
   const failures = await cleanup();

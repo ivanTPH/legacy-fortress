@@ -1313,6 +1313,8 @@ async function applyIdentityVerificationReviewAction(
   const userId = String(request.user_id);
   const requestedLevel = Number(request.requested_identity_level ?? 2);
   if (action === "approve" || action === "reject") {
+    // Reviewer-check decisions are made in the server route (app/api/internal/admin/verifications),
+    // never here; simulator and commercial results are never overridden by hand.
     throw new Error("identity_manual_decision_not_supported");
   }
   if (action === "assign_to_me") {

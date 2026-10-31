@@ -9,6 +9,7 @@ import AdminDataTable, { AdminContextHelp, AdminEmptyState, AdminFilterChips, Ad
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell";
 import AdminLegalAuthorities from "@/components/admin/AdminLegalAuthorities";
 import ProbateReleasePanel from "@/components/admin/ProbateReleasePanel";
+import IdentityReviewCompare from "@/components/admin/IdentityReviewCompare";
 import InfoTip from "@/components/ui/InfoTip";
 import Icon from "@/components/ui/Icon";
 import { filterAdminNavigation, PLATFORM_ADMIN_NAVIGATION } from "@/components/admin/adminNavigation";
@@ -2335,7 +2336,9 @@ function renderVerification(
                   <div><dt>Reviewer</dt><dd>{selected.assignedReviewerName ?? "Unassigned"}</dd></div>
                 </dl>
               </section>
-              <AdminNote icon="shield_lock">Only check results are shown here. Document images, selfies and face data are never displayed in admin.</AdminNote>
+              {selected.providerKey === "lf_inhouse_review_v1" && selected.requestStatus === "review_required"
+                ? <IdentityReviewCompare requestId={selected.id} canDecide={capabilities.includes("verification:decide")} />
+                : <AdminNote icon="shield_lock">Only check results are shown here. Photos are shown only to a reviewer while a reviewer check is waiting, and are deleted after the decision.</AdminNote>}
             </div>
             <aside className="lf-admin-detail-rail">
               {canReview ? <section className="lf-admin-table-card lf-admin-form-card" aria-label="Review actions">

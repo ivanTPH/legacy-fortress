@@ -136,7 +136,7 @@ export default function EstateDeathReportPageClient() {
                 <input type="checkbox" checked={declarationAccepted} onChange={(event) => setDeclarationAccepted(event.target.checked)} />
                 <span>I’m reporting this in good faith. I understand that reporting doesn’t give me access to anything, and that a false report is taken seriously.</span>
               </label>
-              {error ? <p className="lf-va-error" role="alert">{error}{needsPresence ? <> <Link href={`/identity/verify?purpose=step_up_presence`}>Check it’s you</Link></> : null}</p> : null}
+              {error ? <p className="lf-va-error" role="alert">{error}{needsPresence ? <> <Link href={`/identity/verify?purpose=step_up_presence&next=${encodeURIComponent(`/estate/report-death${subject?.nominationRef ? `?nomination=${subject.nominationRef}` : ""}`)}`}>Check it’s you</Link></> : null}</p> : null}
               <button className="lf-primary-btn" type="button" onClick={() => void submitReport()} disabled={busy || !subject || !declarationAccepted}>
                 {busy ? "Sending…" : "Report the death"}
               </button>
