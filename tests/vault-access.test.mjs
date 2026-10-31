@@ -131,3 +131,19 @@ test("asking early or reporting a death never shares anything", () => {
   assert.match(panel, /asked for access now/);
   assert.match(panel, /status: "Required"/);
 });
+
+test("estate release waits for probate, releases only verified nominees, and only the review team can run it", () => {
+  const sql = read("supabase/migrations/20261031190000_estate_release_nominations.sql");
+  assert.match(sql, /REVOKE ALL ON FUNCTION public\.lf_release_vault_nominations\(uuid, uuid, uuid\) FROM PUBLIC, anon, authenticated/);
+  assert.match(sql, /IF auth\.uid\(\) IS NOT NULL THEN\s+RAISE EXCEPTION 'Releases are approved by the review team'/);
+  assert.match(sql, /IF v_state <> 'ESTATE_LOCKED'/);
+  assert.match(sql, /e\.evidence_type = 'probate_grant'/);
+  assert.match(sql, /pc\.status = 'approved'/);
+  assert.match(sql, /lf_identity_assurance_level\(v_linked\) < 2/);
+  assert.match(sql, /x\.mode = 'exclude'/);
+  // Gate: estate-release grants only after the estate is locked; others only while the owner is active.
+  assert.match(sql, /WHEN p_grant\.source = 'estate_release'\s+THEN public\.lf_vault_lifecycle_state\(p_grant\.owner_user_id\) = 'ESTATE_LOCKED'\s+ELSE public\.lf_vault_lifecycle_state\(p_grant\.owner_user_id\) = 'OWNER_ACTIVE' END/);
+  const route = read("app/api/internal/admin/probate-cases/[caseId]/release/route.ts");
+  assert.match(route, /verification:decide/);
+  assert.match(route, /Add decision notes before releasing/);
+});

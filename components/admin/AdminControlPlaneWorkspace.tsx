@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import AdminDataTable, { AdminContextHelp, AdminEmptyState, AdminFilterChips, AdminMetricCard, AdminNote, AdminStatStrip, AdminStatusBadge, sentenceCaseStatus } from "@/components/admin/AdminPrimitives";
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell";
 import AdminLegalAuthorities from "@/components/admin/AdminLegalAuthorities";
+import ProbateReleasePanel from "@/components/admin/ProbateReleasePanel";
 import InfoTip from "@/components/ui/InfoTip";
 import Icon from "@/components/ui/Icon";
 import { filterAdminNavigation, PLATFORM_ADMIN_NAVIGATION } from "@/components/admin/adminNavigation";
@@ -2629,6 +2630,7 @@ function renderProbateDetail(
               ) : <p className="lf-admin-muted">You can look at this case but your role can’t change it.</p>}
             </section>
           )}
+          {item.status === "approved" ? <ProbateReleasePanel caseId={item.id} canDecide={canDecide} /> : null}
           <AdminNote icon="lock">Accepting evidence confirms the death and the executor’s authority. It never opens Vault records by itself; the owner’s release choices still apply.</AdminNote>
         </aside>
       </div>

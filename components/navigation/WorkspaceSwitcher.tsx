@@ -337,7 +337,7 @@ export default function WorkspaceSwitcher({
               {linkedFortresses.length || nominatedOnly.length ? <div className="lf-workspace-menu-heading"><span>Fortresses you&apos;re linked to</span></div> : null}
               {linkedFortresses.map((linked) => (
                 <Link key={linked.grantId} href={`/contact-wallet?grant=${encodeURIComponent(linked.grantId)}`} className={activeLinkedFortress?.grantId === linked.grantId ? "is-active" : ""} aria-current={activeLinkedFortress?.grantId === linked.grantId ? "page" : undefined} onClick={() => { setStoredLinkedGrantId(linked.grantId); closeAfterSelection(); }}>
-                  <Icon name={linked.accessState === "estate_locked" ? "lock" : "verified_user"} size={20} />
+                  <Icon name={linked.accessState === "estate_locked" ? "lock" : linked.accessState === "released" ? "lock_open" : "verified_user"} size={20} />
                   <span><strong>{linked.ownerName}&apos;s Fortress</strong><small>{getRoleLabel(linked.role)} · {getLinkedFortressAccessLabel(linked)}</small></span>
                   {activeLinkedFortress?.grantId === linked.grantId ? <Icon name="check_circle" size={20} /> : null}
                 </Link>
