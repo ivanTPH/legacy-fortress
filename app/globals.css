@@ -9159,3 +9159,24 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-admin-file-list li > span { flex: 1; }
 .lf-admin-file-list small { display: block; color: var(--lf-text-secondary); }
 .lf-admin-check { display: flex !important; gap: 8px; align-items: flex-start; font-weight: 400; }
+/* Separate sign-in: Platform Admin and Partner portal (ADMIN_PARTNER.md › Sign-in) */
+.lf-staff-signin { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; background: #F5F1ED; }
+.lf-staff-signin.is-admin { background: #1F1715; }
+.lf-staff-signin-card { width: min(420px, 100%); display: grid; gap: 16px; padding: 28px 24px; border-radius: 16px; background: #fff; color: #1F1715; box-shadow: 0 10px 40px rgba(0,0,0,.18); }
+.lf-staff-signin-brand { display: flex; align-items: center; gap: 10px; }
+.lf-staff-signin-logo { display: inline-flex; padding: 4px; border-radius: 10px; background: #1F1715; }
+.is-admin .lf-staff-signin-logo { background: #fff; border: 1px solid #E5DCD6; }
+.lf-staff-badge { margin-left: auto; padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; letter-spacing: .06em; }
+.lf-staff-badge.is-admin { background: #B3261E; color: #fff; }
+.lf-staff-badge.is-partner { background: #E3EEEC; color: #1F5A55; }
+.lf-staff-signin h1 { margin: 0; font-size: 22px; }
+.lf-staff-signin form { display: grid; gap: 12px; }
+.lf-staff-signin label { display: grid; gap: 6px; font-weight: 600; font-size: 14px; }
+.lf-staff-signin input { min-height: 44px; padding: 8px 12px; border: 1px solid #C9BDB5; border-radius: 10px; font: inherit; }
+.lf-staff-primary { min-height: 44px; border: 0; border-radius: 10px; background: #1F1715; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+.lf-staff-primary:disabled { opacity: .55; }
+.lf-staff-link { border: 0; background: none; color: #1F1715; text-decoration: underline; font: inherit; cursor: pointer; min-height: 44px; }
+.lf-staff-error { margin: 0; color: #B3261E; }
+.lf-staff-qr { width: 200px; height: 200px; justify-self: center; }
+.lf-staff-footer { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 0; font-size: 14px; color: #6B5D55; }
+.lf-staff-footer a { color: #1F1715; font-weight: 600; }

@@ -483,7 +483,7 @@ export default function EnterpriseOperationsWorkspace() {
     setState("checking");
     const user = await waitForActiveUser(supabase, { attempts: 4, delayMs: 120 });
     if (!user) {
-      router.replace("/sign-in?next=%2Fenterprise");
+      router.replace("/enterprise/sign-in?next=%2Fenterprise");
       return;
     }
     setIdentity({
@@ -554,7 +554,7 @@ export default function EnterpriseOperationsWorkspace() {
     setPortfolio(EMPTY_PORTFOLIO);
     setMessage("");
     setNavigationCapabilities([]);
-    router.replace("/sign-in");
+    router.replace("/enterprise/sign-in");
     router.refresh();
   }
 

@@ -255,6 +255,28 @@ export async function ensureMasterAdminRecord(
   return upsert.data as AdminUserRow;
 }
 
+/**
+ * Two-step verification for staff (ADMIN_PARTNER.md: always required, short session).
+ * The token has already been validated by getUser; this reads its assurance claims.
+ * Switched on by STAFF_MFA_REQUIRED until TEST confirms authenticator codes work end to end.
+ */
+export const STAFF_SESSION_HOURS = 12;
+
+export function staffMfaRequired() {
+  return process.env.STAFF_MFA_REQUIRED === "true";
+}
+
+export function tokenAssurance(token: string) {
+  try {
+    const payload = JSON.parse(Buffer.from(token.split(".")[1] ?? "", "base64url").toString("utf8")) as { aal?: string; amr?: Array<{ method?: string; timestamp?: number }> };
+    const totp = (payload.amr ?? []).filter((entry) => entry.method === "totp").map((entry) => Number(entry.timestamp ?? 0));
+    const lastTotp = totp.length ? Math.max(...totp) * 1000 : 0;
+    return { aal2: payload.aal === "aal2", fresh: lastTotp > 0 && Date.now() - lastTotp < STAFF_SESSION_HOURS * 60 * 60 * 1000 };
+  } catch {
+    return { aal2: false, fresh: false };
+  }
+}
+
 export async function requireAdminAccess(request: Request): Promise<
   | { ok: true; access: AdminAccessState; adminClient: AnySupabaseClient }
   | { ok: false; status: number; message: string; issue?: string }
@@ -281,6 +303,13 @@ export async function requireAdminAccess(request: Request): Promise<
           : "You must be signed in to continue.",
       issue: requestUser.error === "missing_public_env" ? "missing_public_env" : requestUser.error ?? undefined,
     };
+  }
+
+  if (staffMfaRequired()) {
+    const assurance = tokenAssurance(extractBearerToken(request));
+    if (!assurance.aal2 || !assurance.fresh) {
+      return { ok: false, status: 401, message: "Sign in to Platform Admin with your 6-digit code.", issue: "mfa_required" };
+    }
   }
 
   const emailNormalized = normalizeAdminEmail(requestUser.user.email);

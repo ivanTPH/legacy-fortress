@@ -127,6 +127,32 @@ async function freshCheck(person, caseType, caseId) {
   return requestId;
 }
 
+// RFC 6238 time-based code (30 s, 6 digits, SHA-1), as an authenticator app would show.
+function totpCode(base32Secret, at = Date.now()) {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  let bits = "";
+  for (const char of base32Secret.replace(/=+$/, "").toUpperCase()) bits += alphabet.indexOf(char).toString(2).padStart(5, "0");
+  const key = Buffer.from(bits.match(/.{8}/g).map((byte) => parseInt(byte, 2)));
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(at / 30000)));
+  const hmac = crypto.createHmac("sha1", key).update(counter).digest();
+  const offset = hmac[hmac.length - 1] & 0xf;
+  return String(((hmac.readUInt32BE(offset) & 0x7fffffff) % 1000000)).padStart(6, "0");
+}
+
+/** Staff two-step verification: set up an authenticator, then sign in with a code (aal2). */
+async function staffTwoStep(person) {
+  const enrol = await person.client.auth.mfa.enroll({ factorType: "totp", friendlyName: "Synthetic acceptance" });
+  if (enrol.error || !enrol.data) return { ok: false, reason: `enrol:${safeError(enrol.error)}` };
+  const verified = await person.client.auth.mfa.challengeAndVerify({ factorId: enrol.data.id, code: totpCode(enrol.data.totp.secret) });
+  if (verified.error) return { ok: false, reason: `verify:${safeError(verified.error)}` };
+  const session = await person.client.auth.getSession();
+  const level = await person.client.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (level.data?.currentLevel !== "aal2" || !session.data.session) return { ok: false, reason: "not_aal2" };
+  person.token = session.data.session.access_token;
+  return { ok: true };
+}
+
 // A synthetic image file: valid header, padded past the reviewer check's minimum size. Not a real face or document.
 function syntheticImage(type) {
   const header = type === "image/png" ? Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]) : Buffer.from([0xff, 0xd8, 0xff, 0xe0]);
@@ -147,6 +173,9 @@ async function main() {
   created.owners.push(owner.id);
   await must(admin.from("admin_users").insert({ email_normalized: reviewer.email, user_id: reviewer.id, display_name: "Synthetic reviewer", status: "active", is_master: false, role: "super_admin" }), "reviewer_admin");
   created.admins.push(reviewer.id);
+  const twoStep = await staffTwoStep(reviewer);
+  if (process.env.GITHUB_ACTIONS === "true") console.log(`::notice title=Staff two-step verification::${twoStep.ok ? "works on TEST (authenticator code accepted, session at aal2)" : `not available: ${twoStep.reason}`}`);
+  if (process.env.STAFF_MFA_REQUIRED === "true") assert.ok(twoStep.ok, "two-step verification required but unavailable");
 
   const org = await must(admin.from("organisations").insert({ owner_user_id: owner.id, name: `${run} org` }).select("id").single(), "org");
   const wallet = await must(admin.from("wallets").insert({ organisation_id: org.id, owner_user_id: owner.id }).select("id").single(), "wallet");

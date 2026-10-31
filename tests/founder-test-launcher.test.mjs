@@ -80,7 +80,8 @@ test("explicit Vault and Admin destinations remain independent during sign-in", 
   assert.equal(resolveBootstrapDestination({ ...input, nextPath: "/admin", roles: ["consumer_user"], completedDestination: "/dashboard" }).destination, "/dashboard");
   assert.equal(canRoleAccessPath(["consumer_user"], "/admin"), false);
   assert.equal(buildProtectedSignInRedirect("/dashboard"), "/sign-in?next=%2Fdashboard");
-  assert.equal(buildProtectedSignInRedirect("/admin"), "/sign-in?next=%2Fadmin");
+  assert.equal(buildProtectedSignInRedirect("/admin"), "/admin/sign-in?next=%2Fadmin");
+  assert.equal(buildProtectedSignInRedirect("/enterprise"), "/enterprise/sign-in?next=%2Fenterprise");
 });
 
 test("Dashboard session redirects retain the Vault return path", () => {

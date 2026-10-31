@@ -60,6 +60,22 @@ export default function AdminWorkspaceShell({
   const isPlatform = !isPartner;
   const founderLauncherAvailable = useFounderTestLauncherAccess();
 
+  // Short staff sessions (ADMIN_PARTNER.md): sign out after 30 minutes without activity.
+  useEffect(() => {
+    if (!onSignOut) return;
+    const key = `lf:${isPartner ? "partner" : "admin"}:last-activity`;
+    const touch = () => { try { window.sessionStorage.setItem(key, String(Date.now())); } catch { /* optional */ } };
+    touch();
+    const events = ["pointerdown", "keydown", "scroll"] as const;
+    events.forEach((name) => window.addEventListener(name, touch, { passive: true }));
+    const timer = window.setInterval(() => {
+      let last = Date.now();
+      try { last = Number(window.sessionStorage.getItem(key) ?? Date.now()); } catch { /* optional */ }
+      if (Date.now() - last > 30 * 60 * 1000) { window.clearInterval(timer); void onSignOut(); }
+    }, 60 * 1000);
+    return () => { window.clearInterval(timer); events.forEach((name) => window.removeEventListener(name, touch)); };
+  }, [isPartner, onSignOut]);
+
   useEffect(() => {
     queueMicrotask(() => {
       setAccountMenuOpen(false);
