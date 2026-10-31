@@ -10,7 +10,7 @@ const ESTATE_CLAIM_SELECT = "id,death_report_id,probate_case_id,owner_user_id,cl
 
 export function normalizeDeathReportAction(value: string | null | undefined): DeathReportAction | null {
   const action = String(value ?? "").trim().toLowerCase();
-  if (["review", "apply_protective_lock", "confirm_death", "reject", "dispute", "start_owner_recovery", "approve_owner_recovery", "close"].includes(action)) {
+  if (["review", "request_evidence", "apply_protective_lock", "confirm_death", "reject", "dispute", "start_owner_recovery", "approve_owner_recovery", "close"].includes(action)) {
     return action as DeathReportAction;
   }
   return null;
@@ -165,6 +165,8 @@ export async function applyDeathReportAction(
   const update: Record<string, unknown> = { reviewed_at: now, reviewed_by_user_id: input.actorUserId, decision_reason: reason, updated_at: now };
 
   if (input.action === "review") update.status = "under_review";
+  // Ask the reporter for more evidence before anything else happens (owner decision 31 Oct 2026).
+  if (input.action === "request_evidence") update.status = "evidence_required";
   if (input.action === "apply_protective_lock") {
     await transitionVaultLifecycle(client, report.owner_user_id, "DEATH_REPORTED", input.actorUserId, reason, report.id, input.actorType);
     await transitionVaultLifecycle(client, report.owner_user_id, "PROTECTIVE_LOCK", input.actorUserId, reason, report.id, input.actorType);
@@ -442,9 +444,9 @@ async function getDeathReportForActor(client: AnySupabaseClient, reportId: strin
 async function assertDeathReportActionAllowed(client: AnySupabaseClient, report: DeathReportRow, action: DeathReportAction, actorUserId: string) {
   const allowed: Record<string, DeathReportAction[]> = {
     draft: [],
-    submitted: ["review", "apply_protective_lock", "reject"],
+    submitted: ["review", "request_evidence", "apply_protective_lock", "reject"],
     evidence_required: ["review", "apply_protective_lock", "reject"],
-    under_review: ["apply_protective_lock", "reject"],
+    under_review: ["request_evidence", "apply_protective_lock", "reject"],
     protective_lock_applied: ["confirm_death", "dispute"],
     confirmed: ["dispute", "close"],
     rejected: ["close"],

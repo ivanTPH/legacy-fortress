@@ -62,7 +62,9 @@ export default function IdentityVerificationPageClient() {
           </div>
         </div>
       </header>
-      {stepUp ? <PresenceCodeCheck returnTo={returnTo} /> : <ReviewerIdentityCheck
+      {params.get("authority") && /^[0-9a-f-]{36}$/i.test(params.get("authority") ?? "")
+        ? <ReviewerIdentityCheck purpose="admin_review" accessGrantId={null} invitationId={null} returnTo="/dashboard" caseRef={{ type: "legal_authority", id: params.get("authority") ?? "" }} />
+        : stepUp ? <PresenceCodeCheck returnTo={returnTo} /> : <ReviewerIdentityCheck
         purpose={params.get("grant") || params.get("invitation") ? "linked_access" : "registration_required"}
         accessGrantId={params.get("grant")}
         invitationId={params.get("invitation")}

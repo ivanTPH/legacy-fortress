@@ -35,6 +35,8 @@ export function describePersonNotification(kind: string, ownerName: string | nul
     case "authority_rejected": return { title: "Authority not accepted", detail: "Our team couldn’t accept the authority. Open Vault access for details.", icon: "block", group: "people" };
     case "early_access_requested": return { title: "Someone asked for access now", detail: "A person you nominated asked to see something now. Nothing changes unless you share.", icon: "contact_support", group: "people" };
     case "early_access_answered": return { title: "Your request was answered", detail: `${first} has answered your request.`, icon: "mark_email_read", group: "people" };
+    case "more_evidence_requested": return { title: "We need a little more evidence", detail: `Our team needs something else before going further with ${first}’s Vault. Open the report to add it.`, icon: "upload_file", group: "people" };
+    case "attorney_check_requested": return { title: "Confirm it’s you", detail: `To act under ${first}’s Power of Attorney, take a fresh photo of your ID and a live selfie.`, icon: "badge", group: "security" };
     case "identity_approved": return { title: "Your ID is verified", detail: "Our team checked your photos. Your check lasts a year.", icon: "verified_user", group: "security" };
     case "identity_rejected": return { title: "We couldn’t verify your ID", detail: "Our team couldn’t approve your photos. You can try again.", icon: "gpp_bad", group: "security" };
     default: return { title: "Vault access updated", detail: "Something changed in your Vault access.", icon: "notifications", group: "people" };

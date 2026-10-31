@@ -8,6 +8,7 @@ import Icon from "../../../components/ui/Icon";
 import { loadLinkedFortressSummaries } from "../../../lib/access-control/viewerAccess";
 import { supabase } from "../../../lib/supabaseClient";
 import { loadMyNominations } from "../../../lib/vaultAccess/vaultAccess";
+import { ReviewerIdentityCheck } from "../../../components/identity/ReviewerIdentityCheck";
 
 /**
  * Report a death (Journeys 6a–6b; owner decision 30 Oct: any nominee or executor may report).
@@ -30,7 +31,9 @@ export default function EstateDeathReportPageClient() {
   const [dateOfDeath, setDateOfDeath] = useState("");
   const [declarationAccepted, setDeclarationAccepted] = useState(false);
   const [error, setError] = useState("");
-  const [reportId, setReportId] = useState("");
+  // ?report=… returns to an existing report (for example when our team asked for more evidence).
+  const [reportId, setReportId] = useState(() => { const value = params.get("report") ?? ""; return /^[0-9a-f-]{36}$/i.test(value) ? value : ""; });
+  const [checkDone, setCheckDone] = useState(false);
   const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
   const [evidenceDone, setEvidenceDone] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -142,21 +145,25 @@ export default function EstateDeathReportPageClient() {
               </button>
             </>}
           </> : <>
-            <h1>Thank you</h1>
-            <p>We’ve started the release checks. Nothing in {subject?.label ?? "their"}’s Vault is shared until the death is verified and the release is approved.</p>
+            <h1>{params.get("report") ? "Add evidence" : "Thank you"}</h1>
+            <p>{params.get("report") ? "Our team asked for more evidence. Add it here. " : ""}We’ve started the release checks. Nothing in {subject?.label ?? "their"}’s Vault is shared until the death is verified and the release is approved.</p>
             <ol className="lf-va-release-steps" aria-label="Release steps">
               <li className="is-done"><span aria-hidden="true"><Icon name="check" size={16} /></span><div><strong>Death reported</strong></div></li>
               <li className={evidenceDone ? "is-done" : "is-current"}><span aria-hidden="true">{evidenceDone ? <Icon name="check" size={16} /> : 2}</span><div><strong>Add the death certificate</strong><small>{evidenceDone ? "Received. Our team will review it." : "A photo or PDF is fine."}</small></div></li>
-              <li><span aria-hidden="true">3</span><div><strong>Death verified</strong></div></li>
-              <li><span aria-hidden="true">4</span><div><strong>Release approved</strong></div></li>
+              <li className={evidenceDone && !checkDone ? "is-current" : checkDone ? "is-done" : ""}><span aria-hidden="true">{checkDone ? <Icon name="check" size={16} /> : 3}</span><div><strong>Confirm it’s you</strong><small>A fresh photo of your ID and a live selfie</small></div></li>
+              <li><span aria-hidden="true">4</span><div><strong>Our team checks everything</strong><small>Nothing is shared until a person approves the release</small></div></li>
             </ol>
+            {evidenceDone && !checkDone ? <>
+              <ReviewerIdentityCheck purpose="admin_review" accessGrantId={null} invitationId={null} returnTo={null} caseRef={{ type: "death_report", id: reportId }} />
+              <button type="button" className="lf-link-btn" onClick={() => setCheckDone(true)}>I’ve finished the ID check</button>
+            </> : null}
             {!evidenceDone ? <>
               <label>Death certificate<input type="file" accept="application/pdf,image/png,image/jpeg" onChange={(event) => setEvidenceFile(event.currentTarget.files?.[0] ?? null)} /></label>
               {error ? <p className="lf-va-error" role="alert">{error}</p> : null}
               <button type="button" className="lf-primary-btn" onClick={() => void uploadEvidence()} disabled={busy || !evidenceFile}>
                 <Icon name="upload_file" size={16} />{busy ? "Uploading…" : "Upload certificate"}
               </button>
-            </> : <Link className="lf-primary-btn" href="/vault-nominations">Done</Link>}
+            </> : checkDone ? <Link className="lf-primary-btn" href="/vault-nominations">Done</Link> : null}
           </>}
         </div>
       </section>

@@ -9149,3 +9149,13 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-idv-camera-frame { position: relative; }
 .lf-idv-camera-cue { position: absolute; inset: auto 12px 12px 12px; display: flex; gap: 10px; align-items: center; justify-content: center; padding: 12px; border-radius: 12px; background: rgba(0,0,0,.6); color: #fff; text-align: center; }
 .lf-idv-camera-cue span { font-size: 28px; font-weight: 700; min-width: 32px; }
+.lf-admin-death-reports { display: grid; gap: 12px; }
+.lf-admin-death-report { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--lf-border); border-radius: 10px; }
+.lf-admin-death-report header { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.lf-admin-death-report header small { display: block; color: var(--lf-text-secondary); }
+.lf-admin-death-report h3 { margin: 6px 0 0; font-size: 15px; }
+.lf-admin-file-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.lf-admin-file-list li { display: flex; gap: 10px; align-items: center; }
+.lf-admin-file-list li > span { flex: 1; }
+.lf-admin-file-list small { display: block; color: var(--lf-text-secondary); }
+.lf-admin-check { display: flex !important; gap: 8px; align-items: flex-start; font-weight: 400; }

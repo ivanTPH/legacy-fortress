@@ -40,7 +40,7 @@ function friendly(error: unknown) {
   return FRIENDLY[message] ?? "That didn’t work. Try again, or contact support if it keeps happening.";
 }
 
-export function ReviewerIdentityCheck({ purpose, accessGrantId, invitationId, returnTo }: { purpose: "linked_access" | "registration_required"; accessGrantId: string | null; invitationId: string | null; returnTo: string | null }) {
+export function ReviewerIdentityCheck({ purpose, accessGrantId, invitationId, returnTo, caseRef = null }: { purpose: "linked_access" | "registration_required" | "admin_review"; accessGrantId: string | null; invitationId: string | null; returnTo: string | null; caseRef?: { type: "death_report" | "legal_authority"; id: string } | null }) {
   const [step, setStep] = useState<Step>("loading");
   const [requestId, setRequestId] = useState("");
   const [consent, setConsent] = useState(false);
@@ -52,6 +52,8 @@ export function ReviewerIdentityCheck({ purpose, accessGrantId, invitationId, re
 
   useEffect(() => {
     let active = true;
+    // A fresh check for a case always starts new.
+    if (caseRef) { queueMicrotask(() => { if (active) setStep("intro"); }); return () => { active = false; }; }
     void (async () => {
       try {
         const json = await call("/api/identity-verification");
@@ -67,12 +69,12 @@ export function ReviewerIdentityCheck({ purpose, accessGrantId, invitationId, re
       }
     })();
     return () => { active = false; };
-  }, []);
+  }, [caseRef]);
 
   async function start() {
     setBusy(true); setError("");
     try {
-      const json = await call("/api/identity-verification", { method: "POST", body: JSON.stringify({ purpose, requestedIdentityLevel: 2, accessGrantId, invitationId, consentAcknowledged: consent }) });
+      const json = await call("/api/identity-verification", { method: "POST", body: JSON.stringify({ purpose: caseRef ? "admin_review" : purpose, requestedIdentityLevel: 2, accessGrantId, invitationId, consentAcknowledged: consent, caseType: caseRef?.type ?? null, caseId: caseRef?.id ?? null }) });
       setRequestId(json.verification.id);
       setStep("document");
     } catch (cause) { setError(friendly(cause)); }
@@ -133,7 +135,8 @@ export function ReviewerIdentityCheck({ purpose, accessGrantId, invitationId, re
     {step === "loading" ? <p className="lf-muted-note">Loading…</p> : null}
 
     {step === "intro" || step === "failed" ? <>
-      <h1>Prove who you are</h1>
+      <h1>{caseRef ? "Confirm it’s you" : "Prove who you are"}</h1>
+      {caseRef ? <p>Because this is an important step, we ask for a fresh photo of your ID and a live selfie. A person on our team looks at them before anything changes.</p> : null}
       {step === "failed" ? <p className="lf-va-error" role="alert">Your last check couldn’t be approved. You can try again.</p> : null}
       <ul className="lf-idv-needs">
         <li><Icon name="badge" size={20} />A passport, driving licence or national ID card</li>
@@ -171,8 +174,9 @@ export function ReviewerIdentityCheck({ purpose, accessGrantId, invitationId, re
     </> : null}
 
     {step === "waiting" ? <>
-      <h1>We’re checking your ID</h1>
-      <p>We couldn’t confirm it automatically, so a person on our team is comparing your selfie with your document. This usually takes up to one working day. We’ll let you know when it’s done.</p>
+      <h1>{caseRef ? "Thank you" : "We’re checking your ID"}</h1>
+      {caseRef ? <p>A person on our team will look at your photos together with the {caseRef.type === "death_report" ? "death certificate" : "authority"}. If they need anything else, we’ll ask you.</p> : null}
+      <p hidden={Boolean(caseRef)}>We couldn’t confirm it automatically, so a person on our team is comparing your selfie with your document. This usually takes up to one working day. We’ll let you know when it’s done.</p>
       <p className="lf-idv-note"><Icon name="lock" size={18} />Checking your ID doesn’t give you access to anything. Your photos are deleted once it’s decided.</p>
       {returnTo ? <Link className="lf-primary-btn" href={returnTo}>Continue</Link> : <Link className="lf-primary-btn" href="/dashboard">Back to My Vault</Link>}
     </> : null}

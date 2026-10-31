@@ -78,3 +78,19 @@ test("the identity queue stays bounded and looks rows up in small batches", () =
   assert.match(queue, /index \+= 50/);
   assert.doesNotMatch(queue.slice(0, 3000), /\.in\("request_id", identityRequestIds\)/);
 });
+
+test("death reports and Powers of Attorney need a fresh check that only a person decides", () => {
+  const service = read("lib/identity-verification/service.ts");
+  assert.match(service, /identity_case_check_decided_with_case/);
+  assert.match(service, /report\.data\.claimant_user_id !== userId\) throw new Error\("identity_case_invalid"\)/);
+  assert.match(service, /contact\.data\?\.linked_user_id !== userId\) throw new Error\("identity_case_invalid"\)/);
+  const authorities = read("lib/admin/legalAuthorities.ts");
+  assert.match(authorities, /The attorney hasn’t done a fresh ID check for this authority yet/);
+  const release = read("components/admin/ProbateReleasePanel.tsx");
+  assert.match(release, /Only a person can release a Vault/);
+  assert.match(release, /!evidenceChecked/);
+  const evidence = read("app/api/internal/admin/estate-cases/death-reports/[reportId]/evidence/route.ts");
+  assert.match(evidence, /verification:decide/);
+  assert.match(evidence, /Death report evidence viewed/);
+  assert.match(read("lib/estate-lifecycle/service.ts"), /request_evidence\"\) update\.status = \"evidence_required\"/);
+});

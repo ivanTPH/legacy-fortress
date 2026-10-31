@@ -33,6 +33,7 @@ export type EstateClaimStatus =
 
 export type DeathReportAction =
   | "review"
+  | "request_evidence"
   | "apply_protective_lock"
   | "confirm_death"
   | "reject"

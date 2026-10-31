@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { closeCaseChecks, findCaseCheck } from "../identity-verification/service.ts";
 
 /**
  * Power of Attorney review (Platform Admin, server only; admin client = service role).
@@ -32,6 +33,8 @@ export type LegalAuthorityReviewItem = {
   updatedAt: string;
   document: { type: "document" | "attachment"; id: string; fileName: string } | null;
   reviews: Array<{ action: string; messageToOwner: string | null; createdAt: string }>;
+  /** The attorney's fresh ID check for this authority (owner decision 31 Oct 2026). */
+  freshCheck: { id: string; status: string; createdAt: string } | null;
 };
 
 export class LegalAuthorityActionError extends Error {
@@ -126,8 +129,15 @@ export async function loadLegalAuthorities(client: AnySupabaseClient, options: {
       document: row.document_type && row.document_id ? { type: row.document_type, id: row.document_id, fileName: docName.get(row.document_id) ?? "Document" } : null,
       reviews: (reviews.data ?? []).filter((review) => review.authority_id === row.id)
         .map((review) => ({ action: review.action, messageToOwner: review.message_to_owner, createdAt: review.created_at })),
+      freshCheck: null,
     } satisfies LegalAuthorityReviewItem;
   });
+}
+
+export async function loadLegalAuthorityDetail(client: AnySupabaseClient, id: string) {
+  const [item] = await loadLegalAuthorities(client, { id });
+  if (!item) return null;
+  return { ...item, freshCheck: await findCaseCheck(client, "legal_authority", id) };
 }
 
 export async function applyLegalAuthorityAction(client: AnySupabaseClient, input: {
@@ -143,8 +153,12 @@ export async function applyLegalAuthorityAction(client: AnySupabaseClient, input
   if (input.action === "activate") {
     if (!current.attorneyJoined) throw new LegalAuthorityActionError("The attorney hasn’t joined yet.");
     if (!current.attorneyIdVerified) throw new LegalAuthorityActionError("The attorney’s ID hasn’t been verified.");
+    // A person looks at a fresh ID check from the attorney before anything opens.
+    const fresh = await findCaseCheck(client, "legal_authority", current.id);
+    if (!fresh || fresh.status !== "review_required") throw new LegalAuthorityActionError("The attorney hasn’t done a fresh ID check for this authority yet.");
     const { error } = await client.rpc("lf_activate_legal_authority", { p_authority_id: current.id, p_reviewer_user_id: input.reviewerUserId });
     if (error) throw new LegalAuthorityActionError(error.message.replace(/^.*?:\s*/, ""));
+    await closeCaseChecks(client, "legal_authority", [current.id], true).catch(() => null);
     return (await loadLegalAuthorities(client, { id: current.id }))[0];
   }
 
@@ -161,6 +175,7 @@ export async function applyLegalAuthorityAction(client: AnySupabaseClient, input
     authority_id: current.id, owner_user_id: current.ownerUserId, action: reviewAction, message_to_owner: message, reviewer_user_id: input.reviewerUserId,
   });
   if (review.error) throw new LegalAuthorityActionError(review.error.message);
+  if (input.action === "reject" || input.action === "end") await closeCaseChecks(client, "legal_authority", [current.id], false).catch(() => null);
   return (await loadLegalAuthorities(client, { id: current.id }))[0];
 }
 
