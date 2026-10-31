@@ -163,3 +163,74 @@ export const AUTHORITY_LABEL: Record<string, string> = {
 export function firstName(name: string) {
   return name.trim().split(/\s+/)[0] || name;
 }
+
+// ---- Power of Attorney (va-l1–l6). Recording never gives access; the review team
+// checks the authority and the attorney's identity, and only then can it take effect.
+
+export type AuthorityType = "lpa_property_finance" | "lpa_health_welfare" | "enduring_poa" | "general_poa" | "other";
+export type AuthorityDocument = { type: "document" | "attachment"; id: string; name: string; where: string };
+
+export const AUTHORITY_CHOICES: Array<{ value: AuthorityType; title: string; detail: string }> = [
+  { value: "lpa_property_finance", title: "Lasting Power of Attorney: property and financial affairs", detail: "Money, property and bills." },
+  { value: "lpa_health_welfare", title: "Lasting Power of Attorney: health and welfare", detail: "Care and medical decisions. Only usable if you lack mental capacity." },
+  { value: "enduring_poa", title: "Enduring Power of Attorney", detail: "Made before 1 October 2007. Property and finances only." },
+  { value: "general_poa", title: "General Power of Attorney", detail: "Ends if you lose mental capacity." },
+  { value: "other", title: "Something else", detail: "For example a court order. Our team will check it." },
+];
+
+/** What each type could ever cover. Owners can only narrow this. Wills are never included (owner decision 5). */
+export const AUTHORITY_AREAS: Record<AuthorityType, string[]> = {
+  lpa_property_finance: ["finances", "property", "business"],
+  enduring_poa: ["finances", "property", "business"],
+  general_poa: ["finances", "property", "business"],
+  // Owner decision 8 is open: health and welfare covers profile details only until it's decided.
+  lpa_health_welfare: ["profile"],
+  other: ["finances", "property", "business", "digital", "possessions"],
+};
+
+export const AREA_LABEL: Record<string, string> = { profile: "Profile", finances: "Finances", legal: "Legal", property: "Property", business: "Business", digital: "Digital", possessions: "Possessions" };
+
+export async function loadAuthorityDocuments(client: SupabaseClient, ownerUserId: string): Promise<AuthorityDocument[]> {
+  const [documents, attachments] = await Promise.all([
+    client.from("documents").select("id,file_name,display_title,asset_id").eq("owner_user_id", ownerUserId).is("deleted_at", null).order("created_at", { ascending: false }).limit(200),
+    client.from("attachments").select("id,file_name,record_id").eq("owner_user_id", ownerUserId).order("created_at", { ascending: false }).limit(200),
+  ]);
+  return [
+    ...(attachments.data ?? []).map((row) => ({ type: "attachment" as const, id: row.id, name: row.file_name || "Document", where: "Legal" })),
+    ...(documents.data ?? []).map((row) => ({ type: "document" as const, id: row.id, name: row.display_title || row.file_name || "Document", where: "Vault" })),
+  ];
+}
+
+export async function recordLegalAuthority(client: SupabaseClient, ownerUserId: string, input: {
+  personId: string; authorityType: AuthorityType; registered: "yes" | "no" | "unknown"; registrationRef: string;
+  usableWhen: "with_consent" | "lacks_capacity_only"; document: AuthorityDocument; areas: string[];
+}) {
+  const vault = await client.from("wallets").select("id").eq("owner_user_id", ownerUserId).eq("status", "active").order("created_at").limit(1).maybeSingle();
+  if (vault.error || !vault.data) throw new Error("Your Vault isn’t ready yet.");
+  const allowed = AUTHORITY_AREAS[input.authorityType];
+  const inserted = await client.from("legal_authorities").insert({
+    owner_user_id: ownerUserId,
+    vault_id: vault.data.id,
+    person_id: input.personId,
+    authority_type: input.authorityType,
+    registered: input.registered,
+    usable_when: input.authorityType === "lpa_health_welfare" ? "lacks_capacity_only" : input.usableWhen,
+    document_type: input.document.type,
+    document_id: input.document.id,
+    scope_areas: input.areas.filter((area) => allowed.includes(area)),
+    created_by: ownerUserId,
+  }).select("id").single();
+  if (inserted.error) throw new Error(inserted.error.message);
+  const ref = input.registrationRef.trim();
+  if (ref) {
+    const privateDetails = await client.from("legal_authority_private").insert({ authority_id: inserted.data.id, owner_user_id: ownerUserId, registration_ref: ref.slice(0, 60) });
+    if (privateDetails.error) throw new Error("The authority was recorded, but the reference number wasn’t saved. Add it again from the person’s Vault access.");
+  }
+  return String(inserted.data.id);
+}
+
+export async function withdrawLegalAuthority(client: SupabaseClient, ownerUserId: string, authorityId: string, reason: string) {
+  const { error } = await client.from("legal_authorities").update({ status: "withdrawn", withdrawn_reason: reason.trim().slice(0, 300) || "Withdrawn by the owner" })
+    .eq("id", authorityId).eq("owner_user_id", ownerUserId);
+  if (error) throw new Error(error.message);
+}

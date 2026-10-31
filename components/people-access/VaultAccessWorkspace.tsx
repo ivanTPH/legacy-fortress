@@ -5,7 +5,15 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { getSafeUserData } from "../../lib/auth/requireActiveUser";
 import { supabase } from "../../lib/supabaseClient";
 import {
+  AREA_LABEL,
+  AUTHORITY_AREAS,
+  AUTHORITY_CHOICES,
   AUTHORITY_LABEL,
+  loadAuthorityDocuments,
+  recordLegalAuthority,
+  withdrawLegalAuthority,
+  type AuthorityDocument,
+  type AuthorityType,
   cancelVaultNomination,
   firstName,
   loadVaultAccess,
@@ -47,6 +55,7 @@ export default function VaultAccessWorkspace() {
   const [panelKey, setPanelKey] = useState("");
   const [setupOpen, setSetupOpen] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState<VaultNomination | null>(null);
+  const [attorneyFor, setAttorneyFor] = useState("");
   const [busy, setBusy] = useState(false);
 
   const reload = useCallback(async () => {
@@ -170,11 +179,12 @@ export default function VaultAccessWorkspace() {
 
       {panelRow ? (
         <SidePanel title={panelRow.person?.name ?? "Vault access"} subtitle={panelRow.person?.relationship ?? undefined} onClose={() => setPanelKey("")}>
-          <PersonAccess row={panelRow} snapshot={snapshot} onCancel={(nomination) => setConfirmCancel(nomination)} />
+          <PersonAccess row={panelRow} snapshot={snapshot} onCancel={(nomination) => setConfirmCancel(nomination)} onWithdraw={async (authorityId, reason) => { await withdrawLegalAuthority(supabase, ownerId, authorityId, reason); setPanelKey(""); setToast("Authority marked as withdrawn. It can’t be used, and the person is told without details."); await reload(); }} />
         </SidePanel>
       ) : null}
 
-      {setupOpen ? <SetupDialog snapshot={snapshot} ownerId={ownerId} onClose={() => setSetupOpen(false)} onSaved={async (message) => { setSetupOpen(false); setToast(message); await reload(); }} /> : null}
+      {setupOpen ? <SetupDialog snapshot={snapshot} ownerId={ownerId} onClose={() => setSetupOpen(false)} onSaved={async (message) => { setSetupOpen(false); setToast(message); await reload(); }} onAttorney={(personId) => { setSetupOpen(false); setAttorneyFor(personId); }} /> : null}
+      {attorneyFor ? <AttorneyDialog snapshot={snapshot} ownerId={ownerId} personId={attorneyFor} onClose={() => setAttorneyFor("")} onSaved={async (message) => { setAttorneyFor(""); setToast(message); await reload(); }} /> : null}
 
       {confirmCancel ? (
         <Dialog title="Cancel this nomination?" onClose={() => setConfirmCancel(null)}>
@@ -191,11 +201,15 @@ export default function VaultAccessWorkspace() {
   );
 }
 
-function PersonAccess({ row, snapshot, onCancel }: { row: Row; snapshot: VaultAccessSnapshot; onCancel: (nomination: VaultNomination) => void }) {
+function PersonAccess({ row, snapshot, onCancel, onWithdraw }: { row: Row; snapshot: VaultAccessSnapshot; onCancel: (nomination: VaultNomination) => void; onWithdraw: (authorityId: string, reason: string) => Promise<void> }) {
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [reason, setReason] = useState("");
+  const [withdrawError, setWithdrawError] = useState("");
   const person = row.person;
   const name = firstName(person?.name ?? "This person");
   const nowGrant = snapshot.grants.find((grant) => grant.personId === person?.id && ["accepted", "active", "verified"].includes(String(grant.status).toLowerCase()));
   const later = snapshot.nominations.find((item) => item.personId === person?.id && item.status === "active");
+  const authority = snapshot.authorities.find((item) => item.personId === person?.id && !["withdrawn", "ended", "rejected"].includes(item.status));
   return (
     <div className="lf-va-panel-body">
       <section className="lf-va-fact">
@@ -214,6 +228,22 @@ function PersonAccess({ row, snapshot, onCancel }: { row: Row; snapshot: VaultAc
           </dl>
         ) : <p>{name} isn’t nominated to see your Vault after your death.</p>}
       </section>
+      {authority ? (
+        <section className="lf-va-fact" aria-label="Legal authority">
+          <header><strong>Legal authority</strong><Chip tone={authority.activatedAt ? "ok" : "neutral"} icon={authority.activatedAt ? "check_circle" : "pause_circle"} label={authority.activatedAt ? "In effect" : "Not in effect"} /></header>
+          <p>{AUTHORITY_LABEL[authority.authorityType] ?? "Legal authority"} · {authority.usableWhen === "lacks_capacity_only" ? "only if you lack mental capacity" : "with your agreement"}</p>
+          <div className="lf-va-fact-row"><span>{name}’s identity</span><Chip tone={/verified/i.test(person?.identity ?? "") ? "ok" : "wait"} icon={/verified/i.test(person?.identity ?? "") ? "verified_user" : "hourglass_top"} label={/verified/i.test(person?.identity ?? "") ? "ID verified" : "Checking ID"} /></div>
+          <div className="lf-va-fact-row"><span>The authority</span><Chip tone={authority.status === "confirmed" ? "ok" : "wait"} icon={authority.status === "confirmed" ? "check_circle" : "hourglass_top"} label={authority.status === "confirmed" ? "Confirmed" : authority.status === "needs_attention" ? "Needs attention" : "Being checked"} /></div>
+          <div className="lf-va-fact-row"><span>Could see</span><span>{authority.scopeAreas.map((area) => AREA_LABEL[area] ?? area).join(", ") || "No areas"}</span></div>
+          {withdrawing ? (
+            <div className="lf-va-step">
+              <label className="lf-va-field" htmlFor="va-withdraw-reason">Why it’s being withdrawn<textarea id="va-withdraw-reason" rows={2} value={reason} onChange={(event) => setReason(event.target.value)} placeholder="For example, I cancelled the LPA" /></label>
+              {withdrawError ? <p className="lf-va-error" role="alert">{withdrawError}</p> : null}
+              <div className="lf-va-dialog-footer"><button type="button" className="lf-va-secondary" onClick={() => setWithdrawing(false)}>Keep it</button><button type="button" className="lf-va-danger" onClick={() => void onWithdraw(authority.id, reason).catch((cause) => setWithdrawError(cause instanceof Error ? cause.message : "Couldn’t withdraw it."))}>Mark as withdrawn</button></div>
+            </div>
+          ) : <button type="button" className="lf-va-danger-text" onClick={() => setWithdrawing(true)}>Mark the authority as withdrawn</button>}
+        </section>
+      ) : null}
       <section className="lf-va-fact">
         <div className="lf-va-fact-row"><span>Invitation</span><Chip tone={person?.joined ? "ok" : "neutral"} icon={person?.joined ? "check_circle" : "schedule_send"} label={person?.joined ? "Joined" : capitalise(person?.invitation ?? "Not invited")} /></div>
         <div className="lf-va-fact-row"><span>Identity</span><Chip tone={/verified/i.test(person?.identity ?? "") ? "ok" : "neutral"} icon={/verified/i.test(person?.identity ?? "") ? "verified_user" : "badge"} label={/verified/i.test(person?.identity ?? "") ? "ID verified" : "ID not checked"} /></div>
@@ -227,7 +257,7 @@ function PersonAccess({ row, snapshot, onCancel }: { row: Row; snapshot: VaultAc
   );
 }
 
-function SetupDialog({ snapshot, ownerId, onClose, onSaved }: { snapshot: VaultAccessSnapshot; ownerId: string; onClose: () => void; onSaved: (message: string) => void | Promise<void> }) {
+function SetupDialog({ snapshot, ownerId, onClose, onSaved, onAttorney }: { snapshot: VaultAccessSnapshot; ownerId: string; onClose: () => void; onSaved: (message: string) => void | Promise<void>; onAttorney: (personId: string) => void }) {
   const [step, setStep] = useState(1);
   const [personId, setPersonId] = useState("");
   const [kind, setKind] = useState<"later" | "now" | "attorney" | "contact">("later");
@@ -279,7 +309,7 @@ function SetupDialog({ snapshot, ownerId, onClose, onSaved }: { snapshot: VaultA
         <div className="lf-va-choice-list" role="radiogroup" aria-label="Kind of Vault access">
           <Choice name="va-kind" checked={kind === "later"} onChange={() => setKind("later")} title="After my death" detail="Your whole Vault or selected records, released only after the death is verified and the grant of probate is confirmed." />
           <Choice name="va-kind" checked={kind === "now"} onChange={() => setKind("now")} title="Now, while I’m alive" detail="Share selected records with them now. You choose the records in Give access." />
-          <Choice name="va-kind" checked={kind === "attorney"} onChange={() => setKind("attorney")} title="Under a Power of Attorney" detail="Record their legal authority. Coming next: three separate checks before it takes effect." disabled />
+          <Choice name="va-kind" checked={kind === "attorney"} onChange={() => setKind("attorney")} title="Under a Power of Attorney" detail="Record their legal authority. Three separate checks happen before it takes effect." />
           <Choice name="va-kind" checked={kind === "contact"} onChange={() => setKind("contact")} title="Contact only" detail="Keep them in People with no access." />
         </div>
       ) : null}
@@ -325,10 +355,113 @@ function SetupDialog({ snapshot, ownerId, onClose, onSaved }: { snapshot: VaultA
         {step === 2 ? (
           kind === "later" ? <button type="button" className="lf-va-primary" disabled={nominated.has(personId)} onClick={() => setStep(3)}>{nominated.has(personId) ? "Already nominated" : "Continue"}</button>
           : kind === "now" ? <Link className="lf-va-primary" href={`/people-access?view=people&contact=${encodeURIComponent(personId)}`}>Choose records in Give access</Link>
+          : kind === "attorney" ? <button type="button" className="lf-va-primary" onClick={() => onAttorney(personId)}>Continue</button>
           : <button type="button" className="lf-va-primary" onClick={onClose}>Done</button>
         ) : null}
         {step === 3 ? <button type="button" className="lf-va-primary" disabled={scope === "selected" && chosen.length === 0} onClick={() => setStep(4)}>Continue</button> : null}
         {step === 4 ? <button type="button" className="lf-va-primary" disabled={saving} onClick={() => void save()}>{saving ? "Saving…" : "Confirm nomination"}</button> : null}
+      </div>
+    </Dialog>
+  );
+}
+
+function AttorneyDialog({ snapshot, ownerId, personId, onClose, onSaved }: { snapshot: VaultAccessSnapshot; ownerId: string; personId: string; onClose: () => void; onSaved: (message: string) => void | Promise<void> }) {
+  const person = snapshot.people.find((item) => item.id === personId);
+  const name = firstName(person?.name ?? "this person");
+  const [step, setStep] = useState(1);
+  const [type, setType] = useState<AuthorityType | "">("");
+  const [documents, setDocuments] = useState<AuthorityDocument[] | null>(null);
+  const [documentKey, setDocumentKey] = useState("");
+  const [registered, setRegistered] = useState<"yes" | "no" | "unknown" | "">("");
+  const [reference, setReference] = useState("");
+  const [usableWhen, setUsableWhen] = useState<"with_consent" | "lacks_capacity_only" | "">("");
+  const [areas, setAreas] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  useEffect(() => { if (step === 2 && documents === null) void loadAuthorityDocuments(supabase, ownerId).then(setDocuments).catch(() => setDocuments([])); }, [step, documents, ownerId]);
+  const allowed = type ? AUTHORITY_AREAS[type] : [];
+  const document = (documents ?? []).find((item) => `${item.type}:${item.id}` === documentKey);
+  const healthWelfare = type === "lpa_health_welfare";
+  const chooseType = (value: AuthorityType) => { setType(value); setAreas(AUTHORITY_AREAS[value]); if (value === "lpa_health_welfare") setUsableWhen("lacks_capacity_only"); };
+
+  async function save() {
+    if (!type || !document || !registered || !(usableWhen || healthWelfare)) return;
+    setSaving(true); setError("");
+    try {
+      await recordLegalAuthority(supabase, ownerId, { personId, authorityType: type, registered, registrationRef: reference, usableWhen: (usableWhen || "lacks_capacity_only") as "with_consent" | "lacks_capacity_only", document, areas });
+      await onSaved(`${name}’s authority is recorded. It isn’t in effect yet.`);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Couldn’t record the authority."); }
+    finally { setSaving(false); }
+  }
+
+  const titles = ["", `What authority have you given ${name}?`, `About ${name}’s authority`, `What could ${name} see?`, "Before it takes effect", "Check and confirm"];
+  return (
+    <Dialog title={titles[step]} eyebrow={`Power of Attorney for ${name} · Step ${step} of 5`} onClose={onClose}>
+      {step === 1 ? (
+        <div className="lf-va-choice-list" role="radiogroup" aria-label="Kind of authority">
+          {AUTHORITY_CHOICES.map((choice) => <Choice key={choice.value} name="va-authority" checked={type === choice.value} onChange={() => chooseType(choice.value)} title={choice.title} detail={choice.detail} />)}
+        </div>
+      ) : null}
+      {step === 2 ? (
+        <div className="lf-va-step">
+          <h3 className="lf-va-subhead">The document (required)</h3>
+          {documents === null ? <p role="status">Loading your documents…</p> : documents.length === 0 ? (
+            <p className="lf-va-note"><Icon name="info" size={18} />Upload the signed authority to Legal › Power of Attorney first, then come back.</p>
+          ) : (
+            <div className="lf-va-records">{documents.slice(0, 100).map((item) => (
+              <label key={`${item.type}:${item.id}`} className="lf-va-record"><input type="radio" name="va-authority-doc" checked={documentKey === `${item.type}:${item.id}`} onChange={() => setDocumentKey(`${item.type}:${item.id}`)} /><span><strong>{item.name}</strong><small>{item.where}</small></span></label>
+            ))}</div>
+          )}
+          <h3 className="lf-va-subhead">Registered with the Office of the Public Guardian?</h3>
+          <div className="lf-va-segmented" role="radiogroup" aria-label="Registered">
+            {([["yes", "Yes"], ["no", "Not yet"], ["unknown", "Not sure"]] as const).map(([value, label]) => <label key={value} className={registered === value ? "is-selected" : ""}><input type="radio" name="va-registered" checked={registered === value} onChange={() => setRegistered(value)} />{label}</label>)}
+          </div>
+          <label className="lf-va-field" htmlFor="va-reference">Reference number · Optional<input id="va-reference" value={reference} onChange={(event) => setReference(event.target.value)} maxLength={60} placeholder="e.g. 7000-1234-5678" /></label>
+          <h3 className="lf-va-subhead">When can {name} use it?</h3>
+          <div className="lf-va-choice-list" role="radiogroup" aria-label="When it can be used">
+            <Choice name="va-usable" checked={usableWhen === "with_consent"} onChange={() => setUsableWhen("with_consent")} title="While I have mental capacity, with my agreement" detail="" disabled={healthWelfare} />
+            <Choice name="va-usable" checked={usableWhen === "lacks_capacity_only"} onChange={() => setUsableWhen("lacks_capacity_only")} title="Only if I lack mental capacity" detail={healthWelfare ? "A health and welfare LPA can only be used this way." : ""} />
+          </div>
+        </div>
+      ) : null}
+      {step === 3 ? (
+        <div className="lf-va-step">
+          <p className="lf-va-muted">Ticked to match this authority. You can untick areas. You can’t add areas it doesn’t cover.</p>
+          <div className="lf-va-records">
+            {Object.keys(AREA_LABEL).filter((area) => area !== "legal").map((area) => {
+              const covered = allowed.includes(area);
+              return <label key={area} className={`lf-va-record${covered ? "" : " is-disabled"}`}><input type="checkbox" disabled={!covered} checked={covered && areas.includes(area)} onChange={() => setAreas((current) => current.includes(area) ? current.filter((item) => item !== area) : [...current, area])} /><span><strong>{AREA_LABEL[area]}</strong><small>{covered ? "Covered by this authority" : "Not covered by this authority"}</small></span></label>;
+            })}
+          </div>
+          <p className="lf-va-note"><Icon name="info" size={18} />An attorney can’t make or change your Will, so Wills are never included.</p>
+        </div>
+      ) : null}
+      {step === 4 ? (
+        <ol className="lf-va-checks">
+          <li><span>1</span><div><strong>{name} proves who they are</strong><small>An ID check after they join. It proves identity only.</small></div></li>
+          <li><span>2</span><div><strong>We check the authority</strong><small>Our team reviews the document and checks the register where we can.</small></div></li>
+          <li><span>3</span><div><strong>It can be used now</strong><small>{usableWhen === "lacks_capacity_only" || healthWelfare ? `You chose “only if I lack mental capacity”. ${name} asks for access and gives evidence; our team decides.` : "You chose “with my agreement”. Our team confirms with you before it takes effect."}</small></div></li>
+        </ol>
+      ) : null}
+      {step === 5 && type ? (
+        <div className="lf-va-step">
+          <dl className="lf-va-check">
+            <div><dt>Attorney</dt><dd>{person?.name}{person?.relationship ? ` · ${person.relationship}` : ""}</dd></div>
+            <div><dt>Authority</dt><dd>{AUTHORITY_LABEL[type]}{registered === "yes" ? " · registered" : registered === "no" ? " · not registered yet" : ""}</dd></div>
+            <div><dt>Can be used</dt><dd>{usableWhen === "with_consent" && !healthWelfare ? "With your agreement" : "Only if you lack mental capacity"}</dd></div>
+            <div><dt>Could see</dt><dd>{areas.map((area) => AREA_LABEL[area]).join(", ") || "No areas"} · view only<button type="button" className="lf-va-link" onClick={() => setStep(3)}>Change</button></dd></div>
+          </dl>
+          <p className="lf-va-access-now"><Icon name="lock" size={18} /><span><strong>Access now: none.</strong> Recording the authority doesn’t let {name} see anything. It starts only after the checks.</span></p>
+          {error ? <p className="lf-va-error" role="alert">{error}</p> : null}
+        </div>
+      ) : null}
+      <div className="lf-va-dialog-footer">
+        {step > 1 ? <button type="button" className="lf-va-secondary" onClick={() => setStep(step - 1)}>Back</button> : <span />}
+        {step === 1 ? <button type="button" className="lf-va-primary" disabled={!type} onClick={() => setStep(2)}>Continue</button> : null}
+        {step === 2 ? <button type="button" className="lf-va-primary" disabled={!document || !registered || !(usableWhen || healthWelfare)} onClick={() => setStep(3)}>Continue</button> : null}
+        {step === 3 ? <button type="button" className="lf-va-primary" disabled={areas.length === 0} onClick={() => setStep(4)}>Continue</button> : null}
+        {step === 4 ? <button type="button" className="lf-va-primary" onClick={() => setStep(5)}>Continue</button> : null}
+        {step === 5 ? <button type="button" className="lf-va-primary" disabled={saving} onClick={() => void save()}>{saving ? "Recording…" : "Record authority"}</button> : null}
       </div>
     </Dialog>
   );

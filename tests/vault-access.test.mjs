@@ -32,3 +32,16 @@ test("the Vault access screen says Access now: none and saves through the one-st
   assert.doesNotMatch(service, /from\("account_access_grants"\)\.(insert|update|upsert|delete)/);
   assert.match(read("components/people-access/PeopleAccessWorkspace.tsx"), /view=vault-access/);
 });
+
+test("recording a Power of Attorney gives no access and can only narrow", () => {
+  const ui = read("components/people-access/VaultAccessWorkspace.tsx");
+  const service = read("lib/vaultAccess/vaultAccess.ts");
+  const dialog = ui.slice(ui.indexOf("function AttorneyDialog"));
+  assert.match(dialog, /Access now: none\./);
+  assert.match(service, /scope_areas: input\.areas\.filter\(\(area\) => allowed\.includes\(area\)\)/);
+  assert.match(service, /input\.authorityType === "lpa_health_welfare" \? "lacks_capacity_only"/);
+  const record = service.slice(service.indexOf("export async function recordLegalAuthority"), service.indexOf("export async function withdrawLegalAuthority"));
+  assert.doesNotMatch(record, /status:/);
+  assert.doesNotMatch(service, /from\("account_access_grants"\)\.(insert|update|upsert|delete)/);
+  for (const areas of service.match(/AUTHORITY_AREAS[\s\S]*?\n};/g) ?? []) assert.doesNotMatch(areas, /"legal"/);
+});
