@@ -4,6 +4,15 @@ import fs from "node:fs";
 
 const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
+// The browser service may change only a grant's end date (owner sharing). It never creates,
+// widens or deletes a grant; stopping goes through lf_stop_vault_access.
+function assertOnlyEndDateGrantWrites(service) {
+  const writes = [...service.matchAll(/from\("account_access_grants"\)\.(insert|update|upsert|delete)\((\{[^}]*\})/g)];
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0][1], "update");
+  assert.match(writes[0][2], /^\{ ends_at: endsAt, updated_at: new Date\(\)\.toISOString\(\) \}$/);
+}
+
 test("the Vault access migration never creates or changes access", () => {
   const sql = read("supabase/migrations/20261030200000_vault_access_foundation.sql");
   assert.doesNotMatch(sql, /INSERT INTO public\.account_access_grants/i);
@@ -29,7 +38,7 @@ test("the Vault access screen says Access now: none and saves through the one-st
   assert.match(ui, /Access now: none\./);
   assert.match(ui, /grant of probate is confirmed/);
   assert.match(service, /rpc\("lf_save_vault_nomination"/);
-  assert.doesNotMatch(service, /from\("account_access_grants"\)\.(insert|update|upsert|delete)/);
+  assertOnlyEndDateGrantWrites(service);
   assert.match(read("components/people-access/PeopleAccessWorkspace.tsx"), /view=vault-access/);
 });
 
@@ -42,14 +51,15 @@ test("recording a Power of Attorney gives no access and can only narrow", () => 
   assert.match(service, /input\.authorityType === "lpa_health_welfare" \? "lacks_capacity_only"/);
   const record = service.slice(service.indexOf("export async function recordLegalAuthority"), service.indexOf("export async function withdrawLegalAuthority"));
   assert.doesNotMatch(record, /status:/);
-  assert.doesNotMatch(service, /from\("account_access_grants"\)\.(insert|update|upsert|delete)/);
+  assertOnlyEndDateGrantWrites(service);
   for (const areas of service.match(/AUTHORITY_AREAS[\s\S]*?\n};/g) ?? []) assert.doesNotMatch(areas, /"legal"/);
 });
 
 test("the nominee sees only the owner's name, kind and state", () => {
   const page = read("app/(app)/vault-nominations/page.tsx");
   const service = read("lib/vaultAccess/vaultAccess.ts");
-  const loader = service.slice(service.indexOf("export async function loadMyNominations"));
+  const start = service.indexOf("export async function loadMyNominations");
+  const loader = service.slice(start, service.indexOf("\n}\n", start));
   assert.match(loader, /rpc\("my_vault_nomination_status"\)/);
   assert.doesNotMatch(loader, /from\(/);
   assert.doesNotMatch(page, /from\(|vault_nomination_records|scope|includeCount|exceptionCount/);
@@ -78,4 +88,25 @@ test("only the review team can activate an authority, and activation stays insid
   const service = read("lib/admin/legalAuthorities.ts");
   assert.match(service, /rpc\("lf_activate_legal_authority"/);
   assert.doesNotMatch(service, /from\("account_access_grants"\)/);
+});
+
+test("sharing now can end on a date, stop at once, and is written to Record history", () => {
+  const sql = read("supabase/migrations/20261031150000_vault_access_history_and_end_dates.sql");
+  // The identity gate only gains narrowing conditions.
+  const gate = sql.slice(sql.indexOf("CREATE OR REPLACE FUNCTION public.lf_linked_grant_satisfies_identity"), sql.indexOf("$$;"));
+  assert.match(gate, /activation_status = ANY\(ARRAY\['verified','active'\]\)/);
+  assert.match(gate, /lf_identity_assurance_level\(p_grant\.linked_user_id\) >= COALESCE\(p_grant\.required_identity_level, 2\)/);
+  assert.match(gate, /lf_vault_lifecycle_state\(p_grant\.owner_user_id\) = 'OWNER_ACTIVE'/);
+  assert.match(gate, /p_grant\.paused_at IS NULL/);
+  assert.match(gate, /p_grant\.ends_at IS NULL OR p_grant\.ends_at > timezone\('utc', now\(\)\)/);
+  // Stop is invoker (RLS applies) and owner-made sharing only.
+  assert.match(sql, /lf_stop_vault_access[\s\S]*SECURITY INVOKER[\s\S]*source = 'owner_grant'/);
+  // History is owner-only and carries no titles.
+  const history = sql.slice(sql.indexOf("CREATE FUNCTION public.my_vault_access_history"));
+  assert.match(history, /c\.owner_user_id = me\.uid/);
+  assert.doesNotMatch(history, /title|file_name|display_title/);
+  const ui = read("components/people-access/VaultAccessWorkspace.tsx");
+  assert.match(ui, /This happens straight away/);
+  assert.match(ui, /Note for your Record history/);
+  assert.match(ui, /Record history/);
 });
