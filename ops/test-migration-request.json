@@ -1,8 +1,8 @@
 {
-  "approvedBy": "Ivan (owner), 31 Oct 2026: build the signed-off designs on TEST (Record history, AGENTS rule 28, 6b/6n/W3)",
+  "approvedBy": "Ivan (owner), 31 Oct 2026: fresh ID capture when a death certificate or Power of Attorney is submitted; only a person releases after reviewing evidence and can ask for more",
   "mode": "apply",
-  "attempt": 13,
+  "attempt": 14,
   "files": [
-    { "file": "20261031230000_record_history.sql", "sha256": "d131e7f1504a255c22bd8ccf6918798866c170fc31101813565fb41bead224df" }
+    { "file": "20261031240000_death_report_evidence_requests.sql", "sha256": "ddbbe76a4f8279a64dc0a4f72a5fbcf549a7057d424f084c373f57693231d8ba" }
   ]
 }

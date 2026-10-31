@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdminAccess, requireAdminCapability } from "@/lib/admin/access";
 import { recordAdminAuditEvent } from "@/lib/admin/audit";
 import { applyDeathReportAction, normalizeDeathReportAction } from "@/lib/estate-lifecycle/service";
+import { closeCaseChecks } from "@/lib/identity-verification/service";
 
 export async function POST(request: Request, { params }: { params: Promise<{ reportId: string }> }) {
   const admin = await requireAdminAccess(request);
@@ -24,6 +25,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ rep
     actorType: "admin",
     reason,
   });
+  // A rejected or closed report no longer needs the reporter's fresh ID photos.
+  if (action === "reject" || action === "close") await closeCaseChecks(admin.adminClient, "death_report", [reportId], false).catch(() => null);
   await recordAdminAuditEvent(admin.adminClient, admin.access, {
     category: "admin_review",
     action: `Estate death report ${action.replace(/_/g, " ")}`,

@@ -29,6 +29,8 @@ export async function POST(request: Request) {
       accessGrantId?: string | null;
       simulatorScenario?: string | null;
       consentAcknowledged?: boolean;
+      caseType?: string | null;
+      caseId?: string | null;
     };
     const purpose = String(body.purpose ?? "linked_access");
     if (!PURPOSES.has(purpose)) {
@@ -50,6 +52,8 @@ export async function POST(request: Request) {
       accessGrantId: body.accessGrantId ?? null,
       simulatorScenario,
       consentAcknowledged: body.consentAcknowledged === true,
+      caseType: body.caseType === "death_report" || body.caseType === "legal_authority" ? body.caseType : null,
+      caseId: body.caseId ? String(body.caseId) : null,
     });
     return NextResponse.json({
       ok: true,

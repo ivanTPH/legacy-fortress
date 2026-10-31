@@ -95,6 +95,9 @@ export async function startIdentityVerification(
     accessGrantId?: string | null;
     simulatorScenario?: InternalSimulatorScenario | null;
     consentAcknowledged?: boolean;
+    /** Fresh check for a death report or Power of Attorney (owner decision 31 Oct 2026). */
+    caseType?: "death_report" | "legal_authority" | null;
+    caseId?: string | null;
   },
 ) {
   // Synthetic scenarios (staging tests) use the simulator; real people use the reviewer check.
@@ -103,6 +106,7 @@ export async function startIdentityVerification(
   const provider = input.simulatorScenario ? getIdentityVerificationProvider() : new InhouseReviewIdentityProvider();
   if (input.consentAcknowledged !== true) throw new Error("identity_consent_required");
   await validateVerificationContext(client, input);
+  if (input.purpose === "admin_review") await validateCaseContext(client, input.userId, input.caseType ?? null, input.caseId ?? null);
   const started = await provider.startVerification(input);
   const now = new Date().toISOString();
   const insert = await client
@@ -121,6 +125,7 @@ export async function startIdentityVerification(
         provider_experimental: provider.experimental,
         simulator_scenario: input.simulatorScenario ?? null,
         consent_accepted_at: now,
+        ...(input.purpose === "admin_review" ? { case_type: input.caseType, case_id: input.caseId } : {}),
         product_notice: provider.providerKey === INHOUSE_REVIEW_PROVIDER_KEY ? "Reviewer check: document photo and live selfie, compared by a person." : "Internal experimental provider for controlled staging/UAT only.",
       },
       created_at: now,
@@ -159,6 +164,48 @@ async function validateVerificationContext(client: AnySupabaseClient, input: { u
     const invitation = await client.from("contact_invitations").select("id,accepted_user_id,invitation_status").eq("id", input.invitationId).maybeSingle();
     if (invitation.error || !invitation.data || String(invitation.data.accepted_user_id ?? "") !== input.userId) throw new Error("linked_invitation_context_invalid");
     if (["rejected", "revoked", "expired"].includes(String(invitation.data.invitation_status))) throw new Error("linked_invitation_context_terminal");
+  }
+}
+
+/** A fresh check belongs to the person's own death report, or to an authority naming them as attorney. */
+async function validateCaseContext(client: AnySupabaseClient, userId: string, caseType: string | null, caseId: string | null) {
+  if (!caseId || !/^[0-9a-f-]{36}$/i.test(caseId)) throw new Error("identity_case_required");
+  if (caseType === "death_report") {
+    const report = await client.from("death_reports").select("id,claimant_user_id,status").eq("id", caseId).maybeSingle();
+    if (report.error || !report.data || report.data.claimant_user_id !== userId) throw new Error("identity_case_invalid");
+    if (["rejected", "cancelled", "closed"].includes(String(report.data.status))) throw new Error("identity_case_closed");
+    return;
+  }
+  if (caseType === "legal_authority") {
+    const authority = await client.from("legal_authorities").select("id,person_id,owner_user_id,status").eq("id", caseId).maybeSingle();
+    if (authority.error || !authority.data || ["withdrawn", "ended", "rejected"].includes(String(authority.data.status))) throw new Error("identity_case_invalid");
+    const contact = await client.from("contacts").select("linked_user_id").eq("id", authority.data.person_id).eq("owner_user_id", authority.data.owner_user_id).maybeSingle();
+    if (contact.error || contact.data?.linked_user_id !== userId) throw new Error("identity_case_invalid");
+    return;
+  }
+  throw new Error("identity_case_required");
+}
+
+/** The latest fresh check attached to a case, for the case reviewer. */
+export async function findCaseCheck(client: AnySupabaseClient, caseType: "death_report" | "legal_authority", caseId: string) {
+  const rows = await client.from("identity_verification_requests").select("id,user_id,status,metadata,created_at")
+    .eq("verification_purpose", "admin_review").eq("provider_key", INHOUSE_REVIEW_PROVIDER_KEY)
+    .order("created_at", { ascending: false }).limit(50);
+  if (rows.error) return null;
+  const match = (rows.data ?? []).find((row) => (row.metadata as Record<string, unknown> | null)?.case_type === caseType && (row.metadata as Record<string, unknown> | null)?.case_id === caseId);
+  return match ? { id: String(match.id), status: String(match.status), createdAt: String(match.created_at) } : null;
+}
+
+/** When the case is decided, its fresh-check photos are deleted. */
+export async function closeCaseChecks(client: AnySupabaseClient, caseType: "death_report" | "legal_authority", caseIds: string[], approved: boolean) {
+  if (!caseIds.length) return;
+  const rows = await client.from("identity_verification_requests").select("id,user_id,status,metadata")
+    .eq("verification_purpose", "admin_review").eq("provider_key", INHOUSE_REVIEW_PROVIDER_KEY).eq("status", "review_required").limit(200);
+  for (const row of rows.data ?? []) {
+    const meta = (row.metadata ?? {}) as Record<string, unknown>;
+    if (meta.case_type !== caseType || !caseIds.includes(String(meta.case_id))) continue;
+    await client.from("identity_verification_requests").update({ status: approved ? "verified" : "failed", manual_review_required: false, last_reason_code: approved ? "case_approved" : "case_not_approved", updated_at: new Date().toISOString() }).eq("id", row.id);
+    await cleanupExpiredIdentityEvidence(client, String(row.user_id), String(row.id)).catch(() => null);
   }
 }
 
@@ -831,6 +878,8 @@ export async function recordReviewerDecision(
   if (request.provider_key !== INHOUSE_REVIEW_PROVIDER_KEY) throw new Error("identity_manual_decision_not_supported");
   if (request.status !== "review_required") throw new Error("identity_review_not_pending");
   if (request.user_id === input.reviewerUserId) throw new Error("identity_self_review_not_permitted");
+  // A fresh check for a death report or Power of Attorney is decided with that case, not on its own.
+  if (request.verification_purpose === "admin_review") throw new Error("identity_case_check_decided_with_case");
   const now = new Date();
   const decision: Awaited<ReturnType<IdentityVerificationProvider["completeVerification"]>> = {
     providerKey: INHOUSE_REVIEW_PROVIDER_KEY,

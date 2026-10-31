@@ -3,6 +3,7 @@ import { requireAdminAccess, requireAdminCapability } from "@/lib/admin/access";
 import { recordAdminAuditEvent } from "@/lib/admin/audit";
 import { EstateReleaseError, loadReleaseReadiness, releaseNominations } from "@/lib/admin/estateRelease";
 import { getProbateCase } from "@/lib/admin/probateCases";
+import { closeCaseChecks } from "@/lib/identity-verification/service";
 
 export async function GET(request: Request, { params }: { params: Promise<{ caseId: string }> }) {
   const admin = await requireAdminAccess(request);
@@ -13,7 +14,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ case
   const probateCase = await getProbateCase(admin.adminClient, caseId);
   const readiness = await loadReleaseReadiness(admin.adminClient, probateCase.ownerUserId);
   const hasGrantOfProbate = probateCase.evidence.some((item) => item.evidenceType === "probate_grant");
-  return NextResponse.json({ ok: true, readiness, hasGrantOfProbate });
+  const reports = await admin.adminClient.from("death_reports").select("id,status,claimant_role,submitted_at").eq("owner_user_id", probateCase.ownerUserId).order("submitted_at", { ascending: false }).limit(10);
+  const deathReports = (reports.data ?? []).map((row) => ({ id: row.id, status: row.status, role: row.claimant_role, submittedAt: row.submitted_at }));
+  return NextResponse.json({ ok: true, readiness, hasGrantOfProbate, deathReports });
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ caseId: string }> }) {
@@ -27,6 +30,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ cas
   const probateCase = await getProbateCase(admin.adminClient, caseId);
   try {
     const result = await releaseNominations(admin.adminClient, { ownerUserId: probateCase.ownerUserId, reviewerUserId: admin.access.user.id, probateCaseId: caseId });
+    // The reporters' fresh ID photos were for this decision; delete them now it's made.
+    const reports = await admin.adminClient.from("death_reports").select("id").eq("owner_user_id", probateCase.ownerUserId);
+    await closeCaseChecks(admin.adminClient, "death_report", (reports.data ?? []).map((row) => String(row.id)), true).catch(() => null);
     await recordAdminAuditEvent(admin.adminClient, admin.access, {
       category: "admin_approval",
       action: "Nominations released",

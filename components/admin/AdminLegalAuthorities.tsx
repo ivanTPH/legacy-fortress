@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AdminDataTable, { AdminEmptyState, AdminFilterChips, AdminNote, AdminStatStrip, AdminStatusBadge } from "@/components/admin/AdminPrimitives";
 import Icon from "@/components/ui/Icon";
+import IdentityReviewCompare from "@/components/admin/IdentityReviewCompare";
 
 /**
  * Platform Admin › Powers of Attorney. Three separate checks before an authority takes effect:
@@ -30,6 +31,7 @@ type Authority = {
   updatedAt: string;
   document: { type: string; id: string; fileName: string } | null;
   reviews: Array<{ action: string; messageToOwner: string | null; createdAt: string }>;
+  freshCheck?: { id: string; status: string; createdAt: string } | null;
 };
 
 type Action = "confirm" | "needs_attention" | "reject" | "activate" | "end";
@@ -178,7 +180,7 @@ export default function AdminLegalAuthorities({ authFetch, resourceId, capabilit
     const actions = allowedActions(item);
     const decisionAllowed = (action: Action) => action === "needs_attention" ? canReview : canDecide;
     const checks = [
-      { title: "The attorney proves who they are", ok: item.attorneyIdVerified, detail: item.attorneyIdVerified ? "ID verified" : item.attorneyJoined ? "Joined · ID not verified yet" : "Not joined yet" },
+      { title: "The attorney proves who they are", ok: item.attorneyIdVerified && Boolean(item.freshCheck), detail: !item.attorneyJoined ? "Not joined yet" : !item.attorneyIdVerified ? "Joined · ID not verified yet" : item.freshCheck ? "ID verified · fresh check ready to look at below" : item.activatedAt ? "ID verified" : "ID verified · waiting for their fresh check for this authority" },
       { title: "We check the authority", ok: item.status === "confirmed", detail: item.status === "confirmed" ? "Confirmed" : stage.label },
       { title: "It can be used now", ok: Boolean(item.activatedAt), detail: item.activatedAt ? `Active since ${formatDate(item.activatedAt)}` : item.usableWhen === "lacks_capacity_only" ? "Only if the owner lacks mental capacity: confirm capacity evidence before activating" : "With the owner’s agreement: confirm with the owner before activating" },
     ];
@@ -201,6 +203,7 @@ export default function AdminLegalAuthorities({ authFetch, resourceId, capabilit
               </li>)}
             </ol>
           </section>
+          {item.freshCheck && item.freshCheck.status === "review_required" ? <IdentityReviewCompare requestId={item.freshCheck.id} canDecide={canDecide} title="Attorney’s fresh ID check" /> : null}
           <section className="lf-admin-table-card" aria-labelledby="poa-details-title">
             <h2 id="poa-details-title">Authority</h2>
             <dl className="lf-admin-keyvalues">
@@ -242,9 +245,9 @@ export default function AdminLegalAuthorities({ authFetch, resourceId, capabilit
                 {actions.includes("reject") ? <button type="button" className="lf-admin-danger-button" disabled={Boolean(busy) || !canDecide} onClick={() => void run(item, "reject")}>{busy === "reject" ? ACTION_LABEL.reject.busy : ACTION_LABEL.reject.idle}</button>
                   : actions.includes("end") ? <button type="button" className="lf-admin-danger-button" disabled={Boolean(busy) || !canDecide} onClick={() => void run(item, "end")}>{busy === "end" ? ACTION_LABEL.end.busy : ACTION_LABEL.end.idle}</button> : <span />}
                 {actions.includes("confirm") ? <button type="button" className="lf-admin-primary-button" disabled={Boolean(busy) || !canDecide} onClick={() => void run(item, "confirm")}>{busy === "confirm" ? ACTION_LABEL.confirm.busy : ACTION_LABEL.confirm.idle}</button> : null}
-                {actions.includes("activate") ? <button type="button" className="lf-admin-primary-button" disabled={Boolean(busy) || !canDecide || !item.attorneyIdVerified} title={item.attorneyIdVerified ? undefined : "The attorney’s ID must be verified first"} onClick={() => void run(item, "activate")}>{busy === "activate" ? ACTION_LABEL.activate.busy : ACTION_LABEL.activate.idle}</button> : null}
+                {actions.includes("activate") ? <button type="button" className="lf-admin-primary-button" disabled={Boolean(busy) || !canDecide || !item.attorneyIdVerified || !item.freshCheck} title={item.attorneyIdVerified && item.freshCheck ? undefined : "The attorney’s ID and a fresh check are needed first"} onClick={() => void run(item, "activate")}>{busy === "activate" ? ACTION_LABEL.activate.busy : ACTION_LABEL.activate.idle}</button> : null}
               </div>
-              {actions.includes("activate") && !item.attorneyIdVerified ? <p className="lf-admin-muted">Activate is available once the attorney’s ID is verified.</p> : null}
+              {actions.includes("activate") && (!item.attorneyIdVerified || !item.freshCheck) ? <p className="lf-admin-muted">Activate is available once the attorney’s ID is verified and you’ve looked at their fresh ID check. They’re asked for it when you confirm the authority.</p> : null}
             </>}
           </section>
           <AdminNote icon="lock">Confirming checks the document only. Activate is the step that lets the attorney see records, and the owner can withdraw it at any time.</AdminNote>

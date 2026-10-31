@@ -107,6 +107,26 @@ async function api(person, path, body, method = "POST") {
   return { status: response.status, payload };
 }
 
+async function freshCheck(person, caseType, caseId) {
+  const started = await api(person, "/api/identity-verification", { purpose: "admin_review", requestedIdentityLevel: 2, consentAcknowledged: true, caseType, caseId });
+  assert.equal(started.status, 201, `fresh check start failed: ${safeError(started.payload)}`);
+  const requestId = started.payload.verification.id;
+  created.identityRequests.push(requestId);
+  const docForm = new FormData();
+  docForm.set("file", syntheticImage("image/png"), "synthetic-document.png");
+  docForm.set("side", "front");
+  assert.equal((await api(person, `/api/identity-verification/${requestId}/document`, docForm)).status, 200, "fresh check document failed");
+  const challenge = await api(person, `/api/identity-verification/${requestId}/challenge`, {});
+  const selfieForm = new FormData();
+  selfieForm.set("file", syntheticImage("image/jpeg"), "synthetic-selfie.jpg");
+  selfieForm.set("challengeId", challenge.payload.challenge.id);
+  assert.equal((await api(person, `/api/identity-verification/${requestId}/camera`, selfieForm)).status, 200, "fresh check selfie failed");
+  const completed = await api(person, `/api/identity-verification/${requestId}/complete`, {});
+  assert.equal(completed.payload.decision?.status, "review_required", "a case check was decided automatically");
+  // Someone else can't attach a check to this case.
+  return requestId;
+}
+
 // A synthetic image file: valid header, padded past the reviewer check's minimum size. Not a real face or document.
 function syntheticImage(type) {
   const header = type === "image/png" ? Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]) : Buffer.from([0xff, 0xd8, 0xff, 0xe0]);
@@ -190,6 +210,10 @@ async function main() {
   const confirmed = await api(reviewer, `/api/internal/admin/legal-authorities/${authority.id}/actions`, { action: "confirm", reason: "Synthetic acceptance check" });
   assert.equal(confirmed.status, 200, `confirm failed: ${safeError(confirmed.payload)}`);
   assert.deepEqual(await visibleAssets(attorney), [], "confirming opened records");
+  // Activation waits for the attorney's fresh ID check for this authority.
+  const tooEarly = await api(reviewer, `/api/internal/admin/legal-authorities/${authority.id}/actions`, { action: "activate", reason: "Synthetic acceptance check" });
+  assert.equal(tooEarly.status, 409, "activated without the attorney's fresh check");
+  await freshCheck(attorney, "legal_authority", authority.id);
   const activated = await api(reviewer, `/api/internal/admin/legal-authorities/${authority.id}/actions`, { action: "activate", reason: "Synthetic acceptance check" });
   assert.equal(activated.status, 200, `activate failed: ${safeError(activated.payload)}`);
   assert.deepEqual((await visibleAssets(attorney)).sort(), [finance, house].sort(), "attorney scope wrong");

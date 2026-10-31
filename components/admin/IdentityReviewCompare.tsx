@@ -37,7 +37,7 @@ const CHECKS = [
   "The name on the document matches the account",
 ];
 
-export default function IdentityReviewCompare({ requestId, canDecide }: { requestId: string; canDecide: boolean }) {
+export default function IdentityReviewCompare({ requestId, canDecide, title = "Compare the photos" }: { requestId: string; canDecide: boolean; title?: string }) {
   const [evidence, setEvidence] = useState<Evidence | null>(null);
   const [loading, setLoading] = useState(false);
   const [checked, setChecked] = useState<boolean[]>(CHECKS.map(() => false));
@@ -77,7 +77,7 @@ export default function IdentityReviewCompare({ requestId, canDecide }: { reques
 
   const allChecked = checked.every(Boolean);
   return <section className="lf-admin-table-card lf-admin-idv-compare" aria-labelledby="idv-compare-title">
-    <h2 id="idv-compare-title">Compare the photos</h2>
+    <h2 id="idv-compare-title">{title}</h2>
     {!evidence ? <>
       <p className="lf-admin-muted">The photos open through a link that expires in a minute. Viewing is recorded.</p>
       {canDecide ? <button type="button" className="lf-admin-row-button" disabled={loading} onClick={() => void load()}><Icon name="visibility" size={18} />{loading ? "Opening…" : "Show photos"}</button> : <p className="lf-admin-muted">Your role can’t view identity photos.</p>}
@@ -96,7 +96,7 @@ export default function IdentityReviewCompare({ requestId, canDecide }: { reques
         <figure>{evidence.selfieUrl ? <img src={evidence.selfieUrl} alt="Live selfie" referrerPolicy="no-referrer" /> : <span>No selfie</span>}<figcaption>Live selfie</figcaption></figure>
         {(evidence.frames ?? []).map((frame) => <figure key={frame.direction}>{frame.url ? <img src={frame.url} alt={`Turned ${frame.direction}`} referrerPolicy="no-referrer" /> : <span>Missing</span>}<figcaption>Turned {frame.direction}</figcaption></figure>)}
       </div>
-      <fieldset className="lf-admin-idv-checks">
+      {evidence.caseBound ? null : <><fieldset className="lf-admin-idv-checks">
         <legend>Before you approve</legend>
         {CHECKS.map((label, index) => <label key={label}><input type="checkbox" checked={checked[index]} onChange={(event) => setChecked((current) => current.map((value, i) => i === index ? event.target.checked : value))} />{label}</label>)}
       </fieldset>
@@ -106,7 +106,7 @@ export default function IdentityReviewCompare({ requestId, canDecide }: { reques
       <div className="lf-admin-decision-footer">
         <button type="button" className="lf-admin-danger-button" disabled={Boolean(busy)} onClick={() => void decide("reject")}>{busy === "reject" ? "Rejecting…" : "Reject"}</button>
         <button type="button" className="lf-admin-primary-button" disabled={Boolean(busy) || !allChecked} onClick={() => void decide("approve")}>{busy === "approve" ? "Approving…" : "Approve ID"}</button>
-      </div>
+      </div></>}
     </>}
     {message ? <p className="lf-admin-muted" role="status">{message}</p> : null}
   </section>;
