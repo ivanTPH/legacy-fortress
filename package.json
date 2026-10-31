@@ -37,6 +37,7 @@
     "uat:validate": "node scripts/validate-uat-environment.mjs",
     "staging:acceptance:probate-quorum": "node scripts/staging/run-probate-quorum-acceptance.mjs",
     "staging:acceptance:idv": "node scripts/staging/run-invitation-idv-acceptance.mjs",
+    "staging:acceptance:vault-access": "node scripts/staging/run-vault-access-acceptance.mjs",
     "staging:ops": "node scripts/staging/operations.mjs",
     "staging:release": "node scripts/staging/dispatch-release.mjs",
     "staging:reconcile:phase7-history": "bash scripts/staging/reconcile-phase7-migration-history.sh"
