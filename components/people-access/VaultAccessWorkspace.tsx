@@ -245,7 +245,7 @@ function PersonAccess({ row, snapshot, ownerId, onCancel, onWithdraw, onChanged 
         <section className="lf-va-fact" aria-label="Legal authority">
           <header><strong>Legal authority</strong><Chip tone={authority.activatedAt ? "ok" : "neutral"} icon={authority.activatedAt ? "check_circle" : "pause_circle"} label={authority.activatedAt ? "In effect" : "Not in effect"} /></header>
           <p>{AUTHORITY_LABEL[authority.authorityType] ?? "Legal authority"} · {authority.usableWhen === "lacks_capacity_only" ? "only if you lack mental capacity" : "with your agreement"}</p>
-          <div className="lf-va-fact-row"><span>{name}’s identity</span><Chip tone={/verified/i.test(person?.identity ?? "") ? "ok" : "wait"} icon={/verified/i.test(person?.identity ?? "") ? "verified_user" : "hourglass_top"} label={/verified/i.test(person?.identity ?? "") ? "ID verified" : "Checking ID"} /></div>
+          <div className="lf-va-fact-row"><span>{name}’s identity</span><Chip {...identityChip(person)} /></div>
           <div className="lf-va-fact-row"><span>The authority</span><Chip tone={authority.status === "confirmed" ? "ok" : "wait"} icon={authority.status === "confirmed" ? "check_circle" : "hourglass_top"} label={authority.status === "confirmed" ? "Confirmed" : authority.status === "needs_attention" ? "Needs attention" : "Being checked"} /></div>
           <div className="lf-va-fact-row"><span>Could see</span><span>{authority.scopeAreas.map((area) => AREA_LABEL[area] ?? area).join(", ") || "No areas"}</span></div>
           {authority.reviewMessage ? <p className="lf-va-review-message"><Icon name="support_agent" size={18} /><span><strong>From our review team</strong>{authority.reviewMessage}</span></p> : null}
@@ -261,7 +261,7 @@ function PersonAccess({ row, snapshot, ownerId, onCancel, onWithdraw, onChanged 
       ) : null}
       <section className="lf-va-fact">
         <div className="lf-va-fact-row"><span>Invitation</span><Chip tone={person?.joined ? "ok" : "neutral"} icon={person?.joined ? "check_circle" : "schedule_send"} label={person?.joined ? "Joined" : capitalise(person?.invitation ?? "Not invited")} /></div>
-        <div className="lf-va-fact-row"><span>Identity</span><Chip tone={/verified/i.test(person?.identity ?? "") ? "ok" : "neutral"} icon={/verified/i.test(person?.identity ?? "") ? "verified_user" : "badge"} label={/verified/i.test(person?.identity ?? "") ? "ID verified" : "ID not checked"} /></div>
+        <div className="lf-va-fact-row"><span>Identity</span><Chip {...identityChip(person)} /></div>
       </section>
       {person ? <AccessHistory personId={person.id} revision={snapshot} /> : null}
       <p className="lf-va-note"><Icon name="info" size={18} />Nominations, invitations and ID checks never give access. Access opens only when you share records, or after an approved release.</p>
@@ -539,9 +539,14 @@ function Avatar({ name }: { name: string }) {
   return <span className="lf-va-avatar" aria-hidden="true">{initials}</span>;
 }
 
+/** "unverified" must never read as verified, and someone who hasn't joined can't have checked their ID. */
+function idVerified(person: VaultAccessPerson | undefined) {
+  return Boolean(person?.joined) && /^(verified|identity_verified|id_verified|approved)$/i.test(String(person?.identity ?? "").trim());
+}
+
 function identityChip(person: VaultAccessPerson | undefined) {
-  const verified = /verified/i.test(person?.identity ?? "");
-  return verified ? { tone: "ok" as const, icon: "verified_user", label: "ID verified" } : { tone: "neutral" as const, icon: "badge", label: "ID not checked" };
+  if (!person?.joined) return { tone: "neutral" as const, icon: "person_add", label: "Not joined yet" };
+  return idVerified(person) ? { tone: "ok" as const, icon: "verified_user", label: "ID verified" } : { tone: "neutral" as const, icon: "badge", label: "ID not checked" };
 }
 
 function capitalise(value: string) {
