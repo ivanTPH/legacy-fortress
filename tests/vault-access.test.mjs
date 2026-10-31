@@ -158,3 +158,12 @@ test("notifications are content-free and written only by the database", () => {
   const copy = read("lib/notifications/personNotifications.ts");
   assert.doesNotMatch(copy, /record_count|\$\{.*count/);
 });
+
+test("record history is append-only, owner-only and never stores values", () => {
+  const sql = read("supabase/migrations/20261031230000_record_history.sql");
+  assert.match(sql, /REVOKE INSERT, UPDATE, DELETE ON public\.record_history FROM authenticated/);
+  assert.match(sql, /USING \(owner_user_id = auth\.uid\(\)\)/);
+  const table = sql.slice(sql.indexOf("CREATE TABLE public.record_history"), sql.indexOf("CREATE INDEX record_history_record_idx"));
+  assert.doesNotMatch(table, /value|old_|new_|snapshot|content/);
+  assert.match(read("components/records/RecordHistoryPanel.tsx"), /Values and document contents are never shown here/);
+});
