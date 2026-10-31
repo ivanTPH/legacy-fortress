@@ -14,6 +14,9 @@ export function buildProtectedSignInRedirect(pathname: string | null | undefined
   const safePath = toSafeInternalPath(pathname, "/dashboard");
   const safeSearch = search.startsWith("?") ? search : search ? `?${search}` : "";
   const nextPath = `${safePath}${safeSearch}`;
+  // Platform Admin and the Partner portal have their own sign-in (ADMIN_PARTNER.md › Sign-in).
+  if (safePath === "/admin" || safePath.startsWith("/admin/")) return `/admin/sign-in?next=${encodeURIComponent(nextPath)}`;
+  if (safePath === "/enterprise" || safePath.startsWith("/enterprise/")) return `/enterprise/sign-in?next=${encodeURIComponent(nextPath)}`;
   return `/sign-in?next=${encodeURIComponent(nextPath)}`;
 }
 

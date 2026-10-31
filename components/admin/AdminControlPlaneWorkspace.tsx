@@ -659,14 +659,14 @@ export default function AdminControlPlaneWorkspace({
     setMessage("");
     const user = await waitForActiveUser(supabase, { attempts: 4, delayMs: 120 });
     if (!user) {
-      router.replace(`/sign-in?next=${encodeURIComponent(currentHrefForSection(section, resourceId))}`);
+      router.replace(`/admin/sign-in?next=${encodeURIComponent(currentHrefForSection(section, resourceId))}`);
       return;
     }
 
     const sessionRes = await authFetch("/api/internal/admin/session");
     const sessionJson = (await sessionRes.json().catch(() => ({}))) as AdminSessionPayload;
     if (sessionRes.status === 401) {
-      router.replace(`/sign-in?next=${encodeURIComponent(currentHrefForSection(section, resourceId))}`);
+      router.replace(`/admin/sign-in?next=${encodeURIComponent(currentHrefForSection(section, resourceId))}`);
       return;
     }
     if (!sessionRes.ok || !sessionJson.ok || !sessionJson.admin) {
@@ -731,7 +731,7 @@ export default function AdminControlPlaneWorkspace({
     setEnterprisePortfolio(null);
     setLookupResults([]);
     setUserDetail(null);
-    router.replace("/sign-in");
+    router.replace("/admin/sign-in");
     router.refresh();
   }
 

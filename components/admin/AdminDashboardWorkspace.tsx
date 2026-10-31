@@ -59,7 +59,7 @@ export default function AdminDashboardWorkspace() {
     setMessage("");
     const user = await waitForActiveUser(supabase, { attempts: 4, delayMs: 120 });
     if (!user) {
-      router.replace(`/sign-in?next=${encodeURIComponent("/admin")}`);
+      router.replace(`/admin/sign-in?next=${encodeURIComponent("/admin")}`);
       return;
     }
 
@@ -72,7 +72,7 @@ export default function AdminDashboardWorkspace() {
     const summaryJson = (await summaryRes.json().catch(() => ({}))) as { ok?: boolean; summary?: AdminDashboardSummary; message?: string };
 
     if (sessionRes.status === 401 || summaryRes.status === 401) {
-      router.replace(`/sign-in?next=${encodeURIComponent("/admin")}`);
+      router.replace(`/admin/sign-in?next=${encodeURIComponent("/admin")}`);
       return;
     }
     if (sessionRes.status === 403 || summaryRes.status === 403 || !sessionJson.ok || !sessionJson.admin) {
