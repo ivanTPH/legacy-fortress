@@ -58,3 +58,24 @@ test("the nominee sees only the owner's name, kind and state", () => {
   assert.match(switcher, /Locked until release/);
   assert.match(switcher, /Partner and Admin never appear here/);
 });
+
+test("only the review team can activate an authority, and activation stays inside its areas", () => {
+  const sql = read("supabase/migrations/20261031120000_legal_authority_activation.sql");
+  assert.match(sql, /REVOKE ALL ON FUNCTION public\.lf_activate_legal_authority\(uuid, uuid\) FROM PUBLIC, anon, authenticated/);
+  assert.match(sql, /GRANT EXECUTE ON FUNCTION public\.lf_activate_legal_authority\(uuid, uuid\) TO service_role/);
+  assert.match(sql, /IF auth\.uid\(\) IS NOT NULL THEN\s+RAISE EXCEPTION 'Authorities are activated by the review team'/);
+  assert.match(sql, /IF v_auth\.status <> 'confirmed'/);
+  assert.match(sql, /lf_identity_assurance_level\(v_linked\) < 2/);
+  assert.match(sql, /lf_vault_lifecycle_state\(v_auth\.owner_user_id\) <> 'OWNER_ACTIVE'/);
+  assert.match(sql, /COALESCE\(p_section, ''\) <> 'legal'/);
+  assert.match(sql, /current_user IN \('anon', 'authenticated'\)/);
+  // Existing access functions are not redefined.
+  assert.doesNotMatch(sql, /FUNCTION public\.(linked_grant_allows|lf_linked_grant_satisfies_identity|has_linked_account_access)/);
+  const route = read("app/api/internal/admin/legal-authorities/[authorityId]/actions/route.ts");
+  assert.match(route, /requireAdminAccess/);
+  assert.match(route, /verification:decide/);
+  assert.match(route, /Add decision notes/);
+  const service = read("lib/admin/legalAuthorities.ts");
+  assert.match(service, /rpc\("lf_activate_legal_authority"/);
+  assert.doesNotMatch(service, /from\("account_access_grants"\)/);
+});

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminDataTable, { AdminContextHelp, AdminEmptyState, AdminFilterChips, AdminMetricCard, AdminNote, AdminStatStrip, AdminStatusBadge, sentenceCaseStatus } from "@/components/admin/AdminPrimitives";
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell";
+import AdminLegalAuthorities from "@/components/admin/AdminLegalAuthorities";
 import InfoTip from "@/components/ui/InfoTip";
 import Icon from "@/components/ui/Icon";
 import { filterAdminNavigation, PLATFORM_ADMIN_NAVIGATION } from "@/components/admin/adminNavigation";
@@ -33,6 +34,8 @@ type AdminControlPlaneSection =
   | "verification-detail"
   | "probate"
   | "probate-detail"
+  | "authorities"
+  | "authority-detail"
   | "support"
   | "audit"
   | "system-health"
@@ -531,6 +534,16 @@ const PAGE_COPY: Record<AdminControlPlaneSection, { title: string; eyebrow: stri
     title: "Probate cases",
     eyebrow: "Probate & verification",
     description: "Review death reports and executor authority. Identity, authority, evidence and access are separate decisions, and each one is recorded.",
+  },
+  authorities: {
+    title: "Powers of Attorney",
+    eyebrow: "Probate & verification",
+    description: "Check authorities owners record. The attorney’s identity, the authority and whether it can be used now are separate checks. Only Activate opens records.",
+  },
+  "authority-detail": {
+    title: "Power of Attorney",
+    eyebrow: "Probate & verification",
+    description: "The three checks, the document and the decision for this authority.",
   },
   "probate-detail": {
     title: "Probate case",
@@ -1142,6 +1155,7 @@ export default function AdminControlPlaneWorkspace({
         {section === "support" || section === "invitations" ? renderSupport(section, support, supportDetail, supportDetailLoading, supportActionLoading, loadSupportInvitationDetail, runSupportInvitationAction, createSupportCase, runSupportCaseAction, addSupportCaseNote, capabilities, enterprisePortfolio, enterpriseInvitationActionLoading, runEnterpriseInvitationAction) : null}
         {section === "verification" || section === "verification-detail" ? renderVerification(verificationQueue, resourceId, capabilities, verificationActionLoading, verificationReviewNote, setVerificationReviewNote, runVerificationAction) : null}
         {section === "access" || section === "probate" || section === "probate-detail" ? renderProbate(probateCases, estateOperations, resourceId, capabilities, probateDecisionNotes, setProbateDecisionNotes, probateActionLoading, probateEvidenceLoading, runProbateCaseAction, openProbateEvidence, section === "access" ? "Access and estate cases" : "Probate queue") : null}
+        {section === "authorities" || section === "authority-detail" ? <AdminLegalAuthorities authFetch={authFetch} resourceId={section === "authority-detail" ? resourceId : null} capabilities={capabilities} /> : null}
         {section === "audit" ? renderAudit(auditEvents, auditFilter, setAuditFilter) : null}
         {section === "system-health" ? renderSystemHealth(health, metrics, support) : null}
         {section === "settings" ? renderSettings(capabilities) : null}
@@ -1184,6 +1198,7 @@ function currentHrefForSection(section: AdminControlPlaneSection, resourceId: st
   if (section === "user-detail") return `/admin/users/${resourceId ?? ""}`;
   if (section === "verification-detail") return `/admin/verification/${resourceId ?? ""}`;
   if (section === "probate-detail") return `/admin/probate/${resourceId ?? ""}`;
+  if (section === "authority-detail") return `/admin/authorities/${resourceId ?? ""}`;
   return `/admin/${section}`;
 }
 

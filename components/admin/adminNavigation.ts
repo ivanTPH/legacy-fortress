@@ -32,6 +32,7 @@ export const PLATFORM_ADMIN_NAVIGATION: AdminNavigationGroup[] = [
     items: [
       { key: "probate", label: "Probate cases", href: "/admin/probate", icon: "gavel", capability: "admin.probate.summary.read" },
       { key: "verification", label: "Identity verification", href: "/admin/verification", icon: "verified_user", capability: "verification:read" },
+      { key: "authorities", label: "Powers of Attorney", href: "/admin/authorities", icon: "badge", capability: "verification:read" },
     ],
   },
   {
