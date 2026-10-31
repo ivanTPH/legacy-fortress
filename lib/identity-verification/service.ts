@@ -761,7 +761,7 @@ export async function recordReviewerDecision(
     retentionSummary: { raw_document_retention: "deleted_after_decision", raw_camera_retention: "deleted_after_decision", face_template_retained: false },
   };
   await persistDecision(client, request, decision);
-  await recordIdentityEvent(client, request.id, request.user_id, input.approve ? "identity_review_approved" : "identity_review_rejected", "admin", { reviewer_assigned: true });
+  await recordIdentityEvent(client, request.id, request.user_id, input.approve ? "manual_review_approved" : "manual_review_rejected", "admin", { reviewer_assigned: true });
   await cleanupExpiredIdentityEvidence(client, request.user_id, request.id).catch(() => null);
   return decision;
 }

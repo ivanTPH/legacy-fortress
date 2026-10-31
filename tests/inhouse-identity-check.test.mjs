@@ -49,3 +49,15 @@ test("the email code is hashed, short-lived and limited", () => {
   assert.match(code, /presence_code_requires_verified_id/);
   assert.doesNotMatch(code, /presence_code: code|console\.log/);
 });
+
+test("every identity event the service writes is allowed by the database", () => {
+  const service = read("lib/identity-verification/service.ts");
+  const migrations = fs.readdirSync(new URL("../supabase/migrations/", import.meta.url)).filter((name) => name.endsWith(".sql")).sort();
+  const definitions = migrations.map((name) => read(`supabase/migrations/${name}`)).join("\n");
+  const lastCheck = definitions.lastIndexOf("CHECK (event_type IN (");
+  assert.ok(lastCheck > 0, "event type constraint not found");
+  const allowed = new Set([...definitions.slice(lastCheck, lastCheck + 4000).matchAll(/'([a-z_]+)'/g)].map((match) => match[1]));
+  const used = [...service.matchAll(/recordIdentityEvent\([^;]*?"([a-z_]+)"(?: : "([a-z_]+)")?, "(?:user|admin|system|provider)"/g)].flatMap((match) => [match[1], match[2]]).filter(Boolean);
+  assert.ok(used.length > 5);
+  for (const name of used) assert.ok(allowed.has(name), `identity event not allowed by the database: ${name}`);
+});
