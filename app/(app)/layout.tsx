@@ -46,6 +46,7 @@ import {
   selectOwnVault,
   setStoredLinkedGrantId,
   type ViewerAccessState,
+  linkedAccessStateFor,
 } from "../../lib/access-control/viewerAccess";
 import {
   filterNodesByVaultPreferences,
@@ -249,13 +250,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     ...resolvedViewerAccess.assignedAssetIds,
     ...resolvedViewerAccess.assignedRecordIds,
   ]).size;
-  const linkedAccessState = resolvedViewerAccess.vaultLifecycleState !== "OWNER_ACTIVE"
-    ? "estate_locked"
-    : resolvedViewerAccess.identityAssuranceLevel < resolvedViewerAccess.requiredIdentityLevel
-      ? "verification_required"
-      : linkedSharedRecordCount > 0
-        ? "records_shared"
-        : "no_records";
+  const linkedAccessState = linkedAccessStateFor(resolvedViewerAccess, linkedSharedRecordCount);
   const topLevelItems = useMemo(
     () => filterNodesByVaultPreferences(filterNavigationTreeForViewer(contextualTopLevelItems, resolvedViewerAccess), vaultPreferences),
     [contextualTopLevelItems, resolvedViewerAccess, vaultPreferences],

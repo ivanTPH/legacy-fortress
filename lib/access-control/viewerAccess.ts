@@ -37,6 +37,7 @@ export type AccountAccessGrantRow = {
   permissions_override: Record<string, unknown> | null;
   required_identity_level?: number | null;
   vault_lifecycle_state?: VaultLifecycleState | string | null;
+  source?: string | null;
   last_accessed_at: string | null;
   updated_at: string;
 };
@@ -58,6 +59,8 @@ export type ViewerAccessState = {
   requiredIdentityLevel: IdentityAssuranceLevel;
   vaultLifecycleState: VaultLifecycleState;
   permissionsOverride: ViewerPermissionsOverride;
+  /** Where the selected grant came from: owner_grant, legal_authority or estate_release. */
+  grantSource?: string | null;
   assignedAssetIds: string[];
   assignedRecordIds: string[];
   editableAssetIds: string[];
@@ -87,7 +90,7 @@ export type LinkedFortressSummary = {
   requiredIdentityLevel: IdentityAssuranceLevel;
   vaultLifecycleState: VaultLifecycleState;
   sharedRecordCount: number;
-  accessState: "no_records" | "records_shared" | "verification_required" | "estate_locked";
+  accessState: "no_records" | "records_shared" | "verification_required" | "estate_locked" | "released";
 };
 
 export function buildInvitationAcceptPath(invitationId: string, token: string) {
@@ -107,6 +110,7 @@ export function getRoleLabel(role: CollaboratorRole) {
 }
 
 export function getLinkedFortressAccessLabel(summary: Pick<LinkedFortressSummary, "accessState" | "sharedRecordCount">) {
+  if (summary.accessState === "released") return "Released · view only";
   if (summary.accessState === "estate_locked") return "Estate access locked";
   if (summary.accessState === "verification_required") return "Verification required";
   if (summary.accessState === "records_shared") return `${summary.sharedRecordCount} record${summary.sharedRecordCount === 1 ? "" : "s"} shared`;
@@ -188,7 +192,7 @@ export async function loadViewerAccessState(
   const allowedGrantStatuses = includePreVerificationGrants ? CONTACT_WALLET_GRANT_STATUSES : ACTIVE_PROTECTED_GRANT_STATUSES;
   const grantsRes = await client
     .from("account_access_grants")
-    .select("id,owner_user_id,linked_user_id,contact_id,invitation_id,assigned_role,relationship,activation_status,permissions_override,required_identity_level,vault_lifecycle_state,last_accessed_at,updated_at")
+    .select("id,owner_user_id,linked_user_id,contact_id,invitation_id,assigned_role,relationship,activation_status,permissions_override,required_identity_level,vault_lifecycle_state,last_accessed_at,updated_at,source")
     .eq("linked_user_id", sessionUserId)
     .in("activation_status", allowedGrantStatuses)
     .order("updated_at", { ascending: false });
@@ -221,6 +225,7 @@ export async function loadViewerAccessState(
       requiredIdentityLevel: LF_IDENTITY_LEVEL_1_AUTHENTICATED,
       vaultLifecycleState: "OWNER_ACTIVE",
       permissionsOverride: EMPTY_VIEWER_PERMISSIONS_OVERRIDE,
+      grantSource: null,
       assignedAssetIds: [],
       assignedRecordIds: [],
       editableAssetIds: [],
@@ -319,6 +324,7 @@ export async function loadViewerAccessState(
     requiredIdentityLevel,
     vaultLifecycleState,
     permissionsOverride,
+    grantSource: selectedGrant.source ?? null,
     assignedAssetIds,
     assignedRecordIds: Array.from(new Set([...permissionsOverride.recordIds, ...linkedRecordIds])),
     editableAssetIds: permissionsOverride.editableAssetIds,
@@ -347,13 +353,7 @@ export async function loadLinkedFortressSummaries(client: AnySupabaseClient, ses
       });
       if (viewer.mode !== "linked" || !viewer.grantId) return null;
       const sharedRecordCount = new Set([...viewer.assignedAssetIds, ...viewer.assignedRecordIds]).size;
-      const accessState = viewer.vaultLifecycleState !== "OWNER_ACTIVE"
-        ? "estate_locked"
-        : viewer.identityAssuranceLevel < viewer.requiredIdentityLevel
-          ? "verification_required"
-          : sharedRecordCount > 0
-            ? "records_shared"
-            : "no_records";
+      const accessState = linkedAccessStateFor(viewer, sharedRecordCount);
       return {
         grantId: viewer.grantId,
         ownerUserId: viewer.targetOwnerUserId,
@@ -593,4 +593,18 @@ async function loadAssetSectionKeys(client: AnySupabaseClient, ownerUserId: stri
   return ((result.data ?? []) as Array<{ section_key?: string | null }>)
     .map((row) => normalizeSectionKey(row.section_key))
     .filter((value): value is SectionKey => Boolean(value));
+}
+
+
+/** One rule for every screen: released estate access, locked estate, ID needed, shared, nothing. */
+export function linkedAccessStateFor(
+  viewer: Pick<ViewerAccessState, "vaultLifecycleState" | "identityAssuranceLevel" | "requiredIdentityLevel" | "grantSource">,
+  sharedRecordCount: number,
+): LinkedFortressSummary["accessState"] {
+  if (viewer.grantSource === "estate_release" && viewer.vaultLifecycleState === "ESTATE_LOCKED") {
+    return viewer.identityAssuranceLevel < viewer.requiredIdentityLevel ? "verification_required" : "released";
+  }
+  if (viewer.vaultLifecycleState !== "OWNER_ACTIVE") return "estate_locked";
+  if (viewer.identityAssuranceLevel < viewer.requiredIdentityLevel) return "verification_required";
+  return sharedRecordCount > 0 ? "records_shared" : "no_records";
 }

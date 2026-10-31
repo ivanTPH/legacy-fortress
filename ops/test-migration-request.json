@@ -1,8 +1,8 @@
 {
-  "approvedBy": "Ivan (owner), 31 Oct 2026: build the signed-off Vault access designs on TEST (nominee early-access requests va-r6/va-v7, release in progress va-r7; owner decision 30 Oct: any nominee may report a death)",
+  "approvedBy": "Ivan (owner), 31 Oct 2026: build the signed-off Vault access designs on TEST (estate release of nominations; owner decisions 30 Oct: always wait for probate, nominees released together)",
   "mode": "apply",
-  "attempt": 10,
+  "attempt": 11,
   "files": [
-    { "file": "20261031170000_nominee_requests_and_release_state.sql", "sha256": "8359af9f78cfc618053fa1f2bd16ffb720b63d9321f847cb4706ec1dbc03cb72" }
+    { "file": "20261031190000_estate_release_nominations.sql", "sha256": "e8caadcb034f6ae9425eed6e0e4cefdd321851a06f8e5f97936151acde854fec" }
   ]
 }
