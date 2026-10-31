@@ -124,14 +124,16 @@ function runAcceptance(expectedSha) {
   assertExact("EXPECTED_STAGING_SHA", required("EXPECTED_STAGING_SHA"), expectedSha);
   required("NEXT_PUBLIC_SUPABASE_ANON_KEY");
   required("SUPABASE_SERVICE_ROLE_KEY");
-  return new Promise((resolve, reject) => {
-    const child = spawn("npm", ["run", "staging:acceptance:idv"], { stdio: "inherit", env: process.env });
+  const runScript = (script) => new Promise((resolve, reject) => {
+    const child = spawn("npm", ["run", script], { stdio: "inherit", env: process.env });
     child.once("error", reject);
     child.once("exit", (code, signal) => {
       if (code === 0) resolve();
-      else reject(new Error(`staging_acceptance_failed:${code ?? signal}`));
+      else reject(new Error(`staging_acceptance_failed:${script}:${code ?? signal}`));
     });
   });
+  // Identity verification first, then the Vault access journeys (synthetic users only).
+  return runScript("staging:acceptance:idv").then(() => runScript("staging:acceptance:vault-access"));
 }
 
 async function main() {
