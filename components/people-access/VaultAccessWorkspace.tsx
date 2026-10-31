@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { getSafeUserData } from "../../lib/auth/requireActiveUser";
 import { supabase } from "../../lib/supabaseClient";
@@ -24,6 +25,9 @@ import {
   setVaultAccessEndDate,
   stopVaultAccess,
   type VaultAccessHistoryItem,
+  answerEarlyAccessRequest,
+  loadOpenEarlyAccessRequests,
+  type EarlyAccessRequest,
   type VaultGrant,
   loadVaultAccess,
   loadVaultRecordOptions,
@@ -66,6 +70,9 @@ export default function VaultAccessWorkspace() {
   const [confirmCancel, setConfirmCancel] = useState<VaultNomination | null>(null);
   const [attorneyFor, setAttorneyFor] = useState("");
   const [busy, setBusy] = useState(false);
+  const searchParams = useSearchParams();
+  const [requestId, setRequestId] = useState(() => searchParams.get("request") ?? "");
+  const [requests, setRequests] = useState<EarlyAccessRequest[]>([]);
 
   const reload = useCallback(async () => {
     const { data } = await getSafeUserData(supabase);
@@ -75,7 +82,7 @@ export default function VaultAccessWorkspace() {
     const ok = await vaultAccessAvailable(supabase);
     setAvailable(ok);
     if (!ok) return;
-    try { setSnapshot(await loadVaultAccess(supabase, uid)); setError(""); }
+    try { setSnapshot(await loadVaultAccess(supabase, uid)); setRequests(await loadOpenEarlyAccessRequests(supabase, uid)); setError(""); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Vault access couldn’t be loaded."); }
   }, []);
 
@@ -136,6 +143,7 @@ export default function VaultAccessWorkspace() {
   }, [snapshot]);
 
   const panelRow = rows.find((row) => row.key === panelKey);
+  const openRequest = requests.find((item) => item.id === requestId);
   const counts = {
     now: rows.filter((row) => row.group === "now").length,
     later: rows.filter((row) => row.group === "later").length,
@@ -204,13 +212,16 @@ export default function VaultAccessWorkspace() {
 
       {confirmCancel ? (
         <Dialog title="Cancel this nomination?" onClose={() => setConfirmCancel(null)}>
-          <p>{firstName(snapshot.people.find((item) => item.id === confirmCancel.personId)?.name ?? "This person")} won’t be given access to your Vault after your death. This takes effect straight away and is written to your Record history. They’re told without any details.</p>
+          <p>{firstName(snapshot.people.find((item) => item.id === confirmCancel.personId)?.name ?? "This person")} won’t get access to your Vault after your death. They have no access now, so nothing changes today. This is written to your Record history.</p>
+          <p className="lf-va-muted">They stay in People and on the records they’re linked to.</p>
           <div className="lf-va-dialog-footer">
             <button type="button" className="lf-va-secondary" onClick={() => setConfirmCancel(null)}>Keep nomination</button>
             <button type="button" className="lf-va-danger" disabled={busy} onClick={() => void doCancel(confirmCancel)}>{busy ? "Cancelling…" : "Cancel nomination"}</button>
           </div>
         </Dialog>
       ) : null}
+
+      {openRequest ? <EarlyAccessDialog request={openRequest} snapshot={snapshot} ownerId={ownerId} onClose={() => setRequestId("")} onAnswered={async (message) => { setRequestId(""); setToast(message); await reload(); }} /> : null}
 
       {toast ? <div className="lf-va-toast" role="status">{toast}</div> : null}
     </section>
@@ -630,4 +641,34 @@ function AccessHistory({ personId, revision }: { personId: string; revision: unk
       <span><strong>{text.title}</strong><small>{new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(item.at))}{item.note ? " · note added" : ""}</small>{item.note ? <em>{item.note}</em> : null}</span>
     </li>; })}</ol>
   </details>;
+}
+
+
+function EarlyAccessDialog({ request, snapshot, ownerId, onClose, onAnswered }: { request: EarlyAccessRequest; snapshot: VaultAccessSnapshot; ownerId: string; onClose: () => void; onAnswered: (message: string) => Promise<void> }) {
+  const person = snapshot.people.find((item) => item.id === request.personId);
+  const name = firstName(person?.name ?? "This person");
+  const nomination = snapshot.nominations.find((item) => item.id === request.nominationId);
+  const grant = snapshot.grants.find((item) => item.personId === request.personId && item.source === "owner_grant" && grantIsOpen(item));
+  const count = grant ? grant.assetIds.length + grant.recordIds.length : 0;
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  async function decline() {
+    setBusy(true); setError("");
+    try { await answerEarlyAccessRequest(supabase, ownerId, request.id, "declined"); await onAnswered(`Request answered. Nothing was shared with ${name}.`); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "That didn’t save."); }
+    finally { setBusy(false); }
+  }
+  return <Dialog title={`${name} asked for access now`} eyebrow="Needs you" onClose={onClose}>
+    {request.message ? <blockquote className="lf-va-request-message"><small>{name}’s message · {new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" }).format(new Date(request.createdAt))}</small>{request.message}</blockquote> : null}
+    <dl className="lf-va-request-facts">
+      <div><dt>{name} can see now</dt><dd>{count ? `${count} record${count === 1 ? "" : "s"}` : "Nothing"}</dd></div>
+      <div><dt>Arranged for later</dt><dd>{nomination ? (nomination.scope === "whole_vault" ? "Whole Vault after your death" : `${nomination.includeCount} record${nomination.includeCount === 1 ? "" : "s"} after your death`) : "Nothing"}</dd></div>
+    </dl>
+    <p className="lf-va-muted"><Icon name="info" size={16} />Nothing changes unless you share something. If you do, you choose exactly which records.</p>
+    {error ? <p className="lf-va-error" role="alert">{error}</p> : null}
+    <div className="lf-va-dialog-footer">
+      <button type="button" className="lf-va-secondary" disabled={busy} onClick={() => void decline()}>{busy ? "Saving…" : "Not now"}</button>
+      <Link className="lf-va-primary" href={`/people-access?view=people&contact=${encodeURIComponent(request.personId)}`}>Choose records to share</Link>
+    </div>
+  </Dialog>;
 }

@@ -1,5 +1,6 @@
+import { Suspense } from "react";
 import EstateDeathReportPageClient from "./EstateDeathReportPageClient";
 
 export default function EstateDeathReportPage() {
-  return <EstateDeathReportPageClient />;
+  return <Suspense fallback={null}><EstateDeathReportPageClient /></Suspense>;
 }

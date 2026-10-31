@@ -265,16 +265,50 @@ export async function withdrawLegalAuthority(client: SupabaseClient, ownerUserId
 // ---- What the nominee sees (va-r4, va-r5). The narrow RPC returns only the owner's name,
 // the kind and the state: never scope, records, counts or documents.
 
-export type MyNomination = { ownerName: string; kind: string; status: "active" | "released" };
+export type MyNomination = {
+  ref: string;
+  ownerName: string;
+  kind: string;
+  status: "active" | "released";
+  releaseStage: "none" | "in_progress" | "released";
+  openRequest: boolean;
+};
 
 export async function loadMyNominations(client: SupabaseClient): Promise<MyNomination[]> {
   const { data, error } = await client.rpc("my_vault_nomination_status");
   if (error || !Array.isArray(data)) return [];
   return data
     .filter((row) => row && (row.status === "active" || row.status === "released"))
-    .map((row) => ({ ownerName: String(row.owner_display_name || "Your contact"), kind: String(row.kind || "estate"), status: row.status }));
+    .map((row) => ({
+      ref: String(row.nomination_ref ?? ""),
+      ownerName: String(row.owner_display_name || "Your contact"),
+      kind: String(row.kind || "estate"),
+      status: row.status,
+      releaseStage: row.release_stage === "released" ? "released" : row.release_stage === "in_progress" ? "in_progress" : "none",
+      openRequest: Boolean(row.open_request),
+    }));
 }
 
+/** va-r6: asking never shares anything; it becomes a Needs you item for the owner. */
+export async function requestEarlyAccess(client: SupabaseClient, nominationRef: string, message: string) {
+  const { error } = await client.rpc("lf_request_early_access", { p_nomination_ref: nominationRef, p_message: message.trim() || null });
+  if (error) throw new Error(error.message);
+}
+
+export type EarlyAccessRequest = { id: string; personId: string; nominationId: string; message: string | null; createdAt: string };
+
+export async function loadOpenEarlyAccessRequests(client: SupabaseClient, ownerUserId: string): Promise<EarlyAccessRequest[]> {
+  const { data, error } = await client.from("vault_early_access_requests").select("id,person_id,nomination_id,message,created_at")
+    .eq("owner_user_id", ownerUserId).eq("status", "open").order("created_at", { ascending: false });
+  if (error) return [];
+  return (data ?? []).map((row) => ({ id: row.id, personId: row.person_id, nominationId: row.nomination_id, message: row.message ?? null, createdAt: row.created_at }));
+}
+
+export async function answerEarlyAccessRequest(client: SupabaseClient, ownerUserId: string, requestId: string, answer: "declined" | "shared") {
+  const { error } = await client.from("vault_early_access_requests").update({ status: answer })
+    .eq("id", requestId).eq("owner_user_id", ownerUserId).eq("status", "open");
+  if (error) throw new Error(error.message);
+}
 
 // ---- Sharing now: review, end date, stop, history (va-s*, va-v2–v4). ----
 
@@ -338,6 +372,9 @@ export function describeHistory(item: VaultAccessHistoryItem): { icon: string; t
     "authority.activated": ["check_circle", "Authority in effect"],
     "authority.withdrawn": ["block", "Authority withdrawn by you"],
     "authority.ended": ["block", "Authority ended by our review team"],
+    "early_access.requested": ["contact_support", "Asked for access now"],
+    "early_access.declined": ["block", "Request answered: not now"],
+    "early_access.shared": ["visibility", "Request answered: you shared records"],
   };
   const [icon, title] = map[item.action] ?? ["history", "Access updated"];
   return { icon, title };
