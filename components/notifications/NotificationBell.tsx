@@ -5,17 +5,25 @@ import { useEffect, useMemo, useState } from "react";
 import Icon from "../ui/Icon";
 import { supabase } from "../../lib/supabaseClient";
 import { waitForActiveUser } from "../../lib/auth/session";
+import { describePersonNotification, loadPersonNotifications, markPersonNotificationsRead } from "../../lib/notifications/personNotifications";
 
 type NotificationEvent = {
   id: string;
   event_type: string;
   created_at: string;
   invitation_id?: string | null;
+  owner_name?: string | null;
+  link?: string;
+  read?: boolean;
 };
 
 const READ_KEY = "lf:notification-events:read";
 
 function eventCopy(event: NotificationEvent) {
+  if (event.event_type.startsWith("person:")) {
+    const item = describePersonNotification(event.event_type.slice(7), event.owner_name ?? null);
+    return { title: item.title, detail: item.detail, href: event.link ?? "/notifications" };
+  }
   const type = event.event_type.toLowerCase();
   if (type.includes("accepted")) return { title: "Invitation accepted", detail: "A person accepted an invitation to your Fortress.", href: "/contacts" };
   if (type.includes("verified")) return { title: "Identity verified", detail: "An invited relationship completed identity verification.", href: "/contacts" };
@@ -59,14 +67,20 @@ export default function NotificationBell({ ownerUserId, disabled = false }: { ow
         if (!cancelled) setLoading(false);
         return;
       }
-      const result = await supabase
-        .from("invitation_events")
-        .select("id,event_type,created_at,invitation_id")
-        .eq("owner_user_id", ownerUserId)
-        .order("created_at", { ascending: false })
-        .limit(8);
+      const [result, personal] = await Promise.all([
+        supabase
+          .from("invitation_events")
+          .select("id,event_type,created_at,invitation_id")
+          .eq("owner_user_id", ownerUserId)
+          .order("created_at", { ascending: false })
+          .limit(8),
+        loadPersonNotifications(supabase, 8),
+      ]);
       if (!cancelled) {
-        setEvents((result.data ?? []) as NotificationEvent[]);
+        setEvents([
+          ...((result.data ?? []) as NotificationEvent[]),
+          ...personal.map((item) => ({ id: item.id, event_type: `person:${item.kind}`, created_at: item.createdAt, owner_name: item.ownerName, link: item.link, read: Boolean(item.readAt) })),
+        ].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 8));
         setLoading(false);
       }
     }
@@ -75,9 +89,10 @@ export default function NotificationBell({ ownerUserId, disabled = false }: { ow
   }, [disabled, ownerUserId]);
 
   const visibleEvents = ownerUserId && !disabled ? events : [];
-  const unreadCount = useMemo(() => visibleEvents.filter((event) => !readIds.includes(event.id)).length, [readIds, visibleEvents]);
+  const unreadCount = useMemo(() => visibleEvents.filter((event) => !event.read && !readIds.includes(event.id)).length, [readIds, visibleEvents]);
 
   function markRead() {
+    void markPersonNotificationsRead(supabase, visibleEvents.filter((event) => event.event_type.startsWith("person:")).map((event) => event.id));
     const next = Array.from(new Set([...readIds, ...visibleEvents.map((event) => event.id)])).slice(-80);
     setReadIds(next);
     try { window.sessionStorage.setItem(READ_KEY, JSON.stringify(next)); } catch { /* presentation state only */ }

@@ -154,7 +154,9 @@ async function main() {
   assert.deepEqual(Object.keys(status[0]).sort(), ["kind", "nomination_ref", "open_request", "owner_display_name", "release_stage", "status"]);
   assert.equal(status[0].release_stage, "none");
   assert.equal((await must(stranger.client.rpc("my_vault_nomination_status"), "stranger_status")).length, 0);
-  results.push("nominate: no access, nominee sees kind and state only");
+  const kinds = async (person) => (await must(person.client.from("user_notifications").select("kind,owner_display_name"), "notifications")).map((row) => row.kind);
+  assert.ok((await kinds(nominee)).includes("nomination_added"), "nominee not told about the nomination");
+  results.push("nominate: no access, nominee sees kind and state only, told without details");
 
   // 2. Ask for access now: owner gets the request; nothing shared; owner answers Not now.
   await must(nominee.client.rpc("lf_request_early_access", { p_nomination_ref: status[0].nomination_ref, p_message: "Synthetic request" }), "ask_early");
@@ -225,6 +227,9 @@ async function main() {
   assert.deepEqual((await visibleAssets(nominee)).sort(), [finance, house, will].sort(), "released scope wrong (exception must stay hidden)");
   assert.equal((await must(nominee.client.rpc("my_vault_nomination_status"), "released_status"))[0].status, "released");
   assert.deepEqual(await visibleAssets(attorney), [], "lifetime access survived the death");
+  assert.ok((await kinds(nominee)).includes("release_approved"), "nominee not told about the release");
+  assert.ok((await kinds(attorney)).includes("authority_ended"), "attorney not told the authority ended");
+  assert.equal((await kinds(stranger)).length, 0, "stranger received notifications");
   results.push("estate release: waits for probate, whole Vault minus exception, view only");
 
   // 7. Reviewer ID check: document photo + live selfie → waits for a person → approved in Admin → photos deleted.
@@ -262,6 +267,7 @@ async function main() {
   assert.equal(Number(levelAfter?.identity_level), 2, "approval didn't verify ID");
   const afterDecision = await api(reviewer, `/api/internal/admin/verifications/${requestId}/evidence`, undefined, "GET");
   assert.equal(afterDecision.status, 409, "photos still available after the decision");
+  assert.ok((await kinds(applicant)).includes("identity_approved"), "applicant not told the ID was approved");
   results.push("ID check: waits for a person, reviewer-only photos, approval with notes verifies ID, photos deleted");
 
   console.log(JSON.stringify({ hosted: true, run, nominationId: String(nominationId).slice(0, 8), checks: results }, null, 2));

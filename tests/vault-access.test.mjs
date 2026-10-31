@@ -147,3 +147,14 @@ test("estate release waits for probate, releases only verified nominees, and onl
   assert.match(route, /verification:decide/);
   assert.match(route, /Add decision notes before releasing/);
 });
+
+test("notifications are content-free and written only by the database", () => {
+  const sql = read("supabase/migrations/20261031210000_person_notifications.sql");
+  assert.match(sql, /REVOKE INSERT, DELETE ON public\.user_notifications FROM authenticated/);
+  // The table holds only who, what kind and where to go: no titles, counts or scope.
+  const table = sql.slice(sql.indexOf("CREATE TABLE public.user_notifications"), sql.indexOf("CREATE INDEX user_notifications_recipient_idx"));
+  assert.doesNotMatch(table, /title|count|scope|asset|record_id|value/);
+  assert.match(sql, /IF NEW\.notify_person THEN PERFORM lf_vault_access_private\.notify\(v_person, 'nomination_added'/);
+  const copy = read("lib/notifications/personNotifications.ts");
+  assert.doesNotMatch(copy, /record_count|\$\{.*count/);
+});

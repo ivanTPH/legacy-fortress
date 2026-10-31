@@ -6,12 +6,15 @@ import { LFPageHeader } from "../../../components/ui/LFDesignSystem";
 import Icon from "../../../components/ui/Icon";
 import { waitForActiveUser } from "../../../lib/auth/session";
 import { supabase } from "../../../lib/supabaseClient";
+import { describePersonNotification, loadPersonNotifications, markPersonNotificationsRead } from "../../../lib/notifications/personNotifications";
 
 type NotificationEvent = {
   id: string;
   event_type: string;
   created_at: string;
   invitation_id?: string | null;
+  owner_name?: string | null;
+  link?: string;
 };
 
 type Filter = "all" | "unread" | "security" | "people" | "records";
@@ -19,6 +22,10 @@ type Filter = "all" | "unread" | "security" | "people" | "records";
 const READ_KEY = "lf:notification-events:read";
 
 function describeEvent(event: NotificationEvent) {
+  if (event.event_type.startsWith("person:")) {
+    const item = describePersonNotification(event.event_type.slice(7), event.owner_name ?? null);
+    return { ...item, href: event.link ?? "/notifications" };
+  }
   const type = event.event_type.toLowerCase();
   if (type.includes("accepted")) return { title: "Invitation accepted", detail: "A person accepted an invitation to your Fortress.", group: "people", icon: "person_check", href: "/contacts" };
   if (type.includes("verified")) return { title: "Identity verified", detail: "An invited relationship completed identity verification.", group: "people", icon: "verified_user", href: "/contacts" };
@@ -55,10 +62,19 @@ export default function NotificationsPage() {
         if (!cancelled) { setStatus("Sign in to view your notifications."); setLoading(false); }
         return;
       }
-      const result = await supabase.from("invitation_events").select("id,event_type,created_at,invitation_id").eq("owner_user_id", user.id).order("created_at", { ascending: false }).limit(50);
+      const [result, personal] = await Promise.all([
+        supabase.from("invitation_events").select("id,event_type,created_at,invitation_id").eq("owner_user_id", user.id).order("created_at", { ascending: false }).limit(50),
+        loadPersonNotifications(supabase),
+      ]);
       if (cancelled) return;
       if (result.error) setStatus("Notifications are temporarily unavailable.");
-      setEvents((result.data ?? []) as NotificationEvent[]);
+      const merged: NotificationEvent[] = [
+        ...((result.data ?? []) as NotificationEvent[]),
+        ...personal.map((item) => ({ id: item.id, event_type: `person:${item.kind}`, created_at: item.createdAt, owner_name: item.ownerName, link: item.link })),
+      ].sort((a, b) => b.created_at.localeCompare(a.created_at));
+      setEvents(merged);
+      const alreadyRead = personal.filter((item) => item.readAt).map((item) => item.id);
+      if (alreadyRead.length) setReadIds((current) => Array.from(new Set([...current, ...alreadyRead])));
       setLoading(false);
     }
     void load();
@@ -72,12 +88,14 @@ export default function NotificationsPage() {
   const selected = filtered.find((event) => event.id === selectedId) ?? filtered[0] ?? null;
 
   function markRead(id: string) {
+    void markPersonNotificationsRead(supabase, [id]);
     const next = Array.from(new Set([...readIds, id])).slice(-100);
     setReadIds(next);
     try { window.sessionStorage.setItem(READ_KEY, JSON.stringify(next)); } catch { /* presentation state only */ }
   }
 
   function markAllRead() {
+    void markPersonNotificationsRead(supabase, events.filter((event) => event.event_type.startsWith("person:")).map((event) => event.id));
     const next = Array.from(new Set([...readIds, ...events.map((event) => event.id)])).slice(-100);
     setReadIds(next);
     try { window.sessionStorage.setItem(READ_KEY, JSON.stringify(next)); } catch { /* presentation state only */ }
@@ -113,7 +131,7 @@ export default function NotificationsPage() {
               </button>;
             })}
           </section>
-          {selected ? (() => { const item = describeEvent(selected); return <aside className="lf-notification-detail"><span className="lf-notification-detail-icon"><Icon name={item.icon} size={24} /></span><h2>{item.title}</h2><p>{item.detail}</p><dl><div><dt>When</dt><dd>{formatEventTime(selected.created_at)}</dd></div><div><dt>Event</dt><dd>{selected.event_type}</dd></div></dl><Link href={item.href} className="lf-ui-button lf-ui-button-secondary">Open related area <Icon name="chevron_right" size={18} /></Link></aside>; })() : null}
+          {selected ? (() => { const item = describeEvent(selected); return <aside className="lf-notification-detail"><span className="lf-notification-detail-icon"><Icon name={item.icon} size={24} /></span><h2>{item.title}</h2><p>{item.detail}</p><dl><div><dt>When</dt><dd>{formatEventTime(selected.created_at)}</dd></div>{selected.event_type.startsWith("person:") ? null : <div><dt>Event</dt><dd>{selected.event_type}</dd></div>}</dl><Link href={item.href} className="lf-ui-button lf-ui-button-secondary">Open related area <Icon name="chevron_right" size={18} /></Link></aside>; })() : null}
         </div>
       ) : null}
     </div>
