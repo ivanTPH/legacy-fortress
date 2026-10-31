@@ -1,8 +1,8 @@
 {
-  "approvedBy": "Ivan (owner), 31 Oct 2026: build the signed-off Vault access designs on TEST (people are told about access changes without details, rules 5 and 8)",
+  "approvedBy": "Ivan (owner), 31 Oct 2026: build the signed-off designs on TEST (Record history, AGENTS rule 28, 6b/6n/W3)",
   "mode": "apply",
-  "attempt": 12,
+  "attempt": 13,
   "files": [
-    { "file": "20261031210000_person_notifications.sql", "sha256": "db5e3ce3ea6b3474f418eb6709d718a3279d40add8f6fcb44311f88f5962b14f" }
+    { "file": "20261031230000_record_history.sql", "sha256": "d131e7f1504a255c22bd8ccf6918798866c170fc31101813565fb41bead224df" }
   ]
 }

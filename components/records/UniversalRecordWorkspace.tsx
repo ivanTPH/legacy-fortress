@@ -1,5 +1,6 @@
 "use client";
 
+import RecordHistoryPanel from "./RecordHistoryPanel";
 import { startDocumentExtraction, takeBankPrefill } from "../../lib/documents/extraction/client";
 import DocumentFindings from "../documents/DocumentFindings";
 import Image from "next/image";
@@ -3981,10 +3982,7 @@ export default function UniversalRecordWorkspace({
                   </>
                 ) : <p>{isWillsWorkspace ? "No executor recorded." : "No linked people available in this view."}</p>}
               </section>}
-              <details className="lf-v52-record-history">
-                <summary>Record history</summary>
-                <p>Event history is not available for this record.</p>
-              </details>
+              {viewer.mode === "linked" ? null : <RecordHistoryPanel recordId={row.id} />}
             </aside>
           </div>
         ) : null}
