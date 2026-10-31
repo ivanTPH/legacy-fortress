@@ -9023,3 +9023,17 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-va-checks li:first-child { border-top: 0; }
 .lf-va-checks li > span { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 999px; background: var(--lf-primary-bg); color: var(--lf-primary-text); font-weight: 700; }
 .lf-va-checks small { display: block; color: var(--lf-text-secondary); font-size: 13px; }
+
+/* Vault access · what the nominee sees (va-r4, va-r5) */
+.lf-va-nominee { display: grid; gap: 16px; max-width: 720px; }
+.lf-va-nominee-card { display: grid; gap: 16px; padding: 20px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); }
+.lf-va-nominee-card h2 { margin: 0 0 10px; font-size: 20px; }
+.lf-va-nominee-card h3 { margin: 0 0 6px; font-size: 15px; }
+.lf-va-nominee-card p { margin: 0; }
+.lf-va-nominee-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.lf-va-nominee-steps { display: grid; gap: 0; margin: 0; border-top: 1px solid var(--lf-border); }
+.lf-va-nominee-steps > div { display: flex; justify-content: space-between; align-items: center; min-height: 44px; border-bottom: 1px solid var(--lf-border); }
+.lf-va-nominee-steps dt { font-weight: 600; }
+.lf-va-nominee-steps dd { margin: 0; display: inline-flex; gap: 6px; align-items: center; color: var(--lf-text-secondary); }
+.lf-va-nominee .lf-va-muted { display: flex; gap: 6px; align-items: flex-start; }
+.lf-workspace-nominated small { color: var(--lf-text-secondary); }

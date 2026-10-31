@@ -45,3 +45,16 @@ test("recording a Power of Attorney gives no access and can only narrow", () => 
   assert.doesNotMatch(service, /from\("account_access_grants"\)\.(insert|update|upsert|delete)/);
   for (const areas of service.match(/AUTHORITY_AREAS[\s\S]*?\n};/g) ?? []) assert.doesNotMatch(areas, /"legal"/);
 });
+
+test("the nominee sees only the owner's name, kind and state", () => {
+  const page = read("app/(app)/vault-nominations/page.tsx");
+  const service = read("lib/vaultAccess/vaultAccess.ts");
+  const loader = service.slice(service.indexOf("export async function loadMyNominations"));
+  assert.match(loader, /rpc\("my_vault_nomination_status"\)/);
+  assert.doesNotMatch(loader, /from\(/);
+  assert.doesNotMatch(page, /from\(|vault_nomination_records|scope|includeCount|exceptionCount/);
+  assert.match(page, /can’t see anything/);
+  const switcher = read("components/navigation/WorkspaceSwitcher.tsx");
+  assert.match(switcher, /Locked until release/);
+  assert.match(switcher, /Partner and Admin never appear here/);
+});

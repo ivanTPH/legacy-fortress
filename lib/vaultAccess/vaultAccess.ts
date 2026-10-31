@@ -234,3 +234,16 @@ export async function withdrawLegalAuthority(client: SupabaseClient, ownerUserId
     .eq("id", authorityId).eq("owner_user_id", ownerUserId);
   if (error) throw new Error(error.message);
 }
+
+// ---- What the nominee sees (va-r4, va-r5). The narrow RPC returns only the owner's name,
+// the kind and the state: never scope, records, counts or documents.
+
+export type MyNomination = { ownerName: string; kind: string; status: "active" | "released" };
+
+export async function loadMyNominations(client: SupabaseClient): Promise<MyNomination[]> {
+  const { data, error } = await client.rpc("my_vault_nomination_status");
+  if (error || !Array.isArray(data)) return [];
+  return data
+    .filter((row) => row && (row.status === "active" || row.status === "released"))
+    .map((row) => ({ ownerName: String(row.owner_display_name || "Your contact"), kind: String(row.kind || "estate"), status: row.status }));
+}
