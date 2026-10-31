@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { InternalExperimentalIdentityProvider, INTERNAL_EXPERIMENTAL_PROVIDER_KEY } from "./internalExperimentalProvider.ts";
+import { InhouseReviewIdentityProvider, INHOUSE_EVIDENCE_RETENTION_DAYS, INHOUSE_LEVEL_2_TTL_DAYS, INHOUSE_REVIEW_PROVIDER_KEY } from "./inhouseReviewProvider.ts";
 import type {
   IdentityPresenceChallengeRow,
   IdentityVerificationDecision,
@@ -33,6 +34,12 @@ export function getIdentityVerificationProvider(): IdentityVerificationProvider 
     throw new Error("identity_provider_not_enabled");
   }
   return new InternalExperimentalIdentityProvider();
+}
+
+/** Each request keeps the provider it started with. */
+export function getIdentityProviderForKey(providerKey: string | null | undefined): IdentityVerificationProvider {
+  if (providerKey === INHOUSE_REVIEW_PROVIDER_KEY) return new InhouseReviewIdentityProvider();
+  return getIdentityVerificationProvider();
 }
 
 export function getIdentityVerificationProviderStatus() {
@@ -90,7 +97,10 @@ export async function startIdentityVerification(
     consentAcknowledged?: boolean;
   },
 ) {
-  const provider = getIdentityVerificationProvider();
+  // Synthetic scenarios (staging tests) use the simulator; real people use the reviewer check.
+  // A fresh "it's you" check (level 3) on the reviewer path is a one-time email code instead.
+  if (!input.simulatorScenario && input.requestedIdentityLevel === 3) throw new Error("identity_step_up_uses_email_code");
+  const provider = input.simulatorScenario ? getIdentityVerificationProvider() : new InhouseReviewIdentityProvider();
   if (input.consentAcknowledged !== true) throw new Error("identity_consent_required");
   await validateVerificationContext(client, input);
   const started = await provider.startVerification(input);
@@ -106,12 +116,12 @@ export async function startIdentityVerification(
       requested_identity_level: input.requestedIdentityLevel,
       related_invitation_id: input.invitationId ?? null,
       related_access_grant_id: input.accessGrantId ?? null,
-      evidence_retention_until: new Date(Date.now() + 24 * 60 * 60_000).toISOString(),
+      evidence_retention_until: new Date(Date.now() + (provider.providerKey === INHOUSE_REVIEW_PROVIDER_KEY ? INHOUSE_EVIDENCE_RETENTION_DAYS * 24 : 24) * 60 * 60_000).toISOString(),
       metadata: {
         provider_experimental: provider.experimental,
         simulator_scenario: input.simulatorScenario ?? null,
         consent_accepted_at: now,
-        product_notice: "Internal experimental provider for controlled staging/UAT only.",
+        product_notice: provider.providerKey === INHOUSE_REVIEW_PROVIDER_KEY ? "Reviewer check: document photo and live selfie, compared by a person." : "Internal experimental provider for controlled staging/UAT only.",
       },
       created_at: now,
       updated_at: now,
@@ -235,7 +245,7 @@ export async function uploadDocumentEvidence(
   });
   if (upload.error) throw new Error(upload.error.message);
 
-  const provider = getIdentityVerificationProvider();
+  const provider = getIdentityProviderForKey(request.provider_key);
   const extraction = await provider.extractDocumentData({
     requestId: input.requestId,
     userId: input.userId,
@@ -292,7 +302,7 @@ export async function generateSyntheticDocumentEvidence(
 ) {
   const request = await getOwnedVerificationRequest(client, input.requestId, input.userId);
   assertTransition(request.status, ["document_required", "document_uploaded", "document_extracted", "started"]);
-  const provider = getIdentityVerificationProvider();
+  const provider = getIdentityProviderForKey(request.provider_key);
   const scenario = validateSimulatorScenario(request.metadata?.simulator_scenario) ?? "success";
   const extraction = await provider.extractDocumentData({
     requestId: input.requestId,
@@ -339,7 +349,7 @@ export async function generateSyntheticDocumentEvidence(
 export async function createPresenceChallenge(client: AnySupabaseClient, requestId: string, userId: string) {
   const request = await getOwnedVerificationRequest(client, requestId, userId);
   assertTransition(request.status, ["document_extracted", "camera_required", "started"]);
-  const provider = getIdentityVerificationProvider();
+  const provider = getIdentityProviderForKey(request.provider_key);
   const challenge = await provider.capturePresenceChallenge({
     requestId,
     userId,
@@ -394,7 +404,7 @@ export async function uploadCameraEvidence(
     upsert: true,
   });
   if (upload.error) throw new Error(upload.error.message);
-  const provider = getIdentityVerificationProvider();
+  const provider = getIdentityProviderForKey(request.provider_key);
   const liveness = await provider.evaluateLiveness({
     challenge,
     captureHash: hash,
@@ -403,12 +413,13 @@ export async function uploadCameraEvidence(
   });
   const now = new Date().toISOString();
   const challengeUpdate = await client.from("identity_presence_challenges").update({
-    status: liveness.result === "passed" ? "passed" : "failed",
+    // The reviewer check keeps the selfie as "captured" until a person decides.
+    status: liveness.result === "passed" ? "passed" : liveness.result === "review_required" ? "captured" : "failed",
     storage_path: path,
     liveness_status: liveness.result,
     liveness_confidence: liveness.confidence,
     captured_at: now,
-    retention_until: new Date(Date.now() + 24 * 60 * 60_000).toISOString(),
+    retention_until: request.evidence_retention_until ?? new Date(Date.now() + 24 * 60 * 60_000).toISOString(),
     updated_at: now,
     metadata: { ...challenge.metadata, capture_hash: hash, liveness_reason_codes: liveness.reasonCodes },
   }).eq("id", input.challengeId);
@@ -416,10 +427,12 @@ export async function uploadCameraEvidence(
   const requestUpdate = await client.from("identity_verification_requests").update({ status: "camera_captured", updated_at: now }).eq("id", input.requestId);
   assertMutationSucceeded(requestUpdate, "identity_request_update_failed");
   await recordIdentityEvent(client, input.requestId, input.userId, "camera_captured", "user", { challenge_id: input.challengeId });
-  await recordIdentityEvent(client, input.requestId, input.userId, liveness.result === "passed" ? "liveness_passed" : "liveness_failed", "provider", {
-    confidence: liveness.confidence,
-    reason_codes: liveness.reasonCodes,
-  });
+  if (liveness.result !== "review_required") {
+    await recordIdentityEvent(client, input.requestId, input.userId, liveness.result === "passed" ? "liveness_passed" : "liveness_failed", "provider", {
+      confidence: liveness.confidence,
+      reason_codes: liveness.reasonCodes,
+    });
+  }
   return { captureHash: hash, liveness };
 }
 
@@ -433,7 +446,7 @@ export async function generateSyntheticCameraEvidence(client: AnySupabaseClient,
   if (Date.parse(challenge.expires_at) <= Date.now()) throw new Error("presence_challenge_expired");
   const scenario = validateSimulatorScenario(request.metadata?.simulator_scenario) ?? "success";
   const captureHash = syntheticCaptureHash(`live-camera-${scenario}.png`, sha256(`synthetic-camera:${input.requestId}:${input.challengeId}:${scenario}`));
-  const provider = getIdentityVerificationProvider();
+  const provider = getIdentityProviderForKey(request.provider_key);
   const liveness = await provider.evaluateLiveness({ challenge, captureHash, mimeType: "image/png", sizeBytes: 256 });
   const now = new Date().toISOString();
   const challengeUpdate = await client.from("identity_presence_challenges").update({ status: liveness.result === "passed" ? "passed" : "failed", storage_bucket: "synthetic", storage_path: null, liveness_status: liveness.result, liveness_confidence: liveness.confidence, captured_at: now, retention_until: now, updated_at: now, metadata: { ...challenge.metadata, capture_hash: captureHash, synthetic: true, liveness_reason_codes: liveness.reasonCodes } }).eq("id", input.challengeId);
@@ -450,7 +463,7 @@ export async function completeIdentityVerification(client: AnySupabaseClient, re
   assertTransition(request.status, ["camera_captured", "comparison_processing", "review_required"]);
   const document = await latestDocument(client, requestId, userId);
   const challenge = await latestChallenge(client, requestId, userId);
-  const provider = getIdentityVerificationProvider();
+  const provider = getIdentityProviderForKey(request.provider_key);
   const captureHash = String(challenge?.metadata?.capture_hash ?? challenge?.id ?? "");
   const comparison = await provider.compareFaces({ document, challenge, captureHash });
   const liveness = {
@@ -712,4 +725,69 @@ function syntheticCaptureHash(fileName: string, hash: string) {
   if (lower.includes("mismatch")) return `mismatch-${hash}`;
   if (lower.includes("low-confidence")) return `${hash.slice(0, -4)}0000`;
   return hash;
+}
+
+
+/**
+ * A reviewer's decision on a reviewer-check request (Platform Admin, server only).
+ * Approve gives identity level 2 for a year and unlocks any linked access waiting on ID only.
+ * Either way the document photo and selfie are deleted straight after the decision.
+ */
+export async function recordReviewerDecision(
+  client: AnySupabaseClient,
+  input: { requestId: string; reviewerUserId: string; approve: boolean; reasonCode: string },
+) {
+  const requestRes = await client.from("identity_verification_requests").select("*").eq("id", input.requestId).single();
+  if (requestRes.error || !requestRes.data) throw new Error("identity_request_not_found");
+  const request = requestRes.data as IdentityVerificationRequestRow;
+  if (request.provider_key !== INHOUSE_REVIEW_PROVIDER_KEY) throw new Error("identity_manual_decision_not_supported");
+  if (request.status !== "review_required") throw new Error("identity_review_not_pending");
+  if (request.user_id === input.reviewerUserId) throw new Error("identity_self_review_not_permitted");
+  const now = new Date();
+  const decision: Awaited<ReturnType<IdentityVerificationProvider["completeVerification"]>> = {
+    providerKey: INHOUSE_REVIEW_PROVIDER_KEY,
+    providerAssuranceClass: "level_2_reviewer_document_selfie",
+    decision: input.approve ? "verified" : "failed",
+    identityLevel: input.approve ? 2 : null,
+    reasonCodes: [input.approve ? "reviewer_approved" : "reviewer_rejected", input.reasonCode].filter(Boolean).slice(0, 4),
+    requiresManualReview: false,
+    faceMatchScore: null,
+    faceMatchThreshold: null,
+    livenessResult: input.approve ? "passed" : "failed",
+    documentConfidence: null,
+    completedAt: now.toISOString(),
+    expiresAt: input.approve ? new Date(now.getTime() + INHOUSE_LEVEL_2_TTL_DAYS * 24 * 60 * 60_000).toISOString() : null,
+    evidenceReferences: { provider_reference: request.provider_reference, reviewer_user_id: input.reviewerUserId },
+    retentionSummary: { raw_document_retention: "deleted_after_decision", raw_camera_retention: "deleted_after_decision", face_template_retained: false },
+  };
+  await persistDecision(client, request, decision);
+  await recordIdentityEvent(client, request.id, request.user_id, input.approve ? "identity_review_approved" : "identity_review_rejected", "admin", { reviewer_assigned: true });
+  await cleanupExpiredIdentityEvidence(client, request.user_id, request.id).catch(() => null);
+  return decision;
+}
+
+/** Short-lived links to the document photo and selfie, for the reviewer only. */
+export async function createReviewerEvidenceLinks(client: AnySupabaseClient, requestId: string) {
+  const requestRes = await client.from("identity_verification_requests").select("id,user_id,provider_key,status").eq("id", requestId).single();
+  if (requestRes.error || !requestRes.data) throw new Error("identity_request_not_found");
+  if (requestRes.data.provider_key !== INHOUSE_REVIEW_PROVIDER_KEY) throw new Error("identity_evidence_not_reviewable");
+  if (requestRes.data.status !== "review_required") throw new Error("identity_review_not_pending");
+  const [documentRes, challengeRes] = await Promise.all([
+    client.from("identity_verification_documents").select("storage_bucket,storage_path,mime_type").eq("request_id", requestId).neq("extraction_status", "deleted").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    client.from("identity_presence_challenges").select("storage_bucket,storage_path,challenge_prompt,captured_at").eq("request_id", requestId).eq("status", "captured").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+  ]);
+  const expiresInSeconds = 60;
+  const sign = async (bucket: string | null, path: string | null) => {
+    if (!path) return null;
+    const signed = await client.storage.from(bucket || IDENTITY_EVIDENCE_BUCKET).createSignedUrl(path, expiresInSeconds);
+    return signed.error ? null : signed.data?.signedUrl ?? null;
+  };
+  return {
+    documentUrl: await sign(documentRes.data?.storage_bucket ?? null, documentRes.data?.storage_path ?? null),
+    documentIsPdf: documentRes.data?.mime_type === "application/pdf",
+    selfieUrl: await sign(challengeRes.data?.storage_bucket ?? null, challengeRes.data?.storage_path ?? null),
+    prompt: String(challengeRes.data?.challenge_prompt ?? ""),
+    capturedAt: challengeRes.data?.captured_at ?? null,
+    expiresInSeconds,
+  };
 }
