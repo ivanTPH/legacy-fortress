@@ -1128,30 +1128,43 @@ export async function loadVerificationQueue(client: AnySupabaseClient) {
     .from("identity_verification_requests")
     .select("id,user_id,verification_purpose,status,requested_identity_level,achieved_identity_level,provider_key,manual_review_required,submitted_at,verified_at,created_at,updated_at,assigned_reviewer_user_id,last_reason_code")
     .in("status", ["started", "document_required", "document_processing", "camera_required", "comparison_processing", "review_required", "failed", "expired", "verified"])
-    .order("created_at", { ascending: true });
+    // Newest first and bounded: the queue must not grow with every request ever made.
+    .order("created_at", { ascending: false })
+    .limit(200);
   if (!identityQueueRes.error) {
     const identityRows = (identityQueueRes.data ?? []) as Array<Record<string, unknown>>;
     const identityRequestIds = identityRows.map((row) => String(row.id ?? "")).filter(Boolean);
-    const documentsRes = identityRequestIds.length
-      ? await client.from("identity_verification_documents").select("request_id,document_type,document_country,extraction_status,extraction_warnings").in("request_id", identityRequestIds).order("created_at", { ascending: false })
-      : { data: [], error: null };
-    const challengesRes = identityRequestIds.length
-      ? await client.from("identity_presence_challenges").select("request_id,liveness_status,liveness_confidence,created_at").in("request_id", identityRequestIds).order("created_at", { ascending: false })
-      : { data: [], error: null };
-    const decisionsRes = identityRequestIds.length
-      ? await client.from("identity_verification_decisions").select("request_id,decision,liveness_result,decision_reason_codes,decided_at").in("request_id", identityRequestIds).order("decided_at", { ascending: false })
-      : { data: [], error: null };
+    // Look-ups by ID go in batches so the request URL stays short however many rows there are.
+    const inBatches = async (table: string, columns: string, orderColumn: string) => {
+      const rows: Array<Record<string, unknown>> = [];
+      for (let index = 0; index < identityRequestIds.length; index += 50) {
+        const batch = await client.from(table).select(columns).in("request_id", identityRequestIds.slice(index, index + 50)).order(orderColumn, { ascending: false });
+        if (batch.error) return { data: null, error: batch.error };
+        rows.push(...((batch.data ?? []) as unknown as Array<Record<string, unknown>>));
+      }
+      return { data: rows, error: null };
+    };
+    const documentsRes = await inBatches("identity_verification_documents", "request_id,document_type,document_country,extraction_status,extraction_warnings,created_at", "created_at");
+    const challengesRes = await inBatches("identity_presence_challenges", "request_id,liveness_status,liveness_confidence,created_at", "created_at");
+    const decisionsRes = await inBatches("identity_verification_decisions", "request_id,decision,liveness_result,decision_reason_codes,decided_at", "decided_at");
     if (documentsRes.error || challengesRes.error || decisionsRes.error) {
       throw new Error(documentsRes.error?.message ?? challengesRes.error?.message ?? decisionsRes.error?.message ?? "identity_verification_details_unavailable");
     }
-    const latestByRequest = <T extends Record<string, unknown>>(rows: T[]) => new Map(rows.map((row) => [String(row.request_id), row]));
+    const latestByRequest = <T extends Record<string, unknown>>(rows: T[]) => {
+      const map = new Map<string, T>();
+      for (const row of rows) if (!map.has(String(row.request_id))) map.set(String(row.request_id), row);
+      return map;
+    };
     const documentMap = latestByRequest((documentsRes.data ?? []) as Array<Record<string, unknown>>);
     const challengeMap = latestByRequest((challengesRes.data ?? []) as Array<Record<string, unknown>>);
     const decisionMap = latestByRequest((decisionsRes.data ?? []) as Array<Record<string, unknown>>);
     const userIds = [...new Set(identityRows.map((row) => String(row.user_id ?? "")).filter(Boolean))];
-    const identityProfilesRes = userIds.length
-      ? await client.from("user_profiles").select("user_id,display_name").in("user_id", userIds)
-      : { data: [], error: null };
+    const identityProfileRows: UserProfileRow[] = [];
+    for (let index = 0; index < userIds.length; index += 50) {
+      const batch = await client.from("user_profiles").select("user_id,display_name").in("user_id", userIds.slice(index, index + 50));
+      if (!batch.error) identityProfileRows.push(...((batch.data ?? []) as UserProfileRow[]));
+    }
+    const identityProfilesRes = { data: identityProfileRows, error: null };
     const identityProfileMap = new Map((((identityProfilesRes.data ?? []) as UserProfileRow[])).map((row) => [row.user_id, row.display_name ?? "Identity claimant"]));
     const reviewerIds = [...new Set(identityRows.map((row) => String(row.assigned_reviewer_user_id ?? "")).filter(Boolean))];
     const reviewerRes = reviewerIds.length ? await client.from("admin_users").select("user_id,display_name,email_normalized").in("user_id", reviewerIds).eq("status", "active") : { data: [], error: null };
