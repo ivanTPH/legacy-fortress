@@ -91,7 +91,11 @@ export function sentenceCaseStatus(value: string) {
 
 export function AdminStatusBadge({ status, label }: { status: string; label?: string }) {
   const normalized = String(status || "unknown").toLowerCase();
-  const tone = normalized === "ok" || normalized === "healthy" || normalized.includes("active") || normalized.includes("success") || normalized.includes("accepted") || normalized.includes("verified") || normalized.includes("approved")
+  // Negative states first: "inactive" contains "active" and "not_verified" contains "verified".
+  const negative = /(^|[_\s-])(not|un|in)[_\s-]?(verified|active|accepted|approved)/.test(normalized);
+  const tone = negative
+    ? normalized.includes("inactive") ? "danger" : "warning"
+    : normalized === "ok" || normalized === "healthy" || normalized.includes("active") || normalized.includes("success") || normalized.includes("accepted") || normalized.includes("verified") || normalized.includes("approved")
     ? "success"
     : normalized === "warning" || normalized === "attention" || normalized.includes("pending") || normalized.includes("sent") || normalized.includes("review") || normalized.includes("required") || normalized.includes("waiting")
       ? "warning"

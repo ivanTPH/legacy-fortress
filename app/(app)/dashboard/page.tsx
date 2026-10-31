@@ -2559,8 +2559,8 @@ function getContactInviteDisplay(contact: ContactDiscoveryRow, override?: Dashbo
   if (
     normalizedStatus.includes("accepted") ||
     normalizedStatus.includes("activated") ||
-    normalizedStatus.includes("verified") ||
-    verificationStatus.includes("verified")
+    (normalizedStatus.includes("verified") && !/(^|_)(not|un)_?verified/.test(normalizedStatus)) ||
+    verificationStatus === "verified"
   ) {
     return {
       label: "Accepted",

@@ -74,11 +74,15 @@ export async function loadVaultAccess(client: SupabaseClient, ownerUserId: strin
     client.from("vault_nomination_records").select("nomination_id,mode").eq("owner_user_id", ownerUserId),
     client.from("legal_authorities").select("id,person_id,authority_type,usable_when,status,scope_areas,activated_at,withdrawn_at").eq("owner_user_id", ownerUserId),
     client.from("account_access_grants").select("id,contact_id,activation_status,created_at,source,ends_at,paused_at,permissions_override").eq("owner_user_id", ownerUserId),
-    client.from("legal_authority_reviews").select("authority_id,message_to_owner,created_at").eq("owner_user_id", ownerUserId).order("created_at", { ascending: false }),
+    client.from("legal_authority_reviews").select("authority_id,action,message_to_owner,created_at").eq("owner_user_id", ownerUserId).order("created_at", { ascending: false }),
   ]);
+  // Show the team's message only while the latest review is asking the owner to fix something.
   const reviewMessage = new Map<string, string>();
+  const seen = new Set<string>();
   for (const review of reviews.error ? [] : reviews.data ?? []) {
-    if (review.message_to_owner && !reviewMessage.has(review.authority_id)) reviewMessage.set(review.authority_id, review.message_to_owner);
+    if (seen.has(review.authority_id)) continue;
+    seen.add(review.authority_id);
+    if (review.action === "needs_attention" && review.message_to_owner) reviewMessage.set(review.authority_id, review.message_to_owner);
   }
   const firstError = contacts.error ?? nominations.error ?? scopeRows.error ?? authorities.error;
   if (firstError) throw new Error(firstError.message);
