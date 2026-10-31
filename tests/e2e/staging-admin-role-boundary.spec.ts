@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
@@ -159,6 +160,16 @@ async function signIn(page: Page, email: string, next: string) {
   const authClient = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
   const auth = await authClient.auth.signInWithPassword({ email, password: PASSWORD });
   if (auth.error || !auth.data.session) throw auth.error ?? new Error("staging_browser_authentication_failed");
+  let session = auth.data.session;
+  // Staff portals need a two-step sign-in (authenticator code) when it is enforced.
+  if (next.startsWith("/admin") || next.startsWith("/enterprise")) {
+    const enrol = await authClient.auth.mfa.enroll({ factorType: "totp", friendlyName: "Synthetic browser acceptance" });
+    if (!enrol.error && enrol.data) {
+      const verified = await authClient.auth.mfa.challengeAndVerify({ factorId: enrol.data.id, code: totpCode(enrol.data.totp.secret) });
+      const upgraded = await authClient.auth.getSession();
+      if (!verified.error && upgraded.data.session) session = upgraded.data.session;
+    }
+  }
   await page.context().clearCookies();
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
   await page.evaluate(() => {
@@ -167,9 +178,9 @@ async function signIn(page: Page, email: string, next: string) {
   });
   await page.evaluate((session) => {
     window.localStorage.setItem("sb-supabase-test-auth-token", JSON.stringify(session));
-  }, auth.data.session);
+  }, session);
   await page.goto(`${BASE_URL}${next}`, { waitUntil: "domcontentloaded" });
-  return auth.data.session;
+  return session;
 }
 
 async function assertAccountMenu(page: Page) {
@@ -186,4 +197,17 @@ async function assertAccountMenu(page: Page) {
 
 async function assertDeniedWorkspace(page: Page, heading: RegExp) {
   await expect(page.getByRole("heading", { name: heading }).first()).toBeVisible();
+}
+
+/** RFC 6238 code (30 s, 6 digits, SHA-1), as an authenticator app shows. */
+function totpCode(base32Secret: string, at = Date.now()) {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  let bits = "";
+  for (const char of base32Secret.replace(/=+$/, "").toUpperCase()) bits += alphabet.indexOf(char).toString(2).padStart(5, "0");
+  const key = Buffer.from((bits.match(/.{8}/g) ?? []).map((byte) => parseInt(byte, 2)));
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(at / 30000)));
+  const hmac = createHmac("sha1", key).update(counter).digest();
+  const offset = hmac[hmac.length - 1] & 0xf;
+  return String(((hmac.readUInt32BE(offset) & 0x7fffffff) % 1000000)).padStart(6, "0");
 }

@@ -436,11 +436,13 @@ async function loadAdminPermissionRoles(token: string): Promise<PlatformRole[]> 
       authorization: `Bearer ${token}`,
     },
   });
-  if (!response.ok) return [];
-  const payload = (await response.json().catch(() => null)) as {
+  const raw = (await response.json().catch(() => null)) as {
     ok?: boolean;
     admin?: { isMasterAdmin?: boolean; role?: string; capabilities?: string[] };
+    pendingAdmin?: { isMasterAdmin?: boolean; role?: string; capabilities?: string[] } | null;
   } | null;
+  // Staff waiting only for their code step keep their workspace entries; the portal asks for the code.
+  const payload = response.ok ? raw : response.status === 401 && raw?.pendingAdmin ? { ok: true, admin: raw.pendingAdmin } : null;
   if (!payload?.ok || !payload.admin) return [];
   const roles: PlatformRole[] = [];
   if (payload.admin.isMasterAdmin) roles.push("super_admin");

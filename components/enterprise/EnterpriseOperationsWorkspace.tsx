@@ -492,6 +492,11 @@ export default function EnterpriseOperationsWorkspace() {
     });
     const res = await authFetch("/api/internal/admin/enterprise");
     const json = (await res.json().catch(() => ({}))) as { ok?: boolean; portfolio?: EnterprisePortfolio; message?: string; uiAccess?: { organisationScoped: boolean; capabilities: string[] } };
+    if (res.status === 401) {
+      // Signed out, or no recent two-step sign-in.
+      router.replace("/enterprise/sign-in?next=%2Fenterprise");
+      return;
+    }
     if (!res.ok || !json.ok || !json.portfolio) {
       setMessage(json.message || "Enterprise Operations is available only to authorised administrators.");
       setState(res.status === 403 ? "denied" : "error");

@@ -11,6 +11,8 @@ export async function GET(request: Request) {
         ok: false,
         message: admin.message,
         issue: admin.issue ?? null,
+        // Only the person's own staff role, so their menu can still link to the code step.
+        pendingAdmin: admin.issue === "mfa_required" ? admin.staff ?? null : null,
       },
       { status: admin.status },
     );

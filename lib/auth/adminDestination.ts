@@ -31,7 +31,9 @@ export async function resolvePermissionedAdminDestination(
     },
   });
 
+  const payload = (await response.json().catch(() => null)) as { ok?: boolean; issue?: string | null; pendingAdmin?: unknown } | null;
+  // Staff who still need their 6-digit code go on; the portal asks for it.
+  if (response.status === 401 && payload?.issue === "mfa_required" && payload.pendingAdmin) return safeNext;
   if (!response.ok) return fallbackDestination;
-  const payload = (await response.json().catch(() => null)) as { ok?: boolean } | null;
   return payload?.ok ? safeNext : fallbackDestination;
 }
