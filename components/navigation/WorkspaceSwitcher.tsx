@@ -36,6 +36,7 @@ import {
   setStoredLinkedGrantId,
   type LinkedFortressSummary,
 } from "../../lib/access-control/viewerAccess";
+import { loadMyNominations, type MyNomination } from "../../lib/vaultAccess/vaultAccess";
 
 type WorkspaceSwitcherProps = {
   currentPathname: string;
@@ -79,6 +80,7 @@ export default function WorkspaceSwitcher({
 }: WorkspaceSwitcherProps) {
   const [session, setSession] = useState<WorkspaceSession | null>(null);
   const [linkedFortresses, setLinkedFortresses] = useState<LinkedFortressSummary[]>([]);
+  const [nominations, setNominations] = useState<MyNomination[]>([]);
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -134,6 +136,9 @@ export default function WorkspaceSwitcher({
       } catch {
         if (mounted) setLinkedFortresses([]);
       }
+      // Nominations for later open nothing; the switcher only shows that they exist (va-r5).
+      const nominated = user ? await loadMyNominations(supabase) : [];
+      if (mounted) setNominations(nominated.filter((item) => item.status === "active"));
     }
 
     void refresh();
@@ -164,7 +169,8 @@ export default function WorkspaceSwitcher({
     ? linkedFortresses.find((linked) => linked.grantId === getStoredLinkedGrantId())
     : null;
   const hasMultipleContexts = workspaces.length > 1;
-  const singleCustomerContext = customerOnly && !hasMultipleContexts && linkedFortresses.length === 0;
+  const nominatedOnly = customerOnly ? nominations : [];
+  const singleCustomerContext = customerOnly && !hasMultipleContexts && linkedFortresses.length === 0 && nominatedOnly.length === 0;
   const plainCurrentContext = singleCustomerContext && !founderTestLauncherAvailable && !mobileContextOnly;
   const activeRole = activeWorkspace?.roleContext ?? primaryRole;
 
@@ -276,7 +282,7 @@ export default function WorkspaceSwitcher({
     window.location.assign(href);
   }
 
-  if ((!session && !alwaysShow) || (session && !hasMultipleContexts && linkedFortresses.length === 0 && !alwaysShow)) return null;
+  if ((!session && !alwaysShow) || (session && !hasMultipleContexts && linkedFortresses.length === 0 && nominatedOnly.length === 0 && !alwaysShow)) return null;
 
   const currentContent = <>
     {mobileContextOnly ? null : branded ? <BrandGlyph /> : <span className="lf-workspace-icon" aria-hidden="true"><Icon name={iconForWorkspace(activeWorkspace?.id ?? "application")} size={16} /></span>}
@@ -315,7 +321,7 @@ export default function WorkspaceSwitcher({
             {mobileContextOnly ? <div className="lf-workspace-mobile-back"><button type="button" onClick={() => { setOpen(false); triggerRef.current?.focus(); }}><Icon name="chevron_left" size={20} /> {drawerEntry ? "Menu" : "My Vault"}</button></div> : null}
             <div className="lf-workspace-menu-heading">
               <span>{customerOnly ? "Switch Vault" : "Switch context"}</span>
-              <small>{customerOnly ? `${linkedFortresses.length} linked` : `${workspaces.length + linkedFortresses.length} available`}</small>
+              <small>{customerOnly ? `${linkedFortresses.length + nominatedOnly.length} linked` : `${workspaces.length + linkedFortresses.length} available`}</small>
             </div>
             {!customerOnly ? <div className="lf-workspace-session-summary">
               <span>Signed in as <strong>{session.displayName}</strong></span>
@@ -328,7 +334,7 @@ export default function WorkspaceSwitcher({
                 <span><strong>My Vault</strong><small>Owner</small></span>
                 {!activeLinkedFortress ? <Icon name="check_circle" size={20} /> : null}
               </Link> : null}
-              {linkedFortresses.length ? <div className="lf-workspace-menu-heading"><span>Fortresses you&apos;re linked to</span></div> : null}
+              {linkedFortresses.length || nominatedOnly.length ? <div className="lf-workspace-menu-heading"><span>Fortresses you&apos;re linked to</span></div> : null}
               {linkedFortresses.map((linked) => (
                 <Link key={linked.grantId} href={`/contact-wallet?grant=${encodeURIComponent(linked.grantId)}`} className={activeLinkedFortress?.grantId === linked.grantId ? "is-active" : ""} aria-current={activeLinkedFortress?.grantId === linked.grantId ? "page" : undefined} onClick={() => { setStoredLinkedGrantId(linked.grantId); closeAfterSelection(); }}>
                   <Icon name={linked.accessState === "estate_locked" ? "lock" : "verified_user"} size={20} />
@@ -336,7 +342,13 @@ export default function WorkspaceSwitcher({
                   {activeLinkedFortress?.grantId === linked.grantId ? <Icon name="check_circle" size={20} /> : null}
                 </Link>
               ))}
-              <p className="lf-workspace-customer-note">Linked Vault access is separate from Admin and Partner sign-ins.</p>
+              {nominatedOnly.map((item, index) => (
+                <Link key={`nominated-${index}`} href="/vault-nominations" className="lf-workspace-nominated" onClick={closeAfterSelection}>
+                  <Icon name="lock" size={20} />
+                  <span><strong>{item.ownerName}</strong><small>You&apos;re nominated · Locked until release</small></span>
+                </Link>
+              ))}
+              <p className="lf-workspace-customer-note">Partner and Admin never appear here. They&apos;re separate sign-ins.</p>
             </div> : workspaces.map((workspace) => (
               <Link
                 key={workspace.id}

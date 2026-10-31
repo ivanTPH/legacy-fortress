@@ -124,7 +124,7 @@ test("workspace switcher is present in admin shell, application shell, sign-in, 
   assert.doesNotMatch(switcher, /extractPlatformRolesFromMetadata\(user\.user_metadata\)/);
   assert.match(switcher, /getAvailableWorkspaces/);
   assert.match(switcher, /alwaysShow/);
-  assert.match(switcher, /!hasMultipleContexts && linkedFortresses\.length === 0 && !alwaysShow/);
+  assert.match(switcher, /!hasMultipleContexts && linkedFortresses\.length === 0 && nominatedOnly\.length === 0 && !alwaysShow/);
   assert.match(switcher, /lf-workspace-menu/);
   assert.match(switcher, /plainCurrentContext \? <div className="lf-workspace-current lf-workspace-current-label"/);
   assert.match(switcher, /const plainCurrentContext = singleCustomerContext && !founderTestLauncherAvailable/);
