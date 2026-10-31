@@ -4,7 +4,16 @@ import fs from "node:fs";
 
 const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("the reviewer check never decides automatically and never gives access", () => {
+test("automatic verification only on a clear pass, never for case-bound checks, and never gives access", () => {
+  const service = read("lib/identity-verification/service.ts");
+  assert.match(service, /if \(assessment\.outcome === "auto_verified" && !caseBound\)/);
+  assert.match(service, /const caseBound = request\.verification_purpose === "admin_review";/);
+  const face = read("lib/identity-verification/faceAnalysis.ts");
+  assert.match(face, /outcome: reasons\.length === 0 \? "auto_verified" : "needs_review"/);
+  assert.match(face, /motion_check_not_passed/);
+  assert.match(face, /antispoof_below_threshold/);
+  assert.doesNotMatch(face, /insert\(|upsert\(|from\("/);
+
   const provider = read("lib/identity-verification/inhouseReviewProvider.ts");
   assert.match(provider, /decision: usable \? "review_required" : "failed"/);
   assert.match(provider, /identityLevel: null/);

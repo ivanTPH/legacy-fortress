@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { identityErrorResponse, requireIdentityApiAccess } from "@/lib/identity-verification/api";
-import { isInternalExperimentalProviderAllowed, uploadCameraEvidence, generateSyntheticCameraEvidence } from "@/lib/identity-verification/service";
+import { isInternalExperimentalProviderAllowed, uploadCameraEvidence, uploadMotionFrames, generateSyntheticCameraEvidence } from "@/lib/identity-verification/service";
 
 export async function POST(request: Request, context: { params: Promise<{ requestId: string }> }) {
   const access = await requireIdentityApiAccess(request);
@@ -20,6 +20,11 @@ export async function POST(request: Request, context: { params: Promise<{ reques
     if (!(file instanceof File) || !challengeId) {
       return NextResponse.json({ ok: false, error: "camera_capture_and_challenge_required" }, { status: 400 });
     }
+    // Reviewer check: frames taken while the person turned their head as asked.
+    const frames = (["left", "right"] as const)
+      .map((direction) => ({ direction, file: form.get(`frame_${direction}`) }))
+      .filter((frame): frame is { direction: "left" | "right"; file: File } => frame.file instanceof File);
+    if (frames.length) await uploadMotionFrames(access.admin, { userId: access.user.id, requestId, challengeId, frames });
     const result = await uploadCameraEvidence(access.admin, {
       userId: access.user.id,
       requestId,
