@@ -46,6 +46,10 @@ export type VaultGrant = {
   personId: string | null;
   status: string;
   createdAt: string;
+  source: string;
+  endsAt: string | null;
+  assetIds: string[];
+  recordIds: string[];
 };
 
 export type VaultAccessSnapshot = {
@@ -69,7 +73,7 @@ export async function loadVaultAccess(client: SupabaseClient, ownerUserId: strin
     client.from("vault_nominations").select("id,person_id,scope,status,notify_person,created_at,cancelled_at").eq("owner_user_id", ownerUserId).order("created_at", { ascending: false }),
     client.from("vault_nomination_records").select("nomination_id,mode").eq("owner_user_id", ownerUserId),
     client.from("legal_authorities").select("id,person_id,authority_type,usable_when,status,scope_areas,activated_at,withdrawn_at").eq("owner_user_id", ownerUserId),
-    client.from("account_access_grants").select("id,contact_id,activation_status,created_at").eq("owner_user_id", ownerUserId),
+    client.from("account_access_grants").select("id,contact_id,activation_status,created_at,source,ends_at,paused_at,permissions_override").eq("owner_user_id", ownerUserId),
     client.from("legal_authority_reviews").select("authority_id,message_to_owner,created_at").eq("owner_user_id", ownerUserId).order("created_at", { ascending: false }),
   ]);
   const reviewMessage = new Map<string, string>();
@@ -117,7 +121,14 @@ export async function loadVaultAccess(client: SupabaseClient, ownerUserId: strin
       reviewMessage: reviewMessage.get(row.id) ?? null,
     })),
     // Grants are read for display only. Their rules are unchanged.
-    grants: grants.error ? [] : (grants.data ?? []).map((row) => ({ id: row.id, personId: row.contact_id, status: row.activation_status, createdAt: row.created_at })),
+    grants: grants.error ? [] : (grants.data ?? []).map((row) => {
+      const override = (row.permissions_override ?? {}) as Record<string, unknown>;
+      const ids = (key: string) => Array.isArray(override[key]) ? (override[key] as unknown[]).map(String) : [];
+      return {
+        id: row.id, personId: row.contact_id, status: row.paused_at ? "paused" : row.activation_status, createdAt: row.created_at,
+        source: row.source ?? "owner_grant", endsAt: row.ends_at ?? null, assetIds: ids("asset_ids"), recordIds: ids("record_ids"),
+      };
+    }),
   };
 }
 
@@ -258,4 +269,72 @@ export async function loadMyNominations(client: SupabaseClient): Promise<MyNomin
   return data
     .filter((row) => row && (row.status === "active" || row.status === "released"))
     .map((row) => ({ ownerName: String(row.owner_display_name || "Your contact"), kind: String(row.kind || "estate"), status: row.status }));
+}
+
+
+// ---- Sharing now: review, end date, stop, history (va-s*, va-v2–v4). ----
+
+/** A grant opens records only while it has some, is active and hasn't ended. */
+export function grantIsOpen(grant: VaultGrant, now = Date.now()) {
+  return ["accepted", "active", "verified"].includes(String(grant.status).toLowerCase())
+    && grant.assetIds.length + grant.recordIds.length > 0
+    && (!grant.endsAt || Date.parse(grant.endsAt) > now);
+}
+
+export function grantHasEnded(grant: VaultGrant, now = Date.now()) {
+  return Boolean(grant.endsAt && Date.parse(grant.endsAt) <= now && grant.assetIds.length + grant.recordIds.length > 0);
+}
+
+export async function loadGrantRecordTitles(client: SupabaseClient, ownerUserId: string, grant: VaultGrant) {
+  const [assets, records] = await Promise.all([
+    grant.assetIds.length ? client.from("assets").select("id,title").eq("owner_user_id", ownerUserId).in("id", grant.assetIds) : Promise.resolve({ data: [], error: null }),
+    grant.recordIds.length ? client.from("records").select("id,title").eq("owner_user_id", ownerUserId).in("id", grant.recordIds) : Promise.resolve({ data: [], error: null }),
+  ]);
+  return [...(assets.data ?? []), ...(records.data ?? [])].map((row) => String((row as { title?: string }).title || "Untitled record"));
+}
+
+export async function stopVaultAccess(client: SupabaseClient, grantId: string, note: string) {
+  const { error } = await client.rpc("lf_stop_vault_access", { p_grant_id: grantId, p_note: note.trim() || null });
+  if (error) throw new Error(error.message);
+}
+
+export async function setVaultAccessEndDate(client: SupabaseClient, ownerUserId: string, grantId: string, date: string | null) {
+  // A date means "until the end of that day" in the owner's time.
+  const endsAt = date ? new Date(`${date}T23:59:59`).toISOString() : null;
+  const { error } = await client.from("account_access_grants").update({ ends_at: endsAt, updated_at: new Date().toISOString() })
+    .eq("id", grantId).eq("owner_user_id", ownerUserId).eq("source", "owner_grant");
+  if (error) throw new Error(/tomorrow/i.test(error.message) ? "Choose a date from tomorrow onwards." : error.message);
+}
+
+export type VaultAccessHistoryItem = { at: string; action: string; byOwner: boolean; recordCount: number | null; note: string | null };
+
+export async function loadVaultAccessHistory(client: SupabaseClient, personId: string): Promise<VaultAccessHistoryItem[]> {
+  const { data, error } = await client.rpc("my_vault_access_history", { p_person_id: personId });
+  if (error || !Array.isArray(data)) return [];
+  return data.map((row) => ({ at: row.at, action: row.action, byOwner: Boolean(row.by_owner), recordCount: row.record_count ?? null, note: row.note ?? null }));
+}
+
+export function describeHistory(item: VaultAccessHistoryItem): { icon: string; title: string } {
+  const who = item.byOwner ? "by you" : "by our review team";
+  const records = item.recordCount ? ` · ${item.recordCount} record${item.recordCount === 1 ? "" : "s"}` : "";
+  const map: Record<string, [string, string]> = {
+    "access.given": ["visibility", `Access given ${who}${records}`],
+    "access.changed": ["edit", `Records changed ${who}${records}`],
+    "access.stopped": ["block", `Access stopped ${who}${records}`],
+    "access.end_date_changed": ["event", `End date changed ${who}`],
+    "nomination.created": ["bookmark_added", `Nominated for later ${who}`],
+    "nomination.changed": ["edit", `Nomination changed ${who}`],
+    "nomination.cancelled": ["block", `Nomination cancelled ${who}`],
+    "nomination.released": ["lock_open", "Released after the release was approved"],
+    "nomination.ended": ["block", "Nomination ended"],
+    "authority.recorded": ["gavel", `Authority recorded ${who}`],
+    "authority.confirmed": ["check_circle", "Authority confirmed by our review team"],
+    "authority.needs_attention": ["error", "Our review team asked you to fix something"],
+    "authority.rejected": ["block", "Authority rejected by our review team"],
+    "authority.activated": ["check_circle", "Authority in effect"],
+    "authority.withdrawn": ["block", "Authority withdrawn by you"],
+    "authority.ended": ["block", "Authority ended by our review team"],
+  };
+  const [icon, title] = map[item.action] ?? ["history", "Access updated"];
+  return { icon, title };
 }

@@ -16,6 +16,15 @@ import {
   type AuthorityType,
   cancelVaultNomination,
   firstName,
+  describeHistory,
+  grantHasEnded,
+  grantIsOpen,
+  loadGrantRecordTitles,
+  loadVaultAccessHistory,
+  setVaultAccessEndDate,
+  stopVaultAccess,
+  type VaultAccessHistoryItem,
+  type VaultGrant,
   loadVaultAccess,
   loadVaultRecordOptions,
   saveVaultNomination,
@@ -78,11 +87,18 @@ export default function VaultAccessWorkspace() {
     const person = (id: string | null) => snapshot.people.find((item) => item.id === id);
     const out: Row[] = [];
     for (const grant of snapshot.grants) {
-      const active = ["accepted", "active", "verified"].includes(String(grant.status).toLowerCase());
+      // Authority access is shown with its authority; empty grants (an invitation only) share nothing.
+      if (grant.source !== "owner_grant") continue;
+      const count = grant.assetIds.length + grant.recordIds.length;
+      const open = grantIsOpen(grant);
+      const ended = grantHasEnded(grant);
+      if (!open && !ended) continue;
+      const records = `${count} record${count === 1 ? "" : "s"}`;
       out.push({
-        key: `grant-${grant.id}`, group: active ? "now" : "ended", person: person(grant.personId),
-        covers: "Records you shared", kind: "Now, while you’re alive", condition: "View only",
-        chips: active ? [{ tone: "ok", icon: "visibility", label: "Can see shared records" }] : [{ tone: "neutral", icon: "block", label: "Access stopped" }],
+        key: `grant-${grant.id}`, group: open ? "now" : "ended", person: person(grant.personId),
+        covers: open && grant.endsAt ? `${records} · until ${shortDate(grant.endsAt)}` : records,
+        kind: "Now, while you’re alive", condition: "View only",
+        chips: open ? [{ tone: "ok", icon: "visibility", label: `Can see ${records}` }] : [{ tone: "neutral", icon: "event_busy", label: `Ended · ${shortDate(grant.endsAt ?? "")}` }],
       });
     }
     for (const nomination of snapshot.nominations) {
@@ -179,7 +195,7 @@ export default function VaultAccessWorkspace() {
 
       {panelRow ? (
         <SidePanel title={panelRow.person?.name ?? "Vault access"} subtitle={panelRow.person?.relationship ?? undefined} onClose={() => setPanelKey("")}>
-          <PersonAccess row={panelRow} snapshot={snapshot} onCancel={(nomination) => setConfirmCancel(nomination)} onWithdraw={async (authorityId, reason) => { await withdrawLegalAuthority(supabase, ownerId, authorityId, reason); setPanelKey(""); setToast("Authority marked as withdrawn. It can’t be used."); await reload(); }} />
+          <PersonAccess row={panelRow} snapshot={snapshot} ownerId={ownerId} onChanged={async (message) => { setToast(message); await reload(); }} onCancel={(nomination) => setConfirmCancel(nomination)} onWithdraw={async (authorityId, reason) => { await withdrawLegalAuthority(supabase, ownerId, authorityId, reason); setPanelKey(""); setToast("Authority marked as withdrawn. It can’t be used."); await reload(); }} />
         </SidePanel>
       ) : null}
 
@@ -201,21 +217,18 @@ export default function VaultAccessWorkspace() {
   );
 }
 
-function PersonAccess({ row, snapshot, onCancel, onWithdraw }: { row: Row; snapshot: VaultAccessSnapshot; onCancel: (nomination: VaultNomination) => void; onWithdraw: (authorityId: string, reason: string) => Promise<void> }) {
+function PersonAccess({ row, snapshot, ownerId, onCancel, onWithdraw, onChanged }: { row: Row; snapshot: VaultAccessSnapshot; ownerId: string; onCancel: (nomination: VaultNomination) => void; onWithdraw: (authorityId: string, reason: string) => Promise<void>; onChanged: (message: string) => Promise<void> }) {
   const [withdrawing, setWithdrawing] = useState(false);
   const [reason, setReason] = useState("");
   const [withdrawError, setWithdrawError] = useState("");
   const person = row.person;
   const name = firstName(person?.name ?? "This person");
-  const nowGrant = snapshot.grants.find((grant) => grant.personId === person?.id && ["accepted", "active", "verified"].includes(String(grant.status).toLowerCase()));
+  const nowGrant = snapshot.grants.find((grant) => grant.personId === person?.id && grant.source === "owner_grant" && grantIsOpen(grant));
   const later = snapshot.nominations.find((item) => item.personId === person?.id && item.status === "active");
   const authority = snapshot.authorities.find((item) => item.personId === person?.id && !["withdrawn", "ended", "rejected"].includes(item.status));
   return (
     <div className="lf-va-panel-body">
-      <section className="lf-va-fact">
-        <header><strong>Now</strong><Chip tone={nowGrant ? "ok" : "neutral"} icon={nowGrant ? "visibility" : "lock"} label={nowGrant ? "Can see shared records" : "No access"} /></header>
-        <p>{nowGrant ? `${name} can see the records you chose to share.` : `${name} can’t see any of your records.`}</p>
-      </section>
+      <NowAccess grant={nowGrant} name={name} personId={person?.id ?? ""} ownerId={ownerId} onChanged={onChanged} />
       <section className="lf-va-fact">
         <header><strong>Later</strong>{later ? <Chip tone="neutral" icon="bookmark" label="Nominated" /> : <Chip tone="neutral" icon="remove" label="Not nominated" />}</header>
         {later ? (
@@ -250,6 +263,7 @@ function PersonAccess({ row, snapshot, onCancel, onWithdraw }: { row: Row; snaps
         <div className="lf-va-fact-row"><span>Invitation</span><Chip tone={person?.joined ? "ok" : "neutral"} icon={person?.joined ? "check_circle" : "schedule_send"} label={person?.joined ? "Joined" : capitalise(person?.invitation ?? "Not invited")} /></div>
         <div className="lf-va-fact-row"><span>Identity</span><Chip tone={/verified/i.test(person?.identity ?? "") ? "ok" : "neutral"} icon={/verified/i.test(person?.identity ?? "") ? "verified_user" : "badge"} label={/verified/i.test(person?.identity ?? "") ? "ID verified" : "ID not checked"} /></div>
       </section>
+      {person ? <AccessHistory personId={person.id} revision={snapshot} /> : null}
       <p className="lf-va-note"><Icon name="info" size={18} />Nominations, invitations and ID checks never give access. Access opens only when you share records, or after an approved release.</p>
       <div className="lf-va-panel-footer">
         {person ? <Link className="lf-va-secondary" href={`/people-access?view=people&contact=${encodeURIComponent(person.id)}`}>Open person</Link> : <span />}
@@ -536,5 +550,79 @@ function capitalise(value: string) {
 }
 
 function shortDate(value: string) {
-  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" }).format(new Date(value));
+  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(value));
+}
+
+
+function NowAccess({ grant, name, personId, ownerId, onChanged }: { grant: VaultGrant | undefined; name: string; personId: string; ownerId: string; onChanged: (message: string) => Promise<void> }) {
+  const [titles, setTitles] = useState<string[] | null>(null);
+  const [mode, setMode] = useState<"" | "stop" | "end">("");
+  const [note, setNote] = useState("");
+  const [date, setDate] = useState("");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [tomorrow] = useState(() => new Date(Date.now() + 86400000).toISOString().slice(0, 10));
+  useEffect(() => {
+    let active = true;
+    if (!grant) return;
+    void loadGrantRecordTitles(supabase, ownerId, grant).then((value) => { if (active) setTitles(value); });
+    return () => { active = false; };
+  }, [grant, ownerId]);
+  if (!grant) {
+    return <section className="lf-va-fact">
+      <header><strong>Now</strong><Chip tone="neutral" icon="lock" label="No access" /></header>
+      <p>{name} can’t see any of your records.</p>
+      {personId ? <Link className="lf-va-link-button" href={`/people-access?view=people&contact=${encodeURIComponent(personId)}`}>Give access</Link> : null}
+    </section>;
+  }
+  const count = grant.assetIds.length + grant.recordIds.length;
+  async function run(action: () => Promise<void>, message: string) {
+    setSaving(true); setError("");
+    try { await action(); setMode(""); setNote(""); await onChanged(message); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "That didn’t save."); }
+    finally { setSaving(false); }
+  }
+  return <section className="lf-va-fact" aria-label="Access now">
+    <header><strong>Now</strong><Chip tone="ok" icon="visibility" label={`Can see ${count} record${count === 1 ? "" : "s"}`} /></header>
+    <ul className="lf-va-record-list">{(titles ?? []).slice(0, 8).map((title, index) => <li key={index}><Icon name="description" size={16} />{title}</li>)}{titles && titles.length > 8 ? <li>and {titles.length - 8} more</li> : null}</ul>
+    <dl>
+      <div><dt>{name} can</dt><dd>View only</dd></div>
+      <div><dt>Until</dt><dd>{grant.endsAt ? new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(grant.endsAt)) : "You stop it"}</dd></div>
+    </dl>
+    {mode === "stop" ? <div className="lf-va-step" role="group" aria-label={`Stop ${name}’s access`}>
+      <p><strong>Stop {name}’s access?</strong> {name} won’t be able to see {count === 1 ? "this record" : `these ${count} records`} any more. This happens straight away.</p>
+      <label className="lf-va-field" htmlFor="va-stop-note">Note for your Record history · Optional<input id="va-stop-note" value={note} maxLength={300} onChange={(event) => setNote(event.target.value)} placeholder="For example, changed adviser" /></label>
+      {error ? <p className="lf-va-error" role="alert">{error}</p> : null}
+      <div className="lf-va-dialog-footer"><button type="button" className="lf-va-secondary" onClick={() => setMode("")}>Keep access</button><button type="button" className="lf-va-danger" disabled={saving} onClick={() => void run(() => stopVaultAccess(supabase, grant.id, note), `${name}’s access stopped.`)}>{saving ? "Stopping…" : "Stop access"}</button></div>
+    </div> : mode === "end" ? <div className="lf-va-step" role="group" aria-label="Change end date">
+      <label className="lf-va-field" htmlFor="va-end-date">Access ends on<input id="va-end-date" type="date" min={tomorrow} value={date} onChange={(event) => setDate(event.target.value)} /></label>
+      <p className="lf-va-muted">Access stops automatically at the end of that day and shows in Ended.</p>
+      {error ? <p className="lf-va-error" role="alert">{error}</p> : null}
+      <div className="lf-va-dialog-footer">
+        {grant.endsAt ? <button type="button" className="lf-va-secondary" disabled={saving} onClick={() => void run(() => setVaultAccessEndDate(supabase, ownerId, grant.id, null), "End date removed. Access continues until you stop it.")}>Remove end date</button> : <button type="button" className="lf-va-secondary" onClick={() => setMode("")}>Cancel</button>}
+        <button type="button" className="lf-va-primary" disabled={saving || !date} onClick={() => void run(() => setVaultAccessEndDate(supabase, ownerId, grant.id, date), "End date saved.")}>{saving ? "Saving…" : "Save end date"}</button>
+      </div>
+    </div> : <div className="lf-va-actions">
+      <Link className="lf-va-action-row" href={`/people-access?view=people&contact=${encodeURIComponent(personId)}`}>Change records<Icon name="chevron_right" size={18} /></Link>
+      <button type="button" className="lf-va-action-row" onClick={() => { setDate(grant.endsAt ? grant.endsAt.slice(0, 10) : ""); setMode("end"); }}>{grant.endsAt ? "Change end date" : "Add an end date"}<Icon name="chevron_right" size={18} /></button>
+      <button type="button" className="lf-va-danger-text" onClick={() => setMode("stop")}>Stop access</button>
+    </div>}
+  </section>;
+}
+
+function AccessHistory({ personId, revision }: { personId: string; revision: unknown }) {
+  const [items, setItems] = useState<VaultAccessHistoryItem[] | null>(null);
+  useEffect(() => {
+    let active = true;
+    void loadVaultAccessHistory(supabase, personId).then((value) => { if (active) setItems(value); });
+    return () => { active = false; };
+  }, [personId, revision]);
+  if (!items || !items.length) return null;
+  return <details className="lf-va-fact lf-va-history">
+    <summary><strong>Record history</strong><small>{items.length} event{items.length === 1 ? "" : "s"}</small></summary>
+    <ol>{items.map((item, index) => { const text = describeHistory(item); return <li key={index}>
+      <Icon name={text.icon} size={18} />
+      <span><strong>{text.title}</strong><small>{new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(item.at))}{item.note ? " · note added" : ""}</small>{item.note ? <em>{item.note}</em> : null}</span>
+    </li>; })}</ol>
+  </details>;
 }

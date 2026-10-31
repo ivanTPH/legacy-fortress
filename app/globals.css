@@ -9049,3 +9049,18 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-admin-field textarea { font: inherit; font-weight: 400; padding: 10px; border: 1px solid var(--lf-border-input); border-radius: 8px; background: var(--lf-surface-card); color: var(--lf-text); }
 .lf-va-review-message { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0; padding: 10px 12px; border-radius: 8px; background: var(--lf-status-pending-bg); color: var(--lf-status-pending-text, var(--lf-text)); }
 .lf-va-review-message strong { display: block; }
+/* Vault access · sharing now and Record history (va-v2–v4) */
+.lf-va-record-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; }
+.lf-va-record-list li { display: flex; gap: 8px; align-items: center; }
+.lf-va-actions { display: grid; gap: 4px; margin-top: 8px; }
+.lf-va-action-row { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 0 4px; border: 0; border-top: 1px solid var(--lf-border); background: none; color: var(--lf-text); font: inherit; font-weight: var(--lf-weight-semibold); text-decoration: none; cursor: pointer; text-align: left; }
+.lf-va-actions .lf-va-danger-text { justify-self: start; padding-left: 4px; }
+.lf-va-link-button { display: inline-flex; align-items: center; min-height: 44px; font-weight: var(--lf-weight-semibold); color: var(--lf-link, var(--lf-focus)); }
+.lf-va-field input { font: inherit; min-height: 44px; padding: 8px 10px; border: 1px solid var(--lf-border-input); border-radius: 8px; background: var(--lf-surface-card); color: var(--lf-text); }
+.lf-va-history summary { display: flex; justify-content: space-between; align-items: center; min-height: 44px; cursor: pointer; }
+.lf-va-history summary small { color: var(--lf-text-secondary); }
+.lf-va-history ol { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 12px; }
+.lf-va-history li { display: flex; gap: 10px; align-items: flex-start; }
+.lf-va-history li strong, .lf-va-history li small, .lf-va-history li em { display: block; }
+.lf-va-history li small { color: var(--lf-text-secondary); }
+.lf-va-history li em { font-style: normal; color: var(--lf-text-secondary); margin-top: 2px; }

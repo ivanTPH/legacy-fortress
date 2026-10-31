@@ -1,8 +1,8 @@
 {
-  "approvedBy": "Ivan (owner), 31 Oct 2026: 'Yes' to Power of Attorney review and activation (attorney access from a confirmed, activated authority) for TEST",
+  "approvedBy": "Ivan (owner), 31 Oct 2026: build the signed-off Vault access designs (sharing now with end date, stop/cancel/withdraw recorded in Record history) on TEST",
   "mode": "apply",
-  "attempt": 8,
+  "attempt": 9,
   "files": [
-    { "file": "20261031120000_legal_authority_activation.sql", "sha256": "9dc4cc1eb91609477aeb1930352775dd580e467bef94ebe978e37c4d11ccb765" }
+    { "file": "20261031150000_vault_access_history_and_end_dates.sql", "sha256": "9a1af4bf31342350823564c93b8c8388592dc49613447e5ca7c0487830ba1397" }
   ]
 }
