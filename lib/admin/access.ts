@@ -258,12 +258,13 @@ export async function ensureMasterAdminRecord(
 /**
  * Two-step verification for staff (ADMIN_PARTNER.md: always required, short session).
  * The token has already been validated by getUser; this reads its assurance claims.
- * Switched on by STAFF_MFA_REQUIRED until TEST confirms authenticator codes work end to end.
+ * Confirmed working on TEST by the acceptance run on 31 Oct 2026 (release 53).
  */
 export const STAFF_SESSION_HOURS = 12;
 
 export function staffMfaRequired() {
-  return process.env.STAFF_MFA_REQUIRED === "true";
+  // Required (owner sign-off, ADMIN_PARTNER.md). Only a local dev server may set STAFF_MFA_REQUIRED=false.
+  return process.env.STAFF_MFA_REQUIRED !== "false";
 }
 
 export function tokenAssurance(token: string) {
@@ -277,9 +278,20 @@ export function tokenAssurance(token: string) {
   }
 }
 
+/** Who the person is on staff, returned when only the code step is missing (so menus can still link). */
+export type PendingStaff = { isMasterAdmin: boolean; role: string | null; capabilities: string[] };
+
+/** Staff only, checked after the role: a recent sign-in with an authenticator code. */
+function staffAssuranceFailure(request: Request, staff: PendingStaff) {
+  if (!staffMfaRequired()) return null;
+  const assurance = tokenAssurance(extractBearerToken(request));
+  if (assurance.aal2 && assurance.fresh) return null;
+  return { ok: false as const, status: 401, message: "Sign in again with your 6-digit code.", issue: "mfa_required", staff };
+}
+
 export async function requireAdminAccess(request: Request): Promise<
   | { ok: true; access: AdminAccessState; adminClient: AnySupabaseClient }
-  | { ok: false; status: number; message: string; issue?: string }
+  | { ok: false; status: number; message: string; issue?: string; staff?: PendingStaff }
 > {
   const issue = getSupabaseAdminConfigIssue();
   const adminClient = createSupabaseAdminClient();
@@ -303,13 +315,6 @@ export async function requireAdminAccess(request: Request): Promise<
           : "You must be signed in to continue.",
       issue: requestUser.error === "missing_public_env" ? "missing_public_env" : requestUser.error ?? undefined,
     };
-  }
-
-  if (staffMfaRequired()) {
-    const assurance = tokenAssurance(extractBearerToken(request));
-    if (!assurance.aal2 || !assurance.fresh) {
-      return { ok: false, status: 401, message: "Sign in to Platform Admin with your 6-digit code.", issue: "mfa_required" };
-    }
   }
 
   const emailNormalized = normalizeAdminEmail(requestUser.user.email);
@@ -394,15 +399,19 @@ export async function requireAdminAccess(request: Request): Promise<
     };
   }
   const effectiveRole = overrideRole ?? realRole;
+  const isMasterAdmin = isMasterAdminEmail(emailNormalized) || adminRow.is_master;
+  const capabilities = getAdminRoleCapabilities(effectiveRole);
+  const assuranceFailure = staffAssuranceFailure(request, { isMasterAdmin, role: effectiveRole, capabilities });
+  if (assuranceFailure) return assuranceFailure;
 
   return {
     ok: true,
     access: {
       user: requestUser.user,
       emailNormalized,
-      isMasterAdmin: isMasterAdminEmail(emailNormalized) || adminRow.is_master,
+      isMasterAdmin,
       adminRole: effectiveRole,
-      capabilities: getAdminRoleCapabilities(effectiveRole),
+      capabilities,
       adminRow,
     },
     adminClient,
@@ -411,7 +420,7 @@ export async function requireAdminAccess(request: Request): Promise<
 
 export async function requireEnterpriseAccess(request: Request): Promise<
   | { ok: true; access: AdminAccessState; adminClient: AnySupabaseClient }
-  | { ok: false; status: number; message: string; issue?: string }
+  | { ok: false; status: number; message: string; issue?: string; staff?: PendingStaff }
 > {
   const admin = await requireAdminAccess(request);
   if (admin.ok) {
@@ -464,6 +473,9 @@ export async function requireEnterpriseAccess(request: Request): Promise<
       message: "Enterprise Operations access is restricted.",
     };
   }
+
+  const partnerAssurance = staffAssuranceFailure(request, { isMasterAdmin: false, role: "enterprise_admin", capabilities: enterprise.capabilities });
+  if (partnerAssurance) return partnerAssurance;
 
   const emailNormalized = normalizeAdminEmail(requestUser.user.email);
   const firstMembershipId = enterprise.scope.membershipIds[0] ?? requestUser.user.id;

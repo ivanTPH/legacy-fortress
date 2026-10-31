@@ -31,4 +31,9 @@ Concise running state. Newest first. Codex history stays in `CODEX_HANDOVER.md`.
 ## Vault access status (31 Oct 2026)
 - Live on TEST: Vault access tab (nominations for later), Power of Attorney recording (pending check, owner can withdraw), nominee view (`/vault-nominations`, locked rows in the Vault switcher).
 - Verified on TEST with synthetic person Sam Testperson: authority recorded as "Authority being checked · Not in effect", areas narrowed, no access created, then withdrawn (now under Ended).
-- Not built yet: notifications to the person, share now with end date (needs grants work), early-access requests (va-r6), death reporting by nominees, Admin review/activation of authorities, Record history entries.
+- Since built and passing TEST acceptance (releases 44–54, 7 journeys): notifications to the person, share now with end date, early-access requests, death reporting by nominees with fresh ID capture, Admin review/activation of authorities (fresh attorney ID check), estate release by a person only (can ask for more evidence), Record history.
+
+## Identity check and staff sign-in (31 Oct 2026)
+- ID check: document photo + live selfie with random LEFT/RIGHT head turns; automatic face match (@vladmandic/human, server-side WASM) verifies clear matches; anything else, and every check tied to a death report or Power of Attorney, goes to a person in Platform Admin. Thresholds in `lib/identity-verification/faceAnalysis.ts` need calibrating on consenting real photos before production; a DPIA is needed before production.
+- Staff sign-in: `/admin/sign-in` and `/enterprise/sign-in`, password then authenticator code (QR set-up on first use), 30-minute idle sign-out, 12-hour code freshness. Required by default (`lib/admin/access.ts`), including partners who come in through organisation membership; only a local dev server may set `STAFF_MFA_REQUIRED=false`. TEST acceptance proves authenticator codes work each release.
+- Not built yet: suggested-change approvals (7a–7f), monthly summary email, organisation detail page.

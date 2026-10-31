@@ -175,7 +175,7 @@ async function main() {
   created.admins.push(reviewer.id);
   const twoStep = await staffTwoStep(reviewer);
   if (process.env.GITHUB_ACTIONS === "true") console.log(`::notice title=Staff two-step verification::${twoStep.ok ? "works on TEST (authenticator code accepted, session at aal2)" : `not available: ${twoStep.reason}`}`);
-  if (process.env.STAFF_MFA_REQUIRED === "true") assert.ok(twoStep.ok, "two-step verification required but unavailable");
+  if (process.env.STAFF_MFA_REQUIRED !== "false") assert.ok(twoStep.ok, "two-step verification required but unavailable");
 
   const org = await must(admin.from("organisations").insert({ owner_user_id: owner.id, name: `${run} org` }).select("id").single(), "org");
   const wallet = await must(admin.from("wallets").insert({ organisation_id: org.id, owner_user_id: owner.id }).select("id").single(), "wallet");

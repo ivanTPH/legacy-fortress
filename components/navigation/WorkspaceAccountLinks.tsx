@@ -27,8 +27,10 @@ export default function WorkspaceAccountLinks({ current, onNavigate, linkClassNa
         const token = data.session?.access_token;
         if (!token) return;
         const response = await fetch("/api/internal/admin/session", { headers: { authorization: `Bearer ${token}` }, cache: "no-store" });
-        const payload = response.ok ? ((await response.json().catch(() => null)) as AdminSessionPayload | null) : null;
-        if (mounted) setLinks(resolveWorkspaceAccountLinks(current, payload?.ok ? payload.admin ?? null : null));
+        const payload = (await response.json().catch(() => null)) as (AdminSessionPayload & { pendingAdmin?: AdminSessionPayload["admin"] }) | null;
+        // Staff who haven't entered today's code still see the link; the portal asks for the code.
+        const admin = response.ok && payload?.ok ? payload.admin ?? null : response.status === 401 ? payload?.pendingAdmin ?? null : null;
+        if (mounted) setLinks(resolveWorkspaceAccountLinks(current, admin));
       } catch {
         // Fail closed: without a verified admin session only the Personal Vault link is offered.
       }
