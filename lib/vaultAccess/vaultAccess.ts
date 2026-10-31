@@ -37,6 +37,8 @@ export type VaultAuthority = {
   scopeAreas: string[];
   activatedAt: string | null;
   withdrawnAt: string | null;
+  /** Latest message from the review team, if any. Never contains record details. */
+  reviewMessage: string | null;
 };
 
 export type VaultGrant = {
@@ -62,13 +64,18 @@ export async function vaultAccessAvailable(client: SupabaseClient) {
 }
 
 export async function loadVaultAccess(client: SupabaseClient, ownerUserId: string): Promise<VaultAccessSnapshot> {
-  const [contacts, nominations, scopeRows, authorities, grants] = await Promise.all([
+  const [contacts, nominations, scopeRows, authorities, grants, reviews] = await Promise.all([
     client.from("contacts").select("id,full_name,relationship,email,invite_status,verification_status,linked_user_id").eq("owner_user_id", ownerUserId).order("full_name"),
     client.from("vault_nominations").select("id,person_id,scope,status,notify_person,created_at,cancelled_at").eq("owner_user_id", ownerUserId).order("created_at", { ascending: false }),
     client.from("vault_nomination_records").select("nomination_id,mode").eq("owner_user_id", ownerUserId),
     client.from("legal_authorities").select("id,person_id,authority_type,usable_when,status,scope_areas,activated_at,withdrawn_at").eq("owner_user_id", ownerUserId),
     client.from("account_access_grants").select("id,contact_id,activation_status,created_at").eq("owner_user_id", ownerUserId),
+    client.from("legal_authority_reviews").select("authority_id,message_to_owner,created_at").eq("owner_user_id", ownerUserId).order("created_at", { ascending: false }),
   ]);
+  const reviewMessage = new Map<string, string>();
+  for (const review of reviews.error ? [] : reviews.data ?? []) {
+    if (review.message_to_owner && !reviewMessage.has(review.authority_id)) reviewMessage.set(review.authority_id, review.message_to_owner);
+  }
   const firstError = contacts.error ?? nominations.error ?? scopeRows.error ?? authorities.error;
   if (firstError) throw new Error(firstError.message);
   const counts = new Map<string, { include: number; exclude: number }>();
@@ -107,6 +114,7 @@ export async function loadVaultAccess(client: SupabaseClient, ownerUserId: strin
       scopeAreas: row.scope_areas ?? [],
       activatedAt: row.activated_at,
       withdrawnAt: row.withdrawn_at,
+      reviewMessage: reviewMessage.get(row.id) ?? null,
     })),
     // Grants are read for display only. Their rules are unchanged.
     grants: grants.error ? [] : (grants.data ?? []).map((row) => ({ id: row.id, personId: row.contact_id, status: row.activation_status, createdAt: row.created_at })),

@@ -9037,3 +9037,15 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-va-nominee-steps dd { margin: 0; display: inline-flex; gap: 6px; align-items: center; color: var(--lf-text-secondary); }
 .lf-va-nominee .lf-va-muted { display: flex; gap: 6px; align-items: flex-start; }
 .lf-workspace-nominated small { color: var(--lf-text-secondary); }
+
+/* Platform Admin · Powers of Attorney */
+.lf-admin-poa-checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.lf-admin-poa-checks li { display: flex; gap: 12px; align-items: flex-start; }
+.lf-admin-poa-checks li > span { flex: none; width: 28px; height: 28px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; border: 1px solid var(--lf-border-input); color: var(--lf-text-secondary); }
+.lf-admin-poa-checks li.is-done > span { background: var(--lf-status-approved-bg); border-color: var(--lf-status-approved-bg); color: var(--lf-status-approved-text); }
+.lf-admin-poa-checks strong { display: block; }
+.lf-admin-poa-checks small { display: block; color: var(--lf-text-secondary); margin-top: 2px; }
+.lf-admin-field { display: grid; gap: 5px; color: var(--lf-text); font-size: 13px; font-weight: 700; }
+.lf-admin-field textarea { font: inherit; font-weight: 400; padding: 10px; border: 1px solid var(--lf-border-input); border-radius: 8px; background: var(--lf-surface-card); color: var(--lf-text); }
+.lf-va-review-message { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0; padding: 10px 12px; border-radius: 8px; background: var(--lf-status-pending-bg); color: var(--lf-status-pending-text, var(--lf-text)); }
+.lf-va-review-message strong { display: block; }

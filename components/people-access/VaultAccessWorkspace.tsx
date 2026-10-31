@@ -113,7 +113,7 @@ export default function VaultAccessWorkspace() {
         condition: authority.usableWhen === "lacks_capacity_only" ? "Only if you lack capacity" : "With your consent",
         chips: closed ? [{ tone: "neutral", icon: "block", label: capitalise(authority.status) }]
           : authority.activatedAt ? [{ tone: "ok", icon: "check_circle", label: "In effect" }]
-          : [{ tone: "wait", icon: "hourglass_top", label: authority.status === "pending_check" ? "Authority being checked" : capitalise(authority.status) }, { tone: "neutral", icon: "lock", label: "Not in effect" }],
+          : [{ tone: "wait", icon: "hourglass_top", label: authority.status === "pending_check" ? "Authority being checked" : authority.status === "needs_attention" ? "Needs attention" : authority.status === "confirmed" ? "Confirmed · not active yet" : capitalise(authority.status) }, { tone: "neutral", icon: "lock", label: "Not in effect" }],
       });
     }
     return out;
@@ -235,6 +235,8 @@ function PersonAccess({ row, snapshot, onCancel, onWithdraw }: { row: Row; snaps
           <div className="lf-va-fact-row"><span>{name}’s identity</span><Chip tone={/verified/i.test(person?.identity ?? "") ? "ok" : "wait"} icon={/verified/i.test(person?.identity ?? "") ? "verified_user" : "hourglass_top"} label={/verified/i.test(person?.identity ?? "") ? "ID verified" : "Checking ID"} /></div>
           <div className="lf-va-fact-row"><span>The authority</span><Chip tone={authority.status === "confirmed" ? "ok" : "wait"} icon={authority.status === "confirmed" ? "check_circle" : "hourglass_top"} label={authority.status === "confirmed" ? "Confirmed" : authority.status === "needs_attention" ? "Needs attention" : "Being checked"} /></div>
           <div className="lf-va-fact-row"><span>Could see</span><span>{authority.scopeAreas.map((area) => AREA_LABEL[area] ?? area).join(", ") || "No areas"}</span></div>
+          {authority.reviewMessage ? <p className="lf-va-review-message"><Icon name="support_agent" size={18} /><span><strong>From our review team</strong>{authority.reviewMessage}</span></p> : null}
+          {authority.activatedAt ? <p className="lf-va-muted">{name} can see these areas now, view only. Withdrawing stops it at once.</p> : null}
           {withdrawing ? (
             <div className="lf-va-step">
               <label className="lf-va-field" htmlFor="va-withdraw-reason">Why it’s being withdrawn<textarea id="va-withdraw-reason" rows={2} value={reason} onChange={(event) => setReason(event.target.value)} placeholder="For example, I cancelled the LPA" /></label>
