@@ -61,3 +61,11 @@ test("every identity event the service writes is allowed by the database", () =>
   assert.ok(used.length > 5);
   for (const name of used) assert.ok(allowed.has(name), `identity event not allowed by the database: ${name}`);
 });
+
+test("the identity queue stays bounded and looks rows up in small batches", () => {
+  const ops = read("lib/admin/operations.ts");
+  const queue = ops.slice(ops.indexOf('.from("identity_verification_requests")\n    .select("id,user_id,verification_purpose'));
+  assert.match(queue, /\.limit\(200\)/);
+  assert.match(queue, /index \+= 50/);
+  assert.doesNotMatch(queue.slice(0, 3000), /\.in\("request_id", identityRequestIds\)/);
+});

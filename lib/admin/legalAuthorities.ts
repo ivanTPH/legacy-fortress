@@ -65,7 +65,7 @@ export async function loadLegalAuthorities(client: AnySupabaseClient, options: {
     .from("legal_authorities")
     .select("id,owner_user_id,person_id,authority_type,registered,usable_when,document_type,document_id,scope_areas,status,activated_at,withdrawn_at,withdrawn_reason,created_at,updated_at")
     .order("updated_at", { ascending: false })
-    .limit(200);
+    .limit(100); // keeps ID look-ups below short request URLs
   if (options.id) query = query.eq("id", options.id);
   const authorities = await query;
   if (authorities.error) throw new Error(authorities.error.message);
