@@ -168,7 +168,7 @@ export function firstName(name: string) {
 // checks the authority and the attorney's identity, and only then can it take effect.
 
 export type AuthorityType = "lpa_property_finance" | "lpa_health_welfare" | "enduring_poa" | "general_poa" | "other";
-export type AuthorityDocument = { type: "document" | "attachment"; id: string; name: string; where: string };
+export type AuthorityDocument = { type: "document" | "attachment"; id: string; name: string; where: string; added: string };
 
 export const AUTHORITY_CHOICES: Array<{ value: AuthorityType; title: string; detail: string }> = [
   { value: "lpa_property_finance", title: "Lasting Power of Attorney: property and financial affairs", detail: "Money, property and bills." },
@@ -192,12 +192,16 @@ export const AREA_LABEL: Record<string, string> = { profile: "Profile", finances
 
 export async function loadAuthorityDocuments(client: SupabaseClient, ownerUserId: string): Promise<AuthorityDocument[]> {
   const [documents, attachments] = await Promise.all([
-    client.from("documents").select("id,file_name,display_title,asset_id").eq("owner_user_id", ownerUserId).is("deleted_at", null).order("created_at", { ascending: false }).limit(200),
-    client.from("attachments").select("id,file_name,record_id").eq("owner_user_id", ownerUserId).order("created_at", { ascending: false }).limit(200),
+    client.from("documents").select("id,file_name,display_title,asset_id,created_at").eq("owner_user_id", ownerUserId).is("deleted_at", null).order("created_at", { ascending: false }).limit(200),
+    client.from("attachments").select("id,file_name,record_id,created_at").eq("owner_user_id", ownerUserId).order("created_at", { ascending: false }).limit(200),
   ]);
+  const added = (value: string | null) => {
+    const date = value ? new Date(value) : null;
+    return date && !Number.isNaN(date.getTime()) ? date.toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).replace(" at ", ", ") : "";
+  };
   return [
-    ...(attachments.data ?? []).map((row) => ({ type: "attachment" as const, id: row.id, name: row.file_name || "Document", where: "Legal" })),
-    ...(documents.data ?? []).map((row) => ({ type: "document" as const, id: row.id, name: row.display_title || row.file_name || "Document", where: "Vault" })),
+    ...(attachments.data ?? []).map((row) => ({ type: "attachment" as const, id: row.id, name: row.file_name || "Document", where: "Legal", added: added(row.created_at) })),
+    ...(documents.data ?? []).map((row) => ({ type: "document" as const, id: row.id, name: row.display_title || row.file_name || "Document", where: "Vault", added: added(row.created_at) })),
   ];
 }
 
