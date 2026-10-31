@@ -9,7 +9,26 @@ import { supabase } from "@/lib/supabaseClient";
  * was asked to follow. Photos load only when the reviewer asks, through links that expire in a
  * minute; every view is recorded. Approving confirms identity only and never opens records.
  */
-type Evidence = { documentUrl: string | null; documentIsPdf: boolean; selfieUrl: string | null; prompt: string; capturedAt: string | null };
+type Assessment = { document_selfie_similarity?: number | null; session_similarity?: number | null; anti_spoof?: number | null; liveness?: number | null; motion_passed?: boolean; reasons?: string[] };
+type Evidence = { documentUrl: string | null; documentIsPdf: boolean; selfieUrl: string | null; prompt: string; capturedAt: string | null; frames?: Array<{ direction: string; url: string | null }>; assessment?: Assessment | null; caseBound?: boolean };
+
+const REASON: Record<string, string> = {
+  no_face_on_document: "No face found on the document photo",
+  no_face_in_selfie: "No face found in the selfie",
+  more_than_one_face_in_selfie: "More than one face in the selfie",
+  face_match_below_auto_threshold: "Face match not strong enough to pass automatically",
+  motion_check_not_passed: "Head turns not clearly shown",
+  antispoof_below_threshold: "Possible photo of a photo or screen",
+  liveness_below_threshold: "Liveness score low",
+  liveness_unavailable: "Liveness couldn’t be measured",
+  document_not_an_image: "Document is a PDF, so it can’t be compared automatically",
+  selfie_unreadable: "Selfie couldn’t be read",
+  automatic_check_unavailable: "Automatic check unavailable",
+};
+
+function score(value: number | null | undefined) {
+  return typeof value === "number" ? value.toFixed(2) : "–";
+}
 
 const CHECKS = [
   "The selfie shows the same person as the document photo",
@@ -64,9 +83,18 @@ export default function IdentityReviewCompare({ requestId, canDecide }: { reques
       {canDecide ? <button type="button" className="lf-admin-row-button" disabled={loading} onClick={() => void load()}><Icon name="visibility" size={18} />{loading ? "Opening…" : "Show photos"}</button> : <p className="lf-admin-muted">Your role can’t view identity photos.</p>}
     </> : <>
       <p className="lf-admin-idv-prompt"><Icon name="front_hand" size={18} />They were asked to: <strong>{evidence.prompt || "follow a prompt"}</strong></p>
+      {evidence.caseBound ? <p className="lf-admin-muted">This is a fresh check taken for a death report or Power of Attorney. It always needs a person.</p> : null}
+      {evidence.assessment ? <dl className="lf-admin-keyvalues lf-admin-idv-scores">
+        <div><dt>Selfie vs document</dt><dd>{score(evidence.assessment.document_selfie_similarity)}<small>Similarity, not a probability. Automatic pass needs a clear match.</small></dd></div>
+        <div><dt>Same person throughout</dt><dd>{score(evidence.assessment.session_similarity)}</dd></div>
+        <div><dt>Head turns</dt><dd>{evidence.assessment.motion_passed ? "Shown as asked" : "Not clearly shown"}</dd></div>
+        <div><dt>Anti-spoofing · liveness</dt><dd>{score(evidence.assessment.anti_spoof)} · {score(evidence.assessment.liveness)}</dd></div>
+        {evidence.assessment.reasons?.length ? <div><dt>Why it needs a person</dt><dd>{evidence.assessment.reasons.map((code) => REASON[code] ?? code.replace(/_/g, " ")).join("; ")}</dd></div> : null}
+      </dl> : null}
       <div className="lf-admin-idv-photos">
         <figure>{evidence.documentUrl ? (evidence.documentIsPdf ? <a href={evidence.documentUrl} target="_blank" rel="noopener noreferrer">Open the document (PDF)</a> : <img src={evidence.documentUrl} alt="Identity document photo" referrerPolicy="no-referrer" />) : <span>No document photo</span>}<figcaption>Document</figcaption></figure>
         <figure>{evidence.selfieUrl ? <img src={evidence.selfieUrl} alt="Live selfie" referrerPolicy="no-referrer" /> : <span>No selfie</span>}<figcaption>Live selfie</figcaption></figure>
+        {(evidence.frames ?? []).map((frame) => <figure key={frame.direction}>{frame.url ? <img src={frame.url} alt={`Turned ${frame.direction}`} referrerPolicy="no-referrer" /> : <span>Missing</span>}<figcaption>Turned {frame.direction}</figcaption></figure>)}
       </div>
       <fieldset className="lf-admin-idv-checks">
         <legend>Before you approve</legend>

@@ -458,6 +458,61 @@ export async function generateSyntheticCameraEvidence(client: AnySupabaseClient,
   return { captureHash, liveness };
 }
 
+/** Motion frames for the reviewer check: the same person turning left and right as asked. */
+export async function uploadMotionFrames(
+  client: AnySupabaseClient,
+  input: { userId: string; requestId: string; challengeId: string; frames: Array<{ direction: "left" | "right"; file: File }> },
+) {
+  const request = await getOwnedVerificationRequest(client, input.requestId, input.userId);
+  if (request.provider_key !== INHOUSE_REVIEW_PROVIDER_KEY) throw new Error("motion_frames_not_supported");
+  assertTransition(request.status, ["camera_required", "camera_captured"]);
+  const challengeRes = await client.from("identity_presence_challenges").select("id,status,metadata,expires_at").eq("id", input.challengeId).eq("request_id", input.requestId).eq("user_id", input.userId).single();
+  if (challengeRes.error || !challengeRes.data) throw new Error("challenge_not_found");
+  if (challengeRes.data.status !== "issued") throw new Error("presence_challenge_not_reusable");
+  if (Date.parse(challengeRes.data.expires_at) <= Date.now()) throw new Error("presence_challenge_expired");
+  const stored: Array<{ direction: string; path: string }> = [];
+  for (const frame of input.frames.slice(0, 2)) {
+    validateEvidenceFile(frame.file, "camera");
+    const path = `users/${input.userId}/${input.requestId}/camera-${input.challengeId}-${frame.direction}.${extensionForMime(frame.file.type)}`;
+    const upload = await client.storage.from(IDENTITY_EVIDENCE_BUCKET).upload(path, Buffer.from(await frame.file.arrayBuffer()), { contentType: frame.file.type, upsert: true });
+    if (upload.error) throw new Error(upload.error.message);
+    stored.push({ direction: frame.direction, path });
+  }
+  const update = await client.from("identity_presence_challenges").update({ metadata: { ...(challengeRes.data.metadata ?? {}), motion_frames: stored }, updated_at: new Date().toISOString() }).eq("id", input.challengeId);
+  assertMutationSucceeded(update, "identity_challenge_update_failed");
+  return stored.length;
+}
+
+async function downloadEvidence(client: AnySupabaseClient, bucket: string | null, path: string | null) {
+  if (!path) return null;
+  const file = await client.storage.from(bucket || IDENTITY_EVIDENCE_BUCKET).download(path);
+  if (file.error || !file.data) return null;
+  return Buffer.from(await file.data.arrayBuffer());
+}
+
+/**
+ * Automatic check for the reviewer path (owner decision 31 Oct 2026): a clear face match with a
+ * passed motion check verifies at once; anything else waits for a person, with the scores shown.
+ * Checks attached to a death report or Power of Attorney always wait for a person.
+ */
+async function assessInhouseRequest(client: AnySupabaseClient, request: IdentityVerificationRequestRow, document: IdentityVerificationDocumentRow | null, challenge: IdentityPresenceChallengeRow | null) {
+  const { assessFaces } = await import("./faceAnalysis.ts");
+  const documentImage = document?.mime_type === "application/pdf" ? null : await downloadEvidence(client, document?.storage_bucket ?? null, document?.storage_path ?? null);
+  const selfieImage = await downloadEvidence(client, challenge?.storage_bucket ?? null, challenge?.storage_path ?? null);
+  const framesMeta = Array.isArray(challenge?.metadata?.motion_frames) ? challenge.metadata.motion_frames as Array<{ direction: "left" | "right"; path: string }> : [];
+  const frames: Array<{ direction: "left" | "right"; image: Buffer }> = [];
+  for (const frame of framesMeta) {
+    const image = await downloadEvidence(client, challenge?.storage_bucket ?? null, frame.path);
+    if (image) frames.push({ direction: frame.direction, image });
+  }
+  if (!documentImage || !selfieImage) return { outcome: "needs_review" as const, reasons: [documentImage ? "selfie_unreadable" : "document_not_an_image"], documentSelfieSimilarity: null, sessionSimilarity: null, real: null, live: null, motionPassed: false };
+  try {
+    return await assessFaces({ document: documentImage, selfie: selfieImage, frames });
+  } catch {
+    return { outcome: "needs_review" as const, reasons: ["automatic_check_unavailable"], documentSelfieSimilarity: null, sessionSimilarity: null, real: null, live: null, motionPassed: false };
+  }
+}
+
 export async function completeIdentityVerification(client: AnySupabaseClient, requestId: string, userId: string) {
   const request = await getOwnedVerificationRequest(client, requestId, userId);
   assertTransition(request.status, ["camera_captured", "comparison_processing", "review_required"]);
@@ -478,17 +533,50 @@ export async function completeIdentityVerification(client: AnySupabaseClient, re
     liveness,
     comparison,
   });
+  if (request.provider_key === INHOUSE_REVIEW_PROVIDER_KEY && decision.decision === "review_required") {
+    const assessment = await assessInhouseRequest(client, request, document, challenge);
+    const caseBound = request.verification_purpose === "admin_review";
+    const scores = {
+      document_selfie_similarity: assessment.documentSelfieSimilarity,
+      session_similarity: assessment.sessionSimilarity,
+      anti_spoof: assessment.real,
+      liveness: assessment.live,
+      motion_passed: assessment.motionPassed,
+      reasons: assessment.reasons,
+      assessed_at: new Date().toISOString(),
+    };
+    await client.from("identity_verification_requests").update({ metadata: { ...request.metadata, face_assessment: scores }, last_reason_code: assessment.reasons[0] ?? "automatic_checks_passed", updated_at: new Date().toISOString() }).eq("id", request.id);
+    request.metadata = { ...request.metadata, face_assessment: scores };
+    decision.faceMatchScore = assessment.documentSelfieSimilarity;
+    decision.faceMatchThreshold = assessment.documentSelfieSimilarity === null ? null : (await import("./faceAnalysis.ts")).FACE_THRESHOLDS.autoVerifySimilarity;
+    decision.reasonCodes = assessment.outcome === "auto_verified" ? ["automatic_face_match_passed", "motion_check_passed"] : ["awaiting_reviewer", ...assessment.reasons];
+    if (assessment.outcome === "auto_verified" && !caseBound) {
+      const now = new Date();
+      decision.decision = "verified";
+      decision.identityLevel = 2;
+      decision.requiresManualReview = false;
+      decision.livenessResult = "passed";
+      decision.providerAssuranceClass = "level_2_automatic_face_match_motion";
+      decision.expiresAt = new Date(now.getTime() + INHOUSE_LEVEL_2_TTL_DAYS * 24 * 60 * 60_000).toISOString();
+      decision.retentionSummary = { raw_document_retention: "deleted_after_decision", raw_camera_retention: "deleted_after_decision", face_template_retained: false };
+    }
+  }
   await persistDecision(client, request, decision);
+  if (request.provider_key === INHOUSE_REVIEW_PROVIDER_KEY && decision.decision === "verified") {
+    await cleanupExpiredIdentityEvidence(client, request.user_id, request.id).catch(() => null);
+  }
   return decision;
 }
 
 export async function cleanupExpiredIdentityEvidence(client: AnySupabaseClient, userId: string, requestId: string) {
   const request = await getOwnedVerificationRequest(client, requestId, userId);
   const docs = await client.from("identity_verification_documents").select("id,storage_path").eq("request_id", requestId).eq("user_id", userId);
-  const challenges = await client.from("identity_presence_challenges").select("id,storage_path").eq("request_id", requestId).eq("user_id", userId);
+  const challenges = await client.from("identity_presence_challenges").select("id,storage_path,metadata").eq("request_id", requestId).eq("user_id", userId);
   const paths = [
     ...((docs.data ?? []) as Array<{ storage_path?: string | null }>).map((row) => row.storage_path),
     ...((challenges.data ?? []) as Array<{ storage_path?: string | null }>).map((row) => row.storage_path),
+    // Motion frames from the reviewer check.
+    ...((challenges.data ?? []) as Array<{ metadata?: { motion_frames?: Array<{ path?: string }> } | null }>).flatMap((row) => (row.metadata?.motion_frames ?? []).map((frame) => frame.path)),
   ].filter(Boolean) as string[];
   if (paths.length) {
     const removeResult = await client.storage.from(IDENTITY_EVIDENCE_BUCKET).remove(paths);
@@ -774,8 +862,9 @@ export async function createReviewerEvidenceLinks(client: AnySupabaseClient, req
   if (requestRes.data.status !== "review_required") throw new Error("identity_review_not_pending");
   const [documentRes, challengeRes] = await Promise.all([
     client.from("identity_verification_documents").select("storage_bucket,storage_path,mime_type").eq("request_id", requestId).neq("extraction_status", "deleted").order("created_at", { ascending: false }).limit(1).maybeSingle(),
-    client.from("identity_presence_challenges").select("storage_bucket,storage_path,challenge_prompt,captured_at").eq("request_id", requestId).eq("status", "captured").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    client.from("identity_presence_challenges").select("storage_bucket,storage_path,challenge_prompt,captured_at,metadata").eq("request_id", requestId).eq("status", "captured").order("created_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
+  const scoresRes = await client.from("identity_verification_requests").select("metadata,verification_purpose").eq("id", requestId).single();
   const expiresInSeconds = 60;
   const sign = async (bucket: string | null, path: string | null) => {
     if (!path) return null;
@@ -786,6 +875,10 @@ export async function createReviewerEvidenceLinks(client: AnySupabaseClient, req
     documentUrl: await sign(documentRes.data?.storage_bucket ?? null, documentRes.data?.storage_path ?? null),
     documentIsPdf: documentRes.data?.mime_type === "application/pdf",
     selfieUrl: await sign(challengeRes.data?.storage_bucket ?? null, challengeRes.data?.storage_path ?? null),
+    frames: await Promise.all(((challengeRes.data?.metadata as { motion_frames?: Array<{ direction: string; path: string }> } | null)?.motion_frames ?? [])
+      .map(async (frame) => ({ direction: frame.direction, url: await sign(challengeRes.data?.storage_bucket ?? null, frame.path) }))),
+    assessment: ((scoresRes.data?.metadata as Record<string, unknown> | null)?.face_assessment ?? null) as Record<string, unknown> | null,
+    caseBound: scoresRes.data?.verification_purpose === "admin_review",
     prompt: String(challengeRes.data?.challenge_prompt ?? ""),
     capturedAt: challengeRes.data?.captured_at ?? null,
     expiresInSeconds,

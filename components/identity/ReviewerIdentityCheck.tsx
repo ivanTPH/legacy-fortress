@@ -107,16 +107,17 @@ export function ReviewerIdentityCheck({ purpose, accessGrantId, invitationId, re
     queueMicrotask(() => { void issueChallenge(); });
   }, [step, challenge, requestId, issueChallenge]);
 
-  async function uploadSelfie(file: File) {
+  async function uploadSelfie(file: File, frames: Array<{ direction: "left" | "right"; file: File }> = []) {
     if (!challenge) return;
     setBusy(true); setError("");
     try {
       const form = new FormData();
       form.set("file", file);
       form.set("challengeId", challenge.id);
+      for (const frame of frames) form.set(`frame_${frame.direction}`, frame.file);
       await call(`/api/identity-verification/${requestId}/camera`, { method: "POST", body: form });
-      await call(`/api/identity-verification/${requestId}/complete`, { method: "POST" });
-      setStep("waiting");
+      const result = await call(`/api/identity-verification/${requestId}/complete`, { method: "POST" });
+      setStep(result.decision?.status === "verified" ? "verified" : "waiting");
     } catch (cause) {
       setError(friendly(cause));
       if (cause instanceof Error && cause.message === "presence_challenge_expired") { setChallenge(null); }
@@ -137,7 +138,7 @@ export function ReviewerIdentityCheck({ purpose, accessGrantId, invitationId, re
       <ul className="lf-idv-needs">
         <li><Icon name="badge" size={20} />A passport, driving licence or national ID card</li>
         <li><Icon name="photo_camera" size={20} />A quick selfie while you follow a simple prompt</li>
-        <li><Icon name="person_search" size={20} />A person on our team compares the two, usually within one working day</li>
+        <li><Icon name="person_search" size={20} />We compare the two automatically. If it isn’t clear, a person on our team checks, usually within one working day</li>
       </ul>
       <p className="lf-idv-note"><Icon name="info" size={18} />Checking your ID doesn’t give you access to anything. Your photos are used only for this check and deleted once it’s decided.</p>
       <label className="lf-idv-consent"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} /><span>I agree to Legacy Fortress checking my ID using these photos.</span></label>
@@ -163,15 +164,15 @@ export function ReviewerIdentityCheck({ purpose, accessGrantId, invitationId, re
 
     {step === "selfie" ? <>
       <h1>Take a live selfie</h1>
-      {challenge ? <p className="lf-idv-prompt"><Icon name="front_hand" size={22} /><span>While you take it: <strong>{challenge.prompt}</strong></span></p> : <p className="lf-muted-note">Getting your prompt…</p>}
-      <p className="lf-muted-note">Face the camera, in good light, with your whole face showing. The prompt lasts 15 minutes.</p>
-      {challenge ? <SelfieCamera busy={busy} onCapture={(file) => void uploadSelfie(file)} /> : null}
+      {challenge ? <p className="lf-idv-prompt"><Icon name="360" size={22} /><span>We’ll ask you to <strong>{challenge.prompt.charAt(0).toLowerCase() + challenge.prompt.slice(1)}</strong>. Follow the arrows on screen.</span></p> : <p className="lf-muted-note">Getting your prompt…</p>}
+      <p className="lf-muted-note">Good light, your whole face showing, no glasses or hat if you can. The prompt lasts 15 minutes.</p>
+      {challenge ? <SelfieCamera busy={busy} order={motionOrder(challenge.prompt)} onCapture={(file, frames) => void uploadSelfie(file, frames)} /> : null}
       {error ? <p className="lf-va-error" role="alert">{error}</p> : null}
     </> : null}
 
     {step === "waiting" ? <>
       <h1>We’re checking your ID</h1>
-      <p>A person on our team is comparing your selfie with your document. This usually takes up to one working day. We’ll let you know when it’s done.</p>
+      <p>We couldn’t confirm it automatically, so a person on our team is comparing your selfie with your document. This usually takes up to one working day. We’ll let you know when it’s done.</p>
       <p className="lf-idv-note"><Icon name="lock" size={18} />Checking your ID doesn’t give you access to anything. Your photos are deleted once it’s decided.</p>
       {returnTo ? <Link className="lf-primary-btn" href={returnTo}>Continue</Link> : <Link className="lf-primary-btn" href="/dashboard">Back to My Vault</Link>}
     </> : null}
@@ -185,16 +186,27 @@ export function ReviewerIdentityCheck({ purpose, accessGrantId, invitationId, re
   </section>;
 }
 
-function SelfieCamera({ busy, onCapture }: { busy: boolean; onCapture: (file: File) => void }) {
+function motionOrder(prompt: string): Array<"left" | "right"> {
+  const left = prompt.indexOf("LEFT");
+  const right = prompt.indexOf("RIGHT");
+  return left >= 0 && right >= 0 && right < left ? ["right", "left"] : ["left", "right"];
+}
+
+type Shot = "straight" | "left" | "right";
+const SHOT_LABEL: Record<Shot, string> = { straight: "Look straight at the camera", left: "Now turn your head to your left", right: "Now turn your head to your right" };
+
+function SelfieCamera({ busy, order, onCapture }: { busy: boolean; order: Array<"left" | "right">; onCapture: (file: File, frames: Array<{ direction: "left" | "right"; file: File }>) => void }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [cameraState, setCameraState] = useState<"off" | "on" | "unavailable">("off");
+  const [shot, setShot] = useState<Shot | null>(null);
+  const [countdown, setCountdown] = useState(0);
 
   useEffect(() => () => { streamRef.current?.getTracks().forEach((track) => track.stop()); }, []);
 
   async function startCamera() {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 } }, audio: false });
       streamRef.current = stream;
       if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play(); }
       setCameraState("on");
@@ -203,28 +215,51 @@ function SelfieCamera({ busy, onCapture }: { busy: boolean; onCapture: (file: Fi
     }
   }
 
-  function capture() {
-    const video = videoRef.current;
-    if (!video) return;
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth || 720;
-    canvas.height = video.videoHeight || 960;
-    canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob((blob) => {
-      if (!blob) return;
-      streamRef.current?.getTracks().forEach((track) => track.stop());
-      onCapture(new File([blob], "selfie.jpg", { type: "image/jpeg" }));
-    }, "image/jpeg", 0.9);
+  function grab(): Promise<File> {
+    return new Promise((resolve, reject) => {
+      const video = videoRef.current;
+      if (!video) { reject(new Error("no_camera")); return; }
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth || 720;
+      canvas.height = video.videoHeight || 960;
+      canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => blob ? resolve(new File([blob], "selfie.jpg", { type: "image/jpeg" })) : reject(new Error("capture_failed")), "image/jpeg", 0.9);
+    });
+  }
+
+  async function wait(seconds: number) {
+    for (let left = seconds; left > 0; left -= 1) { setCountdown(left); await new Promise((resolve) => setTimeout(resolve, 1000)); }
+    setCountdown(0);
+  }
+
+  async function runSequence() {
+    setShot("straight"); await wait(3);
+    const straight = await grab();
+    const frames: Array<{ direction: "left" | "right"; file: File }> = [];
+    for (const direction of order) {
+      setShot(direction); await wait(2);
+      frames.push({ direction, file: await grab() });
+    }
+    setShot(null);
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    onCapture(straight, frames);
   }
 
   return <div className="lf-idv-camera">
-    <video ref={videoRef} playsInline muted aria-label="Camera preview" hidden={cameraState !== "on"} />
-    {cameraState === "on" ? <button className="lf-primary-btn" type="button" disabled={busy} onClick={capture}><Icon name="photo_camera" size={18} />{busy ? "Sending…" : "Take selfie"}</button>
+    <div className="lf-idv-camera-frame" hidden={cameraState !== "on"}>
+      <video ref={videoRef} playsInline muted aria-label="Camera preview" />
+      {shot ? <div className="lf-idv-camera-cue" role="status" aria-live="assertive">
+        {shot !== "straight" ? <Icon name={shot === "left" ? "arrow_back" : "arrow_forward"} size={40} /> : null}
+        <strong>{SHOT_LABEL[shot]}</strong>
+        {countdown ? <span>{countdown}</span> : null}
+      </div> : null}
+    </div>
+    {cameraState === "on" ? <button className="lf-primary-btn" type="button" disabled={busy || shot !== null} onClick={() => void runSequence()}><Icon name="photo_camera" size={18} />{busy ? "Sending…" : shot ? "Hold still…" : "Start"}</button>
       : cameraState === "off" ? <button className="lf-primary-btn" type="button" onClick={() => void startCamera()}><Icon name="videocam" size={18} />Turn on camera</button>
       : <>
-        <p className="lf-muted-note">We couldn’t open the camera here. Use your phone’s camera instead.</p>
+        <p className="lf-muted-note">We couldn’t open the camera here. You can take a selfie instead, but then a person checks it, which takes longer.</p>
         <label className="lf-idv-file"><Icon name="photo_camera" size={22} /><span>Take a selfie</span>
-          <input type="file" accept="image/jpeg,image/png" capture="user" onChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) onCapture(file); }} />
+          <input type="file" accept="image/jpeg,image/png" capture="user" onChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) onCapture(file, []); }} />
         </label>
       </>}
   </div>;

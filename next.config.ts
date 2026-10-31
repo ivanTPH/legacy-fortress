@@ -59,7 +59,8 @@ const securityHeaders = [
   },
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), payment=()",
+    // Camera on our own pages only, for the live ID check selfie.
+    value: "camera=(self), microphone=(), geolocation=(), payment=()",
   },
   {
     key: "Cross-Origin-Opener-Policy",
@@ -85,7 +86,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
-  serverExternalPackages: ["pdfjs-dist", "tesseract.js", "tesseract.js-core", "@tesseract.js-data/eng", "@napi-rs/canvas"],
+  serverExternalPackages: ["@vladmandic/human", "@tensorflow/tfjs", "@tensorflow/tfjs-backend-wasm", "pdfjs-dist", "tesseract.js", "tesseract.js-core", "@tesseract.js-data/eng", "@napi-rs/canvas"],
   allowedDevOrigins: ["127.0.0.1"],
   env: {
     ...(publicSupabaseUrl ? { NEXT_PUBLIC_SUPABASE_URL: publicSupabaseUrl } : {}),

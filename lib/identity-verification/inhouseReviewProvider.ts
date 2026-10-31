@@ -22,14 +22,12 @@ export const INHOUSE_LEVEL_2_TTL_DAYS = 365;
 export const INHOUSE_EVIDENCE_RETENTION_DAYS = 14;
 export const INHOUSE_CHALLENGE_MINUTES = 15;
 
-const PROMPTS = [
-  "Hold up two fingers next to your face",
-  "Hold up three fingers next to your face",
-  "Touch your nose with one finger",
-  "Put one hand flat on top of your head",
-  "Give a thumbs up next to your face",
-  "Cover one eye with your hand",
-];
+/** The order of head turns is random each time, so a recorded video can't be replayed. */
+export function motionOrderFromPrompt(prompt: string): Array<"left" | "right"> {
+  const left = prompt.indexOf("LEFT");
+  const right = prompt.indexOf("RIGHT");
+  return left >= 0 && right >= 0 ? (left < right ? ["left", "right"] : ["right", "left"]) : ["left", "right"];
+}
 
 export class InhouseReviewIdentityProvider implements IdentityVerificationProvider {
   readonly providerKey = INHOUSE_REVIEW_PROVIDER_KEY;
@@ -60,7 +58,8 @@ export class InhouseReviewIdentityProvider implements IdentityVerificationProvid
   }
 
   async capturePresenceChallenge(): Promise<ProviderPresenceChallenge> {
-    const prompt = PROMPTS[crypto.randomInt(PROMPTS.length)];
+    const [first, second] = crypto.randomInt(2) === 0 ? ["LEFT", "RIGHT"] : ["RIGHT", "LEFT"];
+    const prompt = `Look straight at the camera, then turn your head to your ${first}, then to your ${second}`;
     return { challengeType: "active_camera_prompt", prompt, nonce: crypto.randomUUID(), expiresAt: new Date(Date.now() + INHOUSE_CHALLENGE_MINUTES * 60_000).toISOString() };
   }
 
