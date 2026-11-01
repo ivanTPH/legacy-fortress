@@ -104,7 +104,7 @@ test("canonical legal document writes use the same legal asset category as reads
   assert.match(workspace, /categoryKey === "power-of-attorney"\) return "power-of-attorney"/);
   assert.match(workspace, /toPlainSaveError/);
   assert.match(workspace, /narrativeTitleLabel[\s\S]*required/);
-  assert.match(workspace, /required unless a document is uploaded/);
+  assert.match(workspace, /or a short description, or upload the document/);
   assert.match(createAsset, /\| "identity-documents"/);
   assert.match(createAsset, /\| "power-of-attorney"/);
   assert.match(createAsset, /categorySlug === "identity-documents"\) return "legal"/);

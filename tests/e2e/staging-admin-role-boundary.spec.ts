@@ -171,15 +171,15 @@ test("phone: owner records a Power of Attorney and links a person", async ({ pag
     return `${label}${input.required ? "*" : ""}`;
   }));
   steps.push(`fields: ${fields.join(", ").slice(0, 300)}`);
-  const firstText = page.locator("main input[type=text]:visible, main input:not([type]):visible").first();
-  if (await firstText.count()) await firstText.fill("Synthetic Lasting Power of Attorney");
+  await page.getByLabel(/Document name/i).first().fill("Synthetic Lasting Power of Attorney").catch(() => steps.push("no Document name field"));
+  await page.getByLabel(/Short description/i).first().fill("Property and financial affairs, synthetic").catch(() => steps.push("no Short description field"));
   const saveAndAdd = page.getByRole("button", { name: /Save and add person/i });
   if (!(await saveAndAdd.count())) {
     steps.push("no 'Save and add person' button");
   } else {
     await saveAndAdd.first().click();
     await page.waitForTimeout(4000);
-    const alerts = (await page.locator("[role=alert], .lf-status-note, .lf-form-error").allInnerTexts()).filter(Boolean).join(" / ");
+    const alerts = (await page.locator("[role=alert], .lf-v4-form-error").allInnerTexts()).filter(Boolean).join(" / ");
     steps.push(`after save: url=${page.url().replace(BASE_URL, "")}${alerts ? ` messages=${alerts}` : ""}`);
     const dialog = page.getByRole("dialog");
     steps.push(`add-person panel ${await dialog.count() ? `open: ${(await dialog.first().innerText()).slice(0, 160)}` : "not open"}`);

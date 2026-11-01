@@ -864,6 +864,7 @@ export default function UniversalRecordWorkspace({
   const [submitError, setSubmitError] = useState("");
   const [devBankSubmitTrace, setDevBankSubmitTrace] = useState<string[]>([]);
   const formSectionRef = useRef<HTMLElement | null>(null);
+  const submitErrorRef = useRef<HTMLDivElement | null>(null);
   const addRecordButtonRef = useRef<HTMLButtonElement | null>(null);
   const existingRecordsHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const shouldFocusFormOnOpenRef = useRef(false);
@@ -1721,8 +1722,16 @@ export default function UniversalRecordWorkspace({
     setSubmitError(message);
     setStatus(message);
     setSaving(false);
+    // On a phone the Save buttons are far below the first field: show the message instead of
+    // jumping back to the top (owner report, 1 Nov 2026).
     requestAnimationFrame(() => {
-      focusFirstFormControl(formSectionRef.current);
+      const notice = submitErrorRef.current;
+      if (notice) {
+        notice.scrollIntoView({ block: "center", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+        notice.focus({ preventScroll: true });
+      } else {
+        focusFirstFormControl(formSectionRef.current);
+      }
     });
   }
 
@@ -2293,10 +2302,10 @@ export default function UniversalRecordWorkspace({
       stopSaveForValidation(message);
       return;
     }
-    if (isNarrativeDocumentWorkspace && !String(form.notes ?? "").trim() && !pendingDocumentFiles.length && !editingId) {
+    if (isNarrativeDocumentWorkspace && !String(form.notes ?? "").trim() && !String(form.summary ?? "").trim() && !pendingDocumentFiles.length && !editingId) {
       const message = isTrustsWorkspace
         ? "Upload a trust document or add notes before saving this trust record."
-        : "Add a short note or upload a document before saving this record.";
+        : "Add a short description or note, or upload the document, before saving.";
       setShowNarrativeNotes(true);
       stopSaveForValidation(message);
       return;
@@ -4635,7 +4644,7 @@ export default function UniversalRecordWorkspace({
             <label style={{ ...fieldStyle, gridColumn: isNarrativeDocumentWorkspace ? "1 / -1" : undefined }}>
               <span style={labelStyle}>
                 {isNarrativeDocumentWorkspace && !editingId
-                  ? `${narrativeNotesLabel} (required unless a document is uploaded)`
+                  ? `${narrativeNotesLabel} (or a short description, or upload the document)`
                   : isNarrativeDocumentWorkspace
                     ? narrativeNotesLabel
                     : "Notes"}
@@ -4659,6 +4668,7 @@ export default function UniversalRecordWorkspace({
           <div style={{ display: "grid", gap: 12 }}>
             {submitError ? (
               <div
+                role="alert"
                 style={{
                   border: "1px solid var(--lf-status-rejected-bg)",
                   background: "var(--lf-status-rejected-bg)",
@@ -4798,6 +4808,7 @@ export default function UniversalRecordWorkspace({
           <p>Add people and their roles after this record is saved. Linking a person does not give them access.</p>
           <button type="button" disabled={saving} onClick={() => void saveRecord(true)}>{saving ? "Saving…" : "Save and add person"}</button>
         </section> : null}
+        {submitError ? <div ref={submitErrorRef} tabIndex={-1} className="lf-v4-form-error"><Icon name="error" size={16} /><span><strong>Not saved yet.</strong> {submitError}</span></div> : null}
         <div className="lf-v4-form-footer">
           <span className="lf-v4-form-security"><Icon name="lock" size={16} />Stored securely. Not shared with anyone.</span>
           <div className="lf-v4-form-actions">
