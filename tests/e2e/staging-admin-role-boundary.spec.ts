@@ -163,40 +163,37 @@ test("phone: platform admin pages fit the screen", async ({ page }) => {
 
 test("phone: owner records a Power of Attorney and links a person", async ({ page }) => {
   test.setTimeout(150_000);
+  const log = (line: string) => console.log(`PoA-diag: ${line.slice(0, 400)}`);
+  page.on("console", (message) => { if (["error", "warning"].includes(message.type())) log(`console.${message.type()}: ${message.text()}`); });
+  page.on("pageerror", (error) => log(`pageerror: ${error.message}`));
+  page.on("response", (response) => {
+    const path = response.url().replace(/^https:\/\/[^/]+/, "").split("?")[0];
+    if (response.status() >= 400 || /\/rest\/v1\/(assets|records|record_links)/.test(path)) log(`${response.status()} ${response.request().method()} ${path}`);
+  });
   await page.setViewportSize({ width: 390, height: 844 });
-  const steps: string[] = [];
-  const problems: string[] = [];
-  page.on("console", (message) => { if (message.type() === "error") problems.push(`console: ${message.text().slice(0, 160)}`); });
-  page.on("pageerror", (error) => problems.push(`pageerror: ${error.message.slice(0, 160)}`));
-  page.on("response", (response) => { if (response.status() >= 400) problems.push(`${response.status()} ${response.request().method()} ${response.url().replace(/^https:\/\/[^/]+/, "").split("?")[0]}`); });
   await signIn(page, users[2].email, "/legal/power-of-attorney?add=1");
   await page.waitForTimeout(2500);
-  const fields = await page.locator("form input:visible, main input:visible, main textarea:visible, main select:visible").evaluateAll((elements) => elements.map((element) => {
-    const input = element as HTMLInputElement;
-    const label = input.labels?.[0]?.textContent?.trim() || input.getAttribute("aria-label") || input.name || input.placeholder || input.type;
-    return `${label}${input.required ? "*" : ""}`;
-  }));
-  steps.push(`fields: ${fields.join(", ").slice(0, 300)}`);
-  await page.getByLabel(/Document name/i).first().fill("Synthetic Lasting Power of Attorney").catch(() => steps.push("no Document name field"));
-  await page.getByLabel(/Short description/i).first().fill("Property and financial affairs, synthetic").catch(() => steps.push("no Short description field"));
-  const saveAndAdd = page.getByRole("button", { name: /Save and add person/i });
-  if (!(await saveAndAdd.count())) {
-    steps.push("no 'Save and add person' button");
-  } else {
-    await saveAndAdd.first().click();
-    await page.waitForTimeout(8000);
-    steps.push(`button now: ${(await saveAndAdd.first().innerText().catch(() => "gone")).trim()}`);
-    const alerts = (await page.locator("[role=alert], .lf-v4-form-error").allInnerTexts()).filter(Boolean).join(" / ");
-    steps.push(`after save: url=${page.url().replace(BASE_URL, "")}${alerts ? ` messages=${alerts}` : ""}`);
-    const dialog = page.getByRole("dialog");
-    steps.push(`add-person panel ${await dialog.count() ? `open: ${(await dialog.first().innerText()).slice(0, 160)}` : "not open"}`);
-    const linkedSection = page.getByText(/People linked to this document/i);
-    steps.push(`linked-people section ${await linkedSection.count() ? "shown" : "not shown"}`);
+  log("form loaded");
+  await page.getByLabel(/Document name/i).first().fill("Synthetic Lasting Power of Attorney", { timeout: 5000 }).then(() => log("filled name"), (error) => log(`name fill failed: ${error.message.split("\n")[0]}`));
+  await page.getByLabel(/Short description/i).first().fill("Property and financial affairs, synthetic", { timeout: 5000 }).then(() => log("filled description"), (error) => log(`description fill failed: ${error.message.split("\n")[0]}`));
+  const saveAndAdd = page.getByRole("button", { name: /Save and add person/i }).first();
+  await saveAndAdd.click({ timeout: 5000 }).then(() => log("clicked Save and add person"), (error) => log(`click failed: ${error.message.split("\n")[0]}`));
+  for (let second = 1; second <= 12; second += 1) {
+    await page.waitForTimeout(1000);
+    // A frozen page never answers: race every read against a short timer.
+    const state = await Promise.race([
+      page.evaluate(() => ({
+        url: location.pathname + location.search,
+        button: Array.from(document.querySelectorAll("button")).find((button) => /Save and add person|Saving/.test(button.textContent ?? ""))?.textContent?.trim() ?? "none",
+        errors: Array.from(document.querySelectorAll("[role=alert], .lf-v4-form-error")).map((node) => node.textContent?.trim()).filter(Boolean).join(" / "),
+        dialog: document.querySelector("[role=dialog]")?.textContent?.trim().slice(0, 120) ?? "",
+      })),
+      new Promise<string>((resolve) => setTimeout(() => resolve("page not responding"), 3000)),
+    ]).catch((error: Error) => `read failed: ${error.message.split("\n")[0]}`);
+    log(`t+${second}s ${typeof state === "string" ? state : JSON.stringify(state)}`);
+    if (typeof state !== "string" && (state.dialog || state.errors)) break;
   }
-  const layout = await widestOverflow(page);
-  if (layout.scrollWidth > layout.width + 1) steps.push(`too wide: ${layout.offenders.join("; ")}`);
-  notice("Phone: Power of Attorney record", steps.join(" || "));
-  notice("Phone: Power of Attorney problems", problems.slice(0, 8).join(" || ") || "none");
+  log("done");
 });
 
 async function createUser(role: string) {
