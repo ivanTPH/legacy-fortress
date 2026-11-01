@@ -469,7 +469,7 @@ test("document-oriented records avoid forced monetary structure and task linking
   const createAsset = fs.readFileSync(path.join(root, "lib/assets/createAsset.ts"), "utf8");
 
   assert.match(workspace, /isNarrativeDocumentWorkspace/);
-  assert.match(workspace, /Add a short note or upload a document before saving this record/);
+  assert.match(workspace, /Add a short description or note, or upload the document, before saving/);
   assert.match(workspace, /Add details or upload a document/);
   assert.match(workspace, /Expression of wishes title/);
   assert.match(workspace, /Narrative instructions/);

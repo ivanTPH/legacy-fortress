@@ -9190,3 +9190,12 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-identity-status-action { font-style: normal; font-weight: 600; white-space: nowrap; }
 .lf-identity-status:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 2px; }
 @media (max-width: 480px) { .lf-identity-status-action { display: none; } }
+.lf-v4-form-error { display: flex; align-items: flex-start; gap: 8px; margin: 4px 0 8px; padding: 12px; border-radius: 10px; background: var(--lf-status-rejected-bg); color: var(--lf-status-rejected-text); font-size: 14px; }
+.lf-v4-form-error:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 2px; }
+.lf-v4-form-error .lf-icon { flex: none; margin-top: 2px; }
+
+/* iPhone Safari zooms into any text box under 16px and stays zoomed, pushing pages off the sides. */
+@media (hover: none) and (pointer: coarse) {
+  input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea { font-size: max(16px, 1em); }
+}
+.lf-staff-signin input { font-size: 16px; }
