@@ -4357,14 +4357,14 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-person-drawer-header {
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: 3;
   display: flex;
   justify-content: space-between;
   gap: 16px;
   align-items: flex-start;
   padding: 22px 22px 16px;
-  border-bottom: 1px solid #eee8e3;
-  background: rgba(255, 254, 253, 0.96);
+  border-bottom: 1px solid var(--lf-divider, #eee8e3);
+  background: var(--lf-surface-card, #fffefd);
 }
 
 .lf-person-drawer-close {
@@ -9180,3 +9180,13 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-staff-qr { width: 200px; height: 200px; justify-self: center; }
 .lf-staff-footer { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 0; font-size: 14px; color: #6B5D55; }
 .lf-staff-footer a { color: #1F1715; font-weight: 600; }
+
+/* Settings › Profile: identity verification row (V5.2) */
+.lf-identity-status { display: flex; align-items: center; gap: 10px; min-height: 60px; padding: 10px 14px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); color: var(--lf-text); text-decoration: none; }
+.lf-identity-status > span { display: grid; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.lf-identity-status small { color: var(--lf-text-secondary); font-size: 13px; }
+.lf-identity-status.is-verified > .lf-icon:first-child { color: #2E6B3F; }
+.lf-identity-status.is-todo > .lf-icon:first-child { color: #9A5B13; }
+.lf-identity-status-action { font-style: normal; font-weight: 600; white-space: nowrap; }
+.lf-identity-status:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 2px; }
+@media (max-width: 480px) { .lf-identity-status-action { display: none; } }

@@ -9,6 +9,7 @@ import { loadProfileIdentityChip } from "../../../lib/profile/workspace";
 
 const GROUPS = [
   { title: "Account", items: [
+    { href: "/identity/verify?next=%2Fsettings", icon: "verified_user", label: "Verify your ID", description: "Passport or driving licence and a quick selfie" },
     { href: "/account/security", icon: "lock", label: "Security", description: "Sign-in, password and verification" },
     { href: "/account/billing", icon: "receipt_long", label: "Billing and account", description: "Plan and payment details" },
   ] },
