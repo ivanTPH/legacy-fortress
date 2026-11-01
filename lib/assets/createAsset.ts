@@ -94,8 +94,22 @@ async function assertCanonicalAssetWriteSchema(client: AnySupabaseClient) {
   );
 }
 
+// Remembered for the page's lifetime: the category table is optional, and each probe is a round
+// trip. Without this a save made up to 16 failing requests first (owner report, 1 Nov 2026).
+let assetCategoriesTableMissing = false;
+const categoryLookupCache = new Map<string, CategoryLookup>();
+
 export async function lookupCategoryBySlug(client: AnySupabaseClient, slug: string): Promise<CategoryLookup> {
   const normalizedSlug = normalizeCategoryToken(slug);
+  if (assetCategoriesTableMissing) return { id: null, token: normalizedSlug };
+  const cached = categoryLookupCache.get(normalizedSlug);
+  if (cached) return cached;
+  const result = await lookupCategoryBySlugUncached(client, normalizedSlug);
+  if (result.id) categoryLookupCache.set(normalizedSlug, result);
+  return result;
+}
+
+async function lookupCategoryBySlugUncached(client: AnySupabaseClient, normalizedSlug: string): Promise<CategoryLookup> {
   const candidates = getCategorySlugCandidates(normalizedSlug);
 
   const tryColumns: Array<"slug" | "key" | "category_key" | "name"> = ["slug", "key", "category_key", "name"];
@@ -113,7 +127,11 @@ export async function lookupCategoryBySlug(client: AnySupabaseClient, slug: stri
 
       const response = await query.maybeSingle();
       if (response.error) {
-        if (isMissingRelationError(response.error, "asset_categories") || isMissingColumnError(response.error, column)) {
+        if (isMissingRelationError(response.error, "asset_categories") || /not found|404|PGRST205/i.test(`${response.error.message} ${(response.error as { code?: string }).code ?? ""}`)) {
+          assetCategoriesTableMissing = true;
+          return { id: null, token: normalizedSlug };
+        }
+        if (isMissingColumnError(response.error, column)) {
           continue;
         }
         throw new Error(response.error.message);
