@@ -123,6 +123,74 @@ test("personal user cannot enter administrative workspaces", async ({ page }) =>
   await assertDeniedWorkspace(page, /Access denied|Enterprise workspace unavailable|Sign in/i);
 });
 
+// Phone-size diagnostics (owner reports, 1 Nov 2026). They report what they find as GitHub notices
+// and never fail the release: the findings are fixed in follow-up changes.
+function notice(title: string, message: string) {
+  console.log(`::notice title=${title}::${message.replace(/\r?\n/g, " | ").slice(0, 900)}`);
+}
+
+async function widestOverflow(page: Page) {
+  return page.evaluate(() => {
+    const width = document.documentElement.clientWidth;
+    const offenders: string[] = [];
+    for (const element of Array.from(document.querySelectorAll("body *"))) {
+      const rect = element.getBoundingClientRect();
+      if (rect.width === 0 || rect.right <= width + 1) continue;
+      // Report the outermost offender only: skip elements whose parent already overflows.
+      const parent = element.parentElement?.getBoundingClientRect();
+      if (parent && parent.right > width + 1) continue;
+      const className = typeof element.className === "string" ? element.className.trim().split(/\s+/).slice(0, 3).join(".") : "";
+      offenders.push(`${element.tagName.toLowerCase()}${className ? `.${className}` : ""} right=${Math.round(rect.right)}`);
+      if (offenders.length >= 6) break;
+    }
+    return { width, scrollWidth: document.documentElement.scrollWidth, offenders };
+  });
+}
+
+test("phone: platform admin pages fit the screen", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await signIn(page, users[0].email, "/admin");
+  for (const path of ["/admin", "/admin/verification", "/admin/authorities", "/admin/probate", "/admin/users"]) {
+    await page.goto(`${BASE_URL}${path}`, { waitUntil: "networkidle" }).catch(() => null);
+    await page.waitForTimeout(1500);
+    const result = await widestOverflow(page);
+    notice(`Phone layout ${path}`, result.scrollWidth > result.width + 1
+      ? `too wide: page ${result.scrollWidth}px on a ${result.width}px screen; ${result.offenders.join("; ")}`
+      : `fits (${result.width}px)`);
+  }
+});
+
+test("phone: owner records a Power of Attorney and links a person", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await signIn(page, users[2].email, "/legal/power-of-attorney?add=1");
+  await page.waitForTimeout(2500);
+  const steps: string[] = [];
+  const fields = await page.locator("form input:visible, main input:visible, main textarea:visible, main select:visible").evaluateAll((elements) => elements.map((element) => {
+    const input = element as HTMLInputElement;
+    const label = input.labels?.[0]?.textContent?.trim() || input.getAttribute("aria-label") || input.name || input.placeholder || input.type;
+    return `${label}${input.required ? "*" : ""}`;
+  }));
+  steps.push(`fields: ${fields.join(", ").slice(0, 300)}`);
+  const firstText = page.locator("main input[type=text]:visible, main input:not([type]):visible").first();
+  if (await firstText.count()) await firstText.fill("Synthetic Lasting Power of Attorney");
+  const saveAndAdd = page.getByRole("button", { name: /Save and add person/i });
+  if (!(await saveAndAdd.count())) {
+    steps.push("no 'Save and add person' button");
+  } else {
+    await saveAndAdd.first().click();
+    await page.waitForTimeout(4000);
+    const alerts = (await page.locator("[role=alert], .lf-status-note, .lf-form-error").allInnerTexts()).filter(Boolean).join(" / ");
+    steps.push(`after save: url=${page.url().replace(BASE_URL, "")}${alerts ? ` messages=${alerts}` : ""}`);
+    const dialog = page.getByRole("dialog");
+    steps.push(`add-person panel ${await dialog.count() ? `open: ${(await dialog.first().innerText()).slice(0, 160)}` : "not open"}`);
+    const linkedSection = page.getByText(/People linked to this document/i);
+    steps.push(`linked-people section ${await linkedSection.count() ? "shown" : "not shown"}`);
+  }
+  const layout = await widestOverflow(page);
+  if (layout.scrollWidth > layout.width + 1) steps.push(`too wide: ${layout.offenders.join("; ")}`);
+  notice("Phone: Power of Attorney record", steps.join(" || "));
+});
+
 async function createUser(role: string) {
   const email = `${RUN_MARKER}-${role}@example.test`;
   const result = await adminClient.auth.admin.createUser({ email, password: PASSWORD, email_confirm: true, user_metadata: { full_name: `Staging ${role} Admin` } });

@@ -22,6 +22,7 @@ import {
   TextInput,
 } from "../../../components/forms/asset/AssetFormControls";
 import Icon from "../../../components/ui/Icon";
+import IdentityStatusRow from "../../../components/identity/IdentityStatusRow";
 import { waitForActiveUser } from "../../../lib/auth/session";
 import { getBrowserAuthRedirect } from "../../../lib/auth/redirects";
 import { supabase } from "../../../lib/supabaseClient";
@@ -508,7 +509,7 @@ export default function ProfilePage() {
               <div><dt>Mobile</dt><dd>{form.mobile_number || form.telephone || "Not saved"}</dd></div>
             </dl>
             <p className="lf-v52-profile-help">Your name and date of birth help verify you. Changes to your name may require another identity check.</p>
-            <div className="lf-v52-profile-identity"><strong>Identity</strong><div><Icon name="verified_user" size={20} /><span>Identity details {profileReadiness.identityReady ? "saved" : "need review"}<small>National Insurance: {maskedNi}</small></span></div></div>
+            <div className="lf-v52-profile-identity"><strong>Identity</strong>{!viewer.readOnly ? <IdentityStatusRow /> : null}<div><Icon name="badge" size={20} /><span>Identity details {profileReadiness.identityReady ? "saved" : "need review"}<small>National Insurance: {maskedNi}</small></span></div></div>
             <StatusNote message={status} />
           </div>
         )}
