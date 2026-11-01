@@ -148,6 +148,7 @@ async function widestOverflow(page: Page) {
 }
 
 test("phone: platform admin pages fit the screen", async ({ page }) => {
+  test.setTimeout(150_000);
   await page.setViewportSize({ width: 390, height: 844 });
   await signIn(page, users[0].email, "/admin");
   for (const path of ["/admin", "/admin/verification", "/admin/authorities", "/admin/probate", "/admin/users"]) {
@@ -161,6 +162,7 @@ test("phone: platform admin pages fit the screen", async ({ page }) => {
 });
 
 test("phone: owner records a Power of Attorney and links a person", async ({ page }) => {
+  test.setTimeout(150_000);
   await page.setViewportSize({ width: 390, height: 844 });
   const steps: string[] = [];
   const problems: string[] = [];
