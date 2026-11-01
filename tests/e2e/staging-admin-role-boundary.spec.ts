@@ -194,6 +194,7 @@ test("phone: owner records a Power of Attorney and links a person", async ({ pag
     if (typeof state !== "string" && (state.dialog || state.errors)) break;
   }
   log("done");
+  await expect(page.getByRole("dialog").first()).toContainText("Add a person", { timeout: 20_000 });
 });
 
 async function createUser(role: string) {
