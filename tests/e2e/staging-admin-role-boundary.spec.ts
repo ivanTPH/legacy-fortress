@@ -162,9 +162,13 @@ test("phone: platform admin pages fit the screen", async ({ page }) => {
 
 test("phone: owner records a Power of Attorney and links a person", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
+  const steps: string[] = [];
+  const problems: string[] = [];
+  page.on("console", (message) => { if (message.type() === "error") problems.push(`console: ${message.text().slice(0, 160)}`); });
+  page.on("pageerror", (error) => problems.push(`pageerror: ${error.message.slice(0, 160)}`));
+  page.on("response", (response) => { if (response.status() >= 400) problems.push(`${response.status()} ${response.request().method()} ${response.url().replace(/^https:\/\/[^/]+/, "").split("?")[0]}`); });
   await signIn(page, users[2].email, "/legal/power-of-attorney?add=1");
   await page.waitForTimeout(2500);
-  const steps: string[] = [];
   const fields = await page.locator("form input:visible, main input:visible, main textarea:visible, main select:visible").evaluateAll((elements) => elements.map((element) => {
     const input = element as HTMLInputElement;
     const label = input.labels?.[0]?.textContent?.trim() || input.getAttribute("aria-label") || input.name || input.placeholder || input.type;
@@ -178,7 +182,8 @@ test("phone: owner records a Power of Attorney and links a person", async ({ pag
     steps.push("no 'Save and add person' button");
   } else {
     await saveAndAdd.first().click();
-    await page.waitForTimeout(4000);
+    await page.waitForTimeout(8000);
+    steps.push(`button now: ${(await saveAndAdd.first().innerText().catch(() => "gone")).trim()}`);
     const alerts = (await page.locator("[role=alert], .lf-v4-form-error").allInnerTexts()).filter(Boolean).join(" / ");
     steps.push(`after save: url=${page.url().replace(BASE_URL, "")}${alerts ? ` messages=${alerts}` : ""}`);
     const dialog = page.getByRole("dialog");
@@ -189,6 +194,7 @@ test("phone: owner records a Power of Attorney and links a person", async ({ pag
   const layout = await widestOverflow(page);
   if (layout.scrollWidth > layout.width + 1) steps.push(`too wide: ${layout.offenders.join("; ")}`);
   notice("Phone: Power of Attorney record", steps.join(" || "));
+  notice("Phone: Power of Attorney problems", problems.slice(0, 8).join(" || ") || "none");
 });
 
 async function createUser(role: string) {
