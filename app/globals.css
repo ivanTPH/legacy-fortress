@@ -9325,3 +9325,8 @@ a.lf-pp-item:hover { background: var(--lf-interaction-hover, #F6EFEA); }
 /* Settings profile card: a long email stays on one line, so the card doesn't grow after loading. */
 .lf-v52-settings-profile-copy strong, .lf-v52-settings-profile-copy small { display: block; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .lf-v52-settings-profile-copy { min-width: 0; }
+.lf-todo-loading { display: grid; gap: 12px; min-height: 420px; align-content: start; }
+.lf-skeleton.is-chips { height: 44px; width: 80%; border-radius: 999px; }
+.lf-skeleton.is-row { height: 76px; }
+/* Same height as the "No requests waiting" panel that usually replaces it. */
+.lf-requests-loading { display: grid; place-items: center; min-height: 177px; margin: 0; color: var(--lf-text-secondary); }

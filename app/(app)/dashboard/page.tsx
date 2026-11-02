@@ -1621,7 +1621,8 @@ const legalSummary = useMemo(() => {
     return (
       <div className="lf-action-centre-page lf-v3-area-page">
         <PageHeader title="To do" description="Everything that needs you, in one place." />
-        <ActionQueuePanel
+        {/* Until tasks load, a placeholder of similar size: no "Nothing needs your attention" flash, no jump. */}
+        {loading ? <div className="lf-todo-loading" role="status" aria-busy="true"><span className="lf-visually-hidden">Loading your To do…</span><span className="lf-skeleton is-chips" /><span className="lf-skeleton is-row" /><span className="lf-skeleton is-row" /><span className="lf-skeleton is-row" /></div> : <ActionQueuePanel
           items={dashboardState.actions.items}
           context={actionContext}
           guidanceItems={guidanceItems}
@@ -1629,7 +1630,7 @@ const legalSummary = useMemo(() => {
           onAction={handleAction}
           onGuidanceDecision={(item, action) => void handleGuidanceDecision(item, action)}
           onGuidanceApplicability={handleGuidanceApplicability}
-        />
+        />}
         {status ? <p role="status" className="lf-action-centre-save-status">{stripStatusPrefix(status)}</p> : null}
         {reviewPanel ? <section className="lf-action-centre-follow-up" role="status"><strong>{reviewPanel.title}</strong><p>{reviewPanel.description}</p><button type="button" onClick={() => router.push(reviewPanel.href)}>{reviewPanel.ctaLabel}</button></section> : null}
       </div>
