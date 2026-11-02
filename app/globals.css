@@ -9323,5 +9323,5 @@ a.lf-pp-item:hover { background: var(--lf-interaction-hover, #F6EFEA); }
 @keyframes lf-skeleton { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { .lf-skeleton { animation: none; } }
 /* Settings profile card: a long email stays on one line, so the card doesn't grow after loading. */
-.lf-v52-settings-profile-copy small { display: block; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.lf-v52-settings-profile-copy strong, .lf-v52-settings-profile-copy small { display: block; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .lf-v52-settings-profile-copy { min-width: 0; }
