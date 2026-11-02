@@ -6,11 +6,15 @@ BEGIN;
 \i supabase/migrations/20261031170000_nominee_requests_and_release_state.sql
 \i supabase/migrations/20261031190000_estate_release_nominations.sql
 \i supabase/migrations/20261031210000_person_notifications.sql
+\i supabase/migrations/20261031240000_death_report_evidence_requests.sql
 -- Minimal record_links for the local harness (the real table comes from the Linked People migrations).
 CREATE TABLE IF NOT EXISTS public.record_links (id uuid PRIMARY KEY, owner_user_id uuid NOT NULL, record_id uuid NOT NULL, record_type text NOT NULL, person_id uuid NOT NULL, role text NOT NULL, removed_at timestamptz);
+-- Like TEST: a notification of a kind added by the death-report change already exists.
+INSERT INTO auth.users (id) VALUES ('e0000000-0000-4000-8000-00000000000e') ON CONFLICT DO NOTHING;
+INSERT INTO public.user_notifications (recipient_user_id, kind) VALUES ('e0000000-0000-4000-8000-00000000000e', 'more_evidence_requested');
 \i supabase/migrations/20261102120000_record_link_tell_person.sql
 
-INSERT INTO auth.users (id) VALUES ('a0000000-0000-4000-8000-00000000000a'), ('e0000000-0000-4000-8000-00000000000e'), ('f0000000-0000-4000-8000-00000000000f');
+INSERT INTO auth.users (id) VALUES ('a0000000-0000-4000-8000-00000000000a'), ('f0000000-0000-4000-8000-00000000000f');
 INSERT INTO public.user_profiles (user_id, display_name) VALUES ('a0000000-0000-4000-8000-00000000000a', 'Olive Owner');
 INSERT INTO public.contacts (id, owner_user_id, full_name, linked_user_id) VALUES
   ('a5000000-0000-4000-8000-00000000000a', 'a0000000-0000-4000-8000-00000000000a', 'Joined Person', 'e0000000-0000-4000-8000-00000000000e'),
