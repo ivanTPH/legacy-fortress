@@ -161,40 +161,49 @@ test("phone: platform admin pages fit the screen", async ({ page }) => {
   }
 });
 
-test("phone: owner records a Power of Attorney and links a person", async ({ page }) => {
-  test.setTimeout(150_000);
-  const log = (line: string) => console.log(`PoA-diag: ${line.slice(0, 400)}`);
-  page.on("console", (message) => { if (["error", "warning"].includes(message.type())) log(`console.${message.type()}: ${message.text()}`); });
-  page.on("pageerror", (error) => log(`pageerror: ${error.message}`));
-  page.on("response", (response) => {
-    const path = response.url().replace(/^https:\/\/[^/]+/, "").split("?")[0];
-    if (response.status() >= 400 || /\/rest\/v1\/(assets|records|record_links)/.test(path)) log(`${response.status()} ${response.request().method()} ${path}`);
-  });
-  await page.setViewportSize({ width: 390, height: 844 });
-  await signIn(page, users[2].email, "/legal/power-of-attorney?add=1");
-  await page.waitForTimeout(2500);
-  log("form loaded");
-  await page.getByLabel(/Document name/i).first().fill("Synthetic Lasting Power of Attorney", { timeout: 5000 }).then(() => log("filled name"), (error) => log(`name fill failed: ${error.message.split("\n")[0]}`));
-  await page.getByLabel(/Short description/i).first().fill("Property and financial affairs, synthetic", { timeout: 5000 }).then(() => log("filled description"), (error) => log(`description fill failed: ${error.message.split("\n")[0]}`));
-  const saveAndAdd = page.getByRole("button", { name: /Save and add person/i }).first();
-  await saveAndAdd.click({ timeout: 5000 }).then(() => log("clicked Save and add person"), (error) => log(`click failed: ${error.message.split("\n")[0]}`));
-  for (let second = 1; second <= 12; second += 1) {
-    await page.waitForTimeout(1000);
-    // A frozen page never answers: race every read against a short timer.
-    const state = await Promise.race([
-      page.evaluate(() => ({
-        url: location.pathname + location.search,
-        button: Array.from(document.querySelectorAll("button")).find((button) => /Save and add person|Saving/.test(button.textContent ?? ""))?.textContent?.trim() ?? "none",
-        errors: Array.from(document.querySelectorAll("[role=alert], .lf-v4-form-error")).map((node) => node.textContent?.trim()).filter(Boolean).join(" / "),
-        dialog: document.querySelector("[role=dialog]")?.textContent?.trim().slice(0, 120) ?? "",
-      })),
-      new Promise<string>((resolve) => setTimeout(() => resolve("page not responding"), 3000)),
-    ]).catch((error: Error) => `read failed: ${error.message.split("\n")[0]}`);
-    log(`t+${second}s ${typeof state === "string" ? state : JSON.stringify(state)}`);
-    if (typeof state !== "string" && (state.dialog || state.errors)) break;
+// iPhone-like page (mobile layout viewport + touch) so pages widen the way Safari does.
+async function iphonePage(browser: import("@playwright/test").Browser) {
+  const context = await browser.newContext({ viewport: { width: 390, height: 664 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true,
+    userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" });
+  return context.newPage();
+}
+
+test("phone: owner pages fit the screen", async ({ browser }) => {
+  test.setTimeout(180_000);
+  const page = await iphonePage(browser);
+  await signIn(page, users[2].email, "/dashboard");
+  for (const path of ["/dashboard", "/finances", "/legal", "/legal/power-of-attorney", "/legal/power-of-attorney?add=1", "/people-access", "/profile", "/settings", "/identity/verify"]) {
+    await page.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(3000);
+    const result = await widestOverflow(page);
+    console.log(`Phone-fit: ${path} ${result.scrollWidth > result.width + 1 ? `TOO WIDE ${result.scrollWidth}px/${result.width}px: ${result.offenders.join("; ")}` : "fits"}`);
   }
-  log("done");
-  await expect(page.getByRole("dialog").first()).toContainText("Add a person", { timeout: 20_000 });
+  await page.context().close();
+});
+
+test("phone: owner records a Power of Attorney by tapping and links a person", async ({ browser }) => {
+  test.setTimeout(150_000);
+  const page = await iphonePage(browser);
+  const log = (line: string) => console.log(`PoA-diag: ${line.slice(0, 400)}`);
+  page.on("pageerror", (error) => log(`pageerror: ${error.message}`));
+  await signIn(page, users[2].email, "/legal/power-of-attorney?add=1");
+  await page.waitForTimeout(3000);
+  // Tap each field like a person (a covered field would send the tap elsewhere).
+  const name = page.getByLabel(/Document name/i).first();
+  await name.tap();
+  await page.keyboard.type("Synthetic Lasting Power of Attorney");
+  const description = page.getByLabel(/Short description/i).first();
+  await description.scrollIntoViewIfNeeded();
+  await description.tap();
+  await page.keyboard.type("Property and financial affairs, synthetic");
+  log(`typed: name=${await name.inputValue()} description=${await description.inputValue()}`);
+  expect(await name.inputValue()).toBe("Synthetic Lasting Power of Attorney");
+  const saveAndAdd = page.getByRole("button", { name: /Save and add person/i }).first();
+  await saveAndAdd.scrollIntoViewIfNeeded();
+  await saveAndAdd.tap();
+  await expect(page.getByRole("dialog").first()).toContainText("Add a person", { timeout: 25_000 });
+  log("add-person panel open");
+  await page.context().close();
 });
 
 async function createUser(role: string) {

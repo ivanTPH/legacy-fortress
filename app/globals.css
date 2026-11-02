@@ -8461,7 +8461,7 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-v52-form-people h3, .lf-v52-form-people p { margin: 0; }
 .lf-v52-form-people h3 { font-size: var(--lf-text-section); font-weight: var(--lf-weight-semibold); color: var(--lf-ink); }
 .lf-v52-form-people p { color: var(--lf-text-secondary); font-size: 14px; line-height: 1.5; }
-.lf-v52-form-people button { justify-self: start; min-height: 44px; padding: 8px 16px; border: 1px solid var(--lf-primary-bg); border-radius: var(--lf-radius-input); background: var(--lf-primary-bg); color: var(--lf-primary-text); font: inherit; font-weight: 600; cursor: pointer; }
+.lf-v52-form-people button { justify-self: start; min-height: 44px; padding: 8px 16px; border: 1px solid var(--lf-border-input, var(--lf-border)); border-radius: var(--lf-radius-input); background: var(--lf-surface-card); color: var(--lf-text); font: inherit; font-weight: 600; cursor: pointer; }
 .lf-v52-form-people button:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 2px; }
 .lf-v52-add-person-matches { display: grid; gap: 8px; grid-column: 1 / -1; padding: 12px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-input); background: var(--lf-surface-card); }
 .lf-v52-add-person-matches > div { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
