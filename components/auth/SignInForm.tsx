@@ -40,8 +40,23 @@ export default function SignInForm({
   const [showPassword, setShowPassword] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
   const [showFounderChoice, setShowFounderChoice] = useState(false);
+  // Two-step verification (Settings › Security): people who turned it on enter a 6-digit code.
+  const [codeFactorId, setCodeFactorId] = useState("");
+  const [code, setCode] = useState("");
 
-  async function signIn(event?: FormEvent<HTMLFormElement>) {
+  async function submitCode(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setStatus("");
+    setSigningIn(true);
+    try {
+      const { supabase } = await import("../../lib/supabaseClient");
+      const result = await supabase.auth.mfa.challengeAndVerify({ factorId: codeFactorId, code: code.replace(/\D/g, "") });
+      if (result.error) { setStatus("That code isn’t right. Codes change every 30 seconds; try the current one."); return; }
+    } finally { setSigningIn(false); }
+    await signIn(undefined, true);
+  }
+
+  async function signIn(event?: FormEvent<HTMLFormElement>, afterCode = false) {
     event?.preventDefault();
     setStatus("");
     setShowFounderChoice(false);
@@ -67,7 +82,9 @@ export default function SignInForm({
         import("../../lib/auth/adminDestination"),
         import("../../lib/testLauncher/client"),
       ]);
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = afterCode
+        ? await supabase.auth.getSession().then((result) => ({ data: { session: result.data.session }, error: result.error }))
+        : await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         setStatus(`Sign in failed: ${toSignInErrorMessage(error.message)}`);
         return;
@@ -75,6 +92,14 @@ export default function SignInForm({
       if (!data.session) {
         setStatus("Sign in failed: No active session returned.");
         return;
+      }
+      if (!codeFactorId) {
+        const level = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (level.data?.nextLevel === "aal2" && level.data.currentLevel !== "aal2") {
+          const factors = await supabase.auth.mfa.listFactors();
+          const totp = factors.data?.totp?.find((factor) => factor.status === "verified");
+          if (totp) { setCodeFactorId(totp.id); return; }
+        }
       }
 
       const confirmedUser = await waitForActiveUser(supabase, { attempts: 6, delayMs: 120 });
@@ -121,6 +146,20 @@ export default function SignInForm({
   }
 
   if (showFounderChoice) return <FounderTestLauncher current={null} available mode="post-login" />;
+
+  if (codeFactorId) {
+    return (
+      <form onSubmit={(event) => void submitCode(event)} style={{ display: "grid", gap: 12 }}>
+        <p style={{ margin: 0 }}>Enter the 6-digit code from your authenticator app.</p>
+        <label className="lf-label">
+          <span>6-digit code</span>
+          <input className="lf-input" inputMode="numeric" autoComplete="one-time-code" maxLength={6} autoFocus value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))} />
+        </label>
+        {status ? <p className="lf-va-error" role="alert">{status}</p> : null}
+        <button type="submit" className="lf-primary-btn" disabled={signingIn || code.length !== 6}>{signingIn ? "Checking…" : "Sign in"}</button>
+      </form>
+    );
+  }
 
   return (
     <div style={{ display: "grid", gap: compact ? 10 : 12 }}>

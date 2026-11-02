@@ -9217,3 +9217,30 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-idv-taken span { display: inline-flex; align-items: center; gap: 3px; }
 .lf-idv-file.has-preview { flex-direction: column; min-height: 0; }
 .lf-idv-file img { max-width: 100%; max-height: 200px; border-radius: 8px; object-fit: contain; }
+
+/* Settings › Security (V5.2 p5m): grouped rows like the design. */
+.lf-sec-group { display: grid; gap: 8px; margin-bottom: 20px; }
+.lf-sec-group h2 { margin: 0 4px; font-size: 17px; font-weight: 600; color: var(--lf-text); }
+.lf-sec-card { display: grid; overflow: hidden; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card, 14px); background: var(--lf-surface-card, #fff); }
+.lf-sec-row { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 72px; padding: 12px 16px; border: 0; border-top: 1px solid var(--lf-divider); background: none; color: var(--lf-text); font: inherit; text-align: left; cursor: default; }
+.lf-sec-card > .lf-sec-row:first-child { border-top: 0; }
+button.lf-sec-row { cursor: pointer; }
+button.lf-sec-row:hover { background: var(--lf-interaction-hover, #F6EFEA); }
+button.lf-sec-row:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: -2px; }
+.lf-sec-icon { display: inline-grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 12px; background: var(--lf-primary-bg, #2B1B17); color: var(--lf-primary-text, #fff); }
+.lf-sec-text { display: grid; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.lf-sec-text strong { font-size: 17px; font-weight: 600; }
+.lf-sec-text small { color: var(--lf-text-secondary); font-size: 15px; overflow-wrap: anywhere; }
+.lf-sec-row > .lf-icon:last-child { color: var(--lf-text-secondary); flex: none; }
+.lf-sec-action { min-height: 40px; padding: 0 14px; border: 1px solid var(--lf-border); border-radius: 999px; background: var(--lf-surface-card, #fff); font: inherit; font-weight: 600; cursor: pointer; }
+.lf-sec-panel { display: grid; gap: 12px; padding: 4px 16px 16px 74px; }
+.lf-sec-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.lf-sec-danger { min-height: 52px; width: 100%; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card, 14px); background: var(--lf-surface-card, #fff); color: var(--lf-destructive, #B3261E); font: inherit; font-size: 17px; font-weight: 600; cursor: pointer; }
+.lf-sec-status { margin: 0; color: var(--lf-text-secondary); font-size: 15px; }
+.lf-sec-stack { display: grid; gap: 12px; }
+.lf-sec-stack p { margin: 0; }
+.lf-sec-qr { width: 180px; height: 180px; }
+.lf-sec-secret { display: block; padding: 10px 12px; border-radius: 8px; background: var(--lf-surface-subtle, #F4EFEA); font-size: 15px; word-break: break-all; user-select: all; -webkit-user-select: all; }
+.lf-sec-field { display: grid; gap: 6px; font-weight: 600; }
+.lf-sec-field input { min-height: 48px; padding: 8px 12px; border: 1px solid var(--lf-border-input, #C9BDB5); border-radius: 10px; font-size: 18px; letter-spacing: 4px; }
+@media (max-width: 767px) { .lf-sec-panel { padding-left: 16px; } }

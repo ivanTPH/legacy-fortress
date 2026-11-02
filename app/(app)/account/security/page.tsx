@@ -15,7 +15,17 @@ import { waitForActiveUser } from "../../../../lib/auth/session";
 import { getBrowserAuthRedirect } from "../../../../lib/auth/redirects";
 import { supabase } from "../../../../lib/supabaseClient";
 import { normalizePhone } from "../../../../lib/validation/profile";
-import { enrollPasskey, getPasskeyCapability, isPasskeyEnrollmentEnabled, supportsPasskeyBrowser } from "../../../../lib/auth/passkeys";
+import { enrollPasskey, isPasskeyEnrollmentEnabled, supportsPasskeyBrowser } from "../../../../lib/auth/passkeys";
+import Icon from "../../../../components/ui/Icon";
+import TwoStepPanel, { loadTwoStepState, type TwoStepState } from "../../../../components/auth/TwoStepPanel";
+
+function describeDevice() {
+  if (typeof navigator === "undefined") return { name: "This browser", mobile: false };
+  const agent = navigator.userAgent;
+  const device = /iPhone/.test(agent) ? "iPhone" : /iPad/.test(agent) ? "iPad" : /Android/.test(agent) ? "Android phone" : /Macintosh/.test(agent) ? "Mac" : /Windows/.test(agent) ? "Windows PC" : "Computer";
+  const browser = /Edg\//.test(agent) ? "Edge" : /CriOS|Chrome\//.test(agent) ? "Chrome" : /FxiOS|Firefox\//.test(agent) ? "Firefox" : /Safari\//.test(agent) ? "Safari" : "Browser";
+  return { name: `${device} · ${browser}`, mobile: /iPhone|Android/.test(agent) };
+}
 
 export default function SecurityPage() {
   const router = useRouter();
@@ -28,6 +38,18 @@ export default function SecurityPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passkeyStatus, setPasskeyStatus] = useState("");
   const [passkeyBusy, setPasskeyBusy] = useState(false);
+  const [open, setOpen] = useState<"password" | "two-step" | "mobile" | null>(null);
+  const [twoStep, setTwoStep] = useState<TwoStepState>({ factorId: null, loading: true });
+  const [devicesStatus, setDevicesStatus] = useState("");
+  const [deviceLabel] = useState(describeDevice);
+  const reloadTwoStep = async () => setTwoStep(await loadTwoStepState());
+  useEffect(() => { void loadTwoStepState().then(setTwoStep); }, []);
+
+  const signOutOthers = async () => {
+    setDevicesStatus("");
+    const { error } = await supabase.auth.signOut({ scope: "others" });
+    setDevicesStatus(error ? `Couldn’t sign out other devices: ${error.message}` : "Signed out everywhere except this device.");
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -170,7 +192,7 @@ export default function SecurityPage() {
     try {
       const result = await enrollPasskey(supabase, "This device");
       if (result.error) throw result.error;
-      setPasskeyStatus("Passkey added. Your device keeps its biometric or PIN verification; Legacy Fortress receives only the public credential needed for authentication.");
+      setPasskeyStatus("Added. Your face or fingerprint never leaves your device.");
     } catch (error) {
       setPasskeyStatus(error instanceof Error ? error.message : "Passkey could not be added.");
     } finally {
@@ -179,82 +201,64 @@ export default function SecurityPage() {
   };
 
   return (
-    <SettingsPageShell
-      title="Security"
-      subtitle="Secure your account credentials and maintain verified contact channels for recovery."
-      compact
-    >
-      <SettingsCard title="Mobile verification" description="OTP verification is required before using this number for secure notifications.">
-        {loading ? <div style={{ color: "var(--lf-text-secondary)" }}>Loading...</div> : null}
-
-        <Field label="Mobile number">
-          <input value={mobile} onChange={(e) => setMobile(normalizePhone(e.target.value))} style={inputStyle} placeholder="+447700900123" />
-        </Field>
-
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button type="button" style={primaryBtn} onClick={() => void sendOtp()}>
-            Send verification code
+    <SettingsPageShell title="Security" subtitle="How you sign in, and where you’re signed in." compact>
+      {/* V5.2 Settings › Security (p5m): grouped rows; details open in place. */}
+      <section className="lf-sec-group" aria-labelledby="sec-sign-in">
+        <h2 id="sec-sign-in">Sign-in</h2>
+        <div className="lf-sec-card">
+          {isPasskeyEnrollmentEnabled() && supportsPasskeyBrowser() ? <div className="lf-sec-row">
+            <span className="lf-sec-icon"><Icon name="face" size={22} /></span>
+            <span className="lf-sec-text"><strong>Face ID or fingerprint</strong><small>{passkeyStatus || "Use your device to confirm it’s you"}</small></span>
+            <button type="button" className="lf-sec-action" onClick={() => void addPasskey()} disabled={passkeyBusy}>{passkeyBusy ? "Adding…" : "Add"}</button>
+          </div> : null}
+          <button type="button" className="lf-sec-row" aria-expanded={open === "password"} onClick={() => setOpen(open === "password" ? null : "password")}>
+            <span className="lf-sec-icon"><Icon name="password" size={22} /></span>
+            <span className="lf-sec-text"><strong>Password</strong><small>Change it, or get a reset link by email</small></span>
+            <Icon name={open === "password" ? "expand_less" : "chevron_right"} size={22} />
           </button>
-          <div style={{ color: verified ? "#047857" : "#6b7280", fontSize: 13 }}>
-            {verified ? "Verified" : "Not verified"}
+          {open === "password" ? <div className="lf-sec-panel">
+            <Field label="New password"><input type="password" autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} style={inputStyle} placeholder="At least 10 characters" /></Field>
+            <Field label="Confirm new password"><input type="password" autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} style={inputStyle} /></Field>
+            <div className="lf-sec-buttons"><button type="button" style={primaryBtn} onClick={() => void changePassword()}>Change password</button><button type="button" style={ghostBtn} onClick={() => void sendPasswordReset()}>Email me a reset link</button></div>
+          </div> : null}
+          <button type="button" className="lf-sec-row" aria-expanded={open === "two-step"} onClick={() => setOpen(open === "two-step" ? null : "two-step")}>
+            <span className="lf-sec-icon"><Icon name="phonelink_lock" size={22} /></span>
+            <span className="lf-sec-text"><strong>Two-step verification</strong><small>{twoStep.factorId ? "On · authenticator app" : "Off"}</small></span>
+            <Icon name={open === "two-step" ? "expand_less" : "chevron_right"} size={22} />
+          </button>
+          {open === "two-step" ? <div className="lf-sec-panel"><TwoStepPanel state={twoStep} onChanged={reloadTwoStep} /></div> : null}
+        </div>
+      </section>
+
+      <section className="lf-sec-group" aria-labelledby="sec-devices">
+        <h2 id="sec-devices">Signed-in devices</h2>
+        <div className="lf-sec-card">
+          <div className="lf-sec-row">
+            <span className="lf-sec-icon"><Icon name={deviceLabel.mobile ? "smartphone" : "laptop_mac"} size={22} /></span>
+            <span className="lf-sec-text"><strong>{deviceLabel.name}</strong><small>This device</small></span>
           </div>
         </div>
+        <button type="button" className="lf-sec-danger" onClick={() => void signOutOthers()}>Sign out of all other devices</button>
+        {devicesStatus ? <p className="lf-sec-status" role="status">{devicesStatus}</p> : null}
+      </section>
 
-        <Field label="OTP code">
-          <input value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} style={inputStyle} placeholder="6-digit code" />
-        </Field>
-
-        <button type="button" style={ghostBtn} onClick={() => void verifyOtp()}>
-          Verify mobile number
-        </button>
-        <StatusNote message={status} />
-      </SettingsCard>
-
-      <SettingsCard title="Password" description="Send a secure reset link to your verified sign-in email.">
-        <div style={{ display: "grid", gap: 8 }}>
-          <button type="button" style={primaryBtn} onClick={() => void sendPasswordReset()}>
-            Send password reset email
+      <section className="lf-sec-group" aria-labelledby="sec-recovery">
+        <h2 id="sec-recovery">Recovery</h2>
+        <div className="lf-sec-card">
+          <button type="button" className="lf-sec-row" aria-expanded={open === "mobile"} onClick={() => setOpen(open === "mobile" ? null : "mobile")}>
+            <span className="lf-sec-icon"><Icon name="sms" size={22} /></span>
+            <span className="lf-sec-text"><strong>Mobile number</strong><small>{loading ? "Loading…" : mobile ? `${mobile} · ${verified ? "Verified" : "Not verified"}` : "Not added"}</small></span>
+            <Icon name={open === "mobile" ? "expand_less" : "chevron_right"} size={22} />
           </button>
-
-          <Field label="New password">
-            <input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              style={inputStyle}
-              placeholder="At least 10 characters"
-            />
-          </Field>
-          <Field label="Confirm new password">
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              style={inputStyle}
-            />
-          </Field>
-          <button type="button" style={ghostBtn} onClick={() => void changePassword()}>
-            Change password now
-          </button>
-          <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
-            Recovery options: verified email reset and verified mobile OTP workflows.
-          </div>
+          {open === "mobile" ? <div className="lf-sec-panel">
+            <Field label="Mobile number"><input value={mobile} onChange={(e) => setMobile(normalizePhone(e.target.value))} style={inputStyle} placeholder="+447700900123" /></Field>
+            <button type="button" style={ghostBtn} onClick={() => void sendOtp()}>Send verification code</button>
+            <Field label="Code"><input inputMode="numeric" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} style={inputStyle} placeholder="6-digit code" /></Field>
+            <button type="button" style={primaryBtn} onClick={() => void verifyOtp()}>Verify mobile number</button>
+          </div> : null}
         </div>
-      </SettingsCard>
-
-      {isPasskeyEnrollmentEnabled() ? (
-        <SettingsCard title="Passkeys" description="Use a device passkey for a faster, phishing-resistant step-up. Passkeys are separate from government-ID verification.">
-          <p style={{ color: "var(--lf-text-secondary)", fontSize: 13, margin: 0 }}>
-            Use your device&apos;s passkey, such as Face ID, fingerprint, Windows Hello or a device PIN. Legacy Fortress does not receive or store your biometric template.
-          </p>
-          <button type="button" style={primaryBtn} onClick={() => void addPasskey()} disabled={passkeyBusy || !supportsPasskeyBrowser()}>
-            {passkeyBusy ? "Adding passkey..." : "Add passkey"}
-          </button>
-          {!supportsPasskeyBrowser() ? <StatusNote message="This browser does not support passkeys." /> : null}
-          <StatusNote message={passkeyStatus} />
-          <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>Current client capability: {getPasskeyCapability().passwordlessSignIn ? "passwordless sign-in" : "enrollment and future step-up only"}.</div>
-        </SettingsCard>
-      ) : null}
+      </section>
+      <StatusNote message={status} />
     </SettingsPageShell>
   );
 }
