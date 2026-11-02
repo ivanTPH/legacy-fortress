@@ -196,7 +196,7 @@ function BillingPageContent() {
   return (
     <SettingsPageShell title="Subscription and billing" subtitle="Review owner plan status, subscription readiness, and billing controls in one place.">
       <SettingsCard title="Subscription overview" description="Review the current owner plan, live status labels, and the secure subscription-management entry point without exposing provider secrets in the client.">
-        {loading ? <div style={{ color: "var(--lf-text-secondary)" }}>Loading...</div> : null}
+        {loading ? <div role="status" className="lf-visually-hidden">Loading…</div> : null}
         {reason === "plan-limit" || reason === "invite-status" ? (
           <div style={{ marginBottom: 14, padding: 12, border: "1px solid var(--lf-status-pending-bg)", borderRadius: 14, background: "var(--lf-status-pending-bg)", color: "var(--lf-status-pending-text)", fontSize: 13, display: "grid", gap: 4 }}>
             <strong>{reason === "invite-status" ? "Invitation limit or delivery issue" : "Starter plan limit reached"}</strong>

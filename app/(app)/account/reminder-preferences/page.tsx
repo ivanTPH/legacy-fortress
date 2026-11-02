@@ -96,7 +96,7 @@ export default function ReminderPreferencesPage() {
       compact
     >
       <SettingsCard title="Alerts" description="These choices control existing reminder channels. Push alerts and summary email delivery are not configured here.">
-        {loading ? <div style={{ color: "var(--lf-text-secondary)" }}>Loading...</div> : null}
+        {loading ? <div role="status" className="lf-visually-hidden">Loading…</div> : null}
         <div className="lf-v52-settings-rows">
           <Toggle label="In-app reminders" description="Updates inside your Vault" checked={prefs.in_app_enabled} onChange={(checked) => setPrefs({ ...prefs, in_app_enabled: checked })} />
           <Toggle label="Email reminders" description="Reminder emails without record details" checked={prefs.email_enabled} onChange={(checked) => setPrefs({ ...prefs, email_enabled: checked })} />

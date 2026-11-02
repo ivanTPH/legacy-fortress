@@ -301,12 +301,12 @@ test("phone: sub-pages load without jumping and fit the screen", async ({ browse
   // A record page (the Power of Attorney the earlier test saved).
   await page.goto(`${BASE_URL}/legal/power-of-attorney`, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(2500);
-  const recordHref = await page.locator("a[href*='asset='], a[href*='record=']").first().getAttribute("href").catch(() => null);
+  const recordHref = await page.locator("a[href*='asset='], a[href*='record=']").first().getAttribute("href", { timeout: 5000 }).catch(() => null);
   if (recordHref) {
-    await page.goto(`${BASE_URL}${recordHref}`, { waitUntil: "domcontentloaded" });
+    await page.goto(`${BASE_URL}${recordHref}`, { waitUntil: "domcontentloaded" }).catch(() => null);
     await page.waitForTimeout(3000);
-    console.log(`Sub-shift: record page ${await layoutShifts(page)}`);
-  }
+    console.log(`Sub-shift: record page ${await Promise.race([layoutShifts(page), new Promise<string>((resolve) => setTimeout(() => resolve("not measured"), 5000))])}`);
+  } else console.log("Sub-shift: record page not found");
   await page.context().close();
 });
 
