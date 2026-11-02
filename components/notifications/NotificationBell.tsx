@@ -1,5 +1,7 @@
 "use client";
 
+import SwipeToClear from "./SwipeToClear";
+import { loadClearedNotificationIds, saveClearedNotificationIds } from "../../lib/notifications/cleared";
 import { describeInvitationEvent } from "../../lib/notifications/invitationEvents";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -47,7 +49,7 @@ export default function NotificationBell({ ownerUserId, disabled = false }: { ow
   const [readIds, setReadIds] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
     try {
-      const stored = JSON.parse(window.sessionStorage.getItem(READ_KEY) ?? "[]");
+      const stored = JSON.parse(window.localStorage.getItem(READ_KEY) ?? "[]");
       return Array.isArray(stored) ? stored.filter((item): item is string => typeof item === "string") : [];
     } catch {
       return [];
@@ -83,16 +85,23 @@ export default function NotificationBell({ ownerUserId, disabled = false }: { ow
     }
     void load();
     return () => { cancelled = true; };
-  }, [disabled, ownerUserId]);
+    // Reload when opened so something you just did (e.g. an invitation) shows straight away.
+  }, [disabled, ownerUserId, open]);
 
-  const visibleEvents = ownerUserId && !disabled ? events : [];
+  const [cleared, setCleared] = useState<string[]>([]);
+  useEffect(() => { queueMicrotask(() => setCleared(loadClearedNotificationIds())); }, [open]);
+  const visibleEvents = ownerUserId && !disabled ? events.filter((event) => !cleared.includes(event.id)) : [];
+  function clearOne(id: string) {
+    if (events.find((event) => event.id === id)?.event_type.startsWith("person:")) void markPersonNotificationsRead(supabase, [id]);
+    setCleared(saveClearedNotificationIds([...cleared, id]));
+  }
   const unreadCount = useMemo(() => visibleEvents.filter((event) => !event.read && !readIds.includes(event.id)).length, [readIds, visibleEvents]);
 
   function markRead() {
     void markPersonNotificationsRead(supabase, visibleEvents.filter((event) => event.event_type.startsWith("person:")).map((event) => event.id));
     const next = Array.from(new Set([...readIds, ...visibleEvents.map((event) => event.id)])).slice(-80);
     setReadIds(next);
-    try { window.sessionStorage.setItem(READ_KEY, JSON.stringify(next)); } catch { /* presentation state only */ }
+    try { window.localStorage.setItem(READ_KEY, JSON.stringify(next)); } catch { /* presentation state only */ }
   }
 
   return (
@@ -121,11 +130,10 @@ export default function NotificationBell({ ownerUserId, disabled = false }: { ow
           {!loading && !visibleEvents.length ? <p className="lf-notification-empty">Nothing new has happened yet.</p> : null}
           {!loading ? visibleEvents.map((event) => {
             const copy = eventCopy(event);
-            return <Link key={event.id} href={copy.href} className="lf-notification-event" onClick={() => setOpen(false)}>
-              <span className="lf-notification-event-icon"><Icon name="notifications_active" size={18} /></span>
+            return <SwipeToClear key={event.id} label={copy.title} onClear={() => clearOne(event.id)}><Link href={copy.href} className="lf-notification-event" onClick={() => setOpen(false)}>
+              <span className="lf-notification-event-icon"><Icon name={copy.title.startsWith("Invitation sent") ? "send" : "notifications_active"} size={18} /></span>
               <span><strong>{copy.title}</strong><small>{copy.detail}</small><time dateTime={event.created_at}>{relativeTime(event.created_at)}</time></span>
-              <Icon name="chevron_right" size={18} />
-            </Link>;
+            </Link></SwipeToClear>;
           }) : null}
           {!loading && visibleEvents.length ? <Link href="/notifications" className="lf-notification-view-all" onClick={() => setOpen(false)}>View all notifications <Icon name="chevron_right" size={16} /></Link> : null}
         </div>

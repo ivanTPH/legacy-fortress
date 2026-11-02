@@ -312,6 +312,8 @@ export async function sendRecordLinkedPersonInvitation(client: SupabaseClient, i
   recordId: string;
   personId: string;
   origin: string;
+  /** Send again to someone invited before who hasn't joined (owner request 2 Nov 2026). */
+  resend?: boolean;
 }, dispatch: typeof import("../contacts/sendContactInvite.ts").sendContactInvite = async (client, invitation) => {
   const { sendContactInvite } = await import("../contacts/sendContactInvite.ts");
   return sendContactInvite(client, invitation);
@@ -325,7 +327,8 @@ export async function sendRecordLinkedPersonInvitation(client: SupabaseClient, i
   if (!contact) throw new Error("This person is unavailable.");
   const email = normalizeLinkedPersonEmail(contact.email ?? "");
   if (!email) throw new Error("Add an email to this person before sending an invitation.");
-  if (["invite_sent", "accepted"].includes(contact.invite_status)) {
+  if (contact.invite_status === "accepted") throw new Error("This person has already joined.");
+  if (contact.invite_status === "invite_sent" && !input.resend) {
     throw new Error("This person already has an active invitation. Manage it in People.");
   }
   return dispatch(client, {
@@ -339,6 +342,7 @@ export async function sendRecordLinkedPersonInvitation(client: SupabaseClient, i
     assignedRole: collaboratorRole(contact.contact_role),
     activationStatus: "invited",
     skipLegacyContactLink: true,
+    resend: Boolean(input.resend),
     permissionsOverride: { asset_ids: [], record_ids: [], editable_asset_ids: [], editable_record_ids: [], allowed_sections: [], explicit_permissions: [] },
     origin: input.origin,
   });

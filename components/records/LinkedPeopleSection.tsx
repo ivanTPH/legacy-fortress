@@ -360,6 +360,7 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
       const result = await sendRecordLinkedPersonInvitation(client, {
         ownerUserId, recordId, recordType, personId: savedPersonId,
         origin: window.location.origin,
+        resend: Boolean(saved && saved.invite_status !== "not_invited"),
       });
       try {
         const data = await loadRecordLinkedPeople(client, ownerUserId, recordType, recordId);
@@ -379,7 +380,7 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
     {canManage ? <>
       <button type="button" disabled={busy || mode !== "closed"} onClick={(event) => { returnFocusRef.current = mobile ? rowActionTriggerRef.current : event.currentTarget; if (mobile) closeRowActions(); setManagedLinkId(link.id); setRole(link.role); setOtherRole(link.role_other_text ?? ""); setNotice(""); setError(""); setMode("editRole"); }}>Change role on this record</button>
       <Link href={buildContactsWorkspaceHref(contact.id, true)} onClick={mobile ? closeRowActions : undefined}>Manage access</Link>
-      {contact.email && !["accepted", "invite_sent"].includes(contact.invite_status) ? <button type="button" disabled={busy || mode !== "closed"} onClick={(event) => { returnFocusRef.current = mobile ? rowActionTriggerRef.current : event.currentTarget; if (mobile) closeRowActions(); setSavedPersonId(contact.id); setError(""); setMode("saved"); }}>Invite to connect</button> : null}
+      {contact.email && contact.invite_status !== "accepted" ? <button type="button" disabled={busy || mode !== "closed"} onClick={(event) => { returnFocusRef.current = mobile ? rowActionTriggerRef.current : event.currentTarget; if (mobile) closeRowActions(); setSavedPersonId(contact.id); setError(""); setMode("saved"); }}>{contact.invite_status === "not_invited" ? "Invite to connect" : "Resend invitation"}</button> : null}
       {!contact.email ? <Link href={buildContactsWorkspaceHref(contact.id)} onClick={mobile ? closeRowActions : undefined}>Add email to invite</Link> : null}
       <button type="button" disabled={busy || mode !== "closed"} onClick={(event) => { returnFocusRef.current = mobile ? rowActionTriggerRef.current : event.currentTarget; if (mobile) closeRowActions(); setManagedLinkId(link.id); setNotice(""); setError(""); setMode("confirmUnlink"); }}>Remove from this record</button>
     </> : null}
@@ -505,14 +506,14 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
       <h3>{saved?.full_name ?? "Person"} added as {(() => { const link = links.find((item) => item.person_id === savedPersonId); return link?.role === "Other" ? link.role_other_text || "a linked person" : link?.role || "a linked person"; })()}</h3>
       <p>They’re now listed on {recordLabel}. This doesn’t let them see it.</p>
       {saved?.invite_status === "accepted" ? <p>{saved.full_name} has already joined Legacy Fortress.</p>
-        : saved?.invite_status === "invite_sent" ? <p>{saved.full_name} has already been invited.</p>
+        : saved?.invite_status === "invite_sent" ? <p><strong>{firstNameOf(saved.full_name)} was invited before</strong> and hasn’t joined yet. You can send the invitation again.</p>
         : saved?.email ? <p><strong>Invite {firstNameOf(saved.full_name)} to join?</strong> The invitation doesn’t mention this document or share anything.</p>
         : <p>Add {firstNameOf(saved?.full_name ?? "their")}’s email if you’d like to invite them later.</p>}
       <div className="lf-linked-people-actions lf-linked-people-confirm-actions">
-        {saved?.email && !["invite_sent", "accepted"].includes(saved.invite_status) ? <button type="button" className="is-primary" onClick={() => { setError(""); setMode("confirmInvite"); }}>Send invitation</button>
+        {saved?.email && saved.invite_status !== "accepted" ? <button type="button" className="is-primary" onClick={() => { setError(""); setMode("confirmInvite"); }}>{saved.invite_status === "not_invited" ? "Send invitation" : "Resend invitation"}</button>
           : !saved?.email ? <Link className="is-primary" href={buildContactsWorkspaceHref(savedPersonId)}>Add their email</Link>
           : <button type="button" className="is-primary" onClick={() => resetForm()}>Done</button>}
-        {saved?.email && ["invite_sent", "accepted"].includes(saved.invite_status) ? null : <button type="button" onClick={() => { resetForm(); setNotice(`${saved?.full_name ?? "Person"} added. Not invited yet. You can invite them from the ⋮ menu.`); }}>Not now</button>}
+        {saved?.invite_status === "accepted" ? null : <button type="button" onClick={() => { resetForm(); setNotice(`${saved?.full_name ?? "Person"} added. Not invited yet. You can invite them from the ⋮ menu.`); }}>Not now</button>}
       </div>
     </div> : null}
     {canManage && mode === "viewContact" && saved ? <div className="lf-linked-people-form" role="group" aria-label="Contact details">
@@ -531,7 +532,7 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
       <div className="lf-linked-people-actions lf-linked-people-confirm-actions"><button type="button" className="is-primary" onClick={() => { setInviteSentTo(null); resetForm(); }}>Done</button></div>
     </div> : null}
     {canManage && mode === "confirmInvite" ? <div className="lf-linked-people-form" role="group" aria-label="Confirm invitation">
-      <h3>Invite {saved?.full_name ?? "this person"}</h3>
+      <h3>{saved && saved.invite_status !== "not_invited" ? "Resend invitation to" : "Invite"} {saved?.full_name ?? "this person"}</h3>
       <p>Email: <strong>{saved?.email}</strong></p>
       <p>They will receive a request to create an account and connect with you. They will not receive this record, its documents, or access to your Vault. Access must be shared separately.</p>
       <div className="lf-linked-people-actions"><button type="button" disabled={busy} onClick={() => { setError(""); setMode("saved"); }}>Back</button><button type="button" disabled={busy || !saved?.email} onClick={() => void sendInvitation()}>{busy ? "Submitting…" : "Send invitation"}</button></div>

@@ -1,5 +1,7 @@
 "use client";
 
+import SwipeToClear from "../../../components/notifications/SwipeToClear";
+import { loadClearedNotificationIds, saveClearedNotificationIds } from "../../../lib/notifications/cleared";
 import { describeInvitationEvent } from "../../../lib/notifications/invitationEvents";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -48,7 +50,7 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     try {
-      const stored = JSON.parse(window.sessionStorage.getItem(READ_KEY) ?? "[]");
+      const stored = JSON.parse(window.localStorage.getItem(READ_KEY) ?? "[]");
       if (Array.isArray(stored)) setReadIds(stored.filter((value): value is string => typeof value === "string"));
     } catch { /* presentation state only */ }
 
@@ -78,24 +80,39 @@ export default function NotificationsPage() {
     return () => { cancelled = true; };
   }, []);
 
-  const filtered = useMemo(() => events.filter((event) => {
+  const [cleared, setCleared] = useState<string[]>([]);
+  const [undoIds, setUndoIds] = useState<string[]>([]);
+  useEffect(() => { queueMicrotask(() => setCleared(loadClearedNotificationIds())); }, []);
+  function clearNotifications(ids: string[]) {
+    if (!ids.length) return;
+    void markPersonNotificationsRead(supabase, ids.filter((id) => events.find((event) => event.id === id)?.event_type.startsWith("person:")));
+    setCleared(saveClearedNotificationIds([...cleared, ...ids]));
+    setReadIds((current) => Array.from(new Set([...current, ...ids])));
+    setUndoIds(ids);
+  }
+  function undoClear() {
+    setCleared(saveClearedNotificationIds(cleared.filter((id) => !undoIds.includes(id))));
+    setUndoIds([]);
+  }
+  const visibleEvents = useMemo(() => events.filter((event) => !cleared.includes(event.id)), [events, cleared]);
+  const filtered = useMemo(() => visibleEvents.filter((event) => {
     const item = describeEvent(event);
     return filter === "all" || (filter === "unread" ? !readIds.includes(event.id) : item.group === filter);
-  }), [events, filter, readIds]);
+  }), [visibleEvents, filter, readIds]);
   const selected = filtered.find((event) => event.id === selectedId) ?? filtered[0] ?? null;
 
   function markRead(id: string) {
     void markPersonNotificationsRead(supabase, [id]);
     const next = Array.from(new Set([...readIds, id])).slice(-100);
     setReadIds(next);
-    try { window.sessionStorage.setItem(READ_KEY, JSON.stringify(next)); } catch { /* presentation state only */ }
+    try { window.localStorage.setItem(READ_KEY, JSON.stringify(next)); } catch { /* presentation state only */ }
   }
 
   function markAllRead() {
     void markPersonNotificationsRead(supabase, events.filter((event) => event.event_type.startsWith("person:")).map((event) => event.id));
     const next = Array.from(new Set([...readIds, ...events.map((event) => event.id)])).slice(-100);
     setReadIds(next);
-    try { window.sessionStorage.setItem(READ_KEY, JSON.stringify(next)); } catch { /* presentation state only */ }
+    try { window.localStorage.setItem(READ_KEY, JSON.stringify(next)); } catch { /* presentation state only */ }
   }
 
   return (
@@ -109,23 +126,25 @@ export default function NotificationsPage() {
             </button>
           ))}
         </div>
-        <button type="button" className="lf-ui-button lf-ui-button-text" onClick={markAllRead}>Mark all read</button>
+        <span className="lf-notifications-toolbar-actions"><button type="button" className="lf-ui-button lf-ui-button-text" onClick={markAllRead}>Mark all read</button><button type="button" className="lf-ui-button lf-ui-button-text" onClick={() => clearNotifications(visibleEvents.filter((event) => readIds.includes(event.id)).map((event) => event.id))}>Clear read</button></span>
       </div>
       {status ? <div className="lf-inline-status" role="status">{status}</div> : null}
+      <p className="lf-notifications-hint">Swipe a notification left or right, or tap ×, to clear it.</p>
+      {undoIds.length ? <div className="lf-notifications-undo" role="status">{undoIds.length === 1 ? "Notification cleared." : `${undoIds.length} notifications cleared.`}<button type="button" onClick={undoClear}>Undo</button></div> : null}
       {loading ? <div className="lf-notification-empty">Loading notifications…</div> : null}
-      {!loading && !events.length ? <div className="lf-notifications-empty-state"><Icon name="done_all" size={28} /><strong>You&apos;re all caught up</strong><span>Events from your Fortress will appear here.</span></div> : null}
-      {!loading && events.length ? (
+      {!loading && !visibleEvents.length ? <div className="lf-notifications-empty-state"><Icon name="done_all" size={28} /><strong>You&apos;re all caught up</strong><span>Events from your Fortress will appear here.</span></div> : null}
+      {!loading && visibleEvents.length ? (
         <div className="lf-notifications-layout">
           <section className="lf-notifications-list" aria-label="Notification events">
             {!filtered.length ? <div className="lf-notification-empty">No notifications match this filter.</div> : null}
             {filtered.map((event) => {
               const item = describeEvent(event);
               const unread = !readIds.includes(event.id);
-              return <button key={event.id} type="button" className={`lf-notification-row${selected?.id === event.id ? " is-selected" : ""}`} onClick={() => { setSelectedId(event.id); markRead(event.id); }}>
+              return <SwipeToClear key={event.id} label={item.title} onClear={() => clearNotifications([event.id])}><button type="button" className={`lf-notification-row${selected?.id === event.id ? " is-selected" : ""}`} onClick={() => { setSelectedId(event.id); markRead(event.id); }}>
                 <span className="lf-notification-event-icon"><Icon name={item.icon} size={20} /></span>
                 <span className="lf-notification-row-copy"><strong className={unread ? "is-unread" : ""}>{item.title}</strong><small>{item.detail}</small><time>{formatEventTime(event.created_at)}</time></span>
                 {unread ? <span className="lf-notification-unread-dot" aria-label="Unread" /> : null}
-              </button>;
+              </button></SwipeToClear>;
             })}
           </section>
           {selected ? (() => { const item = describeEvent(selected); return <aside className="lf-notification-detail"><span className="lf-notification-detail-icon"><Icon name={item.icon} size={24} /></span><h2>{item.title}</h2><p>{item.detail}</p><dl><div><dt>When</dt><dd>{formatEventTime(selected.created_at)}</dd></div>{selected.event_type.startsWith("person:") ? null : <div><dt>Event</dt><dd>{selected.event_type}</dd></div>}</dl><Link href={item.href} className="lf-ui-button lf-ui-button-secondary">Open related area <Icon name="chevron_right" size={18} /></Link></aside>; })() : null}
