@@ -180,24 +180,7 @@ test("phone: owner pages fit the screen", async ({ browser }) => {
     const result = await widestOverflow(page);
     // Content can be clipped (overflow hidden) without the page scrolling, so list anything past the edge.
     console.log(`Phone-fit: ${path} ${result.offenders.length ? `CUT OFF (page ${result.scrollWidth}px/${result.width}px): ${result.offenders.join("; ")}` : "fits"}`);
-    // Layout shifts while loading ("screens jump on refresh", owner report 2 Nov 2026).
-    const shifts = await page.evaluate(() => new Promise<string>((resolve) => {
-      const found: string[] = [];
-      let total = 0;
-      new PerformanceObserver((list) => {
-        for (const entry of list.getEntries() as Array<PerformanceEntry & { value: number; hadRecentInput: boolean; sources?: Array<{ node?: Node | null; previousRect: DOMRectReadOnly; currentRect: DOMRectReadOnly }> }>) {
-          if (entry.hadRecentInput) continue;
-          total += entry.value;
-          for (const source of entry.sources ?? []) {
-            const element = source.node instanceof Element ? source.node : source.node?.parentElement;
-            const name = element ? `${element.tagName.toLowerCase()}.${String(element.className || "").split(/\s+/).slice(0, 2).join(".")}` : "?";
-            found.push(`${name} ${Math.round(source.previousRect.y)}→${Math.round(source.currentRect.y)}`);
-          }
-        }
-      }).observe({ type: "layout-shift", buffered: true });
-      setTimeout(() => resolve(`${total.toFixed(3)} ${found.slice(0, 6).join("; ")}`), 300);
-    })).catch(() => "unavailable");
-    console.log(`Phone-shift: ${path} ${shifts}`);
+    console.log(`Phone-shift: ${path} ${await layoutShifts(page)}`);
     // A small screenshot in the log for visual review against the design (synthetic account only).
     const shot = await page.screenshot({ type: "jpeg", quality: 45, scale: "css" }).catch(() => null);
     if (shot) console.log(`Phone-shot: ${path} ${shot.toString("base64")}`);
@@ -275,6 +258,56 @@ test("design review: people screens on a phone and main pages on desktop", async
     await shoot(desktop, `/desk${path}`);
   }
   await desktop.context().close();
+});
+
+// Layout shifts while loading ("screens jump on refresh", owner report 2 Nov 2026).
+async function layoutShifts(page: Page) {
+  return page.evaluate(() => new Promise<string>((resolve) => {
+    const found: string[] = [];
+    let total = 0;
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries() as Array<PerformanceEntry & { value: number; hadRecentInput: boolean; sources?: Array<{ node?: Node | null; previousRect: DOMRectReadOnly; currentRect: DOMRectReadOnly }> }>) {
+        if (entry.hadRecentInput) continue;
+        total += entry.value;
+        for (const source of entry.sources ?? []) {
+          const element = source.node instanceof Element ? source.node : source.node?.parentElement;
+          const name = element ? `${element.tagName.toLowerCase()}.${String(element.className || "").split(/\s+/).slice(0, 2).join(".")}` : "?";
+          found.push(`${name} ${Math.round(source.previousRect.y)}→${Math.round(source.currentRect.y)}`);
+        }
+      }
+    }).observe({ type: "layout-shift", buffered: true });
+    setTimeout(() => resolve(`${total.toFixed(3)} ${found.slice(0, 6).join("; ")}`), 300);
+  })).catch(() => "unavailable");
+}
+
+test("phone: sub-pages load without jumping and fit the screen", async ({ browser }) => {
+  test.setTimeout(420_000);
+  const page = await iphonePage(browser);
+  await signIn(page, users[2].email, "/dashboard");
+  const paths = [
+    "/finances/bank", "/finances/pensions", "/finances/investments", "/finances/insurance", "/finances/debts",
+    "/legal/wills", "/legal/trusts", "/legal/power-of-attorney", "/legal/funeral-wishes", "/legal/marriage-divorce-documents", "/legal/other-legal-documents", "/identity-documents", "/personal/wishes",
+    "/property", "/business", "/vault/digital", "/vault/personal",
+    "/people-access?view=vault-access", "/people-access?view=requests", "/people-access?view=sharing", "/vault-nominations",
+    "/notifications", "/actions", "/add", "/support",
+    "/account/my-vault", "/account/appearance", "/account/accessibility", "/account/communications-preferences", "/account/reminder-preferences", "/account/billing", "/account/terms",
+  ];
+  for (const path of paths) {
+    await page.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(3000);
+    const fit = await widestOverflow(page);
+    console.log(`Sub-shift: ${path} ${await layoutShifts(page)}${fit.offenders.length ? ` | CUT OFF: ${fit.offenders.slice(0, 3).join("; ")}` : ""}`);
+  }
+  // A record page (the Power of Attorney the earlier test saved).
+  await page.goto(`${BASE_URL}/legal/power-of-attorney`, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(2500);
+  const recordHref = await page.locator("a[href*='asset='], a[href*='record=']").first().getAttribute("href").catch(() => null);
+  if (recordHref) {
+    await page.goto(`${BASE_URL}${recordHref}`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(3000);
+    console.log(`Sub-shift: record page ${await layoutShifts(page)}`);
+  }
+  await page.context().close();
 });
 
 async function createUser(role: string) {
