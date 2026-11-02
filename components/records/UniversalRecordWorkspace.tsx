@@ -4803,9 +4803,9 @@ export default function UniversalRecordWorkspace({
         ) : null}
         {!showNarrativeNotes && !usesStructuredWorkspaceForm ? <button type="button" style={ghostBtn} onClick={() => setShowNarrativeNotes(true)}><Icon name="add" size={16} /> Add notes</button> : null}
         {!editingId && canShowLinkedPeople && canCreateRecords ? <section className="lf-v52-form-people" aria-label="People on this record">
-          <h3>{linkedPeopleConfig(sectionKey, categoryKey)?.heading} (optional)</h3>
-          <p>Add people and their roles after this record is saved. Linking a person does not give them access.</p>
-          <button type="button" disabled={saving} onClick={() => void saveRecord(true)}>{saving ? "Saving…" : "Save and add person"}</button>
+          <h3>{linkedPeopleConfig(sectionKey, categoryKey)?.formHeading ?? linkedPeopleConfig(sectionKey, categoryKey)?.heading} (optional)</h3>
+          <p>We save this document first, then you choose {categoryKey === "power-of-attorney" ? "your attorney" : categoryKey === "wills" ? "your executors" : "the people linked to it"} from your People. Linking someone doesn’t give them access.</p>
+          <button type="button" disabled={saving} onClick={() => void saveRecord(true)}>{saving ? "Saving…" : linkedPeopleConfig(sectionKey, categoryKey)?.formAction ?? "Save, then add a person"}</button>
         </section> : null}
         {submitError ? <div ref={submitErrorRef} tabIndex={-1} className="lf-v4-form-error"><Icon name="error" size={16} /><span><strong>Not saved yet.</strong> {submitError}</span></div> : null}
         </div>

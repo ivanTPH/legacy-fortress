@@ -104,7 +104,9 @@ async function assertSavedOwnerRecord(client: SupabaseClient, ownerUserId: strin
 export function linkedPeopleConfig(section: string, category: string) {
   if (section === "personal" && ["tasks", "beneficiaries", "executors"].includes(category)) return null;
   if (section === "legal" && category === "identity-documents") return null;
-  if (section === "legal" && category === "wills") return { heading: "Executors", action: "Add another executor", roles: ["Executor", "Reserve executor", "Solicitor", "Other"] };
+  if (section === "legal" && category === "wills") return { heading: "Executors", action: "Add another executor", roles: ["Executor", "Reserve executor", "Solicitor", "Other"], defaultRole: "Executor", formHeading: "Your executors", formAction: "Save and choose executor" };
+  // Owner review 2 Nov 2026: on a Power of Attorney the natural next step is naming the attorney.
+  if (section === "legal" && category === "power-of-attorney") return { heading: "Your attorney", action: "Add attorney", roles: ["Attorney", "Replacement attorney", "Solicitor", "Other"], defaultRole: "Attorney", formHeading: "Your attorney", formAction: "Save and choose attorney" };
   if (section === "property") return { heading: "People linked to this property", action: "Add person", roles: ["Joint owner", "Solicitor", "Managing agent", "Other"] };
   if (section === "finances") {
     const roles = category === "bank" ? ["Joint account holder", "Adviser", "Bank contact", "Other"]

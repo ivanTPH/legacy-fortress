@@ -61,7 +61,14 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [relationship, setRelationship] = useState("");
-  const [role, setRole] = useState("");
+  const [role, setRole] = useState(config?.defaultRole ?? "");
+  // Each step starts at its top, so a confirmation is never left below the fold on a phone.
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    dialog.scrollTop = 0;
+    dialog.querySelectorAll<HTMLElement>("*").forEach((node) => { if (node.scrollTop) node.scrollTop = 0; });
+  }, [mode]);
   const [otherRole, setOtherRole] = useState("");
   const [address, setAddress] = useState("");
   const [personNotes, setPersonNotes] = useState("");
@@ -170,7 +177,7 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
 
   const resetForm = () => {
     setMode("closed"); setPersonId(""); setName(""); setEmail(""); setPhone("");
-    setRelationship(""); setRole(""); setOtherRole(""); setError(""); setAddress(""); setPersonNotes(""); requestIdRef.current = "";
+    setRelationship(""); setRole(config?.defaultRole ?? ""); setOtherRole(""); setError(""); setAddress(""); setPersonNotes(""); requestIdRef.current = "";
     setContactSearch(""); setRecoveryPersonId(""); setSavedPersonId("");
     setSuggestionId(""); setSuggestionChoice("");
     setManagedLinkId("");

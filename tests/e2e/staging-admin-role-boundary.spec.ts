@@ -204,12 +204,48 @@ test("phone: owner records a Power of Attorney by tapping and links a person", a
   await page.keyboard.type("Property and financial affairs, synthetic");
   log(`typed: name=${await name.inputValue()} description=${await description.inputValue()}`);
   expect(await name.inputValue()).toBe("Synthetic Lasting Power of Attorney");
-  const saveAndAdd = page.getByRole("button", { name: /Save and add person/i }).first();
+  const saveAndAdd = page.getByRole("button", { name: /Save and choose attorney/i }).first();
   await saveAndAdd.scrollIntoViewIfNeeded();
   await saveAndAdd.tap();
-  await expect(page.getByRole("dialog").first()).toContainText("Add a person", { timeout: 25_000 });
+  const dialog = page.getByRole("dialog").first();
+  await expect(dialog).toContainText("Add a person", { timeout: 25_000 });
   log("add-person panel open");
+  // Choose an existing person: the role is already "Attorney", then a clear confirmation.
+  await dialog.getByRole("button", { name: /Choose from People/i }).first().tap();
+  await dialog.locator("button[aria-pressed]").filter({ hasText: /Select person|Selected/ }).first().tap();
+  await dialog.getByRole("button", { name: /Save person and relationship/i }).tap();
+  await expect(dialog).toContainText(/added as Attorney/i, { timeout: 20_000 });
+  log(`confirmation: ${(await dialog.innerText()).replace(/\s+/g, " ").slice(0, 200)}`);
+  const shoot = async (label: string) => { const shot = await page.screenshot({ type: "jpeg", quality: 45, scale: "css" }).catch(() => null); if (shot) console.log(`Phone-shot: ${label} ${shot.toString("base64")}`); };
+  await shoot("/poa-confirmation");
+  await dialog.getByRole("button", { name: /Invite later|Back to record/i }).first().tap().catch(() => null);
+  await page.waitForTimeout(1500);
+  await page.getByText(/Your attorney/i).first().scrollIntoViewIfNeeded().catch(() => null);
+  await shoot("/poa-record-people");
   await page.context().close();
+});
+
+test("design review: people screens on a phone and main pages on desktop", async ({ browser }) => {
+  test.setTimeout(180_000);
+  const shoot = async (target: import("@playwright/test").Page, label: string) => { const shot = await target.screenshot({ type: "jpeg", quality: 45, scale: "css" }).catch(() => null); if (shot) console.log(`Phone-shot: ${label} ${shot.toString("base64")}`); };
+  const phone = await iphonePage(browser);
+  await signIn(phone, users[2].email, "/people-access?view=people");
+  await phone.waitForTimeout(3000);
+  await shoot(phone, "/people-list");
+  const firstPerson = phone.locator(".lf-contact-summary-row, [data-contact-id], .lf-pa-person-row").first();
+  if (await firstPerson.count()) { await firstPerson.tap().catch(() => null); await phone.waitForTimeout(2000); await shoot(phone, "/person-panel"); }
+  await phone.goto(`${BASE_URL}/people-access?view=vault-access`, { waitUntil: "domcontentloaded" });
+  await phone.waitForTimeout(3000);
+  await shoot(phone, "/vault-access");
+  await phone.context().close();
+  const desktop = await browser.newContext({ viewport: { width: 1280, height: 800 } }).then((context) => context.newPage());
+  await signIn(desktop, users[2].email, "/dashboard");
+  for (const path of ["/dashboard", "/finances", "/legal", "/legal/power-of-attorney", "/people-access?view=vault-access"]) {
+    await desktop.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" });
+    await desktop.waitForTimeout(3500);
+    await shoot(desktop, `/desk${path}`);
+  }
+  await desktop.context().close();
 });
 
 async function createUser(role: string) {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import BrandMark from "../../(app)/components/BrandMark";
 import Icon from "../../../components/ui/Icon";
 import { supabase } from "../../../lib/supabaseClient";
@@ -53,6 +54,8 @@ export default function IdentityVerificationPageClient() {
   const stepUp = params.get("purpose") === "step_up_presence";
   return (
     <main className="lf-auth lf-trust-journey">
+      {/* A way back at every step (owner review 2 Nov 2026). Leaving keeps progress; the check resumes. */}
+      <Link href={returnTo ?? "/settings"} className="lf-trust-back"><Icon name="chevron_left" size={22} />{returnTo?.startsWith("/profile") ? "Profile" : returnTo?.startsWith("/settings") || !returnTo ? "Settings" : "Back"}</Link>
       <header className="lf-trust-header">
         <div className="lf-auth-brand-card">
           <BrandMark size={38} />
