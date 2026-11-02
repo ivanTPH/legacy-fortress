@@ -180,6 +180,24 @@ test("phone: owner pages fit the screen", async ({ browser }) => {
     const result = await widestOverflow(page);
     // Content can be clipped (overflow hidden) without the page scrolling, so list anything past the edge.
     console.log(`Phone-fit: ${path} ${result.offenders.length ? `CUT OFF (page ${result.scrollWidth}px/${result.width}px): ${result.offenders.join("; ")}` : "fits"}`);
+    // Layout shifts while loading ("screens jump on refresh", owner report 2 Nov 2026).
+    const shifts = await page.evaluate(() => new Promise<string>((resolve) => {
+      const found: string[] = [];
+      let total = 0;
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries() as Array<PerformanceEntry & { value: number; hadRecentInput: boolean; sources?: Array<{ node?: Node | null; previousRect: DOMRectReadOnly; currentRect: DOMRectReadOnly }> }>) {
+          if (entry.hadRecentInput) continue;
+          total += entry.value;
+          for (const source of entry.sources ?? []) {
+            const element = source.node instanceof Element ? source.node : source.node?.parentElement;
+            const name = element ? `${element.tagName.toLowerCase()}.${String(element.className || "").split(/\s+/).slice(0, 2).join(".")}` : "?";
+            found.push(`${name} ${Math.round(source.previousRect.y)}→${Math.round(source.currentRect.y)}`);
+          }
+        }
+      }).observe({ type: "layout-shift", buffered: true });
+      setTimeout(() => resolve(`${total.toFixed(3)} ${found.slice(0, 6).join("; ")}`), 300);
+    })).catch(() => "unavailable");
+    console.log(`Phone-shift: ${path} ${shifts}`);
     // A small screenshot in the log for visual review against the design (synthetic account only).
     const shot = await page.screenshot({ type: "jpeg", quality: 45, scale: "css" }).catch(() => null);
     if (shot) console.log(`Phone-shot: ${path} ${shot.toString("base64")}`);
