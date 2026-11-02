@@ -134,6 +134,18 @@ export default function InvitationAcceptPageClient() {
       setLinkProblem("none");
       setStoredLinkedGrantId(result.grant_id);
       if (result.activation_status !== "verified" && result.activation_status !== "active") {
+        // Already verified within the last year? Use that check instead of asking again (owner decision 2 Nov 2026).
+        const { data: sessionData } = await supabase.auth.getSession();
+        const reuse = await fetch("/api/identity-verification/reuse", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session?.access_token ?? ""}` },
+          body: JSON.stringify({ accessGrantId: result.grant_id }),
+        }).then((response) => response.json()).catch(() => null) as { ok?: boolean; reused?: boolean } | null;
+        if (reuse?.ok && reuse.reused) {
+          setStatus(`Invitation accepted. Your ID is already verified, so there’s nothing more to do.`);
+          router.replace("/contact-wallet");
+          return;
+        }
         const params = new URLSearchParams({
           purpose: "linked_access",
           invitation: invitationId,

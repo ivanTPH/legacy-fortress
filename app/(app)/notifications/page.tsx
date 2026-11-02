@@ -1,5 +1,6 @@
 "use client";
 
+import { describeInvitationEvent } from "../../../lib/notifications/invitationEvents";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { LFPageHeader } from "../../../components/ui/LFDesignSystem";
@@ -15,6 +16,7 @@ type NotificationEvent = {
   invitation_id?: string | null;
   owner_name?: string | null;
   link?: string;
+  payload?: Record<string, unknown> | null;
 };
 
 type Filter = "all" | "unread" | "security" | "people" | "records";
@@ -26,14 +28,9 @@ function describeEvent(event: NotificationEvent) {
     const item = describePersonNotification(event.event_type.slice(7), event.owner_name ?? null);
     return { ...item, href: event.link ?? "/notifications" };
   }
-  const type = event.event_type.toLowerCase();
-  if (type.includes("accepted")) return { title: "Invitation accepted", detail: "A person accepted an invitation to your Fortress.", group: "people", icon: "person_check", href: "/contacts" };
-  if (type.includes("verified")) return { title: "Identity verified", detail: "An invited relationship completed identity verification.", group: "people", icon: "verified_user", href: "/contacts" };
-  if (type.includes("access")) return { title: "Access updated", detail: "Shared living access was changed for a relationship.", group: "people", icon: "key", href: "/access-sharing" };
-  if (type.includes("record") || type.includes("asset")) return { title: "Record updated", detail: "A record in your Fortress was changed.", group: "records", icon: "description", href: "/dashboard" };
-  if (type.includes("sign") || type.includes("security")) return { title: "Security event", detail: "A security event was recorded on your account.", group: "security", icon: "shield", href: "/account/security" };
-  if (type.includes("sent") || type.includes("invite")) return { title: "Invitation sent", detail: "An invitation was sent from your Fortress.", group: "people", icon: "send", href: "/contacts" };
-  return { title: "Fortress activity", detail: "A relationship or access event was recorded.", group: "people", icon: "notifications_active", href: "/contacts" };
+  const copy = describeInvitationEvent(event.event_type, event.payload ?? null);
+  const icon = copy.kind === "sent" ? "send" : copy.kind === "accepted" ? "person_check" : copy.kind === "verified" ? "verified_user" : copy.kind === "failed" ? "error" : copy.kind === "access" ? "key" : "notifications_active";
+  return { title: copy.title, detail: copy.detail, group: "people", icon, href: copy.kind === "access" ? "/access-sharing" : "/people-access?view=people" };
 }
 
 function formatEventTime(value: string) {
@@ -63,7 +60,7 @@ export default function NotificationsPage() {
         return;
       }
       const [result, personal] = await Promise.all([
-        supabase.from("invitation_events").select("id,event_type,created_at,invitation_id").eq("owner_user_id", user.id).order("created_at", { ascending: false }).limit(50),
+        supabase.from("invitation_events").select("id,event_type,created_at,invitation_id,payload").eq("owner_user_id", user.id).order("created_at", { ascending: false }).limit(50),
         loadPersonNotifications(supabase),
       ]);
       if (cancelled) return;

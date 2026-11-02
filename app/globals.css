@@ -9296,3 +9296,8 @@ a.lf-pp-item:hover { background: var(--lf-interaction-hover, #F6EFEA); }
 .lf-pp-muted { margin: 0; color: var(--lf-text-secondary); font-size: 15px; }
 .lf-pp-note { display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--lf-surface-subtle, #F4EFEA); color: var(--lf-text-secondary); font-size: 14px; }
 .lf-va-link-row { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: var(--lf-link); font-weight: 600; text-decoration: none; }
+/* Choose a person: Cancel and Add stay visible at the bottom on a phone (owner report 2 Nov 2026). */
+.lf-linked-people-sticky-actions { position: sticky; bottom: calc(-20px - env(safe-area-inset-bottom)); z-index: 2; margin: 12px -20px calc(-20px - env(safe-area-inset-bottom)) !important; padding: 12px 20px calc(12px + env(safe-area-inset-bottom)) !important; border-top: 1px solid var(--lf-border); background: var(--lf-surface); display: grid !important; grid-template-columns: 1fr 2fr; gap: 8px; }
+.lf-linked-people-sticky-actions > .is-primary, .lf-linked-people-confirm-actions > .is-primary { border: 0 !important; background: var(--lf-primary-bg, #2B1B17) !important; color: var(--lf-primary-text, #fff) !important; }
+/* "Not now" is the quieter choice. */
+.lf-linked-people-confirm-actions > :not(.is-primary) { min-height: 48px; border: 1px solid var(--lf-border) !important; border-radius: var(--lf-radius-input, 10px); background: var(--lf-surface-card, #fff) !important; color: var(--lf-text) !important; font: inherit; font-weight: 600; cursor: pointer; }

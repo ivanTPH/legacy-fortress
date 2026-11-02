@@ -1,5 +1,6 @@
 "use client";
 
+import { describeInvitationEvent } from "../../lib/notifications/invitationEvents";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import Icon from "../ui/Icon";
@@ -15,6 +16,7 @@ type NotificationEvent = {
   owner_name?: string | null;
   link?: string;
   read?: boolean;
+  payload?: Record<string, unknown> | null;
 };
 
 const READ_KEY = "lf:notification-events:read";
@@ -24,13 +26,8 @@ function eventCopy(event: NotificationEvent) {
     const item = describePersonNotification(event.event_type.slice(7), event.owner_name ?? null);
     return { title: item.title, detail: item.detail, href: event.link ?? "/notifications" };
   }
-  const type = event.event_type.toLowerCase();
-  if (type.includes("accepted")) return { title: "Invitation accepted", detail: "A person accepted an invitation to your Fortress.", href: "/contacts" };
-  if (type.includes("verified")) return { title: "Identity verified", detail: "An invited relationship completed identity verification.", href: "/contacts" };
-  if (type.includes("access_revoked")) return { title: "Access removed", detail: "Shared living access was removed from a relationship.", href: "/access-sharing" };
-  if (type.includes("access_updated")) return { title: "Access updated", detail: "Shared living access was updated for a relationship.", href: "/access-sharing" };
-  if (type.includes("sent") || type.includes("invite")) return { title: "Invitation sent", detail: "An invitation was sent from your Fortress.", href: "/contacts" };
-  return { title: "Fortress activity", detail: "A relationship or access event was recorded.", href: "/contacts" };
+  const copy = describeInvitationEvent(event.event_type, event.payload ?? null);
+  return { title: copy.title, detail: copy.detail, href: copy.kind === "access" ? "/access-sharing" : "/people-access?view=people" };
 }
 
 function relativeTime(value: string) {
@@ -70,7 +67,7 @@ export default function NotificationBell({ ownerUserId, disabled = false }: { ow
       const [result, personal] = await Promise.all([
         supabase
           .from("invitation_events")
-          .select("id,event_type,created_at,invitation_id")
+          .select("id,event_type,created_at,invitation_id,payload")
           .eq("owner_user_id", ownerUserId)
           .order("created_at", { ascending: false })
           .limit(8),
