@@ -749,7 +749,7 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
       ) : null}
 
       {status ? <div style={{ color: "var(--lf-destructive)", fontSize: 13 }}>{status}</div> : null}
-      {loading ? <div style={{ color: "var(--lf-text-secondary)" }}>Loading contacts network...</div> : null}
+      {loading && !addContactGroupKey ? <div style={{ color: "var(--lf-text-secondary)" }}>Loading people…</div> : null}
 
       {!loading && !addContactGroupKey && !sharingView ? (
         <div style={{ display: "grid", gap: 18 }}>
