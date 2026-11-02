@@ -21,7 +21,7 @@ test("People I Trust uses compact rows with progressive person details", () => {
   assert.match(contactsWorkspace, /label="Send invitation"/);
   assert.match(contactsWorkspace, /variant="round"/);
   assert.doesNotMatch(contactsWorkspace, /CONTACTS BUILD CHECK/);
-  assert.doesNotMatch(contactsWorkspace, /Linked to record/);
+  assert.doesNotMatch(contactsWorkspace, /Linked to record(?!s)/);
   assert.doesNotMatch(contactsWorkspace, /Manage selected contact/);
   assert.match(contactsWorkspace, /Friend or family/);
   assert.match(contactsWorkspace, /startAddContact/);
@@ -32,8 +32,10 @@ test("People I Trust uses compact rows with progressive person details", () => {
   assert.match(contactsWorkspace, /<optgroup/);
   assert.doesNotMatch(contactsWorkspace, /label: "Advisor"/);
   assert.match(contactsWorkspace, /PersonVaultAccessSummary/);
-  assert.match(contactsWorkspace, /Contact details/);
-  assert.match(contactsWorkspace, /Connection and identity/);
+  // Person panel follows V5.2 Vault access › N (va-n1).
+  assert.match(contactsWorkspace, /Linked to records/);
+  assert.match(contactsWorkspace, /Set up Vault access/);
+  assert.match(contactsWorkspace, /Being linked, invited or ID-checked never opens your Vault/);
   assert.match(contactsWorkspace, /Access granted/);
   assert.match(contactsWorkspace, /Edit access/);
   assert.match(contactsWorkspace, /sharedRecords\.map/);

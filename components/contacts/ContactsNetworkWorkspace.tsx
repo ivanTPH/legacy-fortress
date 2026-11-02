@@ -40,6 +40,8 @@ import { IconButton } from "../ui/IconButton";
 import InfoTip from "../ui/InfoTip";
 import { Button, Chip, EmptyState, PageHeader, Sheet } from "../ui/V3Primitives";
 import DocumentPreviewDialog, { type DocumentPreviewDialogItem } from "../documents/DocumentPreviewDialog";
+import { loadPersonRecordLinks, type PersonRecordLink } from "../../lib/linkedPeople/recordLinkedPeople";
+import { firstName, grantIsOpen, loadVaultAccess, type VaultAccessSnapshot } from "../../lib/vaultAccess/vaultAccess";
 import { ROLE_RULES, type AccessActivationStatus, type CollaboratorRole, type SectionKey } from "../../lib/access-control/roles";
 
 type ContactRow = {
@@ -961,6 +963,67 @@ function InvitationProgressTracker({ contact, compact = false }: { contact: Cont
   );
 }
 
+function PersonLinkedRecords({ contactId, ownerUserId, fallback }: { contactId: string; ownerUserId: string | null; fallback: ContactRow["linked_context"] }) {
+  const [items, setItems] = useState<PersonRecordLink[] | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const user = await waitForActiveUser(supabase, { attempts: 5, delayMs: 120 });
+      const ownerId = ownerUserId || user?.id;
+      if (!ownerId) return;
+      const links = await loadPersonRecordLinks(supabase, ownerId, contactId).catch(() => []);
+      if (!cancelled) setItems(links);
+    })();
+    return () => { cancelled = true; };
+  }, [contactId, ownerUserId]);
+  // Older links (before record links) still show, without duplicates.
+  const seen = new Set((items ?? []).map((item) => item.recordId));
+  const older = fallback.filter((context) => context.source_id && !seen.has(String(context.source_id)));
+  const rows = [
+    ...(items ?? []).map((item) => ({ key: item.linkId, title: item.title, role: item.role, href: buildLinkedContactRecordHref({ source_kind: item.recordType, source_id: item.recordId, section_key: item.sectionKey, category_key: item.categoryKey } as CanonicalContactContext), section: item.sectionKey })),
+    ...older.map((context, index) => ({ key: `old-${index}`, title: context.label || describeLinkedDocumentContext(context), role: context.role ? humanizeContactTerm(context.role) : "", href: context.source_kind === "asset" || context.source_kind === "record" ? buildLinkedContactRecordHref(context as CanonicalContactContext) : "", section: context.section_key ?? null })),
+  ];
+  return <section className="lf-pp-group" aria-labelledby={`pp-links-${contactId}`}>
+    <h3 id={`pp-links-${contactId}`}>Linked to records</h3>
+    {items === null ? <p className="lf-pp-muted">Loading…</p> : rows.length === 0 ? <p className="lf-pp-muted">Not linked to any records yet. Add them from a record’s people section.</p> : <div className="lf-pp-card">{rows.map((row) => {
+      const body = <><span className="lf-pp-icon" aria-hidden="true"><Icon name={row.section === "legal" ? "gavel" : row.section === "finances" ? "account_balance" : row.section === "property" ? "home" : "description"} size={20} /></span><span className="lf-pp-text"><strong>{row.title}</strong>{row.role ? <small>{row.role}</small> : null}</span>{row.href ? <Icon name="chevron_right" size={20} /> : null}</>;
+      return row.href ? <Link key={row.key} href={row.href} className="lf-pp-item">{body}</Link> : <div key={row.key} className="lf-pp-item">{body}</div>;
+    })}</div>}
+  </section>;
+}
+
+function PersonVaultAccessCard({ contactId, name, ownerUserId, readOnly, onManageNow }: { contactId: string; name: string; ownerUserId: string | null; readOnly: boolean; onManageNow: () => void }) {
+  const [snapshot, setSnapshot] = useState<VaultAccessSnapshot | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const user = await waitForActiveUser(supabase, { attempts: 5, delayMs: 120 });
+      const ownerId = ownerUserId || user?.id;
+      if (!ownerId) return;
+      try { const data = await loadVaultAccess(supabase, ownerId); if (!cancelled) setSnapshot(data); } catch { if (!cancelled) setFailed(true); }
+    })();
+    return () => { cancelled = true; };
+  }, [ownerUserId]);
+  const first = firstName(name);
+  const openGrant = snapshot?.grants.find((grant) => grant.personId === contactId && grantIsOpen(grant));
+  const nowCount = openGrant ? openGrant.assetIds.length + openGrant.recordIds.length : 0;
+  const nomination = snapshot?.nominations.find((item) => item.personId === contactId && item.status === "active");
+  const authority = snapshot?.authorities.find((item) => item.personId === contactId && !["withdrawn", "ended", "rejected"].includes(item.status));
+  const authorityInEffect = Boolean(authority?.activatedAt);
+  return <section className="lf-pp-group" aria-labelledby={`pp-va-${contactId}`}>
+    <h3 id={`pp-va-${contactId}`}>Vault access</h3>
+    {failed ? <p className="lf-pp-muted">Vault access couldn’t be loaded. Try again shortly.</p> : <div className="lf-pp-card">
+      <div className="lf-pp-item"><span className="lf-pp-icon" aria-hidden="true"><Icon name={nowCount ? "visibility" : "visibility_off"} size={20} /></span><span className="lf-pp-text"><strong>Now</strong><small>{snapshot === null ? "Loading…" : nowCount ? `${first} can see ${nowCount} record${nowCount === 1 ? "" : "s"}${openGrant?.endsAt ? ` until ${new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(openGrant.endsAt))}` : ""}.` : `${first} can’t see any of your records.`}</small></span>{snapshot ? <Chip tone={nowCount ? "success" : "neutral"} icon={nowCount ? "visibility" : "lock"}>{nowCount ? `Can see ${nowCount}` : "No access"}</Chip> : null}</div>
+      <div className="lf-pp-item"><span className="lf-pp-icon" aria-hidden="true"><Icon name="event" size={20} /></span><span className="lf-pp-text"><strong>Later</strong><small>{snapshot === null ? "Loading…" : nomination ? `After your death · ${nomination.scope === "whole_vault" ? `whole Vault${nomination.exceptionCount ? `, except ${nomination.exceptionCount}` : ""}` : `${nomination.includeCount} record${nomination.includeCount === 1 ? "" : "s"}`} · view only` : authority ? `Power of Attorney · ${authorityInEffect ? "in effect" : "not in effect yet"}` : "No access arranged for after your death."}</small></span>{snapshot ? nomination ? <Chip tone="neutral" icon="bookmark">Nominated</Chip> : authority ? <Chip tone={authorityInEffect ? "success" : "neutral"} icon="gavel">{authorityInEffect ? "In effect" : "Not in effect"}</Chip> : <Chip tone="neutral">Not nominated</Chip> : null}</div>
+    </div>}
+    {!readOnly ? <div className="lf-pp-actions">
+      <Link className="lf-pp-primary" href={`/people-access?view=vault-access&setup=${encodeURIComponent(contactId)}`}><Icon name="key" size={18} />{nomination || authority || nowCount ? "Change Vault access" : "Set up Vault access"}</Link>
+      <button type="button" className="lf-pp-secondary" onClick={onManageNow}>{nowCount ? "Change what they see now" : "Share records now"}</button>
+    </div> : null}
+  </section>;
+}
+
 function PersonVaultAccessSummary({
   contact,
   ownerUserId,
@@ -1143,29 +1206,18 @@ function PersonDetailDrawer({
               readOnly={readOnly}
             />
           ) : <>
-            <section className="lf-person-detail-section" aria-labelledby="person-details-heading">
-              <h3 id="person-details-heading">Contact details</h3>
-              <span style={drawerRelatedItemStyle}>Relationship: {humanizeContactTerm(contact.relationship) || "Not specified"}</span>
-              {humanizeContactTerm(contact.contact_role) && humanizeContactTerm(contact.contact_role) !== humanizeContactTerm(contact.relationship) ? <span style={drawerRelatedItemStyle}>Role: {humanizeContactTerm(contact.contact_role)}</span> : null}
-              <span style={drawerRelatedItemStyle}>Email: {contact.email || "Not recorded"}</span>
-              {contact.phone ? <span style={drawerRelatedItemStyle}>Phone: {contact.phone}</span> : null}
-              {getRelationshipDocumentLabel(contact) ? <span style={drawerRelatedItemStyle}>Document: {getRelationshipDocumentLabel(contact)}</span> : null}
-              {relatedContexts.slice(0, 3).map((context, index) => <span key={`${context.source_id}-${index}`} style={drawerRelatedItemStyle}>{context.role ? `${humanizeContactTerm(context.role)} · ` : ""}{context.label || describeLinkedDocumentContext(context)}</span>)}
-              {!readOnly ? <div className="lf-person-detail-actions"><Button variant="secondary" onClick={() => setManagementView("edit")}>Edit details</Button><Button variant="secondary" onClick={() => setManagementView("relationship")}>Edit relationship</Button></div> : null}
+            {/* V5.2 Vault access › N (va-n1): facts, linked records, then Vault access now and later. */}
+            <section className="lf-pp-card" aria-label="Connection">
+              <div className="lf-pp-row"><span>Invitation</span><Chip tone={invitation.tone === "warning" ? "warning" : invitation.tone === "danger" ? "danger" : invitation.tone === "success" ? "success" : "neutral"} icon={invitation.icon}>{invitation.label}</Chip></div>
+              <div className="lf-pp-row"><span>Identity</span><Chip tone={getIdentityDisplay(contact) === "Verified" ? "success" : getIdentityDisplay(contact) === "In progress" ? "warning" : "neutral"} icon="verified_user">{getIdentityDisplay(contact) === "Verified" ? "ID verified" : getIdentityDisplay(contact) === "In progress" ? "Checking ID" : "ID not checked"}</Chip></div>
+              <div className="lf-pp-row"><span>Relationship</span><span className="lf-pp-value">{humanizeContactTerm(contact.relationship) || "Not set"}{!readOnly ? <> · <button type="button" className="lf-pp-link" onClick={() => setManagementView("relationship")} aria-label="Edit relationship">Change</button></> : null}</span></div>
+              <div className="lf-pp-row"><span>Email</span>{contact.email ? <span className="lf-pp-value">{contact.email}</span> : !readOnly ? <button type="button" className="lf-pp-link" onClick={() => setManagementView("edit")}>Add email</button> : <span className="lf-pp-value">Not recorded</span>}</div>
+              {contact.phone ? <div className="lf-pp-row"><span>Phone</span><span className="lf-pp-value">{contact.phone}</span></div> : null}
+              {!readOnly && contact.email && ["invite_sent", "not_invited", "failed", "not_delivered", "expired"].includes(contact.invite_status) ? <div className="lf-pp-row-action"><button type="button" className="lf-pp-secondary" onClick={() => setManagementView("invitation")}>{contact.invite_status === "not_invited" ? "Send invitation" : "Manage invitation"}</button></div> : null}
             </section>
-            <section className="lf-person-detail-section" aria-labelledby="person-invitation-heading">
-              <h3 id="person-invitation-heading">Connection and identity</h3>
-              <div className="lf-pa-status-list">
-                <span className="lf-pa-detail-fact"><span>Invitation</span><Chip tone={invitation.tone === "warning" ? "warning" : invitation.tone === "danger" ? "danger" : invitation.tone === "success" ? "success" : "neutral"} icon={invitation.icon}>{invitation.label}</Chip></span>
-                <span className="lf-pa-detail-fact"><span>Connected</span><Chip tone={contact.linked_user_id ? "success" : "neutral"} icon="link">{contact.linked_user_id ? "Connected" : "Not connected"}</Chip></span>
-                <span className="lf-pa-detail-fact"><span>Identity verified</span><Chip tone={getIdentityDisplay(contact) === "Verified" ? "success" : getIdentityDisplay(contact) === "In progress" ? "warning" : "neutral"} icon="verified_user">{getIdentityDisplay(contact)}</Chip></span>
-              </div>
-              <span style={drawerExplanationStyle}>Identity verification does not grant access to any records.</span>
-              {getRelationshipDocumentLabel(contact) ? <span style={drawerExplanationStyle}>Will access stays locked while the owner is living.</span> : null}
-              <InvitationProgressTracker contact={contact} />
-              {!readOnly && ["invite_sent", "not_invited", "failed", "not_delivered", "expired"].includes(contact.invite_status) ? contact.email ? <Button variant="secondary" onClick={() => setManagementView("invitation")}>{contact.invite_status === "not_invited" ? "Send invitation" : "Manage invitation"}</Button> : <Button variant="secondary" onClick={() => setManagementView("edit")}>Add email to invite</Button> : null}
-            </section>
-            <PersonVaultAccessSummary key={`${contact.id}:${accessRevision}`} contact={contact} ownerUserId={ownerUserId} readOnly={readOnly} onManage={() => setManagementView("access")} onRevoke={() => { setRevokeRequested(true); setManagementView("access"); }} />
+            <PersonLinkedRecords contactId={contact.id} ownerUserId={ownerUserId} fallback={relatedContexts} />
+            <PersonVaultAccessCard key={`${contact.id}:${accessRevision}`} contactId={contact.id} name={contact.full_name || "this person"} ownerUserId={ownerUserId} readOnly={readOnly} onManageNow={() => setManagementView("access")} />
+            <p className="lf-pp-note"><Icon name="lock" size={16} />Being linked, invited or ID-checked never opens your Vault. Only what you set up here does.</p>
             {pendingRequestId ? <section className="lf-person-detail-section" aria-label="Request awaiting decision"><h3>Request awaiting decision</h3><p style={drawerExplanationStyle}>Review this person&apos;s request and current sharing in People &amp; Access.</p><Link href={`/people-access?view=requests&request=${encodeURIComponent(pendingRequestId)}`} className="lf-pa-text-action">Review request</Link></section> : null}
             {!readOnly ? <button type="button" className="lf-person-remove-link" onClick={() => setManagementView("remove")}>Remove person</button> : null}
           </>}

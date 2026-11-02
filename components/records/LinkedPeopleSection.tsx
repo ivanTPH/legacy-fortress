@@ -410,13 +410,11 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
           <span className="lf-v52-record-person-avatar" aria-hidden="true">{displayName.trim().split(/\s+/).map((part) => part[0]).slice(0, 2).join("").toUpperCase()}</span>
           <div className="lf-v52-record-person-copy">
             {contact ? <Link href={buildContactsWorkspaceHref(contact.id)}>{displayName}</Link> : <strong>{displayName}</strong>}
-            <small>Role on this record: {link.role === "Other" ? link.role_other_text : link.role}</small>
-            {contact?.relationship ? <small>Relationship in People: {contact.relationship}</small> : null}
-            {otherRecordCounts[link.person_id] ? <small>Also linked to {otherRecordCounts[link.person_id]} other {otherRecordCounts[link.person_id] === 1 ? "record" : "records"}</small> : null}
-            {contact ? <small>{[contact.email, contact.phone].filter(Boolean).join(" · ") || "No contact details recorded"}</small> : null}
-            <span className="lf-linked-people-states"><span className={`lf-linked-people-chip ${contact?.invite_status === "accepted" ? "is-good" : contact?.invite_status === "failed" || contact?.invite_status === "not_delivered" ? "is-error" : contact?.invite_status === "invite_sent" ? "is-pending" : ""}`}>{invitationLabel}</span>{!contact?.email ? <span className="lf-linked-people-chip">No email</span> : null}{verified ? <span className="lf-linked-people-chip is-good">ID verified</span> : contact?.verification_status === "pending_verification" || contact?.verification_status === "verification_submitted" ? <span className="lf-linked-people-chip is-pending">Checking ID</span> : null}{accessByPerson[link.person_id] === "explicit" ? <span className="lf-linked-people-chip is-good">Can see this record</span> : null}</span>
+            {/* V5.2 Vault access › P (va-p1): "Role · Relationship", then status chips, then where it came from. */}
+            <small className="lf-linked-people-role">{[link.role === "Other" ? link.role_other_text : link.role, contact?.relationship ? humanRelationship(contact.relationship) : ""].filter(Boolean).join(" · ")}</small>
+            <span className="lf-linked-people-states"><span className={`lf-linked-people-chip ${contact?.invite_status === "accepted" ? "is-good" : contact?.invite_status === "failed" || contact?.invite_status === "not_delivered" ? "is-error" : contact?.invite_status === "invite_sent" ? "is-pending" : ""}`}>{contact?.invite_status === "accepted" ? <Icon name="check" size={14} /> : contact?.invite_status === "invite_sent" ? <Icon name="schedule" size={14} /> : null}{invitationLabel}</span>{!contact?.email ? <span className="lf-linked-people-chip">No email</span> : null}{verified ? <span className="lf-linked-people-chip is-good"><Icon name="verified_user" size={14} />ID verified</span> : contact?.verification_status === "pending_verification" || contact?.verification_status === "verification_submitted" ? <span className="lf-linked-people-chip is-pending">Checking ID</span> : null}{accessByPerson[link.person_id] === "explicit" ? <span className="lf-linked-people-chip is-good"><Icon name="visibility" size={14} />Can see this record</span> : null}</span>
             {accessByPerson[link.person_id] === "unavailable" ? <small>Record access status unavailable</small> : null}
-            <small>{link.source === "extraction" ? `From ${documentTitles[link.source_document_id || ""] || "document"} · page ${link.source_page} · confirmed by you` : link.manual_origin === "people" ? "Added by you from People" : "Added by you"}</small>
+            <small className="lf-linked-people-origin"><Icon name={link.source === "extraction" ? "description" : "edit_note"} size={15} />{link.source === "extraction" ? `From ${documentTitles[link.source_document_id || ""] || "document"} · page ${link.source_page} · confirmed by you` : `${link.manual_origin === "people" ? "Added by you from People" : "Added by you"}${link.created_at ? ` · ${shortDate(link.created_at)}` : ""}`}</small>
             {contact ? <details className="lf-linked-people-row-menu"><summary aria-label={`Actions for ${displayName}`}>More actions</summary><span className="lf-linked-people-row-actions">{renderRowActions(link, contact, false)}</span></details> : null}
           </div>
           {contact ? <button type="button" className="lf-linked-people-mobile-actions" aria-label={`Actions for ${displayName}`} aria-haspopup="dialog" onClick={(event) => { rowActionTriggerRef.current = event.currentTarget; setRowActionLinkId(link.id); }}><Icon name="more_vert" size={20} /></button> : null}
@@ -446,7 +444,7 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
         </li>;
       })}</ul>
     </div> : null}
-    {canManage && mode === "closed" ? <button type="button" className="lf-linked-people-action" disabled={loading} onClick={(event) => { returnFocusRef.current = event.currentTarget; setError(""); setNotice(""); setMode("choose"); }}>{addAction}</button> : null}
+    {canManage && mode === "closed" ? <button type="button" className="lf-linked-people-action lf-linked-people-add-row" disabled={loading} onClick={(event) => { returnFocusRef.current = event.currentTarget; setError(""); setNotice(""); setMode("choose"); }}><span className="lf-linked-people-add-icon" aria-hidden="true"><Icon name="add" size={20} /></span>{links.length ? (config.heading === "Executors" ? "Add another executor" : "Add another person") : addAction}</button> : null}
     {canManage && mode !== "closed" ? createPortal(<div className="lf-linked-people-overlay" onClick={(event) => { if (event.target === event.currentTarget) requestClose(); }}>
       <div ref={dialogRef} className={`lf-linked-people-dialog ${["saved", "viewContact", "confirmInvite", "confirmUnlink", "discard"].includes(mode) ? "is-offer" : "is-entry"} ${["existing", "new", "reviewSuggestion"].includes(mode) ? "is-full-mobile" : ""}`} role="dialog" aria-modal="true" aria-labelledby={`${formId}-title`}>
         <div className="lf-linked-people-dialog-header"><div className="lf-linked-people-drag-handle" aria-hidden="true" /><h3 id={`${formId}-title`}>{mode === "choose" ? (config.heading === "Executors" ? "Add an executor" : "Add a person") : mode === "existing" ? "Choose a person" : mode === "new" ? (config.heading === "Executors" ? "New executor" : "New person") : mode === "saved" ? `${saved?.full_name ?? "Person"} added` : mode === "viewContact" ? `${saved?.full_name ?? "Person"} in People` : mode === "confirmInvite" ? `Invite ${saved?.full_name ?? "this person"}` : mode === "editRole" ? "Change role on this record" : mode === "confirmUnlink" ? "Remove from this record?" : mode === "discard" ? "Discard these details?" : "Review suggested person"}</h3><button type="button" className="lf-linked-people-dialog-close" onClick={requestClose} aria-label="Close linked people dialog">×</button></div>
@@ -502,22 +500,19 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
       {accessByPerson[managedLink.person_id] === "explicit" && managedContact ? <p role="alert">This person still has explicit access to this record. <Link href={buildContactsWorkspaceHref(managedContact.id, true)}>Manage access</Link> separately if you want to stop it.</p> : null}
       <div className="lf-linked-people-actions"><button type="button" onClick={resetForm} disabled={busy}>Cancel</button><button type="button" disabled={busy} onClick={() => void removeLink()}>{busy ? "Unlinking…" : "Unlink from this record"}</button></div>
     </div> : null}
-    {canManage && mode === "saved" ? <div className="lf-linked-people-form" role="status">
-      <h3>{saved?.full_name ?? "Person"} added as {links.find((link) => link.person_id === savedPersonId)?.role || "a linked person"}</h3>
-      <p>Saved to {recordLabel}. Linking records their role; it does not let them see this record.</p>
-      {saved?.invite_status === "accepted" ? <p>{saved.full_name} is already connected. No invitation is needed.</p>
-        : saved?.invite_status === "invite_sent" ? <p>An invitation request is already recorded for {saved.full_name}. No duplicate invitation will be sent.</p>
-        : <p>Invite {saved?.full_name ?? "this person"} to connect in Legacy Fortress? The invitation will not mention {recordLabel} or share any record.</p>}
-      <div className="lf-linked-people-actions">
-        {saved?.email && !["invite_sent", "accepted"].includes(saved.invite_status) ? <button type="button" onClick={() => { setError(""); setMode("confirmInvite"); }}>Send invitation…</button> : !saved?.email ? <Link href={buildContactsWorkspaceHref(savedPersonId)}>Add email in People to invite</Link> : null}
-        <button type="button" onClick={() => { resetForm(); setNotice(`${saved?.full_name ?? "Person"} remains linked. No invitation was sent.`); }}>{saved?.email && ["invite_sent", "accepted"].includes(saved.invite_status) ? "Back to record" : "Invite later"}</button>
-      </div>
-      <div className="lf-linked-people-actions">
-        <button type="button" onClick={beginAnotherPerson}>{config.heading === "Executors" ? "Add another executor" : "Add another person"}</button>
-        {saved ? <button type="button" onClick={() => setMode("viewContact")}>View contact</button> : null}
-        {links.find((link) => link.person_id === savedPersonId) ? <button type="button" onClick={() => { const link = links.find((item) => item.person_id === savedPersonId); if (!link) return; setManagedLinkId(link.id); setRole(link.role); setOtherRole(link.role_other_text ?? ""); setMode("editRole"); }}>Edit record role</button> : null}
-        {saved ? <Link href={buildContactsWorkspaceHref(saved.id, true)}>Manage access</Link> : null}
-        <button type="button" onClick={resetForm}>Return to {recordLabel}</button>
+    {canManage && mode === "saved" ? <div className="lf-linked-people-form lf-linked-people-confirm" role="status">
+      <span className="lf-linked-people-confirm-icon" aria-hidden="true"><Icon name="check_circle" size={28} /></span>
+      <h3>{saved?.full_name ?? "Person"} added as {(() => { const link = links.find((item) => item.person_id === savedPersonId); return link?.role === "Other" ? link.role_other_text || "a linked person" : link?.role || "a linked person"; })()}</h3>
+      <p>They’re now listed on {recordLabel}. This doesn’t let them see it.</p>
+      {saved?.invite_status === "accepted" ? <p>{saved.full_name} has already joined Legacy Fortress.</p>
+        : saved?.invite_status === "invite_sent" ? <p>{saved.full_name} has already been invited.</p>
+        : saved?.email ? <p><strong>Invite {firstNameOf(saved.full_name)} to join?</strong> The invitation doesn’t mention this document or share anything.</p>
+        : <p>Add {firstNameOf(saved?.full_name ?? "their")}’s email if you’d like to invite them later.</p>}
+      <div className="lf-linked-people-actions lf-linked-people-confirm-actions">
+        {saved?.email && !["invite_sent", "accepted"].includes(saved.invite_status) ? <button type="button" className="is-primary" onClick={() => { setError(""); setMode("confirmInvite"); }}>Send invitation</button>
+          : !saved?.email ? <Link className="is-primary" href={buildContactsWorkspaceHref(savedPersonId)}>Add their email</Link>
+          : <button type="button" className="is-primary" onClick={() => resetForm()}>Done</button>}
+        {saved?.email && ["invite_sent", "accepted"].includes(saved.invite_status) ? null : <button type="button" onClick={() => { resetForm(); setNotice(`${saved?.full_name ?? "Person"} added. Not invited yet. You can invite them from the ⋮ menu.`); }}>Not now</button>}
       </div>
     </div> : null}
     {canManage && mode === "viewContact" && saved ? <div className="lf-linked-people-form" role="group" aria-label="Contact details">
@@ -559,4 +554,18 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
       </div>
     </div>, document.body) : null}
   </section>;
+}
+
+function shortDate(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" }).format(date);
+}
+
+function firstNameOf(name: string) {
+  return name.trim().split(/\s+/)[0] || name;
+}
+
+function humanRelationship(value: string) {
+  const text = value.replace(/_/g, " ").trim();
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : "";
 }

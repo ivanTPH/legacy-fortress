@@ -77,9 +77,8 @@ export default function PeopleAccessWorkspace() {
     />}
     {!addPersonMode ? <nav className="lf-pa-tabs" aria-label="People and access views">
       <Link href="/people-access?view=people" className={view === "people" ? "is-active" : ""} aria-current={view === "people" ? "page" : undefined}>People</Link>
-      <Link href="/people-access?view=vault-access" className={view === "vault-access" ? "is-active" : ""} aria-current={view === "vault-access" ? "page" : undefined}>Vault access</Link>
-      <Link href="/people-access?view=requests" className={view === "requests" ? "is-active" : ""} aria-current={view === "requests" ? "page" : undefined}>Requests{pendingCount ? <span className="lf-pa-count">{pendingCount}</span> : null}</Link>
-      <Link href="/people-access?view=sharing" className={view === "sharing" ? "is-active" : ""} aria-current={view === "sharing" ? "page" : undefined}>Sharing</Link>
+      <Link href="/people-access?view=vault-access" className={view === "vault-access" || view === "sharing" ? "is-active" : ""} aria-current={view === "vault-access" || view === "sharing" ? "page" : undefined}>Vault access</Link>
+      <Link href="/people-access?view=requests" className={view === "requests" ? "is-active" : ""} aria-current={view === "requests" ? "page" : undefined}>{/* Design: three tabs; Sharing is reached from Vault access. */}Requests{pendingCount ? <span className="lf-pa-count">{pendingCount}</span> : null}</Link>
     </nav> : null}
     {view === "vault-access" ? <VaultAccessWorkspace /> : view === "requests"
       ? <AccessRequestsWorkspace embedded onRequestChanged={() => setRequestRevision((current) => current + 1)} onOpenPerson={(contactId) => router.push(`/people-access?view=people&contact=${encodeURIComponent(contactId)}`)} />

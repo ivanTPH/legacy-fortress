@@ -160,7 +160,7 @@ test.describe("V3 recovery local owner journey", () => {
     const drawer = page.getByRole("dialog");
     await expect(drawer).toBeVisible();
     await expect(drawer.getByRole("heading", { name: "Contact details" })).toBeVisible();
-    await expect(drawer.getByRole("heading", { name: "Connection and identity" })).toBeVisible();
+    await expect(drawer.getByRole("heading", { name: "Linked to records" })).toBeVisible();
     await expect(drawer.getByRole("heading", { name: "Access granted" })).toBeVisible();
     await expect(drawer.getByText(firstTitle)).toBeVisible();
     expect((await grantPermissions()).asset_ids).toEqual([ids.assets[0]]);
