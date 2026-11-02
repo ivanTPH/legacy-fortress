@@ -136,12 +136,14 @@ async function widestOverflow(page: Page) {
     for (const element of Array.from(document.querySelectorAll("body *"))) {
       const rect = element.getBoundingClientRect();
       if (rect.width === 0 || rect.right <= width + 1) continue;
+      const style = getComputedStyle(element);
+      if (style.visibility === "hidden" || style.display === "none" || style.position === "fixed" && rect.left >= width) continue;
       // Report the outermost offender only: skip elements whose parent already overflows.
       const parent = element.parentElement?.getBoundingClientRect();
       if (parent && parent.right > width + 1) continue;
       const className = typeof element.className === "string" ? element.className.trim().split(/\s+/).slice(0, 3).join(".") : "";
-      offenders.push(`${element.tagName.toLowerCase()}${className ? `.${className}` : ""} right=${Math.round(rect.right)}`);
-      if (offenders.length >= 6) break;
+      offenders.push(`${element.tagName.toLowerCase()}${className ? `.${className}` : ""} w=${Math.round(rect.width)} right=${Math.round(rect.right)}`);
+      if (offenders.length >= 8) break;
     }
     return { width, scrollWidth: document.documentElement.scrollWidth, offenders };
   });
@@ -176,7 +178,8 @@ test("phone: owner pages fit the screen", async ({ browser }) => {
     await page.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(3000);
     const result = await widestOverflow(page);
-    console.log(`Phone-fit: ${path} ${result.scrollWidth > result.width + 1 ? `TOO WIDE ${result.scrollWidth}px/${result.width}px: ${result.offenders.join("; ")}` : "fits"}`);
+    // Content can be clipped (overflow hidden) without the page scrolling, so list anything past the edge.
+    console.log(`Phone-fit: ${path} ${result.offenders.length ? `CUT OFF (page ${result.scrollWidth}px/${result.width}px): ${result.offenders.join("; ")}` : "fits"}`);
   }
   await page.context().close();
 });

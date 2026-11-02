@@ -491,7 +491,13 @@ export default function DashboardPage() {
   const digitalRecordCount = assetBuckets.digital.length;
   const possessionsRows = assetBuckets.possessions;
   const possessionsRecordCount = possessionsRows.length;
-  const legalRecordCount = legalAssets.length + legalDocuments.length;
+  // Older legal records (e.g. Wills saved before the asset model) live in "records"; the Legal page
+  // counts them, so the Dashboard must too (owner report 2 Nov 2026).
+  const legacyLegalRecords = useMemo(
+    () => recordSearchRows.filter((row) => String(row.section_key ?? "") === "legal" && row.status !== "archived"),
+    [recordSearchRows],
+  );
+  const legalRecordCount = legalAssets.length + legalDocuments.length + legacyLegalRecords.length;
   const willRecordCount = useMemo(
     () => legalAssets.filter(isWillAsset).length + legalDocuments.filter(isWillDocument).length,
     [legalAssets, legalDocuments],
@@ -1599,6 +1605,7 @@ const legalSummary = useMemo(() => {
   const recordIds = new Set([
     ...assetRows.filter((row) => !row.deleted_at && !row.archived_at && row.status !== "archived" && getDashboardAssetBucket(row) !== "tasks").map((row) => `asset:${row.id}`),
     ...sectionEntryRows.map((row) => `record:${row.id}`),
+    ...legacyLegalRecords.map((row) => `legacy-record:${row.id}`),
     ...documentRows.filter((row) => !row.asset_id).map((row) => `document:${row.id}`),
   ]);
   const valuedRows = new Map(assetRows.filter((row) => !row.deleted_at && !row.archived_at && row.status !== "archived" && getDashboardAssetBucket(row) !== "tasks" && getDashboardAssetValueMajor(row) !== 0)

@@ -9199,3 +9199,21 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
   input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea { font-size: max(16px, 1em); }
 }
 .lf-staff-signin input { font-size: 16px; }
+
+/* ID check, owner review 2 Nov 2026: larger plain text, short camera preview, Start always visible, photo confirmations. */
+.lf-idv { font-size: 17px; line-height: 1.45; }
+.lf-idv h1 { font-size: clamp(26px, 6vw, 32px); line-height: 1.15; }
+.lf-idv-lead { margin: 0; font-size: 17px; color: var(--lf-text); }
+.lf-idv-lead .lf-icon { vertical-align: -3px; }
+.lf-idv-needs li { font-size: 17px; }
+.lf-idv-progress { font-size: 14px; }
+.lf-idv-camera video { aspect-ratio: 3 / 4; max-height: min(46vh, 380px); width: auto; max-width: 100%; justify-self: center; display: block; margin: 0 auto; }
+.lf-idv-camera-cue strong { font-size: 20px; }
+.lf-idv-sticky { position: sticky; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 2; box-shadow: 0 6px 18px rgba(31, 23, 21, .18); }
+.lf-idv-saved { display: inline-flex; align-items: center; gap: 6px; margin: 0; color: var(--lf-status-approved-text, #2E6B3F); font-weight: 600; font-size: 15px; }
+.lf-idv-taken { list-style: none; display: flex; gap: 8px; margin: 0; padding: 0; }
+.lf-idv-taken li { display: grid; gap: 4px; justify-items: center; font-size: 13px; color: var(--lf-text-secondary); }
+.lf-idv-taken img { width: 64px; height: 84px; object-fit: cover; border-radius: 8px; transform: scaleX(-1); border: 2px solid var(--lf-status-approved-bg, #DCEFE1); }
+.lf-idv-taken span { display: inline-flex; align-items: center; gap: 3px; }
+.lf-idv-file.has-preview { flex-direction: column; min-height: 0; }
+.lf-idv-file img { max-width: 100%; max-height: 200px; border-radius: 8px; object-fit: contain; }

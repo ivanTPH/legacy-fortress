@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { InternalExperimentalIdentityProvider, INTERNAL_EXPERIMENTAL_PROVIDER_KEY } from "./internalExperimentalProvider.ts";
 import { InhouseReviewIdentityProvider, INHOUSE_EVIDENCE_RETENTION_DAYS, INHOUSE_LEVEL_2_TTL_DAYS, INHOUSE_REVIEW_PROVIDER_KEY } from "./inhouseReviewProvider.ts";
+import { sendIdentityResultEmail } from "./resultEmail.ts";
 import type {
   IdentityPresenceChallengeRow,
   IdentityVerificationDecision,
@@ -611,6 +612,9 @@ export async function completeIdentityVerification(client: AnySupabaseClient, re
   await persistDecision(client, request, decision);
   if (request.provider_key === INHOUSE_REVIEW_PROVIDER_KEY && decision.decision === "verified") {
     await cleanupExpiredIdentityEvidence(client, request.user_id, request.id).catch(() => null);
+    if (request.verification_purpose !== "admin_review") {
+      await sendIdentityResultEmail(client, { userId: request.user_id, requestId: request.id, result: "verified" }).catch(() => null);
+    }
   }
   return decision;
 }
@@ -900,6 +904,7 @@ export async function recordReviewerDecision(
   await persistDecision(client, request, decision);
   await recordIdentityEvent(client, request.id, request.user_id, input.approve ? "manual_review_approved" : "manual_review_rejected", "admin", { reviewer_assigned: true });
   await cleanupExpiredIdentityEvidence(client, request.user_id, request.id).catch(() => null);
+  await sendIdentityResultEmail(client, { userId: request.user_id, requestId: request.id, result: input.approve ? "verified" : "not_verified" }).catch(() => null);
   return decision;
 }
 
