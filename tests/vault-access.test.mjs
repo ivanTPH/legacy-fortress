@@ -167,3 +167,17 @@ test("record history is append-only, owner-only and never stores values", () => 
   assert.doesNotMatch(table, /value|old_|new_|snapshot|content/);
   assert.match(read("components/records/RecordHistoryPanel.tsx"), /Values and document contents are never shown here/);
 });
+
+test("telling a joined person about a new record link carries no record details", async () => {
+  const { describePersonNotification } = await import("../lib/notifications/personNotifications.ts");
+  const copy = describePersonNotification("record_link_added", "Olive Owner");
+  assert.match(copy.title, /Olive added you to a record/);
+  assert.doesNotMatch(`${copy.title} ${copy.detail}`, /attorney|will|power|account|policy|property/i);
+  const route = read("app/api/record-links/tell/route.ts");
+  assert.match(route, /lf_tell_linked_person/);
+  // The email never reads the record or the role.
+  assert.doesNotMatch(route, /from\("assets"\)|from\("records"\)|\.role\b|title/);
+  const migration = read("supabase/migrations/20261102120000_record_link_tell_person.sql");
+  assert.match(migration, /l\.owner_user_id = v_owner AND l\.removed_at IS NULL/);
+  assert.match(migration, /REVOKE ALL ON FUNCTION public\.lf_tell_linked_person\(uuid\) FROM PUBLIC, anon/);
+});
