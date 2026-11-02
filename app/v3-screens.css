@@ -119,7 +119,7 @@
   .lf-v52-section-link .lf-v3-icon-tile { grid-column: 1; grid-row: 1; }
   .lf-v52-section-link > .lf-icon { grid-column: 2; grid-row: 1; justify-self: end; }
   .lf-v52-section-link strong { grid-column: 1 / -1; grid-row: 2; min-width: 0; white-space: normal; overflow-wrap: normal; word-break: normal; }
-  .lf-v52-section-meta { min-height: 48px; padding: var(--lf-space-4) var(--lf-space-12); }
+  .lf-v52-section-meta { min-height: 52px; padding: var(--lf-space-4) var(--lf-space-12); } /* fits the 44px + button, so tiles don't move when counts load */
   .lf-v52-section-updated { display: none; }
   .lf-v52-section-add { width: 44px; height: 44px; }
   .lf-v52-finance-breadcrumb { display: none; }
