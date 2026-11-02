@@ -1,1 +1,1 @@
-export { hasColumn, hasTable } from "./schemaSafe.ts";
+export { hasColumn, hasColumns, hasTable } from "./schemaSafe.ts";

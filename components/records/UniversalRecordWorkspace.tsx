@@ -3929,12 +3929,13 @@ export default function UniversalRecordWorkspace({
                 <div>Renewal / expiry date: {String(row.metadata?.renewal_date ?? "Not set")}</div>
                 <div>Notes: {String(row.metadata?.notes ?? "No additional notes.")}</div>
               </div>
-            ) : (
-              <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
-                {row.summary ? <p>{row.summary}</p> : null}
-                {(row.metadata?.notes as string | undefined) || "No additional notes."}
+            ) : (row.summary || row.metadata?.short_description || row.metadata?.notes) ? (
+              // Show what the person wrote; no empty "No additional notes." card (owner review 2 Nov 2026).
+              <div className="lf-v52-record-notes">
+                {row.summary || row.metadata?.short_description ? <p>{String(row.summary || row.metadata?.short_description)}</p> : null}
+                {row.metadata?.notes ? <p>{String(row.metadata.notes)}</p> : null}
               </div>
-            )}
+            ) : null}
 
             <div className="lf-v52-record-documents">
               <div className="lf-v52-record-documents-heading"><h2>Documents</h2>

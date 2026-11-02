@@ -119,10 +119,12 @@ export default function LegalOverviewPage() {
   return <section className="lf-v3-area-page lf-v52-legal-page">
     <PageHeader title="Legal" description="Keep wills, trusts, powers of attorney and other legal records easy to find." />
     {status ? <p role="alert">{status}</p> : null}
-    {loading ? <p role="status">Loading legal records…</p> : null}
+    {loading ? <p role="status" className="lf-visually-hidden">Loading legal records…</p> : null}
     {!loading ? <p className="lf-v52-legal-summary" aria-label="Legal summary">{recordCount} record{recordCount === 1 ? "" : "s"} · {populated.length} of {sections.length} sections</p> : null}
     <VaultSectionGrid sections={(viewer.mode === "linked" ? populated : sections).map((section) => ({
-      key: section.slug, title: section.title, icon: section.icon, href: section.href, count: section.records.length,
+      key: section.slug, title: section.title, icon: section.icon, href: section.href,
+      // Until loaded, say so: "No records yet" would be wrong for sections that have records.
+      count: loading ? null : section.records.length, description: "Loading…",
       addHref: viewer.mode === "linked" ? undefined : `${section.href}?add=1`,
     }))} />
     {!loading && viewer.mode === "linked" && !recordCount ? <p>No legal records are assigned to you.</p> : null}

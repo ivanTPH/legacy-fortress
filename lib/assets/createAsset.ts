@@ -13,7 +13,7 @@ import { normalizeCanonicalPropertyMetadata } from "./propertyAsset";
 import { normalizeCanonicalBeneficiaryMetadata } from "./beneficiaryAsset";
 import { normalizeCanonicalExecutorMetadata } from "./executorAsset";
 import { normalizeCanonicalTaskMetadata } from "./taskAsset";
-import { hasColumn } from "../schemaSafe";
+import { hasColumn, hasColumns } from "../schemaSafe";
 import { isMissingColumnError, isMissingRelationError } from "../supabaseErrors";
 import { appendDevBankTrace, mergeDevBankContextTrace } from "../devSmoke";
 import { assertOwnerCanCreateRecord, ensureOwnerPlanProfile } from "../accountPlan";
@@ -80,6 +80,7 @@ async function assertCanonicalAssetWriteSchema(client: AnySupabaseClient) {
     "metadata_json",
   ] as const;
 
+  await hasColumns(client, "assets", requiredColumns);
   const availability = await Promise.all(
     requiredColumns.map(async (column) => ({
       column,

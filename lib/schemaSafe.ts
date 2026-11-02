@@ -5,6 +5,36 @@ type AnySupabaseClient = SupabaseClient;
 
 const tableCache = new Map<string, boolean>();
 const columnCache = new Map<string, boolean>();
+// Checks already in flight are shared, so pages loading together don't repeat them.
+const pendingChecks = new Map<string, Promise<boolean>>();
+
+function shared(key: string, run: () => Promise<boolean>) {
+  const existing = pendingChecks.get(key);
+  if (existing) return existing;
+  const promise = run().finally(() => pendingChecks.delete(key));
+  pendingChecks.set(key, promise);
+  return promise;
+}
+
+/**
+ * Confirms several columns in one request (owner review 2 Nov 2026: pages made a dozen
+ * one-column checks before loading). Falls back to one-by-one only if the combined check fails.
+ */
+export async function hasColumns(client: AnySupabaseClient, table: string, columns: readonly string[]): Promise<Record<string, boolean>> {
+  const normalized = [...new Set(columns.map(normalizeSchemaColumnName))];
+  const unknown = normalized.filter((column) => !columnCache.has(columnKey(table, column)));
+  if (unknown.length) {
+    const ok = await shared(`cols:${tableKey(table)}:${unknown.sort().join(",")}`, async () => {
+      const result = await client.from(table).select(unknown.join(",")).limit(1).maybeSingle();
+      if (result.error) return false;
+      tableCache.set(tableKey(table), true);
+      for (const column of unknown) columnCache.set(columnKey(table, column), true);
+      return true;
+    });
+    if (!ok) await Promise.all(unknown.map((column) => hasColumn(client, table, column)));
+  }
+  return Object.fromEntries(normalized.map((column) => [column, columnCache.get(columnKey(table, column)) ?? false]));
+}
 
 function tableKey(table: string) {
   return table.trim().toLowerCase();
@@ -24,7 +54,10 @@ function normalizeSchemaColumnName(column: string) {
 export async function hasTable(client: AnySupabaseClient, table: string): Promise<boolean> {
   const key = tableKey(table);
   if (tableCache.has(key)) return tableCache.get(key) as boolean;
+  return shared(`table:${key}`, () => checkTable(client, table, key));
+}
 
+async function checkTable(client: AnySupabaseClient, table: string, key: string): Promise<boolean> {
   const result = await client.from(table).select("*").limit(1).maybeSingle();
   if (result.error) {
     if (isMissingRelationError(result.error, table)) {
@@ -48,7 +81,10 @@ export async function hasColumn(
   const normalizedColumn = normalizeSchemaColumnName(column);
   const key = columnKey(table, normalizedColumn);
   if (columnCache.has(key)) return columnCache.get(key) as boolean;
+  return shared(`col:${key}`, () => checkColumn(client, table, column, normalizedColumn, key));
+}
 
+async function checkColumn(client: AnySupabaseClient, table: string, column: string, normalizedColumn: string, key: string): Promise<boolean> {
   const tableExists = await hasTable(client, table);
   if (!tableExists) {
     columnCache.set(key, false);
