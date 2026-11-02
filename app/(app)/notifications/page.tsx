@@ -19,6 +19,7 @@ type NotificationEvent = {
   owner_name?: string | null;
   link?: string;
   payload?: Record<string, unknown> | null;
+  contact_invitations?: { contact_name?: string | null } | null;
 };
 
 type Filter = "all" | "unread" | "security" | "people" | "records";
@@ -30,7 +31,7 @@ function describeEvent(event: NotificationEvent) {
     const item = describePersonNotification(event.event_type.slice(7), event.owner_name ?? null);
     return { ...item, href: event.link ?? "/notifications" };
   }
-  const copy = describeInvitationEvent(event.event_type, event.payload ?? null);
+  const copy = describeInvitationEvent(event.event_type, event.payload ?? null, event.contact_invitations?.contact_name ?? null);
   const icon = copy.kind === "sent" ? "send" : copy.kind === "accepted" ? "person_check" : copy.kind === "verified" ? "verified_user" : copy.kind === "failed" ? "error" : copy.kind === "access" ? "key" : "notifications_active";
   return { title: copy.title, detail: copy.detail, group: "people", icon, href: copy.kind === "access" ? "/access-sharing" : "/people-access?view=people" };
 }
@@ -62,7 +63,7 @@ export default function NotificationsPage() {
         return;
       }
       const [result, personal] = await Promise.all([
-        supabase.from("invitation_events").select("id,event_type,created_at,invitation_id,payload").eq("owner_user_id", user.id).order("created_at", { ascending: false }).limit(50),
+        supabase.from("invitation_events").select("id,event_type,created_at,invitation_id,payload,contact_invitations(contact_name)").eq("owner_user_id", user.id).order("created_at", { ascending: false }).limit(50),
         loadPersonNotifications(supabase),
       ]);
       if (cancelled) return;
