@@ -98,7 +98,7 @@ export default function CanonicalAssetOverviewGrid({ tiles, extraSections = [], 
   const recordCount = new Set(populated.flatMap((section) => section.rows.map((row) => row.id))).size;
   const updatedAt = latestTimestamp(populated.flatMap((section) => section.rows.map((row) => row.updated_at ?? row.created_at)));
   return <div className="lf-v3-area-content">
-    {state.status === "loading" ? <p role="status">Loading records…</p> : null}
+    {state.status === "loading" ? <p role="status" className="lf-visually-hidden">Loading records…</p> : null}
     {state.status === "error" ? <p role="alert">Records could not be refreshed. Open a section to review them directly.</p> : null}
     {state.status === "ready" && recordCount ? <Card className="lf-v3-stats-strip" aria-label="Area summary">
       <div><span>Records</span><strong>{recordCount}</strong></div>
@@ -106,7 +106,7 @@ export default function CanonicalAssetOverviewGrid({ tiles, extraSections = [], 
       <div><span>Last updated</span><strong>{formatAreaDate(updatedAt)}</strong></div>
     </Card> : null}
     <VaultSectionGrid sections={[...(viewer.mode === "linked" ? populated : sections).map(({ tile, rows }) => ({
-      key: tile.key, title: tile.title, icon: tile.icon, href: tile.href, count: rows.length,
+      key: tile.key, title: tile.title, icon: tile.icon, href: tile.href, count: state.status === "loading" ? null : rows.length, description: "Loading…",
       addHref: viewer.mode === "linked" ? undefined : tile.addHref,
     })), ...(viewer.mode === "linked" ? [] : extraSections)]} />
     {state.status === "ready" && viewer.mode === "linked" && !recordCount ? <p>No records are assigned in this area.</p> : null}

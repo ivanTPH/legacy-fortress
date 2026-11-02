@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { hasColumn } from "../schemaSafe";
+import { hasColumn, hasColumns } from "../schemaSafe";
 
 type AnySupabaseClient = SupabaseClient;
 
@@ -204,6 +204,8 @@ export async function fetchCanonicalAssets(
   },
 ) {
   const requiresOwnerUserId = !walletId;
+  // One combined check warms the cache for everything below.
+  await hasColumns(client, "assets", [...BASE_ASSET_QUERY_COLUMNS, "owner_user_id", "wallet_id", "deleted_at", "section_key", "category_key"]);
   const requiresDeletedAt = await hasColumn(client, "assets", "deleted_at");
   const hasSectionKeyColumn = await hasColumn(client, "assets", "section_key");
   const hasCategoryKeyColumn = await hasColumn(client, "assets", "category_key");

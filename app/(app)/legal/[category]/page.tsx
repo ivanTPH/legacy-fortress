@@ -28,7 +28,7 @@ export default function LegalCategoryPage() {
       const ownerUserId = viewer.targetOwnerUserId || user?.id;
       if (!ownerUserId) return;
       const wallet = await resolveWalletContextForRead(supabase, ownerUserId);
-      const [assetsRes, contacts] = await Promise.all([
+      const [assetsRes, contacts, recordLinks] = await Promise.all([
         fetchCanonicalAssets(supabase, {
           userId: ownerUserId,
           walletId: wallet.walletId,
@@ -36,14 +36,17 @@ export default function LegalCategoryPage() {
           select: "id,title,section_key,category_key,metadata_json,created_at",
         }),
         loadCanonicalContactsForOwner(supabase, ownerUserId),
+        // People linked through the V5.2 "Your attorney / Executors" section count too.
+        supabase.from("record_links").select("record_id").eq("owner_user_id", ownerUserId).eq("record_type", "asset").is("removed_at", null),
       ]);
       if (cancelled || assetsRes.error) return;
-      const linkedAssetIds = new Set(
-        contacts.flatMap((contact) => contact.linked_context ?? [])
+      const linkedAssetIds = new Set([
+        ...contacts.flatMap((contact) => contact.linked_context ?? [])
           .filter((context) => context.source_kind === "asset")
           .map((context) => String(context.source_id ?? "").trim())
           .filter(Boolean),
-      );
+        ...((recordLinks.data ?? []) as Array<{ record_id: string }>).map((row) => String(row.record_id)),
+      ]);
       const matchingAssets = ((assetsRes.data ?? []) as Array<Record<string, unknown>>).filter((row) =>
         assetMatchesLegalCategory({
           section_key: row.section_key,
@@ -78,7 +81,7 @@ export default function LegalCategoryPage() {
         marginBottom: 12,
       }}
     >
-      {missingAssociationCount} {category.label.toLowerCase()} record{missingAssociationCount === 1 ? "" : "s"} currently need a linked contact but do not have one yet.
+      {missingAssociationCount === 1 ? "One" : missingAssociationCount} {category.slug === "wills" ? `Will${missingAssociationCount === 1 ? " doesn’t" : "s don’t"} name an executor yet.` : category.slug === "power-of-attorney" ? `Power${missingAssociationCount === 1 ? " of Attorney doesn’t" : "s of Attorney don’t"} name your attorney yet.` : `record${missingAssociationCount === 1 ? " doesn’t" : "s don’t"} have a linked person yet.`} Open {missingAssociationCount === 1 ? "it" : "each one"} to add them.
     </div>
   ) : null;
 
