@@ -9259,3 +9259,40 @@ button.lf-sec-row:focus-visible { outline: 2px solid var(--lf-focus); outline-of
 .lf-sec-panel .lf-sec-danger { width: auto; min-height: 44px; padding: 0 18px; font-size: 16px; }
 .lf-v52-record-notes { display: grid; gap: 6px; color: var(--lf-text); font-size: 16px; line-height: 1.5; }
 .lf-v52-record-notes p { margin: 0; }
+
+/* V5.2 Vault access › P (va-p1): linked people rows and the "added" confirmation. */
+.lf-linked-people-role { color: var(--lf-text-secondary); font-size: 15px; }
+.lf-linked-people-chip { display: inline-flex; align-items: center; gap: 4px; }
+.lf-linked-people-origin { display: inline-flex; align-items: center; gap: 5px; color: var(--lf-text-secondary); font-size: 13px; }
+.lf-linked-people-add-row { display: flex !important; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 8px 4px !important; border: 0 !important; border-top: 1px solid var(--lf-divider) !important; border-radius: 0 !important; background: none !important; color: var(--lf-link) !important; font: inherit; font-size: 17px !important; font-weight: 600; text-align: left; cursor: pointer; }
+.lf-linked-people-add-icon { display: inline-grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--lf-border); border-radius: 999px; color: var(--lf-text); flex: none; }
+.lf-linked-people-confirm { text-align: left; }
+.lf-linked-people-confirm-icon { color: var(--lf-status-approved-text, #2E6B3F); }
+.lf-linked-people-confirm h3 { font-size: 20px; margin: 4px 0 0; }
+.lf-linked-people-confirm p { margin: 0; font-size: 16px; }
+.lf-linked-people-confirm-actions { display: grid !important; grid-template-columns: 1fr; gap: 8px; margin-top: 8px; }
+.lf-linked-people-confirm-actions > .is-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; border: 0; border-radius: var(--lf-radius-input, 10px); background: var(--lf-primary-bg, #2B1B17); color: var(--lf-primary-text, #fff); font: inherit; font-weight: 600; text-decoration: none; cursor: pointer; }
+
+/* Person panel (V5.2 Vault access › N, va-n1): grouped fact rows, linked records, Vault access now/later. */
+.lf-pp-card { display: grid; overflow: hidden; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card, 14px); background: var(--lf-surface-card, #fff); }
+.lf-pp-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 10px 16px; border-top: 1px solid var(--lf-divider); font-size: 16px; }
+.lf-pp-card > :first-child { border-top: 0; }
+.lf-pp-row > span:first-child { color: var(--lf-text); }
+.lf-pp-value { min-width: 0; color: var(--lf-text-secondary); overflow-wrap: anywhere; text-align: right; }
+.lf-pp-link { border: 0; background: none; padding: 0; color: var(--lf-link); font: inherit; font-weight: 600; cursor: pointer; }
+.lf-pp-row-action { padding: 10px 16px 14px; border-top: 1px solid var(--lf-divider); }
+.lf-pp-group { display: grid; gap: 8px; }
+.lf-pp-group h3 { margin: 4px 2px 0; font-size: 13px; font-weight: 600; letter-spacing: .02em; color: var(--lf-text-secondary); text-transform: none; }
+.lf-pp-item { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 16px; border-top: 1px solid var(--lf-divider); color: var(--lf-text); text-decoration: none; }
+a.lf-pp-item:hover { background: var(--lf-interaction-hover, #F6EFEA); }
+.lf-pp-icon { display: inline-grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 10px; background: var(--lf-primary-bg, #2B1B17); color: var(--lf-primary-text, #fff); }
+.lf-pp-text { display: grid; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.lf-pp-text strong { font-size: 16px; font-weight: 600; }
+.lf-pp-text small { color: var(--lf-text-secondary); font-size: 14px; }
+.lf-pp-item > .lf-icon:last-child { flex: none; color: var(--lf-text-secondary); }
+.lf-pp-actions { display: grid; gap: 8px; }
+.lf-pp-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; border-radius: var(--lf-radius-input, 10px); background: var(--lf-primary-bg, #2B1B17); color: var(--lf-primary-text, #fff); font-weight: 600; text-decoration: none; }
+.lf-pp-secondary { min-height: 44px; padding: 0 16px; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-input, 10px); background: var(--lf-surface-card, #fff); color: var(--lf-text); font: inherit; font-weight: 600; cursor: pointer; }
+.lf-pp-muted { margin: 0; color: var(--lf-text-secondary); font-size: 15px; }
+.lf-pp-note { display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--lf-surface-subtle, #F4EFEA); color: var(--lf-text-secondary); font-size: 14px; }
+.lf-va-link-row { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: var(--lf-link); font-weight: 600; text-decoration: none; }

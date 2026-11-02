@@ -66,7 +66,9 @@ export default function VaultAccessWorkspace() {
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
   const [panelKey, setPanelKey] = useState("");
-  const [setupOpen, setSetupOpen] = useState(false);
+  // Arriving from a person's panel (?setup=<person>) opens set-up for that person.
+  const initialSetupPerson = useSearchParams().get("setup") ?? "";
+  const [setupOpen, setSetupOpen] = useState(Boolean(initialSetupPerson));
   const [confirmCancel, setConfirmCancel] = useState<VaultNomination | null>(null);
   const [attorneyFor, setAttorneyFor] = useState("");
   const [busy, setBusy] = useState(false);
@@ -173,6 +175,7 @@ export default function VaultAccessWorkspace() {
       <div className="lf-va-toolbar">
         <p className="lf-va-summary">{counts.now} can see records now · {counts.later} nominated for later · {counts.authority} legal {counts.authority === 1 ? "authority" : "authorities"} · {counts.ended} ended</p>
         <button type="button" className="lf-va-primary" onClick={() => setSetupOpen(true)}><Icon name="key" size={18} />Set up Vault access</button>
+        <Link href="/people-access?view=sharing" className="lf-va-link-row"><Icon name="share" size={18} />Records you’ve shared, record by record<Icon name="chevron_right" size={18} /></Link>
       </div>
       {error ? <p className="lf-va-error" role="alert">{error}</p> : null}
       {rows.length === 0 ? (
@@ -207,7 +210,7 @@ export default function VaultAccessWorkspace() {
         </SidePanel>
       ) : null}
 
-      {setupOpen ? <SetupDialog snapshot={snapshot} ownerId={ownerId} onClose={() => setSetupOpen(false)} onSaved={async (message) => { setSetupOpen(false); setToast(message); await reload(); }} onAttorney={(personId) => { setSetupOpen(false); setAttorneyFor(personId); }} /> : null}
+      {setupOpen && snapshot ? <SetupDialog initialPersonId={initialSetupPerson} snapshot={snapshot} ownerId={ownerId} onClose={() => setSetupOpen(false)} onSaved={async (message) => { setSetupOpen(false); setToast(message); await reload(); }} onAttorney={(personId) => { setSetupOpen(false); setAttorneyFor(personId); }} /> : null}
       {attorneyFor ? <AttorneyDialog snapshot={snapshot} ownerId={ownerId} personId={attorneyFor} onClose={() => setAttorneyFor("")} onSaved={async (message) => { setAttorneyFor(""); setToast(message); await reload(); }} /> : null}
 
       {confirmCancel ? (
@@ -284,9 +287,9 @@ function PersonAccess({ row, snapshot, ownerId, onCancel, onWithdraw, onChanged 
   );
 }
 
-function SetupDialog({ snapshot, ownerId, onClose, onSaved, onAttorney }: { snapshot: VaultAccessSnapshot; ownerId: string; onClose: () => void; onSaved: (message: string) => void | Promise<void>; onAttorney: (personId: string) => void }) {
+function SetupDialog({ snapshot, ownerId, onClose, onSaved, onAttorney, initialPersonId = "" }: { snapshot: VaultAccessSnapshot; ownerId: string; onClose: () => void; onSaved: (message: string) => void | Promise<void>; onAttorney: (personId: string) => void; initialPersonId?: string }) {
   const [step, setStep] = useState(1);
-  const [personId, setPersonId] = useState("");
+  const [personId, setPersonId] = useState(() => snapshot.people.some((person) => person.id === initialPersonId) ? initialPersonId : "");
   const [kind, setKind] = useState<"later" | "now" | "attorney" | "contact">("later");
   const [scope, setScope] = useState<"whole_vault" | "selected">("whole_vault");
   const [options, setOptions] = useState<VaultRecordOption[] | null>(null);

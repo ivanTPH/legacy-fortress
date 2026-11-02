@@ -215,13 +215,24 @@ test("phone: owner records a Power of Attorney by tapping and links a person", a
   await dialog.locator("button[aria-pressed]").filter({ hasText: /Select person|Selected/ }).first().tap();
   await dialog.getByRole("button", { name: /Save person and relationship/i }).tap();
   await expect(dialog).toContainText(/added as Attorney/i, { timeout: 20_000 });
+  await expect(dialog.getByRole("button", { name: /Not now|Done/i }).or(dialog.getByRole("link", { name: /Add their email/i })).first()).toBeVisible();
   log(`confirmation: ${(await dialog.innerText()).replace(/\s+/g, " ").slice(0, 200)}`);
   const shoot = async (label: string) => { const shot = await page.screenshot({ type: "jpeg", quality: 45, scale: "css" }).catch(() => null); if (shot) console.log(`Phone-shot: ${label} ${shot.toString("base64")}`); };
   await shoot("/poa-confirmation");
-  await dialog.getByRole("button", { name: /Invite later|Back to record/i }).first().tap().catch(() => null);
+  await dialog.getByRole("button", { name: /Not now|Done/i }).first().tap().catch(() => null);
   await page.waitForTimeout(1500);
   await page.getByText(/Your attorney/i).first().scrollIntoViewIfNeeded().catch(() => null);
   await shoot("/poa-record-people");
+  // Person panel (va-n1), reached from the attorney's name on the record.
+  const personHref = await page.locator(".lf-v52-record-person-copy a").first().getAttribute("href").catch(() => null);
+  if (personHref) {
+    await page.goto(`${BASE_URL}${personHref}`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(3500);
+    await shoot("/person-panel");
+    await page.locator(".lf-person-drawer-content").evaluate((node) => { node.scrollTop = node.scrollHeight; }).catch(() => null);
+    await page.waitForTimeout(500);
+    await shoot("/person-panel-lower");
+  }
   await page.context().close();
 });
 

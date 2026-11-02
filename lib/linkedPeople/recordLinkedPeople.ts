@@ -406,3 +406,25 @@ export async function savePersonPrivateDetails(client: SupabaseClient, input: { 
   );
   if (result.error) throw new Error("The person was saved, but their address and notes were not.");
 }
+
+export type PersonRecordLink = { linkId: string; recordType: LinkedRecordType; recordId: string; role: string; title: string; sectionKey: string | null; categoryKey: string | null };
+
+/** Records a person is linked to (person panel "Linked to records", design va-n1). Links only; never access. */
+export async function loadPersonRecordLinks(client: SupabaseClient, ownerUserId: string, personId: string): Promise<PersonRecordLink[]> {
+  const links = await client.from("record_links").select("id,record_type,record_id,role,role_other_text")
+    .eq("owner_user_id", ownerUserId).eq("person_id", personId).is("removed_at", null).order("created_at", { ascending: true }).limit(50);
+  if (links.error) throw new Error(links.error.message);
+  const rows = (links.data ?? []) as Array<{ id: string; record_type: LinkedRecordType; record_id: string; role: string; role_other_text: string | null }>;
+  if (!rows.length) return [];
+  const assetIds = rows.filter((row) => row.record_type === "asset").map((row) => row.record_id);
+  const recordIds = rows.filter((row) => row.record_type === "record").map((row) => row.record_id);
+  const [assets, records] = await Promise.all([
+    assetIds.length ? client.from("assets").select("id,title,section_key,category_key").eq("owner_user_id", ownerUserId).in("id", assetIds).is("deleted_at", null) : Promise.resolve({ data: [], error: null }),
+    recordIds.length ? client.from("records").select("id,title,section_key,category_key").eq("owner_user_id", ownerUserId).in("id", recordIds) : Promise.resolve({ data: [], error: null }),
+  ]);
+  const byId = new Map(([...(assets.data ?? []), ...(records.data ?? [])] as Array<{ id: string; title: string | null; section_key: string | null; category_key: string | null }>).map((row) => [row.id, row]));
+  return rows.filter((row) => byId.has(row.record_id)).map((row) => {
+    const record = byId.get(row.record_id)!;
+    return { linkId: row.id, recordType: row.record_type, recordId: row.record_id, role: row.role === "Other" ? row.role_other_text || "Other" : row.role, title: record.title || "Untitled record", sectionKey: record.section_key, categoryKey: record.category_key };
+  });
+}
