@@ -5,17 +5,18 @@
  */
 export type InvitationEventCopy = { title: string; detail: string; kind: "sent" | "accepted" | "failed" | "expired" | "verified" | "access" | "other" };
 
-export function describeInvitationEvent(eventType: string, payload?: Record<string, unknown> | null): InvitationEventCopy {
+export function describeInvitationEvent(eventType: string, payload?: Record<string, unknown> | null, contactName?: string | null): InvitationEventCopy {
   const type = eventType.toLowerCase();
   const email = typeof payload?.contact_email === "string" && payload.contact_email ? payload.contact_email : "";
+  // Owner request 2 Nov 2026: name the person ("Invite sent to Jacqui").
+  const first = String(contactName ?? (typeof payload?.contact_name === "string" ? payload.contact_name : "")).trim().split(/\s+/)[0] || "";
   if (type === "auth_request_accepted" || type === "sent" || type === "invite_sent" || type === "resent") {
-    return { kind: "sent", title: "Invitation sent", detail: email ? `Sent to ${email}. We’ll tell you when they join.` : "We’ll tell you when they join." };
+    return { kind: "sent", title: first ? `Invite sent to ${first}` : "Invite sent", detail: email ? `Sent to ${email}. We’ll tell you when ${first || "they"} join${first ? "s" : ""}.` : `We’ll tell you when ${first || "they"} join${first ? "s" : ""}.` };
   }
   if (type === "person_told") {
-    const name = typeof payload?.contact_name === "string" && payload.contact_name ? payload.contact_name : "They";
-    return { kind: "sent", title: `You told ${name === "They" ? "them" : name}`, detail: `${name} was told you added them to a record. No details were shared.` };
+    return { kind: "sent", title: first ? `Invite sent to ${first}` : "Invite sent", detail: `${first || "They"} had already joined, so we let ${first ? "them" : "them"} know you added them to a record. No details were shared.` };
   }
-  if (type === "accepted") return { kind: "accepted", title: "Invitation accepted", detail: "Someone you invited has joined Legacy Fortress." };
+  if (type === "accepted") return { kind: "accepted", title: first ? `${first} accepted your invite` : "Invitation accepted", detail: `${first || "Someone you invited"} has joined Legacy Fortress.` };
   if (type === "failed" || type === "not_delivered" || type.includes("bounce")) return { kind: "failed", title: "Invitation not delivered", detail: email ? `We couldn’t deliver the invitation to ${email}. Check the address in People.` : "Check their email address in People." };
   if (type === "expired") return { kind: "expired", title: "Invitation expired", detail: "Send a new invitation from their page in People." };
   if (type.includes("verified")) return { kind: "verified", title: "Identity verified", detail: "Someone you invited completed their ID check." };
