@@ -10,6 +10,7 @@ ALTER TABLE public.user_notifications ADD CONSTRAINT user_notifications_kind_che
   'authority_confirmed', 'authority_needs_attention', 'authority_rejected',
   'early_access_requested', 'early_access_answered',
   'identity_approved', 'identity_rejected',
+  'more_evidence_requested', 'attorney_check_requested',
   'record_link_added'));
 
 -- Called by the owner for one of their own current links. Returns true when the person was told.

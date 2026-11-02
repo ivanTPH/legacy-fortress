@@ -1,8 +1,11 @@
 {
   "approvedBy": "Ivan (owner), 2 Nov 2026: when linking someone who has joined to another record, ask each time whether to tell them; the message carries no record details",
   "mode": "apply",
-  "attempt": 15,
+  "attempt": 16,
   "files": [
-    { "file": "20261102120000_record_link_tell_person.sql", "sha256": "f324ebd56ba5bfdef9751c53bab1d4cbbfaf7a3eb03b5150e67168e4a7ed356a" }
+    {
+      "file": "20261102120000_record_link_tell_person.sql",
+      "sha256": "1688c586dbd2c15473fa365deaa65e8827bb47304f6c568e937e95b4d9a80b5b"
+    }
   ]
 }
