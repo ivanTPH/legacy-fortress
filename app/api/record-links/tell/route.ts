@@ -30,7 +30,19 @@ export async function POST(request: Request) {
   let emailed = false;
   const apiKey = String(process.env.RESEND_API_KEY ?? "").trim();
   const link = await access.admin.from("record_links").select("person_id").eq("id", linkId).eq("owner_user_id", access.user.id).maybeSingle();
-  const contact = link.data ? await access.admin.from("contacts").select("linked_user_id").eq("id", link.data.person_id).eq("owner_user_id", access.user.id).maybeSingle() : null;
+  const contact = link.data ? await access.admin.from("contacts").select("linked_user_id,full_name").eq("id", link.data.person_id).eq("owner_user_id", access.user.id).maybeSingle() : null;
+  // The owner's own bell records that they told this person (owner report 2 Nov 2026). No record details.
+  if (link.data) {
+    const invitation = await access.admin.from("contact_invitations").select("id").eq("owner_user_id", access.user.id).eq("contact_id", link.data.person_id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (invitation.data?.id) {
+      await access.admin.from("invitation_events").insert({
+        owner_user_id: access.user.id,
+        invitation_id: invitation.data.id,
+        event_type: "person_told",
+        payload: { contact_name: String(contact?.data?.full_name ?? "").trim().split(/\s+/)[0] || null },
+      }).then(() => undefined, () => undefined);
+    }
+  }
   const recipientId = contact?.data?.linked_user_id ?? null;
   if (apiKey && recipientId) {
     const [recipient, profile] = await Promise.all([
