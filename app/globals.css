@@ -9301,3 +9301,17 @@ a.lf-pp-item:hover { background: var(--lf-interaction-hover, #F6EFEA); }
 .lf-linked-people-sticky-actions > .is-primary, .lf-linked-people-confirm-actions > .is-primary { border: 0 !important; background: var(--lf-primary-bg, #2B1B17) !important; color: var(--lf-primary-text, #fff) !important; }
 /* "Not now" is the quieter choice. */
 .lf-linked-people-confirm-actions > :not(.is-primary) { min-height: 48px; border: 1px solid var(--lf-border) !important; border-radius: var(--lf-radius-input, 10px); background: var(--lf-surface-card, #fff) !important; color: var(--lf-text) !important; font: inherit; font-weight: 600; cursor: pointer; }
+
+/* Swipe or tap × to clear a notification (owner request 2 Nov 2026). */
+.lf-swipe-row { position: relative; display: flex; align-items: stretch; touch-action: pan-y; transition: transform .16s ease-out; }
+.lf-swipe-row > :first-child + * , .lf-swipe-row > a, .lf-swipe-row > button:not(.lf-swipe-clear) { flex: 1 1 auto; min-width: 0; }
+.lf-swipe-row.is-leaving { opacity: 0; transition: transform .16s ease-in, opacity .16s; }
+.lf-swipe-hint { position: absolute; inset: 0 auto 0 0; display: none; align-items: center; gap: 6px; padding: 0 16px; color: var(--lf-destructive, #B3261E); font-weight: 600; }
+.lf-swipe-clear { display: inline-grid; place-items: center; flex: none; width: 44px; border: 0; background: none; color: var(--lf-text-secondary); cursor: pointer; }
+.lf-swipe-clear:hover { color: var(--lf-text); background: var(--lf-interaction-hover, #F6EFEA); }
+.lf-swipe-clear:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: -2px; }
+.lf-notifications-hint { margin: 0; color: var(--lf-text-secondary); font-size: 14px; }
+.lf-notifications-undo { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-radius: 10px; background: var(--lf-primary-bg, #2B1B17); color: var(--lf-primary-text, #fff); }
+.lf-notifications-undo button { border: 0; background: none; color: inherit; font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
+.lf-notifications-toolbar-actions { display: inline-flex; gap: 8px; }
+@media (prefers-reduced-motion: reduce) { .lf-swipe-row, .lf-swipe-row.is-leaving { transition: none; } }

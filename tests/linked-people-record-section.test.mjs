@@ -41,6 +41,17 @@ test("Will journey saves three people independently; inviting is a separate acti
   assert.equal(accepted.deliveryState, "auth_request_accepted");
   await assert.rejects(sendRecordLinkedPersonInvitation(client, { ownerUserId, recordType: "record", recordId: "record-1", personId: jane.personId, origin: localOrigin }, async () => { sends++; }), /already has an active invitation/);
   assert.equal(sends, 1);
+  // Resending to someone invited before is allowed and still shares nothing; joined people can't be re-invited.
+  await sendRecordLinkedPersonInvitation(client, { ownerUserId, recordType: "record", recordId: "record-1", personId: jane.personId, origin: localOrigin, resend: true }, async (_client, invitation) => {
+    sends++;
+    assert.equal(invitation.resend, true);
+    assert.deepEqual(invitation.permissionsOverride.record_ids, []);
+    return { invitationId: "synthetic-invite", deliveryState: "auth_request_accepted" };
+  });
+  assert.equal(sends, 2);
+  db.contacts.find((row) => row.id === jane.personId).invite_status = "accepted";
+  await assert.rejects(sendRecordLinkedPersonInvitation(client, { ownerUserId, recordType: "record", recordId: "record-1", personId: jane.personId, origin: localOrigin, resend: true }, async () => { sends++; }), /already joined/);
+  assert.equal(sends, 2);
   assert.equal(db.record_links.length, 3);
   assert.equal(db.account_access_grants.length, 0);
   assert.ok(writes.every((row) => row.table !== "contact_links" && row.table !== "account_access_grants"));
