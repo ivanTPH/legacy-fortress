@@ -221,12 +221,13 @@ export default function SecurityPage() {
             <Field label="Confirm new password"><input type="password" autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} style={inputStyle} /></Field>
             <div className="lf-sec-buttons"><button type="button" style={primaryBtn} onClick={() => void changePassword()}>Change password</button><button type="button" style={ghostBtn} onClick={() => void sendPasswordReset()}>Email me a reset link</button></div>
           </div> : null}
-          <button type="button" className="lf-sec-row" aria-expanded={open === "two-step"} onClick={() => setOpen(open === "two-step" ? null : "two-step")}>
+          <div className="lf-sec-row">
             <span className="lf-sec-icon"><Icon name="phonelink_lock" size={22} /></span>
-            <span className="lf-sec-text"><strong>Two-step verification</strong><small>{twoStep.factorId ? "On · authenticator app" : "Off"}</small></span>
-            <Icon name={open === "two-step" ? "expand_less" : "chevron_right"} size={22} />
-          </button>
-          {open === "two-step" ? <div className="lf-sec-panel"><TwoStepPanel state={twoStep} onChanged={reloadTwoStep} /></div> : null}
+            <span className="lf-sec-text"><strong id="sec-two-step-label">Two-step verification</strong><small>{twoStep.loading ? "Checking…" : twoStep.factorId ? "On · authenticator app" : "Off"}</small></span>
+            {/* A switch like the design's Face ID row: turning it on starts set-up, turning it off asks to confirm. */}
+            <button type="button" role="switch" className="lf-sec-switch" aria-checked={Boolean(twoStep.factorId)} aria-labelledby="sec-two-step-label" disabled={twoStep.loading} onClick={() => setOpen(open === "two-step" ? null : "two-step")}><span aria-hidden="true" /></button>
+          </div>
+          {open === "two-step" ? <div className="lf-sec-panel"><TwoStepPanel state={twoStep} autoStart onChanged={async () => { await reloadTwoStep(); setOpen(null); }} onCancel={() => setOpen(null)} /></div> : null}
         </div>
       </section>
 
