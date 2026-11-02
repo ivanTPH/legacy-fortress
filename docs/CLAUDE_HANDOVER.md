@@ -37,3 +37,11 @@ Concise running state. Newest first. Codex history stays in `CODEX_HANDOVER.md`.
 - ID check: document photo + live selfie with random LEFT/RIGHT head turns; automatic face match (@vladmandic/human, server-side WASM) verifies clear matches; anything else, and every check tied to a death report or Power of Attorney, goes to a person in Platform Admin. Thresholds in `lib/identity-verification/faceAnalysis.ts` need calibrating on consenting real photos before production; a DPIA is needed before production.
 - Staff sign-in: `/admin/sign-in` and `/enterprise/sign-in`, password then authenticator code (QR set-up on first use), 30-minute idle sign-out, 12-hour code freshness. Required by default (`lib/admin/access.ts`), including partners who come in through organisation membership; only a local dev server may set `STAFF_MFA_REQUIRED=false`. TEST acceptance proves authenticator codes work each release.
 - Not built yet: suggested-change approvals (7a–7f), monthly summary email, organisation detail page.
+
+## Owner review fixes (1–2 Nov 2026)
+- Releases 55–68 on TEST. Phone checks in `tests/e2e/staging-admin-role-boundary.spec.ts` emulate an iPhone, tap through the Power of Attorney → attorney flow, list anything cut off at the screen edge, and write small screenshots into the job log (`Phone-shot:` lines, base64 JPEG) for design review.
+- ID check: Settings › Verify your ID and Settings › Profile identity row; larger text, photo confirmations, back link; result email (`lib/identity-verification/resultEmail.ts`, never to synthetic addresses).
+- Settings › Security to design p5m; owners can turn on two-step verification (switch); main sign-in asks for the code.
+- Record people (va-p1), person panel (va-n1), three People & Access tabs (Sharing reached from Vault access). `?view=vault-access&setup=<person>` opens set-up for that person.
+- Schema checks: `hasColumns` in `lib/schemaSafe.ts` (one request, shared in-flight); remember to export from the extensionless `lib/schemaSafe` shim.
+- Not built: listing other signed-in devices (sign-in service doesn't expose it); mobile top bar still shows the Vault switcher on main pages.

@@ -105,3 +105,24 @@ test("ID result email: never to synthetic addresses, no photos or scores, says w
   const no = renderIdentityResultEmail("not_verified", "https://test.mylegacyfortress.com");
   for (const message of [ok, no]) assert.doesNotMatch(`${message.text}${message.html}`, /score|similarity|<img/i);
 });
+
+test("an existing ID check is reused on acceptance, never for death reports or Powers of Attorney", () => {
+  const service = read("lib/identity-verification/service.ts");
+  const reuse = service.slice(service.indexOf("export async function reuseExistingVerification"));
+  assert.match(reuse, /identity_level/);
+  assert.match(reuse, /expires <= Date\.now\(\)/);
+  assert.match(reuse, /linked_user_id !== userId/);
+  // Only the identity gate on the person's own grant changes; never which records they can see.
+  assert.doesNotMatch(reuse, /permissions_override|asset_ids|record_ids/);
+  const accept = read("app/invite/accept/InvitationAcceptPageClient.tsx");
+  assert.match(accept, /\/api\/identity-verification\/reuse/);
+  // Case-bound checks (death report, Power of Attorney) still always start fresh.
+  assert.match(read("components/identity/ReviewerIdentityCheck.tsx"), /A fresh check for a case always starts new/);
+});
+
+test("a sent invitation is never shown as accepted", async () => {
+  const { describeInvitationEvent } = await import("../lib/notifications/invitationEvents.ts");
+  assert.equal(describeInvitationEvent("auth_request_accepted", { contact_email: "a@b.test" }).title, "Invitation sent");
+  assert.equal(describeInvitationEvent("accepted").title, "Invitation accepted");
+  assert.equal(describeInvitationEvent("failed").kind, "failed");
+});

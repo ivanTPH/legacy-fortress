@@ -33,7 +33,8 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
   const [accessByPerson, setAccessByPerson] = useState<Record<string, LinkedRecordAccessState>>({});
   const [documentTitles, setDocumentTitles] = useState<Record<string, string>>({});
   const [otherRecordCounts, setOtherRecordCounts] = useState<Record<string, number>>({});
-  const [mode, setMode] = useState<"closed" | "choose" | "existing" | "new" | "saved" | "viewContact" | "confirmInvite" | "reviewSuggestion" | "editRole" | "confirmUnlink" | "discard">("closed");
+  const [inviteSentTo, setInviteSentTo] = useState<{ name: string; email: string; accepted: boolean } | null>(null);
+  const [mode, setMode] = useState<"closed" | "choose" | "existing" | "new" | "saved" | "inviteSent" | "viewContact" | "confirmInvite" | "reviewSuggestion" | "editRole" | "confirmUnlink" | "discard">("closed");
   const [discardReturnMode, setDiscardReturnMode] = useState<"existing" | "new">("new");
   const [online, setOnline] = useState(true);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -364,10 +365,9 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
         const data = await loadRecordLinkedPeople(client, ownerUserId, recordType, recordId);
         setLinks(data.links); setContacts(data.contacts); setAccessByPerson(data.accessByPerson); setDocumentTitles(data.documentTitles); setOtherRecordCounts(data.otherRecordCounts);
       } catch { /* The accepted request remains authoritative; avoid a second dispatch. */ }
-      resetForm();
-      setNotice(result.deliveryState === "auth_request_accepted"
-        ? `Invitation request submitted for ${saved?.full_name ?? "this person"}. Delivery is not yet confirmed.`
-        : "Invitation status updated.");
+      // Show what happened in the dialog (owner report 2 Nov 2026: a line at the top of the section was missed).
+      setInviteSentTo({ name: saved?.full_name ?? "this person", email: saved?.email ?? "", accepted: result.deliveryState === "auth_request_accepted" });
+      setMode("inviteSent");
     } catch (cause) {
       setError(`${cause instanceof Error ? cause.message : "Could not confirm the invitation request."} Check People before trying again; the request may already have been accepted.`);
     } finally { setBusy(false); }
@@ -446,8 +446,8 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
     </div> : null}
     {canManage && mode === "closed" ? <button type="button" className="lf-linked-people-action lf-linked-people-add-row" disabled={loading} onClick={(event) => { returnFocusRef.current = event.currentTarget; setError(""); setNotice(""); setMode("choose"); }}><span className="lf-linked-people-add-icon" aria-hidden="true"><Icon name="add" size={20} /></span>{links.length ? (config.heading === "Executors" ? "Add another executor" : "Add another person") : addAction}</button> : null}
     {canManage && mode !== "closed" ? createPortal(<div className="lf-linked-people-overlay" onClick={(event) => { if (event.target === event.currentTarget) requestClose(); }}>
-      <div ref={dialogRef} className={`lf-linked-people-dialog ${["saved", "viewContact", "confirmInvite", "confirmUnlink", "discard"].includes(mode) ? "is-offer" : "is-entry"} ${["existing", "new", "reviewSuggestion"].includes(mode) ? "is-full-mobile" : ""}`} role="dialog" aria-modal="true" aria-labelledby={`${formId}-title`}>
-        <div className="lf-linked-people-dialog-header"><div className="lf-linked-people-drag-handle" aria-hidden="true" /><h3 id={`${formId}-title`}>{mode === "choose" ? (config.heading === "Executors" ? "Add an executor" : "Add a person") : mode === "existing" ? "Choose a person" : mode === "new" ? (config.heading === "Executors" ? "New executor" : "New person") : mode === "saved" ? `${saved?.full_name ?? "Person"} added` : mode === "viewContact" ? `${saved?.full_name ?? "Person"} in People` : mode === "confirmInvite" ? `Invite ${saved?.full_name ?? "this person"}` : mode === "editRole" ? "Change role on this record" : mode === "confirmUnlink" ? "Remove from this record?" : mode === "discard" ? "Discard these details?" : "Review suggested person"}</h3><button type="button" className="lf-linked-people-dialog-close" onClick={requestClose} aria-label="Close linked people dialog">×</button></div>
+      <div ref={dialogRef} className={`lf-linked-people-dialog ${["saved", "inviteSent", "viewContact", "confirmInvite", "confirmUnlink", "discard"].includes(mode) ? "is-offer" : "is-entry"} ${["existing", "new", "reviewSuggestion"].includes(mode) ? "is-full-mobile" : ""}`} role="dialog" aria-modal="true" aria-labelledby={`${formId}-title`}>
+        <div className="lf-linked-people-dialog-header"><div className="lf-linked-people-drag-handle" aria-hidden="true" /><h3 id={`${formId}-title`}>{mode === "choose" ? (config.heading === "Executors" ? "Add an executor" : "Add a person") : mode === "existing" ? "Choose a person" : mode === "new" ? (config.heading === "Executors" ? "New executor" : "New person") : mode === "inviteSent" ? "Invitation sent" : mode === "saved" ? `${saved?.full_name ?? "Person"} added` : mode === "viewContact" ? `${saved?.full_name ?? "Person"} in People` : mode === "confirmInvite" ? `Invite ${saved?.full_name ?? "this person"}` : mode === "editRole" ? "Change role on this record" : mode === "confirmUnlink" ? "Remove from this record?" : mode === "discard" ? "Discard these details?" : "Review suggested person"}</h3><button type="button" className="lf-linked-people-dialog-close" onClick={requestClose} aria-label="Close linked people dialog">×</button></div>
         <div className="lf-linked-people-dialog-body">
     {mode === "choose" ? <div className="lf-linked-people-choose"><p>{links.length ? "People already linked remain saved while you add another." : "Choose someone already in your People, or add a new person."}</p><button type="button" disabled={!availableContacts.length} onClick={() => setMode("existing")}><strong>Choose from People</strong><small>{availableContacts.length} available in your Vault</small></button><button type="button" onClick={() => setMode("new")}><strong>Add someone new</strong><small>Name and contact details, if you have them</small></button></div> : null}
     {(mode === "existing" || mode === "new") ? <div className="lf-linked-people-form" id={formId}>
@@ -484,7 +484,7 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
       <p>The People relationship describes how you know them. Their role applies only to this record. Linking does not grant access.</p>
       {recoveryPersonId ? <p role="status">The person is saved in People. Retry the link without creating them again.</p> : null}
       {!online ? <p className="lf-linked-people-offline" role="status">You are offline. Your details remain here; save when your connection returns.</p> : null}
-      <div className="lf-linked-people-actions"><button type="button" onClick={requestClose}>Cancel</button><button type="button" disabled={busy} onClick={() => void save()}>{busy ? "Saving…" : recoveryPersonId ? "Retry relationship" : "Save person and relationship"}</button></div>
+      <div className="lf-linked-people-actions lf-linked-people-sticky-actions"><button type="button" onClick={requestClose}>Cancel</button><button type="button" className="is-primary" disabled={busy} onClick={() => void save()}>{busy ? "Saving…" : recoveryPersonId ? "Retry" : mode === "existing" ? `Add as ${role === "Other" ? (otherRole || "Other") : role || "…"}` : "Save person"}</button></div>
     </div> : null}
     {canManage && mode === "editRole" && managedLink ? <div className="lf-linked-people-form" role="group" aria-label="Edit record role">
       <h3>Edit {managedContact?.full_name ?? "person"}&apos;s role</h3>
@@ -522,6 +522,13 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
       <p>Telephone: {saved.phone || "Not recorded"}</p>
       <p>Their role on {recordLabel} is stored on this record separately from their People details.</p>
       <div className="lf-linked-people-actions"><button type="button" onClick={() => setMode("saved")}>Back to saved options</button><button type="button" onClick={resetForm}>Return to {recordLabel}</button><Link href={buildContactsWorkspaceHref(saved.id)}>Edit contact in People</Link></div>
+    </div> : null}
+    {canManage && mode === "inviteSent" && inviteSentTo ? <div className="lf-linked-people-form lf-linked-people-confirm" role="status">
+      <span className="lf-linked-people-confirm-icon" aria-hidden="true"><Icon name="mark_email_read" size={28} /></span>
+      <h3>Invitation sent to {firstNameOf(inviteSentTo.name)}</h3>
+      <p>{inviteSentTo.email ? <>We’ve emailed <strong>{inviteSentTo.email}</strong>. </> : null}It asks them to join Legacy Fortress. It doesn’t mention this document or share anything.</p>
+      <p>You’ll see “Invite sent” on their row, and a notification under the bell when they join.</p>
+      <div className="lf-linked-people-actions lf-linked-people-confirm-actions"><button type="button" className="is-primary" onClick={() => { setInviteSentTo(null); resetForm(); }}>Done</button></div>
     </div> : null}
     {canManage && mode === "confirmInvite" ? <div className="lf-linked-people-form" role="group" aria-label="Confirm invitation">
       <h3>Invite {saved?.full_name ?? "this person"}</h3>

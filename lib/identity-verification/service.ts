@@ -938,3 +938,22 @@ export async function createReviewerEvidenceLinks(client: AnySupabaseClient, req
     expiresInSeconds,
   };
 }
+
+/**
+ * Owner decision 2 Nov 2026: someone whose ID is already verified (level 2, not expired) isn't asked
+ * to check it again when they accept another invitation or are added to another record. Only the
+ * identity gate on their own pending grant is satisfied; nothing about which records they can see
+ * changes. Death reports and Powers of Attorney still always ask for a fresh, case-bound check.
+ */
+export async function reuseExistingVerification(client: AnySupabaseClient, userId: string, accessGrantId: string) {
+  const state = await client.from("identity_assurance_states").select("identity_level,expires_at").eq("user_id", userId).maybeSingle();
+  if (state.error) throw new Error("identity_state_unavailable");
+  const level = Number(state.data?.identity_level ?? 0);
+  const expires = state.data?.expires_at ? Date.parse(String(state.data.expires_at)) : NaN;
+  if (level < 2 || !Number.isFinite(expires) || expires <= Date.now()) return { reused: false as const, reason: "not_verified" as const };
+  const grant = await client.from("account_access_grants").select("id,linked_user_id,activation_status").eq("id", accessGrantId).maybeSingle();
+  if (grant.error || !grant.data || grant.data.linked_user_id !== userId) throw new Error("linked_access_context_mismatch");
+  if (["verified", "active"].includes(String(grant.data.activation_status))) return { reused: true as const, reason: "already_satisfied" as const };
+  await activateEligibleLinkedAccess(client, userId, accessGrantId);
+  return { reused: true as const, reason: "existing_verification" as const };
+}

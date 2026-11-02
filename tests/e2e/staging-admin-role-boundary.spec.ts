@@ -213,7 +213,7 @@ test("phone: owner records a Power of Attorney by tapping and links a person", a
   // Choose an existing person: the role is already "Attorney", then a clear confirmation.
   await dialog.getByRole("button", { name: /Choose from People/i }).first().tap();
   await dialog.locator("button[aria-pressed]").filter({ hasText: /Select person|Selected/ }).first().tap();
-  await dialog.getByRole("button", { name: /Save person and relationship/i }).tap();
+  await dialog.getByRole("button", { name: /Add as Attorney/i }).tap();
   await expect(dialog).toContainText(/added as Attorney/i, { timeout: 20_000 });
   await expect(dialog.getByRole("button", { name: /Not now|Done/i }).or(dialog.getByRole("link", { name: /Add their email/i })).first()).toBeVisible();
   log(`confirmation: ${(await dialog.innerText()).replace(/\s+/g, " ").slice(0, 200)}`);
