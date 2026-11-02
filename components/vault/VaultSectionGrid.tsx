@@ -24,14 +24,18 @@ export default function VaultSectionGrid({ sections }: { sections: VaultSectionT
       </Link>
       <div className="lf-v52-section-meta">
         <span className="lf-v52-section-meta-primary">
-          <span>{section.count === null ? section.description ?? "Open section" : section.count ? `${section.count} record${section.count === 1 ? "" : "s"}` : "No records yet"}</span>
-          {section.count !== null && section.count > 0 && section.value ? <strong>· {section.value}</strong> : null}
+          <span className="lf-v52-section-count">{countLabel(section)}{section.count !== null && section.count > 0 && section.value ? <strong> · {section.value}</strong> : null}</span>
+          {section.count !== null && section.count > 0 && section.updatedAt ? <span className="lf-v52-section-updated">Updated {formatSectionDate(section.updatedAt)}</span> : null}
         </span>
-        {section.count !== null && section.count > 0 && section.updatedAt ? <span className="lf-v52-section-updated">Updated {formatSectionDate(section.updatedAt)}</span> : null}
-        {section.count === 0 && section.addHref ? <Link href={section.addHref} className="lf-v52-section-add" aria-label={`Add first record in ${section.title}`}><span>Add first record</span><Icon name="add" size={18} /></Link> : null}
+        {section.count === 0 && section.addHref ? <Link href={section.addHref} className="lf-v52-section-add" aria-label={`Add first record in ${section.title}`} title="Add first record"><Icon name="add" size={20} /></Link> : null}
       </div>
     </article>)}
   </div>;
+}
+
+function countLabel(section: VaultSectionTile) {
+  if (section.count === null) return section.description ?? "Open section";
+  return section.count ? `${section.count} record${section.count === 1 ? "" : "s"}` : "No records yet";
 }
 
 function formatSectionDate(value: string) {

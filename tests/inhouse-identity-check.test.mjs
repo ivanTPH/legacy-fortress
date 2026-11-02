@@ -94,3 +94,14 @@ test("death reports and Powers of Attorney need a fresh check that only a person
   assert.match(evidence, /Death report evidence viewed/);
   assert.match(read("lib/estate-lifecycle/service.ts"), /request_evidence\"\) update\.status = \"evidence_required\"/);
 });
+
+test("ID result email: never to synthetic addresses, no photos or scores, says where to look", async () => {
+  const { isDeliverableAddress, renderIdentityResultEmail } = await import("../lib/identity-verification/resultEmail.ts");
+  for (const address of ["a@example.test", "x@example.com", "y@foo.invalid", "nobody", "", null]) assert.equal(isDeliverableAddress(address), false, String(address));
+  assert.equal(isDeliverableAddress("ivan@me.com"), true);
+  const ok = renderIdentityResultEmail("verified", "https://test.mylegacyfortress.com/");
+  assert.match(ok.text, /verified/);
+  assert.match(ok.text, /https:\/\/test\.mylegacyfortress\.com\/profile/);
+  const no = renderIdentityResultEmail("not_verified", "https://test.mylegacyfortress.com");
+  for (const message of [ok, no]) assert.doesNotMatch(`${message.text}${message.html}`, /score|similarity|<img/i);
+});

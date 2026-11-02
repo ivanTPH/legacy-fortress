@@ -21,11 +21,13 @@
 .lf-v52-section-link strong { flex: 1; min-width: 0; overflow-wrap: normal; word-break: normal; font-size: var(--lf-text-section); }
 .lf-v52-section-link > .lf-icon { flex: none; color: var(--lf-text-secondary); }
 .lf-v52-section-meta { display: flex; align-items: center; justify-content: space-between; gap: var(--lf-space-8); min-height: 52px; padding: var(--lf-space-4) var(--lf-space-16); border-top: 1px solid var(--lf-divider); color: var(--lf-text-secondary); font-size: var(--lf-text-min); }
-.lf-v52-section-meta-primary { display: inline-flex; flex-wrap: wrap; min-width: 0; gap: var(--lf-space-4); }
+.lf-v52-section-meta-primary { display: grid; min-width: 0; gap: 2px; }
+.lf-v52-section-count { min-width: 0; overflow-wrap: anywhere; }
 .lf-v52-section-meta-primary strong { color: var(--lf-text); font-weight: 600; }
-.lf-v52-section-updated { flex: none; }
-.lf-v52-section-add { display: inline-flex; align-items: center; justify-content: flex-end; gap: var(--lf-space-4); min-height: 44px; color: var(--lf-link); text-decoration: none; white-space: nowrap; }
-.lf-v52-section-add > .lf-icon { display: none; }
+.lf-v52-section-updated { color: var(--lf-text-tertiary, var(--lf-text-secondary)); font-size: 13px; }
+/* Empty section: muted "No records yet" and a round + (owner decision 2 Nov 2026). */
+.lf-v52-section-add { display: inline-grid; place-items: center; flex: none; width: 40px; height: 40px; border: 1px solid var(--lf-border); border-radius: 999px; background: var(--lf-surface-card, #fff); color: var(--lf-text); text-decoration: none; }
+.lf-v52-section-add:hover { background: var(--lf-interaction-hover, var(--lf-surface-muted)); }
 .lf-v52-section-link:hover { color: var(--lf-link); }
 .lf-v52-section-link:focus-visible, .lf-v52-section-add:focus-visible { outline: 3px solid var(--lf-focus); outline-offset: -3px; }
 .lf-v52-finance-breadcrumb { display: flex; align-items: center; gap: var(--lf-space-8); color: var(--lf-text-secondary); font-size: var(--lf-text-small); }
@@ -119,9 +121,7 @@
   .lf-v52-section-link strong { grid-column: 1 / -1; grid-row: 2; min-width: 0; white-space: normal; overflow-wrap: normal; word-break: normal; }
   .lf-v52-section-meta { min-height: 48px; padding: var(--lf-space-4) var(--lf-space-12); }
   .lf-v52-section-updated { display: none; }
-  .lf-v52-section-add { flex: none; width: 44px; }
-  .lf-v52-section-add > span:not(.lf-icon) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .lf-v52-section-add > .lf-icon { display: inline-flex; }
+  .lf-v52-section-add { width: 44px; height: 44px; }
   .lf-v52-finance-breadcrumb { display: none; }
   .lf-v52-finance-page .lf-v3-page-header-main { align-items: center; flex-direction: row; gap: var(--lf-space-8); }
   .lf-v52-finance-add { width: 44px; padding: 0; }

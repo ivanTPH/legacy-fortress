@@ -46,6 +46,8 @@ export function ReviewerIdentityCheck({ purpose, accessGrantId, invitationId, re
   const [consent, setConsent] = useState(false);
   const [docType, setDocType] = useState<DocType>("passport");
   const [docFile, setDocFile] = useState<File | null>(null);
+  const [docPreview, setDocPreview] = useState<string | null>(null);
+  const [docSaved, setDocSaved] = useState(false);
   const [challenge, setChallenge] = useState<{ id: string; prompt: string } | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -81,6 +83,11 @@ export function ReviewerIdentityCheck({ purpose, accessGrantId, invitationId, re
     finally { setBusy(false); }
   }
 
+  function chooseDocument(file: File | null) {
+    setDocFile(file);
+    setDocPreview((previous) => { if (previous) URL.revokeObjectURL(previous); return file && file.type.startsWith("image/") ? URL.createObjectURL(file) : null; });
+  }
+
   async function uploadDocument() {
     if (!docFile) return;
     setBusy(true); setError("");
@@ -91,6 +98,7 @@ export function ReviewerIdentityCheck({ purpose, accessGrantId, invitationId, re
       form.set("documentType", docType);
       const json = await call(`/api/identity-verification/${requestId}/document`, { method: "POST", body: form });
       if (json.document?.extractionStatus === "failed") throw new Error("identity_evidence_size_invalid");
+      setDocSaved(true);
       setStep("selfie");
     } catch (cause) { setError(friendly(cause)); }
     finally { setBusy(false); }
@@ -126,7 +134,7 @@ export function ReviewerIdentityCheck({ purpose, accessGrantId, invitationId, re
     } finally { setBusy(false); }
   }
 
-  const progress = ["Your document", "A live selfie", "We check"];
+  const progress = ["Document", "Selfie", "Check"];
   const current = step === "document" ? 0 : step === "selfie" ? 1 : step === "waiting" || step === "verified" ? 2 : -1;
 
   return <section className="lf-auth-card lf-trust-card lf-idv">
@@ -138,37 +146,38 @@ export function ReviewerIdentityCheck({ purpose, accessGrantId, invitationId, re
       <h1>{caseRef ? "Confirm it’s you" : "Prove who you are"}</h1>
       {caseRef ? <p>Because this is an important step, we ask for a fresh photo of your ID and a live selfie. A person on our team looks at them before anything changes.</p> : null}
       {step === "failed" ? <p className="lf-va-error" role="alert">Your last check couldn’t be approved. You can try again.</p> : null}
+      <p className="lf-idv-lead">It takes about 3 minutes.</p>
       <ul className="lf-idv-needs">
-        <li><Icon name="badge" size={20} />A passport, driving licence or national ID card</li>
-        <li><Icon name="photo_camera" size={20} />A quick selfie while you follow a simple prompt</li>
-        <li><Icon name="person_search" size={20} />We compare the two automatically. If it isn’t clear, a person on our team checks, usually within one working day</li>
+        <li><Icon name="badge" size={22} />Photograph your passport or driving licence</li>
+        <li><Icon name="photo_camera" size={22} />Take a selfie, turning your head when asked</li>
+        <li><Icon name="notifications" size={22} />We tell you the result by email and in the app</li>
       </ul>
-      <p className="lf-idv-note"><Icon name="info" size={18} />Checking your ID doesn’t give you access to anything. Your photos are used only for this check and deleted once it’s decided.</p>
+      <p className="lf-idv-note"><Icon name="lock" size={18} />Checking your ID doesn’t give you access to anything. Your photos are only used for this check, then deleted.</p>
       <label className="lf-idv-consent"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} /><span>I agree to Legacy Fortress checking my ID using these photos.</span></label>
       {error ? <p className="lf-va-error" role="alert">{error}</p> : null}
       <button className="lf-primary-btn" type="button" disabled={!consent || busy} onClick={() => void start()}>{busy ? "Starting…" : "Start"}</button>
     </> : null}
 
     {step === "document" ? <>
-      <h1>Photograph your document</h1>
+      <h1>Your document</h1>
       <fieldset className="lf-idv-doc-types">
         <legend>Which document?</legend>
         {([["passport", "Passport"], ["driving_licence", "Driving licence"], ["national_identity_document", "National ID card"]] as const).map(([value, label]) => <label key={value} className={docType === value ? "is-selected" : ""}><input type="radio" name="idv-doc" checked={docType === value} onChange={() => setDocType(value)} />{label}</label>)}
       </fieldset>
-      <p className="lf-muted-note">The photo page, flat, in good light, with all four corners showing and no glare.</p>
-      <label className="lf-idv-file">
-        <Icon name="photo_camera" size={22} />
-        <span>{docFile ? docFile.name : "Take a photo or choose one"}</span>
-        <input type="file" accept="image/jpeg,image/png,application/pdf" capture="environment" onChange={(event) => setDocFile(event.currentTarget.files?.[0] ?? null)} />
+      <p className="lf-idv-lead">Photo page, flat, all four corners showing.</p>
+      <label className={`lf-idv-file${docPreview ? " has-preview" : ""}`}>
+        {docPreview ? <><img src={docPreview} alt="Your document photo" /><span className="lf-idv-saved"><Icon name="check_circle" size={18} />Photo taken · tap to retake</span></> : <><Icon name="photo_camera" size={24} /><span>Take a photo</span></>}
+        <input type="file" accept="image/jpeg,image/png,application/pdf" capture="environment" onChange={(event) => chooseDocument(event.currentTarget.files?.[0] ?? null)} />
       </label>
       {error ? <p className="lf-va-error" role="alert">{error}</p> : null}
-      <button className="lf-primary-btn" type="button" disabled={!docFile || busy} onClick={() => void uploadDocument()}>{busy ? "Uploading…" : "Continue"}</button>
+      <button className="lf-primary-btn lf-idv-sticky" type="button" disabled={!docFile || busy} onClick={() => void uploadDocument()}>{busy ? "Uploading…" : "Use this photo"}</button>
     </> : null}
 
     {step === "selfie" ? <>
-      <h1>Take a live selfie</h1>
-      {challenge ? <p className="lf-idv-prompt"><Icon name="360" size={22} /><span>We’ll ask you to <strong>{challenge.prompt.charAt(0).toLowerCase() + challenge.prompt.slice(1)}</strong>. Follow the arrows on screen.</span></p> : <p className="lf-muted-note">Getting your prompt…</p>}
-      <p className="lf-muted-note">Good light, your whole face showing, no glasses or hat if you can. The prompt lasts 15 minutes.</p>
+      {docSaved ? <p className="lf-idv-saved"><Icon name="check_circle" size={18} />Document photo received</p> : null}
+      <h1>Your selfie</h1>
+      <p className="lf-idv-lead">Hold the phone at eye level. Take off glasses if you can. Then follow the arrows.</p>
+      {!challenge ? <p className="lf-muted-note">Getting ready…</p> : null}
       {challenge ? <SelfieCamera busy={busy} order={motionOrder(challenge.prompt)} onCapture={(file, frames) => void uploadSelfie(file, frames)} /> : null}
       {error ? <p className="lf-va-error" role="alert">{error}</p> : null}
     </> : null}
@@ -176,8 +185,9 @@ export function ReviewerIdentityCheck({ purpose, accessGrantId, invitationId, re
     {step === "waiting" ? <>
       <h1>{caseRef ? "Thank you" : "We’re checking your ID"}</h1>
       {caseRef ? <p>A person on our team will look at your photos together with the {caseRef.type === "death_report" ? "death certificate" : "authority"}. If they need anything else, we’ll ask you.</p> : null}
-      <p hidden={Boolean(caseRef)}>We couldn’t confirm it automatically, so a person on our team is comparing your selfie with your document. This usually takes up to one working day. We’ll let you know when it’s done.</p>
-      <p className="lf-idv-note"><Icon name="lock" size={18} />Checking your ID doesn’t give you access to anything. Your photos are deleted once it’s decided.</p>
+      <p className="lf-idv-saved"><Icon name="check_circle" size={18} />Document and selfie received</p>
+      <p hidden={Boolean(caseRef)} className="lf-idv-lead">A person on our team will check your photos, usually within one working day.</p>
+      <p className="lf-idv-lead">We’ll email you and show the result under the bell <Icon name="notifications" size={18} /> and in Settings › Profile.</p>
       {returnTo ? <Link className="lf-primary-btn" href={returnTo}>Continue</Link> : <Link className="lf-primary-btn" href="/dashboard">Back to My Vault</Link>}
     </> : null}
 
@@ -197,7 +207,7 @@ function motionOrder(prompt: string): Array<"left" | "right"> {
 }
 
 type Shot = "straight" | "left" | "right";
-const SHOT_LABEL: Record<Shot, string> = { straight: "Look straight at the camera", left: "Now turn your head to your left", right: "Now turn your head to your right" };
+const SHOT_LABEL: Record<Shot, string> = { straight: "Look straight ahead", left: "Turn to your LEFT", right: "Turn to your RIGHT" };
 
 function SelfieCamera({ busy, order, onCapture }: { busy: boolean; order: Array<"left" | "right">; onCapture: (file: File, frames: Array<{ direction: "left" | "right"; file: File }>) => void }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -205,6 +215,8 @@ function SelfieCamera({ busy, order, onCapture }: { busy: boolean; order: Array<
   const [cameraState, setCameraState] = useState<"off" | "on" | "unavailable">("off");
   const [shot, setShot] = useState<Shot | null>(null);
   const [countdown, setCountdown] = useState(0);
+  const [taken, setTaken] = useState<Array<{ label: string; url: string }>>([]);
+  useEffect(() => () => { taken.forEach((item) => URL.revokeObjectURL(item.url)); }, [taken]);
 
   useEffect(() => () => { streamRef.current?.getTracks().forEach((track) => track.stop()); }, []);
 
@@ -237,12 +249,16 @@ function SelfieCamera({ busy, order, onCapture }: { busy: boolean; order: Array<
   }
 
   async function runSequence() {
+    setTaken([]);
     setShot("straight"); await wait(3);
     const straight = await grab();
+    setTaken((current) => [...current, { label: "Straight", url: URL.createObjectURL(straight) }]);
     const frames: Array<{ direction: "left" | "right"; file: File }> = [];
     for (const direction of order) {
       setShot(direction); await wait(2);
-      frames.push({ direction, file: await grab() });
+      const file = await grab();
+      frames.push({ direction, file });
+      setTaken((current) => [...current, { label: direction === "left" ? "Left" : "Right", url: URL.createObjectURL(file) }]);
     }
     setShot(null);
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -258,8 +274,10 @@ function SelfieCamera({ busy, order, onCapture }: { busy: boolean; order: Array<
         {countdown ? <span>{countdown}</span> : null}
       </div> : null}
     </div>
-    {cameraState === "on" ? <button className="lf-primary-btn" type="button" disabled={busy || shot !== null} onClick={() => void runSequence()}><Icon name="photo_camera" size={18} />{busy ? "Sending…" : shot ? "Hold still…" : "Start"}</button>
-      : cameraState === "off" ? <button className="lf-primary-btn" type="button" onClick={() => void startCamera()}><Icon name="videocam" size={18} />Turn on camera</button>
+    {taken.length ? <ul className="lf-idv-taken" aria-label="Photos taken">{taken.map((item) => <li key={item.label}><img src={item.url} alt={`${item.label} photo`} /><span><Icon name="check_circle" size={14} />{item.label}</span></li>)}</ul> : null}
+    {busy ? <p className="lf-idv-saved" role="status"><Icon name="cloud_upload" size={18} />Photos taken. Sending them securely…</p> : null}
+    {cameraState === "on" ? <button className="lf-primary-btn lf-idv-sticky" type="button" disabled={busy || shot !== null} onClick={() => void runSequence()}><Icon name="photo_camera" size={18} />{busy ? "Sending…" : shot ? "Hold still…" : taken.length ? "Try again" : "Start"}</button>
+      : cameraState === "off" ? <button className="lf-primary-btn lf-idv-sticky" type="button" onClick={() => void startCamera()}><Icon name="videocam" size={18} />Turn on camera</button>
       : <>
         <p className="lf-muted-note">We couldn’t open the camera here. You can take a selfie instead, but then a person checks it, which takes longer.</p>
         <label className="lf-idv-file"><Icon name="photo_camera" size={22} /><span>Take a selfie</span>
