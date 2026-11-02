@@ -122,7 +122,9 @@ test("an existing ID check is reused on acceptance, never for death reports or P
 
 test("a sent invitation is never shown as accepted", async () => {
   const { describeInvitationEvent } = await import("../lib/notifications/invitationEvents.ts");
-  assert.equal(describeInvitationEvent("auth_request_accepted", { contact_email: "a@b.test" }).title, "Invitation sent");
+  assert.equal(describeInvitationEvent("auth_request_accepted", { contact_email: "a@b.test" }).title, "Invite sent");
+  assert.equal(describeInvitationEvent("auth_request_accepted", { contact_email: "a@b.test" }, "Jacqui Yardley").title, "Invite sent to Jacqui");
+  assert.equal(describeInvitationEvent("person_told", { contact_name: "Jacqui" }).title, "Invite sent to Jacqui");
   assert.equal(describeInvitationEvent("accepted").title, "Invitation accepted");
   assert.equal(describeInvitationEvent("failed").kind, "failed");
 });

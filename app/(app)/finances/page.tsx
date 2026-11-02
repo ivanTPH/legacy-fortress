@@ -137,7 +137,7 @@ export default function FinancesOverviewPage() {
       <nav className="lf-v52-finance-breadcrumb" aria-label="Breadcrumb"><Link href="/dashboard">Dashboard</Link><Icon name="chevron_right" size={18} /><span aria-current="page">Finances</span></nav>
     </PageHeader>
     {status ? <p role="alert">{status}</p> : null}
-    {loading ? <p role="status">Loading finance summary…</p> : null}
+    {loading ? <p role="status" className="lf-visually-hidden">Loading finance summary…</p> : null}
     <VaultSectionGrid sections={(viewer.mode === "linked" ? populated : summaries).map((section) => ({
       key: section.href, title: section.title, icon: section.icon, href: section.href,
       count: section.summary.includedCount,

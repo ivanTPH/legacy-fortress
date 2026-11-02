@@ -9315,3 +9315,10 @@ a.lf-pp-item:hover { background: var(--lf-interaction-hover, #F6EFEA); }
 .lf-notifications-undo button { border: 0; background: none; color: inherit; font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
 .lf-notifications-toolbar-actions { display: inline-flex; gap: 8px; }
 @media (prefers-reduced-motion: reduce) { .lf-swipe-row, .lf-swipe-row.is-leaving { transition: none; } }
+
+/* Loading placeholders the same size as what replaces them, so pages don't jump (owner report 2 Nov 2026). */
+.lf-profile-loading { display: grid; gap: 12px; min-height: 560px; align-content: start; }
+.lf-skeleton { display: block; height: 52px; border-radius: 10px; background: linear-gradient(90deg, var(--lf-surface-subtle, #F1ECE7) 0%, var(--lf-surface-muted, #F7F3EF) 50%, var(--lf-surface-subtle, #F1ECE7) 100%); background-size: 200% 100%; animation: lf-skeleton 1.4s ease-in-out infinite; }
+.lf-skeleton.is-photo { width: 96px; height: 96px; border-radius: 999px; }
+@keyframes lf-skeleton { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .lf-skeleton { animation: none; } }

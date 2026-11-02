@@ -19,6 +19,7 @@ type NotificationEvent = {
   link?: string;
   read?: boolean;
   payload?: Record<string, unknown> | null;
+  contact_invitations?: { contact_name?: string | null } | null;
 };
 
 const READ_KEY = "lf:notification-events:read";
@@ -28,7 +29,7 @@ function eventCopy(event: NotificationEvent) {
     const item = describePersonNotification(event.event_type.slice(7), event.owner_name ?? null);
     return { title: item.title, detail: item.detail, href: event.link ?? "/notifications" };
   }
-  const copy = describeInvitationEvent(event.event_type, event.payload ?? null);
+  const copy = describeInvitationEvent(event.event_type, event.payload ?? null, event.contact_invitations?.contact_name ?? null);
   return { title: copy.title, detail: copy.detail, href: copy.kind === "access" ? "/access-sharing" : "/people-access?view=people" };
 }
 
@@ -69,7 +70,7 @@ export default function NotificationBell({ ownerUserId, disabled = false }: { ow
       const [result, personal] = await Promise.all([
         supabase
           .from("invitation_events")
-          .select("id,event_type,created_at,invitation_id,payload")
+          .select("id,event_type,created_at,invitation_id,payload,contact_invitations(contact_name)")
           .eq("owner_user_id", ownerUserId)
           .order("created_at", { ascending: false })
           .limit(8),

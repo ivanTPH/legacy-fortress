@@ -51,7 +51,7 @@ export default function SettingsOverviewPage() {
         // eslint-disable-next-line @next/next/no-img-element
         <img src={profile.avatarUrl} alt="" />
       ) : initials}</span>
-      <span className="lf-v52-settings-profile-copy"><strong>{profile.name}</strong>{profile.email ? <small>{profile.email}</small> : null}<span>Edit profile</span></span>
+      <span className="lf-v52-settings-profile-copy"><strong>{profile.name}</strong><small>{profile.email || "\u00a0"}</small><span>Edit profile</span></span>
       <Icon name="chevron_right" size={20} />
     </Link>
     {GROUPS.map((group) => <section key={group.title} className="lf-v52-settings-group" aria-labelledby={`settings-${group.title.toLowerCase()}`}>
