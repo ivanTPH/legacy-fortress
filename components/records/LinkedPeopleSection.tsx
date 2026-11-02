@@ -33,6 +33,7 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
   const [accessByPerson, setAccessByPerson] = useState<Record<string, LinkedRecordAccessState>>({});
   const [documentTitles, setDocumentTitles] = useState<Record<string, string>>({});
   const [otherRecordCounts, setOtherRecordCounts] = useState<Record<string, number>>({});
+  const [toldMessage, setToldMessage] = useState("");
   const [inviteSentTo, setInviteSentTo] = useState<{ name: string; email: string; accepted: boolean } | null>(null);
   const [mode, setMode] = useState<"closed" | "choose" | "existing" | "new" | "saved" | "inviteSent" | "viewContact" | "confirmInvite" | "reviewSuggestion" | "editRole" | "confirmUnlink" | "discard">("closed");
   const [discardReturnMode, setDiscardReturnMode] = useState<"existing" | "new">("new");
@@ -182,6 +183,7 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
     setContactSearch(""); setRecoveryPersonId(""); setSavedPersonId("");
     setSuggestionId(""); setSuggestionChoice("");
     setManagedLinkId("");
+    setToldMessage("");
   };
   const beginAnotherPerson = () => {
     resetForm();
@@ -374,6 +376,21 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
     } finally { setBusy(false); }
   };
 
+  // Owner decision 2 Nov 2026: ask each time; the message carries no record details.
+  const tellPerson = async () => {
+    const link = links.find((item) => item.person_id === savedPersonId);
+    if (!link) return;
+    setBusy(true); setError("");
+    try {
+      const { data } = await client.auth.getSession();
+      const response = await fetch("/api/record-links/tell", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.session?.access_token ?? ""}` }, body: JSON.stringify({ linkId: link.id }) });
+      const result = (await response.json().catch(() => ({}))) as { ok?: boolean; told?: boolean; emailed?: boolean };
+      if (!response.ok || !result.ok) { setError("We couldn’t send that just now. Try again in a moment."); return; }
+      const first = firstNameOf(saved?.full_name ?? "They");
+      setToldMessage(result.told ? `${first} has been told${result.emailed ? " by email and in the app" : " in the app"}. No details were shared.` : `${first} hasn’t joined yet, so there’s no one to tell.`);
+    } finally { setBusy(false); }
+  };
+
   const closeRowActions = () => setRowActionLinkId("");
   const renderRowActions = (link: LinkedPerson, contact: PeopleContactEntity, mobile: boolean) => <>
     <Link href={buildContactsWorkspaceHref(contact.id)} onClick={mobile ? closeRowActions : undefined}>View / Edit contact</Link>
@@ -505,15 +522,16 @@ export default function LinkedPeopleSection({ ownerUserId, recordId, recordType,
       <span className="lf-linked-people-confirm-icon" aria-hidden="true"><Icon name="check_circle" size={28} /></span>
       <h3>{saved?.full_name ?? "Person"} added as {(() => { const link = links.find((item) => item.person_id === savedPersonId); return link?.role === "Other" ? link.role_other_text || "a linked person" : link?.role || "a linked person"; })()}</h3>
       <p>They’re now listed on {recordLabel}. This doesn’t let them see it.</p>
-      {saved?.invite_status === "accepted" ? <p>{saved.full_name} has already joined Legacy Fortress.</p>
+      {saved?.invite_status === "accepted" ? (toldMessage ? <p role="status"><strong>{toldMessage}</strong></p> : <p><strong>Tell {firstNameOf(saved.full_name)}?</strong> {firstNameOf(saved.full_name)} has joined Legacy Fortress. We can let them know you’ve added them to a record, by email and in the app. The message doesn’t say which record or share anything.</p>)
         : saved?.invite_status === "invite_sent" ? <p><strong>{firstNameOf(saved.full_name)} was invited before</strong> and hasn’t joined yet. You can send the invitation again.</p>
         : saved?.email ? <p><strong>Invite {firstNameOf(saved.full_name)} to join?</strong> The invitation doesn’t mention this document or share anything.</p>
         : <p>Add {firstNameOf(saved?.full_name ?? "their")}’s email if you’d like to invite them later.</p>}
       <div className="lf-linked-people-actions lf-linked-people-confirm-actions">
         {saved?.email && saved.invite_status !== "accepted" ? <button type="button" className="is-primary" onClick={() => { setError(""); setMode("confirmInvite"); }}>{saved.invite_status === "not_invited" ? "Send invitation" : "Resend invitation"}</button>
           : !saved?.email ? <Link className="is-primary" href={buildContactsWorkspaceHref(savedPersonId)}>Add their email</Link>
-          : <button type="button" className="is-primary" onClick={() => resetForm()}>Done</button>}
-        {saved?.invite_status === "accepted" ? null : <button type="button" onClick={() => { resetForm(); setNotice(`${saved?.full_name ?? "Person"} added. Not invited yet. You can invite them from the ⋮ menu.`); }}>Not now</button>}
+          : toldMessage ? <button type="button" className="is-primary" onClick={() => { setToldMessage(""); resetForm(); }}>Done</button>
+          : <button type="button" className="is-primary" disabled={busy} onClick={() => void tellPerson()}>{busy ? "Telling…" : `Tell ${firstNameOf(saved?.full_name ?? "them")}`}</button>}
+        {saved?.invite_status === "accepted" ? (toldMessage ? null : <button type="button" onClick={() => { resetForm(); setNotice(`${saved?.full_name ?? "Person"} added. They weren’t told.`); }}>Not now</button>) : <button type="button" onClick={() => { resetForm(); setNotice(`${saved?.full_name ?? "Person"} added. Not invited yet. You can invite them from the ⋮ menu.`); }}>Not now</button>}
       </div>
     </div> : null}
     {canManage && mode === "viewContact" && saved ? <div className="lf-linked-people-form" role="group" aria-label="Contact details">
