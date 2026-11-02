@@ -6,7 +6,7 @@ import { LFPageHeader } from "../../../../components/ui/LFDesignSystem";
 export function SettingsPageShell({ title, subtitle, children, compact = false }: { title: string; subtitle: string; children: ReactNode; compact?: boolean }) {
   return (
     <div className={compact ? "lf-settings-page-shell lf-v52-settings-compact" : "lf-settings-page-shell"}>
-      <Link href="/settings" className="lf-v52-settings-back"><Icon name="arrow_back" size={20} />Settings</Link>
+      <Link href="/settings" className="lf-v52-settings-back"><Icon name="chevron_left" size={22} />Settings</Link>
       <LFPageHeader title={title} description={compact ? undefined : subtitle} />
       {children}
     </div>

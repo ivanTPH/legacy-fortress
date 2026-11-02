@@ -174,7 +174,7 @@ test("phone: owner pages fit the screen", async ({ browser }) => {
   test.setTimeout(180_000);
   const page = await iphonePage(browser);
   await signIn(page, users[2].email, "/dashboard");
-  for (const path of ["/dashboard", "/finances", "/legal", "/legal/power-of-attorney", "/legal/power-of-attorney?add=1", "/people-access", "/people-access?view=people&add=1", "/profile", "/settings", "/account/security", "/identity/verify"]) {
+  for (const path of ["/dashboard", "/finances", "/legal", "/legal/power-of-attorney", "/legal/power-of-attorney?add=1", "/people-access", "/people-access?view=people&group=trusted_contacts&add=1", "/profile", "/settings", "/account/security", "/identity/verify"]) {
     await page.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(3000);
     const result = await widestOverflow(page);

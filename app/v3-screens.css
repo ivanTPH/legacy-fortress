@@ -384,3 +384,8 @@
 .lf-v52-profile-photo-action { position: absolute; right: 0; bottom: 0; display: grid; place-items: center; width: var(--lf-target-min); height: var(--lf-target-min); padding: 0; border: 2px solid var(--lf-surface-card); border-radius: 50%; background: var(--lf-primary-bg); color: var(--lf-primary-text); cursor: pointer; }
 .lf-v52-profile-photo-action:hover { background: var(--lf-link); }
 .lf-v52-profile-photo-action:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 2px; }
+
+/* Settings sub-pages: one plain "‹ Settings" link like the V5.2 design, not a boxed button.
+   On phones the top bar already shows a back link on pushed pages, so don't repeat it. */
+.lf-v52-settings-back { padding: 0; border: 0; background: none; color: var(--lf-link); font-size: 17px; gap: 2px; }
+@media (max-width: 767px) { body:has(.lf-topbar.is-pushed) .lf-v52-settings-back { display: none; } }

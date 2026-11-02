@@ -4404,7 +4404,7 @@ export default function UniversalRecordWorkspace({
                 Add details or upload a document
               </span>
               <span>
-                For wishes, legal documents, and notes, a written narrative or supporting upload is enough. Monetary values are not required here.
+                A name and a short description is enough. You can upload the document now or later.
               </span>
             </div>
           ) : null}
@@ -7295,9 +7295,11 @@ const fieldStyle: CSSProperties = {
   gap: 6,
 };
 
+// V5.2 forms: labels are readable and dark (owner review 2 Nov 2026: 12px grey looked cramped on phones).
 const labelStyle: CSSProperties = {
-  color: "var(--lf-text-secondary)",
-  fontSize: 12,
+  color: "var(--lf-text)",
+  fontSize: 15,
+  fontWeight: 600,
   display: "inline-flex",
   alignItems: "center",
   gap: 6,
