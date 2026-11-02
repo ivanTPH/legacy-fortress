@@ -486,7 +486,7 @@ export default function ProfilePage() {
       <div id="profile-summary">
       <SettingsCard title="Your details" description="Saved identity and contact details for your Vault.">
         {loading ? (
-          <div style={{ color: "var(--lf-text-secondary)" }}>Loading saved profile...</div>
+          <div className="lf-profile-loading" role="status" aria-busy="true"><span className="lf-visually-hidden">Loading saved profile…</span><span className="lf-skeleton is-photo" /><span className="lf-skeleton" /><span className="lf-skeleton" /><span className="lf-skeleton" /><span className="lf-skeleton" /><span className="lf-skeleton" /></div>
         ) : (
           <div className="lf-v52-profile-summary">
             {!viewer.readOnly ? <button type="button" className="lf-v52-profile-edit" onClick={() => setEditorOpen(true)}><Icon name="edit" size={18} />Edit</button> : null}
