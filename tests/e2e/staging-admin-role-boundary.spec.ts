@@ -174,12 +174,15 @@ test("phone: owner pages fit the screen", async ({ browser }) => {
   test.setTimeout(180_000);
   const page = await iphonePage(browser);
   await signIn(page, users[2].email, "/dashboard");
-  for (const path of ["/dashboard", "/finances", "/legal", "/legal/power-of-attorney", "/legal/power-of-attorney?add=1", "/people-access", "/profile", "/settings", "/identity/verify"]) {
+  for (const path of ["/dashboard", "/finances", "/legal", "/legal/power-of-attorney", "/legal/power-of-attorney?add=1", "/people-access", "/people-access?view=people&add=1", "/profile", "/settings", "/account/security", "/identity/verify"]) {
     await page.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(3000);
     const result = await widestOverflow(page);
     // Content can be clipped (overflow hidden) without the page scrolling, so list anything past the edge.
     console.log(`Phone-fit: ${path} ${result.offenders.length ? `CUT OFF (page ${result.scrollWidth}px/${result.width}px): ${result.offenders.join("; ")}` : "fits"}`);
+    // A small screenshot in the log for visual review against the design (synthetic account only).
+    const shot = await page.screenshot({ type: "jpeg", quality: 45, scale: "css" }).catch(() => null);
+    if (shot) console.log(`Phone-shot: ${path} ${shot.toString("base64")}`);
   }
   await page.context().close();
 });
