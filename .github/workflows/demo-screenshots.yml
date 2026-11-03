@@ -1,0 +1,43 @@
+name: TEST demo screenshots
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: legacy-fortress-staging
+  cancel-in-progress: false
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    environment: legacy-fortress-staging
+    steps:
+      - name: Confirm staging branch
+        run: test "${GITHUB_REF_NAME}" = "hosted-uat-preparation-20260715"
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Photograph a synthetic demo account
+        env:
+          PLAYWRIGHT_BASE_URL: https://test.mylegacyfortress.com
+          NEXT_PUBLIC_SUPABASE_URL: https://supabase-test.mylegacyfortress.com
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+          LEGACY_FORTRESS_ALLOW_STAGING_BROWSER: "true"
+        run: |
+          npx playwright install --with-deps chromium
+          npx playwright test tests/e2e/staging-demo-screenshots.spec.ts --project=desktop-chromium --retries=0
+      - name: Keep the screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-screenshots
+          path: test-results/demo-shots/
+          retention-days: 7
