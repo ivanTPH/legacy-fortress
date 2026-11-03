@@ -5,8 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { waitForActiveUser } from "@/lib/auth/session";
-import AdminStatusBadge from "@/components/admin/prototype/AdminStatusBadge";
-import { AdminFilterChips, AdminStatStrip, AdminStatusBadge as StatusChip } from "@/components/admin/AdminPrimitives";
+import { AdminFilterChips, AdminNote, AdminStatStrip, AdminStatusBadge as StatusChip } from "@/components/admin/AdminPrimitives";
 import Icon from "@/components/ui/Icon";
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell";
 import { PLATFORM_ADMIN_NAVIGATION, filterAdminNavigation } from "@/components/admin/adminNavigation";
@@ -97,6 +96,7 @@ export default function PlatformOrganisationControlCentre({ organisationId }: { 
   const [licenceForm, setLicenceForm] = useState({ licencePlan: "starter", startDate: TODAY, renewalDate: nextYearDate(), purchasedSeats: "10", licenceStatus: "pending_approval", billingStatus: "not_configured" });
   const [inviteForm, setInviteForm] = useState({ email: "", fullName: "", expiryDays: "14", requireMfa: true });
   const [saving, setSaving] = useState(false);
+  const [reason, setReason] = useState("");
 
   const authFetch = useCallback(async (input: string, init?: RequestInit) => {
     const sessionRes = await supabase.auth.getSession();
@@ -138,13 +138,13 @@ export default function PlatformOrganisationControlCentre({ organisationId }: { 
 
   function closeDialogs() { setFormOpen(false); setEditOpen(false); setLicenceOpen(false); setInviteOpen(false); setConfirmState(null); }
 
-  async function runAction(action: string, payload: Record<string, unknown>): Promise<Record<string, unknown> | false> {
+  async function runAction(action: string, payload: Record<string, unknown>, doneMessage = "Saved. The change is in the audit log."): Promise<Record<string, unknown> | false> {
     setSaving(true); setMessage("");
     try {
       const response = await authFetch("/api/internal/admin/enterprise", { method: "POST", body: JSON.stringify({ action, ...payload }) });
       const json = await response.json().catch(() => ({})) as Record<string, unknown>;
       if (!response.ok || json.ok !== true) { setMessage(String(json.message || "The commercial action was blocked.")); return false; }
-      closeDialogs(); await load(); setMessage("Commercial action completed and audit recorded."); return json;
+      closeDialogs(); await load(); setMessage(doneMessage); return json;
     } catch {
       setMessage("The commercial action could not be reached. No change was confirmed.");
       return false;
@@ -188,7 +188,7 @@ export default function PlatformOrganisationControlCentre({ organisationId }: { 
       {editOpen ? <Modal title="Edit organisation" onClose={closeDialogs}><OrganisationForm value={form} onChange={setForm} onSubmit={submitEdit} onCancel={closeDialogs} saving={saving} submitLabel="Save organisation" /></Modal> : null}
       {licenceOpen ? <Modal title="Allocate licence" onClose={closeDialogs}><LicenceForm value={licenceForm} onChange={setLicenceForm} onSubmit={submitLicence} onCancel={closeDialogs} saving={saving} /></Modal> : null}
       {inviteOpen ? <Modal title="Invite organisation administrator" onClose={closeDialogs}><InviteForm value={inviteForm} onChange={setInviteForm} onSubmit={submitInvite} onCancel={closeDialogs} saving={saving} /></Modal> : null}
-      {confirmState ? <Modal title={confirmState === "suspend" ? "Suspend organisation" : "Reactivate organisation"} onClose={closeDialogs}><p>{confirmState === "suspend" ? "Suspension prevents normal organisation operations until reactivated. Customer Personal Vault data is not opened or deleted." : "Reactivation restores the organisation's commercial operating state."}</p><div style={actionRowStyle}><button type="button" onClick={closeDialogs} style={secondaryButtonStyle}>Cancel</button><button type="button" disabled={saving} onClick={() => detail && void runAction("transition_organisation", { organisationId: detail.organisation.id, status: confirmState === "suspend" ? "suspended" : "active", reason: `Platform operator ${confirmState}` })} style={dangerButtonStyle}>{saving ? "Saving..." : confirmState === "suspend" ? "Suspend organisation" : "Reactivate organisation"}</button></div></Modal> : null}
+      {confirmState && detail ? <Modal title={confirmState === "suspend" ? `Suspend ${detail.organisation.name}?` : `Reactivate ${detail.organisation.name}?`} onClose={closeDialogs}><p style={mutedStyle}>{confirmState === "suspend" ? "Members keep their own Vaults but lose organisation access until it’s restored." : "Members get organisation access back. Their own Vaults aren’t affected."}</p><label style={labelStyle}>Reason (Required)<textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={3} maxLength={500} placeholder="Saved to the audit log" /></label><div style={actionRowStyle}><button type="button" onClick={closeDialogs} style={secondaryButtonStyle}>Cancel</button><button type="button" disabled={saving || !reason.trim()} onClick={() => void runAction("transition_organisation", { organisationId: detail.organisation.id, status: confirmState === "suspend" ? "suspended" : "active", reason: reason.trim() }, confirmState === "suspend" ? `${detail.organisation.name} suspended.` : `${detail.organisation.name} reactivated.`)} style={confirmState === "suspend" ? dangerButtonStyle : primaryButtonStyle}>{saving ? "Saving…" : confirmState === "suspend" ? "Suspend organisation" : "Reactivate organisation"}</button></div></Modal> : null}
     </AdminWorkspaceShell>
   );
 
@@ -236,24 +236,90 @@ export default function PlatformOrganisationControlCentre({ organisationId }: { 
 
   function renderDetail() {
     if (!detail) return null;
+    // ADMIN_PARTNER page template + side-panel content (Admin Console › Organisations): key details,
+    // seats, administrators, members and activity. Counts and organisation details only.
     const org = detail.organisation;
     const licence = detail.licences[0];
     const administratorInvitations = detail.invitations.filter((item) => item.roleTemplate === "organisation_admin");
     const activeRegistrationLinks = detail.enrolmentLinks.filter((item) => item.status === "active");
+    const pendingInvitations = detail.invitations.filter((item) => ["draft", "scheduled", "sent", "delivered"].includes(item.status)).length;
     const canSuspend = canManage && ["active", "pending_setup", "pending_administrator_acceptance", "expiring"].includes(org.status);
     const canReactivate = canManage && org.status === "suspended";
-    return <div style={stackStyle}>
-      <Link href="/admin/organisations" style={secondaryLinkStyle}>Back to organisations</Link>
-      <section style={headerRowStyle}><div><p style={eyebrowStyle}>Platform commercial account</p><h2 style={h2Style}>{org.name}</h2><p style={mutedStyle}>{org.legalName}{org.tradingName ? ` · ${org.tradingName}` : ""} · updated {formatDate(org.updatedAt)}</p></div><div style={actionRowStyle}><AdminStatusBadge status={badgeStatus(org.status)} /><AdminStatusBadge status={badgeStatus(org.risk)} /></div></section>
-      <section style={actionRowStyle}><button type="button" style={primaryButtonStyle} disabled={!canManage} onClick={() => { setForm(toForm(org)); setEditOpen(true); }}>Edit organisation</button>{licence ? <Link href={`/admin/licences/${licence.id}`} style={secondaryLinkStyle}>Manage licence</Link> : <button type="button" style={secondaryButtonStyle} disabled={!canCreateLicence} onClick={() => setLicenceOpen(true)}>Allocate licence</button>}<Link href={`/admin/organisations/${org.id}/invitations`} style={secondaryLinkStyle}>Manage administrators</Link>{canInvite ? <button type="button" style={secondaryButtonStyle} disabled={["suspended", "cancelled", "archived"].includes(org.status)} onClick={() => setInviteOpen(true)}>Invite administrator</button> : null}{canSuspend || canReactivate ? <button type="button" style={dangerButtonStyle} onClick={() => setConfirmState(canReactivate ? "reactivate" : "suspend")}>{canReactivate ? "Reactivate" : "Suspend"}</button> : null}</section>
-      <section style={panelStyle}><h3 style={h3Style}>Commercial setup</h3><div style={setupGridStyle}><SetupStep complete={org.status === "active"} label="Organisation active" detail={labelise(org.status)} /><SetupStep complete={Boolean(licence)} label="Licence allocated" detail={licence ? `${licence.purchasedSeats} purchased · ${licence.availableSeats} available` : "Action required"} /><SetupStep complete={Boolean(administratorInvitations.some((item) => item.status === "accepted")) || Boolean(org.nominatedAdminEmail)} label="Administrator assigned" detail={administratorInvitations.length ? `${administratorInvitations.length} invitation${administratorInvitations.length === 1 ? "" : "s"}` : "Action required"} /><SetupStep complete={activeRegistrationLinks.length > 0} label="Registration link active" detail={activeRegistrationLinks.length ? `${activeRegistrationLinks.length} active link${activeRegistrationLinks.length === 1 ? "" : "s"}` : "Managed in Enterprise Operations"} /></div><p style={mutedStyle}>Platform Administration owns commercial setup. Registration links and day-to-day member distribution remain in Enterprise Operations.</p></section>
-      <section style={metricGridStyle}><Metric label="Purchased" value={licence ? String(licence.purchasedSeats) : "0"} /><Metric label="Committed" value={licence ? String(licence.allocatedSeats) : "0"} /><Metric label="Active" value={licence ? String(licence.activeSeats) : "0"} /><Metric label="Invited" value={licence ? String(licence.invitedSeats) : "0"} /><Metric label="Available" value={licence ? String(licence.availableSeats) : "0"} /></section>
-      <section style={twoColumnStyle}><section style={panelStyle}><h3 style={h3Style}>Account details</h3><dl style={definitionGridStyle}><Info label="Organisation type" value={labelise(org.type)} /><Info label="Primary administrator" value={org.nominatedAdminEmail || org.primaryContactEmail || "Not assigned"} /><Info label="Internal account owner" value={org.accountOwner || "Not assigned"} /><Info label="Onboarding" value={labelise(org.onboardingStatus)} /><Info label="Licence status" value={licence ? labelise(licence.status) : "Not configured"} /><Info label="Billing status" value={licence ? labelise(licence.billingStatus) : "Not configured"} /><Info label="Renewal" value={licence ? formatDate(licence.renewalDate) : "Not configured"} /></dl></section><section style={panelStyle}><h3 style={h3Style}>Administrators</h3>{administratorInvitations.length ? administratorInvitations.slice(0, 5).map((item) => <div key={item.id} style={listRowStyle}><strong>{item.fullName || item.email}</strong><span>{item.email} · {labelise(item.status)} · expires {formatDate(item.expiresAt)}</span></div>) : <div style={emptyStyle}><strong>No administrator invitation</strong><span>Invite the primary organisation administrator when ready.</span></div>}<Link href={`/admin/organisations/${org.id}/invitations`} style={secondaryLinkStyle}>Manage administrators and invitation history</Link></section></section>
-      <section style={panelStyle}><h3 style={h3Style}>Registration lifecycle</h3><div style={metricGridStyle}><Metric label="Invitations" value={String(detail.invitations.length)} /><Metric label="Pending invitations" value={String(detail.invitations.filter((item) => ["draft", "scheduled", "sent", "delivered"].includes(item.status)).length)} /><Metric label="Accepted" value={String(detail.invitations.filter((item) => item.status === "accepted").length)} /><Metric label="Active memberships" value={String(detail.memberships.filter((item) => item.status === "active").length)} /><Metric label="Suspended memberships" value={String(detail.memberships.filter((item) => item.status === "suspended").length)} /><Metric label="Claims used" value={String(detail.enrolmentLinks.reduce((sum, item) => sum + item.claimsUsed, 0))} /></div><p style={mutedStyle}>Status-based operational counts only. This page does not measure user engagement or Personal Vault adoption.</p><Link href={`/admin/organisations/${org.id}/invitations`} style={secondaryLinkStyle}>View registration detail</Link></section>
-      <section style={panelStyle}><h3 style={h3Style}>Registration and enrolment</h3>{activeRegistrationLinks.length ? <p style={mutedStyle}>{activeRegistrationLinks.length} active registration link{activeRegistrationLinks.length === 1 ? "" : "s"}; {activeRegistrationLinks.reduce((sum, item) => sum + item.claimsUsed, 0)} claims used.</p> : <p style={mutedStyle}>No active registration link is configured. Link creation and distribution belong in Enterprise Operations.</p>}{canEnterpriseHandoff ? <Link href="/enterprise?tab=registration-links" style={secondaryLinkStyle}>Open Registration links</Link> : <span style={mutedStyle}>Enterprise Operations access is not assigned to this account.</span>}</section>
-      <section style={panelStyle}><h3 style={h3Style}>Enterprise Operations handoff</h3>{canEnterpriseHandoff ? <><p style={mutedStyle}>Day-to-day enrolment links, sponsored users, member operations and organisation reporting remain in the separate Enterprise Operations workspace. Switching workspace preserves the authenticated principal.</p><Link href="/enterprise" style={secondaryLinkStyle}>Open Enterprise Operations</Link></> : <p style={mutedStyle}>Enterprise Operations access is not assigned to this account. Platform review does not change identity or organisation membership.</p>}</section>
-      <section style={panelStyle}><h3 style={h3Style}>Recent activity</h3>{detail.auditEvents.length ? <ol style={activityListStyle}>{detail.auditEvents.slice(0, 10).map((event) => <li key={event.id}><strong>{event.action}</strong><span>{event.result} · {event.actor_email_normalized || "System"}</span><small>{formatDate(event.created_at)}</small></li>)}</ol> : <div style={emptyStyle}><strong>No recent activity</strong><span>Organisation activity will appear here after an audited operation.</span></div>}<Link href={`/admin/audit?resource=organisation:${org.id}`} style={secondaryLinkStyle}>Open Platform Audit</Link></section>
-      {detail.memberships.length ? <section style={panelStyle}><h3 style={h3Style}>Members and sponsored users</h3><p style={mutedStyle}>{detail.memberships.length} membership record{detail.memberships.length === 1 ? "" : "s"}. Personal Vault content is not shown.</p><Link href={`/admin/organisations/${org.id}/users`} style={secondaryLinkStyle}>Open member status</Link></section> : null}
+    const closed = ["suspended", "cancelled", "archived"].includes(org.status);
+    return <div className="lf-admin-detail">
+      <header className="lf-admin-detail-head">
+        <div>
+          <h2>{org.name}</h2>
+          <p>{sentence(org.type)}{org.customerReference ? ` · ${org.customerReference}` : ""} · updated {formatDate(org.updatedAt)}</p>
+        </div>
+        <div className="lf-admin-decision-actions"><StatusChip status={org.status} />{org.risk !== "normal" ? <StatusChip status={org.risk} label={`Risk: ${sentence(org.risk).toLowerCase()}`} /> : null}</div>
+      </header>
+      <AdminStatStrip label="Seats" items={[
+        { label: "Seats bought", value: licence ? licence.purchasedSeats : 0 },
+        { label: "In use", value: licence ? licence.activeSeats : 0 },
+        { label: "Reserved by invitations", value: licence ? licence.invitedSeats : 0 },
+        { label: "Suspended", value: licence ? licence.suspendedSeats : 0 },
+        { label: "Available", value: licence ? licence.availableSeats : 0 },
+      ]} />
+      <div className="lf-admin-detail-grid">
+        <div className="lf-admin-detail-main">
+          <section className="lf-admin-table-card" aria-labelledby="org-details-title">
+            <h2 id="org-details-title">Details</h2>
+            <dl className="lf-admin-keyvalues">
+              <div><dt>Legal name</dt><dd>{org.legalName}{org.tradingName ? <small>Trading as {org.tradingName}</small> : null}</dd></div>
+              <div><dt>Type</dt><dd>{sentence(org.type)}</dd></div>
+              <div><dt>Reference</dt><dd><code>{org.customerReference || org.registrationNumber || org.id}</code></dd></div>
+              <div><dt>Licence</dt><dd>{licence ? <>{sentence(licence.plan)} · {licence.activeSeats} of {licence.purchasedSeats} seats<small>{sentence(licence.status)} · renews {formatDate(licence.renewalDate)}</small></> : "No licence"}</dd></div>
+              <div><dt>Billing</dt><dd>{licence ? sentence(licence.billingStatus) : "Not set up"}</dd></div>
+              <div><dt>Administrator</dt><dd>{org.nominatedAdminName || org.nominatedAdminEmail || "Not invited"}{org.nominatedAdminName && org.nominatedAdminEmail ? <small>{org.nominatedAdminEmail}</small> : null}</dd></div>
+              <div><dt>Primary contact</dt><dd>{org.primaryContactName || org.primaryContactEmail || "Not added"}{org.primaryContactName && org.primaryContactEmail ? <small>{org.primaryContactEmail}</small> : null}</dd></div>
+              <div><dt>Account owner</dt><dd>{org.accountOwner || "Unassigned"}</dd></div>
+              <div><dt>Onboarding</dt><dd>{sentence(org.onboardingStatus)}</dd></div>
+              <div><dt>Risk</dt><dd>{sentence(org.risk)}</dd></div>
+            </dl>
+          </section>
+          <section className="lf-admin-table-card" aria-labelledby="org-admins-title">
+            <h2 id="org-admins-title">Administrators</h2>
+            {administratorInvitations.length ? <ul className="lf-admin-plain-list lf-admin-card-list">{administratorInvitations.slice(0, 5).map((item) => <li key={item.id}><strong>{item.fullName || item.email}</strong><small>{item.email} · {sentence(item.status)}{item.status === "accepted" ? "" : ` · expires ${formatDate(item.expiresAt)}`}</small></li>)}</ul>
+              : <div style={emptyStyle}><strong>No administrator yet</strong><span>Invite the organisation’s first administrator. They manage their own team and seats.</span></div>}
+            <p className="lf-admin-card-foot"><Link href={`/admin/organisations/${org.id}/invitations`}>Manage administrators</Link></p>
+          </section>
+          {/* Registration lifecycle. Status-based operational counts only. It does not measure user engagement or Personal Vault adoption. */}
+          <section className="lf-admin-table-card" aria-labelledby="org-members-title">
+            <h2 id="org-members-title">Members and invitations</h2>
+            <dl className="lf-admin-keyvalues">
+              <div><dt>Pending invitations</dt><dd>{pendingInvitations}</dd></div>
+              <div><dt>Accepted</dt><dd>{detail.invitations.filter((item) => item.status === "accepted").length}</dd></div>
+              <div><dt>Active memberships</dt><dd>{detail.memberships.filter((item) => item.status === "active").length}</dd></div>
+              <div><dt>Suspended memberships</dt><dd>{detail.memberships.filter((item) => item.status === "suspended").length}</dd></div>
+              <div><dt>Registration links</dt><dd>{activeRegistrationLinks.length} active<small>Claims used {detail.enrolmentLinks.reduce((sum, item) => sum + item.claimsUsed, 0)}</small></dd></div>
+            </dl>
+            <p className="lf-admin-card-foot">{detail.memberships.length ? <Link href={`/admin/organisations/${org.id}/users`}>Members</Link> : null}{canEnterpriseHandoff ? <Link href="/enterprise?tab=registration-links">Registration links</Link> : null}</p>
+          </section>
+          <details className="lf-admin-table-card lf-admin-history">
+            <summary><h2>Recent activity</h2><span>{detail.auditEvents.length} event{detail.auditEvents.length === 1 ? "" : "s"}</span></summary>
+            {detail.auditEvents.length ? <ol>{detail.auditEvents.slice(0, 10).map((event) => <li key={event.id}><strong>{sentence(event.action.replace(/[._]/g, " "))}</strong><span>{sentence(event.result)} · {event.actor_email_normalized || "System"}</span><small>{formatDateTime(event.created_at)}</small></li>)}</ol>
+              : <p className="lf-admin-muted" style={{ padding: "0 18px 16px" }}>Changes to this organisation will appear here.</p>}
+            <p className="lf-admin-card-foot"><Link href={`/admin/audit?resource=organisation:${org.id}`}>Open audit log</Link></p>
+          </details>
+        </div>
+        <aside className="lf-admin-detail-rail">
+          <section className="lf-admin-table-card lf-admin-form-card" aria-label="Actions">
+            <h2>Actions</h2>
+            {!canManage && !canInvite && !canCreateLicence ? <p className="lf-admin-muted">You can look at this organisation but your role can’t change it.</p> : <>
+              <div className="lf-admin-decision-actions">
+                {canManage ? <button type="button" className="lf-admin-row-button" onClick={() => { setForm(toForm(org)); setEditOpen(true); }}>Edit details</button> : null}
+                {canInvite ? <button type="button" className="lf-admin-row-button" disabled={closed} onClick={() => setInviteOpen(true)}>Invite administrator</button> : null}
+              </div>
+              <div className="lf-admin-decision-footer">
+                {canSuspend || canReactivate ? <button type="button" className={canReactivate ? "lf-admin-row-button" : "lf-admin-danger-button"} onClick={() => { setReason(""); setConfirmState(canReactivate ? "reactivate" : "suspend"); }}>{canReactivate ? "Reactivate" : "Suspend"}</button> : <span />}
+                {licence ? <Link href={`/admin/licences/${licence.id}`} className="lf-admin-primary-button">Manage licence</Link> : canCreateLicence ? <button type="button" className="lf-admin-primary-button" disabled={closed} onClick={() => setLicenceOpen(true)}>Set up licence</button> : null}
+              </div>
+            </>}
+          </section>
+          <AdminNote icon="lock">Only organisation, licence and membership details are shown. Members’ Vaults stay private: no record names, values, notes or documents.</AdminNote>
+        </aside>
+      </div>
     </div>;
   }
 }
@@ -282,57 +348,31 @@ function InviteForm({ value, onChange, onSubmit, onCancel, saving }: { value: In
 }
 
 function Field({ label, value, onChange, required = false, type = "text" }: { label: string; value: string; onChange: (value: string) => void; required?: boolean; type?: string }) { return <label style={labelStyle}>{label}{required ? " *" : ""}<input required={required} type={type} value={value} onChange={(event) => onChange(event.target.value)} /></label>; }
-function Metric({ label, value }: { label: string; value: string }) { return <section style={metricStyle}><span>{label}</span><strong>{value}</strong></section>; }
-function SetupStep({ complete, label, detail }: { complete: boolean; label: string; detail: string }) { return <div style={setupStepStyle}><strong>{complete ? "✓" : "!"} {label}</strong><span>{detail}</span></div>; }
-function Info({ label, value }: { label: string; value: string }) { return <div><dt>{label}</dt><dd>{value}</dd></div>; }
 function toForm(org: Organisation) { return { ...EMPTY_FORM, legalName: org.legalName, tradingName: org.tradingName || "", organisationType: org.type, country: org.country, primaryContactName: org.primaryContactName || "", primaryContactEmail: org.primaryContactEmail || "", internalAccountOwner: org.accountOwner || "", registrationNumber: org.registrationNumber || "", customerReference: org.customerReference || "", initialStatus: org.status, riskStatus: org.risk }; }
 function renewalFor(org: Organisation, licences: Licence[]) { return licences.find((licence) => licence.organisationId === org.id)?.renewalDate || ""; }
 function availableFor(org: Organisation, licences: Licence[]) { return licences.find((licence) => licence.organisationId === org.id)?.availableSeats || 0; }
 function sentence(value: string) { const text = String(value || "").replace(/_/g, " ").toLowerCase(); return text.charAt(0).toUpperCase() + text.slice(1); }
 function pluralType(type: string) { const map: Record<string, string> = { employer: "Employers", law_firm: "Law firms", wealth_manager: "Advisers", insurer: "Insurers", funeral_provider: "Funeral providers", employee_benefit_provider: "Benefit providers", enterprise_reseller: "Resellers", other: "Other" }; return map[type] ?? sentence(type); }
 function labelise(value: string) { return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }
+function formatDateTime(value: string) { if (!value) return "Not available"; return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value)); }
 function formatDate(value: string) { if (!value) return "Not available"; return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(value)); }
 function nextYearDate() { const next = new Date(); next.setFullYear(next.getFullYear() + 1); return next.toISOString().slice(0, 10); }
-function badgeStatus(value: string): "Active" | "Suspended" | "Pending" | "Restricted" | "Blocked" | "High" | "Urgent" | "Normal" | "Review" {
-  if (value === "active") return "Active";
-  if (value === "suspended") return "Suspended";
-  if (value === "restricted") return "Restricted";
-  if (value === "critical") return "Urgent";
-  if (value === "at_risk") return "High";
-  if (value === "watch") return "Review";
-  if (["cancelled", "archived"].includes(value)) return "Blocked";
-  if (["draft", "pending_setup", "pending_administrator_acceptance", "expiring"].includes(value)) return "Pending";
-  return "Normal";
-}
 
 const pageStyle: CSSProperties = { minHeight: "100vh", background: "var(--lf-surface-page)", padding: 24 };
 const panelStyle: CSSProperties = { border: "1px solid var(--lf-border)", borderRadius: 12, padding: 20, background: "var(--lf-surface-card)", display: "grid", gap: 12 };
 const stackStyle: CSSProperties = { display: "grid", gap: 16 };
 const eyebrowStyle: CSSProperties = { margin: 0, color: "var(--lf-text-secondary)", fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.04em" };
 const h2Style: CSSProperties = { margin: 0, color: "var(--lf-text)", fontSize: 24 };
-const h3Style: CSSProperties = { margin: 0, color: "var(--lf-text)", fontSize: 17 };
 const mutedStyle: CSSProperties = { margin: 0, color: "var(--lf-text-secondary)", lineHeight: 1.5 };
-const headerRowStyle: CSSProperties = { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" };
-const metricGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 };
-const setupGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10 };
-const setupStepStyle: CSSProperties = { display: "grid", gap: 5, padding: 12, border: "1px solid var(--lf-border)", borderRadius: 6, color: "var(--lf-text)" };
-const metricStyle: CSSProperties = { ...panelStyle, gap: 6 };
 const filterStyle: CSSProperties = { ...panelStyle, gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" };
 const formGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 };
-const definitionGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12 };
-const twoColumnStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 };
 const actionRowStyle: CSSProperties = { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" };
-const tableWrapStyle: CSSProperties = { ...panelStyle, overflowX: "auto" };
-const tableStyle: CSSProperties = { width: "100%", minWidth: 820, borderCollapse: "collapse", textAlign: "left", fontSize: 14 };
-const listRowStyle: CSSProperties = { display: "grid", gap: 3, borderTop: "1px solid var(--lf-border)", padding: "10px 0" };
-const activityListStyle: CSSProperties = { display: "grid", gap: 10, margin: 0, paddingLeft: 22 };
 const emptyStyle: CSSProperties = { display: "grid", gap: 5, padding: 18, color: "var(--lf-text-secondary)" };
 const labelStyle: CSSProperties = { display: "grid", gap: 5, color: "var(--lf-text)", fontWeight: 700, fontSize: 13 };
 const checkboxStyle: CSSProperties = { display: "flex", gap: 8, alignItems: "center", color: "var(--lf-text)", fontWeight: 700 };
 const primaryButtonStyle: CSSProperties = { border: 0, borderRadius: 8, padding: "10px 14px", background: "var(--lf-primary-bg)", color: "var(--lf-primary-text)", fontWeight: 700, cursor: "pointer", minHeight: 44, display: "inline-flex", alignItems: "center", gap: 6 };
 const secondaryButtonStyle: CSSProperties = { border: "1px solid var(--lf-border-input)", borderRadius: 8, padding: "10px 13px", background: "var(--lf-surface-card)", color: "var(--lf-text)", fontWeight: 700, cursor: "pointer", minHeight: 44 };
 const dangerButtonStyle: CSSProperties = { border: "1px solid #b91c1c", borderRadius: 6, padding: "9px 13px", background: "var(--lf-surface-card)", color: "var(--lf-status-rejected-text)", fontWeight: 800, cursor: "pointer" };
-const secondaryLinkStyle: CSSProperties = { display: "inline-block", border: "1px solid var(--lf-border-input)", borderRadius: 6, padding: "9px 13px", color: "var(--lf-text)", fontWeight: 700, textDecoration: "none" };
 const alertStyle: CSSProperties = { padding: 12, border: "1px solid #fbbf24", background: "var(--lf-status-pending-bg)", color: "#78350f", borderRadius: 6 };
 const modalBackdropStyle: CSSProperties = { position: "fixed", inset: 0, zIndex: 30, background: "rgba(15, 23, 42, 0.42)", display: "grid", placeItems: "center", padding: 18 };
 const modalStyle: CSSProperties = { width: "min(720px, 100%)", maxHeight: "min(90vh, 760px)", overflow: "auto", background: "var(--lf-surface-card)", borderRadius: 8, padding: 20, boxShadow: "0 20px 60px rgba(15,23,42,.22)", display: "grid", gap: 16 };

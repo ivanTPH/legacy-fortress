@@ -35,8 +35,8 @@ test("control centre exposes only canonical audited commercial actions", () => {
   }
 
   assert.match(controlCentre, /requirement|API enforces/);
-  assert.match(controlCentre, /audit recorded/);
-  assert.match(controlCentre, /Personal Vault content.*excluded|Personal Vault content is not shown/);
+  assert.match(controlCentre, /The change is in the audit log/);
+  assert.match(controlCentre, /Members’ Vaults stay private: no record names, values, notes or documents/);
   assert.doesNotMatch(controlCentre, /service_role|SUPABASE_SERVICE_ROLE_KEY|\.from\(/);
 });
 
@@ -78,25 +78,25 @@ test("dialogs have labelled keyboard and pointer dismissal behavior", () => {
   assert.doesNotMatch(controlCentre, /<h2 id="platform-dialog-title"[^>]*>\{children\}/);
 });
 
-test("platform handoff does not change principal or expose vault content", () => {
+test("organisation detail links to registration links without changing principal or exposing vault content", () => {
   const controlCentre = read("components/admin/PlatformOrganisationControlCentre.tsx");
 
-  assert.match(controlCentre, /Open Enterprise Operations/);
-  assert.match(controlCentre, /does not change identity or organisation membership/);
-  assert.match(controlCentre, /Day-to-day enrolment links/);
-  assert.match(controlCentre, /financial values are excluded/);
-  assert.match(controlCentre, /canEnterpriseHandoff/);
+  assert.match(controlCentre, /canEnterpriseHandoff \? <Link href="\/enterprise\?tab=registration-links"/);
+  assert.match(controlCentre, /Members’ Vaults stay private/);
+  assert.doesNotMatch(controlCentre, /Enterprise Operations handoff|Platform commercial account/);
 });
 
-test("organisation detail exposes commercial setup, administrator and registration workflow state", () => {
+test("organisation detail follows the ADMIN_PARTNER template with a reasoned suspend", () => {
   const controlCentre = read("components/admin/PlatformOrganisationControlCentre.tsx");
-  assert.match(controlCentre, /Commercial setup/);
-  assert.match(controlCentre, /Manage administrators/);
-  assert.match(controlCentre, /Registration and enrolment/);
-  assert.match(controlCentre, /registration-links/);
+  for (const label of ["Seats bought", "Reserved by invitations", "Available", "Administrators", "Manage administrators", "Members and invitations", "Recent activity", "Open audit log", "Set up licence", "Manage licence", "Invite administrator", "Edit details"]) {
+    assert.match(controlCentre, new RegExp(label));
+  }
+  assert.match(controlCentre, /Reason \(Required\)/);
+  assert.match(controlCentre, /disabled=\{saving \|\| !reason\.trim\(\)\}/);
+  assert.match(controlCentre, /reason: reason\.trim\(\)/);
+  assert.match(controlCentre, /Members keep their own Vaults but lose organisation access until it’s restored/);
   assert.match(controlCentre, /activeRegistrationLinks/);
   assert.match(controlCentre, /customerReference: org\.customerReference/);
   assert.match(controlCentre, /initialStatus: org\.status/);
   assert.match(controlCentre, /lf-platform-organisation-cards/);
-  assert.match(controlCentre, /Platform totals/);
 });

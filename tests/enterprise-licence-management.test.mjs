@@ -99,7 +99,7 @@ test("licence UI has operational create, entitlement, renewal and lifecycle surf
     assert.match(portfolio, new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
 
-  assert.match(orgDetail, /Configure licence/);
+  assert.match(orgDetail, /Set up licence/);
   assert.match(orgDetail, /create_licence/);
   assert.match(route, /EnterpriseLicenceDetailWorkspace/);
   assert.match(compatibilityRoute, /redirect\(`\/enterprise\/licences/);

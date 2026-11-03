@@ -1,0 +1,35 @@
+name: Legacy Fortress TEST summary email
+
+# Daily check for summary emails that are due (V5.2 m3). The app decides who is due; on TEST only
+# people who chose a frequency themselves are emailed, and synthetic addresses never are.
+# The request is signed with the server's key; the key itself is never sent.
+on:
+  schedule:
+    - cron: "23 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: legacy-fortress-summary-email
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    environment: legacy-fortress-staging
+    steps:
+      - name: Ask TEST to send due summaries
+        env:
+          SIGNING_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+          BASE_URL: https://test.mylegacyfortress.com
+        run: |
+          set -euo pipefail
+          ts="$(date +%s)"
+          sig="$(printf 'lf-summary-email:%s' "$ts" | openssl dgst -sha256 -hmac "$SIGNING_KEY" -hex | sed 's/^.*= //')"
+          status="$(curl -sS -o result.json -w '%{http_code}' -X POST "$BASE_URL/api/internal/summary-email/run" -H "x-lf-timestamp: $ts" -H "x-lf-signature: $sig")"
+          echo "HTTP $status"
+          # Counts only: considered, sent, skipped.
+          node -e 'const r=require("./result.json"); console.log(JSON.stringify({ok:r.ok,considered:r.considered,sent:r.sent,skipped:r.skipped}))'
+          test "$status" = "200"

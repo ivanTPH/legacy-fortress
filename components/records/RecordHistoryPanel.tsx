@@ -25,7 +25,7 @@ function fieldList(fields: string[]) {
   return names.length <= 3 ? names.join(", ") : `${names.slice(0, 3).join(", ")} and ${names.length - 3} more`;
 }
 
-export function describeEntry(entry: Entry) {
+export function describeEntry(entry: Entry): { icon: string; text: string; chip?: string } {
   const subject = entry.subject ?? "";
   switch (entry.action) {
     case "created": return { icon: "add_circle", text: "Created the record" };
@@ -38,6 +38,11 @@ export function describeEntry(entry: Entry) {
     case "person_unlinked": return { icon: "person_remove", text: subject ? `Unlinked ${subject}` : "Unlinked a person" };
     case "access_given": return { icon: "visibility", text: subject ? `Gave ${subject} access` : "Gave access" };
     case "access_stopped": return { icon: "visibility_off", text: subject ? `Stopped ${subject}’s access` : "Stopped access" };
+    case "suggestion_proposed": return { icon: "edit_note", text: subject ? `Suggested ${subject}` : "Suggested a document", chip: "Pending approval" };
+    case "suggestion_commented": return { icon: "chat", text: subject ? `Commented on ${subject}` : "Commented on a suggestion" };
+    case "suggestion_approved": return { icon: "check", text: subject ? `Approved ${subject}` : "Approved a suggestion", chip: "Approved" };
+    case "suggestion_rejected": return { icon: "close", text: subject ? `Rejected ${subject}` : "Rejected a suggestion", chip: "Rejected" };
+    case "suggestion_withdrawn": return { icon: "undo", text: subject ? `Withdrew ${subject}` : "Withdrew a suggestion" };
     default: return { icon: "history", text: "Updated" };
   }
 }
@@ -90,6 +95,7 @@ export default function RecordHistoryPanel({ recordId }: { recordId: string }) {
         <ol>{entries.map((entry, index) => { const copy = describeEntry(entry); return <li key={index}>
           <span className={`lf-record-history-actor is-${entry.actorKind}`} aria-hidden="true">{entry.actorKind === "system" ? <Icon name="settings" size={16} /> : initials(entry.actorName)}</span>
           <span><strong>{copy.text}</strong><small>{entry.actorName}{entry.actorKind === "system" ? " · applied automatically" : ""} · {formatWhen(entry.at)}</small></span>
+          {copy.chip ? <span className={`lf-sg-chip is-${copy.chip === "Approved" ? "approved" : copy.chip === "Rejected" ? "rejected" : "pending"}`}>{copy.chip}</span> : null}
         </li>; })}</ol>
       </section>
     </div> : null}

@@ -159,7 +159,7 @@ test("enterprise organisation UI exposes operational navigation, create form and
   assert.match(detail, /Reactivate/);
   assert.match(detail, /Archive or delete/);
   assert.match(detail, /auditEvents/);
-  assert.match(detail, /Private customer vault records/);
+  assert.match(detail, /Members’ Vaults stay private/);
   assert.doesNotMatch(workspace, /Static mock data|Prototype session|Northbridge|Harrington|Ledger House|Whitestone/);
 });
 

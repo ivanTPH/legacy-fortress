@@ -95,6 +95,17 @@ test("platform admin remains in admin context while using users, invitations, or
   await page.goto(`${BASE_URL}/admin/organisations/${organisationId}`, { waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL(new RegExp(`/admin/organisations/${organisationId}`));
   await expect(page).not.toHaveURL(/\/enterprise/);
+  // ADMIN_PARTNER organisation detail: seats, details, actions; a reason is needed to suspend.
+  await expect(page.getByRole("heading", { name: "Details", exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Members’ Vaults stay private", { exact: false })).toBeVisible();
+  const desktopShot = await page.screenshot({ type: "jpeg", quality: 45, scale: "css", fullPage: true }).catch(() => null);
+  if (desktopShot) console.log(`Phone-shot: admin-organisation-detail ${desktopShot.toString("base64")}`);
+  const suspend = page.getByRole("button", { name: "Suspend", exact: true });
+  if (await suspend.isVisible().catch(() => false)) {
+    await suspend.click();
+    await expect(page.getByRole("button", { name: "Suspend organisation" })).toBeDisabled();
+    await page.getByRole("button", { name: "Cancel" }).click();
+  }
   await assertAccountMenu(page);
 });
 
@@ -301,11 +312,13 @@ test("phone: sub-pages load without jumping and fit the screen", async ({ browse
   // A record page (the Power of Attorney the earlier test saved).
   await page.goto(`${BASE_URL}/legal/power-of-attorney`, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(2500);
-  const recordHref = await page.locator("a[href*='asset='], a[href*='record=']").first().getAttribute("href", { timeout: 5000 }).catch(() => null);
-  if (recordHref) {
-    await page.goto(`${BASE_URL}${recordHref}`, { waitUntil: "domcontentloaded" }).catch(() => null);
+  // Record rows are buttons that open "?asset=<id>"; read the id rather than clicking so the measurement starts from a fresh load.
+  const recordId = await page.locator("article[data-record-id]").first().getAttribute("data-record-id", { timeout: 8000 }).catch(() => null);
+  if (recordId) {
+    await page.goto(`${BASE_URL}/legal/power-of-attorney?asset=${encodeURIComponent(recordId)}`, { waitUntil: "domcontentloaded" }).catch(() => null);
     await page.waitForTimeout(3000);
-    console.log(`Sub-shift: record page ${await Promise.race([layoutShifts(page), new Promise<string>((resolve) => setTimeout(() => resolve("not measured"), 5000))])}`);
+    const fit = await widestOverflow(page);
+    console.log(`Sub-shift: record page ${await Promise.race([layoutShifts(page), new Promise<string>((resolve) => setTimeout(() => resolve("not measured"), 5000))])}${fit.offenders.length ? ` | CUT OFF: ${fit.offenders.slice(0, 3).join("; ")}` : ""}`);
   } else console.log("Sub-shift: record page not found");
   await page.context().close();
 });

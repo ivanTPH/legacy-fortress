@@ -37,6 +37,7 @@ import {
   type LinkedFortressSummary,
 } from "../../lib/access-control/viewerAccess";
 import { loadMyNominations, type MyNomination } from "../../lib/vaultAccess/vaultAccess";
+import { loadMySuggestions, loadSuggestionTargets } from "../../lib/suggestions/client";
 
 type WorkspaceSwitcherProps = {
   currentPathname: string;
@@ -81,6 +82,7 @@ export default function WorkspaceSwitcher({
   const [session, setSession] = useState<WorkspaceSession | null>(null);
   const [linkedFortresses, setLinkedFortresses] = useState<LinkedFortressSummary[]>([]);
   const [nominations, setNominations] = useState<MyNomination[]>([]);
+  const [suggestionOwners, setSuggestionOwners] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -139,6 +141,12 @@ export default function WorkspaceSwitcher({
       // Nominations for later open nothing; the switcher only shows that they exist (va-r5).
       const nominated = user ? await loadMyNominations(supabase) : [];
       if (mounted) setNominations(nominated.filter((item) => item.status === "active"));
+      // Owners who let this person suggest documents (V5.2 7a). Opens nothing of theirs.
+      const [targets, mine] = user ? await Promise.all([loadSuggestionTargets(supabase), loadMySuggestions(supabase, user.id)]) : [[], []];
+      const owners = new Map<string, string>();
+      for (const target of targets) owners.set(target.owner_user_id, target.owner_name);
+      for (const item of mine) if (!owners.has(item.owner_user_id)) owners.set(item.owner_user_id, "");
+      if (mounted) setSuggestionOwners(Array.from(owners.values()));
     }
 
     void refresh();
@@ -170,6 +178,7 @@ export default function WorkspaceSwitcher({
     : null;
   const hasMultipleContexts = workspaces.length > 1;
   const nominatedOnly = customerOnly ? nominations : [];
+  const suggestionEntry = customerOnly && suggestionOwners.length > 0;
   const singleCustomerContext = customerOnly && !hasMultipleContexts && linkedFortresses.length === 0 && nominatedOnly.length === 0;
   const plainCurrentContext = singleCustomerContext && !founderTestLauncherAvailable && !mobileContextOnly;
   const activeRole = activeWorkspace?.roleContext ?? primaryRole;
@@ -348,6 +357,10 @@ export default function WorkspaceSwitcher({
                   <span><strong>{item.ownerName}</strong><small>You&apos;re nominated · Locked until release</small></span>
                 </Link>
               ))}
+              {suggestionEntry ? <Link href="/suggestions" className="lf-workspace-nominated" onClick={closeAfterSelection}>
+                  <Icon name="edit_note" size={20} />
+                  <span><strong>Suggested documents</strong><small>{suggestionOwners.filter(Boolean).length === 1 ? `For ${suggestionOwners.filter(Boolean)[0]}’s records` : "Documents you’ve sent for approval"}</small></span>
+                </Link> : null}
               <p className="lf-workspace-customer-note">Partner and Admin never appear here. They&apos;re separate sign-ins.</p>
             </div> : workspaces.map((workspace) => (
               <Link

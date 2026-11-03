@@ -56,6 +56,10 @@ import {
   type CanonicalBankTraceEntry,
 } from "../../../lib/devSmoke";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
+import SuggestionReviewDialog from "../../../components/suggestions/SuggestionReviewDialog";
+import { loadPendingSuggestionsForOwner } from "../../../lib/suggestions/client";
+import { buildLinkedContactRecordHref } from "../../../lib/contacts/contactRouting";
+import type { CanonicalContactContext } from "../../../lib/contacts/canonicalContacts";
 import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
 import { applyGuidanceAction, buildGuidanceItems, type GuidanceItem } from "../../../lib/readiness/guidance";
 import { isVaultCategoryEnabled, isVaultSubsectionEnabled, saveVaultPreferences, setVaultApplicability } from "../../../lib/vaultPreferences";
@@ -899,9 +903,32 @@ const legalSummary = useMemo(() => {
     })();
     return () => { active = false; };
   }, [viewer.mode, viewer.sessionUserId]);
+  // Suggested documents waiting for the owner's decision (V5.2 7b): Needs you items, sorted first.
+  const [pendingSuggestions, setPendingSuggestions] = useState<Array<{ id: string; proposerName: string; recordTitle: string }>>([]);
+  const [suggestionsVersion, setSuggestionsVersion] = useState(0);
+  useEffect(() => {
+    let active = true;
+    if (viewer.mode !== "owner" || !viewer.sessionUserId) return;
+    void loadPendingSuggestionsForOwner(supabase, viewer.sessionUserId).then((rows) => {
+      if (active) setPendingSuggestions(rows.map((row) => ({ id: row.id, proposerName: row.proposer_name || "Someone", recordTitle: row.record_title || "a record" })));
+    });
+    return () => { active = false; };
+  }, [viewer.mode, viewer.sessionUserId, suggestionsVersion]);
+  const reviewSuggestionId = actionCentreOnly && viewer.mode === "owner" ? searchParams.get("review") : null;
+  const closeSuggestionReview = useCallback(() => router.replace("/actions"), [router]);
+  const finishSuggestionReview = useCallback(async (message: string, assetId: string | null) => {
+    setSuggestionsVersion((value) => value + 1);
+    setStatus(message);
+    if (assetId) {
+      const asset = await supabase.from("assets").select("id,section_key,category_key").eq("id", assetId).maybeSingle();
+      const href = asset.data ? buildLinkedContactRecordHref({ source_kind: "asset", source_id: asset.data.id, section_key: asset.data.section_key, category_key: asset.data.category_key } as unknown as CanonicalContactContext) : "";
+      if (href) { router.push(href); return; }
+    }
+    router.replace("/actions");
+  }, [router]);
   const actionContext = useMemo(
-    () => (dashboardState.actions.context ? { ...dashboardState.actions.context, earlyAccessRequests } : dashboardState.actions.context),
-    [dashboardState.actions.context, earlyAccessRequests],
+    () => (dashboardState.actions.context ? { ...dashboardState.actions.context, earlyAccessRequests, pendingSuggestions } : dashboardState.actions.context),
+    [dashboardState.actions.context, earlyAccessRequests, pendingSuggestions],
   );
   const actionCentreNeedsYouCount = useMemo(
     () => getActionCentreToDoCount(dashboardState.actions.items, actionContext, guidanceItems),
@@ -1632,6 +1659,7 @@ const legalSummary = useMemo(() => {
           onGuidanceApplicability={handleGuidanceApplicability}
         />}
         {status ? <p role="status" className="lf-action-centre-save-status">{stripStatusPrefix(status)}</p> : null}
+        {reviewSuggestionId && viewer.sessionUserId ? <SuggestionReviewDialog suggestionId={reviewSuggestionId} ownerUserId={viewer.sessionUserId} onClose={closeSuggestionReview} onDecided={(message, assetId) => void finishSuggestionReview(message, assetId)} /> : null}
         {reviewPanel ? <section className="lf-action-centre-follow-up" role="status"><strong>{reviewPanel.title}</strong><p>{reviewPanel.description}</p><button type="button" onClick={() => router.push(reviewPanel.href)}>{reviewPanel.ctaLabel}</button></section> : null}
       </div>
     );
