@@ -1,6 +1,10 @@
 name: TEST demo screenshots
 
+# Runs when ops/demo-screenshots-request.json changes on the TEST branch (manual dispatch only works from main).
 on:
+  push:
+    branches: [hosted-uat-preparation-20260715]
+    paths: [ops/demo-screenshots-request.json]
   workflow_dispatch:
 
 permissions:
