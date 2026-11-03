@@ -19,6 +19,7 @@ test.describe.configure({ mode: "serial" });
 let adminClient: SupabaseClient;
 let organisationId = "";
 const users: Array<{ id: string; email: string }> = [];
+const totpFactors = new Map<string, { id: string; secret: string; lastStep?: number }>();
 
 test.beforeAll(async () => {
   test.skip(!requiredHostedFlag, "Staging browser acceptance requires explicit authorization.");
@@ -168,6 +169,8 @@ test("phone: platform admin and partner pages fit the screen", async ({ browser 
     for (const path of paths) {
       await page.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" }).catch(() => null);
       await page.waitForTimeout(3000);
+      const onSignIn = await page.getByText(/Sign in to (Platform Admin|the partner portal)/).first().isVisible().catch(() => false);
+      expect(onSignIn, `${label} ${path} stuck on staff sign-in`).toBe(false);
       const result = await widestOverflow(page);
       console.log(`Admin-fit: ${label} ${path} ${result.scrollWidth > result.width + 1 ? `TOO WIDE ${result.scrollWidth}px: ${result.offenders.slice(0, 4).join("; ")}` : "fits"}`);
       const shot = await page.screenshot({ type: "jpeg", quality: 40, scale: "css", fullPage: true }).catch(() => null);
@@ -453,11 +456,20 @@ async function signIn(page: Page, email: string, next: string) {
   let session = auth.data.session;
   // Staff portals need a two-step sign-in (authenticator code) when it is enforced.
   if (next.startsWith("/admin") || next.startsWith("/enterprise")) {
-    const enrol = await authClient.auth.mfa.enroll({ factorType: "totp", friendlyName: "Synthetic browser acceptance" });
-    if (!enrol.error && enrol.data) {
-      const verified = await authClient.auth.mfa.challengeAndVerify({ factorId: enrol.data.id, code: totpCode(enrol.data.totp.secret) });
+    // Enrol once per synthetic user, then reuse that authenticator for every later sign-in in this run.
+    let factor = totpFactors.get(email);
+    if (!factor) {
+      const enrol = await authClient.auth.mfa.enroll({ factorType: "totp", friendlyName: `Synthetic browser acceptance ${Date.now()}` });
+      if (!enrol.error && enrol.data) { factor = { id: enrol.data.id, secret: enrol.data.totp.secret }; totpFactors.set(email, factor); }
+    }
+    if (factor) {
+      // A code can't be used twice: wait for the next 30-second code if this one was already used.
+      if (factor.lastStep === Math.floor(Date.now() / 30_000)) await new Promise((resolve) => setTimeout(resolve, 30_000 - (Date.now() % 30_000) + 500));
+      factor.lastStep = Math.floor(Date.now() / 30_000);
+      const verified = await authClient.auth.mfa.challengeAndVerify({ factorId: factor.id, code: totpCode(factor.secret) });
       const upgraded = await authClient.auth.getSession();
       if (!verified.error && upgraded.data.session) session = upgraded.data.session;
+      else console.log(`MFA-diag: ${email.split("@")[0]} ${verified.error?.message ?? "no session"}`);
     }
   }
   await page.context().clearCookies();
