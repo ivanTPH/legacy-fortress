@@ -14,12 +14,14 @@ export type BillingStatus = {
   trialAvailable: boolean;
 };
 
-export type PremiumReason = "records" | "type" | "people" | "storage" | "suggestions" | "weekly";
+export type PremiumReason = "records" | "type" | "sharing" | "nominees" | "people" | "storage" | "suggestions" | "weekly";
 
 export const PREMIUM_SHEET_COPY: Record<PremiumReason, { title: string; body: string }> = {
   records: { title: "Add unlimited records with Premium", body: "You've used your 6 free records. Premium removes the limit, adds 20 GB for documents and lets advisers suggest documents for you to approve." },
   type: { title: "Add all your accounts with Premium", body: "The free plan holds 2 of each kind of record. Premium lets you add every account, pension, policy and property, so nothing is missed." },
-  people: { title: "Share with more people with Premium", body: "The free plan lets you share with one person. Premium lets you add everyone who'll need to help: family, executors and advisers." },
+  people: { title: "Invite more people with Premium", body: "The free plan lets you invite one person, usually the person you nominate for after your death. Premium lets you add everyone who'll need to help: family, executors and advisers." },
+  sharing: { title: "Share records now with Premium", body: "On the free plan, your nominee receives your Vault after your death. Premium lets you share chosen records with people now, while you're here to help, and see when they look." },
+  nominees: { title: "Nominate more people with Premium", body: "The free plan has one nominee for after your death. Premium lets you nominate as many people as you need, each with the records that matter to them." },
   storage: { title: "More room for documents with Premium", body: "You've used your free document space. Premium gives you 20 GB for statements, deeds, policies and photos." },
   suggestions: { title: "Let advisers suggest documents with Premium", body: "With Premium, the people you choose can send you documents for your records. You approve each one first." },
   weekly: { title: "Weekly summaries with Premium", body: "Free members get a monthly summary. Premium adds a weekly summary of what's waiting for you." },
@@ -64,7 +66,19 @@ export function isTypeLimitError(error: unknown) {
   return /PLAN_LIMIT_RECORDS_TYPE/.test(error instanceof Error ? error.message : String(error ?? ""));
 }
 
+/** Which Premium sheet a server plan-limit message calls for, or null when it isn't one. */
+export function planLimitReason(error: unknown): PremiumReason | null {
+  const message = error instanceof Error ? error.message : typeof error === "object" && error && "message" in error ? String((error as { message: unknown }).message) : String(error ?? "");
+  if (/PLAN_LIMIT_SHARING/.test(message)) return "sharing";
+  if (/PLAN_LIMIT_NOMINEES/.test(message)) return "nominees";
+  if (/PLAN_LIMIT_SUGGESTIONS/.test(message)) return "suggestions";
+  if (/PLAN_LIMIT_INVITATIONS/.test(message)) return "people";
+  if (/PLAN_LIMIT_RECORDS_TYPE/.test(message)) return "type";
+  if (/PLAN_LIMIT_RECORDS/.test(message)) return "records";
+  return null;
+}
+
 export function isPlanLimitError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error ?? "");
-  return /PLAN_LIMIT_RECORDS|PLAN_LIMIT_INVITATIONS|Starter plan limit reached|Free plan limit reached/i.test(message) || (error instanceof Error && error.name === "PlanLimitError");
+  return /PLAN_LIMIT_RECORDS|PLAN_LIMIT_INVITATIONS|PLAN_LIMIT_SHARING|PLAN_LIMIT_NOMINEES|PLAN_LIMIT_SUGGESTIONS|Starter plan limit reached|Free plan limit reached/i.test(message) || (error instanceof Error && error.name === "PlanLimitError");
 }

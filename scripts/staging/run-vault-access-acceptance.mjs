@@ -250,7 +250,11 @@ async function main() {
   assert.deepEqual(await visibleAssets(attorney), [], "attorney still sees records after withdrawal");
   results.push("power of attorney: no access until activated, areas only (no Will), withdrawal stops at once");
 
-  // 5. Sharing now: give one record until tomorrow, stop it with a note; Record history shows both.
+  // 5. Sharing now is Premium (owner decision 3 Nov 2026): refused on Free, then allowed once the server
+  // records Premium (here directly for the synthetic owner; in real use only a confirmed Stripe event does).
+  await mustFail(owner.client.from("account_access_grants").update({ permissions_override: { asset_ids: [house] } }).eq("id", attorneyLink.grantId), "share_now_on_free");
+  await must(admin.from("billing_profiles").upsert({ user_id: owner.id, account_plan: "premium", plan_status: "active", plan_source: "manual" }, { onConflict: "user_id" }), "synthetic_premium");
+  // Give one record until tomorrow, stop it with a note; Record history shows both.
   await must(owner.client.from("account_access_grants").update({
     permissions_override: { asset_ids: [house] }, activation_status: "active", ends_at: new Date(Date.now() + 2 * 86400000).toISOString(),
   }).eq("id", attorneyLink.grantId), "share_now");
