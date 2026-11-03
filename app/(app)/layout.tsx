@@ -31,6 +31,7 @@ import WorkspaceSwitcher from "../../components/navigation/WorkspaceSwitcher";
 import FounderTestLauncher, { useFounderTestLauncherAccess } from "../../components/navigation/FounderTestLauncher";
 import WorkspaceAccountLinks from "../../components/navigation/WorkspaceAccountLinks";
 import NotificationBell from "../../components/notifications/NotificationBell";
+import PremiumSheet from "../../components/billing/PremiumSheet";
 import { DEMO_EXPERIENCE_LABEL, DEMO_EXPERIENCE_SUBLABEL, isDemoSessionUser } from "../../lib/demo/config";
 import {
   canViewPath,
@@ -1349,6 +1350,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
           {children}
           </div>
         </main>
+        <PremiumSheet />
         <nav className="lf-mobile-bottom-nav" aria-label="Primary mobile navigation">
           {[
             ["/dashboard", "Home", "home"],

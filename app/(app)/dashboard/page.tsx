@@ -36,6 +36,7 @@ import {
 } from "../../../lib/contacts/canonicalContacts";
 import { savePeopleContact } from "../../../lib/contacts/contactRepository";
 import { getPlanLimitRedirectHref } from "../../../lib/accountPlan";
+import { showPremiumSheet } from "../../../lib/billing/client";
 import { sendContactInvite } from "../../../lib/contacts/sendContactInvite";
 import { loadProfileWorkspace, saveProfileWorkspace } from "../../../lib/profile/workspace";
 import { buildDashboardDiscoveryResults } from "../../../lib/records/discovery";
@@ -1167,6 +1168,7 @@ const legalSummary = useMemo(() => {
     } catch (error) {
       const planHref = getPlanLimitRedirectHref(error);
       if (planHref) {
+        showPremiumSheet("people");
         setDashboardInviteState((current) => ({ ...current, [contact.id]: "plan_limit" }));
         setStatus(`⚠️ ${error instanceof Error ? error.message : "Starter plan limit reached."}`);
         return;

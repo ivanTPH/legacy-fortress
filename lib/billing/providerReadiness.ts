@@ -27,7 +27,7 @@ export const STRIPE_INTEGRATION_READINESS = {
 } as const;
 
 export function getStripeProviderReadiness(env: NodeJS.ProcessEnv = process.env): BillingProviderReadiness {
-  const requiredSecrets = ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_CUSTOMER_PORTAL_URL"];
+  const requiredSecrets = ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"];
   const missingSecrets = requiredSecrets.filter((key) => !env[key]);
   const mode: BillingProviderMode = missingSecrets.length === 0
     ? env.NODE_ENV === "production"
