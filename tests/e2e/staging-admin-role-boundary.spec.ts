@@ -160,20 +160,29 @@ async function widestOverflow(page: Page) {
   });
 }
 
-test("phone: platform admin pages fit the screen", async ({ page }) => {
-  test.setTimeout(150_000);
-  await page.setViewportSize({ width: 390, height: 844 });
-  await signIn(page, users[0].email, "/admin");
-  for (const path of ["/admin", "/admin/verification", "/admin/authorities", "/admin/probate", "/admin/users"]) {
-    await page.goto(`${BASE_URL}${path}`, { waitUntil: "networkidle" }).catch(() => null);
-    await page.waitForTimeout(1500);
-    const result = await widestOverflow(page);
-    notice(`Phone layout ${path}`, result.scrollWidth > result.width + 1
-      ? `too wide: page ${result.scrollWidth}px on a ${result.width}px screen; ${result.offenders.join("; ")}`
-      : `fits (${result.width}px)`);
-  }
+test("phone: platform admin and partner pages fit the screen", async ({ browser }) => {
+  test.setTimeout(420_000);
+  const review = async (email: string, home: string, paths: string[], label: string) => {
+    const page = await iphonePage(browser);
+    await signIn(page, email, home);
+    for (const path of paths) {
+      await page.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" }).catch(() => null);
+      await page.waitForTimeout(3000);
+      const result = await widestOverflow(page);
+      console.log(`Admin-fit: ${label} ${path} ${result.scrollWidth > result.width + 1 ? `TOO WIDE ${result.scrollWidth}px: ${result.offenders.slice(0, 4).join("; ")}` : "fits"}`);
+      const shot = await page.screenshot({ type: "jpeg", quality: 40, scale: "css", fullPage: true }).catch(() => null);
+      if (shot) console.log(`Phone-shot: ${label}${path.replace(/[^a-z0-9]+/gi, "-")} ${shot.toString("base64")}`);
+    }
+    await page.context().close();
+  };
+  await review(users[0].email, "/admin", [
+    "/admin", "/admin/users", "/admin/invitations", "/admin/access", "/admin/support", "/admin/probate", "/admin/verification", "/admin/authorities",
+    "/admin/organisations", `/admin/organisations/${organisationId}`, "/admin/licences", "/admin/audit", "/admin/system-health", "/admin/admin-users", "/admin/settings",
+  ], "admin");
+  await review(users[1].email, "/enterprise", [
+    "/enterprise", "/enterprise?tab=users", "/enterprise?tab=invitations", "/enterprise?tab=registration-links", "/enterprise?tab=reports", `/enterprise/organisations/${organisationId}`,
+  ], "partner");
 });
-
 // iPhone-like page (mobile layout viewport + touch) so pages widen the way Safari does.
 async function iphonePage(browser: import("@playwright/test").Browser) {
   const context = await browser.newContext({ viewport: { width: 390, height: 664 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true,
