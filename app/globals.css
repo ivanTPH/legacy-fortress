@@ -9429,3 +9429,34 @@ a.lf-pp-item:hover { background: var(--lf-interaction-hover, #F6EFEA); }
 .lf-va-also label { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 10px; align-items: start; min-height: 44px; cursor: pointer; }
 .lf-va-also input { width: 20px; height: 20px; margin-top: 2px; }
 .lf-va-also span { display: grid; gap: 2px; } .lf-va-also small { color: var(--lf-text-secondary); font-size: 13px; }
+/* Premium sheet and Billing (plans report, 3 Nov 2026; website artboard Upgrade.dc.html). */
+.lf-premium-backdrop { position: fixed; inset: 0; z-index: 90; display: grid; align-items: end; justify-items: center; background: rgba(31, 23, 21, .45); }
+.lf-premium-sheet { display: flex; flex-direction: column; gap: 14px; width: min(520px, 100%); max-height: 92dvh; overflow-y: auto; box-sizing: border-box; padding: 10px 20px calc(24px + env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; background: var(--lf-surface-card); color: var(--lf-text); }
+@media (min-width: 761px) { .lf-premium-backdrop { align-items: center; } .lf-premium-sheet { border-radius: 22px; padding: 24px 28px 28px; } .lf-premium-grabber { display: none; } }
+.lf-premium-grabber { align-self: center; width: 40px; height: 5px; border-radius: 999px; background: var(--lf-border-control, var(--lf-border)); }
+.lf-premium-badge { align-self: flex-start; padding: 4px 10px; border-radius: 999px; background: var(--lf-surface-tile); font-size: 13px; font-weight: var(--lf-weight-semibold); }
+.lf-premium-sheet h2 { margin: 0; font-size: 24px; line-height: 1.2; outline: none; }
+.lf-premium-body { margin: 0; font-size: 16px; color: var(--lf-text-tertiary, var(--lf-text-secondary)); }
+.lf-premium-options { display: flex; flex-direction: column; gap: 10px; }
+.lf-premium-options button { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; padding: 12px 16px; border: 1px solid var(--lf-border-control, var(--lf-border)); border-radius: 14px; background: var(--lf-surface-card); color: var(--lf-text); font: inherit; text-align: left; cursor: pointer; }
+.lf-premium-options button.is-selected { border: 2px solid var(--lf-primary-bg); }
+.lf-premium-options button > span:first-child { display: grid; gap: 2px; } .lf-premium-options small { color: var(--lf-text-secondary); font-size: 14px; }
+.lf-premium-options button:focus-visible, .lf-premium-primary:focus-visible, .lf-premium-secondary:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: 2px; }
+.lf-premium-dot { flex: none; width: 20px; height: 20px; box-sizing: border-box; border-radius: 999px; border: 2px solid var(--lf-border-input, #8C7F79); }
+.lf-premium-options button.is-selected .lf-premium-dot { border: 6px solid var(--lf-primary-bg); }
+.lf-premium-fine { margin: 0; font-size: 14px; color: var(--lf-text-secondary); }
+.lf-premium-error { margin: 0; color: var(--lf-destructive); font-weight: var(--lf-weight-semibold); font-size: 15px; }
+.lf-premium-primary { min-height: 52px; border: 0; border-radius: 14px; background: var(--lf-primary-bg); color: var(--lf-primary-text); font: inherit; font-size: 17px; font-weight: var(--lf-weight-semibold); cursor: pointer; }
+.lf-premium-primary:disabled { opacity: .55; cursor: not-allowed; }
+.lf-premium-secondary { min-height: 44px; border: 0; background: transparent; color: var(--lf-text); font: inherit; font-size: 16px; font-weight: var(--lf-weight-semibold); cursor: pointer; }
+.lf-premium-safe { display: flex; gap: 8px; align-items: flex-start; margin: 0; font-size: 13px; color: var(--lf-text-secondary); }
+.lf-premium-toast { position: fixed; left: 16px; right: 16px; bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 91; max-width: 520px; margin: 0 auto; padding: 14px 16px; border-radius: 14px; background: var(--lf-primary-bg); color: var(--lf-primary-text); font-size: 15px; }
+.lf-billing-banner { margin: 0 0 12px; padding: 12px 14px; border-radius: 12px; background: var(--lf-surface-tile); font-size: 15px; }
+.lf-billing-banner.is-good { background: var(--lf-status-approved-bg); color: var(--lf-status-approved-text); font-weight: var(--lf-weight-semibold); }
+.lf-billing-banner.is-test { background: var(--lf-status-pending-bg); color: var(--lf-status-pending-text); }
+.lf-billing-card { display: grid; gap: 14px; padding: 16px; }
+.lf-billing-plan { display: flex; align-items: center; gap: 10px; font-size: 20px; }
+.lf-billing-chip { padding: 2px 10px; border-radius: 999px; background: var(--lf-status-approved-bg); color: var(--lf-status-approved-text); font-size: 13px; font-weight: var(--lf-weight-semibold); }
+.lf-billing-muted { margin: 0; color: var(--lf-text-secondary); font-size: 15px; }
+.lf-billing-warn { margin: 0; color: var(--lf-destructive); font-weight: var(--lf-weight-semibold); }
+.lf-billing-list { margin: 0; padding-left: 20px; display: grid; gap: 6px; }

@@ -7,7 +7,6 @@ export const publicEnv = {
 export const recommendedServerEnv = [
   "STRIPE_SECRET_KEY",
   "STRIPE_WEBHOOK_SECRET",
-  "STRIPE_CUSTOMER_PORTAL_URL",
   "SUPABASE_SERVICE_ROLE_KEY",
   "AUTH_PROVIDER_ISSUER",
   "AUTH_PROVIDER_JWKS_URL",

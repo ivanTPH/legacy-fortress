@@ -23,25 +23,24 @@ test("profile and account settings have separate canonical destinations", () => 
   assert.match(routeManifest, /path: "\/account\/accessibility"/);
 });
 
-test("billing overview formats plan status labels for display text", () => {
+test("billing overview shows plan status as plain words, never raw codes", () => {
   const billingPage = fs.readFileSync(path.join(root, "app/(app)/account/billing/page.tsx"), "utf8");
 
-  assert.match(billingPage, /formatPlanStatusLabel/);
-  assert.match(billingPage, /replace\(\/_\/g, " "\)/);
-  assert.match(billingPage, /replace\(\/\\b\\w\/g/);
+  assert.match(billingPage, /"Free trial"/);
+  assert.match(billingPage, /"Payment due"/);
+  assert.doesNotMatch(billingPage, /\{status\?\.status\}/);
 });
 
-test("billing panel exposes safe test subscription state for plan-limit redirects", () => {
+test("billing page shows the real plan and hands payment to Stripe", () => {
   const billingPage = fs.readFileSync(path.join(root, "app/(app)/account/billing/page.tsx"), "utf8");
   const dashboardPage = fs.readFileSync(path.join(root, "app/(app)/dashboard/page.tsx"), "utf8");
   const portalRoute = fs.readFileSync(path.join(root, "app/api/billing/portal/route.ts"), "utf8");
 
-  assert.match(billingPage, /reason === "plan-limit" \|\| reason === "invite-status"/);
-  assert.match(billingPage, /Test subscription state/);
-  assert.match(billingPage, /Safe test\/admin controls/);
-  assert.match(billingPage, /They do not process payments or expose payment provider data/);
+  assert.match(billingPage, /reason === "plan-limit"/);
+  assert.match(billingPage, /Manage subscription/);
+  assert.match(billingPage, /Your card details never reach Legacy Fortress/);
   assert.match(dashboardPage, /isPlanLimitStatus\(status\)/);
-  assert.match(dashboardPage, /\/account\/billing\?reason=plan-limit/);
-  assert.match(portalRoute, /STRIPE_SECRET_KEY/);
-  assert.match(portalRoute, /Billing portal is not configured/);
+  assert.match(dashboardPage, /showPremiumSheet\("people"\)/);
+  assert.match(portalRoute, /billing_portal\/sessions/);
+  assert.match(portalRoute, /Payments aren’t set up on this server yet|Payments aren't set up on this server yet/);
 });

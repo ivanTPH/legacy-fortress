@@ -137,6 +137,7 @@ import {
 import { useViewerAccess } from "../access/ViewerAccessContext";
 import { canEditAssetForViewer, canEditRecordForViewer, filterAssetIdsForViewer, filterRecordIdsForViewer } from "../../lib/access-control/viewerAccess";
 import { getPlanLimitRedirectHref } from "../../lib/accountPlan";
+import { isPlanLimitError, showPremiumSheet } from "../../lib/billing/client";
 import { getWorkspaceHelpMessage } from "../../lib/workspaceHelp";
 import { resolveProviderLogoPath } from "../../lib/assets/providerLogoPath.mjs";
 import BrandMark from "../ui/BrandMark";
@@ -2652,9 +2653,10 @@ export default function UniversalRecordWorkspace({
       const message = toPlainSaveError(error instanceof Error ? error.message : "Unknown error");
       setSubmitError(message);
       setStatus(`Save failed: ${message}`);
-      const redirectHref = getPlanLimitRedirectHref(error);
-      if (redirectHref) {
-        router.push(redirectHref);
+      // A plan limit opens the Premium sheet in place (never a redirect; Not now keeps the form as it was).
+      if (getPlanLimitRedirectHref(error) || isPlanLimitError(error)) {
+        setSubmitError("You've reached the free plan's record limit. Your other records are safe.");
+        showPremiumSheet("records");
       }
       pushBankSubmitTrace(`createAsset error: ${message}`);
       mergeDevBankContextTrace({
