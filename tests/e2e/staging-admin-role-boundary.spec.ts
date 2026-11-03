@@ -323,6 +323,87 @@ test("phone: sub-pages load without jumping and fit the screen", async ({ browse
   await page.context().close();
 });
 
+test("suggested documents: a connected person suggests, the owner reviews, rejects one and approves one", async ({ browser }) => {
+  test.setTimeout(240_000);
+  const owner = users[2];
+  const adviser = await createUser("adviser");
+  // Synthetic connection: the owner's contact, an active verified connection with no view scope, and permission to suggest for one record.
+  const asset = await adminClient.from("assets").select("id,title").eq("owner_user_id", owner.id).is("deleted_at", null).limit(1).maybeSingle();
+  if (asset.error || !asset.data) throw asset.error ?? new Error("suggestion_test_needs_a_record");
+  const contact = await adminClient.from("contacts").insert({ owner_user_id: owner.id, full_name: "Staging Adviser", linked_user_id: adviser.id }).select("id").single();
+  if (contact.error) throw contact.error;
+  const assurance = await adminClient.from("identity_assurance_states").insert({ user_id: adviser.id, identity_level: 2, provider_key: "staging_synthetic", provider_assurance_class: "level_2_synthetic", verified_at: new Date().toISOString() });
+  if (assurance.error) throw assurance.error;
+  const grant = await adminClient.from("account_access_grants").insert({ owner_user_id: owner.id, linked_user_id: adviser.id, contact_id: contact.data.id, assigned_role: "professional_advisor", activation_status: "active", required_identity_level: 2, permissions_override: {} }).select("id").single();
+  if (grant.error) throw grant.error;
+  const permission = await adminClient.from("record_suggestion_permissions").insert({ owner_user_id: owner.id, grant_id: grant.data.id, asset_id: asset.data.id });
+  if (permission.error) throw permission.error;
+
+  const sessionFor = async (email: string) => {
+    const client = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+    const auth = await client.auth.signInWithPassword({ email, password: PASSWORD });
+    if (auth.error || !auth.data.session) throw auth.error ?? new Error("suggestion_sign_in_failed");
+    return auth.data.session.access_token;
+  };
+  const adviserToken = await sessionFor(adviser.email);
+  const ownerToken = await sessionFor(owner.email);
+  const pdf = new Blob(["%PDF-1.4\n% synthetic staging suggestion\n%%EOF\n"], { type: "application/pdf" });
+  const suggest = async (name: string) => {
+    const form = new FormData();
+    form.set("assetId", asset.data!.id); form.set("note", "Synthetic staging suggestion"); form.set("file", new File([pdf], name, { type: "application/pdf" }));
+    const response = await fetch(`${BASE_URL}/api/suggestions`, { method: "POST", headers: { Authorization: `Bearer ${adviserToken}` }, body: form });
+    const json = await response.json();
+    expect(response.status, JSON.stringify(json)).toBe(200);
+    return String(json.suggestionId);
+  };
+  const toReject = await suggest("staging-reject.pdf");
+  const toApprove = await suggest("staging-approve.pdf");
+
+  // The adviser still can't open the record, and can't decide their own suggestion.
+  const viewing = await fetch(`${SUPABASE_URL}/rest/v1/assets?id=eq.${asset.data.id}&select=id`, { headers: { apikey: ANON_KEY, Authorization: `Bearer ${adviserToken}` } }).then((response) => response.json());
+  expect(viewing).toEqual([]);
+  const selfApprove = await fetch(`${BASE_URL}/api/suggestions/${toApprove}`, { method: "POST", headers: { Authorization: `Bearer ${adviserToken}`, "Content-Type": "application/json" }, body: JSON.stringify({ action: "approve" }) });
+  expect(selfApprove.status).toBe(403);
+
+  // Owner rejects one with a reason.
+  const rejected = await fetch(`${BASE_URL}/api/suggestions/${toReject}`, { method: "POST", headers: { Authorization: `Bearer ${ownerToken}`, "Content-Type": "application/json" }, body: JSON.stringify({ action: "reject", reason: "wrong_document", comment: "Synthetic rejection" }) });
+  expect(rejected.status).toBe(200);
+
+  // Owner sees the other in To do and approves it in the review dialog.
+  const page = await iphonePage(browser);
+  await signIn(page, owner.email, "/actions");
+  await expect(page.getByText("Review Staging’s document", { exact: false }).first()).toBeVisible({ timeout: 30_000 });
+  await page.goto(`${BASE_URL}/actions?review=${toApprove}`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("dialog", { name: "Review document" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("Nothing else on", { exact: false })).toBeVisible();
+  const reviewShot = await page.screenshot({ type: "jpeg", quality: 45, scale: "css" }).catch(() => null);
+  if (reviewShot) console.log(`Phone-shot: suggestion-review ${reviewShot.toString("base64")}`);
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Review document" })).toHaveCount(0, { timeout: 30_000 });
+  await page.context().close();
+
+  const rows = await adminClient.from("record_suggestions").select("id,status,applied_document_id,file_removed_at").in("id", [toReject, toApprove]);
+  const byId = new Map((rows.data ?? []).map((row) => [row.id, row]));
+  expect(byId.get(toReject)?.status).toBe("rejected");
+  expect(byId.get(toReject)?.file_removed_at).toBeTruthy();
+  expect(byId.get(toApprove)?.status).toBe("applied");
+  const documentId = byId.get(toApprove)?.applied_document_id as string;
+  const doc = await adminClient.from("documents").select("id,storage_path,asset_id").eq("id", documentId).single();
+  expect(doc.data?.asset_id).toBe(asset.data.id);
+  const history = await adminClient.from("record_history").select("action,actor_kind").eq("record_id", asset.data.id).in("action", ["suggestion_proposed", "suggestion_rejected", "suggestion_approved", "document_added"]);
+  const seen = new Set((history.data ?? []).map((row) => `${row.action}:${row.actor_kind}`));
+  for (const entry of ["suggestion_proposed:person", "suggestion_rejected:owner", "suggestion_approved:owner", "document_added:system"]) expect(seen.has(entry), entry).toBe(true);
+  const audit = await adminClient.from("audit_events").select("action").eq("category", "vault_audit").eq("resource_id", toApprove);
+  console.log(`Suggestion-audit: ${(audit.data ?? []).map((row) => row.action).sort().join(",") || "none yet"}`);
+
+  // Clean up the synthetic document and its file; the rest goes with the synthetic users.
+  if (doc.data?.storage_path) await adminClient.storage.from("vault-docs").remove([doc.data.storage_path]);
+  await adminClient.from("documents").delete().eq("id", documentId);
+  await adminClient.from("record_suggestion_permissions").delete().eq("grant_id", grant.data.id);
+  await adminClient.from("account_access_grants").delete().eq("id", grant.data.id);
+  await adminClient.from("contacts").delete().eq("id", contact.data.id);
+});
+
 async function createUser(role: string) {
   const email = `${RUN_MARKER}-${role}@example.test`;
   const result = await adminClient.auth.admin.createUser({ email, password: PASSWORD, email_confirm: true, user_metadata: { full_name: `Staging ${role} Admin` } });

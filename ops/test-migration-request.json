@@ -1,10 +1,8 @@
 {
-  "approvedBy": "Ivan (owner), 3 Nov 2026: apply all three to TEST — suggested documents for people the owner shares with, synced cleared notifications, and the summary email (TEST emails only people who chose a frequency)",
+  "approvedBy": "Ivan (owner), 3 Nov 2026: audit trail of who is connected, documents uploaded and approval actions, in the append-only audit log without record content",
   "mode": "apply",
-  "attempt": 17,
+  "attempt": 18,
   "files": [
-    { "file": "20261103120000_record_suggestions.sql", "sha256": "18a4981386f16a251a67d72c840a52033f04a9738ac1879c36682044adb66f28" },
-    { "file": "20261103130000_notification_clears.sql", "sha256": "fc85041744b8597ae578fc8aaa859fa2ddb06e68df6a8269a31afec58eaf3294" },
-    { "file": "20261103140000_summary_email.sql", "sha256": "7026886e85c096e7529d3c784dfc0486ff9cdd4c515d7dfcac78d9a6d941d52b" }
+    { "file": "20261103150000_audit_trail_coverage.sql", "sha256": "28c3e5b14f36f3831a322f3924bdb58d92a365a0ac50251b1ad0559bb8d06813" }
   ]
 }

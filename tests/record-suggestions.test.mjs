@@ -56,3 +56,14 @@ test("owner review follows 7c–7e and the proposer sees only their own suggesti
   assert.match(queue, /Review \$\{first\}’s document/);
   assert.match(queue, /pendingSuggestions/);
 });
+
+test("audit trail covers connections, documents, people linked and approvals without content", () => {
+  const migration = read("supabase/migrations/20261103150000_audit_trail_coverage.sql");
+  for (const trigger of ["contact_invitations_audit_trail", "account_access_grants_connection_audit", "documents_audit_trail", "attachments_audit_trail", "record_links_audit_trail", "record_suggestions_audit_trail", "record_suggestion_comments_audit_trail", "record_suggestion_permissions_audit_trail"]) {
+    assert.match(migration, new RegExp(`CREATE TRIGGER ${trigger}`));
+  }
+  assert.match(migration, /INSERT INTO public\.audit_events/);
+  assert.doesNotMatch(migration, /'file_name', |'title', |'full_name', |resource_label/);
+  for (const action of ["suggestion_withdrawn", "access_stopped", "document_added"]) assert.match(migration, new RegExp(`'${action}'`));
+  assert.match(read("components/admin/AdminControlPlaneWorkspace.tsx"), /key: "vaults", label: "Vaults"/);
+});
