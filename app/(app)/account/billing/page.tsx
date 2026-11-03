@@ -76,7 +76,8 @@ function BillingPageContent() {
           </> : <>
             <div className="lf-billing-plan"><strong>Free</strong></div>
             <ul className="lf-billing-list">
-              <li>Up to 25 records</li>
+              <li>2 of each kind of record, up to 6 in all</li>
+              <li>Share with 1 person</li>
               <li>Wills, Power of Attorney, executors and release to your family</li>
               <li>ID checks, two-step sign-in and an audit trail</li>
             </ul>

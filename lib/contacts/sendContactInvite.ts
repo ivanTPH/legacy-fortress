@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AccessActivationStatus, CollaboratorRole } from "../access-control/roles";
 import { createEphemeralBrowserAuthClient } from "../auth/browserAuthClient";
-import { assertOwnerCanSendInvitation, ensureOwnerPlanProfile } from "../accountPlan";
+import { PlanLimitError, STARTER_INVITATION_LIMIT, assertOwnerCanSendInvitation, ensureOwnerPlanProfile } from "../accountPlan";
 import {
   buildCanonicalInvitationProjectionPayload,
 } from "./canonicalContacts";
@@ -55,7 +55,7 @@ export async function sendContactInvite(
       .from("contact_invitations")
       .select("id", { count: "exact", head: true })
       .eq("owner_user_id", input.ownerUserId)
-      .neq("invitation_status", "revoked");
+      .in("invitation_status", ["pending", "accepted"]);
     if (inviteCountRes.error) {
       throw new Error(inviteCountRes.error.message);
     }
@@ -64,7 +64,11 @@ export async function sendContactInvite(
 
   const now = new Date().toISOString();
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-  const invitationId = await resolveContactInvitationId(client, input, now);
+  // The database also enforces the free limit (20261103170000); show it as the same plan-limit message.
+  const invitationId = await resolveContactInvitationId(client, input, now).catch((error: unknown) => {
+    if (/PLAN_LIMIT_INVITATIONS/.test(error instanceof Error ? error.message : String(error))) throw new PlanLimitError("invitation_limit", STARTER_INVITATION_LIMIT);
+    throw error;
+  });
   const token = crypto.randomUUID().replace(/-/g, "");
   const tokenHash = await sha256(token);
   const { data: ownerProfile } = await client

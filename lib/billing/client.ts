@@ -14,11 +14,12 @@ export type BillingStatus = {
   trialAvailable: boolean;
 };
 
-export type PremiumReason = "records" | "people" | "storage" | "suggestions" | "weekly";
+export type PremiumReason = "records" | "type" | "people" | "storage" | "suggestions" | "weekly";
 
 export const PREMIUM_SHEET_COPY: Record<PremiumReason, { title: string; body: string }> = {
-  records: { title: "Add unlimited records with Premium", body: "You've used your 25 free records. Premium removes the limit, adds 20 GB for documents and lets advisers suggest documents for you to approve." },
-  people: { title: "Share with more people with Premium", body: "The free plan lets you share records with a few people at a time. Premium lets you share with as many as you like." },
+  records: { title: "Add unlimited records with Premium", body: "You've used your 6 free records. Premium removes the limit, adds 20 GB for documents and lets advisers suggest documents for you to approve." },
+  type: { title: "Add all your accounts with Premium", body: "The free plan holds 2 of each kind of record. Premium lets you add every account, pension, policy and property, so nothing is missed." },
+  people: { title: "Share with more people with Premium", body: "The free plan lets you share with one person. Premium lets you add everyone who'll need to help: family, executors and advisers." },
   storage: { title: "More room for documents with Premium", body: "You've used your free document space. Premium gives you 20 GB for statements, deeds, policies and photos." },
   suggestions: { title: "Let advisers suggest documents with Premium", body: "With Premium, the people you choose can send you documents for your records. You approve each one first." },
   weekly: { title: "Weekly summaries with Premium", body: "Free members get a monthly summary. Premium adds a weekly summary of what's waiting for you." },
@@ -58,7 +59,12 @@ export async function openBillingPortal() {
   return json?.message ?? "Subscription settings couldn't be opened. Try again.";
 }
 
+/** True when the free plan's 2-of-each-type limit (not the total) was reached. */
+export function isTypeLimitError(error: unknown) {
+  return /PLAN_LIMIT_RECORDS_TYPE/.test(error instanceof Error ? error.message : String(error ?? ""));
+}
+
 export function isPlanLimitError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error ?? "");
-  return /PLAN_LIMIT_RECORDS|Starter plan limit reached|Free plan limit reached/i.test(message) || (error instanceof Error && error.name === "PlanLimitError");
+  return /PLAN_LIMIT_RECORDS|PLAN_LIMIT_INVITATIONS|Starter plan limit reached|Free plan limit reached/i.test(message) || (error instanceof Error && error.name === "PlanLimitError");
 }
