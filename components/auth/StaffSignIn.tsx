@@ -20,6 +20,20 @@ const COPY: Record<Portal, { title: string; badge: string; home: string; footer:
   partner: { title: "Sign in to the partner portal", badge: "PARTNER", home: "/enterprise", footer: "Looking for your own Vault?" },
 };
 
+/** Same window as the server's staff check (lib/admin/access.ts STAFF_SESSION_HOURS). */
+const STAFF_CODE_HOURS = 12;
+
+/**
+ * True only when the last authenticator code was entered within the staff window. Being "aal2" isn't enough:
+ * an older code makes the portal send people back here, and treating it as done looped between the two
+ * (owner report 3 Nov 2026: flashing screen when switching from the Vault).
+ */
+export function staffCodeIsFresh(methods: ReadonlyArray<string | { method?: string; timestamp?: number }> | undefined, now = Date.now()) {
+  const entries = (methods ?? []).filter((entry): entry is { method?: string; timestamp?: number } => typeof entry === "object" && entry !== null);
+  const last = Math.max(0, ...entries.filter((entry) => entry.method === "totp").map((entry) => Number(entry.timestamp ?? 0)));
+  return last > 0 && now - last * 1000 < STAFF_CODE_HOURS * 60 * 60 * 1000;
+}
+
 export function safeNext(value: string | null, portal: Portal) {
   const prefix = portal === "admin" ? "/admin" : "/enterprise";
   return value && value.startsWith(prefix) && !value.startsWith("//") && !value.includes("/sign-in") ? value : prefix;
@@ -42,7 +56,7 @@ export default function StaffSignIn({ portal }: { portal: Portal }) {
 
   async function afterPassword() {
     const level = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (level.data?.currentLevel === "aal2") { finish(); return; }
+    if (level.data?.currentLevel === "aal2" && staffCodeIsFresh(level.data.currentAuthenticationMethods)) { finish(); return; }
     const factors = await supabase.auth.mfa.listFactors();
     const totp = factors.data?.totp?.find((factor) => factor.status === "verified");
     if (totp) { setFactorId(totp.id); setStep("code"); return; }
