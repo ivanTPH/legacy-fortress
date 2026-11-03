@@ -89,6 +89,8 @@ type FormState = {
   expectedUpdatedAt: string;
 };
 
+const TAB_LABELS = { overview: "Overview", licence: "Licence", users: "Team & seats", invitations: "Invitations", audit: "Activity log", settings: "Organisation settings" } as const;
+
 export default function EnterpriseOrganisationDetailWorkspace({ organisationId }: { organisationId: string }) {
   const router = useRouter();
   const [state, setState] = useState<"checking" | "ready" | "denied" | "error">("checking");
@@ -97,7 +99,7 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
   const [navigationCapabilities, setNavigationCapabilities] = useState<string[]>([]);
   const [partnerMode, setPartnerMode] = useState(false);
   const [identity, setIdentity] = useState({ label: "Enterprise user", detail: "" });
-  const [tab, setTab] = useState<"overview" | "licence" | "users" | "invitations" | "adoption" | "consent" | "reports" | "audit" | "settings">("overview");
+  const [tab, setTab] = useState<"overview" | "licence" | "users" | "invitations" | "audit" | "settings">("overview");
   const [form, setForm] = useState<FormState | null>(null);
   const [reason, setReason] = useState("");
   const [inviteFormOpen, setInviteFormOpen] = useState(false);
@@ -217,25 +219,26 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
       workspaceLabel={partnerMode ? "Partner Portal" : "Enterprise operations"}
       eyebrow="Legacy Fortress Enterprise"
       title={org.name}
-      description={`${labelise(org.status)} · ${labelise(org.risk)} · ${org.accountOwner || "No account owner"}`}
+      description="Licence, team and activity for this organisation. Members’ Vaults are never shown."
       currentPathname={`/enterprise/organisations/${organisationId}`}
       navigation={navigation}
       onSignOut={signOut}
       identityLabel={identity.label}
       identityDetail={identity.detail}
-      breadcrumbs={[{ label: "Enterprise operations", href: "/enterprise" }, { label: "Organisations", href: "/enterprise?tab=organisations" }, { label: org.name }]}
+      breadcrumbs={partnerMode ? [{ label: "Overview", href: "/enterprise" }, { label: org.name }] : [{ label: "Commercial", href: "/enterprise" }, { label: "Organisations", href: "/enterprise?tab=organisations" }, { label: org.name }]}
       stagingLabel="STAGING - synthetic test data may be present"
     >
       {message ? <section style={alertStyle}>{message}</section> : null}
       <nav style={tabListStyle} aria-label="Organisation detail navigation">
-        {["overview", "licence", "users", "invitations", "adoption", "consent", "reports", "audit", "settings"].map((item) => (
-          <button key={item} type="button" style={tab === item ? activeTabStyle : tabStyle} onClick={() => setTab(item as typeof tab)}>{labelise(item === "users" ? "users_and_seats" : item)}</button>
+        {/* ADMIN_PARTNER: plain page names; staged sections (adoption, consent, reports) stay off until they exist. */}
+        {(["overview", "licence", "users", "invitations", "audit", "settings"] as const).map((item) => (
+          <button key={item} type="button" aria-pressed={tab === item} style={tab === item ? activeTabStyle : tabStyle} onClick={() => setTab(item)}>{TAB_LABELS[item]}</button>
         ))}
       </nav>
       {tab === "overview" ? (
         <section style={panelStyle}>
           <div style={rowStyle}>
-            <button type="button" style={primaryButtonStyle} onClick={() => setTab("licence")}>{detail.licences.length ? "View licence" : "Configure licence"}</button>
+            <button type="button" style={primaryButtonStyle} onClick={() => setTab("licence")}>{detail.licences.length ? "View licence" : partnerMode ? "Licence" : "Set up licence"}</button>
             {detail.licences[0] ? <Link style={secondaryLinkStyle} href={`/enterprise/licences/${detail.licences[0].id}`}>Manage seats</Link> : null}
           </div>
           <h2>Overview</h2>
@@ -246,14 +249,14 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
             <Info label="Registration" value={org.registrationNumber || "Not set"} />
             <Info label="Primary contact" value={`${org.primaryContactName || "Not set"} · ${org.primaryContactEmail || "No email"}`} />
             <Info label="Telephone" value={org.primaryContactTelephone || "Not set"} />
-            <Info label="Nominated administrator" value={org.nominatedAdminEmail || "No organisation administrator has accepted access."} />
+            <Info label="Administrator" value={org.nominatedAdminEmail || "Not accepted yet"} />
             <Info label="Account owner" value={org.accountOwner || "Unassigned"} />
             <Info label="Onboarding" value={labelise(org.onboardingStatus)} />
-            <Info label="Licence state" value={detail.licences.length ? `${detail.licences.length} configured` : "No licence has been configured for this organisation."} />
-            <Info label="Seats state" value={detail.licences.length ? `${detail.licences.reduce((sum, licence) => sum + licence.activeSeats, 0)} active seats` : "No licence configured"} />
-            <Info label="Recent activity" value={detail.auditEvents[0]?.action || "No activity yet"} />
+            <Info label="Licence" value={detail.licences.length ? `${detail.licences.length} licence${detail.licences.length === 1 ? "" : "s"}` : "No licence"} />
+            <Info label="Seats in use" value={detail.licences.length ? String(detail.licences.reduce((sum, licence) => sum + licence.activeSeats, 0)) : "No licence"} />
+            <Info label="Last activity" value={detail.auditEvents[0] ? `${labelise(detail.auditEvents[0].action.replace(/[._]/g, " "))} · ${formatDate(detail.auditEvents[0].created_at)}` : "No activity yet"} />
           </dl>
-          <p style={privacyStyle}>Private customer vault records, uploaded documents, legal contents and individual financial values are not queried by this workspace.</p>
+          <p style={privacyStyle}>Only organisation, licence and membership details are shown. Members’ Vaults stay private: no record names, values, notes or documents.</p>
         </section>
       ) : null}
       {tab === "licence" ? (
@@ -277,9 +280,11 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
                 </tbody>
               </table>
             </div>
+          ) : partnerMode ? (
+            <p style={mutedStyle}>Your organisation doesn’t have a licence yet. Legacy Fortress sets this up with you; contact your account manager.</p>
           ) : (
             <div style={stackStyle}>
-              <p style={mutedStyle}>No licence has been configured for this organisation.</p>
+              <p style={mutedStyle}>No licence yet.</p>
               <h3>1. Plan</h3>
               <label style={labelStyle}>Licence plan<select value={licenceForm.licencePlan} onChange={(event) => setLicenceForm({ ...licenceForm, licencePlan: event.target.value })}><option value="starter">Starter</option><option value="professional">Professional</option><option value="enterprise">Enterprise</option><option value="custom">Custom</option></select></label>
               {licenceForm.licencePlan === "custom" ? <FormInput label="Custom plan name" required value={licenceForm.customPlanName} onChange={(customPlanName) => setLicenceForm({ ...licenceForm, customPlanName })} /> : null}
@@ -305,16 +310,16 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
       ) : null}
       {tab === "audit" ? (
         <section style={panelStyle}>
-          <h2>Audit</h2>
+          <h2>Activity log</h2>
           <table style={tableStyle}><thead><tr><th>When</th><th>Action</th><th>Result</th><th>Actor role</th></tr></thead><tbody>
-            {detail.auditEvents.map((event) => <tr key={event.id}><td>{formatDate(event.created_at)}</td><td>{event.action}</td><td>{event.result}</td><td>{event.actor_role || "Unknown"}</td></tr>)}
-            {detail.auditEvents.length === 0 ? <tr><td colSpan={4}>No audit events for this organisation yet.</td></tr> : null}
+            {detail.auditEvents.map((event) => <tr key={event.id}><td>{formatDate(event.created_at)}</td><td>{labelise(event.action.replace(/[._]/g, " "))}</td><td>{labelise(event.result)}</td><td>{event.actor_role || "Unknown"}</td></tr>)}
+            {detail.auditEvents.length === 0 ? <tr><td colSpan={4}>Changes to this organisation will appear here.</td></tr> : null}
           </tbody></table>
         </section>
       ) : null}
       {tab === "users" ? (
         <section style={panelStyle}>
-          <h2>Users and seats</h2>
+          <h2>Team & seats</h2>
           <dl style={detailsGridStyle}>
             <Info label="Active members" value={String(detail.memberships.filter((item) => item.status === "active").length)} />
             <Info label="Invited seats" value={String(detail.licences.reduce((sum, licence) => sum + licence.invitedSeats, 0))} />
@@ -345,7 +350,7 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
           <div style={sectionHeaderStyle}>
             <div>
               <h2>Invitations</h2>
-              <p style={mutedStyle}>Current invitations are shown before contextual administrator and user invite controls.</p>
+              <p style={mutedStyle}>People you’ve invited to join this organisation. Accepting reserves a seat; it never shares anyone’s Vault.</p>
             </div>
             <button type="button" style={primaryButtonStyle} onClick={() => setInviteFormOpen(true)}>Invite administrator</button>
           </div>
@@ -400,16 +405,17 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
           <label style={labelStyle}>Risk<select value={form.riskStatus} onChange={(event) => setForm({ ...form, riskStatus: event.target.value })}><option value="normal">Normal</option><option value="watch">Watch</option><option value="at_risk">At risk</option><option value="critical">Critical</option></select></label>
           <label style={labelStyle}>Onboarding<select value={form.onboardingStatus} onChange={(event) => setForm({ ...form, onboardingStatus: event.target.value })}><option value="not_started">Not started</option><option value="pending">Pending</option><option value="in_progress">In progress</option><option value="blocked">Blocked</option><option value="complete">Complete</option></select></label>
           <button type="button" style={primaryButtonStyle} onClick={() => runAction("update_organisation", form)}>Save organisation</button>
-          <h2>Lifecycle</h2>
-          <FormInput label="Reason" value={reason} onChange={setReason} />
+          {partnerMode ? null : <>
+          <h2>Status</h2>
+          <FormInput label="Reason (Required)" required value={reason} onChange={setReason} />
           <div style={rowStyle}>
-            <button type="button" style={secondaryButtonStyle} onClick={() => runAction("transition_organisation", { status: org.status === "suspended" ? "active" : "suspended", reason })}>{org.status === "suspended" ? "Reactivate" : "Suspend"}</button>
-            <button type="button" style={secondaryButtonStyle} onClick={() => runAction("transition_organisation", { status: "expiring", reason })}>Mark expiring</button>
-            <button type="button" style={secondaryButtonStyle} onClick={() => runAction("delete_or_archive_organisation", { reason })}>Archive or delete</button>
+            <button type="button" style={secondaryButtonStyle} disabled={!reason.trim()} onClick={() => runAction("transition_organisation", { status: org.status === "suspended" ? "active" : "suspended", reason })}>{org.status === "suspended" ? "Reactivate" : "Suspend"}</button>
+            <button type="button" style={secondaryButtonStyle} disabled={!reason.trim()} onClick={() => runAction("transition_organisation", { status: "expiring", reason })}>Mark expiring</button>
+            <button type="button" style={secondaryButtonStyle} disabled={!reason.trim()} onClick={() => runAction("delete_or_archive_organisation", { reason })}>Archive or delete</button>
           </div>
+          </>}
         </section>
       ) : null}
-      {!["overview", "licence", "users", "invitations", "audit", "settings"].includes(tab) ? <section style={panelStyle}><h2>{labelise(tab)}</h2><p style={mutedStyle}>This section is staged for a later Enterprise Operations phase. No fabricated operational data is shown.</p></section> : null}
     </AdminWorkspaceShell>
   );
 }

@@ -94,7 +94,7 @@ test("organisation detail moves administrator invitation into a contextual panel
   assert.match(detail, /inviteFormOpen/);
   assert.match(detail, /Invite administrator/);
   assert.match(detail, /aria-label="Invite administrator or user form"/);
-  assert.match(detail, /Current invitations are shown before contextual administrator and user invite controls/);
+  assert.match(detail, /People you’ve invited to join this organisation/);
   assert.match(detail, /setInviteFormOpen\(true\)/);
   assert.match(detail, /setInviteFormOpen\(false\)/);
   assert.match(detail, /supabase\.auth\.signOut\(\)/);

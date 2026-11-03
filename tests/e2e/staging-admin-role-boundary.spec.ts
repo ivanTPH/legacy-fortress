@@ -301,11 +301,13 @@ test("phone: sub-pages load without jumping and fit the screen", async ({ browse
   // A record page (the Power of Attorney the earlier test saved).
   await page.goto(`${BASE_URL}/legal/power-of-attorney`, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(2500);
-  const recordHref = await page.locator("a[href*='asset='], a[href*='record=']").first().getAttribute("href", { timeout: 5000 }).catch(() => null);
-  if (recordHref) {
-    await page.goto(`${BASE_URL}${recordHref}`, { waitUntil: "domcontentloaded" }).catch(() => null);
+  // Record rows are buttons that open "?asset=<id>"; read the id rather than clicking so the measurement starts from a fresh load.
+  const recordId = await page.locator("article[data-record-id]").first().getAttribute("data-record-id", { timeout: 8000 }).catch(() => null);
+  if (recordId) {
+    await page.goto(`${BASE_URL}/legal/power-of-attorney?asset=${encodeURIComponent(recordId)}`, { waitUntil: "domcontentloaded" }).catch(() => null);
     await page.waitForTimeout(3000);
-    console.log(`Sub-shift: record page ${await Promise.race([layoutShifts(page), new Promise<string>((resolve) => setTimeout(() => resolve("not measured"), 5000))])}`);
+    const fit = await widestOverflow(page);
+    console.log(`Sub-shift: record page ${await Promise.race([layoutShifts(page), new Promise<string>((resolve) => setTimeout(() => resolve("not measured"), 5000))])}${fit.offenders.length ? ` | CUT OFF: ${fit.offenders.slice(0, 3).join("; ")}` : ""}`);
   } else console.log("Sub-shift: record page not found");
   await page.context().close();
 });

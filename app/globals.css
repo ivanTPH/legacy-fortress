@@ -8918,6 +8918,12 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-admin-decision-footer { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-top: 12px; border-top: 1px solid var(--lf-border); }
 .lf-admin-danger-button { min-height: 44px; padding: 10px 14px; border: 1px solid var(--lf-border-control, var(--lf-border)); border-radius: 8px; background: var(--lf-surface-card); color: var(--lf-destructive); font: inherit; font-weight: var(--lf-weight-semibold); cursor: pointer; }
 .lf-admin-danger-button:hover { background: var(--lf-surface-hover); }
+/* Organisation detail (ADMIN_PARTNER side-panel content as a page). */
+.lf-admin-card-list { padding: 4px 18px 8px !important; }
+.lf-admin-card-list li { padding: 8px 0; border-top: 1px solid var(--lf-border); } .lf-admin-card-list li:first-child { border-top: 0; }
+.lf-admin-card-foot { display: flex; flex-wrap: wrap; gap: 16px; margin: 0; padding: 10px 18px 16px; border-top: 1px solid var(--lf-border); font-size: var(--lf-text-small); font-weight: var(--lf-weight-semibold); }
+.lf-admin-card-foot:empty { display: none; }
+.lf-admin-keyvalues code { font-family: var(--lf-font-mono, ui-monospace, monospace); font-size: 13px; }
 .lf-admin-plain-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; } .lf-admin-plain-list li { display: grid; gap: 2px; } .lf-admin-plain-list small { color: var(--lf-text-secondary); font-size: 13px; }
 /* People & Access › Vault access (V5.2 Vault Access va-w1–w4). */
 .lf-va { display: grid; gap: 14px; }
