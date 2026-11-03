@@ -1,8 +1,8 @@
 {
-  "approvedBy": "Ivan (owner), 3 Nov 2026: free plan of 2 records of each type, 6 records in total and 1 person, enforced on the server",
+  "approvedBy": "Ivan (owner), 3 Nov 2026: fix - new personal records failed on TEST since 31 Oct (authority sync trigger read a column the records table doesn't have)",
   "mode": "apply",
-  "attempt": 20,
+  "attempt": 21,
   "files": [
-    { "file": "20261103170000_free_plan_limits.sql", "sha256": "15413c389c4a4b1772f0ae3d08c9e0d2b0043134002f5fabc0bc945933c1c53d" }
+    { "file": "20261103180000_fix_authority_record_sync.sql", "sha256": "aed739a414287648296b2e7b1656ce19700be983e8f0701f07c5e20bf4fae327" }
   ]
 }
