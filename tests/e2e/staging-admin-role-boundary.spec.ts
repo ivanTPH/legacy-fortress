@@ -95,6 +95,17 @@ test("platform admin remains in admin context while using users, invitations, or
   await page.goto(`${BASE_URL}/admin/organisations/${organisationId}`, { waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL(new RegExp(`/admin/organisations/${organisationId}`));
   await expect(page).not.toHaveURL(/\/enterprise/);
+  // ADMIN_PARTNER organisation detail: seats, details, actions; a reason is needed to suspend.
+  await expect(page.getByRole("heading", { name: "Details", exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Members’ Vaults stay private", { exact: false })).toBeVisible();
+  const desktopShot = await page.screenshot({ type: "jpeg", quality: 45, scale: "css", fullPage: true }).catch(() => null);
+  if (desktopShot) console.log(`Phone-shot: admin-organisation-detail ${desktopShot.toString("base64")}`);
+  const suspend = page.getByRole("button", { name: "Suspend", exact: true });
+  if (await suspend.isVisible().catch(() => false)) {
+    await suspend.click();
+    await expect(page.getByRole("button", { name: "Suspend organisation" })).toBeDisabled();
+    await page.getByRole("button", { name: "Cancel" }).click();
+  }
   await assertAccountMenu(page);
 });
 
