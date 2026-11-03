@@ -4,9 +4,14 @@ name: Legacy Fortress TEST daily jobs
 # whose deletion failed), then send summary emails that are due (V5.2 m3). On TEST only
 # people who chose a frequency themselves are emailed, and synthetic addresses never are.
 # The request is signed with the server's key; the key itself is never sent.
+# GitHub runs schedules only from the default branch (main), so on the TEST branch this also runs whenever
+# ops/daily-jobs-request.json changes. A daily schedule needs this file on main too (owner decision).
 on:
   schedule:
     - cron: "23 9 * * *"
+  push:
+    branches: [hosted-uat-preparation-20260715]
+    paths: [ops/daily-jobs-request.json]
   workflow_dispatch:
 
 permissions:
