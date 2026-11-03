@@ -2645,8 +2645,10 @@ function renderAudit(events: AuditEvent[], filter: string, setFilter: (value: st
   return <AuditLog events={events} filter={filter} setFilter={setFilter} />;
 }
 
-const AUDIT_SOURCES: Array<{ key: "all" | "admin" | "commercial" | "probate" | "failed"; label: string; matches: (item: AuditEvent) => boolean }> = [
+const AUDIT_SOURCES: Array<{ key: "all" | "admin" | "commercial" | "probate" | "vaults" | "failed"; label: string; matches: (item: AuditEvent) => boolean }> = [
   { key: "all", label: "All sources", matches: () => true },
+  // Connections, documents, people linked and approvals inside customer Vaults (ids and kinds only, never content).
+  { key: "vaults", label: "Vaults", matches: (item) => /^vault/i.test(item.category) },
   { key: "admin", label: "Admin", matches: (item) => /admin|security|support|system/i.test(item.category) },
   { key: "commercial", label: "Commercial", matches: (item) => /enterprise|commercial|organisation|licence/i.test(item.category) },
   { key: "probate", label: "Probate", matches: (item) => /probate|verification|estate/i.test(item.category) },
@@ -2654,7 +2656,7 @@ const AUDIT_SOURCES: Array<{ key: "all" | "admin" | "commercial" | "probate" | "
 ];
 
 function AuditLog({ events, filter, setFilter }: { events: AuditEvent[]; filter: string; setFilter: (value: string) => void }) {
-  const [source, setSource] = useState<"all" | "admin" | "commercial" | "probate" | "failed">("all");
+  const [source, setSource] = useState<"all" | "admin" | "commercial" | "probate" | "vaults" | "failed">("all");
   const normalized = filter.trim().toLowerCase();
   const sourceFilter = AUDIT_SOURCES.find((option) => option.key === source) ?? AUDIT_SOURCES[0];
   const filtered = events
@@ -2674,7 +2676,7 @@ function AuditLog({ events, filter, setFilter }: { events: AuditEvent[]; filter:
           columns={[
             { key: "action", header: "Event", render: (item) => <><span className="lf-admin-cell-title">{sentenceCaseStatus(item.action)}</span><small>{sentenceCaseStatus(item.category)}</small></> },
             { key: "result", header: "Result", render: (item) => <AdminStatusBadge status={item.result} /> },
-            { key: "actor", header: "Who", render: (item) => <>{item.actorEmail ?? "Unknown"}<small>{item.actorRole ? sentenceCaseStatus(item.actorRole) : "–"}</small></> },
+            { key: "actor", header: "Who", render: (item) => <>{item.actorEmail ?? (item.actorRole === "system" ? "System" : "Unknown")}<small>{item.actorRole ? sentenceCaseStatus(item.actorRole) : "–"}</small></> },
             { key: "target", header: "Target", render: (item) => <>{sentenceCaseStatus(item.resourceType)}<small>{item.resourceLabel ?? ""}</small></> },
             { key: "time", header: "Time", render: (item) => formatDate(item.createdAt) },
           ]}

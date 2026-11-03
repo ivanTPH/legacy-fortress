@@ -24,6 +24,9 @@ import {
   loadVaultAccessHistory,
   setVaultAccessEndDate,
   stopVaultAccess,
+  loadRelatedPermissions,
+  removeRelatedPermissions,
+  type RelatedPermissions,
   type VaultAccessHistoryItem,
   answerEarlyAccessRequest,
   loadOpenEarlyAccessRequests,
@@ -581,6 +584,15 @@ function NowAccess({ grant, name, personId, ownerId, onChanged }: { grant: Vault
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [tomorrow] = useState(() => new Date(Date.now() + 86400000).toISOString().slice(0, 10));
+  // Asked when stopping access: also remove their other permissions (owner request 3 Nov 2026).
+  const [related, setRelated] = useState<RelatedPermissions | null>(null);
+  const [alsoRemove, setAlsoRemove] = useState({ suggest: true, links: false, nominations: false });
+  useEffect(() => {
+    let active = true;
+    if (mode !== "stop" || !grant) return;
+    void loadRelatedPermissions(supabase, ownerId, grant.id, personId).then((value) => { if (active) setRelated(value); });
+    return () => { active = false; };
+  }, [grant, mode, ownerId, personId]);
   useEffect(() => {
     let active = true;
     if (!grant) return;
@@ -610,9 +622,21 @@ function NowAccess({ grant, name, personId, ownerId, onChanged }: { grant: Vault
     </dl>
     {mode === "stop" ? <div className="lf-va-step" role="group" aria-label={`Stop ${name}’s access`}>
       <p><strong>Stop {name}’s access?</strong> {name} won’t be able to see {count === 1 ? "this record" : `these ${count} records`} any more. This happens straight away.</p>
+      {related && (related.suggestPermissionIds.length || related.links.length || related.nominationIds.length) ? <fieldset className="lf-va-also">
+        <legend>{name} also has other permissions. Remove these too?</legend>
+        {related.suggestPermissionIds.length ? <label><input type="checkbox" checked={alsoRemove.suggest} onChange={(event) => setAlsoRemove({ ...alsoRemove, suggest: event.target.checked })} /><span><strong>Stop them suggesting documents</strong><small>For {related.suggestPermissionIds.length} record{related.suggestPermissionIds.length === 1 ? "" : "s"}. Suggestions already sent stay for you to decide.</small></span></label> : null}
+        {related.links.length ? <label><input type="checkbox" checked={alsoRemove.links} onChange={(event) => setAlsoRemove({ ...alsoRemove, links: event.target.checked })} /><span><strong>Unlink them from {related.links.length} record{related.links.length === 1 ? "" : "s"}</strong><small>Named as {Array.from(new Set(related.links.map((link) => link.role).filter(Boolean))).join(", ") || "a linked person"}. Unlinking removes their name from the record; documents don’t change.</small></span></label> : null}
+        {related.nominationIds.length ? <label><input type="checkbox" checked={alsoRemove.nominations} onChange={(event) => setAlsoRemove({ ...alsoRemove, nominations: event.target.checked })} /><span><strong>Cancel their nomination for later</strong><small>They wouldn’t see anything after your death or loss of capacity either.</small></span></label> : null}
+      </fieldset> : null}
       <label className="lf-va-field" htmlFor="va-stop-note">Note for your Record history · Optional<input id="va-stop-note" value={note} maxLength={300} onChange={(event) => setNote(event.target.value)} placeholder="For example, changed adviser" /></label>
       {error ? <p className="lf-va-error" role="alert">{error}</p> : null}
-      <div className="lf-va-dialog-footer"><button type="button" className="lf-va-secondary" onClick={() => setMode("")}>Keep access</button><button type="button" className="lf-va-danger" disabled={saving} onClick={() => void run(() => stopVaultAccess(supabase, grant.id, note), `${name}’s access stopped.`)}>{saving ? "Stopping…" : "Stop access"}</button></div>
+      <div className="lf-va-dialog-footer"><button type="button" className="lf-va-secondary" onClick={() => setMode("")}>Keep access</button><button type="button" className="lf-va-danger" disabled={saving} onClick={() => void run(async () => {
+        await stopVaultAccess(supabase, grant.id, note);
+        if (related) {
+          const failures = await removeRelatedPermissions(supabase, ownerId, related, alsoRemove);
+          if (failures.length) throw new Error(`Access stopped, but ${failures.join(" and ")} couldn’t be removed. Try again from their page.`);
+        }
+      }, `${name}’s access stopped${related && ((alsoRemove.suggest && related.suggestPermissionIds.length) || (alsoRemove.links && related.links.length) || (alsoRemove.nominations && related.nominationIds.length)) ? ", with the other permissions you chose" : ""}.`)}>{saving ? "Stopping…" : "Stop access"}</button></div>
     </div> : mode === "end" ? <div className="lf-va-step" role="group" aria-label="Change end date">
       <label className="lf-va-field" htmlFor="va-end-date">Access ends on<input id="va-end-date" type="date" min={tomorrow} value={date} onChange={(event) => setDate(event.target.value)} /></label>
       <p className="lf-va-muted">Access stops automatically at the end of that day and shows in Ended.</p>

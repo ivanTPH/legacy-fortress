@@ -43,6 +43,8 @@ export function describeEntry(entry: Entry): { icon: string; text: string; chip?
     case "suggestion_approved": return { icon: "check", text: subject ? `Approved ${subject}` : "Approved a suggestion", chip: "Approved" };
     case "suggestion_rejected": return { icon: "close", text: subject ? `Rejected ${subject}` : "Rejected a suggestion", chip: "Rejected" };
     case "suggestion_withdrawn": return { icon: "undo", text: subject ? `Withdrew ${subject}` : "Withdrew a suggestion" };
+    case "suggest_allowed": return { icon: "edit_note", text: subject ? `Let ${subject} suggest documents` : "Let someone suggest documents" };
+    case "suggest_removed": return { icon: "edit_off", text: subject ? `Stopped ${subject} suggesting documents` : "Stopped someone suggesting documents" };
     default: return { icon: "history", text: "Updated" };
   }
 }
