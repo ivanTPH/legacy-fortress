@@ -49,8 +49,8 @@ type RawBillingProfileRow = {
   billing_currency?: string | null;
 };
 
-export const STARTER_RECORD_LIMIT = 25;
-export const STARTER_INVITATION_LIMIT = 5;
+export const STARTER_RECORD_LIMIT = 10;
+export const STARTER_INVITATION_LIMIT = 1;
 export const DEFAULT_OWNER_PLAN: OwnerPlanKey = "starter";
 export const DEFAULT_OWNER_PLAN_STATUS: OwnerPlanStatus = "active";
 

@@ -55,3 +55,13 @@ test("a plan limit opens the Premium sheet in place, with Not now", () => {
   assert.match(records, /showPremiumSheet\("records"\)/);
   assert.match(read("app/(app)/layout.tsx"), /<PremiumSheet \/>/);
 });
+
+test("Free is 10 records and 1 person, enforced by the database as well as the app", () => {
+  const migration = read("supabase/migrations/20261103170000_free_plan_limits.sql");
+  assert.match(migration, /record_limit := 10; NEW\.invitation_limit := 1;/);
+  assert.match(migration, /PLAN_LIMIT_INVITATIONS/);
+  assert.match(migration, /invitation_status IN \('pending', 'accepted'\)/);
+  assert.match(read("lib/accountPlan.ts"), /STARTER_RECORD_LIMIT = 10;[\s\S]*STARTER_INVITATION_LIMIT = 1;/);
+  assert.match(read("lib/contacts/sendContactInvite.ts"), /PLAN_LIMIT_INVITATIONS/);
+  assert.match(read("app/(app)/account/billing/page.tsx"), /Up to 10 records/);
+});
