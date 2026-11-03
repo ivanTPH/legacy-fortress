@@ -1,18 +1,18 @@
--- Free plan limits (owner decision 3 Nov 2026): 10 records and 1 person on Free, so Free shows how it works and
--- Premium finishes the job. Existing records and invitations are never hidden or removed; only new ones are refused.
+-- Free plan limits (owner decision 3 Nov 2026): on Free, 2 records of each type (say, 2 bank accounts), 6 records
+-- in total and 1 person, so Free shows how it works and Premium finishes the job. Existing records and invitations are never hidden or removed; only new ones are refused.
 
 -- 1. New and existing Free profiles.
-ALTER TABLE public.billing_profiles ALTER COLUMN record_limit SET DEFAULT 10, ALTER COLUMN invitation_limit SET DEFAULT 1;
-UPDATE public.billing_profiles SET record_limit = 10, invitation_limit = 1 WHERE account_plan IS DISTINCT FROM 'premium';
+ALTER TABLE public.billing_profiles ALTER COLUMN record_limit SET DEFAULT 6, ALTER COLUMN invitation_limit SET DEFAULT 1;
+UPDATE public.billing_profiles SET record_limit = 6, invitation_limit = 1 WHERE account_plan IS DISTINCT FROM 'premium';
 
--- 2. The plan guard and record limit from 20261103160000, with the new numbers.
+-- 2. The plan guard and record limit from 20261103160000, with the new numbers and the per-type limit.
 CREATE OR REPLACE FUNCTION public.lf_guard_billing_plan()
 RETURNS trigger LANGUAGE plpgsql SET search_path = '' AS $$
 BEGIN
   IF auth.uid() IS NULL THEN RETURN NEW; END IF;  -- the server (service role) applies Stripe's decisions
   IF TG_OP = 'INSERT' THEN
     NEW.account_plan := 'starter'; NEW.plan_status := 'active'; NEW.plan_source := 'manual'; NEW.trial_ends_at := NULL;
-    NEW.record_limit := 10; NEW.invitation_limit := 1; NEW.monthly_charge := 0;
+    NEW.record_limit := 6; NEW.invitation_limit := 1; NEW.monthly_charge := 0;
     NEW.stripe_customer_id := NULL; NEW.stripe_subscription_id := NULL; NEW.billing_interval := NULL;
     NEW.current_period_end := NULL; NEW.cancel_at_period_end := false; NEW.trial_used_at := NULL;
     RETURN NEW;
@@ -36,8 +36,14 @@ BEGIN
   SELECT b.account_plan, b.record_limit INTO v_plan, v_limit FROM public.billing_profiles b WHERE b.user_id = NEW.owner_user_id;
   IF COALESCE(v_plan, 'starter') = 'premium' THEN RETURN NEW; END IF;
   SELECT count(*) INTO v_count FROM public.assets a WHERE a.owner_user_id = NEW.owner_user_id AND a.deleted_at IS NULL;
-  IF v_count >= COALESCE(v_limit, 10) THEN
-    RAISE EXCEPTION 'PLAN_LIMIT_RECORDS: Free plan limit reached (% records)', COALESCE(v_limit, 10) USING ERRCODE = 'P0001';
+  IF v_count >= COALESCE(v_limit, 6) THEN
+    RAISE EXCEPTION 'PLAN_LIMIT_RECORDS: Free plan limit reached (% records)', COALESCE(v_limit, 6) USING ERRCODE = 'P0001';
+  END IF;
+  -- 2 of each type on Free. Fixed here, not a profile column, so nobody can raise it from the browser.
+  SELECT count(*) INTO v_count FROM public.assets a
+    WHERE a.owner_user_id = NEW.owner_user_id AND a.deleted_at IS NULL AND a.category_key IS NOT DISTINCT FROM NEW.category_key;
+  IF v_count >= 2 THEN
+    RAISE EXCEPTION 'PLAN_LIMIT_RECORDS_TYPE: Free plan holds 2 records of each type' USING ERRCODE = 'P0001';
   END IF;
   RETURN NEW;
 END;
