@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { planLimitReason, showPremiumSheet } from "../../lib/billing/client";
 import { waitForActiveUser } from "../../lib/auth/session";
 import { loadCanonicalContactsForOwner } from "../../lib/contacts/canonicalContacts";
 import { buildScopedPermissionPayload, normalizeContactPermissionsOverride } from "../../lib/contacts/contactPermissions";
@@ -134,7 +135,9 @@ export default function AccessSharingWorkspace() {
     const result = isOn
       ? await supabase.from("record_suggestion_permissions").delete().eq("owner_user_id", ownerId).eq("grant_id", grant.id).eq("asset_id", assetId)
       : await supabase.from("record_suggestion_permissions").insert({ owner_user_id: ownerId, grant_id: grant.id, asset_id: assetId });
-    if (result.error) setStatus("We couldn’t change that. Please try again.");
+    const limit = result.error ? planLimitReason(result.error) : null;
+    if (limit) showPremiumSheet(limit);
+    else if (result.error) setStatus("We couldn’t change that. Please try again.");
     else setSuggesters((current) => { const next = new Set(current ?? []); if (isOn) next.delete(grant.id); else next.add(grant.id); return next; });
     setSaving("");
   }

@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { getSafeUserData } from "../../lib/auth/requireActiveUser";
 import { supabase } from "../../lib/supabaseClient";
+import { planLimitReason, showPremiumSheet } from "../../lib/billing/client";
 import {
   AREA_LABEL,
   AUTHORITY_AREAS,
@@ -320,7 +321,11 @@ function SetupDialog({ snapshot, ownerId, onClose, onSaved, onAttorney, initialP
     try {
       await saveVaultNomination(supabase, { personId: person.id, scope, records: chosenRecords, notifyPerson: notify });
       await onSaved(`${name} is nominated for later. Access now: none.`);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Couldn’t save the nomination."); }
+    } catch (cause) {
+      const limit = planLimitReason(cause);
+      if (limit) { showPremiumSheet(limit); setError("The free plan has one nominee. Nothing has changed."); }
+      else setError(cause instanceof Error ? cause.message : "Couldn’t save the nomination.");
+    }
     finally { setSaving(false); }
   }
 

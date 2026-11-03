@@ -1,8 +1,8 @@
 {
-  "approvedBy": "Ivan (owner), 3 Nov 2026: fix - new personal records failed on TEST since 31 Oct (authority sync trigger read a column the records table doesn't have)",
+  "approvedBy": "Ivan (owner), 3 Nov 2026: free plan sharing - one nominee for after death; sharing records now, more nominees and adviser suggestions need Premium",
   "mode": "apply",
-  "attempt": 21,
+  "attempt": 22,
   "files": [
-    { "file": "20261103180000_fix_authority_record_sync.sql", "sha256": "aed739a414287648296b2e7b1656ce19700be983e8f0701f07c5e20bf4fae327" }
+    { "file": "20261103190000_free_plan_sharing.sql", "sha256": "724db05353f4e34e953de7e55250be079e1ab4316805f091518ca6eef8b2c820" }
   ]
 }

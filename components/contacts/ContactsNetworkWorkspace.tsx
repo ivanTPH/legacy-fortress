@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { supabase } from "../../lib/supabaseClient";
+import { planLimitReason, showPremiumSheet } from "../../lib/billing/client";
 import { waitForActiveUser } from "../../lib/auth/session";
 import {
   loadCanonicalContactsForOwner,
@@ -1527,6 +1528,10 @@ function PersonManagementPanel({
       setStatus(nextKeys.length ? "Access updated." : "Access removed. The person remains in People I Trust.");
       onRevokeRequestedChange(false);
       onSaved();
+    } else if (planLimitReason(grantUpdate.error)) {
+      setSelectedAccessKeys(savedAccessKeys ?? []);
+      setStatus("Sharing records now needs Premium. Nothing has changed.");
+      showPremiumSheet(planLimitReason(grantUpdate.error)!);
     } else {
       setStatus("Could not update access.");
     }

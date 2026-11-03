@@ -77,7 +77,7 @@ function BillingPageContent() {
             <div className="lf-billing-plan"><strong>Free</strong></div>
             <ul className="lf-billing-list">
               <li>2 of each kind of record, up to 6 in all</li>
-              <li>Share with 1 person</li>
+              <li>1 person nominated to receive your Vault after your death</li>
               <li>Wills, Power of Attorney, executors and release to your family</li>
               <li>ID checks, two-step sign-in and an audit trail</li>
             </ul>
@@ -90,7 +90,7 @@ function BillingPageContent() {
         <div className="lf-sec-card lf-billing-card">
           <ul className="lf-billing-list">
             <li>Unlimited records and 20 GB for documents</li>
-            <li>Share with as many people as you like</li>
+            <li>Share chosen records with people now, and nominate as many as you like</li>
             <li>Advisers can suggest documents for you to approve</li>
             <li>Full record history, weekly summaries and priority support</li>
           </ul>

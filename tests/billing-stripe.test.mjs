@@ -66,3 +66,21 @@ test("Free is 2 of each type, 6 records and 1 person, enforced by the database a
   assert.match(read("lib/contacts/sendContactInvite.ts"), /PLAN_LIMIT_INVITATIONS/);
   assert.match(read("app/(app)/account/billing/page.tsx"), /2 of each kind of record, up to 6 in all/);
 });
+
+test("Free shares nothing now and has one nominee; each limit opens its Premium sheet", async () => {
+  const migration = read("supabase/migrations/20261103190000_free_plan_sharing.sql");
+  for (const code of ["PLAN_LIMIT_SHARING", "PLAN_LIMIT_NOMINEES", "PLAN_LIMIT_SUGGESTIONS"]) assert.match(migration, new RegExp(code));
+  assert.match(migration, /<> 'owner_grant'/, "authority and estate grants are never limited");
+  const { planLimitReason } = await import("../lib/billing/client.ts").catch(() => ({ planLimitReason: null }));
+  if (planLimitReason) {
+    assert.equal(planLimitReason(new Error("PLAN_LIMIT_SHARING: x")), "sharing");
+    assert.equal(planLimitReason({ message: "PLAN_LIMIT_NOMINEES: x" }), "nominees");
+    assert.equal(planLimitReason(new Error("PLAN_LIMIT_RECORDS_TYPE: x")), "type");
+    assert.equal(planLimitReason(new Error("PLAN_LIMIT_RECORDS: x")), "records");
+    assert.equal(planLimitReason(new Error("something else")), null);
+  }
+  assert.match(read("components/contacts/ContactsNetworkWorkspace.tsx"), /showPremiumSheet\(planLimitReason\(grantUpdate\.error\)!\)/);
+  assert.match(read("components/people-access/VaultAccessWorkspace.tsx"), /planLimitReason\(cause\)/);
+  assert.match(read("components/access/AccessSharingWorkspace.tsx"), /planLimitReason\(result\.error\)/);
+  assert.match(read("scripts/staging/run-vault-access-acceptance.mjs"), /share_now_on_free/);
+});
