@@ -1,8 +1,8 @@
 {
-  "approvedBy": "Ivan (owner), 3 Nov 2026: audit trail of who is connected, documents uploaded and approval actions, in the append-only audit log without record content",
+  "approvedBy": "Ivan (owner), 3 Nov 2026: Stripe billing - plans change only through confirmed Stripe events, server-side free record limit, Stripe customer fields and webhook event log",
   "mode": "apply",
-  "attempt": 18,
+  "attempt": 19,
   "files": [
-    { "file": "20261103150000_audit_trail_coverage.sql", "sha256": "28c3e5b14f36f3831a322f3924bdb58d92a365a0ac50251b1ad0559bb8d06813" }
+    { "file": "20261103160000_billing_stripe.sql", "sha256": "b915b9e253e2357e428d2423130217d6cc95ef2580e6bd79a377cd25a9847347" }
   ]
 }
