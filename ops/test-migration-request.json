@@ -1,8 +1,8 @@
 {
-  "approvedBy": "Ivan (owner), 3 Nov 2026: Stripe billing - plans change only through confirmed Stripe events, server-side free record limit, Stripe customer fields and webhook event log",
+  "approvedBy": "Ivan (owner), 3 Nov 2026: free plan of 2 records of each type, 6 records in total and 1 person, enforced on the server",
   "mode": "apply",
-  "attempt": 19,
+  "attempt": 20,
   "files": [
-    { "file": "20261103160000_billing_stripe.sql", "sha256": "b915b9e253e2357e428d2423130217d6cc95ef2580e6bd79a377cd25a9847347" }
+    { "file": "20261103170000_free_plan_limits.sql", "sha256": "15413c389c4a4b1772f0ae3d08c9e0d2b0043134002f5fabc0bc945933c1c53d" }
   ]
 }
