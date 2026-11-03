@@ -154,7 +154,7 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
       return;
     }
     const res = await authFetch(`/api/internal/admin/enterprise?organisationId=${encodeURIComponent(organisationId)}`);
-    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; detail?: Detail; message?: string; uiAccess?: { organisationScoped?: boolean } };
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; detail?: Detail; message?: string; uiAccess?: { organisationScoped?: boolean; capabilities?: string[] } };
     if (!res.ok || !json.ok || !json.detail) {
       setMessage(json.message || "This organisation is unavailable.");
       setState(res.status === 403 ? "denied" : "error");
@@ -162,7 +162,12 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
     }
     const sessionRes = await authFetch("/api/internal/admin/session");
     const sessionJson = await sessionRes.json().catch(() => ({})) as { admin?: { displayName?: string; email?: string; role?: string; capabilities?: string[] } };
-    setNavigationCapabilities(sessionRes.ok && sessionJson.admin?.capabilities?.length ? sessionJson.admin.capabilities : ["enterprise.workspace.access", "organisation:view", "licence:view"]);
+    // Same navigation as the rest of the portal (Overview, Team, Invitations…): the organisation read's own
+    // capabilities first, as EnterpriseOperationsWorkspace does. Display only; the server still checks each action.
+    const capabilities = json.uiAccess?.capabilities ?? (sessionRes.ok && sessionJson.admin?.capabilities?.length
+      ? sessionJson.admin.capabilities
+      : ["organisation:view", "licence:view", "enterprise.membership.read", "enterprise.report.read"]);
+    setNavigationCapabilities([...new Set(["enterprise.workspace.access", ...capabilities])]);
     setIdentity({
       label: sessionJson.admin?.displayName || sessionJson.admin?.email || user.email || "Enterprise user",
       detail: sessionJson.admin?.role ? `${sessionJson.admin.role.replace(/_/g, " ")} · ${sessionJson.admin.email ?? user.email ?? ""}` : user.email ?? "",
@@ -238,7 +243,7 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
       {tab === "overview" ? (
         <section style={panelStyle}>
           <div style={rowStyle}>
-            <button type="button" style={primaryButtonStyle} onClick={() => setTab("licence")}>{detail.licences.length ? "View licence" : partnerMode ? "Licence" : "Set up licence"}</button>
+            {detail.licences.length || !partnerMode ? <button type="button" style={primaryButtonStyle} onClick={() => setTab("licence")}>{detail.licences.length ? "View licence" : "Set up licence"}</button> : null}
             {detail.licences[0] ? <Link style={secondaryLinkStyle} href={`/enterprise/licences/${detail.licences[0].id}`}>Manage seats</Link> : null}
           </div>
           <h2>Overview</h2>

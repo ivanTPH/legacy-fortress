@@ -1672,7 +1672,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI"
     background: transparent;
     color: #cbbdb8;
     font: inherit;
-    font-size: 10px;
+    font-size: 13px;
     font-weight: 700;
     text-align: center;
     text-decoration: none;
@@ -1771,7 +1771,9 @@ button.lf-admin-decision-row { width: 100%; border-left: 0; border-right: 0; bor
   .lf-admin-shell--partner .lf-admin-shell-drawer-close { color: var(--lf-text); background: var(--lf-surface-card); border-color: var(--lf-border); }
   .lf-admin-shell--partner .lf-admin-shell-drawer-account .lf-admin-shell-identity { color: var(--lf-text); background: var(--lf-surface-card); border-color: var(--lf-border); }
   .lf-admin-shell--partner .lf-admin-shell-mobile-tabs { position: fixed; right: 0; bottom: 0; left: 0; z-index: 30; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); min-height: calc(64px + env(safe-area-inset-bottom)); padding: 4px max(4px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(4px, env(safe-area-inset-left)); border-top: 1px solid var(--lf-border); background: var(--lf-surface-card); }
-  .lf-admin-shell--partner .lf-admin-shell-mobile-tabs a { display: grid; justify-items: center; align-content: center; gap: 2px; min-width: 0; min-height: 54px; padding: 4px; color: var(--lf-text-secondary); font-size: 11px; text-align: center; text-decoration: none; }
+  .lf-admin-shell--partner .lf-admin-shell-mobile-tabs :is(a, button) { display: grid; justify-items: center; align-content: center; gap: 2px; min-width: 0; min-height: 54px; padding: 4px; border: 0; background: transparent; color: var(--lf-text-secondary); font: inherit; font-size: 13px; text-align: center; text-decoration: none; cursor: pointer; }
+  .lf-admin-shell--partner .lf-admin-shell-mobile-tabs :is(a, button) span:last-child { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lf-admin-shell--partner .lf-admin-shell-mobile-tabs :is(a, button):focus-visible { outline: 2px solid var(--lf-focus); outline-offset: -2px; }
   .lf-admin-shell--partner .lf-admin-shell-mobile-tabs a[aria-current="page"] { color: var(--lf-text); font-weight: 800; }
   .lf-partner-overview-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .lf-partner-overview-metrics .lf-admin-metric-card { min-height: 88px; padding: 12px; }
@@ -8886,7 +8888,7 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
   .lf-admin-data-card-meta > span + span::before { content: "·"; margin-right: 8px; }
   .lf-admin-data-card-meta small { display: inline; }
   .lf-admin-data-card-status { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-  .lf-admin-data-card-action { display: flex; gap: 8px; align-items: center; }
+  .lf-admin-data-card-action { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; align-items: center; max-width: 40vw; }
   .lf-admin-table-card .lf-admin-data-cards { padding: 0; }
 }
 /* My Vault (Settings › My Vault): one card per area, stacked; switches are ink when on. */
