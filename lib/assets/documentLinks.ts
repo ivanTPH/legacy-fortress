@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchCanonicalAssets } from "./fetchCanonicalAssets";
 import { sanitizeFileName } from "../validation/upload";
 import { normalizeDocumentDisplayTitle } from "../documents/displayTitle";
+import { FAIR_USE_MESSAGE, isFairUseLimit, planLimitReason, showPremiumSheet } from "../billing/client";
 
 type AnySupabaseClient = SupabaseClient;
 export const SUPPORTED_DOCUMENT_SECTION_KEYS = ["finances", "property", "business", "digital", "personal"] as const;
@@ -254,6 +255,9 @@ export async function createCanonicalAssetDocument(
 
   if (insertResult.error) {
     await client.storage.from(storageBucket).remove([storagePath]);
+    if (isFairUseLimit(insertResult.error)) return { ok: false, error: FAIR_USE_MESSAGE };
+    const limit = planLimitReason(insertResult.error);
+    if (limit) { showPremiumSheet(limit); return { ok: false, error: limit === "documentPack" ? "You\u2019ve used the documents included with your plan. Nothing has been lost; add 100 more to keep going." : "The free plan holds 10 documents. Nothing has been lost; remove one or upgrade to add more." }; }
     return { ok: false, error: `Document link failed: ${insertResult.error.message}` };
   }
 
