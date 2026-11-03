@@ -1,6 +1,7 @@
 "use client";
 
 import { startDocumentExtraction } from "@/lib/documents/extraction/client";
+import DocumentAllowanceNote from "../billing/DocumentAllowanceNote";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { waitForActiveUser } from "../../lib/auth/session";
@@ -408,6 +409,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
         <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
           Files stay attached to the right record in your vault so trusted people can understand them when needed.
         </div>
+        <DocumentAllowanceNote />
         {viewer.mode === "linked" ? (
           <div style={linkedPanelChipStyle}>
             <Icon name="visibility_lock" size={14} />

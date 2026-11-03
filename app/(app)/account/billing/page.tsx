@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { SettingsPageShell } from "../../components/settings/SettingsPrimitives";
 import Icon from "../../../../components/ui/Icon";
 import { loadBillingStatus, openBillingPortal, startCheckout, type BillingStatus } from "../../../../lib/billing/client";
+import DocumentAllowanceNote from "../../../../components/billing/DocumentAllowanceNote";
 
 /**
  * Settings › Billing (plans report, 3 Nov 2026). Shows the plan the server holds; upgrading opens Stripe Checkout
@@ -77,6 +78,7 @@ function BillingPageContent() {
             <div className="lf-billing-plan"><strong>Free</strong></div>
             <ul className="lf-billing-list">
               <li>2 of each kind of record, up to 6 in all</li>
+              <li>Up to 10 documents (a multi-page PDF counts once)</li>
               <li>1 person nominated to receive your Vault after your death</li>
               <li>Wills, Power of Attorney, executors and release to your family</li>
               <li>ID checks, two-step sign-in and an audit trail</li>
@@ -85,11 +87,16 @@ function BillingPageContent() {
         </div>
       </section>
 
+      {loaded ? <section className="lf-sec-group" aria-labelledby="billing-documents">
+        <h2 id="billing-documents">Documents</h2>
+        <DocumentAllowanceNote always />
+      </section> : null}
+
       {loaded && !premium ? <section className="lf-sec-group" aria-labelledby="billing-premium">
         <h2 id="billing-premium">Premium</h2>
         <div className="lf-sec-card lf-billing-card">
           <ul className="lf-billing-list">
-            <li>Unlimited records and 20 GB for documents</li>
+            <li>Unlimited records and 100 documents, with more available</li>
             <li>Share chosen records with people now, and nominate as many as you like</li>
             <li>Advisers can suggest documents for you to approve</li>
             <li>Full record history, weekly summaries and priority support</li>

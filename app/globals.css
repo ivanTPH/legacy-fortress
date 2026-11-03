@@ -9463,3 +9463,10 @@ a.lf-pp-item:hover { background: var(--lf-interaction-hover, #F6EFEA); }
 
 /* The sheet title takes focus for screen readers when it opens; it isn't a control, so no focus ring. */
 .lf-premium-sheet h2:focus { outline: none; }
+
+/* Document allowance note (3 Nov 2026) */
+.lf-doc-allowance { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; background: var(--lf-surface-card); border: 1px solid var(--lf-border-card, #EBE4DE); color: var(--lf-text-primary, #1F1715); }
+.lf-doc-allowance.is-near { background: var(--lf-warning-banner-bg); border-color: var(--lf-warning-banner-border); }
+.lf-doc-allowance > div { display: grid; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.lf-doc-allowance span { color: var(--lf-text-secondary); font-size: 14px; }
+.lf-doc-allowance button { flex: none; }

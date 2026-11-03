@@ -11,6 +11,12 @@ export const PREMIUM_PRICES = {
   year: { lookupKey: "lf_premium_yearly", amount: 3900, label: "£39 a year" },
 } as const;
 export type BillingInterval = keyof typeof PREMIUM_PRICES;
+/** +100 documents for Premium members (owner decision 3 Nov 2026). Same interval as their plan. */
+export const DOCUMENT_PACK_PRICES = {
+  month: { lookupKey: "lf_document_pack_monthly", amount: 100, label: "£1 a month" },
+  year: { lookupKey: "lf_document_pack_yearly", amount: 1200, label: "£12 a year" },
+} as const;
+export const DOCUMENTS_PER_PACK = 100;
 export const TRIAL_DAYS = 14;
 
 export function stripeSecretKey() { return String(process.env.STRIPE_SECRET_KEY ?? "").trim(); }
@@ -43,14 +49,22 @@ export async function stripeRequest<T = Record<string, unknown>>(method: "GET" |
  * set-up in Stripe; in live mode they must already exist (created once by the owner), so nothing is invented.
  */
 export async function premiumPriceId(interval: BillingInterval): Promise<string> {
-  const wanted = PREMIUM_PRICES[interval];
+  return priceIdFor(PREMIUM_PRICES[interval], interval, "premium", "Legacy Fortress Premium");
+}
+
+/** The storage-pack price for a plan's interval (Stripe needs every item on a subscription to share it). */
+export async function documentPackPriceId(interval: BillingInterval): Promise<string> {
+  return priceIdFor(DOCUMENT_PACK_PRICES[interval], interval, "document_pack", "Legacy Fortress extra documents (+100)");
+}
+
+async function priceIdFor(wanted: { lookupKey: string; amount: number; label: string }, interval: BillingInterval, productKey: string, productName: string): Promise<string> {
   const found = await stripeRequest<{ data: Array<{ id: string }> }>("GET", "prices", { "lookup_keys[]": wanted.lookupKey, active: true, limit: 1 });
   if (found.data[0]?.id) return found.data[0].id;
   if (stripeMode() !== "test") throw new Error("stripe_price_missing");
-  const products = await stripeRequest<{ data: Array<{ id: string }> }>("GET", "products/search", { query: "metadata['lf_product']:'premium'" }).catch(() => ({ data: [] }));
-  const productId = products.data[0]?.id ?? (await stripeRequest<{ id: string }>("POST", "products", { name: "Legacy Fortress Premium", "metadata[lf_product]": "premium" })).id;
+  const products = await stripeRequest<{ data: Array<{ id: string }> }>("GET", "products/search", { query: `metadata['lf_product']:'${productKey}'` }).catch(() => ({ data: [] }));
+  const productId = products.data[0]?.id ?? (await stripeRequest<{ id: string }>("POST", "products", { name: productName, "metadata[lf_product]": productKey })).id;
   const price = await stripeRequest<{ id: string }>("POST", "prices", {
-    product: productId, currency: "gbp", unit_amount: wanted.amount, "recurring[interval]": interval, lookup_key: wanted.lookupKey, tax_behavior: "inclusive", nickname: `Premium ${wanted.label}`,
+    product: productId, currency: "gbp", unit_amount: wanted.amount, "recurring[interval]": interval, lookup_key: wanted.lookupKey, tax_behavior: "inclusive", nickname: `${productName} ${wanted.label}`,
   });
   return price.id;
 }
@@ -71,13 +85,17 @@ export function verifyStripeSignature(rawBody: string, header: string | null, se
 
 type StripeSubscription = {
   id: string; status: string; customer: string; cancel_at_period_end?: boolean; current_period_end?: number; trial_end?: number | null;
-  metadata?: Record<string, string>; items?: { data?: Array<{ price?: { recurring?: { interval?: string } } }> };
+  metadata?: Record<string, string>;
+  items?: { data?: Array<{ id?: string; quantity?: number; price?: { lookup_key?: string | null; recurring?: { interval?: string } } }> };
 };
 
 /** Keeps a customer's plan in step with their Stripe subscription. Runs as the server (service role). */
 export async function applySubscription(admin: SupabaseClient, subscription: StripeSubscription) {
   const premium = ["active", "trialing", "past_due"].includes(subscription.status);
-  const interval = subscription.items?.data?.[0]?.price?.recurring?.interval;
+  const items = subscription.items?.data ?? [];
+  const isPack = (item: (typeof items)[number]) => String(item.price?.lookup_key ?? "").startsWith("lf_document_pack");
+  const interval = (items.find((item) => !isPack(item)) ?? items[0])?.price?.recurring?.interval;
+  const documentPacks = premium ? items.filter(isPack).reduce((total, item) => total + Math.max(0, Number(item.quantity ?? 1)), 0) : 0;
   const userIdFromMetadata = subscription.metadata?.user_id;
   const profile = userIdFromMetadata
     ? await admin.from("billing_profiles").select("user_id").eq("user_id", userIdFromMetadata).maybeSingle()
@@ -94,6 +112,7 @@ export async function applySubscription(admin: SupabaseClient, subscription: Str
     current_period_end: subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : null,
     trial_ends_at: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
     cancel_at_period_end: Boolean(subscription.cancel_at_period_end),
+    document_packs: documentPacks,
     monthly_charge: premium ? (interval === "year" ? 3.25 : 3.99) : 0,
     ...(subscription.trial_end ? { trial_used_at: new Date().toISOString() } : {}),
     updated_at: new Date().toISOString(),

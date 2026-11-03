@@ -137,7 +137,7 @@ import {
 import { useViewerAccess } from "../access/ViewerAccessContext";
 import { canEditAssetForViewer, canEditRecordForViewer, filterAssetIdsForViewer, filterRecordIdsForViewer } from "../../lib/access-control/viewerAccess";
 import { getPlanLimitRedirectHref } from "../../lib/accountPlan";
-import { isPlanLimitError, isTypeLimitError, showPremiumSheet } from "../../lib/billing/client";
+import { FAIR_USE_MESSAGE, isFairUseLimit, isPlanLimitError, isTypeLimitError, planLimitReason, showPremiumSheet } from "../../lib/billing/client";
 import { getWorkspaceHelpMessage } from "../../lib/workspaceHelp";
 import { resolveProviderLogoPath } from "../../lib/assets/providerLogoPath.mjs";
 import BrandMark from "../ui/BrandMark";
@@ -6815,6 +6815,9 @@ async function createLegacyRecordAttachment({
   }).select("id").maybeSingle();
   if (insertResult.error) {
     await supabase.storage.from(storageBucket).remove([storagePath]);
+    if (isFairUseLimit(insertResult.error)) return { ok: false, error: FAIR_USE_MESSAGE };
+    const limit = planLimitReason(insertResult.error);
+    if (limit) { showPremiumSheet(limit); return { ok: false, error: limit === "documentPack" ? "You\u2019ve used the documents included with your plan. Nothing has been lost; add 100 more to keep going." : "The free plan holds 10 documents. Nothing has been lost; remove one or upgrade to add more." }; }
     return { ok: false, error: `Attachment link failed: ${insertResult.error.message}.` };
   }
   void startDocumentExtraction((insertResult.data as { id?: string } | null)?.id, recordId, "attachment");

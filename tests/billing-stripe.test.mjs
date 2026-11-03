@@ -92,3 +92,18 @@ test("every over-limit action offers the upgrade in place", () => {
   assert.doesNotMatch(read("app/(app)/dashboard/page.tsx"), /router\.push\("\/account\/billing\?reason=plan-limit"\)/);
   assert.match(read("lib/billing/client.ts"), /export async function requirePremium/);
 });
+
+test("Documents: Free 10, Premium 100 plus paid packs of 100, warned from 90%", async () => {
+  const migration = read("supabase/migrations/20261103200000_document_limits.sql");
+  assert.match(migration, /100 \* \(1 \+ b\.document_packs\)/);
+  assert.match(migration, /PLAN_LIMIT_DOCUMENT_PACK/);
+  assert.match(migration, /NEW\.trial_used_at, NEW\.document_packs\)/, "the plan guard covers storage packs");
+  const { DOCUMENT_PACK_PRICES } = await import("../lib/billing/stripe.ts");
+  assert.equal(DOCUMENT_PACK_PRICES.month.amount, 100);
+  assert.equal(DOCUMENT_PACK_PRICES.year.amount, 1200);
+  assert.match(read("app/api/billing/storage-pack/route.ts"), /subscription_items/);
+  assert.match(read("components/billing/PremiumSheet.tsx"), /addDocumentPack/);
+  assert.match(read("components/billing/DocumentAllowanceNote.tsx"), /included \* 0\.9/);
+  assert.match(read("lib/assets/documentLinks.ts"), /showPremiumSheet\(limit\)/);
+  assert.match(read("components/records/UniversalRecordWorkspace.tsx"), /isFairUseLimit\(insertResult\.error\)/);
+});

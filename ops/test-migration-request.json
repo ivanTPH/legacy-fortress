@@ -1,8 +1,8 @@
 {
-  "approvedBy": "Ivan (owner), 3 Nov 2026: free plan sharing - one nominee for after death; sharing records now, more nominees and adviser suggestions need Premium",
+  "approvedBy": "Ivan (owner), 3 Nov 2026: document limits - Free 10, Premium 100 plus Stripe storage packs of 100 (GBP 1/month or 12/year), hidden 2 GB per 100",
   "mode": "apply",
-  "attempt": 22,
+  "attempt": 23,
   "files": [
-    { "file": "20261103190000_free_plan_sharing.sql", "sha256": "724db05353f4e34e953de7e55250be079e1ab4316805f091518ca6eef8b2c820" }
+    { "file": "20261103200000_document_limits.sql", "sha256": "67f1cbc559d7a85711679dd3c066ef01cf1dd5dbbb4538701b40a91c294e9ff2" }
   ]
 }
