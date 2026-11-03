@@ -9460,3 +9460,6 @@ a.lf-pp-item:hover { background: var(--lf-interaction-hover, #F6EFEA); }
 .lf-billing-muted { margin: 0; color: var(--lf-text-secondary); font-size: 15px; }
 .lf-billing-warn { margin: 0; color: var(--lf-destructive); font-weight: var(--lf-weight-semibold); }
 .lf-billing-list { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+
+/* The sheet title takes focus for screen readers when it opens; it isn't a control, so no focus ring. */
+.lf-premium-sheet h2:focus { outline: none; }
