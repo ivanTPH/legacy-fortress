@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { supabase } from "../../lib/supabaseClient";
-import { planLimitReason, showPremiumSheet } from "../../lib/billing/client";
+import { planLimitReason, requirePremium, showPremiumSheet } from "../../lib/billing/client";
 import { waitForActiveUser } from "../../lib/auth/session";
 import {
   loadCanonicalContactsForOwner,
@@ -1020,7 +1020,7 @@ function PersonVaultAccessCard({ contactId, name, ownerUserId, readOnly, onManag
     </div>}
     {!readOnly ? <div className="lf-pp-actions">
       <Link className="lf-pp-primary" href={`/people-access?view=vault-access&setup=${encodeURIComponent(contactId)}`}><Icon name="key" size={18} />{nomination || authority || nowCount ? "Change Vault access" : "Set up Vault access"}</Link>
-      <button type="button" className="lf-pp-secondary" onClick={onManageNow}>{nowCount ? "Change what they see now" : "Share records now"}</button>
+      <button type="button" className="lf-pp-secondary" onClick={() => { if (nowCount) onManageNow(); else void requirePremium("sharing").then((ok) => { if (ok) onManageNow(); }); }}>{nowCount ? "Change what they see now" : "Share records now"}</button>
     </div> : null}
   </section>;
 }
@@ -1122,7 +1122,7 @@ function PersonVaultAccessSummary({
       {sharedCount > 0 && !namesLoaded ? <span style={drawerExplanationStyle}>Loading selected records…</span> : null}
       {sharedRecords.length > 0 ? <><h4 className="lf-pa-can-see-heading">{state === "shared" ? "Can see" : "Selected records · not currently accessible"}</h4><ul className="lf-person-shared-records">{sharedRecords.map((record, index) => <li key={`${record.name}-${index}`}><Icon name="description" size={20} /><span>{record.name}<small>{record.section}</small></span></li>)}</ul></> : null}
       {sharedCount > 0 && namesLoaded && !sharedRecords.length && state !== "checking" ? <span style={drawerExplanationStyle}>Selected record names are unavailable right now.</span> : null}
-      {!readOnly && state !== "checking" && state !== "error" ? <Button variant={sharedCount ? "secondary" : "primary"} icon="key" onClick={onManage}>{sharedCount ? "Edit access" : "Give access"}</Button> : null}
+      {!readOnly && state !== "checking" && state !== "error" ? <Button variant={sharedCount ? "secondary" : "primary"} icon="key" onClick={() => { if (sharedCount) onManage(); else void requirePremium("sharing").then((ok) => { if (ok) onManage(); }); }}>{sharedCount ? "Edit access" : "Give access"}</Button> : null}
       {!readOnly && state === "shared" ? <Button variant="secondary" icon="block" onClick={onRevoke}>Revoke all</Button> : null}
     </section>
   );

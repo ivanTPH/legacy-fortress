@@ -84,3 +84,11 @@ test("Free shares nothing now and has one nominee; each limit opens its Premium 
   assert.match(read("components/access/AccessSharingWorkspace.tsx"), /planLimitReason\(result\.error\)/);
   assert.match(read("scripts/staging/run-vault-access-acceptance.mjs"), /share_now_on_free/);
 });
+
+test("every over-limit action offers the upgrade in place", () => {
+  assert.match(read("lib/contacts/sendContactInvite.ts"), /showPremiumSheet\("people"\)[\s\S]*showPremiumSheet\("people"\)/, "both invite limits open the sheet on every invite screen");
+  const network = read("components/contacts/ContactsNetworkWorkspace.tsx");
+  assert.match(network, /requirePremium\("sharing"\)[\s\S]*requirePremium\("sharing"\)/, "Share records now and Give access check first");
+  assert.doesNotMatch(read("app/(app)/dashboard/page.tsx"), /router\.push\("\/account\/billing\?reason=plan-limit"\)/);
+  assert.match(read("lib/billing/client.ts"), /export async function requirePremium/);
+});

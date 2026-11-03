@@ -166,8 +166,8 @@ export default function ContactInvitationManager({
     if (!status.includes("Starter plan limit reached")) return null;
     return {
       href: "/account/billing?reason=plan-limit",
-      label: "Upgrade plan / Manage subscription",
-      detail: "Open the subscription panel",
+      label: "Upgrade to Premium",
+      detail: "Invite more people with Premium",
     };
   }, [status]);
 
