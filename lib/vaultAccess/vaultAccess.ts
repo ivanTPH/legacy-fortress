@@ -379,3 +379,45 @@ export function describeHistory(item: VaultAccessHistoryItem): { icon: string; t
   const [icon, title] = map[item.action] ?? ["history", "Access updated"];
   return { icon, title };
 }
+
+/**
+ * Other permissions a person keeps after their access is stopped (owner request 3 Nov 2026: ask whether
+ * to remove them too). Suggesting documents, being linked to records and a nomination for later are
+ * separate from viewing access, so stopping access leaves them unless the owner chooses.
+ */
+export type RelatedPermissions = {
+  suggestPermissionIds: string[];
+  links: Array<{ id: string; role: string }>;
+  nominationIds: string[];
+};
+
+export async function loadRelatedPermissions(client: SupabaseClient, ownerUserId: string, grantId: string, personId: string): Promise<RelatedPermissions> {
+  const [suggest, links, nominations] = await Promise.all([
+    client.from("record_suggestion_permissions").select("id").eq("owner_user_id", ownerUserId).eq("grant_id", grantId),
+    personId ? client.from("record_links").select("id,role").eq("owner_user_id", ownerUserId).eq("person_id", personId).is("removed_at", null) : Promise.resolve({ data: [], error: null }),
+    personId ? client.from("vault_nominations").select("id").eq("owner_user_id", ownerUserId).eq("person_id", personId).eq("status", "active") : Promise.resolve({ data: [], error: null }),
+  ]);
+  return {
+    suggestPermissionIds: suggest.error ? [] : ((suggest.data ?? []) as Array<{ id: string }>).map((row) => row.id),
+    links: links.error ? [] : ((links.data ?? []) as Array<{ id: string; role: string }>).map((row) => ({ id: row.id, role: String(row.role ?? "") })),
+    nominationIds: nominations.error ? [] : ((nominations.data ?? []) as Array<{ id: string }>).map((row) => row.id),
+  };
+}
+
+export async function removeRelatedPermissions(client: SupabaseClient, ownerUserId: string, related: RelatedPermissions, choice: { suggest: boolean; links: boolean; nominations: boolean }) {
+  const failures: string[] = [];
+  if (choice.suggest && related.suggestPermissionIds.length) {
+    const { error } = await client.from("record_suggestion_permissions").delete().eq("owner_user_id", ownerUserId).in("id", related.suggestPermissionIds);
+    if (error) failures.push("suggesting documents");
+  }
+  if (choice.links && related.links.length) {
+    const { error } = await client.from("record_links").update({ removed_at: new Date().toISOString() }).eq("owner_user_id", ownerUserId).in("id", related.links.map((link) => link.id)).is("removed_at", null);
+    if (error) failures.push("record links");
+  }
+  if (choice.nominations) {
+    for (const id of related.nominationIds) {
+      try { await cancelVaultNomination(client, ownerUserId, id); } catch { failures.push("nomination"); }
+    }
+  }
+  return failures;
+}

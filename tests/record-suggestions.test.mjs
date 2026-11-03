@@ -67,3 +67,14 @@ test("audit trail covers connections, documents, people linked and approvals wit
   for (const action of ["suggestion_withdrawn", "access_stopped", "document_added"]) assert.match(migration, new RegExp(`'${action}'`));
   assert.match(read("components/admin/AdminControlPlaneWorkspace.tsx"), /key: "vaults", label: "Vaults"/);
 });
+
+test("stopping access asks whether to remove the person's other permissions too", () => {
+  const workspace = read("components/people-access/VaultAccessWorkspace.tsx");
+  const lib = read("lib/vaultAccess/vaultAccess.ts");
+  assert.match(workspace, /also has other permissions\. Remove these too\?/);
+  for (const text of ["Stop them suggesting documents", "Unlink them from", "Cancel their nomination for later"]) assert.match(workspace, new RegExp(text));
+  assert.match(workspace, /removeRelatedPermissions\(supabase, ownerId, related, alsoRemove\)/);
+  // Unlinking and cancelling are opt-in; only suggesting is preselected.
+  assert.match(workspace, /useState\(\{ suggest: true, links: false, nominations: false \}\)/);
+  assert.match(lib, /from\("record_suggestion_permissions"\)\.delete\(\)\.eq\("owner_user_id", ownerUserId\)/);
+});
