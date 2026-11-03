@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: legacy-fortress-staging
+  group: legacy-fortress-demo-screenshots
   cancel-in-progress: false
 
 jobs:
