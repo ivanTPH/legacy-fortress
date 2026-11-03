@@ -43,6 +43,17 @@ export async function loadBillingStatus(): Promise<BillingStatus | null> {
   return (await response.json().catch(() => null)) as BillingStatus | null;
 }
 
+/**
+ * Before starting something Free doesn't include: true on Premium (or when the plan can't be read, so the
+ * server decides); otherwise opens the Premium sheet and returns false. The server enforces it either way.
+ */
+export async function requirePremium(reason: PremiumReason) {
+  const status = await loadBillingStatus();
+  if (!status || status.plan === "premium") return true;
+  showPremiumSheet(reason);
+  return false;
+}
+
 export async function startCheckout(interval: "month" | "year", returnTo?: string) {
   const response = await fetch("/api/billing/checkout", {
     method: "POST",

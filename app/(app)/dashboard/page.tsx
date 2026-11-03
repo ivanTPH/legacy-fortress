@@ -1688,7 +1688,7 @@ const legalSummary = useMemo(() => {
           <button
             type="button"
             style={planLimitStatusButtonStyle}
-            onClick={() => router.push("/account/billing?reason=plan-limit")}
+            onClick={() => showPremiumSheet("people")}
             aria-label={`${stripStatusPrefix(status)} Open subscription and billing.`}
           >
             <Icon name="credit_card" size={16} />

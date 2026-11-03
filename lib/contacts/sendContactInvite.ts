@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AccessActivationStatus, CollaboratorRole } from "../access-control/roles";
 import { createEphemeralBrowserAuthClient } from "../auth/browserAuthClient";
 import { PlanLimitError, STARTER_INVITATION_LIMIT, assertOwnerCanSendInvitation, ensureOwnerPlanProfile } from "../accountPlan";
+import { showPremiumSheet } from "../billing/client";
 import {
   buildCanonicalInvitationProjectionPayload,
 } from "./canonicalContacts";
@@ -59,14 +60,15 @@ export async function sendContactInvite(
     if (inviteCountRes.error) {
       throw new Error(inviteCountRes.error.message);
     }
-    assertOwnerCanSendInvitation(ownerPlan, Number(inviteCountRes.count ?? 0));
+    try { assertOwnerCanSendInvitation(ownerPlan, Number(inviteCountRes.count ?? 0)); }
+    catch (error) { showPremiumSheet("people"); throw error; }  // every invite screen offers the upgrade
   }
 
   const now = new Date().toISOString();
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
   // The database also enforces the free limit (20261103170000); show it as the same plan-limit message.
   const invitationId = await resolveContactInvitationId(client, input, now).catch((error: unknown) => {
-    if (/PLAN_LIMIT_INVITATIONS/.test(error instanceof Error ? error.message : String(error))) throw new PlanLimitError("invitation_limit", STARTER_INVITATION_LIMIT);
+    if (/PLAN_LIMIT_INVITATIONS/.test(error instanceof Error ? error.message : String(error))) { showPremiumSheet("people"); throw new PlanLimitError("invitation_limit", STARTER_INVITATION_LIMIT); }
     throw error;
   });
   const token = crypto.randomUUID().replace(/-/g, "");
