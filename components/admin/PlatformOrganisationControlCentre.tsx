@@ -249,7 +249,6 @@ export default function PlatformOrganisationControlCentre({ organisationId }: { 
     return <div className="lf-admin-detail">
       <header className="lf-admin-detail-head">
         <div>
-          <h2>{org.name}</h2>
           <p>{sentence(org.type)}{org.customerReference ? ` · ${org.customerReference}` : ""} · updated {formatDate(org.updatedAt)}</p>
         </div>
         <div className="lf-admin-decision-actions"><StatusChip status={org.status} />{org.risk !== "normal" ? <StatusChip status={org.risk} label={`Risk: ${sentence(org.risk).toLowerCase()}`} /> : null}</div>
