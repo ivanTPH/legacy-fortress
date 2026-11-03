@@ -1,7 +1,7 @@
 "use client";
 
 import SwipeToClear from "./SwipeToClear";
-import { loadClearedNotificationIds, saveClearedNotificationIds } from "../../lib/notifications/cleared";
+import { clearNotificationIds, loadClearedNotificationIds, syncClearedNotificationIds } from "../../lib/notifications/cleared";
 import { describeInvitationEvent } from "../../lib/notifications/invitationEvents";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -90,11 +90,16 @@ export default function NotificationBell({ ownerUserId, disabled = false }: { ow
   }, [disabled, ownerUserId, open]);
 
   const [cleared, setCleared] = useState<string[]>([]);
-  useEffect(() => { queueMicrotask(() => setCleared(loadClearedNotificationIds())); }, [open]);
+  useEffect(() => {
+    let cancelled = false;
+    queueMicrotask(() => { if (!cancelled) setCleared(loadClearedNotificationIds()); });
+    if (open) void syncClearedNotificationIds(supabase).then((ids) => { if (!cancelled) setCleared(ids); });
+    return () => { cancelled = true; };
+  }, [open]);
   const visibleEvents = ownerUserId && !disabled ? events.filter((event) => !cleared.includes(event.id)) : [];
   function clearOne(id: string) {
     if (events.find((event) => event.id === id)?.event_type.startsWith("person:")) void markPersonNotificationsRead(supabase, [id]);
-    setCleared(saveClearedNotificationIds([...cleared, id]));
+    setCleared(clearNotificationIds(supabase, cleared, [id]));
   }
   const unreadCount = useMemo(() => visibleEvents.filter((event) => !event.read && !readIds.includes(event.id)).length, [readIds, visibleEvents]);
 

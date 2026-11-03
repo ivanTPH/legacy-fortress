@@ -1,7 +1,7 @@
 "use client";
 
 import SwipeToClear from "../../../components/notifications/SwipeToClear";
-import { loadClearedNotificationIds, saveClearedNotificationIds } from "../../../lib/notifications/cleared";
+import { clearNotificationIds, loadClearedNotificationIds, restoreNotificationIds, syncClearedNotificationIds } from "../../../lib/notifications/cleared";
 import { describeInvitationEvent } from "../../../lib/notifications/invitationEvents";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -83,16 +83,21 @@ export default function NotificationsPage() {
 
   const [cleared, setCleared] = useState<string[]>([]);
   const [undoIds, setUndoIds] = useState<string[]>([]);
-  useEffect(() => { queueMicrotask(() => setCleared(loadClearedNotificationIds())); }, []);
+  useEffect(() => {
+    let cancelled = false;
+    queueMicrotask(() => { if (!cancelled) setCleared(loadClearedNotificationIds()); });
+    void syncClearedNotificationIds(supabase).then((ids) => { if (!cancelled) setCleared(ids); });
+    return () => { cancelled = true; };
+  }, []);
   function clearNotifications(ids: string[]) {
     if (!ids.length) return;
     void markPersonNotificationsRead(supabase, ids.filter((id) => events.find((event) => event.id === id)?.event_type.startsWith("person:")));
-    setCleared(saveClearedNotificationIds([...cleared, ...ids]));
+    setCleared(clearNotificationIds(supabase, cleared, ids));
     setReadIds((current) => Array.from(new Set([...current, ...ids])));
     setUndoIds(ids);
   }
   function undoClear() {
-    setCleared(saveClearedNotificationIds(cleared.filter((id) => !undoIds.includes(id))));
+    setCleared(restoreNotificationIds(supabase, cleared, undoIds));
     setUndoIds([]);
   }
   const visibleEvents = useMemo(() => events.filter((event) => !cleared.includes(event.id)), [events, cleared]);
