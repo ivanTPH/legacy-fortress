@@ -46,3 +46,14 @@ test("scheduler requests are signed, fresh and never carry the key", () => {
   assert.match(workflow, /openssl dgst -sha256 -hmac/);
   assert.doesNotMatch(workflow, /-H "[^"]*SIGNING_KEY/);
 });
+
+test("daily jobs sweep expired ID evidence but leave checks waiting for a reviewer", () => {
+  const sweep = fs.readFileSync(new URL("../lib/identity-verification/evidenceSweep.ts", import.meta.url), "utf8");
+  const route = fs.readFileSync(new URL("../app/api/internal/daily/run/route.ts", import.meta.url), "utf8");
+  const workflow = fs.readFileSync(new URL("../.github/workflows/summary-email.yml", import.meta.url), "utf8");
+  assert.match(sweep, /lt\("retention_until", cutoff\)/);
+  assert.match(sweep, /WAITING_FOR_REVIEW = new Set\(\["review_required"\]\)/);
+  assert.match(sweep, /cleanupExpiredIdentityEvidence\(admin, request\.user_id, request\.id\)/);
+  assert.match(route, /verifySchedulerRequest\(request\)/);
+  assert.match(workflow, /\/api\/internal\/daily\/run/);
+});
