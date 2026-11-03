@@ -338,10 +338,14 @@ export default function AdminWorkspaceShell({
         </header>
         {children}
       </section>
-      {isPlatform || isPartner ? <nav className="lf-admin-shell-mobile-tabs" style={{ gridTemplateColumns: `repeat(${Math.max(mobileTabs.length, 1)}, minmax(0, 1fr))` }} aria-label={isPartner ? "Partner Portal quick navigation" : "Platform Admin quick navigation"}>
+      {isPlatform || isPartner ? <nav className="lf-admin-shell-mobile-tabs" style={{ gridTemplateColumns: `repeat(${mobileTabs.length + 1}, minmax(0, 1fr))` }} aria-label={isPartner ? "Partner Portal quick navigation" : "Platform Admin quick navigation"}>
         {mobileTabs.map((item) => <Link key={item.key} href={item.href} aria-current={isActivePath(currentPathname, item.href) ? "page" : undefined} prefetch={false}>
-          <Icon name={item.icon} size={22} /><span>{isPartner && item.key === "enterprise-users" ? "Team" : item.label}</span>
+          <Icon name={item.icon} size={22} /><span>{MOBILE_TAB_LABEL[item.key] ?? item.label}</span>
         </Link>)}
+        {/* CONSISTENCY › Mobile: 3 role tabs + Menu. Menu opens the same role-filtered menu as the top bar. */}
+        <button type="button" className="lf-admin-shell-mobile-tab-menu" onClick={() => setMenuOpen(true)} aria-expanded={menuOpen} aria-controls="admin-mobile-navigation">
+          <Icon name="menu" size={22} /><span>Menu</span>
+        </button>
       </nav> : null}
       <style jsx global>{adminShellCss}</style>
     </main>
@@ -403,6 +407,13 @@ function toDisplayRole(value: string) {
     .trim()
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
+
+/** CONSISTENCY › Mobile tab names: one short word that fits a quarter of a phone. */
+const MOBILE_TAB_LABEL: Record<string, string> = {
+  "enterprise-overview": "Overview", "enterprise-users": "Team", "enterprise-invitations": "Invitations",
+  verification: "Verification", probate: "Probate", users: "Users", "system-health": "Health",
+  organisations: "Organisations", licences: "Licences", support: "Support", audit: "Audit", overview: "Overview",
+};
 
 const adminShellCss = `
   .lf-admin-shell {

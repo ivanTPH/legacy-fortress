@@ -1607,14 +1607,9 @@ function renderOrganisationActions(org: EnterpriseOrganisation, licences: Enterp
 }
 
 function renderLicenceActions(licence: EnterpriseLicence, portfolio: { organisations: EnterpriseOrganisation[]; licences: EnterpriseLicence[] }) {
+  // ADMIN_PARTNER: one trailing control per row; the organisation and its users are reached from the licence.
   const org = portfolio.organisations.find((item) => item.id === licence.organisationId);
-  return (
-    <div style={actionsCellStyle}>
-      <Link href={`/admin/licences/${licence.id}`}>View licence</Link>
-      {org ? <Link href={`/admin/organisations/${org.id}`}>Organisation</Link> : null}
-      {org ? <Link href={`/admin/organisations/${org.id}/users`}>Users and seats</Link> : null}
-    </div>
-  );
+  return <Link href={`/admin/licences/${licence.id}`} className="lf-admin-row-chevron" aria-label={`Open licence${org ? ` for ${org.name}` : ""}`}><Icon name="chevron_right" size={20} /></Link>;
 }
 
 function orgLink(organisationId: string, organisations: EnterpriseOrganisation[]) {

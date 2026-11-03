@@ -78,3 +78,12 @@ test("stopping access asks whether to remove the person's other permissions too"
   assert.match(workspace, /useState\(\{ suggest: true, links: false, nominations: false \}\)/);
   assert.match(lib, /from\("record_suggestion_permissions"\)\.delete\(\)\.eq\("owner_user_id", ownerUserId\)/);
 });
+
+test("admin and partner phones: 3 role tabs + Menu, short names, one row control on licences", () => {
+  const shell = read("components/admin/AdminWorkspaceShell.tsx");
+  assert.match(shell, /lf-admin-shell-mobile-tab-menu/);
+  assert.match(shell, /repeat\(\$\{mobileTabs\.length \+ 1\}/);
+  assert.match(shell, /verification: "Verification"/);
+  assert.match(read("components/admin/AdminControlPlaneWorkspace.tsx"), /aria-label=\{`Open licence/);
+  assert.match(read("app/api/internal/admin/enterprise/route.ts"), /organisationScoped: admin\.access\.enterpriseScope\?\.organisationScoped \?\? false, capabilities: admin\.access\.capabilities \}/);
+});
