@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { SettingsCard, SettingsPageShell, StatusNote, primaryBtn } from "../../components/settings/SettingsPrimitives";
 import { supabase } from "../../../../lib/supabaseClient";
 import { getSafeUserData } from "../../../../lib/auth/requireActiveUser";
+import SummaryEmailCard from "../../../../components/settings/SummaryEmailCard";
 
 type Comms = {
   sms_enabled: boolean;
@@ -108,6 +109,7 @@ export default function CommunicationsPreferencesPage() {
 
         <StatusNote message={status} />
       </SettingsCard>
+      <SummaryEmailCard />
     </SettingsPageShell>
   );
 }

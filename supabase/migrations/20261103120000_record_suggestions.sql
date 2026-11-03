@@ -14,7 +14,9 @@
 -- 1. Private holding area for suggested files. No browser policies: only the server (service role) reads or writes.
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES ('record-suggestions', 'record-suggestions', false, 15728640,
-        ARRAY['application/pdf', 'image/jpeg', 'image/png', 'image/heic', 'image/webp', 'text/plain'])
+        ARRAY['application/pdf', 'image/jpeg', 'image/png', 'application/msword',
+              'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel',
+              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv'])
 ON CONFLICT (id) DO UPDATE SET public = false, file_size_limit = EXCLUDED.file_size_limit, allowed_mime_types = EXCLUDED.allowed_mime_types;
 
 -- 2. Who may suggest documents for which record. Written only by the owner.

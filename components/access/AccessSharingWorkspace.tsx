@@ -42,6 +42,9 @@ export default function AccessSharingWorkspace() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState("");
   const [status, setStatus] = useState("");
+  // Suggesting documents (V5.2 7a–7f): a separate, owner-chosen permission per person and record.
+  // It never lets the person open the record. Null = not available yet on this server.
+  const [suggesters, setSuggesters] = useState<Set<string> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,11 +72,15 @@ export default function AccessSharingWorkspace() {
           return permissions.asset_ids.includes(recordId) || permissions.record_ids.includes(recordId);
         }).map((grant) => grant.id)));
       }
+      if (assetId) {
+        const permissionRows = await supabase.from("record_suggestion_permissions").select("grant_id").eq("owner_user_id", user.id).eq("asset_id", assetId);
+        if (!cancelled) setSuggesters(permissionRows.error ? null : new Set(((permissionRows.data ?? []) as Array<{ grant_id: string }>).map((row) => row.grant_id)));
+      }
       setLoading(false);
     }
     void load();
     return () => { cancelled = true; };
-  }, [recordId]);
+  }, [assetId, recordId]);
 
   const grantByContact = useMemo(() => new Map(grants.map((grant) => [grant.contact_id || grant.linked_user_id || grant.id, grant])), [grants]);
   const eligibleContacts = contacts.filter((contact) => contact.linked_user_id && VIEWABLE_STATUSES.has(contact.verification_status) && contact.contact_role !== "executor");
@@ -119,6 +126,19 @@ export default function AccessSharingWorkspace() {
     setSaving("");
   }
 
+  async function toggleSuggest(grant: Grant) {
+    if (!assetId || !suggesters || saving) return;
+    const isOn = suggesters.has(grant.id);
+    setSaving(`suggest:${grant.id}`);
+    setStatus("");
+    const result = isOn
+      ? await supabase.from("record_suggestion_permissions").delete().eq("owner_user_id", ownerId).eq("grant_id", grant.id).eq("asset_id", assetId)
+      : await supabase.from("record_suggestion_permissions").insert({ owner_user_id: ownerId, grant_id: grant.id, asset_id: assetId });
+    if (result.error) setStatus("We couldn’t change that. Please try again.");
+    else setSuggesters((current) => { const next = new Set(current ?? []); if (isOn) next.delete(grant.id); else next.add(grant.id); return next; });
+    setSaving("");
+  }
+
   if (loading) return <section className="lf-page-shell"><p role="status">Loading Access &amp; Sharing...</p></section>;
 
   return (
@@ -144,7 +164,19 @@ export default function AccessSharingWorkspace() {
             </>
           )}
         </section>
-      ) : (
+      ) : null}
+      {recordId && assetId && !recordIsLocked && suggesters && eligibleContacts.length ? (
+        <section className="lf-access-sharing-panel" aria-labelledby="record-suggest-heading">
+          <h2 id="record-suggest-heading">Who can suggest documents</h2>
+          <p className="lf-muted-copy">They can send you a document for {recordLabel || "this record"}. You approve or reject each one. This doesn’t let them open the record.</p>
+          {eligibleContacts.map((contact) => {
+            const grant = grantByContact.get(contact.id) ?? (contact.linked_user_id ? grantByContact.get(contact.linked_user_id) : undefined);
+            if (!grant) return null;
+            return <label key={`suggest-${grant.id}`} className="lf-access-sharing-person"><input type="checkbox" checked={suggesters.has(grant.id)} disabled={saving === `suggest:${grant.id}`} onChange={() => void toggleSuggest(grant)} /><span><strong>{contact.full_name}</strong><small>Can suggest documents</small></span></label>;
+          })}
+        </section>
+      ) : null}
+      {recordId ? null : (
         <section className="lf-access-sharing-list" aria-label="Current shared access">
           {contacts.filter((contact) => contact.linked_user_id).map((contact) => {
             const grant = grantByContact.get(contact.id) ?? (contact.linked_user_id ? grantByContact.get(contact.linked_user_id) : undefined);

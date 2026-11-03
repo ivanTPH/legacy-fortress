@@ -31,6 +31,8 @@ export type ActionCentreContext = {
   };
   /** Nominees asking for access now (va-v7). */
   earlyAccessRequests?: Array<{ id: string; name: string }>;
+  /** Suggested documents waiting for the owner's decision (V5.2 7b). */
+  pendingSuggestions?: Array<{ id: string; proposerName: string; recordTitle: string }>;
 };
 
 type ActionCentreSection = {
@@ -699,6 +701,23 @@ function getActionReason(item: BlockingItem) {
 function buildDashboardActionRows(context?: ActionCentreContext): ActionCentreRow[] {
   if (!context) return [];
   const seeds: DashboardActionSeed[] = [];
+
+  for (const suggestion of context.pendingSuggestions ?? []) {
+    const first = suggestion.proposerName.trim().split(/\s+/)[0] || suggestion.proposerName;
+    seeds.push({
+      key: `suggestion-${suggestion.id}`,
+      title: `Review ${first}’s document`,
+      stageName: "Pending approval",
+      blockerLabel: `${first} suggested a document for ${suggestion.recordTitle}. It isn’t added until you approve.`,
+      whyItMatters: "Approving adds the file. It doesn’t share the record.",
+      status: "Required",
+      actionKey: `suggestion:${suggestion.id}`,
+      href: `/actions?review=${encodeURIComponent(suggestion.id)}`,
+      requiredRole: "owner",
+      primaryActionLabel: "Review",
+      secondaryActionLabel: "Open To do",
+    });
+  }
 
   for (const request of context.earlyAccessRequests ?? []) {
     const first = request.name.trim().split(/\s+/)[0] || request.name;
