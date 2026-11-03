@@ -5,15 +5,15 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Website screenshots from a synthetic demo account on TEST (owner approved 3 Nov 2026).
- * Creates a throwaway "Bill Smith" account, fills it with the synthetic review data, photographs the main
- * screens on desktop and phone, then deletes the account. The TEST banner is hidden in these photos only.
+ * Uses one fixed synthetic "Bill Smith" account (TEST keeps accounts that have audit history), refreshes its
+ * synthetic review data, and photographs the main screens on desktop and phone. The TEST banner is hidden in
+ * these photos only. Images are printed to the log as JPEG base64 (artifact downloads aren't reachable).
  */
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "";
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
-const RUN_MARKER = `staging-demo-shots-${Date.now()}`;
-const EMAIL = `${RUN_MARKER}@example.test`;
+const EMAIL = "staging-demo-shots@example.test";
 const PASSWORD = `StagingDemoShots-${Date.now()}-Aa1!`;
 const OUT = "test-results/demo-shots";
 const PAGES = ["/dashboard", "/finances", "/finances/bank", "/property", "/legal", "/personal", "/contacts", "/access-sharing", "/account/billing"];
@@ -30,9 +30,16 @@ test.beforeAll(async () => {
   if (!targetIsStaging) throw new Error("staging_target_mismatch");
   if (!ANON_KEY || !SERVICE_KEY) throw new Error("staging_credentials_missing");
   admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
-  const created = await admin.auth.admin.createUser({ email: EMAIL, password: PASSWORD, email_confirm: true, user_metadata: { full_name: "Bill Smith" } });
-  if (created.error || !created.data.user) throw created.error ?? new Error("demo_user_missing");
-  userId = created.data.user.id;
+  const existing = await findUser(EMAIL);
+  if (existing) {
+    const updated = await admin.auth.admin.updateUserById(existing, { password: PASSWORD });
+    if (updated.error) throw updated.error;
+    userId = existing;
+  } else {
+    const created = await admin.auth.admin.createUser({ email: EMAIL, password: PASSWORD, email_confirm: true, user_metadata: { full_name: "Bill Smith" } });
+    if (created.error || !created.data.user) throw created.error ?? new Error("demo_user_missing");
+    userId = created.data.user.id;
+  }
   const now = new Date().toISOString();
   for (const [table, row, conflict] of [
     ["user_onboarding_state", { user_id: userId, current_step: "complete", completed_steps: ["identity", "verification", "consent", "personal_details", "vault_categories", "complete"], is_completed: true, terms_accepted: true, marketing_opt_in: false, tour_opt_in: false }, "user_id"],
@@ -47,11 +54,16 @@ test.beforeAll(async () => {
   fs.mkdirSync(OUT, { recursive: true });
 });
 
-test.afterAll(async () => {
-  if (!admin || !userId) return;
-  const removed = await admin.auth.admin.deleteUser(userId);
-  console.log(`Demo-cleanup: ${removed.error ? `left for manual removal (${removed.error.message})` : "account deleted"}`);
-});
+async function findUser(email: string) {
+  for (let page = 1; page < 50; page += 1) {
+    const result = await admin.auth.admin.listUsers({ page, perPage: 200 });
+    if (result.error) throw result.error;
+    const match = result.data.users.find((user) => user.email?.toLowerCase() === email);
+    if (match) return match.id;
+    if (result.data.users.length < 200) return null;
+  }
+  return null;
+}
 
 async function signIn(page: Page) {
   const client = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -65,8 +77,8 @@ async function shoot(page: Page, name: string) {
   await page.addStyleTag({ content: ".lf-uat-environment-banner{display:none!important}" }).catch(() => undefined);
   await page.waitForLoadState("networkidle", { timeout: 15_000 }).catch(() => undefined);
   await page.waitForTimeout(1500);
-  await page.screenshot({ path: `${OUT}/${name}.png` });
-  console.log(`Demo-shot: ${name} ${new URL(page.url()).pathname}`);
+  const shot = await page.screenshot({ path: `${OUT}/${name}.jpg`, type: "jpeg", quality: 82 });
+  console.log(`Demo-shot: ${name} ${new URL(page.url()).pathname} ${shot.toString("base64")}`);
 }
 
 async function capture(browser: Browser, kind: "desk" | "phone") {
@@ -82,9 +94,11 @@ async function capture(browser: Browser, kind: "desk" | "phone") {
   }
   // The Premium sheet as it appears when a free limit is reached.
   await page.goto(`${BASE_URL}/dashboard`, { waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(2000);
-  await page.evaluate(() => window.dispatchEvent(new CustomEvent("lf:premium-required", { detail: { reason: "records" } })));
-  await expect(page.getByRole("dialog", { name: /Premium/ })).toBeVisible();
+  // Ask until the page has finished loading and the sheet is listening.
+  await expect(async () => {
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent("lf:premium-required", { detail: { reason: "type" } })));
+    await expect(page.locator(".lf-premium-sheet")).toBeVisible({ timeout: 1500 });
+  }).toPass({ timeout: 30_000 });
   await shoot(page, `${kind}-premium-sheet`);
   await context.close();
 }
