@@ -1,0 +1,23 @@
+name: TEST auth version
+
+# Prints the TEST sign-in service's name and version (no keys, no user data) when
+# ops/auth-version-request.json changes on the TEST branch.
+on:
+  push:
+    branches: [hosted-uat-preparation-20260715]
+    paths: [ops/auth-version-request.json]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    environment: legacy-fortress-staging
+    steps:
+      - name: Report auth service version
+        env:
+          ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+        run: |
+          curl -sS https://supabase-test.mylegacyfortress.com/auth/v1/health -H "apikey: $ANON_KEY" | jq -c '{name, version, description}'
+          curl -sS https://supabase-test.mylegacyfortress.com/auth/v1/settings -H "apikey: $ANON_KEY" | jq -c '{passkey: (.passkey // .passkey_enabled // null), mfa_webauthn: (.mfa_webauthn // null), external_email: .external.email, autoconfirm: .mailer_autoconfirm}'
