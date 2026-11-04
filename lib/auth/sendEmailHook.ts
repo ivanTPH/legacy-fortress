@@ -28,6 +28,8 @@ export type VerifiedEmailEvent = {
   tokenHash: string;
   redirectTo: string;
   verificationUrl: string;
+  /** The 6-digit code Supabase also issued (shown for sign-in codes on a new device). */
+  code?: string | null;
 };
 
 export type ResendConfig = {
@@ -184,6 +186,7 @@ export function parseAndVerifyHook(
   const tokenHash = typeof payload.email_data?.token_hash === "string" ? payload.email_data.token_hash.trim() : "";
   const redirectTo = typeof payload.email_data?.redirect_to === "string" ? payload.email_data.redirect_to.trim() : "";
   const actionType = typeof payload.email_data?.email_action_type === "string" ? payload.email_data.email_action_type.trim() : "";
+  const code = typeof payload.email_data?.token === "string" && /^\d{6,10}$/.test(payload.email_data.token.trim()) ? payload.email_data.token.trim() : null;
   if (!recipient || !tokenHash || !redirectTo || !SEND_EMAIL_ACTIONS.has(actionType)) throw new Error("invalid_email_event");
 
   let verifiedRedirect: string;
@@ -202,6 +205,7 @@ export function parseAndVerifyHook(
     tokenHash,
     redirectTo: verifiedRedirect,
     verificationUrl: buildVerificationUrl(STAGING_SUPABASE_ORIGIN, tokenHash, actionType, verifiedRedirect),
+    code,
   };
 }
 
@@ -218,6 +222,16 @@ export function renderAuthEmail(event: VerifiedEmailEvent, senderName = "Legacy 
     invite: "Use the secure link below to accept your invitation.",
     magiclink: "Use the secure link below to sign in.",
   };
+  // Sign-in code on a new device (4 Nov 2026): the code is the main thing, in large type.
+  if (event.actionType === "magiclink" && !event.invitation && event.code) {
+    const spaced = event.code.length === 6 ? `${event.code.slice(0, 3)} ${event.code.slice(3)}` : event.code;
+    const help = "If you didn't just try to sign in, someone may know your password. Change it in Settings › Security.";
+    return {
+      subject: `Your Legacy Fortress code: ${event.code}`,
+      text: `Your Legacy Fortress sign-in code is ${spaced}.\n\nType it on the screen that asked for it. It works once and expires soon.\n\n${help}\n\n${senderName}`,
+      html: `<p>Your Legacy Fortress sign-in code is</p><p style="font-size:32px;font-weight:700;letter-spacing:6px;margin:12px 0">${spaced}</p><p>Type it on the screen that asked for it. It works once and expires soon.</p><p>${help}</p><p>${senderName}</p>`,
+    };
+  }
   const subject = event.invitation ? "You have been invited to Legacy Fortress" : subjects[event.actionType];
   const body = event.invitation
     ? "Someone has invited you to connect with their Legacy Fortress. If you do not already have an account, create one with this email address before reviewing the invitation. If you already have an account, sign in to continue."
@@ -225,8 +239,12 @@ export function renderAuthEmail(event: VerifiedEmailEvent, senderName = "Legacy 
   const escapedUrl = event.verificationUrl.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
   return {
     subject,
-    text: `${body}\n\nAccepting the invitation does not by itself give you access to the owner's private Vault while they are alive.\n\n${event.verificationUrl}\n\nIf you did not expect this invitation, you can ignore this email.`,
-    html: `<p>${body}</p><p>Accepting the invitation does not by itself give you access to the owner's private Vault while they are alive.</p><p><a href="${escapedUrl}">Review invitation</a></p><p>If you did not expect this invitation, you can ignore this email.</p><p>${senderName}</p>`,
+    text: event.invitation
+      ? `${body}\n\nAccepting the invitation does not by itself give you access to the owner's private Vault while they are alive.\n\n${event.verificationUrl}\n\nIf you did not expect this invitation, you can ignore this email.`
+      : `${body}\n\n${event.verificationUrl}\n\nIf you didn't ask for this, you can ignore this email.`,
+    html: event.invitation
+      ? `<p>${body}</p><p>Accepting the invitation does not by itself give you access to the owner's private Vault while they are alive.</p><p><a href="${escapedUrl}">Review invitation</a></p><p>If you did not expect this invitation, you can ignore this email.</p><p>${senderName}</p>`
+      : `<p>${body}</p><p><a href="${escapedUrl}">${event.actionType === "recovery" ? "Reset your password" : event.actionType === "signup" ? "Confirm your account" : "Sign in"}</a></p><p>If you didn't ask for this, you can ignore this email.</p><p>${senderName}</p>`,
   };
 }
 

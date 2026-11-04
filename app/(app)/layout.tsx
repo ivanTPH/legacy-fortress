@@ -23,6 +23,7 @@ import { appendProfileAvatarTrace, maskAvatarUrl } from "../../lib/profile/avata
 import { loadProfileIdentityChip, resolveProfileIdentityDisplayName } from "../../lib/profile/workspace";
 import { buildDashboardSearchHref } from "../../lib/records/discovery";
 import { supabase } from "../../lib/supabaseClient";
+import { checkDeviceTrust, verifyDeviceHref } from "../../lib/auth/deviceTrustClient";
 import { applyAppearancePreference, readAppearancePreference } from "../../lib/appearancePreference";
 import { ViewerAccessProvider } from "../../components/access/ViewerAccessContext";
 import { VaultPreferencesProvider } from "../../components/vault/VaultPreferencesContext";
@@ -480,6 +481,15 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
         if (!user) {
           setIsDemoExperience(false);
           setAuthState("none");
+          return;
+        }
+
+        // A session from a new phone or computer needs the emailed code first (4 Nov 2026).
+        const device = await checkDeviceTrust();
+        if (!mounted) return;
+        if (device.enforced && !device.trusted) {
+          setAuthState("redirecting");
+          router.replace(verifyDeviceHref(`${pathname}${typeof window === "undefined" ? "" : window.location.search}`));
           return;
         }
 

@@ -180,3 +180,16 @@ test("fails closed on provider rejection and timeout", async () => {
   await assert.rejects(() => deliverWithResend(event, { apiKey: "staging-test-key", from: "staging@mail.mylegacyfortress.com", fetchImpl: async () => new Response("", { status: 429 }) }), /resend_http_429/);
   await assert.rejects(() => deliverWithResend(event, { apiKey: "staging-test-key", from: "staging@mail.mylegacyfortress.com", timeoutMs: 1, fetchImpl: async (_url, options) => await new Promise((_, reject) => options.signal.addEventListener("abort", () => reject(new Error("AbortError")))) }), /AbortError/);
 });
+
+test("a sign-in code email shows the code, and only invitations mention invitations", () => {
+  const base = { eventId: "evt_code", recipient: "synthetic@example.test", tokenHash: "opaque", redirectTo: "https://test.mylegacyfortress.com/auth/callback", verificationUrl: "https://supabase-test.mylegacyfortress.com/auth/v1/verify?token=opaque" };
+  const code = renderAuthEmail({ ...base, actionType: "magiclink", invitation: false, code: "123456" });
+  assert.match(code.subject, /123456/);
+  assert.match(code.html, /123 456/);
+  assert.doesNotMatch(code.text, /invitation/i);
+  const reset = renderAuthEmail({ ...base, actionType: "recovery", invitation: false });
+  assert.doesNotMatch(reset.text, /invitation/i);
+  const invite = renderAuthEmail({ ...base, actionType: "magiclink", invitation: true, code: "123456" });
+  assert.match(invite.text, /does not by itself give you access/);
+  assert.doesNotMatch(invite.subject, /123456/);
+});
