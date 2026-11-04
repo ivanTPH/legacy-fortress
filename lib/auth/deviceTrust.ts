@@ -49,3 +49,16 @@ export function deviceLabel(userAgent: string) {
   const browser = /edg\//.test(ua) ? "Edge" : /chrome\//.test(ua) && !/edg\//.test(ua) ? "Chrome" : /safari\//.test(ua) ? "Safari" : /firefox\//.test(ua) ? "Firefox" : "";
   return browser ? `${device} · ${browser}` : device;
 }
+
+/**
+ * Server routes read data with the server key, which the database's new-device rule can't see. So every
+ * route that serves Vault data checks the session here too (4 Nov 2026). Mirrors lf_session_trusted().
+ */
+export async function sessionIsTrusted(admin: SupabaseClient, request: Request, userId: string) {
+  if (!(await newDeviceCheckOn(admin))) return true;
+  const claims = readSessionClaims(bearerToken(request));
+  if (trustedBySignIn(claims)) return true;
+  if (!claims.sessionId) return false;
+  const known = await admin.from("trusted_sessions").select("session_id").eq("session_id", claims.sessionId).eq("user_id", userId).maybeSingle();
+  return Boolean(known.data);
+}

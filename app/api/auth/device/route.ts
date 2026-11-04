@@ -9,7 +9,7 @@ const NO_STORE = { "Cache-Control": "no-store" };
  * The browser can never mark itself trusted; only this server can, after checking the device token.
  */
 export async function GET(request: Request) {
-  const access = await requireIdentityApiAccess(request);
+  const access = await requireIdentityApiAccess(request, { allowUnverifiedDevice: true });
   if (!access.ok) return access.response;
   const enforced = await newDeviceCheckOn(access.admin);
   const claims = readSessionClaims(bearerToken(request));
@@ -32,7 +32,7 @@ export async function GET(request: Request) {
 
 /** POST — remember this device. Only from a session that has just passed the check (emailed code, two-step). */
 export async function POST(request: Request) {
-  const access = await requireIdentityApiAccess(request);
+  const access = await requireIdentityApiAccess(request, { allowUnverifiedDevice: true });
   if (!access.ok) return access.response;
   if (!trustedBySignIn(readSessionClaims(bearerToken(request)))) {
     return NextResponse.json({ ok: false, message: "Confirm it's you first." }, { status: 403, headers: NO_STORE });
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
 
 /** DELETE — forget every remembered device (Settings › Security). The next sign-in on each asks for a code. */
 export async function DELETE(request: Request) {
-  const access = await requireIdentityApiAccess(request);
+  const access = await requireIdentityApiAccess(request, { allowUnverifiedDevice: true });
   if (!access.ok) return access.response;
   await access.admin.from("trusted_devices").delete().eq("user_id", access.user.id);
   await access.admin.from("trusted_sessions").delete().eq("user_id", access.user.id).eq("method", "remembered_device");

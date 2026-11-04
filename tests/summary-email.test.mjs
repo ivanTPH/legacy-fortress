@@ -5,7 +5,7 @@ import { isDue, mayEmail, periodStart, renderSummaryEmail, signSchedulerRequest,
 
 test("summary email has counts, the normal sign-in and change/turn-off links only", () => {
   const message = renderSummaryEmail({ todo: 3, updates: 5, since: new Date("2026-10-01T00:00:00Z"), frequency: "monthly", appUrl: "https://test.example", token: "00000000-0000-4000-8000-000000000001" });
-  assert.match(message.text, /3 things to do and 5 updates since 1 Oct/);
+  assert.match(message.text, /3 decisions waiting for you and 5 updates since 1 Oct/);
   assert.match(message.text, /https:\/\/test\.example\/sign-in/);
   assert.match(message.text, /communications-preferences/);
   assert.match(message.text, /email\/summary-off\?token=/);
@@ -13,7 +13,7 @@ test("summary email has counts, the normal sign-in and change/turn-off links onl
   assert.match(message.html, /Turn off/);
   assert.doesNotMatch(message.text + message.html, /access_token|magic|otp|refresh_token/i);
   assert.equal(renderSummaryEmail({ todo: 1, updates: 0, since: new Date(), frequency: "weekly", appUrl: "x", token: "t" }).subject, "Your weekly Legacy Fortress summary");
-  assert.match(renderSummaryEmail({ todo: 1, updates: 1, since: new Date("2026-10-27T00:00:00Z"), frequency: "weekly", appUrl: "x", token: "t" }).text, /1 thing to do and 1 update since/);
+  assert.match(renderSummaryEmail({ todo: 1, updates: 1, since: new Date("2026-10-27T00:00:00Z"), frequency: "weekly", appUrl: "x", token: "t" }).text, /1 decision waiting for you and 1 update since/);
 });
 
 test("due rules: once a calendar month, or every 7 days; never when off", () => {
@@ -56,4 +56,19 @@ test("daily jobs sweep expired ID evidence but leave checks waiting for a review
   assert.match(sweep, /cleanupExpiredIdentityEvidence\(admin, request\.user_id, request\.id\)/);
   assert.match(route, /verifySchedulerRequest\(request\)/);
   assert.match(workflow, /\/api\/internal\/daily\/run/);
+});
+
+test("the summary lists next steps in general wording only, from the same rule as To do", async () => {
+  const { renderSummaryEmail } = await import("../lib/summaryEmail/service.ts");
+  const { buildNextSteps, emailLines } = await import("../lib/readiness/nextSteps.ts");
+  const facts = { rows: [{ id: "w1", kind: "asset", section_key: "legal", category_key: "wills", title: "My Will", status: "active" }], willDocumentCount: 0,
+    contacts: [{ id: "c1", name: "Mary Example", role: null, linkedUserId: null }], invitations: [], links: [{ recordId: "w1", personId: "c1", role: "Executor" }], suggestions: [], nominations: [] };
+  const steps = emailLines(buildNextSteps(facts, undefined, new Date("2026-11-04T12:00:00Z")));
+  assert.ok(steps.includes("Invite your executors to connect"));
+  const email = renderSummaryEmail({ todo: 0, updates: 0, since: new Date("2026-10-01T00:00:00Z"), frequency: "monthly", appUrl: "https://test.example", token: "t", steps });
+  assert.match(email.text, /Next steps:/);
+  assert.match(email.html, /Invite your executors to connect/);
+  assert.doesNotMatch(`${email.text}${email.html}`, /Mary|Example|My Will/);
+  const source = fs.readFileSync(new URL("../lib/summaryEmail/service.ts", import.meta.url), "utf8");
+  assert.match(source, /emailLines\(buildNextSteps\(facts/);
 });

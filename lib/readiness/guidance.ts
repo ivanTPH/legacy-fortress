@@ -26,7 +26,11 @@ export type GuidanceRuleKey =
   | "wishes"
   | "financial_administration"
   | "executor_after_will"
-  | "attorney_after_capacity";
+  | "attorney_after_capacity"
+  // Progressive steps (lib/readiness/nextSteps.ts, 4 Nov 2026)
+  | "review_executors" | "invite_executors" | "remind_executors" | "nominate_executors"
+  | "review_attorneys" | "invite_attorneys" | "remind_attorneys"
+  | "has_pension" | "has_savings" | "has_life_insurance";
 
 export type GuidanceItem = {
   key: GuidanceRuleKey;

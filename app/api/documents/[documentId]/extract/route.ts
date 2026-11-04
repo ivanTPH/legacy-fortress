@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { sessionIsTrusted } from "@/lib/auth/deviceTrust";
 import { getRequestUser } from "@/lib/admin/access";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { readDocumentText, EXTRACTION_LIMITS } from "@/lib/documents/extraction/readDocumentText";
@@ -29,6 +30,7 @@ export async function POST(request: Request, context: { params: Promise<{ docume
   if (!user) return fail(401, "sign_in_required");
   const admin = createSupabaseAdminClient();
   if (!admin) return fail(503, "extraction_unavailable");
+  if (!(await sessionIsTrusted(admin, request, user.id))) return fail(403, "device_not_verified");
 
   // Ownership is checked here and again by the suggestion triggers.
   // Assets keep files in documents; Legal records (Wills, LPAs...) keep them in attachments.
