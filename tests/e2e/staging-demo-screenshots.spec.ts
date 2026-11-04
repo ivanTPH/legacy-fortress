@@ -113,5 +113,19 @@ async function capture(browser: Browser, kind: "desk" | "phone") {
   await context.close();
 }
 
+test("To do agrees with the vault: the sample account has a Will, so it isn't asked for one", async ({ browser }) => {
+  test.setTimeout(120_000);
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  await signIn(page);
+  await page.goto(`${BASE_URL}/actions`, { waitUntil: "domcontentloaded" });
+  await page.waitForLoadState("networkidle", { timeout: 15_000 }).catch(() => undefined);
+  await expect(page.getByRole("heading").first()).toBeVisible();
+  await page.waitForTimeout(2500);
+  await expect(page.getByText("Do you have a Will?")).toHaveCount(0);
+  await expect(page.getByText("No will has been uploaded")).toHaveCount(0);
+  await context.close();
+});
+
 test("desktop screens", async ({ browser }) => { test.setTimeout(240_000); await capture(browser, "desk"); });
 test("phone screens", async ({ browser }) => { test.setTimeout(240_000); await capture(browser, "phone"); });
