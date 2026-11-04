@@ -36,6 +36,7 @@ import {
 } from "../../../lib/contacts/canonicalContacts";
 import { savePeopleContact } from "../../../lib/contacts/contactRepository";
 import { getPlanLimitRedirectHref } from "../../../lib/accountPlan";
+import { assetMatchesLegalCategory } from "../../../lib/legalCategories";
 import { showPremiumSheet } from "../../../lib/billing/client";
 import { sendContactInvite } from "../../../lib/contacts/sendContactInvite";
 import { loadProfileWorkspace, saveProfileWorkspace } from "../../../lib/profile/workspace";
@@ -354,6 +355,8 @@ type DashboardStateInput = {
   profileReadiness: ProfileReadinessRow;
   dashboardInviteState: Record<string, DashboardInviteOverride>;
   legalRecordCount: number;
+  /** Older legal records (the "records" table), counted like assets for Will and executor checks. */
+  legacyLegalRecords?: AssetRow[];
   willRecordCount: number;
   bankRecordCount: number;
   financeRecordCount: number;
@@ -503,27 +506,32 @@ export default function DashboardPage() {
     [recordSearchRows],
   );
   const legalRecordCount = legalAssets.length + legalDocuments.length + legacyLegalRecords.length;
+  // To-dos and prompts must agree with what the Legal page shows, including Wills saved as older
+  // records (owner report 4 Nov 2026: two Wills recorded, still asked "Do you have a Will?").
+  // Same rule as the Legal page (resolveLegalCategoryForAsset), across new and older records.
+  const activeVaultRows = useMemo(
+    () => [...assetRows, ...recordSearchRows].filter((row) => row.deleted_at == null && row.archived_at == null && row.status !== "archived"),
+    [assetRows, recordSearchRows],
+  );
   const willRecordCount = useMemo(
-    () => legalAssets.filter(isWillAsset).length + legalDocuments.filter(isWillDocument).length,
-    [legalAssets, legalDocuments],
+    () => activeVaultRows.filter((row) => assetMatchesLegalCategory(row, "wills")).length + legalDocuments.filter(isWillDocument).length,
+    [activeVaultRows, legalDocuments],
   );
   const powerOfAttorneyCount = useMemo(
-    () => legalAssets.filter((row) => {
-      const value = `${row.category_key ?? ""} ${row.subtype_key ?? ""} ${row.title ?? ""}`.toLowerCase();
-      return value.includes("power") || value.includes("attorney") || value.includes("lpa");
-    }).length,
-    [legalAssets],
+    () => activeVaultRows.filter((row) => assetMatchesLegalCategory(row, "power-of-attorney")).length,
+    [activeVaultRows],
   );
   const wishesCount = useMemo(
-    () => assetRows.filter((row) => {
+    () => [...assetRows, ...recordSearchRows.filter((row) => row.status !== "archived")].filter((row) => {
       const value = `${row.section_key ?? ""} ${row.category_key ?? ""} ${row.subtype_key ?? ""} ${row.title ?? ""}`.toLowerCase();
       return value.includes("wish") || value.includes("funeral") || value.includes("instruction");
     }).length,
-    [assetRows],
+    [assetRows, recordSearchRows],
   );
   const executorContactCount = useMemo(
-    () => contactRows.filter(isExecutorContact).length + assetRows.filter(isExecutorAsset).length,
-    [assetRows, contactRows],
+    () => contactRows.filter(isExecutorContact).length + assetRows.filter(isExecutorAsset).length
+      + recordSearchRows.filter((row) => row.status !== "archived" && isExecutorAsset(row)).length,
+    [assetRows, contactRows, recordSearchRows],
   );
   const nextOfKinContactCount = useMemo(
     () => contactRows.filter(isNextOfKinContact).length,
@@ -864,6 +872,7 @@ const legalSummary = useMemo(() => {
     profileReadiness,
     dashboardInviteState,
     legalRecordCount,
+    legacyLegalRecords,
     willRecordCount,
     bankRecordCount,
     financeRecordCount,
@@ -1852,7 +1861,7 @@ function useDashboardState(input: DashboardStateInput): DashboardState {
 
   const legalReadiness = useMemo(
     () => buildExecutorLegalReadinessState({
-      assetRows: input.assetRows,
+      assetRows: [...input.assetRows, ...(input.legacyLegalRecords ?? [])],
       documentRows: input.documentRows,
       attachmentRows: input.attachmentRows,
       contactRows: input.contactRows,
@@ -1868,6 +1877,7 @@ function useDashboardState(input: DashboardStateInput): DashboardState {
       dashboardDocumentItems,
       documentCoverage,
       input.assetRows,
+      input.legacyLegalRecords,
       input.attachmentRows,
       input.contactRows,
       input.dashboardInviteState,
