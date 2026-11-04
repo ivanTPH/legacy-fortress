@@ -13,6 +13,7 @@ import {
   PlatformStatCard,
 } from "../../../components/ui/PlatformPrimitives";
 import { supabase } from "../../../lib/supabaseClient";
+import SecurityNudge from "../../../components/auth/SecurityNudge";
 import { waitForActiveUser } from "../../../lib/auth/session";
 import {
   getRoleLabel,
@@ -120,6 +121,7 @@ export default function ContactWalletPage() {
 
   return (
     <main className="lf-page-shell">
+      <SecurityNudge />
       <section className="lf-page-card">
         <div className="lf-page-header">
           <div>

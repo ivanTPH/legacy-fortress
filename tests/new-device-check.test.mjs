@@ -39,3 +39,11 @@ test("sign-in and the app send an untrusted session to the code page; it can be 
   assert.match(read("app/api/auth/device/route.ts"), /Confirm it's you first\./, "only a just-checked session can remember a device");
   assert.match(read("app/(app)/account/security/page.tsx"), /forgetRememberedDevices/);
 });
+
+test("people linked to a Vault are offered two-step once, never forced", () => {
+  const nudge = read("components/auth/SecurityNudge.tsx");
+  assert.match(nudge, /Turn on two-step/);
+  assert.match(nudge, /Not now/);
+  assert.match(read("app/(app)/contact-wallet/page.tsx"), /<SecurityNudge \/>/);
+  assert.match(read("app/(app)/account/security/page.tsx"), /get\("setup"\) === "two-step"/);
+});
