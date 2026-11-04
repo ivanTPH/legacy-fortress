@@ -37,6 +37,7 @@ import {
 import { savePeopleContact } from "../../../lib/contacts/contactRepository";
 import { getPlanLimitRedirectHref } from "../../../lib/accountPlan";
 import { assetMatchesLegalCategory } from "../../../lib/legalCategories";
+import { buildNextSteps, type VaultFacts } from "../../../lib/readiness/nextSteps";
 import { showPremiumSheet } from "../../../lib/billing/client";
 import { sendContactInvite } from "../../../lib/contacts/sendContactInvite";
 import { loadProfileWorkspace, saveProfileWorkspace } from "../../../lib/profile/workspace";
@@ -886,18 +887,24 @@ const legalSummary = useMemo(() => {
     loading,
     viewerMode: viewer.mode,
   });
+  // Next steps come from the one shared rule (lib/readiness/nextSteps.ts) that the notifications bell and
+  // the summary email use too, built from the server's view of the Vault (4 Nov 2026).
+  const [vaultFacts, setVaultFacts] = useState<VaultFacts | null>(null);
+  useEffect(() => {
+    let active = true;
+    if (viewer.mode !== "owner" || !viewer.sessionUserId) return;
+    void (async () => {
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      if (!token) return;
+      const response = await fetch("/api/next-steps", { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" }).catch(() => null);
+      const json = (await response?.json().catch(() => null)) as { facts?: VaultFacts } | null;
+      if (active && json?.facts) setVaultFacts(json.facts);
+    })();
+    return () => { active = false; };
+  }, [viewer.mode, viewer.sessionUserId, assetRows.length, contactRows.length, documentRows.length, recordSearchRows.length]);
   const guidanceItems = useMemo(
-    () => buildGuidanceItems({
-      willCount: willRecordCount,
-      powerOfAttorneyCount,
-      trustedPeopleCount: contactRows.length,
-      executorCount: executorContactCount,
-      digitalRecordCount,
-      possessionCount: possessionsRecordCount,
-      wishesCount,
-      financeRecordCount,
-    }, preferences),
-    [contactRows.length, digitalRecordCount, executorContactCount, financeRecordCount, possessionsRecordCount, preferences, powerOfAttorneyCount, willRecordCount, wishesCount],
+    () => (vaultFacts ? buildNextSteps(vaultFacts, preferences) : []),
+    [preferences, vaultFacts],
   );
   // Early-access requests from nominees are Needs you items (va-v7). Asking never shares anything.
   const [earlyAccessRequests, setEarlyAccessRequests] = useState<Array<{ id: string; name: string }>>([]);

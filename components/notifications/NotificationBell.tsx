@@ -7,6 +7,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import Icon from "../ui/Icon";
 import { supabase } from "../../lib/supabaseClient";
+import { buildNextSteps, type NextStep, type VaultFacts } from "../../lib/readiness/nextSteps";
+import { loadVaultPreferences } from "../../lib/vaultPreferences";
 import { waitForActiveUser } from "../../lib/auth/session";
 import { describePersonNotification, loadPersonNotifications, markPersonNotificationsRead } from "../../lib/notifications/personNotifications";
 
@@ -89,6 +91,23 @@ export default function NotificationBell({ ownerUserId, disabled = false }: { ow
     // Reload when opened so something you just did (e.g. an invitation) shows straight away.
   }, [disabled, ownerUserId, open]);
 
+  // Next steps: the same rule as To do and the summary email (4 Nov 2026). Live, so not clearable here.
+  const [nextSteps, setNextSteps] = useState<NextStep[]>([]);
+  useEffect(() => {
+    if (!ownerUserId || disabled || !open) return;
+    let cancelled = false;
+    void (async () => {
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      if (!token) return;
+      const [factsResponse, preferences] = await Promise.all([
+        fetch("/api/next-steps", { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" }).then((response) => response.json()).catch(() => null) as Promise<{ facts?: VaultFacts } | null>,
+        loadVaultPreferences(supabase, ownerUserId).catch(() => undefined),
+      ]);
+      if (!cancelled && factsResponse?.facts) setNextSteps(buildNextSteps(factsResponse.facts, preferences));
+    })();
+    return () => { cancelled = true; };
+  }, [disabled, open, ownerUserId]);
+
   const [cleared, setCleared] = useState<string[]>([]);
   useEffect(() => {
     let cancelled = false;
@@ -132,6 +151,10 @@ export default function NotificationBell({ ownerUserId, disabled = false }: { ow
               <button type="button" className="lf-icon-btn-round" aria-label="Close notifications" onClick={() => setOpen(false)}><Icon name="close" size={18} /></button>
             </div>
           </div>
+          {nextSteps.length ? <Link href="/actions" className="lf-notification-event lf-notification-next" onClick={() => setOpen(false)}>
+            <span className="lf-notification-event-icon"><Icon name="task_alt" size={18} /></span>
+            <span><strong>{nextSteps.length === 1 ? "1 next step in your Vault" : `${nextSteps.length} next steps in your Vault`}</strong><small>{nextSteps[0].title}</small></span>
+          </Link> : null}
           {loading ? <p className="lf-notification-empty">Loading recent events…</p> : null}
           {!loading && !visibleEvents.length ? <p className="lf-notification-empty">Nothing new has happened yet.</p> : null}
           {!loading ? visibleEvents.map((event) => {

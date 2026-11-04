@@ -238,7 +238,7 @@ function ActionQueuePanel({ items, onAction, context, guidanceItems, onGuidanceD
                                 <summary>More options</summary>
                                 <div className="lf-action-centre-more-options-list">
                                   <button type="button" style={secondaryActionStyle} disabled={guidanceBusyKey === item.guidanceItem.key} onClick={() => onGuidanceDecision(item.guidanceItem!, "already_done")}>Already done</button>
-                                  <button type="button" style={secondaryActionStyle} disabled={guidanceBusyKey === item.guidanceItem.key} onClick={() => onGuidanceDecision(item.guidanceItem!, "not_relevant")}>Not relevant</button>
+                                  <button type="button" style={secondaryActionStyle} disabled={guidanceBusyKey === item.guidanceItem.key} onClick={() => onGuidanceDecision(item.guidanceItem!, "not_relevant")}>{(item.guidanceItem as { dismissLabel?: string }).dismissLabel ?? "Not relevant"}</button>
                                   <button type="button" style={secondaryActionStyle} disabled={guidanceBusyKey === item.guidanceItem.key} onClick={() => onGuidanceDecision(item.guidanceItem!, "remind_later")}>
                                     {guidanceBusyKey === item.guidanceItem.key ? "Saving..." : "Remind me later"}
                                   </button>
@@ -382,7 +382,7 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
                 <summary>Remind me later or change this suggestion</summary>
                 <div className="lf-action-centre-more-options-list">
                   <button type="button" style={secondaryActionStyle} disabled={guidanceBusyKey === selectedRow.guidanceItem.key} onClick={() => onGuidanceDecision(selectedRow.guidanceItem!, "remind_later")}>{guidanceBusyKey === selectedRow.guidanceItem.key ? "Saving..." : "Remind me later"}</button>
-                  <button type="button" style={secondaryActionStyle} disabled={guidanceBusyKey === selectedRow.guidanceItem.key} onClick={() => onGuidanceDecision(selectedRow.guidanceItem!, "not_relevant")}>Not relevant</button>
+                  <button type="button" style={secondaryActionStyle} disabled={guidanceBusyKey === selectedRow.guidanceItem.key} onClick={() => onGuidanceDecision(selectedRow.guidanceItem!, "not_relevant")}>{(selectedRow.guidanceItem as { dismissLabel?: string }).dismissLabel ?? "Not relevant"}</button>
                 </div>
               </details>
             ) : null}
