@@ -98,9 +98,26 @@ async function addAdminRow(admin, user) {
   ids.adminRows.push(row.id);
 }
 
-async function bearer(anon, user) {
+/**
+ * New-device check (4 Nov 2026): this synthetic harness signs in with a password through the API, which
+ * the database treats as a new device. Mark the session trusted with the server key, exactly as
+ * "Remember this device" does after an emailed code. Harmless while the switch is off.
+ */
+let harnessAdmin = null;
+
+async function trustSession(adminClient, accessToken) {
+  if (!adminClient) return;
+  try {
+    const claims = JSON.parse(Buffer.from(String(accessToken).split(".")[1] ?? "", "base64url").toString("utf8"));
+    if (!claims.session_id || !claims.sub) return;
+    await adminClient.from("trusted_sessions").upsert({ session_id: claims.session_id, user_id: claims.sub, method: "remembered_device" }, { onConflict: "session_id" });
+  } catch { /* before the new-device migration there is nothing to record */ }
+}
+
+async function bearer(anon, user, admin = harnessAdmin) {
   const response = await anon.auth.signInWithPassword({ email: user.email, password: user.password });
   if (response.error || !response.data.session) throw response.error || new Error(`Could not sign in ${user.email}`);
+  await trustSession(admin, response.data.session.access_token);
   return response.data.session.access_token;
 }
 
@@ -149,6 +166,7 @@ async function cleanup(admin) {
 async function main() {
   const { appUrl, supabaseUrl } = requireStaging();
   const { admin, anon } = clients(supabaseUrl);
+  harnessAdmin = admin;
   activeAdmin = admin;
   const owner = await createUser(admin, "owner");
   const requester = await createUser(admin, "requester");
@@ -196,6 +214,7 @@ async function main() {
   const walletState = await admin.from("wallets").select("vault_lifecycle_state").eq("id", wallet.id).single();
   if (walletState.error || walletState.data.vault_lifecycle_state !== "ESTATE_LOCKED") throw walletState.error || new Error("Estate lock state mismatch");
   const ownerSession = await anon.auth.signInWithPassword({ email: owner.email, password: owner.password });
+  if (ownerSession.data.session) await trustSession(admin, ownerSession.data.session.access_token);
   const historicMutation = await ownerSession.data.session ? anon.from("records").update({ title: `${marker} should be denied` }).eq("id", record.id).select("id").maybeSingle() : { error: new Error("owner sign-in failed"), data: null };
   if (!historicMutation.error && historicMutation.data) fail("estate lock protects historic data", "Mutation unexpectedly succeeded.");
   pass("estate lock protects historic data");

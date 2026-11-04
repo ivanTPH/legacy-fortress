@@ -358,6 +358,7 @@ test("suggested documents: a connected person suggests, the owner reviews, rejec
     const client = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
     const auth = await client.auth.signInWithPassword({ email, password: PASSWORD });
     if (auth.error || !auth.data.session) throw auth.error ?? new Error("suggestion_sign_in_failed");
+    await trustSession(adminClient, auth.data.session.access_token);
     return auth.data.session.access_token;
   };
   const adviserToken = await sessionFor(adviser.email);
@@ -452,10 +453,20 @@ async function seedCompletedPersonalOnboarding(userId: string) {
   if (terms.error) throw terms.error;
 }
 
+/** New-device check (4 Nov 2026): mark this synthetic password session trusted, as "Remember this device" does. */
+async function trustSession(client: SupabaseClient, accessToken: string) {
+  try {
+    const claims = JSON.parse(Buffer.from(accessToken.split(".")[1] ?? "", "base64url").toString("utf8")) as { session_id?: string; sub?: string };
+    if (!claims.session_id || !claims.sub) return;
+    await client.from("trusted_sessions").upsert({ session_id: claims.session_id, user_id: claims.sub, method: "remembered_device" }, { onConflict: "session_id" });
+  } catch { /* before the new-device migration there is nothing to record */ }
+}
+
 async function signIn(page: Page, email: string, next: string) {
   const authClient = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
   const auth = await authClient.auth.signInWithPassword({ email, password: PASSWORD });
   if (auth.error || !auth.data.session) throw auth.error ?? new Error("staging_browser_authentication_failed");
+  await trustSession(adminClient, auth.data.session.access_token);
   let session = auth.data.session;
   // Staff portals need a two-step sign-in (authenticator code) when it is enforced.
   if (next.startsWith("/admin") || next.startsWith("/enterprise")) {
@@ -516,3 +527,30 @@ function totpCode(base32Secret: string, at = Date.now()) {
   const offset = hmac[hmac.length - 1] & 0xf;
   return String(((hmac.readUInt32BE(offset) & 0x7fffffff) % 1000000)).padStart(6, "0");
 }
+
+test("new-device check: a password-only session sees nothing until the emailed code is entered", async () => {
+  const switchRow = await adminClient.from("lf_security_switches").select("new_device_check").maybeSingle();
+  test.skip(!switchRow.data?.new_device_check, "New-device check is switched off on TEST.");
+  const owner = users[2];
+  const wallet = await adminClient.from("wallets").select("id").eq("owner_user_id", owner.id).limit(1).maybeSingle();
+  test.skip(!wallet.data, "No synthetic vault to check against.");
+  // 1. Password only, not remembered: the database refuses vault data and the app asks for the code.
+  const passwordClient = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+  const passwordAuth = await passwordClient.auth.signInWithPassword({ email: owner.email, password: PASSWORD });
+  if (passwordAuth.error || !passwordAuth.data.session) throw passwordAuth.error ?? new Error("password_sign_in_failed");
+  const hidden = await passwordClient.from("wallets").select("id").eq("owner_user_id", owner.id);
+  expect(hidden.data ?? []).toEqual([]);
+  const check = await fetch(`${BASE_URL}/api/auth/device`, { headers: { Authorization: `Bearer ${passwordAuth.data.session.access_token}` } }).then((response) => response.json());
+  expect(check).toMatchObject({ enforced: true, trusted: false });
+  // 2. The emailed code (issued here without sending, then entered) makes a trusted session that sees the vault.
+  const link = await adminClient.auth.admin.generateLink({ type: "magiclink", email: owner.email });
+  const code = link.data?.properties?.email_otp;
+  if (link.error || !code) throw link.error ?? new Error("code_not_issued");
+  const codeClient = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+  const verified = await codeClient.auth.verifyOtp({ email: owner.email, token: code, type: "email" });
+  if (verified.error || !verified.data.session) throw verified.error ?? new Error("code_not_accepted");
+  const visible = await codeClient.from("wallets").select("id").eq("owner_user_id", owner.id);
+  expect((visible.data ?? []).length).toBeGreaterThan(0);
+  const after = await fetch(`${BASE_URL}/api/auth/device`, { headers: { Authorization: `Bearer ${verified.data.session.access_token}` } }).then((response) => response.json());
+  expect(after).toMatchObject({ enforced: true, trusted: true });
+});

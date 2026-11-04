@@ -72,10 +72,24 @@ async function createUser(admin, email, password, marker) {
   return { id: result.data.user.id, email, password };
 }
 
+/**
+ * New-device check (4 Nov 2026): this synthetic harness signs in with a password through the API, which
+ * the database treats as a new device. Mark the session trusted with the server key, exactly as
+ * "Remember this device" does after an emailed code. Harmless while the switch is off.
+ */
+async function trustSession(adminClient, accessToken) {
+  try {
+    const claims = JSON.parse(Buffer.from(String(accessToken).split(".")[1] ?? "", "base64url").toString("utf8"));
+    if (!claims.session_id || !claims.sub) return;
+    await adminClient.from("trusted_sessions").upsert({ session_id: claims.session_id, user_id: claims.sub, method: "remembered_device" }, { onConflict: "session_id" });
+  } catch { /* before the new-device migration there is nothing to record */ }
+}
+
 async function signIn(config, person) {
   const client = makeClient(config.supabaseUrl, config.anonKey);
   const result = await client.auth.signInWithPassword({ email: person.email, password: person.password });
   if (result.error || !result.data.session) throw result.error ?? new Error("synthetic_sign_in_failed");
+  await trustSession(admin, result.data.session.access_token);
   return { client, user: result.data.user, token: result.data.session.access_token };
 }
 

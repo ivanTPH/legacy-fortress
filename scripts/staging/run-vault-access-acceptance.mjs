@@ -72,7 +72,21 @@ async function createPerson(run, role, password) {
   const client = makeClient(config.supabaseUrl, config.anonKey);
   const session = await client.auth.signInWithPassword({ email, password });
   if (session.error || !session.data.session) throw new Error(`sign_in_${role}:${safeError(session.error)}`);
+  await trustSession(admin, session.data.session.access_token);
   return { id: result.data.user.id, email, client, token: session.data.session.access_token };
+}
+
+/**
+ * New-device check (4 Nov 2026): this synthetic harness signs in with a password through the API, which
+ * the database treats as a new device. Mark the session trusted with the server key, exactly as
+ * "Remember this device" does after an emailed code. Harmless while the switch is off.
+ */
+async function trustSession(adminClient, accessToken) {
+  try {
+    const claims = JSON.parse(Buffer.from(String(accessToken).split(".")[1] ?? "", "base64url").toString("utf8"));
+    if (!claims.session_id || !claims.sub) return;
+    await adminClient.from("trusted_sessions").upsert({ session_id: claims.session_id, user_id: claims.sub, method: "remembered_device" }, { onConflict: "session_id" });
+  } catch { /* before the new-device migration there is nothing to record */ }
 }
 
 async function invite(owner, person, run, role) {
