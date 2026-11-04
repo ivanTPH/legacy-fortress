@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import Icon from "../ui/Icon";
 import { supabase } from "../../lib/supabaseClient";
 import { buildNextSteps, type NextStep, type VaultFacts } from "../../lib/readiness/nextSteps";
+import { loadSuggestionRecordLabels, titleWithRecord } from "../../lib/notifications/suggestionContext";
 import { loadVaultPreferences } from "../../lib/vaultPreferences";
 import { waitForActiveUser } from "../../lib/auth/session";
 import { describePersonNotification, loadPersonNotifications, markPersonNotificationsRead } from "../../lib/notifications/personNotifications";
@@ -26,10 +27,11 @@ type NotificationEvent = {
 
 const READ_KEY = "lf:notification-events:read";
 
-function eventCopy(event: NotificationEvent) {
+function eventCopy(event: NotificationEvent, recordLabels: Record<string, string> = {}) {
   if (event.event_type.startsWith("person:")) {
-    const item = describePersonNotification(event.event_type.slice(7), event.owner_name ?? null);
-    return { title: item.title, detail: item.detail, href: event.link ?? "/notifications" };
+    const kind = event.event_type.slice(7);
+    const item = describePersonNotification(kind, event.owner_name ?? null);
+    return { title: titleWithRecord(kind, item.title, event.link, recordLabels), detail: item.detail, href: event.link ?? "/notifications" };
   }
   const copy = describeInvitationEvent(event.event_type, event.payload ?? null, event.contact_invitations?.contact_name ?? null);
   return { title: copy.title, detail: copy.detail, href: copy.kind === "access" ? "/access-sharing" : "/people-access?view=people" };
@@ -47,6 +49,7 @@ function relativeTime(value: string) {
 
 export default function NotificationBell({ ownerUserId, disabled = false }: { ownerUserId?: string | null; disabled?: boolean }) {
   const [events, setEvents] = useState<NotificationEvent[]>([]);
+  const [recordLabels, setRecordLabels] = useState<Record<string, string>>({});
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [readIds, setReadIds] = useState<string[]>(() => {
@@ -78,7 +81,9 @@ export default function NotificationBell({ ownerUserId, disabled = false }: { ow
           .limit(8),
         loadPersonNotifications(supabase, 8),
       ]);
+      const labels = await loadSuggestionRecordLabels(supabase, personal.map((item) => ({ kind: item.kind, link: item.link })));
       if (!cancelled) {
+        setRecordLabels(labels);
         setEvents([
           ...((result.data ?? []) as NotificationEvent[]),
           ...personal.map((item) => ({ id: item.id, event_type: `person:${item.kind}`, created_at: item.createdAt, owner_name: item.ownerName, link: item.link, read: Boolean(item.readAt) })),
@@ -158,7 +163,7 @@ export default function NotificationBell({ ownerUserId, disabled = false }: { ow
           {loading ? <p className="lf-notification-empty">Loading recent events…</p> : null}
           {!loading && !visibleEvents.length ? <p className="lf-notification-empty">Nothing new has happened yet.</p> : null}
           {!loading ? visibleEvents.map((event) => {
-            const copy = eventCopy(event);
+            const copy = eventCopy(event, recordLabels);
             return <SwipeToClear key={event.id} label={copy.title} onClear={() => clearOne(event.id)}><Link href={copy.href} className="lf-notification-event" onClick={() => setOpen(false)}>
               <span className="lf-notification-event-icon"><Icon name={copy.title.startsWith("Invitation sent") ? "send" : "notifications_active"} size={18} /></span>
               <span><strong>{copy.title}</strong><small>{copy.detail}</small><time dateTime={event.created_at}>{relativeTime(event.created_at)}</time></span>
