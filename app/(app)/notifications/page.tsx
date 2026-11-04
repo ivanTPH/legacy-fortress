@@ -10,6 +10,7 @@ import Icon from "../../../components/ui/Icon";
 import { waitForActiveUser } from "../../../lib/auth/session";
 import { supabase } from "../../../lib/supabaseClient";
 import { describePersonNotification, loadPersonNotifications, markPersonNotificationsRead } from "../../../lib/notifications/personNotifications";
+import { loadSuggestionRecordLabels, titleWithRecord } from "../../../lib/notifications/suggestionContext";
 
 type NotificationEvent = {
   id: string;
@@ -26,10 +27,11 @@ type Filter = "all" | "unread" | "security" | "people" | "records";
 
 const READ_KEY = "lf:notification-events:read";
 
-function describeEvent(event: NotificationEvent) {
+function describeEvent(event: NotificationEvent, recordLabels: Record<string, string> = {}) {
   if (event.event_type.startsWith("person:")) {
-    const item = describePersonNotification(event.event_type.slice(7), event.owner_name ?? null);
-    return { ...item, href: event.link ?? "/notifications" };
+    const kind = event.event_type.slice(7);
+    const item = describePersonNotification(kind, event.owner_name ?? null);
+    return { ...item, title: titleWithRecord(kind, item.title, event.link, recordLabels), href: event.link ?? "/notifications" };
   }
   const copy = describeInvitationEvent(event.event_type, event.payload ?? null, event.contact_invitations?.contact_name ?? null);
   const icon = copy.kind === "sent" ? "send" : copy.kind === "accepted" ? "person_check" : copy.kind === "verified" ? "verified_user" : copy.kind === "failed" ? "error" : copy.kind === "access" ? "key" : "notifications_active";
@@ -43,6 +45,7 @@ function formatEventTime(value: string) {
 
 export default function NotificationsPage() {
   const [events, setEvents] = useState<NotificationEvent[]>([]);
+  const [recordLabels, setRecordLabels] = useState<Record<string, string>>({});
   const [filter, setFilter] = useState<Filter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [readIds, setReadIds] = useState<string[]>([]);
@@ -73,6 +76,7 @@ export default function NotificationsPage() {
         ...personal.map((item) => ({ id: item.id, event_type: `person:${item.kind}`, created_at: item.createdAt, owner_name: item.ownerName, link: item.link })),
       ].sort((a, b) => b.created_at.localeCompare(a.created_at));
       setEvents(merged);
+      void loadSuggestionRecordLabels(supabase, personal.map((item) => ({ kind: item.kind, link: item.link }))).then((labels) => { if (!cancelled) setRecordLabels(labels); });
       const alreadyRead = personal.filter((item) => item.readAt).map((item) => item.id);
       if (alreadyRead.length) setReadIds((current) => Array.from(new Set([...current, ...alreadyRead])));
       setLoading(false);
@@ -102,7 +106,7 @@ export default function NotificationsPage() {
   }
   const visibleEvents = useMemo(() => events.filter((event) => !cleared.includes(event.id)), [events, cleared]);
   const filtered = useMemo(() => visibleEvents.filter((event) => {
-    const item = describeEvent(event);
+    const item = describeEvent(event, recordLabels);
     return filter === "all" || (filter === "unread" ? !readIds.includes(event.id) : item.group === filter);
   }), [visibleEvents, filter, readIds]);
   const selected = filtered.find((event) => event.id === selectedId) ?? filtered[0] ?? null;
@@ -144,7 +148,7 @@ export default function NotificationsPage() {
           <section className="lf-notifications-list" aria-label="Notification events">
             {!filtered.length ? <div className="lf-notification-empty">No notifications match this filter.</div> : null}
             {filtered.map((event) => {
-              const item = describeEvent(event);
+              const item = describeEvent(event, recordLabels);
               const unread = !readIds.includes(event.id);
               return <SwipeToClear key={event.id} label={item.title} onClear={() => clearNotifications([event.id])}><button type="button" className={`lf-notification-row${selected?.id === event.id ? " is-selected" : ""}`} onClick={() => { setSelectedId(event.id); markRead(event.id); }}>
                 <span className="lf-notification-event-icon"><Icon name={item.icon} size={20} /></span>
@@ -153,7 +157,7 @@ export default function NotificationsPage() {
               </button></SwipeToClear>;
             })}
           </section>
-          {selected ? (() => { const item = describeEvent(selected); return <aside className="lf-notification-detail"><span className="lf-notification-detail-icon"><Icon name={item.icon} size={24} /></span><h2>{item.title}</h2><p>{item.detail}</p><dl><div><dt>When</dt><dd>{formatEventTime(selected.created_at)}</dd></div>{selected.event_type.startsWith("person:") ? null : <div><dt>Event</dt><dd>{selected.event_type}</dd></div>}</dl><Link href={item.href} className="lf-ui-button lf-ui-button-secondary">Open related area <Icon name="chevron_right" size={18} /></Link></aside>; })() : null}
+          {selected ? (() => { const item = describeEvent(selected, recordLabels); return <aside className="lf-notification-detail"><span className="lf-notification-detail-icon"><Icon name={item.icon} size={24} /></span><h2>{item.title}</h2><p>{item.detail}</p><dl><div><dt>When</dt><dd>{formatEventTime(selected.created_at)}</dd></div>{selected.event_type.startsWith("person:") ? null : <div><dt>Event</dt><dd>{selected.event_type}</dd></div>}</dl><Link href={item.href} className="lf-ui-button lf-ui-button-secondary">Open related area <Icon name="chevron_right" size={18} /></Link></aside>; })() : null}
         </div>
       ) : null}
     </div>
