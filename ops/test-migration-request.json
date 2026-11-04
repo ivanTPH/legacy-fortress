@@ -1,8 +1,8 @@
 {
-  "approvedBy": "Ivan (owner), 3 Nov 2026: document limits - Free 10, Premium 100 plus Stripe storage packs of 100 (GBP 1/month or 12/year), hidden 2 GB per 100",
+  "approvedBy": "Ivan (owner), 4 Nov 2026: new-device check infrastructure with its switch OFF (emailed code on a new device, remembered devices, restrictive trusted-session rule)",
   "mode": "apply",
-  "attempt": 23,
+  "attempt": 24,
   "files": [
-    { "file": "20261103200000_document_limits.sql", "sha256": "67f1cbc559d7a85711679dd3c066ef01cf1dd5dbbb4538701b40a91c294e9ff2" }
+    { "file": "20261104120000_new_device_check.sql", "sha256": "223c5b02b657583c59bc3dab3245374dc606dfc657cab7d67cac7f22b9f35899" }
   ]
 }

@@ -9470,3 +9470,23 @@ a.lf-pp-item:hover { background: var(--lf-interaction-hover, #F6EFEA); }
 .lf-doc-allowance > div { display: grid; gap: 2px; flex: 1 1 auto; min-width: 0; }
 .lf-doc-allowance span { color: var(--lf-text-secondary); font-size: 14px; }
 .lf-doc-allowance button { flex: none; }
+
+/* New-device code (4 Nov 2026): plain, large and step by step for every age. */
+.lf-verify-device { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; background: var(--lf-surface-page); }
+.lf-verify-card { width: 100%; max-width: 440px; background: var(--lf-surface-card); border: 1px solid var(--lf-border-card, #EBE4DE); border-radius: 20px; padding: 28px 24px; display: grid; gap: 14px; box-shadow: var(--lf-shadow-md); }
+.lf-verify-brand { display: flex; align-items: center; gap: 10px; font-size: 17px; }
+.lf-verify-icon { display: inline-grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: var(--lf-primary-bg); color: #FFFFFF; }
+.lf-verify-card h1 { margin: 0; font-size: 28px; line-height: 1.2; }
+.lf-verify-lead, .lf-verify-sent { margin: 0; font-size: 17px; line-height: 1.5; }
+.lf-verify-sent { font-weight: 600; }
+.lf-verify-card form { display: grid; gap: 14px; }
+.lf-verify-code { font-size: 28px; letter-spacing: 8px; text-align: center; min-height: 60px; font-variant-numeric: tabular-nums; }
+.lf-verify-remember { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; }
+.lf-verify-remember input { width: 22px; height: 22px; margin-top: 2px; flex: none; accent-color: var(--lf-primary-bg); }
+.lf-verify-remember span { display: grid; gap: 2px; }
+.lf-verify-remember small { color: var(--lf-text-secondary); font-size: 14px; line-height: 1.4; }
+.lf-verify-card .lf-primary-btn { min-height: 52px; font-size: 17px; }
+.lf-verify-help { margin: 0; color: var(--lf-text-secondary); font-size: 15px; }
+.lf-verify-actions { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.lf-link-button { border: 0; background: transparent; padding: 10px 0; min-height: 44px; font: inherit; font-size: 16px; font-weight: 600; color: var(--lf-link); cursor: pointer; }
+.lf-link-button:disabled { color: var(--lf-text-secondary); cursor: default; }

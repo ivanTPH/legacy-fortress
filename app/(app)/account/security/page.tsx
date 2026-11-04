@@ -16,6 +16,7 @@ import { getBrowserAuthRedirect } from "../../../../lib/auth/redirects";
 import { supabase } from "../../../../lib/supabaseClient";
 import { normalizePhone } from "../../../../lib/validation/profile";
 import { enrollPasskey, isPasskeyEnrollmentEnabled, supportsPasskeyBrowser } from "../../../../lib/auth/passkeys";
+import { forgetRememberedDevices } from "../../../../lib/auth/deviceTrustClient";
 import Icon from "../../../../components/ui/Icon";
 import TwoStepPanel, { loadTwoStepState, type TwoStepState } from "../../../../components/auth/TwoStepPanel";
 
@@ -37,6 +38,14 @@ export default function SecurityPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passkeyStatus, setPasskeyStatus] = useState("");
+  const [rememberedStatus, setRememberedStatus] = useState("");
+  const [devicesBusy, setDevicesBusy] = useState(false);
+  const forgetDevices = async () => {
+    setDevicesBusy(true);
+    const ok = await forgetRememberedDevices();
+    setRememberedStatus(ok ? "Done. Each phone or computer will ask for an emailed code next time." : "That didn’t work. Please try again.");
+    setDevicesBusy(false);
+  };
   const [passkeyBusy, setPasskeyBusy] = useState(false);
   const [open, setOpen] = useState<"password" | "two-step" | "mobile" | null>(null);
   const [twoStep, setTwoStep] = useState<TwoStepState>({ factorId: null, loading: true });
@@ -226,6 +235,11 @@ export default function SecurityPage() {
             <span className="lf-sec-text"><strong id="sec-two-step-label">Two-step verification</strong><small>{twoStep.loading ? "Checking…" : twoStep.factorId ? "On · authenticator app" : "Off"}</small></span>
             {/* A switch like the design's Face ID row: turning it on starts set-up, turning it off asks to confirm. */}
             <button type="button" role="switch" className="lf-sec-switch" aria-checked={Boolean(twoStep.factorId)} aria-labelledby="sec-two-step-label" disabled={twoStep.loading} onClick={() => setOpen(open === "two-step" ? null : "two-step")}><span aria-hidden="true" /></button>
+          </div>
+          <div className="lf-sec-row">
+            <span className="lf-sec-icon"><Icon name="devices" size={22} /></span>
+            <span className="lf-sec-text"><strong>Remembered devices</strong><small>{rememberedStatus || "Phones and computers that don’t ask for an emailed code"}</small></span>
+            <button type="button" className="lf-sec-action" disabled={devicesBusy} onClick={() => void forgetDevices()}>{devicesBusy ? "Forgetting…" : "Forget all"}</button>
           </div>
           {open === "two-step" ? <div className="lf-sec-panel"><TwoStepPanel state={twoStep} autoStart onChanged={async () => { await reloadTwoStep(); setOpen(null); }} onCancel={() => setOpen(null)} /></div> : null}
         </div>
