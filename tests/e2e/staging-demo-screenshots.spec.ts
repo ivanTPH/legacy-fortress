@@ -65,10 +65,20 @@ async function findUser(email: string) {
   return null;
 }
 
+/** New-device check (4 Nov 2026): mark this synthetic password session trusted, as "Remember this device" does. */
+async function trustSession(client: SupabaseClient, accessToken: string) {
+  try {
+    const claims = JSON.parse(Buffer.from(accessToken.split(".")[1] ?? "", "base64url").toString("utf8")) as { session_id?: string; sub?: string };
+    if (!claims.session_id || !claims.sub) return;
+    await client.from("trusted_sessions").upsert({ session_id: claims.session_id, user_id: claims.sub, method: "remembered_device" }, { onConflict: "session_id" });
+  } catch { /* before the new-device migration there is nothing to record */ }
+}
+
 async function signIn(page: Page) {
   const client = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
   const auth = await client.auth.signInWithPassword({ email: EMAIL, password: PASSWORD });
   if (auth.error || !auth.data.session) throw auth.error ?? new Error("demo_sign_in_failed");
+  await trustSession(admin, auth.data.session.access_token);
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
   await page.evaluate((session) => { window.localStorage.clear(); window.localStorage.setItem("sb-supabase-test-auth-token", JSON.stringify(session)); }, auth.data.session);
 }

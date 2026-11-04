@@ -1,8 +1,8 @@
 {
-  "approvedBy": "Ivan (owner), 4 Nov 2026: new-device check infrastructure with its switch OFF (emailed code on a new device, remembered devices, restrictive trusted-session rule)",
+  "approvedBy": "Ivan (owner), 4 Nov 2026: turn the new-device check on for TEST (open sessions kept trusted)",
   "mode": "apply",
-  "attempt": 24,
+  "attempt": 25,
   "files": [
-    { "file": "20261104120000_new_device_check.sql", "sha256": "223c5b02b657583c59bc3dab3245374dc606dfc657cab7d67cac7f22b9f35899" }
+    { "file": "20261104130000_new_device_check_on.sql", "sha256": "3ad91cf58c093475b6581632443ba048df86433c0c941e28c1db88c3810e0b1a" }
   ]
 }
