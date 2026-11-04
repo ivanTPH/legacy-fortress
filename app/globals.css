@@ -9490,3 +9490,9 @@ a.lf-pp-item:hover { background: var(--lf-interaction-hover, #F6EFEA); }
 .lf-verify-actions { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .lf-link-button { border: 0; background: transparent; padding: 10px 0; min-height: 44px; font: inherit; font-size: 16px; font-weight: 600; color: var(--lf-link); cursor: pointer; }
 .lf-link-button:disabled { color: var(--lf-text-secondary); cursor: default; }
+
+/* Protect your access (4 Nov 2026) */
+.lf-security-nudge { display: flex; gap: 14px; align-items: flex-start; padding: 16px; border-radius: 16px; background: var(--lf-surface-card); border: 1px solid var(--lf-border-card, #EBE4DE); }
+.lf-security-nudge-icon { display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--lf-primary-bg); color: #FFFFFF; flex: none; }
+.lf-security-nudge p { margin: 4px 0 10px; color: var(--lf-text-secondary); }
+.lf-security-nudge-actions { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }

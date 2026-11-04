@@ -48,6 +48,10 @@ export default function SecurityPage() {
   };
   const [passkeyBusy, setPasskeyBusy] = useState(false);
   const [open, setOpen] = useState<"password" | "two-step" | "mobile" | null>(null);
+  // "Turn on two-step" from the Protect your access card opens set-up straight away.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("setup") === "two-step") setOpen("two-step");
+  }, []);
   const [twoStep, setTwoStep] = useState<TwoStepState>({ factorId: null, loading: true });
   const [devicesStatus, setDevicesStatus] = useState("");
   const [deviceLabel] = useState(describeDevice);
