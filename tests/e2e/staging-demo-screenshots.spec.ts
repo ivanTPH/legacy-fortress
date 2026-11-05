@@ -102,6 +102,10 @@ async function capture(browser: Browser, kind: "desk" | "phone") {
     expect(new URL(page.url()).pathname, `${path} opened sign-in instead`).not.toMatch(/sign-in|login|onboarding/);
     await shoot(page, `${kind}${path.replace(/[^a-z0-9]+/gi, "-")}`);
   }
+  // The home dashboard, captured again once everything has loaded (the first shot of a run can miss it).
+  await page.goto(`${BASE_URL}/dashboard`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByText("Total recorded value").first()).toBeVisible({ timeout: 30_000 }).catch(() => undefined);
+  await shoot(page, `${kind}-home`);
   // The Premium sheet as it appears when a free limit is reached.
   await page.goto(`${BASE_URL}/dashboard`, { waitUntil: "domcontentloaded" });
   // Ask until the page has finished loading and the sheet is listening.
