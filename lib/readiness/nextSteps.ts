@@ -2,6 +2,7 @@ import { assetMatchesLegalCategory } from "../legalCategories.ts";
 import { getAssetsForBucket, type DashboardAssetRow } from "../dashboard/summary.ts";
 import { buildGuidanceItems, PROMPT_POLICY, type GuidanceEvidence, type GuidanceItem } from "./guidance.ts";
 import type { VaultPreferences } from "../vaultPreferences.ts";
+import { expiryOf, identityDocumentLabel, identityDocumentStatuses } from "../records/identityDocuments.ts";
 
 /**
  * Next steps (owner decision 4 Nov 2026): ONE rule for To do, the notifications bell and the summary email.
@@ -40,6 +41,17 @@ export type NextStep = GuidanceItem & {
 const EXECUTOR_ROLES = /executor|executrix/i;
 const ATTORNEY_ROLES = /attorney/i;
 const STALE_INVITE_DAYS = 14;
+const YEAR = 365.25 * 86400000;
+/** Owner decision 5 Nov 2026: check the Will every 3 years, counted from the date it was signed. */
+export const WILL_CHECK_YEARS = 3;
+
+/** The Will's signing date when the owner has confirmed one; otherwise when it was added or last changed. */
+function willDateOf(row: VaultFactRow) {
+  const signed = Date.parse(String(row.metadata_json?.will_signed_on ?? ""));
+  if (Number.isFinite(signed)) return { time: signed, signed: true };
+  const added = Date.parse(String(row.updated_at ?? row.created_at ?? ""));
+  return Number.isFinite(added) ? { time: added, signed: false } : null;
+}
 
 /** The general (email) wording for every built-in prompt. */
 const EMAIL_TITLES: Record<string, string> = {
@@ -203,7 +215,7 @@ function typeSteps(facts: VaultFacts): NextStep[] {
  * The one list. Answers saved by the owner ("Not relevant", "Remind me later") apply to every step.
  * Ordered by priority (high, medium, low), keeping the usual order within each.
  */
-/** Housekeeping once someone is set up: one yearly check-in, and a nudge if the Will is getting old. */
+/** Housekeeping once someone is set up: a yearly check-in, the 3-yearly Will check and expiring ID documents. */
 function housekeepingSteps(facts: VaultFacts, now: Date): NextStep[] {
   const rows = activeRows(facts);
   const steps: NextStep[] = [];
@@ -216,15 +228,56 @@ function housekeepingSteps(facts: VaultFacts, now: Date): NextStep[] {
     description: "A new account, a house move, a new policy or a change of executor? Two minutes now saves your family hours later.",
     actionLabel: "Review my Vault", href: "/dashboard", dismissLabel: "Nothing has changed",
   }));
+  // The Will check counts from the Will's own date (read from the document and confirmed), every 3 years.
   const wills = rows.filter((row) => assetMatchesLegalCategory(row, "wills"));
-  const newestWill = Math.max(0, ...wills.map((row) => Date.parse(String(row.updated_at ?? row.created_at ?? ""))).filter(Number.isFinite));
-  if (wills.length && newestWill && now.getTime() - newestWill > 2 * 365 * 86400000) steps.push(step({
-    key: "will_still_current", category: "Legal", priority: "medium",
-    title: "Is your Will still the current one?",
-    emailTitle: "Check your Will is still the current one",
-    description: "If you've made a new Will or added a codicil since, add it so your executors find the right one.",
-    actionLabel: "Check my Will", href: "/legal/wills", dismissLabel: "It's still current",
+  const willDates = wills.map((row) => willDateOf(row)).filter((value): value is { time: number; signed: boolean } => Boolean(value));
+  const newestWill = willDates.sort((a, b) => b.time - a.time)[0];
+  if (wills.length && newestWill && now.getTime() - newestWill.time > WILL_CHECK_YEARS * YEAR) {
+    const years = Math.floor((now.getTime() - newestWill.time) / YEAR);
+    const dated = new Date(newestWill.time).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+    steps.push(step({
+      key: "will_still_current", category: "Legal", priority: "medium",
+      title: newestWill.signed
+        ? `We noticed your Will is dated ${dated}, ${years} years ago. Has anything changed?`
+        : "Is your Will still the current one? Has anything changed since you made it?",
+      emailTitle: "Check your Will is still up to date",
+      description: "A marriage, divorce, new child or grandchild, a house sale or a change of executor can all mean a Will needs updating. In England and Wales, getting married usually cancels an earlier Will. If you've made a new Will or a codicil, add it so your executors find the right one.",
+      actionLabel: "Check my Will", href: "/legal/wills", dismissLabel: "It's still current",
+    }));
+  }
+  // A marriage certificate dated after the Will: marriage usually revokes an earlier Will in England and Wales.
+  const marriage = rows
+    .filter((row) => text(row.category_key) === "identity-documents" && text(row.metadata_json?.identity_document_type) === "marriage_certificate")
+    .map((row) => Date.parse(String(row.metadata_json?.identity_issue_date ?? "")))
+    .filter(Number.isFinite)
+    .sort((a, b) => b - a)[0];
+  if (wills.length && newestWill?.signed && marriage && marriage > newestWill.time) steps.push(step({
+    key: "will_after_marriage", category: "Legal", priority: "high",
+    title: "Your marriage certificate is dated after your Will. Is your Will still valid?",
+    emailTitle: "Check your Will after a marriage",
+    description: "In England and Wales, marriage or civil partnership usually cancels a Will made before it, unless the Will says it was made with that marriage in mind. A solicitor can confirm.",
+    actionLabel: "Check my Will", href: "/legal/wills", dismissLabel: "My Will allows for it",
   }));
+  // Identity documents: about 3 months before expiry, unless a newer one has been added.
+  const identity = rows.filter((row) => text(row.category_key) === "identity-documents");
+  const statuses = identityDocumentStatuses(identity, now);
+  const due = identity
+    .filter((row) => ["expiring", "expired"].includes(statuses.get(row.id) ?? ""))
+    .sort((a, b) => String(expiryOf(a)).localeCompare(String(expiryOf(b))));
+  if (due.length) {
+    const first = due[0];
+    const expiry = expiryOf(first) as string;
+    const label = identityDocumentLabel(first);
+    const when = new Date(`${expiry}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+    const past = statuses.get(first.id) === "expired";
+    steps.push(step({
+      key: "id_document_expiry", category: "Legal", priority: "medium",
+      title: `${due.length > 1 ? `${due.length} identity documents need renewing. ` : ""}Your ${label} ${past ? "expired" : "expires"} on ${when}. When you've renewed it, add the new one.`,
+      emailTitle: "One of your identity documents needs renewing",
+      description: "We'll keep the old one in your Vault and mark it as replaced once you add the new one.",
+      actionLabel: "Add the new one", href: "/legal/identity-documents?add=1", dismissLabel: "I don't need to renew it",
+    }));
+  }
   return steps;
 }
 

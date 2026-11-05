@@ -3,6 +3,8 @@
 import RecordHistoryPanel from "./RecordHistoryPanel";
 import { startDocumentExtraction, takeBankPrefill } from "../../lib/documents/extraction/client";
 import DocumentFindings from "../documents/DocumentFindings";
+import WillDateLine from "../documents/WillDateLine";
+import { expiredOnSaveMessage, IDENTITY_STATUS_LABEL, identityDocumentStatuses, type IdentityDocumentStatus } from "../../lib/records/identityDocuments";
 import Image from "next/image";
 import Link from "next/link";
 import { Fragment, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
@@ -1200,6 +1202,15 @@ export default function UniversalRecordWorkspace({
     };
   }, [categoryKey, forceCanonicalRead, isCanonicalTask, recordFilter, router, sectionKey, usesCanonicalAssetReadPath, viewer]);
 
+  // Identity documents: "Expires soon", "Expired" or "Expired, replaced" (owner decision 5 Nov 2026).
+  const identityStatuses = useMemo(
+    () => (isIdentityDocuments ? identityDocumentStatuses(records.map((row) => ({ id: row.id, title: row.title, metadata: row.metadata as Record<string, unknown> | null }))) : new Map<string, IdentityDocumentStatus>()),
+    [isIdentityDocuments, records],
+  );
+  function applySavedMetadata(rowId: string, metadata: Record<string, unknown>) {
+    setRecords((prev) => prev.map((row) => (row.id === rowId ? { ...row, metadata: { ...(row.metadata ?? {}), ...metadata } } : row)));
+  }
+
   const totals = useMemo(() => {
     const summary = summarizeScopedAssetRows(records);
     return {
@@ -2394,6 +2405,8 @@ export default function UniversalRecordWorkspace({
       trust_jurisdiction: isTrustsWorkspace ? resolvedTrustJurisdiction || null : null,
       trust_jurisdiction_other: isTrustsWorkspace && form.trust_jurisdiction === "Other" ? form.trust_jurisdiction_other.trim() || null : null,
       trust_reference: isTrustsWorkspace ? form.trust_reference.trim() || null : null,
+      // Keep a Will's confirmed signing date when the record is edited.
+      will_signed_on: isWillsWorkspace && editingId ? (records.find((item) => item.id === editingId)?.metadata?.will_signed_on as string | undefined) ?? null : null,
       finance_category: isFinanceSection ? categoryKey : null,
       },
       financeMetadata: financeDraft.metadata,
@@ -2845,7 +2858,9 @@ export default function UniversalRecordWorkspace({
       : trustInvitationSuccessCount > 0
         ? `${trustInvitationSuccessCount} Trust invitation${trustInvitationSuccessCount === 1 ? "" : "s"} sent.`
         : "";
-    setStatus([savedMessage, statementMoveNote, uploadWarning, trustInviteMessage].filter(Boolean).join(" "));
+    // An expiry date already in the past is pointed out, never refused: old documents are worth keeping.
+    const expiredNote = isIdentityDocuments ? expiredOnSaveMessage(form.renewal_date || null) ?? "" : "";
+    setStatus([savedMessage, statementMoveNote, uploadWarning, trustInviteMessage, expiredNote].filter(Boolean).join(" "));
     setStatementPrefill(null);
     setSavedConfirmation(editingId ? "Changes saved" : "Saved record");
     setSavedRecordId(recordId);
@@ -3928,7 +3943,7 @@ export default function UniversalRecordWorkspace({
                 </div>
                 <div>Issuing country: {String(row.metadata?.identity_document_country ?? "Not set")}</div>
                 <div>Issue date: {String(row.metadata?.identity_issue_date ?? "Not set")}</div>
-                <div>Renewal / expiry date: {String(row.metadata?.renewal_date ?? "Not set")}</div>
+                <div>Renewal / expiry date: {String(row.metadata?.renewal_date ?? "Not set")}{IDENTITY_STATUS_LABEL[identityStatuses.get(row.id) ?? "no_date"] ? <strong className="lf-v52-id-status"> · {IDENTITY_STATUS_LABEL[identityStatuses.get(row.id) ?? "no_date"]}</strong> : null}</div>
                 <div>Notes: {String(row.metadata?.notes ?? "No additional notes.")}</div>
               </div>
             ) : (row.summary || row.metadata?.short_description || row.metadata?.notes) ? (
@@ -3943,7 +3958,8 @@ export default function UniversalRecordWorkspace({
               <div className="lf-v52-record-documents-heading"><h2>Documents</h2>
                 {canEditWorkspaceRow(row.id) ? <AddDocumentControl accept={DOCUMENT_UPLOAD_ACCEPT} disabled={uploadingFor === row.id} onFilesSelected={(files) => files.forEach((file) => void uploadAttachment(row.id, file, "document"))} multiple /> : null}
               </div>
-              {canEditWorkspaceRow(row.id) ? <DocumentFindings recordId={row.id} /> : null}
+              {isWillsWorkspace ? <WillDateLine signedOn={String(row.metadata?.will_signed_on ?? "") || null} canEdit={canEditWorkspaceRow(row.id)} recordId={row.id} table={writesCanonicalAsset ? "assets" : "records"} onSaved={(metadata) => applySavedMetadata(row.id, metadata)} /> : null}
+              {canEditWorkspaceRow(row.id) ? <DocumentFindings recordId={row.id} table={writesCanonicalAsset ? "assets" : "records"} onDateSaved={(metadata) => applySavedMetadata(row.id, metadata)} /> : null}
               {rowAttachments.length === 0 ? (
                 <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>No files uploaded.</div>
               ) : (

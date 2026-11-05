@@ -8,6 +8,7 @@ import { matchOwnerContact, mergePeopleByName, normalisePersonName } from "@/lib
 import { extractBankStatementCandidate } from "@/lib/documents/bankStatementExtraction";
 import { matchBankStatementToAuthorisedAccounts } from "@/lib/documents/bankStatementMatching";
 import { buildBankAccountFinding } from "@/lib/documents/extraction/bankFinding";
+import { findExpiryDate, findWillDate } from "@/lib/documents/extraction/documentDates";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -68,7 +69,7 @@ export async function POST(request: Request, context: { params: Promise<{ docume
 
   const read = await readDocumentText(bytes);
   bytes.fill(0);
-  if (!read.ok) return NextResponse.json({ ok: true, readable: false, reason: read.reason, peopleSuggested: 0, account: null }, { headers: NO_STORE });
+  if (!read.ok) return NextResponse.json({ ok: true, readable: false, reason: read.reason, peopleSuggested: 0, account: null, dateFinding: null }, { headers: NO_STORE });
 
   const section = String(record.section_key ?? "");
   const category = String(record.category_key ?? "");
@@ -125,9 +126,17 @@ export async function POST(request: Request, context: { params: Promise<{ docume
     }
   }
 
+  // A Will's signing date or an ID document's expiry: returned to the owner to confirm, never stored here.
+  const dateFinding = section === "legal" && category === "wills"
+    ? findWillDate(read.pages)
+    : section === "legal" && category === "identity-documents"
+      ? findExpiryDate(read.pages)
+      : null;
+
   return NextResponse.json({
     ok: true,
     readable: true,
+    dateFinding,
     pagesRead: read.pages.length,
     usedOcr,
     truncated: read.truncated,
