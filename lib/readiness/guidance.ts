@@ -32,7 +32,9 @@ export type GuidanceRuleKey =
   | "review_attorneys" | "invite_attorneys" | "remind_attorneys"
   | "has_pension" | "has_savings" | "has_life_insurance"
   // Housekeeping once set up (5 Nov 2026)
-  | "annual_review" | "will_still_current";
+  | "annual_review" | "will_still_current"
+  // Dates from documents (5 Nov 2026)
+  | "will_after_marriage" | "id_document_expiry";
 
 export type GuidanceItem = {
   key: GuidanceRuleKey;
@@ -66,7 +68,12 @@ export const PROMPT_POLICY: Record<GuidanceRuleKey, PromptPolicy> = {
   has_pension: { ...ORDINARY, dismissLabel: "I don't have one" }, has_savings: { ...ORDINARY, dismissLabel: "I don't have any" },
   has_life_insurance: { ...ORDINARY, dismissLabel: "I don't have any" },
   annual_review: { tier: "housekeeping", remindDays: 30, dismissDays: 365, doneDays: 365, dismissLabel: "Ask me next year" },
-  will_still_current: { tier: "housekeeping", remindDays: 60, dismissDays: 730, doneDays: 730, dismissLabel: "It's still current" },
+  // Every 3 years (owner decision 5 Nov 2026); "It's still current" restarts the 3 years.
+  will_still_current: { tier: "housekeeping", remindDays: 60, dismissDays: 1095, doneDays: 1095, dismissLabel: "It's still current" },
+  // "My Will allows for it" settles it (an ordinary answer), though it ranks high while open.
+  will_after_marriage: { ...ORDINARY, dismissLabel: "My Will allows for it" },
+  // Comes back each 90 days until the new one is added (adding it removes the prompt by itself).
+  id_document_expiry: { tier: "housekeeping", remindDays: 30, dismissDays: 365, doneDays: 90, dismissLabel: "I don't need to renew it" },
 };
 const DAY = 24 * 60 * 60 * 1000;
 

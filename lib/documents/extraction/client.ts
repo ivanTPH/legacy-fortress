@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabaseClient";
 import type { BankAccountFinding } from "./bankFinding";
+import type { DocumentDateFinding } from "./documentDates";
 
 export const DOCUMENT_EXTRACTION_EVENT = "lf-document-extraction";
 export const BANK_PREFILL_STORAGE_KEY = "lf-bank-prefill-from-document";
@@ -11,6 +12,7 @@ export type DocumentExtractionResult = {
   usedOcr?: boolean;
   peopleSuggested?: number;
   account?: BankAccountFinding | null;
+  dateFinding?: DocumentDateFinding | null;
   error?: string;
 };
 
@@ -62,4 +64,21 @@ export function takeBankPrefill(): StagedBankPrefill | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Save a date the owner confirmed (a Will's signing date, an ID document's expiry) on their own record.
+ * Merges one key into the record's details; row-level security limits this to the owner.
+ */
+export async function saveConfirmedDocumentDate(table: "assets" | "records", rowId: string, key: DocumentDateFinding["kind"], date: string) {
+  // Legal records can be read from either table; try the expected one first.
+  for (const source of table === "assets" ? (["assets", "records"] as const) : (["records", "assets"] as const)) {
+    const column = source === "assets" ? "metadata_json" : "metadata";
+    const current = await supabase.from(source).select(`id,${column}`).eq("id", rowId).maybeSingle();
+    if (current.error || !current.data) continue;
+    const metadata = { ...(((current.data as Record<string, unknown>)[column] ?? {}) as Record<string, unknown>), [key]: date };
+    const updated = await supabase.from(source).update({ [column]: metadata, updated_at: new Date().toISOString() }).eq("id", rowId).select("id").maybeSingle();
+    return updated.error || !updated.data ? { ok: false as const } : { ok: true as const, metadata };
+  }
+  return { ok: false as const };
 }
