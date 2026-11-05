@@ -64,7 +64,7 @@ import { loadPendingSuggestionsForOwner } from "../../../lib/suggestions/client"
 import { buildLinkedContactRecordHref } from "../../../lib/contacts/contactRouting";
 import type { CanonicalContactContext } from "../../../lib/contacts/canonicalContacts";
 import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
-import { applyGuidanceAction, buildGuidanceItems, type GuidanceItem } from "../../../lib/readiness/guidance";
+import { applyGuidanceAction, describeGuidanceChoice, type GuidanceItem } from "../../../lib/readiness/guidance";
 import { isVaultCategoryEnabled, isVaultSubsectionEnabled, saveVaultPreferences, setVaultApplicability } from "../../../lib/vaultPreferences";
 import {
   deriveBlockingState,
@@ -1084,11 +1084,7 @@ const legalSummary = useMemo(() => {
       const nextPreferences = applyGuidanceAction(preferences, item.key, action);
       const savedPreferences = await saveVaultPreferences(supabase, user.id, nextPreferences);
       setPreferences(savedPreferences);
-      setStatus(action === "not_relevant"
-        ? "✅ We will keep this out of your current focus."
-        : action === "remind_later"
-          ? "✅ We will bring this suggestion back later."
-          : "✅ Noted. You can review this again from your Vault.");
+      setStatus(`✅ ${describeGuidanceChoice(item.key, action)}`);
       setRefreshToken((current) => current + 1);
     } catch (error) {
       setStatus(`⚠️ Could not save that choice: ${error instanceof Error ? error.message : "Unknown error"}`);
