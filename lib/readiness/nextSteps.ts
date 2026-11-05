@@ -1,6 +1,6 @@
 import { assetMatchesLegalCategory } from "../legalCategories.ts";
 import { getAssetsForBucket, type DashboardAssetRow } from "../dashboard/summary.ts";
-import { buildGuidanceItems, type GuidanceEvidence, type GuidanceItem } from "./guidance.ts";
+import { buildGuidanceItems, PROMPT_POLICY, type GuidanceEvidence, type GuidanceItem } from "./guidance.ts";
 import type { VaultPreferences } from "../vaultPreferences.ts";
 
 /**
@@ -16,6 +16,8 @@ export type VaultFactRow = DashboardAssetRow & {
   kind: "asset" | "record";
   title?: string | null;
   metadata_json?: Record<string, unknown> | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 };
 
 export type VaultFacts = {
@@ -201,11 +203,53 @@ function typeSteps(facts: VaultFacts): NextStep[] {
  * The one list. Answers saved by the owner ("Not relevant", "Remind me later") apply to every step.
  * Ordered by priority (high, medium, low), keeping the usual order within each.
  */
-export function buildNextSteps(
+/** Housekeeping once someone is set up: one yearly check-in, and a nudge if the Will is getting old. */
+function housekeepingSteps(facts: VaultFacts, now: Date): NextStep[] {
+  const rows = activeRows(facts);
+  const steps: NextStep[] = [];
+  const times = rows.map((row) => Date.parse(String(row.created_at ?? ""))).filter(Number.isFinite);
+  const firstRecord = times.length ? Math.min(...times) : null;
+  if (firstRecord && now.getTime() - firstRecord > 365 * 86400000) steps.push(step({
+    key: "annual_review", category: "Your Vault", priority: "medium",
+    title: "It's been a year. Has anything changed?",
+    emailTitle: "Take a moment to check your Vault is up to date",
+    description: "A new account, a house move, a new policy or a change of executor? Two minutes now saves your family hours later.",
+    actionLabel: "Review my Vault", href: "/dashboard", dismissLabel: "Nothing has changed",
+  }));
+  const wills = rows.filter((row) => assetMatchesLegalCategory(row, "wills"));
+  const newestWill = Math.max(0, ...wills.map((row) => Date.parse(String(row.updated_at ?? row.created_at ?? ""))).filter(Number.isFinite));
+  if (wills.length && newestWill && now.getTime() - newestWill > 2 * 365 * 86400000) steps.push(step({
+    key: "will_still_current", category: "Legal", priority: "medium",
+    title: "Is your Will still the current one?",
+    emailTitle: "Check your Will is still the current one",
+    description: "If you've made a new Will or added a codicil since, add it so your executors find the right one.",
+    actionLabel: "Check my Will", href: "/legal/wills", dismissLabel: "It's still current",
+  }));
+  return steps;
+}
+
+export type NextStepsPlan = {
+  /** What to show now: calm and short (owner decision 5 Nov 2026). */
+  steps: NextStep[];
+  /** Everything that applies, for counts and a "show all" view. */
+  all: NextStep[];
+  /** "setting_up" until the critical things are answered and the Vault has some content; then "settled". */
+  phase: "setting_up" | "settled";
+};
+
+/** While setting up: up to 3 at a time. Once settled: one gentle prompt at a time. */
+export const VISIBLE_LIMIT = { setting_up: 3, settled: 1 } as const;
+
+/**
+ * The one plan. Answers saved by the owner follow each prompt's policy (lib/readiness/guidance.ts):
+ * critical prompts come back a year after "Not now"; ordinary ones settle on "No"; housekeeping cycles.
+ * Ordered by priority (high, medium, low), keeping the usual order within each.
+ */
+export function planNextSteps(
   facts: VaultFacts,
   preferences: Pick<VaultPreferences, "applicability" | "guidance"> = { applicability: {}, guidance: {} },
   now = new Date(),
-): NextStep[] {
+): NextStepsPlan {
   const evidence = evidenceFromFacts(facts);
   const guidance = preferences.guidance ?? {};
   const people = peopleSteps(facts, now);
@@ -213,19 +257,37 @@ export function buildNextSteps(
     // A specific executor or attorney step replaces the general one.
     .filter((item) => !(item.key === "executor_after_will" && people.some((entry) => String(entry.key).endsWith("_executors")))
       && !(item.key === "attorney_after_capacity" && people.some((entry) => String(entry.key).endsWith("_attorneys"))))
-    .map((item) => ({ ...item, emailTitle: EMAIL_TITLES[item.key] ?? "Take a look at your Vault" }));
-  const extra = [...people, ...typeSteps(facts)].filter((item) => {
+    .map((item) => ({ ...item, emailTitle: item.reasked ? "Have another look at something important" : EMAIL_TITLES[item.key] ?? "Take a look at your Vault" }));
+  const extra = [...people, ...typeSteps(facts), ...housekeepingSteps(facts, now)].filter((item) => {
     const decision = guidance[item.key];
-    // "Not relevant" / "I don't have one" and "Already done" both settle a progressive step.
-    if (decision?.state === "not_relevant" || decision?.state === "recorded" || decision?.state === "needs_review") return false;
-    return !(decision?.snoozedUntil && Date.parse(decision.snoozedUntil) > now.getTime());
+    const policy = PROMPT_POLICY[item.key];
+    if (decision?.snoozedUntil && Date.parse(decision.snoozedUntil) > now.getTime()) return false;
+    // Ordinary "No" and "Already done" settle a step; critical "Not now" comes back after its year (snooze above).
+    if (policy?.tier !== "critical" && policy?.tier !== "housekeeping" && (decision?.state === "not_relevant" || decision?.state === "needs_review")) return false;
+    if (decision?.state === "recorded" || (policy?.tier === "critical" && decision?.state === "needs_review")) return false;
+    return true;
   });
-  // Most important first (people a family will need before possessions), keeping each group's order.
   const rank = { high: 0, medium: 1, low: 2 } as const;
-  return [...builtIn, ...extra]
+  const tierRank = { critical: 0, housekeeping: 1, ordinary: 2 } as const;
+  const all = [...builtIn, ...extra]
+    .map((item): NextStep => ({ ...item, dismissLabel: (item as NextStep).dismissLabel ?? PROMPT_POLICY[item.key]?.dismissLabel }))
     .map((item, index) => ({ item, index }))
-    .sort((a, b) => rank[a.item.priority] - rank[b.item.priority] || a.index - b.index)
+    .sort((a, b) => tierRank[PROMPT_POLICY[a.item.key]?.tier ?? "ordinary"] - tierRank[PROMPT_POLICY[b.item.key]?.tier ?? "ordinary"]
+      || rank[a.item.priority] - rank[b.item.priority] || a.index - b.index)
     .map(({ item }) => item);
+  const criticalOpen = all.some((item) => PROMPT_POLICY[item.key]?.tier === "critical");
+  const phase: NextStepsPlan["phase"] = !criticalOpen && activeRows(facts).length >= 5 ? "settled" : "setting_up";
+  // Settled: housekeeping first, then one ordinary idea at a time.
+  return { steps: all.slice(0, VISIBLE_LIMIT[phase]), all, phase };
+}
+
+/** The steps to show now (To do, the bell and the email all use this). */
+export function buildNextSteps(
+  facts: VaultFacts,
+  preferences: Pick<VaultPreferences, "applicability" | "guidance"> = { applicability: {}, guidance: {} },
+  now = new Date(),
+): NextStep[] {
+  return planNextSteps(facts, preferences, now).steps;
 }
 
 /** For email: general wording only, each line once. */

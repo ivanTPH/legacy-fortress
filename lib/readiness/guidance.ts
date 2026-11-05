@@ -30,7 +30,9 @@ export type GuidanceRuleKey =
   // Progressive steps (lib/readiness/nextSteps.ts, 4 Nov 2026)
   | "review_executors" | "invite_executors" | "remind_executors" | "nominate_executors"
   | "review_attorneys" | "invite_attorneys" | "remind_attorneys"
-  | "has_pension" | "has_savings" | "has_life_insurance";
+  | "has_pension" | "has_savings" | "has_life_insurance"
+  // Housekeeping once set up (5 Nov 2026)
+  | "annual_review" | "will_still_current";
 
 export type GuidanceItem = {
   key: GuidanceRuleKey;
@@ -43,7 +45,30 @@ export type GuidanceItem = {
   learnMoreHref?: string;
   state: VaultApplicabilityState;
   snoozedUntil: string | null;
+  /** A critical prompt coming back a year after "Not now". */
+  reasked?: boolean;
 };
+
+/**
+ * How each prompt behaves (owner decision 5 Nov 2026). Critical things a family can't do without are never
+ * dropped for good: "Not now" quiets them for a year, then we gently ask again. Ordinary things are asked
+ * once; "No" settles them, and the yearly review covers any change. Housekeeping comes back on a cycle.
+ */
+export type PromptTier = "critical" | "ordinary" | "housekeeping";
+export type PromptPolicy = { tier: PromptTier; remindDays: number; dismissDays: number | null; doneDays?: number; dismissLabel: string };
+const CRITICAL: PromptPolicy = { tier: "critical", remindDays: 30, dismissDays: 365, dismissLabel: "Not now, ask me in a year" };
+const ORDINARY: PromptPolicy = { tier: "ordinary", remindDays: 30, dismissDays: null, dismissLabel: "Not for me" };
+export const PROMPT_POLICY: Record<GuidanceRuleKey, PromptPolicy> = {
+  will: CRITICAL, capacity_arrangements: CRITICAL, executor_after_will: CRITICAL, attorney_after_capacity: CRITICAL,
+  review_executors: CRITICAL, invite_executors: CRITICAL, remind_executors: { ...CRITICAL, remindDays: 14 }, nominate_executors: CRITICAL,
+  review_attorneys: CRITICAL, invite_attorneys: CRITICAL, remind_attorneys: { ...CRITICAL, remindDays: 14 },
+  people_i_trust: ORDINARY, digital_life: ORDINARY, personal_possessions: ORDINARY, wishes: ORDINARY, financial_administration: ORDINARY,
+  has_pension: { ...ORDINARY, dismissLabel: "I don't have one" }, has_savings: { ...ORDINARY, dismissLabel: "I don't have any" },
+  has_life_insurance: { ...ORDINARY, dismissLabel: "I don't have any" },
+  annual_review: { tier: "housekeeping", remindDays: 30, dismissDays: 365, doneDays: 365, dismissLabel: "Ask me next year" },
+  will_still_current: { tier: "housekeeping", remindDays: 60, dismissDays: 730, doneDays: 730, dismissLabel: "It's still current" },
+};
+const DAY = 24 * 60 * 60 * 1000;
 
 type GuidanceRule = Omit<GuidanceItem, "state" | "snoozedUntil"> & {
   applies: (evidence: GuidanceEvidence) => boolean;
@@ -187,6 +212,9 @@ export function buildGuidanceItems(
               ? "needs_review"
               : selectedState ?? rule.defaultState
           );
+      const policy = PROMPT_POLICY[rule.key];
+      const reasked = !rule.evidence(evidence) && policy.tier === "critical" && decision?.state === "not_relevant" && !isSnoozed(decision, now);
+      if (reasked) return { ...getReaskRule(rule), state: "missing" as VaultApplicabilityState, snoozedUntil: null, reasked: true };
       const contextualRule = rule.key === "will" ? getWillGuidanceRule(rule, state) : rule;
       return { ...contextualRule, state, snoozedUntil: decision?.snoozedUntil ?? null };
     })
@@ -194,13 +222,24 @@ export function buildGuidanceItems(
     .filter((item) => !isSnoozed(guidance[item.key], now));
 }
 
+/** A year after "Not now" on something critical: one gentle question, never a nag. */
+function getReaskRule(rule: GuidanceRule): GuidanceRule {
+  const titles: Partial<Record<GuidanceRuleKey, string>> = {
+    will: "A year ago you said you didn't have a Will. Has anything changed?",
+    capacity_arrangements: "Last year you hadn't set up a Power of Attorney. Is it worth another look?",
+    executor_after_will: "Have you thought again about adding the executors named in your Will?",
+    attorney_after_capacity: "Have you thought again about adding the people named in your Power of Attorney?",
+  };
+  return { ...rule, title: titles[rule.key] ?? rule.title };
+}
+
 function getWillGuidanceRule(rule: GuidanceRule, state: VaultApplicabilityState): GuidanceRule {
   if (state === "no") {
     return {
       ...rule,
-      title: "Would you like help understanding your options for making a Will?",
-      description: "You can explore calm, general information and decide whether professional support would be useful.",
-      actionLabel: "Explore my options",
+      title: "We'd recommend making a Will",
+      description: "Without a Will, the law decides who inherits and your family may wait longer to sort things out. A solicitor, an online Will service or one of our partners can help, often in an afternoon.",
+      actionLabel: "See my options",
       href: "/support?topic=will",
       learnMoreHref: "/support?topic=will",
     };
@@ -234,17 +273,35 @@ export function applyGuidanceAction(
   action: Extract<GuidanceAction, "already_done" | "not_relevant" | "remind_later">,
   now = new Date(),
 ): VaultPreferences {
-  const state: VaultApplicabilityState = action === "not_relevant"
-    ? "not_relevant"
-    : action === "already_done"
-      ? "needs_review"
-      : "unknown";
-  const snoozedUntil = action === "remind_later"
-    ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
-    : null;
+  const policy = PROMPT_POLICY[key] ?? ORDINARY;
+  const willUnsure = key === "will" && preferences.applicability?.will === "unsure";
+  // Housekeeping "done" ("Nothing has changed", "It's still current") just comes back on its cycle.
+  const housekeepingDone = policy.tier === "housekeeping" && action !== "remind_later";
+  const state: VaultApplicabilityState = housekeepingDone
+    ? "unknown"
+    : action === "not_relevant"
+      ? "not_relevant"
+      : action === "already_done"
+        ? "needs_review"
+        : "unknown";
+  const days = action === "remind_later"
+    ? (willUnsure ? 90 : policy.remindDays)
+    : housekeepingDone
+      ? (action === "already_done" ? policy.doneDays : policy.dismissDays) ?? null
+      : action === "not_relevant" ? policy.dismissDays : null;
+  const snoozedUntil = days ? new Date(now.getTime() + days * DAY).toISOString() : null;
   const decision: VaultGuidanceDecision = { state, snoozedUntil, updatedAt: now.toISOString() };
   return {
     ...preferences,
     guidance: { ...preferences.guidance, [key]: decision },
   };
+}
+
+/** What we tell the person after they choose, in plain words. */
+export function describeGuidanceChoice(key: GuidanceRuleKey, action: "already_done" | "not_relevant" | "remind_later") {
+  const policy = PROMPT_POLICY[key] ?? ORDINARY;
+  if (policy.tier === "housekeeping") return action === "remind_later" ? "We'll remind you in a few weeks." : "Thanks. We'll check in again next time.";
+  if (action === "remind_later") return `We'll remind you in ${policy.remindDays >= 60 ? `${Math.round(policy.remindDays / 30)} months` : `${policy.remindDays} days`}.`;
+  if (action === "not_relevant") return policy.tier === "critical" ? "Understood. We'll ask again in a year, in case anything has changed." : "Understood. We won't ask again; your yearly check-in will cover any changes.";
+  return "Noted. You can review this again from your Vault.";
 }
