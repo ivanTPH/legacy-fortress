@@ -182,7 +182,9 @@ for (const kind of ["desk", "phone"] as const) {
     // 4. Tapping it opens the Vault without signing in again.
     await vault.click();
     await page.waitForURL(/dashboard/, { timeout: 30_000 });
-    await expect(page.getByText("Total recorded value").first()).toBeVisible({ timeout: 30_000 });
+    // The phone dashboard has a different layout, so check we're in the Vault rather than for a desktop label.
+    await expect(page.getByText(/Finances/).first()).toBeVisible({ timeout: 30_000 });
+    expect(new URL(page.url()).pathname).not.toMatch(/sign-in|verify-device/);
     await shoot(page, `journey-${kind}-4-vault`);
     await context.close();
   });
