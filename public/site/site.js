@@ -65,6 +65,8 @@
     if (!row || !nav) return;
     var signin = header.querySelector('a[data-signin]') || header.querySelector('a[href="/enterprise/sign-in"]');
     if (signin && !signin.hidden) { var extra = signin.cloneNode(true); extra.removeAttribute('style'); extra.className = 'nav-extra'; extra.removeAttribute('data-signin'); nav.appendChild(extra); }
+    var signup = header.querySelector('a[data-signup]');
+    if (signup) { var cta = signup.cloneNode(true); cta.removeAttribute('style'); cta.className = 'nav-cta'; cta.removeAttribute('data-signup'); nav.appendChild(cta); }
     var btn = document.createElement('button');
     btn.type = 'button'; btn.className = 'menu-btn'; btn.setAttribute('aria-expanded', 'false');
     btn.innerHTML = '<span class="ms" aria-hidden="true">menu</span>Menu';
