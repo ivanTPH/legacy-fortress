@@ -95,6 +95,18 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_DOCUMENT_EXTRACTION: documentExtractionEnabled ? "true" : "false",
   },
   generateBuildId: async () => buildId,
+  // The public website (owner decision 7 Nov 2026): the home page and its pages are static files in
+  // public/site. Signing in, signing up and the Vault are unchanged.
+  async rewrites() {
+    return {
+      beforeFiles: [
+        { source: "/", destination: "/site/index.html" },
+        ...["how-it-works", "pricing", "partners", "contact", "privacy", "terms"].map((page) => ({ source: `/${page}`, destination: `/site/${page}.html` })),
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
+  },
   async headers() {
     return [
       {
