@@ -16,7 +16,7 @@ const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 const EMAIL = "staging-demo-shots@example.test";
 const PASSWORD = `StagingDemoShots-${Date.now()}-Aa1!`;
 const OUT = "test-results/demo-shots";
-const PAGES = ["/dashboard", "/finances", "/finances/bank", "/property", "/legal", "/legal/wills", "/personal", "/contacts", "/people-access", "/people-access?view=vault", "/access-sharing", "/account/billing"];
+const PAGES = ["/dashboard", "/finances", "/finances/bank", "/property", "/legal", "/legal/wills", "/personal", "/contacts", "/people-access", "/people-access?view=vault-access", "/people-access?view=sharing", "/access-sharing", "/account/billing"];
 // Tour video (owner request 7 Nov 2026): the same steps with a record opened, so the film can zoom in on it.
 const OPENED = ["/finances/bank", "/legal/wills", "/contacts"];
 
