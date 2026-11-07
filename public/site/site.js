@@ -59,6 +59,24 @@
   });
 
 
+  // Phone header: a Menu button shows the page links (and Sign in) in a panel.
+  document.querySelectorAll('.page header').forEach(function(header){
+    var row = header.firstElementChild; var nav = header.querySelector('nav[aria-label="Main"]');
+    if (!row || !nav) return;
+    var signin = header.querySelector('a[data-signin]') || header.querySelector('a[href="/enterprise/sign-in"]');
+    if (signin && !signin.hidden) { var extra = signin.cloneNode(true); extra.removeAttribute('style'); extra.className = 'nav-extra'; extra.removeAttribute('data-signin'); nav.appendChild(extra); }
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'menu-btn'; btn.setAttribute('aria-expanded', 'false');
+    btn.innerHTML = '<span class="ms" aria-hidden="true">menu</span>Menu';
+    btn.addEventListener('click', function(){
+      var open = header.classList.toggle('menu-open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      btn.innerHTML = open ? '<span class="ms" aria-hidden="true">close</span>Close' : '<span class="ms" aria-hidden="true">menu</span>Menu';
+    });
+    nav.addEventListener('click', function(e){ if (e.target.closest('a')) { header.classList.remove('menu-open'); btn.setAttribute('aria-expanded','false'); btn.innerHTML = '<span class="ms" aria-hidden="true">menu</span>Menu'; } });
+    row.appendChild(btn);
+  });
+
   // Tour film: each scene lasts as long as its voice-over, with a short cross-fade between scenes.
   var SCENES = [{"say": "This is Legacy Fortress. One safe place for everything your family will need, so life is easier for them when you're no longer there to help.", "secs": 9.07}, {"say": "Your whole picture is on one page. Finances, legal, property and possessions, with a clear view of what's done and what's next.", "secs": 8.18}, {"say": "Step one. Add what you have, a little at a time. Upload a statement and we'll read the details for you to check.", "secs": 6.85}, {"say": "Step two. Add your Will. We find the executors it names, and remind you to check it's still up to date.", "secs": 6.55}, {"say": "Step three. Name the people who'll help. Adding someone never shows them your records. You decide what each person sees.", "secs": 7.72}, {"say": "Step four. Invite them safely. They join with a quick ID check, and new devices get a simple code by email.", "secs": 7.88}, {"say": "Step five. When the time comes, a real person checks the evidence first. Only what you chose is released.", "secs": 7.17}, {"say": "Start free today, and upgrade to Premium whenever you need more. Legacy Fortress. Peace of mind for you and your family.", "secs": 7.9}];
   var player = document.querySelector('[data-player]');

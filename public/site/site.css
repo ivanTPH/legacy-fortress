@@ -100,3 +100,20 @@ img{max-width:100%}
 .film-bar div{display:flex;flex-wrap:wrap;gap:10px}
 .film-bar button{display:inline-flex;align-items:center;gap:8px;border:1px solid #8C7F79;background:#FFFFFF;color:#1F1715;border-radius:10px;padding:10px 16px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;min-height:44px}
 .film-bar .ms{font-size:20px}
+
+.menu-btn{display:none;align-items:center;gap:6px;border:1px solid #D9CCC3;background:#FFFFFF;color:#1F1715;border-radius:10px;min-height:44px;padding:8px 12px;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
+.menu-btn .ms{font-size:22px}
+.nav-extra{display:none}
+@media (max-width:760px){
+  .page header{position:relative}
+  .page header>div{flex-wrap:nowrap!important;gap:10px!important;justify-content:space-between}
+  .page header>div>a:first-child{font-size:17px!important;flex:1 1 auto;min-width:0;white-space:nowrap}
+  .page header nav[aria-label="Main"]{display:none!important}
+  .page header a[data-signin]{display:none!important}
+  .page header a[data-signup]{padding:10px 14px!important;white-space:nowrap}
+  .page header a[href="/enterprise/sign-in"]{display:none!important}
+  .menu-btn{display:inline-flex}
+  .page header.menu-open nav[aria-label="Main"]{display:flex!important;flex-direction:column;gap:0!important;position:absolute;z-index:20;top:100%;left:0;right:0;background:#F7F4F1;border-bottom:1px solid #EBE4DE;box-shadow:0 12px 24px rgba(43,23,20,.12);padding:6px 16px 14px}
+  .page header.menu-open nav[aria-label="Main"] a{display:block;padding:14px 4px!important;border-bottom:1px solid #EBE4DE;font-size:18px!important}
+  .page header.menu-open nav[aria-label="Main"] .nav-extra{display:block;color:#1F1715;text-decoration:none;font-weight:600}
+}
