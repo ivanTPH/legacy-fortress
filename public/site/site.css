@@ -107,6 +107,7 @@ img{max-width:100%}
 .menu-btn{display:none;align-items:center;gap:6px;border:1px solid #D9CCC3;background:#FFFFFF;color:#1F1715;border-radius:10px;min-height:44px;padding:8px 12px;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
 .menu-btn .ms{font-size:22px}
 .nav-extra{display:none}
+.lbl-short{display:none}
 @media (max-width:760px){
   .page header{position:relative}
   .page header>div{flex-wrap:nowrap!important;gap:10px!important;justify-content:space-between}
@@ -115,6 +116,13 @@ img{max-width:100%}
   .page header a[data-signin]{display:none!important}
   .page header>div>a[data-signup],.page header>div>div a[data-signup]{display:none!important}
   .page header>div>div{display:none!important}
+  /* Signed in on this phone: keep a compact "My Vault" button beside Menu. */
+  .lf-signed-in .page header .lbl-long{display:none}
+  .lf-signed-in .menu-btn .menu-lbl{display:none}
+  .lf-signed-in .menu-btn{padding:8px 10px}
+  .lf-signed-in .page header .lbl-short{display:inline}
+  .lf-signed-in .page header>div>div{display:flex!important;gap:8px}
+  .lf-signed-in .page header>div>a[data-signup],.lf-signed-in .page header>div>div a[data-signup]{display:inline-flex!important;padding:10px 14px!important;white-space:nowrap;font-size:15px!important}
   .page header a[href="/enterprise/sign-in"]{display:none!important}
   .menu-btn{display:inline-flex}
   .page header.menu-open nav[aria-label="Main"]{display:flex!important;flex-direction:column;gap:0!important;position:absolute;z-index:20;top:100%;left:0;right:0;background:#F7F4F1;border-bottom:1px solid #EBE4DE;box-shadow:0 12px 24px rgba(43,23,20,.12);padding:6px 16px 14px}
