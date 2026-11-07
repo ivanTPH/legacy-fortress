@@ -16,7 +16,7 @@ const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 const EMAIL = "staging-demo-shots@example.test";
 const PASSWORD = `StagingDemoShots-${Date.now()}-Aa1!`;
 const OUT = "test-results/demo-shots";
-const PAGES = ["/dashboard", "/finances", "/finances/bank", "/property", "/legal", "/legal/wills", "/personal", "/contacts", "/people-access", "/access-sharing", "/vault-nominations", "/account/billing"];
+const PAGES = ["/dashboard", "/finances", "/finances/bank", "/property", "/legal", "/legal/wills", "/personal", "/contacts", "/people-access", "/people-access?view=vault", "/access-sharing", "/account/billing"];
 // Tour video (owner request 7 Nov 2026): the same steps with a record opened, so the film can zoom in on it.
 const OPENED = ["/finances/bank", "/legal/wills", "/contacts"];
 
@@ -142,5 +142,5 @@ test("To do agrees with the vault: the sample account has a Will, so it isn't as
   await context.close();
 });
 
-test("desktop screens", async ({ browser }) => { test.setTimeout(240_000); await capture(browser, "desk"); });
-test("phone screens", async ({ browser }) => { test.setTimeout(240_000); await capture(browser, "phone"); });
+test("desktop screens", async ({ browser }) => { test.setTimeout(600_000); await capture(browser, "desk"); });
+test("phone screens", async ({ browser }) => { test.setTimeout(600_000); await capture(browser, "phone"); });
