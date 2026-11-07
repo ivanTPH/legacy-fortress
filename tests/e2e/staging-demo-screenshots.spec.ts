@@ -16,9 +16,10 @@ const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 const EMAIL = "staging-demo-shots@example.test";
 const PASSWORD = `StagingDemoShots-${Date.now()}-Aa1!`;
 const OUT = "test-results/demo-shots";
-const PAGES = ["/dashboard", "/finances", "/finances/bank", "/property", "/legal", "/legal/wills", "/personal", "/contacts", "/people-access", "/people-access?view=vault-access", "/people-access?view=sharing", "/access-sharing", "/account/billing"];
+const PAGES_ALL = ["/dashboard", "/finances", "/finances/bank", "/property", "/legal", "/legal/wills", "/personal", "/contacts", "/people-access", "/people-access?view=vault-access", "/people-access?view=sharing", "/access-sharing", "/account/billing"];
 // Tour video (owner request 7 Nov 2026): the same steps with a record opened, so the film can zoom in on it.
-const OPENED = ["/finances/bank", "/legal/wills", "/contacts"];
+const PAGES = PAGES_ALL;
+const OPENED_ALL = ["/finances/bank", "/legal/wills", "/contacts"];
 
 const allowed = process.env.LEGACY_FORTRESS_ALLOW_STAGING_BROWSER === "true";
 const targetIsStaging = BASE_URL === "https://test.mylegacyfortress.com" && SUPABASE_URL === "https://supabase-test.mylegacyfortress.com";
@@ -55,6 +56,8 @@ test.beforeAll(async () => {
   execFileSync("node", ["scripts/seed-bill-smith-review-account.mjs"], { stdio: "inherit", env: { ...process.env, SEED_TARGET_EMAIL: EMAIL } });
   fs.mkdirSync(OUT, { recursive: true });
 });
+
+const OPENED = OPENED_ALL;
 
 async function findUser(email: string) {
   for (let page = 1; page < 50; page += 1) {
@@ -141,6 +144,49 @@ test("To do agrees with the vault: the sample account has a Will, so it isn't as
   await expect(page.getByText("No will has been uploaded")).toHaveCount(0);
   await context.close();
 });
+
+// Website and sign-in journey (owner question 7 Nov 2026), on a laptop and a phone, synthetic account only.
+for (const kind of ["desk", "phone"] as const) {
+  test(`website and sign-in journey (${kind})`, async ({ browser }) => {
+    test.setTimeout(180_000);
+    const context = kind === "desk"
+      ? await browser.newContext({ viewport: { width: 1440, height: 900 } })
+      : await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+    const page = await context.newPage();
+    // 1. A browser that has never signed in sees the website with Sign in / Start free.
+    await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
+    await expect(page.locator("header a[data-signup]").first()).toHaveAttribute("href", "/sign-up");
+    await expect(page.getByText("Open my Vault")).toHaveCount(0);
+    await shoot(page, `journey-${kind}-1-website-signed-out`);
+    // 2. Signing in with a password on a new browser asks for the emailed code. The code request itself is
+    //    blocked here, so no email is sent to the synthetic address.
+    await page.route("**/auth/v1/otp**", (route) => route.abort());
+    await page.goto(`${BASE_URL}/sign-in`, { waitUntil: "domcontentloaded" });
+    await page.locator("input[type=email]").first().fill(EMAIL);
+    await page.locator("input[type=password]").first().fill(PASSWORD);
+    await page.locator("button[type=submit]").filter({ hasText: /sign in/i }).first().click();
+    await page.waitForURL(/verify-device|dashboard/, { timeout: 30_000 });
+    const askedForCode = /verify-device/.test(page.url());
+    console.log(`Journey ${kind}: new browser after password -> ${new URL(page.url()).pathname}`);
+    await shoot(page, `journey-${kind}-2-after-password`);
+    expect(askedForCode, "a new browser should be asked for the emailed code").toBe(true);
+    await page.unroute("**/auth/v1/otp**");
+    // 3. Once this browser is trusted (as "Remember this device" does), the website offers the Vault.
+    await signIn(page);
+    await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
+    const vault = page.locator("header a[data-signup]").first();
+    await expect(vault).toHaveAttribute("href", "/dashboard");
+    await expect(vault).toBeVisible();
+    await expect(page.locator("main, .page").getByText("Open my Vault").first()).toBeVisible();
+    await shoot(page, `journey-${kind}-3-website-signed-in`);
+    // 4. Tapping it opens the Vault without signing in again.
+    await vault.click();
+    await page.waitForURL(/dashboard/, { timeout: 30_000 });
+    await expect(page.getByText("Total recorded value").first()).toBeVisible({ timeout: 30_000 });
+    await shoot(page, `journey-${kind}-4-vault`);
+    await context.close();
+  });
+}
 
 test("desktop screens", async ({ browser }) => { test.setTimeout(600_000); await capture(browser, "desk"); });
 test("phone screens", async ({ browser }) => { test.setTimeout(600_000); await capture(browser, "phone"); });

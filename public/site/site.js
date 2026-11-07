@@ -9,7 +9,13 @@
   try { for (var i = 0; i < localStorage.length; i++) { if (/^sb-.+-auth-token$/.test(localStorage.key(i) || '')) { signedIn = true; break; } } } catch (e) {}
   if (signedIn) {
     document.querySelectorAll('header a[data-signin]').forEach(function(a){ a.hidden = true; });
-    document.querySelectorAll('header a[data-signup]').forEach(function(a){ a.textContent = 'Open my Vault'; a.setAttribute('href', '/dashboard'); });
+    document.documentElement.classList.add('lf-signed-in');
+    // Every "Start free" button becomes "Open my Vault" (header, hero and closing call to action).
+    document.querySelectorAll('a[data-signup]').forEach(function(a){
+      a.setAttribute('href', '/dashboard');
+      if (a.closest('header')) a.innerHTML = '<span class="lbl-long">Open my Vault</span><span class="lbl-short">My Vault</span>';
+      else a.textContent = 'Open my Vault';
+    });
   }
   // Pricing: monthly or yearly.
   var prices = {monthly:['£3.99','a month','Or £39 a year. 14 days free, cancel any time.'], yearly:['£39','a year','Works out at £3.25 a month. 14 days free.']};
@@ -66,16 +72,16 @@
     var signin = header.querySelector('a[data-signin]') || header.querySelector('a[href="/enterprise/sign-in"]');
     if (signin && !signin.hidden) { var extra = signin.cloneNode(true); extra.removeAttribute('style'); extra.className = 'nav-extra'; extra.removeAttribute('data-signin'); nav.appendChild(extra); }
     var signup = header.querySelector('a[data-signup]');
-    if (signup) { var cta = signup.cloneNode(true); cta.removeAttribute('style'); cta.className = 'nav-cta'; cta.removeAttribute('data-signup'); nav.appendChild(cta); }
+    if (signup) { var cta = signup.cloneNode(true); cta.removeAttribute('style'); cta.className = 'nav-cta'; cta.removeAttribute('data-signup'); if (document.documentElement.classList.contains('lf-signed-in')) cta.textContent = 'Open my Vault'; nav.appendChild(cta); }
     var btn = document.createElement('button');
-    btn.type = 'button'; btn.className = 'menu-btn'; btn.setAttribute('aria-expanded', 'false');
-    btn.innerHTML = '<span class="ms" aria-hidden="true">menu</span>Menu';
+    btn.type = 'button'; btn.className = 'menu-btn'; btn.setAttribute('aria-label', 'Menu'); btn.setAttribute('aria-expanded', 'false');
+    btn.innerHTML = '<span class="ms" aria-hidden="true">menu</span><span class="menu-lbl">Menu</span>';
     btn.addEventListener('click', function(){
       var open = header.classList.toggle('menu-open');
       btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-      btn.innerHTML = open ? '<span class="ms" aria-hidden="true">close</span>Close' : '<span class="ms" aria-hidden="true">menu</span>Menu';
+      btn.innerHTML = open ? '<span class="ms" aria-hidden="true">close</span><span class="menu-lbl">Close</span>' : '<span class="ms" aria-hidden="true">menu</span><span class="menu-lbl">Menu</span>';
     });
-    nav.addEventListener('click', function(e){ if (e.target.closest('a')) { header.classList.remove('menu-open'); btn.setAttribute('aria-expanded','false'); btn.innerHTML = '<span class="ms" aria-hidden="true">menu</span>Menu'; } });
+    nav.addEventListener('click', function(e){ if (e.target.closest('a')) { header.classList.remove('menu-open'); btn.setAttribute('aria-expanded','false'); btn.innerHTML = '<span class="ms" aria-hidden="true">menu</span><span class="menu-lbl">Menu</span>'; } });
     row.appendChild(btn);
   });
 
