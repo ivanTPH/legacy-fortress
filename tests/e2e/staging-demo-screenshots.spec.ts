@@ -177,7 +177,7 @@ for (const kind of ["desk", "phone"] as const) {
     const vault = page.locator("header a[data-signup]").first();
     await expect(vault).toHaveAttribute("href", "/dashboard");
     await expect(vault).toBeVisible();
-    await expect(page.locator("main, .page").getByText("Open my Vault").first()).toBeVisible();
+    await expect(page.locator("section#top a[data-signup]").first()).toHaveText("Open my Vault");
     await shoot(page, `journey-${kind}-3-website-signed-in`);
     // 4. Tapping it opens the Vault without signing in again.
     await vault.click();
