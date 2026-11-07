@@ -34,6 +34,7 @@ async function main() {
   await upsertAddress(user.id);
   const contacts = await seedContacts(user.id);
   await seedPersonalRecords(user.id, contacts);
+  await seedWillRecord(user.id, contacts);
   const assets = await seedAssets(user.id, wallet, contacts);
   await seedInvitations(user.id, contacts);
   await seedDocuments(user.id, wallet, assets);
@@ -440,7 +441,7 @@ async function seedAssets(userId, wallet, contacts) {
       },
     },
     {
-      title: "Last Will and Testament",
+      title: "Emma Carter (executor)",
       section_key: "personal",
       category_key: "executors",
       provider_name: null,
@@ -555,6 +556,12 @@ async function seedAssets(userId, wallet, contacts) {
     },
   ];
 
+  // The executor is a person, not a Will: earlier runs titled her record "Last Will and Testament", which made
+  // Legal count a Will the Wills page didn't show. Rename it in place (7 Nov 2026).
+  const renamed = await supabase.from("assets").update({ title: "Emma Carter (executor)" })
+    .eq("owner_user_id", userId).eq("section_key", "personal").eq("category_key", "executors").eq("title", "Last Will and Testament");
+  if (renamed.error) throw renamed.error;
+
   const inserted = [];
   for (const asset of assets) {
     const existing = await supabase
@@ -635,6 +642,52 @@ async function seedAssets(userId, wallet, contacts) {
     inserted.push({ id: assetId, title: asset.title, category_key: asset.category_key, section_key: asset.section_key });
   }
   return inserted;
+}
+
+/** A Will in Legal › Wills (synthetic), signed in 2014 and naming Emma Carter as executor (7 Nov 2026, tour video). */
+async function seedWillRecord(userId, contacts) {
+  const emma = contacts.find((item) => item.full_name === "Emma Carter");
+  const existing = await supabase.from("records").select("id").eq("owner_user_id", userId)
+    .eq("section_key", "legal").eq("category_key", "wills").eq("title", "Last Will and Testament").maybeSingle();
+  if (existing.error) throw existing.error;
+  const payload = {
+    owner_user_id: userId,
+    section_key: "legal",
+    category_key: "wills",
+    title: "Last Will and Testament",
+    provider_name: "Harper & Lowe Solicitors",
+    provider_key: null,
+    summary: "Original held by Harper & Lowe Solicitors, York",
+    value_minor: 0,
+    currency_code: "GBP",
+    metadata: { will_signed_on: "2014-03-12", notes: "Synthetic Will record", demo_seed_key: DEMO_KEY },
+    updated_at: new Date().toISOString(),
+  };
+  let recordId = existing.data?.id ? String(existing.data.id) : "";
+  if (recordId) {
+    const update = await supabase.from("records").update(payload).eq("id", recordId).eq("owner_user_id", userId);
+    if (update.error) throw update.error;
+  } else {
+    const insert = await supabase.from("records").insert(payload).select("id").single();
+    if (insert.error || !insert.data?.id) throw insert.error || new Error("Could not create Will record.");
+    recordId = String(insert.data.id);
+  }
+  if (!emma) return;
+  const existingContact = await supabase.from("record_contacts").select("id").eq("owner_user_id", userId).eq("record_id", recordId).maybeSingle();
+  if (existingContact.error) throw existingContact.error;
+  const contactPayload = {
+    owner_user_id: userId,
+    record_id: recordId,
+    contact_id: emma.id,
+    contact_name: "Emma Carter",
+    contact_email: "emma.carter.synthetic@example.test",
+    contact_role: "executor",
+    notes: "Synthetic executor named in the Will",
+  };
+  const write = existingContact.data?.id
+    ? await supabase.from("record_contacts").update(contactPayload).eq("id", existingContact.data.id).eq("owner_user_id", userId)
+    : await supabase.from("record_contacts").insert(contactPayload);
+  if (write.error) throw write.error;
 }
 
 async function seedPersonalRecords(userId, contacts) {
@@ -918,8 +971,8 @@ async function normalizeSeedContactContexts(userId) {
 async function seedDocuments(userId, wallet, assets) {
   const assetByTitle = new Map(assets.map((item) => [item.title, item]));
   const docs = [
-    { title: "Last Will and Testament", file: "will-overview.txt", kind: "document" },
-    { title: "Last Will and Testament", file: "executor-instructions.doc", kind: "document", mimeType: "application/msword" },
+    { title: "Emma Carter (executor)", file: "will-overview.txt", kind: "document" },
+    { title: "Emma Carter (executor)", file: "executor-instructions.doc", kind: "document", mimeType: "application/msword" },
     { title: "14 Orchard Lane", file: "property-title-summary.txt", kind: "document" },
     { title: "Riverside Pension Scheme", file: "pension-summary.txt", kind: "document" },
     { title: "HSBC Everyday Current", file: "bank-statement-summary.txt", kind: "document" },
