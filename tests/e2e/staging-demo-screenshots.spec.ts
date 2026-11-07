@@ -16,7 +16,9 @@ const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 const EMAIL = "staging-demo-shots@example.test";
 const PASSWORD = `StagingDemoShots-${Date.now()}-Aa1!`;
 const OUT = "test-results/demo-shots";
-const PAGES = ["/dashboard", "/finances", "/finances/bank", "/property", "/legal", "/personal", "/contacts", "/access-sharing", "/account/billing"];
+const PAGES = ["/dashboard", "/finances", "/finances/bank", "/property", "/legal", "/legal/wills", "/personal", "/contacts", "/people-access", "/access-sharing", "/vault-nominations", "/account/billing"];
+// Tour video (owner request 7 Nov 2026): the same steps with a record opened, so the film can zoom in on it.
+const OPENED = ["/finances/bank", "/legal/wills", "/contacts"];
 
 const allowed = process.env.LEGACY_FORTRESS_ALLOW_STAGING_BROWSER === "true";
 const targetIsStaging = BASE_URL === "https://test.mylegacyfortress.com" && SUPABASE_URL === "https://supabase-test.mylegacyfortress.com";
@@ -101,6 +103,15 @@ async function capture(browser: Browser, kind: "desk" | "phone") {
     await page.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" });
     expect(new URL(page.url()).pathname, `${path} opened sign-in instead`).not.toMatch(/sign-in|login|onboarding/);
     await shoot(page, `${kind}${path.replace(/[^a-z0-9]+/gi, "-")}`);
+  }
+  for (const path of OPENED) {
+    await page.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("networkidle", { timeout: 15_000 }).catch(() => undefined);
+    const row = page.locator("main button[aria-expanded='false'], main [role='button'][aria-expanded='false']").first();
+    if (await row.isVisible().catch(() => false)) {
+      await row.click().catch(() => undefined);
+      await shoot(page, `${kind}${path.replace(/[^a-z0-9]+/gi, "-")}-open`);
+    }
   }
   // The home dashboard, captured again once everything has loaded (the first shot of a run can miss it).
   await page.goto(`${BASE_URL}/dashboard`, { waitUntil: "domcontentloaded" });
