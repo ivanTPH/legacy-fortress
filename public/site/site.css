@@ -108,20 +108,25 @@ img{max-width:100%}
 .menu-btn .ms{font-size:22px}
 .nav-extra{display:none}
 .lbl-short{display:none}
+.phone-only{display:none!important}
 @media (max-width:760px){
   .page header{position:relative}
   .page header>div{flex-wrap:nowrap!important;gap:10px!important;justify-content:space-between}
-  .page header>div>a:first-child{font-size:17px!important;flex:1 1 auto;min-width:0;white-space:nowrap}
+  .page header>div>a:first-child{font-size:16px!important;gap:8px!important;flex:1 1 auto;min-width:0;white-space:nowrap}
+  .page header>div>a:first-child img{width:32px!important;height:32px!important}
+  .page header>div{gap:8px!important}
   .page header nav[aria-label="Main"]{display:none!important}
-  .page header a[data-signin]{display:none!important}
+  /* Sign in stays visible on phones (owner feedback 8 Nov 2026). */
+  .page header a[data-signin]{display:inline-flex!important;align-items:center;min-height:44px;box-sizing:border-box;padding:8px 12px!important;font-size:16px!important;white-space:nowrap;border:1px solid #D9CCC3;border-radius:10px;background:#FFFFFF;text-decoration:none!important}
+  .page header a[data-signin][hidden]{display:none!important}
+  .page header a.phone-only{display:inline-flex!important}
   .page header>div>a[data-signup],.page header>div>div a[data-signup]{display:none!important}
-  .page header>div>div{display:none!important}
+  .page header>div>div{display:flex!important;gap:8px}
   /* Signed in on this phone: keep a compact "My Vault" button beside Menu. */
   .lf-signed-in .page header .lbl-long{display:none}
   .lf-signed-in .menu-btn .menu-lbl{display:none}
   .lf-signed-in .menu-btn{padding:8px 10px}
   .lf-signed-in .page header .lbl-short{display:inline}
-  .lf-signed-in .page header>div>div{display:flex!important;gap:8px}
   .lf-signed-in .page header>div>a[data-signup],.lf-signed-in .page header>div>div a[data-signup]{display:inline-flex!important;padding:10px 14px!important;white-space:nowrap;font-size:15px!important}
   .page header a[href="/enterprise/sign-in"]{display:none!important}
   .menu-btn{display:inline-flex}

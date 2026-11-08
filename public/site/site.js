@@ -69,7 +69,20 @@
   document.querySelectorAll('.page header').forEach(function(header){
     var row = header.firstElementChild; var nav = header.querySelector('nav[aria-label="Main"]');
     if (!row || !nav) return;
-    var signin = header.querySelector('a[data-signin]') || header.querySelector('a[href="/enterprise/sign-in"]');
+    // Sign in is always in the menu too, on every page.
+    var signin = header.querySelector('a[data-signin]');
+    var signedIn = document.documentElement.classList.contains('lf-signed-in');
+    if (!signin && !signedIn && !header.querySelector('a[href="/enterprise/sign-in"]')) {
+      // Every page offers Sign in on a phone, not only the home page.
+      signin = document.createElement('a');
+      signin.setAttribute('data-signin', '');
+      signin.href = /^https?:$/.test(location.protocol) && !/claude/.test(location.hostname) ? '/sign-in' : 'https://test.mylegacyfortress.com/sign-in';
+      signin.textContent = 'Sign in';
+      signin.className = 'phone-only';
+      signin.style.color = '#1F1715'; signin.style.fontWeight = '600';
+      row.insertBefore(signin, row.lastElementChild && row.lastElementChild.tagName === 'A' && row.lastElementChild.hasAttribute('data-signup') ? row.lastElementChild : null);
+    }
+    if (!signin) signin = header.querySelector('a[href="/enterprise/sign-in"]');
     if (signin && !signin.hidden) { var extra = signin.cloneNode(true); extra.removeAttribute('style'); extra.className = 'nav-extra'; extra.removeAttribute('data-signin'); nav.appendChild(extra); }
     var signup = header.querySelector('a[data-signup]');
     if (signup) { var cta = signup.cloneNode(true); cta.removeAttribute('style'); cta.className = 'nav-cta'; cta.removeAttribute('data-signup'); if (document.documentElement.classList.contains('lf-signed-in')) cta.textContent = 'Open my Vault'; nav.appendChild(cta); }
