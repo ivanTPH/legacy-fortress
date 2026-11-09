@@ -7,6 +7,16 @@
   // Already signed in on this device: offer the Vault instead of Sign in / Start free.
   var signedIn = false;
   try { for (var i = 0; i < localStorage.length; i++) { if (/^sb-.+-auth-token$/.test(localStorage.key(i) || '')) { signedIn = true; break; } } } catch (e) {}
+  // Been here before on a remembered device but signed out: invite them to sign in rather than start again.
+  var returning = false;
+  if (!signedIn) { try { returning = Boolean(localStorage.getItem('lf:returning')); } catch (e) {} }
+  if (returning) {
+    document.documentElement.classList.add('lf-returning');
+    document.querySelectorAll('a[data-signup]').forEach(function(a){
+      a.setAttribute('href', '/sign-in');
+      if (a.closest('header')) a.hidden = true; else a.textContent = 'Sign in to your Vault';
+    });
+  }
   if (signedIn) {
     document.querySelectorAll('header a[data-signin]').forEach(function(a){ a.hidden = true; });
     document.documentElement.classList.add('lf-signed-in');

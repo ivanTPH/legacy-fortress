@@ -27,7 +27,7 @@ test("sign in and start free go to the app in the same window, never to another 
 test("signed-in people are offered their Vault; the website never reads what's in the session", () => {
   const js = fs.readFileSync("public/site/site.js", "utf8");
   assert.match(js, /\/\^sb-\.\+-auth-token\$\/\.test\(localStorage\.key\(i\)/);
-  assert.doesNotMatch(js, /localStorage\.getItem/);
+  assert.doesNotMatch(js, /getItem\([^)]*auth-token/, "never reads the session itself");
   assert.match(js, /'\/dashboard'/);
 });
 

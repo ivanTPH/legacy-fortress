@@ -24,6 +24,9 @@ export default function PublicAuthEntry({
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [resetSuccess, setResetSuccess] = useState(false);
+  // Signed in already, or been here before on a remembered device (owner decision 9 Nov 2026).
+  const [signedInAs, setSignedInAs] = useState<string | null>(null);
+  const [returning, setReturning] = useState<{ firstName: string | null; email: string } | null>(null);
   const nextPath = searchParams.get("next");
   const invitedEmail = searchParams.get("email");
   const requestedMode = searchParams.get("mode");
@@ -53,6 +56,8 @@ export default function PublicAuthEntry({
           import("../../lib/auth/platformRoles"),
           import("../../lib/auth/adminDestination"),
         ]);
+        const { readReturningVisitor } = await import("../../lib/auth/deviceTrustClient");
+        if (mounted) setReturning(readReturningVisitor());
         const { data: sessionData } = await supabase.auth.getSession();
         const sessionUser = sessionData.session?.user ?? (await waitForActiveUser(supabase, { attempts: 3, delayMs: 120 }));
         if (!mounted || !sessionUser) return;
@@ -61,7 +66,9 @@ export default function PublicAuthEntry({
         // recovery redirect; otherwise leave the auth choice visible.
         if (!nextPath) {
           const pendingDestination = await findPendingInvitationDestination(supabase);
-          if (pendingDestination) router.replace(pendingDestination);
+          if (pendingDestination) { router.replace(pendingDestination); return; }
+          const { getUserDisplayName } = await import("../../lib/auth/user");
+          if (mounted) setSignedInAs(getUserDisplayName(sessionUser));
           return;
         }
         const roles = mergePlatformRoles(
@@ -89,6 +96,18 @@ export default function PublicAuthEntry({
       mounted = false;
     };
   }, [nextPath, router]);
+
+  async function signOutHere() {
+    const { supabase } = await import("../../lib/supabaseClient");
+    await supabase.auth.signOut();
+    setSignedInAs(null);
+  }
+
+  async function forgetReturning() {
+    const { clearReturningVisitor } = await import("../../lib/auth/deviceTrustClient");
+    clearReturningVisitor();
+    setReturning(null);
+  }
 
   return (
     <main className="lf-entry-shell lf-trust-entry">
@@ -121,17 +140,32 @@ export default function PublicAuthEntry({
           <div className="lf-entry-panel-top">
             <div>
               <div className="lf-entry-panel-kicker">Secure access</div>
-              <h2>{activeMode === "sign-in" ? "Sign in" : "Create account"}</h2>
+              <h2>{signedInAs ? "You’re signed in" : activeMode === "sign-in" ? (returning ? `Welcome back${returning.firstName ? `, ${returning.firstName}` : ""}` : "Sign in") : "Create account"}</h2>
             </div>
             <Link href="/demo" className="lf-entry-demo-link">Demo</Link>
           </div>
 
           <p className="lf-entry-panel-subtext">
-            {activeMode === "sign-in"
-              ? "Welcome back. Sign in to your Vault."
+            {signedInAs
+              ? `You’re signed in on this device as ${signedInAs}.`
+              : activeMode === "sign-in"
+              ? (returning ? "Sign in to your Vault." : "Welcome back. Sign in to your Vault.")
               : "It takes a minute. We'll then help you set up your Vault, step by step."}
           </p>
 
+          {signedInAs ? (
+            <div style={{ display: "grid", gap: 12 }}>
+              <Link className="lf-primary-btn" href="/dashboard" style={{ textAlign: "center", justifyContent: "center" }}>
+                <Icon name="lock_open" size={16} /> Continue to my Vault
+              </Link>
+              <p className="lf-muted-note" style={{ margin: 0, textAlign: "center" }}>
+                Not you?{" "}
+                <button type="button" className="lf-inline-link" style={{ background: "none", border: 0, padding: 0, cursor: "pointer", fontWeight: 700 }} onClick={() => void signOutHere()}>Sign out</button>
+              </p>
+            </div>
+          ) : null}
+
+          {signedInAs ? null : <>
           <div className="lf-entry-tabs" role="tablist" aria-label="Authentication options">
             <button
               type="button"
@@ -157,10 +191,18 @@ export default function PublicAuthEntry({
             <ResetStatusSync onResetSuccess={() => setResetSuccess(true)} />
           </Suspense>
 
+          {activeMode === "sign-in" && returning && !invitedEmail ? (
+            <p className="lf-muted-note" style={{ margin: 0 }}>
+              Not {returning.firstName ?? returning.email}?{" "}
+              <button type="button" className="lf-inline-link" style={{ background: "none", border: 0, padding: 0, cursor: "pointer", fontWeight: 700 }} onClick={() => void forgetReturning()}>Use a different account</button>
+            </p>
+          ) : null}
+
           {activeMode === "sign-in" ? (
             <SignInForm
+              key={returning?.email ?? "blank"}
               nextPath={nextPath}
-              initialEmail={invitedEmail}
+              initialEmail={invitedEmail || returning?.email || ""}
               compact
               initialStatus={resetSuccess ? "Password updated successfully. Please sign in with your new password." : ""}
             />
@@ -176,6 +218,8 @@ export default function PublicAuthEntry({
               <>Already have an account? <Link className="lf-inline-link" href={nextPath ? `/sign-in?next=${encodeURIComponent(nextPath)}` : "/sign-in"} style={{ fontWeight: 700 }}>Sign in</Link></>
             )}
           </p>
+
+          </>}
 
           <div className="lf-entry-footnote">
             <span><Icon name="lock" size={14} /> Private workspace</span>

@@ -54,7 +54,8 @@ test("invitation sign-in and create-account paths retain the invited email", () 
   const authEntry = fs.readFileSync(path.join(root, "components/auth/PublicAuthEntry.tsx"), "utf8");
   assert.match(acceptPage, /sign-in\?next=\$\{encodeURIComponent\(nextAuthPath\)\}&email=\$\{encodeURIComponent\(summary\.contact_email\)\}/);
   assert.match(authEntry, /expectedEmail=\{invitedEmail\}/);
-  assert.match(authEntry, /initialEmail=\{invitedEmail\}/);
+  // The invited email always wins over a remembered one.
+  assert.match(authEntry, /initialEmail=\{invitedEmail \|\| returning\?\.email \|\| \"\"\}/);
 });
 
 test("invitation acceptance remains the first post-registration relationship mutation", () => {
