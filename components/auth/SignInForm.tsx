@@ -110,12 +110,14 @@ export default function SignInForm({
       }
 
       // New phone or computer? Check it's them with an emailed code first (4 Nov 2026).
-      const { checkDeviceTrust, verifyDeviceHref } = await import("../../lib/auth/deviceTrustClient");
+      const { checkDeviceTrust, verifyDeviceHref, readReturningVisitor, saveReturningVisitor } = await import("../../lib/auth/deviceTrustClient");
       const device = await checkDeviceTrust();
       if (device.enforced && !device.trusted) {
         router.replace(verifyDeviceHref(nextPath ?? "/dashboard"));
         return;
       }
+      // A remembered device keeps its "Welcome back" details up to date.
+      if (readReturningVisitor()) saveReturningVisitor(data.session.user);
 
       const roles = mergePlatformRoles(
         extractPlatformRolesFromMetadata(confirmedUser.app_metadata),

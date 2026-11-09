@@ -179,6 +179,11 @@ for (const kind of ["desk", "phone"] as const) {
     await expect(vault).toBeVisible();
     await expect(page.locator("section#top a[data-signup]").first()).toHaveText("Open my Vault");
     await shoot(page, `journey-${kind}-3-website-signed-in`);
+    // 3b. The sign-in page knows too: "You're signed in" with Continue to my Vault (9 Nov 2026).
+    await page.goto(`${BASE_URL}/sign-in`, { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("link", { name: /Continue to my Vault/ })).toBeVisible({ timeout: 20_000 });
+    await shoot(page, `journey-${kind}-3b-sign-in-page-signed-in`);
+    await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
     // 4. Tapping it opens the Vault without signing in again.
     await vault.click();
     await page.waitForURL(/dashboard/, { timeout: 30_000 });

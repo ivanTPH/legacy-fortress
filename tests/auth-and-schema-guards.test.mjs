@@ -100,7 +100,9 @@ test("an existing personal session does not silently redirect from sign-in", () 
   const entry = fs.readFileSync(path.join(process.cwd(), "components/auth/PublicAuthEntry.tsx"), "utf8");
   assert.match(entry, /existing personal session should not make \/sign-in silently jump/);
   assert.match(entry, /if \(!nextPath\)/);
-  assert.match(entry, /if \(pendingDestination\) router\.replace\(pendingDestination\)/);
+  assert.match(entry, /if \(pendingDestination\) \{ router\.replace\(pendingDestination\); return; \}/);
+  // Signed in already: offer Continue to my Vault instead of jumping (9 Nov 2026).
+  assert.match(entry, /setSignedInAs\(getUserDisplayName\(sessionUser\)\)/);
   assert.match(entry, /return;/);
 });
 
