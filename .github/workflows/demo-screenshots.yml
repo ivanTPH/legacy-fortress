@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   screenshots:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Playwright browsers are not yet supported on ubuntu-latest (26.04), 9 Nov 2026
     environment: legacy-fortress-staging
     steps:
       - name: Confirm staging branch
