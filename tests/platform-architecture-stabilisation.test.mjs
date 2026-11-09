@@ -325,8 +325,9 @@ test("access model keeps consumer navigation separate while allowing authorised 
   assert.match(shell, /WorkspaceSwitcher/);
   assert.match(shell, /lf-prototype-session-details/);
   assert.doesNotMatch(shell, /viewSwitchLinkStyle/);
-  assert.match(authEntry, /Operational dashboards are opened only when account permissions allow them/);
-  assert.match(authEntry, /Admin access is role controlled/);
+  // Plain wording and an obvious way to create an account (owner feedback 9 Nov 2026).
+  assert.match(authEntry, /Welcome back\. Sign in to your Vault\./);
+  assert.match(authEntry, /New to Legacy Fortress\? <Link[^>]*>Create an account<\/Link>/);
   assert.match(authEntry, /resolvePermissionedAdminDestination/);
   assert.doesNotMatch(authEntry, /lf-login-target-switch/);
 });

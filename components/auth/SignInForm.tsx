@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useState, type CSSProperties, type FormEvent } from "react";
 import Icon from "../ui/Icon";
+import { getConfiguredAuthProviders } from "../../lib/auth/authProviders";
 import FounderTestLauncher from "../navigation/FounderTestLauncher";
 
 const OAuthButtons = dynamic(() => import("./OAuthButtons"), {
@@ -220,11 +221,14 @@ export default function SignInForm({
         </button>
       </form>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--lf-text-secondary)", fontSize: 12 }}>
-        <span style={{ flex: 1, height: 1, background: "var(--lf-surface-subtle)" }} />
-        or
-        <span style={{ flex: 1, height: 1, background: "var(--lf-surface-subtle)" }} />
-      </div>
+      {/* Only show "or" when Apple or Google sign-in is switched on. */}
+      {getConfiguredAuthProviders().length > 0 ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--lf-text-secondary)", fontSize: 12 }}>
+          <span style={{ flex: 1, height: 1, background: "var(--lf-surface-subtle)" }} />
+          or
+          <span style={{ flex: 1, height: 1, background: "var(--lf-surface-subtle)" }} />
+        </div>
+      ) : null}
 
       <OAuthButtons nextPath={nextPath || "/dashboard"} />
 
