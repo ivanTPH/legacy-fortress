@@ -128,8 +128,8 @@ export default function PublicAuthEntry({
 
           <p className="lf-entry-panel-subtext">
             {activeMode === "sign-in"
-              ? "Sign in to your authorised workspace. Operational dashboards are opened only when account permissions allow them."
-              : "Start here and continue straight into your guided setup."}
+              ? "Welcome back. Sign in to your Vault."
+              : "It takes a minute. We'll then help you set up your Vault, step by step."}
           </p>
 
           <div className="lf-entry-tabs" role="tablist" aria-label="Authentication options">
@@ -168,10 +168,19 @@ export default function PublicAuthEntry({
             <SignUpForm nextPath={nextPath} expectedEmail={invitedEmail} compact />
           )}
 
+          {/* New visitors need an obvious way in (owner feedback 9 Nov 2026). */}
+          <p className="lf-entry-switch" style={{ margin: "4px 0 0", textAlign: "center", fontSize: 15 }}>
+            {activeMode === "sign-in" ? (
+              <>New to Legacy Fortress? <Link className="lf-inline-link" href={nextPath ? `/sign-up?next=${encodeURIComponent(nextPath)}` : "/sign-up"} style={{ fontWeight: 700 }}>Create an account</Link></>
+            ) : (
+              <>Already have an account? <Link className="lf-inline-link" href={nextPath ? `/sign-in?next=${encodeURIComponent(nextPath)}` : "/sign-in"} style={{ fontWeight: 700 }}>Sign in</Link></>
+            )}
+          </p>
+
           <div className="lf-entry-footnote">
             <span><Icon name="lock" size={14} /> Private workspace</span>
             <span><Icon name="description" size={14} /> Guided setup after sign-up</span>
-            <span><Icon name="admin_panel_settings" size={14} /> Admin access is role controlled</span>
+            <span><Icon name="visibility_lock" size={14} /> Your family sees only what you choose</span>
           </div>
 
           <WorkspaceSwitcher
