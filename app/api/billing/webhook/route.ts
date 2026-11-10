@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
-import { applySubscription, stripeRequest, verifyStripeSignature } from "@/lib/billing/stripe";
+import { applySubscription, invoiceSubscriptionId, stripeRequest, verifyStripeSignature } from "@/lib/billing/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     let subscriptionId: string | null = null;
     if (event.type.startsWith("customer.subscription.")) subscriptionId = String(event.data.object.id ?? "");
     if (event.type === "checkout.session.completed") subscriptionId = String(event.data.object.subscription ?? "") || null;
-    if (event.type === "invoice.payment_failed" || event.type === "invoice.paid") subscriptionId = String(event.data.object.subscription ?? "") || null;
+    if (event.type === "invoice.payment_failed" || event.type === "invoice.paid") subscriptionId = invoiceSubscriptionId(event.data.object);
     if (subscriptionId) {
       const subscription = await stripeRequest<Parameters<typeof applySubscription>[1]>("GET", `subscriptions/${encodeURIComponent(subscriptionId)}`);
       await applySubscription(admin, subscription);
@@ -33,3 +33,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false }, { status: 500 });
   }
 }
+

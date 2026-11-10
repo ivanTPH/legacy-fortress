@@ -124,3 +124,14 @@ export async function applySubscription(admin: SupabaseClient, subscription: Str
 export function siteUrl() {
   return String(process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "https://test.mylegacyfortress.com").replace(/\/$/, "");
 }
+
+/**
+ * Which subscription an invoice belongs to. Older Stripe API versions put it at `subscription`; from 2025 onwards
+ * (the owner's TEST webhook uses 2026-10-28) it is at `parent.subscription_details.subscription`. Read both.
+ */
+export function invoiceSubscriptionId(invoice: Record<string, unknown>): string | null {
+  const parent = invoice.parent as { subscription_details?: { subscription?: unknown } } | null | undefined;
+  const value = invoice.subscription ?? parent?.subscription_details?.subscription;
+  const id = typeof value === "string" ? value : typeof value === "object" && value ? String((value as { id?: unknown }).id ?? "") : "";
+  return id || null;
+}
