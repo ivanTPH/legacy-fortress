@@ -11,7 +11,6 @@ import { getOrCreateOnboardingState, getTermsAcceptanceState, isCurrentTermsAcce
 import {
   loadVaultPreferences,
   saveVaultPreferences,
-  setVaultApplicability,
   type VaultPreferences,
 } from "../../lib/vaultPreferences";
 import type { OnboardingStepId } from "../../config/onboarding.config";
@@ -26,14 +25,20 @@ import {
 // "Skip set-up" (top right, and on Welcome) to go straight to Home with all six areas.
 // Nothing here shares anything or emails anyone: the person steps hand over to the normal People pages.
 
-type Answer = "yes" | "no" | "unsure";
-type QuestionKey = "will" | "capacity_arrangements" | "home";
-type Step = "name" | "welcome" | "q0" | "q1" | "q2" | "first" | "person";
+// Owner decision 10 Nov 2026: start with everyday things (bank and savings, pensions, home), which feel less
+// intrusive. The Will and Power of Attorney come later, through Your next steps, once the Vault is established.
+type KeepKey = "bank" | "pensions" | "home" | "investments";
+type Step = "name" | "welcome" | "keep" | "first" | "person";
 
-const QUESTIONS: Array<{ key: QuestionKey; icon: string; title: string; help: string }> = [
-  { key: "will", icon: "history_edu", title: "Do you have a Will?", help: "This helps us suggest the right next steps. There are no wrong answers." },
-  { key: "capacity_arrangements", icon: "handshake", title: "Do you have a Power of Attorney?", help: "A Lasting Power of Attorney lets someone you trust make decisions if you can’t." },
-  { key: "home", icon: "home", title: "Do you own your home?", help: "On your own, jointly, or with a mortgage." },
+const KEEP_OPTIONS: Array<{ key: KeepKey; icon: string; title: string; help: string; first: { title: string; help: string; href: string } }> = [
+  { key: "bank", icon: "account_balance", title: "Bank and savings accounts", help: "Current accounts, savings and cash ISAs.",
+    first: { title: "A bank or savings account", help: "Just the bank and account name to start.", href: "/finances/bank?add=1" } },
+  { key: "pensions", icon: "savings", title: "Pensions", help: "Workplace, personal and the State Pension.",
+    first: { title: "A pension", help: "The provider’s name is enough to start.", href: "/finances/pensions?add=1" } },
+  { key: "home", icon: "home", title: "Your home", help: "Owned outright, jointly, or with a mortgage.",
+    first: { title: "Your home", help: "The address, and where the deeds are kept.", href: "/vault/property?add=1" } },
+  { key: "investments", icon: "trending_up", title: "Investments", help: "Shares, funds and stocks and shares ISAs.",
+    first: { title: "An investment", help: "The platform or fund name to start.", href: "/finances/investments?add=1" } },
 ];
 
 const COMPLETED_STEPS: OnboardingStepId[] = ["identity", "verification", "consent", "personal_details", "vault_categories", "guided_tour", "complete"];
@@ -48,7 +53,7 @@ export default function OnboardingPageClient() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [nameKnown, setNameKnown] = useState(false);
-  const [answers, setAnswers] = useState<Partial<Record<QuestionKey, Answer>>>({});
+  const [keep, setKeep] = useState<KeepKey[]>([]);
   const [marketingOptIn, setMarketingOptIn] = useState(false);
   const preferencesRef = useRef<VaultPreferences | null>(null);
   const profileRef = useRef<LoadedProfileWorkspace | null>(null);
@@ -146,7 +151,7 @@ export default function OnboardingPageClient() {
     }
   }
 
-  // "Skip set-up" is the same everywhere: straight to Home with all six areas, keeping any answers already given.
+  // "Skip set-up" is the same everywhere: straight to Home with all six areas.
   async function skipSetUp() {
     if (step === "name") {
       setSaving(true);
@@ -163,17 +168,14 @@ export default function OnboardingPageClient() {
     await finish("/dashboard");
   }
 
-  async function finish(destination: string, finalAnswers: Partial<Record<QuestionKey, Answer>> = answers) {
+  async function finish(destination: string) {
     setStatus("");
     setSaving(true);
     try {
       const user = await activeUserOrSignIn();
       if (!user) return;
-      let preferences = preferencesRef.current ?? await loadVaultPreferences(supabase, user.id);
-      for (const [key, value] of Object.entries(finalAnswers)) {
-        if (value) preferences = setVaultApplicability(preferences, key, value);
-      }
-      await saveVaultPreferences(supabase, user.id, preferences);
+      // All six areas stay on (the default). What was ticked only decides which first record to suggest.
+      await saveVaultPreferences(supabase, user.id, preferencesRef.current ?? await loadVaultPreferences(supabase, user.id));
       await saveOnboardingState(supabase, user.id, {
         current_step: "complete",
         completed_steps: COMPLETED_STEPS,
@@ -188,13 +190,8 @@ export default function OnboardingPageClient() {
     }
   }
 
-  function answer(index: number, value: Answer | null) {
-    const question = QUESTIONS[index];
-    const next = { ...answers };
-    if (value) next[question.key] = value;
-    else delete next[question.key];
-    setAnswers(next);
-    setStep(index < QUESTIONS.length - 1 ? (`q${index + 1}` as Step) : "first");
+  function toggleKeep(key: KeepKey) {
+    setKeep((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
   }
 
   if (loading) {
@@ -205,23 +202,27 @@ export default function OnboardingPageClient() {
     );
   }
 
-  const questionIndex = step === "q0" ? 0 : step === "q1" ? 1 : step === "q2" ? 2 : -1;
-  const guidedStep = questionIndex >= 0 ? 1 : step === "first" ? 2 : step === "person" ? 3 : 0;
-  const progress = questionIndex >= 0 ? (questionIndex + 1) / 5 : step === "first" ? 4 / 5 : step === "person" ? 1 : 0;
-  const back: Record<Step, Step | null> = { name: null, welcome: "name", q0: "welcome", q1: "q0", q2: "q1", first: "q2", person: "first" };
-
+  const guidedStep = step === "keep" ? 1 : step === "first" ? 2 : step === "person" ? 3 : 0;
+  const back: Record<Step, Step | null> = { name: null, welcome: "name", keep: "welcome", first: "keep", person: "first" };
+  const picked = KEEP_OPTIONS.filter((option) => keep.includes(option.key));
   const firstChoices = [
-    answers.will === "yes"
-      ? { icon: "history_edu", title: "Your Will", help: "Where the original is kept, and who your executors are.", href: "/legal/wills?add=1" }
-      : answers.home === "yes"
-        ? { icon: "home", title: "Your home", help: "The address, and where the deeds are kept.", href: "/vault/property?add=1" }
-        : null,
-    { icon: "account_balance", title: "A bank account", help: "Just the bank and account name to start.", href: "/finances/bank?add=1" },
+    ...(picked.length ? picked : KEEP_OPTIONS.filter((option) => option.key === "bank" || option.key === "home")).map((option) => ({ icon: option.icon, ...option.first })),
     { icon: "add_circle", title: "Something else", help: "Choose from all six areas of your Vault.", href: "/add" },
-  ].filter(Boolean) as Array<{ icon: string; title: string; help: string; href: string }>;
+  ];
 
   return (
     <main className="lf-setup">
+      <div className="lf-setup-frame">
+      {/* Laptops and tablets only: a short reassurance beside the card. Phones show the card alone. */}
+      <aside className="lf-setup-aside" aria-label="About your Vault">
+        <span className="lf-setup-aside-brand"><Icon name="shield" size={24} />Legacy Fortress</span>
+        <p className="lf-setup-aside-title">Everything your family will need, in one safe place.</p>
+        <ul>
+          <li><Icon name="lock" size={22} /><span>Private to you. Nothing is shared until you choose.</span></li>
+          <li><Icon name="schedule" size={22} /><span>About 5 minutes. Skip any step, or skip set-up.</span></li>
+          <li><Icon name="edit_note" size={22} /><span>A name is enough to start. Add details whenever you like.</span></li>
+        </ul>
+      </aside>
       <div className="lf-setup-card">
         <div className="lf-setup-top">
           {back[step] && !saving ? (
@@ -236,7 +237,7 @@ export default function OnboardingPageClient() {
         {guidedStep ? (
           <div className="lf-setup-steps">
             <span className="lf-setup-steplabel">Step {guidedStep} of 3</span>
-            <div className="lf-setup-progress" aria-hidden="true"><span style={{ width: `${Math.round(progress * 100)}%` }} /></div>
+            <div className="lf-setup-progress" aria-hidden="true"><span style={{ width: `${Math.round((guidedStep / 3) * 100)}%` }} /></div>
           </div>
         ) : null}
 
@@ -270,7 +271,7 @@ export default function OnboardingPageClient() {
               <span><strong>Watch a 1-minute tour first</strong><small>With voice-over and captions. Then come straight back.</small></span>
               <Icon name="chevron_right" size={22} />
             </a>
-            <button type="button" className="lf-setup-primary" onClick={() => setStep("q0")} disabled={saving}>Set up with me</button>
+            <button type="button" className="lf-setup-primary" onClick={() => setStep("keep")} disabled={saving}>Set up with me</button>
             <button type="button" className="lf-setup-quiet" onClick={() => void skipSetUp()} disabled={saving}>
               {saving ? "Opening your Vault…" : "Skip set-up"}
             </button>
@@ -278,17 +279,21 @@ export default function OnboardingPageClient() {
           </div>
         ) : null}
 
-        {questionIndex >= 0 ? (
+        {step === "keep" ? (
           <div className="lf-setup-body">
-            <span className="lf-setup-icon"><Icon name={QUESTIONS[questionIndex].icon} size={28} /></span>
-            <h1 ref={headingRef} tabIndex={-1}>{QUESTIONS[questionIndex].title}</h1>
-            <p className="lf-setup-help">{QUESTIONS[questionIndex].help}</p>
-            <div className="lf-setup-answers" role="group" aria-label={QUESTIONS[questionIndex].title}>
-              <button type="button" className="lf-setup-answer" aria-pressed={answers[QUESTIONS[questionIndex].key] === "yes"} onClick={() => answer(questionIndex, "yes")}>Yes</button>
-              <button type="button" className="lf-setup-answer" aria-pressed={answers[QUESTIONS[questionIndex].key] === "no"} onClick={() => answer(questionIndex, "no")}>No</button>
-              <button type="button" className="lf-setup-answer" aria-pressed={answers[QUESTIONS[questionIndex].key] === "unsure"} onClick={() => answer(questionIndex, "unsure")}>Not sure</button>
+            <h1 ref={headingRef} tabIndex={-1}>What would you like to keep safe?</h1>
+            <p className="lf-setup-help">Tick any that apply. We’ll start with the everyday things.</p>
+            <div className="lf-setup-answers" role="group" aria-label="What would you like to keep safe?">
+              {KEEP_OPTIONS.map((option) => (
+                <button key={option.key} type="button" className="lf-setup-choice lf-setup-tick" aria-pressed={keep.includes(option.key)} onClick={() => toggleKeep(option.key)}>
+                  <Icon name={option.icon} size={28} />
+                  <span><strong>{option.title}</strong><small>{option.help}</small></span>
+                  <Icon name={keep.includes(option.key) ? "check_box" : "check_box_outline_blank"} size={26} />
+                </button>
+              ))}
             </div>
-            <button type="button" className="lf-setup-quiet" onClick={() => answer(questionIndex, null)}>Skip this step</button>
+            <button type="button" className="lf-setup-primary" onClick={() => setStep("first")}>Continue</button>
+            <button type="button" className="lf-setup-quiet" onClick={() => { setKeep([]); setStep("first"); }}>Skip this step</button>
           </div>
         ) : null}
 
@@ -310,15 +315,15 @@ export default function OnboardingPageClient() {
         {step === "person" ? (
           <div className="lf-setup-body">
             <h1 ref={headingRef} tabIndex={-1}>Who should know about your Vault?</h1>
-            <p className="lf-setup-help">Someone you trust, such as a partner, son or daughter, or your executor. Adding them doesn’t share anything or send them anything.</p>
-            <button type="button" className="lf-setup-choice" disabled={saving} onClick={() => void finish("/contacts?group=executors&add=1")}>
-              <Icon name="gavel" size={28} />
-              <span><strong>My executor</strong><small>The person who’ll sort things out.</small></span>
+            <p className="lf-setup-help">Someone you trust, such as a partner, son or daughter, or a close friend. Adding them doesn’t share anything or send them anything.</p>
+            <button type="button" className="lf-setup-choice" disabled={saving} onClick={() => void finish("/contacts?group=family&add=1")}>
+              <Icon name="family_restroom" size={28} />
+              <span><strong>Someone in my family</strong><small>A partner, son or daughter, or another relative.</small></span>
               <Icon name="chevron_right" size={22} />
             </button>
             <button type="button" className="lf-setup-choice" disabled={saving} onClick={() => void finish("/contacts?group=trusted-contacts&add=1")}>
               <Icon name="person_add" size={28} />
-              <span><strong>Someone I trust</strong><small>Family, a friend or an adviser.</small></span>
+              <span><strong>Someone else I trust</strong><small>A close friend or an adviser.</small></span>
               <Icon name="chevron_right" size={22} />
             </button>
             <button type="button" className="lf-setup-quiet" onClick={() => void finish("/dashboard")} disabled={saving}>
@@ -330,6 +335,7 @@ export default function OnboardingPageClient() {
         {status ? <p className="lf-setup-status" role="alert">{status}</p> : null}
       </div>
 
+      </div>
     </main>
   );
 }

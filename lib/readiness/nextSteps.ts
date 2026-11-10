@@ -45,6 +45,18 @@ const YEAR = 365.25 * 86400000;
 /** Owner decision 5 Nov 2026: check the Will every 3 years, counted from the date it was signed. */
 export const WILL_CHECK_YEARS = 3;
 
+/**
+ * Owner decision 10 Nov 2026: the Will and Power of Attorney come later, once the Vault is established with
+ * everyday things (bank and savings accounts, pensions, property). Until then those two prompts wait.
+ */
+export const ESTABLISHED_RECORD_COUNT = 3;
+export const ESTABLISHED_GATED_PROMPTS = new Set(["will", "capacity_arrangements"]);
+
+export function vaultEstablished(facts: VaultFacts) {
+  const rows = activeRows(facts);
+  return getAssetsForBucket(rows, "finance").length + getAssetsForBucket(rows, "property").length >= ESTABLISHED_RECORD_COUNT;
+}
+
 /** The Will's signing date when the owner has confirmed one; otherwise when it was added or last changed. */
 function willDateOf(row: VaultFactRow) {
   const signed = Date.parse(String(row.metadata_json?.will_signed_on ?? ""));
@@ -310,6 +322,8 @@ export function planNextSteps(
     // A specific executor or attorney step replaces the general one.
     .filter((item) => !(item.key === "executor_after_will" && people.some((entry) => String(entry.key).endsWith("_executors")))
       && !(item.key === "attorney_after_capacity" && people.some((entry) => String(entry.key).endsWith("_attorneys"))))
+    // Will and Power of Attorney wait until the Vault is established (owner decision, 10 Nov 2026).
+    .filter((item) => !(ESTABLISHED_GATED_PROMPTS.has(String(item.key)) && !vaultEstablished(facts)))
     .map((item) => ({ ...item, emailTitle: item.reasked ? "Have another look at something important" : EMAIL_TITLES[item.key] ?? "Take a look at your Vault" }));
   const extra = [...people, ...typeSteps(facts), ...housekeepingSteps(facts, now)].filter((item) => {
     const decision = guidance[item.key];

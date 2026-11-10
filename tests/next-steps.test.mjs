@@ -10,10 +10,22 @@ const now = new Date("2026-11-04T12:00:00Z");
 const will = { id: "w1", kind: "asset", section_key: "legal", category_key: "wills", title: "My Will", status: "active" };
 const base = () => ({ rows: [], willDocumentCount: 0, contacts: [], invitations: [], links: [], suggestions: [], nominations: [] });
 const keys = (steps) => steps.map((item) => item.key);
+// A Vault established with everyday things (owner decision 10 Nov 2026): the Will and Power of Attorney prompts wait for this.
+const everyday = [
+  { id: "e1", kind: "asset", section_key: "finances", category_key: "bank", title: "Current account", status: "active", metadata_json: { bank_account_type: "current_account" } },
+  { id: "e2", kind: "asset", section_key: "finances", category_key: "bank", title: "Savings", status: "active", metadata_json: { bank_account_type: "savings_account" } },
+  { id: "e3", kind: "asset", section_key: "property", category_key: "residential", title: "Home", status: "active" },
+];
+const established = () => ({ ...base(), rows: [...everyday] });
 
-test("an empty Vault is asked about a Will; a Vault with a Will isn't", () => {
-  assert.ok(keys(buildNextSteps(base(), undefined, now)).includes("will"));
-  assert.ok(!keys(buildNextSteps({ ...base(), rows: [will] }, undefined, now)).includes("will"));
+test("the Will and Power of Attorney wait until the Vault is established with everyday things", () => {
+  const empty = keys(buildNextSteps(base(), undefined, now));
+  assert.ok(!empty.includes("will") && !empty.includes("capacity_arrangements"), "a new Vault isn't asked about a Will yet");
+  const two = keys(buildNextSteps({ ...base(), rows: everyday.slice(0, 2) }, undefined, now));
+  assert.ok(!two.includes("will"), "two records isn't established yet");
+  const ready = keys(buildNextSteps(established(), undefined, now));
+  assert.ok(ready.includes("will") && ready.includes("capacity_arrangements"), "three everyday records: now ask");
+  assert.ok(!keys(buildNextSteps({ ...established(), rows: [...everyday, will] }, undefined, now)).includes("will"), "a Vault with a Will isn't asked");
 });
 
 test("Will → people it names → invite → reminder → choose what they receive", () => {
@@ -101,7 +113,7 @@ const day = 86400000;
 const prefsAfter = (key, action, at) => applyGuidanceAction({ applicability: {}, guidance: {}, categories: {}, subsections: {} }, key, action, at);
 
 test("critical: 'Not now' on a Will quiets it for a year, then asks gently again", () => {
-  const facts = base();
+  const facts = established();
   const decided = new Date("2025-11-01T12:00:00Z");
   const prefs = prefsAfter("will", "not_relevant", decided);
   assert.ok(!keys(buildNextSteps(facts, prefs, new Date(decided.getTime() + 200 * day))).includes("will"), "quiet within the year");
@@ -113,7 +125,7 @@ test("critical: 'Not now' on a Will quiets it for a year, then asks gently again
 });
 
 test("critical: answering 'No' to a Will recommends making one", () => {
-  const steps = buildNextSteps(base(), { applicability: { will: "no" }, guidance: {} }, now);
+  const steps = buildNextSteps(established(), { applicability: { will: "no" }, guidance: {} }, now);
   assert.match(steps.find((item) => item.key === "will").title, /We'd recommend making a Will/);
 });
 
@@ -140,7 +152,7 @@ test("an old Will gets a gentle 'still the current one?'", () => {
 });
 
 test("calm: up to 3 at a time while setting up, critical first; one at a time once settled", () => {
-  const setUp = planNextSteps(base(), undefined, now);
+  const setUp = planNextSteps(established(), undefined, now);
   assert.equal(setUp.phase, "setting_up");
   assert.ok(setUp.steps.length <= 3);
   assert.equal(setUp.steps[0].key, "will");

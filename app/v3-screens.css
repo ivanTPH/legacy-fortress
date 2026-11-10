@@ -444,3 +444,28 @@
 .lf-v3-next-step-title { font-weight: 600; min-width: 0; }
 .lf-v3-next-step-action { display: inline-flex; align-items: center; gap: 2px; flex: none; font-size: 14px; font-weight: 600; color: var(--lf-link); }
 @media (max-width: 640px) { .lf-v3-next-step-action { font-size: 0; } .lf-v3-next-step-action svg, .lf-v3-next-step-action .ms { font-size: 18px; } }
+
+/* Guided set-up on laptops and tablets (owner, 10 Nov 2026): a centred card at a comfortable size, not a phone
+   column on a big empty page; on wide screens a short reassurance panel sits beside it. Phones are unchanged. */
+.lf-setup-frame { width: 100%; display: flex; justify-content: center; }
+.lf-setup-aside { display: none; }
+.lf-setup-tick[aria-pressed="true"] { border-color: var(--lf-primary-bg); box-shadow: inset 0 0 0 1px var(--lf-primary-bg); }
+.lf-setup-tick > .lf-icon:last-child:not(:first-child) { color: var(--lf-text); }
+@media (min-width: 720px) {
+  .lf-setup { place-items: center; padding: 48px 24px; }
+  .lf-setup-card { max-width: 560px; padding: 32px 40px 40px; border: 1px solid var(--lf-border); border-radius: 24px; background: var(--lf-surface-card); box-shadow: 0 24px 60px -32px rgba(43, 23, 20, 0.35); }
+  .lf-setup-body h1 { font-size: 36px; }
+  .lf-setup-choice, .lf-setup-answer { background: var(--lf-surface-page); }
+  .lf-setup-choice:hover, .lf-setup-answer:hover { background: var(--lf-surface-hover); }
+}
+@media (min-width: 1100px) {
+  .lf-setup-frame { max-width: 1040px; align-items: stretch; gap: 0; }
+  .lf-setup-aside { display: flex; flex-direction: column; gap: 24px; width: 380px; flex-shrink: 0; padding: 40px; border-radius: 24px 0 0 24px; background: var(--lf-primary-bg); color: var(--lf-primary-text); }
+  .lf-setup-aside + .lf-setup-card { border-radius: 0 24px 24px 0; border-left: 0; flex: 1; max-width: none; }
+  .lf-setup-aside-brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; font-size: 18px; }
+  .lf-setup-aside-title { margin: 24px 0 0; font-family: "Newsreader", Georgia, serif; font-weight: 500; font-size: 30px; line-height: 1.2; }
+  .lf-setup-aside ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 18px; font-size: 17px; line-height: 1.45; }
+  .lf-setup-aside li { display: flex; gap: 12px; align-items: flex-start; }
+  .lf-setup-aside li .lf-icon { flex-shrink: 0; opacity: 0.85; }
+  .lf-setup-card .lf-setup-brand { visibility: hidden; }
+}
