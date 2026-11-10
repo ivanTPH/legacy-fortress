@@ -1,8 +1,8 @@
 {
-  "approvedBy": "Ivan (owner), 4 Nov 2026: turn the new-device check on for TEST (open sessions kept trusted)",
+  "approvedBy": "Ivan (owner), 10 Nov 2026: Inbox read state across devices (inbox_reads, own rows only)",
   "mode": "apply",
-  "attempt": 25,
+  "attempt": 26,
   "files": [
-    { "file": "20261104130000_new_device_check_on.sql", "sha256": "3ad91cf58c093475b6581632443ba048df86433c0c941e28c1db88c3810e0b1a" }
+    { "file": "20261110220000_inbox_reads.sql", "sha256": "e789f046bffba1ea59652ee12407a6efbcc33cc4cce8457fd558f49692631171" }
   ]
 }
