@@ -1699,8 +1699,7 @@ const legalSummary = useMemo(() => {
       <V3DashboardOverview loading={loading} areas={v3Areas} recordCount={recordIds.size} lifeCover={lifeCoverText}
         peopleCount={viewer.mode === "linked" ? undefined : contactRows.length} recordedValue={recordedValue}
         actionCount={viewer.mode === "linked" ? undefined : getActionCentreToDoCount(dashboardState.actions.items, actionContext, guidanceItems)}
-        canAddRecords={viewer.mode !== "linked"}
-        nextSteps={viewer.mode === "linked" ? undefined : guidanceItems.map((item) => ({ key: item.key, title: item.title, href: item.href, actionLabel: item.actionLabel }))} />
+        canAddRecords={viewer.mode !== "linked"} />
       {status ? (
         isPlanLimitStatus(status) ? (
           <button
