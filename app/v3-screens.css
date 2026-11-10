@@ -502,3 +502,8 @@
   .lf-action-centre-drawer.lf-inbox-message { width: 100%; height: 100dvh; max-height: none; border: 0; border-radius: 0; box-shadow: none; padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)); }
 }
 .lf-inbox-empty { margin: 0; padding: 20px 4px; color: var(--lf-text-secondary); font-size: 16px; }
+.lf-page-error { display: grid; gap: 14px; max-width: 520px; padding: 32px 4px; }
+.lf-page-error h1 { margin: 0; font-family: "Newsreader", Georgia, serif; font-weight: 500; font-size: 30px; color: var(--lf-text); }
+.lf-page-error p { margin: 0; font-size: 17px; line-height: 1.5; color: var(--lf-text-secondary); }
+.lf-page-error > div { display: flex; flex-wrap: wrap; gap: 10px; }
+.lf-page-error .lf-inbox-secondary { display: inline-flex; align-items: center; text-decoration: none; }

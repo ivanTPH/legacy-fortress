@@ -81,7 +81,21 @@ async function trustSession(client: SupabaseClient, accessToken: string) {
   } catch { /* before the new-device migration there is nothing to record */ }
 }
 
+// Owner report 10 Nov 2026 ("This page couldn't load"): record every in-browser error, and fail if an error page shows.
+const watched = new WeakSet<Page>();
+function watchErrors(page: Page) {
+  if (watched.has(page)) return;
+  watched.add(page);
+  page.on("pageerror", (error) => console.log(`Page-error: ${new URL(page.url()).pathname} ${error.name}: ${error.message}`.slice(0, 400)));
+  page.on("console", (message) => { if (message.type() === "error" && /\[LF\]|ChunkLoad|chunk/i.test(message.text())) console.log(`Console-error: ${new URL(page.url()).pathname} ${message.text()}`.slice(0, 400)); });
+}
+async function assertNoErrorPage(page: Page, name: string) {
+  const broken = await page.getByText(/This page couldn.t load|Sorry, this page didn.t load/).filter({ visible: true }).count().catch(() => 0);
+  expect(broken, `${name}: an error page is showing`).toBe(0);
+}
+
 async function signIn(page: Page) {
+  watchErrors(page);
   const client = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
   const auth = await client.auth.signInWithPassword({ email: EMAIL, password: PASSWORD });
   if (auth.error || !auth.data.session) throw auth.error ?? new Error("demo_sign_in_failed");
@@ -96,6 +110,7 @@ async function shoot(page: Page, name: string) {
   await page.waitForTimeout(1500);
   const shot = await page.screenshot({ path: `${OUT}/${name}.jpg`, type: "jpeg", quality: 82 });
   console.log(`Demo-shot: ${name} ${new URL(page.url()).pathname} ${shot.toString("base64")}`);
+  await assertNoErrorPage(page, name);
 }
 
 async function capture(browser: Browser, kind: "desk" | "phone") {
@@ -198,7 +213,7 @@ for (const kind of ["desk", "phone"] as const) {
 }
 
 // Inbox (owner, 10 Nov 2026): one list of actions and updates; opening one shows it whole, like Mail.
-// Opening only marks it read on this browser; nothing is completed, cleared or changed on TEST.
+// Opening marks it read for the synthetic account (its own read rows only); nothing is completed or cleared.
 for (const kind of ["desk", "phone"] as const) {
   test(`inbox (${kind})`, async ({ browser }) => {
     test.setTimeout(180_000);
@@ -216,10 +231,26 @@ for (const kind of ["desk", "phone"] as const) {
     await shoot(page, `inbox-${kind}-1-all`);
     const first = page.locator(".lf-inbox-row button").first();
     if (await first.count()) {
+      const dot = page.locator(".lf-inbox-row").first().locator(".lf-inbox-dot");
       await first.click();
       await expect(page.locator(".lf-inbox-message")).toBeVisible();
       await shoot(page, `inbox-${kind}-2-opened`);
       await page.getByRole("button", { name: "Inbox" }).filter({ visible: true }).first().click();
+      await expect(dot).not.toHaveClass(/is-new/);
+      // Mark as unread brings the filled dot back, and it survives a reload (saved on TEST, not just this browser).
+      await first.click();
+      await page.getByRole("button", { name: "Mark as unread" }).click();
+      await expect(dot).toHaveClass(/is-new/);
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await expect(page.locator(".lf-inbox-row").first().locator(".lf-inbox-dot")).toHaveClass(/is-new/, { timeout: 30_000 });
+      await page.evaluate(() => window.localStorage.removeItem("lf:inbox:read"));
+      await first.click();
+      await page.getByRole("button", { name: "Inbox" }).filter({ visible: true }).first().click();
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await page.evaluate(() => window.localStorage.removeItem("lf:inbox:read"));
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await expect(page.locator(".lf-inbox-row").first().locator(".lf-inbox-dot")).not.toHaveClass(/is-new/, { timeout: 30_000 });
+      console.log(`Inbox ${kind}: read state survives a reload with this browser's copy wiped (synced on TEST)`);
     }
     await page.getByRole("button", { name: /^Updates/ }).click();
     await shoot(page, `inbox-${kind}-3-updates`);
