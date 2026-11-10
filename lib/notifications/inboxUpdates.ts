@@ -52,29 +52,76 @@ async function currentUserId() {
   try { return (await supabase.auth.getUser()).data.user?.id ?? null; } catch { return null; }
 }
 
-async function persistReads(keys: string[]) {
-  const userId = await currentUserId();
-  const rows = keys.filter((key) => key && key.length <= 200).map((item_key) => ({ user_id: userId, item_key }));
-  if (!userId || !rows.length) return;
-  try { await supabase.from("inbox_reads").upsert(rows, { onConflict: "user_id,item_key", ignoreDuplicates: true }); } catch { /* this device still remembers */ }
+/**
+ * The server is the truth; this device keeps a short queue of changes it hasn't managed to save yet (a page closed
+ * mid-save, no signal). Each sync sends the queue first, then takes the server's list as it is, so marking something
+ * unread on one device isn't undone by another device's old copy.
+ */
+const PENDING_KEY = "lf:inbox:read-pending";
+type Pending = { add: string[]; remove: string[]; legacyMoved?: boolean };
+
+function loadPending(): Pending {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(PENDING_KEY) ?? "{}") as Partial<Pending>;
+    return { add: Array.isArray(stored.add) ? stored.add : [], remove: Array.isArray(stored.remove) ? stored.remove : [], legacyMoved: Boolean(stored.legacyMoved) };
+  } catch {
+    return { add: [], remove: [] };
+  }
 }
 
-async function forgetRead(key: string) {
+function savePending(pending: Pending) {
+  try { window.localStorage.setItem(PENDING_KEY, JSON.stringify({ ...pending, add: pending.add.slice(-500), remove: pending.remove.slice(-500) })); } catch { /* optional */ }
+}
+
+function queue(kind: "add" | "remove", keys: string[]) {
+  const pending = loadPending();
+  const other = kind === "add" ? "remove" : "add";
+  pending[other] = pending[other].filter((key) => !keys.includes(key));
+  pending[kind] = Array.from(new Set([...pending[kind], ...keys]));
+  savePending(pending);
+}
+
+async function flushPending(userId: string) {
+  const pending = loadPending();
+  let ok = true;
+  const add = pending.add.filter((key) => key && key.length <= 200);
+  if (add.length) {
+    const { error } = await supabase.from("inbox_reads").upsert(add.map((item_key) => ({ user_id: userId, item_key })), { onConflict: "user_id,item_key", ignoreDuplicates: true });
+    if (error) ok = false; else pending.add = pending.add.filter((key) => !add.includes(key));
+  }
+  if (pending.remove.length) {
+    const { error } = await supabase.from("inbox_reads").delete().eq("user_id", userId).in("item_key", pending.remove);
+    if (error) ok = false; else pending.remove = [];
+  }
+  savePending(pending);
+  return ok;
+}
+
+async function sendQueued() {
   const userId = await currentUserId();
   if (!userId) return;
-  try { await supabase.from("inbox_reads").delete().eq("user_id", userId).eq("item_key", key); } catch { /* this device still remembers */ }
+  try { await flushPending(userId); } catch { /* stays queued on this device */ }
 }
 
-/** This device's list merged with what was read on other devices. */
+/** Save what's queued, then take the server's list as the truth (keeping anything still waiting to be saved). */
 async function syncReads(): Promise<string[]> {
   const local = loadLocalRead();
+  const userId = await currentUserId();
+  if (!userId) return local;
   try {
+    const pending = loadPending();
+    if (!pending.legacyMoved) {
+      // First sync on this device: what it remembered before syncing existed is saved once, then never re-added.
+      pending.add = Array.from(new Set([...pending.add, ...local]));
+      pending.legacyMoved = true;
+      savePending(pending);
+    }
+    await flushPending(userId);
     const { data, error } = await supabase.from("inbox_reads").select("item_key").order("read_at", { ascending: false }).limit(1000);
     if (error) return local;
     const remote = ((data ?? []) as Array<{ item_key: string }>).map((row) => String(row.item_key));
-    const missingRemotely = local.filter((key) => !remote.includes(key));
-    if (missingRemotely.length) void persistReads(missingRemotely);
-    return saveLocalRead([...local, ...remote]);
+    const still = loadPending();
+    return saveLocalRead([...remote.filter((key) => !still.remove.includes(key)), ...still.add]);
   } catch {
     return local;
   }
@@ -90,14 +137,13 @@ export function useInboxReads() {
   }, []);
   const markRead = useCallback((keys: string[]) => {
     if (!keys.length) return;
-    setRead((current) => {
-      const fresh = keys.filter((key) => !current.includes(key));
-      if (fresh.length) void persistReads(fresh);
-      return saveLocalRead([...current, ...keys]);
-    });
+    queue("add", keys);
+    void sendQueued();
+    setRead((current) => saveLocalRead([...current, ...keys]));
   }, []);
   const markUnread = useCallback((key: string) => {
-    void forgetRead(key);
+    queue("remove", [key]);
+    void sendQueued();
     setRead((current) => saveLocalRead(current.filter((item) => item !== key)));
   }, []);
   return { read, markRead, markUnread };
