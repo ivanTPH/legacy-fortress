@@ -504,7 +504,7 @@ export default function ProfilePage() {
             <dl className="lf-v52-profile-fields">
               <div><dt>Full name</dt><dd>{summaryName}</dd></div>
               <div><dt>Date of birth</dt><dd>{form.date_of_birth ? new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(`${form.date_of_birth}T00:00:00`)) : "Not saved"}</dd></div>
-              <div><dt>Address</dt><dd>{[form.house_name_or_number, form.street_name, form.town, form.city, form.post_code, form.country].filter(Boolean).join(", ") || "Not saved"}</dd></div>
+              <div><dt>Address</dt><dd>{formatProfileAddress(form) || "Not saved"}</dd></div>
               <div><dt>Email</dt><dd>{form.primary_email || "Not saved"}</dd></div>
               <div><dt>Mobile</dt><dd>{form.mobile_number || form.telephone || "Not saved"}</dd></div>
             </dl>
@@ -796,3 +796,12 @@ const profileIconWrapStyle = {
   justifyContent: "center",
   flexShrink: 0,
 } as const;
+
+/** The address as people write it: "Other" shows the country typed, and a town repeated as the city appears once. */
+function formatProfileAddress(form: { house_name_or_number?: string; street_name?: string; town?: string; city?: string; post_code?: string; country?: string; country_other?: string }) {
+  const country = form.country === "__other" ? form.country_other : form.country;
+  const parts = [form.house_name_or_number, form.street_name, form.town, form.city, form.post_code, country]
+    .map((part) => String(part ?? "").trim())
+    .filter(Boolean);
+  return parts.filter((part, index) => part.toLowerCase() !== parts[index - 1]?.toLowerCase()).join(", ");
+}

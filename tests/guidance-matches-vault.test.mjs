@@ -26,3 +26,8 @@ test("with a Will recorded, nobody is asked 'Do you have a Will?'", () => {
   assert.equal(buildGuidanceItems(evidence).some((item) => item.key === "will"), false);
   assert.equal(buildGuidanceItems({ ...evidence, willCount: 0 }).some((item) => item.key === "will"), true, "and is asked when there isn't one");
 });
+
+test("a person's record that only mentions the Will is not counted as a Will (UX review, 10 Nov 2026)", () => {
+  assert.equal(assetMatchesLegalCategory({ section_key: "personal", category_key: "executors", title: "Emma Carter (executor)", metadata_json: { instruction_reference: "Will oversight" } }, "wills"), false);
+  assert.equal(assetMatchesLegalCategory({ section_key: "personal", category_key: "executors", title: "Emma Carter (executor)", metadata_json: { executor_type: "executor" } }, "wills"), false);
+});

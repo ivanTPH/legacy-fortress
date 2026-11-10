@@ -6,7 +6,7 @@ import Link from "next/link";
 import Icon from "../../../components/ui/Icon";
 import { PageHeader } from "../../../components/ui/V3Primitives";
 import VaultSectionGrid from "../../../components/vault/VaultSectionGrid";
-import { formatCurrency } from "../../../lib/currency";
+import { formatCurrencyWhole } from "../../../lib/currency";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
 import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
 import { waitForActiveUser } from "../../../lib/auth/session";
@@ -128,9 +128,13 @@ export default function FinancesOverviewPage() {
   );
   const populated = summaries.filter((section) => section.summary.includedCount > 0);
   const recordCount = populated.reduce((sum, section) => sum + section.summary.includedCount, 0);
-  const total = populated.reduce((sum, section) => sum + section.summary.totalMajor, 0);
+  // Estimated value: life cover on its own, debts taken off, whole pounds (owner decision 10 Nov 2026).
+  const sectionTotal = (key: string) => populated.filter((section) => section.key === key).reduce((sum, section) => sum + section.summary.totalMajor, 0);
+  const lifeCover = sectionTotal("insurance");
+  const total = populated.reduce((sum, section) => sum + (section.key === "insurance" ? 0 : section.key === "debts" ? -Math.abs(section.summary.totalMajor) : section.summary.totalMajor), 0);
   const currencies = new Set(assetRows.map((row) => getFinanceRowCurrencyCode(row) || currency));
-  const totalText = currencies.size > 1 ? "Multiple currencies" : formatCurrency(total, currency);
+  const totalText = currencies.size > 1 ? "Multiple currencies"
+    : `${formatCurrencyWhole(total, currency)} estimated value${lifeCover > 0 ? ` · ${formatCurrencyWhole(lifeCover, currency)} life cover` : ""}`;
   return <section className="lf-v3-area-page lf-v52-finance-page">
     <PageHeader title="Finances" description={loading ? "Loading records…" : `${recordCount} record${recordCount === 1 ? "" : "s"} · ${totalText}`}
       action={viewer.mode !== "linked" ? <Link href="/add?area=finances" className="lf-v52-finance-add"><Icon name="add" size={20} /><span>Add to Finances</span></Link> : undefined}>

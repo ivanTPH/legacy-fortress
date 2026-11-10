@@ -1,6 +1,15 @@
 @import "tailwindcss";
 @import "../design_handoff_legacy_fortress/tokens.css";
 
+/* Focus outline (UX review, 10 Nov 2026): the clay ring read as an error on every form, so light mode uses the
+   dark brand brown; dark mode keeps its own colour. Red stays for errors only. */
+:root:not([data-theme]) , :root[data-theme="light"] { --lf-focus: #2B1714; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme]) { --lf-focus: #F0A98A; } }
+:root[data-theme="dark"] { --lf-focus: #F0A98A; }
+/* A heading focused only to move the reader into a dialog shows no ring. */
+[tabindex="-1"]:focus:not(:focus-visible), h1[tabindex="-1"]:focus, h2[tabindex="-1"]:focus { outline: none; }
+
+
 /* V5.2 theme selectors must outrank the older :root compatibility variables. */
 .lf-v52-value-block { display: grid; gap: 12px; padding: 16px; min-width: 0; border: 1px solid var(--lf-border-control); border-radius: var(--lf-radius-card); background: var(--lf-surface-card); }
 .lf-v52-value-block h3 { margin: 0; color: var(--lf-text); font-size: var(--lf-text-section); font-weight: 700; }

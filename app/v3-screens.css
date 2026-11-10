@@ -389,3 +389,6 @@
    On phones the top bar already shows a back link on pushed pages, so don't repeat it. */
 .lf-v52-settings-back { padding: 0; border: 0; background: none; color: var(--lf-link); font-size: 17px; gap: 2px; }
 @media (max-width: 767px) { body:has(.lf-topbar.is-pushed) .lf-v52-settings-back { display: none; } }
+
+/* Life cover shown beside the estimated value (owner decision 10 Nov 2026). */
+.lf-v3-life-cover { display: block; margin-top: 2px; font-size: 13px; font-weight: 500; color: var(--lf-text-secondary, #6B5F5A); }

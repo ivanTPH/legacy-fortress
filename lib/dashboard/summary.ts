@@ -1,5 +1,5 @@
 import { normalizeBankAssetRow } from "../assets/bankAsset.ts";
-import { formatCurrency } from "../currency.ts";
+import { formatCurrency, formatCurrencyWhole } from "../currency.ts";
 
 export type DashboardAssetRow = {
   id: string;
@@ -155,6 +155,24 @@ export function summarizeScopedAssetRows<T extends DashboardAssetRow>(rows: T[])
   return { activeValueMajor, archivedValueMajor, activeCount, archivedCount, missingValueCount };
 }
 
+/**
+ * What a record adds to the estimated value of the estate (owner decision 10 Nov 2026):
+ * life cover is not money the person has today, so it is shown on its own line, and debts are taken off.
+ */
+export function getEstateValueMajor(row: DashboardAssetRow) {
+  const category = canonicalizeFinanceCategoryKey(getNormalizedDashboardCategoryKey(row));
+  if (category === "insurance") return 0;
+  const value = getDashboardAssetValueMajor(row);
+  if (category === "debts") return -Math.abs(value);
+  return value;
+}
+
+/** Life cover, shown beside the estimated value rather than inside it. */
+export function getLifeCoverMajor(row: DashboardAssetRow) {
+  const category = canonicalizeFinanceCategoryKey(getNormalizedDashboardCategoryKey(row));
+  return category === "insurance" ? Math.abs(getDashboardAssetValueMajor(row)) : 0;
+}
+
 export function getDashboardAssetValueMajor(row: DashboardAssetRow) {
   if (isNormalizedBankCategory(getNormalizedDashboardCategoryKey(row))) {
     return normalizeBankAssetRow(row).current_balance;
@@ -209,7 +227,7 @@ export function buildFinanceSummary<T extends DashboardAssetRow>(
   },
 ): DashboardFinanceSummary {
   const canonicalFinanceRows = sortRowsByDescendingValue(prioritizeCreatedAsset(getAssetsForBucket(rows, "finance"), createdId));
-  const totalMajor = canonicalFinanceRows.reduce((sum, row) => sum + getFinanceRowValueMajor(row), 0);
+  const totalMajor = canonicalFinanceRows.reduce((sum, row) => sum + getFinanceEstateValueMajor(row), 0);
   const categoryCount = new Set(
     canonicalFinanceRows
       .map((row) => canonicalizeFinanceCategoryKey(getNormalizedDashboardCategoryKey(row)))
@@ -218,7 +236,7 @@ export function buildFinanceSummary<T extends DashboardAssetRow>(
 
   return {
     addedAt: latestTimestamp(canonicalFinanceRows.map((row) => row.updated_at ?? row.created_at)),
-    valueText: canonicalFinanceRows.length ? formatCurrency(totalMajor, currency) : "No records yet",
+    valueText: canonicalFinanceRows.length ? formatCurrencyWhole(totalMajor, currency) : "No records yet",
     detailText: canonicalFinanceRows.length
       ? `${canonicalFinanceRows.length} finance record(s) across ${categoryCount || 1} categor${(categoryCount || 1) === 1 ? "y" : "ies"}`
       : "No records yet",
@@ -252,7 +270,7 @@ export function buildFinanceCategorySummary<T extends DashboardAssetRow>(
   const totals = summarizeScopedAssetRows(scopedRows);
   return {
     addedAt: latestTimestamp(scopedRows.map((row) => row.updated_at ?? row.created_at)),
-    valueText: scopedRows.length ? formatCurrency(totals.activeValueMajor, currency) : "No records yet",
+    valueText: scopedRows.length ? formatCurrencyWhole(totals.activeValueMajor, currency) : "No records yet",
     detailText: scopedRows.length ? `${totals.activeCount} active record(s)` : "No records yet",
     items: scopedRows.slice(0, itemLimit).map((row) => ({
       id: `asset-${row.id}`,
@@ -415,6 +433,13 @@ function getFinanceRowLabel(row: DashboardAssetRow) {
       metadata["creditor_name"],
     ) || "Finance asset"
   );
+}
+
+function getFinanceEstateValueMajor(row: DashboardAssetRow) {
+  const category = canonicalizeFinanceCategoryKey(getNormalizedDashboardCategoryKey(row));
+  if (category === "insurance") return 0;
+  const value = getFinanceRowValueMajor(row);
+  return category === "debts" ? -Math.abs(value) : value;
 }
 
 function getFinanceRowValueMajor(row: DashboardAssetRow) {
