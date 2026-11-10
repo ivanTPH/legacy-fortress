@@ -16,6 +16,7 @@ test("Inbox: things to do and updates in one list, filtered All / Actions / Upda
   assert.match(panel, /"remind_later"\); setSelection\(null\); \}\}>\{[^}]*"Not now"\}/);
   assert.match(panel, /"already_done"\); setSelection\(null\); \}\}>Mark as done/);
   assert.match(panel, />Mark as unread</);
+  assert.match(panel, /No updates yet\. When someone accepts an invitation/);
   assert.match(panel, /clearUpdates\(\[selectedUpdate\.id\]\)\}>Clear</);
   const css = read("app/v3-screens.css");
   assert.match(css, /\.lf-inbox-dot\.is-new \{ background: var\(--lf-inbox-dot\)/);
