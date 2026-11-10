@@ -244,12 +244,15 @@ for (const kind of ["desk", "phone"] as const) {
     await expect(page.getByRole("heading", { name: "Do you have a Power of Attorney?" })).toBeVisible();
     await page.getByRole("button", { name: "Not sure", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Do you own your home?" })).toBeVisible();
-    await page.getByRole("button", { name: "Skip this question" }).click();
+    await page.getByRole("button", { name: "Skip this step" }).click();
     await expect(page.getByRole("heading", { name: "Let’s add your first thing" })).toBeVisible();
     await expect(page.getByRole("button", { name: /Your Will/ })).toBeVisible();
     await shoot(page, `setup-${kind}-5-first-thing`);
-    await page.getByRole("button", { name: "I’ll do this later" }).click();
+    await page.getByRole("button", { name: "Skip this step" }).click();
     await expect(page.getByRole("heading", { name: "Who should know about your Vault?" })).toBeVisible();
+    // Every screen offers the same two ways out.
+    await expect(page.getByRole("button", { name: "Skip set-up" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Skip this step" })).toBeVisible();
     await shoot(page, `setup-${kind}-6-person`);
     await context.close();
   });

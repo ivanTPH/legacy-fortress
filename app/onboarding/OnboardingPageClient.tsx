@@ -22,7 +22,8 @@ import {
 } from "../../lib/profile/workspace";
 
 // Guided set-up (UX review, agreed by the owner 10 Nov 2026; design: Onboarding board on the design canvas).
-// Few steps, one question per screen, everything skippable. Skip keeps all six areas on by default.
+// Few steps, one question per screen. Two exits worded the same everywhere: "Skip this step" under each step and
+// "Skip set-up" (top right, and on Welcome) to go straight to Home with all six areas.
 // Nothing here shares anything or emails anyone: the person steps hand over to the normal People pages.
 
 type Answer = "yes" | "no" | "unsure";
@@ -110,34 +111,56 @@ export default function OnboardingPageClient() {
     return user;
   }
 
-  async function confirmName() {
-    setStatus("");
+  // Continuing or skipping from the first screen is the terms acceptance ("By continuing or skipping, you agree…"),
+  // recorded as before. The name is saved when both parts are there.
+  async function saveNameAndTerms(userId: string) {
+    await saveTermsAcceptance(supabase, userId, { accepted: true, source: "onboarding" });
     const first = firstName.trim();
     const last = lastName.trim();
-    if (!first || !last) {
-      setStatus("Please add your first and last name.");
+    const profile = profileRef.current;
+    if (first && last && profile && (profile.form.first_name !== first || profile.form.last_name !== last)) {
+      await saveProfileWorkspace(supabase, {
+        userId,
+        form: { ...profile.form, first_name: first, last_name: last },
+        support: profile.support,
+      });
+    }
+  }
+
+  async function confirmName() {
+    setStatus("");
+    if (!firstName.trim() || !lastName.trim()) {
+      setStatus("Please add your first and last name, or tap Skip set-up.");
       return;
     }
     setSaving(true);
     try {
       const user = await activeUserOrSignIn();
       if (!user) return;
-      // "By continuing you agree…" — continuing from this screen is the acceptance, recorded as before.
-      await saveTermsAcceptance(supabase, user.id, { accepted: true, source: "onboarding" });
-      const profile = profileRef.current;
-      if (profile && (profile.form.first_name !== first || profile.form.last_name !== last)) {
-        await saveProfileWorkspace(supabase, {
-          userId: user.id,
-          form: { ...profile.form, first_name: first, last_name: last },
-          support: profile.support,
-        });
-      }
+      await saveNameAndTerms(user.id);
       setStep("welcome");
     } catch (error) {
       setStatus(`Could not save that: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setSaving(false);
     }
+  }
+
+  // "Skip set-up" is the same everywhere: straight to Home with all six areas, keeping any answers already given.
+  async function skipSetUp() {
+    if (step === "name") {
+      setSaving(true);
+      try {
+        const user = await activeUserOrSignIn();
+        if (!user) return;
+        await saveNameAndTerms(user.id);
+      } catch (error) {
+        setStatus(`Could not save that: ${error instanceof Error ? error.message : "Unknown error"}`);
+        setSaving(false);
+        return;
+      }
+    }
+    await finish("/dashboard");
   }
 
   async function finish(destination: string, finalAnswers: Partial<Record<QuestionKey, Answer>> = answers) {
@@ -206,10 +229,15 @@ export default function OnboardingPageClient() {
               <Icon name="arrow_back" size={20} />Back
             </button>
           ) : <span className="lf-setup-brand"><Icon name="shield" size={20} />Legacy Fortress</span>}
-          {guidedStep ? <span className="lf-setup-steplabel">Step {guidedStep} of 3</span> : null}
+          {step !== "welcome" ? (
+            <button type="button" className="lf-setup-skip" onClick={() => void skipSetUp()} disabled={saving}>Skip set-up</button>
+          ) : null}
         </div>
         {guidedStep ? (
-          <div className="lf-setup-progress" aria-hidden="true"><span style={{ width: `${Math.round(progress * 100)}%` }} /></div>
+          <div className="lf-setup-steps">
+            <span className="lf-setup-steplabel">Step {guidedStep} of 3</span>
+            <div className="lf-setup-progress" aria-hidden="true"><span style={{ width: `${Math.round(progress * 100)}%` }} /></div>
+          </div>
         ) : null}
 
         {step === "name" ? (
@@ -227,7 +255,7 @@ export default function OnboardingPageClient() {
             </label>
             <button type="submit" className="lf-setup-primary" disabled={saving}>{saving ? "Saving…" : nameKnown ? "Yes, continue" : "Continue"}</button>
             <p className="lf-setup-legal">
-              By continuing you agree to our <Link href="/terms">Terms</Link> and <Link href="/privacy">Privacy policy</Link>.
+              By continuing or skipping, you agree to our <Link href="/terms">Terms</Link> and <Link href="/privacy">Privacy policy</Link>.
             </p>
           </form>
         ) : null}
@@ -235,7 +263,7 @@ export default function OnboardingPageClient() {
         {step === "welcome" ? (
           <div className="lf-setup-body">
             <h1 ref={headingRef} tabIndex={-1}>Welcome, {firstName}</h1>
-            <p className="lf-setup-help">Let’s get your Vault started. It takes about 5 minutes, and you can stop at any time.</p>
+            <p className="lf-setup-help">Let’s get your Vault started. It takes about 5 minutes. You can skip any step, or skip set-up altogether.</p>
             {/* TEST and live refuse to show pages inside other pages (X-Frame-Options: DENY), so the tour opens as its own page with a way back. */}
             <a className="lf-setup-choice" href="/how-it-works?from=setup">
               <Icon name="play_circle" size={28} />
@@ -243,10 +271,10 @@ export default function OnboardingPageClient() {
               <Icon name="chevron_right" size={22} />
             </a>
             <button type="button" className="lf-setup-primary" onClick={() => setStep("q0")} disabled={saving}>Set up with me</button>
-            <button type="button" className="lf-setup-quiet" onClick={() => void finish("/dashboard", {})} disabled={saving}>
-              {saving ? "Opening your Vault…" : "Skip, I’ll explore on my own"}
+            <button type="button" className="lf-setup-quiet" onClick={() => void skipSetUp()} disabled={saving}>
+              {saving ? "Opening your Vault…" : "Skip set-up"}
             </button>
-            <p className="lf-setup-help">If you skip, you’ll see all six areas of your Vault. You can come back to this from Help.</p>
+            <p className="lf-setup-help">If you skip set-up, you’ll go straight to your Vault with all six areas. You can add things whenever you like.</p>
           </div>
         ) : null}
 
@@ -260,7 +288,7 @@ export default function OnboardingPageClient() {
               <button type="button" className="lf-setup-answer" aria-pressed={answers[QUESTIONS[questionIndex].key] === "no"} onClick={() => answer(questionIndex, "no")}>No</button>
               <button type="button" className="lf-setup-answer" aria-pressed={answers[QUESTIONS[questionIndex].key] === "unsure"} onClick={() => answer(questionIndex, "unsure")}>Not sure</button>
             </div>
-            <button type="button" className="lf-setup-quiet" onClick={() => answer(questionIndex, null)}>Skip this question</button>
+            <button type="button" className="lf-setup-quiet" onClick={() => answer(questionIndex, null)}>Skip this step</button>
           </div>
         ) : null}
 
@@ -275,7 +303,7 @@ export default function OnboardingPageClient() {
                 <Icon name="chevron_right" size={22} />
               </button>
             ))}
-            <button type="button" className="lf-setup-quiet" onClick={() => setStep("person")} disabled={saving}>I’ll do this later</button>
+            <button type="button" className="lf-setup-quiet" onClick={() => setStep("person")} disabled={saving}>Skip this step</button>
           </div>
         ) : null}
 
@@ -294,7 +322,7 @@ export default function OnboardingPageClient() {
               <Icon name="chevron_right" size={22} />
             </button>
             <button type="button" className="lf-setup-quiet" onClick={() => void finish("/dashboard")} disabled={saving}>
-              {saving ? "Opening your Vault…" : "I’ll do this later"}
+              {saving ? "Opening your Vault…" : "Skip this step"}
             </button>
           </div>
         ) : null}
