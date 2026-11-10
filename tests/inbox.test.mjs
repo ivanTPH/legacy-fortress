@@ -54,6 +54,11 @@ test("what's been read follows the person across devices, through their own rows
   assert.match(updates, /from\("inbox_reads"\)\.select\("item_key"\)/);
   // Falls back to this device if the server or the table isn't available.
   assert.match(updates, /if \(error\) return local;/);
+  // The server is the truth: queued changes are sent first, then the server's list is taken as it is,
+  // so an unread on one device isn't undone by another device's old copy (TEST run 24, 10 Nov 2026).
+  assert.match(updates, /await flushPending\(userId\);\n    const \{ data, error \} = await supabase\.from\("inbox_reads"\)\.select/);
+  assert.match(updates, /return saveLocalRead\(\[\.\.\.remote\.filter\(\(key\) => !still\.remove\.includes\(key\)\), \.\.\.still\.add\]\)/);
+  assert.doesNotMatch(updates, /missingRemotely/);
   const panel = read("app/(app)/components/dashboard/ActionQueuePanel.tsx");
   assert.match(panel, /reads\.markRead\(\[actionReadKey\(row\.actionKey\)\]\)/);
   assert.match(panel, /reads\.markUnread\(actionReadKey\(selectedRow\.actionKey\)\)/);
