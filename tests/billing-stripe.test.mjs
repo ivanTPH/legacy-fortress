@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { createHmac } from "node:crypto";
-import { verifyStripeSignature, PREMIUM_PRICES, TRIAL_DAYS, stripeMode } from "../lib/billing/stripe.ts";
+import { verifyStripeSignature, invoiceSubscriptionId, PREMIUM_PRICES, TRIAL_DAYS, stripeMode } from "../lib/billing/stripe.ts";
 
 const read = (file) => fs.readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
 
@@ -106,4 +106,12 @@ test("Documents: Free 10, Premium 100 plus paid packs of 100, warned from 90%", 
   assert.match(read("components/billing/DocumentAllowanceNote.tsx"), /included \* 0\.9/);
   assert.match(read("lib/assets/documentLinks.ts"), /showPremiumSheet\(limit\)/);
   assert.match(read("components/records/UniversalRecordWorkspace.tsx"), /isFairUseLimit\(insertResult\.error\)/);
+});
+
+test("payment events find their subscription in old and new Stripe formats (TEST webhook uses 2026-10-28)", () => {
+  assert.equal(invoiceSubscriptionId({ subscription: "sub_old" }), "sub_old");
+  assert.equal(invoiceSubscriptionId({ subscription: null, parent: { subscription_details: { subscription: "sub_new" } } }), "sub_new");
+  assert.equal(invoiceSubscriptionId({ parent: { subscription_details: { subscription: { id: "sub_obj" } } } }), "sub_obj");
+  assert.equal(invoiceSubscriptionId({ parent: null }), null);
+  assert.match(read("app/api/billing/webhook/route.ts"), /invoiceSubscriptionId\(event\.data\.object\)/);
 });
