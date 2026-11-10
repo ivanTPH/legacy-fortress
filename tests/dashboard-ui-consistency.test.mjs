@@ -507,10 +507,8 @@ test("shared consumer workflow controls support structured capture and assisted 
   assert.match(documentsWorkspace, /This upload does not extract or apply record details/);
   assert.match(documentsWorkspace, /helperText=\{selectedKind === "photo"/);
   assert.match(documentsWorkspace, /disabled=\{saving \|\| !pendingFile\}/);
-  assert.match(onboarding, /PlatformSection/);
-  assert.match(onboarding, /What happens here/);
-  assert.match(onboarding, /Only the terms acceptance is required/);
-  assert.match(onboarding, /Tasks and reminders stay inside Action Centre/);
-  assert.match(onboarding, /Continue into your secure record/);
-  assert.match(onboarding, /Terms and Conditions/);
+  assert.match(onboarding, /Welcome, \{firstName\}/);
+  assert.match(onboarding, /Set up with me/);
+  assert.match(onboarding, /Step \{guidedStep\} of 3/);
+  assert.match(onboarding, /href="\/terms"/);
 });

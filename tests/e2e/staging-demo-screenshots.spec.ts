@@ -197,5 +197,61 @@ for (const kind of ["desk", "phone"] as const) {
   });
 }
 
+// Guided set-up (UX review, 10 Nov 2026), shown for the synthetic account without changing anything on TEST:
+// the page is told set-up isn't finished yet, and every table write is answered here instead of reaching TEST.
+for (const kind of ["desk", "phone"] as const) {
+  test(`guided set-up screens (${kind})`, async ({ browser }) => {
+    test.setTimeout(240_000);
+    const context = kind === "desk"
+      ? await browser.newContext({ viewport: { width: 1440, height: 900 } })
+      : await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+    const page = await context.newPage();
+    await signIn(page);
+    await page.route("**/rest/v1/**", async (route) => {
+      const request = route.request();
+      const url = request.url();
+      if (request.method() === "GET") {
+        if (!/\/rest\/v1\/user_onboarding_state/.test(url)) return route.continue();
+        const response = await route.fetch();
+        const body = await response.json().catch(() => null);
+        const notDone = (row: Record<string, unknown>) => ({ ...row, is_completed: false, current_step: "identity" });
+        return route.fulfill({ response, json: Array.isArray(body) ? body.map(notDone) : body && typeof body === "object" ? notDone(body) : body });
+      }
+      if (/\/rest\/v1\/rpc\//.test(url)) return route.continue();
+      let sent: unknown = null;
+      try { sent = request.postDataJSON(); } catch { sent = null; }
+      const rows = Array.isArray(sent) ? sent : sent ? [sent] : [];
+      const single = /vnd\.pgrst\.object/.test(request.headers()["accept"] ?? "");
+      console.log(`Set-up ${kind}: answered ${request.method()} ${new URL(url).pathname} here, nothing written`);
+      return route.fulfill({ status: 201, json: single ? (rows[0] ?? {}) : rows });
+    });
+    await page.goto(`${BASE_URL}/onboarding`, { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: /Is this right\?|What’s your name\?/ })).toBeVisible({ timeout: 30_000 });
+    await shoot(page, `setup-${kind}-1-name`);
+    await page.getByRole("button", { name: /Yes, continue|^Continue$/ }).click();
+    await expect(page.getByRole("heading", { name: /^Welcome, / })).toBeVisible({ timeout: 30_000 });
+    await shoot(page, `setup-${kind}-2-welcome`);
+    await page.getByRole("button", { name: /Watch a 1-minute tour first/ }).click();
+    await expect(page.frameLocator("iframe[title='Legacy Fortress tour']").locator("[data-play]")).toBeVisible({ timeout: 30_000 });
+    await shoot(page, `setup-${kind}-3-tour`);
+    await page.getByRole("button", { name: "Back to set-up" }).click();
+    await page.getByRole("button", { name: "Set up with me" }).click();
+    await expect(page.getByRole("heading", { name: "Do you have a Will?" })).toBeVisible();
+    await shoot(page, `setup-${kind}-4-question-will`);
+    await page.getByRole("button", { name: "Yes", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Do you have a Power of Attorney?" })).toBeVisible();
+    await page.getByRole("button", { name: "Not sure", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Do you own your home?" })).toBeVisible();
+    await page.getByRole("button", { name: "Skip this question" }).click();
+    await expect(page.getByRole("heading", { name: "Let’s add your first thing" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Your Will/ })).toBeVisible();
+    await shoot(page, `setup-${kind}-5-first-thing`);
+    await page.getByRole("button", { name: "I’ll do this later" }).click();
+    await expect(page.getByRole("heading", { name: "Who should know about your Vault?" })).toBeVisible();
+    await shoot(page, `setup-${kind}-6-person`);
+    await context.close();
+  });
+}
+
 test("desktop screens", async ({ browser }) => { test.setTimeout(600_000); await capture(browser, "desk"); });
 test("phone screens", async ({ browser }) => { test.setTimeout(600_000); await capture(browser, "phone"); });

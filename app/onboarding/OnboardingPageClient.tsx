@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Icon from "../../components/ui/Icon";
@@ -9,31 +9,33 @@ import { supabase } from "../../lib/supabaseClient";
 import { waitForActiveUser } from "../../lib/auth/session";
 import { getOrCreateOnboardingState, saveOnboardingState, saveTermsAcceptance } from "../../lib/onboarding";
 import {
-  VAULT_CATEGORY_DEFINITIONS,
-  getVaultSubsectionsForGroup,
   loadVaultPreferences,
   saveVaultPreferences,
-  type VaultApplicabilityState,
+  setVaultApplicability,
   type VaultPreferences,
-  type VaultSubsectionKey,
 } from "../../lib/vaultPreferences";
+import type { OnboardingStepId } from "../../config/onboarding.config";
 import {
-  PlatformNotice,
-  PlatformSection,
-} from "../../components/ui/PlatformPrimitives";
+  loadProfileWorkspace,
+  saveProfileWorkspace,
+  type LoadedProfileWorkspace,
+} from "../../lib/profile/workspace";
 
-const ADAPTIVE_ONBOARDING_AREAS: Array<{
-  key: string;
-  label: string;
-  description: string;
-}> = [
-  { key: "will", label: "A Will", description: "A Will or related legal record." },
-  { key: "capacity_arrangements", label: "Capacity arrangements", description: "A power of attorney or similar arrangement." },
-  { key: "people_i_trust", label: "People I trust", description: "People you may want to involve later." },
-  { key: "digital_life", label: "Digital life", description: "Email, social media and online services." },
-  { key: "personal_possessions", label: "Meaningful possessions", description: "Jewellery, collections, heirlooms or other keepsakes." },
-  { key: "wishes", label: "Wishes and instructions", description: "Personal, funeral, charitable or pet-care wishes." },
+// Guided set-up (UX review, agreed by the owner 10 Nov 2026; design: Onboarding board on the design canvas).
+// Few steps, one question per screen, everything skippable. Skip keeps all six areas on by default.
+// Nothing here shares anything or emails anyone: the person steps hand over to the normal People pages.
+
+type Answer = "yes" | "no" | "unsure";
+type QuestionKey = "will" | "capacity_arrangements" | "home";
+type Step = "name" | "welcome" | "q0" | "q1" | "q2" | "first" | "person";
+
+const QUESTIONS: Array<{ key: QuestionKey; icon: string; title: string; help: string }> = [
+  { key: "will", icon: "history_edu", title: "Do you have a Will?", help: "This helps us suggest the right next steps. There are no wrong answers." },
+  { key: "capacity_arrangements", icon: "handshake", title: "Do you have a Power of Attorney?", help: "A Lasting Power of Attorney lets someone you trust make decisions if you can’t." },
+  { key: "home", icon: "home", title: "Do you own your home?", help: "On your own, jointly, or with a mortgage." },
 ];
+
+const COMPLETED_STEPS: OnboardingStepId[] = ["identity", "verification", "consent", "personal_details", "vault_categories", "guided_tour", "complete"];
 
 export default function OnboardingPageClient() {
   const router = useRouter();
@@ -41,10 +43,16 @@ export default function OnboardingPageClient() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
-  const [termsAccepted, setTermsAccepted] = useState(false);
-  const [termsModalOpen, setTermsModalOpen] = useState(false);
+  const [step, setStep] = useState<Step>("name");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [nameKnown, setNameKnown] = useState(false);
+  const [answers, setAnswers] = useState<Partial<Record<QuestionKey, Answer>>>({});
+  const [tourOpen, setTourOpen] = useState(false);
   const [marketingOptIn, setMarketingOptIn] = useState(false);
-  const [vaultPreferences, setVaultPreferences] = useState<VaultPreferences | null>(null);
+  const preferencesRef = useRef<VaultPreferences | null>(null);
+  const profileRef = useRef<LoadedProfileWorkspace | null>(null);
+  const headingRef = useRef<HTMLHeadingElement | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -59,18 +67,24 @@ export default function OnboardingPageClient() {
       await bootstrapAuthenticatedUser(supabase, { userId: user.id });
 
       const onboarding = await getOrCreateOnboardingState(supabase, user.id);
-      const nextVaultPreferences = await loadVaultPreferences(supabase, user.id);
-      if (!mounted) return;
-
-      setTermsAccepted(onboarding.terms_accepted);
-      setMarketingOptIn(onboarding.marketing_opt_in);
-      setVaultPreferences(nextVaultPreferences);
-
       if (onboarding.is_completed) {
         router.replace("/dashboard");
         return;
       }
+      const [preferences, profile] = await Promise.all([
+        loadVaultPreferences(supabase, user.id),
+        loadProfileWorkspace(supabase, { userId: user.id, baseEmail: user.email ?? "" }).catch(() => null),
+      ]);
+      if (!mounted) return;
 
+      preferencesRef.current = preferences;
+      profileRef.current = profile;
+      setMarketingOptIn(onboarding.marketing_opt_in);
+      const first = profile?.form.first_name || String(user.user_metadata?.first_name ?? user.user_metadata?.given_name ?? "");
+      const last = profile?.form.last_name || String(user.user_metadata?.last_name ?? user.user_metadata?.family_name ?? "");
+      setFirstName(first.trim());
+      setLastName(last.trim());
+      setNameKnown(Boolean(first.trim() && last.trim()));
       setLoading(false);
     }
 
@@ -80,338 +94,215 @@ export default function OnboardingPageClient() {
     };
   }, [router]);
 
-  async function completeOnboarding() {
+  // Move focus to each new screen's heading so screen readers announce it.
+  useEffect(() => {
+    if (!loading) headingRef.current?.focus();
+  }, [step, loading]);
+
+  async function activeUserOrSignIn() {
+    const user = await waitForActiveUser(supabase, { attempts: 4, delayMs: 120 });
+    if (!user) router.replace("/sign-in");
+    return user;
+  }
+
+  async function confirmName() {
     setStatus("");
-    if (!termsAccepted) {
-      setStatus("Accept the Terms and Conditions to continue. You can skip category choices for now and update them later in My Vault.");
-      window.requestAnimationFrame(() => {
-        document.querySelector(".lf-onboarding-action-panel")?.scrollIntoView({ behavior: "smooth", block: "center" });
-      });
+    const first = firstName.trim();
+    const last = lastName.trim();
+    if (!first || !last) {
+      setStatus("Please add your first and last name.");
       return;
     }
-
     setSaving(true);
     try {
-      const user = await waitForActiveUser(supabase, { attempts: 4, delayMs: 120 });
-      if (!user) {
-        router.replace("/sign-in");
-        return;
+      const user = await activeUserOrSignIn();
+      if (!user) return;
+      // "By continuing you agree…" — continuing from this screen is the acceptance, recorded as before.
+      await saveTermsAcceptance(supabase, user.id, { accepted: true, source: "onboarding" });
+      const profile = profileRef.current;
+      if (profile && (profile.form.first_name !== first || profile.form.last_name !== last)) {
+        await saveProfileWorkspace(supabase, {
+          userId: user.id,
+          form: { ...profile.form, first_name: first, last_name: last },
+          support: profile.support,
+        });
       }
-
-      await bootstrapAuthenticatedUser(supabase, { userId: user.id });
-      await saveTermsAcceptance(supabase, user.id, {
-        accepted: true,
-        source: "onboarding",
-      });
-      await saveVaultPreferences(supabase, user.id, vaultPreferences ?? await loadVaultPreferences(supabase, user.id));
-
-      await saveOnboardingState(supabase, user.id, {
-        current_step: "complete",
-        completed_steps: ["identity", "verification", "consent", "personal_details", "vault_categories", "complete"],
-        is_completed: true,
-        terms_accepted: true,
-        marketing_opt_in: marketingOptIn,
-      });
-
-      router.replace("/profile?source=onboarding");
+      setStep("welcome");
     } catch (error) {
-      setStatus(`Could not complete onboarding: ${error instanceof Error ? error.message : "Unknown error"}`);
+      setStatus(`Could not save that: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setSaving(false);
     }
   }
 
-  function toggleSubsection(key: VaultSubsectionKey) {
-    setVaultPreferences((current) => current ? {
-      ...current,
-      subsections: {
-        ...current.subsections,
-        [key]: !current.subsections[key],
-      },
-    } : current);
+  async function finish(destination: string, finalAnswers: Partial<Record<QuestionKey, Answer>> = answers) {
+    setStatus("");
+    setSaving(true);
+    try {
+      const user = await activeUserOrSignIn();
+      if (!user) return;
+      let preferences = preferencesRef.current ?? await loadVaultPreferences(supabase, user.id);
+      for (const [key, value] of Object.entries(finalAnswers)) {
+        if (value) preferences = setVaultApplicability(preferences, key, value);
+      }
+      await saveVaultPreferences(supabase, user.id, preferences);
+      await saveOnboardingState(supabase, user.id, {
+        current_step: "complete",
+        completed_steps: COMPLETED_STEPS,
+        is_completed: true,
+        terms_accepted: true,
+        marketing_opt_in: marketingOptIn,
+      });
+      router.replace(destination);
+    } catch (error) {
+      setStatus(`Could not finish setting up: ${error instanceof Error ? error.message : "Unknown error"}`);
+      setSaving(false);
+    }
   }
 
-  function setApplicability(key: string, value: VaultApplicabilityState) {
-    setVaultPreferences((current) => current ? {
-      ...current,
-      groups: {
-        ...current.groups,
-        ...(key === "digital_life" ? { digital: value !== "not_relevant" } : {}),
-      },
-      subsections: {
-        ...current.subsections,
-        ...(key === "will" ? { legal_wills: value !== "not_relevant" } : {}),
-        ...(key === "capacity_arrangements" ? { legal_power_of_attorney: value !== "not_relevant" } : {}),
-        ...(key === "personal_possessions" ? { personal_possessions: value !== "not_relevant" } : {}),
-        ...(key === "wishes" ? { personal_wishes: value !== "not_relevant" } : {}),
-      },
-      applicability: {
-        ...current.applicability,
-        [key]: value,
-      },
-    } : current);
+  function answer(index: number, value: Answer | null) {
+    const question = QUESTIONS[index];
+    const next = { ...answers };
+    if (value) next[question.key] = value;
+    else delete next[question.key];
+    setAnswers(next);
+    setStep(index < QUESTIONS.length - 1 ? (`q${index + 1}` as Step) : "first");
   }
 
   if (loading) {
     return (
-      <main className="lf-auth">
-        <section className="lf-auth-form-side">
-          <div className="lf-auth-card">
-            <h1>Preparing onboarding</h1>
-            <p className="lf-auth-subtext">Validating your account and session...</p>
-          </div>
-        </section>
+      <main className="lf-setup">
+        <div className="lf-setup-card"><p className="lf-setup-help">Getting your Vault ready…</p></div>
       </main>
     );
   }
 
+  const questionIndex = step === "q0" ? 0 : step === "q1" ? 1 : step === "q2" ? 2 : -1;
+  const guidedStep = questionIndex >= 0 ? 1 : step === "first" ? 2 : step === "person" ? 3 : 0;
+  const progress = questionIndex >= 0 ? (questionIndex + 1) / 5 : step === "first" ? 4 / 5 : step === "person" ? 1 : 0;
+  const back: Record<Step, Step | null> = { name: null, welcome: "name", q0: "welcome", q1: "q0", q2: "q1", first: "q2", person: "first" };
+
+  const firstChoices = [
+    answers.will === "yes"
+      ? { icon: "history_edu", title: "Your Will", help: "Where the original is kept, and who your executors are.", href: "/legal/wills?add=1" }
+      : answers.home === "yes"
+        ? { icon: "home", title: "Your home", help: "The address, and where the deeds are kept.", href: "/vault/property?add=1" }
+        : null,
+    { icon: "account_balance", title: "A bank account", help: "Just the bank and account name to start.", href: "/finances/bank?add=1" },
+    { icon: "add_circle", title: "Something else", help: "Choose from all six areas of your Vault.", href: "/add" },
+  ].filter(Boolean) as Array<{ icon: string; title: string; help: string; href: string }>;
+
   return (
-    <main className="lf-auth lf-onboarding-main">
-      <section className="lf-auth-form-side lf-onboarding-form-side">
-        <div className="lf-auth-card lf-onboarding-card">
-          <h1>Welcome to Legacy Fortress</h1>
-          <p className="lf-auth-subtext">
-            Set up the essentials once so your record is clear, secure, and useful to the people who may need it later.
-          </p>
-          {searchParams.get("required") === "1" ? (
-            <div className="lf-muted-note" role="status">
-              Please complete these essentials before continuing into your working account.
-            </div>
-          ) : null}
-          <div className="lf-muted-note" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-            <Icon name="account_tree" size={16} />
-            Your secure account structure is prepared in the background before you continue.
-          </div>
-
-          <section className="lf-onboarding-action-panel" aria-label="Continue or skip setup choices">
-            <div>
-              <strong>Ready to go in?</strong>
-              <p>
-                Category choices are optional. Accept the Terms and Conditions, then continue now and adjust the setup
-                later in My Vault.
-              </p>
-            </div>
-            <div className="lf-onboarding-action-controls">
-              <label className="lf-label lf-onboarding-required-terms">
-                <input
-                  type="checkbox"
-                  checked={termsAccepted}
-                  onChange={(event) => setTermsAccepted(event.target.checked)}
-                />
-                <span>
-                  I accept the{" "}
-                  <button
-                    type="button"
-                    className="lf-onboarding-terms-link"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      setTermsModalOpen(true);
-                    }}
-                  >
-                    Terms and Conditions
-                  </button>
-                </span>
-              </label>
-              <label className="lf-label">
-                <input
-                  type="checkbox"
-                  checked={marketingOptIn}
-                  onChange={(event) => setMarketingOptIn(event.target.checked)}
-                />
-                <span>Receive product updates and helpful reminders (optional)</span>
-              </label>
-              <button className="lf-primary-btn" onClick={() => void completeOnboarding()} disabled={saving}>
-                <Icon name="arrow_forward" size={16} />
-                {saving ? "Saving..." : "Continue into your secure record"}
-              </button>
-            </div>
-            {status ? <div className="lf-onboarding-status" role="alert">{status}</div> : null}
-          </section>
-
-          <PlatformSection
-            title="What happens here"
-            detail="Only the terms acceptance is required. Everything else on this page is a preference you can change later."
-            icon="checklist"
-            emphasis="primary"
-          >
-            <ul className="lf-onboarding-explainer" aria-label="Onboarding choices explained">
-              <li>
-                <strong>Accept the Terms and Conditions</strong>
-                <span>This is required before the secure workspace opens.</span>
-              </li>
-              <li>
-                <strong>Choose visible vault categories</strong>
-                <span>Optional. Untick anything you do not want to focus on today.</span>
-              </li>
-              <li>
-                <strong>Continue to Profile</strong>
-                <span>Your saved choices are applied, then you can add or edit your identity details.</span>
-              </li>
-            </ul>
-            <PlatformNotice icon="verified_user">
-              Tasks and reminders stay inside Action Centre, so the dashboard remains a calm summary once setup is complete.
-            </PlatformNotice>
-          </PlatformSection>
-
-          {vaultPreferences ? (
-            <section
-              style={{
-                border: "1px solid var(--lf-border)",
-                borderRadius: 14,
-                background: "var(--lf-surface-card)",
-                padding: 14,
-                display: "grid",
-                gap: 12,
-              }}
-            >
-              <div style={{ display: "grid", gap: 4 }}>
-                <div style={{ fontWeight: 700 }}>Choose your vault categories</div>
-                <div style={{ color: "var(--lf-text-secondary)", fontSize: 14 }}>
-                  Keep only the sections you want to focus on right now. You can change these later in My Vault settings.
-                </div>
-              </div>
-              <div className="lf-onboarding-category-grid">
-                {VAULT_CATEGORY_DEFINITIONS.map((category) => (
-                  <label
-                    key={category.key}
-                    style={categoryCardStyle}
-                  >
-                    <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <input
-                        type="checkbox"
-                        checked={vaultPreferences.groups[category.key]}
-                        onChange={() => setVaultPreferences((current) => current ? {
-                          ...current,
-                          groups: {
-                            ...current.groups,
-                            [category.key]: !current.groups[category.key],
-                          },
-                        } : current)}
-                      />
-                      <span style={{ fontWeight: 700 }}>{category.label}</span>
-                    </span>
-                    <span style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{category.description}</span>
-                    {getVaultSubsectionsForGroup(category.key).length ? (
-                      <span style={{ display: "grid", gap: 6, paddingLeft: 24 }}>
-                        {getVaultSubsectionsForGroup(category.key).map((subsection) => (
-                          <label key={subsection.key} style={{ display: "grid", gap: 3 }}>
-                            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                              <input
-                                type="checkbox"
-                                checked={vaultPreferences.subsections[subsection.key]}
-                                disabled={!vaultPreferences.groups[category.key]}
-                                onChange={() => toggleSubsection(subsection.key)}
-                              />
-                              <span style={{ fontWeight: 600, fontSize: 13 }}>{subsection.label}</span>
-                            </span>
-                            <span style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>{subsection.description}</span>
-                          </label>
-                        ))}
-                      </span>
-                    ) : null}
-                  </label>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          {vaultPreferences ? (
-            <section className="lf-onboarding-adaptive-panel" aria-labelledby="adaptive-onboarding-title">
-              <div style={{ display: "grid", gap: 4 }}>
-                <div id="adaptive-onboarding-title" style={{ fontWeight: 700 }}>What matters to you right now?</div>
-                <div style={{ color: "var(--lf-text-secondary)", fontSize: 14 }}>
-                  This helps your Vault suggest useful next steps without assuming that every area applies to you. You can change these choices later.
-                </div>
-              </div>
-              <div className="lf-onboarding-adaptive-grid">
-                {ADAPTIVE_ONBOARDING_AREAS.map((area) => (
-                  <label key={area.key} className="lf-onboarding-adaptive-row">
-                    <span style={{ display: "grid", gap: 3, minWidth: 0 }}>
-                      <strong>{area.label}</strong>
-                      <span>{area.description}</span>
-                    </span>
-                    <select
-                      aria-label={`What applies for ${area.label}`}
-                      value={vaultPreferences.applicability[area.key] ?? "unknown"}
-                      onChange={(event) => setApplicability(area.key, event.target.value as VaultApplicabilityState)}
-                    >
-                      <option value="unknown">I&apos;ll decide later</option>
-                      <option value="recorded">I have this</option>
-                      <option value="missing">I want to add this</option>
-                      <option value="not_relevant">Not relevant</option>
-                    </select>
-                  </label>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          <button className="lf-primary-btn" onClick={() => void completeOnboarding()} disabled={saving}>
-            <Icon name="arrow_forward" size={16} />
-            {saving ? "Saving..." : "Continue into your secure record"}
-          </button>
-
-          <div className="lf-muted-note" style={{ display: "grid", gap: 4 }}>
-            <div>You can add the rest in stages. Good progress means the next person can quickly understand who to contact, what exists, and what still needs review.</div>
-            <div>Profile, your selected vault sections, contacts, and the next practical tasks will then guide the rest of your dashboard.</div>
-          </div>
-          <p className="lf-muted-note">
-            Need a different account? <Link className="lf-inline-link" href="/sign-in">Sign in</Link>
-          </p>
+    <main className="lf-setup">
+      <div className="lf-setup-card">
+        <div className="lf-setup-top">
+          {back[step] && !saving ? (
+            <button type="button" className="lf-setup-back" onClick={() => setStep(back[step] as Step)}>
+              <Icon name="arrow_back" size={20} />Back
+            </button>
+          ) : <span className="lf-setup-brand"><Icon name="shield" size={20} />Legacy Fortress</span>}
+          {guidedStep ? <span className="lf-setup-steplabel">Step {guidedStep} of 3</span> : null}
         </div>
-      </section>
-      {termsModalOpen ? (
-        <div className="lf-onboarding-modal-backdrop" role="presentation" onClick={() => setTermsModalOpen(false)}>
-          <section
-            className="lf-onboarding-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="onboarding-terms-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="lf-onboarding-modal-header">
-              <h2 id="onboarding-terms-title">Terms and Conditions</h2>
-              <button type="button" className="lf-icon-button" aria-label="Close terms" onClick={() => setTermsModalOpen(false)}>
-                <Icon name="close" size={18} />
-              </button>
+        {guidedStep ? (
+          <div className="lf-setup-progress" aria-hidden="true"><span style={{ width: `${Math.round(progress * 100)}%` }} /></div>
+        ) : null}
+
+        {step === "name" ? (
+          <form className="lf-setup-body" onSubmit={(event) => { event.preventDefault(); void confirmName(); }}>
+            {searchParams.get("required") === "1" ? <p className="lf-setup-help">Just a minute of set-up before you go in.</p> : null}
+            <h1 ref={headingRef} tabIndex={-1}>{nameKnown ? "Is this right?" : "What’s your name?"}</h1>
+            <p className="lf-setup-help">We use it on your Vault and in emails to you.</p>
+            <label className="lf-setup-field">
+              <span>First name</span>
+              <input value={firstName} onChange={(event) => setFirstName(event.target.value)} autoComplete="given-name" required />
+            </label>
+            <label className="lf-setup-field">
+              <span>Last name</span>
+              <input value={lastName} onChange={(event) => setLastName(event.target.value)} autoComplete="family-name" required />
+            </label>
+            <button type="submit" className="lf-setup-primary" disabled={saving}>{saving ? "Saving…" : nameKnown ? "Yes, continue" : "Continue"}</button>
+            <p className="lf-setup-legal">
+              By continuing you agree to our <Link href="/terms">Terms</Link> and <Link href="/privacy">Privacy policy</Link>.
+            </p>
+          </form>
+        ) : null}
+
+        {step === "welcome" ? (
+          <div className="lf-setup-body">
+            <h1 ref={headingRef} tabIndex={-1}>Welcome, {firstName}</h1>
+            <p className="lf-setup-help">Let’s get your Vault started. It takes about 5 minutes, and you can stop at any time.</p>
+            <button type="button" className="lf-setup-choice" onClick={() => setTourOpen(true)}>
+              <Icon name="play_circle" size={28} />
+              <span><strong>Watch a 1-minute tour first</strong><small>With voice-over and captions</small></span>
+            </button>
+            <button type="button" className="lf-setup-primary" onClick={() => setStep("q0")} disabled={saving}>Set up with me</button>
+            <button type="button" className="lf-setup-quiet" onClick={() => void finish("/dashboard", {})} disabled={saving}>
+              {saving ? "Opening your Vault…" : "Skip, I’ll explore on my own"}
+            </button>
+            <p className="lf-setup-help">If you skip, you’ll see all six areas of your Vault. You can come back to this from Help.</p>
+          </div>
+        ) : null}
+
+        {questionIndex >= 0 ? (
+          <div className="lf-setup-body">
+            <span className="lf-setup-icon"><Icon name={QUESTIONS[questionIndex].icon} size={28} /></span>
+            <h1 ref={headingRef} tabIndex={-1}>{QUESTIONS[questionIndex].title}</h1>
+            <p className="lf-setup-help">{QUESTIONS[questionIndex].help}</p>
+            <div className="lf-setup-answers" role="group" aria-label={QUESTIONS[questionIndex].title}>
+              <button type="button" className="lf-setup-answer" aria-pressed={answers[QUESTIONS[questionIndex].key] === "yes"} onClick={() => answer(questionIndex, "yes")}>Yes</button>
+              <button type="button" className="lf-setup-answer" aria-pressed={answers[QUESTIONS[questionIndex].key] === "no"} onClick={() => answer(questionIndex, "no")}>No</button>
+              <button type="button" className="lf-setup-answer" aria-pressed={answers[QUESTIONS[questionIndex].key] === "unsure"} onClick={() => answer(questionIndex, "unsure")}>Not sure</button>
             </div>
-            <div className="lf-onboarding-modal-body">
-              <p>
-                Legacy Fortress stores sensitive estate and account information. By accepting, you confirm that the
-                information you add is yours to store, that you will keep access details accurate, and that you
-                understand shared access should only be granted to people you trust.
-              </p>
-              <p>
-                You can review your acceptance record later from Profile / Terms and Conditions.
-              </p>
-              <Link className="lf-inline-link" href="/account/terms">
-                Open full terms status page
-              </Link>
-            </div>
-            <div className="lf-onboarding-modal-actions">
-              <button type="button" className="lf-primary-btn" onClick={() => {
-                setTermsAccepted(true);
-                setTermsModalOpen(false);
-              }}>
-                Accept terms
+            <button type="button" className="lf-setup-quiet" onClick={() => answer(questionIndex, null)}>Skip this question</button>
+          </div>
+        ) : null}
+
+        {step === "first" ? (
+          <div className="lf-setup-body">
+            <h1 ref={headingRef} tabIndex={-1}>Let’s add your first thing</h1>
+            <p className="lf-setup-help">Pick whichever is easiest. You can add the rest later.</p>
+            {firstChoices.map((choice) => (
+              <button key={choice.href} type="button" className="lf-setup-choice" disabled={saving} onClick={() => void finish(choice.href)}>
+                <Icon name={choice.icon} size={28} />
+                <span><strong>{choice.title}</strong><small>{choice.help}</small></span>
+                <Icon name="chevron_right" size={22} />
               </button>
-              <button type="button" className="lf-secondary-btn" onClick={() => setTermsModalOpen(false)}>
-                Close
-              </button>
-            </div>
+            ))}
+            <button type="button" className="lf-setup-quiet" onClick={() => setStep("person")} disabled={saving}>I’ll do this later</button>
+          </div>
+        ) : null}
+
+        {step === "person" ? (
+          <div className="lf-setup-body">
+            <h1 ref={headingRef} tabIndex={-1}>Who should know about your Vault?</h1>
+            <p className="lf-setup-help">Someone you trust, such as a partner, son or daughter, or your executor. Adding them doesn’t share anything or send them anything.</p>
+            <button type="button" className="lf-setup-choice" disabled={saving} onClick={() => void finish("/contacts?group=executors&add=1")}>
+              <Icon name="gavel" size={28} />
+              <span><strong>My executor</strong><small>The person who’ll sort things out.</small></span>
+              <Icon name="chevron_right" size={22} />
+            </button>
+            <button type="button" className="lf-setup-choice" disabled={saving} onClick={() => void finish("/contacts?group=trusted-contacts&add=1")}>
+              <Icon name="person_add" size={28} />
+              <span><strong>Someone I trust</strong><small>Family, a friend or an adviser.</small></span>
+              <Icon name="chevron_right" size={22} />
+            </button>
+            <button type="button" className="lf-setup-quiet" onClick={() => void finish("/dashboard")} disabled={saving}>
+              {saving ? "Opening your Vault…" : "I’ll do this later"}
+            </button>
+          </div>
+        ) : null}
+
+        {status ? <p className="lf-setup-status" role="alert">{status}</p> : null}
+      </div>
+
+      {tourOpen ? (
+        <div className="lf-setup-tour-backdrop" role="presentation" onClick={() => setTourOpen(false)}>
+          <section className="lf-setup-tour" role="dialog" aria-modal="true" aria-label="1-minute tour" onClick={(event) => event.stopPropagation()}>
+            <iframe src="/how-it-works?embed=1" title="Legacy Fortress tour" allow="autoplay" />
+            <button type="button" className="lf-setup-primary" onClick={() => setTourOpen(false)} autoFocus>Back to set-up</button>
           </section>
         </div>
       ) : null}
     </main>
   );
 }
-
-const categoryCardStyle: CSSProperties = {
-  border: "1px solid var(--lf-border)",
-  borderRadius: 8,
-  padding: 12,
-  background: "var(--lf-surface-card)",
-  display: "grid",
-  gap: 6,
-  boxShadow: "0 1px 2px rgba(33,17,13,0.018)",
-};
