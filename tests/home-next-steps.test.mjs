@@ -7,5 +7,5 @@ test("Home shows Your next steps from the same rule as To do, owners only (UX re
   assert.match(home, /nextSteps=\{viewer\.mode === "linked" \? undefined : guidanceItems\.map/);
   const overview = fs.readFileSync("app/(app)/components/dashboard/V3DashboardOverview.tsx", "utf8");
   assert.match(overview, /Your next steps/);
-  assert.match(overview, /href="\/action-centre">See all/);
+  assert.ok(overview.includes('<Link href="/action-centre">{actionCount && actionCount > nextSteps.length ? `See all ${actionCount}` : "See all"}</Link>'));
 });
