@@ -16,7 +16,9 @@ const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 const EMAIL = "staging-demo-shots@example.test";
 const PASSWORD = `StagingDemoShots-${Date.now()}-Aa1!`;
 const OUT = "test-results/demo-shots";
-const PAGES_ALL = ["/dashboard", "/finances", "/finances/bank", "/property", "/legal", "/legal/wills", "/personal", "/contacts", "/people-access", "/people-access?view=vault-access", "/people-access?view=sharing", "/access-sharing", "/account/billing"];
+const PAGES_ALL = ["/dashboard", "/finances", "/finances/bank", "/property", "/legal", "/legal/wills", "/personal", "/contacts", "/people-access", "/people-access?view=vault-access", "/people-access?view=sharing", "/access-sharing", "/account/billing",
+  // UX review (10 Nov 2026): the rest of the everyday screens.
+  "/business", "/vault/digital", "/vault/personal", "/notifications", "/action-centre", "/settings", "/settings/security", "/settings/my-vault", "/support", "/profile", "/add", "/onboarding"];
 // Tour video (owner request 7 Nov 2026): the same steps with a record opened, so the film can zoom in on it.
 const PAGES = PAGES_ALL;
 const OPENED_ALL = ["/finances/bank", "/legal/wills", "/contacts"];
