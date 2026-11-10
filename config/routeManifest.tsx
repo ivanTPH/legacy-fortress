@@ -47,10 +47,11 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
   },
   {
     id: "action-centre",
-    label: "To do",
+    // Inbox (owner, 10 Nov 2026): things to do and updates in one list. The path stays /actions.
+    label: "Inbox",
     path: "/actions",
-    description: "Review useful next actions",
-    icon: <Icon name="task_alt" size={18} />,
+    description: "Things to do and updates about your Vault",
+    icon: <Icon name="inbox" size={18} />,
     enabled: on,
   },
   {

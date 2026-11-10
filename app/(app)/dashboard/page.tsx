@@ -1662,13 +1662,13 @@ const legalSummary = useMemo(() => {
 
   if (actionCentreOnly) {
     if (viewer.mode === "linked") {
-      return <div className="lf-action-centre-page" role="status">Returning you to My Vault before opening your To do page...</div>;
+      return <div className="lf-action-centre-page" role="status">Returning you to My Vault before opening your Inbox...</div>;
     }
     return (
       <div className="lf-action-centre-page lf-v3-area-page">
-        <PageHeader title="To do" description="Everything that needs you, in one place." />
+        <PageHeader title="Inbox" description="Things to do and updates about your Vault, in one place." />
         {/* Until tasks load, a placeholder of similar size: no "Nothing needs your attention" flash, no jump. */}
-        {loading ? <div className="lf-todo-loading" role="status" aria-busy="true"><span className="lf-visually-hidden">Loading your To do…</span><span className="lf-skeleton is-chips" /><span className="lf-skeleton is-row" /><span className="lf-skeleton is-row" /><span className="lf-skeleton is-row" /></div> : <ActionQueuePanel
+        {loading ? <div className="lf-todo-loading" role="status" aria-busy="true"><span className="lf-visually-hidden">Loading your Inbox…</span><span className="lf-skeleton is-chips" /><span className="lf-skeleton is-row" /><span className="lf-skeleton is-row" /><span className="lf-skeleton is-row" /></div> : <ActionQueuePanel
           items={dashboardState.actions.items}
           context={actionContext}
           guidanceItems={guidanceItems}

@@ -39,7 +39,7 @@ export function describePersonNotification(kind: string, ownerName: string | nul
     case "attorney_check_requested": return { title: "Confirm it’s you", detail: `To act under ${first}’s Power of Attorney, take a fresh photo of your ID and a live selfie.`, icon: "badge", group: "security" };
     case "identity_approved": return { title: "Your ID is verified", detail: "Our team checked your photos. Your check lasts a year.", icon: "verified_user", group: "security" };
     case "record_link_added": return { title: `${first} added you to a record`, detail: `Nothing new is shared with you. You’ll be told if ${first} shares something.`, icon: "link", group: "people" };
-    case "suggestion_pending": return { title: `${who} suggested a document`, detail: "It needs your approval. Open To do to review it.", icon: "edit_note", group: "records" };
+    case "suggestion_pending": return { title: `${who} suggested a document`, detail: "It needs your approval. Open your Inbox to review it.", icon: "edit_note", group: "records" };
     case "suggestion_comment": return { title: `${who} commented on a suggestion`, detail: "Open it to read and reply.", icon: "chat", group: "records" };
     case "suggestion_approved": return { title: "Your document was approved", detail: `${first} added it. You still can’t open the record.`, icon: "check_circle", group: "records" };
     case "suggestion_rejected": return { title: "Your document wasn’t added", detail: `${first} gave a reason. Open it to see why.`, icon: "close", group: "records" };

@@ -6,6 +6,8 @@ import type { GuidanceAction, GuidanceItem } from "../../../../lib/readiness/gui
 import type { VaultApplicabilityState } from "../../../../lib/vaultPreferences";
 import { countOpenNeedsYou, getVaultTaskGroup } from "../../../../lib/workflow/taskGroups";
 import Icon from "../../../../components/ui/Icon";
+import SwipeToClear from "../../../../components/notifications/SwipeToClear";
+import { loadSeenActions, saveSeenActions, useInboxUpdates } from "../../../../lib/notifications/inboxUpdates";
 
 type ActionQueuePanelProps = {
   items: BlockingItem[];
@@ -259,105 +261,150 @@ function ActionQueuePanel({ items, onAction, context, guidanceItems, onGuidanceD
   */
 }
 
+// Inbox (owner decision 10 Nov 2026): things to do and updates in one list, like Mail. Filter All / Actions / Updates;
+// a filled dot is new, an outline dot has been read. Orange is an action, blue an update, and each row also says so
+// in words. Opening an action never completes it: actions stay until done or put off; updates can be cleared.
+type InboxFilter = "all" | "actions" | "updates";
+type InboxSelection = { kind: "action"; key: string } | { kind: "update"; id: string } | null;
+
+function inboxTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const age = Date.now() - date.getTime();
+  if (age < 60_000) return "Just now";
+  if (age < 3_600_000) return `${Math.floor(age / 60_000)} min ago`;
+  if (age < 86_400_000) return `${Math.floor(age / 3_600_000)} h ago`;
+  if (age < 7 * 86_400_000) return new Intl.DateTimeFormat("en-GB", { weekday: "short" }).format(date);
+  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" }).format(date);
+}
+
 function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidanceDecision, onGuidanceApplicability, guidanceBusyKey }: ActionQueuePanelProps) {
   const rows = useMemo(
     () => getActiveActionRows(items, context ? { ...context, guidanceItems } : undefined),
     [context, guidanceItems, items],
   );
-  const completedRows = useMemo(
-    () => buildActionCentreSections(items, context ? { ...context, guidanceItems } : undefined)
-      .find((section) => section.key === "completed")?.rows ?? [],
-    [context, guidanceItems, items],
-  );
-  const [selectedActionKey, setSelectedActionKey] = useState<string | null>(null);
+  const { updates, loading: updatesLoading, markRead, markUnread, clear, restore } = useInboxUpdates(true);
+  const [seenActions, setSeenActions] = useState<string[]>([]);
+  const [selection, setSelection] = useState<InboxSelection>(null);
   const [willChoice, setWillChoice] = useState<"yes" | "no" | "unsure" | null>(null);
+  const [filter, setFilter] = useState<InboxFilter>("all");
+  const [undo, setUndo] = useState<string[]>([]);
   const requestedActionHandled = useRef(false);
-  const [filter, setFilter] = useState<"all" | "todo" | "waiting" | "suggested">("all");
-  const selectedRow = rows.find((row) => row.actionKey === selectedActionKey) ?? null;
+  const selectedRow = selection?.kind === "action" ? rows.find((row) => row.actionKey === selection.key) ?? null : null;
+  const selectedUpdate = selection?.kind === "update" ? updates.find((item) => item.id === selection.id) ?? null : null;
 
   useEffect(() => {
+    queueMicrotask(() => setSeenActions(loadSeenActions()));
     const params = new URLSearchParams(window.location.search);
-    if (params.get("filter") === "todo") setFilter("todo");
-    const requestedAction = params.get("action");
+    const wanted = params.get("filter");
+    if (wanted === "todo" || wanted === "actions") queueMicrotask(() => setFilter("actions"));
+    if (wanted === "updates") queueMicrotask(() => setFilter("updates"));
+  }, []);
+
+  useEffect(() => {
+    const requestedAction = new URLSearchParams(window.location.search).get("action");
     if (requestedAction && !requestedActionHandled.current && rows.some((row) => row.actionKey === requestedAction)) {
       requestedActionHandled.current = true;
-      setSelectedActionKey(requestedAction);
+      queueMicrotask(() => setSelection({ kind: "action", key: requestedAction }));
     }
   }, [rows]);
 
   useEffect(() => {
-    if (selectedActionKey && !rows.some((row) => row.actionKey === selectedActionKey)) setSelectedActionKey(null);
-  }, [rows, selectedActionKey]);
-
-  useEffect(() => {
-    if (!selectedActionKey) return;
+    if (!selection) return;
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setSelectedActionKey(null);
+      if (event.key === "Escape") setSelection(null);
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedActionKey]);
+  }, [selection]);
 
-  function openRow(row: ActionCentreRow) {
+  function openAction(row: ActionCentreRow) {
     setWillChoice(null);
-    setSelectedActionKey(row.actionKey);
+    setSeenActions((current) => saveSeenActions([...current, row.actionKey]));
+    setSelection({ kind: "action", key: row.actionKey });
+  }
+  function openUpdate(id: string) {
+    markRead([id]);
+    setSelection({ kind: "update", id });
+  }
+  function clearUpdates(ids: string[]) {
+    clear(ids);
+    setUndo(ids);
+    setSelection(null);
+  }
+  function markAllRead() {
+    markRead(updates.map((item) => item.id));
+    setSeenActions((current) => saveSeenActions([...current, ...rows.map((row) => row.actionKey)]));
   }
 
-  const groupedRows = {
-    todo: rows.filter((row) => actionGroup(row) === "todo"),
-    waiting: rows.filter((row) => actionGroup(row) === "waiting"),
-    suggested: rows.filter((row) => actionGroup(row) === "suggested"),
-  };
+  const groupLabel = (row: ActionCentreRow) => actionGroup(row) === "todo" ? "Needs you" : actionGroup(row) === "waiting" ? "Waiting on others" : "Suggested";
+  const showActions = filter !== "updates";
+  const showUpdates = filter !== "actions";
+  const readUpdates = updates.filter((item) => item.read).map((item) => item.id);
 
-  function renderInboxRow(item: ActionCentreRow) {
-    return (
-      <article key={item.actionKey} className="lf-v52-todo-row" data-task-group={actionGroup(item)}>
-        <button type="button" className="lf-v52-todo-row-button" onClick={() => openRow(item)} aria-label={`${actionGroup(item) === "todo" ? "Needs you" : actionGroup(item) === "waiting" ? "Waiting on others" : "Suggested"}: ${item.title}. ${item.status}. Open details`}>
-          <span className="lf-v52-todo-icon" aria-hidden="true"><Icon name={taskIcon(item)} size={22} /></span>
-          <span className="lf-v52-todo-row-copy">
-            <strong>{item.title}</strong>
-            <small>{item.blockerLabel}</small>
-            <span className="lf-v52-todo-status">{item.status}</span>
-          </span>
-          <Icon name="chevron_right" size={20} />
-        </button>
-      </article>
-    );
+  function dot(kind: "action" | "update", isNew: boolean) {
+    return <span className={`lf-inbox-dot is-${kind}${isNew ? " is-new" : ""}`} aria-hidden="true" />;
   }
 
   return (
-    <section id="action-centre" className="lf-action-centre lf-v52-todo" style={panelStyle} aria-label="To do">
-      <div className="lf-v51-action-filters" aria-label="Filter To do">
-        {([ ["all", "All", rows.length], ["todo", "Needs you", groupedRows.todo.length], ["waiting", "Waiting on others", groupedRows.waiting.length], ["suggested", "Suggested", groupedRows.suggested.length] ] as const).map(([key, label, count]) =>
-          <button key={key} type="button" aria-pressed={filter === key} onClick={() => setFilter(key)}>{label} <span>{count}</span></button>)}
+    <section id="action-centre" className="lf-action-centre lf-v52-todo lf-inbox" style={panelStyle} aria-label="Inbox">
+      <div className="lf-inbox-toolbar">
+        <div className="lf-v51-action-filters" aria-label="Show">
+          {([["all", "All", rows.length + updates.length], ["actions", "Actions", rows.length], ["updates", "Updates", updates.length]] as const).map(([key, label, count]) =>
+            <button key={key} type="button" aria-pressed={filter === key} onClick={() => setFilter(key)}>
+              {key !== "all" ? <span className={`lf-inbox-dot is-${key === "actions" ? "action" : "update"} is-new`} aria-hidden="true" /> : null}{label} <span>{count}</span>
+            </button>)}
+        </div>
+        <span className="lf-inbox-toolbar-actions">
+          <button type="button" className="lf-ui-button lf-ui-button-text" onClick={markAllRead}>Mark all as read</button>
+          {showUpdates && readUpdates.length ? <button type="button" className="lf-ui-button lf-ui-button-text" onClick={() => clearUpdates(readUpdates)}>Clear read updates</button> : null}
+        </span>
       </div>
-      {!rows.length ? <section style={clearStateStyle}><strong>Nothing needs your attention right now.</strong><span>You can add or review records whenever you are ready.</span></section> : null}
-      {([ ["todo", "Needs you"], ["waiting", "Waiting on others"], ["suggested", "Suggested"] ] as const).map(([key, label]) => filter === "all" || filter === key ? (
-        <section key={key} className="lf-v51-action-group" aria-label={label}>
-          <h2>{label} <span>{groupedRows[key].length}</span></h2>
-          {groupedRows[key].length ? <div className="lf-action-centre-inbox">{groupedRows[key].map(renderInboxRow)}</div> : filter !== "all" ? <p>No {label.toLowerCase()} items right now.</p> : null}
-        </section>
-      ) : null)}
-      {completedRows.length ? (
-        <details className="lf-action-centre-resolved">
-          <summary>Recently resolved</summary>
-          <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
-            {completedRows.map((item) => <div key={item.actionKey} style={resolvedRowStyle}><span>{item.title}</span><small>Resolved</small></div>)}
-          </div>
-        </details>
-      ) : null}
+      <p className="lf-inbox-key"><span>{dot("action", true)} Action</span><span>{dot("update", true)} Update</span><span>Filled dot: new. Outline: read. Actions stay until done or put off.</span></p>
+      {undo.length ? <div className="lf-notifications-undo" role="status">{undo.length === 1 ? "Update cleared." : `${undo.length} updates cleared.`}<button type="button" onClick={() => { restore(undo); setUndo([]); }}>Undo</button></div> : null}
+      {!rows.length && !updates.length && !updatesLoading ? <section style={clearStateStyle}><strong>You’re all caught up.</strong><span>Things to do and updates about your Vault will appear here.</span></section> : null}
+      <div className="lf-action-centre-inbox lf-inbox-list" role="list">
+        {showActions ? rows.map((row) => {
+          const isNew = !seenActions.includes(row.actionKey);
+          return <article key={row.actionKey} role="listitem" className="lf-v52-todo-row lf-inbox-row" data-task-group={actionGroup(row)}>
+            <button type="button" className="lf-v52-todo-row-button" onClick={() => openAction(row)} aria-label={`Action, ${groupLabel(row)}${isNew ? ", new" : ""}: ${row.title}. Open`}>
+              {dot("action", isNew)}
+              <span className="lf-v52-todo-row-copy">
+                <strong className={isNew ? "is-new" : undefined}>{row.title}</strong>
+                <small>{row.blockerLabel}</small>
+                <span className="lf-inbox-tag is-action">Action · {groupLabel(row)}</span>
+              </span>
+              <Icon name="chevron_right" size={20} />
+            </button>
+          </article>;
+        }) : null}
+        {showUpdates ? updates.map((item) => (
+          <SwipeToClear key={item.id} label={item.title} onClear={() => clearUpdates([item.id])}>
+            <article role="listitem" className="lf-v52-todo-row lf-inbox-row">
+              <button type="button" className="lf-v52-todo-row-button" onClick={() => openUpdate(item.id)} aria-label={`Update${item.read ? "" : ", new"}: ${item.title}. Open`}>
+                {dot("update", !item.read)}
+                <span className="lf-v52-todo-row-copy">
+                  <strong className={item.read ? undefined : "is-new"}>{item.title}</strong>
+                  <small>{item.detail}</small>
+                  <span className="lf-inbox-tag is-update">Update · <time dateTime={item.createdAt}>{inboxTime(item.createdAt)}</time></span>
+                </span>
+                <Icon name="chevron_right" size={20} />
+              </button>
+            </article>
+          </SwipeToClear>
+        )) : null}
+      </div>
+      {showUpdates && updates.length ? <p className="lf-notifications-hint">On a phone, swipe an update left or right to clear it.</p> : null}
+      {updatesLoading && showUpdates ? <p className="lf-notifications-hint">Loading updates…</p> : null}
+
       {selectedRow ? (
-        <div className="lf-action-centre-drawer-backdrop" role="presentation" onClick={() => setSelectedActionKey(null)}>
-          <section className="lf-action-centre-drawer" role="dialog" aria-modal="true" aria-labelledby="action-centre-drawer-title" onClick={(event) => event.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "start" }}>
-              <div style={{ display: "grid", gap: 4 }}>
-                <span style={drawerEyebrowStyle}>What you can do next</span>
-                <h2 id="action-centre-drawer-title" style={{ margin: 0, fontSize: 20 }}>{selectedRow.title}</h2>
-              </div>
-              <button type="button" style={closeButtonStyle} onClick={() => setSelectedActionKey(null)} aria-label="Close action details">×</button>
-            </div>
-            <p style={{ margin: 0, color: "var(--lf-text)", lineHeight: 1.55 }}>{selectedRow.whyItMatters}</p>
-            <p style={{ margin: 0, color: "var(--lf-text-secondary)", fontSize: 13 }}>{selectedRow.blockerLabel}</p>
+        <div className="lf-action-centre-drawer-backdrop" role="presentation" onClick={() => setSelection(null)}>
+          <section className="lf-action-centre-drawer lf-inbox-message" role="dialog" aria-modal="true" aria-labelledby="inbox-message-title" onClick={(event) => event.stopPropagation()}>
+            <button type="button" className="lf-inbox-back" onClick={() => setSelection(null)}><Icon name="arrow_back" size={20} />Inbox</button>
+            <span className="lf-inbox-tag is-action">Action · {groupLabel(selectedRow)}</span>
+            <h2 id="inbox-message-title">{selectedRow.title}</h2>
+            <p className="lf-inbox-message-body">{selectedRow.whyItMatters}</p>
+            <p className="lf-inbox-message-meta">{selectedRow.blockerLabel}</p>
             {selectedRow.guidanceItem?.key === "will" && selectedRow.guidanceItem.state === "unknown" && onGuidanceApplicability ? (
               <div style={drawerChoiceStyle}>
                 <fieldset className="lf-action-will-choices">
@@ -369,23 +416,37 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
                 <button type="button" style={primaryActionStyle} disabled={!willChoice || guidanceBusyKey === selectedRow.guidanceItem.key} onClick={() => {
                   if (!willChoice) return;
                   void Promise.resolve(onGuidanceApplicability(selectedRow.guidanceItem!, willChoice)).then((saved) => {
-                    if (saved) setSelectedActionKey(null);
+                    if (saved) setSelection(null);
                   });
                 }}>Save choice</button>
               </div>
             ) : (
-              <button type="button" style={primaryActionStyle} onClick={() => onAction(selectedRow.actionKey)}>{selectedRow.primaryActionLabel}</button>
+              <button type="button" className="lf-inbox-primary" onClick={() => onAction(selectedRow.actionKey)}>{selectedRow.primaryActionLabel}</button>
             )}
-            {selectedRow.guidanceItem?.learnMoreHref ? <a href={selectedRow.guidanceItem.learnMoreHref} style={secondaryActionStyle}>Learn more</a> : null}
             {selectedRow.guidanceItem && onGuidanceDecision ? (
-              <details className="lf-action-centre-more-options">
-                <summary>Remind me later or change this suggestion</summary>
-                <div className="lf-action-centre-more-options-list">
-                  <button type="button" style={secondaryActionStyle} disabled={guidanceBusyKey === selectedRow.guidanceItem.key} onClick={() => onGuidanceDecision(selectedRow.guidanceItem!, "remind_later")}>{guidanceBusyKey === selectedRow.guidanceItem.key ? "Saving..." : "Remind me later"}</button>
-                  <button type="button" style={secondaryActionStyle} disabled={guidanceBusyKey === selectedRow.guidanceItem.key} onClick={() => onGuidanceDecision(selectedRow.guidanceItem!, "not_relevant")}>{(selectedRow.guidanceItem as { dismissLabel?: string }).dismissLabel ?? "Not relevant"}</button>
-                </div>
-              </details>
+              <div className="lf-inbox-message-actions">
+                <button type="button" className="lf-inbox-secondary" disabled={guidanceBusyKey === selectedRow.guidanceItem.key} onClick={() => { onGuidanceDecision(selectedRow.guidanceItem!, "remind_later"); setSelection(null); }}>{guidanceBusyKey === selectedRow.guidanceItem.key ? "Saving…" : "Not now"}</button>
+                <button type="button" className="lf-inbox-secondary" disabled={guidanceBusyKey === selectedRow.guidanceItem.key} onClick={() => { onGuidanceDecision(selectedRow.guidanceItem!, "already_done"); setSelection(null); }}>Mark as done</button>
+              </div>
             ) : null}
+            {selectedRow.guidanceItem && onGuidanceDecision ? <button type="button" className="lf-inbox-quiet" disabled={guidanceBusyKey === selectedRow.guidanceItem.key} onClick={() => { onGuidanceDecision(selectedRow.guidanceItem!, "not_relevant"); setSelection(null); }}>{(selectedRow.guidanceItem as { dismissLabel?: string }).dismissLabel ?? "This doesn’t apply to me"}</button> : null}
+            {selectedRow.guidanceItem?.learnMoreHref ? <a href={selectedRow.guidanceItem.learnMoreHref} className="lf-inbox-quiet">Learn more</a> : null}
+          </section>
+        </div>
+      ) : null}
+
+      {selectedUpdate ? (
+        <div className="lf-action-centre-drawer-backdrop" role="presentation" onClick={() => setSelection(null)}>
+          <section className="lf-action-centre-drawer lf-inbox-message" role="dialog" aria-modal="true" aria-labelledby="inbox-message-title" onClick={(event) => event.stopPropagation()}>
+            <button type="button" className="lf-inbox-back" onClick={() => setSelection(null)}><Icon name="arrow_back" size={20} />Inbox</button>
+            <span className="lf-inbox-tag is-update">Update · <time dateTime={selectedUpdate.createdAt}>{inboxTime(selectedUpdate.createdAt)}</time></span>
+            <h2 id="inbox-message-title">{selectedUpdate.title}</h2>
+            <p className="lf-inbox-message-body">{selectedUpdate.detail}</p>
+            <a href={selectedUpdate.href} className="lf-inbox-primary">Open</a>
+            <div className="lf-inbox-message-actions">
+              <button type="button" className="lf-inbox-secondary" onClick={() => { markUnread(selectedUpdate.id); setSelection(null); }}>Mark as unread</button>
+              <button type="button" className="lf-inbox-secondary" onClick={() => clearUpdates([selectedUpdate.id])}>Clear</button>
+            </div>
           </section>
         </div>
       ) : null}
@@ -715,7 +776,7 @@ function buildDashboardActionRows(context?: ActionCentreContext): ActionCentreRo
       href: `/actions?review=${encodeURIComponent(suggestion.id)}`,
       requiredRole: "owner",
       primaryActionLabel: "Review",
-      secondaryActionLabel: "Open To do",
+      secondaryActionLabel: "Open Inbox",
     });
   }
 

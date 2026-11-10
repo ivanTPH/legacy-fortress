@@ -87,10 +87,10 @@ test("email wording never names anyone, and each line appears once", () => {
   assert.equal(new Set(lines).size, lines.length);
 });
 
-test("one rule everywhere: To do, the bell and the email all build from buildNextSteps", () => {
+test("one rule everywhere: the Inbox and the email both build from buildNextSteps (the bell was folded into the Inbox)", () => {
   const read = (file) => fs.readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
   assert.match(read("app/(app)/dashboard/page.tsx"), /buildNextSteps\(vaultFacts, preferences\)/);
-  assert.match(read("components/notifications/NotificationBell.tsx"), /buildNextSteps\(factsResponse\.facts, preferences\)/);
+  assert.ok(!fs.existsSync(new URL("../components/notifications/NotificationBell.tsx", import.meta.url)));
   assert.match(read("lib/summaryEmail/service.ts"), /emailLines\(buildNextSteps\(facts/);
   assert.match(read("app/api/next-steps/route.ts"), /loadVaultFacts\(access\.admin, access\.user\.id\)/);
 });

@@ -110,7 +110,7 @@ function AskForAccess({ item, onDone }: { item: MyNomination; onDone: () => Prom
   }
   return <section className="lf-va-nominee">
     <button type="button" className="lf-va-back" onClick={() => void onDone()}><Icon name="chevron_left" size={20} />{item.ownerName}’s Vault</button>
-    <PageHeader title={`Ask ${name} for access now`} description={`${name} gets a request in their To do and decides whether to share anything. Asking doesn’t give you access.`} />
+    <PageHeader title={`Ask ${name} for access now`} description={`${name} gets a request in their Inbox and decides whether to share anything. Asking doesn’t give you access.`} />
     <article className="lf-va-nominee-card">
       <label className="lf-va-field" htmlFor="va-ask-message">Message to {name} · Optional
         <textarea id="va-ask-message" rows={4} maxLength={500} value={message} onChange={(event) => setMessage(event.target.value)} placeholder="For example, I’m sorting the house insurance and need the policy details." />
