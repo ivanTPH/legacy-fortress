@@ -2,8 +2,6 @@
 
 import { Card, PageHeader } from "../../../../components/ui/V3Primitives";
 import { AddAssetLink } from "../../../../components/ui/LFDesignSystem";
-import Link from "next/link";
-import Icon from "../../../../components/ui/Icon";
 import VaultSectionGrid from "../../../../components/vault/VaultSectionGrid";
 
 export type VaultAreaSummary = {
@@ -25,11 +23,9 @@ type Props = {
   lifeCover?: string | null;
   actionCount?: number;
   canAddRecords?: boolean;
-  /** Your next steps, the same calm list as To do (UX review, 10 Nov 2026). */
-  nextSteps?: { key: string; title: string; href: string; actionLabel: string }[];
 };
 
-export default function V3DashboardOverview({ loading, areas, recordCount, peopleCount, recordedValue, lifeCover, actionCount, canAddRecords = true, nextSteps }: Props) {
+export default function V3DashboardOverview({ loading, areas, recordCount, peopleCount, recordedValue, lifeCover, actionCount, canAddRecords = true }: Props) {
   const count = (value: number) => loading ? "…" : value;
 
   return <div className="lf-v3-screen-overview is-dashboard">
@@ -47,15 +43,7 @@ export default function V3DashboardOverview({ loading, areas, recordCount, peopl
     <Card className="lf-v3-mobile-value" aria-label="Estimated value">
       <span>Estimated value</span><strong>{loading ? "…" : recordedValue}</strong>{!loading && lifeCover ? <small className="lf-v3-life-cover">Plus {lifeCover} life cover</small> : null}
     </Card>
-    {!loading && nextSteps && nextSteps.length ? <section className="lf-v3-next-steps" aria-labelledby="lf-next-steps-title">
-      <div className="lf-v3-next-steps-head"><h2 id="lf-next-steps-title">Your next steps</h2><Link href="/action-centre">{actionCount && actionCount > nextSteps.length ? `See all ${actionCount}` : "See all"}</Link></div>
-      <ul>
-        {nextSteps.map((step) => <li key={step.key}><Link href={step.href}>
-          <span className="lf-v3-next-step-title">{step.title}</span>
-          <span className="lf-v3-next-step-action">{step.actionLabel}<Icon name="chevron_right" size={18} /></span>
-        </Link></li>)}
-      </ul>
-    </section> : null}
+    {/* Prompts live only in To do (owner, 10 Nov 2026): on Home they repeated the To do button and confused it. */}
     <section aria-label="Vault areas" className="lf-v3-vault-overview">
       <VaultSectionGrid sections={areas.map((area) => ({
         key: area.href, title: area.title, icon: area.icon, href: area.href,

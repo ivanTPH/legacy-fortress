@@ -431,19 +431,6 @@
 .lf-setup-legal a { color: var(--lf-link); font-weight: 600; }
 .lf-setup-status { margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--lf-status-rejected-bg); color: var(--lf-status-rejected-text); font-size: 15px; }
 @media (prefers-reduced-motion: reduce) { .lf-setup-progress span, .lf-setup-choice, .lf-setup-answer, .lf-setup-skip { transition: none; } }
-/* Your next steps on Home (UX review, 10 Nov 2026). */
-.lf-v3-next-steps { display: grid; gap: 10px; margin: 4px 0 8px; }
-.lf-v3-next-steps-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.lf-v3-next-steps-head h2 { margin: 0; font-size: 18px; color: var(--lf-text); }
-.lf-v3-next-steps-head a { font-weight: 600; color: var(--lf-link); }
-.lf-v3-next-steps ul { list-style: none; margin: 0; padding: 0; border: 1px solid var(--lf-border); border-radius: var(--lf-radius-card, 16px); background: var(--lf-surface-card); overflow: hidden; }
-.lf-v3-next-steps li + li { border-top: 1px solid var(--lf-divider); }
-.lf-v3-next-steps li a { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding: 12px 16px; color: var(--lf-text); text-decoration: none; }
-.lf-v3-next-steps li a:hover { background: var(--lf-surface-hover); }
-.lf-v3-next-steps li a:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: -2px; }
-.lf-v3-next-step-title { font-weight: 600; min-width: 0; }
-.lf-v3-next-step-action { display: inline-flex; align-items: center; gap: 2px; flex: none; font-size: 14px; font-weight: 600; color: var(--lf-link); }
-@media (max-width: 640px) { .lf-v3-next-step-action { font-size: 0; } .lf-v3-next-step-action svg, .lf-v3-next-step-action .ms { font-size: 18px; } }
 
 /* Guided set-up on laptops and tablets (owner, 10 Nov 2026): a centred card at a comfortable size, not a phone
    column on a big empty page; on wide screens a short reassurance panel sits beside it. Phones are unchanged. */
