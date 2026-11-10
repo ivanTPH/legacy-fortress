@@ -393,6 +393,8 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
           </SwipeToClear>
         )) : null}
       </div>
+      {(rows.length || updates.length) && filter === "actions" && !rows.length ? <p className="lf-inbox-empty">Nothing to do right now.</p> : null}
+      {(rows.length || updates.length) && filter === "updates" && !updates.length && !updatesLoading ? <p className="lf-inbox-empty">No updates yet. When someone accepts an invitation or something changes in your Vault, it will appear here.</p> : null}
       {showUpdates && updates.length ? <p className="lf-notifications-hint">On a phone, swipe an update left or right to clear it.</p> : null}
       {updatesLoading && showUpdates ? <p className="lf-notifications-hint">Loading updates…</p> : null}
 
