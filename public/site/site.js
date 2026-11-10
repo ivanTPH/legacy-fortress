@@ -1,8 +1,12 @@
 (function(){
-  // Inside guided set-up (/onboarding) the tour plays on its own, with nothing to navigate away to.
-  if (/[?&]embed=1(&|$)/.test(location.search)) {
+  // Opened from guided set-up (/onboarding): one clear way back, and no "Start free" to wander off to.
+  if (/[?&]from=setup(&|$)/.test(location.search)) {
+    document.documentElement.classList.add('lf-from-setup');
+    var bar = document.createElement('div'); bar.className = 'setup-return';
+    bar.innerHTML = '<a href="/onboarding?step=welcome"><span aria-hidden="true">&lsaquo;</span> Back to set-up</a>';
+    document.body.insertBefore(bar, document.body.firstChild);
     var video = document.querySelector('section[aria-label="Video"]');
-    if (video) { document.documentElement.classList.add('lf-embed'); document.body.insertBefore(video, document.body.firstChild); }
+    if (video) setTimeout(function(){ video.scrollIntoView({ block: 'start' }); }, 50);
   }
   // Show which page you're on in the main menu.
   var here = document.body.getAttribute('data-path');

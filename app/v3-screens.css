@@ -412,7 +412,7 @@
 .lf-setup-primary { min-height: 56px; border: 0; border-radius: 14px; background: var(--lf-primary-bg); color: var(--lf-primary-text); font: inherit; font-size: 18px; font-weight: 600; cursor: pointer; }
 .lf-setup-primary:disabled, .lf-setup-choice:disabled, .lf-setup-quiet:disabled { opacity: 0.6; cursor: progress; }
 .lf-setup-quiet { min-height: 48px; border: 0; background: transparent; color: var(--lf-link); font: inherit; font-size: 17px; font-weight: 600; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
-.lf-setup-choice { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 72px; padding: 14px 16px; border: 1px solid var(--lf-border); border-radius: 16px; background: var(--lf-surface-card); color: var(--lf-text); font: inherit; text-align: left; cursor: pointer; transition: background 120ms; }
+.lf-setup-choice { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 72px; padding: 14px 16px; border: 1px solid var(--lf-border); border-radius: 16px; background: var(--lf-surface-card); color: var(--lf-text); font: inherit; text-align: left; text-decoration: none; cursor: pointer; transition: background 120ms; }
 .lf-setup-choice > .lf-icon:first-child { color: var(--lf-link); flex-shrink: 0; }
 .lf-setup-choice > span:not(.lf-icon) { display: grid; gap: 2px; flex: 1; min-width: 0; }
 .lf-setup-choice strong { font-size: 17px; }
@@ -425,10 +425,6 @@
 .lf-setup-legal { margin: 0; font-size: 15px; color: var(--lf-text-secondary); text-align: center; }
 .lf-setup-legal a { color: var(--lf-link); font-weight: 600; }
 .lf-setup-status { margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--lf-status-rejected-bg); color: var(--lf-status-rejected-text); font-size: 15px; }
-.lf-setup-tour-backdrop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 16px; background: var(--lf-scrim, rgba(31, 23, 21, 0.5)); }
-.lf-setup-tour { width: min(960px, 100%); display: grid; gap: 12px; padding: 12px; border-radius: 18px; background: var(--lf-surface-card); }
-.lf-setup-tour iframe { width: 100%; aspect-ratio: 16 / 10; max-height: 75dvh; border: 0; border-radius: 12px; background: var(--lf-surface-page); }
-@media (max-width: 600px) { .lf-setup-tour iframe { aspect-ratio: 3 / 4; } }
 @media (prefers-reduced-motion: reduce) { .lf-setup-progress span, .lf-setup-choice, .lf-setup-answer { transition: none; } }
 /* Your next steps on Home (UX review, 10 Nov 2026). */
 .lf-v3-next-steps { display: grid; gap: 10px; margin: 4px 0 8px; }
