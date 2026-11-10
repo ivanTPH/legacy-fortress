@@ -9,12 +9,14 @@ import Icon from "../../../components/ui/Icon";
 import { PageHeader } from "../../../components/ui/V3Primitives";
 import AttachmentGallery, { type AttachmentGalleryItem } from "../../../components/documents/AttachmentGallery";
 import { FormField, NumberInput, TextInput } from "../../../components/forms/asset/AssetFormControls";
-import { formatCurrency } from "../../../lib/currency";
+import { formatCurrency, formatCurrencyWhole } from "../../../lib/currency";
 import type { CollaboratorRole } from "../../../lib/access-control/roles";
 import {
   buildFinanceSummary,
   buildBucketSummary,
   getDashboardAssetValueMajor,
+  getEstateValueMajor,
+  getLifeCoverMajor,
   getAssetsForBucket,
   getDashboardAssetBucket,
   getLegalDocuments,
@@ -743,7 +745,7 @@ const legalSummary = useMemo(() => {
       detailLabel: "property asset(s)",
       valueTextBuilder: (rows) => {
         const totalMajor = rows.reduce((sum, row) => sum + getAssetValueMajor(row), 0);
-        return totalMajor > 0 ? formatCurrency(totalMajor, currency) : `${rows.length}`;
+        return totalMajor > 0 ? formatCurrencyWhole(totalMajor, currency) : `${rows.length}`;
       },
       itemBuilder: (row) => ({
         id: row.id,
@@ -760,7 +762,7 @@ const legalSummary = useMemo(() => {
       detailLabel: "business interest(s)",
       valueTextBuilder: (rows) => {
         const totalMajor = rows.reduce((sum, row) => sum + getAssetValueMajor(row), 0);
-        return totalMajor > 0 ? formatCurrency(totalMajor, currency) : `${rows.length}`;
+        return totalMajor > 0 ? formatCurrencyWhole(totalMajor, currency) : `${rows.length}`;
       },
       itemBuilder: (row) => ({
         id: row.id,
@@ -1652,8 +1654,11 @@ const legalSummary = useMemo(() => {
   const valuedRows = new Map(assetRows.filter((row) => !row.deleted_at && !row.archived_at && row.status !== "archived" && getDashboardAssetBucket(row) !== "tasks" && getDashboardAssetValueMajor(row) !== 0)
     .map((row) => [row.id, row]));
   const valuedCurrencies = new Set([...valuedRows.values()].map((row) => row.currency_code || currency));
+  // Estimated value leaves out life cover and takes off debts; life cover is shown on its own line (10 Nov 2026).
+  const lifeCoverMajor = [...valuedRows.values()].reduce((sum, row) => sum + getLifeCoverMajor(row), 0);
   const recordedValue = valuedRows.size === 0 ? "Not recorded" : valuedCurrencies.size > 1 ? "Multiple currencies"
-    : formatCurrency([...valuedRows.values()].reduce((sum, row) => sum + getDashboardAssetValueMajor(row), 0), currency);
+    : formatCurrencyWhole([...valuedRows.values()].reduce((sum, row) => sum + getEstateValueMajor(row), 0), currency);
+  const lifeCoverText = valuedCurrencies.size > 1 || lifeCoverMajor <= 0 ? null : formatCurrencyWhole(lifeCoverMajor, currency);
 
   if (actionCentreOnly) {
     if (viewer.mode === "linked") {
@@ -1691,7 +1696,7 @@ const legalSummary = useMemo(() => {
 
   return (
     <div className="lf-dashboard-shell">
-      <V3DashboardOverview loading={loading} areas={v3Areas} recordCount={recordIds.size}
+      <V3DashboardOverview loading={loading} areas={v3Areas} recordCount={recordIds.size} lifeCover={lifeCoverText}
         peopleCount={viewer.mode === "linked" ? undefined : contactRows.length} recordedValue={recordedValue}
         actionCount={viewer.mode === "linked" ? undefined : getActionCentreToDoCount(dashboardState.actions.items, actionContext, guidanceItems)}
         canAddRecords={viewer.mode !== "linked"} />

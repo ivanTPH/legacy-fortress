@@ -29,3 +29,10 @@
 ## Linked access security blocker (27 October 2026)
 
 18. **Legacy association widens an active grant:** A rollback-only synthetic local test showed that `linked_grant_allows_asset` treats `contact_links` as access and `linked_grant_allows_record` treats `record_contacts` as access when the linked contact already has an active, identity-qualified `account_access_grants` row with empty explicit scope. Both paths also allow the related document/storage reads. The new `record_links` table does not participate in those functions, and changing its role did not widen the grant. Revoking the grant stopped subsequent reads. Approve a **separate security remediation** of the legacy grant-scope/RLS functions, with compatibility review for existing intentional shares, before any new permission integration or legacy backfill. Do not use legacy contact associations as a substitute for explicit Give access.
+
+## Owner decisions, UX review (10 Nov 2026)
+
+- Focus outline: the owner approved changing the light-mode focus ring from clay `#8C4A32` (rule 12) to the dark brand brown `#2B1714`, because the clay ring read as an error on every form. Dark mode keeps `#F0A98A`. Headings focused programmatically (dialogs) show no ring.
+- Totals: "Estimated value" leaves out life cover (shown on its own line) and takes off debts; totals show whole pounds, records keep pence.
+- Sharing: one People section with four tabs (People, Shared now, After I die, Requests); design to follow.
+- Vault switcher: shown only to people who can open another Vault. "Vault secured" stays in the header if the design allows.

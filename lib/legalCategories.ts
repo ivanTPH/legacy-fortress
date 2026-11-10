@@ -84,6 +84,8 @@ export function usesCanonicalLegalAssetRead(slug: string) {
   return slug === "power-of-attorney" || slug === "identity-documents";
 }
 
+const PERSON_CATEGORIES = new Set(["executors", "next-of-kin", "trusted-contacts", "family", "advisors", "advisers", "beneficiaries", "contacts"]);
+
 type AssetLikeForLegalMatch = {
   section_key?: unknown;
   category_key?: unknown;
@@ -104,6 +106,16 @@ export function resolveLegalCategoryForAsset(row: AssetLikeForLegalMatch): Legal
 
   if (sectionKey === "legal" && LEGAL_CATEGORIES.some((category) => category.slug === categoryKey)) {
     return categoryKey as LegalCategorySlug;
+  }
+
+  // A person (an executor, next of kin, an adviser) counts as a legal document only when the record itself is
+  // titled as one (older sample data saved "Last Will and Testament" there). A note that merely mentions the Will
+  // no longer counts, which made Legal show "2 Wills" while the Wills page showed 1 (UX review, 10 Nov 2026).
+  if (sectionKey === "personal" && PERSON_CATEGORIES.has(categoryKey)) {
+    const named = [title, documentTitle].filter(Boolean).join(" ");
+    if (/power of attorney|\blpa\b/.test(named)) return "power-of-attorney";
+    if (/\bwills?\b|testament/.test(named)) return "wills";
+    return null;
   }
 
   const combined = [title, documentTitle, instructionReference, executorType, poaType, categoryKey, sectionKey]
