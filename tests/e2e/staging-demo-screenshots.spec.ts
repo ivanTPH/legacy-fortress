@@ -231,10 +231,12 @@ for (const kind of ["desk", "phone"] as const) {
     await page.getByRole("button", { name: /Yes, continue|^Continue$/ }).click();
     await expect(page.getByRole("heading", { name: /^Welcome, / })).toBeVisible({ timeout: 30_000 });
     await shoot(page, `setup-${kind}-2-welcome`);
-    await page.getByRole("button", { name: /Watch a 1-minute tour first/ }).click();
-    await expect(page.frameLocator("iframe[title='Legacy Fortress tour']").locator("[data-play]")).toBeVisible({ timeout: 30_000 });
+    await page.getByRole("link", { name: /Watch a 1-minute tour first/ }).click();
+    await page.waitForURL(/how-it-works\?from=setup/, { timeout: 30_000 });
+    await expect(page.getByRole("link", { name: /Back to set-up/ })).toBeVisible({ timeout: 30_000 });
     await shoot(page, `setup-${kind}-3-tour`);
-    await page.getByRole("button", { name: "Back to set-up" }).click();
+    await page.getByRole("link", { name: /Back to set-up/ }).click();
+    await expect(page.getByRole("heading", { name: /^Welcome, / })).toBeVisible({ timeout: 30_000 });
     await page.getByRole("button", { name: "Set up with me" }).click();
     await expect(page.getByRole("heading", { name: "Do you have a Will?" })).toBeVisible();
     await shoot(page, `setup-${kind}-4-question-will`);

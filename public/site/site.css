@@ -2,10 +2,9 @@
 @font-face{font-family:"Newsreader";font-style:normal;font-weight:200 800;font-display:swap;src:url("/fonts/newsreader-latin-opsz-normal.woff2") format("woff2")}
 [hidden]{display:none!important}
 .test-note{margin:10px 0 0;font-size:13px;color:#6B5F5A}
-html.lf-embed body{margin:0;background:#F7F4F1}
-html.lf-embed body>.page{display:none!important}
-html.lf-embed section[aria-label="Video"]{max-width:none!important;padding:0!important;margin:0!important}
-html.lf-embed a[data-signup]{display:none!important}
+html.lf-from-setup a[data-signup]{display:none!important}
+.setup-return{position:sticky;top:0;z-index:50;display:flex;justify-content:center;padding:10px 16px;background:#2B1714}
+.setup-return a{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 18px;border-radius:12px;background:#FFFFFF;color:#2B1714;font-weight:600;font-size:17px;text-decoration:none}
 /* Legacy Fortress brand, as signed off in the website designs: one light look on purpose. */
 :root{--paper:#F7F4F1;--ink:#1F1715;--fortress:#2B1714;--clay:#7A3D27;--line:#EBE4DE;--glow:#F0A98A;color-scheme:light}
 .ms{font-family:"Material Symbols Rounded";font-weight:normal;font-style:normal;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;direction:ltr;-webkit-font-smoothing:antialiased;font-variation-settings:"FILL" 0,"wght" 500,"GRAD" 0,"opsz" 24}

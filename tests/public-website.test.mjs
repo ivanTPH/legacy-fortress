@@ -37,10 +37,14 @@ test("forms say plainly that nothing is sent yet on TEST", () => {
   }
 });
 
-test("the tour can play inside guided set-up with nothing to navigate away to", () => {
+test("the tour opens from guided set-up with one clear way back (pages can't be framed: X-Frame-Options DENY)", () => {
   const js = fs.readFileSync("public/site/site.js", "utf8");
   const css = fs.readFileSync("public/site/site.css", "utf8");
-  assert.match(js, /embed=1/);
-  assert.match(css, /html\.lf-embed a\[data-signup\]\{display:none!important\}/);
-  assert.match(fs.readFileSync("app/onboarding/OnboardingPageClient.tsx", "utf8"), /src="\/how-it-works\?embed=1"/);
+  assert.match(js, /from=setup/);
+  assert.match(js, /href="\/onboarding\?step=welcome"/);
+  assert.match(css, /html\.lf-from-setup a\[data-signup\]\{display:none!important\}/);
+  const setup = fs.readFileSync("app/onboarding/OnboardingPageClient.tsx", "utf8");
+  assert.match(setup, /href="\/how-it-works\?from=setup"/);
+  assert.doesNotMatch(setup, /<iframe/);
+  assert.match(fs.readFileSync("next.config.ts", "utf8"), /frame-ancestors 'none'/, "framing stays blocked");
 });

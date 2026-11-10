@@ -7,7 +7,7 @@ import Icon from "../../components/ui/Icon";
 import { bootstrapAuthenticatedUser } from "../../lib/auth/bootstrap";
 import { supabase } from "../../lib/supabaseClient";
 import { waitForActiveUser } from "../../lib/auth/session";
-import { getOrCreateOnboardingState, saveOnboardingState, saveTermsAcceptance } from "../../lib/onboarding";
+import { getOrCreateOnboardingState, getTermsAcceptanceState, isCurrentTermsAcceptance, saveOnboardingState, saveTermsAcceptance } from "../../lib/onboarding";
 import {
   loadVaultPreferences,
   saveVaultPreferences,
@@ -48,7 +48,6 @@ export default function OnboardingPageClient() {
   const [lastName, setLastName] = useState("");
   const [nameKnown, setNameKnown] = useState(false);
   const [answers, setAnswers] = useState<Partial<Record<QuestionKey, Answer>>>({});
-  const [tourOpen, setTourOpen] = useState(false);
   const [marketingOptIn, setMarketingOptIn] = useState(false);
   const preferencesRef = useRef<VaultPreferences | null>(null);
   const profileRef = useRef<LoadedProfileWorkspace | null>(null);
@@ -84,7 +83,13 @@ export default function OnboardingPageClient() {
       const last = profile?.form.last_name || String(user.user_metadata?.last_name ?? user.user_metadata?.family_name ?? "");
       setFirstName(first.trim());
       setLastName(last.trim());
-      setNameKnown(Boolean(first.trim() && last.trim()));
+      const known = Boolean(first.trim() && last.trim());
+      setNameKnown(known);
+      // Back from the tour (/how-it-works?from=setup): pick up at Welcome if the name and terms are already done.
+      if (searchParams.get("step") === "welcome" && known && isCurrentTermsAcceptance(await getTermsAcceptanceState(supabase, user.id).catch(() => null))) {
+        if (!mounted) return;
+        setStep("welcome");
+      }
       setLoading(false);
     }
 
@@ -92,7 +97,7 @@ export default function OnboardingPageClient() {
     return () => {
       mounted = false;
     };
-  }, [router]);
+  }, [router, searchParams]);
 
   // Move focus to each new screen's heading so screen readers announce it.
   useEffect(() => {
@@ -231,10 +236,12 @@ export default function OnboardingPageClient() {
           <div className="lf-setup-body">
             <h1 ref={headingRef} tabIndex={-1}>Welcome, {firstName}</h1>
             <p className="lf-setup-help">Let’s get your Vault started. It takes about 5 minutes, and you can stop at any time.</p>
-            <button type="button" className="lf-setup-choice" onClick={() => setTourOpen(true)}>
+            {/* TEST and live refuse to show pages inside other pages (X-Frame-Options: DENY), so the tour opens as its own page with a way back. */}
+            <a className="lf-setup-choice" href="/how-it-works?from=setup">
               <Icon name="play_circle" size={28} />
-              <span><strong>Watch a 1-minute tour first</strong><small>With voice-over and captions</small></span>
-            </button>
+              <span><strong>Watch a 1-minute tour first</strong><small>With voice-over and captions. Then come straight back.</small></span>
+              <Icon name="chevron_right" size={22} />
+            </a>
             <button type="button" className="lf-setup-primary" onClick={() => setStep("q0")} disabled={saving}>Set up with me</button>
             <button type="button" className="lf-setup-quiet" onClick={() => void finish("/dashboard", {})} disabled={saving}>
               {saving ? "Opening your Vault…" : "Skip, I’ll explore on my own"}
@@ -295,14 +302,6 @@ export default function OnboardingPageClient() {
         {status ? <p className="lf-setup-status" role="alert">{status}</p> : null}
       </div>
 
-      {tourOpen ? (
-        <div className="lf-setup-tour-backdrop" role="presentation" onClick={() => setTourOpen(false)}>
-          <section className="lf-setup-tour" role="dialog" aria-modal="true" aria-label="1-minute tour" onClick={(event) => event.stopPropagation()}>
-            <iframe src="/how-it-works?embed=1" title="Legacy Fortress tour" allow="autoplay" />
-            <button type="button" className="lf-setup-primary" onClick={() => setTourOpen(false)} autoFocus>Back to set-up</button>
-          </section>
-        </div>
-      ) : null}
     </main>
   );
 }
