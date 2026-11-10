@@ -7,7 +7,7 @@ const read = (file) => fs.readFileSync(new URL(`../${file}`, import.meta.url), "
 test("Inbox: things to do and updates in one list, filtered All / Actions / Updates (owner, 10 Nov 2026)", () => {
   const panel = read("app/(app)/components/dashboard/ActionQueuePanel.tsx");
   assert.match(panel, /\["all", "All",[^\]]*\], \["actions", "Actions",[^\]]*\], \["updates", "Updates",/);
-  assert.match(panel, /useInboxUpdates\(true\)/);
+  assert.match(panel, /useInboxUpdates\(true, reads\)/);
   // Filled dot = new, outline = read; each row also says Action or Update in words.
   assert.match(panel, /lf-inbox-dot is-\$\{kind\}\$\{isNew \? " is-new" : ""\}/);
   assert.match(panel, /Action · \{groupLabel\(row\)\}/);
@@ -36,5 +36,24 @@ test("updates keep their old sources, read state and cross-device clearing; noth
   assert.match(updates, /from\("invitation_events"\)\.select\(/);
   assert.match(updates, /loadPersonNotifications\(supabase\)/);
   assert.match(updates, /syncClearedNotificationIds\(supabase\)/);
-  assert.doesNotMatch(updates, /\.update\(|\.delete\(|\.insert\(/);
+  // The only writes are the person's own read marks; the events themselves are never changed.
+  assert.doesNotMatch(updates, /\.update\(|\.insert\(/);
+  for (const match of updates.matchAll(/from\("([a-z_]+)"\)\.(delete|upsert)\(/g)) assert.equal(match[1], "inbox_reads");
+});
+
+test("what's been read follows the person across devices, through their own rows only (owner, 10 Nov 2026)", () => {
+  const migration = read("supabase/migrations/20261110220000_inbox_reads.sql");
+  assert.match(migration, /CREATE TABLE public\.inbox_reads/);
+  assert.match(migration, /ENABLE ROW LEVEL SECURITY/);
+  assert.match(migration, /REVOKE ALL ON public\.inbox_reads FROM anon/);
+  for (const action of ["select", "insert", "delete"]) assert.match(migration, new RegExp(`inbox_reads_own_${action} .*auth\\.uid\\(\\)`));
+  assert.doesNotMatch(migration, /DROP|ALTER TABLE public\.(?!inbox_reads)/);
+  const updates = read("lib/notifications/inboxUpdates.ts");
+  assert.match(updates, /from\("inbox_reads"\)\.upsert\(/);
+  assert.match(updates, /from\("inbox_reads"\)\.select\("item_key"\)/);
+  // Falls back to this device if the server or the table isn't available.
+  assert.match(updates, /if \(error\) return local;/);
+  const panel = read("app/(app)/components/dashboard/ActionQueuePanel.tsx");
+  assert.match(panel, /reads\.markRead\(\[actionReadKey\(row\.actionKey\)\]\)/);
+  assert.match(panel, /reads\.markUnread\(actionReadKey\(selectedRow\.actionKey\)\)/);
 });
