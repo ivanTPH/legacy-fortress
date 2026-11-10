@@ -7,7 +7,7 @@
 @media (prefers-color-scheme: dark) { :root:not([data-theme]) { --lf-focus: #F0A98A; } }
 :root[data-theme="dark"] { --lf-focus: #F0A98A; }
 /* A heading focused only to move the reader into a dialog shows no ring. */
-[tabindex="-1"]:focus:not(:focus-visible), h1[tabindex="-1"]:focus, h2[tabindex="-1"]:focus { outline: none; }
+[tabindex="-1"]:focus:not(:focus-visible), h1[tabindex="-1"]:focus, h2[tabindex="-1"]:focus { outline: none; box-shadow: none; }
 
 
 /* V5.2 theme selectors must outrank the older :root compatibility variables. */
