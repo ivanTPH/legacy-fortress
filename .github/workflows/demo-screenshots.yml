@@ -28,6 +28,15 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Wait until TEST is serving this version
+        # Merging the request redeploys TEST; photographing mid-deploy shows old pages and errors (10 Nov 2026).
+        run: |
+          for i in $(seq 1 60); do
+            live=$(curl -fsS -m 10 https://test.mylegacyfortress.com/api/version | sed -n 's/.*"commitSha":"\([0-9a-f]*\)".*/\1/p' || true)
+            if [ "$live" = "${GITHUB_SHA}" ]; then echo "TEST is on ${GITHUB_SHA}"; sleep 20; exit 0; fi
+            echo "Waiting for TEST (live ${live:-unknown}, want ${GITHUB_SHA})"; sleep 20
+          done
+          echo "TEST did not reach ${GITHUB_SHA} within 20 minutes"; exit 1
       - name: Photograph a synthetic demo account
         env:
           PLAYWRIGHT_BASE_URL: https://test.mylegacyfortress.com
