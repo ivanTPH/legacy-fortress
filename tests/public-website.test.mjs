@@ -36,3 +36,11 @@ test("forms say plainly that nothing is sent yet on TEST", () => {
     assert.match(fs.readFileSync(`public/site/${page}.html`, "utf8"), /TEST site: messages aren’t sent anywhere yet/);
   }
 });
+
+test("the tour can play inside guided set-up with nothing to navigate away to", () => {
+  const js = fs.readFileSync("public/site/site.js", "utf8");
+  const css = fs.readFileSync("public/site/site.css", "utf8");
+  assert.match(js, /embed=1/);
+  assert.match(css, /html\.lf-embed a\[data-signup\]\{display:none!important\}/);
+  assert.match(fs.readFileSync("app/onboarding/OnboardingPageClient.tsx", "utf8"), /src="\/how-it-works\?embed=1"/);
+});

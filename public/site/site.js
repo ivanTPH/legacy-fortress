@@ -1,4 +1,9 @@
 (function(){
+  // Inside guided set-up (/onboarding) the tour plays on its own, with nothing to navigate away to.
+  if (/[?&]embed=1(&|$)/.test(location.search)) {
+    var video = document.querySelector('section[aria-label="Video"]');
+    if (video) { document.documentElement.classList.add('lf-embed'); document.body.insertBefore(video, document.body.firstChild); }
+  }
   // Show which page you're on in the main menu.
   var here = document.body.getAttribute('data-path');
   document.querySelectorAll('nav[aria-label="Main"] a').forEach(function(a){

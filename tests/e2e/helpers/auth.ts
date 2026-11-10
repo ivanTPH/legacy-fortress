@@ -17,11 +17,10 @@ export async function signInAsSeedUser(page: Page) {
   await expect(page).toHaveURL(/\/(app\/dashboard|app\/onboarding|dashboard|onboarding)/);
 
   if (page.url().includes("/onboarding")) {
-    const terms = page.getByLabel(/i accept the terms and conditions/i);
-    if (await terms.count()) {
-      await terms.check();
-      await page.getByRole("button", { name: /go to dashboard/i }).click();
-    }
+    // Guided set-up (10 Nov 2026): confirm the name, then skip straight to the Vault.
+    const confirm = page.getByRole("button", { name: /yes, continue|^continue$/i });
+    if (await confirm.count()) await confirm.click();
+    await page.getByRole("button", { name: /skip, i.ll explore on my own/i }).click();
     await expect(page).toHaveURL(/\/(app\/dashboard|dashboard)/);
   }
 }

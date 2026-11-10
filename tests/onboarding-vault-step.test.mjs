@@ -11,12 +11,17 @@ test("onboarding includes vault category selection and persists shared preferenc
   const settingsRoute = fs.readFileSync(path.join(root, "app/(app)/settings/page.tsx"), "utf8");
 
   assert.match(config, /"vault_categories"/);
-  assert.match(onboardingPage, /Choose your vault categories/);
+  // Guided set-up (UX review, 10 Nov 2026): three questions feed the same shared preferences; Skip keeps every area on.
   assert.match(onboardingPage, /saveVaultPreferences/);
-  assert.match(onboardingPage, /getVaultSubsectionsForGroup/);
-  assert.match(onboardingPage, /What matters to you right now/);
-  assert.match(onboardingPage, /Not relevant/);
-  assert.match(onboardingPage, /I&apos;ll decide later/);
+  assert.match(onboardingPage, /setVaultApplicability/);
+  assert.match(onboardingPage, /Do you have a Will\?/);
+  assert.match(onboardingPage, /Do you have a Power of Attorney\?/);
+  assert.match(onboardingPage, /Skip, I’ll explore on my own/);
+  assert.match(onboardingPage, /Skip this question/);
   assert.match(onboardingPage, /"vault_categories"/);
+  assert.match(onboardingPage, /saveTermsAcceptance\(supabase, user\.id, \{ accepted: true, source: "onboarding" \}\)/);
+  assert.match(onboardingPage, /By continuing you agree to our/);
+  assert.match(onboardingPage, /is_completed: true/);
+  assert.doesNotMatch(onboardingPage, /invite|sendInvitation|grant/i, "set-up never invites or shares");
   assert.match(settingsRoute, /router\.replace\("\/account\/my-vault"\)/);
 });
