@@ -400,6 +400,11 @@
 .lf-setup-brand { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: var(--lf-text); }
 .lf-setup-back { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--lf-link); font: inherit; font-size: 17px; cursor: pointer; }
 .lf-setup-steplabel { font-size: 15px; color: var(--lf-text-secondary); }
+.lf-setup-steps { display: grid; gap: 8px; }
+/* "Skip set-up": same words, same place on every screen; a full-size target, not a faint link. */
+.lf-setup-skip { min-height: 44px; padding: 0 14px; border: 1px solid var(--lf-border-input); border-radius: 12px; background: var(--lf-surface-card); color: var(--lf-text); font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 120ms; }
+.lf-setup-skip:hover { background: var(--lf-surface-hover); }
+.lf-setup-skip:disabled { opacity: 0.6; cursor: progress; }
 .lf-setup-progress { height: 6px; border-radius: 999px; background: var(--lf-surface-subtle); overflow: hidden; }
 .lf-setup-progress span { display: block; height: 100%; border-radius: 999px; background: var(--lf-primary-bg); transition: width 200ms var(--lf-ease, ease); }
 .lf-setup-body { display: grid; gap: 14px; }
@@ -425,7 +430,7 @@
 .lf-setup-legal { margin: 0; font-size: 15px; color: var(--lf-text-secondary); text-align: center; }
 .lf-setup-legal a { color: var(--lf-link); font-weight: 600; }
 .lf-setup-status { margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--lf-status-rejected-bg); color: var(--lf-status-rejected-text); font-size: 15px; }
-@media (prefers-reduced-motion: reduce) { .lf-setup-progress span, .lf-setup-choice, .lf-setup-answer { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .lf-setup-progress span, .lf-setup-choice, .lf-setup-answer, .lf-setup-skip { transition: none; } }
 /* Your next steps on Home (UX review, 10 Nov 2026). */
 .lf-v3-next-steps { display: grid; gap: 10px; margin: 4px 0 8px; }
 .lf-v3-next-steps-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }

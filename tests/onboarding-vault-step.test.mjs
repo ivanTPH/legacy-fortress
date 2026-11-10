@@ -16,11 +16,13 @@ test("onboarding includes vault category selection and persists shared preferenc
   assert.match(onboardingPage, /setVaultApplicability/);
   assert.match(onboardingPage, /Do you have a Will\?/);
   assert.match(onboardingPage, /Do you have a Power of Attorney\?/);
-  assert.match(onboardingPage, /Skip, I’ll explore on my own/);
-  assert.match(onboardingPage, /Skip this question/);
+  // One way out, worded the same everywhere (owner, 10 Nov 2026): "Skip this step" and "Skip set-up".
+  assert.match(onboardingPage, /className="lf-setup-skip" onClick=\{\(\) => void skipSetUp\(\)\}[^>]*>Skip set-up</);
+  assert.equal((onboardingPage.match(/>Skip this step</g) ?? []).length + (onboardingPage.match(/: "Skip this step"\}/g) ?? []).length, 3, "three steps, each with Skip this step");
+  assert.doesNotMatch(onboardingPage, /I’ll do this later|explore on my own|Skip this question|from Help/);
   assert.match(onboardingPage, /"vault_categories"/);
   assert.match(onboardingPage, /saveTermsAcceptance\(supabase, user\.id, \{ accepted: true, source: "onboarding" \}\)/);
-  assert.match(onboardingPage, /By continuing you agree to our/);
+  assert.match(onboardingPage, /By continuing or skipping, you agree to our/);
   assert.match(onboardingPage, /is_completed: true/);
   assert.doesNotMatch(onboardingPage, /invite|sendInvitation|grant/i, "set-up never invites or shares");
   assert.match(settingsRoute, /router\.replace\("\/account\/my-vault"\)/);

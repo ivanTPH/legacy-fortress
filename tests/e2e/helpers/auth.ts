@@ -17,10 +17,8 @@ export async function signInAsSeedUser(page: Page) {
   await expect(page).toHaveURL(/\/(app\/dashboard|app\/onboarding|dashboard|onboarding)/);
 
   if (page.url().includes("/onboarding")) {
-    // Guided set-up (10 Nov 2026): confirm the name, then skip straight to the Vault.
-    const confirm = page.getByRole("button", { name: /yes, continue|^continue$/i });
-    if (await confirm.count()) await confirm.click();
-    await page.getByRole("button", { name: /skip, i.ll explore on my own/i }).click();
+    // Guided set-up (10 Nov 2026): "Skip set-up" sits top right on every screen and goes straight to the Vault.
+    await page.getByRole("button", { name: "Skip set-up" }).first().click();
     await expect(page).toHaveURL(/\/(app\/dashboard|dashboard)/);
   }
 }
