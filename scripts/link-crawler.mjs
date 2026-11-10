@@ -10,6 +10,13 @@ const pageFiles = walk(appDir).filter((file) => file.endsWith("/page.tsx"));
 const routes = pageFiles.map((file) => toRoute(file));
 const explicit = routes.filter((route) => !route.includes("["));
 const dynamic = routes.filter((route) => route.includes("["));
+// The public website pages (/, /terms, /privacy…) are static files served by rewrites in next.config.ts.
+const nextConfig = fs.existsSync(path.join(root, "next.config.ts")) ? fs.readFileSync(path.join(root, "next.config.ts"), "utf8") : "";
+const rewritten = [...nextConfig.matchAll(/source:\s*["'](\/[a-z0-9/-]*)["']/g)].map((match) => match[1]).filter((route) => !route.includes(":"));
+for (const list of nextConfig.matchAll(/\[([^\]]*)\]\.map\(\(page\) => \(\{ source: `\/\$\{page\}`/g)) {
+  rewritten.push(...[...list[1].matchAll(/["']([a-z0-9-]+)["']/g)].map((match) => `/${match[1]}`));
+}
+explicit.push(...rewritten);
 
 const sourceFiles = walk(path.join(root, "app"))
   .concat(walk(path.join(root, "components")))
