@@ -7,7 +7,7 @@ import type { VaultApplicabilityState } from "../../../../lib/vaultPreferences";
 import { countOpenNeedsYou, getVaultTaskGroup } from "../../../../lib/workflow/taskGroups";
 import Icon from "../../../../components/ui/Icon";
 import SwipeToClear from "../../../../components/notifications/SwipeToClear";
-import { loadSeenActions, saveSeenActions, useInboxUpdates } from "../../../../lib/notifications/inboxUpdates";
+import { actionReadKey, useInboxReads, useInboxUpdates } from "../../../../lib/notifications/inboxUpdates";
 
 type ActionQueuePanelProps = {
   items: BlockingItem[];
@@ -283,8 +283,8 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
     () => getActiveActionRows(items, context ? { ...context, guidanceItems } : undefined),
     [context, guidanceItems, items],
   );
-  const { updates, loading: updatesLoading, markRead, markUnread, clear, restore } = useInboxUpdates(true);
-  const [seenActions, setSeenActions] = useState<string[]>([]);
+  const reads = useInboxReads();
+  const { updates, loading: updatesLoading, markRead, markUnread, clear, restore } = useInboxUpdates(true, reads);
   const [selection, setSelection] = useState<InboxSelection>(null);
   const [willChoice, setWillChoice] = useState<"yes" | "no" | "unsure" | null>(null);
   const [filter, setFilter] = useState<InboxFilter>("all");
@@ -294,7 +294,6 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
   const selectedUpdate = selection?.kind === "update" ? updates.find((item) => item.id === selection.id) ?? null : null;
 
   useEffect(() => {
-    queueMicrotask(() => setSeenActions(loadSeenActions()));
     const params = new URLSearchParams(window.location.search);
     const wanted = params.get("filter");
     if (wanted === "todo" || wanted === "actions") queueMicrotask(() => setFilter("actions"));
@@ -320,7 +319,7 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
 
   function openAction(row: ActionCentreRow) {
     setWillChoice(null);
-    setSeenActions((current) => saveSeenActions([...current, row.actionKey]));
+    reads.markRead([actionReadKey(row.actionKey)]);
     setSelection({ kind: "action", key: row.actionKey });
   }
   function openUpdate(id: string) {
@@ -334,7 +333,7 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
   }
   function markAllRead() {
     markRead(updates.map((item) => item.id));
-    setSeenActions((current) => saveSeenActions([...current, ...rows.map((row) => row.actionKey)]));
+    reads.markRead(rows.map((row) => actionReadKey(row.actionKey)));
   }
 
   const groupLabel = (row: ActionCentreRow) => actionGroup(row) === "todo" ? "Needs you" : actionGroup(row) === "waiting" ? "Waiting on others" : "Suggested";
@@ -365,7 +364,7 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
       {!rows.length && !updates.length && !updatesLoading ? <section style={clearStateStyle}><strong>You’re all caught up.</strong><span>Things to do and updates about your Vault will appear here.</span></section> : null}
       <div className="lf-action-centre-inbox lf-inbox-list" role="list">
         {showActions ? rows.map((row) => {
-          const isNew = !seenActions.includes(row.actionKey);
+          const isNew = !reads.read.includes(actionReadKey(row.actionKey));
           return <article key={row.actionKey} role="listitem" className="lf-v52-todo-row lf-inbox-row" data-task-group={actionGroup(row)}>
             <button type="button" className="lf-v52-todo-row-button" onClick={() => openAction(row)} aria-label={`Action, ${groupLabel(row)}${isNew ? ", new" : ""}: ${row.title}. Open`}>
               {dot("action", isNew)}
@@ -431,6 +430,7 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
             ) : null}
             {selectedRow.guidanceItem && onGuidanceDecision ? <button type="button" className="lf-inbox-quiet" disabled={guidanceBusyKey === selectedRow.guidanceItem.key} onClick={() => { onGuidanceDecision(selectedRow.guidanceItem!, "not_relevant"); setSelection(null); }}>{(selectedRow.guidanceItem as { dismissLabel?: string }).dismissLabel ?? "This doesn’t apply to me"}</button> : null}
             {selectedRow.guidanceItem?.learnMoreHref ? <a href={selectedRow.guidanceItem.learnMoreHref} className="lf-inbox-quiet">Learn more</a> : null}
+            <button type="button" className="lf-inbox-quiet" onClick={() => { reads.markUnread(actionReadKey(selectedRow.actionKey)); setSelection(null); }}>Mark as unread</button>
           </section>
         </div>
       ) : null}
