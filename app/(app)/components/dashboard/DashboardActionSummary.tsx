@@ -28,10 +28,10 @@ export default function DashboardActionSummary({ items, context, guidanceItems, 
   if (!preview.length) return null;
 
   return (
-    <section id="action-centre" className="lf-dashboard-action-summary" aria-label="To do">
+    <section id="action-centre" className="lf-dashboard-action-summary" aria-label="Inbox">
       <div className="lf-dashboard-action-summary-heading">
         <div>
-          <h2>To do</h2>
+          <h2>Inbox</h2>
         </div>
         <Link className="lf-dashboard-action-summary-link" href="/actions?filter=todo">
           See all {count}

@@ -456,3 +456,48 @@
   .lf-setup-aside li .lf-icon { flex-shrink: 0; opacity: 0.85; }
   .lf-setup-card .lf-setup-brand { visibility: hidden; }
 }
+
+/* Inbox (owner decision 10 Nov 2026): things to do and updates in one list, like Mail. Orange dot = action, blue = update;
+   filled = new, outline = read. Each row also says "Action" or "Update" in words, so colour is never the only signal. */
+.lf-inbox { --lf-inbox-action: #C2532A; --lf-inbox-update: #2F6DB0; }
+:root[data-theme="dark"] .lf-inbox { --lf-inbox-action: #F0A98A; --lf-inbox-update: #8DB8EA; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .lf-inbox { --lf-inbox-action: #F0A98A; --lf-inbox-update: #8DB8EA; } }
+.lf-inbox-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.lf-inbox-toolbar-actions { display: flex; flex-wrap: wrap; gap: 4px; }
+.lf-inbox-key { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; font-size: 13px; color: var(--lf-text-secondary); }
+.lf-inbox-key > span { display: inline-flex; align-items: center; gap: 6px; }
+.lf-inbox-dot { display: inline-block; flex: none; width: 12px; height: 12px; border-radius: 50%; box-sizing: border-box; border: 2px solid var(--lf-inbox-dot); background: transparent; --lf-inbox-dot: var(--lf-inbox-update); }
+.lf-inbox-dot.is-action { --lf-inbox-dot: var(--lf-inbox-action); }
+.lf-inbox-dot.is-new { background: var(--lf-inbox-dot); box-shadow: 0 0 0 3px color-mix(in srgb, var(--lf-inbox-dot) 22%, transparent); }
+.lf-v51-action-filters .lf-inbox-dot { width: 10px; height: 10px; }
+.lf-v51-action-filters button[aria-pressed="true"] .lf-inbox-dot { box-shadow: 0 0 0 2px var(--lf-primary-text); }
+.lf-inbox-list { display: grid; }
+.lf-inbox .lf-v52-todo-row-button { grid-template-columns: 16px minmax(0, 1fr) 20px; align-items: start; }
+.lf-inbox .lf-v52-todo-row-button > .lf-inbox-dot { margin-top: 5px; }
+.lf-inbox .lf-v52-todo-row-button > .lf-icon:last-child { align-self: center; color: var(--lf-text-secondary); }
+.lf-inbox-row strong { font-weight: 500; }
+.lf-inbox-row strong.is-new { font-weight: 700; }
+.lf-inbox-tag { font-size: 12px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; }
+.lf-inbox-tag.is-action { color: var(--lf-inbox-action); }
+.lf-inbox-tag.is-update { color: var(--lf-inbox-update); }
+.lf-inbox-tag time { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--lf-text-secondary); }
+/* Opening a message: a reading pane on the right on laptops; the whole screen on phones, like Mail. */
+.lf-inbox-message { width: min(560px, 100%); gap: 14px; padding: 24px; }
+.lf-inbox-message h2 { margin: 0; font-family: "Newsreader", Georgia, serif; font-weight: 500; font-size: 28px; line-height: 1.2; color: var(--lf-text); }
+.lf-inbox-message-body { margin: 0; font-size: 17px; line-height: 1.5; color: var(--lf-text); }
+.lf-inbox-message-meta { margin: 0; font-size: 14px; color: var(--lf-text-secondary); }
+.lf-inbox-back { justify-self: start; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--lf-link); font: inherit; font-size: 17px; cursor: pointer; }
+.lf-inbox-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 52px; padding: 0 20px; border: 0; border-radius: 14px; background: var(--lf-primary-bg); color: var(--lf-primary-text); font: inherit; font-size: 17px; font-weight: 600; text-decoration: none; cursor: pointer; }
+.lf-inbox-message-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.lf-inbox-secondary { min-height: 48px; padding: 0 14px; border: 1px solid var(--lf-border-input); border-radius: 12px; background: var(--lf-surface-card); color: var(--lf-text); font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
+.lf-inbox-secondary:hover, .lf-inbox-quiet:hover { background: var(--lf-surface-hover); }
+.lf-inbox-quiet { justify-self: start; min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--lf-link); font: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
+.lf-inbox-primary:disabled, .lf-inbox-secondary:disabled, .lf-inbox-quiet:disabled { opacity: 0.6; cursor: progress; }
+@media (min-width: 701px) {
+  .lf-action-centre-drawer-backdrop:has(.lf-inbox-message) { padding: 0; }
+  .lf-action-centre-drawer.lf-inbox-message { height: 100vh; max-height: none; border-radius: 0; border-width: 0 0 0 1px; padding: 32px 40px; }
+}
+@media (max-width: 700px) {
+  .lf-action-centre-drawer-backdrop:has(.lf-inbox-message) { padding: 0; align-items: stretch; background: var(--lf-surface-page); }
+  .lf-action-centre-drawer.lf-inbox-message { width: 100%; height: 100dvh; max-height: none; border: 0; border-radius: 0; box-shadow: none; padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)); }
+}

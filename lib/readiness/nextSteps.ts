@@ -5,7 +5,7 @@ import type { VaultPreferences } from "../vaultPreferences.ts";
 import { expiryOf, identityDocumentLabel, identityDocumentStatuses } from "../records/identityDocuments.ts";
 
 /**
- * Next steps (owner decision 4 Nov 2026): ONE rule for To do, the notifications bell and the summary email.
+ * Next steps (owner decision 4 Nov 2026): ONE rule for the Inbox (formerly To do and the bell) and the summary email.
  * Built from what is actually in the Vault, so it never asks for something already there, and progresses
  * one step at a time (e.g. Will → people it names → invited → accepted → chosen to receive the Vault).
  *

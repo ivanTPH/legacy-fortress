@@ -18,7 +18,7 @@ const PASSWORD = `StagingDemoShots-${Date.now()}-Aa1!`;
 const OUT = "test-results/demo-shots";
 const PAGES_ALL = ["/dashboard", "/finances", "/finances/bank", "/property", "/legal", "/legal/wills", "/personal", "/contacts", "/people-access", "/people-access?view=vault-access", "/people-access?view=sharing", "/access-sharing", "/account/billing",
   // UX review (10 Nov 2026): the rest of the everyday screens.
-  "/business", "/vault/digital", "/vault/personal", "/notifications", "/action-centre", "/settings", "/settings/security", "/settings/my-vault", "/support", "/profile", "/add"]; // /onboarding has its own guided set-up test below
+  "/business", "/vault/digital", "/vault/personal", "/actions", "/actions?filter=updates", "/settings", "/settings/security", "/settings/my-vault", "/support", "/profile", "/add"]; // /onboarding has its own guided set-up test below
 // Tour video (owner request 7 Nov 2026): the same steps with a record opened, so the film can zoom in on it.
 const PAGES = PAGES_ALL;
 const OPENED_ALL = ["/finances/bank", "/legal/wills", "/contacts"];
@@ -193,6 +193,36 @@ for (const kind of ["desk", "phone"] as const) {
     await expect(page.getByText(/Finances/).filter({ visible: true }).first()).toBeVisible({ timeout: 30_000 });
     expect(new URL(page.url()).pathname).not.toMatch(/sign-in|verify-device/);
     await shoot(page, `journey-${kind}-4-vault`);
+    await context.close();
+  });
+}
+
+// Inbox (owner, 10 Nov 2026): one list of actions and updates; opening one shows it whole, like Mail.
+// Opening only marks it read on this browser; nothing is completed, cleared or changed on TEST.
+for (const kind of ["desk", "phone"] as const) {
+  test(`inbox (${kind})`, async ({ browser }) => {
+    test.setTimeout(180_000);
+    const context = kind === "desk"
+      ? await browser.newContext({ viewport: { width: 1440, height: 900 } })
+      : await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+    const page = await context.newPage();
+    await signIn(page);
+    await page.goto(`${BASE_URL}/actions`, { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Inbox" }).filter({ visible: true }).first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("button", { name: /^Actions/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Updates/ })).toBeVisible();
+    await expect(page.locator(".lf-notification-control")).toHaveCount(0);
+    await page.waitForTimeout(1500);
+    await shoot(page, `inbox-${kind}-1-all`);
+    const first = page.locator(".lf-inbox-row button").first();
+    if (await first.count()) {
+      await first.click();
+      await expect(page.locator(".lf-inbox-message")).toBeVisible();
+      await shoot(page, `inbox-${kind}-2-opened`);
+      await page.getByRole("button", { name: "Inbox" }).filter({ visible: true }).first().click();
+    }
+    await page.getByRole("button", { name: /^Updates/ }).click();
+    await shoot(page, `inbox-${kind}-3-updates`);
     await context.close();
   });
 }

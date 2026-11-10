@@ -17,7 +17,8 @@ test("a suggestion notification names the record it's for, inside the app only",
 test("stored notifications still carry no record details; the label is looked up when shown", () => {
   const migration = fs.readFileSync(new URL("../supabase/migrations/20261103120000_record_suggestions.sql", import.meta.url), "utf8");
   assert.match(migration, /notify\(v_owner, 'suggestion_pending', v_me, '\/actions\?review=' \|\| v_id::text\)/);
-  for (const file of ["components/notifications/NotificationBell.tsx", "app/(app)/notifications/page.tsx"]) {
+  // Updates now load in the Inbox (owner, 10 Nov 2026).
+  for (const file of ["lib/notifications/inboxUpdates.ts"]) {
     assert.match(fs.readFileSync(new URL(`../${file}`, import.meta.url), "utf8"), /loadSuggestionRecordLabels\(supabase/);
   }
   assert.doesNotMatch(fs.readFileSync(new URL("../lib/summaryEmail/service.ts", import.meta.url), "utf8"), /suggestionContext/);

@@ -38,12 +38,12 @@ export default function V3DashboardOverview({ loading, areas, recordCount, peopl
       <div><span>Estimated value</span><strong>{loading ? "…" : recordedValue}</strong>{!loading && lifeCover ? <small className="lf-v3-life-cover">Plus {lifeCover} life cover</small> : null}</div>
       <div><span>Records</span><strong>{count(recordCount)}</strong></div>
       {peopleCount !== undefined ? <div><span>People</span><strong>{count(peopleCount)}</strong></div> : null}
-      {actionCount !== undefined ? <div><span>To do</span><strong>{count(actionCount)}</strong></div> : null}
+      {actionCount !== undefined ? <div><span>Inbox</span><strong>{count(actionCount)}</strong></div> : null}
     </Card>
     <Card className="lf-v3-mobile-value" aria-label="Estimated value">
       <span>Estimated value</span><strong>{loading ? "…" : recordedValue}</strong>{!loading && lifeCover ? <small className="lf-v3-life-cover">Plus {lifeCover} life cover</small> : null}
     </Card>
-    {/* Prompts live only in To do (owner, 10 Nov 2026): on Home they repeated the To do button and confused it. */}
+    {/* Prompts live only in the Inbox (owner, 10 Nov 2026): on Home they repeated it and confused what it is for. */}
     <section aria-label="Vault areas" className="lf-v3-vault-overview">
       <VaultSectionGrid sections={areas.map((area) => ({
         key: area.href, title: area.title, icon: area.icon, href: area.href,

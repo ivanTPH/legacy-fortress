@@ -9,7 +9,7 @@ const GROUPS = [
   { title: "Records", kinds: ["asset"] },
   { title: "Documents", kinds: ["document", "attachment"] },
   { title: "People", kinds: ["contact"] },
-  { title: "To do", kinds: ["task"] },
+  { title: "Inbox", kinds: ["task"] },
   { title: "Pages", kinds: ["navigation"] },
 ] as const;
 
@@ -52,7 +52,7 @@ function VaultSearchContent({
     {!query ? <div className="lf-v52-search-intro">
       <h1>Try searching for</h1>
       <div className="lf-v52-search-prompts">{PROMPTS.map((prompt) => <button type="button" key={prompt.label} onClick={() => onSearch(prompt.label)}><Icon name={prompt.icon} size={18} />{prompt.label}</button>)}</div>
-      <p>Searches record names, people, document titles and To do. Account numbers and values are never searched. Recent searches aren&apos;t saved.</p>
+      <p>Searches record names, people, document titles and your Inbox. Account numbers and values are never searched. Recent searches aren&apos;t saved.</p>
     </div> : loading ? <div className="lf-v52-search-intro" role="status">Searching your authorised Vault…</div> : results.length ? <div className="lf-v52-search-groups">
       {GROUPS.map((group) => {
         const entries = results.filter((result) => (group.kinds as readonly string[]).includes(result.kind));

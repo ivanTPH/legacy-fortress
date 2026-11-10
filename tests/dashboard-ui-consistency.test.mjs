@@ -140,7 +140,7 @@ test("dashboard uses authorised Version 3 area summaries and keeps live actions"
   assert.doesNotMatch(summaryCard, /actionIcon/);
   assert.match(summaryCard, /className="lf-dashboard-summary-value" style=\{valueStyle\}/);
   assert.match(summaryCard, /className="lf-dashboard-summary-detail" style=\{detailStyle\}/);
-  assert.match(actionQueue, /aria-label="To do"/);
+  assert.match(actionQueue, /aria-label="Inbox"/);
   assert.match(actionQueue, /className="lf-action-centre"/);
   assert.match(actionQueue, /className="lf-action-centre-header"/);
   assert.match(actionQueue, /className="lf-action-centre-intro"/);
@@ -208,7 +208,7 @@ test("dashboard uses authorised Version 3 area summaries and keeps live actions"
   assert.match(searchResults, /aria-label="Search your vault"/);
   assert.match(searchResults, /Clear search/);
   assert.match(searchResults, /Nothing matches/);
-  assert.match(searchResults, /Searches record names, people, document titles and To do/);
+  assert.match(searchResults, /Searches record names, people, document titles and your Inbox/);
   assert.match(fs.readFileSync(path.join(root, "app/(app)/layout.tsx"), "utf8"), /placeholder="Search your vault"/);
   assert.match(v3Overview, /aria-label="Vault areas"/);
   assert.match(dashboardPage, /guidanceItems=\{guidanceItems\}/);

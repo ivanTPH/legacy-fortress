@@ -31,7 +31,6 @@ import { AccessibilityPreferencesProvider } from "../../components/accessibility
 import WorkspaceSwitcher from "../../components/navigation/WorkspaceSwitcher";
 import FounderTestLauncher, { useFounderTestLauncherAccess } from "../../components/navigation/FounderTestLauncher";
 import WorkspaceAccountLinks from "../../components/navigation/WorkspaceAccountLinks";
-import NotificationBell from "../../components/notifications/NotificationBell";
 import PremiumSheet from "../../components/billing/PremiumSheet";
 import { DEMO_EXPERIENCE_LABEL, DEMO_EXPERIENCE_SUBLABEL, isDemoSessionUser } from "../../lib/demo/config";
 import {
@@ -1218,10 +1217,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
               <Icon name={resolvedViewerAccess.mode === "linked" ? "visibility_lock" : "verified_user"} size={16} filled />
               <span>Vault secured</span>
             </div>
-            <NotificationBell
-              ownerUserId={resolvedViewerAccess.mode === "owner" ? (resolvedViewerAccess.targetOwnerUserId || null) : null}
-              disabled={resolvedViewerAccess.mode === "linked"}
-            />
+            {/* The bell is gone: updates now live in the Inbox with things to do (owner, 10 Nov 2026). */}
             <div ref={accountMenuRef} className="lf-admin-shell-account-menu lf-personal-account-menu">
               <button ref={accountTriggerRef} type="button" className="lf-admin-shell-account-trigger" aria-label={`Open account menu for ${effectiveDisplayName}`} aria-expanded={accountMenuOpen} aria-controls={accountMenuId} aria-haspopup="menu" onClick={toggleAccountMenu}>
                 <span className="lf-admin-shell-avatar" aria-hidden="true">
@@ -1364,13 +1360,13 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
         <nav className="lf-mobile-bottom-nav" aria-label="Primary mobile navigation">
           {[
             ["/dashboard", "Home", "home"],
-            ["/actions", "To do", "task_alt"],
+            ["/actions", "Inbox", "inbox"],
             ["/people-access", "People", "group"],
             ["/settings", "Settings", "settings"],
           ].filter(([href]) => canViewPath(href, resolvedViewerAccess)).map(([href, label, icon]) => {
             const active = pathname === href || (href === "/people-access" && ["/contacts", "/access-requests", "/access"].includes(pathname)) || (href === "/actions" && pathname === "/action-centre") || (href === "/settings" && (pathname === "/profile" || pathname.startsWith("/account/"))) || (href !== "/dashboard" && pathname.startsWith(`${href}/`));
             return (
-              <Link key={href} href={href} className={`lf-mobile-bottom-nav-item${active ? " is-active" : ""}`} aria-current={active ? "page" : undefined} aria-label={href === "/actions" && needsYouCount > 0 ? `To do, ${needsYouCount} open Needs you items` : label}>
+              <Link key={href} href={href} className={`lf-mobile-bottom-nav-item${active ? " is-active" : ""}`} aria-current={active ? "page" : undefined} aria-label={href === "/actions" && needsYouCount > 0 ? `Inbox, ${needsYouCount} ${needsYouCount === 1 ? "thing needs" : "things need"} you` : label}>
                 <Icon name={icon} size={21} filled={active} />
                 <span>{label}</span>
                 {href === "/actions" && needsYouCount > 0 ? <span className="lf-mobile-tab-badge" aria-hidden="true">{needsYouCount > 99 ? "99+" : needsYouCount}</span> : null}
