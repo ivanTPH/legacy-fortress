@@ -48,7 +48,7 @@ export default function V3DashboardOverview({ loading, areas, recordCount, peopl
       <span>Estimated value</span><strong>{loading ? "…" : recordedValue}</strong>{!loading && lifeCover ? <small className="lf-v3-life-cover">Plus {lifeCover} life cover</small> : null}
     </Card>
     {!loading && nextSteps && nextSteps.length ? <section className="lf-v3-next-steps" aria-labelledby="lf-next-steps-title">
-      <div className="lf-v3-next-steps-head"><h2 id="lf-next-steps-title">Your next steps</h2><Link href="/action-centre">See all</Link></div>
+      <div className="lf-v3-next-steps-head"><h2 id="lf-next-steps-title">Your next steps</h2><Link href="/action-centre">{actionCount && actionCount > nextSteps.length ? `See all ${actionCount}` : "See all"}</Link></div>
       <ul>
         {nextSteps.map((step) => <li key={step.key}><Link href={step.href}>
           <span className="lf-v3-next-step-title">{step.title}</span>

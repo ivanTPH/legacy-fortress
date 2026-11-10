@@ -3,6 +3,7 @@
 [hidden]{display:none!important}
 .test-note{margin:10px 0 0;font-size:13px;color:#6B5F5A}
 html.lf-from-setup a[data-signup]{display:none!important}
+html.lf-from-setup section[aria-label="Video"]{scroll-margin-top:72px}
 .setup-return{position:sticky;top:0;z-index:50;display:flex;justify-content:center;padding:10px 16px;background:#2B1714}
 .setup-return a{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 18px;border-radius:12px;background:#FFFFFF;color:#2B1714;font-weight:600;font-size:17px;text-decoration:none}
 /* Legacy Fortress brand, as signed off in the website designs: one light look on purpose. */
