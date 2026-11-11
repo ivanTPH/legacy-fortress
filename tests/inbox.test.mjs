@@ -13,8 +13,8 @@ test("Inbox, Mail style: categories All / Needs you / Waiting / Updates; badge-l
   assert.match(css, /\.lf-inbox-category\.is-needs\[aria-pressed="true"\]/);
 });
 
-test("one tap goes straight to the thing; only your own tasks and the Will question open first", () => {
-  assert.match(panel, /const opensFirst = ownTask \|\| \(guidance\?\.key === "will"/);
+test("one tap goes straight to the thing; only your own tasks, the Will question and the executor/attorney decisions open first", () => {
+  assert.match(panel, /const opensFirst = ownTask \|\| Boolean\(guidance && NAMED_PEOPLE_STEPS\[String\(guidance\.key\)\]\)\n        \|\| \(guidance\?\.key === "will"/);
   assert.match(panel, /if \(opensFirst\) setOpened\(key\); else onAction\(row\.actionKey\);/);
   assert.match(panel, /open: \(\) => \{ markRead\(ids\); window\.location\.assign\(latest\.href\); \}/);
   // A tap on your own task never ticks it off; Mark as done is its own button.
@@ -59,4 +59,21 @@ test("the bell is gone; Inbox replaces To do in the menus; old Notifications lin
   assert.doesNotMatch(read("app/(app)/layout.tsx"), /<NotificationBell/);
   assert.match(read("app/(app)/layout.tsx"), /\["\/actions", "Inbox", "inbox"\]/);
   assert.match(read("app/(app)/notifications/page.tsx"), /router\.replace\("\/actions\?filter=updates"\)/);
+});
+
+test("executors and attorneys are decided in the Inbox, using the record page's own services (owner, 11 Nov 2026)", () => {
+  const panelFile = read("components/inbox/NamedPeoplePanel.tsx");
+  assert.match(panel, /review_executors: "will", invite_executors: "will", remind_executors: "will"/);
+  assert.match(panelFile, /reviewLinkedPersonSuggestion\(supabase, \{\s*ownerUserId, suggestionId: person\.suggestionId, decision: "confirm", choice: "new"/);
+  assert.match(panelFile, /sendRecordLinkedPersonInvitation\(supabase, \{ ownerUserId, recordType: person\.recordType/);
+  // A Will rarely has an email: inviting needs one, and says so.
+  assert.match(panelFile, /Needed to invite them\. We didn’t find one in your \{docName\}\./);
+  assert.match(panelFile, /if \(sendInvite && !email\) \{ setError\("Add an email address to invite them, or choose Add without inviting\."\); return; \}/);
+  // Orange ✓ Sent, green ✓ Accepted, in the same place.
+  assert.match(panelFile, /<span className="lf-named-tick is-accepted">✓ Accepted<\/span>/);
+  assert.match(panelFile, /<span className="lf-named-tick is-sent">✓ Sent<\/span>/);
+  assert.match(css, /\.lf-named-tick\.is-sent \{ color: var\(--lf-inbox-needs/);
+  // Never shares anything: the invite service sends an empty permissions override.
+  assert.match(read("lib/linkedPeople/recordLinkedPeople.ts"), /permissionsOverride: \{ asset_ids: \[\], record_ids: \[\]/);
+  assert.match(panelFile, /Accepting it doesn’t let them see anything\./);
 });

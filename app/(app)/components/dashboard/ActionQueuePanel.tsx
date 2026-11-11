@@ -7,6 +7,7 @@ import type { VaultApplicabilityState } from "../../../../lib/vaultPreferences";
 import { countOpenNeedsYou, getVaultTaskGroup } from "../../../../lib/workflow/taskGroups";
 import Icon from "../../../../components/ui/Icon";
 import SwipeRow from "../../../../components/inbox/SwipeRow";
+import NamedPeoplePanel from "../../../../components/inbox/NamedPeoplePanel";
 import { actionReadKey, useInboxLater, useInboxReads, useInboxUpdates } from "../../../../lib/notifications/inboxUpdates";
 
 type ActionQueuePanelProps = {
@@ -313,6 +314,12 @@ function laterDate(choice: "tomorrow" | "week" | string) {
   return Number.isNaN(picked.getTime()) ? null : picked;
 }
 
+/** Will and Power of Attorney people steps are decided in the Inbox itself (owner, 11 Nov 2026). */
+const NAMED_PEOPLE_STEPS: Record<string, "will" | "poa"> = {
+  review_executors: "will", invite_executors: "will", remind_executors: "will",
+  review_attorneys: "poa", invite_attorneys: "poa", remind_attorneys: "poa",
+};
+
 function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidanceDecision, onGuidanceApplicability, guidanceBusyKey }: ActionQueuePanelProps) {
   const rows = useMemo(
     () => getActiveActionRows(items, context ? { ...context, guidanceItems } : undefined),
@@ -331,6 +338,7 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
   const [toast, setToast] = useState<{ text: string; undo?: () => void } | null>(null);
   const [opened, setOpened] = useState<string | null>(null);
   const [willChoice, setWillChoice] = useState<"yes" | "no" | "unsure" | null>(null);
+  const [peopleChanged, setPeopleChanged] = useState(false);
   const requestedActionHandled = useRef(false);
 
   useEffect(() => {
@@ -365,7 +373,8 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
       const group = actionGroup(row);
       const guidance = row.guidanceItem;
       const ownTask = row.actionKey.startsWith("task:complete:");
-      const opensFirst = ownTask || (guidance?.key === "will" && guidance.state === "unknown" && Boolean(onGuidanceApplicability));
+      const opensFirst = ownTask || Boolean(guidance && NAMED_PEOPLE_STEPS[String(guidance.key)])
+        || (guidance?.key === "will" && guidance.state === "unknown" && Boolean(onGuidanceApplicability));
       const finish: InboxFinish = guidance && onGuidanceDecision
         ? { label: "Done", run: () => onGuidanceDecision(guidance, "already_done"), message: "Marked as done" }
         : ownTask ? { label: "Done", run: () => onAction(row.actionKey), message: "Marked as done" } : null;
@@ -542,7 +551,13 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
             <span className={`lf-inbox-tag is-${actionGroup(openedRow) === "waiting" ? "waiting" : "needs"}`}>{actionGroup(openedRow) === "waiting" ? "Waiting" : "Needs you"}</span>
             <h2 id="inbox-message-title">{openedRow.title}</h2>
             <p className="lf-inbox-message-body">{openedRow.whyItMatters}</p>
-            {openedRow.guidanceItem?.key === "will" && openedRow.guidanceItem.state === "unknown" && onGuidanceApplicability ? (
+            {openedRow.guidanceItem && NAMED_PEOPLE_STEPS[String(openedRow.guidanceItem.key)] ? (
+              <>
+                <NamedPeoplePanel doc={NAMED_PEOPLE_STEPS[String(openedRow.guidanceItem.key)]} onChanged={() => setPeopleChanged(true)} />
+                {/* The step clears itself once everyone is added and invited; closing refreshes the Inbox if anything changed. */}
+                <button type="button" className="lf-inbox-primary" onClick={() => { setOpened(null); if (peopleChanged) window.location.reload(); }}>Done</button>
+              </>
+            ) : openedRow.guidanceItem?.key === "will" && openedRow.guidanceItem.state === "unknown" && onGuidanceApplicability ? (
               <div style={drawerChoiceStyle}>
                 <fieldset className="lf-action-will-choices">
                   <legend>Have you already made a Will?</legend>

@@ -261,6 +261,27 @@ for (const kind of ["desk", "phone"] as const) {
       console.log("Inbox desk: Unread survives a reload with this browser's copy wiped (synced on TEST)");
     }
 
+    // Executors decided in place: the panel loads and its buttons can be reached (owner, 11 Nov 2026: on a phone the
+    // Add form's buttons were hidden below the screen in the design). Nothing is added or sent.
+    const executorRow = page.locator(".lf-inbox-row-button").filter({ hasText: /executor/i }).first();
+    if (await executorRow.count()) {
+      await executorRow.click();
+      await expect(page.locator(".lf-inbox-message .lf-named, .lf-inbox-message .lf-inbox-message-body").first()).toBeVisible({ timeout: 20_000 });
+      const done = page.locator(".lf-inbox-message").getByRole("button", { name: "Done", exact: true });
+      await done.scrollIntoViewIfNeeded();
+      await expect(done).toBeInViewport();
+      await shoot(page, `inbox-${kind}-4b-executors`);
+      const add = page.locator(".lf-named").getByRole("button", { name: "Add", exact: true }).first();
+      if (await add.count()) {
+        await add.click();
+        const addInvite = page.getByRole("button", { name: "Add and invite" });
+        await addInvite.scrollIntoViewIfNeeded();
+        await expect(addInvite).toBeInViewport();
+        await shoot(page, `inbox-${kind}-4c-add-form`);
+      }
+      await page.locator(".lf-inbox-message .lf-inbox-back").click();
+    }
+
     await page.getByRole("button", { name: /^Updates, \d+/ }).click();
     await shoot(page, `inbox-${kind}-5-updates`);
     await page.getByRole("button", { name: /^All, \d+/ }).click();

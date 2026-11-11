@@ -574,3 +574,24 @@
 .lf-inbox-sheet > button.is-primary { justify-content: center; margin: 8px 16px; border: 0; border-radius: 14px; background: var(--lf-primary-bg); color: var(--lf-primary-text); font-weight: 600; }
 .lf-inbox-sheet > button.is-cancel { justify-content: center; color: var(--lf-link); font-weight: 600; }
 @media (prefers-reduced-motion: reduce) { .lf-swipe-content, .lf-inbox-category { transition: none; } }
+/* Executors and attorneys decided in the Inbox (owner, 11 Nov 2026): orange ✓ Sent, green ✓ Accepted. */
+.lf-named { display: grid; gap: 10px; }
+.lf-named-key { margin: 0; font-size: 14px; color: var(--lf-text-secondary); }
+.lf-named .is-sent, .lf-named-tick.is-sent { color: var(--lf-inbox-needs, #C2532A); font-weight: 700; }
+.lf-named .is-accepted, .lf-named-tick.is-accepted { color: var(--lf-inbox-done, #2E7D4F); font-weight: 700; }
+.lf-named-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--lf-border); border-radius: 16px; background: var(--lf-surface-card); }
+.lf-named-row { display: grid; gap: 8px; padding: 14px 16px; }
+.lf-named-row + .lf-named-row { border-top: 1px solid var(--lf-border); }
+.lf-named-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.lf-named-who { display: grid; gap: 2px; min-width: 0; }
+.lf-named-who small { font-size: 14px; color: var(--lf-text-secondary); }
+.lf-named-tick { flex: none; font-size: 15px; white-space: nowrap; }
+.lf-named-line .lf-inbox-secondary { flex: none; min-height: 44px; display: inline-flex; align-items: center; text-decoration: none; }
+.lf-named-form { display: grid; gap: 10px; padding: 12px; border-radius: 12px; background: var(--lf-surface-page); }
+.lf-named-form label { display: grid; gap: 4px; font-size: 14px; font-weight: 600; }
+.lf-named-form label small { font-weight: 400; color: var(--lf-text-secondary); }
+.lf-named-form input { min-height: 48px; padding: 0 12px; border: 1px solid var(--lf-border-input); border-radius: 10px; background: var(--lf-surface-card); color: var(--lf-text); font: inherit; font-size: 16px; }
+.lf-named-form input[readonly] { background: var(--lf-surface-subtle); }
+.lf-named-note { font-size: 13px; color: var(--lf-text-secondary); }
+.lf-named-notice { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--lf-inbox-done, #2E7D4F); font-weight: 600; }
+.lf-named-error { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--lf-status-rejected-bg); color: var(--lf-status-rejected-text); }
