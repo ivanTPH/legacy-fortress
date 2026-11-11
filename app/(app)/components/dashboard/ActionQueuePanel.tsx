@@ -278,6 +278,8 @@ type InboxEntry = {
   kind: InboxKind;
   /** A suggestion rather than something that must be done: listed under Needs you, but not in the badge. */
   suggested?: boolean;
+  /** Opens the executors / attorneys panel in place. */
+  named?: "will" | "poa";
   title: string;
   sub: string;
   when: string;
@@ -381,7 +383,7 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
         ? { label: "Done", run: () => onGuidanceDecision(guidance, "already_done"), message: "Marked as done" }
         : ownTask ? { label: "Done", run: () => onAction(row.actionKey), message: "Marked as done" } : null;
       return {
-        key, kind: group === "waiting" ? "waiting" : "needs", suggested: group === "suggested", title: row.title, sub: row.blockerLabel, when: "", person: null,
+        key, kind: group === "waiting" ? "waiting" : "needs", suggested: group === "suggested", named: guidance ? NAMED_PEOPLE_STEPS[String(guidance.key)] : undefined, title: row.title, sub: row.blockerLabel, when: "", person: null,
         icon: taskIcon(row), isNew: !reads.read.includes(actionReadKey(row.actionKey)), count: 1, readKeys: [actionReadKey(row.actionKey)],
         open: () => { reads.markRead([actionReadKey(row.actionKey)]); if (opensFirst) setOpened(key); else onAction(row.actionKey); },
         finish,
@@ -486,7 +488,7 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
               onLongLeft={entry.finish ? () => finishEntries([entry.key]) : undefined}
               onHold={selecting ? undefined : () => setSheet({ type: "menu", keys: [entry.key] })}
             >
-              <button type="button" className="lf-inbox-row-button" aria-label={`${entry.suggested ? "Suggested" : tag(entry.kind)}${entry.isNew ? ", new" : ""}: ${entry.title}${entry.count > 1 ? `, ${entry.count} times` : ""}. ${selecting ? (isPicked ? "Selected" : "Select") : "Open"}`}
+              <button type="button" className="lf-inbox-row-button" data-named={entry.named} aria-label={`${entry.suggested ? "Suggested" : tag(entry.kind)}${entry.isNew ? ", new" : ""}: ${entry.title}${entry.count > 1 ? `, ${entry.count} times` : ""}. ${selecting ? (isPicked ? "Selected" : "Select") : "Open"}`}
                 onClick={() => {
                   if (selecting) { setPicked((current) => current.includes(entry.key) ? current.filter((key) => key !== entry.key) : [...current, entry.key]); return; }
                   if (swiped) { setSwiped(null); return; }
