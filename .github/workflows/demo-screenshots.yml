@@ -45,7 +45,13 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
           LEGACY_FORTRESS_ALLOW_STAGING_BROWSER: "true"
         run: |
-          npx playwright install --with-deps chromium
+          # The runner's Ubuntu mirror sometimes fails to resolve (11 Nov 2026): retry, then use the browser alone.
+          ok=0
+          for i in 1 2 3; do
+            if npx playwright install --with-deps chromium; then ok=1; break; fi
+            sudo apt-get update -q || true; sleep 30
+          done
+          [ "$ok" = 1 ] || npx playwright install chromium
           npx playwright test tests/e2e/staging-demo-screenshots.spec.ts --project=desktop-chromium --retries=0
       - name: Keep the screenshots
         if: always()
