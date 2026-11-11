@@ -955,11 +955,12 @@ const legalSummary = useMemo(() => {
   );
 
   useEffect(() => {
-    if (typeof window === "undefined" || loading || viewer.mode !== "owner" || !viewer.sessionUserId) return;
+    // On the Inbox page the Inbox itself sets the badge from what it shows.
+    if (typeof window === "undefined" || loading || actionCentreOnly || viewer.mode !== "owner" || !viewer.sessionUserId) return;
     const detail = { userId: viewer.sessionUserId, count: actionCentreNeedsYouCount };
     window.sessionStorage.setItem(`lf:needs-you-count:${detail.userId}`, JSON.stringify({ count: detail.count, at: Date.now() }));
     window.dispatchEvent(new CustomEvent("lf-needs-you-count", { detail }));
-  }, [actionCentreNeedsYouCount, loading, viewer.mode, viewer.sessionUserId]);
+  }, [actionCentreNeedsYouCount, actionCentreOnly, loading, viewer.mode, viewer.sessionUserId]);
 
   const markDashboardTaskComplete = useCallback(async (taskId: string) => {
     const task = assetRows.find((row) => row.id === taskId && String(row.category_key ?? "") === "tasks");

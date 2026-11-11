@@ -229,6 +229,11 @@ for (const kind of ["desk", "phone"] as const) {
     await expect(page.locator(".lf-inbox-row").first()).toBeVisible({ timeout: 30_000 });
     await page.waitForTimeout(1200);
     await shoot(page, `inbox-${kind}-1-all`);
+    // The badge and "N need you" are the same number (owner saw 2 on the badge and "5 need you" on 11 Nov 2026).
+    const needYou = Number((await page.locator(".lf-inbox-subtitle").first().innerText()).match(/(\d+) needs? you/)?.[1] ?? "0");
+    const badge = page.locator(kind === "phone" ? ".lf-mobile-tab-badge" : ".lf-nav-badge").filter({ visible: true }).first();
+    if (needYou > 0) await expect(badge).toHaveText(String(needYou), { timeout: 10_000 });
+    else await expect(badge).toHaveCount(0, { timeout: 10_000 });
 
     // Select: tick a row, the floating bar appears; Later opens the date sheet; cancel everything.
     await page.getByRole("button", { name: "Select", exact: true }).click();
@@ -287,7 +292,7 @@ for (const kind of ["desk", "phone"] as const) {
     await page.getByRole("button", { name: /^All, \d+/ }).click();
 
     // One tap goes straight to the thing (no in-between screen) for an action that isn't your own task.
-    const target = page.locator(".lf-inbox-row.is-needs .lf-inbox-row-button").filter({ hasNotText: /User created/ }).first();
+    const target = page.locator(".lf-inbox-row.is-needs .lf-inbox-row-button").filter({ hasNotText: /Your task/ }).first();
     if (await target.count()) {
       await target.click();
       await page.waitForURL((url) => !url.pathname.startsWith("/actions") || url.search.includes("review=") || url.search.includes("request="), { timeout: 15_000 }).catch(() => undefined);

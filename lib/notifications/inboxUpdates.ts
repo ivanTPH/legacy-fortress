@@ -290,3 +290,25 @@ export function useInboxLater() {
   return { later, isLater, snooze, wake };
 }
 
+
+/** Items put off with Later that haven't come back yet, from this device's copy (kept in step with the server). */
+export function laterKeysNow(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  const now = Date.now();
+  return new Set(Object.entries(loadLaterLocal()).filter(([, until]) => Date.parse(until) > now).map(([key]) => key));
+}
+
+/**
+ * The Inbox badge (sidebar and phone tab bar). The Inbox page sets it from exactly what it shows, so the badge and
+ * "N need you" always agree; other pages fall back to the same rule (must-do items, not suggestions, not Later).
+ */
+export function publishNeedsYouCount(userId: string, count: number) {
+  if (typeof window === "undefined" || !userId) return;
+  try { window.sessionStorage.setItem(`lf:needs-you-count:${userId}`, JSON.stringify({ count, at: Date.now() })); } catch { /* optional */ }
+  window.dispatchEvent(new CustomEvent("lf-needs-you-count", { detail: { userId, count } }));
+}
+
+export async function publishNeedsYouCountForCurrentUser(count: number) {
+  const userId = await currentUserId();
+  if (userId) publishNeedsYouCount(userId, count);
+}

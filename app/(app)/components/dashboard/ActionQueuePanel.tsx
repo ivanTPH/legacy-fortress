@@ -8,7 +8,7 @@ import { countOpenNeedsYou, getVaultTaskGroup } from "../../../../lib/workflow/t
 import Icon from "../../../../components/ui/Icon";
 import SwipeRow from "../../../../components/inbox/SwipeRow";
 import NamedPeoplePanel from "../../../../components/inbox/NamedPeoplePanel";
-import { actionReadKey, useInboxLater, useInboxReads, useInboxUpdates } from "../../../../lib/notifications/inboxUpdates";
+import { actionReadKey, laterKeysNow, publishNeedsYouCountForCurrentUser, useInboxLater, useInboxReads, useInboxUpdates } from "../../../../lib/notifications/inboxUpdates";
 
 type ActionQueuePanelProps = {
   items: BlockingItem[];
@@ -276,6 +276,8 @@ type InboxFinish = { label: "Done" | "Clear" | "Doesn’t apply"; run: () => voi
 type InboxEntry = {
   key: string;
   kind: InboxKind;
+  /** A suggestion rather than something that must be done: listed under Needs you, but not in the badge. */
+  suggested?: boolean;
   title: string;
   sub: string;
   when: string;
@@ -379,7 +381,7 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
         ? { label: "Done", run: () => onGuidanceDecision(guidance, "already_done"), message: "Marked as done" }
         : ownTask ? { label: "Done", run: () => onAction(row.actionKey), message: "Marked as done" } : null;
       return {
-        key, kind: group === "waiting" ? "waiting" : "needs", title: row.title, sub: row.blockerLabel, when: "", person: null,
+        key, kind: group === "waiting" ? "waiting" : "needs", suggested: group === "suggested", title: row.title, sub: row.blockerLabel, when: "", person: null,
         icon: taskIcon(row), isNew: !reads.read.includes(actionReadKey(row.actionKey)), count: 1, readKeys: [actionReadKey(row.actionKey)],
         open: () => { reads.markRead([actionReadKey(row.actionKey)]); if (opensFirst) setOpened(key); else onAction(row.actionKey); },
         finish,
@@ -409,8 +411,10 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
 
   const count = (kind: InboxCategory) => entries.filter((entry) => kind === "all" || entry.kind === kind).length;
   const shown = entries.filter((entry) => category === "all" || entry.kind === category);
-  const needs = count("needs");
+  // The same number as the Inbox badge: things that must be done, not suggestions (release C rule).
+  const needs = entries.filter((entry) => entry.kind === "needs" && !entry.suggested).length;
   const newCount = entries.filter((entry) => entry.isNew).length;
+  useEffect(() => { void publishNeedsYouCountForCurrentUser(needs); }, [needs]);
   const byKey = (key: string) => entries.find((entry) => entry.key === key);
   const openedRow = opened?.startsWith("action:") ? rows.find((row) => `action:${row.actionKey}` === opened) ?? null : null;
 
@@ -482,7 +486,7 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
               onLongLeft={entry.finish ? () => finishEntries([entry.key]) : undefined}
               onHold={selecting ? undefined : () => setSheet({ type: "menu", keys: [entry.key] })}
             >
-              <button type="button" className="lf-inbox-row-button" aria-label={`${tag(entry.kind)}${entry.isNew ? ", new" : ""}: ${entry.title}${entry.count > 1 ? `, ${entry.count} times` : ""}. ${selecting ? (isPicked ? "Selected" : "Select") : "Open"}`}
+              <button type="button" className="lf-inbox-row-button" aria-label={`${entry.suggested ? "Suggested" : tag(entry.kind)}${entry.isNew ? ", new" : ""}: ${entry.title}${entry.count > 1 ? `, ${entry.count} times` : ""}. ${selecting ? (isPicked ? "Selected" : "Select") : "Open"}`}
                 onClick={() => {
                   if (selecting) { setPicked((current) => current.includes(entry.key) ? current.filter((key) => key !== entry.key) : [...current, entry.key]); return; }
                   if (swiped) { setSwiped(null); return; }
@@ -494,7 +498,7 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
                 <span className="lf-inbox-row-copy">
                   <span className="lf-inbox-row-top"><strong className={entry.isNew ? "is-new" : undefined}>{entry.title}{entry.count > 1 ? <span className="lf-inbox-count">{entry.count}</span> : null}</strong>{entry.when ? <time dateTime={entry.when}>{inboxTime(entry.when)}</time> : null}</span>
                   <small>{entry.sub}</small>
-                  <span className={`lf-inbox-tag is-${entry.kind}`}>{tag(entry.kind)}</span>
+                  <span className={`lf-inbox-tag is-${entry.kind}`}>{entry.suggested ? "Suggested" : tag(entry.kind)}</span>
                 </span>
               </button>
               {!selecting ? <span className="lf-inbox-hover" aria-hidden="false">
@@ -788,7 +792,10 @@ export function getActionCentreActionCount(
 }
 
 export function getActionCentreToDoCount(items: BlockingItem[], context?: ActionCentreContext, guidanceItems: GuidanceItem[] = []) {
-  return countOpenNeedsYou(getActiveActionRows(items, context ? { ...context, guidanceItems } : undefined));
+  // Same rule as the Inbox's "N need you": must-do items, not suggestions, and not anything put off with Later.
+  const later = laterKeysNow();
+  return countOpenNeedsYou(getActiveActionRows(items, context ? { ...context, guidanceItems } : undefined)
+    .filter((row) => !later.has(`action:${row.actionKey}`)));
 }
 
 export function buildActionCentrePreview(
@@ -1073,9 +1080,9 @@ function getTaskPriorityLevel(task: ActionCentreTask): ActionPriorityLevel {
 }
 
 function formatTaskType(type: ActionCentreTaskType) {
-  if (type === "system_generated") return "System generated";
+  if (type === "system_generated") return "Suggested for you";
   if (type === "reminder") return "Reminder";
-  return "User created";
+  return "Your task";
 }
 
 function formatTaskReason(task: ActionCentreTask) {

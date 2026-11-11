@@ -77,3 +77,14 @@ test("executors and attorneys are decided in the Inbox, using the record page's 
   assert.match(read("lib/linkedPeople/recordLinkedPeople.ts"), /permissionsOverride: \{ asset_ids: \[\], record_ids: \[\]/);
   assert.match(panelFile, /Accepting it doesn’t let them see anything\./);
 });
+
+test("the Inbox badge and 'N need you' use one rule: must-do items, not suggestions or Later", async () => {
+  const { readFileSync } = await import("node:fs");
+  const panel = readFileSync(new URL("../app/(app)/components/dashboard/ActionQueuePanel.tsx", import.meta.url), "utf8");
+  const page = readFileSync(new URL("../app/(app)/dashboard/page.tsx", import.meta.url), "utf8");
+  assert.match(panel, /const needs = entries\.filter\(\(entry\) => entry\.kind === "needs" && !entry\.suggested\)/);
+  assert.match(panel, /publishNeedsYouCountForCurrentUser\(needs\)/);
+  assert.match(panel, /later\.has\(`action:\$\{row\.actionKey\}`\)/);
+  assert.match(page, /loading \|\| actionCentreOnly \|\|/);
+  assert.doesNotMatch(panel, /"User created"|"System generated"/);
+});
