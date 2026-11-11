@@ -291,6 +291,78 @@ export function useInboxLater() {
 }
 
 
+/**
+ * Archive (owner decision 11 Nov 2026, like Mail): moves an Inbox item out of the list without completing it, into
+ * Archived, where it can be found and moved back. Kept in the person's own inbox_reads rows as "archive:<item>", so it
+ * follows them across devices without a new table; this device keeps a copy. Nothing about the item itself changes.
+ */
+export const ARCHIVE_PREFIX = "archive:";
+const ARCHIVE_KEY = "lf:inbox:archive";
+
+function loadArchiveLocal(): string[] {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(ARCHIVE_KEY) ?? "[]");
+    return Array.isArray(stored) ? stored.filter((item): item is string => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveArchiveLocal(keys: string[]) {
+  const unique = [...new Set(keys)].slice(-1000);
+  try { window.localStorage.setItem(ARCHIVE_KEY, JSON.stringify(unique)); } catch { /* optional */ }
+  return unique;
+}
+
+export function useInboxArchive() {
+  const [archived, setArchived] = useState<string[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    queueMicrotask(() => { if (!cancelled) setArchived(loadArchiveLocal()); });
+    void (async () => {
+      try {
+        const { data, error } = await supabase.from("inbox_reads").select("item_key").like("item_key", `${ARCHIVE_PREFIX}%`).limit(1000);
+        if (error || cancelled) return;
+        const server = ((data ?? []) as Array<{ item_key: string }>).map((row) => row.item_key.slice(ARCHIVE_PREFIX.length));
+        if (!cancelled) setArchived(saveArchiveLocal([...loadArchiveLocal(), ...server]));
+      } catch { /* this device's copy still works */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const archive = useCallback((keys: string[]) => {
+    if (!keys.length) return;
+    setArchived((current) => saveArchiveLocal([...current, ...keys]));
+    void (async () => {
+      const userId = await currentUserId();
+      if (!userId) return;
+      const itemKeys = keys.map((key) => `${ARCHIVE_PREFIX}${key}`).filter((key) => key.length <= 200);
+      try {
+        await supabase.from("inbox_reads").upsert(itemKeys.map((item_key) => ({ user_id: userId, item_key })), { onConflict: "user_id,item_key", ignoreDuplicates: true });
+      } catch { /* this device still remembers */ }
+    })();
+  }, []);
+
+  const unarchive = useCallback((keys: string[]) => {
+    if (!keys.length) return;
+    setArchived((current) => saveArchiveLocal(current.filter((key) => !keys.includes(key))));
+    void (async () => {
+      const userId = await currentUserId();
+      if (!userId) return;
+      try { await supabase.from("inbox_reads").delete().eq("user_id", userId).in("item_key", keys.map((key) => `${ARCHIVE_PREFIX}${key}`)); } catch { /* optional */ }
+    })();
+  }, []);
+
+  const isArchived = useCallback((key: string) => archived.includes(key), [archived]);
+  return { archived, isArchived, archive, unarchive };
+}
+
+/** Items moved to Archived, from this device's copy (kept in step with the server). */
+export function archivedKeysNow(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  return new Set(loadArchiveLocal());
+}
+
 /** Items put off with Later that haven't come back yet, from this device's copy (kept in step with the server). */
 export function laterKeysNow(): Set<string> {
   if (typeof window === "undefined") return new Set();

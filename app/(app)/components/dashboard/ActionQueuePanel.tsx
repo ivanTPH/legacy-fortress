@@ -8,7 +8,7 @@ import { countOpenNeedsYou, getVaultTaskGroup } from "../../../../lib/workflow/t
 import Icon from "../../../../components/ui/Icon";
 import SwipeRow from "../../../../components/inbox/SwipeRow";
 import NamedPeoplePanel from "../../../../components/inbox/NamedPeoplePanel";
-import { actionReadKey, laterKeysNow, publishNeedsYouCountForCurrentUser, useInboxLater, useInboxReads, useInboxUpdates } from "../../../../lib/notifications/inboxUpdates";
+import { actionReadKey, archivedKeysNow, laterKeysNow, publishNeedsYouCountForCurrentUser, useInboxArchive, useInboxLater, useInboxReads, useInboxUpdates } from "../../../../lib/notifications/inboxUpdates";
 
 type ActionQueuePanelProps = {
   items: BlockingItem[];
@@ -93,6 +93,12 @@ function actionGroup(row: ActionCentreRow): "todo" | "waiting" | "suggested" {
   return getVaultTaskGroup(row);
 }
 
+/** "X hasn't accepted your invitation yet" is waiting on someone else, not a suggestion (owner, 11 Nov 2026). */
+function inboxActionKind(row: ActionCentreRow): "needs" | "waiting" {
+  if (actionGroup(row) === "waiting") return "waiting";
+  return String(row.guidanceItem?.key ?? "").startsWith("remind_") ? "waiting" : "needs";
+}
+
 function taskIcon(row: ActionCentreRow) {
   const key = `${row.actionKey} ${row.title}`.toLowerCase();
   if (key.includes("invite")) return "send";
@@ -100,7 +106,7 @@ function taskIcon(row: ActionCentreRow) {
   if (key.includes("will") || key.includes("legal")) return "gavel";
   if (key.includes("document") || key.includes("statement")) return "note_add";
   if (key.includes("verif")) return "verified_user";
-  if (row.taskType === "reminder" || actionGroup(row) === "waiting") return "schedule";
+  if (row.taskType === "reminder" || inboxActionKind(row) === "waiting") return "schedule";
   return actionGroup(row) === "suggested" ? "lightbulb" : "task_alt";
 }
 
@@ -266,12 +272,14 @@ function ActionQueuePanel({ items, onAction, context, guidanceItems, onGuidanceD
 // - Categories: All / Needs you / Waiting / Updates. The badge counts only what needs the person.
 // - One tap goes straight to the thing. Only your own tasks and the Will question open first, so a tap never
 //   completes anything by accident.
-// - Swipe right: Read/Unread and Later. Swipe left: Later and Done (Clear for updates). Long swipe left: Done.
-//   Press and hold: quick actions. On a laptop the same buttons appear on hover. Select ticks several at once.
+// - Each action lives on one side only (owner, 11 Nov 2026). Swipe right: Read/Unread (long swipe does it). Swipe
+//   left: Later and Done (Clear for updates; long swipe does Done). Press and hold: every action. On a laptop the
+//   same buttons appear on hover. Select ticks several at once; its toolbar replaces the phone tab bar, like Mail.
+// - Archive moves an item out of the list without completing it, into Archived, where it can be moved back.
 // - A filled dot is new, an outline has been read. Orange: needs you. Grey: waiting. Blue: update. Each row also
 //   says which in words. Later brings an item back as new on the chosen date.
-type InboxCategory = "all" | "needs" | "waiting" | "update";
-type InboxKind = Exclude<InboxCategory, "all">;
+type InboxCategory = "all" | "needs" | "waiting" | "update" | "archived";
+type InboxKind = Exclude<InboxCategory, "all" | "archived">;
 type InboxFinish = { label: "Done" | "Clear" | "Doesn’t apply"; run: () => void; message: string; undo?: () => void } | null;
 type InboxEntry = {
   key: string;
@@ -332,6 +340,7 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
   const reads = useInboxReads();
   const { updates, loading: updatesLoading, markRead, markUnread, clear, restore } = useInboxUpdates(true, reads);
   const later = useInboxLater();
+  const shelf = useInboxArchive();
   const [category, setCategory] = useState<InboxCategory>("all");
   const [selecting, setSelecting] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
@@ -371,10 +380,11 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
     window.setTimeout(() => setToast((current) => (current?.text === text ? null : current)), 6000);
   }, []);
 
-  const entries = useMemo<InboxEntry[]>(() => {
+  const allEntries = useMemo<InboxEntry[]>(() => {
     const actionEntries = rows.map((row): InboxEntry => {
       const key = `action:${row.actionKey}`;
       const group = actionGroup(row);
+      const kind = inboxActionKind(row);
       const guidance = row.guidanceItem;
       const ownTask = row.actionKey.startsWith("task:complete:");
       const opensFirst = ownTask || Boolean(guidance && NAMED_PEOPLE_STEPS[String(guidance.key)])
@@ -383,7 +393,7 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
         ? { label: "Done", run: () => onGuidanceDecision(guidance, "already_done"), message: "Marked as done" }
         : ownTask ? { label: "Done", run: () => onAction(row.actionKey), message: "Marked as done" } : null;
       return {
-        key, kind: group === "waiting" ? "waiting" : "needs", suggested: group === "suggested", named: guidance ? NAMED_PEOPLE_STEPS[String(guidance.key)] : undefined, title: row.title, sub: row.blockerLabel, when: "", person: null,
+        key, kind, suggested: kind === "needs" && group === "suggested", named: guidance ? NAMED_PEOPLE_STEPS[String(guidance.key)] : undefined, title: row.title, sub: row.blockerLabel, when: "", person: null,
         icon: taskIcon(row), isNew: !reads.read.includes(actionReadKey(row.actionKey)), count: 1, readKeys: [actionReadKey(row.actionKey)],
         open: () => { reads.markRead([actionReadKey(row.actionKey)]); if (opensFirst) setOpened(key); else onAction(row.actionKey); },
         finish,
@@ -408,16 +418,19 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
         finish: { label: "Clear", run: () => clear(ids), message: list.length > 1 ? `${list.length} updates cleared` : "Update cleared", undo: () => restore(ids) },
       };
     });
-    return [...actionEntries, ...updateEntries].filter((entry) => !later.isLater(entry.key));
-  }, [rows, updates, reads, later, onAction, onGuidanceDecision, onGuidanceApplicability, markRead, clear, restore]);
+    return [...actionEntries, ...updateEntries];
+  }, [rows, updates, reads, onAction, onGuidanceDecision, onGuidanceApplicability, markRead, clear, restore]);
+  const entries = useMemo(() => allEntries.filter((entry) => !later.isLater(entry.key) && !shelf.isArchived(entry.key)), [allEntries, later, shelf]);
+  const archivedEntries = useMemo(() => allEntries.filter((entry) => shelf.isArchived(entry.key)), [allEntries, shelf]);
 
-  const count = (kind: InboxCategory) => entries.filter((entry) => kind === "all" || entry.kind === kind).length;
-  const shown = entries.filter((entry) => category === "all" || entry.kind === category);
+  const count = (kind: InboxCategory) => kind === "archived" ? archivedEntries.length : entries.filter((entry) => kind === "all" || entry.kind === kind).length;
+  const inArchive = category === "archived";
+  const shown = inArchive ? archivedEntries : entries.filter((entry) => category === "all" || entry.kind === category);
   // The same number as the Inbox badge: things that must be done, not suggestions (release C rule).
   const needs = entries.filter((entry) => entry.kind === "needs" && !entry.suggested).length;
   const newCount = entries.filter((entry) => entry.isNew).length;
   useEffect(() => { void publishNeedsYouCountForCurrentUser(needs); }, [needs]);
-  const byKey = (key: string) => entries.find((entry) => entry.key === key);
+  const byKey = (key: string) => allEntries.find((entry) => entry.key === key);
   const openedRow = opened?.startsWith("action:") ? rows.find((row) => `action:${row.actionKey}` === opened) ?? null : null;
 
   function setRead(entry: InboxEntry, read: boolean) {
@@ -446,35 +459,56 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
     say(`Back ${when}`, () => later.wake(keys));
   }
 
-  const swipeButtons = (entry: InboxEntry, side: "left" | "right") => side === "right" ? <>
-    <button type="button" className="lf-swipe-button is-read" onClick={() => { setRead(entry, entry.isNew); setSwiped(null); }}><Icon name={entry.isNew ? "drafts" : "mark_email_unread"} size={20} />{entry.isNew ? "Read" : "Unread"}</button>
-    <button type="button" className="lf-swipe-button is-later" onClick={() => setSheet({ type: "later", keys: [entry.key] })}><Icon name="schedule" size={20} />Later</button>
-  </> : <>
-    <button type="button" className="lf-swipe-button is-later" onClick={() => setSheet({ type: "later", keys: [entry.key] })}><Icon name="schedule" size={20} />Later</button>
+  function archiveEntries(keys: string[]) {
+    if (!keys.length) return;
+    shelf.archive(keys);
+    setSheet(null); setSwiped(null); setSelecting(false); setPicked([]);
+    say(keys.length === 1 ? "Moved to Archived" : `${keys.length} moved to Archived`, () => shelf.unarchive(keys));
+  }
+  function unarchiveEntries(keys: string[]) {
+    if (!keys.length) return;
+    shelf.unarchive(keys);
+    setSheet(null); setSwiped(null); setSelecting(false); setPicked([]);
+    say(keys.length === 1 ? "Moved back to Inbox" : `${keys.length} moved back to Inbox`, () => shelf.archive(keys));
+  }
+
+  // Each action on one side only. Right: Read/Unread. Left: Later and Done/Clear (in Archived: Inbox and Done/Clear).
+  const leftButtons = (entry: InboxEntry) => <>
+    {inArchive
+      ? <button type="button" className="lf-swipe-button is-archive" onClick={() => unarchiveEntries([entry.key])}><Icon name="move_to_inbox" size={20} />Inbox</button>
+      : <button type="button" className="lf-swipe-button is-later" onClick={() => setSheet({ type: "later", keys: [entry.key] })}><Icon name="schedule" size={20} />Later</button>}
     {entry.finish ? <button type="button" className={`lf-swipe-button ${entry.kind === "update" ? "is-clear" : "is-done"}`} onClick={() => finishEntries([entry.key])}><Icon name={entry.kind === "update" ? "clear_all" : "check_circle"} size={20} />{entry.finish.label}</button> : null}
   </>;
+  const rightButtons = (entry: InboxEntry) => (
+    <button type="button" className="lf-swipe-button is-read" onClick={() => { setRead(entry, entry.isNew); setSwiped(null); }}><Icon name={entry.isNew ? "drafts" : "mark_email_unread"} size={20} />{entry.isNew ? "Read" : "Unread"}</button>
+  );
+  const pickedEntries = picked.map(byKey).filter((entry): entry is InboxEntry => Boolean(entry));
+  const pickedAllRead = pickedEntries.length > 0 && pickedEntries.every((entry) => !entry.isNew);
+  const allShownPicked = shown.length > 0 && shown.every((entry) => picked.includes(entry.key));
 
   const menuEntry = sheet?.type === "menu" ? byKey(sheet.keys[0]) : undefined;
   const tag = (kind: InboxKind) => kind === "needs" ? "Needs you" : kind === "waiting" ? "Waiting" : "Update";
 
   return (
-    <section id="action-centre" className="lf-action-centre lf-inbox" style={panelStyle} aria-label="Inbox">
+    <section id="action-centre" className={`lf-action-centre lf-inbox${selecting ? " is-selecting" : ""}`} style={panelStyle} aria-label="Inbox">
       <div className="lf-inbox-head">
         {selecting ? <p className="lf-inbox-subtitle"><strong>{picked.length} selected</strong> · tap rows to choose</p> : <p className="lf-inbox-subtitle">{needs} {needs === 1 ? "needs" : "need"} you · {newCount} new</p>}
         <span className="lf-inbox-head-actions">
+          {selecting && shown.length ? <button type="button" className="lf-inbox-select-all" onClick={() => setPicked(allShownPicked ? [] : shown.map((entry) => entry.key))}>{allShownPicked ? "Deselect all" : "Select all"}</button> : null}
           {!selecting && newCount ? <button type="button" className="lf-inbox-quiet" onClick={() => { entries.forEach((entry) => setRead(entry, true)); }}>Mark all as read</button> : null}
           <button type="button" className="lf-inbox-pill-button" onClick={() => { setSelecting(!selecting); setPicked([]); setSwiped(null); }}>{selecting ? "Cancel" : "Select"}</button>
         </span>
       </div>
       <div className="lf-inbox-categories" role="group" aria-label="Show">
-        {([["all", "All", "inbox"], ["needs", "Needs you", "priority_high"], ["waiting", "Waiting", "hourglass_top"], ["update", "Updates", "notifications"]] as const).map(([key, label, icon]) => (
-          <button key={key} type="button" className={`lf-inbox-category is-${key}`} aria-pressed={category === key} aria-label={`${label}, ${count(key)}`} onClick={() => setCategory(key)}>
+        {([["all", "All", "inbox"], ["needs", "Needs you", "priority_high"], ["waiting", "Waiting", "hourglass_top"], ["update", "Updates", "notifications"], ["archived", "Archived", "archive"]] as const).map(([key, label, icon]) => (
+          <button key={key} type="button" className={`lf-inbox-category is-${key}`} aria-pressed={category === key} aria-label={`${label}, ${count(key)}`} onClick={() => { setCategory(key); setPicked([]); setSwiped(null); }}>
             <Icon name={icon} size={20} />{category === key ? <span>{label} {count(key)}</span> : null}
           </button>
         ))}
       </div>
-      {!entries.length && !updatesLoading ? <section style={clearStateStyle}><strong>You’re all caught up.</strong><span>Things to do and updates about your Vault will appear here.</span></section> : null}
-      {entries.length && !shown.length && !updatesLoading ? <p className="lf-inbox-empty">{category === "update" ? "No updates yet. When someone accepts an invitation or something changes in your Vault, it will appear here." : category === "waiting" ? "Nothing waiting on anyone else." : "Nothing needs you right now."}</p> : null}
+      {!entries.length && !inArchive && !updatesLoading ? <section style={clearStateStyle}><strong>You’re all caught up.</strong><span>Things to do and updates about your Vault will appear here.</span></section> : null}
+      {inArchive && !shown.length ? <p className="lf-inbox-empty">Nothing archived. Archive moves something out of your Inbox without marking it done, and you can move it back here.</p> : null}
+      {!inArchive && entries.length && !shown.length && !updatesLoading ? <p className="lf-inbox-empty">{category === "update" ? "No updates yet. When someone accepts an invitation or something changes in your Vault, it will appear here." : category === "waiting" ? "Nothing waiting on anyone else." : "Nothing needs you right now."}</p> : null}
       <div className="lf-inbox-list" role="list">
         {shown.map((entry) => {
           const isPicked = picked.includes(entry.key);
@@ -483,9 +517,13 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
             <SwipeRow
               open={swiped?.key === entry.key ? swiped.side : null}
               onOpenChange={(side) => setSwiped(side ? { key: entry.key, side } : null)}
-              left={swipeButtons(entry, "left")}
-              right={swipeButtons(entry, "right")}
+              left={leftButtons(entry)}
+              right={rightButtons(entry)}
+              leftCount={1 + (entry.finish ? 1 : 0)}
+              rightCount={1}
+              disabled={selecting}
               onLongLeft={entry.finish ? () => finishEntries([entry.key]) : undefined}
+              onLongRight={() => setRead(entry, entry.isNew)}
               onHold={selecting ? undefined : () => setSheet({ type: "menu", keys: [entry.key] })}
             >
               <button type="button" className="lf-inbox-row-button" data-named={entry.named} aria-label={`${entry.suggested ? "Suggested" : tag(entry.kind)}${entry.isNew ? ", new" : ""}: ${entry.title}${entry.count > 1 ? `, ${entry.count} times` : ""}. ${selecting ? (isPicked ? "Selected" : "Select") : "Open"}`}
@@ -505,20 +543,25 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
               </button>
               {!selecting ? <span className="lf-inbox-hover" aria-hidden="false">
                 <button type="button" onClick={() => setRead(entry, entry.isNew)}>{entry.isNew ? "Read" : "Unread"}</button>
-                <button type="button" onClick={() => setSheet({ type: "later", keys: [entry.key] })}>Later</button>
+                {inArchive
+                  ? <button type="button" onClick={() => unarchiveEntries([entry.key])}>Move to Inbox</button>
+                  : <><button type="button" onClick={() => setSheet({ type: "later", keys: [entry.key] })}>Later</button><button type="button" onClick={() => archiveEntries([entry.key])}>Archive</button></>}
                 {entry.finish ? <button type="button" onClick={() => finishEntries([entry.key])}>{entry.finish.label}</button> : null}
               </span> : null}
             </SwipeRow>
           </div>;
         })}
       </div>
-      {shown.length ? <p className="lf-notifications-hint">Tap to open. On a phone, swipe right to mark read or for Later, swipe left for Done, or press and hold for more.</p> : null}
+      {shown.length ? <p className="lf-notifications-hint">Tap to open. On a phone, swipe right to mark read, swipe left for Later or Done, or press and hold for more.</p> : null}
       {updatesLoading && category !== "needs" && category !== "waiting" ? <p className="lf-notifications-hint">Loading updates…</p> : null}
 
       {selecting ? <div className="lf-inbox-selectbar" role="toolbar" aria-label="Selected items">
-        <button type="button" disabled={!picked.length} onClick={() => { picked.map(byKey).forEach((entry) => entry && setRead(entry, true)); setSelecting(false); setPicked([]); }}><Icon name="drafts" size={20} />Mark read</button>
-        <button type="button" disabled={!picked.length} onClick={() => setSheet({ type: "later", keys: picked })}><Icon name="schedule" size={20} />Later</button>
-        <button type="button" disabled={!picked.length} onClick={() => finishEntries(picked)}><Icon name="check_circle" size={20} />Done / Clear</button>
+        <button type="button" disabled={!picked.length} onClick={() => { pickedEntries.forEach((entry) => setRead(entry, !pickedAllRead)); setSelecting(false); setPicked([]); }}><Icon name={pickedAllRead ? "mark_email_unread" : "drafts"} size={22} />{pickedAllRead ? "Unread" : "Read"}</button>
+        {inArchive ? null : <button type="button" disabled={!picked.length} onClick={() => setSheet({ type: "later", keys: picked })}><Icon name="schedule" size={22} />Later</button>}
+        {inArchive
+          ? <button type="button" disabled={!picked.length} onClick={() => unarchiveEntries(picked)}><Icon name="move_to_inbox" size={22} />Inbox</button>
+          : <button type="button" disabled={!picked.length} onClick={() => archiveEntries(picked)}><Icon name="archive" size={22} />Archive</button>}
+        <button type="button" disabled={!picked.length} onClick={() => finishEntries(picked)}><Icon name="check_circle" size={22} />Done</button>
       </div> : null}
 
       {toast ? <div className="lf-inbox-toast" role="status">{toast.text}{toast.undo ? <button type="button" onClick={() => { toast.undo!(); setToast(null); }}>Undo</button> : null}</div> : null}
@@ -542,7 +585,12 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
             <h2>{menuEntry.title}</h2>
             <button type="button" role="menuitem" onClick={() => { setSheet(null); menuEntry.open(); }}><Icon name="open_in_new" size={22} />Open</button>
             <button type="button" role="menuitem" onClick={() => { setRead(menuEntry, menuEntry.isNew); setSheet(null); }}><Icon name={menuEntry.isNew ? "drafts" : "mark_email_unread"} size={22} />{menuEntry.isNew ? "Mark as read" : "Mark as unread"}</button>
-            <button type="button" role="menuitem" onClick={() => setSheet({ type: "later", keys: [menuEntry.key] })}><Icon name="schedule" size={22} />Later</button>
+            {shelf.isArchived(menuEntry.key)
+              ? <button type="button" role="menuitem" onClick={() => unarchiveEntries([menuEntry.key])}><Icon name="move_to_inbox" size={22} />Move to Inbox</button>
+              : <>
+                <button type="button" role="menuitem" onClick={() => setSheet({ type: "later", keys: [menuEntry.key] })}><Icon name="schedule" size={22} />Later</button>
+                <button type="button" role="menuitem" onClick={() => archiveEntries([menuEntry.key])}><Icon name="archive" size={22} />Archive</button>
+              </>}
             {menuEntry.finish ? <button type="button" role="menuitem" onClick={() => finishEntries([menuEntry.key])}><Icon name={menuEntry.kind === "update" ? "clear_all" : "check_circle"} size={22} />{menuEntry.finish.label === "Done" ? "Mark as done" : menuEntry.finish.label}</button> : null}
             {menuEntry.extraNotRelevant ? <button type="button" role="menuitem" onClick={() => { menuEntry.extraNotRelevant!(); setSheet(null); say("Removed. It won’t come back."); }}><Icon name="block" size={22} />This doesn’t apply to me</button> : null}
             <button type="button" className="is-cancel" onClick={() => setSheet(null)}>Cancel</button>
@@ -554,7 +602,7 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
         <div className="lf-action-centre-drawer-backdrop" role="presentation" onClick={() => setOpened(null)}>
           <section className="lf-action-centre-drawer lf-inbox-message" role="dialog" aria-modal="true" aria-labelledby="inbox-message-title" onClick={(event) => event.stopPropagation()}>
             <button type="button" className="lf-inbox-back" onClick={() => setOpened(null)}><Icon name="arrow_back" size={20} />Inbox</button>
-            <span className={`lf-inbox-tag is-${actionGroup(openedRow) === "waiting" ? "waiting" : "needs"}`}>{actionGroup(openedRow) === "waiting" ? "Waiting" : "Needs you"}</span>
+            <span className={`lf-inbox-tag is-${inboxActionKind(openedRow)}`}>{inboxActionKind(openedRow) === "waiting" ? "Waiting" : "Needs you"}</span>
             <h2 id="inbox-message-title">{openedRow.title}</h2>
             <p className="lf-inbox-message-body">{openedRow.whyItMatters}</p>
             {openedRow.guidanceItem && NAMED_PEOPLE_STEPS[String(openedRow.guidanceItem.key)] ? (
@@ -794,10 +842,11 @@ export function getActionCentreActionCount(
 }
 
 export function getActionCentreToDoCount(items: BlockingItem[], context?: ActionCentreContext, guidanceItems: GuidanceItem[] = []) {
-  // Same rule as the Inbox's "N need you": must-do items, not suggestions, and not anything put off with Later.
+  // Same rule as the Inbox's "N need you": must-do items, not suggestions, not put off with Later, not archived.
   const later = laterKeysNow();
+  const archived = archivedKeysNow();
   return countOpenNeedsYou(getActiveActionRows(items, context ? { ...context, guidanceItems } : undefined)
-    .filter((row) => !later.has(`action:${row.actionKey}`)));
+    .filter((row) => !later.has(`action:${row.actionKey}`) && !archived.has(`action:${row.actionKey}`)));
 }
 
 export function buildActionCentrePreview(
