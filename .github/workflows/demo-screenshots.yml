@@ -46,13 +46,13 @@ jobs:
           LEGACY_FORTRESS_ALLOW_STAGING_BROWSER: "true"
         run: |
           # The runner's Ubuntu mirror sometimes fails to resolve (11 Nov 2026): retry, then use the browser alone.
-          ok=0
-          for i in 1 2 3; do
-            if npx playwright install --with-deps chromium; then ok=1; break; fi
-            sudo apt-get update -q || true; sleep 30
-          done
-          [ "$ok" = 1 ] || npx playwright install chromium
+          # The runner's Ubuntu mirror sometimes can't be reached; give the extra system parts one bounded try,
+          # then carry on with just the browser (the runner already has what Chromium needs).
+          timeout 480 npx playwright install --with-deps chromium || npx playwright install chromium
           npx playwright test tests/e2e/staging-demo-screenshots.spec.ts --project=desktop-chromium --retries=0
+      - name: Show what the page held when a check failed
+        if: failure()
+        run: find test-results -name error-context.md -exec sh -c 'echo "== $1"; head -c 6000 "$1"' _ {} \; || true
       - name: Keep the screenshots
         if: always()
         uses: actions/upload-artifact@v4
