@@ -88,3 +88,11 @@ test("the Inbox badge and 'N need you' use one rule: must-do items, not suggesti
   assert.match(page, /loading \|\| actionCentreOnly \|\|/);
   assert.doesNotMatch(panel, /"User created"|"System generated"/);
 });
+
+test("the executors panel never sits on Loading for ever", () => {
+  const src = fs.readFileSync(new URL("../components/inbox/NamedPeoplePanel.tsx", import.meta.url), "utf8");
+  assert.match(src, /waitForActiveUser\(supabase/);
+  assert.match(src, /Promise\.race\(/);
+  assert.match(src, />Try again</);
+  assert.doesNotMatch(src, /supabase\.auth\.getUser\(\)\.then/);
+});
