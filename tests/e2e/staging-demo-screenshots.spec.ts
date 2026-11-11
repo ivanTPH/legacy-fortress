@@ -212,11 +212,11 @@ for (const kind of ["desk", "phone"] as const) {
   });
 }
 
-// Inbox (owner, 10 Nov 2026): one list of actions and updates; opening one shows it whole, like Mail.
-// Opening marks it read for the synthetic account (its own read rows only); nothing is completed or cleared.
+// Inbox, Mail style (owner, 11 Nov 2026). Uses the synthetic account only. Read marks it changes are its own rows;
+// Later is opened and cancelled, and nothing is completed or cleared.
 for (const kind of ["desk", "phone"] as const) {
   test(`inbox (${kind})`, async ({ browser }) => {
-    test.setTimeout(180_000);
+    test.setTimeout(240_000);
     const context = kind === "desk"
       ? await browser.newContext({ viewport: { width: 1440, height: 900 } })
       : await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
@@ -224,36 +224,56 @@ for (const kind of ["desk", "phone"] as const) {
     await signIn(page);
     await page.goto(`${BASE_URL}/actions`, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Inbox" }).filter({ visible: true }).first()).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByRole("button", { name: /^Actions/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: /^Updates/ })).toBeVisible();
+    for (const name of [/^All, \d+/, /^Needs you, \d+/, /^Waiting, \d+/, /^Updates, \d+/]) await expect(page.getByRole("button", { name })).toBeVisible();
     await expect(page.locator(".lf-notification-control")).toHaveCount(0);
-    await page.waitForTimeout(1500);
+    await expect(page.locator(".lf-inbox-row").first()).toBeVisible({ timeout: 30_000 });
+    await page.waitForTimeout(1200);
     await shoot(page, `inbox-${kind}-1-all`);
-    const first = page.locator(".lf-inbox-row button").first();
-    if (await first.count()) {
-      const dot = page.locator(".lf-inbox-row").first().locator(".lf-inbox-dot");
-      await first.click();
-      await expect(page.locator(".lf-inbox-message")).toBeVisible();
-      await shoot(page, `inbox-${kind}-2-opened`);
-      await page.getByRole("button", { name: "Inbox" }).filter({ visible: true }).first().click();
+
+    // Select: tick a row, the floating bar appears; Later opens the date sheet; cancel everything.
+    await page.getByRole("button", { name: "Select", exact: true }).click();
+    await page.locator(".lf-inbox-row-button").first().click();
+    await expect(page.getByText("1 selected")).toBeVisible();
+    await expect(page.getByRole("toolbar", { name: "Selected items" })).toBeVisible();
+    await shoot(page, `inbox-${kind}-2-select`);
+    await page.getByRole("toolbar", { name: "Selected items" }).getByRole("button", { name: "Later" }).click();
+    await expect(page.getByRole("dialog").getByRole("button", { name: "Tomorrow morning" })).toBeVisible();
+    await shoot(page, `inbox-${kind}-3-later`);
+    await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+
+    if (kind === "desk") {
+      // Laptop: pointing at a row shows Read/Unread, Later, Done. Unread survives a reload with this browser's copy wiped.
+      const row = page.locator(".lf-inbox-row").first();
+      const dot = row.locator(".lf-inbox-dot");
+      await row.hover();
+      await expect(row.locator(".lf-inbox-hover")).toBeVisible();
+      await shoot(page, `inbox-${kind}-4-hover`);
+      const toggle = row.locator(".lf-inbox-hover button").first();
+      if ((await toggle.textContent())?.trim() === "Read") { await toggle.click(); await row.hover(); }
       await expect(dot).not.toHaveClass(/is-new/);
-      // Mark as unread brings the filled dot back, and it survives a reload (saved on TEST, not just this browser).
-      await first.click();
-      await page.getByRole("button", { name: "Mark as unread" }).click();
+      await row.locator(".lf-inbox-hover button").first().click(); // Unread
       await expect(dot).toHaveClass(/is-new/);
+      await page.waitForTimeout(1500);
+      await page.evaluate(() => { window.localStorage.removeItem("lf:inbox:read"); window.localStorage.removeItem("lf:inbox:read-pending"); });
       await page.reload({ waitUntil: "domcontentloaded" });
       await expect(page.locator(".lf-inbox-row").first().locator(".lf-inbox-dot")).toHaveClass(/is-new/, { timeout: 30_000 });
-      await page.evaluate(() => window.localStorage.removeItem("lf:inbox:read"));
-      await first.click();
-      await page.getByRole("button", { name: "Inbox" }).filter({ visible: true }).first().click();
-      await page.reload({ waitUntil: "domcontentloaded" });
-      await page.evaluate(() => window.localStorage.removeItem("lf:inbox:read"));
-      await page.reload({ waitUntil: "domcontentloaded" });
-      await expect(page.locator(".lf-inbox-row").first().locator(".lf-inbox-dot")).not.toHaveClass(/is-new/, { timeout: 30_000 });
-      console.log(`Inbox ${kind}: read state survives a reload with this browser's copy wiped (synced on TEST)`);
+      console.log("Inbox desk: Unread survives a reload with this browser's copy wiped (synced on TEST)");
     }
-    await page.getByRole("button", { name: /^Updates/ }).click();
-    await shoot(page, `inbox-${kind}-3-updates`);
+
+    await page.getByRole("button", { name: /^Updates, \d+/ }).click();
+    await shoot(page, `inbox-${kind}-5-updates`);
+    await page.getByRole("button", { name: /^All, \d+/ }).click();
+
+    // One tap goes straight to the thing (no in-between screen) for an action that isn't your own task.
+    const target = page.locator(".lf-inbox-row.is-needs .lf-inbox-row-button").filter({ hasNotText: /User created/ }).first();
+    if (await target.count()) {
+      await target.click();
+      await page.waitForURL((url) => !url.pathname.startsWith("/actions") || url.search.includes("review=") || url.search.includes("request="), { timeout: 15_000 }).catch(() => undefined);
+      await page.waitForTimeout(1000);
+      console.log(`Inbox ${kind}: one tap opened ${new URL(page.url()).pathname}${new URL(page.url()).search}`);
+      await shoot(page, `inbox-${kind}-6-one-tap`);
+    }
     await context.close();
   });
 }

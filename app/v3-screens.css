@@ -507,3 +507,70 @@
 .lf-page-error p { margin: 0; font-size: 17px; line-height: 1.5; color: var(--lf-text-secondary); }
 .lf-page-error > div { display: flex; flex-wrap: wrap; gap: 10px; }
 .lf-page-error .lf-inbox-secondary { display: inline-flex; align-items: center; text-decoration: none; }
+
+/* Inbox, Mail style (owner decision 11 Nov 2026). Orange: needs you. Grey: waiting. Blue: update. */
+.lf-inbox { --lf-inbox-needs: #C2532A; --lf-inbox-waiting: #7C716B; --lf-inbox-update: #2F6DB0; --lf-inbox-done: #2E7D4F; --lf-inbox-later: #6E5BC0; position: relative; }
+:root[data-theme="dark"] .lf-inbox { --lf-inbox-needs: #F0A98A; --lf-inbox-waiting: #B9AEA8; --lf-inbox-update: #8DB8EA; --lf-inbox-done: #7FCB9C; --lf-inbox-later: #B7A9F0; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .lf-inbox { --lf-inbox-needs: #F0A98A; --lf-inbox-waiting: #B9AEA8; --lf-inbox-update: #8DB8EA; --lf-inbox-done: #7FCB9C; --lf-inbox-later: #B7A9F0; } }
+.lf-inbox-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.lf-inbox-subtitle { margin: 0; font-size: 15px; color: var(--lf-text-secondary); }
+.lf-inbox-head-actions { display: inline-flex; align-items: center; gap: 12px; }
+.lf-inbox-pill-button { min-height: 44px; padding: 0 18px; border: 1px solid var(--lf-border-input); border-radius: 999px; background: var(--lf-surface-card); color: var(--lf-text); font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
+.lf-inbox-categories { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 4px; scrollbar-width: none; }
+.lf-inbox-category { display: inline-flex; align-items: center; gap: 6px; flex: none; min-height: 44px; min-width: 56px; justify-content: center; padding: 0 14px; border: 0; border-radius: 999px; background: var(--lf-surface-subtle); color: var(--lf-text-secondary); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 120ms; }
+.lf-inbox-category[aria-pressed="true"] { background: var(--lf-primary-bg); color: var(--lf-primary-text); }
+.lf-inbox-category.is-needs[aria-pressed="true"] { background: var(--lf-inbox-needs); color: #FFFFFF; }
+.lf-inbox-category.is-waiting[aria-pressed="true"] { background: var(--lf-inbox-waiting); color: #FFFFFF; }
+.lf-inbox-category.is-update[aria-pressed="true"] { background: var(--lf-inbox-update); color: #FFFFFF; }
+.lf-inbox-dot.is-needs { --lf-inbox-dot: var(--lf-inbox-needs); }
+.lf-inbox-dot.is-waiting { --lf-inbox-dot: var(--lf-inbox-waiting); }
+.lf-inbox-tag.is-needs { color: var(--lf-inbox-needs); }
+.lf-inbox-tag.is-waiting { color: var(--lf-inbox-waiting); }
+.lf-inbox-list { display: grid; border-top: 1px solid var(--lf-border); }
+.lf-inbox-row { position: relative; border-bottom: 1px solid var(--lf-border); background: var(--lf-surface-card); }
+.lf-inbox-row.is-picked { background: color-mix(in srgb, var(--lf-inbox-update) 9%, var(--lf-surface-card)); }
+.lf-swipe { position: relative; display: flex; align-items: stretch; overflow: hidden; touch-action: pan-y; }
+.lf-swipe-content { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; background: inherit; transition: transform 160ms ease; }
+.lf-swipe-actions { display: flex; flex: none; }
+.lf-swipe-button { display: grid; justify-items: center; align-content: center; gap: 4px; width: 78px; border: 0; color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.lf-swipe-button.is-read, .lf-swipe-button.is-clear { background: var(--lf-inbox-update); }
+.lf-swipe-button.is-later { background: var(--lf-inbox-later); }
+.lf-swipe-button.is-done { background: var(--lf-inbox-done); }
+.lf-inbox-row-button { display: flex; align-items: flex-start; gap: 10px; flex: 1; min-width: 0; padding: 14px 12px 14px 6px; border: 0; background: transparent; color: var(--lf-text); font: inherit; text-align: left; cursor: pointer; }
+.lf-inbox-row-button:hover { background: var(--lf-surface-hover); }
+.lf-inbox-row-button > .lf-inbox-dot { align-self: center; }
+.lf-inbox-check { flex: none; align-self: center; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--lf-border-input); box-sizing: border-box; color: #FFFFFF; }
+.lf-inbox-row.is-picked .lf-inbox-check { border: 0; background: var(--lf-inbox-update); }
+.lf-inbox-pic { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--lf-primary-bg); color: var(--lf-primary-text); font-weight: 700; font-size: 15px; }
+.lf-inbox-pic.is-person { border-radius: 50%; background: var(--lf-surface-tile); color: var(--lf-link); }
+.lf-inbox-row-copy { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.lf-inbox-row-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.lf-inbox-row-top strong { font-size: 16px; font-weight: 500; line-height: 1.3; }
+.lf-inbox-row-top strong.is-new { font-weight: 700; }
+.lf-inbox-row-top time { flex: none; font-size: 13px; color: var(--lf-text-secondary); }
+.lf-inbox-row-copy small { font-size: 14px; line-height: 1.4; color: var(--lf-text-secondary); }
+.lf-inbox-count { display: inline-block; margin-left: 6px; padding: 0 7px; border-radius: 999px; background: var(--lf-surface-subtle); color: var(--lf-text-secondary); font-size: 12px; font-weight: 700; vertical-align: 2px; }
+.lf-inbox-row .lf-inbox-tag { font-size: 11px; letter-spacing: 0.04em; }
+/* Laptop: the swipe buttons appear on hover instead. */
+.lf-inbox-hover { display: none; flex: none; gap: 6px; padding-right: 12px; }
+.lf-inbox-hover button { min-height: 36px; padding: 0 12px; border: 1px solid var(--lf-border-input); border-radius: 10px; background: var(--lf-surface-card); color: var(--lf-text); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.lf-inbox-hover button:hover { background: var(--lf-surface-hover); }
+@media (hover: hover) and (pointer: fine) { .lf-inbox-row:hover .lf-inbox-hover, .lf-inbox-row:focus-within .lf-inbox-hover { display: inline-flex; } }
+.lf-inbox-selectbar { position: sticky; bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 5; display: flex; gap: 6px; margin-top: 12px; padding: 8px; border-radius: 20px; background: var(--lf-surface-card); box-shadow: 0 10px 30px rgba(43, 23, 20, 0.25); }
+.lf-inbox-selectbar button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; border: 0; border-radius: 14px; background: transparent; color: var(--lf-text); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+.lf-inbox-selectbar button:hover { background: var(--lf-surface-hover); }
+.lf-inbox-selectbar button:disabled { opacity: 0.45; cursor: default; }
+@media (min-width: 901px) { .lf-inbox-selectbar { bottom: 24px; } }
+.lf-inbox-toast { position: fixed; left: 50%; bottom: calc(100px + env(safe-area-inset-bottom)); z-index: 80; transform: translateX(-50%); display: flex; align-items: center; gap: 16px; width: min(420px, calc(100vw - 32px)); box-sizing: border-box; justify-content: space-between; padding: 12px 16px; border-radius: 14px; background: #2B1714; color: #FFFFFF; font-size: 15px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); }
+.lf-inbox-toast button { min-height: 36px; border: 0; background: transparent; color: #F0A98A; font: inherit; font-weight: 700; cursor: pointer; }
+@media (min-width: 901px) { .lf-inbox-toast { bottom: 32px; } }
+.lf-inbox-sheet-backdrop { position: fixed; inset: 0; z-index: 90; display: grid; align-items: end; justify-items: center; background: rgba(31, 23, 21, 0.4); }
+.lf-inbox-sheet { width: min(480px, 100%); max-height: 85dvh; overflow-y: auto; display: grid; padding: 12px 0 max(20px, env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; background: var(--lf-surface-card); color: var(--lf-text); }
+@media (min-width: 701px) { .lf-inbox-sheet-backdrop { align-items: center; } .lf-inbox-sheet { border-radius: 20px; } }
+.lf-inbox-sheet h2 { margin: 4px 20px 10px; font-size: 18px; font-weight: 700; }
+.lf-inbox-sheet > button, .lf-inbox-sheet-date { display: flex; align-items: center; gap: 12px; min-height: 54px; padding: 0 20px; border: 0; border-top: 1px solid var(--lf-border); background: transparent; color: var(--lf-text); font: inherit; font-size: 17px; text-align: left; cursor: pointer; }
+.lf-inbox-sheet > button:hover { background: var(--lf-surface-hover); }
+.lf-inbox-sheet-date input { margin-left: auto; min-height: 40px; padding: 0 8px; border: 1px solid var(--lf-border-input); border-radius: 10px; font: inherit; font-size: 16px; }
+.lf-inbox-sheet > button.is-primary { justify-content: center; margin: 8px 16px; border: 0; border-radius: 14px; background: var(--lf-primary-bg); color: var(--lf-primary-text); font-weight: 600; }
+.lf-inbox-sheet > button.is-cancel { justify-content: center; color: var(--lf-link); font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .lf-swipe-content, .lf-inbox-category { transition: none; } }

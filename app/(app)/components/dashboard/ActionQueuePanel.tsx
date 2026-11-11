@@ -1,13 +1,13 @@
 "use client";
 
-import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { BlockingItem } from "../../../../lib/workflow/blockingModel";
 import type { GuidanceAction, GuidanceItem } from "../../../../lib/readiness/guidance";
 import type { VaultApplicabilityState } from "../../../../lib/vaultPreferences";
 import { countOpenNeedsYou, getVaultTaskGroup } from "../../../../lib/workflow/taskGroups";
 import Icon from "../../../../components/ui/Icon";
-import SwipeToClear from "../../../../components/notifications/SwipeToClear";
-import { actionReadKey, useInboxReads, useInboxUpdates } from "../../../../lib/notifications/inboxUpdates";
+import SwipeRow from "../../../../components/inbox/SwipeRow";
+import { actionReadKey, useInboxLater, useInboxReads, useInboxUpdates } from "../../../../lib/notifications/inboxUpdates";
 
 type ActionQueuePanelProps = {
   items: BlockingItem[];
@@ -261,21 +261,56 @@ function ActionQueuePanel({ items, onAction, context, guidanceItems, onGuidanceD
   */
 }
 
-// Inbox (owner decision 10 Nov 2026): things to do and updates in one list, like Mail. Filter All / Actions / Updates;
-// a filled dot is new, an outline dot has been read. Orange is an action, blue an update, and each row also says so
-// in words. Opening an action never completes it: actions stay until done or put off; updates can be cleared.
-type InboxFilter = "all" | "actions" | "updates";
-type InboxSelection = { kind: "action"; key: string } | { kind: "update"; id: string } | null;
+// Inbox (owner decisions 10–11 Nov 2026), built to work like Apple Mail.
+// - Categories: All / Needs you / Waiting / Updates. The badge counts only what needs the person.
+// - One tap goes straight to the thing. Only your own tasks and the Will question open first, so a tap never
+//   completes anything by accident.
+// - Swipe right: Read/Unread and Later. Swipe left: Later and Done (Clear for updates). Long swipe left: Done.
+//   Press and hold: quick actions. On a laptop the same buttons appear on hover. Select ticks several at once.
+// - A filled dot is new, an outline has been read. Orange: needs you. Grey: waiting. Blue: update. Each row also
+//   says which in words. Later brings an item back as new on the chosen date.
+type InboxCategory = "all" | "needs" | "waiting" | "update";
+type InboxKind = Exclude<InboxCategory, "all">;
+type InboxFinish = { label: "Done" | "Clear" | "Doesn’t apply"; run: () => void; message: string; undo?: () => void } | null;
+type InboxEntry = {
+  key: string;
+  kind: InboxKind;
+  title: string;
+  sub: string;
+  when: string;
+  person: string | null;
+  icon: string;
+  isNew: boolean;
+  count: number;
+  readKeys: string[];
+  open: () => void;
+  finish: InboxFinish;
+  extraNotRelevant?: () => void;
+};
 
 function inboxTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
   const age = Date.now() - date.getTime();
   if (age < 60_000) return "Just now";
-  if (age < 3_600_000) return `${Math.floor(age / 60_000)} min ago`;
-  if (age < 86_400_000) return `${Math.floor(age / 3_600_000)} h ago`;
+  if (age < 86_400_000 && date.getDate() === new Date().getDate()) return new Intl.DateTimeFormat("en-GB", { hour: "numeric", minute: "2-digit" }).format(date);
+  if (age < 2 * 86_400_000) return "Yesterday";
   if (age < 7 * 86_400_000) return new Intl.DateTimeFormat("en-GB", { weekday: "short" }).format(date);
   return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" }).format(date);
+}
+
+function initials(name: string | null) {
+  const parts = String(name ?? "").trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "";
+  return `${parts[0][0] ?? ""}${parts.length > 1 ? parts[parts.length - 1][0] ?? "" : ""}`.toUpperCase();
+}
+
+function laterDate(choice: "tomorrow" | "week" | string) {
+  const date = new Date();
+  if (choice === "tomorrow") { date.setDate(date.getDate() + 1); date.setHours(8, 0, 0, 0); return date; }
+  if (choice === "week") { date.setDate(date.getDate() + ((8 - date.getDay()) % 7 || 7)); date.setHours(8, 0, 0, 0); return date; }
+  const picked = new Date(`${choice}T08:00:00`);
+  return Number.isNaN(picked.getTime()) ? null : picked;
 }
 
 function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidanceDecision, onGuidanceApplicability, guidanceBusyKey }: ActionQueuePanelProps) {
@@ -285,169 +320,249 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
   );
   const reads = useInboxReads();
   const { updates, loading: updatesLoading, markRead, markUnread, clear, restore } = useInboxUpdates(true, reads);
-  const [selection, setSelection] = useState<InboxSelection>(null);
+  const later = useInboxLater();
+  const [category, setCategory] = useState<InboxCategory>("all");
+  const [selecting, setSelecting] = useState(false);
+  const [picked, setPicked] = useState<string[]>([]);
+  const [swiped, setSwiped] = useState<{ key: string; side: "left" | "right" } | null>(null);
+  const [sheet, setSheet] = useState<{ type: "later" | "menu"; keys: string[] } | null>(null);
+  const [pickDate, setPickDate] = useState("");
+  const [minDate] = useState(() => new Date(Date.now() + 86_400_000).toISOString().slice(0, 10));
+  const [toast, setToast] = useState<{ text: string; undo?: () => void } | null>(null);
+  const [opened, setOpened] = useState<string | null>(null);
   const [willChoice, setWillChoice] = useState<"yes" | "no" | "unsure" | null>(null);
-  const [filter, setFilter] = useState<InboxFilter>("all");
-  const [undo, setUndo] = useState<string[]>([]);
   const requestedActionHandled = useRef(false);
-  const selectedRow = selection?.kind === "action" ? rows.find((row) => row.actionKey === selection.key) ?? null : null;
-  const selectedUpdate = selection?.kind === "update" ? updates.find((item) => item.id === selection.id) ?? null : null;
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const wanted = params.get("filter");
-    if (wanted === "todo" || wanted === "actions") queueMicrotask(() => setFilter("actions"));
-    if (wanted === "updates") queueMicrotask(() => setFilter("updates"));
+    const wanted = new URLSearchParams(window.location.search).get("filter");
+    if (wanted === "updates") queueMicrotask(() => setCategory("update"));
+    if (wanted === "todo" || wanted === "actions") queueMicrotask(() => setCategory("needs"));
   }, []);
 
   useEffect(() => {
-    const requestedAction = new URLSearchParams(window.location.search).get("action");
-    if (requestedAction && !requestedActionHandled.current && rows.some((row) => row.actionKey === requestedAction)) {
+    const requested = new URLSearchParams(window.location.search).get("action");
+    if (requested && !requestedActionHandled.current && rows.some((row) => row.actionKey === requested)) {
       requestedActionHandled.current = true;
-      queueMicrotask(() => setSelection({ kind: "action", key: requestedAction }));
+      queueMicrotask(() => setOpened(`action:${requested}`));
     }
   }, [rows]);
 
   useEffect(() => {
-    if (!selection) return;
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setSelection(null);
+    if (!sheet && !opened) return;
+    function onKey(event: KeyboardEvent) { if (event.key === "Escape") { setSheet(null); setOpened(null); } }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sheet, opened]);
+
+  const say = useCallback((text: string, undo?: () => void) => {
+    setToast({ text, undo });
+    window.setTimeout(() => setToast((current) => (current?.text === text ? null : current)), 6000);
+  }, []);
+
+  const entries = useMemo<InboxEntry[]>(() => {
+    const actionEntries = rows.map((row): InboxEntry => {
+      const key = `action:${row.actionKey}`;
+      const group = actionGroup(row);
+      const guidance = row.guidanceItem;
+      const ownTask = row.actionKey.startsWith("task:complete:");
+      const opensFirst = ownTask || (guidance?.key === "will" && guidance.state === "unknown" && Boolean(onGuidanceApplicability));
+      const finish: InboxFinish = guidance && onGuidanceDecision
+        ? { label: "Done", run: () => onGuidanceDecision(guidance, "already_done"), message: "Marked as done" }
+        : ownTask ? { label: "Done", run: () => onAction(row.actionKey), message: "Marked as done" } : null;
+      return {
+        key, kind: group === "waiting" ? "waiting" : "needs", title: row.title, sub: row.blockerLabel, when: "", person: null,
+        icon: taskIcon(row), isNew: !reads.read.includes(actionReadKey(row.actionKey)), count: 1, readKeys: [actionReadKey(row.actionKey)],
+        open: () => { reads.markRead([actionReadKey(row.actionKey)]); if (opensFirst) setOpened(key); else onAction(row.actionKey); },
+        finish,
+        extraNotRelevant: guidance && onGuidanceDecision ? () => onGuidanceDecision(guidance, "not_relevant") : undefined,
+      };
+    });
+    // Repeats of the same update (three "Invite sent to Jacqui") show once, with a count.
+    const grouped = new Map<string, typeof updates>();
+    for (const update of updates) {
+      const list = grouped.get(update.title) ?? [];
+      list.push(update);
+      grouped.set(update.title, list);
     }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selection]);
+    const updateEntries = [...grouped.values()].map((list): InboxEntry => {
+      const latest = list[0];
+      const ids = list.map((item) => item.id);
+      return {
+        key: `update:${latest.id}`, kind: "update", title: latest.title,
+        sub: list.length > 1 ? `${latest.detail} Sent ${list.length} times, most recently ${inboxTime(latest.createdAt)}.` : latest.detail,
+        when: latest.createdAt, person: latest.person ?? null, icon: "notifications", isNew: list.some((item) => !item.read), count: list.length, readKeys: ids,
+        open: () => { markRead(ids); window.location.assign(latest.href); },
+        finish: { label: "Clear", run: () => clear(ids), message: list.length > 1 ? `${list.length} updates cleared` : "Update cleared", undo: () => restore(ids) },
+      };
+    });
+    return [...actionEntries, ...updateEntries].filter((entry) => !later.isLater(entry.key));
+  }, [rows, updates, reads, later, onAction, onGuidanceDecision, onGuidanceApplicability, markRead, clear, restore]);
 
-  function openAction(row: ActionCentreRow) {
-    setWillChoice(null);
-    reads.markRead([actionReadKey(row.actionKey)]);
-    setSelection({ kind: "action", key: row.actionKey });
+  const count = (kind: InboxCategory) => entries.filter((entry) => kind === "all" || entry.kind === kind).length;
+  const shown = entries.filter((entry) => category === "all" || entry.kind === category);
+  const needs = count("needs");
+  const newCount = entries.filter((entry) => entry.isNew).length;
+  const byKey = (key: string) => entries.find((entry) => entry.key === key);
+  const openedRow = opened?.startsWith("action:") ? rows.find((row) => `action:${row.actionKey}` === opened) ?? null : null;
+
+  function setRead(entry: InboxEntry, read: boolean) {
+    if (read) { if (entry.kind === "update") markRead(entry.readKeys); else reads.markRead(entry.readKeys); }
+    else entry.readKeys.forEach((key) => (entry.kind === "update" ? markUnread(key) : reads.markUnread(key)));
   }
-  function openUpdate(id: string) {
-    markRead([id]);
-    setSelection({ kind: "update", id });
+  function finishEntries(keys: string[]) {
+    const chosen = keys.map(byKey).filter((entry): entry is InboxEntry => Boolean(entry));
+    const doable = chosen.filter((entry) => entry.finish);
+    doable.forEach((entry) => entry.finish!.run());
+    setSwiped(null); setSheet(null); setSelecting(false); setPicked([]);
+    const skipped = chosen.length - doable.length;
+    if (!doable.length) { say(skipped === 1 ? "That one needs opening first" : "Those need opening first"); return; }
+    const undos = doable.map((entry) => entry.finish!.undo).filter((fn): fn is () => void => Boolean(fn));
+    const text = doable.length === 1 ? doable[0].finish!.message : `${doable.length} done or cleared`;
+    say(skipped ? `${text} · ${skipped} need${skipped === 1 ? "s" : ""} opening` : text, undos.length === doable.length ? () => undos.forEach((fn) => fn()) : undefined);
   }
-  function clearUpdates(ids: string[]) {
-    clear(ids);
-    setUndo(ids);
-    setSelection(null);
-  }
-  function markAllRead() {
-    markRead(updates.map((item) => item.id));
-    reads.markRead(rows.map((row) => actionReadKey(row.actionKey)));
+  function laterEntries(keys: string[], choice: string) {
+    const until = laterDate(choice);
+    if (!until) return;
+    const chosen = keys.map(byKey).filter((entry): entry is InboxEntry => Boolean(entry));
+    chosen.forEach((entry) => setRead(entry, false)); // comes back as new
+    later.snooze(keys, until);
+    setSheet(null); setSwiped(null); setSelecting(false); setPicked([]); setPickDate("");
+    const when = choice === "tomorrow" ? "tomorrow morning" : choice === "week" ? "next week" : new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long" }).format(until);
+    say(`Back ${when}`, () => later.wake(keys));
   }
 
-  const groupLabel = (row: ActionCentreRow) => actionGroup(row) === "todo" ? "Needs you" : actionGroup(row) === "waiting" ? "Waiting on others" : "Suggested";
-  const showActions = filter !== "updates";
-  const showUpdates = filter !== "actions";
-  const readUpdates = updates.filter((item) => item.read).map((item) => item.id);
+  const swipeButtons = (entry: InboxEntry, side: "left" | "right") => side === "right" ? <>
+    <button type="button" className="lf-swipe-button is-read" onClick={() => { setRead(entry, entry.isNew); setSwiped(null); }}><Icon name={entry.isNew ? "drafts" : "mark_email_unread"} size={20} />{entry.isNew ? "Read" : "Unread"}</button>
+    <button type="button" className="lf-swipe-button is-later" onClick={() => setSheet({ type: "later", keys: [entry.key] })}><Icon name="schedule" size={20} />Later</button>
+  </> : <>
+    <button type="button" className="lf-swipe-button is-later" onClick={() => setSheet({ type: "later", keys: [entry.key] })}><Icon name="schedule" size={20} />Later</button>
+    {entry.finish ? <button type="button" className={`lf-swipe-button ${entry.kind === "update" ? "is-clear" : "is-done"}`} onClick={() => finishEntries([entry.key])}><Icon name={entry.kind === "update" ? "clear_all" : "check_circle"} size={20} />{entry.finish.label}</button> : null}
+  </>;
 
-  function dot(kind: "action" | "update", isNew: boolean) {
-    return <span className={`lf-inbox-dot is-${kind}${isNew ? " is-new" : ""}`} aria-hidden="true" />;
-  }
+  const menuEntry = sheet?.type === "menu" ? byKey(sheet.keys[0]) : undefined;
+  const tag = (kind: InboxKind) => kind === "needs" ? "Needs you" : kind === "waiting" ? "Waiting" : "Update";
 
   return (
-    <section id="action-centre" className="lf-action-centre lf-v52-todo lf-inbox" style={panelStyle} aria-label="Inbox">
-      <div className="lf-inbox-toolbar">
-        <div className="lf-v51-action-filters" aria-label="Show">
-          {([["all", "All", rows.length + updates.length], ["actions", "Actions", rows.length], ["updates", "Updates", updates.length]] as const).map(([key, label, count]) =>
-            <button key={key} type="button" aria-pressed={filter === key} onClick={() => setFilter(key)}>
-              {key !== "all" ? <span className={`lf-inbox-dot is-${key === "actions" ? "action" : "update"} is-new`} aria-hidden="true" /> : null}{label} <span>{count}</span>
-            </button>)}
-        </div>
-        <span className="lf-inbox-toolbar-actions">
-          <button type="button" className="lf-ui-button lf-ui-button-text" onClick={markAllRead}>Mark all as read</button>
-          {showUpdates && readUpdates.length ? <button type="button" className="lf-ui-button lf-ui-button-text" onClick={() => clearUpdates(readUpdates)}>Clear read updates</button> : null}
+    <section id="action-centre" className="lf-action-centre lf-inbox" style={panelStyle} aria-label="Inbox">
+      <div className="lf-inbox-head">
+        {selecting ? <p className="lf-inbox-subtitle"><strong>{picked.length} selected</strong> · tap rows to choose</p> : <p className="lf-inbox-subtitle">{needs} {needs === 1 ? "needs" : "need"} you · {newCount} new</p>}
+        <span className="lf-inbox-head-actions">
+          {!selecting && newCount ? <button type="button" className="lf-inbox-quiet" onClick={() => { entries.forEach((entry) => setRead(entry, true)); }}>Mark all as read</button> : null}
+          <button type="button" className="lf-inbox-pill-button" onClick={() => { setSelecting(!selecting); setPicked([]); setSwiped(null); }}>{selecting ? "Cancel" : "Select"}</button>
         </span>
       </div>
-      <p className="lf-inbox-key"><span>{dot("action", true)} Action</span><span>{dot("update", true)} Update</span><span>Filled dot: new. Outline: read. Actions stay until done or put off.</span></p>
-      {undo.length ? <div className="lf-notifications-undo" role="status">{undo.length === 1 ? "Update cleared." : `${undo.length} updates cleared.`}<button type="button" onClick={() => { restore(undo); setUndo([]); }}>Undo</button></div> : null}
-      {!rows.length && !updates.length && !updatesLoading ? <section style={clearStateStyle}><strong>You’re all caught up.</strong><span>Things to do and updates about your Vault will appear here.</span></section> : null}
-      <div className="lf-action-centre-inbox lf-inbox-list" role="list">
-        {showActions ? rows.map((row) => {
-          const isNew = !reads.read.includes(actionReadKey(row.actionKey));
-          return <article key={row.actionKey} role="listitem" className="lf-v52-todo-row lf-inbox-row" data-task-group={actionGroup(row)}>
-            <button type="button" className="lf-v52-todo-row-button" onClick={() => openAction(row)} aria-label={`Action, ${groupLabel(row)}${isNew ? ", new" : ""}: ${row.title}. Open`}>
-              {dot("action", isNew)}
-              <span className="lf-v52-todo-row-copy">
-                <strong className={isNew ? "is-new" : undefined}>{row.title}</strong>
-                <small>{row.blockerLabel}</small>
-                <span className="lf-inbox-tag is-action">Action · {groupLabel(row)}</span>
-              </span>
-              <Icon name="chevron_right" size={20} />
-            </button>
-          </article>;
-        }) : null}
-        {showUpdates ? updates.map((item) => (
-          <SwipeToClear key={item.id} label={item.title} onClear={() => clearUpdates([item.id])}>
-            <article role="listitem" className="lf-v52-todo-row lf-inbox-row">
-              <button type="button" className="lf-v52-todo-row-button" onClick={() => openUpdate(item.id)} aria-label={`Update${item.read ? "" : ", new"}: ${item.title}. Open`}>
-                {dot("update", !item.read)}
-                <span className="lf-v52-todo-row-copy">
-                  <strong className={item.read ? undefined : "is-new"}>{item.title}</strong>
-                  <small>{item.detail}</small>
-                  <span className="lf-inbox-tag is-update">Update · <time dateTime={item.createdAt}>{inboxTime(item.createdAt)}</time></span>
-                </span>
-                <Icon name="chevron_right" size={20} />
-              </button>
-            </article>
-          </SwipeToClear>
-        )) : null}
+      <div className="lf-inbox-categories" role="group" aria-label="Show">
+        {([["all", "All", "inbox"], ["needs", "Needs you", "priority_high"], ["waiting", "Waiting", "hourglass_top"], ["update", "Updates", "notifications"]] as const).map(([key, label, icon]) => (
+          <button key={key} type="button" className={`lf-inbox-category is-${key}`} aria-pressed={category === key} aria-label={`${label}, ${count(key)}`} onClick={() => setCategory(key)}>
+            <Icon name={icon} size={20} />{category === key ? <span>{label} {count(key)}</span> : null}
+          </button>
+        ))}
       </div>
-      {(rows.length || updates.length) && filter === "actions" && !rows.length ? <p className="lf-inbox-empty">Nothing to do right now.</p> : null}
-      {(rows.length || updates.length) && filter === "updates" && !updates.length && !updatesLoading ? <p className="lf-inbox-empty">No updates yet. When someone accepts an invitation or something changes in your Vault, it will appear here.</p> : null}
-      {showUpdates && updates.length ? <p className="lf-notifications-hint">On a phone, swipe an update left or right to clear it.</p> : null}
-      {updatesLoading && showUpdates ? <p className="lf-notifications-hint">Loading updates…</p> : null}
+      {!entries.length && !updatesLoading ? <section style={clearStateStyle}><strong>You’re all caught up.</strong><span>Things to do and updates about your Vault will appear here.</span></section> : null}
+      {entries.length && !shown.length && !updatesLoading ? <p className="lf-inbox-empty">{category === "update" ? "No updates yet. When someone accepts an invitation or something changes in your Vault, it will appear here." : category === "waiting" ? "Nothing waiting on anyone else." : "Nothing needs you right now."}</p> : null}
+      <div className="lf-inbox-list" role="list">
+        {shown.map((entry) => {
+          const isPicked = picked.includes(entry.key);
+          const who = initials(entry.person);
+          return <div key={entry.key} role="listitem" className={`lf-inbox-row is-${entry.kind}${isPicked ? " is-picked" : ""}`}>
+            <SwipeRow
+              open={swiped?.key === entry.key ? swiped.side : null}
+              onOpenChange={(side) => setSwiped(side ? { key: entry.key, side } : null)}
+              left={swipeButtons(entry, "left")}
+              right={swipeButtons(entry, "right")}
+              onLongLeft={entry.finish ? () => finishEntries([entry.key]) : undefined}
+              onHold={selecting ? undefined : () => setSheet({ type: "menu", keys: [entry.key] })}
+            >
+              <button type="button" className="lf-inbox-row-button" aria-label={`${tag(entry.kind)}${entry.isNew ? ", new" : ""}: ${entry.title}${entry.count > 1 ? `, ${entry.count} times` : ""}. ${selecting ? (isPicked ? "Selected" : "Select") : "Open"}`}
+                onClick={() => {
+                  if (selecting) { setPicked((current) => current.includes(entry.key) ? current.filter((key) => key !== entry.key) : [...current, entry.key]); return; }
+                  if (swiped) { setSwiped(null); return; }
+                  entry.open();
+                }}>
+                {selecting ? <span className="lf-inbox-check" aria-hidden="true">{isPicked ? <Icon name="check" size={16} /> : null}</span> : null}
+                <span className={`lf-inbox-dot is-${entry.kind}${entry.isNew ? " is-new" : ""}`} aria-hidden="true" />
+                <span className={`lf-inbox-pic${who ? " is-person" : ""}`} aria-hidden="true">{who || <Icon name={entry.icon} size={20} />}</span>
+                <span className="lf-inbox-row-copy">
+                  <span className="lf-inbox-row-top"><strong className={entry.isNew ? "is-new" : undefined}>{entry.title}{entry.count > 1 ? <span className="lf-inbox-count">{entry.count}</span> : null}</strong>{entry.when ? <time dateTime={entry.when}>{inboxTime(entry.when)}</time> : null}</span>
+                  <small>{entry.sub}</small>
+                  <span className={`lf-inbox-tag is-${entry.kind}`}>{tag(entry.kind)}</span>
+                </span>
+              </button>
+              {!selecting ? <span className="lf-inbox-hover" aria-hidden="false">
+                <button type="button" onClick={() => setRead(entry, entry.isNew)}>{entry.isNew ? "Read" : "Unread"}</button>
+                <button type="button" onClick={() => setSheet({ type: "later", keys: [entry.key] })}>Later</button>
+                {entry.finish ? <button type="button" onClick={() => finishEntries([entry.key])}>{entry.finish.label}</button> : null}
+              </span> : null}
+            </SwipeRow>
+          </div>;
+        })}
+      </div>
+      {shown.length ? <p className="lf-notifications-hint">Tap to open. On a phone, swipe right to mark read or for Later, swipe left for Done, or press and hold for more.</p> : null}
+      {updatesLoading && category !== "needs" && category !== "waiting" ? <p className="lf-notifications-hint">Loading updates…</p> : null}
 
-      {selectedRow ? (
-        <div className="lf-action-centre-drawer-backdrop" role="presentation" onClick={() => setSelection(null)}>
-          <section className="lf-action-centre-drawer lf-inbox-message" role="dialog" aria-modal="true" aria-labelledby="inbox-message-title" onClick={(event) => event.stopPropagation()}>
-            <button type="button" className="lf-inbox-back" onClick={() => setSelection(null)}><Icon name="arrow_back" size={20} />Inbox</button>
-            <span className="lf-inbox-tag is-action">Action · {groupLabel(selectedRow)}</span>
-            <h2 id="inbox-message-title">{selectedRow.title}</h2>
-            <p className="lf-inbox-message-body">{selectedRow.whyItMatters}</p>
-            <p className="lf-inbox-message-meta">{selectedRow.blockerLabel}</p>
-            {selectedRow.guidanceItem?.key === "will" && selectedRow.guidanceItem.state === "unknown" && onGuidanceApplicability ? (
-              <div style={drawerChoiceStyle}>
-                <fieldset className="lf-action-will-choices">
-                  <legend>Have you already made a Will?</legend>
-                  {([ ["yes", "Yes, I have a Will"], ["no", "No, I don’t have one"], ["unsure", "I’m not sure"] ] as const).map(([value, label]) => (
-                    <label key={value}><input type="radio" name="will-applicability" value={value} checked={willChoice === value} onChange={() => setWillChoice(value)} />{label}</label>
-                  ))}
-                </fieldset>
-                <button type="button" style={primaryActionStyle} disabled={!willChoice || guidanceBusyKey === selectedRow.guidanceItem.key} onClick={() => {
-                  if (!willChoice) return;
-                  void Promise.resolve(onGuidanceApplicability(selectedRow.guidanceItem!, willChoice)).then((saved) => {
-                    if (saved) setSelection(null);
-                  });
-                }}>Save choice</button>
-              </div>
-            ) : (
-              <button type="button" className="lf-inbox-primary" onClick={() => onAction(selectedRow.actionKey)}>{selectedRow.primaryActionLabel}</button>
-            )}
-            {selectedRow.guidanceItem && onGuidanceDecision ? (
-              <div className="lf-inbox-message-actions">
-                <button type="button" className="lf-inbox-secondary" disabled={guidanceBusyKey === selectedRow.guidanceItem.key} onClick={() => { onGuidanceDecision(selectedRow.guidanceItem!, "remind_later"); setSelection(null); }}>{guidanceBusyKey === selectedRow.guidanceItem.key ? "Saving…" : "Not now"}</button>
-                <button type="button" className="lf-inbox-secondary" disabled={guidanceBusyKey === selectedRow.guidanceItem.key} onClick={() => { onGuidanceDecision(selectedRow.guidanceItem!, "already_done"); setSelection(null); }}>Mark as done</button>
-              </div>
-            ) : null}
-            {selectedRow.guidanceItem && onGuidanceDecision ? <button type="button" className="lf-inbox-quiet" disabled={guidanceBusyKey === selectedRow.guidanceItem.key} onClick={() => { onGuidanceDecision(selectedRow.guidanceItem!, "not_relevant"); setSelection(null); }}>{(selectedRow.guidanceItem as { dismissLabel?: string }).dismissLabel ?? "This doesn’t apply to me"}</button> : null}
-            {selectedRow.guidanceItem?.learnMoreHref ? <a href={selectedRow.guidanceItem.learnMoreHref} className="lf-inbox-quiet">Learn more</a> : null}
-            <button type="button" className="lf-inbox-quiet" onClick={() => { reads.markUnread(actionReadKey(selectedRow.actionKey)); setSelection(null); }}>Mark as unread</button>
+      {selecting ? <div className="lf-inbox-selectbar" role="toolbar" aria-label="Selected items">
+        <button type="button" disabled={!picked.length} onClick={() => { picked.map(byKey).forEach((entry) => entry && setRead(entry, true)); setSelecting(false); setPicked([]); }}><Icon name="drafts" size={20} />Mark read</button>
+        <button type="button" disabled={!picked.length} onClick={() => setSheet({ type: "later", keys: picked })}><Icon name="schedule" size={20} />Later</button>
+        <button type="button" disabled={!picked.length} onClick={() => finishEntries(picked)}><Icon name="check_circle" size={20} />Done / Clear</button>
+      </div> : null}
+
+      {toast ? <div className="lf-inbox-toast" role="status">{toast.text}{toast.undo ? <button type="button" onClick={() => { toast.undo!(); setToast(null); }}>Undo</button> : null}</div> : null}
+
+      {sheet?.type === "later" ? (
+        <div className="lf-inbox-sheet-backdrop" role="presentation" onClick={() => setSheet(null)}>
+          <section className="lf-inbox-sheet" role="dialog" aria-modal="true" aria-labelledby="inbox-later-title" onClick={(event) => event.stopPropagation()}>
+            <h2 id="inbox-later-title">Bring {sheet.keys.length > 1 ? `these ${sheet.keys.length}` : "this"} back…</h2>
+            <button type="button" onClick={() => laterEntries(sheet.keys, "tomorrow")}><Icon name="wb_sunny" size={22} />Tomorrow morning</button>
+            <button type="button" onClick={() => laterEntries(sheet.keys, "week")}><Icon name="date_range" size={22} />Next week</button>
+            <label className="lf-inbox-sheet-date"><Icon name="calendar_month" size={22} /><span>Pick a date</span><input type="date" value={pickDate} min={minDate} onChange={(event) => setPickDate(event.target.value)} /></label>
+            {pickDate ? <button type="button" className="is-primary" onClick={() => laterEntries(sheet.keys, pickDate)}>Bring back on {new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long" }).format(new Date(`${pickDate}T08:00:00`))}</button> : null}
+            <button type="button" className="is-cancel" onClick={() => setSheet(null)}>Cancel</button>
           </section>
         </div>
       ) : null}
 
-      {selectedUpdate ? (
-        <div className="lf-action-centre-drawer-backdrop" role="presentation" onClick={() => setSelection(null)}>
+      {sheet?.type === "menu" && menuEntry ? (
+        <div className="lf-inbox-sheet-backdrop" role="presentation" onClick={() => setSheet(null)}>
+          <section className="lf-inbox-sheet" role="menu" aria-label={`Quick actions for ${menuEntry.title}`} onClick={(event) => event.stopPropagation()}>
+            <h2>{menuEntry.title}</h2>
+            <button type="button" role="menuitem" onClick={() => { setSheet(null); menuEntry.open(); }}><Icon name="open_in_new" size={22} />Open</button>
+            <button type="button" role="menuitem" onClick={() => { setRead(menuEntry, menuEntry.isNew); setSheet(null); }}><Icon name={menuEntry.isNew ? "drafts" : "mark_email_unread"} size={22} />{menuEntry.isNew ? "Mark as read" : "Mark as unread"}</button>
+            <button type="button" role="menuitem" onClick={() => setSheet({ type: "later", keys: [menuEntry.key] })}><Icon name="schedule" size={22} />Later</button>
+            {menuEntry.finish ? <button type="button" role="menuitem" onClick={() => finishEntries([menuEntry.key])}><Icon name={menuEntry.kind === "update" ? "clear_all" : "check_circle"} size={22} />{menuEntry.finish.label === "Done" ? "Mark as done" : menuEntry.finish.label}</button> : null}
+            {menuEntry.extraNotRelevant ? <button type="button" role="menuitem" onClick={() => { menuEntry.extraNotRelevant!(); setSheet(null); say("Removed. It won’t come back."); }}><Icon name="block" size={22} />This doesn’t apply to me</button> : null}
+            <button type="button" className="is-cancel" onClick={() => setSheet(null)}>Cancel</button>
+          </section>
+        </div>
+      ) : null}
+
+      {openedRow ? (
+        <div className="lf-action-centre-drawer-backdrop" role="presentation" onClick={() => setOpened(null)}>
           <section className="lf-action-centre-drawer lf-inbox-message" role="dialog" aria-modal="true" aria-labelledby="inbox-message-title" onClick={(event) => event.stopPropagation()}>
-            <button type="button" className="lf-inbox-back" onClick={() => setSelection(null)}><Icon name="arrow_back" size={20} />Inbox</button>
-            <span className="lf-inbox-tag is-update">Update · <time dateTime={selectedUpdate.createdAt}>{inboxTime(selectedUpdate.createdAt)}</time></span>
-            <h2 id="inbox-message-title">{selectedUpdate.title}</h2>
-            <p className="lf-inbox-message-body">{selectedUpdate.detail}</p>
-            <a href={selectedUpdate.href} className="lf-inbox-primary">Open</a>
+            <button type="button" className="lf-inbox-back" onClick={() => setOpened(null)}><Icon name="arrow_back" size={20} />Inbox</button>
+            <span className={`lf-inbox-tag is-${actionGroup(openedRow) === "waiting" ? "waiting" : "needs"}`}>{actionGroup(openedRow) === "waiting" ? "Waiting" : "Needs you"}</span>
+            <h2 id="inbox-message-title">{openedRow.title}</h2>
+            <p className="lf-inbox-message-body">{openedRow.whyItMatters}</p>
+            {openedRow.guidanceItem?.key === "will" && openedRow.guidanceItem.state === "unknown" && onGuidanceApplicability ? (
+              <div style={drawerChoiceStyle}>
+                <fieldset className="lf-action-will-choices">
+                  <legend>Have you already made a Will?</legend>
+                  {([["yes", "Yes, I have a Will"], ["no", "No, I don’t have one"], ["unsure", "I’m not sure"]] as const).map(([value, label]) => (
+                    <label key={value}><input type="radio" name="will-applicability" value={value} checked={willChoice === value} onChange={() => setWillChoice(value)} />{label}</label>
+                  ))}
+                </fieldset>
+                <button type="button" style={primaryActionStyle} disabled={!willChoice || guidanceBusyKey === openedRow.guidanceItem.key} onClick={() => {
+                  if (!willChoice) return;
+                  void Promise.resolve(onGuidanceApplicability(openedRow.guidanceItem!, willChoice)).then((saved) => { if (saved) setOpened(null); });
+                }}>Save choice</button>
+              </div>
+            ) : openedRow.actionKey.startsWith("task:complete:") ? (
+              <button type="button" className="lf-inbox-primary" onClick={() => { onAction(openedRow.actionKey); setOpened(null); say("Marked as done"); }}>Mark as done</button>
+            ) : (
+              <button type="button" className="lf-inbox-primary" onClick={() => onAction(openedRow.actionKey)}>{openedRow.primaryActionLabel}</button>
+            )}
             <div className="lf-inbox-message-actions">
-              <button type="button" className="lf-inbox-secondary" onClick={() => { markUnread(selectedUpdate.id); setSelection(null); }}>Mark as unread</button>
-              <button type="button" className="lf-inbox-secondary" onClick={() => clearUpdates([selectedUpdate.id])}>Clear</button>
+              <button type="button" className="lf-inbox-secondary" onClick={() => { setOpened(null); setSheet({ type: "later", keys: [`action:${openedRow.actionKey}`] }); }}>Later</button>
+              <button type="button" className="lf-inbox-secondary" onClick={() => { reads.markUnread(actionReadKey(openedRow.actionKey)); setOpened(null); }}>Mark as unread</button>
             </div>
           </section>
         </div>
