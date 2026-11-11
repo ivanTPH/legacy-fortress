@@ -694,16 +694,38 @@ async function seedWillRecord(userId, contacts) {
   await seedWillExecutorSuggestions(userId, recordId, contacts);
 }
 
+/** A minimal one-page PDF holding one line of text. */
+function samplePdf(text) {
+  const safe = String(text).replace(/[\\()]/g, "\\$&");
+  const stream = `BT /F1 14 Tf 72 720 Td (${safe}) Tj ET`;
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+    `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream`,
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+  ];
+  let out = "%PDF-1.4\n";
+  const offsets = [];
+  objects.forEach((obj, i) => { offsets.push(Buffer.byteLength(out)); out += `${i + 1} 0 obj\n${obj}\nendobj\n`; });
+  const xref = Buffer.byteLength(out);
+  out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  offsets.forEach((o) => { out += `${String(o).padStart(10, "0")} 00000 n \n`; });
+  out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(out, "latin1");
+}
+
 /**
  * Names "found" in the Will, for the Inbox executors panel (owner, 11 Nov 2026): one already in People with an email
  * (Sarah Smith, so Confirm), one not in People and with no email (Robert Sample, so Add asks for one). Kept pending:
  * if a check or a person decides one, the next seed puts a fresh pending one back. Nothing is shared or sent.
  */
 async function seedWillExecutorSuggestions(userId, recordId, contacts) {
-  const file = "will-overview.txt";
-  const body = await readFile(path.join(process.cwd(), "public", "demo-docs", file));
+  // The vault store takes PDFs, pictures and office files only, so the sample Will page is a one-page PDF.
+  const file = "will-overview.pdf";
+  const body = samplePdf("Sample Will (synthetic). Executors: Sarah Smith, Robert Sample.");
   const storagePath = `demo-review/${userId}/records/${recordId}/${file}`;
-  const upload = await supabase.storage.from(DOCUMENT_BUCKET).upload(storagePath, body, { upsert: true, contentType: "text/plain" });
+  const upload = await supabase.storage.from(DOCUMENT_BUCKET).upload(storagePath, body, { upsert: true, contentType: "application/pdf" });
   if (upload.error) throw upload.error;
   const existing = await supabase.from("attachments").select("id").eq("owner_user_id", userId).eq("record_id", recordId).eq("storage_path", storagePath).maybeSingle();
   if (existing.error) throw existing.error;
@@ -711,7 +733,7 @@ async function seedWillExecutorSuggestions(userId, recordId, contacts) {
   if (!attachmentId) {
     const insert = await supabase.from("attachments").insert({
       record_id: recordId, owner_user_id: userId, storage_bucket: DOCUMENT_BUCKET, storage_path: storagePath, file_name: file,
-      mime_type: "text/plain", size_bytes: body.byteLength, checksum: crypto.createHash("sha256").update(body).digest("hex"),
+      mime_type: "application/pdf", size_bytes: body.byteLength, checksum: crypto.createHash("sha256").update(body).digest("hex"),
     }).select("id").single();
     if (insert.error || !insert.data?.id) throw insert.error || new Error("Could not attach the Will document.");
     attachmentId = String(insert.data.id);
