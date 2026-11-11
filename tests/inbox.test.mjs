@@ -8,7 +8,7 @@ const updates = read("lib/notifications/inboxUpdates.ts");
 const css = read("app/v3-screens.css");
 
 test("Inbox, Mail style: categories All / Needs you / Waiting / Updates; badge-like subtitle (owner, 11 Nov 2026)", () => {
-  assert.match(panel, /\[\["all", "All", "inbox"\], \["needs", "Needs you", "priority_high"\], \["waiting", "Waiting", "hourglass_top"\], \["update", "Updates", "notifications"\]\]/);
+  assert.match(panel, /\[\["all", "All", "inbox"\], \["needs", "Needs you", "priority_high"\], \["waiting", "Waiting", "hourglass_top"\], \["update", "Updates", "notifications"\], \["archived", "Archived", "archive"\]\]/);
   assert.match(panel, /\{needs\} \{needs === 1 \? "needs" : "need"\} you · \{newCount\} new/);
   assert.match(css, /\.lf-inbox-category\.is-needs\[aria-pressed="true"\]/);
 });
@@ -23,8 +23,8 @@ test("one tap goes straight to the thing; only your own tasks, the Will question
 
 test("swipes like Mail, with visible buttons for everything; long swipe left only where Done is safe", () => {
   const swipe = read("components/inbox/SwipeRow.tsx");
-  assert.match(swipe, /if \(event\.pointerType !== "touch"\) return;/, "a mouse gets the hover buttons instead");
-  assert.match(swipe, /dx < -from\.width \* LONG && onLongLeft/);
+  assert.match(swipe, /if \(disabled \|\| event\.pointerType !== "touch"\) return;/, "a mouse gets the hover buttons instead");
+  assert.match(swipe, /moved < -from\.width \* LONG && onLongLeft/);
   assert.match(panel, /onLongLeft=\{entry\.finish \? \(\) => finishEntries\(\[entry\.key\]\) : undefined\}/);
   assert.match(panel, /className="lf-inbox-hover"/);
   assert.match(css, /@media \(hover: hover\) and \(pointer: fine\) \{ \.lf-inbox-row:hover \.lf-inbox-hover/);
@@ -102,4 +102,38 @@ test("a routine sign-in refresh doesn't close what's open in the Inbox", () => {
   assert.match(layout, /setViewerAccess\(\(current\) => sameViewerAccess\(current, nextViewer\) \? current : nextViewer\)/);
   const page = read("app/(app)/dashboard/page.tsx");
   assert.match(page, /\{loading && !loadedOnce \? <div className="lf-todo-loading"/);
+});
+
+test("swipes: one action per side, message slides over, off while selecting (owner, 11 Nov 2026)", () => {
+  const panel = read("app/(app)/components/dashboard/ActionQueuePanel.tsx");
+  const right = panel.slice(panel.indexOf("const rightButtons"), panel.indexOf("const pickedEntries"));
+  assert.match(right, /is-read/);
+  assert.doesNotMatch(right, /Later/);
+  const left = panel.slice(panel.indexOf("const leftButtons"), panel.indexOf("const rightButtons"));
+  assert.match(left, /Later/);
+  assert.doesNotMatch(left, /is-read/);
+  assert.match(panel, /disabled=\{selecting\}/);
+  assert.match(panel, /onLongRight=\{\(\) => setRead\(entry, entry\.isNew\)\}/);
+  const css = read("app/v3-screens.css");
+  assert.match(css, /\.lf-swipe-actions \{ position: absolute;/);
+  const row = read("components/inbox/SwipeRow.tsx");
+  assert.match(row, /suppressClick\.current = false; \/\/ only the click that ends a swipe/);
+});
+
+test("select: fixed toolbar replaces the phone tab bar, with Select all and Archive", () => {
+  const panel = read("app/(app)/components/dashboard/ActionQueuePanel.tsx");
+  assert.match(panel, /Select all/);
+  assert.match(panel, /archiveEntries\(picked\)/);
+  const css = read("app/v3-screens.css");
+  assert.match(css, /\.lf-inbox-selectbar \{ position: fixed;/);
+  assert.match(css, /body:has\(\.lf-inbox-selectbar\) \.lf-mobile-bottom-nav \{ display: none; \}/);
+});
+
+test("archive keeps items findable and out of the badge; invite reminders are Waiting", () => {
+  const panel = read("app/(app)/components/dashboard/ActionQueuePanel.tsx");
+  assert.match(panel, /\["archived", "Archived", "archive"\]/);
+  assert.match(panel, /!archived\.has\(`action:\$\{row\.actionKey\}`\)/);
+  assert.match(panel, /startsWith\("remind_"\) \? "waiting"/);
+  const store = read("lib/notifications/inboxUpdates.ts");
+  assert.match(store, /export const ARCHIVE_PREFIX = "archive:"/);
 });

@@ -529,12 +529,18 @@
 .lf-inbox-list { display: grid; border-top: 1px solid var(--lf-border); }
 .lf-inbox-row { position: relative; border-bottom: 1px solid var(--lf-border); background: var(--lf-surface-card); }
 .lf-inbox-row.is-picked { background: color-mix(in srgb, var(--lf-inbox-update) 9%, var(--lf-surface-card)); }
-.lf-swipe { position: relative; display: flex; align-items: stretch; overflow: hidden; touch-action: pan-y; }
-.lf-swipe-content { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; background: inherit; transition: transform 160ms ease; }
-.lf-swipe-actions { display: flex; flex: none; }
-.lf-swipe-button { display: grid; justify-items: center; align-content: center; gap: 4px; width: 78px; border: 0; color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+/* Swipe (owner decision 11 Nov 2026): the message slides over the buttons at full width, like Mail. */
+.lf-swipe { position: relative; overflow: hidden; touch-action: pan-y; background: inherit; }
+.lf-swipe-content { position: relative; z-index: 1; display: flex; align-items: center; min-width: 0; background: inherit; transition: transform 200ms ease; }
+.lf-swipe-content.is-dragging { transition: none; }
+.lf-swipe-actions { position: absolute; top: 0; bottom: 0; display: flex; visibility: hidden; }
+.lf-swipe-actions[data-showing] { visibility: visible; }
+.lf-swipe-actions.is-right { left: 0; }
+.lf-swipe-actions.is-left { right: 0; }
+.lf-swipe-button { display: grid; justify-items: center; align-content: center; gap: 4px; width: 76px; border: 0; color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .lf-swipe-button.is-read, .lf-swipe-button.is-clear { background: var(--lf-inbox-update); }
 .lf-swipe-button.is-later { background: var(--lf-inbox-later); }
+.lf-swipe-button.is-archive { background: var(--lf-inbox-waiting); }
 .lf-swipe-button.is-done { background: var(--lf-inbox-done); }
 .lf-inbox-row-button { display: flex; align-items: flex-start; gap: 10px; flex: 1; min-width: 0; padding: 14px 12px 14px 6px; border: 0; background: transparent; color: var(--lf-text); font: inherit; text-align: left; cursor: pointer; }
 .lf-inbox-row-button:hover { background: var(--lf-surface-hover); }
@@ -556,11 +562,16 @@
 .lf-inbox-hover button { min-height: 36px; padding: 0 12px; border: 1px solid var(--lf-border-input); border-radius: 10px; background: var(--lf-surface-card); color: var(--lf-text); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
 .lf-inbox-hover button:hover { background: var(--lf-surface-hover); }
 @media (hover: hover) and (pointer: fine) { .lf-inbox-row:hover .lf-inbox-hover, .lf-inbox-row:focus-within .lf-inbox-hover { display: inline-flex; } }
-.lf-inbox-selectbar { position: sticky; bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 5; display: flex; gap: 6px; margin-top: 12px; padding: 8px; border-radius: 20px; background: var(--lf-surface-card); box-shadow: 0 10px 30px rgba(43, 23, 20, 0.25); }
-.lf-inbox-selectbar button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; border: 0; border-radius: 14px; background: transparent; color: var(--lf-text); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+/* Select (owner decision 11 Nov 2026): like Mail, a toolbar takes the place of the phone tab bar while choosing. */
+.lf-inbox.is-selecting { padding-bottom: 104px; }
+body:has(.lf-inbox-selectbar) .lf-mobile-bottom-nav { display: none; }
+.lf-inbox-selectbar { position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 40; display: flex; gap: 4px; padding: 6px; border: 1px solid var(--lf-border); border-radius: 20px; background: var(--lf-surface-card); box-shadow: 0 10px 30px rgba(43, 23, 20, 0.22); }
+.lf-inbox-selectbar button { flex: 1; display: grid; justify-items: center; gap: 2px; min-height: 56px; padding: 6px 2px; border: 0; border-radius: 14px; background: transparent; color: var(--lf-text); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .lf-inbox-selectbar button:hover { background: var(--lf-surface-hover); }
-.lf-inbox-selectbar button:disabled { opacity: 0.45; cursor: default; }
-@media (min-width: 901px) { .lf-inbox-selectbar { bottom: 24px; } }
+.lf-inbox-selectbar button:disabled { opacity: 0.4; cursor: default; }
+@media (min-width: 901px) { .lf-inbox-selectbar { left: calc(var(--lf-shell-sidebar-width, 264px) + 40px); right: 40px; bottom: 24px; max-width: 640px; margin-inline: auto; } }
+.lf-inbox-select-all { min-height: 36px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; color: var(--lf-link); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+.lf-inbox-category.is-archived { margin-left: auto; }
 .lf-inbox-toast { position: fixed; left: 50%; bottom: calc(100px + env(safe-area-inset-bottom)); z-index: 80; transform: translateX(-50%); display: flex; align-items: center; gap: 16px; width: min(420px, calc(100vw - 32px)); box-sizing: border-box; justify-content: space-between; padding: 12px 16px; border-radius: 14px; background: #2B1714; color: #FFFFFF; font-size: 15px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); }
 .lf-inbox-toast button { min-height: 36px; border: 0; background: transparent; color: #F0A98A; font: inherit; font-weight: 700; cursor: pointer; }
 @media (min-width: 901px) { .lf-inbox-toast { bottom: 32px; } }

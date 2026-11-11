@@ -224,7 +224,7 @@ for (const kind of ["desk", "phone"] as const) {
     await signIn(page);
     await page.goto(`${BASE_URL}/actions`, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Inbox" }).filter({ visible: true }).first()).toBeVisible({ timeout: 30_000 });
-    for (const name of [/^All, \d+/, /^Needs you, \d+/, /^Waiting, \d+/, /^Updates, \d+/]) await expect(page.getByRole("button", { name })).toBeVisible();
+    for (const name of [/^All, \d+/, /^Needs you, \d+/, /^Waiting, \d+/, /^Updates, \d+/, /^Archived, \d+/]) await expect(page.getByRole("button", { name })).toBeVisible();
     await expect(page.locator(".lf-notification-control")).toHaveCount(0);
     await expect(page.locator(".lf-inbox-row").first()).toBeVisible({ timeout: 30_000 });
     await page.waitForTimeout(1200);
@@ -239,13 +239,76 @@ for (const kind of ["desk", "phone"] as const) {
     await page.getByRole("button", { name: "Select", exact: true }).click();
     await page.locator(".lf-inbox-row-button").first().click();
     await expect(page.getByText("1 selected")).toBeVisible();
-    await expect(page.getByRole("toolbar", { name: "Selected items" })).toBeVisible();
+    const toolbar = page.getByRole("toolbar", { name: "Selected items" });
+    // On screen, not tucked under the list (owner couldn't see it, 11 Nov 2026); on a phone it replaces the tab bar.
+    await expect(toolbar).toBeInViewport();
+    for (const name of ["Read", "Later", "Archive", "Done"]) await expect(toolbar.getByRole("button", { name, exact: true })).toBeVisible();
+    if (kind === "phone") await expect(page.locator(".lf-mobile-bottom-nav")).toBeHidden();
+    await page.getByRole("button", { name: "Select all", exact: true }).click();
+    const rowCount = await page.locator(".lf-inbox-row").count();
+    await expect(page.getByText(`${rowCount} selected`)).toBeVisible();
     await shoot(page, `inbox-${kind}-2-select`);
+    await page.getByRole("button", { name: "Deselect all", exact: true }).click();
+    await page.locator(".lf-inbox-row-button").first().click();
     await page.getByRole("toolbar", { name: "Selected items" }).getByRole("button", { name: "Later" }).click();
     await expect(page.getByRole("dialog").getByRole("button", { name: "Tomorrow morning" })).toBeVisible();
     await shoot(page, `inbox-${kind}-3-later`);
     await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
     await page.getByRole("button", { name: "Cancel", exact: true }).click();
+
+    if (kind === "phone") {
+      // Swipes: one action per side (owner, 11 Nov 2026). Right shows Read/Unread only; left shows Later and Done.
+      // The message slides over the buttons at full width rather than squashing. Nothing is tapped.
+      const swipe = async (index: number, dx: number) => {
+        const box = await page.locator(".lf-inbox-row .lf-swipe").nth(index).boundingBox();
+        if (!box) throw new Error("No row to swipe");
+        await page.locator(".lf-inbox-row .lf-swipe").nth(index).evaluate((el, { x, y, dx: move }) => {
+          const fire = (type: string, cx: number) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerType: "touch", pointerId: 7, clientX: cx, clientY: y, isPrimary: true }));
+          fire("pointerdown", x);
+          for (let i = 1; i <= 8; i += 1) fire("pointermove", x + (move * i) / 8);
+          fire("pointerup", x + move);
+        }, { x: box.x + box.width / 2, y: box.y + box.height / 2, dx });
+      };
+      const rowIndex = (await page.locator(".lf-inbox-row").evaluateAll((rows) => rows.findIndex((row) => row.querySelector(".lf-inbox-tag")?.textContent === "Needs you")));
+      const target = Math.max(0, rowIndex);
+      const swipeRow = page.locator(".lf-inbox-row").nth(target);
+      const fullWidth = (await swipeRow.locator(".lf-inbox-row-copy").boundingBox())!.width;
+      await swipe(target, 110);
+      const right = swipeRow.locator(".lf-swipe-actions.is-right[data-showing]");
+      await expect(right).toBeVisible();
+      await expect(right.getByRole("button")).toHaveCount(1);
+      await expect(right.getByRole("button")).toHaveText(/Read|Unread/);
+      await page.waitForTimeout(400);
+      expect(Math.round((await swipeRow.locator(".lf-inbox-row-copy").boundingBox())!.width)).toBe(Math.round(fullWidth));
+      await shoot(page, `inbox-${kind}-5-swipe-right`);
+      await swipe(target, -110 - 110);
+      const left = swipeRow.locator(".lf-swipe-actions.is-left[data-showing]");
+      await expect(left).toBeVisible();
+      await expect(left.getByRole("button", { name: "Later" })).toBeVisible();
+      await expect(left.getByRole("button", { name: /Read|Unread/ })).toHaveCount(0);
+      await page.waitForTimeout(400);
+      expect(Math.round((await swipeRow.locator(".lf-inbox-row-copy").boundingBox())!.width)).toBe(Math.round(fullWidth));
+      await shoot(page, `inbox-${kind}-6-swipe-left`);
+      await swipeRow.locator(".lf-inbox-row-copy").click(); // a tap on an open row just closes it
+      await expect(swipeRow.locator(".lf-swipe-actions[data-showing]")).toHaveCount(0);
+      await expect(page.locator(".lf-inbox-message")).toHaveCount(0);
+
+      // Archive one item, see it in Archived, move it back. Only this synthetic account's own Inbox rows change.
+      const firstTitle = (await page.locator(".lf-inbox-row .lf-inbox-row-top strong").first().innerText()).split("\n")[0];
+      await page.getByRole("button", { name: "Select", exact: true }).click();
+      await page.locator(".lf-inbox-row-button").first().click();
+      await toolbar.getByRole("button", { name: "Archive", exact: true }).click();
+      await expect(page.getByText("Moved to Archived")).toBeVisible();
+      await page.getByRole("button", { name: /^Archived, [1-9]/ }).click();
+      await expect(page.locator(".lf-inbox-row").filter({ hasText: firstTitle })).toBeVisible();
+      await shoot(page, `inbox-${kind}-7-archived`);
+      await page.getByRole("button", { name: "Select", exact: true }).click();
+      await page.getByRole("button", { name: "Select all", exact: true }).click();
+      await toolbar.getByRole("button", { name: "Inbox", exact: true }).click();
+      await expect(page.getByText("Moved back to Inbox")).toBeVisible();
+      await expect(page.getByRole("button", { name: /^Archived, 0/ })).toBeVisible();
+      await page.getByRole("button", { name: /^All, \d+/ }).click();
+    }
 
     if (kind === "desk") {
       // Laptop: pointing at a row shows Read/Unread, Later, Done. Unread survives a reload with this browser's copy wiped.
