@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 import { inspectCoolify, inspectDatabase, summarize, verifiedRestore, TARGET } from "../scripts/staging/verify-test-infrastructure.mjs";
 
 const responses = {
@@ -25,6 +26,13 @@ const mockFetch = (table) => async (url, options) => {
   const path = new URL(url).pathname.replace("/api/v1", "") + new URL(url).search;
   return { ok: Boolean(table[path]), status: table[path] ? 200 : 404, json: async () => table[path] };
 };
+
+test("protected diagnostic reuses the existing Coolify URL but never receives the deploy-capable token", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/staging-infrastructure-diagnostic.yml", import.meta.url), "utf8");
+  assert.match(workflow, /COOLIFY_READ_URL: \$\{\{ vars\.COOLIFY_BASE_URL \|\| secrets\.COOLIFY_BASE_URL \}\}/);
+  assert.match(workflow, /COOLIFY_READ_TOKEN: \$\{\{ secrets\.COOLIFY_READ_TOKEN \}\}/);
+  assert.doesNotMatch(workflow, /COOLIFY_API_TOKEN|COOLIFY_DEPLOY_TOKEN/);
+});
 
 test("Coolify verifier checks exact TEST resources and emits no compose or backup filename", async () => {
   const result = await inspectCoolify({ baseUrl: "https://coolify.example.test", token: "test-token", fetchImpl: mockFetch(responses) });
