@@ -13,7 +13,8 @@ import { clearNotificationIds, loadClearedNotificationIds, restoreNotificationId
  * one list with things to do. Updates are news ("Sarah accepted your invitation"): read, then cleared, like Mail.
  * The same sources, read state and cross-device clearing as before; nothing here changes the events themselves.
  */
-export type InboxUpdate = { id: string; title: string; detail: string; href: string; createdAt: string; read: boolean };
+/** person: who the update is about (for the initials on the row), when known. */
+export type InboxUpdate = { id: string; title: string; detail: string; href: string; createdAt: string; read: boolean; person?: string | null };
 
 type EventRow = { id: string; event_type: string; created_at: string; payload?: Record<string, unknown> | null; contact_invitations?: { contact_name?: string | null } | null };
 
@@ -119,7 +120,7 @@ async function syncReads(): Promise<string[]> {
     await flushPending(userId);
     const { data, error } = await supabase.from("inbox_reads").select("item_key").order("read_at", { ascending: false }).limit(1000);
     if (error) return local;
-    const remote = ((data ?? []) as Array<{ item_key: string }>).map((row) => String(row.item_key));
+    const remote = ((data ?? []) as Array<{ item_key: string }>).map((row) => String(row.item_key)).filter((key) => !key.startsWith(LATER_PREFIX));
     const still = loadPending();
     return saveLocalRead([...remote.filter((key) => !still.remove.includes(key)), ...still.add]);
   } catch {
@@ -173,11 +174,11 @@ export function useInboxUpdates(enabled: boolean, reads: ReturnType<typeof useIn
       if (cancelled) return;
       const invitationUpdates = ((result.data ?? []) as EventRow[]).map((event) => {
         const copy = describeInvitationEvent(event.event_type, event.payload ?? null, event.contact_invitations?.contact_name ?? null);
-        return { id: event.id, title: copy.title, detail: copy.detail, href: copy.kind === "access" ? "/access-sharing" : "/people-access?view=people", createdAt: event.created_at };
+        return { id: event.id, title: copy.title, detail: copy.detail, href: copy.kind === "access" ? "/access-sharing" : "/people-access?view=people", createdAt: event.created_at, person: event.contact_invitations?.contact_name ?? null };
       });
       const personUpdates = personal.map((item) => {
         const copy = describePersonNotification(item.kind, item.ownerName ?? null);
-        return { id: item.id, title: titleWithRecord(item.kind, copy.title, item.link, labels), detail: copy.detail, href: item.link ?? "/actions", createdAt: item.createdAt };
+        return { id: item.id, title: titleWithRecord(item.kind, copy.title, item.link, labels), detail: copy.detail, href: item.link ?? "/actions", createdAt: item.createdAt, person: item.ownerName ?? null };
       });
       setPersonIds(personal.map((item) => item.id));
       // Person notifications already carry their own read mark; fold those in so every device agrees.
@@ -214,3 +215,78 @@ export function useInboxUpdates(enabled: boolean, reads: ReturnType<typeof useIn
 
 /** The read-state key for an action. Opening an action only marks it read; it never completes it. */
 export const actionReadKey = (actionKey: string) => `action:${actionKey}`;
+
+/**
+ * Later (owner decision 11 Nov 2026, like Mail's Remind Me): hide an Inbox item until a chosen date, when it comes
+ * back as new. Kept in the person's own inbox_reads rows as "later:<item>" with the date it returns, so it follows
+ * them across devices without a new table; this device keeps a copy. Nothing about the item itself changes.
+ */
+export const LATER_PREFIX = "later:";
+const LATER_KEY = "lf:inbox:later";
+
+function loadLaterLocal(): Record<string, string> {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(LATER_KEY) ?? "{}");
+    return stored && typeof stored === "object" ? stored as Record<string, string> : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveLaterLocal(map: Record<string, string>) {
+  const now = Date.now();
+  const live = Object.fromEntries(Object.entries(map).filter(([, until]) => Date.parse(until) > now));
+  try { window.localStorage.setItem(LATER_KEY, JSON.stringify(live)); } catch { /* optional */ }
+  return live;
+}
+
+export function useInboxLater() {
+  const [later, setLater] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let cancelled = false;
+    queueMicrotask(() => { if (!cancelled) setLater(saveLaterLocal(loadLaterLocal())); });
+    void (async () => {
+      try {
+        const { data, error } = await supabase.from("inbox_reads").select("item_key,read_at").like("item_key", `${LATER_PREFIX}%`).limit(500);
+        if (error || cancelled) return;
+        const merged = { ...loadLaterLocal() };
+        for (const row of (data ?? []) as Array<{ item_key: string; read_at: string }>) {
+          const key = row.item_key.slice(LATER_PREFIX.length);
+          if (!merged[key] || Date.parse(row.read_at) > Date.parse(merged[key])) merged[key] = row.read_at;
+        }
+        if (!cancelled) setLater(saveLaterLocal(merged));
+      } catch { /* this device's copy still works */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const snooze = useCallback((keys: string[], until: Date) => {
+    if (!keys.length) return;
+    const iso = until.toISOString();
+    setLater((current) => saveLaterLocal({ ...current, ...Object.fromEntries(keys.map((key) => [key, iso])) }));
+    void (async () => {
+      const userId = await currentUserId();
+      if (!userId) return;
+      const itemKeys = keys.map((key) => `${LATER_PREFIX}${key}`).filter((key) => key.length <= 200);
+      try {
+        // No updates on this table: replace the row.
+        await supabase.from("inbox_reads").delete().eq("user_id", userId).in("item_key", itemKeys);
+        await supabase.from("inbox_reads").insert(itemKeys.map((item_key) => ({ user_id: userId, item_key, read_at: iso })));
+      } catch { /* this device still remembers */ }
+    })();
+  }, []);
+
+  const wake = useCallback((keys: string[]) => {
+    if (!keys.length) return;
+    setLater((current) => saveLaterLocal(Object.fromEntries(Object.entries(current).filter(([key]) => !keys.includes(key)))));
+    void (async () => {
+      const userId = await currentUserId();
+      if (!userId) return;
+      try { await supabase.from("inbox_reads").delete().eq("user_id", userId).in("item_key", keys.map((key) => `${LATER_PREFIX}${key}`)); } catch { /* optional */ }
+    })();
+  }, []);
+
+  const isLater = useCallback((key: string) => Boolean(later[key] && Date.parse(later[key]) > Date.now()), [later]);
+  return { later, isLater, snooze, wake };
+}
+
