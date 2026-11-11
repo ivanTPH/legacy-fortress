@@ -268,7 +268,8 @@ for (const kind of ["desk", "phone"] as const) {
 
     // Executors decided in place: the panel loads and its buttons can be reached (owner, 11 Nov 2026: on a phone the
     // Add form's buttons were hidden below the screen in the design). Nothing is added or sent.
-    const executorRow = page.locator(".lf-inbox-row-button").filter({ hasText: /executor/i }).first();
+    const executorRow = page.locator(".lf-inbox-row-button[data-named]").first();
+    console.log(`Inbox executors panel (${kind}): ${await executorRow.count() ? "checked" : "no executor or attorney step on this account"}`);
     if (await executorRow.count()) {
       await executorRow.click();
       await expect(page.locator(".lf-inbox-message .lf-named, .lf-inbox-message .lf-inbox-message-body").first()).toBeVisible({ timeout: 20_000 });
