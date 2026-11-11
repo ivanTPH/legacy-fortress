@@ -33,6 +33,9 @@ export default function SwipeRow({ left, right, leftCount, rightCount, onLongLef
   const hold = useRef<number | null>(null);
   const suppressClick = useRef(false);
   const [drag, setDrag] = useState<number | null>(null);
+  // The live position, read when the finger lifts: screen state can lag a quick flick by a frame.
+  const live = useRef<number | null>(null);
+  const move = (value: number | null) => { live.current = value; setDrag(value); };
 
   function clearHold() {
     if (hold.current) window.clearTimeout(hold.current);
@@ -57,16 +60,16 @@ export default function SwipeRow({ left, right, leftCount, rightCount, onLongLef
         const from = start.current;
         if (!from) return;
         const x = event.clientX - from.x, y = event.clientY - from.y;
-        if (!from.moved && Math.abs(y) > 12 && Math.abs(y) > Math.abs(x)) { start.current = null; clearHold(); setDrag(null); return; } // scrolling
+        if (!from.moved && Math.abs(y) > 12 && Math.abs(y) > Math.abs(x)) { start.current = null; clearHold(); move(null); return; } // scrolling
         if (Math.abs(x) > 8) { from.moved = true; clearHold(); }
-        if (from.moved) setDrag(Math.max(-from.width, Math.min(from.width, from.base + x)));
+        if (from.moved) move(Math.max(-from.width, Math.min(from.width, from.base + x)));
       }}
       onPointerUp={() => {
         const from = start.current;
         clearHold();
         start.current = null;
-        const moved = drag ?? 0;
-        setDrag(null);
+        const moved = live.current ?? 0;
+        move(null);
         if (!from || !from.moved) return;
         suppressClick.current = true;
         if (moved < -from.width * LONG && onLongLeft) { onOpenChange(null); onLongLeft(); }
@@ -75,7 +78,7 @@ export default function SwipeRow({ left, right, leftCount, rightCount, onLongLef
         else if (moved > REVEAL) onOpenChange("right");
         else onOpenChange(null);
       }}
-      onPointerCancel={() => { clearHold(); start.current = null; setDrag(null); }}
+      onPointerCancel={() => { clearHold(); start.current = null; move(null); }}
       onClickCapture={(event) => {
         if (suppressClick.current) { suppressClick.current = false; event.preventDefault(); event.stopPropagation(); }
       }}
