@@ -274,6 +274,12 @@ for (const kind of ["desk", "phone"] as const) {
     {
       await executorRow.click();
       await expect(page.locator(".lf-inbox-message .lf-named, .lf-inbox-message .lf-inbox-message-body").first()).toBeVisible({ timeout: 20_000 });
+      const drawerText = async () => (await page.locator(".lf-inbox-message").count())
+        ? (await page.locator(".lf-inbox-message").first().innerText()).replace(/\s+/g, " ").slice(0, 400) : "(drawer closed)";
+      console.log(`Inbox ${kind} executors, just opened: ${await drawerText()}`);
+      await page.locator(".lf-named, .lf-inbox-message-body").filter({ hasNotText: "Loading the names" }).first().waitFor({ timeout: 20_000 }).catch(() => undefined);
+      await page.waitForTimeout(3000);
+      console.log(`Inbox ${kind} executors, 3s later: ${await drawerText()}`);
       const done = page.locator(".lf-inbox-message").getByRole("button", { name: "Done", exact: true });
       await done.scrollIntoViewIfNeeded();
       await expect(done).toBeInViewport();
