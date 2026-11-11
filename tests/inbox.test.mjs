@@ -96,3 +96,10 @@ test("the executors panel never sits on Loading for ever", () => {
   assert.match(src, />Try again</);
   assert.doesNotMatch(src, /supabase\.auth\.getUser\(\)\.then/);
 });
+
+test("a routine sign-in refresh doesn't close what's open in the Inbox", () => {
+  const layout = read("app/(app)/layout.tsx");
+  assert.match(layout, /setViewerAccess\(\(current\) => sameViewerAccess\(current, nextViewer\) \? current : nextViewer\)/);
+  const page = read("app/(app)/dashboard/page.tsx");
+  assert.match(page, /\{loading && !loadedOnce \? <div className="lf-todo-loading"/);
+});

@@ -426,7 +426,9 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
           setStoredLinkedGrantId(requestedGrantId);
         }
         setLinkedFortresses(await loadLinkedFortressSummaries(supabase, userId));
-        setViewerAccess(nextViewer);
+        // A routine sign-in refresh re-reads the same access. Keep the current object when nothing changed, so
+        // pages that reload on a viewer change (the Inbox) don't reset what's open (screenshot run 33).
+        setViewerAccess((current) => sameViewerAccess(current, nextViewer) ? current : nextViewer);
       } catch {
         if (!mounted) return;
         setViewerAccess({
@@ -1560,3 +1562,7 @@ const linkedOwnerAvatarStyle: CSSProperties = {
   fontWeight: 800,
   flexShrink: 0,
 };
+
+function sameViewerAccess(a: ViewerAccessState | null, b: ViewerAccessState) {
+  return a !== null && JSON.stringify(a) === JSON.stringify(b);
+}

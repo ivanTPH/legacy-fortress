@@ -431,6 +431,8 @@ export default function DashboardPage() {
   }, [actionCentreOnly, clearLinkedGrant, viewer.mode]);
 
   const [loading, setLoading] = useState(true);
+  // After the first load, refreshes keep the Inbox on screen (an open message stays open) instead of the skeleton.
+  const [loadedOnce, setLoadedOnce] = useState(false);
   const [status, setStatus] = useState("");
   const [currency, setCurrency] = useState("GBP");
   const [refreshToken, setRefreshToken] = useState(0);
@@ -662,7 +664,7 @@ export default function DashboardPage() {
         if (!mounted) return;
         setStatus(`⚠️ Could not load dashboard: ${error instanceof Error ? error.message : "Unknown error"}`);
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) { setLoading(false); setLoadedOnce(true); }
       }
     }
 
@@ -1669,7 +1671,7 @@ const legalSummary = useMemo(() => {
       <div className="lf-action-centre-page lf-v3-area-page">
         <PageHeader title="Inbox" description="Things to do and updates about your Vault, in one place." />
         {/* Until tasks load, a placeholder of similar size: no "Nothing needs your attention" flash, no jump. */}
-        {loading ? <div className="lf-todo-loading" role="status" aria-busy="true"><span className="lf-visually-hidden">Loading your Inbox…</span><span className="lf-skeleton is-chips" /><span className="lf-skeleton is-row" /><span className="lf-skeleton is-row" /><span className="lf-skeleton is-row" /></div> : <ActionQueuePanel
+        {loading && !loadedOnce ? <div className="lf-todo-loading" role="status" aria-busy="true"><span className="lf-visually-hidden">Loading your Inbox…</span><span className="lf-skeleton is-chips" /><span className="lf-skeleton is-row" /><span className="lf-skeleton is-row" /><span className="lf-skeleton is-row" /></div> : <ActionQueuePanel
           items={dashboardState.actions.items}
           context={actionContext}
           guidanceItems={guidanceItems}
