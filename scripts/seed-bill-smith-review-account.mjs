@@ -4,7 +4,10 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { normalizeCanonicalLinkedContexts } from "../lib/contacts/canonicalContacts.ts";
 
-const TARGET_EMAIL = process.env.SEED_TARGET_EMAIL || "ivanyardley@me.com";
+// Synthetic accounts only: the target must be named, and the owner's own account is refused (owner rule).
+const TARGET_EMAIL = String(process.env.SEED_TARGET_EMAIL || "").trim().toLowerCase();
+if (!TARGET_EMAIL) throw new Error("Seed blocked: set SEED_TARGET_EMAIL to a synthetic account.");
+if (TARGET_EMAIL === "ivanyardley@me.com") throw new Error("Seed blocked: this script never runs against the owner's own account.");
 const DEMO_KEY = "bill-smith-review-account-v1";
 const DOCUMENT_BUCKET = "vault-docs";
 
@@ -688,6 +691,47 @@ async function seedWillRecord(userId, contacts) {
     ? await supabase.from("record_contacts").update(contactPayload).eq("id", existingContact.data.id).eq("owner_user_id", userId)
     : await supabase.from("record_contacts").insert(contactPayload);
   if (write.error) throw write.error;
+  await seedWillExecutorSuggestions(userId, recordId, contacts);
+}
+
+/**
+ * Names "found" in the Will, for the Inbox executors panel (owner, 11 Nov 2026): one already in People with an email
+ * (Sarah Smith, so Confirm), one not in People and with no email (Robert Sample, so Add asks for one). Kept pending:
+ * if a check or a person decides one, the next seed puts a fresh pending one back. Nothing is shared or sent.
+ */
+async function seedWillExecutorSuggestions(userId, recordId, contacts) {
+  const file = "will-overview.txt";
+  const body = await readFile(path.join(process.cwd(), "public", "demo-docs", file));
+  const storagePath = `demo-review/${userId}/records/${recordId}/${file}`;
+  const upload = await supabase.storage.from(DOCUMENT_BUCKET).upload(storagePath, body, { upsert: true, contentType: "text/plain" });
+  if (upload.error) throw upload.error;
+  const existing = await supabase.from("attachments").select("id").eq("owner_user_id", userId).eq("record_id", recordId).eq("storage_path", storagePath).maybeSingle();
+  if (existing.error) throw existing.error;
+  let attachmentId = existing.data?.id ? String(existing.data.id) : "";
+  if (!attachmentId) {
+    const insert = await supabase.from("attachments").insert({
+      record_id: recordId, owner_user_id: userId, storage_bucket: DOCUMENT_BUCKET, storage_path: storagePath, file_name: file,
+      mime_type: "text/plain", size_bytes: body.byteLength, checksum: crypto.createHash("sha256").update(body).digest("hex"),
+    }).select("id").single();
+    if (insert.error || !insert.data?.id) throw insert.error || new Error("Could not attach the Will document.");
+    attachmentId = String(insert.data.id);
+  }
+  const sarah = contacts.find((item) => item.full_name === "Sarah Smith");
+  const names = [
+    { name: "Sarah Smith", match: sarah ? { match_person_id: sarah.id, match_kind: "exact" } : { match_person_id: null, match_kind: "none" } },
+    { name: "Robert Sample", match: { match_person_id: null, match_kind: "none" } },
+  ];
+  for (const entry of names) {
+    const pending = await supabase.from("extraction_suggestions").select("id").eq("owner_user_id", userId)
+      .eq("record_type", "record").eq("record_id", recordId).eq("extracted_name", entry.name).eq("status", "pending").limit(1);
+    if (pending.error) throw pending.error;
+    if (pending.data?.length) continue;
+    const insert = await supabase.from("extraction_suggestions").insert({
+      owner_user_id: userId, record_type: "record", record_id: recordId, attachment_id: attachmentId, document_id: null,
+      page: 1, extracted_name: entry.name, extracted_role: "Executor", ...entry.match, status: "pending",
+    });
+    if (insert.error) throw insert.error;
+  }
 }
 
 async function seedPersonalRecords(userId, contacts) {
