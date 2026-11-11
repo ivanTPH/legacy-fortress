@@ -242,7 +242,8 @@ for (const kind of ["desk", "phone"] as const) {
     const toolbar = page.getByRole("toolbar", { name: "Selected items" });
     // On screen, not tucked under the list (owner couldn't see it, 11 Nov 2026); on a phone it replaces the tab bar.
     await expect(toolbar).toBeInViewport();
-    for (const name of ["Read", "Later", "Archive", "Done"]) await expect(toolbar.getByRole("button", { name, exact: true })).toBeVisible();
+    await expect(toolbar.getByRole("button", { name: /^(Read|Unread)$/ })).toBeVisible(); // depends on the row picked
+    for (const name of ["Later", "Archive", "Done"]) await expect(toolbar.getByRole("button", { name, exact: true })).toBeVisible();
     if (kind === "phone") await expect(page.locator(".lf-mobile-bottom-nav")).toBeHidden();
     await page.getByRole("button", { name: "Select all", exact: true }).click();
     const rowCount = await page.locator(".lf-inbox-row").count();
