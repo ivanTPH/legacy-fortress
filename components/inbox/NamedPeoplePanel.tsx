@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import Icon from "../ui/Icon";
 import { supabase } from "../../lib/supabaseClient";
+import { waitForActiveUser } from "../../lib/auth/session";
 import { loadInboxNamedPeople, type InboxNamedPerson } from "../../lib/linkedPeople/inboxNamedPeople";
 import { reviewLinkedPersonSuggestion } from "../../lib/linkedPeople/suggestions";
 import { normalizeLinkedPersonEmail, sendRecordLinkedPersonInvitation } from "../../lib/linkedPeople/recordLinkedPeople";
@@ -25,21 +26,36 @@ export default function NamedPeoplePanel({ doc, onChanged }: { doc: "will" | "po
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
+  const [loadFailed, setLoadFailed] = useState(false);
+
   const reload = useCallback(async (owner: string) => {
-    try { setPeople((await loadInboxNamedPeople(supabase, owner, doc)).people); }
-    catch { setError("We couldn’t load the names just now. Please try again."); setPeople([]); }
+    try {
+      // Bounded, so a stalled request shows "Try again" rather than "Loading" for ever (screenshot run 32).
+      const result = await Promise.race([
+        loadInboxNamedPeople(supabase, owner, doc),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 20_000)),
+      ]);
+      setLoadFailed(false);
+      setPeople(result.people);
+    } catch { setLoadFailed(true); setPeople(null); }
   }, [doc]);
+
+  const start = useCallback(async (isCancelled: () => boolean) => {
+    try {
+      // The app's shared sign-in check (session first, then the server), as the Inbox itself uses.
+      const user = await waitForActiveUser(supabase, { attempts: 6, delayMs: 200 });
+      if (isCancelled()) return;
+      if (!user) { setLoadFailed(true); return; }
+      setOwnerUserId(user.id);
+      await reload(user.id);
+    } catch { if (!isCancelled()) setLoadFailed(true); }
+  }, [reload]);
 
   useEffect(() => {
     let cancelled = false;
-    void supabase.auth.getUser().then(({ data }) => {
-      const id = data.user?.id ?? "";
-      if (cancelled || !id) return;
-      setOwnerUserId(id);
-      void reload(id);
-    });
+    queueMicrotask(() => { void start(() => cancelled); });
     return () => { cancelled = true; };
-  }, [reload]);
+  }, [start]);
 
   async function run(key: string, work: () => Promise<string>) {
     if (busy) return;
@@ -75,6 +91,12 @@ export default function NamedPeoplePanel({ doc, onChanged }: { doc: "will" | "po
     });
   }
 
+  if (loadFailed) return (
+    <div className="lf-named">
+      <p className="lf-named-error" role="alert">We couldn’t load the names just now.</p>
+      <button type="button" className="lf-inbox-secondary" onClick={() => { setLoadFailed(false); setPeople(null); void start(() => false); }}>Try again</button>
+    </div>
+  );
   if (!people) return <p className="lf-inbox-message-meta" role="status">Loading the names…</p>;
   if (!people.length) return <p className="lf-inbox-message-body">Nothing to check here now. Everyone named on your {docName} is in People.</p>;
 
