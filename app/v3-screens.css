@@ -542,6 +542,8 @@
 .lf-swipe-button.is-later { background: var(--lf-inbox-later); }
 .lf-swipe-button.is-archive { background: var(--lf-inbox-waiting); }
 .lf-swipe-button.is-done { background: var(--lf-inbox-done); }
+.lf-swipe-button.is-delete { background: var(--lf-danger, #B42318); }
+.lf-inbox-selectbar button.is-delete, .lf-inbox-hover button.is-delete, .lf-inbox-sheet [role="menuitem"].is-delete { color: var(--lf-danger, #B42318); }
 .lf-inbox-row-button { display: flex; align-items: flex-start; gap: 10px; flex: 1; min-width: 0; padding: 14px 12px 14px 6px; border: 0; background: transparent; color: var(--lf-text); font: inherit; text-align: left; cursor: pointer; }
 .lf-inbox-row-button:hover { background: var(--lf-surface-hover); }
 .lf-inbox-row-button > .lf-inbox-dot { align-self: center; }
@@ -571,7 +573,8 @@ body:has(.lf-inbox-selectbar) .lf-mobile-bottom-nav { display: none; }
 .lf-inbox-selectbar button:disabled { opacity: 0.4; cursor: default; }
 @media (min-width: 901px) { .lf-inbox-selectbar { left: calc(var(--lf-shell-sidebar-width, 264px) + 40px); right: 40px; bottom: 24px; max-width: 640px; margin-inline: auto; } }
 .lf-inbox-select-all { min-height: 36px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; color: var(--lf-link); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
-.lf-inbox-category.is-archived { margin-left: auto; }
+/* Phone: five filters fit without the chosen one being cut off. */
+@media (max-width: 480px) { .lf-inbox-categories { gap: 6px; } .lf-inbox-category { min-width: 48px; padding: 0 12px; } }
 .lf-inbox-toast { position: fixed; left: 50%; bottom: calc(100px + env(safe-area-inset-bottom)); z-index: 80; transform: translateX(-50%); display: flex; align-items: center; gap: 16px; width: min(420px, calc(100vw - 32px)); box-sizing: border-box; justify-content: space-between; padding: 12px 16px; border-radius: 14px; background: #2B1714; color: #FFFFFF; font-size: 15px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); }
 .lf-inbox-toast button { min-height: 36px; border: 0; background: transparent; color: #F0A98A; font: inherit; font-weight: 700; cursor: pointer; }
 @media (min-width: 901px) { .lf-inbox-toast { bottom: 32px; } }

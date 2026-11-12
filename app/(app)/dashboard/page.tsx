@@ -996,6 +996,27 @@ const legalSummary = useMemo(() => {
     }
   }, [assetRows]);
 
+  // Delete one of the person's own reminders from the Inbox (owner, 12 Nov 2026). A soft delete, as elsewhere in the
+  // Vault, limited to their own reminders; the Inbox only calls this after its Undo window has passed.
+  const deleteDashboardTask = useCallback(async (taskId: string) => {
+    const ownerId = viewer.sessionUserId;
+    if (!ownerId || viewer.mode !== "owner") return false;
+    const now = new Date().toISOString();
+    const result = await supabase
+      .from("assets")
+      .update({ deleted_at: now, updated_at: now })
+      .eq("id", taskId)
+      .eq("owner_user_id", ownerId)
+      .eq("category_key", "tasks")
+      .is("deleted_at", null);
+    if (result.error) {
+      setStatus("⚠️ Could not delete that reminder. Please try again.");
+      return false;
+    }
+    setAssetRows((current) => current.filter((row) => row.id !== taskId));
+    return true;
+  }, [viewer.mode, viewer.sessionUserId]);
+
   const handleAction = useCallback((actionKey: string, destination?: string) => {
     if (destination) {
       router.push(destination);
@@ -1679,6 +1700,7 @@ const legalSummary = useMemo(() => {
           onAction={handleAction}
           onGuidanceDecision={(item, action) => void handleGuidanceDecision(item, action)}
           onGuidanceApplicability={handleGuidanceApplicability}
+          onDeleteOwnTask={viewer.mode === "owner" ? deleteDashboardTask : undefined}
         />}
         {status ? <p role="status" className="lf-action-centre-save-status">{stripStatusPrefix(status)}</p> : null}
         {reviewSuggestionId && viewer.sessionUserId ? <SuggestionReviewDialog suggestionId={reviewSuggestionId} ownerUserId={viewer.sessionUserId} onClose={closeSuggestionReview} onDecided={(message, assetId) => void finishSuggestionReview(message, assetId)} /> : null}

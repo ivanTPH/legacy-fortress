@@ -243,7 +243,7 @@ for (const kind of ["desk", "phone"] as const) {
     // On screen, not tucked under the list (owner couldn't see it, 11 Nov 2026); on a phone it replaces the tab bar.
     await expect(toolbar).toBeInViewport();
     await expect(toolbar.getByRole("button", { name: /^(Read|Unread)$/ })).toBeVisible(); // depends on the row picked
-    for (const name of ["Later", "Archive", "Done"]) await expect(toolbar.getByRole("button", { name, exact: true })).toBeVisible();
+    for (const name of ["Later", "Archive", "Done", "Delete"]) await expect(toolbar.getByRole("button", { name, exact: true })).toBeVisible();
     if (kind === "phone") await expect(page.locator(".lf-mobile-bottom-nav")).toBeHidden();
     await page.getByRole("button", { name: "Select all", exact: true }).click();
     const rowCount = await page.locator(".lf-inbox-row").count();
@@ -300,7 +300,9 @@ for (const kind of ["desk", "phone"] as const) {
       await page.locator(".lf-inbox-row-button").first().click();
       await toolbar.getByRole("button", { name: "Archive", exact: true }).click();
       await expect(page.getByText("Moved to Archived")).toBeVisible();
-      await page.getByRole("button", { name: /^Archived, [1-9]/ }).click();
+      const archivedChip = page.getByRole("button", { name: /^Archived, [1-9]/ });
+      await archivedChip.click();
+      await expect(archivedChip).toBeInViewport({ ratio: 1 }); // the chosen filter is never cut off
       await expect(page.locator(".lf-inbox-row").filter({ hasText: firstTitle })).toBeVisible();
       await shoot(page, `inbox-${kind}-7-archived`);
       await page.getByRole("button", { name: "Select", exact: true }).click();
@@ -308,6 +310,19 @@ for (const kind of ["desk", "phone"] as const) {
       await toolbar.getByRole("button", { name: "Inbox", exact: true }).click();
       await expect(page.getByText("Moved back to Inbox")).toBeVisible();
       await expect(page.getByRole("button", { name: /^Archived, 0/ })).toBeVisible();
+
+      // Delete (bin) is only for updates and own reminders: offered for an update, not for a suggestion. Not pressed.
+      await page.getByRole("button", { name: /^All, \d+/ }).click();
+      await page.getByRole("button", { name: "Select", exact: true }).click();
+      const suggestionRow = page.locator(".lf-inbox-row").filter({ has: page.locator(".lf-inbox-tag", { hasText: /^(Suggested|Needs you|Waiting)$/ }) }).first();
+      await suggestionRow.locator(".lf-inbox-row-button").click();
+      await expect(toolbar.getByRole("button", { name: "Delete", exact: true })).toBeDisabled();
+      const updateRow = page.locator(".lf-inbox-row").filter({ has: page.locator(".lf-inbox-tag", { hasText: /^Update$/ }) }).first();
+      if (await updateRow.count()) {
+        await updateRow.locator(".lf-inbox-row-button").click();
+        await expect(toolbar.getByRole("button", { name: "Delete", exact: true })).toBeEnabled();
+      }
+      await page.getByRole("button", { name: "Cancel", exact: true }).click();
       await page.getByRole("button", { name: /^All, \d+/ }).click();
     }
 
