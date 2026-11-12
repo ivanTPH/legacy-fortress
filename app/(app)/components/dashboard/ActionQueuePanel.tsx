@@ -388,6 +388,16 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
   }, []);
 
   // A deleted reminder hides at once and is only deleted when the Undo window has passed (or the Inbox closes).
+  // The chosen filter grows to show its name, so bring it fully into view after that render (phone width).
+  const categoriesRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const row = categoriesRef.current;
+    const chip = row?.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (!row || !chip) return;
+    const box = row.getBoundingClientRect(), place = chip.getBoundingClientRect();
+    if (place.left < box.left) row.scrollLeft -= box.left - place.left;
+    else if (place.right > box.right) row.scrollLeft += place.right - box.right;
+  }, [category]);
   const [pendingDeletes, setPendingDeletes] = useState<string[]>([]);
   const deleteTimers = useRef(new Map<string, number>());
   const deleteOwnTask = useRef(onDeleteOwnTask);
@@ -548,9 +558,9 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
           <button type="button" className="lf-inbox-pill-button" onClick={() => { setSelecting(!selecting); setPicked([]); setSwiped(null); }}>{selecting ? "Cancel" : "Select"}</button>
         </span>
       </div>
-      <div className="lf-inbox-categories" role="group" aria-label="Show">
+      <div className="lf-inbox-categories" role="group" aria-label="Show" ref={categoriesRef}>
         {([["all", "All", "inbox"], ["needs", "Needs you", "priority_high"], ["waiting", "Waiting", "hourglass_top"], ["update", "Updates", "notifications"], ["archived", "Archived", "archive"]] as const).map(([key, label, icon]) => (
-          <button key={key} type="button" className={`lf-inbox-category is-${key}`} aria-pressed={category === key} aria-label={`${label}, ${count(key)}`} onClick={(event) => { setCategory(key); setPicked([]); setSwiped(null); event.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest" }); }}>
+          <button key={key} type="button" className={`lf-inbox-category is-${key}`} aria-pressed={category === key} aria-label={`${label}, ${count(key)}`} onClick={(event) => { setCategory(key); setPicked([]); setSwiped(null); }}>
             <Icon name={icon} size={20} />{category === key ? <span>{label} {count(key)}</span> : null}
           </button>
         ))}
