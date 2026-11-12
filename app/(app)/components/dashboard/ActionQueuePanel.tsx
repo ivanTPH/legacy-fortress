@@ -17,6 +17,8 @@ type ActionQueuePanelProps = {
   guidanceItems?: GuidanceItem[];
   onGuidanceDecision?: (item: GuidanceItem, action: Exclude<GuidanceAction, "add" | "learn_more">) => void;
   onGuidanceApplicability?: (item: GuidanceItem, state: Extract<VaultApplicabilityState, "yes" | "no" | "unsure">) => Promise<boolean> | boolean;
+  /** Deletes one of the person's own reminders (soft delete). Runs once the Undo window has passed. */
+  onDeleteOwnTask?: (taskId: string) => Promise<boolean> | boolean;
   guidanceBusyKey?: string | null;
 };
 
@@ -127,8 +129,8 @@ type DashboardActionSeed = Pick<
   "key" | "title" | "stageName" | "blockerLabel" | "whyItMatters" | "status" | "actionKey" | "href" | "requiredRole" | "primaryActionLabel" | "secondaryActionLabel"
 >;
 
-function ActionQueuePanel({ items, onAction, context, guidanceItems, onGuidanceDecision, onGuidanceApplicability, guidanceBusyKey }: ActionQueuePanelProps) {
-  return <ActionCentreInbox {...{ items, onAction, context, guidanceItems, onGuidanceDecision, onGuidanceApplicability, guidanceBusyKey }} />;
+function ActionQueuePanel({ items, onAction, context, guidanceItems, onGuidanceDecision, onGuidanceApplicability, onDeleteOwnTask, guidanceBusyKey }: ActionQueuePanelProps) {
+  return <ActionCentreInbox {...{ items, onAction, context, guidanceItems, onGuidanceDecision, onGuidanceApplicability, onDeleteOwnTask, guidanceBusyKey }} />;
 
   /* Legacy grouping retained below for the existing action builders. */
   /*
@@ -273,14 +275,18 @@ function ActionQueuePanel({ items, onAction, context, guidanceItems, onGuidanceD
 // - One tap goes straight to the thing. Only your own tasks and the Will question open first, so a tap never
 //   completes anything by accident.
 // - Each action lives on one side only (owner, 11 Nov 2026). Swipe right: Read/Unread (long swipe does it). Swipe
-//   left: Later and Done (Clear for updates; long swipe does Done). Press and hold: every action. On a laptop the
+//   left: Later, Done and Delete (long swipe does Done, or Delete for updates). Press and hold: every action. On a laptop the
 //   same buttons appear on hover. Select ticks several at once; its toolbar replaces the phone tab bar, like Mail.
 // - Archive moves an item out of the list without completing it, into Archived, where it can be moved back.
+// - Delete (bin, owner 12 Nov 2026) only for updates (news) and the person's own reminders. Suggested and must-do
+//   steps come from the Vault itself, so they have Done, Doesn't apply or Archive instead. Deleting an update never
+//   touches the activity history behind it.
 // - A filled dot is new, an outline has been read. Orange: needs you. Grey: waiting. Blue: update. Each row also
 //   says which in words. Later brings an item back as new on the chosen date.
 type InboxCategory = "all" | "needs" | "waiting" | "update" | "archived";
 type InboxKind = Exclude<InboxCategory, "all" | "archived">;
-type InboxFinish = { label: "Done" | "Clear" | "Doesn’t apply"; run: () => void; message: string; undo?: () => void } | null;
+type InboxFinish = { label: "Done" | "Doesn’t apply"; run: () => void; message: string; undo?: () => void } | null;
+type InboxRemove = { run: () => void; message: string; undo?: () => void } | null;
 type InboxEntry = {
   key: string;
   kind: InboxKind;
@@ -298,6 +304,7 @@ type InboxEntry = {
   readKeys: string[];
   open: () => void;
   finish: InboxFinish;
+  remove?: InboxRemove;
   extraNotRelevant?: () => void;
 };
 
@@ -332,7 +339,7 @@ const NAMED_PEOPLE_STEPS: Record<string, "will" | "poa"> = {
   review_attorneys: "poa", invite_attorneys: "poa", remind_attorneys: "poa",
 };
 
-function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidanceDecision, onGuidanceApplicability, guidanceBusyKey }: ActionQueuePanelProps) {
+function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidanceDecision, onGuidanceApplicability, onDeleteOwnTask, guidanceBusyKey }: ActionQueuePanelProps) {
   const rows = useMemo(
     () => getActiveActionRows(items, context ? { ...context, guidanceItems } : undefined),
     [context, guidanceItems, items],
@@ -380,6 +387,32 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
     window.setTimeout(() => setToast((current) => (current?.text === text ? null : current)), 6000);
   }, []);
 
+  // A deleted reminder hides at once and is only deleted when the Undo window has passed (or the Inbox closes).
+  const [pendingDeletes, setPendingDeletes] = useState<string[]>([]);
+  const deleteTimers = useRef(new Map<string, number>());
+  const deleteOwnTask = useRef(onDeleteOwnTask);
+  useEffect(() => { deleteOwnTask.current = onDeleteOwnTask; }, [onDeleteOwnTask]);
+  useEffect(() => {
+    const timers = deleteTimers.current;
+    return () => {
+      timers.forEach((timer, taskId) => { window.clearTimeout(timer); void deleteOwnTask.current?.(taskId); });
+      timers.clear();
+    };
+  }, []);
+  const queueTaskDelete = useCallback((taskId: string) => {
+    setPendingDeletes((current) => [...current, taskId]);
+    deleteTimers.current.set(taskId, window.setTimeout(() => {
+      deleteTimers.current.delete(taskId);
+      void deleteOwnTask.current?.(taskId);
+    }, 6500));
+  }, []);
+  const cancelTaskDelete = useCallback((taskId: string) => {
+    const timer = deleteTimers.current.get(taskId);
+    if (timer) window.clearTimeout(timer);
+    deleteTimers.current.delete(taskId);
+    setPendingDeletes((current) => current.filter((id) => id !== taskId));
+  }, []);
+
   const allEntries = useMemo<InboxEntry[]>(() => {
     const actionEntries = rows.map((row): InboxEntry => {
       const key = `action:${row.actionKey}`;
@@ -392,11 +425,14 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
       const finish: InboxFinish = guidance && onGuidanceDecision
         ? { label: "Done", run: () => onGuidanceDecision(guidance, "already_done"), message: "Marked as done" }
         : ownTask ? { label: "Done", run: () => onAction(row.actionKey), message: "Marked as done" } : null;
+      const taskId = ownTask ? row.actionKey.slice("task:complete:".length) : "";
+      const remove: InboxRemove = ownTask && onDeleteOwnTask
+        ? { run: () => queueTaskDelete(taskId), message: "Reminder deleted", undo: () => cancelTaskDelete(taskId) } : null;
       return {
         key, kind, suggested: kind === "needs" && group === "suggested", named: guidance ? NAMED_PEOPLE_STEPS[String(guidance.key)] : undefined, title: row.title, sub: row.blockerLabel, when: "", person: null,
         icon: taskIcon(row), isNew: !reads.read.includes(actionReadKey(row.actionKey)), count: 1, readKeys: [actionReadKey(row.actionKey)],
         open: () => { reads.markRead([actionReadKey(row.actionKey)]); if (opensFirst) setOpened(key); else onAction(row.actionKey); },
-        finish,
+        finish, remove,
         extraNotRelevant: guidance && onGuidanceDecision ? () => onGuidanceDecision(guidance, "not_relevant") : undefined,
       };
     });
@@ -415,11 +451,12 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
         sub: list.length > 1 ? `${latest.detail} Sent ${list.length} times, most recently ${inboxTime(latest.createdAt)}.` : latest.detail,
         when: latest.createdAt, person: latest.person ?? null, icon: "notifications", isNew: list.some((item) => !item.read), count: list.length, readKeys: ids,
         open: () => { markRead(ids); window.location.assign(latest.href); },
-        finish: { label: "Clear", run: () => clear(ids), message: list.length > 1 ? `${list.length} updates cleared` : "Update cleared", undo: () => restore(ids) },
+        finish: null,
+        remove: { run: () => clear(ids), message: list.length > 1 ? `${list.length} updates deleted` : "Update deleted", undo: () => restore(ids) },
       };
     });
-    return [...actionEntries, ...updateEntries];
-  }, [rows, updates, reads, onAction, onGuidanceDecision, onGuidanceApplicability, markRead, clear, restore]);
+    return [...actionEntries, ...updateEntries].filter((entry) => !pendingDeletes.some((id) => entry.key === `action:task:complete:${id}`));
+  }, [rows, updates, reads, onAction, onGuidanceDecision, onGuidanceApplicability, onDeleteOwnTask, markRead, clear, restore, pendingDeletes, queueTaskDelete, cancelTaskDelete]);
   const entries = useMemo(() => allEntries.filter((entry) => !later.isLater(entry.key) && !shelf.isArchived(entry.key)), [allEntries, later, shelf]);
   const archivedEntries = useMemo(() => allEntries.filter((entry) => shelf.isArchived(entry.key)), [allEntries, shelf]);
 
@@ -445,8 +482,19 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
     const skipped = chosen.length - doable.length;
     if (!doable.length) { say(skipped === 1 ? "That one needs opening first" : "Those need opening first"); return; }
     const undos = doable.map((entry) => entry.finish!.undo).filter((fn): fn is () => void => Boolean(fn));
-    const text = doable.length === 1 ? doable[0].finish!.message : `${doable.length} done or cleared`;
+    const text = doable.length === 1 ? doable[0].finish!.message : `${doable.length} marked as done`;
     say(skipped ? `${text} · ${skipped} need${skipped === 1 ? "s" : ""} opening` : text, undos.length === doable.length ? () => undos.forEach((fn) => fn()) : undefined);
+  }
+  function deleteEntries(keys: string[]) {
+    const chosen = keys.map(byKey).filter((entry): entry is InboxEntry => Boolean(entry));
+    const removable = chosen.filter((entry) => entry.remove);
+    removable.forEach((entry) => entry.remove!.run());
+    setSwiped(null); setSheet(null); setSelecting(false); setPicked([]);
+    const skipped = chosen.length - removable.length;
+    if (!removable.length) { say("Only updates and your own reminders can be deleted. Suggestions can be archived instead."); return; }
+    const undos = removable.map((entry) => entry.remove!.undo).filter((fn): fn is () => void => Boolean(fn));
+    const text = removable.length === 1 ? removable[0].remove!.message : `${removable.length} deleted`;
+    say(skipped ? `${text} · ${skipped} kept (suggestions can be archived instead)` : text, undos.length ? () => undos.forEach((fn) => fn()) : undefined);
   }
   function laterEntries(keys: string[], choice: string) {
     const until = laterDate(choice);
@@ -472,12 +520,13 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
     say(keys.length === 1 ? "Moved back to Inbox" : `${keys.length} moved back to Inbox`, () => shelf.archive(keys));
   }
 
-  // Each action on one side only. Right: Read/Unread. Left: Later and Done/Clear (in Archived: Inbox and Done/Clear).
+  // Each action on one side only. Right: Read/Unread. Left: Later (in Archived: Inbox), Done, Delete.
   const leftButtons = (entry: InboxEntry) => <>
     {inArchive
       ? <button type="button" className="lf-swipe-button is-archive" onClick={() => unarchiveEntries([entry.key])}><Icon name="move_to_inbox" size={20} />Inbox</button>
       : <button type="button" className="lf-swipe-button is-later" onClick={() => setSheet({ type: "later", keys: [entry.key] })}><Icon name="schedule" size={20} />Later</button>}
-    {entry.finish ? <button type="button" className={`lf-swipe-button ${entry.kind === "update" ? "is-clear" : "is-done"}`} onClick={() => finishEntries([entry.key])}><Icon name={entry.kind === "update" ? "clear_all" : "check_circle"} size={20} />{entry.finish.label}</button> : null}
+    {entry.finish ? <button type="button" className="lf-swipe-button is-done" onClick={() => finishEntries([entry.key])}><Icon name="check_circle" size={20} />{entry.finish.label}</button> : null}
+    {entry.remove ? <button type="button" className="lf-swipe-button is-delete" onClick={() => deleteEntries([entry.key])}><Icon name="delete" size={20} />Delete</button> : null}
   </>;
   const rightButtons = (entry: InboxEntry) => (
     <button type="button" className="lf-swipe-button is-read" onClick={() => { setRead(entry, entry.isNew); setSwiped(null); }}><Icon name={entry.isNew ? "drafts" : "mark_email_unread"} size={20} />{entry.isNew ? "Read" : "Unread"}</button>
@@ -501,7 +550,7 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
       </div>
       <div className="lf-inbox-categories" role="group" aria-label="Show">
         {([["all", "All", "inbox"], ["needs", "Needs you", "priority_high"], ["waiting", "Waiting", "hourglass_top"], ["update", "Updates", "notifications"], ["archived", "Archived", "archive"]] as const).map(([key, label, icon]) => (
-          <button key={key} type="button" className={`lf-inbox-category is-${key}`} aria-pressed={category === key} aria-label={`${label}, ${count(key)}`} onClick={() => { setCategory(key); setPicked([]); setSwiped(null); }}>
+          <button key={key} type="button" className={`lf-inbox-category is-${key}`} aria-pressed={category === key} aria-label={`${label}, ${count(key)}`} onClick={(event) => { setCategory(key); setPicked([]); setSwiped(null); event.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest" }); }}>
             <Icon name={icon} size={20} />{category === key ? <span>{label} {count(key)}</span> : null}
           </button>
         ))}
@@ -519,10 +568,10 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
               onOpenChange={(side) => setSwiped(side ? { key: entry.key, side } : null)}
               left={leftButtons(entry)}
               right={rightButtons(entry)}
-              leftCount={1 + (entry.finish ? 1 : 0)}
+              leftCount={1 + (entry.finish ? 1 : 0) + (entry.remove ? 1 : 0)}
               rightCount={1}
               disabled={selecting}
-              onLongLeft={entry.finish ? () => finishEntries([entry.key]) : undefined}
+              onLongLeft={entry.finish ? () => finishEntries([entry.key]) : entry.remove ? () => deleteEntries([entry.key]) : undefined}
               onLongRight={() => setRead(entry, entry.isNew)}
               onHold={selecting ? undefined : () => setSheet({ type: "menu", keys: [entry.key] })}
             >
@@ -547,12 +596,13 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
                   ? <button type="button" onClick={() => unarchiveEntries([entry.key])}>Move to Inbox</button>
                   : <><button type="button" onClick={() => setSheet({ type: "later", keys: [entry.key] })}>Later</button><button type="button" onClick={() => archiveEntries([entry.key])}>Archive</button></>}
                 {entry.finish ? <button type="button" onClick={() => finishEntries([entry.key])}>{entry.finish.label}</button> : null}
+                {entry.remove ? <button type="button" className="is-delete" onClick={() => deleteEntries([entry.key])}>Delete</button> : null}
               </span> : null}
             </SwipeRow>
           </div>;
         })}
       </div>
-      {shown.length ? <p className="lf-notifications-hint">Tap to open. On a phone, swipe right to mark read, swipe left for Later or Done, or press and hold for more.</p> : null}
+      {shown.length ? <p className="lf-notifications-hint">Tap to open. On a phone, swipe right to mark read, swipe left for Later, Done or Delete, or press and hold for more.</p> : null}
       {updatesLoading && category !== "needs" && category !== "waiting" ? <p className="lf-notifications-hint">Loading updates…</p> : null}
 
       {selecting ? <div className="lf-inbox-selectbar" role="toolbar" aria-label="Selected items">
@@ -561,7 +611,8 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
         {inArchive
           ? <button type="button" disabled={!picked.length} onClick={() => unarchiveEntries(picked)}><Icon name="move_to_inbox" size={22} />Inbox</button>
           : <button type="button" disabled={!picked.length} onClick={() => archiveEntries(picked)}><Icon name="archive" size={22} />Archive</button>}
-        <button type="button" disabled={!picked.length} onClick={() => finishEntries(picked)}><Icon name="check_circle" size={22} />Done</button>
+        <button type="button" disabled={!pickedEntries.some((entry) => entry.finish)} onClick={() => finishEntries(picked)}><Icon name="check_circle" size={22} />Done</button>
+        <button type="button" className="is-delete" disabled={!pickedEntries.some((entry) => entry.remove)} onClick={() => deleteEntries(picked)}><Icon name="delete" size={22} />Delete</button>
       </div> : null}
 
       {toast ? <div className="lf-inbox-toast" role="status">{toast.text}{toast.undo ? <button type="button" onClick={() => { toast.undo!(); setToast(null); }}>Undo</button> : null}</div> : null}
@@ -591,7 +642,8 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
                 <button type="button" role="menuitem" onClick={() => setSheet({ type: "later", keys: [menuEntry.key] })}><Icon name="schedule" size={22} />Later</button>
                 <button type="button" role="menuitem" onClick={() => archiveEntries([menuEntry.key])}><Icon name="archive" size={22} />Archive</button>
               </>}
-            {menuEntry.finish ? <button type="button" role="menuitem" onClick={() => finishEntries([menuEntry.key])}><Icon name={menuEntry.kind === "update" ? "clear_all" : "check_circle"} size={22} />{menuEntry.finish.label === "Done" ? "Mark as done" : menuEntry.finish.label}</button> : null}
+            {menuEntry.finish ? <button type="button" role="menuitem" onClick={() => finishEntries([menuEntry.key])}><Icon name="check_circle" size={22} />{menuEntry.finish.label === "Done" ? "Mark as done" : menuEntry.finish.label}</button> : null}
+            {menuEntry.remove ? <button type="button" role="menuitem" className="is-delete" onClick={() => deleteEntries([menuEntry.key])}><Icon name="delete" size={22} />Delete</button> : null}
             {menuEntry.extraNotRelevant ? <button type="button" role="menuitem" onClick={() => { menuEntry.extraNotRelevant!(); setSheet(null); say("Removed. It won’t come back."); }}><Icon name="block" size={22} />This doesn’t apply to me</button> : null}
             <button type="button" className="is-cancel" onClick={() => setSheet(null)}>Cancel</button>
           </section>

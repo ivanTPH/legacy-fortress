@@ -25,7 +25,7 @@ test("swipes like Mail, with visible buttons for everything; long swipe left onl
   const swipe = read("components/inbox/SwipeRow.tsx");
   assert.match(swipe, /if \(disabled \|\| event\.pointerType !== "touch"\) return;/, "a mouse gets the hover buttons instead");
   assert.match(swipe, /moved < -from\.width \* LONG && onLongLeft/);
-  assert.match(panel, /onLongLeft=\{entry\.finish \? \(\) => finishEntries\(\[entry\.key\]\) : undefined\}/);
+  assert.match(panel, /onLongLeft=\{entry\.finish \? \(\) => finishEntries\(\[entry\.key\]\) : entry\.remove \? \(\) => deleteEntries\(\[entry\.key\]\) : undefined\}/);
   assert.match(panel, /className="lf-inbox-hover"/);
   assert.match(css, /@media \(hover: hover\) and \(pointer: fine\) \{ \.lf-inbox-row:hover \.lf-inbox-hover/);
   // Items that need a decision have no quick finish: Select skips them and says so.
@@ -40,9 +40,9 @@ test("Later brings an item back as new on the chosen date, synced through the pe
   assert.match(updates, /\.filter\(\(key\) => !key\.startsWith\(LATER_PREFIX\)\)/, "Later rows are not read marks");
 });
 
-test("repeats of the same update show once with a count; clearing clears them all, with Undo", () => {
+test("repeats of the same update show once with a count; deleting removes them all, with Undo", () => {
   assert.match(panel, /grouped\.set\(update\.title, list\)/);
-  assert.match(panel, /finish: \{ label: "Clear", run: \(\) => clear\(ids\),.*undo: \(\) => restore\(ids\) \}/);
+  assert.match(panel, /remove: \{ run: \(\) => clear\(ids\),.*undo: \(\) => restore\(ids\) \}/);
 });
 
 test("what's been read follows the person across devices, through their own rows only", () => {
@@ -136,4 +136,20 @@ test("archive keeps items findable and out of the badge; invite reminders are Wa
   assert.match(panel, /startsWith\("remind_"\) \? "waiting"/);
   const store = read("lib/notifications/inboxUpdates.ts");
   assert.match(store, /export const ARCHIVE_PREFIX = "archive:"/);
+});
+
+test("delete (bin): updates and own reminders only, with Undo; suggestions can't be deleted (owner, 12 Nov 2026)", () => {
+  const panel = read("app/(app)/components/dashboard/ActionQueuePanel.tsx");
+  assert.match(panel, /remove: \{ run: \(\) => clear\(ids\), message: list\.length > 1 \? `\$\{list\.length\} updates deleted` : "Update deleted", undo: \(\) => restore\(ids\) \}/);
+  assert.match(panel, /const remove: InboxRemove = ownTask && onDeleteOwnTask/);
+  assert.doesNotMatch(panel, /label: "Clear"/);
+  assert.match(panel, /disabled=\{!pickedEntries\.some\(\(entry\) => entry\.remove\)\}/);
+  assert.match(panel, /}, 6500\)\);/, "a reminder is only deleted after the Undo window");
+  const page = read("app/(app)/dashboard/page.tsx");
+  const del = page.slice(page.indexOf("const deleteDashboardTask"), page.indexOf("const handleAction"));
+  assert.match(del, /viewer\.mode !== "owner"/);
+  assert.match(del, /\.eq\("owner_user_id", ownerId\)/);
+  assert.match(del, /\.eq\("category_key", "tasks"\)/);
+  assert.match(del, /deleted_at: now/);
+  assert.doesNotMatch(del, /\.delete\(\)/, "soft delete only");
 });
