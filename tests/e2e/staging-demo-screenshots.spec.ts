@@ -467,6 +467,21 @@ test("insurance: a new policy with a photo shows in the Insurance list (phone)",
   const atts = await admin.from("attachments").select("id", { count: "exact", head: true }).eq("owner_user_id", userId);
   const plan = await admin.from("billing_profiles").select("account_plan").eq("user_id", userId).maybeSingle();
   console.log(`Insurance diag: plan=${plan.data?.account_plan ?? "none"} documents=${docs.count ?? "?"} attachments=${atts.count ?? "?"}`);
+  // Earlier test policies are tidied first (synthetic account only).
+  await admin.from("records").delete().eq("owner_user_id", userId).ilike("provider_name", "Diag Insurer%");
+  await admin.from("records").delete().eq("owner_user_id", userId).ilike("title", "Diag Insurer%");
+  // Bring the synthetic account to the free plan's 10 documents, as the owner's was: placeholder attachment rows on
+  // one of its own records, removed again at the end. No files are stored.
+  const used = (docs.count ?? 0) + (atts.count ?? 0);
+  const host = await admin.from("records").select("id").eq("owner_user_id", userId).limit(1).maybeSingle();
+  const fillerIds: string[] = [];
+  if (host.data?.id && used < 10) {
+    for (let i = used; i < 10; i += 1) {
+      const row = await admin.from("attachments").insert({ record_id: host.data.id, owner_user_id: userId, storage_bucket: "vault-docs", storage_path: `demo-review/${userId}/diag/filler-${i}.pdf`, file_name: `filler-${i}.pdf`, mime_type: "application/pdf", size_bytes: 10, checksum: `diag-filler-${i}` }).select("id").single();
+      if (row.data?.id) fillerIds.push(String(row.data.id)); else console.log(`Insurance diag filler: ${row.error?.message}`);
+    }
+  }
+  console.log(`Insurance diag: brought documents to the limit with ${fillerIds.length} placeholders`);
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
   const page = await context.newPage();
   page.on("console", (message) => { if (message.type() === "error") console.log(`Insurance diag console: ${message.text().slice(0, 300)}`); });
@@ -478,8 +493,14 @@ test("insurance: a new policy with a photo shows in the Insurance list (phone)",
   const labels = (await page.locator("main label, [role='dialog'] label").allInnerTexts()).map((text) => text.replace(/\s+/g, " ").trim()).filter(Boolean);
   console.log(`Insurance diag labels: ${labels.join(" | ").slice(0, 900)}`);
   const fill = async (label: RegExp, value: string) => {
-    const field = page.getByLabel(label).filter({ visible: true }).first();
-    if (!(await field.count())) { console.log(`Insurance diag: no visible field ${label}`); return; }
+    const matches = page.getByLabel(label).filter({ visible: true });
+    if (!(await matches.count())) { console.log(`Insurance diag: no visible field ${label}`); return; }
+    let field = matches.first();
+    if (/^\d+$/.test(value)) {
+      for (let i = 0; i < await matches.count(); i += 1) {
+        if (await matches.nth(i).evaluate((el) => el.tagName.toLowerCase() === "input")) { field = matches.nth(i); break; }
+      }
+    }
     try {
       const tag = await field.evaluate((el) => el.tagName.toLowerCase(), undefined, { timeout: 5000 });
       if (tag === "select") await field.selectOption({ label: value }, { timeout: 5000 }).catch(async () => { await field.selectOption({ index: 1 }, { timeout: 5000 }); });
@@ -519,11 +540,13 @@ test("insurance: a new policy with a photo shows in the Insurance list (phone)",
   const buttonsLater = (await page.getByRole("button").allInnerTexts()).map((text) => text.trim()).filter((text) => /Sav/i.test(text));
   console.log(`Insurance diag after Not now: url=${new URL(page.url()).pathname}${new URL(page.url()).search} saveButtons=${JSON.stringify(buttonsLater)}`);
   await shoot(page, "insurance-diag-3-after-not-now");
-  const saved = await admin.from("assets").select("id,section_key,category_key,status,deleted_at,archived_at,title,value_minor").eq("owner_user_id", userId).ilike("title", `%${marker}%`);
-  const savedByProvider = saved.data?.length ? saved : await admin.from("assets").select("id,section_key,category_key,status,deleted_at,archived_at,title,value_minor,provider_name").eq("owner_user_id", userId).ilike("provider_name", `%${marker}%`);
-  console.log(`Insurance diag saved rows: ${JSON.stringify(savedByProvider.data ?? savedByProvider.error)}`);
-  const recent = await admin.from("assets").select("id,section_key,category_key,status,deleted_at,title,created_at").eq("owner_user_id", userId).gte("created_at", startedAt);
-  console.log(`Insurance diag rows created by this test: ${JSON.stringify(recent.data ?? recent.error)}`);
+  // Insurance is kept in the records table (pensions and debts too); bank, property and others in assets.
+  const savedRecords = await admin.from("records").select("id,section_key,category_key,status,archived_at,title,provider_name,value_minor,currency_code,created_at").eq("owner_user_id", userId).gte("created_at", startedAt);
+  console.log(`Insurance diag records created by this test: ${JSON.stringify(savedRecords.data ?? savedRecords.error)}`);
+  const savedAssets = await admin.from("assets").select("id,section_key,category_key,status,deleted_at,title,provider_name,value_minor,created_at").eq("owner_user_id", userId).gte("created_at", startedAt);
+  console.log(`Insurance diag assets created by this test: ${JSON.stringify(savedAssets.data ?? savedAssets.error)}`);
+  const newAttachments = await admin.from("attachments").select("id,record_id,file_name,created_at").eq("owner_user_id", userId).gte("created_at", startedAt).not("file_name", "like", "filler-%");
+  console.log(`Insurance diag photos saved by this test: ${JSON.stringify(newAttachments.data ?? newAttachments.error)}`);
   await page.goto(`${BASE_URL}/finances/insurance`, { waitUntil: "domcontentloaded" });
   await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => undefined);
   await page.waitForTimeout(2500);
@@ -531,9 +554,16 @@ test("insurance: a new policy with a photo shows in the Insurance list (phone)",
   console.log(`Insurance diag list: ${listText.slice(0, 900)}`);
   await shoot(page, "insurance-diag-4-list");
   const inList = listText.includes(marker);
-  // Tidy up: remove only the policies this test created (soft delete, synthetic account).
-  const ids = [...(savedByProvider.data ?? []), ...(recent.data ?? [])].map((row) => (row as { id: string }).id);
-  if (ids.length) await admin.from("assets").update({ deleted_at: new Date().toISOString() }).eq("owner_user_id", userId).in("id", ids).is("deleted_at", null);
+  console.log(`Insurance diag: in list=${inList}, cover shown=${listText.includes("1,000,000")}`);
+  // Tidy up (synthetic account): the placeholders, and only the policies and photos this test created.
+  if (fillerIds.length) await admin.from("attachments").delete().eq("owner_user_id", userId).in("id", fillerIds);
+  const recordIds = (savedRecords.data ?? []).map((row) => (row as { id: string }).id);
+  if (recordIds.length) {
+    await admin.from("attachments").delete().eq("owner_user_id", userId).in("record_id", recordIds);
+    await admin.from("records").delete().eq("owner_user_id", userId).in("id", recordIds);
+  }
+  const assetIds = (savedAssets.data ?? []).map((row) => (row as { id: string }).id);
+  if (assetIds.length) await admin.from("assets").update({ deleted_at: new Date().toISOString() }).eq("owner_user_id", userId).in("id", assetIds).is("deleted_at", null);
   await context.close();
   expect(inList, "the new policy should be in the Insurance list").toBe(true);
 });
