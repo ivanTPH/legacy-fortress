@@ -49,7 +49,13 @@ jobs:
           # The runner's Ubuntu mirror sometimes can't be reached; give the extra system parts one bounded try,
           # then carry on with just the browser (the runner already has what Chromium needs).
           timeout 480 npx playwright install --with-deps chromium || npx playwright install chromium
-          npx playwright test tests/e2e/staging-demo-screenshots.spec.ts --project=desktop-chromium --retries=0
+          # A request may name one check to run ("grep"), for a quick diagnosis; otherwise everything runs.
+          GREP=$(node -e 'try{const r=require("./ops/demo-screenshots-request.json");process.stdout.write(String(r.grep||"").replace(/[^A-Za-z0-9 ()-]/g,""))}catch{}')
+          if [ -n "$GREP" ]; then
+            npx playwright test tests/e2e/staging-demo-screenshots.spec.ts --project=desktop-chromium --retries=0 --grep "$GREP"
+          else
+            npx playwright test tests/e2e/staging-demo-screenshots.spec.ts --project=desktop-chromium --retries=0
+          fi
       - name: Show what the page held when a check failed
         if: failure()
         run: find test-results -name error-context.md -exec sh -c 'echo "== $1"; head -c 6000 "$1"' _ {} \; || true
