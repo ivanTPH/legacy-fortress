@@ -478,23 +478,33 @@ test("insurance: a new policy with a photo shows in the Insurance list (phone)",
   const labels = (await page.locator("main label, [role='dialog'] label").allInnerTexts()).map((text) => text.replace(/\s+/g, " ").trim()).filter(Boolean);
   console.log(`Insurance diag labels: ${labels.join(" | ").slice(0, 900)}`);
   const fill = async (label: RegExp, value: string) => {
-    const field = page.getByLabel(label).first();
-    if (!(await field.count())) { console.log(`Insurance diag: no field ${label}`); return; }
-    const tag = await field.evaluate((el) => el.tagName.toLowerCase());
-    if (tag === "select") await field.selectOption({ label: value }).catch(async () => { await field.selectOption({ index: 1 }); });
-    else await field.fill(value);
+    const field = page.getByLabel(label).filter({ visible: true }).first();
+    if (!(await field.count())) { console.log(`Insurance diag: no visible field ${label}`); return; }
+    try {
+      const tag = await field.evaluate((el) => el.tagName.toLowerCase(), undefined, { timeout: 5000 });
+      if (tag === "select") await field.selectOption({ label: value }, { timeout: 5000 }).catch(async () => { await field.selectOption({ index: 1 }, { timeout: 5000 }); });
+      else await field.fill(value, { timeout: 5000 });
+      console.log(`Insurance diag: filled ${label} (${tag})`);
+    } catch (error) { console.log(`Insurance diag: couldn't fill ${label}: ${String(error).slice(0, 200)}`); }
   };
+  // Which Stripe key TEST holds (test or live), from the app's own status: the key itself is never read.
+  const billing = await page.evaluate(async () => {
+    const raw = window.localStorage.getItem("sb-supabase-test-auth-token");
+    const token = raw ? (JSON.parse(raw) as { access_token?: string }).access_token : "";
+    const response = await fetch("/api/billing/status", { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    const json = await response.json().catch(() => ({})) as { mode?: string; plan?: string };
+    return `${response.status} mode=${json.mode ?? "?"} plan=${json.plan ?? "?"}`;
+  });
+  console.log(`Billing diag: ${billing}`);
   await fill(/Insurer name|Provider/i, marker);
   await fill(/Policy type|Insurance type/i, "Life insurance");
-  await fill(/Policy number/i, `DIAG-${Date.now()}`);
-  await fill(/Insured person|Insured/i, "Bill Smith");
   await fill(/Cover amount/i, "1000000");
   const photo = Buffer.from("/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=", "base64");
   const fileInput = page.locator("input[type='file']").first();
   if (await fileInput.count()) await fileInput.setInputFiles({ name: "image.jpg", mimeType: "image/jpeg", buffer: photo });
   else console.log("Insurance diag: no file input");
   await shoot(page, "insurance-diag-1-filled");
-  const save = page.getByRole("button", { name: /^Save/ }).last();
+  const save = page.getByRole("button", { name: /^Save/ }).filter({ visible: true }).last();
   console.log(`Insurance diag save button: ${await save.count() ? await save.innerText() : "none"}`);
   await save.click();
   const sheet = page.locator(".lf-premium-sheet");
