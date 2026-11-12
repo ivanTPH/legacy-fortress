@@ -455,3 +455,75 @@ for (const kind of ["desk", "phone"] as const) {
 
 test("desktop screens", async ({ browser }) => { test.setTimeout(600_000); await capture(browser, "desk"); });
 test("phone screens", async ({ browser }) => { test.setTimeout(600_000); await capture(browser, "phone"); });
+
+// Owner report 12 Nov 2026: a £1m life policy added with a photo on a phone didn't show in Insurance, and the
+// Premium sheet appeared (document limit). Repeat those steps on the synthetic account, record what happens at each
+// step, then remove the test policy. Nothing is paid for; the sheet is only looked at.
+test("insurance: a new policy with a photo shows in the Insurance list (phone)", async ({ browser }) => {
+  test.setTimeout(240_000);
+  const marker = `Diag Insurer ${Date.now()}`;
+  const startedAt = new Date().toISOString();
+  const docs = await admin.from("documents").select("id", { count: "exact", head: true }).eq("owner_user_id", userId).is("deleted_at", null);
+  const atts = await admin.from("attachments").select("id", { count: "exact", head: true }).eq("owner_user_id", userId);
+  const plan = await admin.from("billing_profiles").select("account_plan").eq("user_id", userId).maybeSingle();
+  console.log(`Insurance diag: plan=${plan.data?.account_plan ?? "none"} documents=${docs.count ?? "?"} attachments=${atts.count ?? "?"}`);
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  page.on("console", (message) => { if (message.type() === "error") console.log(`Insurance diag console: ${message.text().slice(0, 300)}`); });
+  page.on("response", (response) => { if (response.status() >= 400) console.log(`Insurance diag http ${response.status()} ${response.request().method()} ${new URL(response.url()).pathname}`); });
+  await signIn(page);
+  await page.goto(`${BASE_URL}/finances/insurance?add=1`, { waitUntil: "domcontentloaded" });
+  await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => undefined);
+  await page.waitForTimeout(1500);
+  const labels = (await page.locator("main label, [role='dialog'] label").allInnerTexts()).map((text) => text.replace(/\s+/g, " ").trim()).filter(Boolean);
+  console.log(`Insurance diag labels: ${labels.join(" | ").slice(0, 900)}`);
+  const fill = async (label: RegExp, value: string) => {
+    const field = page.getByLabel(label).first();
+    if (!(await field.count())) { console.log(`Insurance diag: no field ${label}`); return; }
+    const tag = await field.evaluate((el) => el.tagName.toLowerCase());
+    if (tag === "select") await field.selectOption({ label: value }).catch(async () => { await field.selectOption({ index: 1 }); });
+    else await field.fill(value);
+  };
+  await fill(/Insurer name|Provider/i, marker);
+  await fill(/Policy type|Insurance type/i, "Life insurance");
+  await fill(/Policy number/i, `DIAG-${Date.now()}`);
+  await fill(/Insured person|Insured/i, "Bill Smith");
+  await fill(/Cover amount/i, "1000000");
+  const photo = Buffer.from("/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=", "base64");
+  const fileInput = page.locator("input[type='file']").first();
+  if (await fileInput.count()) await fileInput.setInputFiles({ name: "image.jpg", mimeType: "image/jpeg", buffer: photo });
+  else console.log("Insurance diag: no file input");
+  await shoot(page, "insurance-diag-1-filled");
+  const save = page.getByRole("button", { name: /^Save/ }).last();
+  console.log(`Insurance diag save button: ${await save.count() ? await save.innerText() : "none"}`);
+  await save.click();
+  const sheet = page.locator(".lf-premium-sheet");
+  await Promise.race([sheet.waitFor({ timeout: 30_000 }).catch(() => undefined), page.waitForURL(/\/finances\/insurance(?!\?add)/, { timeout: 30_000 }).catch(() => undefined)]);
+  await page.waitForTimeout(4000);
+  const sheetShown = await sheet.isVisible().catch(() => false);
+  const buttons = (await page.getByRole("button").allInnerTexts()).map((text) => text.trim()).filter((text) => /Sav/i.test(text));
+  const statusText = (await page.locator("[role='alert'], [role='status']").allInnerTexts()).map((text) => text.replace(/\s+/g, " ").trim()).filter(Boolean);
+  console.log(`Insurance diag after save: url=${new URL(page.url()).pathname}${new URL(page.url()).search} sheet=${sheetShown} saveButtons=${JSON.stringify(buttons)} status=${JSON.stringify(statusText).slice(0, 600)}`);
+  await shoot(page, "insurance-diag-2-after-save");
+  if (sheetShown) { await page.getByRole("button", { name: "Not now" }).click().catch(() => undefined); await page.waitForTimeout(3000); }
+  const buttonsLater = (await page.getByRole("button").allInnerTexts()).map((text) => text.trim()).filter((text) => /Sav/i.test(text));
+  console.log(`Insurance diag after Not now: url=${new URL(page.url()).pathname}${new URL(page.url()).search} saveButtons=${JSON.stringify(buttonsLater)}`);
+  await shoot(page, "insurance-diag-3-after-not-now");
+  const saved = await admin.from("assets").select("id,section_key,category_key,status,deleted_at,archived_at,title,value_minor").eq("owner_user_id", userId).ilike("title", `%${marker}%`);
+  const savedByProvider = saved.data?.length ? saved : await admin.from("assets").select("id,section_key,category_key,status,deleted_at,archived_at,title,value_minor,provider_name").eq("owner_user_id", userId).ilike("provider_name", `%${marker}%`);
+  console.log(`Insurance diag saved rows: ${JSON.stringify(savedByProvider.data ?? savedByProvider.error)}`);
+  const recent = await admin.from("assets").select("id,section_key,category_key,status,deleted_at,title,created_at").eq("owner_user_id", userId).gte("created_at", startedAt);
+  console.log(`Insurance diag rows created by this test: ${JSON.stringify(recent.data ?? recent.error)}`);
+  await page.goto(`${BASE_URL}/finances/insurance`, { waitUntil: "domcontentloaded" });
+  await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => undefined);
+  await page.waitForTimeout(2500);
+  const listText = (await page.locator("main").innerText()).replace(/\s+/g, " ");
+  console.log(`Insurance diag list: ${listText.slice(0, 900)}`);
+  await shoot(page, "insurance-diag-4-list");
+  const inList = listText.includes(marker);
+  // Tidy up: remove only the policies this test created (soft delete, synthetic account).
+  const ids = [...(savedByProvider.data ?? []), ...(recent.data ?? [])].map((row) => (row as { id: string }).id);
+  if (ids.length) await admin.from("assets").update({ deleted_at: new Date().toISOString() }).eq("owner_user_id", userId).in("id", ids).is("deleted_at", null);
+  await context.close();
+  expect(inList, "the new policy should be in the Insurance list").toBe(true);
+});
