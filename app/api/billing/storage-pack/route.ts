@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireIdentityApiAccess } from "@/lib/identity-verification/api";
-import { applySubscription, documentPackPriceId, stripeMode, stripeRequest, type BillingInterval } from "@/lib/billing/stripe";
+import { applySubscription, describeStripeFailure, documentPackPriceId, LIVE_KEY_ON_TEST_MESSAGE, paymentsBlockedOnTest, stripeMode, stripeRequest, type BillingInterval } from "@/lib/billing/stripe";
 
 type Subscription = Parameters<typeof applySubscription>[1];
 
@@ -12,6 +12,7 @@ export async function POST(request: Request) {
   const access = await requireIdentityApiAccess(request);
   if (!access.ok) return access.response;
   if (stripeMode() === "not_configured") return NextResponse.json({ ok: false, message: "Payments aren't set up on this server yet." }, { status: 503 });
+  if (paymentsBlockedOnTest()) return NextResponse.json({ ok: false, reason: "live_key_on_test", message: LIVE_KEY_ON_TEST_MESSAGE }, { status: 503 });
   const profile = await access.admin.from("billing_profiles").select("account_plan,stripe_subscription_id").eq("user_id", access.user.id).maybeSingle();
   const subscriptionId = profile.data?.stripe_subscription_id as string | undefined;
   if (profile.data?.account_plan !== "premium" || !subscriptionId) return NextResponse.json({ ok: false, message: "Extra documents are added to a Premium subscription." }, { status: 409 });
@@ -28,7 +29,8 @@ export async function POST(request: Request) {
     // Apply straight away (the webhook confirms the same state moments later).
     await applySubscription(access.admin, await stripeRequest<Subscription>("GET", `subscriptions/${subscriptionId}`));
     return NextResponse.json({ ok: true, message: interval === "year" ? "100 more documents added for £12 a year." : "100 more documents added for £1 a month." });
-  } catch {
-    return NextResponse.json({ ok: false, message: "Extra documents couldn't be added. Nothing was charged. Try again." }, { status: 502 });
+  } catch (error) {
+    const failure = describeStripeFailure(error, "documents");
+    return NextResponse.json({ ok: false, reason: failure.reason, message: failure.message }, { status: 502 });
   }
 }

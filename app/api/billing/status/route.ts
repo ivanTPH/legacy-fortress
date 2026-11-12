@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireIdentityApiAccess } from "@/lib/identity-verification/api";
-import { stripeMode } from "@/lib/billing/stripe";
+import { paymentsBlockedOnTest, stripeMode } from "@/lib/billing/stripe";
 
 /** GET — the signed-in person's plan, as the server holds it. */
 export async function GET(request: Request) {
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   const documentPacks = Number((packs.data as { document_packs?: number } | null)?.document_packs ?? 0);
   return NextResponse.json({
     ok: true,
-    mode: stripeMode(),
+    mode: paymentsBlockedOnTest() ? "live_blocked" : stripeMode(),
     plan: data?.account_plan === "premium" ? "premium" : "free",
     status: data?.plan_status ?? "active",
     interval: data?.billing_interval ?? null,

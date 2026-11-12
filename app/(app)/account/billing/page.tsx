@@ -60,6 +60,7 @@ function BillingPageContent() {
       {checkout === "success" ? <p className="lf-billing-banner is-good" role="status">{premium ? "Welcome to Premium. Thank you." : "Payment received. Your plan updates in a moment."}</p> : null}
       {checkout === "cancelled" ? <p className="lf-billing-banner" role="status">No payment was taken. You’re still on the free plan.</p> : null}
       {reason === "plan-limit" && !premium ? <p className="lf-billing-banner" role="status">You’ve reached a free plan limit. Nothing has been lost.</p> : null}
+      {status?.mode === "live_blocked" ? <p className="lf-billing-banner is-test" role="note">Payments are switched off on TEST: this server has a live Stripe key. Set a test key (starting sk_test_) to try payments. Nothing can be charged here.</p> : null}
       {status?.mode === "test" ? <p className="lf-billing-banner is-test" role="note">Test payments only. Use card 4242 4242 4242 4242, any future date and any CVC. No money moves.</p> : null}
 
       <section className="lf-sec-group" aria-labelledby="billing-plan">
@@ -106,7 +107,7 @@ function BillingPageContent() {
             <button type="button" role="radio" aria-checked={interval === "year"} className={interval === "year" ? "is-selected" : ""} onClick={() => setInterval("year")}><span><strong>Yearly · 2 months free</strong><small>£39 a year</small></span><span className="lf-premium-dot" aria-hidden="true" /></button>
           </div>
           <p className="lf-billing-muted">{status?.trialAvailable ? "14 days free. " : ""}Prices include VAT. Cancel any time.</p>
-          <button type="button" className="lf-premium-primary" disabled={Boolean(busy) || status?.mode === "not_configured"} onClick={() => void upgrade()}>{busy === "upgrade" ? "Opening secure payment…" : status?.trialAvailable ? "Start free trial" : "Upgrade to Premium"}</button>
+          <button type="button" className="lf-premium-primary" disabled={Boolean(busy) || status?.mode === "not_configured" || status?.mode === "live_blocked"} onClick={() => void upgrade()}>{busy === "upgrade" ? "Opening secure payment…" : status?.trialAvailable ? "Start free trial" : "Upgrade to Premium"}</button>
           {status?.mode === "not_configured" ? <p className="lf-billing-muted">Payments aren’t switched on yet.</p> : null}
           <p className="lf-premium-safe"><Icon name="lock" size={16} />Payments are handled by Stripe. Your card details never reach Legacy Fortress.</p>
         </div>

@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isUatEnvironment } from "../environment/appEnvironment.ts";
 
 /**
  * Stripe subscriptions (owner decision 3 Nov 2026). Server only: the secret key and webhook secret come from the
@@ -24,6 +25,32 @@ export function stripeMode(): "not_configured" | "test" | "live" {
   const key = stripeSecretKey();
   if (!key) return "not_configured";
   return key.startsWith("sk_test_") || key.startsWith("rk_test_") ? "test" : "live";
+}
+
+/**
+ * TEST must never take real money (owner rule: synthetic data only, no real payment events). If a TEST/UAT server
+ * holds a live Stripe key, every payment action stops with a plain reason instead of reaching Stripe.
+ */
+export function paymentsBlockedOnTest() {
+  return stripeMode() === "live" && isUatEnvironment();
+}
+export const LIVE_KEY_ON_TEST_MESSAGE = "Payments on TEST only work with a Stripe test key (starting sk_test_). Nothing was charged.";
+
+/** Why a Stripe call failed, as a code and a plain sentence. Never includes a key. */
+export function describeStripeFailure(error: unknown, action: "payment" | "settings" | "documents") {
+  const raw = error instanceof Error ? error.message : String(error ?? "");
+  const safe = raw.replace(/\b(sk|rk|pk|whsec)_[A-Za-z0-9_*]+/g, "[key]").slice(0, 300);
+  const reason = /stripe_price_missing/.test(raw) ? "price_missing"
+    : /api key|api_key|authentication|401/i.test(raw) ? "invalid_key"
+    : /fetch failed|ENOTFOUND|ECONNRESET|network/i.test(raw) ? "unreachable"
+    : "stripe_error";
+  console.error(`[billing] ${action} failed (${reason}): ${safe}`);
+  const what = action === "payment" ? "Secure payment couldn't be opened" : action === "settings" ? "Subscription settings couldn't be opened" : "Extra documents couldn't be added";
+  const why = reason === "price_missing" ? "Premium isn't set up in Stripe on this server yet."
+    : reason === "invalid_key" ? "Stripe didn't accept this server's key."
+    : reason === "unreachable" ? "Stripe couldn't be reached."
+    : "Stripe refused the request.";
+  return { reason, message: `${what}: ${why} Nothing was charged. Try again later.` };
 }
 
 type StripeParams = Record<string, string | number | boolean | undefined | null>;

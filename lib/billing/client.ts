@@ -3,7 +3,7 @@ import { supabase } from "../supabaseClient";
 /** Browser helpers for billing. Nothing here can change a plan: Stripe's confirmed events do that on the server. */
 export type BillingStatus = {
   ok: boolean;
-  mode: "not_configured" | "test" | "live";
+  mode: "not_configured" | "test" | "live" | "live_blocked";
   plan: "free" | "premium";
   status: string;
   interval: "month" | "year" | null;

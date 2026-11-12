@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireIdentityApiAccess } from "@/lib/identity-verification/api";
-import { premiumPriceId, siteUrl, stripeMode, stripeRequest, TRIAL_DAYS, type BillingInterval } from "@/lib/billing/stripe";
+import { premiumPriceId, siteUrl, describeStripeFailure, LIVE_KEY_ON_TEST_MESSAGE, paymentsBlockedOnTest, stripeMode, stripeRequest, TRIAL_DAYS, type BillingInterval } from "@/lib/billing/stripe";
 
 /**
  * POST { interval: "month" | "year", returnTo? } — opens Stripe Checkout for Premium. Card details are entered on
@@ -10,6 +10,7 @@ export async function POST(request: Request) {
   const access = await requireIdentityApiAccess(request);
   if (!access.ok) return access.response;
   if (stripeMode() === "not_configured") return NextResponse.json({ ok: false, message: "Payments aren't set up on this server yet." }, { status: 503 });
+  if (paymentsBlockedOnTest()) return NextResponse.json({ ok: false, reason: "live_key_on_test", message: LIVE_KEY_ON_TEST_MESSAGE }, { status: 503 });
   const body = (await request.json().catch(() => ({}))) as { interval?: string; returnTo?: string };
   const interval: BillingInterval = body.interval === "year" ? "year" : "month";
   const returnTo = typeof body.returnTo === "string" && /^\/[A-Za-z0-9/_?=&.-]*$/.test(body.returnTo) && !body.returnTo.startsWith("//") ? body.returnTo : "/account/billing";
@@ -45,7 +46,8 @@ export async function POST(request: Request) {
       locale: "en-GB",
     });
     return NextResponse.json({ ok: true, url: session.url });
-  } catch {
-    return NextResponse.json({ ok: false, message: "Secure payment couldn't be opened. Try again." }, { status: 502 });
+  } catch (error) {
+    const failure = describeStripeFailure(error, "payment");
+    return NextResponse.json({ ok: false, reason: failure.reason, message: failure.message }, { status: 502 });
   }
 }

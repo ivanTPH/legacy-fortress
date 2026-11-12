@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { createHmac } from "node:crypto";
-import { verifyStripeSignature, invoiceSubscriptionId, PREMIUM_PRICES, TRIAL_DAYS, stripeMode } from "../lib/billing/stripe.ts";
+import { verifyStripeSignature, invoiceSubscriptionId, PREMIUM_PRICES, TRIAL_DAYS, stripeMode, paymentsBlockedOnTest, describeStripeFailure } from "../lib/billing/stripe.ts";
 
 const read = (file) => fs.readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
 
@@ -114,4 +114,37 @@ test("payment events find their subscription in old and new Stripe formats (TEST
   assert.equal(invoiceSubscriptionId({ parent: { subscription_details: { subscription: { id: "sub_obj" } } } }), "sub_obj");
   assert.equal(invoiceSubscriptionId({ parent: null }), null);
   assert.match(read("app/api/billing/webhook/route.ts"), /invoiceSubscriptionId\(event\.data\.object\)/);
+});
+
+test("TEST never takes real money: a live key on a TEST server blocks every payment action (owner, 12 Nov 2026)", () => {
+  const saved = { key: process.env.STRIPE_SECRET_KEY, env: process.env.APP_ENV };
+  try {
+    process.env.APP_ENV = "uat";
+    process.env.STRIPE_SECRET_KEY = "sk_live_synthetic";
+    assert.equal(paymentsBlockedOnTest(), true);
+    process.env.STRIPE_SECRET_KEY = "sk_test_synthetic";
+    assert.equal(paymentsBlockedOnTest(), false);
+    process.env.APP_ENV = "production";
+    process.env.STRIPE_SECRET_KEY = "sk_live_synthetic";
+    assert.equal(paymentsBlockedOnTest(), false);
+  } finally {
+    if (saved.key === undefined) delete process.env.STRIPE_SECRET_KEY; else process.env.STRIPE_SECRET_KEY = saved.key;
+    if (saved.env === undefined) delete process.env.APP_ENV; else process.env.APP_ENV = saved.env;
+  }
+  for (const route of ["checkout", "portal", "storage-pack"]) {
+    assert.match(read(`app/api/billing/${route}/route.ts`), /if \(paymentsBlockedOnTest\(\)\) return NextResponse\.json\(\{ ok: false, reason: "live_key_on_test"/);
+  }
+  assert.match(read("app/api/billing/status/route.ts"), /mode: paymentsBlockedOnTest\(\) \? "live_blocked" : stripeMode\(\)/);
+});
+
+test("a Stripe failure says why, and never shows a key", () => {
+  const original = console.error; console.error = () => {};
+  try {
+    const key = describeStripeFailure(new Error("stripe_error: Invalid API Key provided: sk_live_********abcd"), "payment");
+    assert.equal(key.reason, "invalid_key");
+    assert.doesNotMatch(key.message, /sk_/);
+    assert.match(key.message, /Nothing was charged/);
+    assert.equal(describeStripeFailure(new Error("stripe_price_missing"), "payment").reason, "price_missing");
+    assert.equal(describeStripeFailure(new Error("fetch failed"), "settings").reason, "unreachable");
+  } finally { console.error = original; }
 });
