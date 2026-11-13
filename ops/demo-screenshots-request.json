@@ -1,1 +1,1 @@
-{ "requestedBy": "Ivan (owner), 12 Nov 2026: insurance policy not showing; reproduce on the synthetic demo account on TEST", "run": 42, "grep": "insurance" }
+{ "requestedBy": "Ivan (owner), 12 Nov 2026: Stripe test key set; confirm test mode and that checkout opens, no payment", "run": 43, "grep": "billing" }
