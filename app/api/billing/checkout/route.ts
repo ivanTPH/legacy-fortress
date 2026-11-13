@@ -25,6 +25,13 @@ export async function POST(request: Request) {
 
   try {
     let customerId = profile.data.stripe_customer_id as string | null;
+    // A customer saved under a different Stripe key (e.g. a live key that TEST once held) isn't known to this one:
+    // start a fresh customer rather than fail (owner report, 12-13 Nov 2026).
+    if (customerId) {
+      const known = await stripeRequest<{ deleted?: boolean }>("GET", `customers/${encodeURIComponent(customerId)}`)
+        .then((customer) => !customer.deleted, (error: unknown) => !/No such customer/i.test(String(error instanceof Error ? error.message : error)));
+      if (!known) customerId = null;
+    }
     if (!customerId) {
       const customer = await stripeRequest<{ id: string }>("POST", "customers", { email: access.user.email ?? undefined, "metadata[user_id]": access.user.id });
       customerId = customer.id;

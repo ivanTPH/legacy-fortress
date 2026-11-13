@@ -567,3 +567,34 @@ test("insurance: a new policy with a photo shows in the Insurance list (phone)",
   await context.close();
   expect(inList, "the new policy should be in the Insurance list").toBe(true);
 });
+
+// Owner set TEST's Stripe test key and webhook secret (13 Nov 2026). Confirm TEST is in Stripe test mode and that a
+// test-mode checkout page can be created for the synthetic account. The page is never opened and nothing is paid.
+test("billing: TEST is in Stripe test mode and checkout opens (no payment)", async ({ browser }) => {
+  test.setTimeout(120_000);
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  await signIn(page);
+  await page.goto(`${BASE_URL}/account/billing`, { waitUntil: "domcontentloaded" });
+  await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => undefined);
+  const result = await page.evaluate(async () => {
+    const raw = window.localStorage.getItem("sb-supabase-test-auth-token");
+    const token = raw ? (JSON.parse(raw) as { access_token?: string }).access_token : "";
+    const headers = { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+    const status = await fetch("/api/billing/status", { headers }).then((r) => r.json()).catch(() => ({})) as { mode?: string; plan?: string };
+    const checkout = await fetch("/api/billing/checkout", { method: "POST", headers, body: JSON.stringify({ interval: "month", returnTo: "/account/billing" }) });
+    const json = await checkout.json().catch(() => ({})) as { ok?: boolean; url?: string; reason?: string; message?: string; alreadyPremium?: boolean };
+    const url = json.url ? new URL(json.url) : null;
+    return { mode: status.mode, plan: status.plan, checkoutStatus: checkout.status, ok: json.ok, reason: json.reason, message: json.message, alreadyPremium: json.alreadyPremium,
+      host: url?.host, testSession: url ? /\/c\/pay\/cs_test_/.test(url.pathname) : null };
+  });
+  console.log(`Billing check: ${JSON.stringify(result)}`);
+  await shoot(page, "billing-test-mode");
+  await context.close();
+  expect(result.mode, "TEST should hold a Stripe test key").toBe("test");
+  if (!result.alreadyPremium) {
+    expect(result.ok, result.message ?? "checkout should open").toBe(true);
+    expect(result.host).toBe("checkout.stripe.com");
+    expect(result.testSession, "the checkout page should be a test-mode one").toBe(true);
+  }
+});
