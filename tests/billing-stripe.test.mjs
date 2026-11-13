@@ -148,3 +148,10 @@ test("a Stripe failure says why, and never shows a key", () => {
     assert.equal(describeStripeFailure(new Error("fetch failed"), "settings").reason, "unreachable");
   } finally { console.error = original; }
 });
+
+test("checkout starts a fresh Stripe customer when the saved one belongs to another key", () => {
+  const route = read("app/api/billing/checkout/route.ts");
+  assert.match(route, /stripeRequest<\{ deleted\?: boolean \}>\("GET", `customers\/\$\{encodeURIComponent\(customerId\)\}`\)/);
+  assert.match(route, /No such customer/);
+  assert.match(route, /if \(!known\) customerId = null;/);
+});
