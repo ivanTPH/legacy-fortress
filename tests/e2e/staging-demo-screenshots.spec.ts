@@ -652,7 +652,11 @@ test("invitations: a waiting invitation opens in the Inbox with Resend, Change e
   await signIn(page);
   await page.goto(`${BASE_URL}/actions`, { waitUntil: "domcontentloaded" });
   await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => undefined);
-  const row = page.locator(".lf-inbox-row").filter({ hasText: /Check .+'s invitation/ }).first();
+  await page.locator(".lf-inbox-row").first().waitFor({ timeout: 20_000 }).catch(() => undefined);
+  const titles = (await page.locator(".lf-inbox-row .lf-inbox-row-top strong").allInnerTexts()).map((text) => text.split("\n")[0]);
+  console.log(`Invitation check: Inbox items: ${JSON.stringify(titles)}`);
+  console.log(`Invitation check: waiting people: ${JSON.stringify((waiting.data ?? []).map((item) => (item as { full_name?: string }).full_name))}`);
+  const row = page.locator(".lf-inbox-row").filter({ hasText: /Check .+'s invitation|hasn.t accepted your invitation/ }).first();
   if (!(await row.count())) {
     console.log("Invitation check: no 'Check …'s invitation' item in this account's Inbox");
     await context.close();
