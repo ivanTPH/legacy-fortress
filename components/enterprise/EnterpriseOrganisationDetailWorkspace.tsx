@@ -213,7 +213,7 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
     router.refresh();
   }
 
-  if (state === "checking") return <main style={pageStyle}><section style={panelStyle}><h1>Checking organisation access</h1><p>Confirming your signed-in session and role permissions.</p></section></main>;
+  if (state === "checking") return <main style={checkingPageStyle} aria-busy="true"><section style={checkingPanelStyle}><h1>Checking organisation access</h1><p>Confirming your signed-in session and role permissions.</p></section></main>;
   if (state !== "ready" || !detail || !form) return <main style={pageStyle}><section style={panelStyle}><h1>{state === "denied" ? "Access denied" : "Organisation unavailable"}</h1><p>{message}</p><Link href="/enterprise">Back to Enterprise Operations</Link></section></main>;
 
   const org = detail.organisation;
@@ -497,3 +497,7 @@ const stackStyle: CSSProperties = { display: "grid", gap: 12 };
 const tableWrapStyle: CSSProperties = { overflowX: "auto" };
 const detailsGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 };
 const tableStyle: CSSProperties = { width: "100%", borderCollapse: "collapse", fontSize: 14 };
+
+// Brief access check: a small centred card on the page colour, the same on a laptop and a phone.
+const checkingPageStyle: CSSProperties = { minHeight: "100vh", display: "grid", placeItems: "center", padding: 24, background: "var(--lf-surface-page, #f7f3f1)" };
+const checkingPanelStyle: CSSProperties = { width: "min(440px, 100%)", background: "var(--lf-surface-card, #fff)", border: "1px solid var(--lf-border, #e6ded9)", borderRadius: 12, padding: 20, display: "grid", gap: 8 };

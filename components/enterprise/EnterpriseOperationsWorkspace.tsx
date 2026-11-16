@@ -693,8 +693,8 @@ export default function EnterpriseOperationsWorkspace() {
 
   if (state === "checking") {
     return (
-      <main style={pageStyle}>
-        <section style={panelStyle}>
+      <main style={checkingPageStyle} aria-busy="true">
+        <section style={checkingPanelStyle}>
           <p style={eyebrowStyle}>Legacy Fortress Enterprise</p>
           <h1 style={h1Style}>Checking enterprise access</h1>
           <p style={mutedStyle}>Confirming your signed-in session and role permissions.</p>
@@ -2088,3 +2088,7 @@ const tableWrapStyle: CSSProperties = { overflowX: "auto" };
 const tableStyle: CSSProperties = { width: "100%", borderCollapse: "collapse", fontSize: 14 };
 const actionsCellStyle: CSSProperties = { display: "flex", gap: 8, flexWrap: "wrap" };
 const linkCodeStyle: CSSProperties = { display: "block", maxWidth: 360, overflowWrap: "anywhere", color: "#475569", fontSize: 12, marginTop: 5 };
+
+// Brief access check: a small centred card on the page colour, the same on a laptop and a phone.
+const checkingPageStyle: CSSProperties = { minHeight: "100vh", display: "grid", placeItems: "center", padding: 24, background: "var(--lf-surface-page, #f7f3f1)" };
+const checkingPanelStyle: CSSProperties = { width: "min(440px, 100%)", background: "var(--lf-surface-card, #fff)", border: "1px solid var(--lf-border, #e6ded9)", borderRadius: 12, padding: 20, display: "grid", gap: 8 };
