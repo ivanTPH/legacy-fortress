@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { includeTestsFrom } from "@/lib/admin/testAccounts";
 import { countNewAccounts, lookupUsers } from "@/lib/admin/operations";
 import { requireAdminAccess, requireAdminCapability } from "@/lib/admin/access";
 import { recordAdminAuditEvent } from "@/lib/admin/audit";
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const query = url.searchParams.get("q") ?? "";
-  const includeTests = url.searchParams.get("tests") === "1";
+  const includeTests = includeTestsFrom(request);
   const users = await lookupUsers(admin.adminClient, query, includeTests);
   const newThisWeek = query.trim() ? null : await countNewAccounts(admin.adminClient, 7, Date.now(), includeTests);
   await recordAdminAuditEvent(admin.adminClient, admin.access, {

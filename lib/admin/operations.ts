@@ -775,10 +775,10 @@ export function isTestAccountEmail(email: string | null | undefined) {
   return /^example\.(test|com|net|org)$/.test(domain) || /\.(test|invalid|localhost)$/.test(domain);
 }
 
-/** Every sign-in account, newest first (up to 2,000; the Admin list shows the first 20 matches). */
+/** Every sign-in account, newest first (up to 10,000; the Admin list shows the first 20 matches). */
 export async function listAuthUsersNewestFirst(client: AnySupabaseClient): Promise<AuthListUser[]> {
   const all: AuthListUser[] = [];
-  for (let page = 1; page <= 10; page += 1) {
+  for (let page = 1; page <= 50; page += 1) {
     const result = await client.auth.admin.listUsers({ page, perPage: 200 });
     if (result.error) throw new Error(result.error.message);
     const batch = (result.data?.users ?? []) as AuthListUser[];
@@ -1466,17 +1466,19 @@ async function applyIdentityVerificationReviewAction(
   }
 }
 
-export async function loadSupportSnapshot(client: AnySupabaseClient) {
+export async function loadSupportSnapshot(client: AnySupabaseClient, options: { includeTests?: boolean; testIds?: Set<string> } = {}) {
+  // Test accounts are left out of the counts and the list alike (16 Nov 2026), unless asked for.
+  const skip = options.includeTests ? new Set<string>() : options.testIds ?? new Set<string>();
   const [pendingInvitations, readyToSendInvitations, verificationAwaitingReview, linkedAccountsActive, invitationRowsRes, roleRowsRes, ownerProfilesRes, casesRes] = await Promise.all([
-    countSentPendingContactInvitations(client),
-    countReadyToSendContactInvitations(client),
-    countRowsIn(client, "verification_requests", "request_status", ["pending", "submitted"]),
-    countRowsIn(client, "account_access_grants", "activation_status", ["accepted", "verified", "active"]),
+    countOwned(client, "contact_invitations", skip, (query) => query.eq("invitation_status", "pending").not("sent_at", "is", null)),
+    countOwned(client, "contact_invitations", skip, (query) => query.eq("invitation_status", "pending").is("sent_at", null)),
+    countOwned(client, "verification_requests", skip, (query) => query.in("request_status", ["pending", "submitted"])),
+    countOwned(client, "account_access_grants", skip, (query) => query.in("activation_status", ["accepted", "verified", "active"])),
     client
       .from("contact_invitations")
       .select("id,contact_id,contact_name,contact_email,invitation_status,sent_at,owner_user_id")
       .order("updated_at", { ascending: false })
-      .limit(40),
+      .limit(skip.size ? 1000 : 40),
     client
       .from("role_assignments")
       .select("id,invitation_id,owner_user_id,assigned_role,activation_status,updated_at")
@@ -1516,6 +1518,7 @@ export async function loadSupportSnapshot(client: AnySupabaseClient) {
         assignedAdminUserId: typeof caseMap.get(invitation.id)?.assigned_admin_user_id === "string" ? String(caseMap.get(invitation.id)?.assigned_admin_user_id) : null,
       };
     })
+    .filter((item) => !skip.has(item.ownerUserId))
     .filter((item) =>
       (item.invitationStatus === "pending" && Boolean(item.sentAt))
       || ["failed", "delivery_failed"].includes(item.invitationStatus)
@@ -1731,28 +1734,22 @@ async function countRows(client: AnySupabaseClient, table: string, column: strin
   return res.count ?? 0;
 }
 
-async function countRowsIn(client: AnySupabaseClient, table: string, column: string, values: string[]) {
-  const res = await client.from(table).select("id", { count: "exact", head: true }).in(column, values);
+/** Counts rows by owner, leaving out the given owners (test accounts). */
+async function countOwned(
+  client: AnySupabaseClient,
+  table: string,
+  skip: Set<string>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  apply: (query: any) => any,
+) {
+  if (!skip.size) {
+    const res = await apply(client.from(table).select("id", { count: "exact", head: true })) as { count: number | null; error: unknown };
+    return res.error ? 0 : res.count ?? 0;
+  }
+  const res = await apply(client.from(table).select("owner_user_id").limit(20000)) as { data: unknown[] | null; error: unknown };
   if (res.error) return 0;
-  return res.count ?? 0;
+  return ((res.data ?? []) as Array<{ owner_user_id?: string | null }>).filter((row) => !skip.has(String(row.owner_user_id ?? ""))).length;
 }
 
-async function countSentPendingContactInvitations(client: AnySupabaseClient) {
-  const res = await client
-    .from("contact_invitations")
-    .select("id", { count: "exact", head: true })
-    .eq("invitation_status", "pending")
-    .not("sent_at", "is", null);
-  if (res.error) return 0;
-  return res.count ?? 0;
-}
 
-async function countReadyToSendContactInvitations(client: AnySupabaseClient) {
-  const res = await client
-    .from("contact_invitations")
-    .select("id", { count: "exact", head: true })
-    .eq("invitation_status", "pending")
-    .is("sent_at", null);
-  if (res.error) return 0;
-  return res.count ?? 0;
-}
+

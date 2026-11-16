@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { includeTestsFrom, loadAccounts, withoutTests } from "@/lib/admin/testAccounts";
 import { applyVerificationAction, loadVerificationQueue, type VerificationAction } from "@/lib/admin/operations";
 import { requireAdminAccess, requireAdminCapability } from "@/lib/admin/access";
 import { recordAdminAuditEvent } from "@/lib/admin/audit";
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, message: denied.message, capability: denied.capability }, { status: denied.status });
   }
 
-  const queue = await loadVerificationQueue(admin.adminClient);
+  const queue = withoutTests(await loadVerificationQueue(admin.adminClient), (await loadAccounts(admin.adminClient)).testIds, includeTestsFrom(request), (item) => item.ownerUserId);
   return NextResponse.json({ ok: true, queue });
 }
 
@@ -94,6 +95,6 @@ export async function POST(request: Request) {
     metadata: { action, review_notes_present: Boolean(String(body.reviewNotes ?? "").trim()) },
   });
 
-  const queue = await loadVerificationQueue(admin.adminClient);
+  const queue = withoutTests(await loadVerificationQueue(admin.adminClient), (await loadAccounts(admin.adminClient)).testIds, includeTestsFrom(request), (item) => item.ownerUserId);
   return NextResponse.json({ ok: true, queue });
 }

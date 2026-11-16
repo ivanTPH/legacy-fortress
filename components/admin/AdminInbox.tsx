@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Icon from "@/components/ui/Icon";
 import type { AdminInboxItem, AdminInboxKind } from "@/lib/admin/inbox";
+import { INCLUDE_TESTS_EVENT, readIncludeTests, writeIncludeTests } from "@/lib/admin/includeTestsPreference";
 
 /**
  * Admin Inbox (owner decision 16 Nov 2026), in the style of the Vault Inbox: newest first, unread dots, filters.
@@ -34,7 +35,14 @@ export default function AdminInbox({ authFetch }: { authFetch: (input: string, i
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<AdminInboxKind | "all">("all");
   const [search, setSearch] = useState("");
-  const [includeTests, setIncludeTests] = useState(false);
+  const [includeTests, setIncludeTestsState] = useState(false);
+  useEffect(() => {
+    queueMicrotask(() => setIncludeTestsState(readIncludeTests()));
+    const onChange = (event: Event) => setIncludeTestsState(Boolean((event as CustomEvent<boolean>).detail));
+    window.addEventListener(INCLUDE_TESTS_EVENT, onChange);
+    return () => window.removeEventListener(INCLUDE_TESTS_EVENT, onChange);
+  }, []);
+  const setIncludeTests = (value: boolean) => writeIncludeTests(value);
   const [read, setRead] = useState<string[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<string>("");
@@ -44,7 +52,7 @@ export default function AdminInbox({ authFetch }: { authFetch: (input: string, i
   const load = useCallback(async () => {
     setRefreshing(true);
     try {
-      const res = await authFetch(`/api/internal/admin/inbox${includeTests ? "?tests=1" : ""}`);
+      const res = await authFetch("/api/internal/admin/inbox");
       const json = (await res.json().catch(() => ({}))) as { ok?: boolean; items?: AdminInboxItem[]; generatedAt?: string; message?: string };
       if (!res.ok || !json.ok) { setError(json.message || "The Inbox couldn’t load. Try again."); return; }
       setError("");

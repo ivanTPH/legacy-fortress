@@ -57,8 +57,8 @@ test("support issue labels stay human-readable", () => {
 test("admin support snapshot distinguishes sent pending invites from saved unsent setups", () => {
   const source = fs.readFileSync(path.join(process.cwd(), "lib/admin/operations.ts"), "utf8");
 
-  assert.match(source, /countSentPendingContactInvitations/);
-  assert.match(source, /countReadyToSendContactInvitations/);
+  assert.match(source, /countOwned\(client, "contact_invitations", skip, \(query\) => query\.eq\("invitation_status", "pending"\)\.not\("sent_at", "is", null\)\)/);
+  assert.match(source, /countOwned\(client, "contact_invitations", skip, \(query\) => query\.eq\("invitation_status", "pending"\)\.is\("sent_at", null\)\)/);
   assert.match(source, /\.not\("sent_at", "is", null\)/);
   assert.match(source, /\.is\("sent_at", null\)/);
   assert.match(source, /item\.invitationStatus === "pending" && Boolean\(item\.sentAt\)/);
@@ -127,4 +127,16 @@ test("Admin customer page: counts open details only; no names, emails, titles, v
   assert.doesNotMatch(ui, /fullName|contactName|contactEmail|fileName|file_name/);
   const page = fs.readFileSync(new URL("../components/admin/AdminControlPlaneWorkspace.tsx", import.meta.url), "utf8");
   assert.match(page, /<AdminAccountSummary detail=\{detail\} \/>/);
+});
+
+test("one Show test accounts choice applies across Admin; counts and lists agree (16 Nov 2026)", () => {
+  const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+  for (const route of ["dashboard-summary", "support", "verifications", "probate-cases", "legal-authorities", "users", "inbox"]) {
+    assert.match(read(`app/api/internal/admin/${route}/route.ts`), /includeTestsFrom\(request\)/, route);
+  }
+  const ui = read("components/admin/AdminControlPlaneWorkspace.tsx");
+  assert.match(ui, /if \(readIncludeTests\(\)\) headers\.set\("x-lf-include-tests", "1"\)/);
+  assert.match(ui, /const probateToReview = probate\.filter/, "Overview counts probate like the Probate page");
+  assert.match(read("lib/admin/dashboardSummary.ts"), /without\|with no\|incomplete/, "'Users with no …' is not shown as healthy");
+  assert.doesNotMatch(read("lib/admin/dashboardSummary.ts"), /perPage: 1000/, "counts read every account, not the first 1,000");
 });

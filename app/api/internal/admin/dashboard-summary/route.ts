@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { includeTestsFrom, loadAccounts, withoutTests } from "@/lib/admin/testAccounts";
 import { loadAdminDashboardSummary } from "@/lib/admin/dashboardSummary";
 import { requireAdminAccess, requireAdminCapability } from "@/lib/admin/access";
 import { recordAdminAuditEvent } from "@/lib/admin/audit";
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, message: denied.message, capability: denied.capability }, { status: denied.status });
   }
 
-  const summary = await loadAdminDashboardSummary(admin.adminClient, admin.access);
+  const summary = await loadAdminDashboardSummary(admin.adminClient, admin.access, { includeTests: includeTestsFrom(request) });
   await recordAdminAuditEvent(admin.adminClient, admin.access, {
     category: "admin_review",
     action: "Admin dashboard summary opened",

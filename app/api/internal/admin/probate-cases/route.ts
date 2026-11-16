@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { includeTestsFrom, loadAccounts, withoutTests } from "@/lib/admin/testAccounts";
 import { requireAdminAccess, requireAdminCapability } from "@/lib/admin/access";
 import { recordAdminAuditEvent } from "@/lib/admin/audit";
 import { loadProbateCases, submitProbateCaseFromVerification } from "@/lib/admin/probateCases";
@@ -13,7 +14,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, message: denied.message, capability: denied.capability }, { status: denied.status });
   }
 
-  const cases = await loadProbateCases(admin.adminClient);
+  const cases = withoutTests(await loadProbateCases(admin.adminClient), (await loadAccounts(admin.adminClient)).testIds, includeTestsFrom(request), (item) => item.ownerUserId);
   return NextResponse.json({ ok: true, cases });
 }
 
