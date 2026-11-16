@@ -13,12 +13,14 @@ import IdentityReviewCompare from "@/components/admin/IdentityReviewCompare";
 import InfoTip from "@/components/ui/InfoTip";
 import Icon from "@/components/ui/Icon";
 import { filterAdminNavigation, PLATFORM_ADMIN_NAVIGATION } from "@/components/admin/adminNavigation";
+import AdminInbox from "@/components/admin/AdminInbox";
 import { waitForActiveUser } from "@/lib/auth/session";
 import { supabase } from "@/lib/supabaseClient";
 import { getSupportNextStep, getSupportOperationalState } from "@/lib/admin/operations";
 
 type AdminControlPlaneSection =
   | "overview"
+  | "inbox"
   | "organisations"
   | "organisation-detail"
   | "organisation-users"
@@ -456,6 +458,11 @@ const PAGE_COPY: Record<AdminControlPlaneSection, { title: string; eyebrow: stri
     title: "Overview",
     eyebrow: "Platform Admin",
     description: "What needs a decision today. Customer Vault contents and documents are never shown in admin.",
+  },
+  inbox: {
+    title: "Inbox",
+    eyebrow: "Platform Admin",
+    description: "New accounts, plan changes, links, documents and what's waiting for you, newest first.",
   },
   users: {
     title: "Customer users",
@@ -1136,6 +1143,7 @@ export default function AdminControlPlaneWorkspace({
         {message ? <section style={alertStyle}>{message}</section> : null}
         {confirmation ? <AdminConfirmationDialog confirmation={confirmation} onCancel={() => setConfirmation(null)} onConfirm={() => { const action = confirmation.onConfirm; setConfirmation(null); void action(); }} /> : null}
 
+        {section === "inbox" ? <AdminInbox authFetch={authFetch} /> : null}
         {section === "overview" ? renderOverview(metrics, support, verificationQueue, probateCases, enterprisePortfolio, capabilities) : null}
         {section === "organisations" ? renderPlatformOrganisations(enterpriseViews, {
           search: enterpriseSearch,
@@ -1867,6 +1875,7 @@ function renderUsers(
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by email or name" />
         </label>
         <button type="submit" className="lf-admin-row-button">Search</button>
+        <button type="button" className="lf-admin-row-button" aria-label="Refresh" onClick={() => void runLookup()}><Icon name="refresh" size={18} />&nbsp;Refresh</button>
       </form>
       {resourceId ? renderUserOperationalDetail(detail, detailLoading, resourceId) : null}
       {showingNewest && !resourceId ? (

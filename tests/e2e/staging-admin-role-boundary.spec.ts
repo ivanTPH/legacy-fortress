@@ -90,6 +90,24 @@ test("platform admin remains in admin context while using users, invitations, or
   await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
   await page.goto(`${BASE_URL}/admin/users`, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Customer users" })).toBeVisible();
+  // Owner, 16 Nov 2026: newest accounts listed without searching, test accounts hidden, Refresh beside search.
+  await expect(page.getByText("Newest accounts first")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Refresh" })).toBeVisible();
+  await expect(page.getByText("Show test accounts")).toBeVisible();
+  // Admin Inbox: search and Refresh at the top, filters, account details and counts only.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${BASE_URL}/admin/inbox`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "Inbox", exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Refresh" })).toBeVisible();
+  for (const label of ["New accounts", "Plans", "Links", "Documents", "Needs you"]) await expect(page.getByRole("button", { name: new RegExp(`^${label}`) })).toBeVisible();
+  await expect(page.getByText(/new · last 30 days/)).toBeVisible({ timeout: 20_000 });
+  const inboxShot = await page.screenshot({ type: "jpeg", quality: 60, scale: "css" }).catch(() => null);
+  if (inboxShot) console.log(`Phone-shot: admin-inbox ${inboxShot.toString("base64")}`);
+  await page.getByText("Show test accounts").click();
+  await expect(page.getByText(/new · last 30 days/)).toBeVisible({ timeout: 20_000 });
+  const inboxTestsShot = await page.screenshot({ type: "jpeg", quality: 60, scale: "css" }).catch(() => null);
+  if (inboxTestsShot) console.log(`Phone-shot: admin-inbox-with-tests ${inboxTestsShot.toString("base64")}`);
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${BASE_URL}/admin/invitations`, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Invitations", exact: true })).toBeVisible();
   await expect(page.getByText("Platform Admin", { exact: true }).first()).toBeVisible();

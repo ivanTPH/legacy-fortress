@@ -16,6 +16,7 @@ export const PLATFORM_ADMIN_NAVIGATION: AdminNavigationGroup[] = [
     label: "",
     items: [
       { key: "overview", label: "Overview", href: "/admin", icon: "space_dashboard", capability: "admin.dashboard.read" },
+      { key: "inbox", label: "Inbox", href: "/admin/inbox", icon: "inbox", capability: "users:lookup" },
     ],
   },
   {
