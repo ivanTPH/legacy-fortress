@@ -196,13 +196,13 @@ async function widestOverflow(page: Page) {
 }
 
 test("phone: platform admin and partner pages fit the screen", async ({ browser }) => {
-  test.setTimeout(420_000);
-  const review = async (email: string, home: string, paths: string[], label: string) => {
-    const page = await iphonePage(browser);
+  test.setTimeout(900_000);
+  // Owner, 16 Nov 2026: every page checked at phone AND laptop size (desk pictures are "desk-…").
+  const review = async (email: string, home: string, paths: string[], label: string, desk = false) => {
+    const page = desk ? await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage() : await iphonePage(browser);
     await signIn(page, email, home);
     for (const path of paths) {
       const started = Date.now();
-  page.on("response", (response) => { if (response.url().includes("/api/internal/admin/inbox")) console.log(`Admin inbox API ${response.status()} after ${Math.round((Date.now() - started) / 1000)}s`); });
       await page.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" }).catch(() => null);
       await page.waitForTimeout(1500);
       await page.getByText(/^(Checking admin access|Checking organisation access|Loading commercial register|Loading…)$/).first().waitFor({ state: "hidden", timeout: 20_000 }).catch(() => null);
@@ -210,19 +210,22 @@ test("phone: platform admin and partner pages fit the screen", async ({ browser 
       const onSignIn = await page.getByText(/Sign in to (Platform Admin|the partner portal)/).first().isVisible().catch(() => false);
       expect(onSignIn, `${label} ${path} stuck on staff sign-in`).toBe(false);
       const result = await widestOverflow(page);
-      console.log(`Admin-fit: ${label} ${path} ${result.scrollWidth > result.width + 1 ? `TOO WIDE ${result.scrollWidth}px: ${result.offenders.slice(0, 4).join("; ")}` : "fits"}`);
+      console.log(`Admin-fit: ${desk ? "desk-" : ""}${label} ${path} ${result.scrollWidth > result.width + 1 ? `TOO WIDE ${result.scrollWidth}px: ${result.offenders.slice(0, 4).join("; ")}` : "fits"}`);
       const shot = await page.screenshot({ type: "jpeg", quality: 40, scale: "css", fullPage: true }).catch(() => null);
-      if (shot) console.log(`Phone-shot: ${label}${path.replace(/[^a-z0-9]+/gi, "-")} ${shot.toString("base64")}`);
+      if (shot) console.log(`Phone-shot: ${desk ? "desk-" : ""}${label}${path.replace(/[^a-z0-9]+/gi, "-")} ${shot.toString("base64")}`);
     }
     await page.context().close();
   };
-  await review(users[0].email, "/admin", [
-    "/admin", "/admin/users", "/admin/invitations", "/admin/access", "/admin/support", "/admin/probate", "/admin/verification", "/admin/authorities",
-    "/admin/organisations", `/admin/organisations/${organisationId}`, "/admin/licences", "/admin/audit", "/admin/system-health", "/admin/admin-users", "/admin/settings",
-  ], "admin");
+  const adminPaths = [
+    "/admin", "/admin/inbox", "/admin/users", `/admin/users/${encodeURIComponent(users[0].id)}`, "/admin/invitations", "/admin/access", "/admin/support", "/admin/probate", "/admin/verification", "/admin/authorities",
+    "/admin/organisations", `/admin/organisations/${organisationId}`, "/admin/licences", "/admin/audit", "/admin/system-health", "/admin/admin-users", "/admin/roles", "/admin/settings",
+  ];
+  await review(users[0].email, "/admin", adminPaths, "admin");
+  await review(users[0].email, "/admin", adminPaths, "admin", true);
   await review(users[1].email, "/enterprise", [
     "/enterprise", "/enterprise?tab=users", "/enterprise?tab=invitations", "/enterprise?tab=registration-links", "/enterprise?tab=reports", `/enterprise/organisations/${organisationId}`,
   ], "partner");
+  await review(users[1].email, "/enterprise", ["/enterprise", "/enterprise?tab=users", `/enterprise/organisations/${organisationId}`], "partner", true);
 });
 // iPhone-like page (mobile layout viewport + touch) so pages widen the way Safari does.
 async function iphonePage(browser: import("@playwright/test").Browser) {
