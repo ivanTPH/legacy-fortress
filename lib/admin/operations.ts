@@ -764,6 +764,15 @@ async function upsertAdminUser(
   return res.data as AdminUserRow;
 }
 
+/**
+ * Addresses that can only belong to automated checks: the example domains and the .test/.invalid/.localhost
+ * names are reserved and never reach a real person (RFC 2606). Hidden from Admin's lists unless asked for.
+ */
+export function isTestAccountEmail(email: string | null | undefined) {
+  const domain = String(email ?? "").trim().toLowerCase().split("@")[1] ?? "";
+  return /^example\.(test|com|net|org)$/.test(domain) || /\.(test|invalid|localhost)$/.test(domain);
+}
+
 /** Every sign-in account, newest first (up to 2,000; the Admin list shows the first 20 matches). */
 export async function listAuthUsersNewestFirst(client: AnySupabaseClient): Promise<AuthListUser[]> {
   const all: AuthListUser[] = [];
@@ -778,16 +787,18 @@ export async function listAuthUsersNewestFirst(client: AnySupabaseClient): Promi
 }
 
 /** How many accounts were opened in the last `days` days. Counts only; no names or emails. */
-export async function countNewAccounts(client: AnySupabaseClient, days = 7, now = Date.now()) {
+export async function countNewAccounts(client: AnySupabaseClient, days = 7, now = Date.now(), includeTests = false) {
   const since = new Date(now - days * 24 * 60 * 60 * 1000).toISOString();
-  return (await listAuthUsersNewestFirst(client)).filter((user) => String(user.created_at ?? "") >= since).length;
+  return (await listAuthUsersNewestFirst(client))
+    .filter((user) => String(user.created_at ?? "") >= since && (includeTests || !isTestAccountEmail(user.email))).length;
 }
 
-export async function lookupUsers(client: AnySupabaseClient, query: string) {
+export async function lookupUsers(client: AnySupabaseClient, query: string, includeTests = false) {
   const normalizedQuery = query.trim().toLowerCase();
   // Newest accounts first (owner, 16 Nov 2026: "how would I know if someone opened a new vault?"). With no search,
   // this is the "New accounts" list.
   const users = (await listAuthUsersNewestFirst(client)).filter((user) => {
+    if (!includeTests && !normalizedQuery && isTestAccountEmail(user.email)) return false;
     if (!normalizedQuery) return true;
     const email = String(user.email ?? "").toLowerCase();
     const displayName = String(user.user_metadata?.display_name ?? user.user_metadata?.full_name ?? "").toLowerCase();

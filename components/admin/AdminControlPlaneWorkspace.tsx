@@ -613,6 +613,7 @@ export default function AdminControlPlaneWorkspace({
   // With the search empty, Users shows the newest accounts first and how many opened this week (16 Nov 2026).
   const [newThisWeek, setNewThisWeek] = useState<number | null>(null);
   const [showingNewest, setShowingNewest] = useState(false);
+  const [includeTestAccounts, setIncludeTestAccounts] = useState(false);
   const [userDetail, setUserDetail] = useState<UserOperationalDetail | null>(null);
   const [userDetailLoading, setUserDetailLoading] = useState(false);
   const [auditFilter, setAuditFilter] = useState("");
@@ -740,7 +741,7 @@ export default function AdminControlPlaneWorkspace({
 
   const runLookup = useCallback(async (query = "") => {
     const trimmed = query.trim();
-    const res = await authFetch(`/api/internal/admin/users?q=${encodeURIComponent(trimmed)}`);
+    const res = await authFetch(`/api/internal/admin/users?q=${encodeURIComponent(trimmed)}${includeTestAccounts ? "&tests=1" : ""}`);
     const json = (await res.json().catch(() => ({}))) as { ok?: boolean; users?: LookupUser[]; newThisWeek?: number | null; message?: string };
     if (!res.ok || !json.ok) {
       setMessage(json.message || "Could not search users.");
@@ -750,7 +751,7 @@ export default function AdminControlPlaneWorkspace({
     setLookupResults(json.users ?? []);
     setShowingNewest(!trimmed);
     if (!trimmed) setNewThisWeek(typeof json.newThisWeek === "number" ? json.newThisWeek : null);
-  }, [authFetch]);
+  }, [authFetch, includeTestAccounts]);
 
   useEffect(() => {
     if (state !== "ready" || section !== "users") return;
@@ -1160,7 +1161,7 @@ export default function AdminControlPlaneWorkspace({
         {section === "licences" ? renderPlatformLicences(enterpriseViews) : null}
         {section === "licence-detail" ? renderPlatformLicenceDetail(resourceId, enterprisePortfolio) : null}
         {section === "admin-users" || section === "admin-user-detail" ? renderAdminUsers(admins, adminInvitations, adminFilter, setAdminFilter, adminInviteForm, setAdminInviteForm, sendAdminInvitation, adminInviteOpen, setAdminInviteOpen, adminLifecycleForm, setAdminLifecycleForm, runAdminLifecycle, runAdminInvitationLifecycle, (input, onConfirm) => requestConfirmation(input, onConfirm), resourceId, adminLifecycleActionLoading) : null}
-        {section === "users" || section === "user-detail" ? renderUsers(lookupQuery, setLookupQuery, lookupResults, (query) => runLookup(query ?? lookupQuery), resourceId, userDetail, userDetailLoading, showingNewest, newThisWeek) : null}
+        {section === "users" || section === "user-detail" ? renderUsers(lookupQuery, setLookupQuery, lookupResults, (query) => runLookup(query ?? lookupQuery), resourceId, userDetail, userDetailLoading, showingNewest, newThisWeek, includeTestAccounts, setIncludeTestAccounts) : null}
         {section === "support" || section === "invitations" ? renderSupport(section, support, supportDetail, supportDetailLoading, supportActionLoading, loadSupportInvitationDetail, runSupportInvitationAction, createSupportCase, runSupportCaseAction, addSupportCaseNote, capabilities, enterprisePortfolio, enterpriseInvitationActionLoading, runEnterpriseInvitationAction) : null}
         {section === "verification" || section === "verification-detail" ? renderVerification(verificationQueue, resourceId, capabilities, verificationActionLoading, verificationReviewNote, setVerificationReviewNote, runVerificationAction) : null}
         {section === "access" || section === "probate" || section === "probate-detail" ? renderProbate(probateCases, estateOperations, resourceId, capabilities, probateDecisionNotes, setProbateDecisionNotes, probateActionLoading, probateEvidenceLoading, runProbateCaseAction, openProbateEvidence, section === "access" ? "Access and estate cases" : "Probate queue") : null}
@@ -1856,6 +1857,8 @@ function renderUsers(
   detailLoading: boolean,
   showingNewest = false,
   newThisWeek: number | null = null,
+  includeTests = false,
+  setIncludeTests: (value: boolean) => void = () => undefined,
 ) {
   return (
     <div style={stackStyle}>
@@ -1868,8 +1871,9 @@ function renderUsers(
       {resourceId ? renderUserOperationalDetail(detail, detailLoading, resourceId) : null}
       {showingNewest && !resourceId ? (
         <p className="lf-admin-new-accounts" role="status">
-          <strong>Newest accounts first</strong> · {newThisWeek === null ? "" : `${newThisWeek} new in the last 7 days`}
+          <strong>Newest accounts first</strong> · {newThisWeek === null ? "" : `${newThisWeek} new in the last 7 days${includeTests ? "" : " (test accounts hidden)"}`}
           {query.trim() ? null : <span className="lf-admin-muted"> · Search to find anyone else</span>}
+          <label className="lf-admin-test-toggle"><input type="checkbox" checked={includeTests} onChange={(event) => setIncludeTests(event.target.checked)} /> Show test accounts</label>
         </p>
       ) : null}
       <div className="lf-admin-table-card">

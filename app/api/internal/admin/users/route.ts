@@ -15,8 +15,9 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const query = url.searchParams.get("q") ?? "";
-  const users = await lookupUsers(admin.adminClient, query);
-  const newThisWeek = query.trim() ? null : await countNewAccounts(admin.adminClient, 7);
+  const includeTests = url.searchParams.get("tests") === "1";
+  const users = await lookupUsers(admin.adminClient, query, includeTests);
+  const newThisWeek = query.trim() ? null : await countNewAccounts(admin.adminClient, 7, Date.now(), includeTests);
   await recordAdminAuditEvent(admin.adminClient, admin.access, {
     category: "admin_review",
     action: "Admin user lookup",
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
     resourceId: null,
     resourceLabel: "User lookup",
     route: "/api/internal/admin/users",
-    metadata: { query_present: Boolean(query.trim()), result_count: users.length },
+    metadata: { query_present: Boolean(query.trim()), result_count: users.length, include_tests: includeTests },
   });
   return NextResponse.json({ ok: true, users, newThisWeek });
 }

@@ -9511,3 +9511,5 @@ a.lf-pp-item:hover { background: var(--lf-interaction-hover, #F6EFEA); }
 
 /* Admin Users: newest accounts first (owner, 16 Nov 2026). */
 .lf-admin-new-accounts { margin: 0; font-size: 15px; }
+.lf-admin-test-toggle { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 15px; }
+.lf-admin-test-toggle input { width: 20px; height: 20px; }
