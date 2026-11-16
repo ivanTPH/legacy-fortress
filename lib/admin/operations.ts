@@ -131,18 +131,20 @@ export type AdminUserOperationalDetail = AdminLookupResult & {
     displayName: string | null;
     hasProfile: boolean;
   };
+  /** People the customer added, without names or emails (owner decision 16 Nov 2026). */
   contacts: Array<{
     id: string;
-    fullName: string;
-    email: string | null;
+    label: string;
+    role: string | null;
     relationship: string | null;
     inviteStatus: string | null;
     verificationStatus: string | null;
   }>;
+  /** Records and documents: area, type, status, size and dates only. */
+  records: Array<{ id: string; area: string; type: string; status: string; createdAt: string; updatedAt: string }>;
+  documentList: Array<{ id: string; area: string; kind: string; mimeType: string; sizeBytes: number; createdAt: string }>;
   invitations: Array<{
     id: string;
-    contactName: string;
-    contactEmail: string | null;
     assignedRole: string;
     invitationStatus: string;
     sentAt: string | null;
@@ -905,18 +907,23 @@ export async function loadUserOperationalDetail(client: AnySupabaseClient, userI
     membershipsRes,
     assets,
     documents,
+    assetListRes,
+    recordListRes,
+    documentListRes,
+    attachmentListRes,
   ] = await Promise.all([
     client.from("user_profiles").select("user_id,display_name").eq("user_id", id).maybeSingle(),
     client.from("billing_profiles").select("user_id,account_plan,plan_status,monthly_charge,billing_currency").eq("user_id", id).maybeSingle(),
     client
       .from("contacts")
-      .select("id,full_name,email,relationship,invite_status,verification_status")
+      // Owner decision 16 Nov 2026: Admin never shows the names or emails of the people a customer adds.
+      .select("id,contact_role,invite_status,verification_status")
       .eq("owner_user_id", id)
       .order("updated_at", { ascending: false })
       .limit(20),
     client
       .from("contact_invitations")
-      .select("id,contact_name,contact_email,assigned_role,invitation_status,sent_at,accepted_at,revoked_at")
+      .select("id,assigned_role,invitation_status,sent_at,accepted_at,revoked_at")
       .eq("owner_user_id", id)
       .order("updated_at", { ascending: false })
       .limit(20),
@@ -939,6 +946,12 @@ export async function loadUserOperationalDetail(client: AnySupabaseClient, userI
       .order("updated_at", { ascending: false }),
     countRows(client, "assets", "owner_user_id", id),
     countRows(client, "documents", "owner_user_id", id),
+    // Details only for the summary's drop-down lists: area, type, status and dates. Never titles, values,
+    // file names, storage paths or contents.
+    client.from("assets").select("id,section_key,category_key,status,created_at,updated_at").eq("owner_user_id", id).is("deleted_at", null).order("created_at", { ascending: false }).limit(100),
+    client.from("records").select("id,section_key,category_key,status,created_at,updated_at").eq("owner_user_id", id).order("created_at", { ascending: false }).limit(100),
+    client.from("documents").select("id,asset_id,mime_type,size_bytes,document_kind,created_at").eq("owner_user_id", id).is("deleted_at", null).order("created_at", { ascending: false }).limit(100),
+    client.from("attachments").select("id,record_id,mime_type,size_bytes,created_at").eq("owner_user_id", id).order("created_at", { ascending: false }).limit(100),
   ]);
 
   if (profileRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", profileRes.error.message);
@@ -951,8 +964,8 @@ export async function loadUserOperationalDetail(client: AnySupabaseClient, userI
 
   const profile = profileRes.data as UserProfileRow | null;
   const billing = billingRes.data as BillingProfileRow | null;
-  const contacts = (contactsRes.data ?? []) as Array<ContactRow & { invite_status?: string | null; verification_status?: string | null }>;
-  const invitations = (invitationsRes.data ?? []) as ContactInvitationRow[];
+  const contacts = (contactsRes.data ?? []) as Array<{ id: string; contact_role?: string | null; invite_status?: string | null; verification_status?: string | null }>;
+  const invitations = (invitationsRes.data ?? []) as Array<{ id: string; assigned_role?: string | null; invitation_status: string; sent_at?: string | null; accepted_at?: string | null; revoked_at?: string | null }>;
   const grants = (grantsRes.data ?? []) as Array<Record<string, unknown>>;
   const verifications = (verificationRes.data ?? []) as Array<Record<string, unknown>>;
   const memberships = (membershipsRes.data ?? []) as EnterpriseMembershipContextRow[];
@@ -1001,18 +1014,26 @@ export async function loadUserOperationalDetail(client: AnySupabaseClient, userI
       role: membership.organisation_role,
       status: membership.membership_status,
     })),
-    contacts: contacts.map((row) => ({
+    contacts: contacts.map((row, index) => ({
       id: row.id,
-      fullName: row.full_name,
-      email: row.email,
-      relationship: row.relationship,
+      label: `Person ${index + 1}`,
+      role: String(row.contact_role ?? "") || null,
+      relationship: null,
       inviteStatus: row.invite_status ?? null,
       verificationStatus: row.verification_status ?? null,
     })),
+    records: [...((assetListRes.data ?? []) as Array<Record<string, unknown>>), ...((recordListRes.data ?? []) as Array<Record<string, unknown>>)]
+      .map((row) => ({ id: String(row.id), area: String(row.section_key ?? ""), type: String(row.category_key ?? ""), status: String(row.status ?? "active"), createdAt: String(row.created_at ?? ""), updatedAt: String(row.updated_at ?? "") }))
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
+    documentList: (() => {
+      const areaById = new Map([...((assetListRes.data ?? []) as Array<Record<string, unknown>>), ...((recordListRes.data ?? []) as Array<Record<string, unknown>>)].map((row) => [String(row.id), String(row.section_key ?? "")]));
+      return [
+        ...((documentListRes.data ?? []) as Array<Record<string, unknown>>).map((row) => ({ id: String(row.id), area: areaById.get(String(row.asset_id ?? "")) ?? "", kind: String(row.document_kind ?? "document"), mimeType: String(row.mime_type ?? ""), sizeBytes: Number(row.size_bytes ?? 0), createdAt: String(row.created_at ?? "") })),
+        ...((attachmentListRes.data ?? []) as Array<Record<string, unknown>>).map((row) => ({ id: String(row.id), area: areaById.get(String(row.record_id ?? "")) ?? "", kind: "document", mimeType: String(row.mime_type ?? ""), sizeBytes: Number(row.size_bytes ?? 0), createdAt: String(row.created_at ?? "") })),
+      ].sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+    })(),
     invitations: invitations.map((row) => ({
       id: row.id,
-      contactName: row.contact_name ?? "Unknown contact",
-      contactEmail: row.contact_email ?? null,
       assignedRole: row.assigned_role ?? "professional_advisor",
       invitationStatus: row.invitation_status,
       sentAt: row.sent_at ?? null,

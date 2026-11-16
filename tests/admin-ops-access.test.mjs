@@ -114,3 +114,17 @@ test("Admin Inbox: account details and counts only, same permission and audit as
   const nav = fs.readFileSync(new URL("../components/admin/adminNavigation.ts", import.meta.url), "utf8");
   assert.match(nav, /key: "inbox", label: "Inbox", href: "\/admin\/inbox", icon: "inbox", capability: "users:lookup"/);
 });
+
+test("Admin customer page: counts open details only; no names, emails, titles, values or file names (16 Nov 2026)", () => {
+  const ops = fs.readFileSync(new URL("../lib/admin/operations.ts", import.meta.url), "utf8");
+  const detail = ops.slice(ops.indexOf("export async function loadUserOperationalDetail"), ops.indexOf("export async function loadUserOperationalDetail") + 9000);
+  const selects = [...detail.matchAll(/select\("([^"]+)"/g)].map((match) => match[1]);
+  const listSelects = selects.filter((cols) => !/display_name|account_plan|organisation_role/.test(cols)).join(",");
+  assert.doesNotMatch(listSelects, /full_name|email|contact_name|contact_email|title|value_minor|file_name|storage_path|metadata|notes/);
+  assert.match(detail, /label: `Person \$\{index \+ 1\}`/);
+  const ui = fs.readFileSync(new URL("../components/admin/AdminAccountSummary.tsx", import.meta.url), "utf8");
+  assert.match(ui, /aria-expanded=\{open === key\}/);
+  assert.doesNotMatch(ui, /fullName|contactName|contactEmail|fileName|file_name/);
+  const page = fs.readFileSync(new URL("../components/admin/AdminControlPlaneWorkspace.tsx", import.meta.url), "utf8");
+  assert.match(page, /<AdminAccountSummary detail=\{detail\} \/>/);
+});

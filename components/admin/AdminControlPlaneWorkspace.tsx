@@ -14,6 +14,7 @@ import InfoTip from "@/components/ui/InfoTip";
 import Icon from "@/components/ui/Icon";
 import { filterAdminNavigation, PLATFORM_ADMIN_NAVIGATION } from "@/components/admin/adminNavigation";
 import AdminInbox from "@/components/admin/AdminInbox";
+import AdminAccountSummary from "@/components/admin/AdminAccountSummary";
 import { waitForActiveUser } from "@/lib/auth/session";
 import { supabase } from "@/lib/supabaseClient";
 import { getSupportNextStep, getSupportOperationalState } from "@/lib/admin/operations";
@@ -399,18 +400,20 @@ type UserOperationalDetail = LookupUser & {
     displayName: string | null;
     hasProfile: boolean;
   };
+  /** People the customer added, without names or emails (owner decision 16 Nov 2026). */
   contacts: Array<{
     id: string;
-    fullName: string;
-    email: string | null;
+    label: string;
+    role: string | null;
     relationship: string | null;
     inviteStatus: string | null;
     verificationStatus: string | null;
   }>;
+  /** Records and documents: area, type, status, size and dates only. */
+  records: Array<{ id: string; area: string; type: string; status: string; createdAt: string; updatedAt: string }>;
+  documentList: Array<{ id: string; area: string; kind: string; mimeType: string; sizeBytes: number; createdAt: string }>;
   invitations: Array<{
     id: string;
-    contactName: string;
-    contactEmail: string | null;
     assignedRole: string;
     invitationStatus: string;
     sentAt: string | null;
@@ -1920,60 +1923,10 @@ function renderUserOperationalDetail(detail: UserOperationalDetail | null, loadi
         <AdminStatusBadge status={detail.commercial.planStatus} label={sentenceCaseStatus(detail.commercial.accountPlan)} />
       </header>
       {/* Privacy-bounded account summary: Secure notes, document contents, storage paths and recovery data are not exposed. */}
-      <AdminNote icon="shield_lock">Counts only. Record names, values, documents, notes and recovery details are never shown in admin.</AdminNote>
-      <AdminStatStrip label="Account summary" items={[
-        { label: "Records", value: detail.counts.assets },
-        { label: "Documents", value: detail.counts.documents },
-        { label: "People", value: detail.counts.contacts },
-        { label: "Invitations", value: detail.counts.invitations },
-        { label: "Access given", value: detail.counts.linkedAccessGrants },
-        { label: "Identity checks", value: detail.counts.verificationRequests },
-      ]} />
+      <AdminNote icon="shield_lock">Tap a count to see details. Record names, values, documents, notes, recovery details and the names of the people a customer adds are never shown in admin.</AdminNote>
       <div className="lf-admin-detail-grid">
         <div className="lf-admin-detail-main">
-          <div className="lf-admin-table-card">
-            <h2>Trusted people</h2>
-            <AdminDataTable
-              caption="User contacts and linked access"
-              columns={[
-                { key: "contact", header: "Person", render: (item) => <><span className="lf-admin-cell-title">{item.fullName}</span><small>{item.email || "No email"} · {item.relationship || "Relationship not recorded"}</small></> },
-                { key: "invite", header: "Invitation", render: (item) => <AdminStatusBadge status={item.inviteStatus || "not invited"} /> },
-                { key: "verification", header: "Identity", render: (item) => <AdminStatusBadge status={item.verificationStatus || "not started"} /> },
-              ]}
-              rows={detail.contacts}
-              getRowKey={(item) => item.id}
-              emptyState={<AdminEmptyState icon="group" title="No trusted people">This customer hasn’t added anyone yet.</AdminEmptyState>}
-            />
-          </div>
-          <div className="lf-admin-table-card">
-            <h2>Invitations</h2>
-            <AdminDataTable
-              caption="User invitations"
-              columns={[
-                { key: "recipient", header: "Recipient", render: (item) => <><span className="lf-admin-cell-title">{item.contactName}</span><small>{item.contactEmail || "No email"} · {labelise(item.assignedRole)}</small></> },
-                { key: "status", header: "Status", render: (item) => <AdminStatusBadge status={item.invitationStatus} /> },
-                { key: "sent", header: "Sent", render: (item) => item.sentAt ? formatDate(item.sentAt) : "Not sent" },
-                { key: "actions", header: "", render: () => <Link className="lf-admin-row-button" href="/admin/support" prefetch={false}>Open support queue</Link> },
-              ]}
-              rows={detail.invitations}
-              getRowKey={(item) => item.id}
-              emptyState={<AdminEmptyState icon="forward_to_inbox" title="No invitations">No invitations have been sent from this account.</AdminEmptyState>}
-            />
-          </div>
-          <div className="lf-admin-table-card">
-            <h2>Identity checks</h2>
-            <AdminDataTable
-              caption="User verification requests"
-              columns={[
-                { key: "type", header: "Type", render: (item) => labelise(item.requestType) },
-                { key: "status", header: "Status", render: (item) => <AdminStatusBadge status={item.requestStatus} /> },
-                { key: "submitted", header: "Started", render: (item) => formatDate(item.submittedAt) },
-              ]}
-              rows={detail.verificationRequests}
-              getRowKey={(item) => item.id}
-              emptyState={<AdminEmptyState icon="verified_user" title="No identity checks">No executor or probate checks are linked to this account.</AdminEmptyState>}
-            />
-          </div>
+          <AdminAccountSummary detail={detail} />
         </div>
         <aside className="lf-admin-detail-rail">
           <section className="lf-admin-table-card lf-admin-form-card" aria-label="Organisation context">
