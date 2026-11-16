@@ -1,8 +1,8 @@
 {
-  "approvedBy": "Ivan (owner), 10 Nov 2026: Inbox read state across devices (inbox_reads, own rows only)",
+  "approvedBy": "Ivan (owner), 16 Nov 2026: account origins (direct / partner / invited) and organisation Test marker",
   "mode": "apply",
-  "attempt": 26,
+  "attempt": 27,
   "files": [
-    { "file": "20261110220000_inbox_reads.sql", "sha256": "e789f046bffba1ea59652ee12407a6efbcc33cc4cce8457fd558f49692631171" }
+    { "file": "20261116220000_account_origins_and_test_marker.sql", "sha256": "c72f12569cb3590c5befe6e20c0bce4aba625733d709e6653815b4abced75bc8" }
   ]
 }
