@@ -1888,7 +1888,7 @@ function renderUsers(
           <label className="lf-admin-test-toggle"><input type="checkbox" checked={includeTests} onChange={(event) => setIncludeTests(event.target.checked)} /> Show test accounts</label>
         </p>
       ) : null}
-      <div className="lf-admin-table-card">
+      {resourceId && !results.length ? null : <div className="lf-admin-table-card">
         <AdminDataTable
           caption={showingNewest ? "Newest customer accounts" : "Customer users"}
           columns={[
@@ -1905,7 +1905,7 @@ function renderUsers(
             ? <AdminEmptyState icon="person_search" title="No customer accounts yet">New accounts appear here, newest first.</AdminEmptyState>
             : <AdminEmptyState icon="person_search" title="No customers found">Try another email address or name. Results show account details only.</AdminEmptyState>}
         />
-      </div>
+      </div>}
     </div>
   );
 }
@@ -1924,10 +1924,8 @@ function renderUserOperationalDetail(detail: UserOperationalDetail | null, loadi
       </header>
       {/* Privacy-bounded account summary: Secure notes, document contents, storage paths and recovery data are not exposed. */}
       <AdminNote icon="shield_lock">Tap a count to see details. Record names, values, documents, notes, recovery details and the names of the people a customer adds are never shown in admin.</AdminNote>
+      <AdminAccountSummary detail={detail} />
       <div className="lf-admin-detail-grid">
-        <div className="lf-admin-detail-main">
-          <AdminAccountSummary detail={detail} />
-        </div>
         <aside className="lf-admin-detail-rail">
           <section className="lf-admin-table-card lf-admin-form-card" aria-label="Organisation context">
             <h2>Organisation</h2>
