@@ -597,3 +597,46 @@ test("billing: TEST is in Stripe test mode and checkout opens (no payment)", asy
     expect(result.host).toBe("checkout.stripe.com"); // a test key can only create test-mode checkout pages
   }
 });
+
+// Owner decisions 3 Nov 2026: the free plan holds 10 documents. Run 42 saw an 11th accepted while the owner was
+// stopped at 10. Check the database's own rule as the signed-in synthetic owner: the 10th document is accepted,
+// the 11th refused. Placeholder rows only (no files), all removed at the end.
+test("documents: the free plan accepts the 10th document and refuses the 11th", async () => {
+  test.setTimeout(120_000);
+  const owner = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+  const session = await owner.auth.signInWithPassword({ email: EMAIL, password: PASSWORD });
+  if (session.error || !session.data.session) throw session.error ?? new Error("no session");
+  await trustSession(owner, session.data.session.access_token);
+  const plan = await admin.from("billing_profiles").select("account_plan,document_packs").eq("user_id", userId).maybeSingle();
+  const count = async () => {
+    const docs = await admin.from("documents").select("id", { count: "exact", head: true }).eq("owner_user_id", userId).is("deleted_at", null);
+    const atts = await admin.from("attachments").select("id", { count: "exact", head: true }).eq("owner_user_id", userId);
+    return (docs.count ?? 0) + (atts.count ?? 0);
+  };
+  const usage = await owner.rpc("lf_my_document_usage");
+  console.log(`Limit check: plan=${JSON.stringify(plan.data)} counted=${await count()} usage=${JSON.stringify(usage.data ?? usage.error?.message)}`);
+  const host = await admin.from("records").select("id").eq("owner_user_id", userId).limit(1).maybeSingle();
+  if (!host.data?.id) throw new Error("no record to attach to");
+  const made: string[] = [];
+  const row = (name: string) => ({ record_id: host.data!.id, owner_user_id: userId, storage_bucket: "vault-docs", storage_path: `users/${userId}/records/${host.data!.id}/documents/${name}`, file_name: name, mime_type: "application/pdf", size_bytes: 10, checksum: null });
+  try {
+    for (let i = await count(); i < 9; i += 1) {
+      const filler = await admin.from("attachments").insert(row(`limit-filler-${i}.pdf`)).select("id").single();
+      if (filler.data?.id) made.push(String(filler.data.id)); else console.log(`Limit check filler: ${filler.error?.message}`);
+    }
+    console.log(`Limit check: at ${await count()} before the owner adds two`);
+    const tenth = await owner.from("attachments").insert(row("limit-10th.pdf")).select("id").maybeSingle();
+    if (tenth.data?.id) made.push(String(tenth.data.id));
+    console.log(`Limit check 10th: ${tenth.error ? `refused ${tenth.error.code} ${tenth.error.message}` : "accepted"} (now ${await count()})`);
+    const eleventh = await owner.from("attachments").insert(row("limit-11th.pdf")).select("id").maybeSingle();
+    if (eleventh.data?.id) made.push(String(eleventh.data.id));
+    console.log(`Limit check 11th: ${eleventh.error ? `refused ${eleventh.error.code} ${eleventh.error.message}` : "accepted"} (now ${await count()})`);
+    const usageAfter = await owner.rpc("lf_my_document_usage");
+    console.log(`Limit check usage after: ${JSON.stringify(usageAfter.data ?? usageAfter.error?.message)}`);
+    expect(tenth.error, "the 10th document should be accepted").toBeNull();
+    expect(eleventh.error?.message ?? "", "the 11th document should be refused").toMatch(/PLAN_LIMIT_DOCUMENTS/);
+  } finally {
+    if (made.length) await admin.from("attachments").delete().eq("owner_user_id", userId).in("id", made);
+    await owner.auth.signOut().catch(() => undefined);
+  }
+});
