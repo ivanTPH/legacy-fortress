@@ -9552,3 +9552,22 @@ a.lf-pp-item:hover { background: var(--lf-interaction-hover, #F6EFEA); }
 .lf-admin-inbox-error { margin: 0; padding: 10px 12px; border-radius: 10px; background: #FDF3F2; color: var(--lf-destructive); }
 .lf-admin-inbox-note { font-size: 13px; }
 @media (prefers-reduced-motion: reduce) { .lf-admin-inbox-row { transition: none; } }
+
+/* Admin customer summary (owner, 16 Nov 2026): each count opens its details underneath. */
+.lf-admin-account-summary { display: grid; gap: 12px; }
+.lf-admin-account-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; overflow: hidden; border: 1px solid var(--lf-border); border-radius: 14px; background: var(--lf-border); }
+@media (max-width: 700px) { .lf-admin-account-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.lf-admin-shell-content .lf-admin-account-tiles button { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; gap: 6px 8px; align-items: center; min-height: 96px; max-width: none; padding: 16px; border: 0; background: var(--lf-surface-card); color: var(--lf-text); font: inherit; text-align: left; cursor: pointer; transition: background 120ms; }
+.lf-admin-account-tiles button span { grid-column: 1 / -1; color: var(--lf-text-muted); font-size: 15px; }
+.lf-admin-account-tiles button strong { font-size: 30px; font-weight: 700; line-height: 1; }
+.lf-admin-account-tiles button:hover { background: #F6EFEA; }
+.lf-admin-account-tiles button:active { background: #EBE0D8; }
+.lf-admin-account-tiles button[aria-expanded="true"] { background: #fff; box-shadow: inset 0 0 0 2px #8C4A32; }
+.lf-admin-account-tiles button:focus-visible { outline: 2px solid #8C4A32; outline-offset: -2px; }
+.lf-admin-account-list { display: grid; gap: 10px; padding: 16px; border: 1px solid var(--lf-border); border-radius: 14px; background: var(--lf-surface-card); }
+.lf-admin-account-list h3 { margin: 0; font-size: 18px; }
+.lf-admin-account-list ul { display: grid; margin: 0; padding: 0; list-style: none; }
+.lf-admin-account-list li { display: grid; gap: 2px; padding: 10px 0; border-top: 1px solid var(--lf-border); }
+.lf-admin-account-list li:first-child { border-top: 0; }
+.lf-admin-account-list li small { color: var(--lf-text-muted); font-size: 14px; }
+@media (prefers-reduced-motion: reduce) { .lf-admin-account-tiles button { transition: none; } }

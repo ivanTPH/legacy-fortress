@@ -114,6 +114,15 @@ test("platform admin remains in admin context while using users, invitations, or
   console.log(`Admin inbox with test accounts: ${await page.locator(".lf-admin-inbox-list li").count()} items`);
   const inboxTestsShot = await page.screenshot({ type: "jpeg", quality: 60, scale: "css" }).catch(() => null);
   if (inboxTestsShot) console.log(`Phone-shot: admin-inbox-with-tests ${inboxTestsShot.toString("base64")}`);
+  // Customer page: each count opens its details; names and file details are never shown (16 Nov 2026).
+  await page.goto(`${BASE_URL}/admin/users/${encodeURIComponent(users[0].id)}`, { waitUntil: "domcontentloaded" });
+  const peopleTile = page.getByRole("button", { name: /^People/ });
+  await expect(peopleTile).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: "Trusted people" })).toHaveCount(0);
+  await page.getByRole("button", { name: /^Records/ }).click();
+  await expect(page.getByRole("region", { name: "Records" })).toBeVisible();
+  const detailShot = await page.screenshot({ type: "jpeg", quality: 60, scale: "css", fullPage: true }).catch(() => null);
+  if (detailShot) console.log(`Phone-shot: admin-customer-records ${detailShot.toString("base64")}`);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${BASE_URL}/admin/invitations`, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Invitations", exact: true })).toBeVisible();
