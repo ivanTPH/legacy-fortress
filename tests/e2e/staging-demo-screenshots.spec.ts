@@ -682,7 +682,7 @@ test("invitations: a waiting invitation opens in the Inbox with Resend, Change e
   // The People list shows the same ticks.
   await page.goto(`${BASE_URL}/contacts`, { waitUntil: "domcontentloaded" });
   await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => undefined);
-  await expect(page.locator(".lf-people-status-chip[data-tone='sent']").first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator(".lf-people-status-chip[data-tone='sent']").filter({ visible: true }).first()).toBeVisible({ timeout: 20_000 });
   await shoot(page, "invite-phone-4-people-ticks");
   await context.close();
 });
