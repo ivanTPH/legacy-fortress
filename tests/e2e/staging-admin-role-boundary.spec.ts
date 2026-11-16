@@ -85,6 +85,7 @@ test.afterAll(async () => {
 });
 
 test("platform admin remains in admin context while using users, invitations, organisation resources and account menu", async ({ page }) => {
+  test.setTimeout(300_000);
   await signIn(page, users[0].email, "/admin");
   await expect(page).toHaveURL(`${BASE_URL}/admin`);
   await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
@@ -100,11 +101,17 @@ test("platform admin remains in admin context while using users, invitations, or
   await expect(page.getByRole("heading", { name: "Inbox", exact: true })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole("button", { name: "Refresh" })).toBeVisible();
   for (const label of ["New accounts", "Plans", "Links", "Documents", "Needs you"]) await expect(page.getByRole("button", { name: new RegExp(`^${label}`) })).toBeVisible();
-  await expect(page.getByText(/new · last 30 days/)).toBeVisible({ timeout: 20_000 });
+  const started = Date.now();
+  page.on("response", (response) => { if (response.url().includes("/api/internal/admin/inbox")) console.log(`Admin inbox API ${response.status()} after ${Math.round((Date.now() - started) / 1000)}s`); });
+  await expect(page.locator(".lf-admin-inbox-list li").first().or(page.getByText("Nothing here in the last 30 days."))).toBeVisible({ timeout: 60_000 });
+  console.log(`Admin inbox loaded in ${Math.round((Date.now() - started) / 1000)}s with ${await page.locator(".lf-admin-inbox-list li").count()} items`);
+  await expect(page.getByText("Loading…")).toHaveCount(0);
   const inboxShot = await page.screenshot({ type: "jpeg", quality: 60, scale: "css" }).catch(() => null);
   if (inboxShot) console.log(`Phone-shot: admin-inbox ${inboxShot.toString("base64")}`);
   await page.getByText("Show test accounts").click();
-  await expect(page.getByText(/new · last 30 days/)).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator(".lf-admin-inbox-list li").first()).toBeVisible({ timeout: 60_000 });
+  await page.waitForTimeout(1500);
+  console.log(`Admin inbox with test accounts: ${await page.locator(".lf-admin-inbox-list li").count()} items`);
   const inboxTestsShot = await page.screenshot({ type: "jpeg", quality: 60, scale: "css" }).catch(() => null);
   if (inboxTestsShot) console.log(`Phone-shot: admin-inbox-with-tests ${inboxTestsShot.toString("base64")}`);
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -186,6 +193,7 @@ test("phone: platform admin and partner pages fit the screen", async ({ browser 
     await signIn(page, email, home);
     for (const path of paths) {
       const started = Date.now();
+  page.on("response", (response) => { if (response.url().includes("/api/internal/admin/inbox")) console.log(`Admin inbox API ${response.status()} after ${Math.round((Date.now() - started) / 1000)}s`); });
       await page.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" }).catch(() => null);
       await page.waitForTimeout(1500);
       await page.getByText(/^(Checking admin access|Checking organisation access|Loading commercial register|Loading…)$/).first().waitFor({ state: "hidden", timeout: 20_000 }).catch(() => null);

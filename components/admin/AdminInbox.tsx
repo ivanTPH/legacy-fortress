@@ -90,7 +90,7 @@ export default function AdminInbox({ authFetch }: { authFetch: (input: string, i
           <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by email" />
         </label>
         <button type="button" className="lf-admin-row-button" onClick={() => void load()} disabled={refreshing} aria-label="Refresh">
-          <Icon name="refresh" size={20} /><span>{refreshing ? "Refreshing…" : "Refresh"}</span>
+          <Icon name="refresh" size={20} /><span className="lf-admin-inbox-refresh-label">{refreshing ? "Refreshing…" : "Refresh"}</span>
         </button>
       </div>
       <p className="lf-admin-inbox-summary">
