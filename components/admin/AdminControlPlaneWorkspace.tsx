@@ -610,6 +610,9 @@ export default function AdminControlPlaneWorkspace({
   const [enterprisePlanFilter, setEnterprisePlanFilter] = useState("");
   const [lookupQuery, setLookupQuery] = useState("");
   const [lookupResults, setLookupResults] = useState<LookupUser[]>([]);
+  // With the search empty, Users shows the newest accounts first and how many opened this week (16 Nov 2026).
+  const [newThisWeek, setNewThisWeek] = useState<number | null>(null);
+  const [showingNewest, setShowingNewest] = useState(false);
   const [userDetail, setUserDetail] = useState<UserOperationalDetail | null>(null);
   const [userDetailLoading, setUserDetailLoading] = useState(false);
   const [auditFilter, setAuditFilter] = useState("");
@@ -735,21 +738,25 @@ export default function AdminControlPlaneWorkspace({
     router.refresh();
   }
 
-  async function runLookup(query = lookupQuery) {
+  const runLookup = useCallback(async (query = "") => {
     const trimmed = query.trim();
-    if (!trimmed) {
-      setLookupResults([]);
-      return;
-    }
     const res = await authFetch(`/api/internal/admin/users?q=${encodeURIComponent(trimmed)}`);
-    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; users?: LookupUser[]; message?: string };
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; users?: LookupUser[]; newThisWeek?: number | null; message?: string };
     if (!res.ok || !json.ok) {
       setMessage(json.message || "Could not search users.");
       setLookupResults([]);
       return;
     }
     setLookupResults(json.users ?? []);
-  }
+    setShowingNewest(!trimmed);
+    if (!trimmed) setNewThisWeek(typeof json.newThisWeek === "number" ? json.newThisWeek : null);
+  }, [authFetch]);
+
+  useEffect(() => {
+    if (state !== "ready" || section !== "users") return;
+    const timer = window.setTimeout(() => { void runLookup(""); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [runLookup, section, state]);
 
   const loadUserDetail = useCallback(async (userId: string) => {
     setMessage("");
@@ -1153,7 +1160,7 @@ export default function AdminControlPlaneWorkspace({
         {section === "licences" ? renderPlatformLicences(enterpriseViews) : null}
         {section === "licence-detail" ? renderPlatformLicenceDetail(resourceId, enterprisePortfolio) : null}
         {section === "admin-users" || section === "admin-user-detail" ? renderAdminUsers(admins, adminInvitations, adminFilter, setAdminFilter, adminInviteForm, setAdminInviteForm, sendAdminInvitation, adminInviteOpen, setAdminInviteOpen, adminLifecycleForm, setAdminLifecycleForm, runAdminLifecycle, runAdminInvitationLifecycle, (input, onConfirm) => requestConfirmation(input, onConfirm), resourceId, adminLifecycleActionLoading) : null}
-        {section === "users" || section === "user-detail" ? renderUsers(lookupQuery, setLookupQuery, lookupResults, runLookup, resourceId, userDetail, userDetailLoading) : null}
+        {section === "users" || section === "user-detail" ? renderUsers(lookupQuery, setLookupQuery, lookupResults, (query) => runLookup(query ?? lookupQuery), resourceId, userDetail, userDetailLoading, showingNewest, newThisWeek) : null}
         {section === "support" || section === "invitations" ? renderSupport(section, support, supportDetail, supportDetailLoading, supportActionLoading, loadSupportInvitationDetail, runSupportInvitationAction, createSupportCase, runSupportCaseAction, addSupportCaseNote, capabilities, enterprisePortfolio, enterpriseInvitationActionLoading, runEnterpriseInvitationAction) : null}
         {section === "verification" || section === "verification-detail" ? renderVerification(verificationQueue, resourceId, capabilities, verificationActionLoading, verificationReviewNote, setVerificationReviewNote, runVerificationAction) : null}
         {section === "access" || section === "probate" || section === "probate-detail" ? renderProbate(probateCases, estateOperations, resourceId, capabilities, probateDecisionNotes, setProbateDecisionNotes, probateActionLoading, probateEvidenceLoading, runProbateCaseAction, openProbateEvidence, section === "access" ? "Access and estate cases" : "Probate queue") : null}
@@ -1847,6 +1854,8 @@ function renderUsers(
   resourceId: string | null,
   detail: UserOperationalDetail | null,
   detailLoading: boolean,
+  showingNewest = false,
+  newThisWeek: number | null = null,
 ) {
   return (
     <div style={stackStyle}>
@@ -1857,19 +1866,28 @@ function renderUsers(
         <button type="submit" className="lf-admin-row-button">Search</button>
       </form>
       {resourceId ? renderUserOperationalDetail(detail, detailLoading, resourceId) : null}
+      {showingNewest && !resourceId ? (
+        <p className="lf-admin-new-accounts" role="status">
+          <strong>Newest accounts first</strong> · {newThisWeek === null ? "" : `${newThisWeek} new in the last 7 days`}
+          {query.trim() ? null : <span className="lf-admin-muted"> · Search to find anyone else</span>}
+        </p>
+      ) : null}
       <div className="lf-admin-table-card">
         <AdminDataTable
-          caption="Customer users"
+          caption={showingNewest ? "Newest customer accounts" : "Customer users"}
           columns={[
             { key: "user", header: "Customer", render: (item) => <><span className="lf-admin-cell-title">{item.displayName}</span><small>{item.email ?? "No email"}</small></> },
             { key: "organisations", header: "Organisation", render: (item) => item.organisations.length ? <>{item.organisations.map((organisation) => <Link key={organisation.id} href={`/admin/organisations/${organisation.id}`} prefetch={false}>{organisation.name}</Link>)}</> : "Personal" },
+            { key: "signed-up", header: "Signed up", render: (item) => item.createdAt ? formatDate(item.createdAt) : "Unknown" },
             { key: "last-sign-in", header: "Last sign-in", render: (item) => item.lastSignInAt ? formatDate(item.lastSignInAt) : "Never" },
             { key: "plan", header: "Plan", render: (item) => <AdminStatusBadge status={item.commercial.planStatus} label={sentenceCaseStatus(item.commercial.accountPlan)} /> },
             { key: "open", header: "", render: (item) => <Link className="lf-admin-row-chevron" href={`/admin/users/${encodeURIComponent(item.userId)}`} prefetch={false} aria-label={`Open ${item.displayName}`}><Icon name="chevron_right" size={20} /></Link> },
           ]}
           rows={results}
           getRowKey={(item) => item.userId}
-          emptyState={<AdminEmptyState icon="person_search" title="Search for a customer">Enter an email address or name. Results show account details only.</AdminEmptyState>}
+          emptyState={showingNewest
+            ? <AdminEmptyState icon="person_search" title="No customer accounts yet">New accounts appear here, newest first.</AdminEmptyState>
+            : <AdminEmptyState icon="person_search" title="No customers found">Try another email address or name. Results show account details only.</AdminEmptyState>}
         />
       </div>
     </div>

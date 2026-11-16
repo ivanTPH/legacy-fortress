@@ -9508,3 +9508,6 @@ a.lf-pp-item:hover { background: var(--lf-interaction-hover, #F6EFEA); }
 .lf-security-nudge p { margin: 4px 0 10px; color: var(--lf-text-secondary); }
 .lf-security-nudge-actions { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
 .lf-notification-next { border-bottom: 1px solid var(--lf-border-card, #EBE4DE); background: var(--lf-surface-tile); }
+
+/* Admin Users: newest accounts first (owner, 16 Nov 2026). */
+.lf-admin-new-accounts { margin: 0; font-size: 15px; }

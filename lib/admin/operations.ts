@@ -764,14 +764,30 @@ async function upsertAdminUser(
   return res.data as AdminUserRow;
 }
 
+/** Every sign-in account, newest first (up to 2,000; the Admin list shows the first 20 matches). */
+export async function listAuthUsersNewestFirst(client: AnySupabaseClient): Promise<AuthListUser[]> {
+  const all: AuthListUser[] = [];
+  for (let page = 1; page <= 10; page += 1) {
+    const result = await client.auth.admin.listUsers({ page, perPage: 200 });
+    if (result.error) throw new Error(result.error.message);
+    const batch = (result.data?.users ?? []) as AuthListUser[];
+    all.push(...batch);
+    if (batch.length < 200) break;
+  }
+  return all.sort((left, right) => String(right.created_at ?? "").localeCompare(String(left.created_at ?? "")));
+}
+
+/** How many accounts were opened in the last `days` days. Counts only; no names or emails. */
+export async function countNewAccounts(client: AnySupabaseClient, days = 7, now = Date.now()) {
+  const since = new Date(now - days * 24 * 60 * 60 * 1000).toISOString();
+  return (await listAuthUsersNewestFirst(client)).filter((user) => String(user.created_at ?? "") >= since).length;
+}
+
 export async function lookupUsers(client: AnySupabaseClient, query: string) {
   const normalizedQuery = query.trim().toLowerCase();
-  const authList = await client.auth.admin.listUsers({ page: 1, perPage: 200 });
-  if (authList.error) {
-    throw new Error(authList.error.message);
-  }
-
-  const users = ((authList.data?.users ?? []) as AuthListUser[]).filter((user) => {
+  // Newest accounts first (owner, 16 Nov 2026: "how would I know if someone opened a new vault?"). With no search,
+  // this is the "New accounts" list.
+  const users = (await listAuthUsersNewestFirst(client)).filter((user) => {
     if (!normalizedQuery) return true;
     const email = String(user.email ?? "").toLowerCase();
     const displayName = String(user.user_metadata?.display_name ?? user.user_metadata?.full_name ?? "").toLowerCase();

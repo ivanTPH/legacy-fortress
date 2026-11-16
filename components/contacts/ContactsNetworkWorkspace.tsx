@@ -796,7 +796,7 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
                           </span>
                           <span className="lf-pa-person-facts">
                             <span className="lf-people-status-chip" data-tone={invitation.tone}><Icon name={invitation.icon} size={14} />{invitation.label}</span>
-                            <span className="lf-people-status-chip lf-v51-mobile-person-status" data-tone={access.includes("record") && !access.startsWith("No") ? "success" : invitation.tone}>{access.includes("record") && !access.startsWith("No") ? access : invitation.label}</span>
+                            <span className="lf-people-status-chip lf-v51-mobile-person-status" data-tone={access.includes("record") && !access.startsWith("No") ? "success" : invitation.tone}>{access.includes("record") && !access.startsWith("No") ? access : <><Icon name={invitation.icon} size={14} />{invitation.label}</>}</span>
                             <span className="lf-pa-progress" role="img" aria-label={`Connected: ${contact.linked_user_id ? "yes" : "no"}; identity verified: ${identity === "Verified" ? "yes" : "no"}; access granted: ${access.includes("record") && !access.startsWith("No") ? "yes" : "no"}`}>
                               <span data-state={contact.linked_user_id ? "done" : contact.invite_status === "invite_sent" ? "pending" : "rest"} /><span data-state={identity === "Verified" ? "done" : identity === "In progress" ? "pending" : "rest"} /><span data-state={access.includes("record") && !access.startsWith("No") ? "done" : "rest"} />
                             </span>
