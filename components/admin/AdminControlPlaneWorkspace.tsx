@@ -1943,10 +1943,9 @@ function renderUserOperationalDetail(detail: UserOperationalDetail | null, loadi
         <AdminStatusBadge status={detail.commercial.planStatus} label={sentenceCaseStatus(detail.commercial.accountPlan)} />
       </header>
       {/* Privacy-bounded account summary: Secure notes, document contents, storage paths and recovery data are not exposed. */}
-      <AdminNote icon="shield_lock">Tap a count to see details. Record names, values, documents, notes, recovery details and the names of the people a customer adds are never shown in admin.</AdminNote>
+      <AdminNote icon="shield_lock">Select a count to see details. Record names, values, documents, notes, recovery details and the names of the people a customer adds are never shown in admin.</AdminNote>
       <AdminAccountSummary detail={detail} />
-      <div className="lf-admin-detail-grid">
-        <aside className="lf-admin-detail-rail">
+      <div className="lf-admin-detail-pair">
           <section className="lf-admin-table-card lf-admin-form-card" aria-label="Organisation context">
             <h2>Organisation</h2>
             {detail.organisations.length ? detail.organisations.map((organisation) => <p key={organisation.id} className="lf-admin-muted"><Link href={`/admin/organisations/${organisation.id}`} prefetch={false}>{organisation.name}</Link> · {labelise(organisation.role).toLowerCase()} · {labelise(organisation.status).toLowerCase()}</p>) : <p className="lf-admin-muted">Personal account, not part of an organisation.</p>}
@@ -1957,9 +1956,8 @@ function renderUserOperationalDetail(detail: UserOperationalDetail | null, loadi
               {detail.unavailableActions.map((item) => <li key={item.action}><strong>{sentenceCaseStatus(item.action)}</strong><small>{item.reason}</small></li>)}
             </ul>
           </section>
-          <Link className="lf-admin-row-button" href="/admin/audit" prefetch={false}>Open audit history</Link>
-        </aside>
       </div>
+      <Link className="lf-admin-row-button" href="/admin/audit" prefetch={false}>Open audit history</Link>
     </div>
   );
 }
