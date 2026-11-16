@@ -86,3 +86,15 @@ test("Admin Users lists the newest accounts first and counts this week's, with n
   assert.match(ui, /header: "Signed up"/);
   assert.match(ui, /if \(state !== "ready" \|\| section !== "users"\) return;/);
 });
+
+test("Admin hides automated test accounts by default; reserved test domains only", async () => {
+  const { isTestAccountEmail } = await import("../lib/admin/operations.ts").catch(() => ({ isTestAccountEmail: null }));
+  const ops = fs.readFileSync(new URL("../lib/admin/operations.ts", import.meta.url), "utf8");
+  assert.match(ops, /if \(!includeTests && !normalizedQuery && isTestAccountEmail\(user\.email\)\) return false;/, "searching still finds any account");
+  if (isTestAccountEmail) {
+    for (const email of ["vault-access-1-applicant@example.test", "a@example.com", "x@foo.test", "y@bar.invalid"]) assert.equal(isTestAccountEmail(email), true, email);
+    for (const email of ["ivan@me.com", "someone@gmail.com", "a@example.co.uk", "b@testing.com"]) assert.equal(isTestAccountEmail(email), false, email);
+  }
+  const ui = fs.readFileSync(new URL("../components/admin/AdminControlPlaneWorkspace.tsx", import.meta.url), "utf8");
+  assert.match(ui, /Show test accounts/);
+});
