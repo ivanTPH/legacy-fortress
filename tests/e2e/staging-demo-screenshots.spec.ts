@@ -656,7 +656,7 @@ test("invitations: a waiting invitation opens in the Inbox with Resend, Change e
   const titles = (await page.locator(".lf-inbox-row .lf-inbox-row-top strong").allInnerTexts()).map((text) => text.split("\n")[0]);
   console.log(`Invitation check: Inbox items: ${JSON.stringify(titles)}`);
   console.log(`Invitation check: waiting people: ${JSON.stringify((waiting.data ?? []).map((item) => (item as { full_name?: string }).full_name))}`);
-  const row = page.locator(".lf-inbox-row").filter({ hasText: /Check .+'s invitation|hasn.t accepted your invitation/ }).first();
+  const row = page.locator(".lf-inbox-row").filter({ hasText: /Check .+'s invitation|Check invitation status/ }).first();
   if (!(await row.count())) {
     console.log("Invitation check: no 'Check …'s invitation' item in this account's Inbox");
     await context.close();
@@ -665,19 +665,20 @@ test("invitations: a waiting invitation opens in the Inbox with Resend, Change e
   }
   await row.locator(".lf-inbox-row-button").click();
   const drawer = page.locator(".lf-inbox-message");
-  await expect(drawer.getByRole("button", { name: "Resend", exact: true })).toBeVisible({ timeout: 20_000 });
-  await expect(drawer.getByText("Sent to")).toBeVisible();
+  await expect(drawer.getByRole("button", { name: "Resend", exact: true }).first()).toBeVisible({ timeout: 20_000 });
+  await expect(drawer.getByText("Sent to").first()).toBeVisible();
+  console.log(`Invitation check: people in the opened item: ${await drawer.locator(".lf-invite-actions").count()}`);
   await shoot(page, "invite-phone-1-open");
-  await drawer.getByRole("button", { name: "Change email", exact: true }).click();
+  await drawer.getByRole("button", { name: "Change email", exact: true }).first().click();
   await expect(drawer.getByRole("textbox")).toBeVisible();
   await expect(drawer.getByRole("button", { name: "Send to this address" })).toBeInViewport();
   await shoot(page, "invite-phone-2-change-email");
   await drawer.getByRole("button", { name: "Back", exact: true }).click();
-  await drawer.getByRole("button", { name: "Cancel invitation", exact: true }).click();
+  await drawer.getByRole("button", { name: "Cancel invitation", exact: true }).first().click();
   await expect(drawer.getByText(/stays in People/)).toBeVisible();
   await shoot(page, "invite-phone-3-cancel-confirm");
   await drawer.getByRole("button", { name: "Keep it", exact: true }).click();
-  await expect(drawer.getByRole("button", { name: "Resend", exact: true })).toBeVisible();
+  await expect(drawer.getByRole("button", { name: "Resend", exact: true }).first()).toBeVisible();
   // The People list shows the same ticks.
   await page.goto(`${BASE_URL}/contacts`, { waitUntil: "domcontentloaded" });
   await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => undefined);

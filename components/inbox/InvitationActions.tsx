@@ -9,7 +9,7 @@ import { cancelWaitingInvitation, isPlausibleEmail, loadWaitingInvitation, resen
  * A waiting invitation, handled where it's shown (owner decision 16 Nov 2026): Resend, Change email, Cancel.
  * Uses the same shared actions as the People screen. Inviting never shares anything with the person.
  */
-export default function InvitationActions({ contactId, onChanged, compact = false }: { contactId: string; onChanged?: (outcome: "sent" | "cancelled") => void; compact?: boolean }) {
+export default function InvitationActions({ contactId, onChanged, compact = false, showName = false }: { contactId: string; onChanged?: (outcome: "sent" | "cancelled") => void; compact?: boolean; showName?: boolean }) {
   const [owner, setOwner] = useState<{ id: string; email: string | null } | null>(null);
   const [invitation, setInvitation] = useState<WaitingInvitation | null | undefined>(undefined);
   const [mode, setMode] = useState<"idle" | "email" | "cancel">("idle");
@@ -72,6 +72,7 @@ export default function InvitationActions({ contactId, onChanged, compact = fals
 
   return (
     <div className={`lf-invite-actions${compact ? " is-compact" : ""}`}>
+      {showName && invitation ? <h3 className="lf-invite-name">{invitation.name}</h3> : null}
       {invitation && !compact ? (
         <dl className="lf-invite-facts">
           <div><dt>Sent to</dt><dd>{invitation.email || "No email address"}</dd></div>

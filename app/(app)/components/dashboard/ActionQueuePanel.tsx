@@ -55,6 +55,8 @@ type ActionCentreSection = {
 
 type ActionCentreRow = {
   key: string;
+  /** People with a waiting invitation, when several are grouped into one item. */
+  waitingContactIds?: string[];
   title: string;
   stageName: string;
   blockerLabel: string;
@@ -336,9 +338,10 @@ function laterDate(choice: "tomorrow" | "week" | string) {
 
 /** Will and Power of Attorney people steps are decided in the Inbox itself (owner, 11 Nov 2026). */
 /** "Check X's invitation" (a waiting invite) is handled in the Inbox too: Resend, Change email, Cancel (16 Nov 2026). */
-function waitingInviteContactId(row: ActionCentreRow) {
+function waitingInviteContactIds(row: ActionCentreRow): string[] {
+  if (row.waitingContactIds?.length) return row.waitingContactIds;
   const match = /^contact:manage:(.+)$/.exec(row.actionKey);
-  return match && /still needs to accept/.test(row.blockerLabel ?? "") ? match[1] : null;
+  return match && /still needs to accept/.test(row.blockerLabel ?? "") ? [match[1]] : [];
 }
 
 const NAMED_PEOPLE_STEPS: Record<string, "will" | "poa"> = {
@@ -437,7 +440,7 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
       const kind = inboxActionKind(row);
       const guidance = row.guidanceItem;
       const ownTask = row.actionKey.startsWith("task:complete:");
-      const opensFirst = ownTask || Boolean(guidance && NAMED_PEOPLE_STEPS[String(guidance.key)]) || Boolean(waitingInviteContactId(row))
+      const opensFirst = ownTask || Boolean(guidance && NAMED_PEOPLE_STEPS[String(guidance.key)]) || waitingInviteContactIds(row).length > 0
         || (guidance?.key === "will" && guidance.state === "unknown" && Boolean(onGuidanceApplicability));
       const finish: InboxFinish = guidance && onGuidanceDecision
         ? { label: "Done", run: () => onGuidanceDecision(guidance, "already_done"), message: "Marked as done" }
@@ -680,9 +683,11 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
                 {/* The step clears itself once everyone is added and invited; closing refreshes the Inbox if anything changed. */}
                 <button type="button" className="lf-inbox-primary" onClick={() => { setOpened(null); if (peopleChanged) window.location.reload(); }}>Done</button>
               </>
-            ) : waitingInviteContactId(openedRow) ? (
+            ) : waitingInviteContactIds(openedRow).length ? (
               <>
-                <InvitationActions contactId={waitingInviteContactId(openedRow)!} onChanged={() => setPeopleChanged(true)} />
+                {waitingInviteContactIds(openedRow).map((contactId) => (
+                  <InvitationActions key={contactId} contactId={contactId} showName={waitingInviteContactIds(openedRow).length > 1} onChanged={() => setPeopleChanged(true)} />
+                ))}
                 <button type="button" className="lf-inbox-primary" onClick={() => { setOpened(null); if (peopleChanged) window.location.reload(); }}>Done</button>
               </>
             ) : openedRow.guidanceItem?.key === "will" && openedRow.guidanceItem.state === "unknown" && onGuidanceApplicability ? (
@@ -839,6 +844,7 @@ function buildActionRows(items: BlockingItem[], context?: ActionCentreContext): 
   if (pendingInvitationItems.length > 1) {
     rows.push({
       key: "contacts-pending-group",
+      waitingContactIds: pendingInvitationItems.map((item) => /^contact:manage:(.+)$/.exec(item.actionKey)?.[1]).filter((id): id is string => Boolean(id)),
       title: "Check invitation status",
       stageName: "Contacts",
       blockerLabel: `${pendingInvitationItems.length} contacts still need to accept invitations.`,

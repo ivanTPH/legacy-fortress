@@ -14,7 +14,7 @@ test("Inbox, Mail style: categories All / Needs you / Waiting / Updates; badge-l
 });
 
 test("one tap goes straight to the thing; only your own tasks, the Will question, the executor/attorney decisions and waiting invitations open first", () => {
-  assert.match(panel, /const opensFirst = ownTask \|\| Boolean\(guidance && NAMED_PEOPLE_STEPS\[String\(guidance\.key\)\]\) \|\| Boolean\(waitingInviteContactId\(row\)\)\n        \|\| \(guidance\?\.key === "will"/);
+  assert.match(panel, /const opensFirst = ownTask \|\| Boolean\(guidance && NAMED_PEOPLE_STEPS\[String\(guidance\.key\)\]\) \|\| waitingInviteContactIds\(row\)\.length > 0\n        \|\| \(guidance\?\.key === "will"/);
   assert.match(panel, /if \(opensFirst\) setOpened\(key\); else onAction\(row\.actionKey\);/);
   assert.match(panel, /open: \(\) => \{ markRead\(ids\); window\.location\.assign\(latest\.href\); \}/);
   // A tap on your own task never ticks it off; Mark as done is its own button.
@@ -166,8 +166,9 @@ test("waiting invitations are handled in place with shared actions (owner, 16 No
   assert.match(people, /label: "Sent", icon: "check", tone: "sent"/);
   assert.match(people, /label: "Accepted", icon: "check", tone: "success"/);
   const panel = read("app/(app)/components/dashboard/ActionQueuePanel.tsx");
-  assert.match(panel, /function waitingInviteContactId\(row: ActionCentreRow\)/);
-  assert.match(panel, /<InvitationActions contactId=\{waitingInviteContactId\(openedRow\)!\}/);
+  assert.match(panel, /function waitingInviteContactIds\(row: ActionCentreRow\): string\[\]/);
+  assert.match(panel, /waitingContactIds: pendingInvitationItems\.map/, "several waiting invitations open together");
+  assert.match(panel, /<InvitationActions key=\{contactId\} contactId=\{contactId\}/);
   const named = read("components/inbox/NamedPeoplePanel.tsx");
   assert.match(named, /<InvitationActions contactId=\{person\.personId\} compact/);
   const ui = read("components/inbox/InvitationActions.tsx");
