@@ -71,3 +71,18 @@ test("admin lifecycle actions are explicitly normalised", () => {
   assert.equal(normalizeAdminUserLifecycleAction("delete"), null);
   assert.equal(normalizeAdminUserLifecycleAction(""), null);
 });
+
+test("Admin Users lists the newest accounts first and counts this week's, with no record details (owner, 16 Nov 2026)", () => {
+  const ops = fs.readFileSync(new URL("../lib/admin/operations.ts", import.meta.url), "utf8");
+  assert.match(ops, /export async function listAuthUsersNewestFirst/);
+  assert.match(ops, /localeCompare\(String\(left\.created_at/);
+  assert.match(ops, /export async function countNewAccounts/);
+  const route = fs.readFileSync(new URL("../app/api/internal/admin/users/route.ts", import.meta.url), "utf8");
+  assert.match(route, /requireAdminCapability\(admin\.access, "users:lookup"\)/, "still needs the lookup capability");
+  assert.match(route, /recordAdminAuditEvent/, "still audited");
+  assert.match(route, /const newThisWeek = query\.trim\(\) \? null : await countNewAccounts/);
+  const ui = fs.readFileSync(new URL("../components/admin/AdminControlPlaneWorkspace.tsx", import.meta.url), "utf8");
+  assert.match(ui, /new in the last 7 days/);
+  assert.match(ui, /header: "Signed up"/);
+  assert.match(ui, /if \(state !== "ready" \|\| section !== "users"\) return;/);
+});
