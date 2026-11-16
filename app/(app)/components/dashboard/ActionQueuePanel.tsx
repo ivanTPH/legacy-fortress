@@ -8,6 +8,7 @@ import { countOpenNeedsYou, getVaultTaskGroup } from "../../../../lib/workflow/t
 import Icon from "../../../../components/ui/Icon";
 import SwipeRow from "../../../../components/inbox/SwipeRow";
 import NamedPeoplePanel from "../../../../components/inbox/NamedPeoplePanel";
+import InvitationActions from "../../../../components/inbox/InvitationActions";
 import { actionReadKey, archivedKeysNow, laterKeysNow, publishNeedsYouCountForCurrentUser, useInboxArchive, useInboxLater, useInboxReads, useInboxUpdates } from "../../../../lib/notifications/inboxUpdates";
 
 type ActionQueuePanelProps = {
@@ -334,6 +335,12 @@ function laterDate(choice: "tomorrow" | "week" | string) {
 }
 
 /** Will and Power of Attorney people steps are decided in the Inbox itself (owner, 11 Nov 2026). */
+/** "Check X's invitation" (a waiting invite) is handled in the Inbox too: Resend, Change email, Cancel (16 Nov 2026). */
+function waitingInviteContactId(row: ActionCentreRow) {
+  const match = /^contact:manage:(.+)$/.exec(row.actionKey);
+  return match && /still needs to accept/.test(row.blockerLabel ?? "") ? match[1] : null;
+}
+
 const NAMED_PEOPLE_STEPS: Record<string, "will" | "poa"> = {
   review_executors: "will", invite_executors: "will", remind_executors: "will",
   review_attorneys: "poa", invite_attorneys: "poa", remind_attorneys: "poa",
@@ -430,7 +437,7 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
       const kind = inboxActionKind(row);
       const guidance = row.guidanceItem;
       const ownTask = row.actionKey.startsWith("task:complete:");
-      const opensFirst = ownTask || Boolean(guidance && NAMED_PEOPLE_STEPS[String(guidance.key)])
+      const opensFirst = ownTask || Boolean(guidance && NAMED_PEOPLE_STEPS[String(guidance.key)]) || Boolean(waitingInviteContactId(row))
         || (guidance?.key === "will" && guidance.state === "unknown" && Boolean(onGuidanceApplicability));
       const finish: InboxFinish = guidance && onGuidanceDecision
         ? { label: "Done", run: () => onGuidanceDecision(guidance, "already_done"), message: "Marked as done" }
@@ -671,6 +678,11 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
               <>
                 <NamedPeoplePanel doc={NAMED_PEOPLE_STEPS[String(openedRow.guidanceItem.key)]} onChanged={() => setPeopleChanged(true)} />
                 {/* The step clears itself once everyone is added and invited; closing refreshes the Inbox if anything changed. */}
+                <button type="button" className="lf-inbox-primary" onClick={() => { setOpened(null); if (peopleChanged) window.location.reload(); }}>Done</button>
+              </>
+            ) : waitingInviteContactId(openedRow) ? (
+              <>
+                <InvitationActions contactId={waitingInviteContactId(openedRow)!} onChanged={() => setPeopleChanged(true)} />
                 <button type="button" className="lf-inbox-primary" onClick={() => { setOpened(null); if (peopleChanged) window.location.reload(); }}>Done</button>
               </>
             ) : openedRow.guidanceItem?.key === "will" && openedRow.guidanceItem.state === "unknown" && onGuidanceApplicability ? (

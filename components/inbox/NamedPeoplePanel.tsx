@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import InvitationActions from "./InvitationActions";
 import Link from "next/link";
 import Icon from "../ui/Icon";
 import { supabase } from "../../lib/supabaseClient";
@@ -23,6 +24,7 @@ export default function NamedPeoplePanel({ doc, onChanged }: { doc: "will" | "po
   const [people, setPeople] = useState<InboxNamedPerson[] | null>(null);
   const [form, setForm] = useState<{ key: string; name: string; email: string } | null>(null);
   const [busy, setBusy] = useState("");
+  const [managing, setManaging] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -127,7 +129,9 @@ export default function NamedPeoplePanel({ doc, onChanged }: { doc: "will" | "po
                 : person.email ? <button type="button" className="lf-inbox-secondary" disabled={Boolean(busy)} onClick={() => void run(person.key, () => invite(person, person.invite === "problem"))}>{busy === person.key ? "Sending…" : person.invite === "problem" ? "Send again" : "Invite"}</button>
                 : <Link className="lf-inbox-secondary" href={buildContactsWorkspaceHref(person.personId)}>Add email</Link>}
             </div>
-            {person.kind === "linked" && person.invite === "sent" ? <button type="button" className="lf-inbox-quiet" disabled={Boolean(busy)} onClick={() => void run(person.key, () => invite(person, true))}>{busy === person.key ? "Sending…" : "Send the invite again"}</button> : null}
+            {person.kind === "linked" && person.invite === "sent" ? (managing === person.key
+              ? <InvitationActions contactId={person.personId} compact onChanged={() => onChanged?.()} />
+              : <button type="button" className="lf-inbox-quiet" disabled={Boolean(busy)} onClick={() => setManaging(person.key)}>Manage invitation</button>) : null}
             {person.kind === "found" && open ? (
               <div className="lf-named-form">
                 <label><span>Name</span><input value={form.name} autoComplete="off" onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>

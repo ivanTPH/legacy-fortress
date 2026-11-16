@@ -640,3 +640,44 @@ test("documents: the free plan accepts the 10th document and refuses the 11th", 
     await owner.auth.signOut().catch(() => undefined);
   }
 });
+
+// Owner decision 16 Nov 2026: a waiting invitation is handled in the Inbox (Resend, Change email, Cancel).
+// Opens it and looks at each option; nothing is sent or cancelled, so no email goes out.
+test("invitations: a waiting invitation opens in the Inbox with Resend, Change email and Cancel (phone)", async ({ browser }) => {
+  test.setTimeout(150_000);
+  const waiting = await admin.from("contacts").select("id,full_name").eq("owner_user_id", userId).eq("invite_status", "invite_sent").limit(5);
+  console.log(`Invitation check: waiting invitations=${(waiting.data ?? []).length}`);
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  await signIn(page);
+  await page.goto(`${BASE_URL}/actions`, { waitUntil: "domcontentloaded" });
+  await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => undefined);
+  const row = page.locator(".lf-inbox-row").filter({ hasText: /Check .+'s invitation/ }).first();
+  if (!(await row.count())) {
+    console.log("Invitation check: no 'Check …'s invitation' item in this account's Inbox");
+    await context.close();
+    test.skip(true, "no waiting invitation to look at");
+    return;
+  }
+  await row.locator(".lf-inbox-row-button").click();
+  const drawer = page.locator(".lf-inbox-message");
+  await expect(drawer.getByRole("button", { name: "Resend", exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(drawer.getByText("Sent to")).toBeVisible();
+  await shoot(page, "invite-phone-1-open");
+  await drawer.getByRole("button", { name: "Change email", exact: true }).click();
+  await expect(drawer.getByRole("textbox")).toBeVisible();
+  await expect(drawer.getByRole("button", { name: "Send to this address" })).toBeInViewport();
+  await shoot(page, "invite-phone-2-change-email");
+  await drawer.getByRole("button", { name: "Back", exact: true }).click();
+  await drawer.getByRole("button", { name: "Cancel invitation", exact: true }).click();
+  await expect(drawer.getByText(/stays in People/)).toBeVisible();
+  await shoot(page, "invite-phone-3-cancel-confirm");
+  await drawer.getByRole("button", { name: "Keep it", exact: true }).click();
+  await expect(drawer.getByRole("button", { name: "Resend", exact: true })).toBeVisible();
+  // The People list shows the same ticks.
+  await page.goto(`${BASE_URL}/contacts`, { waitUntil: "domcontentloaded" });
+  await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => undefined);
+  await expect(page.locator(".lf-people-status-chip[data-tone='sent']").first()).toBeVisible({ timeout: 20_000 });
+  await shoot(page, "invite-phone-4-people-ticks");
+  await context.close();
+});
