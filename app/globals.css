@@ -9522,8 +9522,8 @@ a.lf-pp-item:hover { background: var(--lf-interaction-hover, #F6EFEA); }
 @media (max-width: 600px) { .lf-admin-inbox-refresh-label { display: none; } }
 .lf-admin-inbox-bar .lf-admin-row-button { min-width: 44px; min-height: 44px; justify-content: center; }
 .lf-admin-inbox .lf-admin-search { min-height: 44px; }
-.lf-admin-inbox .lf-admin-search input, .lf-admin-inbox .lf-admin-search input:focus { flex: 1; min-width: 0; min-height: 0; height: 40px; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; outline: none; font: inherit; font-size: 16px; }
-.lf-admin-inbox .lf-admin-search:focus-within { outline: 2px solid #8C4A32; outline-offset: 1px; }
+.lf-admin-shell-content .lf-admin-search input, .lf-admin-shell-content .lf-admin-search input:focus { flex: 1; min-width: 0; min-height: 0; height: 40px; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; outline: none; font: inherit; font-size: 16px; }
+.lf-admin-shell-content .lf-admin-search:focus-within { outline: 2px solid #8C4A32; outline-offset: 1px; }
 .lf-admin-shell-content .lf-admin-test-toggle { display: inline-flex; align-items: center; gap: 8px; justify-self: start; width: auto; margin: 0; padding: 0; border: 0; background: none; font-size: 15px; font-weight: 500; }
 .lf-admin-shell-content .lf-admin-test-toggle input[type="checkbox"] { appearance: auto; flex: none; width: 20px; height: 20px; min-width: 0; min-height: 0; margin: 0; padding: 0; border: 0; box-shadow: none; }
 .lf-admin-inbox-pull { margin: 0; text-align: center; color: var(--lf-text-muted); font-size: 14px; }
