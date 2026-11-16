@@ -1,5 +1,7 @@
 "use client";
 
+import AdminAccountTags from "@/components/admin/AdminAccountTags";
+import type { AccountOrigin } from "@/lib/admin/accountOrigins";
 import Link from "next/link";
 import BrandMark from "@/components/ui/BrandMark";
 import type { CSSProperties, FormEvent } from "react";
@@ -218,6 +220,8 @@ type SupportSnapshot = {
     caseStatus?: string | null;
     casePriority?: string | null;
     assignedAdminUserId?: string | null;
+    /** True when the invited person has no account yet: name and email are not sent to Admin. */
+    inviteeHidden?: boolean;
   }>;
 };
 
@@ -374,6 +378,9 @@ type AuditEvent = {
 
 type LookupUser = {
   userId: string;
+  /** Absent from older server responses; treated as Direct. */
+  origin?: AccountOrigin;
+  isTest?: boolean;
   email: string | null;
   displayName: string;
   createdAt: string;
@@ -1913,7 +1920,7 @@ function renderUsers(
           caption={showingNewest ? "Newest customer accounts" : "Customer users"}
           columns={[
             { key: "user", header: "Customer", render: (item) => <><span className="lf-admin-cell-title">{item.displayName}</span><small>{item.email ?? "No email"}</small></> },
-            { key: "organisations", header: "Organisation", render: (item) => item.organisations.length ? <>{item.organisations.map((organisation) => <Link key={organisation.id} href={`/admin/organisations/${organisation.id}`} prefetch={false}>{organisation.name}</Link>)}</> : "Personal" },
+            { key: "joined", header: "How they joined", render: (item) => <AdminAccountTags origin={item.origin} isTest={item.isTest} /> },
             { key: "signed-up", header: "Signed up", render: (item) => item.createdAt ? formatDate(item.createdAt) : "Unknown" },
             { key: "last-sign-in", header: "Last sign-in", render: (item) => item.lastSignInAt ? formatDate(item.lastSignInAt) : "Never" },
             { key: "plan", header: "Plan", render: (item) => <AdminStatusBadge status={item.commercial.planStatus} label={sentenceCaseStatus(item.commercial.accountPlan)} /> },
@@ -1939,6 +1946,7 @@ function renderUserOperationalDetail(detail: UserOperationalDetail | null, loadi
         <div>
           <h2>{detail.displayName}</h2>
           <p>{detail.email || "No email recorded"} · joined {formatDate(detail.createdAt)} · last signed in {detail.lastSignInAt ? formatDate(detail.lastSignInAt) : "never"}</p>
+          <AdminAccountTags origin={detail.origin} isTest={detail.isTest} />
         </div>
         <AdminStatusBadge status={detail.commercial.planStatus} label={sentenceCaseStatus(detail.commercial.accountPlan)} />
       </header>
@@ -2002,7 +2010,9 @@ function renderSupport(
         <AdminDataTable
           caption={`${title} table`}
           columns={[
-            { key: "contact", header: "Person", render: (item) => <><span className="lf-admin-cell-title">{item.contactName || item.contactEmail || "Unknown person"}</span><small>{item.contactEmail || "No email recorded"} · {labelise(item.assignedRole)}</small></> },
+            { key: "contact", header: "Person", render: (item) => inviteeHiddenFor(item)
+              ? <><span className="lf-admin-cell-title">{labelise(item.assignedRole)}</span><small>No account yet · name hidden</small></>
+              : <><span className="lf-admin-cell-title">{item.contactName || item.contactEmail || "Unknown person"}</span><small>{item.contactEmail || "No email recorded"} · {labelise(item.assignedRole)}</small></> },
             { key: "owner", header: "Vault owner", render: (item) => item.ownerName },
             { key: "issue", header: "Problem", render: (item) => <>{item.issueLabel}<small>{getSupportNextStep(item.invitationStatus ?? "", item.activationStatus ?? "")}</small></> },
             { key: "status", header: "Status", render: (item) => <AdminStatusBadge status={item.invitationStatus ?? item.activationStatus ?? "invited"} /> },
@@ -2013,7 +2023,7 @@ function renderSupport(
                     {actionLoading === `${item.invitationId}:resend` ? "Sending…" : item.sentAt ? "Resend" : "Send"}
                   </button>
                 ) : null}
-                <button type="button" className="lf-admin-row-chevron" onClick={() => void loadDetail(item.invitationId)} disabled={detailLoading} aria-label={`Open case for ${item.contactName || item.contactEmail || "this person"}`}><Icon name="chevron_right" size={20} /></button>
+                <button type="button" className="lf-admin-row-chevron" onClick={() => void loadDetail(item.invitationId)} disabled={detailLoading} aria-label={`Open case for ${inviteeHiddenFor(item) ? labelise(item.assignedRole).toLowerCase() : item.contactName || item.contactEmail || "this person"}`}><Icon name="chevron_right" size={20} /></button>
               </div>
             ) },
           ]}
@@ -2094,7 +2104,7 @@ function renderSupportInvitationDetail(
         <div>
           <p style={eyebrowStyle}>Access Operations</p>
           <h2 style={h2Style}>{operationsCase ? `Case ${operationsCase.id.slice(0, 8)}` : "Access issue"}</h2>
-          <p style={mutedStyle}>{invitation.contactName || invitation.contactEmail || "Contact invitation"} · {invitation.ownerName}</p>
+          <p style={mutedStyle}>{inviteeHiddenFor(invitation) ? `${labelise(invitation.assignedRole)} (no account yet)` : invitation.contactName || invitation.contactEmail || "Contact invitation"} · {invitation.ownerName}</p>
         </div>
         <div style={actionRowStyle}>
           {operationsCase ? <AdminStatusBadge status={operationsCase.status} /> : <AdminStatusBadge status={invitation.invitationStatus} />}
@@ -2117,7 +2127,7 @@ function renderSupportInvitationDetail(
         <h3 style={h3Style}>Security state <InfoTip label="Access state information" tone="security" message="This is the security decision and cannot be manually edited by Platform administrators." /></h3>
         <p style={mutedStyle}>Read only. Support-case actions never grant or remove vault authority.</p>
         <div style={compactDetailGridStyle}>
-          <Detail label="Recipient" value={invitation.contactEmail || "No email recorded"} />
+          <Detail label="Recipient" value={inviteeHiddenFor(invitation) ? "Hidden until they create an account" : invitation.contactEmail || "No email recorded"} />
           <Detail label="Owner" value={invitation.ownerEmail ? `${invitation.ownerName} (${invitation.ownerEmail})` : invitation.ownerName} />
           <Detail label="Role" value={invitation.assignedRole.replace(/_/g, " ")} />
           <Detail label="Invitation" value={labelise(invitation.invitationStatus)} />
@@ -2910,3 +2920,8 @@ const eventListStyle = { margin: 0, paddingLeft: 18, display: "grid", gap: 8 } s
 const compactFilterStyle = { ...panelStyle, display: "grid", gap: 10, alignItems: "end" } satisfies CSSProperties;
 const contextNavStyle = { display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 } satisfies CSSProperties;
 const labelStyle = { display: "grid", gap: 5, color: "var(--lf-text)", fontSize: 13, fontWeight: 700 } satisfies CSSProperties;
+
+/** Invited people are shown by role until they create an account (owner decision 16 Nov 2026). */
+function inviteeHiddenFor(item: object) {
+  return (item as { inviteeHidden?: unknown }).inviteeHidden === true;
+}

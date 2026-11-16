@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isTestAccountEmail, listAuthUsersNewestFirst } from "./operations";
+import { DIRECT_ORIGIN, loadAccountOrigins, type AccountOrigin } from "./accountOrigins";
 
 /**
  * Admin Inbox (owner decision 16 Nov 2026): what happened across customer accounts, newest first, built from what is
@@ -15,6 +16,9 @@ export type AdminInboxItem = {
   at: string;
   href: string;
   accountEmail: string | null;
+  /** New accounts only: how the account was created, and whether it is a test account. */
+  origin?: AccountOrigin;
+  isTest?: boolean;
 };
 
 type AnyClient = SupabaseClient;
@@ -32,12 +36,16 @@ export async function loadAdminInbox(client: AnyClient, options: { days?: number
   // New accounts.
   const plans = await safe(client.from("billing_profiles").select("user_id,account_plan,plan_status,trial_ends_at,cancel_at_period_end,updated_at").gte("updated_at", since).limit(1000));
   const planByUser = new Map((plans as Array<Record<string, unknown>>).map((row) => [String(row.user_id), row]));
-  for (const user of users) {
-    const created = String(user.created_at ?? "");
-    if (created < since) break;
-    if (isTest(user.id)) continue;
+  const newAccounts = users.filter((user) => String(user.created_at ?? "") >= since && !isTest(user.id));
+  const origins = await loadAccountOrigins(client, newAccounts.map((user) => user.id));
+  for (const user of newAccounts) {
     const plan = planByUser.get(user.id);
-    items.push({ id: `account:${user.id}`, kind: "accounts", title: "New account", detail: `${user.email ?? "No email"} · ${plan?.account_plan === "premium" ? "Premium" : "Free"} plan`, at: created, ...account(user.id) });
+    const origin = origins.get(user.id) ?? DIRECT_ORIGIN;
+    items.push({
+      id: `account:${user.id}`, kind: "accounts", title: "New account",
+      detail: `${user.email ?? "No email"} · ${plan?.account_plan === "premium" ? "Premium" : "Free"} plan`,
+      at: String(user.created_at ?? ""), origin, isTest: isTestAccountEmail(user.email), ...account(user.id),
+    });
   }
 
   // Plan changes, from each billing profile's current state.

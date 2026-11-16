@@ -62,7 +62,7 @@ export const ENTERPRISE_FILTER_KEYS = [
   "risk",
   "synthetic",
 ] as const;
-const ORGANISATION_SELECT = "id,legal_name,trading_name,organisation_type,organisation_type_other,registration_number,country,registered_address,operating_address,primary_contact_name,primary_contact_email,primary_contact_telephone,website,internal_account_owner,contract_reference,customer_reference,onboarding_status,onboarding_notes,nominated_admin_name,nominated_admin_email,nominated_admin_require_mfa,nominated_admin_expiry_days,status,risk_status,same_operating_address,archived_at,created_at,updated_at";
+const ORGANISATION_SELECT = "id,legal_name,trading_name,organisation_type,organisation_type_other,registration_number,country,registered_address,operating_address,primary_contact_name,primary_contact_email,primary_contact_telephone,website,internal_account_owner,contract_reference,customer_reference,onboarding_status,onboarding_notes,nominated_admin_name,nominated_admin_email,nominated_admin_require_mfa,nominated_admin_expiry_days,status,risk_status,same_operating_address,archived_at,is_test,created_at,updated_at";
 const LICENCE_SELECT = "id,organisation_id,licence_plan,custom_plan_name,contract_reference,billing_reference,start_date,renewal_date,end_date,renewal_notice_days,auto_renew,renewal_notes,purchased_seats,allocated_seats,active_seats,invited_seats,suspended_seats,billing_status,licence_status,account_owner,created_at,updated_at";
 const INVITATION_SELECT = "id,organisation_id,licence_id,email_normalized,full_name,invitation_type,role_template,status,expires_at,require_mfa,sent_at,accepted_at,revoked_at,failure_reason,created_at,scope,access_expires_at,resend_count,last_resent_at,delivered_at,failed_at,seat_id,internal_reference,department,synthetic_run_marker";
 const MEMBERSHIP_SELECT = "id,organisation_id,licence_id,seat_id,user_id,email_normalized,full_name,organisation_role,membership_status,onboarding_status,consent_status,internal_reference,department,invited_at,joined_at,suspended_at,removed_at,last_active_at,access_expires_at,synthetic_run_marker,created_at,updated_at";
@@ -70,6 +70,7 @@ const ENROLMENT_LINK_SELECT = "id,organisation_id,licence_id,display_name,status
 
 type EnterpriseOrganisationRow = {
   id: string;
+  is_test?: boolean | null;
   legal_name: string;
   trading_name: string | null;
   organisation_type: string;
@@ -1534,6 +1535,8 @@ function mapOrganisation(row: EnterpriseOrganisationRow) {
     nominatedAdminRequireMfa: row.nominated_admin_require_mfa,
     nominatedAdminExpiryDays: row.nominated_admin_expiry_days,
     archivedAt: row.archived_at,
+    /** Synthetic organisation (TEST data); tagged and hidden by default in Platform Admin. */
+    isTest: row.is_test === true,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

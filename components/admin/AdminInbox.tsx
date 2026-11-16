@@ -1,5 +1,7 @@
 "use client";
 
+import AdminAccountTags from "@/components/admin/AdminAccountTags";
+import { accountSourceLabel } from "@/lib/admin/accountOrigins";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Icon from "@/components/ui/Icon";
@@ -75,7 +77,7 @@ export default function AdminInbox({ authFetch }: { authFetch: (input: string, i
   const shown = useMemo(() => {
     const words = search.trim().toLowerCase();
     return (items ?? []).filter((item) => (filter === "all" || item.kind === filter)
-      && (!words || `${item.title} ${item.detail} ${item.accountEmail ?? ""}`.toLowerCase().includes(words)));
+      && (!words || `${item.title} ${item.detail} ${item.accountEmail ?? ""} ${item.kind === "accounts" ? accountSourceLabel(item.origin) : ""}`.toLowerCase().includes(words)));
   }, [filter, items, search]);
   const count = (kind: AdminInboxKind | "all") => (items ?? []).filter((item) => kind === "all" || item.kind === kind).length;
   const unread = (items ?? []).filter((item) => !read.includes(item.id)).length;
@@ -126,7 +128,7 @@ export default function AdminInbox({ authFetch }: { authFetch: (input: string, i
                 <span className="lf-admin-inbox-icon" aria-hidden="true"><Icon name={ICONS[item.kind]} size={20} /></span>
                 <span className="lf-admin-inbox-copy">
                   <span className="lf-admin-inbox-top"><strong>{item.title}</strong><time dateTime={item.at}>{when(item.at)}</time></span>
-                  <span className="lf-admin-inbox-detail">{item.detail}</span>
+                  <span className="lf-admin-inbox-detail">{item.detail}{item.kind === "accounts" ? <AdminAccountTags origin={item.origin} isTest={item.isTest} /> : null}</span>
                 </span>
                 <Icon name="chevron_right" size={20} />
               </Link>

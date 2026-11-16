@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { includeTestsFrom, loadAccounts, withoutTests } from "@/lib/admin/testAccounts";
 import { loadSupportSnapshot } from "@/lib/admin/operations";
+import { withoutInviteeIdentity } from "@/lib/admin/inviteePrivacy";
 import { requireAdminAccess, requireAdminCapability } from "@/lib/admin/access";
 
 export async function GET(request: Request) {
@@ -14,5 +15,6 @@ export async function GET(request: Request) {
   }
 
   const raw = await loadSupportSnapshot(admin.adminClient, { includeTests: includeTestsFrom(request), testIds: (await loadAccounts(admin.adminClient)).testIds });
-  return NextResponse.json({ ok: true, support: raw });
+  // Invited people stay unnamed until they create an account (owner decision 16 Nov 2026).
+  return NextResponse.json({ ok: true, support: { ...raw, issues: raw.issues.map(withoutInviteeIdentity) } });
 }

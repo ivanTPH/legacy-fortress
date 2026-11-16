@@ -7,12 +7,15 @@ import { supabase } from "@/lib/supabaseClient";
 import { waitForActiveUser } from "@/lib/auth/session";
 import { AdminFilterChips, AdminNote, AdminStatStrip, AdminStatusBadge as StatusChip } from "@/components/admin/AdminPrimitives";
 import Icon from "@/components/ui/Icon";
+import { INCLUDE_TESTS_EVENT, readIncludeTests, writeIncludeTests } from "@/lib/admin/includeTestsPreference";
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell";
 import { PLATFORM_ADMIN_NAVIGATION, filterAdminNavigation } from "@/components/admin/adminNavigation";
 import type { CSSProperties, FormEvent, ReactNode } from "react";
 
 type Organisation = {
   id: string;
+  /** Synthetic (TEST) organisation: tagged, and hidden unless "Show test accounts" is on. */
+  isTest?: boolean;
   name: string;
   legalName: string;
   tradingName: string | null;
@@ -87,6 +90,13 @@ export default function PlatformOrganisationControlCentre({ organisationId }: { 
   const [typeFilter, setTypeFilter] = useState("");
   const [licenceFilter, setLicenceFilter] = useState("");
   const [sort, setSort] = useState("name");
+  const [includeTests, setIncludeTestsState] = useState(false);
+  useEffect(() => {
+    setIncludeTestsState(readIncludeTests());
+    const onChange = (event: Event) => setIncludeTestsState(Boolean((event as CustomEvent<boolean>).detail));
+    window.addEventListener(INCLUDE_TESTS_EVENT, onChange);
+    return () => window.removeEventListener(INCLUDE_TESTS_EVENT, onChange);
+  }, []);
   const [formOpen, setFormOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [licenceOpen, setLicenceOpen] = useState(false);
@@ -193,8 +203,11 @@ export default function PlatformOrganisationControlCentre({ organisationId }: { 
   );
 
   function renderRegister() {
-    const organisations = portfolio?.organisations ?? [];
-    const licences = portfolio?.licences ?? [];
+    const allOrganisations = portfolio?.organisations ?? [];
+    const organisations = includeTests ? allOrganisations : allOrganisations.filter((org) => !org.isTest);
+    const hiddenTests = allOrganisations.length - organisations.length;
+    const shownIds = new Set(organisations.map((org) => org.id));
+    const licences = (portfolio?.licences ?? []).filter((licence) => shownIds.has(licence.organisationId));
     const invitations = portfolio?.invitations ?? [];
     const rows = organisations.filter((org) => {
       const licence = licences.find((item) => item.organisationId === org.id);
@@ -220,6 +233,7 @@ export default function PlatformOrganisationControlCentre({ organisationId }: { 
           ...typesPresent.map((type) => ({ key: type, label: pluralType(type), count: organisations.filter((org) => org.type === type).length })),
           { key: "none", label: "No licence", count: organisations.filter((org) => !licences.some((licence) => licence.organisationId === org.id)).length },
         ]} />
+        <label className="lf-admin-test-toggle"><input type="checkbox" checked={includeTests} onChange={(event) => writeIncludeTests(event.target.checked)} /> Show test accounts{!includeTests && hiddenTests ? ` (${hiddenTests} hidden)` : ""}</label>
         <details className="lf-admin-more-filters">
           <summary>More filters</summary>
           <div style={filterStyle}>
@@ -230,7 +244,7 @@ export default function PlatformOrganisationControlCentre({ organisationId }: { 
           </div>
         </details>
       </section>
-      <section className="lf-admin-table-card" style={{ overflowX: "auto" }}><table className="lf-admin-data-table"><caption>Platform organisation register</caption><thead><tr><th>Organisation</th><th>Type</th><th>Licence</th><th>Administrator</th><th>Status</th><th><span className="lf-visually-hidden">Open</span></th></tr></thead><tbody>{rows.map((org) => { const licence = licences.find((item) => item.organisationId === org.id); const pending = invitations.filter((item) => item.organisationId === org.id && ["draft", "scheduled", "sent", "delivered"].includes(item.status)).length; return <tr key={org.id}><td><Link href={`/admin/organisations/${org.id}`} className="lf-admin-cell-title">{org.name}</Link><small>{org.registrationNumber || org.legalName}</small></td><td>{sentence(org.type)}</td><td>{licence ? <>{licence.activeSeats} of {licence.purchasedSeats} seats<small>{sentence(licence.plan)}{licence.renewalDate ? ` · renews ${formatDate(licence.renewalDate)}` : ""}</small></> : "No licence"}</td><td>{org.nominatedAdminName || org.nominatedAdminEmail ? <>{org.nominatedAdminName || org.nominatedAdminEmail}<small>{pending ? `${pending} invitation${pending === 1 ? "" : "s"} waiting` : org.nominatedAdminEmail || ""}</small></> : <StatusChip status={pending ? "pending" : "not_invited"} label={pending ? "Invitation sent" : "Not invited"} />}</td><td><StatusChip status={org.status} /></td><td><Link href={`/admin/organisations/${org.id}`} className="lf-admin-row-chevron" aria-label={`Open ${org.name}`}><Icon name="chevron_right" size={20} /></Link></td></tr>; })}{rows.length === 0 ? <tr><td colSpan={6}><div style={emptyStyle}><strong>No organisations match</strong><span>Change the search or filters, or add a new organisation.</span></div></td></tr> : null}</tbody></table><div className="lf-platform-organisation-cards" aria-label="Platform organisation register mobile cards">{rows.map((org) => { const licence = licences.find((item) => item.organisationId === org.id); return <Link key={org.id} href={`/admin/organisations/${org.id}`} className="lf-platform-organisation-card"><div><strong>{org.name}</strong><small>{licence ? `${sentence(licence.plan)} · ${licence.activeSeats} of ${licence.purchasedSeats} seats` : "No licence"}</small></div><StatusChip status={org.status} /><Icon name="chevron_right" size={20} /></Link>; })}</div></section>
+      <section className="lf-admin-table-card" style={{ overflowX: "auto" }}><table className="lf-admin-data-table"><caption>Platform organisation register</caption><thead><tr><th>Organisation</th><th>Type</th><th>Licence</th><th>Administrator</th><th>Status</th><th><span className="lf-visually-hidden">Open</span></th></tr></thead><tbody>{rows.map((org) => { const licence = licences.find((item) => item.organisationId === org.id); const pending = invitations.filter((item) => item.organisationId === org.id && ["draft", "scheduled", "sent", "delivered"].includes(item.status)).length; return <tr key={org.id}><td><Link href={`/admin/organisations/${org.id}`} className="lf-admin-cell-title">{org.name}</Link>{org.isTest ? <> <span className="lf-admin-account-tag is-test">Test</span></> : null}<small>{org.registrationNumber || org.legalName}</small></td><td>{sentence(org.type)}</td><td>{licence ? <>{licence.activeSeats} of {licence.purchasedSeats} seats<small>{sentence(licence.plan)}{licence.renewalDate ? ` · renews ${formatDate(licence.renewalDate)}` : ""}</small></> : "No licence"}</td><td>{org.nominatedAdminName || org.nominatedAdminEmail ? <>{org.nominatedAdminName || org.nominatedAdminEmail}<small>{pending ? `${pending} invitation${pending === 1 ? "" : "s"} waiting` : org.nominatedAdminEmail || ""}</small></> : <StatusChip status={pending ? "pending" : "not_invited"} label={pending ? "Invitation sent" : "Not invited"} />}</td><td><StatusChip status={org.status} /></td><td><Link href={`/admin/organisations/${org.id}`} className="lf-admin-row-chevron" aria-label={`Open ${org.name}`}><Icon name="chevron_right" size={20} /></Link></td></tr>; })}{rows.length === 0 ? <tr><td colSpan={6}><div style={emptyStyle}><strong>No organisations match</strong><span>Change the search or filters, or add a new organisation.</span></div></td></tr> : null}</tbody></table><div className="lf-platform-organisation-cards" aria-label="Platform organisation register mobile cards">{rows.map((org) => { const licence = licences.find((item) => item.organisationId === org.id); return <Link key={org.id} href={`/admin/organisations/${org.id}`} className="lf-platform-organisation-card"><div><strong>{org.name}{org.isTest ? <> <span className="lf-admin-account-tag is-test">Test</span></> : null}</strong><small>{licence ? `${sentence(licence.plan)} · ${licence.activeSeats} of ${licence.purchasedSeats} seats` : "No licence"}</small></div><StatusChip status={org.status} /><Icon name="chevron_right" size={20} /></Link>; })}</div></section>
     </div>;
   }
 
@@ -251,7 +265,7 @@ export default function PlatformOrganisationControlCentre({ organisationId }: { 
         <div>
           <p>{sentence(org.type)}{org.customerReference ? ` · ${org.customerReference}` : ""} · updated {formatDate(org.updatedAt)}</p>
         </div>
-        <div className="lf-admin-decision-actions"><StatusChip status={org.status} />{org.risk !== "normal" ? <StatusChip status={org.risk} label={`Risk: ${sentence(org.risk).toLowerCase()}`} /> : null}</div>
+        <div className="lf-admin-decision-actions">{org.isTest ? <span className="lf-admin-account-tag is-test">Test</span> : null}<StatusChip status={org.status} />{org.risk !== "normal" ? <StatusChip status={org.risk} label={`Risk: ${sentence(org.risk).toLowerCase()}`} /> : null}</div>
       </header>
       <AdminStatStrip label="Seats" items={[
         { label: "Seats bought", value: licence ? licence.purchasedSeats : 0 },
