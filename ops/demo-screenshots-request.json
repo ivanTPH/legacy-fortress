@@ -1,1 +1,1 @@
-{ "requestedBy": "Ivan (owner), 12 Nov 2026: Stripe test key set; confirm test mode and that checkout opens, no payment", "run": 43, "grep": "billing" }
+{ "requestedBy": "Ivan (owner), 12 Nov 2026: document limit: check the 10th and 11th document as the synthetic owner", "run": 44, "grep": "accepts the 10th" }
