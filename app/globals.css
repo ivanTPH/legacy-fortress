@@ -9571,3 +9571,4 @@ a.lf-pp-item:hover { background: var(--lf-interaction-hover, #F6EFEA); }
 .lf-admin-account-list li:first-child { border-top: 0; }
 .lf-admin-account-list li small { color: var(--lf-text-muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .lf-admin-account-tiles button { transition: none; } }
+.lf-admin-shell-content .lf-admin-page-test-toggle { margin: 0 0 4px; color: var(--lf-text-muted); font-size: 14px; }

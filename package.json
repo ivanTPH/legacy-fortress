@@ -49,7 +49,7 @@
     "@tensorflow/tfjs-backend-wasm": "4.22.0",
     "@tesseract.js-data/eng": "^1.0.0",
     "@vladmandic/human": "3.3.6",
-    "next": "16.4.3",
+    "next": "16.4.6",
     "pdfjs-dist": "^4.10.38",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -63,7 +63,7 @@
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
-    "eslint-config-next": "16.2.12",
+    "eslint-config-next": "16.4.6",
     "pngjs": "^7.0.0",
     "tailwindcss": "^4",
     "typescript": "^5"

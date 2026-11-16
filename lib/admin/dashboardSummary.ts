@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { loadAccounts } from "./testAccounts";
 import type { AdminAccessState } from "./access.ts";
 
 type AnySupabaseClient = SupabaseClient;
@@ -80,9 +81,10 @@ export function getAdminDashboardMetricKeysForRole(role: string) {
 export async function loadAdminDashboardSummary(
   client: AnySupabaseClient,
   access: AdminAccessState,
+  options: { includeTests?: boolean } = {},
 ): Promise<AdminDashboardSummary> {
   const generatedAt = new Date().toISOString();
-  const allMetrics = await buildAdminDashboardMetrics(client, generatedAt);
+  const allMetrics = await buildAdminDashboardMetrics(client, generatedAt, options.includeTests ?? false);
   const allowedKeys = new Set(getAdminDashboardMetricKeysForRole(access.adminRole));
   return {
     generatedAt,
@@ -92,7 +94,11 @@ export async function loadAdminDashboardSummary(
   };
 }
 
-async function buildAdminDashboardMetrics(client: AnySupabaseClient, generatedAt: string) {
+async function buildAdminDashboardMetrics(client: AnySupabaseClient, generatedAt: string, includeTests: boolean) {
+  // Every account (not just the first 1,000), without automated test accounts unless asked (16 Nov 2026).
+  const accounts = await loadAccounts(client).catch(() => null);
+  const testIds = accounts?.testIds ?? new Set<string>();
+  const customers = (accounts?.all ?? []).filter((user) => includeTests || !testIds.has(user.id));
   const [
     totalUsers,
     activeVaults,
@@ -106,15 +112,15 @@ async function buildAdminDashboardMetrics(client: AnySupabaseClient, generatedAt
     pendingProbateReviews,
     openSupportIssues,
   ] = await Promise.all([
-    countAuthUsers(client),
+    accounts ? countAuthUsers(customers) : unavailable("Auth user count is unavailable from the current admin client."),
     safeCount("activeVaults", "user_profiles", (query) => query.eq("account_status", "active")),
     safeCount("incompleteVaults", "user_profiles", (query) => query.neq("onboarding_complete", true)),
-    countUsersWithoutActiveWill(client),
+    accounts ? countUsersWithoutActiveWill(client, customers) : unavailable("Auth users could not be loaded for no-will calculation."),
     safeCount("staleWills", "assets", (query) =>
       query.eq("section_key", "legal").eq("category_key", "wills").neq("status", "archived").lt("updated_at", staleThresholdIso()),
     ),
     safeCount("oldDocuments", "documents", (query) => query.lt("updated_at", staleThresholdIso())),
-    countUsersWithoutExecutor(client),
+    accounts ? countUsersWithoutExecutor(client, customers) : unavailable("Auth users could not be loaded for executor calculation."),
     safeCount("pendingInvitations", "contact_invitations", (query) => query.eq("invitation_status", "pending").not("sent_at", "is", null)),
     safeCount("failedEmails", "invitation_events", (query) => query.in("event_type", ["failed", "bounced", "delivery_failed"])),
     safeCount("pendingProbateReviews", "probate_cases", (query) => query.in("status", ["submitted", "needs_information", "under_review"])),
@@ -146,13 +152,20 @@ async function buildAdminDashboardMetrics(client: AnySupabaseClient, generatedAt
   ];
 
   async function safeCount(key: string, table: string, apply?: (query: CountQuery) => CountQuery) {
-    const baseQuery = client.from(table).select("id", { count: "exact", head: true }) as unknown as CountQuery;
-    const query = apply ? apply(baseQuery) : baseQuery;
-    const res = await query as CountResult;
-    if (res.error) {
-      return unavailable(`${key} is unavailable because ${table} could not be queried.`);
+    if (includeTests) {
+      const baseQuery = client.from(table).select("id", { count: "exact", head: true }) as unknown as CountQuery;
+      const query = apply ? apply(baseQuery) : baseQuery;
+      const res = await query as CountResult;
+      if (res.error) return unavailable(`${key} is unavailable because ${table} could not be queried.`);
+      return res.count ?? 0;
     }
-    return res.count ?? 0;
+    // Count only customers' rows: read the owner of each matching row and leave out test accounts.
+    const ownerColumn = table === "user_profiles" ? "user_id" : "owner_user_id";
+    const baseQuery = client.from(table).select(ownerColumn).limit(20000) as unknown as CountQuery;
+    const query = apply ? apply(baseQuery) : baseQuery;
+    const res = await query as unknown as { data: Array<Record<string, unknown>> | null; error: unknown };
+    if (res.error) return unavailable(`${key} is unavailable because ${table} could not be queried.`);
+    return (res.data ?? []).filter((row) => !testIds.has(String(row[ownerColumn] ?? ""))).length;
   }
 }
 
@@ -182,7 +195,7 @@ function metric(
     label,
     value,
     available: true,
-    status: value > 0 && /failed|pending|stale|old|risk|without|incomplete/i.test(label) ? "warning" : "ok",
+    status: value > 0 && /failed|pending|stale|old|risk|without|with no|incomplete/i.test(label) ? "warning" : "ok",
     definition,
     source,
     updatedAt,
@@ -193,19 +206,15 @@ function unavailable(warning: string) {
   return { warning };
 }
 
-async function countAuthUsers(client: AnySupabaseClient) {
-  const res = await client.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  if (res.error) return unavailable("Auth user count is unavailable from the current admin client.");
-  const users = res.data.users.filter((user) => {
+async function countAuthUsers(customers: Array<{ email?: string | null }>) {
+  const users = customers.filter((user) => {
     const email = String(user.email ?? "").toLowerCase();
     return !email.includes("service") && !email.includes("system");
   });
   return users.length;
 }
 
-async function countUsersWithoutActiveWill(client: AnySupabaseClient) {
-  const usersRes = await client.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  if (usersRes.error) return unavailable("Auth users could not be loaded for no-will calculation.");
+async function countUsersWithoutActiveWill(client: AnySupabaseClient, customers: Array<{ id: string }>) {
   const assetsRes = await client
     .from("assets")
     .select("owner_user_id")
@@ -214,19 +223,17 @@ async function countUsersWithoutActiveWill(client: AnySupabaseClient) {
     .neq("status", "archived");
   if (assetsRes.error) return unavailable("Canonical Will records could not be queried.");
   const ownersWithWill = new Set((assetsRes.data ?? []).map((row) => String((row as { owner_user_id?: string }).owner_user_id ?? "")));
-  return usersRes.data.users.filter((user) => !ownersWithWill.has(user.id)).length;
+  return customers.filter((user) => !ownersWithWill.has(user.id)).length;
 }
 
-async function countUsersWithoutExecutor(client: AnySupabaseClient) {
-  const usersRes = await client.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  if (usersRes.error) return unavailable("Auth users could not be loaded for executor calculation.");
+async function countUsersWithoutExecutor(client: AnySupabaseClient, customers: Array<{ id: string }>) {
   const contactsRes = await client
     .from("contacts")
     .select("owner_user_id")
     .in("relationship", ["executor", "Executor"]);
   if (contactsRes.error) return unavailable("Canonical executor contacts could not be queried.");
   const ownersWithExecutor = new Set((contactsRes.data ?? []).map((row) => String((row as { owner_user_id?: string }).owner_user_id ?? "")));
-  return usersRes.data.users.filter((user) => !ownersWithExecutor.has(user.id)).length;
+  return customers.filter((user) => !ownersWithExecutor.has(user.id)).length;
 }
 
 function staleThresholdIso() {

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { includeTestsFrom } from "@/lib/admin/testAccounts";
 import { requireAdminAccess, requireAdminCapability } from "@/lib/admin/access";
 import { recordAdminAuditEvent } from "@/lib/admin/audit";
 import { loadAdminInbox } from "@/lib/admin/inbox";
@@ -15,8 +16,7 @@ export async function GET(request: Request) {
   if (denied) {
     return NextResponse.json({ ok: false, message: denied.message, capability: denied.capability }, { status: denied.status });
   }
-  const url = new URL(request.url);
-  const includeTests = url.searchParams.get("tests") === "1";
+  const includeTests = includeTestsFrom(request);
   const items = await loadAdminInbox(admin.adminClient, { days: 30, includeTests });
   await recordAdminAuditEvent(admin.adminClient, admin.access, {
     category: "admin_review",

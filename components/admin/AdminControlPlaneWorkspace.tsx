@@ -14,6 +14,7 @@ import InfoTip from "@/components/ui/InfoTip";
 import Icon from "@/components/ui/Icon";
 import { filterAdminNavigation, PLATFORM_ADMIN_NAVIGATION } from "@/components/admin/adminNavigation";
 import AdminInbox from "@/components/admin/AdminInbox";
+import { INCLUDE_TESTS_EVENT, readIncludeTests, writeIncludeTests } from "@/lib/admin/includeTestsPreference";
 import AdminAccountSummary from "@/components/admin/AdminAccountSummary";
 import { waitForActiveUser } from "@/lib/auth/session";
 import { supabase } from "@/lib/supabaseClient";
@@ -623,7 +624,16 @@ export default function AdminControlPlaneWorkspace({
   // With the search empty, Users shows the newest accounts first and how many opened this week (16 Nov 2026).
   const [newThisWeek, setNewThisWeek] = useState<number | null>(null);
   const [showingNewest, setShowingNewest] = useState(false);
-  const [includeTestAccounts, setIncludeTestAccounts] = useState(false);
+  const [lookupLoading, setLookupLoading] = useState(true);
+  // One "Show test accounts" choice for all of Admin; changing it reloads the page's data.
+  const [includeTestAccounts, setIncludeTestAccountsState] = useState(false);
+  useEffect(() => {
+    queueMicrotask(() => setIncludeTestAccountsState(readIncludeTests()));
+    const onChange = (event: Event) => setIncludeTestAccountsState(Boolean((event as CustomEvent<boolean>).detail));
+    window.addEventListener(INCLUDE_TESTS_EVENT, onChange);
+    return () => window.removeEventListener(INCLUDE_TESTS_EVENT, onChange);
+  }, []);
+  const setIncludeTestAccounts = useCallback((value: boolean) => writeIncludeTests(value), []);
   const [userDetail, setUserDetail] = useState<UserOperationalDetail | null>(null);
   const [userDetailLoading, setUserDetailLoading] = useState(false);
   const [auditFilter, setAuditFilter] = useState("");
@@ -658,6 +668,7 @@ export default function AdminControlPlaneWorkspace({
     const token = sessionRes.data.session?.access_token ?? "";
     const headers = new Headers(init?.headers ?? {});
     if (token) headers.set("authorization", `Bearer ${token}`);
+    if (readIncludeTests()) headers.set("x-lf-include-tests", "1");
     if (!headers.has("content-type") && init?.body && !(init.body instanceof FormData)) headers.set("content-type", "application/json");
     return fetch(input, { ...init, headers });
   }, []);
@@ -714,7 +725,8 @@ export default function AdminControlPlaneWorkspace({
       });
     }
     setState("ready");
-  }, [authFetch, resourceId, router, section]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when "Show test accounts" changes
+  }, [authFetch, resourceId, router, section, includeTestAccounts]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -751,7 +763,8 @@ export default function AdminControlPlaneWorkspace({
 
   const runLookup = useCallback(async (query = "") => {
     const trimmed = query.trim();
-    const res = await authFetch(`/api/internal/admin/users?q=${encodeURIComponent(trimmed)}${includeTestAccounts ? "&tests=1" : ""}`);
+    setLookupLoading(true);
+    const res = await authFetch(`/api/internal/admin/users?q=${encodeURIComponent(trimmed)}`).finally(() => setLookupLoading(false));
     const json = (await res.json().catch(() => ({}))) as { ok?: boolean; users?: LookupUser[]; newThisWeek?: number | null; message?: string };
     if (!res.ok || !json.ok) {
       setMessage(json.message || "Could not search users.");
@@ -1146,6 +1159,9 @@ export default function AdminControlPlaneWorkspace({
         {message ? <section style={alertStyle}>{message}</section> : null}
         {confirmation ? <AdminConfirmationDialog confirmation={confirmation} onCancel={() => setConfirmation(null)} onConfirm={() => { const action = confirmation.onConfirm; setConfirmation(null); void action(); }} /> : null}
 
+        {["overview", "invitations", "access", "support", "verification", "probate", "authorities"].includes(section) ? (
+          <label className="lf-admin-test-toggle lf-admin-page-test-toggle"><input type="checkbox" checked={includeTestAccounts} onChange={(event) => setIncludeTestAccounts(event.target.checked)} /> Show test accounts</label>
+        ) : null}
         {section === "inbox" ? <AdminInbox authFetch={authFetch} /> : null}
         {section === "overview" ? renderOverview(metrics, support, verificationQueue, probateCases, enterprisePortfolio, capabilities) : null}
         {section === "organisations" ? renderPlatformOrganisations(enterpriseViews, {
@@ -1172,11 +1188,11 @@ export default function AdminControlPlaneWorkspace({
         {section === "licences" ? renderPlatformLicences(enterpriseViews) : null}
         {section === "licence-detail" ? renderPlatformLicenceDetail(resourceId, enterprisePortfolio) : null}
         {section === "admin-users" || section === "admin-user-detail" ? renderAdminUsers(admins, adminInvitations, adminFilter, setAdminFilter, adminInviteForm, setAdminInviteForm, sendAdminInvitation, adminInviteOpen, setAdminInviteOpen, adminLifecycleForm, setAdminLifecycleForm, runAdminLifecycle, runAdminInvitationLifecycle, (input, onConfirm) => requestConfirmation(input, onConfirm), resourceId, adminLifecycleActionLoading) : null}
-        {section === "users" || section === "user-detail" ? renderUsers(lookupQuery, setLookupQuery, lookupResults, (query) => runLookup(query ?? lookupQuery), resourceId, userDetail, userDetailLoading, showingNewest, newThisWeek, includeTestAccounts, setIncludeTestAccounts) : null}
+        {section === "users" || section === "user-detail" ? renderUsers(lookupQuery, setLookupQuery, lookupResults, (query) => runLookup(query ?? lookupQuery), resourceId, userDetail, userDetailLoading, showingNewest, newThisWeek, includeTestAccounts, setIncludeTestAccounts, lookupLoading) : null}
         {section === "support" || section === "invitations" ? renderSupport(section, support, supportDetail, supportDetailLoading, supportActionLoading, loadSupportInvitationDetail, runSupportInvitationAction, createSupportCase, runSupportCaseAction, addSupportCaseNote, capabilities, enterprisePortfolio, enterpriseInvitationActionLoading, runEnterpriseInvitationAction) : null}
         {section === "verification" || section === "verification-detail" ? renderVerification(verificationQueue, resourceId, capabilities, verificationActionLoading, verificationReviewNote, setVerificationReviewNote, runVerificationAction) : null}
         {section === "access" || section === "probate" || section === "probate-detail" ? renderProbate(probateCases, estateOperations, resourceId, capabilities, probateDecisionNotes, setProbateDecisionNotes, probateActionLoading, probateEvidenceLoading, runProbateCaseAction, openProbateEvidence, section === "access" ? "Access and estate cases" : "Probate queue") : null}
-        {section === "authorities" || section === "authority-detail" ? <AdminLegalAuthorities authFetch={authFetch} resourceId={section === "authority-detail" ? resourceId : null} capabilities={capabilities} /> : null}
+        {section === "authorities" || section === "authority-detail" ? <AdminLegalAuthorities key={includeTestAccounts ? "with-tests" : "customers"} authFetch={authFetch} resourceId={section === "authority-detail" ? resourceId : null} capabilities={capabilities} /> : null}
         {section === "audit" ? renderAudit(auditEvents, auditFilter, setAuditFilter) : null}
         {section === "system-health" ? renderSystemHealth(health, metrics, support) : null}
         {section === "settings" ? renderSettings(capabilities) : null}
@@ -1255,9 +1271,11 @@ function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | n
   const canVerify = capabilities.includes("verification:read");
   const canViewInvitations = capabilities.includes("support:read");
   const pending = support?.counts.verificationAwaitingReview ?? verification.length;
+  const probateToReview = probate.filter((item) => PROBATE_FILTERS.find((filter) => filter.key === "review")!.matches(item)).length;
   const decisions = [
     canVerify && pending > 0 ? { icon: "verified_user", label: "Identity checks to review", detail: "Waiting for a reviewer", count: pending, href: "/admin/verification" } : null,
-    canVerify && probate.length > 0 ? { icon: "gavel", label: "Probate evidence to review", detail: `${probate.length === 1 ? "1 case" : `${probate.length} cases`} awaiting a decision`, count: probate.length, href: "/admin/probate" } : null,
+    // Same rule as the Probate page's "Needs review" (16 Nov 2026: Overview said 100 while Probate said 0; all were closed).
+    canVerify && probateToReview > 0 ? { icon: "gavel", label: "Probate evidence to review", detail: `${probateToReview === 1 ? "1 case" : `${probateToReview} cases`} awaiting a decision`, count: probateToReview, href: "/admin/probate" } : null,
     canViewInvitations && (support?.counts.readyToSendInvitations ?? 0) > 0 ? { icon: "schedule_send", label: "Invitations saved but not sent", detail: "Customers added people without sending", count: support?.counts.readyToSendInvitations ?? 0, href: "/admin/invitations?status=ready" } : null,
     canViewInvitations && (support?.counts.invitationIssues ?? 0) > 0 ? { icon: "forward_to_inbox", label: "Invitation issues", detail: "Delivery or acceptance problems", count: support?.counts.invitationIssues ?? 0, href: "/admin/access" } : null,
   ].filter((item): item is { icon: string; label: string; detail: string; count: number; href: string } => item !== null);
@@ -1870,6 +1888,7 @@ function renderUsers(
   newThisWeek: number | null = null,
   includeTests = false,
   setIncludeTests: (value: boolean) => void = () => undefined,
+  loading = false,
 ) {
   return (
     <div style={stackStyle}>
@@ -1888,7 +1907,8 @@ function renderUsers(
           <label className="lf-admin-test-toggle"><input type="checkbox" checked={includeTests} onChange={(event) => setIncludeTests(event.target.checked)} /> Show test accounts</label>
         </p>
       ) : null}
-      {resourceId && !results.length ? null : <div className="lf-admin-table-card">
+      {loading && !results.length && !resourceId ? <p className="lf-admin-muted" role="status">Loading accounts…</p> : null}
+      {(resourceId || loading) && !results.length ? null : <div className="lf-admin-table-card">
         <AdminDataTable
           caption={showingNewest ? "Newest customer accounts" : "Customer users"}
           columns={[

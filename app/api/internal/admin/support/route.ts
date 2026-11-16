@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { includeTestsFrom, loadAccounts, withoutTests } from "@/lib/admin/testAccounts";
 import { loadSupportSnapshot } from "@/lib/admin/operations";
 import { requireAdminAccess, requireAdminCapability } from "@/lib/admin/access";
 
@@ -12,6 +13,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, message: denied.message, capability: denied.capability }, { status: denied.status });
   }
 
-  const support = await loadSupportSnapshot(admin.adminClient);
-  return NextResponse.json({ ok: true, support });
+  const raw = await loadSupportSnapshot(admin.adminClient, { includeTests: includeTestsFrom(request), testIds: (await loadAccounts(admin.adminClient)).testIds });
+  return NextResponse.json({ ok: true, support: raw });
 }
