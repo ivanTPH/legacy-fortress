@@ -98,3 +98,19 @@ test("Admin hides automated test accounts by default; reserved test domains only
   const ui = fs.readFileSync(new URL("../components/admin/AdminControlPlaneWorkspace.tsx", import.meta.url), "utf8");
   assert.match(ui, /Show test accounts/);
 });
+
+test("Admin Inbox: account details and counts only, same permission and audit as finding customers (16 Nov 2026)", () => {
+  const lib = fs.readFileSync(new URL("../lib/admin/inbox.ts", import.meta.url), "utf8");
+  const selects = [...lib.matchAll(/select\("([^"]+)"/g)].map((match) => match[1]).join(",");
+  assert.doesNotMatch(selects, /file_name|storage_path|contact_name|contact_email|full_name|title|value_minor|metadata|payload/, "reads never include names, files, values or invitees");
+  assert.match(lib, /select\("owner_user_id,event_type,created_at"\)/);
+  assert.match(lib, /select\("owner_user_id,created_at"\)/);
+  assert.match(lib, /isTestAccountEmail/);
+  const route = fs.readFileSync(new URL("../app/api/internal/admin/inbox/route.ts", import.meta.url), "utf8");
+  assert.match(route, /requireAdminCapability\(admin\.access, "users:lookup"\)/);
+  assert.match(route, /recordAdminAuditEvent/);
+  const ui = fs.readFileSync(new URL("../components/admin/AdminInbox.tsx", import.meta.url), "utf8");
+  for (const text of ["Refresh", "Pull to refresh", "60_000", "Mark all as read", "Show test accounts"]) assert.ok(ui.includes(text), text);
+  const nav = fs.readFileSync(new URL("../components/admin/adminNavigation.ts", import.meta.url), "utf8");
+  assert.match(nav, /key: "inbox", label: "Inbox", href: "\/admin\/inbox", icon: "inbox", capability: "users:lookup"/);
+});

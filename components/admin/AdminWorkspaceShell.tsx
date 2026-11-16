@@ -162,11 +162,11 @@ export default function AdminWorkspaceShell({
         .sort((a, b) => b.href.length - a.href.length)[0]
     : undefined;
   const preferredTabs = isPartner || isInternalEnterprise ? ["enterprise-overview", "enterprise-users", "enterprise-invitations"]
-    : adminRole === "support_agent" ? ["overview", "users", "support"]
+    : adminRole === "support_agent" ? ["inbox", "users", "support"]
     : adminRole === "probate_reviewer" ? ["overview", "probate", "verification"]
     : adminRole === "enterprise_admin" ? ["overview", "organisations", "licences"]
     : adminRole === "auditor" ? ["overview", "audit", "system-health"]
-    : ["overview", "verification", "audit"];
+    : ["inbox", "overview", "verification"];
   const mobileTabs = [
     ...preferredTabs.map((key) => visibleItems.find((item) => item.key === key)),
     ...visibleItems,
@@ -412,7 +412,7 @@ function toDisplayRole(value: string) {
 const MOBILE_TAB_LABEL: Record<string, string> = {
   "enterprise-overview": "Overview", "enterprise-users": "Team", "enterprise-invitations": "Invitations",
   verification: "Verification", probate: "Probate", users: "Users", "system-health": "Health",
-  organisations: "Organisations", licences: "Licences", support: "Support", audit: "Audit", overview: "Overview",
+  organisations: "Organisations", licences: "Licences", support: "Support", audit: "Audit", overview: "Overview", inbox: "Inbox",
 };
 
 const adminShellCss = `
