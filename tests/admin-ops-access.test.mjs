@@ -140,3 +140,21 @@ test("one Show test accounts choice applies across Admin; counts and lists agree
   assert.match(read("lib/admin/dashboardSummary.ts"), /without\|with no\|incomplete/, "'Users with no …' is not shown as healthy");
   assert.doesNotMatch(read("lib/admin/dashboardSummary.ts"), /perPage: 1000/, "counts read every account, not the first 1,000");
 });
+
+test("account source labels and invitee privacy (owner decision 16 Nov 2026)", async () => {
+  const { accountSourceLabel, organisationDisplayName } = await import("../lib/admin/accountOrigins.ts");
+  const { withoutInviteeIdentity, invitationAuditLabel } = await import("../lib/admin/inviteePrivacy.ts");
+  assert.equal(accountSourceLabel(null), "Direct");
+  assert.equal(accountSourceLabel({ source: "invited", organisationId: null, organisationName: null }), "Invited by a customer");
+  assert.equal(accountSourceLabel({ source: "partner", organisationId: "o", organisationName: "Acme" }), "Via Acme");
+  assert.equal(accountSourceLabel({ source: "partner", organisationId: "o", organisationName: null }), "Via a partner");
+  assert.equal(organisationDisplayName({ legal_name: "Acme Ltd", trading_name: "" }), "Acme Ltd");
+  const waiting = withoutInviteeIdentity({ contactName: "Jane Doe", contactEmail: "jane@x.com", invitationStatus: "pending" });
+  assert.deepEqual([waiting.contactName, waiting.contactEmail, waiting.inviteeHidden], ["", "", true]);
+  const accepted = withoutInviteeIdentity({ contactName: "Jane Doe", contactEmail: "jane@x.com", invitationStatus: "accepted" });
+  assert.deepEqual([accepted.contactName, accepted.inviteeHidden], ["Jane Doe", false]);
+  assert.equal(invitationAuditLabel("1234567890abcdef"), "Invitation 12345678");
+  const migration = fs.readFileSync(path.join(process.cwd(), "supabase/migrations/20261116220000_account_origins_and_test_marker.sql"), "utf8");
+  assert.match(migration, /REVOKE ALL ON public\.account_origins FROM anon, authenticated;/);
+  assert.match(migration, /ON CONFLICT \(user_id\) DO NOTHING/);
+});

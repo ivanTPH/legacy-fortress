@@ -1,3 +1,4 @@
+import { invitationAuditLabel, withoutInviteeIdentity } from "@/lib/admin/inviteePrivacy";
 import { adminHasCapability, requireAdminAccess, requireAdminCapability } from "@/lib/admin/access";
 import { recordAdminAuditEvent } from "@/lib/admin/audit";
 import {
@@ -29,7 +30,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ invi
   try {
     const { invitationId } = await params;
     const detail = await loadSupportInvitationDetail(admin.adminClient, invitationId);
-    return noStoreJson({ ok: true, detail });
+    return noStoreJson({ ok: true, detail: publicDetail(detail) });
   } catch (error) {
     return safeAdminErrorResponse(error);
   }
@@ -105,7 +106,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ in
       result: "success",
       resourceType: "access_policy",
       resourceId: invitationId,
-      resourceLabel: detail.invitation.contactEmail || detail.invitation.contactName,
+      resourceLabel: invitationAuditLabel(invitationId),
       route: "/api/internal/admin/support/[invitationId]",
       metadata: {
         action,
@@ -115,7 +116,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ in
       },
     });
 
-    return noStoreJson({ ok: true, detail });
+    return noStoreJson({ ok: true, detail: publicDetail(detail) });
   } catch (error) {
     await recordAdminAuditEvent(admin.adminClient, admin.access, {
       category: "restricted_action_blocked",
@@ -143,11 +144,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ inv
   const body = (await request.json().catch(() => ({}))) as { priority?: string; reasonCode?: string | null; reasonSummary?: string | null };
   try {
     const detail = await loadSupportInvitationDetail(admin.adminClient, invitationId);
-    if (detail.case) return noStoreJson({ ok: true, detail, created: false });
+    if (detail.case) return noStoreJson({ ok: true, detail: publicDetail(detail), created: false });
     const createdCase = await createAccessOperationsCase(admin.adminClient, { invitationId, actorUserId: admin.access.user.id, priority: body.priority, reasonCode: body.reasonCode ?? detail.invitation.issueLabel, reasonSummary: body.reasonSummary ?? detail.invitation.issueLabel });
-    await recordAdminAuditEvent(admin.adminClient, admin.access, { category: "admin_approval", action: "Access operations case created", result: "success", resourceType: "access_policy", resourceId: createdCase.id, resourceLabel: detail.invitation.contactEmail || detail.invitation.contactName, route: "/api/internal/admin/support/[invitationId]", metadata: { invitation_id: invitationId } });
-    return noStoreJson({ ok: true, detail: await loadSupportInvitationDetail(admin.adminClient, invitationId), created: true });
+    await recordAdminAuditEvent(admin.adminClient, admin.access, { category: "admin_approval", action: "Access operations case created", result: "success", resourceType: "access_policy", resourceId: createdCase.id, resourceLabel: invitationAuditLabel(invitationId), route: "/api/internal/admin/support/[invitationId]", metadata: { invitation_id: invitationId } });
+    return noStoreJson({ ok: true, detail: publicDetail(await loadSupportInvitationDetail(admin.adminClient, invitationId)), created: true });
   } catch (error) {
     return safeAdminErrorResponse(error);
   }
+}
+
+/** What Admin sees: the invited person stays unnamed until they create an account (owner decision 16 Nov 2026). */
+function publicDetail<T extends { invitation: { contactName: string; contactEmail: string | null; invitationStatus?: string | null; acceptedAt?: string | null }; contact?: unknown }>(detail: T) {
+  const invitation = withoutInviteeIdentity(detail.invitation);
+  return { ...detail, invitation, contact: invitation.inviteeHidden ? null : detail.contact };
 }

@@ -1,3 +1,4 @@
+import { DIRECT_ORIGIN, loadAccountOrigins, organisationDisplayName, type AccountOrigin } from "./accountOrigins.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AdminUserRow } from "./access.ts";
 import { MASTER_ADMIN_EMAIL, normalizeAdminEmail } from "./access.ts";
@@ -96,6 +97,7 @@ type EnterpriseOrganisationContextRow = {
   name: string;
   status: string;
 };
+type EnterpriseOrganisationRow = { id: string; legal_name?: string | null; trading_name?: string | null; status: string };
 
 export type AdminLookupResult = {
   userId: string;
@@ -124,6 +126,9 @@ export type AdminLookupResult = {
     role: string;
     status: string;
   }>;
+  /** How the account was created (Direct / Via partner / Invited by a customer) and whether it is a test account. */
+  origin: AccountOrigin;
+  isTest: boolean;
 };
 
 export type AdminUserOperationalDetail = AdminLookupResult & {
@@ -829,14 +834,15 @@ export async function lookupUsers(client: AnySupabaseClient, query: string, incl
   const memberships = (membershipRes.data ?? []) as EnterpriseMembershipContextRow[];
   const organisationIds = [...new Set(memberships.map((row) => row.organisation_id))];
   const organisationRes = organisationIds.length
-    ? await client.from("enterprise_organisations").select("id,name,status").in("id", organisationIds)
+    ? await client.from("enterprise_organisations").select("id,legal_name,trading_name,status").in("id", organisationIds)
     : { data: [], error: null };
   if (organisationRes.error) throw new Error(organisationRes.error.message);
   const organisations = new Map((organisationRes.data ?? []).map((row) => {
-    const item = row as EnterpriseOrganisationContextRow;
-    return [item.id, item];
+    const item = row as EnterpriseOrganisationRow;
+    return [item.id, { id: item.id, name: organisationDisplayName(item), status: item.status } satisfies EnterpriseOrganisationContextRow];
   }));
 
+  const origins = await loadAccountOrigins(client, userIds);
   const results = await Promise.all(
     users.map(async (user) => {
       const [assets, documents, contacts, invitations, grants, verifications] = await Promise.all([
@@ -880,6 +886,8 @@ export async function lookupUsers(client: AnySupabaseClient, query: string, incl
           role: membership.organisation_role,
           status: membership.membership_status,
         })),
+        origin: origins.get(user.id) ?? DIRECT_ORIGIN,
+        isTest: isTestAccountEmail(user.email),
       } satisfies AdminLookupResult;
     }),
   );
@@ -971,12 +979,12 @@ export async function loadUserOperationalDetail(client: AnySupabaseClient, userI
   const memberships = (membershipsRes.data ?? []) as EnterpriseMembershipContextRow[];
   const organisationIds = [...new Set(memberships.map((row) => row.organisation_id))];
   const organisationRes = organisationIds.length
-    ? await client.from("enterprise_organisations").select("id,name,status").in("id", organisationIds)
+    ? await client.from("enterprise_organisations").select("id,legal_name,trading_name,status").in("id", organisationIds)
     : { data: [], error: null };
   if (organisationRes.error) throw adminLifecycleError("ADMIN_INTERNAL_ERROR", organisationRes.error.message);
   const organisations = new Map((organisationRes.data ?? []).map((row) => {
-    const item = row as EnterpriseOrganisationContextRow;
-    return [item.id, item];
+    const item = row as EnterpriseOrganisationRow;
+    return [item.id, { id: item.id, name: organisationDisplayName(item), status: item.status } satisfies EnterpriseOrganisationContextRow];
   }));
   const displayName =
     String(profile?.display_name ?? "").trim()
@@ -1014,6 +1022,8 @@ export async function loadUserOperationalDetail(client: AnySupabaseClient, userI
       role: membership.organisation_role,
       status: membership.membership_status,
     })),
+    origin: (await loadAccountOrigins(client, [id])).get(id) ?? DIRECT_ORIGIN,
+    isTest: isTestAccountEmail(user.email),
     contacts: contacts.map((row, index) => ({
       id: row.id,
       label: `Person ${index + 1}`,
