@@ -43,7 +43,8 @@ import { Button, Chip, EmptyState, PageHeader, Sheet } from "../ui/V3Primitives"
 import DocumentPreviewDialog, { type DocumentPreviewDialogItem } from "../documents/DocumentPreviewDialog";
 import { loadPersonRecordLinks, type PersonRecordLink } from "../../lib/linkedPeople/recordLinkedPeople";
 import { firstName, grantIsOpen, loadVaultAccess, type VaultAccessSnapshot } from "../../lib/vaultAccess/vaultAccess";
-import { ROLE_RULES, type AccessActivationStatus, type CollaboratorRole, type SectionKey } from "../../lib/access-control/roles";
+import { ROLE_RULES, type CollaboratorRole, type SectionKey } from "../../lib/access-control/roles";
+import { cancelWaitingInvitation, resendWaitingInvitation, toAccessActivationStatus, toCollaboratorRole } from "../../lib/contacts/invitationActions";
 
 type ContactRow = {
   id: string;
@@ -900,12 +901,13 @@ function getInvitationDisplay(contact: ContactRow) {
   if (contact.invite_status === "failed") return { label: "Failed", icon: "error", tone: "danger" as const };
   if (contact.invite_status === "not_delivered") return { label: "Not delivered", icon: "error", tone: "danger" as const };
   if (contact.invite_status === "expired") return { label: "Expired", icon: "schedule_send", tone: "warning" as const };
-  if (contact.invite_status === "revoked") return { label: "Revoked", icon: "block", tone: "danger" as const };
+  if (contact.invite_status === "revoked") return { label: "Cancelled", icon: "block", tone: "neutral" as const };
   if (contact.invite_status === "rejected") return { label: "Declined", icon: "block", tone: "danger" as const };
+  // Same ticks as the Inbox (owner, 16 Nov 2026): orange ✓ Sent while waiting, green ✓ Accepted once joined.
   if (contact.invite_status === "accepted") {
-    return { label: "Joined", icon: "check_circle", tone: "success" as const };
+    return { label: "Accepted", icon: "check", tone: "success" as const };
   }
-  if (contact.invite_status === "invite_sent") return { label: "Invite sent", icon: "hourglass_top", tone: "warning" as const };
+  if (contact.invite_status === "invite_sent") return { label: "Sent", icon: "check", tone: "sent" as const };
   return { label: "Not invited", icon: "schedule_send", tone: "neutral" as const };
 }
 
@@ -1444,7 +1446,7 @@ function PersonManagementPanel({
   }
 
   async function updateInvitation(nextStatus: "revoked") {
-    if (readOnly) return;
+    if (readOnly || nextStatus !== "revoked") return;
     const invitationId = contact.linked_context.find((context) => context.source_kind === "invitation")?.source_id;
     const { ownerId } = await resolveOwner();
     if (!ownerId || !invitationId) {
@@ -1452,18 +1454,13 @@ function PersonManagementPanel({
       return;
     }
     setSaving(true);
-    const result = await supabase
-      .from("contact_invitations")
-      .update({ invitation_status: nextStatus, revoked_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-      .eq("owner_user_id", ownerId)
-      .eq("id", invitationId);
-    if (!result.error) {
-      await supabase.from("contacts").update({ invite_status: nextStatus, verification_status: nextStatus, updated_at: new Date().toISOString() }).eq("owner_user_id", ownerId).eq("id", contact.id);
-      await supabase.from("invitation_events").insert({ owner_user_id: ownerId, invitation_id: invitationId, event_type: nextStatus, payload: { source: "people_drawer" } });
-    }
+    let failed = false;
+    try {
+      await cancelWaitingInvitation(supabase, { ownerUserId: ownerId, contactId: contact.id, invitationId, source: "people_drawer" });
+    } catch { failed = true; }
     setSaving(false);
-    setStatus(result.error ? "Could not cancel this invitation." : "Invitation cancelled. The person remains in People I Trust.");
-    if (!result.error) onSaved();
+    setStatus(failed ? "Could not cancel this invitation." : "Invitation cancelled. The person remains in People I Trust.");
+    if (!failed) onSaved();
   }
 
   async function resendInvitation() {
@@ -1476,21 +1473,23 @@ function PersonManagementPanel({
     }
     setSaving(true);
     try {
-      await sendContactInvite(supabase, {
+      const sentTo = await resendWaitingInvitation(supabase, {
         ownerUserId: ownerId,
         ownerEmail: user.email,
-        contactId: contact.id,
-        contactName: contact.full_name,
-        contactEmail: contact.email ?? "",
-        contactRelationship: contact.relationship,
-        assignedRole: toCollaboratorRole(contact.contact_role),
-        invitationId,
-        invitedAt: new Date().toISOString(),
-        activationStatus: toAccessActivationStatus(contact.verification_status),
-        resend: true,
+        invitation: {
+          contactId: contact.id,
+          invitationId,
+          name: contact.full_name,
+          email: contact.email ?? "",
+          relationship: contact.relationship,
+          role: toCollaboratorRole(contact.contact_role),
+          activation: toAccessActivationStatus(contact.verification_status),
+          lastSentAt: null,
+          expiresAt: null,
+        },
         origin: typeof window === "undefined" ? null : window.location.origin,
       });
-      setStatus(`Invitation request submitted for ${contact.email}.`);
+      setStatus(`Invitation request submitted for ${sentTo}.`);
       onSaved();
     } catch {
       setStatus("Could not resend this invitation.");
@@ -1629,16 +1628,6 @@ function PersonManagementPanel({
       {status ? <span role="status" style={drawerExplanationStyle}>{status}</span> : null}
     </section>
   );
-}
-
-function toCollaboratorRole(value: string | null): CollaboratorRole {
-  const allowed: CollaboratorRole[] = ["executor", "professional_advisor", "accountant", "financial_advisor", "lawyer", "friend_or_family"];
-  return allowed.includes(value as CollaboratorRole) ? value as CollaboratorRole : "friend_or_family";
-}
-
-function toAccessActivationStatus(value: string | null): AccessActivationStatus {
-  const allowed: AccessActivationStatus[] = ["invited", "accepted", "pending_verification", "verification_submitted", "verified", "active", "rejected", "revoked"];
-  return allowed.includes(value as AccessActivationStatus) ? value as AccessActivationStatus : "invited";
 }
 
 function getAccessSectionsForRole(value: string | null): SectionKey[] {

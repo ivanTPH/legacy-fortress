@@ -3852,6 +3852,8 @@ html:not([data-lf-icons-ready="true"]) .lf-icon { color: transparent !important;
 .lf-people-status-chip[data-tone="neutral"] { background: #F3EEEA; color: #3A2C28; }
 .lf-people-status-chip[data-tone="warning"] { background: var(--lf-status-pending-bg); color: var(--lf-status-pending-text); }
 .lf-people-status-chip[data-tone="success"] { background: #E9F3EC; color: #225C3A; }
+.lf-people-status-chip[data-tone="sent"] { background: #FBEDE6; color: #A8431F; font-weight: 600; }
+.lf-people-status-chip[data-tone="success"] { font-weight: 600; }
 
 .lf-auth-subtext {
   margin: 0;

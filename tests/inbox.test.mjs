@@ -13,8 +13,8 @@ test("Inbox, Mail style: categories All / Needs you / Waiting / Updates; badge-l
   assert.match(css, /\.lf-inbox-category\.is-needs\[aria-pressed="true"\]/);
 });
 
-test("one tap goes straight to the thing; only your own tasks, the Will question and the executor/attorney decisions open first", () => {
-  assert.match(panel, /const opensFirst = ownTask \|\| Boolean\(guidance && NAMED_PEOPLE_STEPS\[String\(guidance\.key\)\]\)\n        \|\| \(guidance\?\.key === "will"/);
+test("one tap goes straight to the thing; only your own tasks, the Will question, the executor/attorney decisions and waiting invitations open first", () => {
+  assert.match(panel, /const opensFirst = ownTask \|\| Boolean\(guidance && NAMED_PEOPLE_STEPS\[String\(guidance\.key\)\]\) \|\| Boolean\(waitingInviteContactId\(row\)\)\n        \|\| \(guidance\?\.key === "will"/);
   assert.match(panel, /if \(opensFirst\) setOpened\(key\); else onAction\(row\.actionKey\);/);
   assert.match(panel, /open: \(\) => \{ markRead\(ids\); window\.location\.assign\(latest\.href\); \}/);
   // A tap on your own task never ticks it off; Mark as done is its own button.
@@ -152,4 +152,24 @@ test("delete (bin): updates and own reminders only, with Undo; suggestions can't
   assert.match(del, /\.eq\("category_key", "tasks"\)/);
   assert.match(del, /deleted_at: now/);
   assert.doesNotMatch(del, /\.delete\(\)/, "soft delete only");
+});
+
+test("waiting invitations are handled in place with shared actions (owner, 16 Nov 2026)", () => {
+  const actions = read("lib/contacts/invitationActions.ts");
+  assert.match(actions, /export async function resendWaitingInvitation/);
+  assert.match(actions, /export async function cancelWaitingInvitation/);
+  assert.match(actions, /resend: true/, "resend reuses the invitation and makes a new link");
+  assert.doesNotMatch(actions, /account_access_grants|record_links|permissions_override:/, "invitations never grant access");
+  const people = read("components/contacts/ContactsNetworkWorkspace.tsx");
+  assert.match(people, /cancelWaitingInvitation\(supabase, \{ ownerUserId: ownerId, contactId: contact\.id, invitationId, source: "people_drawer" \}\)/);
+  assert.match(people, /resendWaitingInvitation\(supabase,/);
+  assert.match(people, /label: "Sent", icon: "check", tone: "sent"/);
+  assert.match(people, /label: "Accepted", icon: "check", tone: "success"/);
+  const panel = read("app/(app)/components/dashboard/ActionQueuePanel.tsx");
+  assert.match(panel, /function waitingInviteContactId\(row: ActionCentreRow\)/);
+  assert.match(panel, /<InvitationActions contactId=\{waitingInviteContactId\(openedRow\)!\}/);
+  const named = read("components/inbox/NamedPeoplePanel.tsx");
+  assert.match(named, /<InvitationActions contactId=\{person\.personId\} compact/);
+  const ui = read("components/inbox/InvitationActions.tsx");
+  for (const label of ["Resend", "Change email", "Cancel invitation", "Keep it", "Send to this address"]) assert.ok(ui.includes(label), label);
 });

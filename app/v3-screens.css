@@ -609,3 +609,20 @@ body:has(.lf-inbox-selectbar) .lf-mobile-bottom-nav { display: none; }
 .lf-named-note { font-size: 13px; color: var(--lf-text-secondary); }
 .lf-named-notice { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--lf-inbox-done, #2E7D4F); font-weight: 600; }
 .lf-named-error { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--lf-status-rejected-bg); color: var(--lf-status-rejected-text); }
+/* Waiting invitation in the Inbox (owner, 16 Nov 2026): Resend, Change email, Cancel. */
+.lf-invite-actions { display: grid; gap: 12px; }
+.lf-invite-facts { display: grid; gap: 8px; margin: 0; padding: 12px 14px; border: 1px solid var(--lf-border); border-radius: 12px; background: var(--lf-surface-card); }
+.lf-invite-facts div { display: flex; justify-content: space-between; gap: 12px; }
+.lf-invite-facts dt { color: var(--lf-text-muted); }
+.lf-invite-facts dd { margin: 0; font-weight: 600; text-align: right; overflow-wrap: anywhere; }
+.lf-invite-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.lf-invite-buttons > * { flex: 1 1 140px; }
+.lf-invite-email { display: grid; gap: 8px; }
+.lf-invite-email label { font-weight: 600; }
+.lf-invite-email input { min-height: 48px; padding: 0 12px; border: 1px solid var(--lf-border-input); border-radius: 12px; font: inherit; font-size: 16px; }
+.lf-invite-confirm { display: grid; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--lf-status-rejected-bg); }
+.lf-invite-confirm p { margin: 0; }
+.lf-invite-note { margin: 0; }
+.lf-inbox-secondary.is-danger { color: var(--lf-status-rejected-text); }
+.lf-inbox-danger { min-height: 48px; padding: 0 14px; border: 0; border-radius: 12px; background: var(--lf-status-rejected-text); color: #fff; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
+.lf-inbox-danger:disabled { opacity: 0.6; cursor: progress; }
