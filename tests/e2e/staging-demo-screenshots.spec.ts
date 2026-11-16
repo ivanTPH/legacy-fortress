@@ -607,7 +607,7 @@ test("documents: the free plan accepts the 10th document and refuses the 11th", 
   const owner = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
   const session = await owner.auth.signInWithPassword({ email: EMAIL, password: PASSWORD });
   if (session.error || !session.data.session) throw session.error ?? new Error("no session");
-  await trustSession(owner, session.data.session.access_token);
+  await trustSession(admin, session.data.session.access_token);
   const plan = await admin.from("billing_profiles").select("account_plan,document_packs").eq("user_id", userId).maybeSingle();
   const count = async () => {
     const docs = await admin.from("documents").select("id", { count: "exact", head: true }).eq("owner_user_id", userId).is("deleted_at", null);
