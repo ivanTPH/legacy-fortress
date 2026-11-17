@@ -1899,7 +1899,7 @@ function renderUsers(
 ) {
   return (
     <div style={stackStyle}>
-      <form className="lf-admin-toolbar" role="search" onSubmit={(event) => { event.preventDefault(); void runLookup(); }}>
+      <form className="lf-admin-toolbar lf-admin-toolbar--search" role="search" onSubmit={(event) => { event.preventDefault(); void runLookup(); }}>
         <label className="lf-admin-search"><Icon name="search" size={18} /><span className="lf-visually-hidden">Search customers</span>
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by email or name" />
         </label>

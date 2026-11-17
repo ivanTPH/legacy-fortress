@@ -9,6 +9,7 @@ import Icon from "../../../../components/ui/Icon";
 import SwipeRow from "../../../../components/inbox/SwipeRow";
 import NamedPeoplePanel from "../../../../components/inbox/NamedPeoplePanel";
 import InvitationActions from "../../../../components/inbox/InvitationActions";
+import EarlyAccessActions from "../../../../components/inbox/EarlyAccessActions";
 import { actionReadKey, archivedKeysNow, laterKeysNow, publishNeedsYouCountForCurrentUser, useInboxArchive, useInboxLater, useInboxReads, useInboxUpdates } from "../../../../lib/notifications/inboxUpdates";
 
 type ActionQueuePanelProps = {
@@ -342,6 +343,11 @@ function waitingInviteContactIds(row: ActionCentreRow): string[] {
   if (row.waitingContactIds?.length) return row.waitingContactIds;
   const match = /^contact:manage:(.+)$/.exec(row.actionKey);
   return match && /still needs to accept/.test(row.blockerLabel ?? "") ? [match[1]] : [];
+}
+
+/** "X asked for access now" is answered in the Inbox: Not now here, or choose records on their page (17 Nov 2026). */
+function earlyAccessRequestId(row: ActionCentreRow): string {
+  return /^early-access:(.+)$/.exec(row.actionKey)?.[1] ?? "";
 }
 
 const NAMED_PEOPLE_STEPS: Record<string, "will" | "poa"> = {
@@ -682,6 +688,11 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
                 <NamedPeoplePanel doc={NAMED_PEOPLE_STEPS[String(openedRow.guidanceItem.key)]} onChanged={() => setPeopleChanged(true)} />
                 {/* The step clears itself once everyone is added and invited; closing refreshes the Inbox if anything changed. */}
                 <button type="button" className="lf-inbox-primary" onClick={() => { setOpened(null); if (peopleChanged) window.location.reload(); }}>Done</button>
+              </>
+            ) : earlyAccessRequestId(openedRow) ? (
+              <>
+                <EarlyAccessActions requestId={earlyAccessRequestId(openedRow)} name={openedRow.title.replace(/ asked for access now$/, "")} onAnswered={() => setPeopleChanged(true)} />
+                <button type="button" className="lf-inbox-secondary" onClick={() => { setOpened(null); if (peopleChanged) window.location.reload(); }}>Close</button>
               </>
             ) : waitingInviteContactIds(openedRow).length ? (
               <>

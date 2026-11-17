@@ -9585,3 +9585,9 @@ a.lf-pp-item:hover { background: var(--lf-interaction-hover, #F6EFEA); }
 .lf-admin-account-tag.is-invited { background: #eaf5ee; color: #1f6b3a; border-color: #cfe6d7; }
 .lf-admin-account-tag.is-test { background: #eceae9; color: #5f5653; border-color: #dcd7d5; }
 .lf-admin-inbox-detail .lf-admin-account-tags { margin-left: 6px; vertical-align: middle; }
+
+/* Customer users search: the box fills the row with Search and Refresh beside it (like the Admin Inbox). */
+.lf-admin-toolbar--search { justify-content: flex-start; flex-wrap: nowrap; gap: 8px; }
+.lf-admin-toolbar--search .lf-admin-search { flex: 1 1 auto; }
+.lf-admin-toolbar--search .lf-admin-row-button { min-height: 40px; flex: 0 0 auto; }
+@media (max-width: 640px) { .lf-admin-toolbar--search .lf-admin-row-button { padding: 6px 10px; } }
