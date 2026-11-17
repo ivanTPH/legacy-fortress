@@ -686,3 +686,41 @@ test("invitations: a waiting invitation opens in the Inbox with Resend, Change e
   await shoot(page, "invite-phone-4-people-ticks");
   await context.close();
 });
+
+// Laptop design check (owner report 17 Nov 2026: "big and cramped, icons bigger than they used to be").
+// Measures the rendered sizes on the synthetic account and logs them against the V5.2 tokens; changes nothing.
+test("laptop design measurements", async ({ browser }) => {
+  test.setTimeout(600_000);
+  for (const width of [1440, 1280]) {
+    const context = await browser.newContext({ viewport: { width, height: 860 }, deviceScaleFactor: 2 });
+    const page = await context.newPage();
+    await signIn(page);
+    for (const path of ["/dashboard", "/finances", "/finances/bank", "/legal/wills", "/actions", "/people-access?view=people", "/people-access?view=shared", "/settings"]) {
+      await page.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" });
+      await page.waitForTimeout(4500);
+      const report = await page.evaluate(() => {
+        const r = (el: Element | null) => { if (!el) return null; const b = el.getBoundingClientRect(); const s = getComputedStyle(el); return { w: Math.round(b.width), h: Math.round(b.height), fs: s.fontSize, fw: s.fontWeight, br: s.borderRadius, bg: s.backgroundColor, txt: (el.textContent ?? "").trim().replace(/\s+/g, " ").slice(0, 40) }; };
+        const main = document.querySelector("main") ?? document.body;
+        const sidebar = document.querySelector("aside, nav[aria-label*='Vault' i], .lf-sidebar, .lf-app-sidebar");
+        const navItem = sidebar?.querySelector("a");
+        const topbar = document.querySelector("header");
+        const h1 = main.querySelector("h1");
+        const visible = (el: Element) => { const b = el.getBoundingClientRect(); return b.width > 0 && b.height > 0; };
+        const controls = [...main.querySelectorAll("a, button, summary")].filter(visible).slice(0, 400);
+        const round = controls.filter((el) => { const b = el.getBoundingClientRect(); return Math.abs(b.width - b.height) < 3 && b.width >= 24 && parseFloat(getComputedStyle(el).borderRadius) >= b.width / 2 - 1; }).map(r);
+        const primary = controls.filter((el) => /^(\+ ?)?add\b|^add /i.test((el.textContent ?? "").trim()) && !(Math.abs(el.getBoundingClientRect().width - el.getBoundingClientRect().height) < 3)).map(r);
+        const inkTiles = [...main.querySelectorAll("span, div")].filter((el) => { const b = el.getBoundingClientRect(); const s = getComputedStyle(el); return b.width >= 24 && b.width <= 72 && Math.abs(b.width - b.height) < 3 && (s.backgroundColor === "rgb(43, 23, 20)" || s.backgroundColor === "rgb(255, 255, 255)" && s.borderStyle === "solid" && el.querySelector("img")); }).map(r);
+        const rows = [...main.querySelectorAll("[role='row'], li, article, .lf-pa-person-row, a[class*='row'], button[class*='row']")].filter(visible).slice(0, 6).map((el) => Math.round(el.getBoundingClientRect().height));
+        const bodyText = [...main.querySelectorAll("p, small, span")].filter(visible).slice(0, 60).map((el) => getComputedStyle(el).fontSize);
+        const fontCounts: Record<string, number> = {};
+        for (const size of bodyText) fontCounts[size] = (fontCounts[size] ?? 0) + 1;
+        const content = main.firstElementChild;
+        return { sidebar: r(sidebar), navItem: r(navItem ?? null), navIcon: r(navItem?.querySelector("svg, .material-symbols-rounded, [class*='icon' i]") ?? null), topbar: r(topbar), main: r(main), content: r(content), h1: r(h1), primary: primary.slice(0, 3), round: round.slice(0, 6), inkTiles: inkTiles.slice(0, 6), rows, fontCounts };
+      });
+      console.log(`Design-fit: ${width} ${path} ${JSON.stringify(report)}`);
+      const shot = await page.screenshot({ type: "jpeg", quality: 55 });
+      console.log(`Demo-shot: fit-${width}${path.replace(/[/?=&]+/g, "-")} ${path} ${shot.toString("base64")}`);
+    }
+    await context.close();
+  }
+});
