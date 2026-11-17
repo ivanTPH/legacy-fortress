@@ -1,13 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isTestAccountEmail, listAuthUsersNewestFirst } from "./operations";
 import { DIRECT_ORIGIN, loadAccountOrigins, type AccountOrigin } from "./accountOrigins";
+import { loadHelpMessages } from "./helpMessages";
 
 /**
  * Admin Inbox (owner decision 16 Nov 2026): what happened across customer accounts, newest first, built from what is
  * already recorded. Privacy (owner-approved): account details only. Links and documents are COUNTS per account per
  * day; never the invited person's name or email, never file names, record names, values or contents.
  */
-export type AdminInboxKind = "accounts" | "plans" | "links" | "documents" | "needs";
+export type AdminInboxKind = "accounts" | "plans" | "links" | "documents" | "messages" | "needs";
 export type AdminInboxItem = {
   id: string;
   kind: AdminInboxKind;
@@ -16,6 +17,8 @@ export type AdminInboxItem = {
   at: string;
   href: string;
   accountEmail: string | null;
+  /** Messages only: what the customer wrote to us from Help (they chose to send it to us). */
+  message?: string;
   /** New accounts only: how the account was created, and whether it is a test account. */
   origin?: AccountOrigin;
   isTest?: boolean;
@@ -83,6 +86,13 @@ export async function loadAdminInbox(client: AnyClient, options: { days?: number
     const [userId] = key.split("|");
     if (isTest(userId)) continue;
     items.push({ id: `documents:${key}`, kind: "documents", title: `Added ${group.length} ${group.length === 1 ? "document" : "documents"}`, detail: emailById.get(userId) || "Account", at: latest(group), ...account(userId) });
+  }
+
+  // Messages sent from Help › Contact us (UX review Stage 4). The customer wrote these to us, so the text is shown;
+  // nothing else from their Vault is read. Staff reply to the account email.
+  for (const row of await loadHelpMessages(client, since)) {
+    if (isTest(row.userId)) continue;
+    items.push({ id: `message:${row.id}`, kind: "messages", title: `Message: ${row.topic}`, detail: emailById.get(row.userId) || "Account", message: row.text, at: row.at, ...account(row.userId) });
   }
 
   // Needs you: what's waiting in the review queues (counts; each opens its own page).

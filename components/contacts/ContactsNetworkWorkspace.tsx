@@ -1,5 +1,6 @@
 "use client";
 
+import HelpTip from "../ui/HelpTip";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -1213,8 +1214,8 @@ function PersonDetailDrawer({
           ) : <>
             {/* V5.2 Vault access › N (va-n1): facts, linked records, then Vault access now and later. */}
             <section className="lf-pp-card" aria-label="Connection">
-              <div className="lf-pp-row"><span>Invitation</span><Chip tone={invitation.tone === "warning" ? "warning" : invitation.tone === "danger" ? "danger" : invitation.tone === "success" ? "success" : "neutral"} icon={invitation.icon}>{invitation.label}</Chip></div>
-              <div className="lf-pp-row"><span>Identity</span><Chip tone={getIdentityDisplay(contact) === "Verified" ? "success" : getIdentityDisplay(contact) === "In progress" ? "warning" : "neutral"} icon="verified_user">{getIdentityDisplay(contact) === "Verified" ? "ID verified" : getIdentityDisplay(contact) === "In progress" ? "Checking ID" : "ID not checked"}</Chip></div>
+              <div className="lf-pp-row"><span>Invitation <HelpTip tip="invitation" name={(contact.full_name || "this person").split(" ")[0]} /></span><Chip tone={invitation.tone === "warning" ? "warning" : invitation.tone === "danger" ? "danger" : invitation.tone === "success" ? "success" : "neutral"} icon={invitation.icon}>{invitation.label}</Chip></div>
+              <div className="lf-pp-row"><span>ID check <HelpTip tip="identity" name={(contact.full_name || "this person").split(" ")[0]} /></span><Chip tone={getIdentityDisplay(contact) === "Verified" ? "success" : getIdentityDisplay(contact) === "In progress" ? "warning" : "neutral"} icon="verified_user">{getIdentityDisplay(contact) === "Verified" ? "ID verified" : getIdentityDisplay(contact) === "In progress" ? "Checking ID" : "ID not checked"}</Chip></div>
               {/* Two separate facts, as in Add a person (qi1m): how you know them, and which group they're in. */}
               <div className="lf-pp-row"><span>Relationship</span><span className="lf-pp-value">{humanizeContactTerm(contact.relationship) || "Not added"}{!readOnly ? <> · <button type="button" className="lf-pp-link" onClick={() => setManagementView("relationship")} aria-label="Edit relationship">{contact.relationship ? "Change" : "Add"}</button></> : null}</span></div>
               {contact.contact_role ? <div className="lf-pp-row"><span>Type</span><span className="lf-pp-value">{humanizeContactTerm(contact.contact_role)}</span></div> : null}
@@ -1224,7 +1225,7 @@ function PersonDetailDrawer({
             </section>
             <PersonLinkedRecords contactId={contact.id} ownerUserId={ownerUserId} fallback={relatedContexts} />
             <PersonVaultAccessCard key={`${contact.id}:${accessRevision}`} contactId={contact.id} name={contact.full_name || "this person"} ownerUserId={ownerUserId} readOnly={readOnly} onManageNow={() => setManagementView("access")} />
-            <p className="lf-pp-note"><Icon name="lock" size={16} />Being linked, invited or ID-checked never opens your Vault. Only what you set up here does.</p>
+            <p className="lf-pp-note"><Icon name="lock" size={16} />Being linked, invited or ID-checked never opens your Vault. Only what you set up here does. <HelpTip tip="access" name={(contact.full_name || "this person").split(" ")[0]} /></p>
             {pendingRequestId ? <section className="lf-person-detail-section" aria-label="Request awaiting decision"><h3>Request awaiting decision</h3><p style={drawerExplanationStyle}>Review this person&apos;s request and what they can see now.</p><Link href={`/people-access?view=requests&request=${encodeURIComponent(pendingRequestId)}`} className="lf-pa-text-action">Review request</Link></section> : null}
             {!readOnly ? <button type="button" className="lf-person-remove-link" onClick={() => setManagementView("remove")}>Remove person</button> : null}
           </>}

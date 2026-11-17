@@ -20,9 +20,10 @@ const FILTERS: Array<[AdminInboxKind | "all", string, string]> = [
   ["plans", "Plans", "workspace_premium"],
   ["links", "Links", "link"],
   ["documents", "Documents", "description"],
+  ["messages", "Messages", "mail"],
   ["needs", "Needs you", "priority_high"],
 ];
-const ICONS: Record<AdminInboxKind, string> = { accounts: "person_add", plans: "workspace_premium", links: "link", documents: "description", needs: "priority_high" };
+const ICONS: Record<AdminInboxKind, string> = { accounts: "person_add", plans: "workspace_premium", links: "link", documents: "description", messages: "mail", needs: "priority_high" };
 const READ_KEY = "lf:admin-inbox:read";
 
 function loadRead(): string[] {
@@ -129,6 +130,7 @@ export default function AdminInbox({ authFetch }: { authFetch: (input: string, i
                 <span className="lf-admin-inbox-copy">
                   <span className="lf-admin-inbox-top"><strong>{item.title}</strong><time dateTime={item.at}>{when(item.at)}</time></span>
                   <span className="lf-admin-inbox-detail">{item.detail}{item.kind === "accounts" ? <AdminAccountTags origin={item.origin} isTest={item.isTest} /> : null}</span>
+                  {item.kind === "messages" && item.message ? <span className="lf-admin-inbox-message">{item.message}</span> : null}
                 </span>
                 <Icon name="chevron_right" size={20} />
               </Link>

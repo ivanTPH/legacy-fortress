@@ -9,19 +9,19 @@ import { loadProfileIdentityChip } from "../../../lib/profile/workspace";
 
 const GROUPS = [
   { title: "Account", items: [
-    { href: "/identity/verify?next=%2Fsettings", icon: "verified_user", label: "Verify your ID", description: "Passport or driving licence and a quick selfie" },
-    { href: "/account/security", icon: "lock", label: "Security", description: "Password, two-step verification and devices" },
-    { href: "/account/billing", icon: "receipt_long", label: "Billing and account", description: "Plan and payment details" },
+    { href: "/identity/verify?next=%2Fsettings", icon: "verified_user", label: "Check my ID", description: "Only needed if you’re named in someone else’s Vault" },
+    { href: "/account/security", icon: "lock", label: "Security", description: "Your password, sign-in codes and devices" },
+    { href: "/account/billing", icon: "receipt_long", label: "Billing and account", description: "Your plan and how you pay" },
   ] },
   { title: "Preferences", items: [
-    { href: "/account/my-vault", icon: "apps", label: "My Vault", description: "Choose visible areas and sections" },
-    { href: "/account/appearance", icon: "palette", label: "Appearance", description: "Automatic, Light or Dark on this device" },
-    { href: "/account/accessibility", icon: "accessibility_new", label: "Accessibility", description: "Text, contrast and reading options" },
-    { href: "/account/communications-preferences", icon: "mail", label: "Communications", description: "Choose permitted contact channels" },
-    { href: "/account/reminder-preferences", icon: "notifications", label: "Notifications and reminders", description: "Existing reminder preferences" },
+    { href: "/account/my-vault", icon: "apps", label: "My Vault", description: "Choose which areas you see" },
+    { href: "/account/appearance", icon: "palette", label: "Appearance", description: "Light, dark or match this device" },
+    { href: "/account/accessibility", icon: "accessibility_new", label: "Accessibility", description: "Bigger text, stronger contrast and read aloud" },
+    { href: "/account/communications-preferences", icon: "mail", label: "Communications", description: "Choose how we contact you" },
+    { href: "/account/reminder-preferences", icon: "notifications", label: "Notifications and reminders", description: "Choose when we remind you" },
   ] },
   { title: "Legal", items: [
-    { href: "/account/terms", icon: "description", label: "Terms and conditions", description: "Review account terms" },
+    { href: "/account/terms", icon: "description", label: "Terms and conditions", description: "Read the terms of your account" },
   ] },
 ] as const;
 
@@ -62,6 +62,6 @@ export default function SettingsOverviewPage() {
         <Icon name="chevron_right" size={20} />
       </Link>)}</div>
     </section>)}
-    <Link href="/support" className="lf-v52-settings-support"><Icon name="help" size={20} />Support<Icon name="chevron_right" size={20} /></Link>
+    <Link href="/support" className="lf-v52-settings-support"><Icon name="help" size={20} />Help<Icon name="chevron_right" size={20} /></Link>
   </section>;
 }

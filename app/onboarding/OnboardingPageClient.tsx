@@ -72,7 +72,8 @@ export default function OnboardingPageClient() {
       await bootstrapAuthenticatedUser(supabase, { userId: user.id });
 
       const onboarding = await getOrCreateOnboardingState(supabase, user.id);
-      if (onboarding.is_completed) {
+      // Help › Set up with me (?again=1) lets someone who has finished set-up go through the guide again.
+      if (onboarding.is_completed && searchParams.get("again") !== "1") {
         router.replace("/dashboard");
         return;
       }
