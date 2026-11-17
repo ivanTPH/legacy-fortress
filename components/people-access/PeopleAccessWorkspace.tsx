@@ -12,6 +12,14 @@ import VaultAccessWorkspace from "./VaultAccessWorkspace";
 import Icon from "../ui/Icon";
 import { PageHeader } from "../ui/V3Primitives";
 
+const VIEW_DESCRIPTION: Record<string, string> = {
+  people: "The people in your circle, and whether they’ve joined.",
+  shared: "Who can see your records today.",
+  sharing: "Who can see each record today.",
+  after: "Who gets access after your death, and to what.",
+  requests: "Things waiting for your decision.",
+};
+
 export default function PeopleAccessWorkspace() {
   const pathname = usePathname();
   const router = useRouter();
@@ -21,7 +29,11 @@ export default function PeopleAccessWorkspace() {
   const [pendingByContact, setPendingByContact] = useState<Record<string, string>>({});
   const [requestRevision, setRequestRevision] = useState(0);
   const requestedView = params.get("view");
-  const view = requestedView === "vault-access" ? "vault-access" : requestedView === "sharing" ? "sharing"
+  // Four tabs (owner-approved UX review, Stage 3): People, Shared now, After I die, Requests.
+  // Older links still work: vault-access opens Shared now (early-access requests are answered there); sharing is record by record.
+  const view = requestedView === "after" || requestedView === "later" ? "after"
+    : requestedView === "shared" || requestedView === "vault-access" ? "shared"
+    : requestedView === "sharing" ? "sharing"
     : requestedView === "requests" || ((pathname === "/access-requests" || pathname === "/access") && requestedView !== "people") ? "requests" : "people";
   const addPersonMode = view === "people" && params.get("add") === "1" && !viewer.readOnly;
 
@@ -71,16 +83,17 @@ export default function PeopleAccessWorkspace() {
 
   return <section className={addPersonMode ? "lf-pa-page is-add-person" : "lf-pa-page"}>
     {addPersonMode ? <div className="lf-v52-add-person-page-header"><Link href="/people-access?view=people"><Icon name="chevron_left" size={20} />People</Link><h1>Add a person</h1></div> : <PageHeader
-      title="People & Access"
-      description={view === "vault-access" ? "Who can see your Vault now, and who you’ve arranged access for later." : "Keep relationships, requests and record sharing in one place."}
+      title="People"
+      description={VIEW_DESCRIPTION[view]}
       action={view === "people" && !viewer.readOnly ? <Link className="lf-pa-add" href="/people-access?view=people&group=trusted_contacts&add=1"><Icon name="person_add" size={18} />Add person</Link> : undefined}
     />}
-    {!addPersonMode ? <nav className="lf-pa-tabs" aria-label="People and access views">
+    {!addPersonMode ? <nav className="lf-pa-tabs lf-pa-tabs--four" aria-label="People views">
       <Link href="/people-access?view=people" className={view === "people" ? "is-active" : ""} aria-current={view === "people" ? "page" : undefined}>People</Link>
-      <Link href="/people-access?view=vault-access" className={view === "vault-access" || view === "sharing" ? "is-active" : ""} aria-current={view === "vault-access" || view === "sharing" ? "page" : undefined}>Vault access</Link>
-      <Link href="/people-access?view=requests" className={view === "requests" ? "is-active" : ""} aria-current={view === "requests" ? "page" : undefined}>{/* Design: three tabs; Sharing is reached from Vault access. */}Requests{pendingCount ? <span className="lf-pa-count">{pendingCount}</span> : null}</Link>
+      <Link href="/people-access?view=shared" className={view === "shared" || view === "sharing" ? "is-active" : ""} aria-current={view === "shared" || view === "sharing" ? "page" : undefined}>Shared now</Link>
+      <Link href="/people-access?view=after" className={view === "after" ? "is-active" : ""} aria-current={view === "after" ? "page" : undefined}>After I die</Link>
+      <Link href="/people-access?view=requests" className={view === "requests" ? "is-active" : ""} aria-current={view === "requests" ? "page" : undefined}>Requests{pendingCount ? <span className="lf-pa-count">{pendingCount}</span> : null}</Link>
     </nav> : null}
-    {view === "vault-access" ? <VaultAccessWorkspace /> : view === "requests"
+    {view === "shared" ? <VaultAccessWorkspace mode="now" /> : view === "after" ? <VaultAccessWorkspace mode="later" /> : view === "requests"
       ? <AccessRequestsWorkspace embedded onRequestChanged={() => setRequestRevision((current) => current + 1)} onOpenPerson={(contactId) => router.push(`/people-access?view=people&contact=${encodeURIComponent(contactId)}`)} />
       : <ContactsNetworkWorkspace embedded sharingView={view === "sharing"} basePath="/people-access" pendingByContact={pendingByContact} />}
   </section>;

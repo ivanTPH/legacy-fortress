@@ -18,7 +18,9 @@ test("People I Trust uses compact rows with progressive person details", () => {
   assert.match(contactsWorkspace, /event\.key === "Escape"/);
   assert.match(contactsWorkspace, /onClose=\{closeContact\}/);
   assert.match(contactsWorkspace, /label="Edit"/);
-  assert.match(contactsWorkspace, /label="Send invitation"/);
+  // Invite is a labelled button (UX review Stage 3), not a paper-plane icon.
+  assert.match(contactsWorkspace, /className="lf-contact-invite-button"/);
+  assert.match(contactsWorkspace, /"Sending…" : "Invite"/);
   assert.match(contactsWorkspace, /variant="round"/);
   assert.doesNotMatch(contactsWorkspace, /CONTACTS BUILD CHECK/);
   assert.doesNotMatch(contactsWorkspace, /Linked to record(?!s)/);
@@ -34,7 +36,8 @@ test("People I Trust uses compact rows with progressive person details", () => {
   assert.match(contactsWorkspace, /PersonVaultAccessSummary/);
   // Person panel follows V5.2 Vault access › N (va-n1).
   assert.match(contactsWorkspace, /Linked to records/);
-  assert.match(contactsWorkspace, /Set up Vault access/);
+  assert.match(contactsWorkspace, /Nominate for after I die/);
+  assert.match(contactsWorkspace, /view=after&setup=/);
   assert.match(contactsWorkspace, /Being linked, invited or ID-checked never opens your Vault/);
   assert.match(contactsWorkspace, /Access granted/);
   assert.match(contactsWorkspace, /Edit access/);

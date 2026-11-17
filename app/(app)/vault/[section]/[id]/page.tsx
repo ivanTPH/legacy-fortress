@@ -302,7 +302,7 @@ export default function VaultAssetDetailPage() {
           </section>
 
           <section id="access" className="lf-record-detail-card" style={cardStyle}>
-            <div className="lf-record-detail-card-title"><strong>Who can see this</strong><Link href="/access-sharing">Manage access <Icon name="chevron_right" size={16} /></Link></div>
+            <div className="lf-record-detail-card-title"><strong>Who can see this</strong><Link href={`/access-sharing?record=${encodeURIComponent(id)}`}>Manage access <Icon name="chevron_right" size={16} /></Link></div>
             <p className="lf-record-detail-note">Sharing remains view only and is managed through explicit record grants.</p>
           </section>
 

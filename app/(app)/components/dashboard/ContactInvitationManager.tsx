@@ -299,7 +299,7 @@ export default function ContactInvitationManager({
         : null;
       const managedInvitation = currentEditingRow ?? existingDraftInvitation;
       if (contactOnly && managedInvitation) {
-        setStatus("This person already has an invitation. Open their People & Access profile to manage it.");
+        setStatus("This person already has an invitation. Open them in People to manage it.");
         return;
       }
       const managedInvitationId = editingId ?? existingDraftInvitation?.id ?? null;

@@ -27,7 +27,6 @@ test("asset-class overview pages use the same summary card pattern as finance", 
     legal: files.legal,
     property: files.property,
     business: files.business,
-    personal: files.personal,
     digitalOverview: files.digitalOverview,
     possessionOverview: files.possessionOverview,
   })) {
@@ -57,7 +56,8 @@ test("record workspaces open the add form from add=1 query links", () => {
   assert.match(files.property, /emptyState/);
   assert.match(files.business, /\$\{href\}\?add=1/);
   assert.match(files.business, /CanonicalAssetOverviewGrid/);
-  assert.match(files.personal, /\$\{item\.href\}\?add=1/);
+  // The old Personal overview is retired (UX review Stage 3) and redirects to Possessions.
+  assert.match(files.personal, /redirect\("\/vault\/personal"\)/);
   assert.match(files.digitalOverview, /\/vault\/digital\/records\?add=1&digitalType=/);
   assert.match(files.possessionOverview, /\/vault\/personal\/records\?add=1&possessionCategory=/);
   assert.match(files.digitalRecords, /UniversalRecordWorkspace/);

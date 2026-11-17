@@ -310,13 +310,13 @@ test("design review: people screens on a phone and main pages on desktop", async
   await shoot(phone, "/people-list");
   const firstPerson = phone.locator(".lf-contact-summary-row, [data-contact-id], .lf-pa-person-row").first();
   if (await firstPerson.count()) { await firstPerson.tap().catch(() => null); await phone.waitForTimeout(2000); await shoot(phone, "/person-panel"); }
-  await phone.goto(`${BASE_URL}/people-access?view=vault-access`, { waitUntil: "domcontentloaded" });
+  await phone.goto(`${BASE_URL}/people-access?view=after`, { waitUntil: "domcontentloaded" });
   await phone.waitForTimeout(3000);
   await shoot(phone, "/vault-access");
   await phone.context().close();
   const desktop = await browser.newContext({ viewport: { width: 1280, height: 800 } }).then((context) => context.newPage());
   await signIn(desktop, users[2].email, "/dashboard");
-  for (const path of ["/dashboard", "/finances", "/legal", "/legal/power-of-attorney", "/people-access?view=vault-access"]) {
+  for (const path of ["/dashboard", "/finances", "/legal", "/legal/power-of-attorney", "/people-access?view=shared", "/people-access?view=after"]) {
     await desktop.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" });
     await desktop.waitForTimeout(3500);
     await shoot(desktop, `/desk${path}`);

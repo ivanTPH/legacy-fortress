@@ -370,7 +370,7 @@ export function getSupportOperationalState(invitationStatus: string, activationS
 
 export function getSupportNextStep(invitationStatus: string, activationStatus: string) {
   const state = getSupportOperationalState(invitationStatus, activationStatus);
-  if (state === "terminal") return "This invitation is closed. The Vault owner can send a new one from People & Access.";
+  if (state === "terminal") return "This invitation is closed. The Vault owner can send a new one from People.";
   if (state === "verification_required") return "Waiting for an identity check. Access stays closed until it’s approved.";
   return "Resend the invitation, or open the case to see what happened.";
 }

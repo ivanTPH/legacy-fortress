@@ -128,7 +128,7 @@ export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
   },
   {
     id: "people-contacts",
-    label: "People & Access",
+    label: "People",
     path: "/people-access",
     icon: <ContactsIcon />,
     enabled: on,

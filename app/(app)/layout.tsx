@@ -1295,7 +1295,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                 onNavigate={() => closeNavigationState("item_select")}
                 />
                 <div className="lf-mobile-drawer-footer">
-                {canViewPath("/people-access", resolvedViewerAccess) ? <Link href="/people-access" className="lf-mobile-drawer-support" onClick={() => closeNavigationState("item_select")}><Icon name="group" size={20} />People &amp; Access</Link> : null}
+                {canViewPath("/people-access", resolvedViewerAccess) ? <Link href="/people-access" className="lf-mobile-drawer-support" onClick={() => closeNavigationState("item_select")}><Icon name="group" size={20} />People</Link> : null}
                 {accountItems.some((item) => item.id === "support") ? <Link href="/support" className="lf-mobile-drawer-support" onClick={() => closeNavigationState("item_select")}><Icon name="help" size={20} />Support</Link> : null}
                 {canViewPath("/settings", resolvedViewerAccess) ? <Link href="/settings" className="lf-mobile-drawer-support" onClick={() => closeNavigationState("item_select")}><Icon name="settings" size={20} />Settings</Link> : null}
                 <WorkspaceAccountLinks current="vault" linkClassName="lf-mobile-drawer-support" iconSize={20} asMenuItems={false} onNavigate={() => closeNavigationState("item_select")} />
