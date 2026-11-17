@@ -240,6 +240,16 @@ function housekeepingSteps(facts: VaultFacts, now: Date): NextStep[] {
     description: "A new account, a house move, a new policy or a change of executor? Two minutes now saves your family hours later.",
     actionLabel: "Review my Vault", href: "/dashboard", dismissLabel: "Nothing has changed",
   }));
+  // Bank details, yearly (owner decision 17 Nov 2026): counted from the last time any bank account was added or edited.
+  const banks = getAssetsForBucket(rows, "finance").filter((row) => text(row.category_key) === "bank");
+  const bankTimes = banks.map((row) => Date.parse(String(row.updated_at ?? row.created_at ?? ""))).filter(Number.isFinite);
+  if (bankTimes.length && now.getTime() - Math.max(...bankTimes) > 365 * 86400000) steps.push(step({
+    key: "bank_details_current", category: "Finances", priority: "medium",
+    title: banks.length === 1 ? "Are your bank account details still correct?" : `Are your ${banks.length} bank accounts still correct?`,
+    emailTitle: "Check your bank details are still correct",
+    description: "Accounts get closed, switched or renamed. If anything has changed, update it so your family isn't chasing an old account.",
+    actionLabel: "Check my bank accounts", href: "/finances/bank", dismissLabel: "Yes, still correct",
+  }));
   // The Will check counts from the Will's own date (read from the document and confirmed), every 3 years.
   const wills = rows.filter((row) => assetMatchesLegalCategory(row, "wills"));
   const willDates = wills.map((row) => willDateOf(row)).filter((value): value is { time: number; signed: boolean } => Boolean(value));
