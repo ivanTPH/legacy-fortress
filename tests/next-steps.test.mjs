@@ -169,3 +169,17 @@ test("calm: up to 3 at a time while setting up, critical first; one at a time on
   assert.ok(settled.steps.length <= 1);
   assert.ok(settled.all.length >= settled.steps.length);
 });
+
+test("bank details: a yearly check once accounts are a year old; 'Yes, still correct' brings it back in a year", () => {
+  const bank = { id: "b9", kind: "asset", section_key: "finances", category_key: "bank", title: "HSBC", status: "active", metadata_json: { bank_account_type: "current_account" }, created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" };
+  const fresh = { ...bank, updated_at: new Date(now.getTime() - 30 * day).toISOString() };
+  assert.ok(!keys(buildNextSteps({ ...base(), rows: [will, fresh] }, undefined, now)).includes("bank_details_current"), "recently edited: no check");
+  const plan = planNextSteps({ ...base(), rows: [will, bank] }, undefined, now);
+  const item = plan.all.find((step) => step.key === "bank_details_current");
+  assert.ok(item, "over a year old: asks");
+  assert.equal(item.dismissLabel, "Yes, still correct");
+  assert.equal(item.href, "/finances/bank");
+  const prefs = prefsAfter("bank_details_current", "already_done", now);
+  assert.ok(!planNextSteps({ ...base(), rows: [will, bank] }, prefs, new Date(now.getTime() + 100 * day)).all.some((step) => step.key === "bank_details_current"));
+  assert.ok(planNextSteps({ ...base(), rows: [will, bank] }, prefs, new Date(now.getTime() + 370 * day)).all.some((step) => step.key === "bank_details_current"));
+});
