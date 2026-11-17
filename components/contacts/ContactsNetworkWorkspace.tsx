@@ -679,22 +679,22 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
           <label style={contactSearchFieldStyle}>
             <span style={contactSearchLabelStyle}>
               <Icon name="search" size={16} />
-              Search contacts
+              Search people
             </span>
             <input
               style={contactSearchInputStyle}
-              placeholder="Search name, email, role, or linked record..."
+              placeholder="Search people"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
           </label>
           {embedded ? <details ref={peopleFilterRef} className="lf-v51-people-filter">
-            <summary aria-label="Filter people by role"><Icon name="tune" size={20} /></summary>
+            <summary aria-label="Filter people by role"><Icon name="tune" size={20} /><span className="lf-v51-people-tool-label">Filter</span></summary>
             <div role="group" aria-label="Filter people by role">
               {[["all", "All"], ["executors", "Executors"], ["family", "Family"], ["advisors", "Advisers"], ["not_invited", "Not invited"]].map(([key, label]) => <button key={key} type="button" aria-pressed={roleFilter === key} onClick={() => { setRoleFilter(key); if (peopleFilterRef.current) peopleFilterRef.current.open = false; }}>{label}</button>)}
             </div>
           </details> : null}
-          {embedded && !viewer.readOnly ? <Link className="lf-v51-people-add" href={`${basePath}?view=people&group=trusted_contacts&add=1`} aria-label="Add person"><Icon name="person_add" size={20} /></Link> : null}
+          {embedded && !viewer.readOnly ? <Link className="lf-v51-people-add" href={`${basePath}?view=people&group=trusted_contacts&add=1`}><Icon name="person_add" size={20} /><span className="lf-v51-people-tool-label">Add person</span></Link> : null}
           {!embedded && !viewer.readOnly ? (
             <button
               type="button"
@@ -706,7 +706,7 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
               Add person
             </button>
           ) : null}
-          {!embedded && !viewer.readOnly ? <Link href="/access-sharing" className="lf-access-sharing-link">Access &amp; Sharing</Link> : null}
+          {!embedded && !viewer.readOnly ? <Link href="/people-access?view=shared" className="lf-access-sharing-link">Shared now</Link> : null}
         </div>
       </section> : null}
       {embedded && !addContactGroupKey && !sharingView ? <div className="lf-pa-role-filters lf-v51-desktop-role-filters" role="group" aria-label="Filter people by role">
@@ -806,14 +806,13 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
                         </button>
                         <div className="lf-contact-summary-action">
                           {contact.invite_status === "not_invited" && contact.email && !viewer.readOnly ? (
-                            <IconButton
-                              icon="send"
-                              label="Send invitation"
-                              variant="round"
-                              className="lf-contact-send-button"
+                            <button
+                              type="button"
+                              className="lf-contact-invite-button"
+                              aria-label={`Invite ${contact.full_name || "this person"}`}
                               disabled={sendingInviteId === contact.id}
                               onClick={() => { void sendExistingContactInvite(contact); }}
-                            />
+                            ><Icon name="send" size={16} />{sendingInviteId === contact.id ? "Sending…" : "Invite"}</button>
                           ) : null}
                           <IconButton
                             icon="key"
@@ -841,7 +840,10 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
         </div>
       ) : null}
       {!loading && sharingView ? <section className="lf-pa-sharing" aria-label="Record sharing overview">
-        <p>Selected records appear below. A check means the person can currently view the record; a pending status means selection alone has not unlocked access. New records are never shared automatically.</p>
+        <details className="lf-pa-info">
+          <summary><Icon name="info" size={18} />What the ticks mean</summary>
+          <p>A tick means the person can see that record now. “Not yet accessible” means you’ve chosen the record but they can’t open it yet, usually because they haven’t joined. New records are never shared automatically.</p>
+        </details>
         {accessByContact === null || sharingError ? <span role="status">Sharing details are unavailable right now.</span> : sharingResources === null ? <span role="status">Loading record sharing…</span> : !sharingGroups.length ? <EmptyState icon="visibility_off" title="No records selected for sharing" description="Choose a person and grant access to an individual record when you are ready." /> : <div className="lf-pa-sharing-scroll" tabIndex={0} aria-label="Record sharing matrix, scroll horizontally for more people"><div className="lf-pa-sharing-matrix" role="table" aria-label="Who can see each record" style={{ gridTemplateColumns: `minmax(220px, 1fr) repeat(${sharingPeople.length}, minmax(120px, 140px))`, minWidth: 220 + sharingPeople.length * 120 }}>
           <div className="lf-pa-sharing-matrix-row lf-pa-sharing-matrix-head" role="row" style={{ display: "contents" }}><span role="columnheader">Record</span>{sharingPeople.map((contact) => <span role="columnheader" key={contact.id}><strong>{contact.full_name || "Unnamed person"}</strong><Link href={`/people-access?view=people&contact=${encodeURIComponent(contact.id)}&access=1`}>Edit</Link></span>)}</div>
           {sharingGroups.map(([sectionKey, resources]) => <div key={sectionKey} role="rowgroup" style={{ display: "contents" }}><h2 className="lf-pa-sharing-matrix-section" style={{ gridColumn: `1 / span ${sharingPeople.length + 1}` }}>{accessSectionLabel(sectionKey)}</h2>{resources.map((resource) => <div key={resource.key} className="lf-pa-sharing-record" role="row" style={{ display: "contents" }}><strong role="rowheader">{resource.label}</strong>{sharingPeople.map((contact) => {
@@ -1017,11 +1019,11 @@ function PersonVaultAccessCard({ contactId, name, ownerUserId, readOnly, onManag
   return <section className="lf-pp-group" aria-labelledby={`pp-va-${contactId}`}>
     <h3 id={`pp-va-${contactId}`}>Vault access</h3>
     {failed ? <p className="lf-pp-muted">Vault access couldn’t be loaded. Try again shortly.</p> : <div className="lf-pp-card">
-      <div className="lf-pp-item"><span className="lf-pp-icon" aria-hidden="true"><Icon name={nowCount ? "visibility" : "visibility_off"} size={20} /></span><span className="lf-pp-text"><strong>Now</strong><small>{snapshot === null ? "Loading…" : nowCount ? `${first} can see ${nowCount} record${nowCount === 1 ? "" : "s"}${openGrant?.endsAt ? ` until ${new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(openGrant.endsAt))}` : ""}.` : `${first} can’t see any of your records.`}</small></span>{snapshot ? <Chip tone={nowCount ? "success" : "neutral"} icon={nowCount ? "visibility" : "lock"}>{nowCount ? `Can see ${nowCount}` : "No access"}</Chip> : null}</div>
-      <div className="lf-pp-item"><span className="lf-pp-icon" aria-hidden="true"><Icon name="event" size={20} /></span><span className="lf-pp-text"><strong>Later</strong><small>{snapshot === null ? "Loading…" : nomination ? `After your death · ${nomination.scope === "whole_vault" ? `whole Vault${nomination.exceptionCount ? `, except ${nomination.exceptionCount}` : ""}` : `${nomination.includeCount} record${nomination.includeCount === 1 ? "" : "s"}`} · view only` : authority ? `Power of Attorney · ${authorityInEffect ? "in effect" : "not in effect yet"}` : "No access arranged for after your death."}</small></span>{snapshot ? nomination ? <Chip tone="neutral" icon="bookmark">Nominated</Chip> : authority ? <Chip tone={authorityInEffect ? "success" : "neutral"} icon="gavel">{authorityInEffect ? "In effect" : "Not in effect"}</Chip> : <Chip tone="neutral">Not nominated</Chip> : null}</div>
+      <div className="lf-pp-item"><span className="lf-pp-icon" aria-hidden="true"><Icon name={nowCount ? "visibility" : "visibility_off"} size={20} /></span><span className="lf-pp-text"><strong>Shared now</strong><small>{snapshot === null ? "Loading…" : nowCount ? `${first} can see ${nowCount} record${nowCount === 1 ? "" : "s"}${openGrant?.endsAt ? ` until ${new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(openGrant.endsAt))}` : ""}.` : `${first} can’t see any of your records.`}</small></span>{snapshot ? <Chip tone={nowCount ? "success" : "neutral"} icon={nowCount ? "visibility" : "lock"}>{nowCount ? `Can see ${nowCount}` : "No access"}</Chip> : null}</div>
+      <div className="lf-pp-item"><span className="lf-pp-icon" aria-hidden="true"><Icon name="event" size={20} /></span><span className="lf-pp-text"><strong>After I die</strong><small>{snapshot === null ? "Loading…" : nomination ? `After your death · ${nomination.scope === "whole_vault" ? `whole Vault${nomination.exceptionCount ? `, except ${nomination.exceptionCount}` : ""}` : `${nomination.includeCount} record${nomination.includeCount === 1 ? "" : "s"}`} · view only` : authority ? `Power of Attorney · ${authorityInEffect ? "in effect" : "not in effect yet"}` : "No access arranged for after your death."}</small></span>{snapshot ? nomination ? <Chip tone="neutral" icon="bookmark">Nominated</Chip> : authority ? <Chip tone={authorityInEffect ? "success" : "neutral"} icon="gavel">{authorityInEffect ? "In effect" : "Not in effect"}</Chip> : <Chip tone="neutral">Not nominated</Chip> : null}</div>
     </div>}
     {!readOnly ? <div className="lf-pp-actions">
-      <Link className="lf-pp-primary" href={`/people-access?view=vault-access&setup=${encodeURIComponent(contactId)}`}><Icon name="key" size={18} />{nomination || authority || nowCount ? "Change Vault access" : "Set up Vault access"}</Link>
+      <Link className="lf-pp-primary" href={`/people-access?view=after&setup=${encodeURIComponent(contactId)}`}><Icon name="bookmark" size={18} />{nomination ? "Change what they get after I die" : "Nominate for after I die"}</Link>
       <button type="button" className="lf-pp-secondary" onClick={() => { if (nowCount) onManageNow(); else void requirePremium("sharing").then((ok) => { if (ok) onManageNow(); }); }}>{nowCount ? "Change what they see now" : "Share records now"}</button>
     </div> : null}
   </section>;
@@ -1223,7 +1225,7 @@ function PersonDetailDrawer({
             <PersonLinkedRecords contactId={contact.id} ownerUserId={ownerUserId} fallback={relatedContexts} />
             <PersonVaultAccessCard key={`${contact.id}:${accessRevision}`} contactId={contact.id} name={contact.full_name || "this person"} ownerUserId={ownerUserId} readOnly={readOnly} onManageNow={() => setManagementView("access")} />
             <p className="lf-pp-note"><Icon name="lock" size={16} />Being linked, invited or ID-checked never opens your Vault. Only what you set up here does.</p>
-            {pendingRequestId ? <section className="lf-person-detail-section" aria-label="Request awaiting decision"><h3>Request awaiting decision</h3><p style={drawerExplanationStyle}>Review this person&apos;s request and current sharing in People &amp; Access.</p><Link href={`/people-access?view=requests&request=${encodeURIComponent(pendingRequestId)}`} className="lf-pa-text-action">Review request</Link></section> : null}
+            {pendingRequestId ? <section className="lf-person-detail-section" aria-label="Request awaiting decision"><h3>Request awaiting decision</h3><p style={drawerExplanationStyle}>Review this person&apos;s request and what they can see now.</p><Link href={`/people-access?view=requests&request=${encodeURIComponent(pendingRequestId)}`} className="lf-pa-text-action">Review request</Link></section> : null}
             {!readOnly ? <button type="button" className="lf-person-remove-link" onClick={() => setManagementView("remove")}>Remove person</button> : null}
           </>}
         </div>
@@ -1889,10 +1891,13 @@ function getAssociationState(contact: ContactRow, validationSourceText: Record<s
   return { label: `${contexts.length} related records`, tone: "success" as const };
 }
 
+/** One relationship, then a role only when it means something ("Wife · Executor"), not "Spouse Partner · Friend or family". */
+const GENERIC_ROLES = new Set(["friend_or_family", "trusted_contact", "contact", "other", ""]);
 function formatContactRoleLine(contact: ContactRow) {
   const relationship = humanizeContactTerm(contact.relationship);
-  const role = humanizeContactTerm(contact.contact_role);
-  return [relationship, role && role !== relationship ? role : ""].filter(Boolean).join(" · ") || "Relationship not set";
+  const roleKey = String(contact.contact_role ?? "").trim().toLowerCase();
+  const role = GENERIC_ROLES.has(roleKey) ? "" : humanizeContactTerm(contact.contact_role);
+  return [relationship || humanizeContactTerm(contact.contact_role), role && role !== relationship ? role : ""].filter(Boolean).join(" · ") || "Relationship not set";
 }
 
 function getRelationshipDocumentLabel(contact: ContactRow) {
@@ -1909,6 +1914,9 @@ function humanizeContactTerm(value: string | null | undefined) {
   const labels: Record<string, string> = {
     friend_or_family: "Friend or family",
     trusted_contact: "Trusted contact",
+    spouse_partner: "Spouse or partner",
+    spouse: "Spouse",
+    partner: "Partner",
     next_of_kin: "Next of kin",
     executor: "Executor",
     attorney: "Attorney",

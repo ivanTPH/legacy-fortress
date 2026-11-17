@@ -39,7 +39,12 @@ test("the Vault access screen says Access now: none and saves through the one-st
   assert.match(ui, /grant of probate is confirmed/);
   assert.match(service, /rpc\("lf_save_vault_nomination"/);
   assertOnlyEndDateGrantWrites(service);
-  assert.match(read("components/people-access/PeopleAccessWorkspace.tsx"), /view=vault-access/);
+  const shell = read("components/people-access/PeopleAccessWorkspace.tsx");
+  // Four tabs (UX review Stage 3); older vault-access links still open Shared now.
+  for (const label of [">People<", ">Shared now<", ">After I die<", ">Requests"]) assert.ok(shell.includes(label), label);
+  assert.match(shell, /requestedView === "shared" \|\| requestedView === "vault-access" \? "shared"/);
+  assert.match(ui, /No one can see your records yet/);
+  assert.match(ui, /No one is nominated yet/);
 });
 
 test("recording a Power of Attorney gives no access and can only narrow", () => {

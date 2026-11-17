@@ -183,7 +183,7 @@ function peopleSteps(facts: VaultFacts, now: Date): NextStep[] {
         title: `Choose what ${names(toNominate.map((person) => person.name))} should receive after your death`,
         emailTitle: "Choose what your executors receive after your death",
         description: "Nominate them for later. Nothing opens until after your death, and only after checks.",
-        actionLabel: "Choose", href: "/people-access?view=vault",
+        actionLabel: "Choose", href: "/people-access?view=after",
       }));
     }
   };

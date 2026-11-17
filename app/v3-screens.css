@@ -628,3 +628,26 @@ body:has(.lf-inbox-selectbar) .lf-mobile-bottom-nav { display: none; }
 .lf-inbox-secondary.is-danger { color: var(--lf-status-rejected-text); }
 .lf-inbox-danger { min-height: 48px; padding: 0 14px; border: 0; border-radius: 12px; background: var(--lf-status-rejected-text); color: #fff; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
 .lf-inbox-danger:disabled { opacity: 0.6; cursor: progress; }
+
+/* People, four tabs (owner-approved UX review, Stage 3). Laptop: underlined tabs; phone: four equal segments. */
+@media (max-width: 767px) {
+  .lf-pa-tabs.lf-pa-tabs--four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .lf-pa-tabs.lf-pa-tabs--four a { font-size: 13px; padding-inline: 2px; }
+  /* Search on its own row; Filter and Add person as labelled buttons under it. */
+  .lf-v51-people-toolbar > div { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "search search search" ". filter add"; }
+  .lf-v51-people-toolbar > div > label { grid-area: search; }
+  .lf-v51-people-filter { grid-area: filter; }
+  .lf-v51-people-add { grid-area: add; }
+  .lf-v51-people-filter summary, .lf-v51-people-add { display: inline-flex; gap: 6px; align-items: center; width: auto; padding: 0 14px; border-radius: 22px; font-size: 15px; font-weight: 600; }
+}
+.lf-v51-people-tool-label { white-space: nowrap; }
+/* Invite: a labelled button, not a paper-plane icon. */
+.lf-contact-invite-button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; border: 1px solid var(--lf-ink); border-radius: 18px; background: var(--lf-ink); color: var(--lf-primary-text, #fff); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.lf-contact-invite-button:hover, .lf-contact-invite-button:focus-visible { background: var(--lf-ink-hover); border-color: var(--lf-ink-hover); }
+.lf-contact-invite-button:disabled { opacity: .6; cursor: progress; }
+@media (max-width: 767px) { .lf-pa-person-row .lf-contact-invite-button { min-height: 44px; border-radius: 22px; } }
+/* "What the ticks mean": rules text behind an info button. */
+.lf-pa-info { margin: 0 0 12px; }
+.lf-pa-info summary { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; color: var(--lf-text-secondary); font-size: 14px; cursor: pointer; list-style: none; }
+.lf-pa-info summary::-webkit-details-marker { display: none; }
+.lf-pa-info p { margin: 4px 0 0; max-width: 64ch; color: var(--lf-text-secondary); font-size: 14px; line-height: 1.5; }

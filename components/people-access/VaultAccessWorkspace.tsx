@@ -45,7 +45,7 @@ import {
 import Icon from "../ui/Icon";
 
 /**
- * People & Access › Vault access (V5.2 Vault Access va-w1–w4).
+ * People › Shared now and After I die (V5.2 Vault Access va-w1–w4, split into two tabs in UX review Stage 3).
  * Lists who can see now, who is nominated for later, legal authorities and ended access.
  * Nominating never gives access; every confirmation says "Access now: none".
  */
@@ -61,9 +61,21 @@ type Row = {
   nomination?: VaultNomination;
 };
 
-const GROUP_TITLE: Record<Row["group"], string> = { now: "Can see now", later: "Nominated for later", authority: "Legal authority", ended: "Ended" };
+const GROUP_TITLE: Record<Row["group"], string> = { now: "Can see now", later: "Nominated", authority: "Power of Attorney", ended: "Ended" };
 
-export default function VaultAccessWorkspace() {
+/** A sentence, not a row of zeros (owner-approved UX review, Stage 3). */
+function summarySentence(mode: "now" | "later", counts: { now: number; later: number; authority: number }) {
+  const people = (count: number) => `${count} ${count === 1 ? "person" : "people"}`;
+  if (mode === "later") return counts.later ? `${people(counts.later)} nominated. None of them can see anything today.` : "No one is nominated for after your death yet.";
+  const parts = [counts.now ? `${people(counts.now)} can see records now` : "No one can see your records yet"];
+  if (counts.authority) parts.push(`${counts.authority} Power of Attorney ${counts.authority === 1 ? "is" : "are"} recorded`);
+  return `${parts.join(". ")}.`;
+}
+
+/** Shared now: records shared today, legal authorities and ended sharing. After I die: nominations, including ended ones. */
+const MODE_GROUPS: Record<"now" | "later", Array<Row["group"]>> = { now: ["now", "authority", "ended"], later: ["later", "ended"] };
+
+export default function VaultAccessWorkspace({ mode = "now" }: { mode?: "now" | "later" }) {
   const [ownerId, setOwnerId] = useState("");
   const [available, setAvailable] = useState<boolean | null>(null);
   const [snapshot, setSnapshot] = useState<VaultAccessSnapshot | null>(null);
@@ -148,6 +160,9 @@ export default function VaultAccessWorkspace() {
     return out;
   }, [snapshot]);
 
+  // Each tab shows only its own rows; "ended" nominations belong to After I die, ended sharing to Shared now.
+  const visibleRows = rows.filter((row) => MODE_GROUPS[mode].includes(row.group)
+    && (row.group !== "ended" || (mode === "later" ? row.key.startsWith("nom-") : !row.key.startsWith("nom-"))));
   const panelRow = rows.find((row) => row.key === panelKey);
   const openRequest = requests.find((item) => item.id === requestId);
   const counts = {
@@ -177,18 +192,20 @@ export default function VaultAccessWorkspace() {
   return (
     <section className="lf-va" aria-label="Vault access">
       <div className="lf-va-toolbar">
-        <p className="lf-va-summary">{counts.now} can see records now · {counts.later} nominated for later · {counts.authority} legal {counts.authority === 1 ? "authority" : "authorities"} · {counts.ended} ended</p>
-        <button type="button" className="lf-va-primary" onClick={() => setSetupOpen(true)}><Icon name="key" size={18} />Set up Vault access</button>
-        <Link href="/people-access?view=sharing" className="lf-va-link-row"><Icon name="share" size={18} />Records you’ve shared, record by record<Icon name="chevron_right" size={18} /></Link>
+        {visibleRows.length ? <p className="lf-va-summary">{summarySentence(mode, counts)}</p> : <span />}
+        <button type="button" className="lf-va-primary" onClick={() => setSetupOpen(true)}><Icon name={mode === "now" ? "share" : "bookmark"} size={18} />{mode === "now" ? "Share records" : "Nominate someone"}</button>
+        {mode === "now" ? <Link href="/people-access?view=sharing" className="lf-va-link-row"><Icon name="table_view" size={18} />See each record and who can see it<Icon name="chevron_right" size={18} /></Link> : null}
       </div>
       {error ? <p className="lf-va-error" role="alert">{error}</p> : null}
-      {rows.length === 0 ? (
-        <div className="lf-va-empty"><Icon name="key" size={22} /><div><strong>No one has Vault access</strong><p>Nominate someone to see your Vault after your death, or share selected records now. Nominating never gives access straight away.</p></div></div>
+      {visibleRows.length === 0 ? (
+        mode === "now"
+          ? <div className="lf-va-empty"><Icon name="visibility_off" size={22} /><div><strong>No one can see your records yet</strong><p>When you’re ready, choose a person and the exact records they can see. New records are never shared automatically.</p></div></div>
+          : <div className="lf-va-empty"><Icon name="bookmark" size={22} /><div><strong>No one is nominated yet</strong><p>Choose who should see your Vault after your death, and what they get. Nominating never gives access straight away: it opens only after the death is verified and probate is confirmed.</p></div></div>
       ) : (
-        <div className="lf-va-card" role="table" aria-label="Vault access">
+        <div className="lf-va-card" role="table" aria-label={mode === "now" ? "Shared now" : "After I die"}>
           <div className="lf-va-head" role="row"><span role="columnheader">Person</span><span role="columnheader">Covers</span><span role="columnheader">Kind and condition</span><span role="columnheader">Status</span><span aria-hidden="true" /></div>
-          {(["now", "later", "authority", "ended"] as const).map((group) => {
-            const groupRows = rows.filter((row) => row.group === group);
+          {MODE_GROUPS[mode].map((group) => {
+            const groupRows = visibleRows.filter((row) => row.group === group);
             if (!groupRows.length) return null;
             return (
               <div key={group} role="rowgroup">
@@ -214,7 +231,7 @@ export default function VaultAccessWorkspace() {
         </SidePanel>
       ) : null}
 
-      {setupOpen && snapshot ? <SetupDialog initialPersonId={initialSetupPerson} snapshot={snapshot} ownerId={ownerId} onClose={() => setSetupOpen(false)} onSaved={async (message) => { setSetupOpen(false); setToast(message); await reload(); }} onAttorney={(personId) => { setSetupOpen(false); setAttorneyFor(personId); }} /> : null}
+      {setupOpen && snapshot ? <SetupDialog initialKind={mode} initialPersonId={initialSetupPerson} snapshot={snapshot} ownerId={ownerId} onClose={() => setSetupOpen(false)} onSaved={async (message) => { setSetupOpen(false); setToast(message); await reload(); }} onAttorney={(personId) => { setSetupOpen(false); setAttorneyFor(personId); }} /> : null}
       {attorneyFor ? <AttorneyDialog snapshot={snapshot} ownerId={ownerId} personId={attorneyFor} onClose={() => setAttorneyFor("")} onSaved={async (message) => { setAttorneyFor(""); setToast(message); await reload(); }} /> : null}
 
       {confirmCancel ? (
@@ -291,10 +308,10 @@ function PersonAccess({ row, snapshot, ownerId, onCancel, onWithdraw, onChanged 
   );
 }
 
-function SetupDialog({ snapshot, ownerId, onClose, onSaved, onAttorney, initialPersonId = "" }: { snapshot: VaultAccessSnapshot; ownerId: string; onClose: () => void; onSaved: (message: string) => void | Promise<void>; onAttorney: (personId: string) => void; initialPersonId?: string }) {
+function SetupDialog({ snapshot, ownerId, onClose, onSaved, onAttorney, initialPersonId = "", initialKind = "later" }: { snapshot: VaultAccessSnapshot; ownerId: string; onClose: () => void; onSaved: (message: string) => void | Promise<void>; onAttorney: (personId: string) => void; initialPersonId?: string; initialKind?: "later" | "now" }) {
   const [step, setStep] = useState(1);
   const [personId, setPersonId] = useState(() => snapshot.people.some((person) => person.id === initialPersonId) ? initialPersonId : "");
-  const [kind, setKind] = useState<"later" | "now" | "attorney" | "contact">("later");
+  const [kind, setKind] = useState<"later" | "now" | "attorney" | "contact">(initialKind);
   const [scope, setScope] = useState<"whole_vault" | "selected">("whole_vault");
   const [options, setOptions] = useState<VaultRecordOption[] | null>(null);
   const [chosen, setChosen] = useState<string[]>([]);

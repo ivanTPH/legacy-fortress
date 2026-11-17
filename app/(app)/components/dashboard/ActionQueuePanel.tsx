@@ -1066,7 +1066,7 @@ function buildDashboardActionRows(context?: ActionCentreContext): ActionCentreRo
     seeds.push({
       key: `early-access-${request.id}`,
       title: `${first} asked for access now`,
-      stageName: "People & Access",
+      stageName: "People",
       blockerLabel: `${first} is nominated for later and asked to see something now. Nothing changes unless you share.`,
       whyItMatters: "You decide. If you share, you choose exactly which records.",
       status: "Required",

@@ -174,7 +174,7 @@ export function useInboxUpdates(enabled: boolean, reads: ReturnType<typeof useIn
       if (cancelled) return;
       const invitationUpdates = ((result.data ?? []) as EventRow[]).map((event) => {
         const copy = describeInvitationEvent(event.event_type, event.payload ?? null, event.contact_invitations?.contact_name ?? null);
-        return { id: event.id, title: copy.title, detail: copy.detail, href: copy.kind === "access" ? "/access-sharing" : "/people-access?view=people", createdAt: event.created_at, person: event.contact_invitations?.contact_name ?? null };
+        return { id: event.id, title: copy.title, detail: copy.detail, href: copy.kind === "access" ? "/people-access?view=shared" : "/people-access?view=people", createdAt: event.created_at, person: event.contact_invitations?.contact_name ?? null };
       });
       const personUpdates = personal.map((item) => {
         const copy = describePersonNotification(item.kind, item.ownerName ?? null);

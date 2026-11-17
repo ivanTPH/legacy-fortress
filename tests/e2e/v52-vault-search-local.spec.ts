@@ -263,7 +263,7 @@ test.describe("V5.2 authorised local Vault search", () => {
       await expect(drawer.getByRole("link", { name: "Finances" })).toBeVisible();
       await expect(drawer.getByRole("link", { name: "Legal" })).toBeVisible();
       await expect(drawer.getByRole("link", { name: "Finances" })).toBeInViewport();
-      await expect(drawer.getByRole("link", { name: "People & Access" })).toBeVisible();
+      await expect(drawer.getByRole("link", { name: "People", exact: true })).toBeVisible();
       await expect(drawer.getByRole("link", { name: "Settings" })).toBeVisible();
       await expect(page.locator(".lf-mobile-bottom-nav")).toBeVisible();
       const menuGeometry = await drawer.evaluate((element) => {

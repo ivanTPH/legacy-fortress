@@ -99,7 +99,7 @@ test.describe("V3 recovery local owner journey", () => {
     await signIn(page, ownerEmail);
     await page.waitForURL((next) => next.pathname === "/dashboard", { timeout: 20_000 });
     await page.goto("/people-access", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "People & Access" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "People", exact: true })).toBeVisible();
     await page.getByRole("link", { name: "Sharing", exact: true }).click();
     const sharedRecord = page.locator(".lf-pa-sharing-record").filter({ hasText: firstTitle });
     await expect(sharedRecord.getByRole("cell", { name: "Recovery Linked Person: Can view" })).toBeVisible();
@@ -249,7 +249,7 @@ test.describe("V3 recovery local owner journey", () => {
     test.setTimeout(120_000);
     await signIn(page, ownerEmail);
     await page.goto("/people-access?view=people", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "People & Access" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "People", exact: true })).toBeVisible();
     const person = page.getByRole("button", { name: /Open Recovery (Linked|Edited) Person/ });
     await expect(person).toBeVisible();
     await expect(person.getByText("Accepted")).toBeVisible();
@@ -350,7 +350,7 @@ test.describe("V3 recovery local owner journey", () => {
       }
 
       await visit("/people-access?view=people");
-      await expect(page.getByRole("heading", { name: "People & Access" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "People", exact: true })).toBeVisible();
       await page.screenshot({ path: `/private/tmp/lf-v4-${stage}-people-${size}.png`, fullPage: true });
       await page.getByRole("button", { name: /Open Recovery Linked Person/ }).click();
       await expect(page.getByRole("dialog", { name: /Recovery Linked Person/ })).toBeVisible();
@@ -369,12 +369,12 @@ test.describe("V3 recovery local owner journey", () => {
         await page.getByRole("alertdialog").getByRole("button", { name: "Keep access" }).click();
       }
       await visit("/people-access?view=sharing");
-      await expect(page.getByRole("heading", { name: "People & Access" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "People", exact: true })).toBeVisible();
       await expect(page.locator(".lf-pa-sharing-record").filter({ hasText: firstTitle })).toBeVisible();
       if (stage === "after") await expect(page.getByRole("table", { name: "Who can see each record" }).getByRole("cell", { name: "Recovery Linked Person: Can view" })).toBeVisible();
       await page.screenshot({ path: `/private/tmp/lf-v4-${stage}-sharing-${size}.png`, fullPage: true });
       await visit("/people-access?view=requests");
-      await expect(page.getByRole("heading", { name: "People & Access" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "People", exact: true })).toBeVisible();
       await expect(page.locator(".lf-pa-request-row").filter({ hasText: "Recovery Linked Person" })).toBeVisible();
       await page.screenshot({ path: `/private/tmp/lf-v4-${stage}-requests-${size}.png`, fullPage: true });
     } finally {
