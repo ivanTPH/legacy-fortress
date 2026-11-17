@@ -83,7 +83,7 @@ export default function DigitalVaultOverviewPage() {
   return (
     <section className="lf-v3-area-page">
       <PageHeader title="Digital" description="Keep online accounts, subscriptions, platforms and recovery contacts clear for trusted people."
-        action={viewer.mode === "linked" ? undefined : <AddAssetLink href={digitalTiles[0].addHref} />} />
+        action={viewer.mode === "linked" ? undefined : <AddAssetLink href="/add?area=digital" label="Add to Digital" />} />
       <CanonicalAssetOverviewGrid tiles={digitalTiles} />
     </section>
   );

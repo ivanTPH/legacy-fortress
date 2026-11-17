@@ -52,7 +52,8 @@ test("selected overview pages use the shared canonical overview grid", () => {
 test("Phase 4A dashboards keep summaries privacy-safe", () => {
   assert.match(files.component, /filterAssetIdsForViewer/);
   assert.match(files.component, /const recordCount = new Set\(/);
-  assert.match(files.component, /<strong>\{recordCount\}<\/strong>/);
+  // Stage 5: the count is a one-line summary ("3 records"), still counted, never values or names.
+  assert.match(files.component, /\$\{recordCount\} record\$\{recordCount === 1/);
   assert.doesNotMatch(files.component, /<strong>\{row\.value_minor\}<\/strong>/);
   assert.doesNotMatch(files.component, /file_name|storage_path|contact_email|contact_phone|account_number|sort_code/);
   assert.match(files.inventory, /Do not count attachments, filenames, invitation records, contact notes, document contents, account numbers or unrelated owner data/);

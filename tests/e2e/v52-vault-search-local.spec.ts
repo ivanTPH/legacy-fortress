@@ -255,7 +255,7 @@ test.describe("V5.2 authorised local Vault search", () => {
     if (isMobile) {
       await page.setViewportSize({ width: 320, height: 568 });
       await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-      await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Home", exact: true })).toBeVisible();
       await expect(page.getByRole("button", { name: "Toggle navigation menu" })).toBeVisible();
       await page.getByRole("button", { name: "Toggle navigation menu" }).click();
       const drawer = page.getByRole("complementary", { name: "Mobile Navigation" });
@@ -310,7 +310,7 @@ test.describe("V5.2 authorised local Vault search", () => {
     await page.context().addInitScript((session) => localStorage.setItem("sb-127-auth-token", JSON.stringify(session)), signedIn.data.session);
     await page.setViewportSize(isMobile ? { width: 390, height: 844 } : { width: 1440, height: 900 });
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Home", exact: true })).toBeVisible();
     if (!isMobile) {
       const desktopSearch = page.locator(".lf-global-search");
       await expect(desktopSearch).toBeVisible();

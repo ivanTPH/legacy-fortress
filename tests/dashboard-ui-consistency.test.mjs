@@ -233,7 +233,9 @@ test("vault area tiles use Version 3 primitives while the sidebar keeps its work
   assert.match(designSystem, /export function LFVaultAreaTile/);
   assert.match(designSystem, /className=\{`lf-vault-area-tile is-\$\{state\}`\}/);
   assert.match(overview, /<LFVaultAreaTile/);
-  assert.match(canonicalGrid, /<Card/);
+  // Stage 5: a one-line summary like Finances and Legal, not a "Sections 1 of 1" strip.
+  assert.match(canonicalGrid, /lf-v52-legal-summary/);
+  assert.doesNotMatch(canonicalGrid, /Sections<\/span>/);
   assert.match(canonicalGrid, /filterAssetIdsForViewer/);
   assert.doesNotMatch(overview, /className=\{`lf-vault-area-tile/);
   assert.doesNotMatch(canonicalGrid, /className=\{`lf-vault-area-tile/);

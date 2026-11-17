@@ -577,7 +577,8 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
       <div className="lf-inbox-categories" role="group" aria-label="Show" ref={categoriesRef}>
         {([["all", "All", "inbox"], ["needs", "Needs you", "priority_high"], ["waiting", "Waiting", "hourglass_top"], ["update", "Updates", "notifications"], ["archived", "Archived", "archive"]] as const).map(([key, label, icon]) => (
           <button key={key} type="button" className={`lf-inbox-category is-${key}`} aria-pressed={category === key} aria-label={`${label}, ${count(key)}`} onClick={(event) => { setCategory(key); setPicked([]); setSwiped(null); }}>
-            <Icon name={icon} size={20} />{category === key ? <span>{label} {count(key)}</span> : null}
+            {/* Laptop: every filter is labelled. Phone: only the chosen one, to fit (UX review Stage 5). */}
+            <Icon name={icon} size={20} /><span className={category === key ? "is-current" : "lf-inbox-category-label"}>{label}{category === key ? ` ${count(key)}` : ""}</span>
           </button>
         ))}
       </div>

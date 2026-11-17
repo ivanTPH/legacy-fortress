@@ -10,7 +10,7 @@ test("shared topbar owns the main page title and removes the owner padlock icon"
   const dashboard = fs.readFileSync(path.join(root, "app/(app)/dashboard/page.tsx"), "utf8");
   const contacts = fs.readFileSync(path.join(root, "components/contacts/ContactsNetworkWorkspace.tsx"), "utf8");
 
-  assert.match(layout, /normalizedPathname === "\/dashboard"\s*\?\s*"Dashboard"/);
+  assert.match(layout, /normalizedPathname === "\/dashboard"\s*\?\s*"Home"/);
   assert.match(layout, /<Breadcrumbs items=\{topbarBreadcrumbs\} \/>/);
   assert.match(layout, /verified_user/);
   assert.doesNotMatch(layout, /resolvedViewerAccess\.mode === "linked" \? "visibility_lock" : "lock"/);

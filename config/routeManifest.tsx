@@ -31,7 +31,7 @@ const on = true;
 export const APP_ROUTE_MANIFEST: AppRouteNode[] = [
   {
     id: "dashboard",
-    label: "Dashboard",
+    label: "Home",
     path: "/dashboard",
     description: "Overview",
     icon: <DashboardIcon />,

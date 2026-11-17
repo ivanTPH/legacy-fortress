@@ -49,8 +49,9 @@ export function LFPageHeader({
   );
 }
 
-export function AddAssetLink({ href }: { href: string }) {
-  return <Link className="lf-v4-add-asset" href={href} aria-label="Add record" title="Add record"><Icon name="add" size={20} /><span className="lf-v4-add-label">Add record</span></Link>;
+/** The one Add control (UX review Stage 5): a round + on a phone, "+ Add" on a laptop. */
+export function AddAssetLink({ href, label = "Add a record" }: { href: string; label?: string }) {
+  return <Link className="lf-v4-add-asset" href={href} aria-label={label} title={label}><Icon name="add" size={20} /><span className="lf-v4-add-label" aria-hidden="true">Add</span></Link>;
 }
 
 export function AddDocumentControl({ accept, onFilesSelected, disabled = false, multiple = false }: { accept: string; onFilesSelected: (files: File[]) => void; disabled?: boolean; multiple?: boolean }) {

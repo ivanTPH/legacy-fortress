@@ -31,7 +31,7 @@ export default function BusinessOverviewPage() {
   return (
     <section className="lf-v3-area-page">
       <PageHeader title="Business" description="Keep business interests, workplace records and supporting documents clear for future review."
-        action={viewer.mode === "linked" || !businessTiles.length ? undefined : <AddAssetLink href={businessTiles[0].addHref} />} />
+        action={viewer.mode === "linked" || !businessTiles.length ? undefined : <AddAssetLink href="/add?area=business" label="Add to Business" />} />
 
       {showBusinessInterests || showEmployment ? (
         <CanonicalAssetOverviewGrid tiles={businessTiles} extraSections={showEmployment ? [{ key: "employment", title: "Employment", icon: "work", href: "/employment", count: null, description: "Workplace records and benefits" }] : []} />

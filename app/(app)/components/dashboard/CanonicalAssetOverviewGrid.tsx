@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Card } from "../../../../components/ui/V3Primitives";
 import VaultSectionGrid, { type VaultSectionTile } from "../../../../components/vault/VaultSectionGrid";
 import { useViewerAccess } from "../../../../components/access/ViewerAccessContext";
 import { filterAssetIdsForViewer } from "../../../../lib/access-control/viewerAccess";
@@ -96,28 +95,20 @@ export default function CanonicalAssetOverviewGrid({ tiles, extraSections = [], 
   }));
   const populated = sections.filter((section) => section.rows.length > 0);
   const recordCount = new Set(populated.flatMap((section) => section.rows.map((row) => row.id))).size;
-  const updatedAt = latestTimestamp(populated.flatMap((section) => section.rows.map((row) => row.updated_at ?? row.created_at)));
   return <div className="lf-v3-area-content">
     {state.status === "loading" ? <p role="status" className="lf-visually-hidden">Loading records…</p> : null}
     {state.status === "error" ? <p role="alert">Records could not be refreshed. Open a section to review them directly.</p> : null}
-    {state.status === "ready" && recordCount ? <Card className="lf-v3-stats-strip" aria-label="Area summary">
-      <div><span>Records</span><strong>{recordCount}</strong></div>
-      <div><span>Sections</span><strong>{populated.length} of {tiles.length}</strong></div>
-      <div><span>Last updated</span><strong>{formatAreaDate(updatedAt)}</strong></div>
-    </Card> : null}
+    {/* Same summary line as Finances and Legal (UX review Stage 5), not a "Sections 1 of 1" strip. */}
+    <p className="lf-v52-legal-summary" aria-label="Area summary">{state.status === "loading" ? "Loading…" : `${recordCount} record${recordCount === 1 ? "" : "s"}`}</p>
     <VaultSectionGrid sections={[...(viewer.mode === "linked" ? populated : sections).map(({ tile, rows }) => ({
       key: tile.key, title: tile.title, icon: tile.icon, href: tile.href, count: state.status === "loading" ? null : rows.length, description: "Loading…",
+      updatedAt: latestTimestamp(rows.map((row) => row.updated_at ?? row.created_at)),
       addHref: viewer.mode === "linked" ? undefined : tile.addHref,
     })), ...(viewer.mode === "linked" ? [] : extraSections)]} />
     {state.status === "ready" && viewer.mode === "linked" && !recordCount ? <p>No records are assigned in this area.</p> : null}
   </div>;
 }
 
-function formatAreaDate(value: string | null | undefined) {
-  if (!value) return "Not recorded";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "Not recorded" : new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(date);
-}
 
 export function metadataToken(row: CanonicalAssetOverviewRow, ...keys: string[]) {
   const metadata = row.metadata_json ?? row.metadata ?? {};

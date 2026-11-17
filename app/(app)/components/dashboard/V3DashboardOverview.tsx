@@ -30,9 +30,9 @@ export default function V3DashboardOverview({ loading, areas, recordCount, peopl
 
   return <div className="lf-v3-screen-overview is-dashboard">
     <div className="lf-v3-dashboard-pageheader"><PageHeader
-      title="Dashboard"
+      title="Home"
       description="Your recorded information, in one place."
-      action={canAddRecords ? <AddAssetLink href="/add" /> : undefined}
+      action={canAddRecords ? <AddAssetLink href="/add" label="Add to my Vault" /> : undefined}
     /></div>
     <Card className="lf-v3-stats-strip" aria-label="Vault summary">
       <div><span>Estimated value</span><strong>{loading ? "…" : recordedValue}</strong>{!loading && lifeCover ? <small className="lf-v3-life-cover">Plus {lifeCover} life cover</small> : null}</div>

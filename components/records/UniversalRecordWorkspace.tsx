@@ -4103,7 +4103,7 @@ export default function UniversalRecordWorkspace({
   return (
     <section id={sectionId} className="lf-v52-record-workspace" style={{ display: "grid", gap: 14 }}>
       {!selectedWorkspaceRecordId ? <div className="lf-v52-category-heading">
-        <Link href={categoryParentHref} className="lf-v52-record-page-back"><Icon name="chevron_left" size={20} /> {sectionKey === "finances" ? "Finances" : sectionKey === "legal" ? "Legal" : sectionKey === "personal" ? "Personal" : "Home"}</Link>
+        <Link href={categoryParentHref} className="lf-v52-record-page-back"><Icon name="chevron_left" size={20} /> {sectionKey === "finances" ? "Finances" : sectionKey === "legal" ? "Legal" : sectionKey === "personal" ? "Possessions" : "Home"}</Link>
         <div className="lf-v52-category-title-row"><h1 ref={existingRecordsHeadingRef} tabIndex={-1}>{title.replace(/^Legal · /, "").replace(/^Finances · Bank accounts$/, "Banks").replace(/^Property · Assets$/, "Property")}</h1>
           {canCreateRecords ? <button ref={addRecordButtonRef} type="button" className="lf-v52-category-add" onClick={startCreate} aria-label={addLabel} aria-expanded={isCreatingRecord} aria-controls={createFormRegionId}><Icon name="add" size={20} /> {isWillsWorkspace ? "Add a Will" : addLabel}</button> : null}
         </div>
