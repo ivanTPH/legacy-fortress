@@ -121,7 +121,7 @@ export default function LegalOverviewPage() {
     {status ? <p role="alert">{status}</p> : null}
     {loading ? <p role="status" className="lf-visually-hidden">Loading legal records…</p> : null}
     {/* Same line while loading, so the tiles don't jump when counts arrive. */}
-    <p className="lf-v52-legal-summary" aria-label="Legal summary">{loading ? "Loading…" : `${recordCount} record${recordCount === 1 ? "" : "s"} · ${populated.length} of ${sections.length} sections`}</p>
+    <p className="lf-v52-legal-summary" aria-label="Legal summary">{loading ? "Loading…" : `${recordCount} record${recordCount === 1 ? "" : "s"}`}</p>
     <VaultSectionGrid sections={(viewer.mode === "linked" ? populated : sections).map((section) => ({
       key: section.slug, title: section.title, icon: section.icon, href: section.href,
       // Until loaded, say so: "No records yet" would be wrong for sections that have records.

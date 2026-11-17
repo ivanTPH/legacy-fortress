@@ -1328,7 +1328,7 @@ function GuidedExecutorFlow({
           <button type="button" style={guidedSecondaryButtonStyle} onClick={onCancel}>Cancel</button>
         </div>
         <p style={{ margin: 0, color: "var(--lf-text-secondary)", fontSize: 14 }}>
-          Add this person to People I Trust first. You can decide separately whether to invite them to connect with your Fortress.
+          Add this person to People I Trust first. You can decide separately whether to invite them to join.
         </p>
         {status ? <div style={statusMessageStyle} role="status">{status}</div> : null}
       </div>

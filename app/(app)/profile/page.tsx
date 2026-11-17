@@ -464,11 +464,11 @@ export default function ProfilePage() {
   if (viewer.mode === "linked") {
     return (
       <SettingsPageShell title={`About ${viewer.accountHolderName}`} subtitle="Relationship information is read-only and separate from your own profile settings.">
-        <SettingsCard title={`About ${viewer.accountHolderName}`} description="Only relationship-safe information is shown in a linked Fortress context.">
+        <SettingsCard title={`About ${viewer.accountHolderName}`} description="You can see only what they’ve chosen to share with you.">
           <div style={{ display: "grid", gap: 8 }}>
             <strong>Your relationship: {viewer.viewerRole === "owner" ? "Linked relationship" : viewer.viewerRole.replace(/_/g, " ")}</strong>
             <span style={{ color: "var(--lf-text-secondary)" }}>Connection: Linked</span>
-            <span style={{ color: "var(--lf-text-secondary)" }}>Private profile details remain with the Fortress owner.</span>
+            <span style={{ color: "var(--lf-text-secondary)" }}>Their private details stay with them.</span>
             {viewer.grantId ? <Link href={`/linked-fortresses/${viewer.grantId}`} className="lf-link-btn">Relationship details</Link> : null}
           </div>
         </SettingsCard>

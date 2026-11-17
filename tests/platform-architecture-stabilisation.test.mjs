@@ -147,7 +147,7 @@ test("implementation keeps shared documents and contacts canonical while known c
   const contactsWorkspace = fs.readFileSync(path.join(root, "components/contacts/ContactsNetworkWorkspace.tsx"), "utf8");
   const documentsWorkspace = fs.readFileSync(path.join(root, "components/documents/DocumentsWorkspace.tsx"), "utf8");
   const sectionWorkspace = fs.readFileSync(path.join(root, "components/sections/SectionWorkspace.tsx"), "utf8");
-  const supportWorkspace = fs.readFileSync(path.join(root, "components/support/SupportWorkspace.tsx"), "utf8");
+  const supportWorkspace = fs.readFileSync(path.join(root, "components/support/HelpWorkspace.tsx"), "utf8");
   const routeManifest = fs.readFileSync(path.join(root, "config/routeManifest.tsx"), "utf8");
 
   assert.match(contactsWorkspace, /ContactInvitationManager/);
@@ -162,7 +162,7 @@ test("implementation keeps shared documents and contacts canonical while known c
   assert.match(sectionWorkspace, /from\("section_entries"\)/);
   assert.match(sectionWorkspace, /schema\.drift\.detected/);
   assert.match(supportWorkspace, /from\("section_entries"\)/);
-  assert.match(supportWorkspace, /Support/);
+  assert.match(supportWorkspace, /help_requests/);
 });
 
 test("production readiness contracts keep backend auth billing and release boundaries explicit", () => {

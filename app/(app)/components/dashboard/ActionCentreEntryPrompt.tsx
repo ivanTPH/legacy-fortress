@@ -15,10 +15,10 @@ type ActionCentreEntryPromptProps = {
 export default function ActionCentreEntryPrompt({ item, onAction, onDismiss, onGuidanceApplicability }: ActionCentreEntryPromptProps) {
   const asksAboutWill = item.guidanceKey === "will" && item.guidanceState === "unknown" && onGuidanceApplicability;
   return (
-    <section className="lf-action-entry-prompt" aria-label="A small step for your Fortress" role="status">
+    <section className="lf-action-entry-prompt" aria-label="A small step for your Vault" role="status">
       <div className="lf-action-entry-prompt-icon" aria-hidden="true"><Icon name="lightbulb" size={20} /></div>
       <div className="lf-action-entry-prompt-copy">
-        <p className="lf-action-entry-prompt-eyebrow">A small step for your Fortress</p>
+        <p className="lf-action-entry-prompt-eyebrow">A small step for your Vault</p>
         <h2>{item.title}</h2>
         <p>{item.blockerLabel}</p>
       </div>

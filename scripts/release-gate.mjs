@@ -25,7 +25,7 @@ if (fs.existsSync(nextDevTypesDir)) {
 }
 
 const checks = [
-  ["npm", ["audit", "--audit-level=moderate"], "Dependency vulnerability audit"],
+  ["node", ["scripts/audit-check.mjs"], "Dependency vulnerability audit (production clean; dev-only exceptions listed with expiry)"],
   ...(hasLocalEnv && !isCi
     ? [["npm", ["run", "validate:env"], "Local environment validation"]]
     : []),

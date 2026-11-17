@@ -158,3 +158,20 @@ test("account source labels and invitee privacy (owner decision 16 Nov 2026)", a
   assert.match(migration, /REVOKE ALL ON public\.account_origins FROM anon, authenticated;/);
   assert.match(migration, /ON CONFLICT \(user_id\) DO NOTHING/);
 });
+
+test("Help replaces Support; messages reach the Admin Inbox (UX review Stage 4)", () => {
+  const help = fs.readFileSync(path.join(process.cwd(), "components/support/HelpWorkspace.tsx"), "utf8");
+  const inbox = fs.readFileSync(path.join(process.cwd(), "lib/admin/inbox.ts"), "utf8");
+  const tip = fs.readFileSync(path.join(process.cwd(), "components/ui/HelpTip.tsx"), "utf8");
+  for (const text of ["Set up with me", "Watch the tour", "Common questions", "Who can see my Vault?", "Send message", "Please don’t include passwords"]) assert.ok(help.includes(text), text);
+  assert.match(help, /category_key: "help_requests"/);
+  assert.match(help, /\/onboarding\?again=1&step=welcome/);
+  assert.match(inbox, /kind: "messages"/);
+  assert.match(inbox, /loadHelpMessages/);
+  const messages = fs.readFileSync(path.join(process.cwd(), "lib/admin/helpMessages.ts"), "utf8");
+  // Only what the customer sent us: one table, the support/help_requests rows, nothing from their Vault.
+  assert.deepEqual([...messages.matchAll(/from\("([^"]+)"\)/g)].map((match) => match[1]), ["section_entries"]);
+  assert.match(messages, /eq\("section_key", "support"\)\.eq\("category_key", "help_requests"\)/);
+  for (const text of ["Learn more in Help", "Got it", "aria-modal=\"true\"", "createPortal"]) assert.ok(tip.includes(text), text);
+  assert.match(fs.readFileSync(path.join(process.cwd(), "app/onboarding/OnboardingPageClient.tsx"), "utf8"), /searchParams\.get\("again"\) !== "1"/);
+});

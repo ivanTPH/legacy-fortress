@@ -4472,11 +4472,11 @@ export default function UniversalRecordWorkspace({
                 {!editingId ? (
                   <InlineDocumentUploadField
                     files={pendingDocumentFiles}
-                    onFilesSelected={(files) => stageDocumentFiles(files, TRUST_DOCUMENT_UPLOAD_MIME_TYPES, "Allowed: PDF, DOCX, JPG, JPEG, PNG up to 15MB.")}
+                    onFilesSelected={(files) => stageDocumentFiles(files, TRUST_DOCUMENT_UPLOAD_MIME_TYPES, "Photos, PDFs and Word documents up to 15 MB.")}
                     onRemoveFile={removePendingDocumentFile}
                     disabled={saving}
                     accept={TRUST_DOCUMENT_UPLOAD_ACCEPT}
-                    helpText="Drop a file here or choose one from your device. PDF, DOCX, JPG, JPEG, or PNG up to 15MB."
+                    helpText="Drop a file here or choose one. Photos, PDFs and Word documents up to 15 MB."
                   />
                 ) : null}
               </div>
@@ -4851,7 +4851,7 @@ function InlineDocumentUploadField({
   onRemoveFile,
   disabled,
   accept = DOCUMENT_UPLOAD_ACCEPT,
-  helpText = "Drop a file here or choose one from your device. PDF, DOCX, JPG, PNG, XLSX, CSV, or ICS up to 15MB.",
+  helpText = "Drop a file here or choose one. Photos, PDFs and documents up to 15 MB.",
 }: {
   files: File[];
   onFilesSelected: (files: File[] | FileList) => void;

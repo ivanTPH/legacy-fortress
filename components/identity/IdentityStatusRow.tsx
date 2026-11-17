@@ -23,7 +23,8 @@ export function describeIdentityStatus(rows: Row[], now = Date.now()): IdentityS
   if (latest?.status === "review_required") return { tone: "waiting", title: "ID check being reviewed", detail: "A member of our team is checking it. We’ll let you know.", action: "View" };
   if (latest && ["document_required", "document_extracted", "camera_required", "camera_captured"].includes(latest.status)) return { tone: "todo", title: "ID check not finished", detail: "Carry on where you left off.", action: "Continue" };
   if (latest?.status === "verified") return { tone: "todo", title: "ID check expired", detail: "Checks last a year. Do a new one when you’re ready.", action: "Verify your ID" };
-  return { tone: "todo", title: "Identity not verified", detail: "Takes about 3 minutes with your passport or driving licence and your phone camera.", action: "Verify your ID" };
+  // Owners don’t need an ID check for their own Vault (UX review Stage 4): say when it matters, without a warning.
+  return { tone: "todo", title: "ID not checked", detail: "Only needed if you’re named in someone else’s Vault. Takes about 3 minutes with your passport or driving licence.", action: "Check my ID" };
 }
 
 export default function IdentityStatusRow() {
