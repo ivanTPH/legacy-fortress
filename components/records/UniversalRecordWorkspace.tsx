@@ -2963,7 +2963,10 @@ export default function UniversalRecordWorkspace({
       setStatus("This shared view is read-only. The vault owner controls changes.");
       return;
     }
-    const confirmed = window.confirm("Delete this record permanently?");
+    // One clear question, then straight back to the list (owner report 17 Nov 2026: a second "Discard this
+    // unsaved record?" appeared after deleting, and the deleted record stayed on screen).
+    const deletingTitle = records.find((row) => row.id === recordId)?.title?.trim();
+    const confirmed = window.confirm(`Delete ${deletingTitle ? `“${deletingTitle}”` : "this record"}? It and its documents will be removed from your Vault. You can’t undo this.`);
     if (!confirmed) return;
     const user = await requireUser(router);
     if (!user) return;
@@ -3005,9 +3008,15 @@ export default function UniversalRecordWorkspace({
       const message = error instanceof Error ? error.message : "Unknown error";
       setStatus(`Record deleted, but contact link cleanup failed: ${message}`);
     }
-    setStatus("Record deleted.");
-    if (selectedWorkspaceRecordId === recordId) router.replace(pathname);
-    if (editingId === recordId) cancelForm();
+    setRecords((current) => current.filter((row) => row.id !== recordId));
+    if (editingId === recordId) {
+      // Already confirmed: close the form without asking about unsaved changes.
+      clearAddRecordQueryFlag();
+      resetFormState();
+    }
+    setStatus(deletingTitle ? `Deleted “${deletingTitle}”.` : "Record deleted.");
+    // Leave the deleted record's page (?asset=, ?record=, ?edit=) for the list.
+    if (selectedWorkspaceRecordId === recordId || searchParams.get("edit") === recordId) router.replace(pathname);
     await reloadWorkspace(router, sectionKey, categoryKey, setRecords, setAttachments, setContacts, setStatus, {
       targetOwnerUserId: viewer.targetOwnerUserId,
       forceCanonicalRead,
