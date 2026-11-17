@@ -727,3 +727,28 @@ body:has(.lf-inbox-selectbar) .lf-mobile-bottom-nav { display: none; }
 }
 @media (max-width: 767px) { .lf-help-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .lf-admin-inbox-message { display: block; margin-top: 4px; color: var(--lf-text-primary); font-size: 14px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+
+/*
+ * One phone header (UX review Stage 5): back link on the left, actions on the right, and the page title once —
+ * in the page, as a heading. Home is the exception: it has no heading, so the bar says "Home".
+ */
+@media (max-width: 767px) {
+  .lf-topbar .lf-topbar-title { display: none; }
+  .lf-topbar.is-home .lf-topbar-heading:not(:has(.lf-workspace-switcher)) .lf-topbar-title { display: block; }
+  .lf-v3-destination .lf-v3-page-header h1,
+  .lf-v3-screen-overview.is-actions .lf-v3-page-header h1,
+  .lf-v3-area-page .lf-v3-page-header h1,
+  .lf-v3-people-page .lf-v3-page-header h1 { position: static; width: auto; height: auto; margin: 0; overflow: visible; clip: auto; white-space: normal; }
+  /* The bar already has the way back, so the in-page "‹ Settings" / "‹ Finances" links don't repeat it. */
+  .lf-v52-settings-back, .lf-v52-category-back { display: none; }
+}
+
+/* One Add control (UX review Stage 5): "+ Add" on a laptop, a round + on a phone, on Home and every area page. */
+.lf-v4-add-asset { width: auto; height: 40px; min-height: 40px; padding: 0 16px 0 12px; gap: 6px; border-radius: 20px; }
+.lf-v4-add-asset > .lf-v4-add-label { position: static; width: auto; height: auto; overflow: visible; clip-path: none; font-size: 14px; font-weight: 600; }
+@media (max-width: 767px) {
+  .lf-v4-add-asset { width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 999px; }
+  .lf-v4-add-asset > .lf-v4-add-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+@media (max-width: 767px) { .lf-inbox-category .lf-inbox-category-label { display: none; } }
+@media (min-width: 768px) { .lf-inbox-category { width: auto; padding-inline: 12px 14px; gap: 6px; } }

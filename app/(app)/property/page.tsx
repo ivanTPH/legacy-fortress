@@ -35,11 +35,10 @@ export default function PropertyOverviewPage() {
   return (
     <section className="lf-v3-area-page">
       <PageHeader title="Property" description="Record properties, deeds, valuations and supporting documents for your estate."
-        action={viewer.mode === "linked" || !propertyRecordTiles.length ? undefined : <AddAssetLink href={propertyRecordTiles[0].addHref} />} />
+        action={viewer.mode === "linked" || !propertyRecordTiles.length ? undefined : <AddAssetLink href="/add?area=property" label="Add to Property" />} />
+      {/* Documents live inside each property record, as in Finances (UX review Stage 5). */}
       {visibleItems.length ? (
-      <CanonicalAssetOverviewGrid tiles={propertyRecordTiles} extraSections={visibleItems.filter((item) => item.href !== "/vault/property").map((item) => ({
-        key: item.href, title: item.label, icon: item.icon, href: item.href, count: null, description: "Browse supporting files",
-      }))} />
+      <CanonicalAssetOverviewGrid tiles={propertyRecordTiles} />
       ) : (
         <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
           Property subsections are currently hidden by My Vault preferences. Re-enable them in Account / My Vault at any time.

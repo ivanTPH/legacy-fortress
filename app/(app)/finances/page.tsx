@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Icon from "../../../components/ui/Icon";
 import { PageHeader } from "../../../components/ui/V3Primitives";
+import { AddAssetLink } from "../../../components/ui/LFDesignSystem";
 import VaultSectionGrid from "../../../components/vault/VaultSectionGrid";
 import { formatCurrencyWhole } from "../../../lib/currency";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
@@ -137,8 +138,8 @@ export default function FinancesOverviewPage() {
     : `${formatCurrencyWhole(total, currency)} estimated value${lifeCover > 0 ? ` · ${formatCurrencyWhole(lifeCover, currency)} life cover` : ""}`;
   return <section className="lf-v3-area-page lf-v52-finance-page">
     <PageHeader title="Finances" description={loading ? "Loading records…" : `${recordCount} record${recordCount === 1 ? "" : "s"} · ${totalText}`}
-      action={viewer.mode !== "linked" ? <Link href="/add?area=finances" className="lf-v52-finance-add"><Icon name="add" size={20} /><span>Add to Finances</span></Link> : undefined}>
-      <nav className="lf-v52-finance-breadcrumb" aria-label="Breadcrumb"><Link href="/dashboard">Dashboard</Link><Icon name="chevron_right" size={18} /><span aria-current="page">Finances</span></nav>
+      action={viewer.mode !== "linked" ? <AddAssetLink href="/add?area=finances" label="Add to Finances" /> : undefined}>
+      <nav className="lf-v52-finance-breadcrumb" aria-label="Breadcrumb"><Link href="/dashboard">Home</Link><Icon name="chevron_right" size={18} /><span aria-current="page">Finances</span></nav>
     </PageHeader>
     {status ? <p role="alert">{status}</p> : null}
     {loading ? <p role="status" className="lf-visually-hidden">Loading finance summary…</p> : null}

@@ -83,7 +83,7 @@ export default function PersonalPossessionsOverviewPage() {
   return (
     <section className="lf-v3-area-page">
       <PageHeader title="Possessions" description="Capture personal possessions with values, references, locations, attachments and photos."
-        action={viewer.mode === "linked" ? undefined : <AddAssetLink href={possessionTiles[0].addHref} />} />
+        action={viewer.mode === "linked" ? undefined : <AddAssetLink href="/add?area=possessions" label="Add to Possessions" />} />
       <CanonicalAssetOverviewGrid tiles={possessionTiles} />
     </section>
   );

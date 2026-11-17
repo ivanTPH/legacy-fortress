@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "../../../components/ui/V3Primitives";
+import { AddAssetLink } from "../../../components/ui/LFDesignSystem";
 import VaultSectionGrid from "../../../components/vault/VaultSectionGrid";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
 import { filterAssetIdsForViewer, filterRecordIdsForViewer } from "../../../lib/access-control/viewerAccess";
@@ -117,7 +118,8 @@ export default function LegalOverviewPage() {
   const populated = sections.filter((section) => section.records.length > 0);
   const recordCount = new Set(populated.flatMap((section) => section.records.map((row) => `${row.source}:${row.id}`))).size;
   return <section className="lf-v3-area-page lf-v52-legal-page">
-    <PageHeader title="Legal" description="Keep wills, trusts, powers of attorney and other legal records easy to find." />
+    <PageHeader title="Legal" description="Keep wills, trusts, powers of attorney and other legal records easy to find."
+      action={viewer.mode === "linked" ? undefined : <AddAssetLink href="/add?area=legal" label="Add to Legal" />} />
     {status ? <p role="alert">{status}</p> : null}
     {loading ? <p role="status" className="lf-visually-hidden">Loading legal records…</p> : null}
     {/* Same line while loading, so the tiles don't jump when counts arrive. */}

@@ -932,9 +932,10 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
   const recordDetailOpen = (searchParams.has("asset") || searchParams.has("record")) && normalizedPathname !== "/dashboard";
   const topbarTitle = normalizedPathname === "/dashboard"
     ? "Home"
-    : recordDetailOpen ? "" : currentNode?.label ?? "Dashboard";
+    : recordDetailOpen ? "" : currentNode?.label ?? "Home";
   const topbarBreadcrumbs = normalizedPathname === "/dashboard" ? [] : recordDetailOpen ? breadcrumbs : breadcrumbs.slice(0, -1);
-  const showBackButton = !["/dashboard", "/add", "/add-to-fortress", "/actions", "/action-centre", "/contacts", "/people-access", "/profile", "/settings"].includes(normalizedPathname);
+  // Profile is reached from Settings, so on a phone it gets "← Settings" like the other Settings pages (UX review Stage 5).
+  const showBackButton = !["/dashboard", "/add", "/add-to-fortress", "/actions", "/action-centre", "/contacts", "/people-access", "/settings"].includes(normalizedPathname);
   const searchPageOpen = normalizedPathname === "/dashboard" && searchParams.has("search");
 
   function toggleAccountMenu() {
@@ -1130,7 +1131,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
       </div>
 
       <div className="lf-content-wrap">
-        <header className={`lf-topbar${showBackButton ? " is-pushed" : " is-root"}${searchPageOpen ? " is-search" : ""}`}>
+        <header className={`lf-topbar${showBackButton ? " is-pushed" : " is-root"}${searchPageOpen ? " is-search" : ""}${normalizedPathname === "/dashboard" && !searchPageOpen ? " is-home" : ""}`}>
           <button
             className="lf-menu-btn"
             type="button"
@@ -1181,11 +1182,11 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
             </button>
             <div className="lf-topbar-heading">
               <Breadcrumbs items={topbarBreadcrumbs} />
+              {/* Vault switcher only for people who can open another Vault (UX review decision); it hides itself otherwise. */}
               {!showBackButton && !searchPageOpen ? <div className="lf-mobile-workspace-trigger"><WorkspaceSwitcher
                 currentPathname={pathname}
                 compact
                 mobileContextOnly
-                alwaysShow
                 customerOnly
                 founderTestLauncherAvailable={founderLauncherAvailable}
                 governanceContext="Mobile header · role-aware workspace switch"
