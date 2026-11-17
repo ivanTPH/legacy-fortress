@@ -191,11 +191,12 @@ export default function VaultAccessWorkspace({ mode = "now" }: { mode?: "now" | 
 
   return (
     <section className="lf-va" aria-label="Vault access">
+      {/* Summary (or the record-by-record link) on the left, the one action on the right; same on every tab. */}
       <div className="lf-va-toolbar">
-        {visibleRows.length ? <p className="lf-va-summary">{summarySentence(mode, counts)}</p> : <span />}
+        {visibleRows.length ? <p className="lf-va-summary">{summarySentence(mode, counts)}</p> : mode === "now" ? <Link href="/people-access?view=sharing" className="lf-va-link-row"><Icon name="table_view" size={18} />See each record and who can see it<Icon name="chevron_right" size={18} /></Link> : <span />}
         <button type="button" className="lf-va-primary" onClick={() => setSetupOpen(true)}><Icon name={mode === "now" ? "share" : "bookmark"} size={18} />{mode === "now" ? "Share records" : "Nominate someone"}</button>
-        {mode === "now" ? <Link href="/people-access?view=sharing" className="lf-va-link-row"><Icon name="table_view" size={18} />See each record and who can see it<Icon name="chevron_right" size={18} /></Link> : null}
       </div>
+      {mode === "now" && visibleRows.length ? <Link href="/people-access?view=sharing" className="lf-va-link-row"><Icon name="table_view" size={18} />See each record and who can see it<Icon name="chevron_right" size={18} /></Link> : null}
       {error ? <p className="lf-va-error" role="alert">{error}</p> : null}
       {visibleRows.length === 0 ? (
         mode === "now"
