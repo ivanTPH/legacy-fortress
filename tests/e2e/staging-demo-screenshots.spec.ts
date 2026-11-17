@@ -715,7 +715,7 @@ test("laptop design measurements", async ({ browser }) => {
         const fontCounts: Record<string, number> = {};
         for (const size of bodyText) fontCounts[size] = (fontCounts[size] ?? 0) + 1;
         const content = main.firstElementChild;
-        return { sidebar: r(sidebar), navItem: r(navItem), navIcon: r(navItem?.querySelector("svg, .material-symbols-rounded, [class*='icon' i]") ?? null), topbar: r(topbar), main: r(main), content: r(content), h1: r(h1), primary: primary.slice(0, 3), round: round.slice(0, 6), inkTiles: inkTiles.slice(0, 6), rows, fontCounts };
+        return { sidebar: r(sidebar), navItem: r(navItem ?? null), navIcon: r(navItem?.querySelector("svg, .material-symbols-rounded, [class*='icon' i]") ?? null), topbar: r(topbar), main: r(main), content: r(content), h1: r(h1), primary: primary.slice(0, 3), round: round.slice(0, 6), inkTiles: inkTiles.slice(0, 6), rows, fontCounts };
       });
       console.log(`Design-fit: ${width} ${path} ${JSON.stringify(report)}`);
       const shot = await page.screenshot({ type: "jpeg", quality: 55 });
