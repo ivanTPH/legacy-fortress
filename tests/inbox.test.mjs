@@ -1,6 +1,7 @@
 import test from "node:test";
 import fs from "node:fs";
 import assert from "node:assert/strict";
+import path from "node:path";
 
 const read = (file) => fs.readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
 const panel = read("app/(app)/components/dashboard/ActionQueuePanel.tsx");
@@ -173,4 +174,14 @@ test("waiting invitations are handled in place with shared actions (owner, 16 No
   assert.match(named, /<InvitationActions contactId=\{person\.personId\} compact/);
   const ui = read("components/inbox/InvitationActions.tsx");
   for (const label of ["Resend", "Change email", "Cancel invitation", "Keep it", "Send to this address"]) assert.ok(ui.includes(label), label);
+});
+
+test("deleting a record asks once and returns to the list (owner report 17 Nov 2026)", () => {
+  const source = fs.readFileSync(path.join(process.cwd(), "components/records/UniversalRecordWorkspace.tsx"), "utf8");
+  const body = source.slice(source.indexOf("async function deleteRecord("), source.indexOf("async function uploadAttachment("));
+  assert.match(body, /You can’t undo this\./);
+  assert.doesNotMatch(body, /cancelForm\(\)/, "no second 'Discard this unsaved record?' after deleting");
+  assert.match(body, /resetFormState\(\)/);
+  assert.match(body, /setRecords\(\(current\) => current\.filter\(\(row\) => row\.id !== recordId\)\)/);
+  assert.match(body, /router\.replace\(pathname\)/);
 });
