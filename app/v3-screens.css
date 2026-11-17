@@ -660,7 +660,7 @@ body:has(.lf-inbox-selectbar) .lf-mobile-bottom-nav { display: none; }
   /* One page-title style: 28px bold, as on Dashboard, Inbox and People. */
   .lf-v52-category-title-row h1, .lf-v52-record-page-heading h1, .lf-v52-settings-heading h1, .lf-v3-page-header h1, .lf-ui-page-header h1, .lf-ds-page-header h1 { font-size: 28px; line-height: 34px; font-weight: 700; letter-spacing: -0.02em; }
   /* Page Add button ("Add bank account", "Add a Will"): 40px pill, 14px text (was 44px, 15px). */
-  .lf-v52-category-add, .lf-v52-record-page-edit { min-height: 40px; padding: 0 16px 0 12px; border-radius: 20px; font-size: 14px; }
+  .lf-v52-category-add, .lf-v52-record-page-edit, .lf-v52-finance-add, .lf-v52-search-add { min-height: 40px; padding: 0 16px 0 12px; border-radius: 20px; font-size: 14px; }
   /* + on an empty area tile: 36px with a light hairline (was 40px). */
   .lf-v52-section-add { width: 36px; height: 36px; border-color: var(--lf-border-control, #D9CFC8); }
   /* Area tiles (Home, Finances, Legal…): 40px dark tile, 10px radius. */
