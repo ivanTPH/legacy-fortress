@@ -9591,3 +9591,4 @@ a.lf-pp-item:hover { background: var(--lf-interaction-hover, #F6EFEA); }
 .lf-admin-toolbar--search .lf-admin-search { flex: 1 1 auto; }
 .lf-admin-toolbar--search .lf-admin-row-button { min-height: 40px; flex: 0 0 auto; }
 @media (max-width: 640px) { .lf-admin-toolbar--search .lf-admin-row-button { padding: 6px 10px; } }
+

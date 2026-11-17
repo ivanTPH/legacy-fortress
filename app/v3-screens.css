@@ -651,3 +651,34 @@ body:has(.lf-inbox-selectbar) .lf-mobile-bottom-nav { display: none; }
 .lf-pa-info summary { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; color: var(--lf-text-secondary); font-size: 14px; cursor: pointer; list-style: none; }
 .lf-pa-info summary::-webkit-details-marker { display: none; }
 .lf-pa-info p { margin: 4px 0 0; max-width: 64ch; color: var(--lf-text-secondary); font-size: 14px; line-height: 1.5; }
+
+/*
+ * Laptop sizes back to the approved V5.2 design (owner report 17 Nov 2026: "big and cramped, icons bigger than
+ * they used to be"). Measured on TEST at 1440 and 1280px; phone sizes are unchanged.
+ */
+@media (min-width: 768px) {
+  /* One page-title style: 28px bold, as on Dashboard, Inbox and People. */
+  .lf-v52-category-title-row h1, .lf-v52-record-page-heading h1, .lf-v52-settings-heading h1, .lf-v3-page-header h1, .lf-ui-page-header h1, .lf-ds-page-header h1 { font-size: 28px; line-height: 34px; font-weight: 700; letter-spacing: -0.02em; }
+  /* Page Add button ("Add bank account", "Add a Will"): 40px pill, 14px text (was 44px, 15px). */
+  .lf-v52-category-add, .lf-v52-record-page-edit { min-height: 40px; padding: 0 16px 0 12px; border-radius: 20px; font-size: 14px; }
+  /* + on an empty area tile: 36px with a light hairline (was 40px). */
+  .lf-v52-section-add { width: 36px; height: 36px; border-color: var(--lf-border-control, #D9CFC8); }
+  /* Area tiles (Home, Finances, Legal…): 40px dark tile, 10px radius. */
+  .lf-v52-section-link .lf-v3-icon-tile.lf-v3-icon-tile--36 { width: 40px; height: 40px; border-radius: 10px; }
+  /* Logos and icons in record lists: 36px (44px stays on the record page itself). */
+  .lf-v52-record-list .lf-v52-brand-mark { flex-basis: 36px; width: 36px; height: 36px; border-radius: 9px; }
+  .lf-v52-record-list .lf-v52-brand-mark.is-logo { padding: 4px; }
+  .lf-v52-record-list .lf-v52-brand-mark.is-logo img { max-width: 26px; max-height: 26px; }
+  /* Inbox: same 10px tile radius as everywhere else; slightly tighter rows. */
+  .lf-va-primary, .lf-pa-add { min-height: 40px; font-size: 14px; }
+  .lf-inbox-pic { border-radius: 10px; }
+  .lf-inbox-row-button { padding-top: 12px; padding-bottom: 12px; }
+}
+/* Two area tiles across on a narrower laptop window, three on a wider one, so tiles never get squeezed. */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .lf-v52-section-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* Inbox labels ("Suggested", "Needs you"): never below the 13px minimum. */
+.lf-inbox-row .lf-inbox-tag { font-size: 13px; letter-spacing: 0.02em; }
+/* People › Shared now / After I die: the action always sits on the right. */
+.lf-va-toolbar .lf-va-primary { margin-left: auto; }
