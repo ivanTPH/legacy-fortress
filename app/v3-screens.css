@@ -733,8 +733,12 @@ body:has(.lf-inbox-selectbar) .lf-mobile-bottom-nav { display: none; }
  * in the page, as a heading. Home is the exception: it has no heading, so the bar says "Home".
  */
 @media (max-width: 767px) {
-  .lf-topbar .lf-topbar-title { display: none; }
-  .lf-topbar.is-home .lf-topbar-heading:not(:has(.lf-workspace-switcher)) .lf-topbar-title { display: block; }
+  .lf-topbar .lf-topbar-title, .lf-topbar.is-pushed .lf-topbar-heading .lf-topbar-title { display: none; }
+  .lf-topbar.is-home .lf-topbar-heading:not(:has(.lf-workspace-switcher)) .lf-topbar-title { display: block; overflow: visible; }
+  /* No switcher (one Vault): don't keep its empty box, so "Home" has room. */
+  .lf-mobile-workspace-trigger:not(:has(.lf-workspace-switcher)) { display: none; }
+  /* Area pages: the round + sits beside the title, as on Finances. */
+  .lf-v3-area-page .lf-v3-page-header-main { flex-direction: row; align-items: flex-start; justify-content: space-between; gap: var(--lf-space-8); }
   .lf-v3-destination .lf-v3-page-header h1,
   .lf-v3-screen-overview.is-actions .lf-v3-page-header h1,
   .lf-v3-area-page .lf-v3-page-header h1,
