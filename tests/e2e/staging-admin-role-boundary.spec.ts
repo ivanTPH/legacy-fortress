@@ -90,7 +90,7 @@ test("platform admin remains in admin context while using users, invitations, or
   await expect(page).toHaveURL(`${BASE_URL}/admin`);
   await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
   await page.goto(`${BASE_URL}/admin/users`, { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("heading", { name: "Customer users" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Customers", exact: true })).toBeVisible();
   // Owner, 16 Nov 2026: newest accounts listed without searching, test accounts hidden, Refresh beside search.
   await expect(page.getByText("Newest accounts first")).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole("button", { name: "Refresh" })).toBeVisible();
