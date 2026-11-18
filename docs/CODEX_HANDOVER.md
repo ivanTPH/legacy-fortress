@@ -1,5 +1,12 @@
 # Codex Handover
 
+## UX review 2 stages 1–3 — 18 November 2026
+
+- Quick wins (PRs 223, 224): icon-only Vault-secured shield (laptop), one People status + Share button, one Will/POA Save that opens choose-people (Wills and POA only; other records keep the optional button), test-organisation detection by run marker/test domain, Admin Overview hides unmeasured rows.
+- Partner one look (PR 225): enterprise inline styles moved to app tokens (ink pill buttons, underlined tabs), loading outline (`WorkspaceLoadingOutline`) replaces "Checking … access", partner organisation page titled "Your organisation" with Details/Activity tabs only, "No licence yet" empty states, "Chose not to be counted".
+- Admin menu 15 → 9 (owner approved in the review doc): menu-only merge in `adminNavigation.ts` via `tabs`; routes and per-page capabilities unchanged; `AdminWorkspaceShell` renders `.lf-admin-section-tabs` for merged items.
+- Pre-existing failures outside the release suite: `tests/admin-shared-workspace-shell.test.mjs` #5 and `tests/v52-interface-consolidation.test.mjs` #2/#3 expect "Enterprise Operations" capitalised.
+
 ## Linked People A–H/S design compliance update — 29 October 2026
 
 - Continued on isolated `feat/v52-linked-people-pr5` after PR #7, preserving all existing PR 5 service, history and security work. The shared record section now uses a mobile chooser sheet/full-height entry, desktop right panel, centred desktop invitation offer, compact person states, contextual row menu, role chips, duplicate-contact reuse, offline notice, discard confirmation and possible-match comparison. Owner-scoped other-record counts distinguish a person already linked elsewhere. No grant or legacy contact-link write was added.

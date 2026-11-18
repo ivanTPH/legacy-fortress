@@ -15,7 +15,7 @@ test("platform administration enterprise links stay inside the platform hierarch
 
   assert.match(platformBlock, /href: "\/admin\/organisations"/);
   assert.match(platformBlock, /href: "\/admin\/licences"/);
-  assert.match(platformBlock, /label: "Enterprise audit"/);
+  assert.match(platformBlock, /label: "Partner audit"/); // owner-approved menu merge, 18 Nov 2026
   assert.doesNotMatch(platformBlock, /label: "Enterprise reports"/);
   assert.doesNotMatch(platformBlock, /href: "\/application\/enterprise/);
   assert.doesNotMatch(platformBlock, /tab=organisations|tab=licences/);
@@ -123,4 +123,20 @@ test("enterprise saved views are server persisted and licence actions map to exp
   for (const action of ["update_licence", "change_licence_seats", "renew_licence", "transition_licence"]) {
     assert.match(capabilities, new RegExp(action));
   }
+});
+
+test("merged Admin menu keeps every page's own route and capability (owner approved 18 Nov 2026)", async () => {
+  const { PLATFORM_ADMIN_NAVIGATION, filterAdminNavigation } = await import("../components/admin/adminNavigation.ts");
+  const top = PLATFORM_ADMIN_NAVIGATION.flatMap((group) => group.items);
+  assert.equal(top.length, 9);
+  const pages = top.flatMap((item) => item.tabs ?? [item]);
+  for (const href of ["/admin/support", "/admin/access", "/admin/authorities", "/admin/licences", "/admin/system-health", "/admin/settings"]) {
+    assert.ok(pages.some((page) => page.href === href), `${href} is still reachable`);
+  }
+  for (const page of pages) assert.ok(page.capability, `${page.href} keeps a capability check`);
+  // A support agent sees Invitations and help but not Partners or Team.
+  const support = filterAdminNavigation(PLATFORM_ADMIN_NAVIGATION, ["users:lookup", "support:read"]).flatMap((group) => group.items);
+  assert.deepEqual(support.map((item) => item.label), ["Inbox", "Customers", "Invitations and help", "Cases"]);
+  assert.deepEqual(support.find((item) => item.label === "Cases").tabs.map((tab) => tab.href), ["/admin/access"]);
+  assert.equal(support.find((item) => item.label === "Cases").href, "/admin/access");
 });

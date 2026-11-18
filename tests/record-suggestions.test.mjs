@@ -83,7 +83,7 @@ test("admin and partner phones: 3 role tabs + Menu, short names, one row control
   const shell = read("components/admin/AdminWorkspaceShell.tsx");
   assert.match(shell, /lf-admin-shell-mobile-tab-menu/);
   assert.match(shell, /repeat\(\$\{mobileTabs\.length \+ 1\}/);
-  assert.match(shell, /verification: "Verification"/);
+  assert.match(shell, /verification: "Checks"/);
   assert.match(read("components/admin/AdminControlPlaneWorkspace.tsx"), /aria-label=\{`Open licence/);
   assert.match(read("app/api/internal/admin/enterprise/route.ts"), /organisationScoped: admin\.access\.enterpriseScope\?\.organisationScoped \?\? false, capabilities: admin\.access\.capabilities \}/);
 });

@@ -1,5 +1,6 @@
 "use client";
 
+import WorkspaceLoadingOutline from "./WorkspaceLoadingOutline";
 import Link from "next/link";
 import Icon from "@/components/ui/Icon";
 import BrandMark from "@/components/ui/BrandMark";
@@ -691,17 +692,7 @@ export default function EnterpriseOperationsWorkspace() {
     router.push(tab === "overview" ? "/enterprise" : `/enterprise?tab=${tab}`);
   };
 
-  if (state === "checking") {
-    return (
-      <main style={checkingPageStyle} aria-busy="true">
-        <section style={checkingPanelStyle}>
-          <p style={eyebrowStyle}>Legacy Fortress Enterprise</p>
-          <h1 style={h1Style}>Checking enterprise access</h1>
-          <p style={mutedStyle}>Confirming your signed-in session and role permissions.</p>
-        </section>
-      </main>
-    );
-  }
+  if (state === "checking") return <WorkspaceLoadingOutline label="Opening your portal" />;
 
   if (state === "denied" || state === "error") {
     return (
@@ -798,13 +789,16 @@ function renderPartnerOverview(portfolio: EnterprisePortfolio, setActiveTab: (ta
     expiringLinks.length ? { key: "links", icon: "link", label: "Sign-up links expire this week", detail: "Extend or replace the link", count: expiringLinks.length, tab: "registration-links" as EnterpriseTab } : null,
     freeSeats > 0 ? { key: "seats", icon: "event_seat", label: "Seats available", detail: "Invite advisers to use them", count: freeSeats, tab: "users" as EnterpriseTab } : null,
   ].filter((item): item is { key: string; icon: string; label: string; detail: string; count: number; tab: EnterpriseTab } => item !== null);
+  // UX review 2: no licence yet reads as that, not "0 of 0" and "Not set".
+  const noLicence = portfolio.licences.length === 0;
   const stats = [
-    { label: "Seats in use", value: `${seats.active} of ${seats.purchased}`, tab: "users" as EnterpriseTab },
+    { label: "Seats in use", value: noLicence ? "No licence yet" : `${seats.active} of ${seats.purchased}`, tab: "users" as EnterpriseTab },
     { label: "Invitations waiting", value: String(portfolio.summary.pendingInvitations), tab: "invitations" as EnterpriseTab },
     { label: "Active sign-up links", value: String(activeLinks.length), tab: "registration-links" as EnterpriseTab },
-    { label: "Renews", value: renewal ? new Date(renewal).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "Not set", tab: null },
+    { label: "Renews", value: renewal ? new Date(renewal).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : noLicence ? "No licence yet" : "Not set", tab: null },
   ];
   return <div className="lf-partner-overview">
+    {noLicence ? <p className="lf-partner-no-licence">Your organisation doesn’t have a licence yet. Legacy Fortress sets this up once your agreement is in place; contact your account manager.</p> : null}
     <section className="lf-partner-stat-strip" aria-label="Organisation summary">
       {stats.map((stat) => stat.tab
         ? <button key={stat.label} type="button" onClick={() => setActiveTab(stat.tab as EnterpriseTab)}><span>{stat.label}</span><strong>{stat.value}</strong></button>
@@ -836,7 +830,7 @@ function PartnerTeam({ portfolio, canInvite, onInvite, onOpenInvitations, advanc
   const filters = [{ key: "all", label: "All" }, { key: "active", label: "Active" }, { key: "invited", label: "Invited" }, { key: "admins", label: "Admins" }];
   return <div className="lf-partner-team">
     {canInvite ? <button type="button" className="lf-partner-primary" onClick={onInvite}>Invite team member</button> : null}
-    <section className="lf-partner-seat-card"><strong>{portfolio.summary.seats.active} of {portfolio.summary.seats.purchased} seats used</strong><span>Invitations hold a seat</span><progress max={Math.max(portfolio.summary.seats.purchased, 1)} value={portfolio.summary.seats.active} /></section>
+    <section className="lf-partner-seat-card"><strong>{portfolio.licences.length ? `${portfolio.summary.seats.active} of ${portfolio.summary.seats.purchased} seats used` : "No licence yet"}</strong><span>Invitations hold a seat</span><progress max={Math.max(portfolio.summary.seats.purchased, 1)} value={portfolio.summary.seats.active} /></section>
     <div className="lf-partner-filter-chips" aria-label="Filter team">{filters.map((option) => <button key={option.key} type="button" aria-pressed={filter === option.key} onClick={() => setFilter(option.key)}>{option.label} {people.filter((person) => option.key === "all" || option.key === "active" && person.status === "active" || option.key === "invited" && person.status === "invited" || option.key === "admins" && person.role.includes("admin")).length}</button>)}</div>
     <section className="lf-partner-team-list" aria-label="Team members">{filtered.length ? filtered.map((person) => <div key={`${person.kind}-${person.id}`} className="lf-partner-person-row"><span className="lf-partner-person-avatar" aria-hidden="true">{person.name.trim().slice(0, 2).toUpperCase()}</span><span><strong>{person.name}</strong><small>{labelise(person.status)} · {labelise(person.role)}</small></span>{person.kind === "invitation" ? <button type="button" onClick={onOpenInvitations} aria-label={`View invitations for ${person.name}`}>View invitations</button> : null}</div>) : <p>No people match this filter.</p>}</section>
     <details className="lf-partner-advanced"><summary>Manage membership details</summary>{advanced}</details>
@@ -1504,8 +1498,9 @@ function renderReports(
         { label: "Seats in use", value: `${portfolio.summary.seats.allocated} / ${portfolio.summary.seats.purchased}` },
         { label: "Invitations accepted", value: `${portfolio.invitations.filter((item) => item.status === "accepted").length} / ${portfolio.invitations.length}` },
         { label: "Renewals due", value: portfolio.summary.renewalsDue },
-        { label: "Hidden for consent", value: hidden },
+        { label: "Chose not to be counted", value: hidden },
       ]} />
+      {Number(hidden) > 0 ? <p className="lf-admin-measures-note">{Number(hidden) === 1 ? "1 person chose not to be counted" : `${hidden} people chose not to be counted`} in these reports.</p> : null}
       <section className="lf-admin-table-card" style={{ overflowX: "auto" }}>
         <table className="lf-admin-data-table">
           <caption>Reports you can export</caption>
@@ -2055,40 +2050,38 @@ function parseBulkRows(value: string) {
   });
 }
 
-const pageStyle: CSSProperties = { minHeight: "100vh", padding: 24, background: "#f8fafc" };
-const panelStyle: CSSProperties = { background: "#fff", border: "1px solid #dbe3ef", borderRadius: 8, padding: 18, boxShadow: "0 12px 30px rgba(15,23,42,.05)" };
+const pageStyle: CSSProperties = { minHeight: "100vh", padding: 24, background: "var(--lf-surface-page)" };
+const panelStyle: CSSProperties = { background: "#fff", border: "1px solid var(--lf-border)", borderRadius: 8, padding: 18, boxShadow: "0 12px 30px rgba(15,23,42,.05)" };
 const h1Style: CSSProperties = { margin: 0, fontSize: 28, lineHeight: 1.15 };
 const h2Style: CSSProperties = { margin: "0 0 12px", fontSize: 18 };
 const h3Style: CSSProperties = { margin: "18px 0 8px", fontSize: 15 };
-const eyebrowStyle: CSSProperties = { margin: "0 0 8px", color: "#475569", fontSize: 12, textTransform: "uppercase", fontWeight: 800, letterSpacing: 0 };
-const mutedStyle: CSSProperties = { color: "#64748b", margin: "6px 0 0", lineHeight: 1.5 };
-const privacyStyle: CSSProperties = { color: "#334155", background: "#f1f5f9", border: "1px solid #dbe3ef", borderRadius: 6, padding: 10, margin: "12px 0 0" };
+const eyebrowStyle: CSSProperties = { margin: "0 0 8px", color: "var(--lf-text-secondary)", fontSize: 12, textTransform: "uppercase", fontWeight: 800, letterSpacing: 0 };
+const mutedStyle: CSSProperties = { color: "var(--lf-text-secondary)", margin: "6px 0 0", lineHeight: 1.5 };
+const privacyStyle: CSSProperties = { color: "var(--lf-text)", background: "var(--lf-surface-hover)", border: "1px solid var(--lf-border)", borderRadius: 6, padding: 10, margin: "12px 0 0" };
 const rowStyle: CSSProperties = { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 };
 const sectionHeaderStyle: CSSProperties = { display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 12 };
-const contextPanelStyle: CSSProperties = { border: "1px solid #cbd5e1", borderRadius: 8, padding: 14, display: "grid", gap: 12, background: "#f8fafc" };
-const secondaryLinkStyle: CSSProperties = { color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 6, padding: "9px 12px", textDecoration: "none", background: "#fff", fontWeight: 700 };
-const secondaryButtonStyle: CSSProperties = { color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 6, padding: "9px 12px", background: "#fff", fontWeight: 700 };
-const primaryButtonStyle: CSSProperties = { border: 0, borderRadius: 6, padding: "10px 14px", background: "#111827", color: "#fff", fontWeight: 800 };
+const contextPanelStyle: CSSProperties = { border: "1px solid var(--lf-border-input)", borderRadius: 8, padding: 14, display: "grid", gap: 12, background: "var(--lf-surface-page)" };
+const secondaryLinkStyle: CSSProperties = { display: "inline-flex", alignItems: "center", minHeight: 40, color: "var(--lf-ink)", border: "1px solid var(--lf-border-input)", borderRadius: 999, padding: "8px 16px", textDecoration: "none", background: "var(--lf-surface-card)", fontWeight: 600 };
+const secondaryButtonStyle: CSSProperties = { minHeight: 40, color: "var(--lf-ink)", border: "1px solid var(--lf-border-input)", borderRadius: 999, padding: "8px 16px", background: "var(--lf-surface-card)", fontWeight: 600 };
+const primaryButtonStyle: CSSProperties = { minHeight: 40, border: 0, borderRadius: 999, padding: "8px 18px", background: "var(--lf-ink)", color: "var(--lf-primary-text, #fff)", fontWeight: 600 };
 const alertStyle: CSSProperties = { background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 8, padding: 12, marginBottom: 16 };
 const filterBarStyle: CSSProperties = { ...panelStyle, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 10, alignItems: "end", marginBottom: 16 };
-const moreFiltersStyle: CSSProperties = { gridColumn: "1 / -1", border: "1px solid #dbe3ef", borderRadius: 8, padding: 12, display: "grid", gap: 10, background: "#f8fafc" };
+const moreFiltersStyle: CSSProperties = { gridColumn: "1 / -1", border: "1px solid var(--lf-border)", borderRadius: 8, padding: 12, display: "grid", gap: 10, background: "var(--lf-surface-page)" };
 const filterChipsStyle: CSSProperties = { gridColumn: "1 / -1", display: "flex", gap: 8, flexWrap: "wrap" };
-const chipStyle: CSSProperties = { border: "1px solid #bfdbfe", background: "#eff6ff", borderRadius: 999, padding: "7px 10px", color: "#1e3a8a", fontWeight: 800 };
+const chipStyle: CSSProperties = { border: "1px solid var(--lf-border)", background: "var(--lf-surface-sidebar)", borderRadius: 999, padding: "7px 10px", color: "var(--lf-text)", fontWeight: 800 };
 const savedViewsStyle: CSSProperties = { gridColumn: "1 / -1", display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" };
-const savedViewChipStyle: CSSProperties = { display: "inline-flex", gap: 6, alignItems: "center", border: "1px solid #dbe3ef", background: "#f8fafc", borderRadius: 6, padding: "6px 8px" };
-const mutedInlineStyle: CSSProperties = { color: "#64748b", fontSize: 13 };
+const savedViewChipStyle: CSSProperties = { display: "inline-flex", gap: 6, alignItems: "center", border: "1px solid var(--lf-border)", background: "var(--lf-surface-page)", borderRadius: 6, padding: "6px 8px" };
+const mutedInlineStyle: CSSProperties = { color: "var(--lf-text-secondary)", fontSize: 13 };
 const gridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 };
 const stackStyle: CSSProperties = { display: "grid", gap: 16 };
 const twoColumnStyle: CSSProperties = { display: "grid", gridTemplateColumns: "minmax(280px, 420px) minmax(0, 1fr)", gap: 16, alignItems: "start" };
 const definitionGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 10 };
-const labelStyle: CSSProperties = { display: "grid", gap: 5, fontWeight: 700, color: "#334155", fontSize: 13 };
-const checkboxStyle: CSSProperties = { display: "flex", gap: 8, alignItems: "center", color: "#334155", fontWeight: 700 };
-const fieldsetStyle: CSSProperties = { border: "1px solid #dbe3ef", borderRadius: 8, padding: 12, display: "grid", gap: 10 };
+const labelStyle: CSSProperties = { display: "grid", gap: 5, fontWeight: 700, color: "var(--lf-text)", fontSize: 13 };
+const checkboxStyle: CSSProperties = { display: "flex", gap: 8, alignItems: "center", color: "var(--lf-text)", fontWeight: 700 };
+const fieldsetStyle: CSSProperties = { border: "1px solid var(--lf-border)", borderRadius: 8, padding: 12, display: "grid", gap: 10 };
 const tableWrapStyle: CSSProperties = { overflowX: "auto" };
 const tableStyle: CSSProperties = { width: "100%", borderCollapse: "collapse", fontSize: 14 };
 const actionsCellStyle: CSSProperties = { display: "flex", gap: 8, flexWrap: "wrap" };
-const linkCodeStyle: CSSProperties = { display: "block", maxWidth: 360, overflowWrap: "anywhere", color: "#475569", fontSize: 12, marginTop: 5 };
+const linkCodeStyle: CSSProperties = { display: "block", maxWidth: 360, overflowWrap: "anywhere", color: "var(--lf-text-secondary)", fontSize: 12, marginTop: 5 };
 
 // Brief access check: a small centred card on the page colour, the same on a laptop and a phone.
-const checkingPageStyle: CSSProperties = { minHeight: "100vh", display: "grid", placeItems: "center", padding: 24, background: "var(--lf-surface-page, #f7f3f1)" };
-const checkingPanelStyle: CSSProperties = { width: "min(440px, 100%)", background: "var(--lf-surface-card, #fff)", border: "1px solid var(--lf-border, #e6ded9)", borderRadius: 12, padding: 20, display: "grid", gap: 8 };
