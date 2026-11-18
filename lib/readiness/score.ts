@@ -24,6 +24,10 @@ export const READINESS_ITEMS: Array<{ key: ReadinessKey; label: string; weight: 
   { key: "other", label: "Other", weight: 5, href: "/add", addLabel: "Add something else that matters", notApplicableLabel: "Nothing else", dismissKeys: [] },
 ];
 
+const READINESS_ICONS: Record<ReadinessKey, string> = {
+  will: "gavel", named: "person_add", bank: "account_balance", home: "home", pension: "savings", insurance: "shield", savings: "trending_up", other: "inventory_2",
+};
+
 export const readinessPreferenceKey = (key: ReadinessKey) => `readiness_${key}`;
 
 export type ReadinessItemState = {
@@ -35,7 +39,13 @@ export type ReadinessItemState = {
   notApplicable: boolean;
   /** Plain words for what's still missing, when part done. */
   hint: string | null;
+  /** The next action in plain words, naming the document or person it's about (owner request 18 Nov 2026). */
+  actionTitle: string;
+  /** What it's about: the Will's title, the person's name. */
+  subject: string | null;
+  /** Opens the exact place to act: the Will itself, the person's page, or the add form. */
   href: string;
+  icon: string;
   addLabel: string;
   notApplicableLabel: string;
 };
@@ -62,11 +72,27 @@ export function computeReadiness(facts: VaultFacts, preferences: Pick<VaultPrefe
   const otherCount = getAssetsForBucket(rows, "business").length + getAssetsForBucket(rows, "digital").length
     + rows.filter((row) => text(row.section_key) === "personal" && !["executors", "beneficiaries", "tasks", "wishes", "next-of-kin"].includes(text(row.category_key))).length;
 
-  const measured: Record<ReadinessKey, { done: number; hint: string | null }> = {
+  // The Will to finish, and the person to invite, so each step can name them and open them directly.
+  const unsignedWill = wills.find((row) => String(row.metadata_json?.will_signed_on ?? "").trim() === "");
+  const willHref = (row: { id: string; kind: "asset" | "record" }) => `/legal/wills?${row.kind === "asset" ? "asset" : "record"}=${encodeURIComponent(row.id)}`;
+  const waitingPerson = executorPeople.find((person) => person.stage === "added" && person.contactId)
+    ?? executorPeople.find((person) => (person.stage === "invited" || person.stage === "invited_stale") && person.contactId);
+  const waitingContact = waitingPerson ? null : executorContacts.find((contact) => !contact.linkedUserId);
+  const waitingName = waitingPerson?.name ?? waitingContact?.name ?? null;
+  const waitingId = waitingPerson?.contactId ?? waitingContact?.id ?? null;
+  const waitingInvited = waitingPerson ? waitingPerson.stage !== "added" : false;
+  const measured: Record<ReadinessKey, { done: number; hint: string | null; actionTitle?: string; subject?: string | null; href?: string }> = {
     will: wills.length || facts.willDocumentCount
-      ? { done: willSigned ? 1 : 0.5, hint: willSigned ? null : "Add the date it was signed" }
+      ? { done: willSigned ? 1 : 0.5, hint: willSigned ? null : "Add the date it was signed",
+          actionTitle: "Add the date your Will was signed", subject: unsignedWill?.title?.trim() || "Your Will",
+          href: unsignedWill ? willHref(unsignedWill) : "/legal/wills" }
       : { done: 0, hint: null },
-    named: anyoneNamed ? { done: anyoneJoined ? 1 : 0.5, hint: anyoneJoined ? null : "Invite them so they can join" } : { done: 0, hint: null },
+    named: anyoneNamed
+      ? { done: anyoneJoined ? 1 : 0.5, hint: anyoneJoined ? null : "Invite them so they can join",
+          actionTitle: waitingName ? (waitingInvited ? `Remind ${waitingName} to join` : `Invite ${waitingName} to join`) : "Invite your executor to join",
+          subject: waitingName ? "Your executor" : null,
+          href: waitingId ? `/contacts?contact=${encodeURIComponent(waitingId)}` : "/contacts?group=executors" }
+      : { done: 0, hint: null },
     bank: { done: banks.length ? 1 : 0, hint: null },
     home: { done: getAssetsForBucket(rows, "property").length ? 1 : 0, hint: null },
     pension: { done: getAssetsForFinanceCategory(rows, "pensions").length ? 1 : 0, hint: null },
@@ -80,7 +106,13 @@ export function computeReadiness(facts: VaultFacts, preferences: Pick<VaultPrefe
     const answered = [readinessPreferenceKey(item.key), ...item.dismissKeys].some((key) => preferences.applicability[key] === "not_relevant");
     // Something recorded always counts, even if it was once marked "Doesn't apply".
     const notApplicable = answered && state.done === 0;
-    return { key: item.key, label: item.label, weight: item.weight, done: state.done, notApplicable, hint: state.hint, href: item.href, addLabel: item.addLabel, notApplicableLabel: item.notApplicableLabel };
+    const partial = state.done > 0 && state.done < 1;
+    return { key: item.key, label: item.label, weight: item.weight, done: state.done, notApplicable, hint: state.hint,
+      actionTitle: partial && state.actionTitle ? state.actionTitle : item.addLabel,
+      subject: partial ? state.subject ?? null : null,
+      href: partial && state.href ? state.href : item.href,
+      icon: READINESS_ICONS[item.key],
+      addLabel: item.addLabel, notApplicableLabel: item.notApplicableLabel };
   });
   const counted = items.filter((item) => !item.notApplicable);
   const total = counted.reduce((sum, item) => sum + item.weight, 0);

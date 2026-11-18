@@ -43,3 +43,19 @@ test("the score is the owner's only: Home shows it only in the owner's own Vault
   assert.match(page, /vaultFacts && viewer\.mode === "owner" \? computeReadiness/);
   assert.doesNotMatch(fs.readFileSync("lib/readiness/score.ts", "utf8"), /from\(|fetch\(/, "computed in the browser from the owner's own facts; nothing stored or sent");
 });
+
+test("each step names its document or person and opens the place to act (owner, 18 Nov 2026)", () => {
+  const will = row("legal", "wills", { id: "will-1", title: "Last Will and Testament" });
+  const result = computeReadiness(facts([will], {
+    contacts: [{ id: "p-jane", name: "Jane Example", role: "Executor", linkedUserId: null }],
+    links: [{ recordId: "will-1", personId: "p-jane", role: "executor" }],
+  }));
+  const willStep = result.items.find((item) => item.key === "will");
+  assert.equal(willStep.actionTitle, "Add the date your Will was signed");
+  assert.equal(willStep.subject, "Last Will and Testament");
+  assert.equal(willStep.href, "/legal/wills?asset=will-1");
+  const named = result.items.find((item) => item.key === "named");
+  assert.equal(named.actionTitle, "Invite Jane Example to join");
+  assert.equal(named.href, "/contacts?contact=p-jane");
+  assert.equal(result.items.find((item) => item.key === "home").href, "/add?area=property");
+});
