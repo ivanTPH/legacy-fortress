@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Card, PageHeader } from "../../../../components/ui/V3Primitives";
 import { AddAssetLink } from "../../../../components/ui/LFDesignSystem";
 import VaultSectionGrid from "../../../../components/vault/VaultSectionGrid";
@@ -23,9 +24,11 @@ type Props = {
   lifeCover?: string | null;
   actionCount?: number;
   canAddRecords?: boolean;
+  /** Readiness score card (owner only), shown above the areas so it's seen first (owner, 18 Nov 2026). */
+  readiness?: ReactNode;
 };
 
-export default function V3DashboardOverview({ loading, areas, recordCount, peopleCount, recordedValue, lifeCover, actionCount, canAddRecords = true }: Props) {
+export default function V3DashboardOverview({ loading, areas, recordCount, peopleCount, recordedValue, lifeCover, actionCount, canAddRecords = true, readiness }: Props) {
   const count = (value: number) => loading ? "…" : value;
 
   return <div className="lf-v3-screen-overview is-dashboard">
@@ -43,6 +46,7 @@ export default function V3DashboardOverview({ loading, areas, recordCount, peopl
     <Card className="lf-v3-mobile-value" aria-label="Estimated value">
       <span>Estimated value</span><strong>{loading ? "…" : recordedValue}</strong>{!loading && lifeCover ? <small className="lf-v3-life-cover">Plus {lifeCover} life cover</small> : null}
     </Card>
+    {readiness}
     {/* Prompts live only in the Inbox (owner, 10 Nov 2026): on Home they repeated it and confused what it is for. */}
     <section aria-label="Vault areas" className="lf-v3-vault-overview">
       <VaultSectionGrid sections={areas.map((area) => ({

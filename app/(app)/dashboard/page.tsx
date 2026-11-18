@@ -1746,8 +1746,8 @@ const legalSummary = useMemo(() => {
       <V3DashboardOverview loading={loading} areas={v3Areas} recordCount={recordIds.size} lifeCover={lifeCoverText}
         peopleCount={viewer.mode === "linked" ? undefined : contactRows.length} recordedValue={recordedValue}
         actionCount={viewer.mode === "linked" ? undefined : getActionCentreToDoCount(dashboardState.actions.items, actionContext, guidanceItems)}
-        canAddRecords={viewer.mode !== "linked"} />
-      {readiness && !loading ? <ReadinessCard readiness={readiness} busyKey={readinessBusyKey} onNotApplicable={(key, notApplicable) => void setReadinessApplies(key, notApplicable)} /> : null}
+        canAddRecords={viewer.mode !== "linked"}
+        readiness={readiness && !loading ? <ReadinessCard readiness={readiness} busyKey={readinessBusyKey} onNotApplicable={(key, notApplicable) => void setReadinessApplies(key, notApplicable)} /> : null} />
       {status ? (
         isPlanLimitStatus(status) ? (
           <button

@@ -30,17 +30,24 @@ export default function ReadinessCard({ readiness, busyKey, onNotApplicable }: {
         <span style={{ width: `${readiness.percent}%` }} />
       </div>
       {readiness.nextSteps.length ? (
-        <ol className="lf-readiness-steps" aria-label="Next steps">
-          {readiness.nextSteps.map((item) => (
-            <li key={item.key}>
-              <Link href={item.href}>
-                <span className="lf-readiness-step-icon" aria-hidden="true"><Icon name="add" size={18} /></span>
-                <span><strong>{item.hint ?? item.addLabel}</strong><small>{item.label}</small></span>
-                <Icon name="chevron_right" size={20} />
-              </Link>
-            </li>
-          ))}
-        </ol>
+        <>
+          <h3 className="lf-readiness-steps-title">Next steps</h3>
+          {/* Each step names the document or person and opens the exact place to act (owner, 18 Nov 2026). */}
+          <ol className="lf-readiness-steps">
+            {readiness.nextSteps.map((item) => (
+              <li key={item.key}>
+                <Link href={item.href} aria-label={`${item.actionTitle}${item.subject ? `: ${item.subject}` : ""}`}>
+                  <span className="lf-readiness-step-icon" aria-hidden="true"><Icon name={item.icon} size={22} /></span>
+                  <span className="lf-readiness-step-copy">
+                    <small>{item.subject ? `${item.label} · ${item.subject}` : item.label}</small>
+                    <strong>{item.actionTitle}</strong>
+                  </span>
+                  <Icon name="chevron_right" size={22} />
+                </Link>
+              </li>
+            ))}
+          </ol>
+        </>
       ) : null}
       <button type="button" className="lf-readiness-toggle" aria-expanded={open} aria-controls={listId} onClick={() => setOpen((value) => !value)}>
         {open ? "Hide what counts" : "See what counts"}<Icon name={open ? "expand_less" : "expand_more"} size={20} />
@@ -60,7 +67,9 @@ function ReadinessRow({ item, busy, onNotApplicable }: { item: ReadinessItemStat
   return (
     <li className={item.done >= 1 ? "is-done" : item.notApplicable ? "is-na" : undefined}>
       <Icon name={icon} size={20} />
-      <span className="lf-readiness-item-copy"><strong>{item.label}</strong><small>{status}</small></span>
+      {item.done < 1 && !item.notApplicable
+        ? <Link className="lf-readiness-item-copy" href={item.href}><strong>{item.label}</strong><small>{status}</small></Link>
+        : <span className="lf-readiness-item-copy"><strong>{item.label}</strong><small>{status}</small></span>}
       {item.done === 0 ? (
         <button type="button" disabled={busy} onClick={() => onNotApplicable(item.key, !item.notApplicable)}>
           {busy ? "Saving…" : item.notApplicable ? "It applies" : item.notApplicableLabel}
