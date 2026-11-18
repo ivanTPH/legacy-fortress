@@ -10,6 +10,7 @@ import { loadInboxNamedPeople, type InboxNamedPerson } from "../../lib/linkedPeo
 import { reviewLinkedPersonSuggestion } from "../../lib/linkedPeople/suggestions";
 import { normalizeLinkedPersonEmail, sendRecordLinkedPersonInvitation } from "../../lib/linkedPeople/recordLinkedPeople";
 import { buildContactsWorkspaceHref } from "../../lib/contacts/contactRouting";
+import { isPlanLimitError } from "../../lib/billing/client";
 
 /**
  * Executors (or attorneys) named on a Will (or Power of Attorney), decided in the Inbox (owner, 11 Nov 2026):
@@ -86,8 +87,16 @@ export default function NamedPeoplePanel({ doc, onChanged }: { doc: "will" | "po
         name: form?.name || person.name, role, email: email || undefined,
       });
       if (sendInvite && result.person_id) {
-        await invite({ personId: result.person_id, recordId: person.recordId, recordType: person.recordType, name: form?.name || person.name });
-        return `${form?.name || person.name} added and invited`;
+        const name = form?.name || person.name;
+        try {
+          await invite({ personId: result.person_id, recordId: person.recordId, recordType: person.recordType, name });
+        } catch (cause) {
+          // Owner report 18 Nov 2026: the person was added but the invitation was refused for the plan limit,
+          // and nothing said so. Say it plainly; "Invite" stays next to their name for after upgrading.
+          if (isPlanLimitError(cause)) return `${name} added to People. The invitation wasn’t sent: the free plan includes 1 invitation. After you upgrade, tap Invite next to ${name}.`;
+          return `${name} added to People, but the invitation wasn’t sent. Tap Invite next to ${name} to try again.`;
+        }
+        return `${name} added and invited`;
       }
       return `${form?.name || person.name} added to People`;
     });
@@ -126,7 +135,10 @@ export default function NamedPeoplePanel({ doc, onChanged }: { doc: "will" | "po
                 open ? null : <button type="button" className="lf-inbox-secondary" disabled={Boolean(busy)} onClick={() => { setError(""); setForm({ key: person.key, name: person.name, email: "" }); }}>Add</button>
               ) : person.invite === "accepted" ? <span className="lf-named-tick is-accepted">✓ Accepted</span>
                 : person.invite === "sent" ? <span className="lf-named-tick is-sent">✓ Sent</span>
-                : person.email ? <button type="button" className="lf-inbox-secondary" disabled={Boolean(busy)} onClick={() => void run(person.key, () => invite(person, person.invite === "problem"))}>{busy === person.key ? "Sending…" : person.invite === "problem" ? "Send again" : "Invite"}</button>
+                : person.email ? <button type="button" className="lf-inbox-secondary" disabled={Boolean(busy)} onClick={() => void run(person.key, () => invite(person, person.invite === "problem").catch((cause: unknown) => {
+                  if (isPlanLimitError(cause)) throw new Error(`The invitation to ${person.name} wasn’t sent: the free plan includes 1 invitation. After you upgrade, tap Invite again.`);
+                  throw cause;
+                }))}>{busy === person.key ? "Sending…" : person.invite === "problem" ? "Send again" : "Invite"}</button>
                 : <Link className="lf-inbox-secondary" href={buildContactsWorkspaceHref(person.personId)}>Add email</Link>}
             </div>
             {person.kind === "linked" && person.invite === "sent" ? (managing === person.key
