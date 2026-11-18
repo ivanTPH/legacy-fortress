@@ -769,11 +769,10 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
                 <div style={{ display: "grid", gap: 8 }}>
                   {rows.map((contact) => {
                     const invitation = getInvitationDisplay(contact);
-                    const identity = getIdentityDisplay(contact);
                     const access = accessByContact === null
                       ? "Checking access"
                       : contact.contact_role === "executor"
-                        ? "No living access"
+                        ? "Nothing shared now"
                         : (() => {
                           const summary = accessByContact[contact.id] ?? (contact.linked_user_id ? accessByContact[contact.linked_user_id] : undefined);
                           if (!summary?.count) return "No records shared";
@@ -795,13 +794,16 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
                               <span style={contactSummaryRelationshipStyle}>{formatContactRoleLine(contact)}</span>
                             </span>
                           </span>
+                          {/* One plain status per person (UX review 2); the detail lives in their panel. */}
                           <span className="lf-pa-person-facts">
-                            <span className="lf-people-status-chip" data-tone={invitation.tone}><Icon name={invitation.icon} size={14} />{invitation.label}</span>
-                            <span className="lf-people-status-chip lf-v51-mobile-person-status" data-tone={access.includes("record") && !access.startsWith("No") ? "success" : invitation.tone}>{access.includes("record") && !access.startsWith("No") ? access : <><Icon name={invitation.icon} size={14} />{invitation.label}</>}</span>
-                            <span className="lf-pa-progress" role="img" aria-label={`Connected: ${contact.linked_user_id ? "yes" : "no"}; identity verified: ${identity === "Verified" ? "yes" : "no"}; access granted: ${access.includes("record") && !access.startsWith("No") ? "yes" : "no"}`}>
-                              <span data-state={contact.linked_user_id ? "done" : contact.invite_status === "invite_sent" ? "pending" : "rest"} /><span data-state={identity === "Verified" ? "done" : identity === "In progress" ? "pending" : "rest"} /><span data-state={access.includes("record") && !access.startsWith("No") ? "done" : "rest"} />
-                            </span>
-                            <span className="lf-pa-status-caption">{contact.linked_user_id ? "Connected" : "Not connected"} · {identity === "Verified" ? "Identity verified" : "Identity not verified"} · {access}</span>
+                            {(() => {
+                              const sharing = access.includes("record") && !access.startsWith("No");
+                              const status = sharing ? { tone: "success", icon: "visibility", label: access.replace(/^View /, "Can see ") }
+                                : contact.linked_user_id ? { tone: "success", icon: "check_circle", label: "Joined" }
+                                : contact.invite_status === "invite_sent" ? { tone: invitation.tone, icon: invitation.icon, label: "Invited, not joined yet" }
+                                : { tone: invitation.tone, icon: invitation.icon, label: invitation.label };
+                              return <span className="lf-people-status-chip lf-pa-one-status" data-tone={status.tone}><Icon name={status.icon} size={14} />{status.label}</span>;
+                            })()}
                           </span>
                           <Icon name="chevron_right" size={18} className="lf-pa-row-chevron" />
                         </button>
@@ -815,13 +817,12 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
                               onClick={() => { void sendExistingContactInvite(contact); }}
                             ><Icon name="send" size={16} />{sendingInviteId === contact.id ? "Sending…" : "Invite"}</button>
                           ) : null}
-                          <IconButton
-                            icon="key"
-                            label="Manage record access"
-                            variant="round"
-                            className="lf-contact-edit-button"
+                          <button
+                            type="button"
+                            className="lf-contact-share-button"
+                            aria-label={`Share records with ${contact.full_name || "this person"}`}
                             onClick={(event) => openContact(contact.id, groupKey, event.currentTarget, true)}
-                          />
+                          ><Icon name="key" size={16} /><span className="lf-contact-share-label">Share</span></button>
                         </div>
                       </article>
                     );

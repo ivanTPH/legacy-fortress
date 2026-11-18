@@ -1310,7 +1310,7 @@ function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | n
             { key: "value", header: "Count", render: (metric) => metric.available ? metric.value?.toLocaleString() : "–" },
             { key: "status", header: "Status", render: (metric) => <AdminStatusBadge status={metric.status} label={MEASURE_STATUS_LABEL[String(metric.status).toLowerCase()]} /> },
           ]}
-          rows={metrics}
+          rows={metrics.filter((metric) => metric.available && String(metric.status).toLowerCase() !== "unavailable")}
           getRowKey={(metric) => metric.key}
           emptyState={<AdminEmptyState title="No measures">No summary metrics are available for this role.</AdminEmptyState>}
         />

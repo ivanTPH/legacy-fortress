@@ -128,7 +128,7 @@ try {
   await checkMobileCard(320, 568);
   await page.setViewportSize({ width: 390, height: 844 });
 
-  await card.getByRole("button", { name: "Manage record access" }).click();
+  await card.getByRole("button", { name: /^Share records with/ }).click();
   await page.getByRole("heading", { name: "Choose individual records" }).waitFor({ timeout: 20000 });
   await page.locator(".lf-person-access-record").first().waitFor();
   assert.equal(await page.locator(".lf-person-access-record").count(), 3);
