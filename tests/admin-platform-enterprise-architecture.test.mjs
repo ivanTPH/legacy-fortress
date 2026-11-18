@@ -140,3 +140,13 @@ test("merged Admin menu keeps every page's own route and capability (owner appro
   assert.deepEqual(support.find((item) => item.label === "Cases").tabs.map((tab) => tab.href), ["/admin/access"]);
   assert.equal(support.find((item) => item.label === "Cases").href, "/admin/access");
 });
+
+test("admin action results show where they can be seen; disabled actions say why (owner report 18 Nov 2026)", () => {
+  const workspace = read("components/admin/AdminControlPlaneWorkspace.tsx");
+  assert.match(workspace, /className="lf-admin-toast" role="status"/);
+  assert.match(workspace, /Write a note first: Add review note and Request retry need one\./);
+  assert.match(workspace, /Assigned to you\. This is recorded in Audit\./);
+  const css = read("app/v3-screens.css");
+  assert.match(css, /\.lf-admin-toast \{ position: fixed;/);
+  assert.match(css, /\.lf-admin-shell button:disabled/);
+});

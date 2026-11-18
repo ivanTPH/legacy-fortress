@@ -1031,7 +1031,9 @@ export default function AdminControlPlaneWorkspace({
     }
     setVerificationQueue(json.queue ?? []);
     if (action === "add_note" || action === "retry") setVerificationReviewNote("");
-    setMessage(`Verification ${action.replace(/_/g, " ")} completed and audit recorded.`);
+    setMessage(action === "assign_to_me" ? "Assigned to you. This is recorded in Audit."
+      : action === "add_note" ? "Note added. This is recorded in Audit."
+      : "Retry requested. They’ll be asked to do the ID check again. This is recorded in Audit.");
   }
 
   async function addSupportCaseNote(invitationId: string, note: string) {
@@ -1163,7 +1165,9 @@ export default function AdminControlPlaneWorkspace({
       breadcrumbs={buildPlatformBreadcrumbs(section, resourceId, enterprisePortfolio, page.title)}
       primaryAction={section === "admin-users" ? <button type="button" style={primaryButtonStyle} onClick={() => setAdminInviteOpen(true)}><Icon name="person_add" size={18} /> Invite administrator</button> : undefined}
     >
-        {message ? <section style={alertStyle}>{message}</section> : null}
+        {/* Owner report 18 Nov 2026: on a phone the result of an action appeared at the top of the page, out of
+            view, so buttons seemed to do nothing. It now shows where it can be seen, until closed. */}
+        {message ? <section className="lf-admin-toast" role="status" aria-live="polite"><span>{message}</span><button type="button" aria-label="Close message" onClick={() => setMessage("")}><Icon name="close" size={20} /></button></section> : null}
         {confirmation ? <AdminConfirmationDialog confirmation={confirmation} onCancel={() => setConfirmation(null)} onConfirm={() => { const action = confirmation.onConfirm; setConfirmation(null); void action(); }} /> : null}
 
         {["overview", "invitations", "access", "support", "verification", "probate", "authorities"].includes(section) ? (
@@ -2357,6 +2361,7 @@ function renderVerification(
                 <label style={labelStyle}>Note or reason for a retry
                   <textarea value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} rows={3} placeholder="Don’t enter document numbers or Vault details." />
                 </label>
+                {!reviewNote.trim() ? <p className="lf-admin-field-hint">Write a note first: Add review note and Request retry need one.</p> : null}
                 <div className="lf-admin-decision-actions">
                   {!selected.assignedReviewerUserId ? <button type="button" className="lf-admin-row-button" onClick={() => void runAction(selected.id, "assign_to_me")} disabled={actionLoading === `${selected.id}:assign_to_me`}>{actionLoading === `${selected.id}:assign_to_me` ? "Assigning…" : "Assign to me"}</button> : null}
                   <button type="button" className="lf-admin-row-button" onClick={() => void runAction(selected.id, "add_note")} disabled={!reviewNote.trim() || actionLoading === `${selected.id}:add_note`}>{actionLoading === `${selected.id}:add_note` ? "Saving…" : "Add review note"}</button>
@@ -2887,7 +2892,6 @@ const loadingPageStyle = {
 } satisfies CSSProperties;
 
 const panelStyle = { background: "var(--lf-surface-card)", border: "1px solid var(--lf-border)", borderRadius: 12, padding: 20, display: "grid", gap: 14 } satisfies CSSProperties;
-const alertStyle = { ...panelStyle, color: "var(--lf-status-rejected-text)", background: "var(--lf-status-pending-bg)" } satisfies CSSProperties;
 const stackStyle = { display: "grid", gap: 16 } satisfies CSSProperties;
 const gridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 154px), 1fr))", gap: 12 } satisfies CSSProperties;
 const toolbarStyle = { ...panelStyle, display: "flex", alignItems: "end", justifyContent: "space-between", gap: 12, flexWrap: "wrap" } satisfies CSSProperties;
