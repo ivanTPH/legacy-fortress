@@ -943,6 +943,7 @@ export default function UniversalRecordWorkspace({
     && viewer.mode !== "linked" && !isTrustedContacts && !isCanonicalTask
     && !isCanonicalExecutor && !isCanonicalBeneficiary && !isIdentityDocuments
     && Boolean(linkedPeopleConfig(sectionKey, categoryKey));
+  const savesThenChoosesPeople = !editingId && canShowLinkedPeople && canCreateRecords && (categoryKey === "wills" || categoryKey === "power-of-attorney");
   const canEditWorkspaceRow = (recordId: string) =>
     usesCanonicalAssets || canonicalLegalDocumentCategorySlug ? canEditAssetForViewer(recordId, viewer) : canEditRecordForViewer(recordId, viewer);
   const helpMessage = getWorkspaceHelpMessage(sectionKey, categoryKey);
@@ -4842,8 +4843,11 @@ export default function UniversalRecordWorkspace({
         {!showNarrativeNotes && !usesStructuredWorkspaceForm ? <button type="button" style={ghostBtn} onClick={() => setShowNarrativeNotes(true)}><Icon name="add" size={16} /> Add notes</button> : null}
         {!editingId && canShowLinkedPeople && canCreateRecords ? <section className="lf-v52-form-people" aria-label="People on this record">
           <h3>{linkedPeopleConfig(sectionKey, categoryKey)?.formHeading ?? linkedPeopleConfig(sectionKey, categoryKey)?.heading} (optional)</h3>
-          {/* One Save (UX review 2): saving a new Will or Power of Attorney goes straight on to choosing the people. */}
-          <p>When you save, we’ll ask you to choose {categoryKey === "power-of-attorney" ? "your attorney" : categoryKey === "wills" ? "your executors" : "the people linked to it"} from your People. You can skip it. Linking someone doesn’t give them access.</p>
+          {/* One Save (UX review 2): saving a new Will or Power of Attorney goes straight on to choosing the people.
+              Other records (insurance, pensions…) keep people optional: a separate button, never opened by Save. */}
+          {savesThenChoosesPeople ? <p>When you save, we’ll ask you to choose {categoryKey === "power-of-attorney" ? "your attorney" : "your executors"} from your People. You can skip it. Linking someone doesn’t give them access.</p> : <>
+          <p>We save this first, then you choose the people linked to it from your People. Linking someone doesn’t give them access.</p>
+          <button type="button" disabled={saving} onClick={() => void saveRecord(true)}>{saving ? "Saving…" : linkedPeopleConfig(sectionKey, categoryKey)?.formAction ?? "Save, then add a person"}</button></>}
         </section> : null}
         {submitError ? <div ref={submitErrorRef} tabIndex={-1} className="lf-v4-form-error"><Icon name="error" size={16} /><span><strong>Not saved yet.</strong> {submitError}</span></div> : null}
         </div>
@@ -4851,7 +4855,7 @@ export default function UniversalRecordWorkspace({
           <span className="lf-v4-form-security"><Icon name="lock" size={16} />Stored securely. Not shared with anyone.</span>
           <div className="lf-v4-form-actions">
             <button type="button" className="lf-v4-form-cancel" style={ghostBtn} onClick={cancelForm}><Icon name="close" size={16} />Cancel</button>
-            {(!editingId ? canCreateRecords : canEditWorkspaceRow(editingId)) ? <button type="button" className="lf-v4-form-save" style={primaryBtn} disabled={saving} onClick={() => void saveRecord(!editingId && canShowLinkedPeople && canCreateRecords)} title={editingId ? "Save changes to this record" : "Save this new record"}>
+            {(!editingId ? canCreateRecords : canEditWorkspaceRow(editingId)) ? <button type="button" className="lf-v4-form-save" style={primaryBtn} disabled={saving} onClick={() => void saveRecord(savesThenChoosesPeople)} title={editingId ? "Save changes to this record" : "Save this new record"}>
               <Icon name="save" size={16} style={{ marginRight: 6, verticalAlign: "text-bottom" }} />
               {saving ? "Saving..." : <><span className="lf-v4-form-save-desktop">{editingId ? "Save changes" : statementPrefill ? "Confirm and add to Vault" : saveLabel}</span><span className="lf-v4-form-save-mobile">{editingId ? "Save changes" : statementPrefill ? "Confirm and add" : "Save record"}</span></>}
             </button> : null}

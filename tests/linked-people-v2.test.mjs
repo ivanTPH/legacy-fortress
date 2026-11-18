@@ -59,3 +59,10 @@ test("a suggestion is matched again against today's People and an exact match is
   assert.match(section, /matchOwnerContact\(item\.extracted_name, contacts\)/);
   assert.match(section, /setSuggestionChoice\(exact \? "existing" : ""\); setPersonId\(exact\)/);
 });
+
+test("only a new Will or Power of Attorney goes from Save straight to choosing people", () => {
+  const workspace = fs.readFileSync("components/records/UniversalRecordWorkspace.tsx", "utf8");
+  assert.match(workspace, /const savesThenChoosesPeople = !editingId && canShowLinkedPeople && canCreateRecords && \(categoryKey === "wills" \|\| categoryKey === "power-of-attorney"\);/);
+  assert.match(workspace, /onClick=\{\(\) => void saveRecord\(savesThenChoosesPeople\)\}/);
+  assert.match(workspace, /Save, then add a person/, "other records keep people optional behind their own button");
+});
