@@ -40,6 +40,8 @@ import { savePeopleContact } from "../../../lib/contacts/contactRepository";
 import { getPlanLimitRedirectHref } from "../../../lib/accountPlan";
 import { assetMatchesLegalCategory } from "../../../lib/legalCategories";
 import { buildNextSteps, type VaultFacts } from "../../../lib/readiness/nextSteps";
+import { computeReadiness, READINESS_ITEMS, readinessPreferenceKey, type ReadinessKey } from "../../../lib/readiness/score";
+import ReadinessCard from "../components/dashboard/ReadinessCard";
 import { showPremiumSheet } from "../../../lib/billing/client";
 import { sendContactInvite } from "../../../lib/contacts/sendContactInvite";
 import { loadProfileWorkspace, saveProfileWorkspace } from "../../../lib/profile/workspace";
@@ -910,6 +912,26 @@ const legalSummary = useMemo(() => {
     () => (vaultFacts ? buildNextSteps(vaultFacts, preferences) : []),
     [preferences, vaultFacts],
   );
+  // Readiness score (owner decision 18 Nov 2026): owner only, from the same facts as the next steps.
+  const readiness = useMemo(() => (vaultFacts && viewer.mode === "owner" ? computeReadiness(vaultFacts, preferences) : null), [preferences, vaultFacts, viewer.mode]);
+  const [readinessBusyKey, setReadinessBusyKey] = useState<ReadinessKey | null>(null);
+  const setReadinessApplies = useCallback(async (key: ReadinessKey, notApplicable: boolean) => {
+    if (viewer.mode !== "owner") return;
+    setReadinessBusyKey(key);
+    try {
+      const user = await waitForActiveUser(supabase, { attempts: 4, delayMs: 120 });
+      if (!user) return;
+      const item = READINESS_ITEMS.find((candidate) => candidate.key === key);
+      // "It applies" also undoes an earlier "I don't have one" on the matching next step.
+      const keys = notApplicable ? [readinessPreferenceKey(key)] : [readinessPreferenceKey(key), ...(item?.dismissKeys ?? [])];
+      const next = keys.reduce((prefs, prefKey) => setVaultApplicability(prefs, prefKey, notApplicable ? "not_relevant" : "unknown"), preferences);
+      setPreferences(await saveVaultPreferences(supabase, user.id, next));
+    } catch (error) {
+      setStatus(`⚠️ Could not save that choice: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setReadinessBusyKey(null);
+    }
+  }, [preferences, setPreferences, viewer.mode]);
   // Early-access requests from nominees are Needs you items (va-v7). Asking never shares anything.
   const [earlyAccessRequests, setEarlyAccessRequests] = useState<Array<{ id: string; name: string }>>([]);
   useEffect(() => {
@@ -1725,6 +1747,7 @@ const legalSummary = useMemo(() => {
         peopleCount={viewer.mode === "linked" ? undefined : contactRows.length} recordedValue={recordedValue}
         actionCount={viewer.mode === "linked" ? undefined : getActionCentreToDoCount(dashboardState.actions.items, actionContext, guidanceItems)}
         canAddRecords={viewer.mode !== "linked"} />
+      {readiness && !loading ? <ReadinessCard readiness={readiness} busyKey={readinessBusyKey} onNotApplicable={(key, notApplicable) => void setReadinessApplies(key, notApplicable)} /> : null}
       {status ? (
         isPlanLimitStatus(status) ? (
           <button
