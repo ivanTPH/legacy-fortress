@@ -296,7 +296,7 @@ test.describe.serial("admin role matrix local proof", () => {
     await signInViaBrowser(page, "uat.superadmin@local.test");
 
     await page.goto(`${BASE_URL}/admin/users`, { waitUntil: "networkidle" });
-    await expect(page.getByRole("heading", { name: "Customer users" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Customers", exact: true })).toBeVisible();
     await expect(page.getByText("Safe lookup results")).toBeVisible();
 
     await page.goto(`${BASE_URL}/admin/invitations`, { waitUntil: "networkidle" });

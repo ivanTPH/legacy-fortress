@@ -476,118 +476,118 @@ const PAGE_COPY: Record<AdminControlPlaneSection, { title: string; eyebrow: stri
     description: "New accounts, plan changes, links, documents and what's waiting for you, newest first.",
   },
   users: {
-    title: "Customer users",
-    eyebrow: "Operations",
+    title: "Customers",
+    eyebrow: "Customers",
     description: "Find a customer to help with their account. Record names, values and documents are never shown.",
   },
   "user-detail": {
-    title: "Customer user",
-    eyebrow: "Operations",
+    title: "Customer",
+    eyebrow: "Customers",
     description: "Account details for support. Record names, values and documents are never shown.",
   },
   "admin-users": {
     title: "Admin users",
-    eyebrow: "Oversight",
+    eyebrow: "Team and settings",
     description: "Legacy Fortress staff who can sign in to Platform Admin, and what each one can do.",
   },
   "admin-user-detail": {
     title: "Administrator",
-    eyebrow: "Oversight",
+    eyebrow: "Team and settings",
     description: "Role, status and recent changes for this administrator.",
   },
   invitations: {
     title: "Invitations",
-    eyebrow: "Operations",
+    eyebrow: "Invitations and help",
     description: "Every invitation on the platform: customers inviting trusted people, organisations and administrators.",
   },
   organisations: {
     title: "Organisations",
-    eyebrow: "Commercial",
+    eyebrow: "Partners",
     description: "Partner organisations, their licences and administrators. Members’ Vaults are never shown.",
   },
   "organisation-detail": {
     title: "Organisation",
-    eyebrow: "Commercial",
+    eyebrow: "Partners",
     description: "Licence, seats, people and invitations for this organisation.",
   },
   "organisation-users": {
     title: "Users & seats",
-    eyebrow: "Commercial",
+    eyebrow: "Partners",
     description: "People using this organisation’s seats.",
   },
   "organisation-invitations": {
     title: "Invitations",
-    eyebrow: "Commercial",
+    eyebrow: "Partners",
     description: "Invitations sent by or for this organisation.",
   },
   "organisation-licences": {
     title: "Licences",
-    eyebrow: "Commercial",
+    eyebrow: "Partners",
     description: "Licences held by this organisation.",
   },
   licences: {
     title: "Licences",
-    eyebrow: "Commercial",
+    eyebrow: "Partners",
     description: "Seats each organisation has bought, and when they renew.",
   },
   "licence-detail": {
     title: "Licence",
-    eyebrow: "Commercial",
+    eyebrow: "Partners",
     description: "Seats, renewal and the organisation this licence belongs to.",
   },
   access: {
     title: "Access requests",
-    eyebrow: "Operations",
+    eyebrow: "Cases",
     description: "Requests to see more of someone’s Vault, and executor requests after a death. Admins route cases; Vault owners decide on access.",
   },
   verification: {
-    title: "Identity verification",
-    eyebrow: "Probate & verification",
+    title: "ID checks",
+    eyebrow: "Checks",
     description: "Check people who failed an automatic identity check. Approving confirms who someone is; it doesn’t give them access to anything.",
   },
   "verification-detail": {
     title: "Identity check",
-    eyebrow: "Probate & verification",
+    eyebrow: "Checks",
     description: "Approving confirms who someone is. It never gives access to records.",
   },
   probate: {
     title: "Probate cases",
-    eyebrow: "Probate & verification",
+    eyebrow: "Cases",
     description: "Review death reports and executor authority. Identity, authority, evidence and access are separate decisions, and each one is recorded.",
   },
   authorities: {
     title: "Powers of Attorney",
-    eyebrow: "Probate & verification",
+    eyebrow: "Checks",
     description: "Check authorities owners record. The attorney’s identity, the authority and whether it can be used now are separate checks. Only Activate opens records.",
   },
   "authority-detail": {
     title: "Power of Attorney",
-    eyebrow: "Probate & verification",
+    eyebrow: "Checks",
     description: "The three checks, the document and the decision for this authority.",
   },
   "probate-detail": {
     title: "Probate case",
-    eyebrow: "Probate & verification",
+    eyebrow: "Cases",
     description: "Evidence, decisions and the next step for this case.",
   },
   support: {
-    title: "Support",
-    eyebrow: "Operations",
+    title: "Help and support",
+    eyebrow: "Invitations and help",
     description: "Problems with invitations, linked access and identity checks that need someone to follow up.",
   },
   audit: {
     title: "Audit",
-    eyebrow: "Oversight",
+    eyebrow: "Audit and health",
     description: "Every admin, commercial and probate action in one read-only log.",
   },
   "system-health": {
     title: "System health",
-    eyebrow: "Oversight",
+    eyebrow: "Audit and health",
     description: "Whether each part of the platform is working. Secrets, tokens and passwords are never displayed.",
   },
   settings: {
     title: "Settings",
-    eyebrow: "Oversight",
+    eyebrow: "Team and settings",
     description: "How the platform is configured.",
   },
 };
@@ -1246,9 +1246,15 @@ function currentHrefForSection(section: AdminControlPlaneSection, resourceId: st
   return `/admin/${section}`;
 }
 
+const MENU_GROUP_HOME: Record<string, string> = {
+  Customers: "/admin/users", "Invitations and help": "/admin/invitations", Cases: "/admin/probate", Checks: "/admin/verification",
+  Partners: "/admin/organisations", "Audit and health": "/admin/audit", "Team and settings": "/admin/admin-users",
+};
+
 function buildPlatformBreadcrumbs(section: AdminControlPlaneSection, resourceId: string | null, portfolio: EnterprisePortfolio | null, fallbackTitle: string) {
+  // Breadcrumbs start with the menu item the page sits under (UX review 2 menu, 18 Nov 2026).
   const group = PAGE_COPY[section]?.eyebrow ?? "Platform Admin";
-  const crumbs: Array<{ label: string; href?: string }> = [{ label: group, href: section === "overview" ? undefined : undefined }];
+  const crumbs: Array<{ label: string; href?: string }> = group === fallbackTitle ? [] : [{ label: group, href: MENU_GROUP_HOME[group] }];
   if (["organisations", "organisation-detail", "organisation-users", "organisation-invitations", "organisation-licences"].includes(section)) {
     crumbs.push({ label: "Organisations", href: "/admin/organisations" });
     if (resourceId && section !== "organisations") {
