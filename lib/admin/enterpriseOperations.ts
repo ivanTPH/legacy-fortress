@@ -1536,7 +1536,7 @@ function mapOrganisation(row: EnterpriseOrganisationRow) {
     nominatedAdminExpiryDays: row.nominated_admin_expiry_days,
     archivedAt: row.archived_at,
     /** Synthetic organisation (TEST data); tagged and hidden by default in Platform Admin. */
-    isTest: row.is_test === true,
+    isTest: isTestOrganisationRow(row),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -2095,4 +2095,17 @@ function changedLicenceFields(before: EnterpriseLicenceRow, after: EnterpriseLic
 
 function hashInvitationToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
+}
+
+/**
+ * A synthetic organisation: marked is_test, run by a reserved test e-mail domain, or named by an automated
+ * check (a run marker such as "Staging Boundary staging-admin-boundary-1763...", "phase6-hosted-…", "Diag Insurer 1763…").
+ * Real organisations never carry a 13-digit run timestamp in their name.
+ */
+const TEST_ORGANISATION_EMAIL = /@(example\.(test|com|net|org)|[^@\s]+\.(test|invalid|localhost))$/i;
+const TEST_ORGANISATION_NAME = /(^|\s)(staging[- ]|synthetic\b|diag\b|phase\d+[- ]|release[- ]check\b)|\b\d{13}\b/i;
+export function isTestOrganisationRow(row: { is_test?: boolean | null; legal_name?: string | null; trading_name?: string | null; primary_contact_email?: string | null; nominated_admin_email?: string | null }) {
+  if (row.is_test === true) return true;
+  if ([row.primary_contact_email, row.nominated_admin_email].some((email) => TEST_ORGANISATION_EMAIL.test(String(email ?? "").trim()))) return true;
+  return [row.legal_name, row.trading_name].some((name) => TEST_ORGANISATION_NAME.test(String(name ?? "")));
 }

@@ -269,7 +269,7 @@ test("phone: owner records a Power of Attorney by tapping and links a person", a
   await page.keyboard.type("Property and financial affairs, synthetic");
   log(`typed: name=${await name.inputValue()} description=${await description.inputValue()}`);
   expect(await name.inputValue()).toBe("Synthetic Lasting Power of Attorney");
-  const saveAndAdd = page.getByRole("button", { name: /Save and choose attorney/i }).first();
+  const saveAndAdd = page.locator("button.lf-v4-form-save").first();
   await saveAndAdd.scrollIntoViewIfNeeded();
   await saveAndAdd.tap();
   const dialog = page.getByRole("dialog").first();

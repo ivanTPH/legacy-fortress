@@ -185,7 +185,7 @@ export default function AccessSharingWorkspace() {
             const grant = grantByContact.get(contact.id) ?? (contact.linked_user_id ? grantByContact.get(contact.linked_user_id) : undefined);
             const permissions = normalizeContactPermissionsOverride(grant?.permissions_override);
             const count = permissions.asset_ids.length + permissions.record_ids.length;
-            return <article key={contact.id} className="lf-access-sharing-card"><div><h2>{contact.full_name}</h2><p>{contact.relationship || "Relationship not set"}{contact.contact_role && contact.contact_role !== contact.relationship ? ` · ${contact.contact_role}` : ""}</p></div><strong>{contact.contact_role === "executor" ? "No living access" : count ? `${count} records shared · View only` : "No records shared"}</strong><Link href={`/contacts?contact=${encodeURIComponent(contact.id)}`} className="lf-secondary-btn">Edit</Link></article>;
+            return <article key={contact.id} className="lf-access-sharing-card"><div><h2>{contact.full_name}</h2><p>{contact.relationship || "Relationship not set"}{contact.contact_role && contact.contact_role !== contact.relationship ? ` · ${contact.contact_role}` : ""}</p></div><strong>{contact.contact_role === "executor" ? "Nothing shared now" : count ? `${count} records shared · View only` : "No records shared"}</strong><Link href={`/contacts?contact=${encodeURIComponent(contact.id)}`} className="lf-secondary-btn">Edit</Link></article>;
           })}
           {!contacts.some((contact) => contact.linked_user_id) ? <p className="lf-muted-copy">No linked people are available yet.</p> : null}
         </section>

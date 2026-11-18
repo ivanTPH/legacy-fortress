@@ -107,5 +107,5 @@ test("the extraction route returns the date for the owner to confirm and stores 
   assert.match(findings, /Yes, save this date/);
   assert.match(findings, /No, that’s not right/);
   const workspace = fs.readFileSync("components/records/UniversalRecordWorkspace.tsx", "utf8");
-  assert.match(workspace, /will_signed_on: isWillsWorkspace && editingId/, "editing a Will keeps its signing date");
+  assert.match(workspace, /will_signed_on: isWillsWorkspace \? \(form\.will_signed_on \|\| \(editingId \?/, "editing a Will keeps its signing date; a new Will can enter it");
 });

@@ -756,3 +756,16 @@ body:has(.lf-inbox-selectbar) .lf-mobile-bottom-nav { display: none; }
 }
 @media (max-width: 767px) { .lf-inbox-category .lf-inbox-category-label { display: none; } }
 @media (min-width: 768px) { .lf-inbox-category { width: auto; padding-inline: 12px 14px; gap: 6px; } }
+
+/* People rows (UX review 2): one status and a labelled Share button. */
+.lf-contact-share-button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; border: 1px solid var(--lf-border-input, #D9CFC8); border-radius: 18px; background: var(--lf-surface-card, #fff); color: var(--lf-ink); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.lf-contact-share-button:hover, .lf-contact-share-button:focus-visible { border-color: var(--lf-accent); background: var(--lf-tint, #F6EFEA); }
+.lf-pa-person-facts > .lf-people-status-chip.lf-pa-one-status { display: inline-flex; max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Phone: the whole row opens the person, as before; Share lives in their panel. */
+@media (max-width: 767px) { .lf-pa-person-row .lf-contact-share-button { display: none; } }
+
+/* Security shield (owner, 18 Nov 2026): icon only, green shield in a light green circle; opens Security. */
+.lf-topbar-shield { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 999px; background: #E6F2EA; color: #1F6B3A; text-decoration: none; flex: 0 0 auto; }
+a.lf-topbar-shield:hover, a.lf-topbar-shield:focus-visible { background: #D3EADB; }
+a.lf-topbar-shield:focus-visible { outline: 3px solid var(--lf-focus); outline-offset: 2px; }
+@media (max-width: 767px) { .lf-topbar-shield { display: none; } }

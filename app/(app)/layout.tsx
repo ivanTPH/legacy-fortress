@@ -126,6 +126,14 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
   const [menuState, dispatchMenu] = useReducer(menuReducer, initialMenuState);
   const founderLauncherAvailable = useFounderTestLauncherAccess();
   const navWrapRef = useRef<HTMLDivElement | null>(null);
+  const [twoStepOn, setTwoStepOn] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void supabase.auth.mfa.listFactors().then((result) => {
+      if (active) setTwoStepOn(Boolean(result.data?.totp?.some((factor) => factor.status === "verified")));
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [signOutError, setSignOutError] = useState("");
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
@@ -1081,9 +1089,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
               })}
             </nav>
 
-              <div className="lf-sidebar-actions" aria-label="Account controls">
-                <Link href="/profile" className="lf-account-link" onClick={() => closeNavigationState("item_select")}>Profile and account</Link>
-              </div>
+              {/* "Profile and account" removed (UX review 2): Profile is the first row in Settings and in the account menu. */}
           </div>
         </aside>
 
@@ -1204,22 +1210,15 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
           </div>
 
             <div className="lf-topbar-actions">
-            <div
-              className="lf-topbar-security"
-              aria-label={
-                resolvedViewerAccess.mode === "linked"
-                  ? `${getRoleLabel(resolvedViewerAccess.viewerRole)} view-only access`
-                  : "Private and secure account"
-              }
-              title={
-                resolvedViewerAccess.mode === "linked"
-                  ? `${getRoleLabel(resolvedViewerAccess.viewerRole)} view-only access`
-                  : "Private and secure account"
-              }
-            >
-              <Icon name={resolvedViewerAccess.mode === "linked" ? "visibility_lock" : "verified_user"} size={16} filled />
-              <span>Vault secured</span>
-            </div>
+            {/* Icon-only security shield (owner, 18 Nov 2026): a green shield in a light green circle; it opens Security. */}
+            {(() => {
+              const label = resolvedViewerAccess.mode === "linked"
+                ? `${getRoleLabel(resolvedViewerAccess.viewerRole)} view-only access`
+                : twoStepOn ? "Vault secured: two-step sign-in is on" : "Vault secured: new devices need a code to sign in";
+              return resolvedViewerAccess.mode === "linked"
+                ? <span className="lf-topbar-shield" role="img" aria-label={label} title={label}><Icon name="visibility_lock" size={18} filled /></span>
+                : <Link href="/account/security" className="lf-topbar-shield" aria-label={label} title={label}><Icon name="verified_user" size={18} filled /></Link>;
+            })()}
             {/* The bell is gone: updates now live in the Inbox with things to do (owner, 10 Nov 2026). */}
             <div ref={accountMenuRef} className="lf-admin-shell-account-menu lf-personal-account-menu">
               <button ref={accountTriggerRef} type="button" className="lf-admin-shell-account-trigger" aria-label={`Open account menu for ${effectiveDisplayName}`} aria-expanded={accountMenuOpen} aria-controls={accountMenuId} aria-haspopup="menu" onClick={toggleAccountMenu}>

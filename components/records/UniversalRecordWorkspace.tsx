@@ -246,6 +246,7 @@ type EditForm = {
   trust_document_type: string;
   trust_document_type_other: string;
   trust_date_created: string;
+  will_signed_on: string;
   trust_jurisdiction: string;
   trust_jurisdiction_other: string;
   trust_reference: string;
@@ -440,6 +441,7 @@ const EMPTY_FORM: EditForm = {
   trust_document_type: "",
   trust_document_type_other: "",
   trust_date_created: "",
+  will_signed_on: "",
   trust_jurisdiction: "",
   trust_jurisdiction_other: "",
   trust_reference: "",
@@ -1379,9 +1381,11 @@ export default function UniversalRecordWorkspace({
   }, [canCreateRecords, categoryKey, defaultLegalContactRole, editingId, formVisible, isCanonicalDigital, isPossessions, legalLinkedContactDefinition, searchParams, sectionKey]);
 
   function createEmptyForm() {
-    if (!legalLinkedContactDefinition) return { ...EMPTY_FORM };
+    // A new Will starts with its usual title, so it can be saved straight away (UX review 2).
+    const base = isWillsWorkspace ? { ...EMPTY_FORM, title: "Last Will and Testament" } : { ...EMPTY_FORM };
+    if (!legalLinkedContactDefinition) return base;
     return {
-      ...EMPTY_FORM,
+      ...base,
       contact_role: defaultLegalContactRole,
       legal_contacts: [createLegalContactRow({ role: defaultLegalContactRole })],
     };
@@ -1505,6 +1509,7 @@ export default function UniversalRecordWorkspace({
       trust_document_type: trustDocumentType.selected,
       trust_document_type_other: String(row.metadata?.trust_document_type_other ?? trustDocumentType.other),
       trust_date_created: String(row.metadata?.trust_date_created ?? ""),
+      will_signed_on: String(row.metadata?.will_signed_on ?? ""),
       trust_jurisdiction: trustJurisdiction.selected,
       trust_jurisdiction_other: String(row.metadata?.trust_jurisdiction_other ?? trustJurisdiction.other),
       trust_reference: String(row.metadata?.trust_reference ?? ""),
@@ -2406,7 +2411,8 @@ export default function UniversalRecordWorkspace({
       trust_jurisdiction_other: isTrustsWorkspace && form.trust_jurisdiction === "Other" ? form.trust_jurisdiction_other.trim() || null : null,
       trust_reference: isTrustsWorkspace ? form.trust_reference.trim() || null : null,
       // Keep a Will's confirmed signing date when the record is edited.
-      will_signed_on: isWillsWorkspace && editingId ? (records.find((item) => item.id === editingId)?.metadata?.will_signed_on as string | undefined) ?? null : null,
+      // The date the Will was signed, asked in the form itself (the 3-yearly check counts from it).
+      will_signed_on: isWillsWorkspace ? (form.will_signed_on || (editingId ? (records.find((item) => item.id === editingId)?.metadata?.will_signed_on as string | undefined) : undefined) || null) : null,
       finance_category: isFinanceSection ? categoryKey : null,
       },
       financeMetadata: financeDraft.metadata,
@@ -4442,6 +4448,10 @@ export default function UniversalRecordWorkspace({
                 <span style={labelStyle}>Will title (required)</span>
                 <input style={inputStyle} value={form.title} onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))} />
               </label>
+              <label style={fieldStyle}>
+                <span style={labelStyle}>Date it was signed</span>
+                <input style={inputStyle} type="date" value={form.will_signed_on} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setForm((prev) => ({ ...prev, will_signed_on: event.target.value }))} />
+              </label>
               {!editingId ? (
                 <InlineDocumentUploadField
                   files={pendingDocumentFiles}
@@ -4832,8 +4842,8 @@ export default function UniversalRecordWorkspace({
         {!showNarrativeNotes && !usesStructuredWorkspaceForm ? <button type="button" style={ghostBtn} onClick={() => setShowNarrativeNotes(true)}><Icon name="add" size={16} /> Add notes</button> : null}
         {!editingId && canShowLinkedPeople && canCreateRecords ? <section className="lf-v52-form-people" aria-label="People on this record">
           <h3>{linkedPeopleConfig(sectionKey, categoryKey)?.formHeading ?? linkedPeopleConfig(sectionKey, categoryKey)?.heading} (optional)</h3>
-          <p>We save this document first, then you choose {categoryKey === "power-of-attorney" ? "your attorney" : categoryKey === "wills" ? "your executors" : "the people linked to it"} from your People. Linking someone doesn’t give them access.</p>
-          <button type="button" disabled={saving} onClick={() => void saveRecord(true)}>{saving ? "Saving…" : linkedPeopleConfig(sectionKey, categoryKey)?.formAction ?? "Save, then add a person"}</button>
+          {/* One Save (UX review 2): saving a new Will or Power of Attorney goes straight on to choosing the people. */}
+          <p>When you save, we’ll ask you to choose {categoryKey === "power-of-attorney" ? "your attorney" : categoryKey === "wills" ? "your executors" : "the people linked to it"} from your People. You can skip it. Linking someone doesn’t give them access.</p>
         </section> : null}
         {submitError ? <div ref={submitErrorRef} tabIndex={-1} className="lf-v4-form-error"><Icon name="error" size={16} /><span><strong>Not saved yet.</strong> {submitError}</span></div> : null}
         </div>
@@ -4841,7 +4851,7 @@ export default function UniversalRecordWorkspace({
           <span className="lf-v4-form-security"><Icon name="lock" size={16} />Stored securely. Not shared with anyone.</span>
           <div className="lf-v4-form-actions">
             <button type="button" className="lf-v4-form-cancel" style={ghostBtn} onClick={cancelForm}><Icon name="close" size={16} />Cancel</button>
-            {(!editingId ? canCreateRecords : canEditWorkspaceRow(editingId)) ? <button type="button" className="lf-v4-form-save" style={primaryBtn} disabled={saving} onClick={() => void saveRecord()} title={editingId ? "Save changes to this record" : "Save this new record"}>
+            {(!editingId ? canCreateRecords : canEditWorkspaceRow(editingId)) ? <button type="button" className="lf-v4-form-save" style={primaryBtn} disabled={saving} onClick={() => void saveRecord(!editingId && canShowLinkedPeople && canCreateRecords)} title={editingId ? "Save changes to this record" : "Save this new record"}>
               <Icon name="save" size={16} style={{ marginRight: 6, verticalAlign: "text-bottom" }} />
               {saving ? "Saving..." : <><span className="lf-v4-form-save-desktop">{editingId ? "Save changes" : statementPrefill ? "Confirm and add to Vault" : saveLabel}</span><span className="lf-v4-form-save-mobile">{editingId ? "Save changes" : statementPrefill ? "Confirm and add" : "Save record"}</span></>}
             </button> : null}
