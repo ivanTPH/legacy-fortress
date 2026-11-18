@@ -185,3 +185,12 @@ test("deleting a record asks once and returns to the list (owner report 17 Nov 2
   assert.match(body, /setRecords\(\(current\) => current\.filter\(\(row\) => row\.id !== recordId\)\)/);
   assert.match(body, /router\.replace\(pathname\)/);
 });
+
+test("an invite refused for the plan limit says so; the Inbox opens the person to invite (owner report 18 Nov 2026)", () => {
+  const panel = fs.readFileSync(path.join(process.cwd(), "components/inbox/NamedPeoplePanel.tsx"), "utf8");
+  assert.match(panel, /isPlanLimitError\(cause\)/);
+  assert.match(panel, /The invitation wasn’t sent: the free plan includes 1 invitation/);
+  const steps = fs.readFileSync(path.join(process.cwd(), "lib/readiness/nextSteps.ts"), "utf8");
+  assert.match(steps, /\/contacts\?contact=\$\{encodeURIComponent\(list\[0\]\.contactId\)\}/);
+  assert.match(steps, /actionLabel: "Invite", href: peopleHref\(toInvite, label\)/);
+});

@@ -145,6 +145,12 @@ function step(input: Omit<NextStep, "state" | "snoozedUntil" | "category"> & { c
   return { category: input.category ?? "People", state: "missing", snoozedUntil: null, ...input };
 }
 
+/** One person: their own page in People (Send invitation is there). Several: People filtered to the role. */
+function peopleHref(list: Array<{ contactId: string | null }>, label: "executor" | "attorney") {
+  if (list.length === 1 && list[0].contactId) return `/contacts?contact=${encodeURIComponent(list[0].contactId)}`;
+  return label === "executor" ? "/contacts?group=executors" : "/people-access";
+}
+
 /** Will and Power of Attorney journeys: review → add → invite → accepted → choose what they receive. */
 function peopleSteps(facts: VaultFacts, now: Date): NextStep[] {
   const steps: NextStep[] = [];
@@ -166,7 +172,8 @@ function peopleSteps(facts: VaultFacts, now: Date): NextStep[] {
       title: `Invite ${names(toInvite.map((person) => person.name))}, your ${toInvite.length === 1 ? label : plural}, to connect`,
       emailTitle: `Invite your ${plural} to connect`,
       description: "Connecting doesn't show them anything. It means they're ready if they're ever needed.",
-      actionLabel: "Invite", href: "/people-access",
+      // Owner report 18 Nov 2026: open the person (with Send invitation), not the whole People list.
+      actionLabel: "Invite", href: peopleHref(toInvite, label),
     }));
     const stale = list.filter((person) => person.stage === "invited_stale");
     if (stale.length) steps.push(step({
@@ -174,7 +181,7 @@ function peopleSteps(facts: VaultFacts, now: Date): NextStep[] {
       title: `${names(stale.map((person) => person.name))} ${stale.length === 1 ? "hasn't" : "haven't"} accepted your invitation yet`,
       emailTitle: `An ${label} hasn't accepted your invitation yet`,
       description: "You can send the invitation again, or check the email address is right.",
-      actionLabel: "Send again", href: "/people-access",
+      actionLabel: "Send again", href: peopleHref(stale, label),
     }));
     if (label === "executor") {
       const toNominate = list.filter((person) => person.stage === "accepted");
@@ -204,7 +211,7 @@ function typeSteps(facts: VaultFacts): NextStep[] {
     title: "Do you have a pension? Most people have at least one, often from a job.",
     emailTitle: "Add your pensions, if you have any",
     description: "Workplace and personal pensions are among the hardest things for families to trace.",
-    actionLabel: "Add a pension", href: "/finances/pensions", dismissLabel: "I don't have one",
+    actionLabel: "Add a pension", href: "/finances/pensions?add=1", dismissLabel: "I don't have one",
   }));
   if (bankTypes.length && !bankTypes.some((type) => /sav|isa|deposit/.test(type)) && !has("investments")) steps.push(step({
     key: "has_savings", category: "Finances", priority: "low",
@@ -218,7 +225,7 @@ function typeSteps(facts: VaultFacts): NextStep[] {
     title: "Do you have life insurance or other policies?",
     emailTitle: "Add any insurance policies",
     description: "Life cover, home and car policies help your family know who to contact.",
-    actionLabel: "Add a policy", href: "/finances/insurance", dismissLabel: "I don't have any",
+    actionLabel: "Add a policy", href: "/finances/insurance?add=1", dismissLabel: "I don't have any",
   }));
   return steps;
 }
