@@ -56,6 +56,17 @@ test.beforeAll(async () => {
   }
   // The existing synthetic review data set (accounts, property, will, LPA, pension, insurance, business, people).
   execFileSync("node", ["scripts/seed-bill-smith-review-account.mjs"], { stdio: "inherit", env: { ...process.env, SEED_TARGET_EMAIL: EMAIL } });
+  // Clear what earlier runs of these checks left behind if they stopped part-way (synthetic demo account only):
+  // placeholder documents from the limit checks and the test insurance policies. Bill's own seeded data is untouched.
+  if (!/@example\.test$/i.test(EMAIL)) throw new Error("cleanup is only for the synthetic demo account");
+  const leftovers = await admin.from("attachments").delete().eq("owner_user_id", userId).or("file_name.like.filler-%,file_name.like.limit-%").select("id");
+  const oldPolicies = await admin.from("records").select("id").eq("owner_user_id", userId).or("provider_name.ilike.Diag Insurer%,title.ilike.Diag Insurer%");
+  const policyIds = (oldPolicies.data ?? []).map((row) => String((row as { id: string }).id));
+  if (policyIds.length) {
+    await admin.from("attachments").delete().eq("owner_user_id", userId).in("record_id", policyIds);
+    await admin.from("records").delete().eq("owner_user_id", userId).in("id", policyIds);
+  }
+  console.log(`Demo tidy: removed ${leftovers.data?.length ?? 0} leftover placeholder documents and ${policyIds.length} test policies`);
   fs.mkdirSync(OUT, { recursive: true });
 });
 
@@ -483,6 +494,8 @@ test("insurance: a new policy with a photo shows in the Insurance list (phone)",
   }
   console.log(`Insurance diag: brought documents to the limit with ${fillerIds.length} placeholders`);
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+  let inList = false;
+  try {
   const page = await context.newPage();
   page.on("console", (message) => { if (message.type() === "error") console.log(`Insurance diag console: ${message.text().slice(0, 300)}`); });
   page.on("response", (response) => { if (response.status() >= 400) console.log(`Insurance diag http ${response.status()} ${response.request().method()} ${new URL(response.url()).pathname}`); });
@@ -553,10 +566,13 @@ test("insurance: a new policy with a photo shows in the Insurance list (phone)",
   const listText = (await page.locator("main").innerText()).replace(/\s+/g, " ");
   console.log(`Insurance diag list: ${listText.slice(0, 900)}`);
   await shoot(page, "insurance-diag-4-list");
-  const inList = listText.includes(marker);
+  inList = listText.includes(marker);
   console.log(`Insurance diag: in list=${inList}, cover shown=${listText.includes("1,000,000")}`);
-  // Tidy up (synthetic account): the placeholders, and only the policies and photos this test created.
+  } finally {
+  // Tidy up (synthetic account), even if a step failed: the placeholders, and only the policies and photos this test created.
   if (fillerIds.length) await admin.from("attachments").delete().eq("owner_user_id", userId).in("id", fillerIds);
+  const savedRecords = await admin.from("records").select("id").eq("owner_user_id", userId).gte("created_at", startedAt);
+  const savedAssets = await admin.from("assets").select("id").eq("owner_user_id", userId).gte("created_at", startedAt);
   const recordIds = (savedRecords.data ?? []).map((row) => (row as { id: string }).id);
   if (recordIds.length) {
     await admin.from("attachments").delete().eq("owner_user_id", userId).in("record_id", recordIds);
@@ -565,6 +581,7 @@ test("insurance: a new policy with a photo shows in the Insurance list (phone)",
   const assetIds = (savedAssets.data ?? []).map((row) => (row as { id: string }).id);
   if (assetIds.length) await admin.from("assets").update({ deleted_at: new Date().toISOString() }).eq("owner_user_id", userId).in("id", assetIds).is("deleted_at", null);
   await context.close();
+  }
   expect(inList, "the new policy should be in the Insurance list").toBe(true);
 });
 
