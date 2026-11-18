@@ -1,5 +1,6 @@
 "use client";
 
+import WorkspaceLoadingOutline from "./WorkspaceLoadingOutline";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
@@ -179,7 +180,7 @@ export default function EnterpriseLicenceDetailWorkspace({ licenceId, platformAd
     router.refresh();
   }
 
-  if (state === "checking") return <main style={pageStyle}><section style={panelStyle}><h1>Checking licence access</h1><p>Confirming your signed-in session and role permissions.</p></section></main>;
+  if (state === "checking") return <WorkspaceLoadingOutline label="Opening the licence" />;
   if (state !== "ready" || !detail) return <main style={pageStyle}><section style={panelStyle}><h1>{state === "denied" ? "Access denied" : "Licence unavailable"}</h1><p>{message}</p><Link href={platformAdmin ? "/admin/licences" : "/enterprise"}>Back to {platformAdmin ? "Platform Administration" : "Enterprise operations"}</Link></section></main>;
 
   const licence = detail.licence;
@@ -419,23 +420,23 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
-const pageStyle: CSSProperties = { minHeight: "100vh", padding: 24, background: "#f8fafc", color: "#111827" };
-const panelStyle: CSSProperties = { background: "#fff", border: "1px solid #dbe3ef", borderRadius: 8, padding: 18, boxShadow: "0 12px 30px rgba(15,23,42,.05)", display: "grid", gap: 12 };
+const pageStyle: CSSProperties = { minHeight: "100vh", padding: 24, background: "var(--lf-surface-page)", color: "var(--lf-text)" };
+const panelStyle: CSSProperties = { background: "#fff", border: "1px solid var(--lf-border)", borderRadius: 8, padding: 18, boxShadow: "0 12px 30px rgba(15,23,42,.05)", display: "grid", gap: 12 };
 const stackStyle: CSSProperties = { display: "grid", gap: 16 };
-const mutedStyle: CSSProperties = { color: "#64748b", margin: "6px 0 0", lineHeight: 1.5 };
-const privacyStyle: CSSProperties = { color: "#334155", background: "#f1f5f9", border: "1px solid #dbe3ef", borderRadius: 6, padding: 10, margin: "12px 0 0" };
-const secondaryButtonStyle: CSSProperties = { color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 6, padding: "9px 12px", background: "#fff", fontWeight: 700 };
-const primaryButtonStyle: CSSProperties = { border: 0, borderRadius: 6, padding: "10px 14px", background: "#111827", color: "#fff", fontWeight: 800 };
+const mutedStyle: CSSProperties = { color: "var(--lf-text-secondary)", margin: "6px 0 0", lineHeight: 1.5 };
+const privacyStyle: CSSProperties = { color: "var(--lf-text)", background: "var(--lf-surface-hover)", border: "1px solid var(--lf-border)", borderRadius: 6, padding: 10, margin: "12px 0 0" };
+const secondaryButtonStyle: CSSProperties = { minHeight: 40, color: "var(--lf-ink)", border: "1px solid var(--lf-border-input)", borderRadius: 999, padding: "8px 16px", background: "var(--lf-surface-card)", fontWeight: 600 };
+const primaryButtonStyle: CSSProperties = { minHeight: 40, border: 0, borderRadius: 999, padding: "8px 18px", background: "var(--lf-ink)", color: "var(--lf-primary-text, #fff)", fontWeight: 600 };
 const alertStyle: CSSProperties = { background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 8, padding: 12, marginBottom: 16 };
-const tabListStyle: CSSProperties = { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 };
-const tabStyle: CSSProperties = { border: "1px solid #cbd5e1", background: "#fff", borderRadius: 6, padding: "9px 12px", fontWeight: 700 };
-const activeTabStyle: CSSProperties = { ...tabStyle, background: "#111827", color: "#fff", borderColor: "#111827" };
-const labelStyle: CSSProperties = { display: "grid", gap: 5, fontWeight: 700, color: "#334155", fontSize: 13 };
-const checkboxStyle: CSSProperties = { display: "flex", gap: 8, alignItems: "center", color: "#334155", fontWeight: 700 };
+const tabListStyle: CSSProperties = { display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 16, borderBottom: "1px solid var(--lf-border)" };
+const tabStyle: CSSProperties = { minHeight: 44, border: 0, borderBottom: "2px solid transparent", marginBottom: -1, background: "transparent", color: "var(--lf-text-secondary)", padding: "10px 14px", fontWeight: 500, cursor: "pointer" };
+const activeTabStyle: CSSProperties = { ...tabStyle, color: "var(--lf-text)", borderBottomColor: "var(--lf-ink)", fontWeight: 700 };
+const labelStyle: CSSProperties = { display: "grid", gap: 5, fontWeight: 700, color: "var(--lf-text)", fontSize: 13 };
+const checkboxStyle: CSSProperties = { display: "flex", gap: 8, alignItems: "center", color: "var(--lf-text)", fontWeight: 700 };
 const rowStyle: CSSProperties = { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 };
 const actionRowStyle: CSSProperties = { display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" };
 const sectionHeaderStyle: CSSProperties = { display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" };
-const contextPanelStyle: CSSProperties = { border: "1px solid #cbd5e1", borderRadius: 8, padding: 14, display: "grid", gap: 12, background: "#f8fafc" };
+const contextPanelStyle: CSSProperties = { border: "1px solid var(--lf-border-input)", borderRadius: 8, padding: 14, display: "grid", gap: 12, background: "var(--lf-surface-page)" };
 const detailsGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 };
 const tableStyle: CSSProperties = { width: "100%", borderCollapse: "collapse", fontSize: 14 };
 const modalBackdropStyle: CSSProperties = { position: "fixed", inset: 0, zIndex: 50, display: "grid", placeItems: "center", padding: 18, background: "rgba(15,23,42,.48)" };

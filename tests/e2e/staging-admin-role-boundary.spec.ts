@@ -206,6 +206,7 @@ test("phone: platform admin and partner pages fit the screen", async ({ browser 
       await page.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" }).catch(() => null);
       await page.waitForTimeout(1500);
       await page.getByText(/^(Checking admin access|Checking organisation access|Loading commercial register|Loading…)$/).first().waitFor({ state: "hidden", timeout: 20_000 }).catch(() => null);
+      await page.locator(".lf-workspace-outline").first().waitFor({ state: "hidden", timeout: 20_000 }).catch(() => null);
       console.log(`Admin-ready: ${label} ${path} ${Date.now() - started}ms`);
       const onSignIn = await page.getByText(/Sign in to (Platform Admin|the partner portal)/).first().isVisible().catch(() => false);
       expect(onSignIn, `${label} ${path} stuck on staff sign-in`).toBe(false);

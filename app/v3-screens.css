@@ -769,3 +769,29 @@ body:has(.lf-inbox-selectbar) .lf-mobile-bottom-nav { display: none; }
 a.lf-topbar-shield:hover, a.lf-topbar-shield:focus-visible { background: #D3EADB; }
 a.lf-topbar-shield:focus-visible { outline: 3px solid var(--lf-focus); outline-offset: 2px; }
 @media (max-width: 767px) { .lf-topbar-shield { display: none; } }
+
+/* UX review 2 — Partner/Enterprise loading outline instead of "Checking … access". */
+.lf-workspace-outline { display: grid; grid-template-columns: 264px minmax(0, 1fr); min-height: 100vh; background: var(--lf-surface-page); }
+.lf-workspace-outline-sidebar { display: grid; align-content: start; gap: 14px; padding: 24px 20px; background: var(--lf-surface-sidebar); border-right: 1px solid var(--lf-border); }
+.lf-workspace-outline-content { display: grid; align-content: start; gap: 16px; padding: 40px 48px; }
+.lf-workspace-outline span { display: block; border-radius: 8px; background: color-mix(in srgb, var(--lf-border) 70%, transparent); animation: lf-outline-pulse 1.4s ease-in-out infinite; }
+.lf-workspace-outline-brand { width: 160px; height: 40px; margin-bottom: 18px; }
+.lf-workspace-outline-line { width: 70%; height: 16px; }
+.lf-workspace-outline-line.is-wide { width: min(520px, 90%); }
+.lf-workspace-outline-title { width: 220px; height: 30px; }
+.lf-workspace-outline-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.lf-workspace-outline-cards span { height: 84px; border-radius: 12px; }
+.lf-workspace-outline-panel { height: 220px; border-radius: 12px; }
+@keyframes lf-outline-pulse { 50% { opacity: .55; } }
+@media (prefers-reduced-motion: reduce) { .lf-workspace-outline span { animation: none; } }
+@media (max-width: 860px) {
+  .lf-workspace-outline { grid-template-columns: 1fr; }
+  .lf-workspace-outline-sidebar { display: none; }
+  .lf-workspace-outline-content { padding: 72px 16px 24px; }
+  .lf-workspace-outline-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* UX review 2 — Partner Portal brand mark matches the Vault's (ink square, white mark). */
+.lf-admin-shell--partner .lf-admin-shell-brand-mark { background: var(--lf-ink); color: var(--lf-primary-text, #fff); border-radius: 10px; }
+.lf-admin-shell--partner .lf-partner-primary { border-radius: 999px; background: var(--lf-ink); color: var(--lf-primary-text, #fff); font-weight: 600; }
+.lf-partner-no-licence { margin: 0; padding: 14px 16px; border: 1px solid var(--lf-border); border-radius: 12px; background: var(--lf-surface-card); color: var(--lf-text-secondary); }

@@ -1,5 +1,6 @@
 "use client";
 
+import WorkspaceLoadingOutline from "./WorkspaceLoadingOutline";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type CSSProperties } from "react";
@@ -213,7 +214,7 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
     router.refresh();
   }
 
-  if (state === "checking") return <main style={checkingPageStyle} aria-busy="true"><section style={checkingPanelStyle}><h1>Checking organisation access</h1><p>Confirming your signed-in session and role permissions.</p></section></main>;
+  if (state === "checking") return <WorkspaceLoadingOutline label="Opening your organisation" />;
   if (state !== "ready" || !detail || !form) return <main style={pageStyle}><section style={panelStyle}><h1>{state === "denied" ? "Access denied" : "Organisation unavailable"}</h1><p>{message}</p><Link href="/enterprise">Back to Enterprise Operations</Link></section></main>;
 
   const org = detail.organisation;
@@ -223,21 +224,23 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
     <AdminWorkspaceShell
       workspaceLabel={partnerMode ? "Partner Portal" : "Enterprise operations"}
       eyebrow="Legacy Fortress Enterprise"
-      title={org.name}
-      description="Licence, team and activity for this organisation. Members’ Vaults are never shown."
+      title={partnerMode ? "Your organisation" : org.name}
+      description={partnerMode ? "Details and activity. Members’ Vaults are never shown." : "Licence, team and activity for this organisation. Members’ Vaults are never shown."}
+      contextLabel={partnerMode ? org.name : undefined}
       currentPathname={`/enterprise/organisations/${organisationId}`}
       navigation={navigation}
       onSignOut={signOut}
       identityLabel={identity.label}
       identityDetail={identity.detail}
-      breadcrumbs={partnerMode ? [{ label: "Overview", href: "/enterprise" }, { label: org.name }] : [{ label: "Commercial", href: "/enterprise" }, { label: "Organisations", href: "/enterprise?tab=organisations" }, { label: org.name }]}
+      breadcrumbs={partnerMode ? [{ label: "Overview", href: "/enterprise" }, { label: "Your organisation" }] : [{ label: "Commercial", href: "/enterprise" }, { label: "Organisations", href: "/enterprise?tab=organisations" }, { label: org.name }]}
       stagingLabel="STAGING - synthetic test data may be present"
     >
       {message ? <section style={alertStyle}>{message}</section> : null}
       <nav style={tabListStyle} aria-label="Organisation detail navigation">
         {/* ADMIN_PARTNER: plain page names; staged sections (adoption, consent, reports) stay off until they exist. */}
-        {(["overview", "licence", "users", "invitations", "audit", "settings"] as const).map((item) => (
-          <button key={item} type="button" aria-pressed={tab === item} style={tab === item ? activeTabStyle : tabStyle} onClick={() => setTab(item)}>{TAB_LABELS[item]}</button>
+        {/* UX review 2: partners already have Licence, Team, Invitations and Settings in the sidebar, so only Details and Activity here. */}
+        {(partnerMode ? (["overview", "audit"] as const) : (["overview", "licence", "users", "invitations", "audit", "settings"] as const)).map((item) => (
+          <button key={item} type="button" aria-pressed={tab === item} style={tab === item ? activeTabStyle : tabStyle} onClick={() => setTab(item)}>{partnerMode && item === "overview" ? "Details" : TAB_LABELS[item]}</button>
         ))}
       </nav>
       {tab === "overview" ? (
@@ -257,8 +260,8 @@ export default function EnterpriseOrganisationDetailWorkspace({ organisationId }
             <Info label="Administrator" value={org.nominatedAdminEmail || "Not accepted yet"} />
             <Info label="Account owner" value={org.accountOwner || "Unassigned"} />
             <Info label="Onboarding" value={labelise(org.onboardingStatus)} />
-            <Info label="Licence" value={detail.licences.length ? `${detail.licences.length} licence${detail.licences.length === 1 ? "" : "s"}` : "No licence"} />
-            <Info label="Seats in use" value={detail.licences.length ? String(detail.licences.reduce((sum, licence) => sum + licence.activeSeats, 0)) : "No licence"} />
+            <Info label="Licence" value={detail.licences.length ? `${detail.licences.length} licence${detail.licences.length === 1 ? "" : "s"}` : "No licence yet"} />
+            <Info label="Seats in use" value={detail.licences.length ? String(detail.licences.reduce((sum, licence) => sum + licence.activeSeats, 0)) : "No licence yet"} />
             <Info label="Last activity" value={detail.auditEvents[0] ? `${labelise(detail.auditEvents[0].action.replace(/[._]/g, " "))} · ${formatDate(detail.auditEvents[0].created_at)}` : "No activity yet"} />
           </dl>
           <p style={privacyStyle}>Only organisation, licence and membership details are shown. Members’ Vaults stay private: no record names, values, notes or documents.</p>
@@ -477,27 +480,25 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
-const pageStyle: CSSProperties = { minHeight: "100vh", padding: 24, background: "#f8fafc", color: "#111827" };
-const panelStyle: CSSProperties = { background: "#fff", border: "1px solid #dbe3ef", borderRadius: 8, padding: 18, boxShadow: "0 12px 30px rgba(15,23,42,.05)", display: "grid", gap: 12 };
-const mutedStyle: CSSProperties = { color: "#64748b", margin: "6px 0 0", lineHeight: 1.5 };
-const privacyStyle: CSSProperties = { color: "#334155", background: "#f1f5f9", border: "1px solid #dbe3ef", borderRadius: 6, padding: 10, margin: "12px 0 0" };
-const secondaryLinkStyle: CSSProperties = { color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 6, padding: "9px 12px", textDecoration: "none", background: "#fff", fontWeight: 700 };
-const secondaryButtonStyle: CSSProperties = { color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 6, padding: "9px 12px", background: "#fff", fontWeight: 700 };
-const primaryButtonStyle: CSSProperties = { border: 0, borderRadius: 6, padding: "10px 14px", background: "#111827", color: "#fff", fontWeight: 800 };
+const pageStyle: CSSProperties = { minHeight: "100vh", padding: 24, background: "var(--lf-surface-page)", color: "var(--lf-text)" };
+const panelStyle: CSSProperties = { background: "#fff", border: "1px solid var(--lf-border)", borderRadius: 8, padding: 18, boxShadow: "0 12px 30px rgba(15,23,42,.05)", display: "grid", gap: 12 };
+const mutedStyle: CSSProperties = { color: "var(--lf-text-secondary)", margin: "6px 0 0", lineHeight: 1.5 };
+const privacyStyle: CSSProperties = { color: "var(--lf-text)", background: "var(--lf-surface-hover)", border: "1px solid var(--lf-border)", borderRadius: 6, padding: 10, margin: "12px 0 0" };
+const secondaryLinkStyle: CSSProperties = { display: "inline-flex", alignItems: "center", minHeight: 40, color: "var(--lf-ink)", border: "1px solid var(--lf-border-input)", borderRadius: 999, padding: "8px 16px", textDecoration: "none", background: "var(--lf-surface-card)", fontWeight: 600 };
+const secondaryButtonStyle: CSSProperties = { minHeight: 40, color: "var(--lf-ink)", border: "1px solid var(--lf-border-input)", borderRadius: 999, padding: "8px 16px", background: "var(--lf-surface-card)", fontWeight: 600 };
+const primaryButtonStyle: CSSProperties = { minHeight: 40, border: 0, borderRadius: 999, padding: "8px 18px", background: "var(--lf-ink)", color: "var(--lf-primary-text, #fff)", fontWeight: 600 };
 const alertStyle: CSSProperties = { background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 8, padding: 12, marginBottom: 16 };
-const tabListStyle: CSSProperties = { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 };
-const tabStyle: CSSProperties = { border: "1px solid #cbd5e1", background: "#fff", borderRadius: 6, padding: "9px 12px", fontWeight: 700 };
-const activeTabStyle: CSSProperties = { ...tabStyle, background: "#111827", color: "#fff", borderColor: "#111827" };
-const labelStyle: CSSProperties = { display: "grid", gap: 5, fontWeight: 700, color: "#334155", fontSize: 13 };
-const checkboxStyle: CSSProperties = { display: "flex", gap: 8, alignItems: "flex-start", color: "#334155", fontSize: 13, lineHeight: 1.45 };
+const tabListStyle: CSSProperties = { display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 16, borderBottom: "1px solid var(--lf-border)" };
+const tabStyle: CSSProperties = { minHeight: 44, border: 0, borderBottom: "2px solid transparent", marginBottom: -1, background: "transparent", color: "var(--lf-text-secondary)", padding: "10px 14px", fontWeight: 500, cursor: "pointer" };
+const activeTabStyle: CSSProperties = { ...tabStyle, color: "var(--lf-text)", borderBottomColor: "var(--lf-ink)", fontWeight: 700 };
+const labelStyle: CSSProperties = { display: "grid", gap: 5, fontWeight: 700, color: "var(--lf-text)", fontSize: 13 };
+const checkboxStyle: CSSProperties = { display: "flex", gap: 8, alignItems: "flex-start", color: "var(--lf-text)", fontSize: 13, lineHeight: 1.45 };
 const rowStyle: CSSProperties = { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 };
 const sectionHeaderStyle: CSSProperties = { display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" };
-const contextPanelStyle: CSSProperties = { border: "1px solid #cbd5e1", borderRadius: 8, padding: 14, display: "grid", gap: 12, background: "#f8fafc" };
+const contextPanelStyle: CSSProperties = { border: "1px solid var(--lf-border-input)", borderRadius: 8, padding: 14, display: "grid", gap: 12, background: "var(--lf-surface-page)" };
 const stackStyle: CSSProperties = { display: "grid", gap: 12 };
 const tableWrapStyle: CSSProperties = { overflowX: "auto" };
 const detailsGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 };
 const tableStyle: CSSProperties = { width: "100%", borderCollapse: "collapse", fontSize: 14 };
 
 // Brief access check: a small centred card on the page colour, the same on a laptop and a phone.
-const checkingPageStyle: CSSProperties = { minHeight: "100vh", display: "grid", placeItems: "center", padding: 24, background: "var(--lf-surface-page, #f7f3f1)" };
-const checkingPanelStyle: CSSProperties = { width: "min(440px, 100%)", background: "var(--lf-surface-card, #fff)", border: "1px solid var(--lf-border, #e6ded9)", borderRadius: 12, padding: 20, display: "grid", gap: 8 };
