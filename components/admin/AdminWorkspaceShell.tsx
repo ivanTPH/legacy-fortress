@@ -155,17 +155,21 @@ export default function AdminWorkspaceShell({
   const visibleItems = navigation.flatMap((group) => group.items);
   const currentRoute = currentPathname.split("?")[0];
   // A page in the menu is a root screen (menu + logo); only pages below one get a back link.
-  const isRootScreen = visibleItems.some((item) => item.href.split("?")[0] === currentRoute);
+  const pageHrefs = visibleItems.flatMap((item) => item.tabs?.map((tab) => tab.href) ?? [item.href]);
+  const isRootScreen = pageHrefs.some((href) => href.split("?")[0] === currentRoute);
+  const activeItem = visibleItems.find((item) => isItemActive(currentPathname, item));
+  const sectionTabs = activeItem?.tabs && activeItem.tabs.length > 1 ? activeItem.tabs : null;
   const detailParent = isPlatform && !isRootScreen
     ? visibleItems
+        .flatMap((item) => item.tabs?.map((tab) => ({ ...item, key: tab.key, label: tab.label, href: tab.href })) ?? [item])
         .filter((item) => currentRoute.startsWith(`${item.href.split("?")[0]}/`))
         .sort((a, b) => b.href.length - a.href.length)[0]
     : undefined;
   const preferredTabs = isPartner || isInternalEnterprise ? ["enterprise-overview", "enterprise-users", "enterprise-invitations"]
-    : adminRole === "support_agent" ? ["inbox", "users", "support"]
+    : adminRole === "support_agent" ? ["inbox", "users", "invitations"]
     : adminRole === "probate_reviewer" ? ["overview", "probate", "verification"]
-    : adminRole === "enterprise_admin" ? ["overview", "organisations", "licences"]
-    : adminRole === "auditor" ? ["overview", "audit", "system-health"]
+    : adminRole === "enterprise_admin" ? ["overview", "organisations", "audit"]
+    : adminRole === "auditor" ? ["overview", "audit", "admin-users"]
     : ["inbox", "overview", "verification"];
   const mobileTabs = [
     ...preferredTabs.map((key) => visibleItems.find((item) => item.key === key)),
@@ -188,7 +192,7 @@ export default function AdminWorkspaceShell({
           <section key={group.label} className="lf-admin-shell-nav-group">
             {group.label ? <div className="lf-admin-shell-nav-label">{group.label}</div> : null}
             {group.items.map((item) => {
-              const active = isActivePath(currentPathname, item.href);
+              const active = isItemActive(currentPathname, item);
               return (
                 <Link key={item.key} href={item.href} className={active ? "lf-admin-shell-nav-link active" : "lf-admin-shell-nav-link"} onClick={() => setMenuOpen(false)} prefetch={false}>
                   <Icon name={item.icon} size={18} />
@@ -336,10 +340,15 @@ export default function AdminWorkspaceShell({
             {accountMenu(false)}
           </div>
         </header>
+        {sectionTabs ? (
+          <nav className="lf-admin-section-tabs" aria-label={`${activeItem?.label ?? "Section"} pages`}>
+            {sectionTabs.map((tab) => <Link key={tab.key} href={tab.href} aria-current={isActivePath(currentPathname, tab.href) ? "page" : undefined} prefetch={false}>{tab.label}</Link>)}
+          </nav>
+        ) : null}
         {children}
       </section>
       {isPlatform || isPartner ? <nav className="lf-admin-shell-mobile-tabs" style={{ gridTemplateColumns: `repeat(${mobileTabs.length + 1}, minmax(0, 1fr))` }} aria-label={isPartner ? "Partner Portal quick navigation" : "Platform Admin quick navigation"}>
-        {mobileTabs.map((item) => <Link key={item.key} href={item.href} aria-current={isActivePath(currentPathname, item.href) ? "page" : undefined} prefetch={false}>
+        {mobileTabs.map((item) => <Link key={item.key} href={item.href} aria-current={isItemActive(currentPathname, item) ? "page" : undefined} prefetch={false}>
           <Icon name={item.icon} size={22} /><span>{MOBILE_TAB_LABEL[item.key] ?? item.label}</span>
         </Link>)}
         {/* CONSISTENCY › Mobile: 3 role tabs + Menu. Menu opens the same role-filtered menu as the top bar. */}
@@ -350,6 +359,10 @@ export default function AdminWorkspaceShell({
       <style jsx global>{adminShellCss}</style>
     </main>
   );
+}
+
+function isItemActive(currentPathname: string, item: AdminNavigationItem) {
+  return item.tabs ? item.tabs.some((tab) => isActivePath(currentPathname, tab.href)) : isActivePath(currentPathname, item.href);
 }
 
 function isActivePath(currentPathname: string, href: string) {
@@ -411,8 +424,8 @@ function toDisplayRole(value: string) {
 /** CONSISTENCY › Mobile tab names: one short word that fits a quarter of a phone. */
 const MOBILE_TAB_LABEL: Record<string, string> = {
   "enterprise-overview": "Overview", "enterprise-users": "Team", "enterprise-invitations": "Invitations",
-  verification: "Verification", probate: "Probate", users: "Users", "system-health": "Health",
-  organisations: "Organisations", licences: "Licences", support: "Support", audit: "Audit", overview: "Overview", inbox: "Inbox",
+  verification: "Checks", probate: "Cases", users: "Customers", invitations: "Help", "admin-users": "Team",
+  organisations: "Partners", audit: "Audit", overview: "Overview", inbox: "Inbox",
 };
 
 const adminShellCss = `

@@ -795,3 +795,10 @@ a.lf-topbar-shield:focus-visible { outline: 3px solid var(--lf-focus); outline-o
 .lf-admin-shell--partner .lf-admin-shell-brand-mark { background: var(--lf-ink); color: var(--lf-primary-text, #fff); border-radius: 10px; }
 .lf-admin-shell--partner .lf-partner-primary { border-radius: 999px; background: var(--lf-ink); color: var(--lf-primary-text, #fff); font-weight: 600; }
 .lf-partner-no-licence { margin: 0; padding: 14px 16px; border: 1px solid var(--lf-border); border-radius: 12px; background: var(--lf-surface-card); color: var(--lf-text-secondary); }
+
+/* UX review 2 — merged Admin menu items show their pages as underlined tabs. */
+.lf-admin-section-tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--lf-border); scrollbar-width: none; }
+.lf-admin-section-tabs a { flex: 0 0 auto; display: inline-flex; align-items: center; min-height: 44px; padding: 10px 14px; margin-bottom: -1px; border-bottom: 2px solid transparent; color: var(--lf-text-secondary); font-weight: 500; text-decoration: none; }
+.lf-admin-section-tabs a:hover { color: var(--lf-text); }
+.lf-admin-section-tabs a[aria-current="page"] { color: var(--lf-text); border-bottom-color: var(--lf-ink); font-weight: 700; }
+.lf-admin-section-tabs a:focus-visible { outline: 2px solid var(--lf-focus); outline-offset: -2px; }
