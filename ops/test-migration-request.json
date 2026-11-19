@@ -1,8 +1,8 @@
 {
-  "approvedBy": "Ivan (owner), 16 Nov 2026: account origins (direct / partner / invited) and organisation Test marker",
+  "approvedBy": "Ivan (owner), 19 Nov 2026: Recently deleted (30-day restore bin for records)",
   "mode": "apply",
-  "attempt": 27,
+  "attempt": 28,
   "files": [
-    { "file": "20261116220000_account_origins_and_test_marker.sql", "sha256": "c72f12569cb3590c5befe6e20c0bce4aba625733d709e6653815b4abced75bc8" }
+    { "file": "20261118210000_recently_deleted.sql", "sha256": "e632207c3470021bedaa8717347769bf76a925039871b8c1d40e603fdedfaa43" }
   ]
 }
