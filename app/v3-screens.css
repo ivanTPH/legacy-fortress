@@ -873,3 +873,14 @@ a.lf-topbar-shield:focus-visible { outline: 3px solid var(--lf-focus); outline-o
   .lf-inbox-selectbar-actions button { flex: 0 0 88px; }
 }
 .lf-inbox-selectbar.is-pinned { margin: 0; border-radius: 0 0 16px 16px; }
+/* Recently deleted (owner approved 30 days, 18 Nov 2026). */
+.lf-recently-deleted-empty { margin: 0; color: var(--lf-text-secondary); }
+.lf-recently-deleted-list { display: grid; margin: 0; padding: 0; list-style: none; }
+.lf-recently-deleted-list li { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 0; border-bottom: 1px solid var(--lf-divider, var(--lf-border)); }
+.lf-recently-deleted-list li:last-child { border-bottom: 0; }
+.lf-recently-deleted-icon { flex: 0 0 40px; display: grid; place-items: center; height: 40px; border-radius: 10px; background: var(--lf-surface-sidebar); color: var(--lf-text-secondary); }
+.lf-recently-deleted-copy { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.lf-recently-deleted-copy strong { overflow-wrap: anywhere; }
+.lf-recently-deleted-copy small { color: var(--lf-text-secondary); font-size: 13px; }
+.lf-recently-deleted-restore { flex: 0 0 auto; min-height: 40px; padding: 8px 16px; border: 1px solid var(--lf-border-input); border-radius: 999px; background: var(--lf-surface-card); color: var(--lf-ink); font: inherit; font-weight: 600; cursor: pointer; }
+.lf-recently-deleted-restore:disabled { opacity: .6; cursor: default; }

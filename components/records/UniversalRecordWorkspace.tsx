@@ -1,5 +1,6 @@
 "use client";
 
+import { binRecord } from "../../lib/records/recentlyDeleted";
 import RecordHistoryPanel from "./RecordHistoryPanel";
 import { startDocumentExtraction, takeBankPrefill } from "../../lib/documents/extraction/client";
 import DocumentFindings from "../documents/DocumentFindings";
@@ -2973,17 +2974,13 @@ export default function UniversalRecordWorkspace({
     // One clear question, then straight back to the list (owner report 17 Nov 2026: a second "Discard this
     // unsaved record?" appeared after deleting, and the deleted record stayed on screen).
     const deletingTitle = records.find((row) => row.id === recordId)?.title?.trim();
-    const confirmed = window.confirm(`Delete ${deletingTitle ? `“${deletingTitle}”` : "this record"}? It and its documents will be removed from your Vault. You can’t undo this.`);
+    // Recently deleted (owner approved 30 days, 18 Nov 2026): kept for 30 days, then removed for good.
+    const confirmed = window.confirm(`Delete ${deletingTitle ? `“${deletingTitle}”` : "this record"}? You can restore it, with its documents, from Settings › Recently deleted for 30 days.`);
     if (!confirmed) return;
     const user = await requireUser(router);
     if (!user) return;
 
-    const relatedAttachments = attachments.filter((item) => item.record_id === recordId);
-    if (relatedAttachments.length) {
-      const byBucket = groupByBucket(relatedAttachments);
-      await Promise.all(Object.entries(byBucket).map(([bucket, paths]) => supabase.storage.from(bucket).remove(paths)));
-    }
-
+    // Stored files are kept while the record is in Recently deleted; the daily job removes them after 30 days.
     const result = writesCanonicalAsset
       ? await supabase
           .from("assets")
@@ -2991,7 +2988,7 @@ export default function UniversalRecordWorkspace({
           .eq("id", recordId)
           .eq("owner_user_id", user.id)
           .is("deleted_at", null)
-      : await supabase.from("records").delete().eq("id", recordId).eq("owner_user_id", user.id);
+      : await binRecord(supabase, user.id, recordId).then((binned) => ({ error: binned.ok ? null : { message: binned.message } }));
     if (result.error) {
       setStatus(`Delete failed: ${result.error.message}`);
       return;
@@ -3021,7 +3018,7 @@ export default function UniversalRecordWorkspace({
       clearAddRecordQueryFlag();
       resetFormState();
     }
-    setStatus(deletingTitle ? `Deleted “${deletingTitle}”.` : "Record deleted.");
+    setStatus(deletingTitle ? `Deleted “${deletingTitle}”. You can restore it from Settings › Recently deleted for 30 days.` : "Record deleted. You can restore it from Settings › Recently deleted for 30 days.");
     // Leave the deleted record's page (?asset=, ?record=, ?edit=) for the list.
     if (selectedWorkspaceRecordId === recordId || searchParams.get("edit") === recordId) router.replace(pathname);
     await reloadWorkspace(router, sectionKey, categoryKey, setRecords, setAttachments, setContacts, setStatus, {
@@ -7203,15 +7200,6 @@ function toMajorUnits(valueMinor: number | null) {
   const safe = Number(valueMinor ?? 0);
   if (!Number.isFinite(safe)) return 0;
   return safe / 100;
-}
-
-function groupByBucket(items: RecordAttachment[]) {
-  return items.reduce<Record<string, string[]>>((acc, item) => {
-    const key = item.storage_bucket || "vault-docs";
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(item.storage_path);
-    return acc;
-  }, {});
 }
 
 async function requireUser(router: ReturnType<typeof useRouter>) {

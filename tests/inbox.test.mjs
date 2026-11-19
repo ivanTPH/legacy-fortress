@@ -183,7 +183,9 @@ test("waiting invitations are handled in place with shared actions (owner, 16 No
 test("deleting a record asks once and returns to the list (owner report 17 Nov 2026)", () => {
   const source = fs.readFileSync(path.join(process.cwd(), "components/records/UniversalRecordWorkspace.tsx"), "utf8");
   const body = source.slice(source.indexOf("async function deleteRecord("), source.indexOf("async function uploadAttachment("));
-  assert.match(body, /You can’t undo this\./);
+  assert.match(body, /Recently deleted for 30 days/, "deleting says where to restore it (owner approved 30 days, 18 Nov 2026)");
+  assert.match(body, /binRecord\(supabase, user\.id, recordId\)/);
+  assert.doesNotMatch(body, /storage\.from\(bucket\)\.remove/, "files are kept until the bin is emptied");
   assert.doesNotMatch(body, /cancelForm\(\)/, "no second 'Discard this unsaved record?' after deleting");
   assert.match(body, /resetFormState\(\)/);
   assert.match(body, /setRecords\(\(current\) => current\.filter\(\(row\) => row\.id !== recordId\)\)/);
