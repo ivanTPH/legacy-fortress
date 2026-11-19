@@ -274,7 +274,15 @@ test("phone: owner records a Power of Attorney by tapping and links a person", a
   await saveAndAdd.scrollIntoViewIfNeeded();
   await saveAndAdd.tap();
   const dialog = page.getByRole("dialog").first();
-  await expect(dialog).toContainText("Add a person", { timeout: 25_000 });
+  // Diagnostics (failed in 2 of 3 releases on 19 Nov 2026): if the panel doesn't open, record what is on screen.
+  const opened = await dialog.waitFor({ state: "visible", timeout: 25_000 }).then(() => true).catch(() => false);
+  if (!opened) {
+    log(`no panel; url=${page.url()} status=${(await page.locator('[role="status"], [role="alert"], .lf-status, .lf-premium-sheet').allInnerTexts().catch(() => [])).join(" | ").replace(/\s+/g, " ").slice(0, 300)}`);
+    log(`save button: ${await saveAndAdd.isVisible().catch(() => false)} ${await saveAndAdd.isEnabled().catch(() => false)} ${await saveAndAdd.innerText().catch(() => "")}`);
+    const shot = await page.screenshot({ type: "jpeg", quality: 45, scale: "css" }).catch(() => null);
+    if (shot) console.log(`Phone-shot: /poa-no-panel ${shot.toString("base64")}`);
+  }
+  await expect(dialog).toContainText("Add a person", { timeout: 5_000 });
   log("add-person panel open");
   // Choose an existing person: the role is already "Attorney", then a clear confirmation.
   await dialog.getByRole("button", { name: /Choose from People/i }).first().tap();

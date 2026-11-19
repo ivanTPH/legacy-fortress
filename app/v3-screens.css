@@ -884,3 +884,9 @@ a.lf-topbar-shield:focus-visible { outline: 3px solid var(--lf-focus); outline-o
 .lf-recently-deleted-copy small { color: var(--lf-text-secondary); font-size: 13px; }
 .lf-recently-deleted-restore { flex: 0 0 auto; min-height: 40px; padding: 8px 16px; border: 1px solid var(--lf-border-input); border-radius: 999px; background: var(--lf-surface-card); color: var(--lf-ink); font: inherit; font-weight: 600; cursor: pointer; }
 .lf-recently-deleted-restore:disabled { opacity: .6; cursor: default; }
+
+/* Assign to… (owner, 19 Nov 2026): registered reviewers only, from a list. */
+.lf-admin-assign { display: grid; gap: 6px; margin-top: 12px; }
+.lf-admin-assign label { font-weight: 600; font-size: 14px; }
+.lf-admin-assign-row { display: flex; gap: 8px; }
+.lf-admin-assign-row select { flex: 1; min-width: 0; min-height: 40px; padding: 0 10px; border: 1px solid var(--lf-border-input); border-radius: 8px; background: var(--lf-surface-card); color: var(--lf-text); font: inherit; }

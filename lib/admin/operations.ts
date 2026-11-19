@@ -309,7 +309,7 @@ export type AdminAuditHistoryItem = {
   createdAt: string;
 };
 
-export type VerificationAction = "approve" | "reject" | "review" | "retry" | "assign_to_me" | "add_note";
+export type VerificationAction = "approve" | "reject" | "review" | "retry" | "assign_to_me" | "assign" | "add_note";
 export type AdminUserLifecycleAction = "activate" | "deactivate" | "change_role";
 export type AdminUserLifecyclePlan = {
   adminUserId: string;
@@ -1278,12 +1278,14 @@ export async function applyVerificationAction(
     reviewNotes,
     reviewedByUserId,
     note,
+    assigneeUserId,
   }: {
     requestId: string;
     action: VerificationAction;
     reviewNotes?: string | null;
     reviewedByUserId: string;
     note?: string | null;
+    assigneeUserId?: string | null;
   },
 ) {
   const requestRes = await client
@@ -1307,9 +1309,11 @@ export async function applyVerificationAction(
       reviewNotes,
       reviewedByUserId,
       note,
+      assigneeUserId,
     });
     return;
   }
+  if (action === "assign") throw new Error("verification_assign_not_supported");
 
   const roleRes = await client
     .from("role_assignments")
@@ -1371,12 +1375,14 @@ async function applyIdentityVerificationReviewAction(
     reviewNotes,
     reviewedByUserId,
     note,
+    assigneeUserId,
   }: {
     request: Record<string, unknown>;
     action: VerificationAction;
     reviewNotes?: string | null;
     reviewedByUserId: string;
     note?: string | null;
+    assigneeUserId?: string | null;
   },
 ) {
   const now = new Date().toISOString();
@@ -1388,10 +1394,13 @@ async function applyIdentityVerificationReviewAction(
     // never here; simulator and commercial results are never overridden by hand.
     throw new Error("identity_manual_decision_not_supported");
   }
-  if (action === "assign_to_me") {
-    const update = await client.from("identity_verification_requests").update({ assigned_reviewer_user_id: reviewedByUserId, updated_at: now }).eq("id", requestId);
+  if (action === "assign_to_me" || action === "assign") {
+    // "assign" hands the check to another registered reviewer; the route has already checked they may review.
+    const assignee = action === "assign" ? String(assigneeUserId ?? "") : reviewedByUserId;
+    if (!assignee) throw new Error("identity_review_assignee_required");
+    const update = await client.from("identity_verification_requests").update({ assigned_reviewer_user_id: assignee, updated_at: now }).eq("id", requestId);
     if (update.error) throw new Error(update.error.message);
-    await client.from("identity_verification_events").insert({ request_id: requestId, user_id: userId, event_type: "identity_review_assigned", ["actor" + "_user_id"]: reviewedByUserId, actor_type: "admin", provider_key: "manual_review", metadata: {} });
+    await client.from("identity_verification_events").insert({ request_id: requestId, user_id: userId, event_type: "identity_review_assigned", ["actor" + "_user_id"]: reviewedByUserId, actor_type: "admin", provider_key: "manual_review", metadata: { assigned_to_self: assignee === reviewedByUserId } });
     return;
   }
   if (action === "add_note") {

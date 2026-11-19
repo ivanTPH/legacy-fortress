@@ -1406,6 +1406,18 @@ function PersonManagementPanel({
       setSaving(false);
       return;
     }
+    // Owner, 19 Nov 2026: changing someone's role in People never changes a Will or Power of Attorney. If they're
+    // still named as an executor or attorney there, say so and let the owner decide before saving.
+    if (role !== contact.contact_role && !/executor|attorney/i.test(role)) {
+      const named = await supabase.from("record_links").select("role,record_type")
+        .eq("owner_user_id", ownerId).eq("person_id", contact.id).is("removed_at", null);
+      const acting = (named.data ?? []).filter((link) => /executor|attorney/i.test(String((link as { role?: string }).role ?? "")));
+      if (acting.length) {
+        const what = acting.some((link) => /attorney/i.test(String((link as { role?: string }).role ?? ""))) ? "an attorney on your Power of Attorney" : "an executor in your Will";
+        const confirmed = window.confirm(`${contact.full_name} is still named as ${what}. Changing their role here doesn’t change that. If they’re no longer acting for you, update the Will or Power of Attorney first.\n\nChange their role anyway?`);
+        if (!confirmed) { setSaving(false); return; }
+      }
+    }
     const nextRelationship = relationship.trim() || ROLE_RULES[role as CollaboratorRole]?.label || role;
     const contactUpdate = {
       contact_role: role,
@@ -1719,7 +1731,8 @@ function mergeContactsWithInvitations(
         ...existing,
         full_name: row.contact_name || existing.full_name || "Unnamed contact",
         email: row.contact_email || existing.email,
-        contact_role: row.assigned_role || existing.contact_role,
+        // An invitation never changes someone's role (owner, 19 Nov 2026): their own role wins.
+        contact_role: existing.contact_role || row.assigned_role,
         invite_status: resolveInvitationProjectionStatus(row, existing.invite_status),
         verification_status: mapInvitationActivationStatus(row.activation_status),
         source_type: existing.source_type === "manual" ? "invitation" : existing.source_type,

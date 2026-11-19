@@ -3,6 +3,7 @@ import { includeTestsFrom, loadAccounts, withoutTests } from "@/lib/admin/testAc
 import { applyVerificationAction, loadVerificationQueue, type VerificationAction } from "@/lib/admin/operations";
 import { requireAdminAccess, requireAdminCapability } from "@/lib/admin/access";
 import { recordAdminAuditEvent } from "@/lib/admin/audit";
+import { isAssignableAdmin } from "@/lib/admin/assignees";
 import { INHOUSE_REVIEW_PROVIDER_KEY } from "@/lib/identity-verification/inhouseReviewProvider";
 import { recordReviewerDecision } from "@/lib/identity-verification/service";
 
@@ -30,20 +31,26 @@ export async function POST(request: Request) {
     requestId?: string;
     action?: VerificationAction;
     reviewNotes?: string | null;
+    assigneeUserId?: string | null;
   };
 
   const requestId = String(body.requestId ?? "").trim();
   const action = body.action;
-  if (!requestId || !action || !["approve", "reject", "review", "retry", "assign_to_me", "add_note"].includes(action)) {
+  if (!requestId || !action || !["approve", "reject", "review", "retry", "assign_to_me", "assign", "add_note"].includes(action)) {
     return NextResponse.json({ ok: false, message: "A valid verification action is required." }, { status: 400 });
   }
-  const capability = ["review", "retry", "assign_to_me", "add_note"].includes(action) ? "verification:review" : "verification:decide";
+  const capability = ["review", "retry", "assign_to_me", "assign", "add_note"].includes(action) ? "verification:review" : "verification:decide";
   const denied = requireAdminCapability(admin.access, capability);
   if (denied) {
     return NextResponse.json({ ok: false, message: denied.message, capability: denied.capability }, { status: denied.status });
   }
   if (["approve", "reject"].includes(action) && !String(body.reviewNotes ?? "").trim()) {
     return NextResponse.json({ ok: false, message: "Decision notes are required before approving or rejecting verification." }, { status: 400 });
+  }
+  // Assign to… (owner, 19 Nov 2026): only a registered, active admin allowed to review ID checks.
+  const assigneeUserId = String(body.assigneeUserId ?? "").trim();
+  if (action === "assign" && (!assigneeUserId || !(await isAssignableAdmin(admin.adminClient, "verification:review", assigneeUserId)))) {
+    return NextResponse.json({ ok: false, message: "Choose an admin who can review ID checks." }, { status: 400 });
   }
   if (action === "add_note" && !String(body.reviewNotes ?? "").trim()) {
     return NextResponse.json({ ok: false, message: "A review note is required." }, { status: 400 });
@@ -83,6 +90,7 @@ export async function POST(request: Request) {
     reviewNotes: body.reviewNotes ?? null,
     reviewedByUserId: admin.access.user.id,
     note: body.reviewNotes ?? null,
+    assigneeUserId: action === "assign" ? assigneeUserId : null,
   });
   await recordAdminAuditEvent(admin.adminClient, admin.access, {
     category: action === "approve" ? "admin_approval" : "admin_review",
@@ -92,7 +100,7 @@ export async function POST(request: Request) {
     resourceId: requestId,
     resourceLabel: "Executor verification request",
     route: "/api/internal/admin/verifications",
-    metadata: { action, review_notes_present: Boolean(String(body.reviewNotes ?? "").trim()) },
+    metadata: { action, review_notes_present: Boolean(String(body.reviewNotes ?? "").trim()), ...(action === "assign" ? { assigned_admin_user_id: assigneeUserId } : {}) },
   });
 
   const queue = withoutTests(await loadVerificationQueue(admin.adminClient), (await loadAccounts(admin.adminClient)).testIds, includeTestsFrom(request), (item) => item.ownerUserId);
