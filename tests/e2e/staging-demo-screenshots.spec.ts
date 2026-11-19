@@ -261,11 +261,11 @@ for (const kind of ["desk", "phone"] as const) {
     await expect(page.getByText(`${rowCount} selected`)).toBeVisible();
     await shoot(page, `inbox-${kind}-2-select`);
     // The bar stays pinned under the top bar while scrolling a long list (owner, 19 Nov 2026).
-    await page.evaluate(() => window.scrollBy(0, 900));
+    await page.evaluate(() => { window.scrollBy(0, 900); document.querySelector(".lf-main-content")?.scrollBy(0, 900); });
     await page.waitForTimeout(400);
     await expect(toolbar).toBeInViewport();
     await shoot(page, `inbox-${kind}-2b-select-scrolled`);
-    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.evaluate(() => { window.scrollTo(0, 0); document.querySelector(".lf-main-content")?.scrollTo(0, 0); });
     await page.getByRole("button", { name: "Deselect all", exact: true }).click();
     await page.locator(".lf-inbox-row-button").first().click();
     await page.getByRole("toolbar", { name: "Selected items" }).getByRole("button", { name: "Later" }).click();

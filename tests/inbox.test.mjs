@@ -126,7 +126,7 @@ test("select: like Mail, the Inbox header becomes a pinned dark bar (owner, 19 N
   assert.match(panel, /Select all/);
   assert.match(panel, /archiveEntries\(picked\)/);
   const css = read("app/v3-screens.css");
-  assert.match(css, /\.lf-inbox-selectbar \{ position: sticky;/);
+  assert.match(panel, /setSelectPin\(rect\.top < top \?/, "pinned under the top bar while scrolling");
   assert.doesNotMatch(css, /body:has\(\.lf-inbox-selectbar\) \.lf-topbar/, "the app's top bar stays");
   assert.match(panel, /disabled=\{selecting\} onClick=\{\(event\) => \{ setCategory\(key\)/, "filters are locked while choosing");
   assert.match(css, /\.lf-inbox-selectbar-actions button\.is-delete \{ background: #C0392B; color: #fff; \}/);
