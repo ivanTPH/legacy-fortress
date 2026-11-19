@@ -366,6 +366,26 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
   const shelf = useInboxArchive();
   const [category, setCategory] = useState<InboxCategory>("all");
   const [selecting, setSelecting] = useState(false);
+  // The select bar stays pinned under the top bar while scrolling (owner, 19 Nov 2026). Watching its slot works
+  // whichever element scrolls (the page on a laptop, the content area on a phone).
+  const selectSlotRef = useRef<HTMLDivElement | null>(null);
+  const [selectPin, setSelectPin] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
+  useEffect(() => {
+    if (!selecting || typeof window === "undefined") { setSelectPin(null); return; }
+    const measure = () => {
+      const slot = selectSlotRef.current;
+      if (!slot) return;
+      const topbar = document.querySelector(".lf-topbar");
+      const top = Math.max(0, topbar ? topbar.getBoundingClientRect().bottom : 0);
+      const rect = slot.getBoundingClientRect();
+      const bar = slot.firstElementChild as HTMLElement | null;
+      setSelectPin(rect.top < top ? { top, left: rect.left, width: rect.width, height: bar?.offsetHeight ?? 120 } : null);
+    };
+    measure();
+    document.addEventListener("scroll", measure, { capture: true, passive: true });
+    window.addEventListener("resize", measure);
+    return () => { document.removeEventListener("scroll", measure, { capture: true }); window.removeEventListener("resize", measure); };
+  }, [selecting]);
   const [picked, setPicked] = useState<string[]>([]);
   const [swiped, setSwiped] = useState<{ key: string; side: "left" | "right" } | null>(null);
   const [sheet, setSheet] = useState<{ type: "later" | "menu"; keys: string[] } | null>(null);
@@ -568,7 +588,7 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
     <section id="action-centre" className={`lf-action-centre lf-inbox${selecting ? " is-selecting" : ""}`} style={panelStyle} aria-label="Inbox">
       {/* Owner, 19 Nov 2026: like Mail, choosing turns the Inbox header into a dark bar (pinned while scrolling)
           and any action brings the header back. Delete is reversed out in red; Done and Delete say why when they can't. */}
-      {selecting ? <div className="lf-inbox-selectbar" role="toolbar" aria-label="Selected items">
+      {selecting ? <div ref={selectSlotRef} className="lf-inbox-selectslot" style={selectPin ? { minHeight: selectPin.height } : undefined}><div className={`lf-inbox-selectbar${selectPin ? " is-pinned" : ""}`} role="toolbar" aria-label="Selected items" style={selectPin ? { position: "fixed", top: selectPin.top, left: selectPin.left, width: selectPin.width } : undefined}>
         <div className="lf-inbox-selectbar-head">
           <button type="button" className="lf-inbox-selectbar-close" aria-label="Stop selecting" onClick={() => { setSelecting(false); setPicked([]); }}><Icon name="close" size={24} /></button>
           <strong aria-live="polite">{picked.length ? `${picked.length} selected` : "Tap messages to choose"}</strong>
@@ -591,7 +611,7 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
             deleteEntries(removable);
           }}><Icon name="delete" size={22} />Delete</button>
         </div>
-      </div> : (
+      </div></div> : (
       <div className="lf-inbox-head">
         {selecting ? <p className="lf-inbox-subtitle">Tap messages to choose them</p> : <p className="lf-inbox-subtitle">{needs} {needs === 1 ? "needs" : "need"} you · {newCount} new</p>}
         <span className="lf-inbox-head-actions">

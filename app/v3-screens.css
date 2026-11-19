@@ -854,7 +854,7 @@ a.lf-topbar-shield:focus-visible { outline: 3px solid var(--lf-focus); outline-o
 
 /* Select (owner, 19 Nov 2026): like Mail, choosing turns the Inbox header into a dark bar, pinned under the top
    bar while scrolling; any action brings the header back. Delete is reversed out in red. */
-.lf-inbox-selectbar { position: sticky; top: calc(60px + env(safe-area-inset-top)); z-index: 30; display: grid; gap: 4px; margin: 0 -8px 8px; padding: 6px 8px 8px; border-radius: 16px; background: #241714; color: #fff; box-shadow: 0 6px 20px rgba(0, 0, 0, .2); }
+.lf-inbox-selectbar { position: relative; z-index: 30; display: grid; gap: 4px; margin: 0 -8px 8px; padding: 6px 8px 8px; border-radius: 16px; background: #241714; color: #fff; box-shadow: 0 6px 20px rgba(0, 0, 0, .2); }
 .lf-inbox-selectbar-head { display: flex; align-items: center; gap: 8px; min-height: 44px; }
 .lf-inbox-selectbar-head strong { flex: 1; font-size: 17px; }
 .lf-inbox-selectbar-close { display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; }
@@ -868,9 +868,8 @@ a.lf-topbar-shield:focus-visible { outline: 3px solid var(--lf-focus); outline-o
 .lf-inbox-selectbar button:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
 .lf-inbox.is-selecting .lf-inbox-category:disabled { opacity: .55; cursor: default; }
 @media (min-width: 901px) {
-  .lf-inbox-selectbar { top: 72px; margin: 0 0 12px; padding: 8px 16px; grid-template-columns: auto 1fr; align-items: center; gap: 16px; }
+  .lf-inbox-selectbar { margin: 0 0 12px; padding: 8px 16px; grid-template-columns: auto 1fr; align-items: center; gap: 16px; }
   .lf-inbox-selectbar-actions { justify-content: flex-end; }
   .lf-inbox-selectbar-actions button { flex: 0 0 88px; }
 }
-/* overflow-x: hidden makes the page container a scroll box, which stops the select bar sticking; clip doesn't. */
-.lf-main-content:has(.lf-inbox) { overflow-x: clip; }
+.lf-inbox-selectbar.is-pinned { margin: 0; border-radius: 0 0 16px 16px; }
