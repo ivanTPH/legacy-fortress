@@ -251,11 +251,11 @@ for (const kind of ["desk", "phone"] as const) {
     await page.locator(".lf-inbox-row-button").first().click();
     await expect(page.getByText("1 selected")).toBeVisible();
     const toolbar = page.getByRole("toolbar", { name: "Selected items" });
-    // On screen, not tucked under the list (owner couldn't see it, 11 Nov 2026); on a phone it replaces the tab bar.
+    // On screen (owner couldn't see it, 11 Nov 2026); a dark bar in place of the top bar (owner, 19 Nov 2026).
     await expect(toolbar).toBeInViewport();
     await expect(toolbar.getByRole("button", { name: /^(Read|Unread)$/ })).toBeVisible(); // depends on the row picked
     for (const name of ["Later", "Archive", "Done", "Delete"]) await expect(toolbar.getByRole("button", { name, exact: true })).toBeVisible();
-    if (kind === "phone") await expect(page.locator(".lf-mobile-bottom-nav")).toBeHidden();
+    if (kind === "phone") await expect(page.locator(".lf-topbar").first()).toBeHidden();
     await page.getByRole("button", { name: "Select all", exact: true }).click();
     const rowCount = await page.locator(".lf-inbox-row").count();
     await expect(page.getByText(`${rowCount} selected`)).toBeVisible();
@@ -266,7 +266,7 @@ for (const kind of ["desk", "phone"] as const) {
     await expect(page.getByRole("dialog").getByRole("button", { name: "Tomorrow morning" })).toBeVisible();
     await shoot(page, `inbox-${kind}-3-later`);
     await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
-    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    await page.getByRole("button", { name: "Stop selecting" }).click();
 
     if (kind === "phone") {
       // Swipes: one action per side (owner, 11 Nov 2026). Right shows Read/Unread only; left shows Later and Done.
@@ -327,13 +327,16 @@ for (const kind of ["desk", "phone"] as const) {
       await page.getByRole("button", { name: "Select", exact: true }).click();
       const suggestionRow = page.locator(".lf-inbox-row").filter({ has: page.locator(".lf-inbox-tag", { hasText: /^(Suggested|Needs you|Waiting)$/ }) }).first();
       await suggestionRow.locator(".lf-inbox-row-button").click();
-      await expect(toolbar.getByRole("button", { name: "Delete", exact: true })).toBeDisabled();
+      // Delete answers with the reason rather than being a dead button (owner, 19 Nov 2026); nothing is removed.
+      await toolbar.getByRole("button", { name: "Delete", exact: true }).click();
+      await expect(page.getByText(/can’t be deleted, as they’d come back/)).toBeVisible();
+      await shoot(page, `inbox-${kind}-8-delete-reason`);
       const updateRow = page.locator(".lf-inbox-row").filter({ has: page.locator(".lf-inbox-tag", { hasText: /^Update$/ }) }).first();
       if (await updateRow.count()) {
         await updateRow.locator(".lf-inbox-row-button").click();
         await expect(toolbar.getByRole("button", { name: "Delete", exact: true })).toBeEnabled();
       }
-      await page.getByRole("button", { name: "Cancel", exact: true }).click();
+      await page.getByRole("button", { name: "Stop selecting" }).click();
       await page.getByRole("button", { name: /^All, \d+/ }).click();
     }
 

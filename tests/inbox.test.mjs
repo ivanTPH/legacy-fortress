@@ -121,13 +121,16 @@ test("swipes: one action per side, message slides over, off while selecting (own
   assert.match(row, /suppressClick\.current = false; \/\/ only the click that ends a swipe/);
 });
 
-test("select: fixed toolbar replaces the phone tab bar, with Select all and Archive", () => {
+test("select: a dark bar takes the place of the top bar (owner, 19 Nov 2026), with Select all and Archive", () => {
   const panel = read("app/(app)/components/dashboard/ActionQueuePanel.tsx");
   assert.match(panel, /Select all/);
   assert.match(panel, /archiveEntries\(picked\)/);
   const css = read("app/v3-screens.css");
   assert.match(css, /\.lf-inbox-selectbar \{ position: fixed;/);
-  assert.match(css, /body:has\(\.lf-inbox-selectbar\) \.lf-mobile-bottom-nav \{ display: none; \}/);
+  assert.match(css, /\.lf-inbox-selectbar \{ position: fixed; top: 0;/);
+  assert.match(css, /body:has\(\.lf-inbox-selectbar\) \.lf-topbar \{ visibility: hidden; \}/);
+  assert.match(css, /\.lf-inbox-selectbar-actions button\.is-delete \{ background: #C0392B; color: #fff; \}/);
+  assert.match(panel, /Suggestions and things that need you can’t be deleted, as they’d come back\. Archive them instead\./);
 });
 
 test("archive keeps items findable and out of the badge; invite reminders are Waiting", () => {
@@ -144,7 +147,8 @@ test("delete (bin): updates and own reminders only, with Undo; suggestions can't
   assert.match(panel, /remove: \{ run: \(\) => clear\(ids\), message: list\.length > 1 \? `\$\{list\.length\} updates deleted` : "Update deleted", undo: \(\) => restore\(ids\) \}/);
   assert.match(panel, /const remove: InboxRemove = ownTask && onDeleteOwnTask/);
   assert.doesNotMatch(panel, /label: "Clear"/);
-  assert.match(panel, /disabled=\{!pickedEntries\.some\(\(entry\) => entry\.remove\)\}/);
+  // Still only removable entries are deleted; the rest get a plain reason instead of a dead button (19 Nov 2026).
+  assert.match(panel, /const removable = pickedEntries\.filter\(\(entry\) => entry\.remove\)/);
   assert.match(panel, /}, 6500\)\);/, "a reminder is only deleted after the Undo window");
   const page = read("app/(app)/dashboard/page.tsx");
   const del = page.slice(page.indexOf("const deleteDashboardTask"), page.indexOf("const handleAction"));
