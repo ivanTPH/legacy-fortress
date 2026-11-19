@@ -319,7 +319,7 @@ export async function sendRecordLinkedPersonInvitation(client: SupabaseClient, i
   return sendContactInvite(client, invitation);
 }): Promise<SendContactInviteResult> {
   const owner = await assertOwnerMayManage(client, input.ownerUserId);
-  const link = await client.from("record_links").select("id")
+  const link = await client.from("record_links").select("id,role")
     .eq("owner_user_id", input.ownerUserId).eq("record_type", input.recordType)
     .eq("record_id", input.recordId).eq("person_id", input.personId).is("removed_at", null).maybeSingle();
   if (link.error || !link.data) throw new Error("This person is not linked to this record.");
@@ -339,7 +339,8 @@ export async function sendRecordLinkedPersonInvitation(client: SupabaseClient, i
     contactEmail: email,
     contactPhone: contact.phone,
     contactRelationship: contact.relationship,
-    assignedRole: collaboratorRole(contact.contact_role),
+    // Invited from a Will: they're invited as the executor they're named as, not as "friend or family" (19 Nov 2026).
+    assignedRole: collaboratorRole(contact.contact_role) === "friend_or_family" && /executor/i.test(String((link.data as { role?: string }).role ?? "")) ? "executor" : collaboratorRole(contact.contact_role),
     activationStatus: "invited",
     skipLegacyContactLink: true,
     resend: Boolean(input.resend),

@@ -12,6 +12,7 @@ import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell";
 import AdminLegalAuthorities from "@/components/admin/AdminLegalAuthorities";
 import ProbateReleasePanel from "@/components/admin/ProbateReleasePanel";
 import IdentityReviewCompare from "@/components/admin/IdentityReviewCompare";
+import AssignReviewer from "@/components/admin/AssignReviewer";
 import InfoTip from "@/components/ui/InfoTip";
 import Icon from "@/components/ui/Icon";
 import { filterAdminNavigation, PLATFORM_ADMIN_NAVIGATION } from "@/components/admin/adminNavigation";
@@ -1016,12 +1017,18 @@ export default function AdminControlPlaneWorkspace({
     setMessage(`Operations case ${action.replace(/_/g, " ")} completed and audit recorded.`);
   }
 
-  async function runVerificationAction(requestId: string, action: "retry" | "assign_to_me" | "add_note") {
+  const loadVerificationAssignees = useCallback(async () => {
+    const res = await authFetch("/api/internal/admin/assignees?for=verification");
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; assignees?: Array<{ userId: string; name: string }> };
+    return res.ok && json.ok ? json.assignees ?? [] : [];
+  }, [authFetch]);
+
+  async function runVerificationAction(requestId: string, action: "retry" | "assign_to_me" | "assign" | "add_note", assigneeUserId?: string) {
     if (action === "add_note" && !verificationReviewNote.trim()) return;
     setVerificationActionLoading(`${requestId}:${action}`);
     const res = await authFetch("/api/internal/admin/verifications", {
       method: "POST",
-      body: JSON.stringify({ requestId, action, reviewNotes: action === "add_note" || action === "retry" ? verificationReviewNote.trim() : null }),
+      body: JSON.stringify({ requestId, action, reviewNotes: action === "add_note" || action === "retry" ? verificationReviewNote.trim() : null, assigneeUserId: action === "assign" ? assigneeUserId : undefined }),
     });
     const json = (await res.json().catch(() => ({}))) as { ok?: boolean; queue?: VerificationItem[]; message?: string; capability?: string };
     setVerificationActionLoading("");
@@ -1032,6 +1039,7 @@ export default function AdminControlPlaneWorkspace({
     setVerificationQueue(json.queue ?? []);
     if (action === "add_note" || action === "retry") setVerificationReviewNote("");
     setMessage(action === "assign_to_me" ? "Assigned to you. This is recorded in Audit."
+      : action === "assign" ? "Handed over. This is recorded in Audit."
       : action === "add_note" ? "Note added. This is recorded in Audit."
       : "Retry requested. They’ll be asked to do the ID check again. This is recorded in Audit.");
   }
@@ -1201,7 +1209,7 @@ export default function AdminControlPlaneWorkspace({
         {section === "admin-users" || section === "admin-user-detail" ? renderAdminUsers(admins, adminInvitations, adminFilter, setAdminFilter, adminInviteForm, setAdminInviteForm, sendAdminInvitation, adminInviteOpen, setAdminInviteOpen, adminLifecycleForm, setAdminLifecycleForm, runAdminLifecycle, runAdminInvitationLifecycle, (input, onConfirm) => requestConfirmation(input, onConfirm), resourceId, adminLifecycleActionLoading) : null}
         {section === "users" || section === "user-detail" ? renderUsers(lookupQuery, setLookupQuery, lookupResults, (query) => runLookup(query ?? lookupQuery), resourceId, userDetail, userDetailLoading, showingNewest, newThisWeek, includeTestAccounts, setIncludeTestAccounts, lookupLoading) : null}
         {section === "support" || section === "invitations" ? renderSupport(section, support, supportDetail, supportDetailLoading, supportActionLoading, loadSupportInvitationDetail, runSupportInvitationAction, createSupportCase, runSupportCaseAction, addSupportCaseNote, capabilities, enterprisePortfolio, enterpriseInvitationActionLoading, runEnterpriseInvitationAction) : null}
-        {section === "verification" || section === "verification-detail" ? renderVerification(verificationQueue, resourceId, capabilities, verificationActionLoading, verificationReviewNote, setVerificationReviewNote, runVerificationAction) : null}
+        {section === "verification" || section === "verification-detail" ? renderVerification(verificationQueue, resourceId, capabilities, verificationActionLoading, verificationReviewNote, setVerificationReviewNote, runVerificationAction, loadVerificationAssignees) : null}
         {section === "access" || section === "probate" || section === "probate-detail" ? renderProbate(probateCases, estateOperations, resourceId, capabilities, probateDecisionNotes, setProbateDecisionNotes, probateActionLoading, probateEvidenceLoading, runProbateCaseAction, openProbateEvidence, section === "access" ? "Access and estate cases" : "Probate queue") : null}
         {section === "authorities" || section === "authority-detail" ? <AdminLegalAuthorities key={includeTestAccounts ? "with-tests" : "customers"} authFetch={authFetch} resourceId={section === "authority-detail" ? resourceId : null} capabilities={capabilities} /> : null}
         {section === "audit" ? renderAudit(auditEvents, auditFilter, setAuditFilter) : null}
@@ -2323,7 +2331,8 @@ function renderVerification(
   actionLoading: string,
   reviewNote: string,
   setReviewNote: (value: string) => void,
-  runAction: (requestId: string, action: "retry" | "assign_to_me" | "add_note") => Promise<void>,
+  runAction: (requestId: string, action: "retry" | "assign_to_me" | "assign" | "add_note", assigneeUserId?: string) => Promise<void>,
+  loadAssignees: () => Promise<Array<{ userId: string; name: string }>>,
 ) {
   const selected = resourceId ? queue.find((item) => item.id === resourceId) : null;
   const canReview = capabilities.includes("verification:review");
@@ -2362,6 +2371,7 @@ function renderVerification(
                   <textarea value={reviewNote} onChange={(event) => setReviewNote(event.target.value)} rows={3} placeholder="Don’t enter document numbers or Vault details." />
                 </label>
                 {!reviewNote.trim() ? <p className="lf-admin-field-hint">Write a note first: Add review note and Request retry need one.</p> : null}
+                <AssignReviewer currentReviewerId={selected.assignedReviewerUserId ?? null} busy={actionLoading === `${selected.id}:assign`} load={loadAssignees} onAssign={(userId) => void runAction(selected.id, "assign", userId)} />
                 <div className="lf-admin-decision-actions">
                   {!selected.assignedReviewerUserId ? <button type="button" className="lf-admin-row-button" onClick={() => void runAction(selected.id, "assign_to_me")} disabled={actionLoading === `${selected.id}:assign_to_me`}>{actionLoading === `${selected.id}:assign_to_me` ? "Assigning…" : "Assign to me"}</button> : null}
                   <button type="button" className="lf-admin-row-button" onClick={() => void runAction(selected.id, "add_note")} disabled={!reviewNote.trim() || actionLoading === `${selected.id}:add_note`}>{actionLoading === `${selected.id}:add_note` ? "Saving…" : "Add review note"}</button>
