@@ -566,6 +566,32 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
 
   return (
     <section id="action-centre" className={`lf-action-centre lf-inbox${selecting ? " is-selecting" : ""}`} style={panelStyle} aria-label="Inbox">
+      {/* Owner, 19 Nov 2026: like Mail, choosing turns the Inbox header into a dark bar (pinned while scrolling)
+          and any action brings the header back. Delete is reversed out in red; Done and Delete say why when they can't. */}
+      {selecting ? <div className="lf-inbox-selectbar" role="toolbar" aria-label="Selected items">
+        <div className="lf-inbox-selectbar-head">
+          <button type="button" className="lf-inbox-selectbar-close" aria-label="Stop selecting" onClick={() => { setSelecting(false); setPicked([]); }}><Icon name="close" size={24} /></button>
+          <strong aria-live="polite">{picked.length ? `${picked.length} selected` : "Tap messages to choose"}</strong>
+          {shown.length ? <button type="button" className="lf-inbox-selectbar-all" onClick={() => setPicked(allShownPicked ? [] : shown.map((entry) => entry.key))}>{allShownPicked ? "Deselect all" : "Select all"}</button> : null}
+        </div>
+        <div className="lf-inbox-selectbar-actions">
+          <button type="button" disabled={!picked.length} onClick={() => { pickedEntries.forEach((entry) => setRead(entry, !pickedAllRead)); setSelecting(false); setPicked([]); }}><Icon name={pickedAllRead ? "mark_email_unread" : "drafts"} size={22} />{pickedAllRead ? "Unread" : "Read"}</button>
+          {inArchive ? null : <button type="button" disabled={!picked.length} onClick={() => setSheet({ type: "later", keys: picked })}><Icon name="schedule" size={22} />Later</button>}
+          {inArchive
+            ? <button type="button" disabled={!picked.length} onClick={() => unarchiveEntries(picked)}><Icon name="move_to_inbox" size={22} />Inbox</button>
+            : <button type="button" disabled={!picked.length} onClick={() => archiveEntries(picked)}><Icon name="archive" size={22} />Archive</button>}
+          <button type="button" disabled={!picked.length} onClick={() => {
+            const finishable = pickedEntries.filter((entry) => entry.finish).map((entry) => entry.key);
+            if (!finishable.length) { say("These can’t be marked done here. Open one to do it, or Archive it."); return; }
+            finishEntries(finishable);
+          }}><Icon name="check_circle" size={22} />Done</button>
+          <button type="button" className="is-delete" disabled={!picked.length} onClick={() => {
+            const removable = pickedEntries.filter((entry) => entry.remove).map((entry) => entry.key);
+            if (!removable.length) { say("Suggestions and things that need you can’t be deleted, as they’d come back. Archive them instead."); return; }
+            deleteEntries(removable);
+          }}><Icon name="delete" size={22} />Delete</button>
+        </div>
+      </div> : (
       <div className="lf-inbox-head">
         {selecting ? <p className="lf-inbox-subtitle">Tap messages to choose them</p> : <p className="lf-inbox-subtitle">{needs} {needs === 1 ? "needs" : "need"} you · {newCount} new</p>}
         <span className="lf-inbox-head-actions">
@@ -573,9 +599,10 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
           <button type="button" className="lf-inbox-pill-button" onClick={() => { setSelecting(!selecting); setPicked([]); setSwiped(null); }}>{selecting ? "Cancel" : "Select"}</button>
         </span>
       </div>
+      )}
       <div className="lf-inbox-categories" role="group" aria-label="Show" ref={categoriesRef}>
         {([["all", "All", "inbox"], ["needs", "Needs you", "priority_high"], ["waiting", "Waiting", "hourglass_top"], ["update", "Updates", "notifications"], ["archived", "Archived", "archive"]] as const).map(([key, label, icon]) => (
-          <button key={key} type="button" className={`lf-inbox-category is-${key}`} aria-pressed={category === key} aria-label={`${label}, ${count(key)}`} onClick={(event) => { setCategory(key); setPicked([]); setSwiped(null); }}>
+          <button key={key} type="button" className={`lf-inbox-category is-${key}`} aria-pressed={category === key} aria-label={`${label}, ${count(key)}`} disabled={selecting} onClick={(event) => { setCategory(key); setPicked([]); setSwiped(null); }}>
             {/* Laptop: every filter is labelled. Phone: only the chosen one, to fit (UX review Stage 5). */}
             <Icon name={icon} size={20} /><span className={category === key ? "is-current" : "lf-inbox-category-label"}>{label}{category === key ? ` ${count(key)}` : ""}</span>
           </button>
@@ -631,32 +658,7 @@ function ActionCentreInbox({ items, onAction, context, guidanceItems, onGuidance
       {shown.length ? <p className="lf-notifications-hint">Tap to open. On a phone, swipe right to mark read, swipe left for Later, Done or Delete, or press and hold for more.</p> : null}
       {updatesLoading && category !== "needs" && category !== "waiting" ? <p className="lf-notifications-hint">Loading updates…</p> : null}
 
-      {/* Owner, 19 Nov 2026: while choosing, a dark bar takes the place of the top bar, so it's clear a choice is
-          open; Delete is reversed out in red. Done and Delete always answer: what can't be done says why. */}
-      {selecting ? <div className="lf-inbox-selectbar" role="toolbar" aria-label="Selected items">
-        <div className="lf-inbox-selectbar-head">
-          <button type="button" className="lf-inbox-selectbar-close" aria-label="Stop selecting" onClick={() => { setSelecting(false); setPicked([]); }}><Icon name="close" size={24} /></button>
-          <strong aria-live="polite">{picked.length ? `${picked.length} selected` : "Choose messages"}</strong>
-          {shown.length ? <button type="button" className="lf-inbox-selectbar-all" onClick={() => setPicked(allShownPicked ? [] : shown.map((entry) => entry.key))}>{allShownPicked ? "Deselect all" : "Select all"}</button> : null}
-        </div>
-        <div className="lf-inbox-selectbar-actions">
-          <button type="button" disabled={!picked.length} onClick={() => { pickedEntries.forEach((entry) => setRead(entry, !pickedAllRead)); setSelecting(false); setPicked([]); }}><Icon name={pickedAllRead ? "mark_email_unread" : "drafts"} size={22} />{pickedAllRead ? "Unread" : "Read"}</button>
-          {inArchive ? null : <button type="button" disabled={!picked.length} onClick={() => setSheet({ type: "later", keys: picked })}><Icon name="schedule" size={22} />Later</button>}
-          {inArchive
-            ? <button type="button" disabled={!picked.length} onClick={() => unarchiveEntries(picked)}><Icon name="move_to_inbox" size={22} />Inbox</button>
-            : <button type="button" disabled={!picked.length} onClick={() => archiveEntries(picked)}><Icon name="archive" size={22} />Archive</button>}
-          <button type="button" disabled={!picked.length} onClick={() => {
-            const finishable = pickedEntries.filter((entry) => entry.finish).map((entry) => entry.key);
-            if (!finishable.length) { say("These can’t be marked done here. Open one to do it, or Archive it."); return; }
-            finishEntries(finishable);
-          }}><Icon name="check_circle" size={22} />Done</button>
-          <button type="button" className="is-delete" disabled={!picked.length} onClick={() => {
-            const removable = pickedEntries.filter((entry) => entry.remove).map((entry) => entry.key);
-            if (!removable.length) { say("Suggestions and things that need you can’t be deleted, as they’d come back. Archive them instead."); return; }
-            deleteEntries(removable);
-          }}><Icon name="delete" size={22} />Delete</button>
-        </div>
-      </div> : null}
+
 
       {toast ? <div className="lf-inbox-toast" role="status">{toast.text}{toast.undo ? <button type="button" onClick={() => { toast.undo!(); setToast(null); }}>Undo</button> : null}</div> : null}
 

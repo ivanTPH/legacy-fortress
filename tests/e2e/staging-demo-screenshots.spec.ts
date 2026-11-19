@@ -251,15 +251,21 @@ for (const kind of ["desk", "phone"] as const) {
     await page.locator(".lf-inbox-row-button").first().click();
     await expect(page.getByText("1 selected")).toBeVisible();
     const toolbar = page.getByRole("toolbar", { name: "Selected items" });
-    // On screen (owner couldn't see it, 11 Nov 2026); a dark bar in place of the top bar (owner, 19 Nov 2026).
+    // On screen (owner couldn't see it, 11 Nov 2026); the Inbox header becomes a dark bar, top bar stays (19 Nov 2026).
     await expect(toolbar).toBeInViewport();
     await expect(toolbar.getByRole("button", { name: /^(Read|Unread)$/ })).toBeVisible(); // depends on the row picked
     for (const name of ["Later", "Archive", "Done", "Delete"]) await expect(toolbar.getByRole("button", { name, exact: true })).toBeVisible();
-    if (kind === "phone") await expect(page.locator(".lf-topbar").first()).toBeHidden();
+    if (kind === "phone") await expect(page.locator(".lf-topbar").first()).toBeVisible();
     await page.getByRole("button", { name: "Select all", exact: true }).click();
     const rowCount = await page.locator(".lf-inbox-row").count();
     await expect(page.getByText(`${rowCount} selected`)).toBeVisible();
     await shoot(page, `inbox-${kind}-2-select`);
+    // The bar stays pinned under the top bar while scrolling a long list (owner, 19 Nov 2026).
+    await page.evaluate(() => window.scrollBy(0, 900));
+    await page.waitForTimeout(400);
+    await expect(toolbar).toBeInViewport();
+    await shoot(page, `inbox-${kind}-2b-select-scrolled`);
+    await page.evaluate(() => window.scrollTo(0, 0));
     await page.getByRole("button", { name: "Deselect all", exact: true }).click();
     await page.locator(".lf-inbox-row-button").first().click();
     await page.getByRole("toolbar", { name: "Selected items" }).getByRole("button", { name: "Later" }).click();
