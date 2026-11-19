@@ -121,14 +121,14 @@ test("swipes: one action per side, message slides over, off while selecting (own
   assert.match(row, /suppressClick\.current = false; \/\/ only the click that ends a swipe/);
 });
 
-test("select: a dark bar takes the place of the top bar (owner, 19 Nov 2026), with Select all and Archive", () => {
+test("select: like Mail, the Inbox header becomes a pinned dark bar (owner, 19 Nov 2026), with Select all and Archive", () => {
   const panel = read("app/(app)/components/dashboard/ActionQueuePanel.tsx");
   assert.match(panel, /Select all/);
   assert.match(panel, /archiveEntries\(picked\)/);
   const css = read("app/v3-screens.css");
-  assert.match(css, /\.lf-inbox-selectbar \{ position: fixed;/);
-  assert.match(css, /\.lf-inbox-selectbar \{ position: fixed; top: 0;/);
-  assert.match(css, /body:has\(\.lf-inbox-selectbar\) \.lf-topbar \{ visibility: hidden; \}/);
+  assert.match(css, /\.lf-inbox-selectbar \{ position: sticky;/);
+  assert.doesNotMatch(css, /body:has\(\.lf-inbox-selectbar\) \.lf-topbar/, "the app's top bar stays");
+  assert.match(panel, /disabled=\{selecting\} onClick=\{\(event\) => \{ setCategory\(key\)/, "filters are locked while choosing");
   assert.match(css, /\.lf-inbox-selectbar-actions button\.is-delete \{ background: #C0392B; color: #fff; \}/);
   assert.match(panel, /Suggestions and things that need you can’t be deleted, as they’d come back\. Archive them instead\./);
 });
