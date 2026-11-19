@@ -15,47 +15,55 @@ export default function ReadinessCard({ readiness, busyKey, onNotApplicable }: {
   onNotApplicable: (key: ReadinessKey, notApplicable: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const listId = useId();
+  const drawerId = `${listId}-drawer`;
   const headline = readiness.percent >= 100 ? "Your Vault is ready" : `Your Vault is ${readiness.percent}% ready`;
+  const stepCount = readiness.nextSteps.length;
   return (
+    // Compact by default (owner, 19 Nov 2026): the score and bar, with Next steps as a drawer that opens on tap.
     <section className="lf-readiness-card" aria-labelledby={`${listId}-title`}>
       <div className="lf-readiness-head">
+        <span className="lf-readiness-figure" aria-hidden="true">{readiness.percent}%</span>
         <div className="lf-readiness-copy">
           <h2 id={`${listId}-title`}>{headline}</h2>
-          <p>{readiness.percent >= 100 ? "Everything that matters is here. Check it once a year." : "The essentials your family would need, in one place."}</p>
+          <div className="lf-readiness-bar" role="progressbar" aria-label="Vault readiness" aria-valuemin={0} aria-valuemax={100} aria-valuenow={readiness.percent}>
+            <span style={{ width: `${readiness.percent}%` }} />
+          </div>
         </div>
-        <span className="lf-readiness-figure" aria-hidden="true">{readiness.percent}%</span>
       </div>
-      <div className="lf-readiness-bar" role="progressbar" aria-label="Vault readiness" aria-valuemin={0} aria-valuemax={100} aria-valuenow={readiness.percent}>
-        <span style={{ width: `${readiness.percent}%` }} />
-      </div>
-      {readiness.nextSteps.length ? (
-        <>
-          <h3 className="lf-readiness-steps-title">Next steps</h3>
-          {/* Each step names the document or person and opens the exact place to act (owner, 18 Nov 2026). */}
-          <ol className="lf-readiness-steps">
-            {readiness.nextSteps.map((item) => (
-              <li key={item.key}>
-                <Link href={item.href} aria-label={`${item.actionTitle}${item.subject ? `: ${item.subject}` : ""}`}>
-                  <span className="lf-readiness-step-icon" aria-hidden="true"><Icon name={item.icon} size={22} /></span>
-                  <span className="lf-readiness-step-copy">
-                    <small>{item.subject ? `${item.label} · ${item.subject}` : item.label}</small>
-                    <strong>{item.actionTitle}</strong>
-                  </span>
-                  <Icon name="chevron_right" size={22} />
-                </Link>
-              </li>
-            ))}
-          </ol>
-        </>
-      ) : null}
-      <button type="button" className="lf-readiness-toggle" aria-expanded={open} aria-controls={listId} onClick={() => setOpen((value) => !value)}>
-        {open ? "Hide what counts" : "See what counts"}<Icon name={open ? "expand_less" : "expand_more"} size={20} />
+      <button type="button" className="lf-readiness-drawer-toggle" aria-expanded={drawerOpen} aria-controls={drawerId} onClick={() => setDrawerOpen((value) => !value)}>
+        <span>{stepCount ? `Next steps · ${stepCount}` : "See what counts"}</span>
+        <Icon name={drawerOpen ? "expand_less" : "expand_more"} size={22} />
       </button>
-      {open ? (
-        <ul id={listId} className="lf-readiness-items">
-          {readiness.items.map((item) => <ReadinessRow key={item.key} item={item} busy={busyKey === item.key} onNotApplicable={onNotApplicable} />)}
-        </ul>
+      {drawerOpen ? (
+        <div id={drawerId} className="lf-readiness-drawer">
+          {stepCount ? (
+            /* Each step names the document or person and opens the exact place to act (owner, 18 Nov 2026). */
+            <ol className="lf-readiness-steps" aria-label="Next steps">
+              {readiness.nextSteps.map((item) => (
+                <li key={item.key}>
+                  <Link href={item.href} aria-label={`${item.actionTitle}${item.subject ? `: ${item.subject}` : ""}`}>
+                    <span className="lf-readiness-step-icon" aria-hidden="true"><Icon name={item.icon} size={22} /></span>
+                    <span className="lf-readiness-step-copy">
+                      <small>{item.subject ? `${item.label} · ${item.subject}` : item.label}</small>
+                      <strong>{item.actionTitle}</strong>
+                    </span>
+                    <Icon name="chevron_right" size={22} />
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          ) : null}
+          <button type="button" className="lf-readiness-toggle" aria-expanded={open} aria-controls={listId} onClick={() => setOpen((value) => !value)}>
+            {open ? "Hide what counts" : "See what counts"}<Icon name={open ? "expand_less" : "expand_more"} size={20} />
+          </button>
+          {open ? (
+            <ul id={listId} className="lf-readiness-items">
+              {readiness.items.map((item) => <ReadinessRow key={item.key} item={item} busy={busyKey === item.key} onNotApplicable={onNotApplicable} />)}
+            </ul>
+          ) : null}
+        </div>
       ) : null}
     </section>
   );
