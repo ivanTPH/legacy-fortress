@@ -849,3 +849,12 @@ a.lf-topbar-shield:focus-visible { outline: 3px solid var(--lf-focus); outline-o
 /* Disabled admin buttons look disabled. */
 .lf-admin-shell button:disabled, .lf-admin-shell .lf-admin-row-button:disabled { opacity: .45; cursor: not-allowed; }
 .lf-admin-field-hint { margin: 6px 0 0; color: var(--lf-text-secondary); font-size: 13px; }
+/* Readiness, compact (owner, 19 Nov 2026): score row + "Next steps" drawer. */
+.lf-readiness-card { gap: 10px; padding: 16px; }
+.lf-readiness-head { gap: 14px; justify-content: flex-start; }
+.lf-readiness-head .lf-readiness-figure { width: 48px; height: 48px; font-size: 14px; }
+.lf-readiness-head .lf-readiness-copy { flex: 1; min-width: 0; display: grid; gap: 8px; }
+.lf-readiness-head .lf-readiness-copy h2 { font-size: 17px; }
+.lf-readiness-drawer-toggle { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 44px; padding: 8px 2px 0; border: 0; border-top: 1px solid var(--lf-border); background: transparent; color: #8C4A32; font: inherit; font-weight: 600; cursor: pointer; }
+.lf-readiness-drawer-toggle:focus-visible { outline: 2px solid #8C4A32; outline-offset: 2px; }
+.lf-readiness-drawer { display: grid; gap: 10px; }
