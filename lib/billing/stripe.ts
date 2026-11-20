@@ -1,3 +1,4 @@
+import { hasActivePartnerSeat } from "./partnerPlan.ts";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isUatEnvironment } from "../environment/appEnvironment.ts";
@@ -129,6 +130,12 @@ export async function applySubscription(admin: SupabaseClient, subscription: Str
     : await admin.from("billing_profiles").select("user_id").eq("stripe_customer_id", subscription.customer).maybeSingle();
   const userId = profile.data?.user_id as string | undefined;
   if (!userId) return { applied: false, reason: "no_matching_account" };
+  // A member whose own subscription ends while a partner seat covers them keeps partner Premium (18 Nov 2026).
+  if (!premium && await hasActivePartnerSeat(admin, userId)) {
+    const kept = await admin.from("billing_profiles").update({ account_plan: "premium", plan_status: "active", plan_source: "partner", stripe_subscription_id: null, monthly_charge: 0, cancel_at_period_end: false, updated_at: new Date().toISOString() }).eq("user_id", userId);
+    if (kept.error) throw new Error(kept.error.message);
+    return { applied: true, userId, premium: true };
+  }
   const update = await admin.from("billing_profiles").update({
     account_plan: premium ? "premium" : "starter",
     plan_status: subscription.status === "trialing" ? "trialing" : subscription.status === "past_due" ? "past_due" : premium ? "active" : "canceled",

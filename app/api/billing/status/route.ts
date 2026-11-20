@@ -15,10 +15,11 @@ export async function GET(request: Request) {
   const [documents, attachments, packs] = await Promise.all([
     access.admin.from("documents").select("id", { count: "exact", head: true }).eq("owner_user_id", access.user.id).is("deleted_at", null),
     access.admin.from("attachments").select("id", { count: "exact", head: true }).eq("owner_user_id", access.user.id),
-    access.admin.from("billing_profiles").select("document_packs").eq("user_id", access.user.id).maybeSingle(),
+    access.admin.from("billing_profiles").select("document_packs,plan_source").eq("user_id", access.user.id).maybeSingle(),
   ]);
   const premium = data?.account_plan === "premium";
   const documentPacks = Number((packs.data as { document_packs?: number } | null)?.document_packs ?? 0);
+  const planSource = String((packs.data as { plan_source?: string | null } | null)?.plan_source ?? "manual");
   return NextResponse.json({
     ok: true,
     mode: paymentsBlockedOnTest() ? "live_blocked" : stripeMode(),
@@ -33,5 +34,7 @@ export async function GET(request: Request) {
     documentsUsed: Number(documents.count ?? 0) + Number(attachments.count ?? 0),
     documentsIncluded: premium ? 100 * (1 + documentPacks) : 10,
     documentPacks: premium ? documentPacks : 0,
+    // "partner": Premium arranged by the member's organisation; "partner_ended": their licence has ended (18 Nov 2026).
+    source: planSource === "partner" || planSource === "partner_ended" || planSource === "stripe" ? planSource : "manual",
   }, { headers: { "Cache-Control": "no-store" } });
 }

@@ -15,6 +15,7 @@ export type BillingStatus = {
   documentsUsed: number;
   documentsIncluded: number;
   documentPacks: number;
+  source?: "partner" | "partner_ended" | "stripe" | "manual";
 };
 
 export type PremiumReason = "records" | "type" | "documentPack" | "sharing" | "nominees" | "people" | "storage" | "suggestions" | "weekly";
@@ -39,6 +40,12 @@ export function showPremiumSheet(reason: PremiumReason) {
 async function authHeaders(): Promise<Record<string, string>> {
   const token = (await supabase.auth.getSession()).data.session?.access_token;
   return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+/** After a partner licence ends, the member chooses to stay on Free (18 Nov 2026). */
+export async function stayOnFreeAfterPartner(): Promise<boolean> {
+  const response = await fetch("/api/billing/partner-ended", { method: "POST", headers: await authHeaders() }).catch(() => null);
+  return Boolean(response?.ok);
 }
 
 export async function loadBillingStatus(): Promise<BillingStatus | null> {

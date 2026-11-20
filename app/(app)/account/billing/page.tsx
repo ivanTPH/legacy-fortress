@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { SettingsPageShell } from "../../components/settings/SettingsPrimitives";
 import Icon from "../../../../components/ui/Icon";
-import { loadBillingStatus, openBillingPortal, startCheckout, type BillingStatus } from "../../../../lib/billing/client";
+import { loadBillingStatus, openBillingPortal, startCheckout, type BillingStatus, stayOnFreeAfterPartner } from "../../../../lib/billing/client";
 import DocumentAllowanceNote from "../../../../components/billing/DocumentAllowanceNote";
 
 /**
@@ -55,10 +55,25 @@ function BillingPageContent() {
   }
 
   const premium = status?.plan === "premium";
+  const partnerPremium = premium && status?.source === "partner";
+  async function stayOnFree() {
+    setBusy("free"); setMessage("");
+    const ok = await stayOnFreeAfterPartner();
+    setBusy("");
+    if (!ok) { setMessage("That couldn’t be saved. Please try again."); return; }
+    setStatus((current) => current ? { ...current, source: "manual" } : current);
+    setMessage("You’re staying on Free. You can choose Premium at any time.");
+  }
   return (
     <SettingsPageShell title="Billing" subtitle="Your plan and payments." compact>
       {checkout === "success" ? <p className="lf-billing-banner is-good" role="status">{premium ? "Welcome to Premium. Thank you." : "Payment received. Your plan updates in a moment."}</p> : null}
       {checkout === "cancelled" ? <p className="lf-billing-banner" role="status">No payment was taken. You’re still on the free plan.</p> : null}
+      {/* Partner licence ended (owner decision 18 Nov 2026): the member chooses Free or Premium. */}
+      {status?.source === "partner_ended" && !premium ? <section className="lf-billing-banner is-partner" role="status">
+        <strong>Your organisation’s licence has ended</strong>
+        <span>Your Vault and everything in it are still yours, and nothing has been deleted. You’re now on the Free plan. Choose Premium below to keep its extra features, or stay on Free.</span>
+        <button type="button" className="lf-sg-secondary" disabled={Boolean(busy)} onClick={() => void stayOnFree()}>{busy === "free" ? "Saving…" : "Stay on Free"}</button>
+      </section> : null}
       {reason === "plan-limit" && !premium ? <p className="lf-billing-banner" role="status">You’ve reached a free plan limit. Nothing has been lost.</p> : null}
       {status?.mode === "live_blocked" ? <p className="lf-billing-banner is-test" role="note">Payments are switched off on TEST: this server has a live Stripe key. Set a test key (starting sk_test_) to try payments. Nothing can be charged here.</p> : null}
       {status?.mode === "test" ? <p className="lf-billing-banner is-test" role="note">Test payments only. Use card 4242 4242 4242 4242, any future date and any CVC. No money moves.</p> : null}
@@ -67,14 +82,15 @@ function BillingPageContent() {
         <h2 id="billing-plan">Your plan</h2>
         <div className="lf-sec-card lf-billing-card">
           {!loaded ? <p className="lf-billing-muted" role="status">Loading…</p> : premium ? <>
-            <div className="lf-billing-plan"><strong>Premium</strong><span className="lf-billing-chip">{status?.status === "trialing" ? "Free trial" : status?.status === "past_due" ? "Payment due" : "Active"}</span></div>
+            <div className="lf-billing-plan"><strong>Premium</strong><span className="lf-billing-chip">{partnerPremium ? "Arranged by your organisation" : status?.status === "trialing" ? "Free trial" : status?.status === "past_due" ? "Payment due" : "Active"}</span></div>
+            {partnerPremium ? <p className="lf-billing-muted">Your organisation pays for your Premium, so there’s nothing for you to pay. If its arrangement ends, you’ll be told and can choose Free or Premium; nothing you’ve saved is deleted.</p> : null}
             <p className="lf-billing-muted">
               {status?.status === "trialing" && status.trialEndsAt ? `Your free trial ends on ${formatDate(status.trialEndsAt)}. ` : ""}
               {status?.cancelAtPeriodEnd ? `Premium ends on ${formatDate(status.renewsAt)}; you'll then move to Free and nothing is deleted.` : status?.renewsAt ? `${status.interval === "year" ? "£39 a year" : "£3.99 a month"}, next payment ${formatDate(status.renewsAt)}.` : ""}
             </p>
             {status?.status === "past_due" ? <p className="lf-billing-warn">Your last payment didn’t go through. Update your card to keep Premium.</p> : null}
-            <button type="button" className="lf-sg-secondary" disabled={Boolean(busy) || !status?.canManage} onClick={() => void manage()}>{busy === "manage" ? "Opening…" : "Manage subscription"}</button>
-            <p className="lf-billing-muted">Change card, switch between monthly and yearly, see invoices or cancel.</p>
+            {partnerPremium ? null : <button type="button" className="lf-sg-secondary" disabled={Boolean(busy) || !status?.canManage} onClick={() => void manage()}>{busy === "manage" ? "Opening…" : "Manage subscription"}</button>}
+            {partnerPremium ? null : <p className="lf-billing-muted">Change card, switch between monthly and yearly, see invoices or cancel.</p>}
           </> : <>
             <div className="lf-billing-plan"><strong>Free</strong></div>
             <ul className="lf-billing-list">

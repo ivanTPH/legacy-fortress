@@ -29,6 +29,8 @@ export type VaultFacts = {
   links: Array<{ recordId: string; personId: string; role: string }>;
   suggestions: Array<{ recordId: string; name: string; role: string | null; status: string; matchPersonId: string | null }>;
   nominations: Array<{ personId: string; status: string }>;
+  /** billing_profiles.plan_source: "partner_ended" after a partner licence ends (18 Nov 2026). */
+  planSource?: string | null;
 };
 
 export type NextStep = GuidanceItem & {
@@ -342,7 +344,17 @@ export function planNextSteps(
     // Will and Power of Attorney wait until the Vault is established (owner decision, 10 Nov 2026).
     .filter((item) => !(ESTABLISHED_GATED_PROMPTS.has(String(item.key)) && !vaultEstablished(facts)))
     .map((item) => ({ ...item, emailTitle: item.reasked ? "Have another look at something important" : EMAIL_TITLES[item.key] ?? "Take a look at your Vault" }));
-  const extra = [...people, ...typeSteps(facts), ...housekeepingSteps(facts, now)].filter((item) => {
+  // Partner licence ended (owner decision 18 Nov 2026): goes away when the member chooses Free or Premium.
+  const partner: NextStep[] = facts.planSource === "partner_ended" ? [step({
+    key: "partner_licence_ended", category: "Your plan", priority: "high",
+    title: "Your organisation’s licence has ended",
+    emailTitle: "Your organisation’s Legacy Fortress licence has ended",
+    description: activeRows(facts).length > 6
+      ? `Your Vault and everything in it are still yours. You’re now on the Free plan, which holds 6 records; you have ${activeRows(facts).length}. Nothing is deleted, but to add more, choose Premium.`
+      : "Your Vault and everything in it are still yours. You’re now on the Free plan. Choose Premium to keep its extra features, or stay on Free.",
+    actionLabel: "Choose a plan", href: "/account/billing?from=partner",
+  })] : [];
+  const extra = [...partner, ...people, ...typeSteps(facts), ...housekeepingSteps(facts, now)].filter((item) => {
     const decision = guidance[item.key];
     const policy = PROMPT_POLICY[item.key];
     if (decision?.snoozedUntil && Date.parse(decision.snoozedUntil) > now.getTime()) return false;

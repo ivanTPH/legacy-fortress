@@ -101,13 +101,21 @@ export default function EnterpriseInvitationAcceptPageClient() {
         communicationPreferences: { email: communicationEmail },
       }),
     });
-    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string };
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string; code?: string };
     setAccepting(false);
     if (!res.ok || !json.ok) {
       setMessage(json.message || "This invitation could not be accepted.");
+      if (json.code === "licence_full") window.setTimeout(() => router.replace("/dashboard"), 4000);
       return;
     }
-    setMessage("Access accepted. Redirecting to Enterprise Operations...");
+    // Members who join with a sign-up link go to their own Vault, now on Premium (owner decision 18 Nov 2026);
+    // people invited to run the organisation's portal go to the Partner Portal.
+    if (type === "enrolment") {
+      setMessage("You’re in. Premium is on, arranged by your organisation. Opening your Vault…");
+      router.replace("/dashboard");
+      return;
+    }
+    setMessage("Access accepted. Opening the Partner Portal…");
     router.replace("/enterprise");
   }
 

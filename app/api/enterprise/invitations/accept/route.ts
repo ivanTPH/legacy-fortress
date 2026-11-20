@@ -70,7 +70,14 @@ export async function POST(request: Request) {
   }
 }
 
+// Beyond the licence (owner decision 18 Nov 2026): the person's account is theirs on the Free plan, and they can
+// choose Premium themselves. Say so plainly instead of a technical error.
+const LICENCE_FULL = new Set(["enrolment_link_exhausted", "seat_entitlement_exceeded", "licence_allocation_blocked"]);
+
 function toInvitationResponse(error: unknown) {
+  if (error instanceof EnterpriseOperationError && LICENCE_FULL.has(error.code)) {
+    return NextResponse.json({ ok: false, code: "licence_full", message: "All the places your organisation arranged have been taken. Your Legacy Fortress account is ready on the Free plan, and you can choose Premium at any time." }, { status: 409 });
+  }
   if (error instanceof EnterpriseOperationError) {
     return NextResponse.json({ ok: false, code: error.code, message: error.message }, { status: error.status });
   }
