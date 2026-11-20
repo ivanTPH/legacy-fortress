@@ -32,7 +32,7 @@ export type GuidanceRuleKey =
   | "review_attorneys" | "invite_attorneys" | "remind_attorneys"
   | "has_pension" | "has_savings" | "has_life_insurance"
   // Housekeeping once set up (5 Nov 2026)
-  | "annual_review" | "will_still_current" | "bank_details_current"
+  | "annual_review" | "will_still_current" | "bank_details_current" | "partner_licence_ended"
   // Dates from documents (5 Nov 2026)
   | "will_after_marriage" | "id_document_expiry";
 
@@ -67,6 +67,8 @@ export const PROMPT_POLICY: Record<GuidanceRuleKey, PromptPolicy> = {
   people_i_trust: ORDINARY, digital_life: ORDINARY, personal_possessions: ORDINARY, wishes: ORDINARY, financial_administration: ORDINARY,
   has_pension: { ...ORDINARY, dismissLabel: "I don't have one" }, has_savings: { ...ORDINARY, dismissLabel: "I don't have any" },
   has_life_insurance: { ...ORDINARY, dismissLabel: "I don't have any" },
+  // Partner licence ended (owner decision 18 Nov 2026): first in the Inbox until the member chooses Free or Premium.
+  partner_licence_ended: { tier: "critical", remindDays: 7, dismissDays: 30, dismissLabel: "Decide later" },
   annual_review: { tier: "housekeeping", remindDays: 30, dismissDays: 365, doneDays: 365, dismissLabel: "Ask me next year" },
   // Every 3 years (owner decision 5 Nov 2026); "It's still current" restarts the 3 years.
   will_still_current: { tier: "housekeeping", remindDays: 60, dismissDays: 1095, doneDays: 1095, dismissLabel: "It's still current" },

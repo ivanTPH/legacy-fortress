@@ -947,3 +947,5 @@ a.lf-topbar-shield:focus-visible { outline: 3px solid var(--lf-focus); outline-o
   .lf-partner-mix li { grid-template-columns: 1fr 44px; }
   .lf-partner-mix li .lf-partner-mix-bar { grid-column: 1 / -1; grid-row: 2; }
 }
+.lf-billing-banner.is-partner { display: grid; gap: 8px; padding: 16px; border: 1px solid #E9C46A; border-radius: 14px; background: #FFF8E6; }
+.lf-billing-banner.is-partner button { justify-self: start; }

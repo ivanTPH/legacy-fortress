@@ -1,3 +1,4 @@
+import { endPartnerPremium, endPartnerPremiumForLicence, grantPartnerPremium } from "../billing/partnerPlan.ts";
 import { loadVaultMix } from "../enterprise/vaultMix.ts";
 import { createHash, randomBytes } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -740,6 +741,11 @@ export async function transitionEnterpriseLicence(client: AnySupabaseClient, lic
   if (normalized === "expired") patch.expired_at = new Date().toISOString();
   const update = await client.from("enterprise_licences").update(patch).eq("id", licenceId).select(LICENCE_SELECT).single();
   if (update.error || !update.data) throw new EnterpriseOperationError("licence_transition_failed", update.error?.message ?? "Could not update licence status.", 500);
+  // Partner licence ended (owner decision 18 Nov 2026): its members become Legacy Fortress customers on Free and
+  // are told why. A paused (suspended) licence doesn't change anyone's plan.
+  if ((normalized === "cancelled" || normalized === "expired") && current.licence_status !== normalized) {
+    await endPartnerPremiumForLicence(client, licenceId).catch(() => null);
+  }
   return { before: mapLicence(current), after: mapLicence(update.data as EnterpriseLicenceRow) };
 }
 
@@ -1031,6 +1037,7 @@ export async function transitionEnterpriseMembership(client: AnySupabaseClient, 
     if (normalized === "active" && current.membership_status === "suspended") await setEnterpriseSeatStatus(client, current.seat_id, "active", current.user_id);
     if (normalized === "removed") await releaseEnterpriseSeat(client, current.seat_id, optionalText(reason) ?? "membership_removed");
   }
+  if (normalized === "removed" && current.user_id) await endPartnerPremium(client, current.user_id, { exceptSeatId: current.seat_id ?? undefined }).catch(() => null);
   return { before: mapMembership(current), after: mapMembership(update.data as EnterpriseMembershipRow) };
 }
 
@@ -1945,6 +1952,8 @@ async function activateEnterpriseSeat(client: AnySupabaseClient, seatId: string,
     allocated_seats: active + invited + Number(licence.suspended_seats ?? 0),
     updated_at: new Date().toISOString(),
   }).eq("id", licence.id);
+  // Joining on a partner seat gives Premium at no cost to the member (owner decision 18 Nov 2026).
+  await grantPartnerPremium(client, userId).catch(() => null);
 }
 
 async function setEnterpriseSeatStatus(client: AnySupabaseClient, seatId: string, status: "active" | "suspended", userId: string) {
