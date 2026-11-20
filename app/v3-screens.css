@@ -1012,3 +1012,14 @@ a.lf-topbar-shield:focus-visible { outline: 3px solid var(--lf-focus); outline-o
   body.lf-print-pack .lf-pack section { break-inside: avoid-page; }
   body.lf-print-pack .lf-pack-table tr { break-inside: avoid; }
 }
+
+/* Admin support actions (20 Nov 2026): sign-in help on a customer page, each with a reason for the audit log. */
+.lf-admin-support-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
+.lf-admin-support-list > li { display: grid; gap: 6px; justify-items: start; }
+.lf-admin-support-confirm { display: grid; gap: 8px; width: 100%; padding: 12px; border-radius: 12px; background: var(--lf-surface-muted, #F6EFEA); }
+.lf-admin-support-confirm p { margin: 0; }
+.lf-admin-support-confirm label { display: grid; gap: 4px; font-size: 13px; font-weight: 600; }
+.lf-admin-support-confirm textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--lf-border, #EBE4DE); border-radius: 10px; font: inherit; font-weight: 400; resize: vertical; }
+.lf-admin-support-note { margin: 8px 0 0; font-size: 14px; }
+.lf-admin-support-note.is-ok { color: var(--lf-success, #2F6B4F); }
+.lf-admin-support-note.is-error { color: var(--lf-danger, #A3362B); }

@@ -9,12 +9,8 @@ import { validateStagingSender } from "../auth/sendEmailHook.ts";
 export type IdentityResult = "verified" | "not_verified";
 
 /** Synthetic test addresses are never emailed. */
-export function isDeliverableAddress(email: string | null | undefined) {
-  const address = String(email ?? "").trim().toLowerCase();
-  if (!address.includes("@")) return false;
-  const domain = address.slice(address.lastIndexOf("@") + 1);
-  return !/(^|\.)(test|example|invalid|localhost)$/.test(domain) && !/^example\.(com|org|net)$/.test(domain);
-}
+export { isDeliverableAddress } from "../email/deliverable.ts";
+import { isDeliverableAddress } from "../email/deliverable.ts";
 
 export function renderIdentityResultEmail(result: IdentityResult, appUrl: string) {
   const link = `${appUrl.replace(/\/$/, "")}/profile`;

@@ -119,6 +119,12 @@ test("platform admin remains in admin context while using users, invitations, or
   const peopleTile = page.getByRole("button", { name: /^People/ });
   await expect(peopleTile).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("heading", { name: "Trusted people" })).toHaveCount(0);
+  // Support actions (20 Nov 2026): sign-in help only; test addresses are never emailed.
+  const supportActions = page.getByRole("region", { name: "Support actions" });
+  await expect(supportActions).toBeVisible();
+  await expect(supportActions.getByRole("button", { name: "Send password reset link" })).toBeDisabled();
+  await expect(supportActions.getByText("Test address: no email is sent.").first()).toBeVisible();
+  await expect(supportActions.getByRole("button", { name: "Sign out on every device" })).toBeEnabled();
   await page.getByRole("button", { name: /^Records/ }).click();
   await expect(page.getByRole("region", { name: "Records" })).toBeVisible();
   const detailShot = await page.screenshot({ type: "jpeg", quality: 60, scale: "css", fullPage: true }).catch(() => null);
