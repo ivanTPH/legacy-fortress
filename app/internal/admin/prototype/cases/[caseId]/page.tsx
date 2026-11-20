@@ -32,7 +32,7 @@ export default async function AdminCaseDetailPage({ params }: AdminCaseDetailPag
         <section style={panelStyle}>
           <h2 style={h2Style}>Evidence preview</h2>
           <div style={documentPreviewStyle}>
-            <div style={{ fontSize: 12, fontWeight: 800, color: "var(--lf-text-soft)", textTransform: "uppercase" }}>Death certificate</div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: "var(--lf-text-soft)", textTransform: "uppercase" }}>Death certificate</div>
             <div style={{ fontSize: 24, fontWeight: 800, color: "var(--lf-text)" }}>Certificate placeholder</div>
             <div style={{ color: "var(--lf-text-soft)", fontSize: 13 }}>Submitted 30 Apr 2026 · PDF · mocked preview</div>
           </div>
@@ -80,7 +80,7 @@ export default async function AdminCaseDetailPage({ params }: AdminCaseDetailPag
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <span style={{ display: "block", color: "var(--lf-text-soft)", fontSize: 12, fontWeight: 800 }}>{label}</span>
+      <span style={{ display: "block", color: "var(--lf-text-soft)", fontSize: 13, fontWeight: 800 }}>{label}</span>
       <strong>{value}</strong>
     </div>
   );

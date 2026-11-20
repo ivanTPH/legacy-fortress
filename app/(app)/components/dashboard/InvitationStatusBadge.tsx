@@ -24,7 +24,7 @@ export default function InvitationStatusBadge({
         background: tone.bg,
         borderRadius: 999,
         padding: "2px 8px",
-        fontSize: 12,
+        fontSize: 13,
       }}
     >
       {state.label}

@@ -106,7 +106,7 @@ export default function ReminderPreferencesPage() {
       <SettingsCard title="Review reminder schedule" description="Choose the date and advance notice for the existing monthly review reminder.">
         <div className="lf-content-grid">
           <label style={{ display: "grid", gap: 6 }}>
-            <span style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>Monthly review day (1-28)</span>
+            <span style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>Monthly review day (1-28)</span>
             <input
               style={inputStyle}
               type="number"
@@ -117,7 +117,7 @@ export default function ReminderPreferencesPage() {
             />
           </label>
           <label style={{ display: "grid", gap: 6 }}>
-            <span style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>Advance notice days (1-30)</span>
+            <span style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>Advance notice days (1-30)</span>
             <input
               style={inputStyle}
               type="number"

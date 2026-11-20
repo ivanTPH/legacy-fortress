@@ -401,14 +401,14 @@ const brandMarkStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 800,
 };
 
 const brandSubStyle: CSSProperties = {
   display: "block",
   color: "#81766f",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 500,
 };
 
@@ -423,7 +423,7 @@ function navSectionStyle(divided: boolean): CSSProperties {
 
 const navSectionLabelStyle: CSSProperties = {
   color: "#81766f",
-  fontSize: 11,
+  fontSize: 13,
   fontWeight: 800,
   letterSpacing: 0,
   textTransform: "uppercase",
@@ -501,7 +501,7 @@ const contextBadgeStyle: CSSProperties = {
   background: "#f5f1ec",
   color: "var(--lf-bronze)",
   padding: "4px 9px",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 800,
   marginBottom: 8,
 };

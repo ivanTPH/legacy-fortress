@@ -2055,7 +2055,7 @@ const panelStyle: CSSProperties = { background: "#fff", border: "1px solid var(-
 const h1Style: CSSProperties = { margin: 0, fontSize: 28, lineHeight: 1.15 };
 const h2Style: CSSProperties = { margin: "0 0 12px", fontSize: 18 };
 const h3Style: CSSProperties = { margin: "18px 0 8px", fontSize: 15 };
-const eyebrowStyle: CSSProperties = { margin: "0 0 8px", color: "var(--lf-text-secondary)", fontSize: 12, textTransform: "uppercase", fontWeight: 800, letterSpacing: 0 };
+const eyebrowStyle: CSSProperties = { margin: "0 0 8px", color: "var(--lf-text-secondary)", fontSize: 13, textTransform: "uppercase", fontWeight: 800, letterSpacing: 0 };
 const mutedStyle: CSSProperties = { color: "var(--lf-text-secondary)", margin: "6px 0 0", lineHeight: 1.5 };
 const privacyStyle: CSSProperties = { color: "var(--lf-text)", background: "var(--lf-surface-hover)", border: "1px solid var(--lf-border)", borderRadius: 6, padding: 10, margin: "12px 0 0" };
 const rowStyle: CSSProperties = { display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 };
@@ -2082,6 +2082,6 @@ const fieldsetStyle: CSSProperties = { border: "1px solid var(--lf-border)", bor
 const tableWrapStyle: CSSProperties = { overflowX: "auto" };
 const tableStyle: CSSProperties = { width: "100%", borderCollapse: "collapse", fontSize: 14 };
 const actionsCellStyle: CSSProperties = { display: "flex", gap: 8, flexWrap: "wrap" };
-const linkCodeStyle: CSSProperties = { display: "block", maxWidth: 360, overflowWrap: "anywhere", color: "var(--lf-text-secondary)", fontSize: 12, marginTop: 5 };
+const linkCodeStyle: CSSProperties = { display: "block", maxWidth: 360, overflowWrap: "anywhere", color: "var(--lf-text-secondary)", fontSize: 13, marginTop: 5 };
 
 // Brief access check: a small centred card on the page colour, the same on a laptop and a phone.

@@ -190,13 +190,13 @@ const areaBadgeStyle = {
   background: "var(--lf-surface-muted)",
   color: "var(--lf-text)",
   padding: "6px 10px",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 800,
 } as const;
 
 const roleStyle = {
   color: "var(--lf-text-soft)",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 700,
   textAlign: "right",
 } as const;

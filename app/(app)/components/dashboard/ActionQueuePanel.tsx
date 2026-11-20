@@ -1367,7 +1367,7 @@ const resolvedRowStyle = {
 
 const drawerEyebrowStyle = {
   color: "var(--lf-link)",
-  fontSize: 11,
+  fontSize: 13,
   fontWeight: 800,
   letterSpacing: "0.08em",
   textTransform: "uppercase",
@@ -1413,7 +1413,7 @@ const activeBadgeStyle = {
   border: "1px solid var(--lf-border)",
   background: "var(--lf-surface-card)",
   color: "#5d2d1f",
-  fontSize: 11,
+  fontSize: 13,
   fontWeight: 700,
   padding: "3px 8px",
 } satisfies CSSProperties;
@@ -1510,7 +1510,7 @@ const sectionTitleStyle = {
 
 const sectionSummaryStyle = {
   color: "var(--lf-text-secondary)",
-  fontSize: 12,
+  fontSize: 13,
   lineHeight: 1.4,
   overflow: "hidden",
   textOverflow: "ellipsis",
@@ -1562,14 +1562,14 @@ const stageChipStyle = {
   background: "var(--lf-surface-page)",
   border: "1px solid var(--lf-border)",
   borderRadius: 999,
-  fontSize: 11,
+  fontSize: 13,
   fontWeight: 700,
   padding: "2px 7px",
 } satisfies CSSProperties;
 
 const rowCountStyle = {
   color: "var(--lf-text-secondary)",
-  fontSize: 11,
+  fontSize: 13,
   fontWeight: 600,
 } satisfies CSSProperties;
 
@@ -1589,7 +1589,7 @@ const rowLabelStyle = {
 
 const rowReasonStyle = {
   color: "var(--lf-text-secondary)",
-  fontSize: 12,
+  fontSize: 13,
   lineHeight: 1.4,
 } satisfies CSSProperties;
 
@@ -1611,7 +1611,7 @@ const primaryActionStyle = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 800,
   cursor: "pointer",
 } satisfies CSSProperties;
@@ -1627,7 +1627,7 @@ const secondaryActionStyle = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 750,
 } satisfies CSSProperties;
 
@@ -1647,7 +1647,7 @@ function statusPillStyle(status: ActionCentreStatus): CSSProperties {
     color: tone.color,
     borderRadius: 999,
     padding: "4px 8px",
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: 800,
     whiteSpace: "nowrap",
   };
@@ -1667,7 +1667,7 @@ function priorityPillStyle(priority: ActionPriorityLevel): CSSProperties {
     color: tone.color,
     borderRadius: 999,
     padding: "4px 8px",
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: 850,
     whiteSpace: "nowrap",
   };

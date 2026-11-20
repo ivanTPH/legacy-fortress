@@ -88,7 +88,7 @@ const countStyle: CSSProperties = {
   background: "#f1ece8",
   color: "var(--lf-text-soft)",
   padding: "4px 9px",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 800,
 };
 

@@ -178,7 +178,7 @@ const lockedControlStyle: CSSProperties = {
 
 const labelStyle: CSSProperties = {
   color: "var(--lf-text-soft)",
-  fontSize: 11,
+  fontSize: 13,
   fontWeight: 800,
   textTransform: "uppercase",
 };
@@ -205,7 +205,7 @@ const activeChipStyle: CSSProperties = {
   background: "#f5f1ec",
   color: "var(--lf-bronze)",
   padding: "6px 9px",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 800,
 };
 

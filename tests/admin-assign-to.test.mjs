@@ -34,7 +34,7 @@ test("the server re-checks the choice and records the hand-over", () => {
 test("an invitation never changes someone's role; changing an acting executor's role warns first (owner, 19 Nov 2026)", () => {
   const people = fs.readFileSync("components/contacts/ContactsNetworkWorkspace.tsx", "utf8");
   assert.match(people, /contact_role: existing\.contact_role \|\| row\.assigned_role/);
-  assert.match(people, /is still named as \$\{what\}\. Changing their role here doesn’t change that\./);
+  assert.match(people, /title: `\$\{contact\.full_name\} is still named as \$\{what\}`, body: "Changing their role here doesn’t change that\./);
   assert.match(people, /if \(!confirmed\) \{ setSaving\(false\); return; \}/);
   const linked = fs.readFileSync("lib/linkedPeople/recordLinkedPeople.ts", "utf8");
   assert.match(linked, /\/executor\/i\.test\(String\(\(link\.data as \{ role\?: string \}\)\.role/);

@@ -260,7 +260,7 @@ const miniRowStyle: CSSProperties = {
 const mutedBlockStyle: CSSProperties = {
   display: "block",
   color: "var(--lf-text-soft)",
-  fontSize: 12,
+  fontSize: 13,
   marginTop: 3,
 };
 

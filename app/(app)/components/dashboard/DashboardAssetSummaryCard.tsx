@@ -190,7 +190,7 @@ export default function DashboardAssetSummaryCard({
                 <Icon name="chevron_right" size={16} />
                 {item.label}
               </span>
-              {item.meta ? <span style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>{item.meta}</span> : null}
+              {item.meta ? <span style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{item.meta}</span> : null}
             </Link>
           ))
         ) : !emptyState && !hideItems && onEmptyActionClick ? (
@@ -292,7 +292,7 @@ const titleStyle: CSSProperties = {
 };
 
 const dateStyle: CSSProperties = {
-  fontSize: 12,
+  fontSize: 13,
   color: "var(--lf-text-secondary)",
 };
 

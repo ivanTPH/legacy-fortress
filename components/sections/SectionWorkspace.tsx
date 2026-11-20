@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmDialog } from "../ui/confirmDialog";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { waitForActiveUser } from "../../lib/auth/session";
@@ -286,7 +287,7 @@ export default function SectionWorkspace({
       return;
     }
     if (tableUnavailable) return;
-    const ok = window.confirm("Delete this record?");
+    const ok = await confirmDialog({ title: "Delete this record?", body: "This can’t be undone.", confirmLabel: "Delete", tone: "danger" });
     if (!ok) return;
 
     const user = await requireUser(router);
@@ -686,7 +687,7 @@ export default function SectionWorkspace({
                 <div style={{ display: "grid", gap: 3 }}>
                   <div style={{ fontWeight: 700 }}>{row.title || "Untitled record"}</div>
                   <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{row.summary || "No summary provided."}</div>
-                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     Added {formatDate(row.created_at)} · {formatCurrency(row.estimated_value, "GBP")}
                   </div>
                   {extraFields.length > 0 ? (
@@ -885,7 +886,7 @@ const fieldStyle: CSSProperties = {
 
 const labelStyle: CSSProperties = {
   color: "var(--lf-text-secondary)",
-  fontSize: 12,
+  fontSize: 13,
 };
 
 const inputStyle: CSSProperties = {
@@ -924,7 +925,7 @@ const linkedPanelChipStyle: CSSProperties = {
   background: "var(--lf-surface-page)",
   color: "var(--lf-text-secondary)",
   padding: "4px 10px",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 700,
 };
 

@@ -135,7 +135,7 @@ const tooltipStyle: CSSProperties = {
   background: "var(--lf-primary-bg)",
   color: "var(--lf-primary-text)",
   padding: "10px 12px",
-  fontSize: 12,
+  fontSize: 13,
   lineHeight: 1.5,
   boxShadow: "0 12px 24px rgba(15,23,42,0.18)",
   transition: "opacity 140ms ease, transform 140ms ease",
@@ -143,7 +143,7 @@ const tooltipStyle: CSSProperties = {
 
 const titleStyle: CSSProperties = {
   display: "block",
-  fontSize: 12,
+  fontSize: 13,
   lineHeight: 1.35,
 };
 

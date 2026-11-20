@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmDialog } from "../ui/confirmDialog";
 import { startDocumentExtraction } from "@/lib/documents/extraction/client";
 import DocumentAllowanceNote from "../billing/DocumentAllowanceNote";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
@@ -320,7 +321,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
       setStatus("Linked users cannot remove owner documents. Document contribution must preserve the original.");
       return;
     }
-    const confirmed = window.confirm(`Remove "${item.fileName}" from ${item.parentLabel}?`);
+    const confirmed = await confirmDialog({ title: `Remove “${item.fileName}”?`, body: `The document is removed from ${item.parentLabel}.`, confirmLabel: "Remove", tone: "danger" });
     if (!confirmed) return;
 
     const user = await requireUser(router);
@@ -518,7 +519,7 @@ export default function DocumentsWorkspace({ title, subtitle, sectionFilter, sho
             />
             I confirm this file and the selected parent asset are correct before linking.
           </label>
-          {formError ? <div role="alert" style={{ color: "var(--lf-destructive)", fontSize: 12, fontWeight: 700 }}>{formError}</div> : null}
+          {formError ? <div role="alert" style={{ color: "var(--lf-destructive)", fontSize: 13, fontWeight: 700 }}>{formError}</div> : null}
         </UploadConfirmationPanel>
 
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -636,7 +637,7 @@ const linkedPanelChipStyle: CSSProperties = {
   background: "var(--lf-surface-page)",
   color: "var(--lf-text-secondary)",
   padding: "4px 10px",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 700,
 };
 

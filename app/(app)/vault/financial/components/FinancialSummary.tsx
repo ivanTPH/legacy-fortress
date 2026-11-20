@@ -27,7 +27,7 @@ export default function FinancialSummary({ assets, liabilities, net, currency }:
         <div style={{ color: "var(--lf-text-secondary)", fontSize: 13, marginTop: 4 }}>
           Liabilities reduce the total automatically.
         </div>
-        <div style={{ color: "var(--lf-text-secondary)", fontSize: 12, marginTop: 4 }}>
+        <div style={{ color: "var(--lf-text-secondary)", fontSize: 13, marginTop: 4 }}>
           Totals assume all balances are in {currency}.
         </div>
       </div>

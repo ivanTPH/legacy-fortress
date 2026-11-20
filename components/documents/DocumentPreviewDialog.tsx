@@ -44,8 +44,8 @@ export default function DocumentPreviewDialog({
         <div className="lf-v52-document-dialog-header" style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 700, wordBreak: "break-word" }}>{item.fileName || "Attachment preview"}</div>
-            <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>{formatMime(item.mimeType)}</div>
-            {item.metaLabel ? <div style={{ color: "var(--lf-text-secondary)", fontSize: 12, marginTop: 4 }}>{item.metaLabel}</div> : null}
+            <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{formatMime(item.mimeType)}</div>
+            {item.metaLabel ? <div style={{ color: "var(--lf-text-secondary)", fontSize: 13, marginTop: 4 }}>{item.metaLabel}</div> : null}
             {item.originalFileName ? <div style={{ color: "var(--lf-text-secondary)", fontSize: 13, marginTop: 4 }}>Original filename: {item.originalFileName}</div> : null}
           </div>
           <IconButton icon="close" label="Close preview" className="lf-v52-document-dialog-close" onClick={onClose} />

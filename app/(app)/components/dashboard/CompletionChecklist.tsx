@@ -46,15 +46,15 @@ export default function CompletionChecklist({ items }: CompletionChecklistProps)
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <StatusDot status={item.status} />
                   <span style={{ fontWeight: 700 }}>{item.label}</span>
-                  <span style={{ fontSize: 12, color: "var(--lf-text-secondary)" }}>{humanizeCompletionStatus(item.status)}</span>
+                  <span style={{ fontSize: 13, color: "var(--lf-text-secondary)" }}>{humanizeCompletionStatus(item.status)}</span>
                 </div>
-                <div style={{ marginTop: 4, fontSize: 12, color: "var(--lf-text-secondary)" }}>
+                <div style={{ marginTop: 4, fontSize: 13, color: "var(--lf-text-secondary)" }}>
                   {item.missingItems > 0 ? `${item.missingItems} item(s) still to review` : "Ready for someone else to review"}
                 </div>
               </div>
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontWeight: 700 }}>{item.percent}%</div>
-                <div style={{ fontSize: 12, color: "var(--lf-text-secondary)" }}>
+                <div style={{ fontSize: 13, color: "var(--lf-text-secondary)" }}>
                   {item.status === "complete" ? "Review details" : "Improve next"}
                 </div>
               </div>

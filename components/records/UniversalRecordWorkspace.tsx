@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmDialog } from "../ui/confirmDialog";
 import { binRecord } from "../../lib/records/recentlyDeleted";
 import RecordHistoryPanel from "./RecordHistoryPanel";
 import { startDocumentExtraction, takeBankPrefill } from "../../lib/documents/extraction/client";
@@ -1710,9 +1711,9 @@ export default function UniversalRecordWorkspace({
     });
   }
 
-  function cancelForm() {
+  async function cancelForm() {
     setStatementPrefill(null);
-    if (hasUnsavedFormChanges() && !window.confirm(getDiscardPrompt())) {
+    if (hasUnsavedFormChanges() && !(await confirmDialog({ title: "Leave without saving?", body: getDiscardPrompt(), confirmLabel: "Leave", cancelLabel: "Keep editing" }))) {
       return;
     }
     clearAddRecordQueryFlag();
@@ -1945,7 +1946,7 @@ export default function UniversalRecordWorkspace({
   }
 
   async function removeLinkedContactFromRecord(contact: RecordContact) {
-    if (!window.confirm(`Remove ${contact.contact_name || "this contact"} from this Trust record? The contact profile and invitation history will be preserved.`)) {
+    if (!(await confirmDialog({ title: `Remove ${contact.contact_name || "this person"} from this record?`, body: "They stay in People, and their invitation history is kept.", confirmLabel: "Remove", tone: "danger" }))) {
       return;
     }
     const user = await requireUser(router);
@@ -2975,7 +2976,7 @@ export default function UniversalRecordWorkspace({
     // unsaved record?" appeared after deleting, and the deleted record stayed on screen).
     const deletingTitle = records.find((row) => row.id === recordId)?.title?.trim();
     // Recently deleted (owner approved 30 days, 18 Nov 2026): kept for 30 days, then removed for good.
-    const confirmed = window.confirm(`Delete ${deletingTitle ? `“${deletingTitle}”` : "this record"}? You can restore it, with its documents, from Settings › Recently deleted for 30 days.`);
+    const confirmed = await confirmDialog({ title: `Delete ${deletingTitle ? `“${deletingTitle}”` : "this record"}?`, body: "You can restore it, with its documents, from Settings › Recently deleted for 30 days.", confirmLabel: "Delete", tone: "danger" });
     if (!confirmed) return;
     const user = await requireUser(router);
     if (!user) return;
@@ -3092,7 +3093,7 @@ export default function UniversalRecordWorkspace({
       setStatus("This shared view is read-only. The vault owner controls changes.");
       return;
     }
-    const confirmed = window.confirm(`Remove "${item.file_name}" from this record?`);
+    const confirmed = await confirmDialog({ title: `Remove “${item.file_name}”?`, body: "The document is removed from this record.", confirmLabel: "Remove", tone: "danger" });
     if (!confirmed) return;
     const user = await requireUser(router);
     if (!user) return;
@@ -3633,7 +3634,7 @@ export default function UniversalRecordWorkspace({
                   <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     Address: {String(row.metadata?.address ?? "Not set")}
                   </div>
-                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>Updated {formatDate(row.updated_at)}</div>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>Updated {formatDate(row.updated_at)}</div>
                 </>
               ) : isCanonicalDigital ? (
                 <>
@@ -3644,7 +3645,7 @@ export default function UniversalRecordWorkspace({
                     {canonicalDigitalAsset?.jurisdiction || "Jurisdiction not set"}
                     {canonicalDigitalAsset?.wallet_reference ? " · Reference on file" : ""}
                   </div>
-                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     {formatCurrency(
                       canonicalDigitalAsset?.estimated_value_major ?? toMajorUnits(row.value_minor),
                       canonicalDigitalAsset?.currency_code || (row.currency_code ?? "GBP").toUpperCase(),
@@ -3662,7 +3663,7 @@ export default function UniversalRecordWorkspace({
                     {" · "}
                     {canonicalBeneficiaryAsset?.contact_phone || "No phone"}
                   </div>
-                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     {canonicalBeneficiaryAsset?.preferred_name ? `${canonicalBeneficiaryAsset.preferred_name} · ` : ""}
                     Updated {formatDate(row.updated_at)}
                   </div>
@@ -3677,7 +3678,7 @@ export default function UniversalRecordWorkspace({
                     {" · "}
                     {primaryContact?.verification_status || canonicalExecutorAsset?.executor_status || "Status not set"}
                   </div>
-                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     {canonicalExecutorAsset?.appointed_on ? `Appointed ${canonicalExecutorAsset.appointed_on} · ` : ""}
                     Updated {formatDate(row.updated_at)}
                   </div>
@@ -3691,7 +3692,7 @@ export default function UniversalRecordWorkspace({
                     {canonicalTaskAsset?.related_asset_label || "No related asset"}
                     {canonicalTaskAsset?.due_date ? ` · Due ${canonicalTaskAsset.due_date}` : ""}
                   </div>
-                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     {canonicalTaskAsset?.assigned_executor_label || canonicalTaskAsset?.assigned_beneficiary_label || "Unassigned"}
                     {" · "}
                     Updated {formatDate(row.updated_at)}
@@ -3706,7 +3707,7 @@ export default function UniversalRecordWorkspace({
                     {canonicalBusinessAsset?.jurisdiction || "Jurisdiction not set"}
                     {canonicalBusinessAsset?.registration_number ? " · Registration on file" : ""}
                   </div>
-                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     {formatCurrency(
                       canonicalBusinessAsset?.estimated_value_major ?? toMajorUnits(row.value_minor),
                       canonicalBusinessAsset?.currency_code || (row.currency_code ?? "GBP").toUpperCase(),
@@ -3722,7 +3723,7 @@ export default function UniversalRecordWorkspace({
                   <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     {canonicalPropertyAsset?.property_address || "Address not set"}
                   </div>
-                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     {formatCurrency(
                       canonicalPropertyAsset?.estimated_value_major ?? toMajorUnits(row.value_minor),
                       canonicalPropertyAsset?.currency_code || (row.currency_code ?? "GBP").toUpperCase(),
@@ -3767,7 +3768,7 @@ export default function UniversalRecordWorkspace({
                       {getCategoryTypeLabel("finances", "debts", row.metadata?.debt_type ?? "Debt")} · Ref: {String(row.metadata?.debt_reference ?? "Not set")}
                     </div>
                   ) : null}
-                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     {formatCurrency(
                       canonicalBankAsset?.current_balance ?? toMajorUnits(row.value_minor),
                       canonicalBankAsset?.currency || (row.currency_code ?? "GBP").toUpperCase(),
@@ -3781,7 +3782,7 @@ export default function UniversalRecordWorkspace({
                       ? [String(row.metadata?.identity_document_type ?? ""), String(row.metadata?.identity_document_number ?? "").trim() ? "Reference on file" : ""].filter(Boolean).join(" · ") || "Identity document"
                       : row.summary || "No summary provided."}
                   </div>
-                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                     {categoryLabel ? `${categoryLabel} · ` : ""}
                     {isNarrativeDocumentWorkspace ? null : (
                       <>
@@ -4156,7 +4157,7 @@ export default function UniversalRecordWorkspace({
             <Icon name="bug_report" size={16} />
             <strong style={{ fontSize: 14 }}>DEV bank flow trace</strong>
           </div>
-          <div style={{ fontSize: 12, color: "#7c2d12", display: "grid", gap: 6 }}>
+          <div style={{ fontSize: 13, color: "#7c2d12", display: "grid", gap: 6 }}>
             <div>
               Auth/context: session <code>{devBankContextTrace?.sessionPresent == null ? "n/a" : devBankContextTrace.sessionPresent ? "yes" : "no"}</code> · user <code>{devBankContextTrace?.userId ?? "n/a"}</code> · organisation <code>{devBankContextTrace?.organisationId ?? "n/a"}</code> · wallet <code>{devBankContextTrace?.walletId ?? "n/a"}</code>
             </div>
@@ -4205,7 +4206,7 @@ export default function UniversalRecordWorkspace({
             </div>
             {devBankSubmitTrace.length ? (
               <div style={{ display: "grid", gap: 4 }}>
-                <strong style={{ fontSize: 12 }}>Submit trace</strong>
+                <strong style={{ fontSize: 13 }}>Submit trace</strong>
                 {devBankSubmitTrace.map((step, index) => (
                   <code key={`${index}-${step}`} style={{ whiteSpace: "pre-wrap" }}>{step}</code>
                 ))}
@@ -4213,7 +4214,7 @@ export default function UniversalRecordWorkspace({
             ) : null}
             {devBankRequestTrace.length ? (
               <div style={{ display: "grid", gap: 4 }}>
-                <strong style={{ fontSize: 12 }}>Assets request trace</strong>
+                <strong style={{ fontSize: 13 }}>Assets request trace</strong>
                 {devBankRequestTrace.slice(-12).map((step, index) => (
                   <code key={`${index}-${step}`} style={{ whiteSpace: "pre-wrap" }}>{step}</code>
                 ))}
@@ -4246,15 +4247,15 @@ export default function UniversalRecordWorkspace({
             <Icon name="lan" size={16} />
             <strong style={{ fontSize: 13 }}>DEV PostgREST trace</strong>
           </div>
-          <div style={{ fontSize: 11, color: "#cbd5e1" }}>
+          <div style={{ fontSize: 13, color: "#cbd5e1" }}>
             {DEV_BANK_BUILD_MARKER}
           </div>
           {devBankRequestTrace.length ? (
             devBankRequestTrace.slice(-14).map((step, index) => (
-              <code key={`${index}-${step}`} style={{ whiteSpace: "pre-wrap", fontSize: 11, color: "#fde68a" }}>{step}</code>
+              <code key={`${index}-${step}`} style={{ whiteSpace: "pre-wrap", fontSize: 13, color: "#fde68a" }}>{step}</code>
             ))
           ) : (
-            <div style={{ fontSize: 12, color: "var(--lf-text-secondary)" }}>No PostgREST assets requests captured yet.</div>
+            <div style={{ fontSize: 13, color: "var(--lf-text-secondary)" }}>No PostgREST assets requests captured yet.</div>
           )}
         </aside>
       ) : null}
@@ -7237,7 +7238,7 @@ const linkedPanelChipStyle: CSSProperties = {
   background: "var(--lf-surface-page)",
   color: "var(--lf-text-secondary)",
   padding: "4px 10px",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 700,
 };
 
@@ -7255,7 +7256,7 @@ const activePillStyle: CSSProperties = {
   border: "1px solid #cfe8dc",
   background: "#f0f8f4",
   color: "var(--lf-status-approved-text)",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 700,
   padding: "5px 10px",
   whiteSpace: "nowrap",
@@ -7305,7 +7306,7 @@ const maskedRowStyle: CSSProperties = {
 
 const recordUpdateStampStyle: CSSProperties = {
   color: "#9a918b",
-  fontSize: 12,
+  fontSize: 13,
 };
 
 const linkedContactLinkStyle: CSSProperties = {

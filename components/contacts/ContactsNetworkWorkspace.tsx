@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmDialog } from "../ui/confirmDialog";
 import HelpTip from "../ui/HelpTip";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -1414,7 +1415,7 @@ function PersonManagementPanel({
       const acting = (named.data ?? []).filter((link) => /executor|attorney/i.test(String((link as { role?: string }).role ?? "")));
       if (acting.length) {
         const what = acting.some((link) => /attorney/i.test(String((link as { role?: string }).role ?? ""))) ? "an attorney on your Power of Attorney" : "an executor in your Will";
-        const confirmed = window.confirm(`${contact.full_name} is still named as ${what}. Changing their role here doesn’t change that. If they’re no longer acting for you, update the Will or Power of Attorney first.\n\nChange their role anyway?`);
+        const confirmed = await confirmDialog({ title: `${contact.full_name} is still named as ${what}`, body: "Changing their role here doesn’t change that. If they’re no longer acting for you, update the Will or Power of Attorney first.", confirmLabel: "Change role anyway", cancelLabel: "Keep their role" });
         if (!confirmed) { setSaving(false); return; }
       }
     }
@@ -1556,7 +1557,7 @@ function PersonManagementPanel({
   async function removePerson() {
     if (readOnly) return;
     const { ownerId } = await resolveOwner();
-    if (!ownerId || !window.confirm(`Remove ${contact.full_name || "this person"}? Existing audit history will be retained.`)) return;
+    if (!ownerId || !(await confirmDialog({ title: `Remove ${contact.full_name || "this person"}?`, body: "They’re removed from People and lose anything you shared with them. A record of past activity is kept.", confirmLabel: "Remove", tone: "danger" }))) return;
     setSaving(true);
     try {
       await removePeopleContact(supabase, { ownerUserId: ownerId, contactId: contact.id });
@@ -2144,7 +2145,7 @@ const groupHeaderButtonStyle: CSSProperties = {
 const groupCountStyle: CSSProperties = {
   borderRadius: 999,
   padding: "3px 8px",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 700,
   background: "var(--lf-surface-subtle)",
   color: "var(--lf-text)",
@@ -2153,7 +2154,7 @@ const groupCountStyle: CSSProperties = {
 const groupWarningStyle: CSSProperties = {
   borderRadius: 999,
   padding: "3px 8px",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 700,
   background: "#fef3c7",
   color: "var(--lf-status-pending-text)",
@@ -2184,7 +2185,7 @@ const selectedContactStackStyle: CSSProperties = {
 const neutralPillStyle: CSSProperties = {
   borderRadius: 999,
   padding: "4px 8px",
-  fontSize: 11,
+  fontSize: 13,
   background: "var(--lf-surface-subtle)",
   color: "var(--lf-text)",
 };
@@ -2208,7 +2209,7 @@ const dangerPillStyle: CSSProperties = {
 };
 
 const moreLinksStyle: CSSProperties = {
-  fontSize: 11,
+  fontSize: 13,
   color: "var(--lf-text-secondary)",
   fontWeight: 600,
 };
@@ -2245,7 +2246,7 @@ const rowPrimaryActionStyle: CSSProperties = {
   color: "var(--lf-text)",
   borderRadius: 999,
   padding: "7px 10px",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 700,
   cursor: "pointer",
   display: "inline-flex",
@@ -2291,7 +2292,7 @@ const selectedActionChipStyle: CSSProperties = {
   background: "var(--lf-surface-card)",
   color: "var(--lf-text)",
   padding: "5px 9px",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 600,
   display: "inline-flex",
   alignItems: "center",
@@ -2309,7 +2310,7 @@ const personSummaryStyle: CSSProperties = {
 
 const personSummaryLabelStyle: CSSProperties = {
   color: "var(--lf-link)",
-  fontSize: 11,
+  fontSize: 13,
   fontWeight: 800,
   letterSpacing: "0.06em",
   textTransform: "uppercase",
@@ -2366,7 +2367,7 @@ const contactSummaryStatusStyle: CSSProperties = {
 
 const contactNextActionStyle: CSSProperties = {
   color: "var(--lf-link)",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 700,
   whiteSpace: "nowrap",
 };
@@ -2411,7 +2412,7 @@ const linkedDocumentIconButtonStyle: CSSProperties = {
   color: "var(--lf-text)",
   borderRadius: 999,
   padding: "4px 8px",
-  fontSize: 11,
+  fontSize: 13,
   fontWeight: 700,
   display: "inline-flex",
   alignItems: "center",
@@ -2442,7 +2443,7 @@ const contactSearchLabelStyle: CSSProperties = {
   alignItems: "center",
   gap: 6,
   color: "var(--lf-text-secondary)",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 700,
 };
 
@@ -2462,7 +2463,7 @@ const contactFormFieldStyle: CSSProperties = {
 
 const contactFormLabelStyle: CSSProperties = {
   color: "var(--lf-text-secondary)",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 800,
 };
 

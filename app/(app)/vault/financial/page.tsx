@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmDialog } from "../../../../components/ui/confirmDialog";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { financialSubtypes, financialTypeOptions, optionLabel } from "../../../../lib/categoryConfig";
@@ -237,7 +238,7 @@ export default function FinancialVaultPage() {
 
   const remove = async (id: string) => {
     setStatus("");
-    const ok = window.confirm("Delete this financial account?");
+    const ok = await confirmDialog({ title: "Delete this account?", body: "This can’t be undone.", confirmLabel: "Delete", tone: "danger" });
     if (!ok) return;
 
     try {
@@ -325,7 +326,7 @@ export default function FinancialVaultPage() {
                         .join(" · ")}
                     </div>
                     {a.account_number_last4 ? (
-                      <div style={{ color: "var(--lf-text-secondary)", fontSize: 12, marginTop: 4 }}>
+                      <div style={{ color: "var(--lf-text-secondary)", fontSize: 13, marginTop: 4 }}>
                         ****{a.account_number_last4}
                       </div>
                     ) : null}

@@ -424,7 +424,7 @@ export function FileDropzone({
           </span>
           <strong style={{ fontSize: 13 }}>{label}</strong>
         </div>
-        <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
+        <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
           {helperText ?? "Drop a file here or choose one from your device. PDF, PNG, JPG, DOCX, XLSX, and ICS files can be stored where supported."}
         </div>
         {file ? (
@@ -438,7 +438,7 @@ export function FileDropzone({
               <span style={{ fontSize: 13 }}>{file.name}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>{formatBytes(file.size)}</span>
+              <span style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{formatBytes(file.size)}</span>
               {onClear ? (
                 <button
                   type="button"
@@ -502,7 +502,7 @@ const requiredPillStyle: CSSProperties = {
   background: "var(--lf-tint)",
   color: "var(--lf-tint-icon)",
   padding: "2px 6px",
-  fontSize: 11,
+  fontSize: 13,
   fontWeight: 500,
 };
 
@@ -523,7 +523,7 @@ const toggleStyle: CSSProperties = {
   border: "1px solid var(--lf-border-input)",
   borderRadius: 999,
   padding: "6px 10px",
-  fontSize: 12,
+  fontSize: 13,
   background: "var(--lf-surface-card)",
 };
 
@@ -563,7 +563,7 @@ const filePlaceholderStyle: CSSProperties = {
   border: "1px dashed var(--lf-border-input)",
   borderRadius: 10,
   padding: "10px 12px",
-  fontSize: 12,
+  fontSize: 13,
   color: "var(--lf-text-secondary)",
 };
 
@@ -622,7 +622,7 @@ const clearButtonStyle: CSSProperties = {
   alignItems: "center",
   gap: 4,
   cursor: "pointer",
-  fontSize: 12,
+  fontSize: 13,
 };
 
 function formatBytes(size: number) {

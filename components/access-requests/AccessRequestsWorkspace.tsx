@@ -312,7 +312,7 @@ export default function AccessRequestsWorkspace({ embedded = false, onOpenPerson
           {!loading && assignments.length > 0 ? (
             <>
               <label style={{ display: "grid", gap: 6 }}>
-                <span style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>Role assignment</span>
+                <span style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>Role assignment</span>
                 <select value={selectedAssignment} onChange={(event) => setSelectedAssignment(event.target.value)} style={inputStyle}>
                   {assignments.map((item) => (
                     <option key={item.id} value={item.id}>
@@ -516,7 +516,7 @@ export default function AccessRequestsWorkspace({ embedded = false, onOpenPerson
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ display: "grid", gap: 2 }}>
-      <span style={{ color: "var(--lf-text-secondary)", fontSize: 11, fontWeight: 800, textTransform: "uppercase" }}>{label}</span>
+      <span style={{ color: "var(--lf-text-secondary)", fontSize: 13, fontWeight: 800, textTransform: "uppercase" }}>{label}</span>
       <span style={{ color: "var(--lf-text)", fontSize: 13, fontWeight: 700 }}>{value}</span>
     </div>
   );
@@ -642,6 +642,6 @@ const statusPillStyle: CSSProperties = {
   background: "var(--lf-surface-page)",
   color: "var(--lf-text)",
   padding: "4px 8px",
-  fontSize: 11,
+  fontSize: 13,
   fontWeight: 800,
 };

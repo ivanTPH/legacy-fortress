@@ -8,7 +8,7 @@ export default function RoleBadge({ role }: { role: CollaboratorRole }) {
         border: "1px solid var(--lf-border-input)",
         borderRadius: 999,
         padding: "2px 8px",
-        fontSize: 12,
+        fontSize: 13,
         color: "var(--lf-text)",
         background: "var(--lf-surface-page)",
       }}
