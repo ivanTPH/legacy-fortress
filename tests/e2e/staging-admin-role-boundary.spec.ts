@@ -37,6 +37,7 @@ test.beforeAll(async () => {
   const enterprise = await createUser("enterprise");
   const personal = await createUser("personal");
   await seedCompletedPersonalOnboarding(personal.id);
+  await createUser("signout"); // users[3]: only for the "Sign out on every device" support action (20 Nov 2026)
 
   const adminRow = await adminClient.from("admin_users").insert({
     email_normalized: platform.email,
@@ -125,6 +126,25 @@ test("platform admin remains in admin context while using users, invitations, or
   await expect(supportActions.getByRole("button", { name: "Send password reset link" })).toBeDisabled();
   await expect(supportActions.getByText("Test address: no email is sent.").first()).toBeVisible();
   await expect(supportActions.getByRole("button", { name: "Sign out on every device" })).toBeEnabled();
+  // Sign out everywhere really ends the customer's sessions: their refresh token stops working.
+  const target = users[3];
+  const customerClient = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+  const customerAuth = await customerClient.auth.signInWithPassword({ email: target.email, password: PASSWORD });
+  expect(customerAuth.error).toBeNull();
+  const refreshToken = customerAuth.data.session?.refresh_token ?? "";
+  await page.goto(`${BASE_URL}/admin/users/${encodeURIComponent(target.id)}`, { waitUntil: "domcontentloaded" });
+  const targetActions = page.getByRole("region", { name: "Support actions" });
+  await expect(targetActions).toBeVisible({ timeout: 30_000 });
+  await targetActions.getByRole("button", { name: "Sign out on every device" }).click();
+  await targetActions.getByLabel("Reason (for the audit log)").fill("Release check: synthetic account");
+  await targetActions.getByRole("button", { name: "Sign out on every device" }).last().click();
+  await expect(targetActions.getByText(/Signed out everywhere/)).toBeVisible({ timeout: 30_000 });
+  const refreshed = await createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } }).auth.refreshSession({ refresh_token: refreshToken });
+  expect(refreshed.error, "the old refresh token no longer works").not.toBeNull();
+  const signedOutShot = await page.screenshot({ type: "jpeg", quality: 60, scale: "css", fullPage: true }).catch(() => null);
+  if (signedOutShot) console.log(`Phone-shot: admin-support-signed-out ${signedOutShot.toString("base64")}`);
+  await page.goto(`${BASE_URL}/admin/users/${encodeURIComponent(users[0].id)}`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("button", { name: /^People/ })).toBeVisible({ timeout: 30_000 });
   await page.getByRole("button", { name: /^Records/ }).click();
   await expect(page.getByRole("region", { name: "Records" })).toBeVisible();
   const detailShot = await page.screenshot({ type: "jpeg", quality: 60, scale: "css", fullPage: true }).catch(() => null);
