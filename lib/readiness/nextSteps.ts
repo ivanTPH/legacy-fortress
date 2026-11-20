@@ -291,6 +291,26 @@ function housekeepingSteps(facts: VaultFacts, now: Date): NextStep[] {
     description: "In England and Wales, marriage or civil partnership usually cancels a Will made before it, unless the Will says it was made with that marriage in mind. A solicitor can confirm.",
     actionLabel: "Check my Will", href: "/legal/wills", dismissLabel: "My Will allows for it",
   }));
+  // Renewals (stage 4, 20 Nov 2026): an insurance policy renewing within 30 days (or lapsed in the last 30), and a
+  // tenancy ending within 60 days. The step goes when the date is moved on; "Already sorted" quiets it for 45 days.
+  const renewals = renewalsDue(rows, now);
+  if (renewals.length) {
+    const first = renewals[0];
+    const when = new Date(first.time).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" });
+    const more = renewals.length > 1 ? ` (and ${renewals.length - 1} more)` : "";
+    const past = first.time < now.getTime();
+    steps.push(step({
+      key: "renewal_due", category: first.kind === "tenancy" ? "Property" : "Finances", priority: "medium",
+      title: first.kind === "tenancy"
+        ? `A tenancy ${past ? "ended" : "ends"} on ${when}${more}. Is it being renewed?`
+        : `${first.label} ${past ? "was due to renew" : "renews"} on ${when}${more}. Check the price and cover.`,
+      emailTitle: "Something in your Vault is due for renewal",
+      description: first.kind === "tenancy"
+        ? "Update the end date once it’s agreed, or note what happens next, so your family knows where things stand."
+        : "Renewal is a good moment to compare quotes. When it’s renewed, update the renewal date so your family has the current policy.",
+      actionLabel: first.kind === "tenancy" ? "Open the property" : "Open the policy", href: first.href, dismissLabel: "Already sorted",
+    }));
+  }
   // Identity documents: about 3 months before expiry, unless a newer one has been added.
   const identity = rows.filter((row) => text(row.category_key) === "identity-documents");
   const statuses = identityDocumentStatuses(identity, now);
@@ -312,6 +332,31 @@ function housekeepingSteps(facts: VaultFacts, now: Date): NextStep[] {
     }));
   }
   return steps;
+}
+
+const RENEWAL_AHEAD_DAYS = { insurance: 30, tenancy: 60 } as const;
+const RENEWAL_LAPSED_DAYS = 30;
+
+/** Upcoming renewals, soonest first. Read only from the owner's own rows; never shown to anyone else. */
+export function renewalsDue(rows: VaultFactRow[], now = new Date()) {
+  const due: Array<{ id: string; kind: "insurance" | "tenancy"; label: string; time: number; href: string }> = [];
+  for (const row of rows) {
+    const meta = (row.metadata_json ?? {}) as Record<string, unknown>;
+    const category = text(row.category_key);
+    const isInsurance = category === "insurance";
+    const isTenancy = !isInsurance && text(meta.occupancy_status) === "rental_property";
+    const raw = isInsurance ? meta.renewal_date : isTenancy ? meta.tenancy_end_date : null;
+    const time = Date.parse(`${String(raw ?? "").slice(0, 10)}T00:00:00Z`);
+    if (!Number.isFinite(time)) continue;
+    const ahead = (time - now.getTime()) / 86400000;
+    if (ahead > RENEWAL_AHEAD_DAYS[isInsurance ? "insurance" : "tenancy"] || ahead < -RENEWAL_LAPSED_DAYS) continue;
+    const type = String(meta.policy_type ?? "").replace(/_/g, " ").trim().toLowerCase();
+    const named = type && !/^(__other|other( insurance)?)$/.test(type) ? (/insurance|cover|protection/.test(type) ? type : `${type} insurance`) : "";
+    const label = isInsurance ? (named ? `Your ${named}` : "An insurance policy") : "A tenancy";
+    const base = isInsurance ? "/finances/insurance" : "/property";
+    due.push({ id: row.id, kind: isInsurance ? "insurance" : "tenancy", label, time, href: `${base}?${row.kind === "asset" ? "asset" : "record"}=${encodeURIComponent(row.id)}` });
+  }
+  return due.sort((a, b) => a.time - b.time);
 }
 
 export type NextStepsPlan = {

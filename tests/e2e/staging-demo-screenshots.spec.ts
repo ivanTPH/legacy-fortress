@@ -473,6 +473,41 @@ for (const kind of ["desk", "phone"] as const) {
   });
 }
 
+// Stage 4 (20 Nov 2026): the executor pack (screen and print) and Help with a sample reply. Look only: the sample
+// reply is answered here and any write (marking it read) is answered here too, so nothing changes on TEST.
+for (const kind of ["desk", "phone"] as const) {
+  test(`confidence screens (${kind})`, async ({ browser }) => {
+    test.setTimeout(240_000);
+    const context = kind === "desk"
+      ? await browser.newContext({ viewport: { width: 1440, height: 900 } })
+      : await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+    const page = await context.newPage();
+    await signIn(page);
+    await page.goto(`${BASE_URL}/account/executor-pack`, { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("button", { name: "Print or save as PDF" })).toBeEnabled({ timeout: 30_000 });
+    await expect(page.getByText(/Account and policy numbers, addresses and passwords are never included/)).toBeVisible();
+    await shoot(page, `pack-${kind}-1-screen`);
+    await page.emulateMedia({ media: "print" });
+    await shoot(page, `pack-${kind}-2-print`);
+    await page.emulateMedia({ media: "screen" });
+    await page.route("**/rest/v1/section_entries**", async (route) => {
+      const request = route.request();
+      if (request.method() !== "GET") return route.fulfill({ status: 204, body: "" });
+      if (!/help_replies/.test(decodeURIComponent(request.url()))) return route.continue();
+      const user = "00000000-0000-0000-0000-000000000000";
+      return route.fulfill({ json: [
+        { id: "11111111-1111-1111-1111-111111111111", user_id: user, category_key: "help_requests", title: "Billing and my plan", summary: "Can I switch from monthly to yearly?", details: {}, created_at: "2026-11-19T10:00:00Z" },
+        { id: "22222222-2222-2222-2222-222222222222", user_id: user, category_key: "help_replies", title: "Re: Billing and my plan", summary: "Yes. Open Billing and account, choose Change plan, then Yearly. You keep everything in your Vault.", details: { reply_to: "11111111-1111-1111-1111-111111111111", read_at: null }, created_at: "2026-11-19T14:30:00Z" },
+      ] });
+    });
+    await page.goto(`${BASE_URL}/help#messages`, { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Your messages" })).toBeVisible({ timeout: 30_000 });
+    await page.getByRole("heading", { name: "Your messages" }).scrollIntoViewIfNeeded();
+    await shoot(page, `help-${kind}-1-reply`);
+    await context.close();
+  });
+}
+
 test("desktop screens", async ({ browser }) => { test.setTimeout(600_000); await capture(browser, "desk"); });
 test("phone screens", async ({ browser }) => { test.setTimeout(600_000); await capture(browser, "phone"); });
 

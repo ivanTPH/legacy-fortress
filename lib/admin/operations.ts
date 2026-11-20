@@ -781,7 +781,21 @@ export function isTestAccountEmail(email: string | null | undefined) {
 }
 
 /** Every sign-in account, newest first (up to 10,000; the Admin list shows the first 20 matches). */
+/**
+ * Every account, newest first. Several Admin pages ask at once (Overview, Customers, the Inbox), and on a large
+ * TEST project each full list is many pages, so one list is shared for a few seconds and calls in flight are joined.
+ */
+const AUTH_LIST_TTL_MS = 10_000;
+let authListCache: { at: number; value: Promise<AuthListUser[]> } | null = null;
 export async function listAuthUsersNewestFirst(client: AnySupabaseClient): Promise<AuthListUser[]> {
+  if (authListCache && Date.now() - authListCache.at < AUTH_LIST_TTL_MS) return authListCache.value;
+  const value = fetchAuthUsersNewestFirst(client);
+  authListCache = { at: Date.now(), value };
+  value.catch(() => { if (authListCache?.value === value) authListCache = null; });
+  return value;
+}
+
+async function fetchAuthUsersNewestFirst(client: AnySupabaseClient): Promise<AuthListUser[]> {
   const all: AuthListUser[] = [];
   for (let page = 1; page <= 50; page += 1) {
     const result = await client.auth.admin.listUsers({ page, perPage: 200 });

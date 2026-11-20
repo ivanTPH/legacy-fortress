@@ -717,7 +717,7 @@ export default function AdminControlPlaneWorkspace({
     const responses = await Promise.all(requested.map((item) => authFetch(item.url).then(async (res) => ({ ...item, res, json: await res.json().catch(() => ({})) }))));
     for (const item of responses) {
       if (!item.res.ok) continue;
-      if (item.key === "summary") { setMetrics(item.json.summary?.metrics ?? []); setFunnel(item.json.summary?.funnel ?? null); }
+      if (item.key === "summary") setMetrics(item.json.summary?.metrics ?? []);
       if (item.key === "support") setSupport(item.json.support ?? null);
       if (item.key === "verification") setVerificationQueue(item.json.queue ?? []);
       if (item.key === "probate") setProbateCases(item.json.cases ?? []);
@@ -744,6 +744,17 @@ export default function AdminControlPlaneWorkspace({
     }, 0);
     return () => window.clearTimeout(timer);
   }, [loadAll]);
+
+  // The sign-up funnel loads after the Overview has shown, so it never holds the page up.
+  useEffect(() => {
+    if (state !== "ready" || section !== "overview" || !admin?.capabilities.includes("admin.dashboard.read")) return;
+    let live = true;
+    void authFetch("/api/internal/admin/dashboard-summary?part=funnel")
+      .then(async (res) => (res.ok ? ((await res.json().catch(() => ({}))) as { funnel?: ActivationFunnel | null }).funnel ?? null : null))
+      .then((value) => { if (live) setFunnel(value); })
+      .catch(() => undefined);
+    return () => { live = false; };
+  }, [state, section, admin, authFetch, includeTestAccounts]);
 
   async function signOut() {
     const { error } = await supabase.auth.signOut();

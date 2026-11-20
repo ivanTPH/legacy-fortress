@@ -15,6 +15,7 @@ const GROUPS = [
   ] },
   { title: "Preferences", items: [
     { href: "/account/my-vault", icon: "apps", label: "My Vault", description: "Choose which areas you see" },
+    { href: "/account/executor-pack", icon: "print", label: "Executor pack", description: "Print a summary of your Vault to keep with your Will" },
     { href: "/account/recently-deleted", icon: "delete", label: "Recently deleted", description: "Restore something you deleted in the last 30 days" },
     { href: "/account/appearance", icon: "palette", label: "Appearance", description: "Light, dark or match this device" },
     { href: "/account/accessibility", icon: "accessibility_new", label: "Accessibility", description: "Bigger text, stronger contrast and read aloud" },
