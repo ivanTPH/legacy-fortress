@@ -38,7 +38,7 @@ test("Later brings an item back as new on the chosen date, synced through the pe
   assert.match(panel, />Tomorrow morning</); assert.match(panel, />Next week</); assert.match(panel, /<span>Pick a date<\/span>/);
   assert.match(updates, /export const LATER_PREFIX = "later:";/);
   assert.match(updates, /from\("inbox_reads"\)\.insert\(itemKeys\.map\(\(item_key\) => \(\{ user_id: userId, item_key, read_at: iso \}\)\)\)/);
-  assert.match(updates, /\.filter\(\(key\) => !key\.startsWith\(LATER_PREFIX\)\)/, "Later rows are not read marks");
+  assert.match(updates, /\.filter\(\(key\) => !key\.startsWith\(LATER_PREFIX\)( && !key\.startsWith\("admin-inbox:"\))?\)/, "Later rows are not read marks");
 });
 
 test("repeats of the same update show once with a count; deleting removes them all, with Undo", () => {

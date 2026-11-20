@@ -1,5 +1,6 @@
 "use client";
 
+import type { ActivationFunnel } from "@/lib/admin/activationFunnel";
 import AdminAccountTags from "@/components/admin/AdminAccountTags";
 import type { AccountOrigin } from "@/lib/admin/accountOrigins";
 import Link from "next/link";
@@ -607,6 +608,7 @@ export default function AdminControlPlaneWorkspace({
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [adminInvitations, setAdminInvitations] = useState<AdminInvitation[]>([]);
   const [metrics, setMetrics] = useState<DashboardMetric[]>([]);
+  const [funnel, setFunnel] = useState<ActivationFunnel | null>(null);
   const [support, setSupport] = useState<SupportSnapshot | null>(null);
   const [supportDetail, setSupportDetail] = useState<SupportInvitationDetail | null>(null);
   const [supportDetailLoading, setSupportDetailLoading] = useState(false);
@@ -715,7 +717,7 @@ export default function AdminControlPlaneWorkspace({
     const responses = await Promise.all(requested.map((item) => authFetch(item.url).then(async (res) => ({ ...item, res, json: await res.json().catch(() => ({})) }))));
     for (const item of responses) {
       if (!item.res.ok) continue;
-      if (item.key === "summary") setMetrics(item.json.summary?.metrics ?? []);
+      if (item.key === "summary") { setMetrics(item.json.summary?.metrics ?? []); setFunnel(item.json.summary?.funnel ?? null); }
       if (item.key === "support") setSupport(item.json.support ?? null);
       if (item.key === "verification") setVerificationQueue(item.json.queue ?? []);
       if (item.key === "probate") setProbateCases(item.json.cases ?? []);
@@ -1182,7 +1184,7 @@ export default function AdminControlPlaneWorkspace({
           <label className="lf-admin-test-toggle lf-admin-page-test-toggle"><input type="checkbox" checked={includeTestAccounts} onChange={(event) => setIncludeTestAccounts(event.target.checked)} /> Show test accounts</label>
         ) : null}
         {section === "inbox" ? <AdminInbox authFetch={authFetch} /> : null}
-        {section === "overview" ? renderOverview(metrics, support, verificationQueue, probateCases, enterprisePortfolio, capabilities) : null}
+        {section === "overview" ? renderOverview(metrics, support, verificationQueue, probateCases, enterprisePortfolio, capabilities, funnel) : null}
         {section === "organisations" ? renderPlatformOrganisations(enterpriseViews, {
           search: enterpriseSearch,
           status: enterpriseStatusFilter,
@@ -1292,7 +1294,35 @@ function buildPlatformBreadcrumbs(section: AdminControlPlaneSection, resourceId:
 
 const MEASURE_STATUS_LABEL: Record<string, string> = { ok: "Healthy", warning: "Attention", error: "Problem", unavailable: "Not measured" };
 
-function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | null, verification: VerificationItem[], probate: ProbateCase[], _portfolio: EnterprisePortfolio | null, capabilities: string[]) {
+/** Sign-ups each week and where people drop off (UX review 2). Counts only. */
+function ActivationFunnelCard({ funnel }: { funnel: ActivationFunnel }) {
+  const peak = Math.max(1, ...funnel.weeks.map((week) => week.signUps));
+  const total = funnel.weeks.reduce((sum, week) => sum + week.signUps, 0);
+  return (
+    <section className="lf-admin-funnel" aria-labelledby="admin-funnel-title">
+      <div className="lf-admin-funnel-head"><h2 id="admin-funnel-title">Sign-ups and activation</h2><span>Last {funnel.windowWeeks} weeks · {total.toLocaleString("en-GB")} sign-ups</span></div>
+      <div className="lf-admin-funnel-weeks" role="img" aria-label={`Sign-ups by week: ${funnel.weeks.map((week) => `${new Date(week.weekStart).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} ${week.signUps}`).join(", ")}`}>
+        {funnel.weeks.map((week) => (
+          <span key={week.weekStart} title={`Week of ${new Date(week.weekStart).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}: ${week.signUps}`}>
+            <span className="lf-admin-funnel-bar" style={{ height: `${Math.max(4, (week.signUps / peak) * 100)}%` }} />
+          </span>
+        ))}
+      </div>
+      <ol className="lf-admin-funnel-steps">
+        {funnel.steps.map((step) => (
+          <li key={step.key}>
+            <span className="lf-admin-funnel-label">{step.label}</span>
+            <span className="lf-admin-funnel-track" aria-hidden="true"><span style={{ width: `${step.percent}%` }} /></span>
+            <strong>{step.count.toLocaleString("en-GB")}</strong>
+            <small>{step.percent}%</small>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | null, verification: VerificationItem[], probate: ProbateCase[], _portfolio: EnterprisePortfolio | null, capabilities: string[], funnel: ActivationFunnel | null = null) {
   const canVerify = capabilities.includes("verification:read");
   const canViewInvitations = capabilities.includes("support:read");
   const pending = support?.counts.verificationAwaitingReview ?? verification.length;
@@ -1306,6 +1336,7 @@ function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | n
   ].filter((item): item is { icon: string; label: string; detail: string; count: number; href: string } => item !== null);
   return (
     <div style={stackStyle} className="lf-admin-overview">
+      {funnel ? <ActivationFunnelCard funnel={funnel} /> : null}
       <section className="lf-admin-overview-decisions" aria-labelledby="admin-decisions-title">
         <h2 id="admin-decisions-title">Needs a decision</h2>
         {decisions.map((item) => (

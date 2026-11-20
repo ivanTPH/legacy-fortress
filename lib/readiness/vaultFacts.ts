@@ -8,7 +8,7 @@ import type { VaultFacts, VaultFactRow } from "./nextSteps.ts";
  */
 export async function loadVaultFacts(client: SupabaseClient, ownerUserId: string): Promise<VaultFacts> {
   const rows = <T>(result: { data: unknown; error: unknown }) => (result.error ? [] : ((result.data ?? []) as T[]));
-  const [assets, records, documents, contacts, invitations, links, suggestions, nominations, billing] = await Promise.all([
+  const [assets, records, documents, contacts, invitations, links, suggestions, nominations, billing, helpReplies] = await Promise.all([
     client.from("assets").select("id,section_key,category_key,title,status,archived_at,deleted_at,metadata_json,created_at,updated_at").eq("owner_user_id", ownerUserId).is("deleted_at", null).limit(2000),
     client.from("records").select("id,section_key,category_key,title,status,archived_at,metadata,created_at,updated_at").eq("owner_user_id", ownerUserId).limit(2000),
     client.from("documents").select("id,asset_id,file_name,display_title,document_type").eq("owner_user_id", ownerUserId).is("deleted_at", null).limit(2000),
@@ -18,6 +18,7 @@ export async function loadVaultFacts(client: SupabaseClient, ownerUserId: string
     client.from("extraction_suggestions").select("record_id,extracted_name,extracted_role,status,match_person_id").eq("owner_user_id", ownerUserId).eq("status", "pending").limit(500),
     client.from("vault_nominations").select("person_id,status").eq("owner_user_id", ownerUserId).limit(500),
     client.from("billing_profiles").select("plan_source").eq("user_id", ownerUserId).maybeSingle(),
+    client.from("section_entries").select("id,details").eq("user_id", ownerUserId).eq("section_key", "support").eq("category_key", "help_replies").limit(200),
   ]);
 
   type AssetRow = { id: string; section_key: string | null; category_key: string | null; title: string | null; status: string | null; archived_at: string | null; deleted_at: string | null; metadata_json: Record<string, unknown> | null; created_at: string | null; updated_at: string | null };
@@ -33,6 +34,7 @@ export async function loadVaultFacts(client: SupabaseClient, ownerUserId: string
 
   return {
     planSource: billing.error ? null : ((billing.data as { plan_source?: string | null } | null)?.plan_source ?? null),
+    unreadHelpReplies: rows<{ details: Record<string, unknown> | null }>(helpReplies).filter((row) => !row.details?.read_at).length,
     rows: vaultRows,
     willDocumentCount,
     contacts: rows<{ id: string; full_name: string | null; contact_role: string | null; relationship: string | null; linked_user_id: string | null }>(contacts)

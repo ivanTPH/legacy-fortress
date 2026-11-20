@@ -19,6 +19,8 @@ export type AdminInboxItem = {
   accountEmail: string | null;
   /** Messages only: what the customer wrote to us from Help (they chose to send it to us). */
   message?: string;
+  /** Messages only: replies already sent from the Admin Inbox. */
+  replies?: number;
   /** New accounts only: how the account was created, and whether it is a test account. */
   origin?: AccountOrigin;
   isTest?: boolean;
@@ -92,7 +94,7 @@ export async function loadAdminInbox(client: AnyClient, options: { days?: number
   // nothing else from their Vault is read. Staff reply to the account email.
   for (const row of await loadHelpMessages(client, since)) {
     if (isTest(row.userId)) continue;
-    items.push({ id: `message:${row.id}`, kind: "messages", title: `Message: ${row.topic}`, detail: emailById.get(row.userId) || "Account", message: row.text, at: row.at, ...account(row.userId) });
+    items.push({ id: `message:${row.id}`, kind: "messages", title: `Message: ${row.topic}`, detail: emailById.get(row.userId) || "Account", message: row.text, replies: row.replies, at: row.at, ...account(row.userId) });
   }
 
   // Needs you: what's waiting in the review queues (counts; each opens its own page).

@@ -1,3 +1,4 @@
+import { loadActivationFunnel, type ActivationFunnel } from "./activationFunnel.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { loadAccounts } from "./testAccounts";
 import type { AdminAccessState } from "./access.ts";
@@ -23,6 +24,7 @@ export type AdminDashboardSummary = {
   environment: "Local" | "Staging" | "Production";
   role: string;
   metrics: AdminDashboardMetric[];
+  funnel?: ActivationFunnel | null;
 };
 
 type CountResult = {
@@ -85,12 +87,17 @@ export async function loadAdminDashboardSummary(
 ): Promise<AdminDashboardSummary> {
   const generatedAt = new Date().toISOString();
   const allMetrics = await buildAdminDashboardMetrics(client, generatedAt, options.includeTests ?? false);
+  // Activation funnel (UX review 2): counts only, test accounts left out unless asked.
+  const accounts = await loadAccounts(client).catch(() => null);
+  const customers = (accounts?.all ?? []).filter((user) => options.includeTests || !accounts?.testIds.has(user.id));
+  const funnel = accounts ? await loadActivationFunnel(client, customers).catch(() => null) : null;
   const allowedKeys = new Set(getAdminDashboardMetricKeysForRole(access.adminRole));
   return {
     generatedAt,
     environment: getAdminRuntimeEnvironment(),
     role: access.adminRole,
     metrics: allMetrics.filter((metric) => allowedKeys.has(metric.key)),
+    funnel,
   };
 }
 
