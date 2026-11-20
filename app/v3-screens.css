@@ -909,3 +909,41 @@ a.lf-topbar-shield:focus-visible { outline: 3px solid var(--lf-focus); outline-o
   .lf-confirm-actions { flex-direction: column-reverse; }
   .lf-confirm-actions button { width: 100%; }
 }
+
+/* Partner Portal growth (UX review 2; owner decisions 18 Nov 2026). */
+.lf-partner-usage, .lf-partner-mix, .lf-partner-start { display: grid; gap: 10px; padding: 18px 20px; border: 1px solid var(--lf-border); border-radius: 14px; background: var(--lf-surface-card); }
+.lf-partner-usage h2, .lf-partner-mix h2, .lf-partner-start h2 { margin: 0; font-size: 17px; }
+.lf-partner-usage-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.lf-partner-usage-head strong { font-size: 17px; }
+.lf-partner-usage-bar, .lf-partner-mix-bar { display: block; height: 10px; border-radius: 999px; background: var(--lf-surface-sidebar); overflow: hidden; }
+.lf-partner-usage-bar > span, .lf-partner-mix-bar > span { display: block; height: 100%; border-radius: inherit; background: #2F8A4E; }
+.lf-partner-usage.is-warning .lf-partner-usage-bar > span { background: #B7791F; }
+.lf-partner-usage.is-critical .lf-partner-usage-bar > span { background: #B3261E; }
+.lf-partner-usage.is-warning { border-color: #E9C46A; }
+.lf-partner-usage.is-critical { border-color: #E5A39E; }
+.lf-partner-usage p, .lf-partner-mix p { margin: 0; color: var(--lf-text-secondary); font-size: 14px; }
+.lf-partner-mix ul { display: grid; gap: 10px; margin: 4px 0 0; padding: 0; list-style: none; }
+.lf-partner-mix li { display: grid; grid-template-columns: minmax(120px, 200px) 1fr 48px; align-items: center; gap: 12px; font-size: 14px; }
+.lf-partner-mix li strong { text-align: right; }
+.lf-partner-start ol { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.lf-partner-start li { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 0; border-bottom: 1px solid var(--lf-border); }
+.lf-partner-start li:last-child { border-bottom: 0; }
+.lf-partner-start-mark { flex: 0 0 32px; display: grid; place-items: center; height: 32px; border-radius: 50%; background: var(--lf-surface-sidebar); font-weight: 700; }
+.lf-partner-start li.is-done .lf-partner-start-mark { background: #E6F2EA; color: #1F6B3A; }
+.lf-partner-start-copy { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.lf-partner-start-copy small { color: var(--lf-text-secondary); font-size: 13px; }
+.lf-partner-start li.is-done strong { color: var(--lf-text-secondary); }
+.lf-share-link { display: flex; gap: 18px; align-items: flex-start; padding: 16px; border: 1px solid var(--lf-border); border-radius: 14px; background: var(--lf-surface-card); }
+.lf-share-link-qr { flex: 0 0 168px; width: 168px; min-height: 168px; border-radius: 8px; background: #fff; }
+.lf-share-link-qr svg { display: block; width: 100%; height: auto; }
+.lf-share-link-copy { flex: 1; min-width: 0; display: grid; gap: 8px; }
+.lf-share-link-copy code { overflow-wrap: anywhere; font-size: 13px; color: var(--lf-text-secondary); }
+.lf-share-link-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.lf-share-link-actions button { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 8px 14px; border: 1px solid var(--lf-border-input); border-radius: 999px; background: var(--lf-surface-card); color: var(--lf-ink); font: inherit; font-weight: 600; cursor: pointer; }
+.lf-share-link-copy pre { white-space: pre-wrap; font: inherit; font-size: 14px; margin: 8px 0 0; padding: 12px; border-radius: 10px; background: var(--lf-surface-page); }
+@media (max-width: 640px) {
+  .lf-share-link { flex-direction: column; align-items: stretch; }
+  .lf-share-link-qr { align-self: center; }
+  .lf-partner-mix li { grid-template-columns: 1fr 44px; }
+  .lf-partner-mix li .lf-partner-mix-bar { grid-column: 1 / -1; grid-row: 2; }
+}

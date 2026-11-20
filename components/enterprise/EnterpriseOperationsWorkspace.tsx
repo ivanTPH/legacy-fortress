@@ -1,5 +1,7 @@
 "use client";
 
+import ShareSignupLink from "./ShareSignupLink";
+import type { VaultMix } from "../../lib/enterprise/vaultMix";
 import WorkspaceLoadingOutline from "./WorkspaceLoadingOutline";
 import Link from "next/link";
 import Icon from "@/components/ui/Icon";
@@ -13,6 +15,7 @@ import { waitForActiveUser } from "@/lib/auth/session";
 import { supabase } from "@/lib/supabaseClient";
 
 type EnterprisePortfolio = {
+  vaultMix?: VaultMix | null;
   summary: {
     organisations: number;
     activeLicences: number;
@@ -804,6 +807,21 @@ function renderPartnerOverview(portfolio: EnterprisePortfolio, setActiveTab: (ta
         ? <button key={stat.label} type="button" onClick={() => setActiveTab(stat.tab as EnterpriseTab)}><span>{stat.label}</span><strong>{stat.value}</strong></button>
         : <div key={stat.label}><span>{stat.label}</span><strong>{stat.value}</strong></div>)}
     </section>
+    {/* Licence usage (owner decision 18 Nov 2026): registrations against the licence, warned at 80% and 95%. */}
+    {!noLicence ? (() => {
+      const used = seats.active + seats.invited;
+      const share = seats.purchased ? Math.min(100, Math.round((used / seats.purchased) * 100)) : 0;
+      const band = share >= 95 ? "is-critical" : share >= 80 ? "is-warning" : "";
+      return <section className={`lf-partner-usage ${band}`} aria-labelledby="partner-usage-title">
+        <div className="lf-partner-usage-head"><h2 id="partner-usage-title">Registrations</h2><strong>{used.toLocaleString("en-GB")} of {seats.purchased.toLocaleString("en-GB")} used</strong></div>
+        <div className="lf-partner-usage-bar" role="progressbar" aria-label="Registrations used" aria-valuemin={0} aria-valuemax={100} aria-valuenow={share}><span style={{ width: `${share}%` }} /></div>
+        <p>{share >= 95 ? `Nearly all used. When the licence is full, new people can still join but pay Legacy Fortress directly. Talk to your account manager to add more.`
+          : share >= 80 ? `${share}% used. Talk to your account manager if you expect more people to join.`
+          : `${(seats.purchased - used).toLocaleString("en-GB")} still available. Invitations count once sent.`}</p>
+      </section>;
+    })() : null}
+    <PartnerGetStarted portfolio={portfolio} setActiveTab={setActiveTab} />
+    <PartnerVaultMix mix={portfolio.vaultMix ?? null} />
     <section className="lf-admin-overview-decisions" aria-labelledby="partner-attention-title">
       <h2 id="partner-attention-title">Needs attention</h2>
       {attention.map((item) => (
@@ -817,6 +835,42 @@ function renderPartnerOverview(portfolio: EnterprisePortfolio, setActiveTab: (ta
       {!attention.length ? <p className="lf-admin-decision-empty">Nothing needs your attention right now.</p> : null}
     </section>
   </div>;
+}
+
+/** Get started (UX review 2): the four steps to members joining, shown until they're all done. */
+function PartnerGetStarted({ portfolio, setActiveTab }: { portfolio: EnterprisePortfolio; setActiveTab: (tab: EnterpriseTab) => void }) {
+  const licenceActive = portfolio.licences.some((licence) => licence.status === "active" || licence.status === "expiring");
+  const hasLink = portfolio.enrolmentLinks.some((link) => link.status === "active");
+  const shared = portfolio.enrolmentLinks.some((link) => link.claimsUsed > 0) || portfolio.invitations.length > 0;
+  const joined = portfolio.summary.seats.active > 0;
+  const steps: Array<{ done: boolean; label: string; detail: string; tab: EnterpriseTab | null }> = [
+    { done: licenceActive, label: "Licence active", detail: licenceActive ? "Your licence is in place." : "Legacy Fortress turns this on once your agreement is in place.", tab: null },
+    { done: hasLink, label: "Create a sign-up link", detail: "One link your members use to join.", tab: "registration-links" },
+    { done: shared, label: "Share it", detail: "Copy the link, print the QR code or send the ready-made email.", tab: "registration-links" },
+    { done: joined, label: "See who joined", detail: "Members appear in Team as they join.", tab: "users" },
+  ];
+  if (steps.every((step) => step.done)) return null;
+  return <section className="lf-partner-start" aria-labelledby="partner-start-title">
+    <h2 id="partner-start-title">Get started</h2>
+    <ol>{steps.map((step, index) => <li key={step.label} className={step.done ? "is-done" : undefined}>
+      <span className="lf-partner-start-mark" aria-hidden="true">{step.done ? <Icon name="check" size={18} /> : index + 1}</span>
+      <span className="lf-partner-start-copy"><strong>{step.label}</strong><small>{step.detail}</small></span>
+      {!step.done && step.tab ? <button type="button" className="lf-admin-row-button" onClick={() => setActiveTab(step.tab as EnterpriseTab)}>Open</button> : null}
+      <span className="lf-visually-hidden">{step.done ? "Done" : "To do"}</span>
+    </li>)}</ol>
+  </section>;
+}
+
+/** What members' Vaults hold, as percentages only (owner decision 18 Nov 2026). Never names, values or contents. */
+function PartnerVaultMix({ mix }: { mix: VaultMix | null | undefined }) {
+  if (!mix) return null;
+  return <section className="lf-partner-mix" aria-labelledby="partner-mix-title">
+    <h2 id="partner-mix-title">What members’ Vaults hold</h2>
+    {mix.status === "ready" ? <>
+      <p>Share of the {mix.counted.toLocaleString("en-GB")} members who agreed to be counted. Percentages only: nobody’s details are ever shown.</p>
+      <ul>{mix.items.map((item) => <li key={item.key}><span>{item.label}</span><span className="lf-partner-mix-bar" aria-hidden="true"><span style={{ width: `${item.percent}%` }} /></span><strong>{item.percent}%</strong></li>)}</ul>
+    </> : <p>{mix.status === "too_few" ? `This appears once at least ${mix.minimum} members have agreed to be counted, so no one can be identified.` : "Your organisation hasn’t turned on reporting, so nothing is counted."}</p>}
+  </section>;
 }
 
 function PartnerTeam({ portfolio, canInvite, onInvite, onOpenInvitations, advanced }: { portfolio: EnterprisePortfolio; canInvite: boolean; onInvite: () => void; onOpenInvitations: () => void; advanced: ReactNode }) {
@@ -1357,6 +1411,10 @@ function renderRegistrationLinks(
       </section>
       <div><button type="button" style={primaryButtonStyle} disabled={!form.organisationId || !form.licenceId || !form.displayName.trim()} onClick={() => runAction("create_enrolment_link", form)}>Create registration link</button></div>
     </details>
+    {/* Share each active link: QR code for posters, ready-made email for newsletters (UX review 2). */}
+    {portfolio.enrolmentLinks.filter((link) => link.status === "active" && link.stagingClaimPath).map((link) => (
+      <ShareSignupLink key={`share-${link.id}`} name={link.displayName} organisationName={portfolio.organisations.find((org) => org.id === link.organisationId)?.name ?? "Your organisation"} path={String(link.stagingClaimPath)} />
+    ))}
     <section className="lf-admin-table-card" style={{ overflowX: "auto" }}>
       <table className="lf-admin-data-table"><caption>Organisation registration links</caption><thead><tr><th>Link</th><th>Organisation</th><th>Claims</th><th>Expires</th><th>Status</th><th><span className="lf-visually-hidden">Actions</span></th></tr></thead><tbody>{portfolio.enrolmentLinks.map((link) => <tr key={link.id}><td><span className="lf-admin-cell-title">{link.displayName}</span><small>{link.allowedEmailDomain || "Any email domain"}</small>{link.stagingClaimPath ? <code style={linkCodeStyle}>{link.stagingClaimPath}</code> : null}</td><td>{portfolio.organisations.find((org) => org.id === link.organisationId)?.name || "–"}</td><td>{link.claimsUsed} of {link.maxClaims}</td><td>{formatDate(link.expiresAt)}</td><td><AdminStatusBadge status={link.status} /></td><td style={actionsCellStyle}>{link.stagingClaimPath ? <button type="button" className="lf-admin-row-button" onClick={() => void copyLink(link)}>{copiedLinkId === link.id ? "Copied" : "Copy link"}</button> : null}{["active", "paused"].includes(link.status) ? <button type="button" className="lf-admin-row-button" onClick={() => runAction("update_enrolment_link", { enrolmentLinkId: link.id, status: link.status === "active" ? "paused" : "active" })}>{link.status === "active" ? "Pause" : "Reactivate"}</button> : null}</td></tr>)}{portfolio.enrolmentLinks.length === 0 ? <tr><td colSpan={6}><AdminEmptyState icon="link" title="No registration links">Create a link to share with a group, for example an employer’s staff or a firm’s new clients.</AdminEmptyState></td></tr> : null}</tbody></table>
     </section>
