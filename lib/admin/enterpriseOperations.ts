@@ -1,3 +1,4 @@
+import { loadVaultMix } from "../enterprise/vaultMix.ts";
 import { createHash, randomBytes } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AdminAccessState } from "./access.ts";
@@ -345,8 +346,20 @@ export async function loadEnterprisePortfolio(client: AnySupabaseClient, access:
   const reports = buildEnterpriseReportCatalogue(access);
   const reportRows = buildEnterpriseReportSummaries(organisations, licences, invitations, memberships, enrolmentLinks, consentByOrg, adoptionBands);
   const risk = buildEnterpriseRiskSummaries(organisations, licences, invitations, memberships, consentByOrg, adoptionBands);
+  // Partner Portal (owner decision 18 Nov 2026): the anonymous Vault mix for one organisation — percentages only,
+  // consenting members only, nothing under the minimum group size.
+  const vaultMix = organisations.length === 1
+    ? await loadVaultMix(client, {
+        memberUserIds: memberships
+          .filter((item) => item.organisationId === organisations[0].id && item.status === "active" && /^(accepted|partially_accepted)$/.test(item.consentStatus) && item.userId)
+          .map((item) => String(item.userId)),
+        reportingConsent: Boolean(consentByOrg.get(organisations[0].id)?.reporting_consent),
+        minimum: Math.max(ENTERPRISE_REPORT_MINIMUM_COHORT, Number(consentByOrg.get(organisations[0].id)?.minimum_reporting_cohort ?? 0)),
+      }).catch(() => null)
+    : null;
 
   return {
+    vaultMix,
     summary: {
       organisations: organisations.length,
       activeLicences: activeLicences.length,
