@@ -118,9 +118,9 @@ async function syncReads(): Promise<string[]> {
       savePending(pending);
     }
     await flushPending(userId);
-    const { data, error } = await supabase.from("inbox_reads").select("item_key").order("read_at", { ascending: false }).limit(1000);
+    const { data, error } = await supabase.from("inbox_reads").select("item_key").not("item_key", "like", "admin-inbox:%").order("read_at", { ascending: false }).limit(1000);
     if (error) return local;
-    const remote = ((data ?? []) as Array<{ item_key: string }>).map((row) => String(row.item_key)).filter((key) => !key.startsWith(LATER_PREFIX));
+    const remote = ((data ?? []) as Array<{ item_key: string }>).map((row) => String(row.item_key)).filter((key) => !key.startsWith(LATER_PREFIX) && !key.startsWith("admin-inbox:"));
     const still = loadPending();
     return saveLocalRead([...remote.filter((key) => !still.remove.includes(key)), ...still.add]);
   } catch {

@@ -31,6 +31,8 @@ export type VaultFacts = {
   nominations: Array<{ personId: string; status: string }>;
   /** billing_profiles.plan_source: "partner_ended" after a partner licence ends (18 Nov 2026). */
   planSource?: string | null;
+  /** Replies to the person's Help messages they haven't opened yet (20 Nov 2026). */
+  unreadHelpReplies?: number;
 };
 
 export type NextStep = GuidanceItem & {
@@ -354,7 +356,14 @@ export function planNextSteps(
       : "Your Vault and everything in it are still yours. You’re now on the Free plan. Choose Premium to keep its extra features, or stay on Free.",
     actionLabel: "Choose a plan", href: "/account/billing?from=partner",
   })] : [];
-  const extra = [...partner, ...people, ...typeSteps(facts), ...housekeepingSteps(facts, now)].filter((item) => {
+  const helpReply: NextStep[] = (facts.unreadHelpReplies ?? 0) > 0 ? [step({
+    key: "help_reply", category: "Help", priority: "high",
+    title: facts.unreadHelpReplies === 1 ? "We’ve replied to your message" : `We’ve replied to your messages (${facts.unreadHelpReplies})`,
+    emailTitle: "We’ve replied to your message",
+    description: "Open Help to read our reply.",
+    actionLabel: "Read the reply", href: "/help#messages",
+  })] : [];
+  const extra = [...partner, ...helpReply, ...people, ...typeSteps(facts), ...housekeepingSteps(facts, now)].filter((item) => {
     const decision = guidance[item.key];
     const policy = PROMPT_POLICY[item.key];
     if (decision?.snoozedUntil && Date.parse(decision.snoozedUntil) > now.getTime()) return false;

@@ -5,14 +5,17 @@ import { accountSourceLabel } from "@/lib/admin/accountOrigins";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Icon from "@/components/ui/Icon";
+import HelpReplyForm from "@/components/admin/HelpReplyForm";
 import type { AdminInboxItem, AdminInboxKind } from "@/lib/admin/inbox";
+import { supabase } from "@/lib/supabaseClient";
 import { INCLUDE_TESTS_EVENT, readIncludeTests, writeIncludeTests } from "@/lib/admin/includeTestsPreference";
 
 /**
  * Admin Inbox (owner decision 16 Nov 2026), in the style of the Vault Inbox: newest first, unread dots, filters.
  * Search stays at the top with Refresh; pull down on a phone to refresh; it also refreshes every minute.
  * Account details and counts only: never record names, values, documents or the people customers invite.
- * Read/unread is remembered on this device.
+ * Read/unread follows the admin across devices (stage 3, 20 Nov 2026): their own inbox_reads rows, keyed
+ * "admin-inbox:<item>" (no new table). This device keeps a copy, so it still works if the server can't be reached.
  */
 const FILTERS: Array<[AdminInboxKind | "all", string, string]> = [
   ["all", "All", "inbox"],
@@ -31,6 +34,25 @@ function loadRead(): string[] {
 }
 function saveRead(ids: string[]) {
   try { window.localStorage.setItem(READ_KEY, JSON.stringify(ids.slice(-3000))); } catch { /* optional */ }
+}
+const SERVER_PREFIX = "admin-inbox:";
+async function loadServerRead(): Promise<string[]> {
+  try {
+    const { data, error } = await supabase.from("inbox_reads").select("item_key").like("item_key", `${SERVER_PREFIX}%`).order("read_at", { ascending: false }).limit(3000);
+    if (error) return [];
+    return ((data ?? []) as Array<{ item_key: string }>).map((row) => String(row.item_key).slice(SERVER_PREFIX.length));
+  } catch { return []; }
+}
+async function saveServerRead(ids: string[]) {
+  try {
+    const { data } = await supabase.auth.getUser();
+    const userId = data.user?.id;
+    if (!userId) return;
+    const rows = ids.map((id) => `${SERVER_PREFIX}${id}`).filter((key) => key.length <= 200).map((item_key) => ({ user_id: userId, item_key }));
+    for (let index = 0; index < rows.length; index += 200) {
+      await supabase.from("inbox_reads").upsert(rows.slice(index, index + 200), { onConflict: "user_id,item_key", ignoreDuplicates: true });
+    }
+  } catch { /* this device still remembers */ }
 }
 
 export default function AdminInbox({ authFetch }: { authFetch: (input: string, init?: RequestInit) => Promise<Response> }) {
@@ -70,6 +92,10 @@ export default function AdminInbox({ authFetch }: { authFetch: (input: string, i
 
   useEffect(() => {
     queueMicrotask(() => setRead(loadRead()));
+    void loadServerRead().then((remote) => {
+      if (!remote.length) return;
+      setRead((current) => { const next = [...new Set([...current, ...remote])]; saveRead(next); return next; });
+    });
     const first = window.setTimeout(() => { void load(); }, 0);
     const timer = window.setInterval(() => { if (document.visibilityState === "visible") void load(); }, 60_000);
     return () => { window.clearTimeout(first); window.clearInterval(timer); };
@@ -85,6 +111,7 @@ export default function AdminInbox({ authFetch }: { authFetch: (input: string, i
 
   function markRead(ids: string[]) {
     setRead((current) => { const next = [...new Set([...current, ...ids])]; saveRead(next); return next; });
+    void saveServerRead(ids);
   }
 
   return (
@@ -134,6 +161,7 @@ export default function AdminInbox({ authFetch }: { authFetch: (input: string, i
                 </span>
                 <Icon name="chevron_right" size={20} />
               </Link>
+              {item.kind === "messages" ? <HelpReplyForm messageId={item.id} replies={item.replies ?? 0} authFetch={authFetch} onSent={() => markRead([item.id])} /> : null}
             </li>
           );
         })}

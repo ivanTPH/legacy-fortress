@@ -949,3 +949,41 @@ a.lf-topbar-shield:focus-visible { outline: 3px solid var(--lf-focus); outline-o
 }
 .lf-billing-banner.is-partner { display: grid; gap: 8px; padding: 16px; border: 1px solid #E9C46A; border-radius: 14px; background: #FFF8E6; }
 .lf-billing-banner.is-partner button { justify-self: start; }
+
+/* Admin Overview: sign-ups and activation (UX review 2). */
+.lf-admin-funnel { display: grid; gap: 14px; padding: 18px 20px; border: 1px solid var(--lf-border); border-radius: 14px; background: var(--lf-surface-card); }
+.lf-admin-funnel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.lf-admin-funnel-head h2 { margin: 0; font-size: 17px; }
+.lf-admin-funnel-head span { color: var(--lf-text-secondary); font-size: 14px; }
+.lf-admin-funnel-weeks { display: grid; grid-template-columns: repeat(12, 1fr); align-items: end; gap: 6px; height: 96px; padding-bottom: 4px; border-bottom: 1px solid var(--lf-border); }
+.lf-admin-funnel-weeks > span { display: flex; align-items: flex-end; height: 100%; }
+.lf-admin-funnel-bar { display: block; width: 100%; border-radius: 4px 4px 0 0; background: #8C4A32; }
+.lf-admin-funnel-steps { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.lf-admin-funnel-steps li { display: grid; grid-template-columns: minmax(140px, 200px) 1fr 56px 44px; align-items: center; gap: 12px; font-size: 14px; }
+.lf-admin-funnel-track { display: block; height: 10px; border-radius: 999px; background: var(--lf-surface-sidebar); overflow: hidden; }
+.lf-admin-funnel-track > span { display: block; height: 100%; border-radius: inherit; background: #2F8A4E; }
+.lf-admin-funnel-steps strong { text-align: right; }
+.lf-admin-funnel-steps small { color: var(--lf-text-secondary); font-size: 13px; text-align: right; }
+@media (max-width: 640px) {
+  .lf-admin-funnel-steps li { grid-template-columns: 1fr 48px 40px; }
+  .lf-admin-funnel-track { grid-column: 1 / -1; grid-row: 2; }
+}
+
+/* Help replies (stage 3, 20 Nov 2026): the person's messages and our replies on Help; Reply in the Admin Inbox. */
+.lf-help-messages { display: grid; gap: 8px; }
+.lf-help-thread-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.lf-help-thread { display: grid; gap: 8px; padding: 16px; border: 1px solid var(--lf-border, #EBE4DE); border-radius: 16px; background: var(--lf-surface-card, #fff); }
+.lf-help-thread-head { display: flex; justify-content: space-between; gap: 12px; margin: 0; }
+.lf-help-thread-head strong { display: inline-flex; align-items: center; gap: 6px; }
+.lf-help-thread-head time { color: var(--lf-text-secondary, #6B625C); font-size: 13px; white-space: nowrap; }
+.lf-help-thread-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.lf-help-reply { display: grid; gap: 6px; padding: 12px; border-radius: 12px; background: var(--lf-surface-muted, #F6EFEA); }
+.lf-help-reply.is-new { box-shadow: inset 3px 0 0 var(--lf-accent, #8C4A32); }
+.lf-help-new { margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: var(--lf-accent, #8C4A32); color: #fff; font-size: 12px; font-weight: 600; }
+.lf-admin-reply { display: grid; gap: 8px; padding: 0 16px 12px 52px; }
+.lf-admin-reply-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.lf-admin-reply-form { display: grid; gap: 8px; }
+.lf-admin-reply-form textarea { width: 100%; min-height: 96px; padding: 10px 12px; border: 1px solid var(--lf-border, #EBE4DE); border-radius: 12px; font: inherit; resize: vertical; }
+.lf-admin-reply-done { display: inline-flex; align-items: center; gap: 4px; color: var(--lf-success, #2F6B4F); font-size: 13px; font-weight: 600; }
+.lf-admin-reply-note { margin: 0; color: var(--lf-text-secondary, #6B625C); font-size: 13px; }
+@media (max-width: 640px) { .lf-admin-reply { padding: 0 12px 12px; } }

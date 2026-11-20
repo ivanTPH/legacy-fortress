@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Icon from "../ui/Icon";
 import { supabase } from "../../lib/supabaseClient";
 import { waitForActiveUser } from "../../lib/auth/session";
@@ -22,6 +22,35 @@ export const HELP_QUESTIONS: Array<{ id: string; q: string; a: string }> = [
   { id: "safe", q: "Is my information safe?", a: "Your Vault is private to you. Sign-in needs your password and, on a new device, a code. Files are only opened through short-lived links, and every access is recorded." },
 ];
 
+type Thread = { id: string; topic: string; text: string; at: string; replies: Array<{ id: string; text: string; at: string; isNew: boolean }> };
+
+/** The person's own messages to us and our replies (stage 3, 20 Nov 2026). Opening Help marks replies as read. */
+async function loadThreads(): Promise<Thread[]> {
+  const user = await waitForActiveUser(supabase, { attempts: 4, delayMs: 100 });
+  if (!user) return [];
+  const { data, error } = await supabase.from("section_entries").select("id,category_key,title,summary,details,created_at")
+    .eq("user_id", user.id).eq("section_key", "support").in("category_key", ["help_requests", "help_replies"])
+    .order("created_at", { ascending: true }).limit(200);
+  if (error) return [];
+  type Row = { id: string; category_key: string; title: string | null; summary: string | null; details: Record<string, unknown> | null; created_at: string };
+  const rows = (data ?? []) as Row[];
+  const threads = new Map<string, Thread>();
+  for (const row of rows.filter((item) => item.category_key === "help_requests")) {
+    threads.set(row.id, { id: row.id, topic: String(row.title ?? "Message"), text: String(row.summary ?? ""), at: row.created_at, replies: [] });
+  }
+  const unread: Row[] = [];
+  for (const row of rows.filter((item) => item.category_key === "help_replies")) {
+    const thread = threads.get(String(row.details?.reply_to ?? ""));
+    if (!thread) continue;
+    const isNew = !row.details?.read_at;
+    if (isNew) unread.push(row);
+    thread.replies.push({ id: row.id, text: String(row.summary ?? ""), at: row.created_at, isNew });
+  }
+  const readAt = new Date().toISOString();
+  await Promise.all(unread.map((row) => supabase.from("section_entries").update({ details: { ...(row.details ?? {}), read_at: readAt } }).eq("id", row.id)));
+  return [...threads.values()].reverse().slice(0, 10);
+}
+
 const TOPICS = ["Setting up my Vault", "Someone has died", "Billing and my plan", "Security or privacy", "Something else"] as const;
 
 export default function HelpWorkspace() {
@@ -32,6 +61,9 @@ export default function HelpWorkspace() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  const [threads, setThreads] = useState<Thread[]>([]);
+  const refreshThreads = useCallback(() => { void loadThreads().then(setThreads).catch(() => setThreads([])); }, []);
+  useEffect(() => { refreshThreads(); }, [refreshThreads]);
 
   const results = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -57,6 +89,7 @@ export default function HelpWorkspace() {
       });
       if (insertError) throw insertError;
       setSent(true); setMessage(""); setTopic("");
+      refreshThreads();
     } catch {
       setError("That didn’t send. Please try again in a moment.");
     } finally {
@@ -98,13 +131,33 @@ export default function HelpWorkspace() {
         ) : <p className="lf-help-muted">Try another word, or send us a message below.</p>}
       </section>
 
+      {threads.length ? (
+        <section className="lf-help-messages" aria-labelledby="help-messages" id="messages">
+          <h2 id="help-messages">Your messages</h2>
+          <ul className="lf-help-thread-list">
+            {threads.map((thread) => (
+              <li key={thread.id} className="lf-help-thread">
+                <p className="lf-help-thread-head"><strong>{thread.topic}</strong><time dateTime={thread.at}>{shortDate(thread.at)}</time></p>
+                <p className="lf-help-thread-text">{thread.text}</p>
+                {thread.replies.length ? thread.replies.map((reply) => (
+                  <div key={reply.id} className={`lf-help-reply${reply.isNew ? " is-new" : ""}`}>
+                    <p className="lf-help-thread-head"><strong><Icon name="reply" size={16} />Legacy Fortress replied{reply.isNew ? <span className="lf-help-new">New</span> : null}</strong><time dateTime={reply.at}>{shortDate(reply.at)}</time></p>
+                    <p className="lf-help-thread-text">{reply.text}</p>
+                  </div>
+                )) : <p className="lf-help-muted">Waiting for our reply.</p>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <section className="lf-help-contact" aria-labelledby="help-contact" id="contact">
         <h2 id="help-contact">Contact us</h2>
         {sent ? (
-          <p role="status" className="lf-help-sent"><Icon name="check_circle" size={20} />Thanks. We’ve got your message and will reply to your email within 1 working day.</p>
+          <p role="status" className="lf-help-sent"><Icon name="check_circle" size={20} />Thanks. We’ve got your message. Our reply will appear here and in your Inbox, usually within 1 working day.</p>
         ) : (
           <>
-            <p className="lf-help-muted">Still stuck? Send us a message. We reply to the email you sign in with, within 1 working day.</p>
+            <p className="lf-help-muted">Still stuck? Send us a message. Our reply appears here and in your Inbox, usually within 1 working day.</p>
             <label className="lf-help-field">What’s it about?
               <select value={topic} onChange={(event) => setTopic(event.target.value)}>
                 <option value="">Choose one</option>
@@ -122,4 +175,9 @@ export default function HelpWorkspace() {
       </section>
     </div>
   );
+}
+
+function shortDate(iso: string) {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
