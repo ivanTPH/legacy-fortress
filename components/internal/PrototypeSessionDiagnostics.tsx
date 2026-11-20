@@ -183,7 +183,7 @@ const badgeStyle = {
   padding: "4px 9px",
   color: "var(--lf-text-soft)",
   background: "var(--lf-surface-muted)",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 800,
 } as const;
 
@@ -218,7 +218,7 @@ const diagnosticStyle = {
   background: "var(--lf-surface-card)",
   display: "grid",
   gap: 4,
-  fontSize: 12,
+  fontSize: 13,
   color: "var(--lf-text-soft)",
 } as const;
 
@@ -269,6 +269,6 @@ const disabledButtonStyle = {
 
 const buttonHintStyle = {
   display: "block",
-  fontSize: 11,
+  fontSize: 13,
   fontWeight: 600,
 } as const;

@@ -192,7 +192,7 @@ const metricStyle: CSSProperties = {
 
 const metricLabelStyle: CSSProperties = {
   color: "var(--lf-text-soft)",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 800,
   textTransform: "uppercase",
 };
@@ -286,7 +286,7 @@ const checkStyle: CSSProperties = {
   color: "var(--lf-status-approved-text)",
   borderRadius: 999,
   padding: "3px 7px",
-  fontSize: 11,
+  fontSize: 13,
   fontWeight: 800,
 };
 

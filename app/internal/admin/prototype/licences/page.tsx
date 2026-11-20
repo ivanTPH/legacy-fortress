@@ -296,7 +296,7 @@ const metricStyle: CSSProperties = {
 
 const metricLabelStyle: CSSProperties = {
   color: "var(--lf-text-soft)",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 800,
   textTransform: "uppercase",
 };
@@ -388,7 +388,7 @@ const thStyle: CSSProperties = {
   padding: "10px 11px",
   borderBottom: "1px solid var(--lf-border)",
   color: "var(--lf-text-soft)",
-  fontSize: 11,
+  fontSize: 13,
   textTransform: "uppercase",
   whiteSpace: "nowrap",
 };
@@ -403,7 +403,7 @@ const tdStyle: CSSProperties = {
 const mutedBlockStyle: CSSProperties = {
   display: "block",
   color: "var(--lf-text-soft)",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 500,
   marginTop: 2,
 };
@@ -414,7 +414,7 @@ const disabledButtonStyle: CSSProperties = {
   background: "var(--lf-surface-muted)",
   color: "var(--lf-text-soft)",
   padding: "7px 9px",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 800,
 };
 
@@ -444,7 +444,7 @@ const tagStyle: CSSProperties = {
   background: "var(--lf-surface-muted)",
   color: "var(--lf-text)",
   padding: "5px 8px",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 800,
 };
 

@@ -65,7 +65,7 @@ test("Trust linked contact visible actions are functional and do not expose manu
   assert.match(workspace, /removeLinkedContactFromRecord\(item\)/);
   assert.match(workspace, /aria-label={`View \$\{contactLabel\}`}/);
   assert.match(workspace, /aria-label={`Delete \$\{contactLabel\} from this record`}/);
-  assert.match(workspace, /window\.confirm\(`Remove \$\{contact\.contact_name \|\| "this contact"\} from this Trust record\?/);
+  assert.match(workspace, /confirmDialog\(\{ title: `Remove \$\{contact\.contact_name \|\| "this person"\} from this record\?`/);
   assert.doesNotMatch(workspace, /label="Invitation status"[\s\S]{0,160}<FieldInput/);
   assert.doesNotMatch(workspace, /onChange=\{\(value\) => updateLinkedContactDraft\(item\.id, "invite/);
 });

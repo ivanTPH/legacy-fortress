@@ -546,7 +546,7 @@ export default function ProfilePage() {
               background: "var(--lf-surface-page)",
               display: "grid",
               placeItems: "center",
-              fontSize: 11,
+              fontSize: 13,
               color: "var(--lf-text-secondary)",
             }}
           >
@@ -771,7 +771,7 @@ export default function ProfilePage() {
 
       {avatarTraceEnabled ? (
         <SettingsCard title="DEV avatar trace" description="Temporary local trace for upload, save, reload, and sidebar hydrate.">
-          <div style={{ display: "grid", gap: 8, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12 }}>
+          <div style={{ display: "grid", gap: 8, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 13 }}>
             {avatarTraceLines.length ? avatarTraceLines.map((line, index) => (
               <div key={`${index}-${line}`}>{line}</div>
             )) : (

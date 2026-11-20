@@ -225,7 +225,7 @@ export default function SignInForm({
 
       {/* Only show "or" when Apple or Google sign-in is switched on. */}
       {getConfiguredAuthProviders().length > 0 ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--lf-text-secondary)", fontSize: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--lf-text-secondary)", fontSize: 13 }}>
           <span style={{ flex: 1, height: 1, background: "var(--lf-surface-subtle)" }} />
           or
           <span style={{ flex: 1, height: 1, background: "var(--lf-surface-subtle)" }} />

@@ -106,7 +106,7 @@ const thStyle: CSSProperties = {
   padding: "11px 12px",
   borderBottom: "1px solid var(--lf-border)",
   color: "var(--lf-text-soft)",
-  fontSize: 12,
+  fontSize: 13,
   textTransform: "uppercase",
 };
 

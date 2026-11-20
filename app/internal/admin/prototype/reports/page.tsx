@@ -223,7 +223,7 @@ const metricStyle: CSSProperties = {
 
 const metricLabelStyle: CSSProperties = {
   color: "var(--lf-text-soft)",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 800,
   textTransform: "uppercase",
 };

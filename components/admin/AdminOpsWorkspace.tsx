@@ -431,7 +431,7 @@ export default function AdminOpsWorkspace() {
       {reasonDialog ? <AdminReasonDialog action={reasonDialog.action} reason={reasonDraft} setReason={setReasonDraft} onCancel={() => setReasonDialog(null)} onSubmit={() => { const dialog = reasonDialog; setReasonDialog(null); void applyAdminUserAction(dialog.adminUserId, dialog.action, dialog.role, reasonDraft.trim()); }} /> : null}
       <section style={panelStyle}>
         <div style={{ display: "grid", gap: 4 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--lf-text-secondary)" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--lf-text-secondary)" }}>
             Internal admin operations
           </div>
           <h1 style={{ margin: 0, fontSize: 28 }}>Admin operations</h1>
@@ -527,7 +527,7 @@ export default function AdminOpsWorkspace() {
           <div style={sectionHeaderStyle}>
             <div>
               <h2 style={h2Style}>Support tools</h2>
-              <div style={mutedStyle}>{canReadSupport ? "High-level signals for invitation, linked access, and verification support work." : "Support queue access is not available for this admin role."}</div>
+              <div style={mutedStyle}>{canReadSupport ? "Invitations, sharing and ID checks that may need support." : "Support queue access is not available for this admin role."}</div>
             </div>
           </div>
           {canReadSupport ? <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 10 }}>
@@ -594,7 +594,7 @@ export default function AdminOpsWorkspace() {
         <div style={sectionHeaderStyle}>
           <div>
             <h2 style={h2Style}>Executor verification queue</h2>
-            <div style={mutedStyle}>{canReviewVerification || canDecideVerification ? "Review submitted evidence and decide whether linked access can move forward." : "Verification queue access is not available for this admin role."}</div>
+            <div style={mutedStyle}>{canReviewVerification || canDecideVerification ? "Check the evidence and decide whether this person can go on to see what’s shared with them." : "Verification queue access is not available for this admin role."}</div>
           </div>
         </div>
         {canReviewVerification || canDecideVerification ? <div style={{ display: "grid", gap: 10 }}>
@@ -968,7 +968,7 @@ const pillStyle: CSSProperties = {
   background: "var(--lf-surface-subtle)",
   color: "var(--lf-text)",
   padding: "5px 9px",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 600,
 };
 

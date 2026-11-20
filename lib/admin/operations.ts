@@ -1223,7 +1223,7 @@ export async function loadVerificationQueue(client: AnySupabaseClient) {
       if (!batch.error) identityProfileRows.push(...((batch.data ?? []) as UserProfileRow[]));
     }
     const identityProfilesRes = { data: identityProfileRows, error: null };
-    const identityProfileMap = new Map((((identityProfilesRes.data ?? []) as UserProfileRow[])).map((row) => [row.user_id, row.display_name ?? "Identity claimant"]));
+    const identityProfileMap = new Map((((identityProfilesRes.data ?? []) as UserProfileRow[])).map((row) => [row.user_id, row.display_name ?? "Person being checked"]));
     const reviewerIds = [...new Set(identityRows.map((row) => String(row.assigned_reviewer_user_id ?? "")).filter(Boolean))];
     const reviewerRes = reviewerIds.length ? await client.from("admin_users").select("user_id,display_name,email_normalized").in("user_id", reviewerIds).eq("status", "active") : { data: [], error: null };
     const reviewerMap = new Map(((reviewerRes.data ?? []) as Array<Record<string, unknown>>).map((row) => [String(row.user_id), String(row.display_name ?? row.email_normalized ?? "Reviewer")]));
@@ -1237,7 +1237,7 @@ export async function loadVerificationQueue(client: AnySupabaseClient) {
       return ({
       id: requestId,
       ownerUserId: String(row.user_id),
-      ownerName: String(identityProfileMap.get(String(row.user_id)) ?? "Identity claimant"),
+      ownerName: String(identityProfileMap.get(String(row.user_id)) ?? "Person being checked"),
       assignedRole: String(row.verification_purpose ?? "identity_verification"),
       activationStatus: String(row.status ?? "review_required"),
       requestType: `identity_${String(row.requested_identity_level ?? "2")}`,
@@ -1245,7 +1245,7 @@ export async function loadVerificationQueue(client: AnySupabaseClient) {
       submittedAt: String(row.submitted_at ?? row.created_at ?? ""),
       reviewedAt: String(row.verified_at ?? "") || null,
       reviewNotes: null,
-      contactName: "Identity verification claimant",
+      contactName: "Person being checked",
       contactEmail: "",
       evidencePath: null,
       providerKey: String(row.provider_key ?? ""),

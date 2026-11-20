@@ -205,7 +205,7 @@ function InfoCard({ label, value, detail }: { label: string; value: ReactNode; d
     <section style={metricStyle}>
       <span style={metricLabelStyle}>{label}</span>
       <strong style={{ fontSize: 22 }}>{value}</strong>
-      {detail ? <span style={{ color: "var(--lf-text-soft)", fontSize: 12 }}>{detail}</span> : null}
+      {detail ? <span style={{ color: "var(--lf-text-soft)", fontSize: 13 }}>{detail}</span> : null}
     </section>
   );
 }
@@ -363,7 +363,7 @@ const metricStyle: CSSProperties = {
 
 const metricLabelStyle: CSSProperties = {
   color: "var(--lf-text-soft)",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 800,
   textTransform: "uppercase",
 };
@@ -438,7 +438,7 @@ const disabledButtonStyle: CSSProperties = {
   background: "var(--lf-surface-muted)",
   color: "var(--lf-text-soft)",
   padding: "7px 9px",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 800,
 };
 
@@ -460,7 +460,7 @@ const tagStyle: CSSProperties = {
   background: "var(--lf-surface-muted)",
   color: "var(--lf-text)",
   padding: "5px 8px",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 800,
 };
 

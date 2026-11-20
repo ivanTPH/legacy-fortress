@@ -142,7 +142,7 @@ test("admin dashboard completion uses shared responsive primitives for operation
   for (const caption of [
     "Across all Vaults",
     "${title} table",
-    "Identity verification queue",
+    "ID check queue",
     "Probate review queue",
     "Audit",
     "Parts of the platform",

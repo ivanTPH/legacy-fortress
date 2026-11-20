@@ -32,10 +32,10 @@ export function AttachmentGallerySummary<T extends AttachmentGalleryItem>({
   return (
     <div style={{ display: "grid", gap: 6 }}>
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--lf-text)" }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "var(--lf-text)" }}>
           {items.length} attachment{items.length === 1 ? "" : "s"}
         </span>
-        <span style={{ fontSize: 12, color: "var(--lf-text-secondary)" }}>Ready to open from this record</span>
+        <span style={{ fontSize: 13, color: "var(--lf-text-secondary)" }}>Ready to open from this record</span>
       </div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {visibleItems.map((item, index) => {
@@ -44,10 +44,10 @@ export function AttachmentGallerySummary<T extends AttachmentGalleryItem>({
             <div key={getAttachmentItemKey(item, index)} style={summaryCardStyle}>
               <AttachmentVisual item={item} size="summary" />
               <div style={{ minWidth: 0, display: "grid", gap: 2 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--lf-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--lf-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {item.fileName || "Untitled file"}
                 </div>
-                <div style={{ fontSize: 11, color: "var(--lf-text-secondary)" }}>{fileKind}</div>
+                <div style={{ fontSize: 13, color: "var(--lf-text-secondary)" }}>{fileKind}</div>
               </div>
             </div>
           );
@@ -414,7 +414,7 @@ const fileBadgeStyle: CSSProperties = {
 
 const fileBadgeLabelStyle: CSSProperties = {
   color: "#5f4b3f",
-  fontSize: 10,
+  fontSize: 13,
   fontWeight: 800,
   lineHeight: 1,
   textTransform: "uppercase",

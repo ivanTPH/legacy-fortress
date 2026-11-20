@@ -574,7 +574,7 @@ const PAGE_COPY: Record<AdminControlPlaneSection, { title: string; eyebrow: stri
   support: {
     title: "Help and support",
     eyebrow: "Invitations and help",
-    description: "Problems with invitations, linked access and identity checks that need someone to follow up.",
+    description: "Problems with invitations, sharing and ID checks that need someone to follow up.",
   },
   audit: {
     title: "Audit",
@@ -1067,7 +1067,7 @@ export default function AdminControlPlaneWorkspace({
     if (["approve", "reject", "revoke"].includes(action)) {
       requestConfirmation({
         title: `Confirm ${action.replace(/_/g, " ")}`,
-        message: "This decision is recorded in the probate audit trail and does not override identity verification or access policy.",
+        message: "This decision is recorded in the probate audit trail and does not override ID checks or the access rules.",
         confirmLabel: labelise(action),
       }, () => runProbateCaseActionConfirmed(caseId, action, reason));
       return;
@@ -2413,7 +2413,7 @@ function VerificationDesktopQueue({ queue }: { queue: VerificationItem[] }) {
       <AdminFilterChips label="Filter identity checks" value={filter} onChange={setFilter} options={VERIFICATION_FILTERS.map((option) => ({ key: option.key, label: option.label, count: queue.filter(option.matches).length }))} />
       <div className="lf-admin-table-card">
         <AdminDataTable
-          caption="Identity verification queue"
+          caption="ID check queue"
           columns={[
             { key: "claimant", header: "Claimant", render: (item) => <><span className="lf-admin-cell-title">{item.ownerName || <code>{item.id.slice(0, 8)}</code>}</span><small>{formatDate(item.submittedAt)}</small></> },
             { key: "type", header: "Linked to", render: (item) => labelise(item.purpose ?? item.requestType) },
@@ -2761,7 +2761,7 @@ function renderSettings(capabilities: string[]) {
     ["General", "Environment name and how the admin console looks"],
     ["Security", "Role changes, protecting the last master admin, reasons for changes"],
     ["Invitations", "How long invitations last, resending and cancelling"],
-    ["Identity verification", "Rules reviewers follow when approving or rejecting"],
+    ["ID checks", "Rules reviewers follow when approving or rejecting"],
     ["Probate", "Which case decisions are allowed at each stage"],
     ["Documents", "Evidence opens through secure, time-limited links only"],
     ["Audit & retention", "How long audit history is kept; it can’t be edited"],
@@ -2809,9 +2809,12 @@ function formatRoleLabel(role: string | null, isMaster: boolean) {
   return String(role ?? "support_agent").replace(/_/g, " ");
 }
 
+// The Vault's words for the same things (UX review 2 glossary, 20 Nov 2026).
+const GLOSSARY: Record<string, string> = { linked_access: "Shared records", vault_access: "Shared records", identity_verification: "ID check", identity_verified: "ID checked" };
+
 function labelise(value: string) {
-  // Sentence case everywhere (CONSISTENCY.md): "linked_access" → "Linked access".
-  return sentenceCaseStatus(value || "unknown");
+  // Sentence case everywhere (CONSISTENCY.md); the Vault's words where we have them.
+  return GLOSSARY[value] ?? sentenceCaseStatus(value || "unknown");
 }
 
 function formatDate(value: string | null) {
@@ -2910,7 +2913,7 @@ const formGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, 
 const definitionGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", gap: 12 } satisfies CSSProperties;
 const settingsCardStyle = { ...panelStyle, gap: 8 } satisfies CSSProperties;
 const rowStyle = { border: "1px solid var(--lf-border)", borderRadius: 10, padding: 12, display: "grid", gap: 4 } satisfies CSSProperties;
-const eyebrowStyle = { margin: 0, color: "var(--lf-text-secondary)", textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 12, fontWeight: 800 } satisfies CSSProperties;
+const eyebrowStyle = { margin: 0, color: "var(--lf-text-secondary)", textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 13, fontWeight: 800 } satisfies CSSProperties;
 const h1Style = { margin: 0, fontSize: 28, lineHeight: 1.15 } satisfies CSSProperties;
 const h2Style = { margin: 0, fontSize: 20 } satisfies CSSProperties;
 const h3Style = { margin: 0, fontSize: 16 } satisfies CSSProperties;

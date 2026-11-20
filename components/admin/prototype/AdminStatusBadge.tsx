@@ -53,7 +53,7 @@ function badgeStyle(status: AdminStatusBadgeProps["status"]): CSSProperties {
     background: tone.background,
     color: tone.color,
     padding: "4px 9px",
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: 700,
     whiteSpace: "nowrap",
   };

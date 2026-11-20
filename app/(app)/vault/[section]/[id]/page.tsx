@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmDialog } from "../../../../../components/ui/confirmDialog";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -149,7 +150,7 @@ export default function VaultAssetDetailPage() {
   }
 
   async function remove() {
-    const ok = window.confirm(`Delete this ${config.label.toLowerCase()}?`);
+    const ok = await confirmDialog({ title: `Delete this ${config.label.toLowerCase()}?`, body: section === "property" || section === "business" || section === "digital" ? "You can restore it from Settings › Recently deleted for 30 days." : "This can’t be undone.", confirmLabel: "Delete", tone: "danger" });
     if (!ok) return;
 
     setSaving(true);
@@ -286,14 +287,14 @@ export default function VaultAssetDetailPage() {
                 .filter(([key]) => !["id", "user_id", "owner_user_id", "created_at", "updated_at", "metadata_json", "section_key", "category_key"].includes(key))
                 .map(([key, value]) => (
                   <div key={key} style={{ display: "grid", gap: 2 }}>
-                    <div style={{ fontSize: 12, color: "var(--lf-text-secondary)", textTransform: "capitalize" }}>{key.replace(/_/g, " ")}</div>
+                    <div style={{ fontSize: 13, color: "var(--lf-text-secondary)", textTransform: "capitalize" }}>{key.replace(/_/g, " ")}</div>
                     <div style={{ fontSize: 14, color: "var(--lf-text)" }}>{formatValue(value)}</div>
                   </div>
                 ))}
               {(section === "property" || section === "business" || section === "digital") && row.metadata_json && typeof row.metadata_json === "object"
                 ? Object.entries(row.metadata_json as Record<string, unknown>).map(([key, value]) => (
                     <div key={`meta-${key}`} style={{ display: "grid", gap: 2 }}>
-                      <div style={{ fontSize: 12, color: "var(--lf-text-secondary)", textTransform: "capitalize" }}>{key.replace(/_/g, " ")}</div>
+                      <div style={{ fontSize: 13, color: "var(--lf-text-secondary)", textTransform: "capitalize" }}>{key.replace(/_/g, " ")}</div>
                       <div style={{ fontSize: 14, color: "var(--lf-text)" }}>{formatValue(value)}</div>
                     </div>
                   ))
@@ -348,7 +349,7 @@ export default function VaultAssetDetailPage() {
 function Meta({ label, value }: { label: string; value: string | null }) {
   return (
     <div>
-      <div style={{ fontSize: 12, color: "var(--lf-text-secondary)" }}>{label}</div>
+      <div style={{ fontSize: 13, color: "var(--lf-text-secondary)" }}>{label}</div>
       <div style={{ fontSize: 14, fontWeight: 700, color: "var(--lf-text)" }}>{value ?? "-"}</div>
     </div>
   );

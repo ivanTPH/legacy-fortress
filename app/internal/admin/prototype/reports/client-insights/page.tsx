@@ -334,7 +334,7 @@ const metricStyle: CSSProperties = {
 
 const metricLabelStyle: CSSProperties = {
   color: "var(--lf-text-soft)",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 800,
   textTransform: "uppercase",
 };
@@ -408,7 +408,7 @@ function opportunityBadgeStyle(level: ClientOpportunityScore["scoreLevel"]): CSS
     padding: "4px 8px",
     background: level === "blocked" ? "#fef2f2" : level === "high" ? "#fff7ed" : "var(--lf-surface-muted)",
     color: level === "blocked" ? "#991b1b" : level === "high" ? "#9a3412" : "var(--lf-text-soft)",
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: 800,
     textTransform: "uppercase",
   };
@@ -452,7 +452,7 @@ function severityBadgeStyle(severity: ClientInsightSeverity): CSSProperties {
     padding: "4px 8px",
     background: severity === "critical" ? "#fef2f2" : severity === "high" ? "#fff7ed" : "var(--lf-surface-muted)",
     color: severity === "critical" ? "#991b1b" : severity === "high" ? "#9a3412" : "var(--lf-text-soft)",
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: 800,
     textTransform: "uppercase",
   };
@@ -483,7 +483,7 @@ const thStyle: CSSProperties = {
   padding: "10px 11px",
   borderBottom: "1px solid var(--lf-border)",
   color: "var(--lf-text-soft)",
-  fontSize: 11,
+  fontSize: 13,
   textTransform: "uppercase",
   whiteSpace: "nowrap",
 };

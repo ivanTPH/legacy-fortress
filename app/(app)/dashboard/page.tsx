@@ -1577,7 +1577,7 @@ const legalSummary = useMemo(() => {
                 <div key={contactRow.id} style={miniStatusRowStyle}>
                   <span style={{ display: "grid", gap: 2, minWidth: 0 }}>
                     <strong style={{ fontSize: 13, color: "var(--lf-text)" }}>{contactRow.name}</strong>
-                    <span style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
+                    <span style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                       {formatDashboardContactStatus(contactRow.status)} · {contactRow.invite.detail}
                     </span>
                   </span>
@@ -1673,7 +1673,7 @@ const legalSummary = useMemo(() => {
               </span>
               <span style={{ display: "grid", gap: 3, minWidth: 0 }}>
                 <strong style={{ color: "var(--lf-text)" }}>{item.label}</strong>
-                <span style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>{item.status}</span>
+                <span style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{item.status}</span>
               </span>
             </div>
           ))}
@@ -1780,7 +1780,7 @@ const legalSummary = useMemo(() => {
             <Icon name="bug_report" size={16} />
             <strong style={{ fontSize: 14 }}>DEV bank flow trace</strong>
           </div>
-          <div style={{ fontSize: 12, color: "#7c2d12", display: "grid", gap: 6 }}>
+          <div style={{ fontSize: 13, color: "#7c2d12", display: "grid", gap: 6 }}>
             <div>
               Dashboard context: user <code>{latestDashboardTrace?.userId ?? "n/a"}</code> · organisation <code>{latestDashboardTrace?.organisationId ?? "n/a"}</code> · wallet <code>{latestDashboardTrace?.walletId ?? "n/a"}</code>
             </div>
@@ -1843,7 +1843,7 @@ function ReadinessUploadAction({ label, detail, href }: { label: string; detail:
       </span>
       <span style={{ display: "grid", gap: 3, minWidth: 0 }}>
         <strong style={{ color: "var(--lf-text)" }}>{label}</strong>
-        <span style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>{detail}</span>
+        <span style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{detail}</span>
       </span>
       <Icon name="arrow_forward" size={15} />
     </a>
@@ -3588,7 +3588,7 @@ function commandIconStyle(tone: DashboardReviewPanel["tone"] | ContactInviteDisp
 
 const commandEyebrowStyle = {
   color: "var(--lf-text-secondary)",
-  fontSize: 11,
+  fontSize: 13,
   fontWeight: 800,
   letterSpacing: 0,
   textTransform: "uppercase",
@@ -3606,7 +3606,7 @@ const trustCueStyle = {
   background: "var(--lf-surface-page)",
   color: "#5b4a40",
   padding: "8px 10px",
-  fontSize: 12,
+  fontSize: 13,
 } satisfies CSSProperties;
 
 const quickFormStyle = {
@@ -3695,7 +3695,7 @@ function statusBadgeStyle(tone: ContactInviteDisplay["tone"], mode: "button" | "
     color: palette.color,
     borderRadius: 999,
     padding: "6px 9px",
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: 800,
     whiteSpace: "nowrap",
     minHeight: 32,

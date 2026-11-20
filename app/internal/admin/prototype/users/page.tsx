@@ -236,7 +236,7 @@ const thStyle: CSSProperties = {
   padding: "11px 12px",
   borderBottom: "1px solid var(--lf-border)",
   color: "var(--lf-text-soft)",
-  fontSize: 12,
+  fontSize: 13,
   textTransform: "uppercase",
 };
 
@@ -255,7 +255,7 @@ const userLinkStyle: CSSProperties = {
 const mutedBlockStyle: CSSProperties = {
   display: "block",
   color: "var(--lf-text-soft)",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 500,
   marginTop: 2,
 };

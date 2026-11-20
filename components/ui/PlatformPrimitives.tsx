@@ -254,7 +254,7 @@ export const platformInputStyle: CSSProperties = {
 
 const labelStyle: CSSProperties = {
   color: "var(--lf-text-soft)",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 750,
 };
 
@@ -283,14 +283,14 @@ const statValueStyle: CSSProperties = {
 
 const detailStyle: CSSProperties = {
   color: "var(--lf-text-soft)",
-  fontSize: 12,
+  fontSize: 13,
   lineHeight: 1.35,
 };
 
 const detailBlockStyle: CSSProperties = {
   display: "block",
   color: "var(--lf-text-soft)",
-  fontSize: 12,
+  fontSize: 13,
   lineHeight: 1.4,
   marginTop: 3,
 };
@@ -308,7 +308,7 @@ const restrictedStateStyle: CSSProperties = {
 
 const restrictedMetaStyle: CSSProperties = {
   color: "var(--lf-bronze)",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 800,
 };
 
@@ -442,7 +442,7 @@ function chipStyle(tone: PlatformTone): CSSProperties {
     background: palette.background,
     color: palette.text,
     padding: "6px 9px",
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: 800,
   };
 }

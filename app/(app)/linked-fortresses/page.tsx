@@ -65,7 +65,7 @@ export default function LinkedFortressesPage() {
               </div>
               <div style={{ display: "grid", gap: 3, textAlign: "right" }}>
                 <strong>{getLinkedFortressAccessLabel(fortress)}</strong>
-                <span style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>{fortress.activationStatus === "active" || fortress.activationStatus === "verified" ? "Linked" : "Connection in progress"}</span>
+                <span style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{fortress.activationStatus === "active" || fortress.activationStatus === "verified" ? "Linked" : "Connection in progress"}</span>
               </div>
             </Link>
           ))}

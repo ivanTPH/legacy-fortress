@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmDialog } from "../../../../components/ui/confirmDialog";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch, type SetStateAction } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -557,7 +558,7 @@ export default function ContactInvitationManager({
 
   async function remove(row: InvitationRow) {
     setStatus("");
-    const ok = window.confirm(`Delete ${row.contact_name || row.contact_email}? This removes the invitation, linked access, and shared contact entry.`);
+    const ok = await confirmDialog({ title: `Delete ${row.contact_name || row.contact_email}?`, body: "This removes their invitation, anything shared with them, and their entry in People.", confirmLabel: "Delete", tone: "danger" });
     if (!ok) return;
 
     try {
@@ -600,7 +601,7 @@ export default function ContactInvitationManager({
 
   async function removeSelectedDraftContact() {
     if (!draftContactId) return;
-    const ok = window.confirm(`Delete ${name || "this contact"}? This removes the shared contact entry and any linked invitation access.`);
+    const ok = await confirmDialog({ title: `Delete ${name || "this person"}?`, body: "This removes them from People and cancels any invitation or sharing.", confirmLabel: "Delete", tone: "danger" });
     if (!ok) return;
 
     try {
@@ -838,7 +839,7 @@ export default function ContactInvitationManager({
           </label>}
           {!contactOnly ? <div style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
             <span style={fieldLabelStyle}>Category access</span>
-            <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
+            <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
               Choose the visible categories this contact can review. Records beneath each selected category start as view only, then you can allow editing record by record.
             </div>
             <button
@@ -897,7 +898,7 @@ export default function ContactInvitationManager({
           {!contactOnly && allowedSections.length ? (
             <div style={{ ...fieldStyle, gridColumn: "1 / -1" }}>
               <span style={fieldLabelStyle}>Linked records and document permissions</span>
-              <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
+              <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                 Each selected category expands into the actual visible record types and saved records in the vault. Every linked record starts on View, and Edit must be enabled explicitly record by record.
               </div>
               <div style={{ display: "grid", gap: 8 }}>
@@ -905,7 +906,7 @@ export default function ContactInvitationManager({
                   <div key={group.key} style={resourceGroupStyle}>
                     <div style={{ display: "grid", gap: 2 }}>
                       <strong style={{ fontSize: 13, color: "var(--lf-text)" }}>{group.label}</strong>
-                      <span style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>{group.description}</span>
+                      <span style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{group.description}</span>
                     </div>
                     {group.items.length ? (
                       <div style={{ display: "grid", gap: 8 }}>
@@ -926,7 +927,7 @@ export default function ContactInvitationManager({
                             <div key={`${group.key}-${option.sourceKind}:${option.sourceId}`} style={scopePermissionRowStyle}>
                               <div style={{ display: "grid", gap: 2 }}>
                                 <span style={{ fontWeight: 600 }}>{option.label}</span>
-                                <span style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>{option.meta}</span>
+                                <span style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>{option.meta}</span>
                               </div>
                               {href ? (
                                 <Link href={href} style={{ color: "#1d4ed8", textDecoration: "none", fontWeight: 600 }}>
@@ -956,14 +957,14 @@ export default function ContactInvitationManager({
                         })}
                       </div>
                     ) : (
-                      <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>
+                      <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                         No saved records are visible here yet, but this resource type remains linked to the selected category.
                       </div>
                     )}
                   </div>
                 ))}
                 {getScopedResourceGroups(scopeItems, allowedSections, preferences).length === 0 ? (
-                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 12 }}>No visible record types are available yet in the selected categories.</div>
+                  <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>No visible record types are available yet in the selected categories.</div>
                 ) : null}
               </div>
             </div>
@@ -1115,12 +1116,12 @@ export default function ContactInvitationManager({
                                 onClick={() => void sendInvite(row, false)}
                               >
                                 <StatusIcon icon="send" tone="neutral" label={`Send invite to ${row.contact_email}`} />
-                                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--lf-text)" }}>Send invite</span>
+                                <span style={{ fontSize: 13, fontWeight: 600, color: "var(--lf-text)" }}>Send invite</span>
                               </button>
                             ) : (
                               <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                                 <StatusIcon {...getInvitationStatusIcon(row, isRecentlySent(row.id))} />
-                                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--lf-text)" }}>{getDashboardInvitationStatusLabel(row, isRecentlySent(row.id))}</span>
+                                <span style={{ fontSize: 13, fontWeight: 600, color: "var(--lf-text)" }}>{getDashboardInvitationStatusLabel(row, isRecentlySent(row.id))}</span>
                               </div>
                             )
                           ) : (
@@ -1189,12 +1190,12 @@ export default function ContactInvitationManager({
                           onClick={() => void sendInvite(row, false)}
                         >
                           <StatusIcon icon="send" tone="neutral" label={`Send invite to ${row.contact_email}`} />
-                          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--lf-text)" }}>Send invite</span>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--lf-text)" }}>Send invite</span>
                         </button>
                       ) : (
                         <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                           <StatusIcon {...getInvitationStatusIcon(row, isRecentlySent(row.id))} />
-                          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--lf-text)" }}>{getDashboardInvitationStatusLabel(row, isRecentlySent(row.id))}</span>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--lf-text)" }}>{getDashboardInvitationStatusLabel(row, isRecentlySent(row.id))}</span>
                         </div>
                       )
                     ) : (
@@ -1855,7 +1856,7 @@ const guidedFlowStyle: CSSProperties = {
 const eyebrowStyle: CSSProperties = {
   margin: 0,
   color: "var(--lf-text-secondary)",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 700,
   letterSpacing: "0.04em",
   textTransform: "uppercase",
@@ -1874,7 +1875,7 @@ const activeStepStyle: CSSProperties = {
   gap: 7,
   color: "var(--lf-text)",
   fontWeight: 700,
-  fontSize: 12,
+  fontSize: 13,
   borderBottom: "2px solid #0f172a",
   padding: "7px 2px",
 };
@@ -1910,7 +1911,7 @@ const customizeDetailsStyle: CSSProperties = { marginTop: 14, padding: 12, borde
 const reviewSectionStyle: CSSProperties = { display: "grid", gap: 5, padding: 14, border: "1px solid var(--lf-border)", borderRadius: 8, background: "var(--lf-surface-card)", color: "var(--lf-text)" };
 const recentInvitationStyle: CSSProperties = { border: "1px solid #86efac", borderRadius: 12, background: "var(--lf-status-approved-bg)", color: "var(--lf-status-approved-text)", padding: 18, display: "grid", gap: 16 };
 const statusPanelStyle: CSSProperties = { border: "1px solid var(--lf-border-input)", borderRadius: 10, background: "var(--lf-surface-page)", padding: 14, display: "grid", gap: 14 };
-const statusPanelRoleStyle: CSSProperties = { border: "1px solid var(--lf-border-input)", borderRadius: 999, padding: "5px 9px", color: "var(--lf-text)", fontSize: 12, fontWeight: 700 };
+const statusPanelRoleStyle: CSSProperties = { border: "1px solid var(--lf-border-input)", borderRadius: 999, padding: "5px 9px", color: "var(--lf-text)", fontSize: 13, fontWeight: 700 };
 const statusPanelGridStyle: CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8 };
 const statusPanelStepStyle: CSSProperties = { display: "flex", alignItems: "flex-start", gap: 8, padding: 9, border: "1px solid var(--lf-border)", borderRadius: 8, background: "var(--lf-surface-card)" };
 const statusCheckStyle: CSSProperties = { color: "var(--lf-status-approved-text)", fontWeight: 800, fontSize: 17 };
@@ -1964,7 +1965,7 @@ const summaryCardStyle: CSSProperties = {
 };
 
 const summaryLabelStyle: CSSProperties = {
-  fontSize: 12,
+  fontSize: 13,
   color: "var(--lf-text-secondary)",
   fontWeight: 700,
   textTransform: "uppercase",
@@ -1978,12 +1979,12 @@ const summaryValueStyle: CSSProperties = {
 };
 
 const summaryHelpStyle: CSSProperties = {
-  fontSize: 12,
+  fontSize: 13,
   color: "var(--lf-text-secondary)",
 };
 
 const fieldStyle: CSSProperties = { display: "grid", gap: 6 };
-const fieldLabelStyle: CSSProperties = { fontSize: 12, color: "var(--lf-text)" };
+const fieldLabelStyle: CSSProperties = { fontSize: 13, color: "var(--lf-text)" };
 const scopeChipStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
@@ -2057,7 +2058,7 @@ const mobileMetaRowStyle: CSSProperties = {
 };
 
 const mobileMetaLabelStyle: CSSProperties = {
-  fontSize: 11,
+  fontSize: 13,
   fontWeight: 700,
   letterSpacing: "0.02em",
   textTransform: "uppercase",
@@ -2098,7 +2099,7 @@ const permissionOnButtonStyle: CSSProperties = {
   color: "var(--lf-primary-text)",
   borderRadius: 999,
   padding: "7px 10px",
-  fontSize: 12,
+  fontSize: 13,
   cursor: "pointer",
 };
 const permissionOffButtonStyle: CSSProperties = {
@@ -2107,7 +2108,7 @@ const permissionOffButtonStyle: CSSProperties = {
   color: "var(--lf-text)",
   borderRadius: 999,
   padding: "7px 10px",
-  fontSize: 12,
+  fontSize: 13,
   cursor: "pointer",
 };
 const dangerBtnStyle: CSSProperties = {
@@ -2166,12 +2167,12 @@ const planLimitCtaStyle: CSSProperties = {
   color: "var(--lf-status-rejected-text)",
   borderRadius: 999,
   padding: "7px 10px",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 700,
   cursor: "pointer",
   display: "inline-flex",
   alignItems: "center",
   gap: 8,
 };
-const thStyle: CSSProperties = { padding: "8px 6px", fontSize: 12, color: "var(--lf-text-secondary)", fontWeight: 600 };
+const thStyle: CSSProperties = { padding: "8px 6px", fontSize: 13, color: "var(--lf-text-secondary)", fontWeight: 600 };
 const tdStyle: CSSProperties = { padding: "10px 6px", verticalAlign: "top" };

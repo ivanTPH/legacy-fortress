@@ -292,7 +292,7 @@ const consoleHeaderStyle: CSSProperties = {
 
 const eyebrowStyle: CSSProperties = {
   color: "var(--lf-text-soft)",
-  fontSize: 11,
+  fontSize: 13,
   fontWeight: 900,
   textTransform: "uppercase",
 };
@@ -327,7 +327,7 @@ const summaryPillStyle: CSSProperties = {
   background: "#fbf7f2",
   color: "#6b5a4c",
   padding: "6px 9px",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 850,
 };
 
@@ -382,7 +382,7 @@ const rowActionsStyle: CSSProperties = {
 
 const openPersonStyle: CSSProperties = {
   color: "var(--lf-bronze)",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 850,
   textDecoration: "none",
 };
@@ -422,7 +422,7 @@ const fieldStyle: CSSProperties = {
   display: "grid",
   gap: 5,
   color: "var(--lf-text-soft)",
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 850,
 };
 
