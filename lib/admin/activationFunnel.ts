@@ -51,19 +51,23 @@ export async function loadActivationFunnel(client: SupabaseClient, users: Array<
   const since = new Date(now.getTime() - 12 * WEEK).toISOString();
   const ids = users.filter((user) => user.created_at && user.created_at >= since).map((user) => user.id);
   const setUp = new Set<string>(), withRecord = new Set<string>(), invited = new Set<string>(), premium = new Set<string>();
-  for (let start = 0; start < ids.length; start += 300) {
-    const chunk = ids.slice(start, start + 300);
-    const [onboarding, assets, records, invitations, billing] = await Promise.all([
-      client.from("user_onboarding_state").select("user_id").in("user_id", chunk).eq("is_completed", true),
-      client.from("assets").select("owner_user_id").in("owner_user_id", chunk).is("deleted_at", null).limit(5000),
-      client.from("records").select("owner_user_id").in("owner_user_id", chunk).limit(5000),
-      client.from("contact_invitations").select("owner_user_id").in("owner_user_id", chunk).limit(5000),
-      client.from("billing_profiles").select("user_id").in("user_id", chunk).eq("account_plan", "premium"),
-    ]);
-    for (const row of (onboarding.data ?? []) as Array<{ user_id: string }>) setUp.add(row.user_id);
-    for (const row of [...(assets.data ?? []), ...(records.data ?? [])] as Array<{ owner_user_id: string }>) withRecord.add(row.owner_user_id);
-    for (const row of (invitations.data ?? []) as Array<{ owner_user_id: string }>) invited.add(row.owner_user_id);
-    for (const row of (billing.data ?? []) as Array<{ user_id: string }>) premium.add(row.user_id);
+  const chunks: string[][] = [];
+  for (let start = 0; start < ids.length; start += 150) chunks.push(ids.slice(start, start + 150));
+  // Chunks run side by side (a few at a time) so a large TEST project still answers quickly.
+  for (let start = 0; start < chunks.length; start += 4) {
+    await Promise.all(chunks.slice(start, start + 4).map(async (chunk) => {
+      const [onboarding, assets, records, invitations, billing] = await Promise.all([
+        client.from("user_onboarding_state").select("user_id").in("user_id", chunk).eq("is_completed", true),
+        client.from("assets").select("owner_user_id").in("owner_user_id", chunk).is("deleted_at", null).limit(5000),
+        client.from("records").select("owner_user_id").in("owner_user_id", chunk).limit(5000),
+        client.from("contact_invitations").select("owner_user_id").in("owner_user_id", chunk).limit(5000),
+        client.from("billing_profiles").select("user_id").in("user_id", chunk).eq("account_plan", "premium"),
+      ]);
+      for (const row of (onboarding.data ?? []) as Array<{ user_id: string }>) setUp.add(row.user_id);
+      for (const row of [...(assets.data ?? []), ...(records.data ?? [])] as Array<{ owner_user_id: string }>) withRecord.add(row.owner_user_id);
+      for (const row of (invitations.data ?? []) as Array<{ owner_user_id: string }>) invited.add(row.owner_user_id);
+      for (const row of (billing.data ?? []) as Array<{ user_id: string }>) premium.add(row.user_id);
+    }));
   }
   return buildFunnel({ users, setUp, withRecord, invited, premium, now });
 }

@@ -87,10 +87,8 @@ export async function loadAdminDashboardSummary(
 ): Promise<AdminDashboardSummary> {
   const generatedAt = new Date().toISOString();
   const allMetrics = await buildAdminDashboardMetrics(client, generatedAt, options.includeTests ?? false);
-  // Activation funnel (UX review 2): counts only, test accounts left out unless asked.
-  const accounts = await loadAccounts(client).catch(() => null);
-  const customers = (accounts?.all ?? []).filter((user) => options.includeTests || !accounts?.testIds.has(user.id));
-  const funnel = accounts ? await loadActivationFunnel(client, customers).catch(() => null) : null;
+  // The activation funnel is loaded on its own (loadAdminFunnel) so it never holds up the Overview.
+  const funnel = null;
   const allowedKeys = new Set(getAdminDashboardMetricKeysForRole(access.adminRole));
   return {
     generatedAt,
@@ -251,4 +249,12 @@ function buildRiskFlagCount(values: Array<number | ReturnType<typeof unavailable
   const availableValues = values.filter((value): value is number => typeof value === "number");
   if (!availableValues.length) return unavailable("No operational alert sources are available yet.");
   return availableValues.filter((value) => value > 0).length;
+}
+
+/** Activation funnel (UX review 2): counts only, test accounts left out unless asked. Fetched after the Overview shows. */
+export async function loadAdminFunnel(client: AnySupabaseClient, options: { includeTests?: boolean } = {}) {
+  const accounts = await loadAccounts(client).catch(() => null);
+  if (!accounts) return null;
+  const customers = accounts.all.filter((user) => options.includeTests || !accounts.testIds.has(user.id));
+  return loadActivationFunnel(client, customers).catch(() => null);
 }
