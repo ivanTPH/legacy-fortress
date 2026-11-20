@@ -1,3 +1,4 @@
+import { isDeliverableAddress } from "../email/deliverable.ts";
 import { DIRECT_ORIGIN, loadAccountOrigins, organisationDisplayName, type AccountOrigin } from "./accountOrigins.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AdminUserRow } from "./access.ts";
@@ -22,6 +23,7 @@ type AuthListUser = {
   email?: string | null;
   created_at?: string | null;
   last_sign_in_at?: string | null;
+  email_confirmed_at?: string | null;
   user_metadata?: { display_name?: string | null; full_name?: string | null } | null;
 };
 
@@ -132,6 +134,8 @@ export type AdminLookupResult = {
 };
 
 export type AdminUserOperationalDetail = AdminLookupResult & {
+  /** For support actions (20 Nov 2026): whether the sign-up email is confirmed, and whether email can be sent. */
+  support: { emailConfirmed: boolean; deliverable: boolean };
   profile: {
     displayName: string | null;
     hasProfile: boolean;
@@ -1012,6 +1016,7 @@ export async function loadUserOperationalDetail(client: AnySupabaseClient, userI
     createdAt: String(user.created_at ?? ""),
     lastSignInAt: String(user.last_sign_in_at ?? ""),
     hasProfile: Boolean(profile?.display_name),
+    support: { emailConfirmed: Boolean(user.email_confirmed_at), deliverable: isDeliverableAddress(String(user.email ?? "")) },
     profile: {
       displayName: profile?.display_name ?? null,
       hasProfile: Boolean(profile?.display_name),
@@ -1083,8 +1088,8 @@ export async function loadUserOperationalDetail(client: AnySupabaseClient, userI
         reason: "Use the canonical Audit history page; the user detail service does not duplicate audit retrieval.",
       },
       {
-        action: "Suspend or restrict account",
-        reason: "No canonical customer account suspension mutation is implemented for Platform Administration yet.",
+        action: "Lock account, change plan or restore records",
+        reason: "Not approved for support staff (owner decision 20 Nov 2026). Use the support actions above for sign-in help.",
       },
       {
         action: "Impersonate user",

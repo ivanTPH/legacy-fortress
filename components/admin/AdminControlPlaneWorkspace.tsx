@@ -16,6 +16,7 @@ import IdentityReviewCompare from "@/components/admin/IdentityReviewCompare";
 import AssignReviewer from "@/components/admin/AssignReviewer";
 import InfoTip from "@/components/ui/InfoTip";
 import Icon from "@/components/ui/Icon";
+import SupportActionsPanel from "@/components/admin/SupportActionsPanel";
 import { filterAdminNavigation, PLATFORM_ADMIN_NAVIGATION } from "@/components/admin/adminNavigation";
 import AdminInbox from "@/components/admin/AdminInbox";
 import { INCLUDE_TESTS_EVENT, readIncludeTests, writeIncludeTests } from "@/lib/admin/includeTestsPreference";
@@ -406,6 +407,7 @@ type LookupUser = {
 };
 
 type UserOperationalDetail = LookupUser & {
+  support?: { emailConfirmed: boolean; deliverable: boolean };
   profile: {
     displayName: string | null;
     hasProfile: boolean;
@@ -1220,7 +1222,7 @@ export default function AdminControlPlaneWorkspace({
         {section === "licences" ? renderPlatformLicences(enterpriseViews) : null}
         {section === "licence-detail" ? renderPlatformLicenceDetail(resourceId, enterprisePortfolio) : null}
         {section === "admin-users" || section === "admin-user-detail" ? renderAdminUsers(admins, adminInvitations, adminFilter, setAdminFilter, adminInviteForm, setAdminInviteForm, sendAdminInvitation, adminInviteOpen, setAdminInviteOpen, adminLifecycleForm, setAdminLifecycleForm, runAdminLifecycle, runAdminInvitationLifecycle, (input, onConfirm) => requestConfirmation(input, onConfirm), resourceId, adminLifecycleActionLoading) : null}
-        {section === "users" || section === "user-detail" ? renderUsers(lookupQuery, setLookupQuery, lookupResults, (query) => runLookup(query ?? lookupQuery), resourceId, userDetail, userDetailLoading, showingNewest, newThisWeek, includeTestAccounts, setIncludeTestAccounts, lookupLoading) : null}
+        {section === "users" || section === "user-detail" ? renderUsers(lookupQuery, setLookupQuery, lookupResults, (query) => runLookup(query ?? lookupQuery), resourceId, userDetail, userDetailLoading, showingNewest, newThisWeek, includeTestAccounts, setIncludeTestAccounts, lookupLoading, capabilities.includes("support:manage") && capabilities.includes("audit:write") ? authFetch : null) : null}
         {section === "support" || section === "invitations" ? renderSupport(section, support, supportDetail, supportDetailLoading, supportActionLoading, loadSupportInvitationDetail, runSupportInvitationAction, createSupportCase, runSupportCaseAction, addSupportCaseNote, capabilities, enterprisePortfolio, enterpriseInvitationActionLoading, runEnterpriseInvitationAction) : null}
         {section === "verification" || section === "verification-detail" ? renderVerification(verificationQueue, resourceId, capabilities, verificationActionLoading, verificationReviewNote, setVerificationReviewNote, runVerificationAction, loadVerificationAssignees) : null}
         {section === "access" || section === "probate" || section === "probate-detail" ? renderProbate(probateCases, estateOperations, resourceId, capabilities, probateDecisionNotes, setProbateDecisionNotes, probateActionLoading, probateEvidenceLoading, runProbateCaseAction, openProbateEvidence, section === "access" ? "Access and estate cases" : "Probate queue") : null}
@@ -1956,6 +1958,7 @@ function renderUsers(
   includeTests = false,
   setIncludeTests: (value: boolean) => void = () => undefined,
   loading = false,
+  supportFetch: ((input: string, init?: RequestInit) => Promise<Response>) | null = null,
 ) {
   return (
     <div style={stackStyle}>
@@ -1966,7 +1969,7 @@ function renderUsers(
         <button type="submit" className="lf-admin-row-button">Search</button>
         <button type="button" className="lf-admin-row-button" aria-label="Refresh" onClick={() => void runLookup()}><Icon name="refresh" size={18} />&nbsp;Refresh</button>
       </form>
-      {resourceId ? renderUserOperationalDetail(detail, detailLoading, resourceId) : null}
+      {resourceId ? renderUserOperationalDetail(detail, detailLoading, resourceId, supportFetch) : null}
       {showingNewest && !resourceId ? (
         <p className="lf-admin-new-accounts" role="status">
           <strong>Newest accounts first</strong> · {newThisWeek === null ? "" : `${newThisWeek} new in the last 7 days${includeTests ? "" : " (test accounts hidden)"}`}
@@ -1997,7 +2000,7 @@ function renderUsers(
   );
 }
 
-function renderUserOperationalDetail(detail: UserOperationalDetail | null, loading: boolean, userId: string) {
+function renderUserOperationalDetail(detail: UserOperationalDetail | null, loading: boolean, userId: string, supportFetch: ((input: string, init?: RequestInit) => Promise<Response>) | null = null) {
   if (loading) return <section className="lf-admin-table-card lf-admin-form-card" aria-live="polite"><h2>Loading customer</h2><p className="lf-admin-muted">Getting account details…</p></section>;
   if (!detail) return <AdminEmptyState icon="person_search" title="Customer not found">No account details are available for <code>{userId.slice(0, 8)}</code>. Search again, or check the account exists.</AdminEmptyState>;
   return (
@@ -2013,6 +2016,7 @@ function renderUserOperationalDetail(detail: UserOperationalDetail | null, loadi
       {/* Privacy-bounded account summary: Secure notes, document contents, storage paths and recovery data are not exposed. */}
       <AdminNote icon="shield_lock">Select a count to see details. Record names, values, documents, notes, recovery details and the names of the people a customer adds are never shown in admin.</AdminNote>
       <AdminAccountSummary detail={detail} />
+      {supportFetch && detail.support ? <SupportActionsPanel key={detail.userId} userId={detail.userId} emailConfirmed={detail.support.emailConfirmed} deliverable={detail.support.deliverable} authFetch={supportFetch} /> : null}
       <div className="lf-admin-detail-pair">
           <section className="lf-admin-table-card lf-admin-form-card" aria-label="Organisation context">
             <h2>Organisation</h2>
