@@ -1,8 +1,8 @@
 {
-  "approvedBy": "Ivan (owner), 19 Nov 2026: Recently deleted (30-day restore bin for records)",
+  "approvedBy": "Ivan (owner), 20 Nov 2026 15:05: Approved (support action: sign out on every device)",
   "mode": "apply",
-  "attempt": 28,
+  "attempt": 29,
   "files": [
-    { "file": "20261118210000_recently_deleted.sql", "sha256": "e632207c3470021bedaa8717347769bf76a925039871b8c1d40e603fdedfaa43" }
+    { "file": "20261120150000_admin_sign_out_everywhere.sql", "sha256": "7217141d8e1ef360532841c41e5df97b7a683b69d94f9f50d765d00a903c4aff" }
   ]
 }
