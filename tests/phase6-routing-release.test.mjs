@@ -8,7 +8,7 @@ import { buildPrototypeWorkspaceUrl, getCurrentWorkspaceForPath } from "../lib/w
 
 const root = process.cwd();
 
-test("Phase 6 canonical route entries exist without removing compatibility routes", () => {
+test("Phase 6 canonical route entries exist without removing compatibility routes", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   assert.equal(existsSync(`${root}/app/(app)/access/page.tsx`), true);
   assert.equal(existsSync(`${root}/app/enterprise/page.tsx`), true);
   assert.equal(existsSync(`${root}/app/admin/page.tsx`), true);

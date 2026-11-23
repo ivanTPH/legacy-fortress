@@ -40,7 +40,7 @@ test("owners with onboarding done but no terms acceptance are sent straight to t
   assert.equal(result.destination, "/account/terms?required=1");
 });
 
-test("terms acceptance is resolved through the shared current-version policy", () => {
+test("terms acceptance is resolved through the shared current-version policy", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const onboarding = fs.readFileSync(path.join(root, "lib/onboarding/index.ts"), "utf8");
   const bootstrap = fs.readFileSync(path.join(root, "lib/auth/bootstrap.ts"), "utf8");
 

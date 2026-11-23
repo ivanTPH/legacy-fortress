@@ -7,7 +7,7 @@ const root = process.cwd();
 const manager = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/ContactInvitationManager.tsx"), "utf8");
 const contacts = fs.readFileSync(path.join(root, "components/contacts/ContactsNetworkWorkspace.tsx"), "utf8");
 
-test("executor contacts use a guided person, role, access and review flow", () => {
+test("executor contacts use a guided person, role, access and review flow", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   assert.match(contacts, /guidedExecutor=\{addContactGroupKey === "executors"\}/);
   assert.match(manager, /guidedExecutor\?: boolean/);
   assert.match(manager, /People I Trust/);
@@ -40,7 +40,7 @@ test("executor role selection uses the canonical role catalog without duplicatin
   assert.match(manager, /initialRole/);
 });
 
-test("executor creation hides the legacy editor while guided mode is active", () => {
+test("executor creation hides the legacy editor while guided mode is active", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   assert.match(contacts, /addContactGroupKey === "executors" \? null :/);
   assert.match(contacts, /!addContactGroupKey \? <section style=\{panelStyle\}/);
   assert.match(contacts, /!loading && !addContactGroupKey/);

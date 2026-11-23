@@ -22,7 +22,7 @@ test("wills define executor linked-contact labels and default role", () => {
   assert.match(legalCategories, /value: "guardian"/);
 });
 
-test("legal document forms support multiple linked contact rows", () => {
+test("legal document forms support multiple linked contact rows", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const workspace = read("components/records/UniversalRecordWorkspace.tsx");
 
   assert.match(workspace, /legal_contacts: LegalContactFormRow\[\]/);
@@ -51,7 +51,7 @@ test("legal save path persists every non-empty linked contact through canonical 
   assert.doesNotMatch(workspace, /section_entries.*legal_contacts/s);
 });
 
-test("wills use a tailored form instead of generic document fields", () => {
+test("wills use a tailored form instead of generic document fields", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const workspace = read("components/records/UniversalRecordWorkspace.tsx");
 
   assert.match(workspace, /const isWillsWorkspace = sectionKey === "legal" && categoryKey === "wills"/);

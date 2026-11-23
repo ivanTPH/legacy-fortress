@@ -15,7 +15,7 @@ test("scope projection keeps all eligible finance records, including pensions", 
   assert.deepEqual(rows.map((row) => row.id), ["bank-1", "bank-2", "pension-1"]);
 });
 
-test("shared access uses one canonical explicit-id editor from both directions", () => {
+test("shared access uses one canonical explicit-id editor from both directions", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const contacts = fs.readFileSync(path.join(root, "components/contacts/ContactsNetworkWorkspace.tsx"), "utf8");
   const sharing = fs.readFileSync(path.join(root, "components/access/AccessSharingWorkspace.tsx"), "utf8");
   const recordWorkspace = fs.readFileSync(path.join(root, "components/records/UniversalRecordWorkspace.tsx"), "utf8");

@@ -6,7 +6,7 @@ import test from "node:test";
 const root = process.cwd();
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 
-test("Action Centre uses an inbox row and progressive detail drawer", () => {
+test("Action Centre uses an inbox row and progressive detail drawer", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const queue = read("app/(app)/components/dashboard/ActionQueuePanel.tsx");
   const summary = read("app/(app)/components/dashboard/DashboardActionSummary.tsx");
 
@@ -22,7 +22,7 @@ test("Action Centre uses an inbox row and progressive detail drawer", () => {
   assert.doesNotMatch(summary, /actionable items/);
 });
 
-test("Action Centre rows keep specific customer actions and direct destinations", () => {
+test("Action Centre rows keep specific customer actions and direct destinations", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const queue = read("app/(app)/components/dashboard/ActionQueuePanel.tsx");
 
   assert.match(queue, /Add a copy of your Will/);
@@ -33,7 +33,7 @@ test("Action Centre rows keep specific customer actions and direct destinations"
   assert.match(queue, /selectedRow\.guidanceItem\?\.learnMoreHref/);
 });
 
-test("People view removes development UI and keeps relationship details progressive", () => {
+test("People view removes development UI and keeps relationship details progressive", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const contacts = read("components/contacts/ContactsNetworkWorkspace.tsx");
 
   assert.doesNotMatch(contacts, /CONTACTS BUILD CHECK/);

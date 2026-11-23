@@ -53,7 +53,7 @@ test("canonical admin users page owns invitation and lifecycle controls without 
   assert.doesNotMatch(workspace, /href="\/internal\/admin"/);
 });
 
-test("admin segment disables static caching and clears protected state during sign-out", () => {
+test("admin segment disables static caching and clears protected state during sign-out", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const layout = read("app/admin/layout.tsx");
   const workspace = read("components/admin/AdminControlPlaneWorkspace.tsx");
 

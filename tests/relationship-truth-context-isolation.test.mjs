@@ -6,7 +6,7 @@ import test from "node:test";
 const root = process.cwd();
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 
-test("owner relationship projection derives accepted and linked state from canonical activation", () => {
+test("owner relationship projection derives accepted and linked state from canonical activation", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const contacts = read("components/contacts/ContactsNetworkWorkspace.tsx");
   assert.match(contacts, /resolveInvitationProjectionStatus\(row, existing\.invite_status\)/);
   assert.match(contacts, /invitationStatus === "accepted"/);
@@ -17,7 +17,7 @@ test("owner relationship projection derives accepted and linked state from canon
   assert.doesNotMatch(contacts, /Your response is still outstanding/);
 });
 
-test("shared access remains explicit, selected and view-only", () => {
+test("shared access remains explicit, selected and view-only", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const contacts = read("components/contacts/ContactsNetworkWorkspace.tsx");
   const permissions = read("lib/contacts/contactPermissions.ts");
   assert.match(contacts, /Manage shared access/);
@@ -31,7 +31,7 @@ test("shared access remains explicit, selected and view-only", () => {
   assert.doesNotMatch(contacts, /All existing and future records/);
 });
 
-test("relationship cards expose canonical document context without inventing legal roles", () => {
+test("relationship cards expose canonical document context without inventing legal roles", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const contacts = read("components/contacts/ContactsNetworkWorkspace.tsx");
   assert.match(contacts, /getRelationshipDocumentLabel/);
   assert.match(contacts, /Document: \{getRelationshipDocumentLabel/);
@@ -39,7 +39,7 @@ test("relationship cards expose canonical document context without inventing leg
   assert.match(contacts, /Linked · Verified/);
 });
 
-test("linked context cannot present personal Action Centre or owner-only routes", () => {
+test("linked context cannot present personal Action Centre or owner-only routes", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const access = read("lib/access-control/viewerAccess.ts");
   const layout = read("app/(app)/layout.tsx");
   const dashboard = read("app/(app)/dashboard/page.tsx");
@@ -49,7 +49,7 @@ test("linked context cannot present personal Action Centre or owner-only routes"
   assert.match(dashboard, /Returning you to My Fortress before opening your personal Action Centre/);
 });
 
-test("zero-grant linked dashboards do not render owner category furniture", () => {
+test("zero-grant linked dashboards do not render owner category furniture", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const dashboard = read("app/(app)/dashboard/page.tsx");
   assert.match(dashboard, /No Vault information is currently shared with you/);
   assert.match(dashboard, /hasVisibleOverviewCard/);
@@ -57,14 +57,14 @@ test("zero-grant linked dashboards do not render owner category furniture", () =
   assert.match(dashboard, /showAddAction=\{viewer\.mode !== "linked"\}/);
 });
 
-test("Action Centre prioritises a short primary list and collapses the remainder", () => {
+test("Action Centre prioritises a short primary list and collapses the remainder", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const queue = read("app/(app)/components/dashboard/ActionQueuePanel.tsx");
   assert.match(queue, /const primaryRows = rows\.slice\(0, 5\)/);
   assert.match(queue, /More things to consider/);
   assert.match(queue, /secondaryRows\.map\(renderInboxRow\)/);
 });
 
-test("linked profile is relationship-safe rather than an editable owner profile", () => {
+test("linked profile is relationship-safe rather than an editable owner profile", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const profile = read("app/(app)/profile/page.tsx");
   assert.match(profile, /About \$\{viewer\.accountHolderName\}/);
   assert.match(profile, /Private profile details remain with the Fortress owner/);

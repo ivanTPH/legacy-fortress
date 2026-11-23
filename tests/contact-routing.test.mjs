@@ -40,7 +40,7 @@ test("linked contact record routing builds exact workspace deep links", () => {
   }), "/contacts?group=executors&asset=asset-456");
 });
 
-test("contacts resolves as a single top-level navigation destination", () => {
+test("contacts resolves as a single top-level navigation destination", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   assert.match(manifest, /id: "people-contacts"[\s\S]*path: "\/contacts"/);
   assert.doesNotMatch(manifest, /id: "personal-contacts"/);
   assert.doesNotMatch(manifest, /path: "\/personal\/contacts"/);

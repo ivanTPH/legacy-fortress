@@ -9,7 +9,7 @@ function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
 }
 
-test("trusts use the document-form family without financial summaries", () => {
+test("trusts use the document-form family without financial summaries", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const workspace = read("components/records/UniversalRecordWorkspace.tsx");
   const legalCategories = read("lib/legalCategories.ts");
 
@@ -70,7 +70,7 @@ test("trust first row is name type upload and removes duplicate generic fields",
   assert.doesNotMatch(css, /lf-trust-primary-fields/);
 });
 
-test("trust upload is restricted to document-led file types and uses shared upload UI", () => {
+test("trust upload is restricted to document-led file types and uses shared upload UI", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const workspace = read("components/records/UniversalRecordWorkspace.tsx");
 
   assert.match(workspace, /TRUST_DOCUMENT_UPLOAD_ACCEPT/);

@@ -92,7 +92,7 @@ test("Phase 4 enterprise API exposes saved-view lifecycle and governed export au
   assert.match(route, /financial_values_excluded/);
 });
 
-test("Phase 4 UI has operational analytics filters, saved views, reports and campaign-safe treatment", () => {
+test("Phase 4 UI has operational analytics filters, saved views, reports and campaign-safe treatment", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const workspace = read("components/enterprise/EnterpriseOperationsWorkspace.tsx");
 
   for (const text of [

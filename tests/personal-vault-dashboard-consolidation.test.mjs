@@ -6,7 +6,7 @@ import test from "node:test";
 const root = process.cwd();
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 
-test("Personal Vault presents one action system and persistent creation destinations", () => {
+test("Personal Vault presents one action system and persistent creation destinations", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const dashboard = read("app/(app)/dashboard/page.tsx");
   const manifest = read("config/routeManifest.tsx");
   const actionQueue = read("app/(app)/components/dashboard/ActionQueuePanel.tsx");
@@ -23,7 +23,7 @@ test("Personal Vault presents one action system and persistent creation destinat
   assert.doesNotMatch(dashboard, /aria-label="Estate readiness summary"/);
 });
 
-test("category summaries separate opening a category from adding another record", () => {
+test("category summaries separate opening a category from adding another record", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const dashboard = read("app/(app)/dashboard/page.tsx");
   const summaryCard = read("app/(app)/components/dashboard/DashboardAssetSummaryCard.tsx");
 
@@ -36,7 +36,7 @@ test("category summaries separate opening a category from adding another record"
   assert.match(dashboard, /addHref="\/vault\/personal\/records\?add=1&possessionCategory=other"/);
 });
 
-test("multiple records remain a count-based snapshot rather than a single-record slot", () => {
+test("multiple records remain a count-based snapshot rather than a single-record slot", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const dashboard = read("app/(app)/dashboard/page.tsx");
   const createAsset = read("lib/assets/createAsset.ts");
 

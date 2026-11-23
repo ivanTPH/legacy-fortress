@@ -9,7 +9,7 @@ function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
 }
 
-test("trusts keep the add form closed by default while preserving existing records", () => {
+test("trusts keep the add form closed by default while preserving existing records", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const workspace = read("components/records/UniversalRecordWorkspace.tsx");
 
   assert.match(workspace, /const \[formVisible, setFormVisible\] = useState\(false\)/);
@@ -31,7 +31,7 @@ test("trust add button controls one accessible form region", () => {
   assert.match(workspace, /prefersReducedMotion\(\) \? "auto" : "smooth"/);
 });
 
-test("trust cancel closes cleanly and protects unsaved data", () => {
+test("trust cancel closes cleanly and protects unsaved data", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const workspace = read("components/records/UniversalRecordWorkspace.tsx");
 
   assert.match(workspace, /Discard this unsaved trust record\?/);

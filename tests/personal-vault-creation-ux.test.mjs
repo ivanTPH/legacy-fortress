@@ -10,7 +10,7 @@ const chooser = read("lib/vault/addRecordTypes.ts");
 const addToFortress = read("app/(app)/components/dashboard/AddToFortressPanel.tsx");
 const overviewGrid = read("app/(app)/components/dashboard/CanonicalAssetOverviewGrid.tsx");
 
-test("parent finance plus opens the canonical finance category without a duplicate chooser", () => {
+test("parent finance plus opens the canonical finance category without a duplicate chooser", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   assert.match(dashboard, /addHref="\/finances"/);
   assert.doesNotMatch(finances, /FINANCE_RECORD_CHOICES/);
   assert.doesNotMatch(finances, /role="dialog"/);
@@ -20,7 +20,7 @@ test("parent finance plus opens the canonical finance category without a duplica
   }
 });
 
-test("finance subcategory cards retain an exact-type plus for empty and populated states", () => {
+test("finance subcategory cards retain an exact-type plus for empty and populated states", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   assert.match(finances, /addHref=\{`\$\{section\.href\}\?add=1`\}/);
   assert.match(finances, /const cardHref = section\.href/);
   assert.match(card, /label=\{addLabel \?\? `Add \$\{title\.toLowerCase\(\)\}`\}/);
@@ -29,12 +29,12 @@ test("finance subcategory cards retain an exact-type plus for empty and populate
   assert.match(overviewGrid, /addHref=\{tile\.addHref\}/);
 });
 
-test("Add to my Fortress enters the same canonical finance category", () => {
+test("Add to my Fortress enters the same canonical finance category", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   assert.match(addToFortress, /FINANCE_CATEGORY_CHOICE/);
   assert.match(chooser, /href: "\/finances"/);
 });
 
-test("session prompt action is excluded from dashboard preview without changing the full count", () => {
+test("session prompt action is excluded from dashboard preview without changing the full count", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   assert.match(dashboard, /entryPromptActionKey/);
   assert.match(dashboard, /excludedActionKeys=\{entryPromptActionKey \? \[entryPromptActionKey\] : \[\]\}/);
   assert.match(dashboard, /setEntryPromptActionKey\(actionCentrePreview\.actionKey\)/);

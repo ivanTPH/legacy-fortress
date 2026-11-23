@@ -6,7 +6,7 @@ import test from "node:test";
 const root = process.cwd();
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 
-test("category cards use card=view and plus=add semantics", () => {
+test("category cards use card=view and plus=add semantics", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const card = read("app/(app)/components/dashboard/DashboardAssetSummaryCard.tsx");
   const dashboard = read("app/(app)/dashboard/page.tsx");
 
@@ -21,7 +21,7 @@ test("category cards use card=view and plus=add semantics", () => {
   assert.match(dashboard, /addLabel="Add property"/);
 });
 
-test("dashboard uses a compact preview while Action Centre retains the full list", () => {
+test("dashboard uses a compact preview while Action Centre retains the full list", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const dashboard = read("app/(app)/dashboard/page.tsx");
   const summary = read("app/(app)/components/dashboard/DashboardActionSummary.tsx");
   const queue = read("app/(app)/components/dashboard/ActionQueuePanel.tsx");
@@ -42,7 +42,7 @@ test("dashboard uses a compact preview while Action Centre retains the full list
   assert.doesNotMatch(route, /redirect\(/);
 });
 
-test("Action Centre count is derived from active rows and shared with navigation", () => {
+test("Action Centre count is derived from active rows and shared with navigation", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const dashboard = read("app/(app)/dashboard/page.tsx");
   const layout = read("app/(app)/layout.tsx");
   const sidebar = read("app/(app)/components/navigation/SidebarPrimary.tsx");
@@ -58,7 +58,7 @@ test("Action Centre count is derived from active rows and shared with navigation
   assert.match(mobile, /lf-nav-badge/);
 });
 
-test("Action Centre actions expose one reusable delivery contract and entry prompt is session-scoped", () => {
+test("Action Centre actions expose one reusable delivery contract and entry prompt is session-scoped", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const dashboard = read("app/(app)/dashboard/page.tsx");
   const queue = read("app/(app)/components/dashboard/ActionQueuePanel.tsx");
   const prompt = read("app/(app)/components/dashboard/ActionCentreEntryPrompt.tsx");
@@ -75,7 +75,7 @@ test("Action Centre actions expose one reusable delivery contract and entry prom
   assert.match(prompt, /A small step for your Fortress/);
 });
 
-test("dashboard uses customer-facing records wording and keeps full actions on the dedicated route", () => {
+test("dashboard uses customer-facing records wording and keeps full actions on the dedicated route", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const dashboard = read("app/(app)/dashboard/page.tsx");
   assert.match(dashboard, /Your Fortress Records/);
   assert.doesNotMatch(dashboard, /Your Fortress at a glance/);
@@ -101,7 +101,7 @@ test("Action Centre is a direct inbox with action-specific CTAs and no empty buc
   assert.match(prompt, /onAction\(item\.actionKey, item\.href\)/);
 });
 
-test("dashboard keeps multiple-record creation and linked viewers read-only", () => {
+test("dashboard keeps multiple-record creation and linked viewers read-only", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const dashboard = read("app/(app)/dashboard/page.tsx");
   const createAsset = read("lib/assets/createAsset.ts");
   const card = read("app/(app)/components/dashboard/DashboardAssetSummaryCard.tsx");

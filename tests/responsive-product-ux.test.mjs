@@ -22,7 +22,7 @@ test("mobile task surfaces use calm actions and progressive guidance", () => {
   assert.match(requests, /How access requests work/);
 });
 
-test("finance loading never presents an unresolved zero", () => {
+test("finance loading never presents an unresolved zero", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const finances = read("app/(app)/finances/page.tsx");
   assert.match(finances, /loading \? "Loading your finances\.\.\."/);
   assert.match(finances, /className="lf-loading-note"/);

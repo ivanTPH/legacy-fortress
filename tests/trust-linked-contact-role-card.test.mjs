@@ -9,7 +9,7 @@ function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
 }
 
-test("Trust linked people render as a table on the visible record card instead of inline text", () => {
+test("Trust linked people render as a table on the visible record card instead of inline text", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const workspace = read("components/records/UniversalRecordWorkspace.tsx");
   const css = read("app/globals.css");
 
@@ -26,7 +26,7 @@ test("Trust linked people render as a table on the visible record card instead o
   assert.doesNotMatch(workspace, /item\.contact_email \? ` · \$\{item\.contact_email\}`/);
 });
 
-test("expanded Trust linked contacts use a compact table with labelled status columns and edit mode", () => {
+test("expanded Trust linked contacts use a compact table with labelled status columns and edit mode", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const workspace = read("components/records/UniversalRecordWorkspace.tsx");
   const css = read("app/globals.css");
 

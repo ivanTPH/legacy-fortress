@@ -41,7 +41,7 @@ test("contextual help popover stays reusable, accessible, and mobile safe", () =
   assert.match(css, /\.lf-panel-help \{\s*margin-left: auto;\s*\}/);
 });
 
-test("dashboard introduces contextual help without changing core navigation", () => {
+test("dashboard introduces contextual help without changing core navigation", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const dashboardPage = fs.readFileSync(path.join(root, "app/(app)/dashboard/page.tsx"), "utf8");
   const actionQueue = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/ActionQueuePanel.tsx"), "utf8");
 

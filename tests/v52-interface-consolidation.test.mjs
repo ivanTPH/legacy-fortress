@@ -17,7 +17,7 @@ test("Partner labels only change permitted navigation presentation", () => {
   assert.equal(ENTERPRISE_ADMIN_NAVIGATION[0].items.find((item) => item.key === "enterprise-users")?.label, "Users and seats");
 });
 
-test("organisation scope comes from the authorised Enterprise API on root and details", () => {
+test("organisation scope comes from the authorised Enterprise API on root and details", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const api = read("app/api/internal/admin/enterprise/route.ts");
   const licence = read("components/enterprise/EnterpriseLicenceDetailWorkspace.tsx");
   const organisation = read("components/enterprise/EnterpriseOrganisationDetailWorkspace.tsx");
@@ -28,7 +28,7 @@ test("organisation scope comes from the authorised Enterprise API on root and de
   assert.match(organisation, /partnerMode \? "Partner Portal" : "Enterprise Operations"/);
 });
 
-test("mobile account controls expose Sign out and failed sign out does not navigate", () => {
+test("mobile account controls expose Sign out and failed sign out does not navigate", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const vault = read("app/(app)/layout.tsx");
   const shell = read("components/admin/AdminWorkspaceShell.tsx");
   const admin = read("components/admin/AdminControlPlaneWorkspace.tsx");

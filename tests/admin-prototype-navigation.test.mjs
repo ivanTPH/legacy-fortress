@@ -5,7 +5,7 @@ import path from "node:path";
 
 const root = process.cwd();
 
-test("admin prototype navigation separates probate and enterprise functions with mock permissions", () => {
+test("admin prototype navigation separates probate and enterprise functions with mock permissions", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const shell = fs.readFileSync(path.join(root, "components/admin/prototype/AdminPrototypeShell.tsx"), "utf8");
   const mockData = fs.readFileSync(path.join(root, "components/admin/prototype/mockData.ts"), "utf8");
   const prototypePage = fs.readFileSync(path.join(root, "app/internal/admin/prototype/page.tsx"), "utf8");

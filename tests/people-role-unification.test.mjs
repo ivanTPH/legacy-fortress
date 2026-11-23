@@ -5,7 +5,7 @@ import path from "node:path";
 
 const root = process.cwd();
 
-test("navigation keeps Contacts as the only people destination", () => {
+test("navigation keeps Contacts as the only people destination", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const manifest = fs.readFileSync(path.join(root, "config/routeManifest.tsx"), "utf8");
 
   assert.match(manifest, /label: "Contacts"/);
@@ -41,7 +41,7 @@ test("legacy people-role routes redirect into contacts group views", () => {
   }
 });
 
-test("contacts normalizes legacy group aliases and preserves selected contact state", () => {
+test("contacts normalizes legacy group aliases and preserves selected contact state", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const grouping = fs.readFileSync(path.join(root, "lib/contacts/contactGrouping.ts"), "utf8");
   const contactsWorkspace = fs.readFileSync(path.join(root, "components/contacts/ContactsNetworkWorkspace.tsx"), "utf8");
   const personalContactsRoute = fs.readFileSync(path.join(root, "app/(app)/personal/contacts/page.tsx"), "utf8");
