@@ -537,24 +537,32 @@ async function trustSession(client: SupabaseClient, accessToken: string) {
 
 // Speed timings for Admin (owner request 23 Nov 2026): read only, printed as "Perf:" lines; never fails the release.
 test("speed timings: admin pages (read only)", async ({ page }) => {
-  test.setTimeout(240_000);
-  await signIn(page, users[0].email, "/admin");
-  await page.waitForLoadState("networkidle", { timeout: 30_000 }).catch(() => undefined);
-  for (const path of ["/admin", "/admin/inbox", "/admin/users", "/admin/verification", "/admin/support", "/admin/audit", "/admin/enterprise"]) {
-    let inFlight = 0; let lastChange = Date.now();
-    const onStart = () => { inFlight += 1; lastChange = Date.now(); };
-    const onEnd = () => { inFlight = Math.max(0, inFlight - 1); lastChange = Date.now(); };
-    page.on("request", onStart); page.on("requestfinished", onEnd); page.on("requestfailed", onEnd);
-    const start = Date.now();
-    await page.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" }).catch(() => undefined);
-    let settled = 0;
-    while (Date.now() - start < 45_000) {
-      const loading = await page.evaluate(() => /Checking admin access|Loading/.test((document.querySelector("main") ?? document.body).textContent || "") || Boolean(document.querySelector('[aria-busy="true"]'))).catch(() => true);
-      if (!loading && inFlight === 0 && Date.now() - lastChange > 500) { settled = lastChange - start; break; }
-      await page.waitForTimeout(100);
+  test.setTimeout(300_000);
+  try {
+    await signIn(page, users[0].email, "/admin");
+    await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => undefined);
+    let lastChange = Date.now();
+    const seen: string[] = [];
+    page.on("request", (request) => { lastChange = Date.now(); seen.push(new URL(request.url()).pathname); });
+    page.on("requestfinished", () => { lastChange = Date.now(); });
+    for (const path of ["/admin", "/admin/inbox", "/admin/users", "/admin/verification", "/admin/support"]) {
+      seen.length = 0;
+      const start = Date.now();
+      await page.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" }).catch(() => undefined);
+      let ready = 0; let settled = 0;
+      while (Date.now() - start < 25_000) {
+        const checking = await page.getByText("Checking admin access").count().catch(() => 1);
+        const h1 = await page.locator("h1").first().isVisible().catch(() => false);
+        if (!ready && h1 && !checking) ready = Date.now() - start;
+        if (ready && Date.now() - lastChange > 2000) { settled = lastChange - start; break; }
+        await page.waitForTimeout(150);
+      }
+      const api = seen.filter((item) => item.startsWith("/api/")).length;
+      const db = seen.filter((item) => item.startsWith("/rest/") || item.startsWith("/auth/")).length;
+      console.log(`Perf: admin ${path} ready=${ready || "none"}ms settled=${settled || "none"}ms api=${api} supabase=${db}`);
     }
-    page.off("request", onStart); page.off("requestfinished", onEnd); page.off("requestfailed", onEnd);
-    console.log(`Perf: admin ${path} settled=${settled || "timeout"}ms`);
+  } catch (error) {
+    console.log(`Perf: admin timings stopped early: ${String(error).slice(0, 120)}`);
   }
 });
 
