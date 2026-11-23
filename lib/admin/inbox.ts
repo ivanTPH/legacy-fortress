@@ -99,7 +99,12 @@ export async function loadAdminInbox(client: AnyClient, options: { days?: number
 
   // Needs you: what's waiting in the review queues (counts; each opens its own page).
   const queues = await Promise.all([
-    count(client.from("verification_requests").select("id", { count: "exact", head: true }).in("request_status", ["pending", "submitted"])),
+    // ID checks waiting for a person (23 Nov 2026): these live in identity_verification_requests. The Inbox used to
+    // count only the older verification_requests table, so a selfie waiting for review never showed here.
+    Promise.all([
+      count(client.from("identity_verification_requests").select("id", { count: "exact", head: true }).eq("status", "review_required")),
+      count(client.from("verification_requests").select("id", { count: "exact", head: true }).in("request_status", ["pending", "submitted"])),
+    ]).then(([current, older]) => current + older),
     count(client.from("legal_authorities").select("id", { count: "exact", head: true }).in("status", ["pending_check", "needs_attention"])),
     count(client.from("probate_cases").select("id", { count: "exact", head: true }).in("status", ["submitted", "needs_information", "under_review"])),
     count(client.from("support_cases").select("id", { count: "exact", head: true }).in("status", ["open", "pending", "escalated"])),

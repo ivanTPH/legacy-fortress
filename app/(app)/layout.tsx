@@ -60,9 +60,6 @@ import {
   loadAccessibilityPreferences,
 } from "../../lib/accessibilityPreferences";
 import {
-  normalizePlatformRole,
-} from "../../lib/auth/platformRoles";
-import {
   getTestPersona,
   isTestPersonaAccessEnabled,
   TEST_PERSONA_QUERY_PARAM,
@@ -202,13 +199,11 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     if (typeof window === "undefined" || !isTestPersonaAccessEnabled()) return;
 
     function refreshPrototypeContext() {
+      // The admin prototype and its ?prototype=true previews were removed (23 Nov 2026); only test personas remain.
       const url = new URL(window.location.href);
-      const queryRole = normalizePlatformRole(url.searchParams.get("role"));
-      const adminFlag = url.searchParams.get("admin") === "true";
-      const prototypeFlag = url.searchParams.get("prototype") === "true";
       const persona = getTestPersona(url.searchParams.get(TEST_PERSONA_QUERY_PARAM))
         ?? getTestPersona(window.localStorage.getItem(TEST_PERSONA_STORAGE_KEY));
-      setPrototypePreviewMode(Boolean(persona || (queryRole && adminFlag && prototypeFlag)));
+      setPrototypePreviewMode(Boolean(persona));
     }
 
     refreshPrototypeContext();

@@ -92,7 +92,7 @@ export const TEST_PERSONAS: TestPersona[] = [
     capabilities: ["Enterprise dashboard", "Organisation portfolio summaries", "Consent-restricted reporting"],
     restrictedAreas: ["Probate operations", "Unrestricted exports", "Campaign sending"],
     dashboardState: ["Enterprise prototype routes available", "Campaign actions disabled", "Client values shown as bands"],
-    previewHref: buildPrototypePreviewHref("/internal/admin/prototype/enterprise", "enterprise_admin"),
+    previewHref: "/enterprise",
     roles: ["enterprise_admin"],
   },
   {
@@ -104,7 +104,7 @@ export const TEST_PERSONAS: TestPersona[] = [
     capabilities: ["Enterprise dashboard", "Licences", "Reports", "Campaign shell"],
     restrictedAreas: ["Probate case operations unless separately granted", "Live payment actions", "Client exports"],
     dashboardState: ["Licensing navigation visible", "Static enterprise mock data", "Disabled campaign and export actions"],
-    previewHref: buildPrototypePreviewHref("/internal/admin/prototype/enterprise", "licensing_admin"),
+    previewHref: "/admin/licences",
     roles: ["licensing_admin"],
   },
   {
@@ -116,7 +116,7 @@ export const TEST_PERSONAS: TestPersona[] = [
     capabilities: ["Cases", "Verifications", "Users", "Access", "Audit"],
     restrictedAreas: ["Enterprise dashboard", "Licences", "Reports", "Campaigns"],
     dashboardState: ["Probate navigation visible", "Enterprise routes show restricted state", "No real operations enabled"],
-    previewHref: buildPrototypePreviewHref("/internal/admin/prototype/cases", "probate_admin"),
+    previewHref: "/admin/probate",
     roles: ["probate_admin"],
   },
   {
@@ -128,19 +128,11 @@ export const TEST_PERSONAS: TestPersona[] = [
     capabilities: ["Probate operations", "Enterprise dashboard", "Licences", "Reports", "Campaign shell"],
     restrictedAreas: ["Real backend actions", "Live exports", "Production auth bypasses"],
     dashboardState: ["Both prototype navigation groups visible", "Access gates still labelled", "Static mock data only"],
-    previewHref: buildPrototypePreviewHref("/internal/admin/prototype/enterprise", "super_admin"),
+    previewHref: "/admin",
     roles: ["super_admin"],
   },
 ];
 
-export function buildPrototypePreviewHref(pathname: string, role: string) {
-  const params = new URLSearchParams({
-    role,
-    admin: "true",
-    prototype: "true",
-  });
-  return `${pathname}?${params.toString()}`;
-}
 
 export function getTestPersona(id: string | null | undefined) {
   if (!id) return null;

@@ -71,3 +71,8 @@ test("Admin Inbox read state follows the admin (own inbox_reads rows) and stays 
   assert.match(admin, /SERVER_PREFIX = "admin-inbox:"/);
   assert.match(vault, /\.not\("item_key", "like", "admin-inbox:%"\)/);
 });
+
+test("Admin Inbox counts ID checks waiting for review in the current table (23 Nov 2026)", () => {
+  const inbox = readFileSync(new URL("../lib/admin/inbox.ts", import.meta.url), "utf8");
+  assert.match(inbox, /from\("identity_verification_requests"\)\.select\("id", \{ count: "exact", head: true \}\)\.eq\("status", "review_required"\)/);
+});

@@ -87,7 +87,6 @@ test("customer switcher never offers platform or partner destinations", () => {
 });
 
 test("workspace switcher is present in admin shell, application shell, sign-in, and test launcher", () => {
-  const adminShell = fs.readFileSync(path.join(root, "components/admin/prototype/AdminPrototypeShell.tsx"), "utf8");
   const appLayout = fs.readFileSync(path.join(root, "app/(app)/layout.tsx"), "utf8");
   const authEntry = fs.readFileSync(path.join(root, "components/auth/PublicAuthEntry.tsx"), "utf8");
   const signInForm = fs.readFileSync(path.join(root, "components/auth/SignInForm.tsx"), "utf8");
@@ -96,10 +95,6 @@ test("workspace switcher is present in admin shell, application shell, sign-in, 
   const switcher = fs.readFileSync(path.join(root, "components/navigation/WorkspaceSwitcher.tsx"), "utf8");
   const globals = fs.readFileSync(path.join(root, "app/globals.css"), "utf8");
 
-  assert.match(adminShell, /WorkspaceSwitcher/);
-  assert.doesNotMatch(adminShell, /buildPrototypeWorkspaceUrl\("application"/);
-  assert.match(adminShell, /canRoleAccessPath\(userRoles, pathname\)/);
-  assert.match(adminShell, /getMasterAdminRolesForEmail\(user\.email\)/);
   assert.match(appLayout, /WorkspaceSwitcher/);
   assert.match(appLayout, /alwaysShow/);
   assert.match(appLayout, /Mobile header · role-aware workspace switch/);
