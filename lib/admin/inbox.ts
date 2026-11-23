@@ -106,14 +106,18 @@ export async function loadAdminInbox(client: AnyClient, options: { days?: number
       count(client.from("verification_requests").select("id", { count: "exact", head: true }).in("request_status", ["pending", "submitted"])),
     ]).then(([current, older]) => current + older),
     count(client.from("legal_authorities").select("id", { count: "exact", head: true }).in("status", ["pending_check", "needs_attention"])),
-    count(client.from("probate_cases").select("id", { count: "exact", head: true }).in("status", ["submitted", "needs_information", "under_review"])),
+    // Death reports waiting for review count here too (23 Nov 2026).
+    Promise.all([
+      count(client.from("probate_cases").select("id", { count: "exact", head: true }).in("status", ["submitted", "needs_information", "under_review"])),
+      count(client.from("death_reports").select("id", { count: "exact", head: true }).eq("status", "submitted")),
+    ]).then(([cases, reports]) => cases + reports),
     count(client.from("support_cases").select("id", { count: "exact", head: true }).in("status", ["open", "pending", "escalated"])),
   ]);
   const stamp = new Date(now).toISOString();
   const needs: Array<[number, string, string, string, string]> = [
     [queues[0], "verification", "person waiting for a verification review", "people waiting for a verification review", "/admin/verification"],
     [queues[1], "authorities", "Power of Attorney waiting for a check", "Powers of Attorney waiting for a check", "/admin/authorities"],
-    [queues[2], "probate", "probate case waiting for review", "probate cases waiting for review", "/admin/probate"],
+    [queues[2], "probate", "death report or estate case waiting for review", "death reports or estate cases waiting for review", "/admin/probate"],
     [queues[3], "support", "open support request", "open support requests", "/admin/support"],
   ];
   for (const [n, key, one, many, href] of needs) {

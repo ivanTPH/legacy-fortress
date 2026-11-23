@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { alertStaff } from "../admin/staffAlerts.ts";
 import { InternalExperimentalIdentityProvider, INTERNAL_EXPERIMENTAL_PROVIDER_KEY } from "./internalExperimentalProvider.ts";
 import { InhouseReviewIdentityProvider, INHOUSE_EVIDENCE_RETENTION_DAYS, INHOUSE_LEVEL_2_TTL_DAYS, INHOUSE_REVIEW_PROVIDER_KEY } from "./inhouseReviewProvider.ts";
 import { sendIdentityResultEmail } from "./resultEmail.ts";
@@ -687,6 +688,9 @@ async function persistDecision(client: AnySupabaseClient, request: IdentityVerif
       threshold: decision.faceMatchThreshold,
     });
   }
+
+  // A check waiting for a person tells the staff who can review it (owner decision 23 Nov 2026).
+  if (decision.decision === "review_required") await alertStaff(client, "id_check", { source: "identity-verification" });
 
   if (decision.decision === "verified" && decision.identityLevel) {
     await upsertIdentityAssurance(client, request, decision);

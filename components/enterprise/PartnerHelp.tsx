@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { tellStaff } from "@/lib/staffAlertClient";
 import Icon from "@/components/ui/Icon";
 import { supabase } from "@/lib/supabaseClient";
 import { waitForActiveUser } from "@/lib/auth/session";
@@ -50,6 +51,7 @@ export default function PartnerHelp({ organisationId }: { organisationId?: strin
       if (insertError) throw insertError;
       setSent(true); setMessage(""); setTopic("");
       refresh();
+      void tellStaff("help_message");
     } catch {
       setError("That didn’t send. Please try again in a moment.");
     } finally {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { identityErrorResponse, requireIdentityApiAccess } from "@/lib/identity-verification/api";
 import { createDeathReport } from "@/lib/estate-lifecycle/service";
+import { alertStaff } from "@/lib/admin/staffAlerts";
 import { ACTIVE_PROTECTED_GRANT_STATUSES } from "@/lib/access-control/securityPolicy";
 
 export async function POST(request: Request) {
@@ -53,6 +54,8 @@ export async function POST(request: Request) {
       declarationAccepted: body.declarationAccepted === true,
       metadata: { source_route: "/api/estate/death-reports", reported_as: nominationRef ? "nominee" : "estate_role" },
     });
+    // Staff who review estate cases are told something is waiting (owner decision 23 Nov 2026).
+    await alertStaff(access.admin, "death_report", { source: "/api/estate/death-reports" });
     return NextResponse.json({ ok: true, report: publicDeathReport(report) }, { status: 201 });
   } catch (error) {
     return identityErrorResponse(error);

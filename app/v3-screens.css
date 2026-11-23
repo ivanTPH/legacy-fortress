@@ -931,3 +931,8 @@ a.lf-topbar-shield:focus-visible { outline: 3px solid var(--lf-focus); outline-o
 .lf-partner-uptake-bars small { font-size: 13px; color: var(--lf-text-secondary, #6B625C); white-space: nowrap; }
 .lf-partner-uptake-bars li:nth-child(odd) small { visibility: hidden; }
 @media (max-width: 640px) { .lf-partner-uptake-bars { gap: 3px; height: 110px; } .lf-partner-uptake-bars li:not(:last-child):not(:first-child) small { visibility: hidden; } }
+
+/* Admin: red count on Inbox when something is waiting (owner decision 23 Nov 2026). */
+.lf-admin-nav-badge { margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: #B3261E; color: #fff; font-size: 12px; font-weight: 700; line-height: 20px; text-align: center; }
+.lf-admin-tab-icon { position: relative; display: inline-flex; }
+.lf-admin-nav-badge.is-tab { position: absolute; top: -6px; right: -12px; margin: 0; height: 18px; min-width: 18px; line-height: 18px; font-size: 11px; border: 2px solid var(--lf-surface-card, #fff); box-sizing: content-box; }
