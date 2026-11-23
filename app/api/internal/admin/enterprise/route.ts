@@ -66,6 +66,24 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: true, detail, uiAccess: { organisationScoped: admin.access.enterpriseScope?.organisationScoped ?? false, capabilities: admin.access.capabilities } });
   }
 
+  // View as partner (owner decision 23 Nov 2026): Legacy Fortress staff see one partner's Portal exactly as that
+  // partner does, read only and audited. Only staff who aren't themselves tied to an organisation may use it.
+  const viewAs = url.searchParams.get("viewAs");
+  if (viewAs) {
+    if (admin.access.enterpriseScope?.organisationScoped) return NextResponse.json({ ok: false, message: "Not available." }, { status: 403 });
+    if (!/^[0-9a-f-]{36}$/i.test(viewAs)) return NextResponse.json({ ok: false, message: "That partner couldn’t be found." }, { status: 400 });
+    const scopedAccess = { ...admin.access, enterpriseScope: { canAccessEnterpriseWorkspace: true, organisationIds: [viewAs], membershipIds: [], membershipRoles: ["organisation_admin"], organisationScoped: true } };
+    const portfolio = await loadEnterprisePortfolio(admin.adminClient, scopedAccess);
+    const organisation = portfolio.organisations.find((item) => item.id === viewAs);
+    if (!organisation) return NextResponse.json({ ok: false, message: "That partner couldn’t be found." }, { status: 404 });
+    await recordAdminAuditEvent(admin.adminClient, admin.access, {
+      category: "report_access", action: "Partner Portal viewed as partner", result: "success", resourceType: "organisation",
+      resourceId: organisation.id, resourceLabel: organisation.name, route: "/api/internal/admin/enterprise",
+      metadata: { read_only: true, vault_content_excluded: true, financial_values_excluded: true, document_content_excluded: true },
+    }).catch(() => null);
+    return NextResponse.json({ ok: true, portfolio, uiAccess: { organisationScoped: true, viewAs: { id: organisation.id, name: organisation.name }, capabilities: admin.access.capabilities } });
+  }
+
   const portfolio = await loadEnterprisePortfolio(admin.adminClient, admin.access);
   await recordAdminAuditEvent(admin.adminClient, admin.access, {
     category: "report_access",

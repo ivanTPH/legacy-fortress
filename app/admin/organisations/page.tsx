@@ -1,5 +1,6 @@
+import { Suspense } from "react";
 import PlatformOrganisationControlCentre from "@/components/admin/PlatformOrganisationControlCentre";
 
 export default function AdminOrganisationsPage() {
-  return <PlatformOrganisationControlCentre />;
+  return <Suspense fallback={null}><PlatformOrganisationControlCentre /></Suspense>;
 }

@@ -52,7 +52,7 @@ test("register supports safe operational search, filters, sorting and responsive
     "Renewal date",
     "Available capacity",
     "No organisations match",
-    "New organisation",
+    "Onboard a partner", // renamed from "New organisation" (23 Nov 2026)
   ]) {
     assert.match(controlCentre, new RegExp(field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }

@@ -22,6 +22,7 @@ export type AdminInboxItem = {
   message?: string;
   /** Partner enquiries only (23 Nov 2026): where it stands. */
   enquiryStatus?: string;
+  enquiry?: { name: string; contact: string; email: string; type: string | null };
   /** Messages only: replies already sent from the Admin Inbox. */
   replies?: number;
   /** New accounts only: how the account was created, and whether it is a test account. */
@@ -107,7 +108,7 @@ export async function loadAdminInbox(client: AnyClient, options: { days?: number
     items.push({
       id: `partner:${row.id}`, kind: "partners", title: `Partner enquiry: ${row.organisationName}`,
       detail: `${row.contactName} · ${row.contactEmail}${row.contactPhone ? ` · ${row.contactPhone}` : ""}${row.organisationType ? ` · ${row.organisationType}` : ""}${size}`,
-      message: row.message ?? undefined, enquiryStatus: row.status, at: row.at, href: "/admin/organisations", accountEmail: null,
+      message: row.message ?? undefined, enquiryStatus: row.status, enquiry: { name: row.organisationName, contact: row.contactName, email: row.contactEmail, type: row.organisationType }, at: row.at, href: "/admin/organisations", accountEmail: null,
     });
   }
 

@@ -163,7 +163,7 @@ export default function AdminInbox({ authFetch }: { authFetch: (input: string, i
                 </span>
                 <Icon name="chevron_right" size={20} />
               </Link>
-              {item.kind === "partners" ? <EnquiryStatus id={item.id} status={item.enquiryStatus ?? "new"} authFetch={authFetch} /> : null}
+              {item.kind === "partners" ? <EnquiryStatus id={item.id} status={item.enquiryStatus ?? "new"} authFetch={authFetch} prefill={item.enquiry} /> : null}
               {item.kind === "messages" ? <HelpReplyForm messageId={item.id} replies={item.replies ?? 0} authFetch={authFetch} onSent={() => markRead([item.id])} /> : null}
             </li>
           );

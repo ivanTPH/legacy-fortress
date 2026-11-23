@@ -161,6 +161,15 @@ test("platform admin remains in admin context while using users, invitations, or
   await expect(page.getByText("Members’ Vaults stay private", { exact: false })).toBeVisible();
   const desktopShot = await page.screenshot({ type: "jpeg", quality: 45, scale: "css", fullPage: true }).catch(() => null);
   if (desktopShot) console.log(`Phone-shot: admin-organisation-detail ${desktopShot.toString("base64")}`);
+  // Onboarding checklist and View as partner (owner decision 23 Nov 2026): look only, nothing changed.
+  await expect(page.getByRole("heading", { name: /^(Onboarding|Partner is live)$/ })).toBeVisible();
+  await page.getByRole("link", { name: "View as partner" }).click();
+  await expect(page.getByText("Look only: nothing can be changed here.", { exact: false })).toBeVisible({ timeout: 30_000 });
+  const viewAsShot = await page.screenshot({ type: "jpeg", quality: 45, scale: "css", fullPage: true }).catch(() => null);
+  if (viewAsShot) console.log(`Phone-shot: admin-view-as-partner ${viewAsShot.toString("base64")}`);
+  await page.getByRole("link", { name: "Back to Admin" }).click();
+  await expect(page).toHaveURL(new RegExp(`/admin/organisations/${organisationId}`));
+  await expect(page.getByRole("heading", { name: "Details", exact: true })).toBeVisible({ timeout: 20_000 });
   const suspend = page.getByRole("button", { name: "Suspend", exact: true });
   if (await suspend.isVisible().catch(() => false)) {
     await suspend.click();
