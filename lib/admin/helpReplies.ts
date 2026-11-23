@@ -36,7 +36,8 @@ export async function sendHelpReply(
     title: `Re: ${String(row.title ?? "Your message").slice(0, 120)}`,
     summary: text,
     estimated_value: 0,
-    details: { reply_to: row.id, replied_by: input.adminUserId, read_at: null, source: "admin_inbox" },
+    // "place" says where the conversation lives: Vault Help, or the Partner Portal's Help (23 Nov 2026).
+    details: { reply_to: row.id, replied_by: input.adminUserId, read_at: null, source: "admin_inbox", place: (row.details ?? {}).source === "partner_portal" ? "partner_portal" : "help_page" },
     updated_at: now,
   }).select("id").single();
   if (insert.error || !insert.data) return { ok: false, status: 503, message: "The reply couldn’t be saved. Try again." };
@@ -44,14 +45,14 @@ export async function sendHelpReply(
   await client.from("section_entries").update({ details: { ...(row.details ?? {}), replied_at: now, reply_count: replies } }).eq("id", row.id);
   let emailed = false;
   if (input.sendEmail !== false) {
-    try { emailed = (await sendHelpReplyEmail(client, { userId: row.user_id, replyId: String(insert.data.id) })).sent; } catch { emailed = false; }
+    try { emailed = (await sendHelpReplyEmail(client, { userId: row.user_id, replyId: String(insert.data.id), partner: (row.details ?? {}).source === "partner_portal" })).sent; } catch { emailed = false; }
   }
   return { ok: true, replyId: String(insert.data.id), userId: row.user_id, emailed };
 }
 
 /** Content-free: says a reply is waiting and where to read it. Never the message, the reply or any Vault detail. */
-export function renderHelpReplyEmail(appUrl: string) {
-  const link = `${appUrl.replace(/\/$/, "")}/help#messages`;
+export function renderHelpReplyEmail(appUrl: string, partner = false) {
+  const link = `${appUrl.replace(/\/$/, "")}${partner ? "/enterprise?tab=help#messages" : "/help#messages"}`;
   return {
     subject: "We’ve replied to your message",
     text: `We’ve replied to the message you sent us from Help in Legacy Fortress.\n\nSign in to read it: ${link}`,
@@ -59,7 +60,7 @@ export function renderHelpReplyEmail(appUrl: string) {
   };
 }
 
-export async function sendHelpReplyEmail(client: SupabaseClient, input: { userId: string; replyId: string }) {
+export async function sendHelpReplyEmail(client: SupabaseClient, input: { userId: string; replyId: string; partner?: boolean }) {
   const apiKey = String(process.env.RESEND_API_KEY ?? "").trim();
   if (!apiKey) return { sent: false, reason: "not_configured" as const };
   const user = await client.auth.admin.getUserById(input.userId);
@@ -67,7 +68,7 @@ export async function sendHelpReplyEmail(client: SupabaseClient, input: { userId
   if (!isDeliverableAddress(email)) return { sent: false, reason: "no_deliverable_address" as const };
   const from = validateStagingSender(String(process.env.RESEND_AUTH_FROM ?? ""));
   const appUrl = String(process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "https://test.mylegacyfortress.com");
-  const message = renderHelpReplyEmail(appUrl);
+  const message = renderHelpReplyEmail(appUrl, input.partner === true);
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", "Idempotency-Key": `lf-help-reply/${input.replyId}` },

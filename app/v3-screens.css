@@ -921,3 +921,13 @@ a.lf-topbar-shield:focus-visible { outline: 3px solid var(--lf-focus); outline-o
 .lf-admin-support-note { margin: 8px 0 0; font-size: 14px; }
 .lf-admin-support-note.is-ok { color: var(--lf-success, #2F6B4F); }
 .lf-admin-support-note.is-error { color: var(--lf-danger, #A3362B); }
+
+/* Partner Portal: sign-ups each week (UX review 2, 23 Nov 2026). */
+.lf-partner-uptake { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--lf-border, #EBE4DE); border-radius: 16px; background: var(--lf-surface-card, #fff); }
+.lf-partner-uptake p { margin: 0; color: var(--lf-text-secondary, #6B625C); }
+.lf-partner-uptake-bars { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 6px; align-items: end; height: 140px; }
+.lf-partner-uptake-bars li { display: grid; grid-template-rows: 1fr auto; gap: 4px; height: 100%; align-items: end; justify-items: center; }
+.lf-partner-uptake-bar { width: 100%; min-height: 2px; border-radius: 6px 6px 0 0; background: var(--lf-accent, #8C4A32); }
+.lf-partner-uptake-bars small { font-size: 13px; color: var(--lf-text-secondary, #6B625C); white-space: nowrap; }
+.lf-partner-uptake-bars li:nth-child(odd) small { visibility: hidden; }
+@media (max-width: 640px) { .lf-partner-uptake-bars { gap: 3px; height: 110px; } .lf-partner-uptake-bars li:not(:last-child):not(:first-child) small { visibility: hidden; } }
