@@ -19,6 +19,30 @@ type MaybeSingleWalletResult = {
   error: { message: string } | null;
 };
 const walletReadContextInFlight = new Map<string, Promise<WalletReadContext>>();
+// Speed (23 Nov 2026): a wallet's id never changes, so a found wallet is remembered for this tab (memory and
+// sessionStorage, keyed by user) instead of being looked up by every page and component.
+const WALLET_CACHE_PREFIX = "lf-wallet-ctx:";
+const walletReadResolved = new Map<string, WalletReadContext>();
+function rememberedWallet(userId: string): WalletReadContext | null {
+  const inMemory = walletReadResolved.get(userId);
+  if (inMemory) return inMemory;
+  try {
+    if (typeof window === "undefined") return null;
+    const raw = window.sessionStorage.getItem(`${WALLET_CACHE_PREFIX}${userId}`);
+    const parsed = raw ? (JSON.parse(raw) as { walletId?: string; organisationId?: string }) : null;
+    if (parsed?.walletId && parsed.organisationId) {
+      const context = { walletId: parsed.walletId, organisationId: parsed.organisationId, warning: null };
+      walletReadResolved.set(userId, context);
+      return context;
+    }
+  } catch { /* storage unavailable */ }
+  return null;
+}
+function rememberWallet(userId: string, context: WalletReadContext) {
+  if (!context.walletId || !context.organisationId) return;
+  walletReadResolved.set(userId, context);
+  try { if (typeof window !== "undefined") window.sessionStorage.setItem(`${WALLET_CACHE_PREFIX}${userId}`, JSON.stringify({ walletId: context.walletId, organisationId: context.organisationId })); } catch { /* optional */ }
+}
 
 function traceWalletResolution(step: string, details: Record<string, unknown>) {
   const detailText = Object.entries(details)
@@ -177,6 +201,12 @@ export async function ensureWalletContext(client: AnySupabaseClient, userId: str
   // return early because canonical asset writes may still need an organisation created
   // or backfilled onto an existing wallet.
   const existing = await resolveWalletContextForRead(client, userId);
+  // Speed (23 Nov 2026): an account that already has its wallet and organisation needs nothing more. This ran on
+  // every page load and used to re-check and re-save the wallet each time (a write per page).
+  if (existing.walletId && existing.organisationId) {
+    traceWalletResolution("ensure.success", { userId, walletId: existing.walletId, organisationId: existing.organisationId, fast: true });
+    return { walletId: existing.walletId, organisationId: existing.organisationId };
+  }
   let walletId = existing.walletId ?? "";
   let organisationId = existing.organisationId ?? "";
 
@@ -337,6 +367,8 @@ export async function resolveWalletContextForRead(
     return { walletId: null, organisationId: null, warning: "user-id-missing" };
   }
 
+  const remembered = rememberedWallet(normalizedUserId);
+  if (remembered) return remembered;
   const existingPromise = walletReadContextInFlight.get(normalizedUserId);
   if (existingPromise) {
     traceWalletResolution("read.reuse-inflight", { userId: normalizedUserId });
@@ -449,7 +481,9 @@ export async function resolveWalletContextForRead(
 
   walletReadContextInFlight.set(normalizedUserId, promise);
   try {
-    return await promise;
+    const context = await promise;
+    rememberWallet(normalizedUserId, context);
+    return context;
   } finally {
     walletReadContextInFlight.delete(normalizedUserId);
   }

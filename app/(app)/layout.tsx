@@ -23,6 +23,7 @@ import { appendProfileAvatarTrace, maskAvatarUrl } from "../../lib/profile/avata
 import { loadProfileIdentityChip, resolveProfileIdentityDisplayName } from "../../lib/profile/workspace";
 import { buildDashboardSearchHref } from "../../lib/records/discovery";
 import { supabase } from "../../lib/supabaseClient";
+import { sharedRead } from "../../lib/sharedRead";
 import { checkDeviceTrust, verifyDeviceHref } from "../../lib/auth/deviceTrustClient";
 import { applyAppearancePreference, readAppearancePreference } from "../../lib/appearancePreference";
 import { ViewerAccessProvider } from "../../components/access/ViewerAccessContext";
@@ -1464,7 +1465,12 @@ function cacheProfileAvatarUrl(value: string) {
   }
 }
 
-async function loadServerProfileIdentityChip(email: string) {
+function loadServerProfileIdentityChip(email: string) {
+  // Shared for a few seconds: the shell asked twice per page load (speed, 23 Nov 2026).
+  return sharedRead(`identity-chip:${email}`, () => loadServerProfileIdentityChipUncached(email));
+}
+
+async function loadServerProfileIdentityChipUncached(email: string) {
   try {
     const session = await supabase.auth.getSession();
     const token = session.data.session?.access_token ?? "";
@@ -1495,7 +1501,11 @@ async function loadServerProfileIdentityChip(email: string) {
   }
 }
 
-async function loadServerProfileAvatarDataUrl() {
+function loadServerProfileAvatarDataUrl() {
+  return sharedRead("profile-avatar", loadServerProfileAvatarDataUrlUncached);
+}
+
+async function loadServerProfileAvatarDataUrlUncached() {
   try {
     const session = await supabase.auth.getSession();
     const token = session.data.session?.access_token ?? "";

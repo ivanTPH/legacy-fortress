@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isMissingColumnError, isMissingRelationError } from "../supabaseErrors";
 import { maskNationalInsuranceNumber } from "../security/identity";
+import { clearSharedReads } from "../sharedRead.ts";
 import { normalizePhone, normalizePostCode, sanitizeAddress, sanitizeName } from "../validation/profile";
 import { sanitizeFileName } from "../validation/upload";
 import { COUNTRY_OPTIONS, CURRENCY_OPTIONS } from "../assets/fieldDictionary";
@@ -300,6 +301,7 @@ export async function saveProfileWorkspace(
     support: ProfileWorkspaceSupport;
   },
 ) {
+  clearSharedReads(); // the shell shows the new name and picture straight away (speed cache, 23 Nov 2026)
   const now = new Date().toISOString();
   const normalizedFirstName = sanitizeName(form.first_name) || "";
   const normalizedLastName = sanitizeName(form.last_name) || "";
