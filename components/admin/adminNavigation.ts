@@ -114,13 +114,22 @@ export function filterAdminNavigation(groups: AdminNavigationGroup[], capabiliti
     .filter((group) => group.items.length > 0);
 }
 
+/**
+ * The Partner Portal menu in the partner's own words (owner decision 23 Nov 2026): a partner has one organisation,
+ * so "Organisations" goes; the rest read as plain tasks. Capability checks are unchanged.
+ */
+const PARTNER_LABELS: Record<string, string> = {
+  "enterprise-users": "Members", "enterprise-registration-links": "Sign-up link", "enterprise-licences": "Licence and invoice",
+  "enterprise-invitations": "Invite staff", "enterprise-settings": "Settings",
+};
+const PARTNER_ORDER = ["enterprise-overview", "enterprise-users", "enterprise-registration-links", "enterprise-reports", "enterprise-licences", "enterprise-invitations", "enterprise-help", "enterprise-settings"];
 export function labelPartnerNavigation(groups: AdminNavigationGroup[]): AdminNavigationGroup[] {
   return groups.map((group) => ({
     ...group,
     label: "Partner Portal",
-    items: group.items.map((item) => ({
-      ...item,
-      label: item.key === "enterprise-users" ? "Team & seats" : item.key === "enterprise-licences" ? "Licence" : item.label,
-    })),
+    items: group.items
+      .filter((item) => item.key !== "enterprise-organisations")
+      .map((item) => ({ ...item, label: PARTNER_LABELS[item.key] ?? item.label }))
+      .sort((a, b) => (PARTNER_ORDER.indexOf(a.key) + 100) % 100 - (PARTNER_ORDER.indexOf(b.key) + 100) % 100),
   }));
 }

@@ -13,7 +13,21 @@ test("partner enquiry: required fields, plain messages, spam field and limits", 
   assert.equal(ok.value.contactEmail, "jo@acme.co.uk");
   assert.equal(ok.value.membersEstimate, 1000);
   assert.equal(ok.value.message.length, 4000);
-  assert.equal(validateEnquiry({ organisationName: "Acme", contactName: "Jo", contactEmail: "jo@acme.co.uk", organisationType: "Made up" }).value.organisationType, null);
+  assert.equal(validateEnquiry({ organisationName: "Acme", contactName: "Jo", contactEmail: "jo@acme.co.uk", organisationType: "" }).value.organisationType, null);
+  // The website form: size band to a number, extra details kept with the message.
+  const site = validateEnquiry({ organisationName: "Acme", contactName: "Jo", contactEmail: "jo@acme.co.uk", organisationType: "Law firm or solicitor", membersBand: "250 to 1,000", request: "demo", contactRole: "Partner", message: "Hello" });
+  assert.equal(site.value.organisationType, "Law firm or solicitor");
+  assert.equal(site.value.membersEstimate, 1000);
+  assert.match(site.value.message, /^Asked for: a 20-minute demo · Role: Partner · Size: 250 to 1,000\n\nHello$/);
+});
+
+test("partner enquiry: the website partners form sends to the enquiry API", () => {
+  const html = readFileSync(new URL("../public/site/partners.html", import.meta.url), "utf8");
+  assert.match(html, /data-endpoint="\/api\/partners\/enquiry"/);
+  for (const name of ["organisationName", "organisationType", "contactName", "contactEmail", "membersBand", "website"]) assert.match(html, new RegExp(`name="${name}"`));
+  assert.doesNotMatch(html, /messages aren’t sent anywhere/);
+  const js = readFileSync(new URL("../public/site/site.js", import.meta.url), "utf8");
+  assert.match(js, /data-endpoint/);
 });
 
 test("partner enquiry: service role only table; platform staff only in Admin", () => {

@@ -9,6 +9,8 @@ import { AdminFilterChips, AdminNote, AdminStatStrip, AdminStatusBadge as Status
 import Icon from "@/components/ui/Icon";
 import { INCLUDE_TESTS_EVENT, readIncludeTests, writeIncludeTests } from "@/lib/admin/includeTestsPreference";
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell";
+import { partnerOnboarding, renewalFromLength } from "@/lib/admin/partnerOnboarding";
+import { useSearchParams } from "next/navigation";
 import { PLATFORM_ADMIN_NAVIGATION, filterAdminNavigation } from "@/components/admin/adminNavigation";
 import type { CSSProperties, FormEvent, ReactNode } from "react";
 
@@ -48,6 +50,7 @@ type Licence = {
   suspendedSeats: number;
   availableSeats: number;
   renewalDate: string;
+  billingReference?: string | null;
 };
 
 type Invitation = {
@@ -101,9 +104,12 @@ export default function PlatformOrganisationControlCentre({ organisationId }: { 
   const [editOpen, setEditOpen] = useState(false);
   const [licenceOpen, setLicenceOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [invoiceForm, setInvoiceForm] = useState({ reference: "", paid: false });
+  const searchParams = useSearchParams();
   const [confirmState, setConfirmState] = useState<"suspend" | "reactivate" | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [licenceForm, setLicenceForm] = useState({ licencePlan: "starter", startDate: TODAY, renewalDate: nextYearDate(), purchasedSeats: "10", licenceStatus: "pending_approval", billingStatus: "not_configured" });
+  const [licenceForm, setLicenceForm] = useState({ licencePlan: "professional", startDate: TODAY, renewalDate: nextYearDate(), purchasedSeats: "100", licenceStatus: "pending_approval", billingStatus: "pending", lengthMonths: "12" });
   const [inviteForm, setInviteForm] = useState({ email: "", fullName: "", expiryDays: "14", requireMfa: true });
   const [saving, setSaving] = useState(false);
   const [reason, setReason] = useState("");
@@ -146,7 +152,15 @@ export default function PlatformOrganisationControlCentre({ organisationId }: { 
     return () => { document.removeEventListener("keydown", onKeyDown); };
   }, [confirmState, editOpen, formOpen, inviteOpen, licenceOpen]);
 
-  function closeDialogs() { setFormOpen(false); setEditOpen(false); setLicenceOpen(false); setInviteOpen(false); setConfirmState(null); }
+  function closeDialogs() { setFormOpen(false); setEditOpen(false); setLicenceOpen(false); setInviteOpen(false); setInvoiceOpen(false); setConfirmState(null); }
+
+  // "Start onboarding" from a partner enquiry opens the form filled in (23 Nov 2026).
+  useEffect(() => {
+    if (organisationId || searchParams?.get("onboard") !== "1") return;
+    const type = String(searchParams.get("type") ?? "");
+    setForm({ ...EMPTY_FORM, legalName: searchParams.get("name") ?? "", primaryContactName: searchParams.get("contact") ?? "", primaryContactEmail: searchParams.get("email") ?? "", organisationType: ENTERPRISE_ORGANISATION_TYPES.includes(type) ? type : "employer" });
+    setFormOpen(true);
+  }, [organisationId, searchParams]);
 
   async function runAction(action: string, payload: Record<string, unknown>, doneMessage = "Saved. The change is in the audit log."): Promise<Record<string, unknown> | false> {
     setSaving(true); setMessage("");
@@ -173,7 +187,23 @@ export default function PlatformOrganisationControlCentre({ organisationId }: { 
 
   async function submitEdit(event: FormEvent) { event.preventDefault(); if (!detail) return; await runAction("update_organisation", { organisationId: detail.organisation.id, ...form, expectedUpdatedAt: detail.organisation.updatedAt }); }
 
-  async function submitLicence(event: FormEvent) { event.preventDefault(); if (!detail) return; await runAction("create_licence", { organisationId: detail.organisation.id, ...licenceForm, purchasedSeats: Number(licenceForm.purchasedSeats) }); }
+  async function submitLicence(event: FormEvent) {
+    event.preventDefault(); if (!detail) return;
+    const { lengthMonths, ...rest } = licenceForm;
+    await runAction("create_licence", { organisationId: detail.organisation.id, ...rest, renewalDate: renewalFromLength(rest.startDate, Number(lengthMonths)) || rest.renewalDate, purchasedSeats: Number(licenceForm.purchasedSeats) }, "Licence set up. Next: record the invoice.");
+  }
+
+  async function submitInvoice(event: FormEvent) {
+    event.preventDefault(); if (!detail) return;
+    const licence = detail.licences[0]; if (!licence) return;
+    if (!invoiceForm.reference.trim()) { setMessage("Add the invoice number."); return; }
+    await runAction("update_licence", { licenceId: licence.id, billingReference: invoiceForm.reference.trim(), billingStatus: invoiceForm.paid ? "active" : "pending" }, invoiceForm.paid ? "Invoice marked as paid. Next: switch the licence on." : "Invoice recorded as waiting for payment.");
+  }
+
+  async function switchOn() {
+    if (!detail) return; const licence = detail.licences[0]; if (!licence) return;
+    await runAction("transition_licence", { licenceId: licence.id, status: "active", reason: "Invoice paid; switched on from the onboarding checklist" }, "Licence switched on. The partner's sign-up link now works.");
+  }
 
   async function submitInvite(event: FormEvent) { event.preventDefault(); if (!detail) return; await runAction("invite_organisation_admin", { organisationId: detail.organisation.id, ...inviteForm, expiryDays: Number(inviteForm.expiryDays), roleTemplate: "organisation_admin" }); }
 
@@ -191,12 +221,13 @@ export default function PlatformOrganisationControlCentre({ organisationId }: { 
   if (state === "error" || !session) return <main style={pageStyle}><section style={panelStyle}><p style={eyebrowStyle}>Platform Administration</p><h1>Commercial register unavailable</h1><p>{message || "Try again later."}</p></section></main>;
 
   return (
-    <AdminWorkspaceShell workspaceLabel="Platform Administration" eyebrow="Commercial" title={organisationId ? (detail?.organisation.name ?? currentLabel) : currentLabel} description={organisationId ? "Licence, seats, administrators and activity for this organisation. Members’ Vaults are never shown." : "Partner organisations, their licences and administrators. Members’ Vaults are never shown."} breadcrumbs={organisationId ? [{ label: "Commercial" }, { label: "Organisations", href: "/admin/organisations" }, { label: detail?.organisation.name ?? "Organisation" }] : [{ label: "Commercial" }, { label: "Organisations" }]} primaryAction={!organisationId && canManage ? <button type="button" style={primaryButtonStyle} onClick={() => { setForm(EMPTY_FORM); setFormOpen(true); }}><Icon name="domain_add" size={18} /> Add organisation</button> : undefined} currentPathname={organisationId ? `/admin/organisations/${organisationId}` : "/admin/organisations"} navigation={navigation} onSignOut={() => { void signOutThenLeave(); }} identityLabel={identity?.label} identityDetail={identity?.detail} adminRole={session?.role}>
+    <AdminWorkspaceShell workspaceLabel="Platform Administration" eyebrow="Commercial" title={organisationId ? (detail?.organisation.name ?? currentLabel) : currentLabel} description={organisationId ? "Licence, seats, administrators and activity for this organisation. Members’ Vaults are never shown." : "Partner organisations, their licences and administrators. Members’ Vaults are never shown."} breadcrumbs={organisationId ? [{ label: "Commercial" }, { label: "Organisations", href: "/admin/organisations" }, { label: detail?.organisation.name ?? "Organisation" }] : [{ label: "Commercial" }, { label: "Organisations" }]} primaryAction={!organisationId && canManage ? <button type="button" style={primaryButtonStyle} onClick={() => { setForm(EMPTY_FORM); setFormOpen(true); }}><Icon name="domain_add" size={18} /> Onboard a partner</button> : undefined} currentPathname={organisationId ? `/admin/organisations/${organisationId}` : "/admin/organisations"} navigation={navigation} onSignOut={() => { void signOutThenLeave(); }} identityLabel={identity?.label} identityDetail={identity?.detail} adminRole={session?.role}>
       {message ? <div role="status" style={alertStyle}>{message}</div> : null}
       {organisationId && detail ? renderDetail() : renderRegister()}
-      {formOpen ? <Modal title="New organisation" onClose={closeDialogs}><OrganisationForm value={form} onChange={setForm} onSubmit={submitOrganisation} onCancel={closeDialogs} saving={saving} /></Modal> : null}
+      {formOpen ? <Modal title="Onboard a partner: organisation details" onClose={closeDialogs}><OrganisationForm value={form} onChange={setForm} onSubmit={submitOrganisation} onCancel={closeDialogs} saving={saving} /></Modal> : null}
       {editOpen ? <Modal title="Edit organisation" onClose={closeDialogs}><OrganisationForm value={form} onChange={setForm} onSubmit={submitEdit} onCancel={closeDialogs} saving={saving} submitLabel="Save organisation" /></Modal> : null}
       {licenceOpen ? <Modal title="Allocate licence" onClose={closeDialogs}><LicenceForm value={licenceForm} onChange={setLicenceForm} onSubmit={submitLicence} onCancel={closeDialogs} saving={saving} /></Modal> : null}
+      {invoiceOpen ? <Modal title="Invoice" onClose={closeDialogs}><form onSubmit={submitInvoice} style={formGridStyle}><Field label="Invoice number" required value={invoiceForm.reference} onChange={(next) => setInvoiceForm({ ...invoiceForm, reference: next })} /><label style={checkboxStyle}><input type="checkbox" checked={invoiceForm.paid} onChange={(event) => setInvoiceForm({ ...invoiceForm, paid: event.target.checked })} /> The invoice has been paid</label><p style={mutedStyle}>Invoices are sent outside the app. Tick when the money has arrived; then you can switch the licence on.</p><div style={actionRowStyle}><button type="button" style={secondaryButtonStyle} onClick={closeDialogs}>Cancel</button><button type="submit" style={primaryButtonStyle} disabled={saving}>{saving ? "Saving…" : "Save"}</button></div></form></Modal> : null}
       {inviteOpen ? <Modal title="Invite organisation administrator" onClose={closeDialogs}><InviteForm value={inviteForm} onChange={setInviteForm} onSubmit={submitInvite} onCancel={closeDialogs} saving={saving} /></Modal> : null}
       {confirmState && detail ? <Modal title={confirmState === "suspend" ? `Suspend ${detail.organisation.name}?` : `Reactivate ${detail.organisation.name}?`} onClose={closeDialogs}><p style={mutedStyle}>{confirmState === "suspend" ? "Members keep their own Vaults but lose organisation access until it’s restored." : "Members get organisation access back. Their own Vaults aren’t affected."}</p><label style={labelStyle}>Reason (Required)<textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={3} maxLength={500} placeholder="Saved to the audit log" /></label><div style={actionRowStyle}><button type="button" onClick={closeDialogs} style={secondaryButtonStyle}>Cancel</button><button type="button" disabled={saving || !reason.trim()} onClick={() => void runAction("transition_organisation", { organisationId: detail.organisation.id, status: confirmState === "suspend" ? "suspended" : "active", reason: reason.trim() }, confirmState === "suspend" ? `${detail.organisation.name} suspended.` : `${detail.organisation.name} reactivated.`)} style={confirmState === "suspend" ? dangerButtonStyle : primaryButtonStyle}>{saving ? "Saving…" : confirmState === "suspend" ? "Suspend organisation" : "Reactivate organisation"}</button></div></Modal> : null}
     </AdminWorkspaceShell>
@@ -244,7 +275,7 @@ export default function PlatformOrganisationControlCentre({ organisationId }: { 
           </div>
         </details>
       </section>
-      <section className="lf-admin-table-card" style={{ overflowX: "auto" }}><table className="lf-admin-data-table"><caption>Platform organisation register</caption><thead><tr><th>Organisation</th><th>Type</th><th>Licence</th><th>Administrator</th><th>Status</th><th><span className="lf-visually-hidden">Open</span></th></tr></thead><tbody>{rows.map((org) => { const licence = licences.find((item) => item.organisationId === org.id); const pending = invitations.filter((item) => item.organisationId === org.id && ["draft", "scheduled", "sent", "delivered"].includes(item.status)).length; return <tr key={org.id}><td><Link href={`/admin/organisations/${org.id}`} className="lf-admin-cell-title">{org.name}</Link>{org.isTest ? <> <span className="lf-admin-account-tag is-test">Test</span></> : null}<small>{org.registrationNumber || org.legalName}</small></td><td>{sentence(org.type)}</td><td>{licence ? <>{licence.activeSeats} of {licence.purchasedSeats} seats<small>{sentence(licence.plan)}{licence.renewalDate ? ` · renews ${formatDate(licence.renewalDate)}` : ""}</small></> : "No licence"}</td><td>{org.nominatedAdminName || org.nominatedAdminEmail ? <>{org.nominatedAdminName || org.nominatedAdminEmail}<small>{pending ? `${pending} invitation${pending === 1 ? "" : "s"} waiting` : org.nominatedAdminEmail || ""}</small></> : <StatusChip status={pending ? "pending" : "not_invited"} label={pending ? "Invitation sent" : "Not invited"} />}</td><td><StatusChip status={org.status} /></td><td><Link href={`/admin/organisations/${org.id}`} className="lf-admin-row-chevron" aria-label={`Open ${org.name}`}><Icon name="chevron_right" size={20} /></Link></td></tr>; })}{rows.length === 0 ? <tr><td colSpan={6}><div style={emptyStyle}><strong>No organisations match</strong><span>Change the search or filters, or add a new organisation.</span></div></td></tr> : null}</tbody></table><div className="lf-platform-organisation-cards" aria-label="Platform organisation register mobile cards">{rows.map((org) => { const licence = licences.find((item) => item.organisationId === org.id); return <Link key={org.id} href={`/admin/organisations/${org.id}`} className="lf-platform-organisation-card"><div><strong>{org.name}{org.isTest ? <> <span className="lf-admin-account-tag is-test">Test</span></> : null}</strong><small>{licence ? `${sentence(licence.plan)} · ${licence.activeSeats} of ${licence.purchasedSeats} seats` : "No licence"}</small></div><StatusChip status={org.status} /><Icon name="chevron_right" size={20} /></Link>; })}</div></section>
+      <section className="lf-admin-table-card" style={{ overflowX: "auto" }}><table className="lf-admin-data-table"><caption>Platform organisation register</caption><thead><tr><th>Organisation</th><th>Type</th><th>Set-up</th><th>Licence</th><th>Administrator</th><th>Status</th><th><span className="lf-visually-hidden">Open</span></th></tr></thead><tbody>{rows.map((org) => { const licence = licences.find((item) => item.organisationId === org.id); const pending = invitations.filter((item) => item.organisationId === org.id && ["draft", "scheduled", "sent", "delivered"].includes(item.status)).length; return <tr key={org.id}><td><Link href={`/admin/organisations/${org.id}`} className="lf-admin-cell-title">{org.name}</Link>{org.isTest ? <> <span className="lf-admin-account-tag is-test">Test</span></> : null}<small>{org.registrationNumber || org.legalName}</small></td><td>{sentence(org.type)}</td><td>{(() => { const setup = partnerOnboarding({ organisation: org, licences: licences.filter((item) => item.organisationId === org.id), invitations: invitations.filter((item) => item.organisationId === org.id) }); return <span className="lf-admin-setup-cell"><span className="lf-admin-setup-dots" aria-label={`${setup.done} of ${setup.total} done`}>{setup.steps.map((step) => <span key={step.key} className={step.done ? "is-done" : ""} />)}</span><small>{setup.next ? `Next: ${setup.next.label.toLowerCase()}` : "Live"}</small></span>; })()}</td><td>{licence ? <>{licence.activeSeats} of {licence.purchasedSeats} seats<small>{sentence(licence.plan)}{licence.renewalDate ? ` · renews ${formatDate(licence.renewalDate)}` : ""}</small></> : "No licence"}</td><td>{org.nominatedAdminName || org.nominatedAdminEmail ? <>{org.nominatedAdminName || org.nominatedAdminEmail}<small>{pending ? `${pending} invitation${pending === 1 ? "" : "s"} waiting` : org.nominatedAdminEmail || ""}</small></> : <StatusChip status={pending ? "pending" : "not_invited"} label={pending ? "Invitation sent" : "Not invited"} />}</td><td><StatusChip status={org.status} /></td><td><Link href={`/admin/organisations/${org.id}`} className="lf-admin-row-chevron" aria-label={`Open ${org.name}`}><Icon name="chevron_right" size={20} /></Link></td></tr>; })}{rows.length === 0 ? <tr><td colSpan={7}><div style={emptyStyle}><strong>No organisations match</strong><span>Change the search or filters, or add a new organisation.</span></div></td></tr> : null}</tbody></table><div className="lf-platform-organisation-cards" aria-label="Platform organisation register mobile cards">{rows.map((org) => { const licence = licences.find((item) => item.organisationId === org.id); return <Link key={org.id} href={`/admin/organisations/${org.id}`} className="lf-platform-organisation-card"><div><strong>{org.name}{org.isTest ? <> <span className="lf-admin-account-tag is-test">Test</span></> : null}</strong><small>{licence ? `${sentence(licence.plan)} · ${licence.activeSeats} of ${licence.purchasedSeats} seats` : "No licence"}</small></div><StatusChip status={org.status} /><Icon name="chevron_right" size={20} /></Link>; })}</div></section>
     </div>;
   }
 
@@ -267,6 +298,20 @@ export default function PlatformOrganisationControlCentre({ organisationId }: { 
         </div>
         <div className="lf-admin-decision-actions">{org.isTest ? <span className="lf-admin-account-tag is-test">Test</span> : null}<StatusChip status={org.status} />{org.risk !== "normal" ? <StatusChip status={org.risk} label={`Risk: ${sentence(org.risk).toLowerCase()}`} /> : null}</div>
       </header>
+      {(() => {
+        const setup = partnerOnboarding({ organisation: org, licences: detail.licences, invitations: detail.invitations, memberships: detail.memberships });
+        const action = !setup.next ? null
+          : setup.next.key === "licence" && canCreateLicence ? <button type="button" className="lf-admin-primary-button" disabled={closed} onClick={() => setLicenceOpen(true)}>Set up the licence</button>
+          : setup.next.key === "invoice" && canCreateLicence ? <button type="button" className="lf-admin-primary-button" onClick={() => { setInvoiceForm({ reference: licence?.billingReference ?? "", paid: false }); setInvoiceOpen(true); }}>Record the invoice</button>
+          : setup.next.key === "active" && canCreateLicence ? <button type="button" className="lf-admin-primary-button" disabled={saving || !setup.steps[2].done} onClick={() => void switchOn()}>Switch the licence on</button>
+          : setup.next.key === "lead" && canInvite ? (setup.leadInvited ? <span className="lf-admin-muted">Waiting for them to accept the invitation.</span> : <button type="button" className="lf-admin-primary-button" disabled={closed} onClick={() => setInviteOpen(true)}>Invite the lead person</button>)
+          : <span className="lf-admin-muted">Your role can’t do the next step.</span>;
+        return <section className="lf-admin-table-card lf-admin-onboarding" aria-labelledby="onboarding-title">
+          <div className="lf-admin-onboarding-head"><h2 id="onboarding-title">{setup.complete ? "Partner is live" : "Onboarding"}</h2><span>{setup.done} of {setup.total} done</span></div>
+          <ol className="lf-admin-onboarding-steps">{setup.steps.map((step, index) => <li key={step.key} className={step.done ? "is-done" : setup.next?.key === step.key ? "is-next" : ""}><span className="lf-admin-onboarding-tick" aria-hidden="true">{step.done ? <Icon name="check" size={16} /> : index + 1}</span><span><strong>{step.label}</strong><small>{step.detail}</small></span></li>)}</ol>
+          {action ? <div className="lf-admin-onboarding-action">{action}</div> : null}
+        </section>;
+      })()}
       <AdminStatStrip label="Seats" items={[
         { label: "Seats bought", value: licence ? licence.purchasedSeats : 0 },
         { label: "In use", value: licence ? licence.activeSeats : 0 },
@@ -323,6 +368,7 @@ export default function PlatformOrganisationControlCentre({ organisationId }: { 
               <div className="lf-admin-decision-actions">
                 {canManage ? <button type="button" className="lf-admin-row-button" onClick={() => { setForm(toForm(org)); setEditOpen(true); }}>Edit details</button> : null}
                 {canInvite ? <button type="button" className="lf-admin-row-button" disabled={closed} onClick={() => setInviteOpen(true)}>Invite administrator</button> : null}
+                {canEnterpriseHandoff ? <Link href={`/enterprise?viewAs=${org.id}`} className="lf-admin-row-button"><Icon name="visibility" size={18} /> View as partner</Link> : null}
               </div>
               <div className="lf-admin-decision-footer">
                 {canSuspend || canReactivate ? <button type="button" className={canReactivate ? "lf-admin-row-button" : "lf-admin-danger-button"} onClick={() => { setReason(""); setConfirmState(canReactivate ? "reactivate" : "suspend"); }}>{canReactivate ? "Reactivate" : "Suspend"}</button> : <span />}
@@ -348,12 +394,19 @@ function OrganisationForm({ value, onChange, onSubmit, onCancel, saving, submitL
   return <form onSubmit={onSubmit} style={formGridStyle}><Field label="Legal name" required value={value.legalName} onChange={(next) => set("legalName", next)} /><Field label="Trading name" value={value.tradingName} onChange={(next) => set("tradingName", next)} /><label style={labelStyle}>Organisation type<select value={value.organisationType} onChange={(event) => set("organisationType", event.target.value)}>{ENTERPRISE_ORGANISATION_TYPES.map((item) => <option key={item} value={item}>{labelise(item)}</option>)}</select></label><Field label="Country" required value={value.country} onChange={(next) => set("country", next)} /><Field label="Primary contact name" value={value.primaryContactName} onChange={(next) => set("primaryContactName", next)} /><Field label="Primary contact email" required type="email" value={value.primaryContactEmail} onChange={(next) => set("primaryContactEmail", next)} /><Field label="Internal account owner" required value={value.internalAccountOwner} onChange={(next) => set("internalAccountOwner", next)} /><Field label="Registration number" value={value.registrationNumber} onChange={(next) => set("registrationNumber", next)} /><Field label="Customer reference" value={value.customerReference} onChange={(next) => set("customerReference", next)} /><label style={labelStyle}>Account status<select value={value.initialStatus} onChange={(event) => set("initialStatus", event.target.value)}>{ENTERPRISE_ORGANISATION_STATUSES.map((item) => <option key={item} value={item}>{labelise(item)}</option>)}</select></label><label style={labelStyle}>Risk<select value={value.riskStatus} onChange={(event) => set("riskStatus", event.target.value)}>{ENTERPRISE_RISK_STATUSES.map((item) => <option key={item} value={item}>{labelise(item)}</option>)}</select></label><div style={actionRowStyle}><button type="button" style={secondaryButtonStyle} onClick={onCancel}>Cancel</button><button type="submit" style={primaryButtonStyle} disabled={saving}>{saving ? "Saving..." : submitLabel}</button></div></form>;
 }
 
-type LicenceFormValue = { licencePlan: string; startDate: string; renewalDate: string; purchasedSeats: string; licenceStatus: string; billingStatus: string };
+type LicenceFormValue = { licencePlan: string; startDate: string; renewalDate: string; purchasedSeats: string; licenceStatus: string; billingStatus: string; lengthMonths: string };
 type InviteFormValue = { email: string; fullName: string; expiryDays: string; requireMfa: boolean };
 
 function LicenceForm({ value, onChange, onSubmit, onCancel, saving }: { value: LicenceFormValue; onChange: (value: LicenceFormValue) => void; onSubmit: (event: FormEvent) => void; onCancel: () => void; saving: boolean }) {
   const set = (key: keyof typeof value, next: string) => onChange({ ...value, [key]: next });
-  return <form onSubmit={onSubmit} style={formGridStyle}><label style={labelStyle}>Plan<select value={value.licencePlan} onChange={(event) => set("licencePlan", event.target.value)}><option>starter</option><option>professional</option><option>enterprise</option><option>custom</option></select></label><Field label="Start date" required type="date" value={value.startDate} onChange={(next) => set("startDate", next)} /><Field label="Renewal date" required type="date" value={value.renewalDate} onChange={(next) => set("renewalDate", next)} /><Field label="Purchased licences" required type="number" value={value.purchasedSeats} onChange={(next) => set("purchasedSeats", next)} /><label style={labelStyle}>Initial licence status<select value={value.licenceStatus} onChange={(event) => set("licenceStatus", event.target.value)}><option>pending_approval</option><option>active</option><option>draft</option></select></label><label style={labelStyle}>Billing status<select value={value.billingStatus} onChange={(event) => set("billingStatus", event.target.value)}><option>not_configured</option><option>trial</option><option>active</option><option>manual_review</option></select></label><p style={mutedStyle}>The API enforces positive quantities, valid dates and committed-seat limits.</p><div style={actionRowStyle}><button type="button" style={secondaryButtonStyle} onClick={onCancel}>Cancel</button><button type="submit" style={primaryButtonStyle} disabled={saving}>{saving ? "Saving..." : "Create allocation"}</button></div></form>;
+  return <form onSubmit={onSubmit} style={formGridStyle}>
+    <Field label="Number of members" required type="number" value={value.purchasedSeats} onChange={(next) => set("purchasedSeats", next)} />
+    <label style={labelStyle}>Length<select value={value.lengthMonths} onChange={(event) => set("lengthMonths", event.target.value)}><option value="12">12 months</option><option value="24">24 months</option><option value="36">36 months</option></select></label>
+    <Field label="Starts" required type="date" value={value.startDate} onChange={(next) => set("startDate", next)} />
+    <label style={labelStyle}>Plan<select value={value.licencePlan} onChange={(event) => set("licencePlan", event.target.value)}><option value="starter">Starter</option><option value="professional">Professional</option><option value="enterprise">Enterprise</option></select></label>
+    <p style={mutedStyle}>The licence starts switched off. Record the invoice next, then switch it on when it’s paid. The API enforces positive quantities, valid dates and committed-seat limits.</p>
+    <div style={actionRowStyle}><button type="button" style={secondaryButtonStyle} onClick={onCancel}>Cancel</button><button type="submit" style={primaryButtonStyle} disabled={saving}>{saving ? "Saving…" : "Set up licence"}</button></div>
+  </form>;
 }
 
 function InviteForm({ value, onChange, onSubmit, onCancel, saving }: { value: InviteFormValue; onChange: (value: InviteFormValue) => void; onSubmit: (event: FormEvent) => void; onCancel: () => void; saving: boolean }) {

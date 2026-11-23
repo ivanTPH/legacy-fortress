@@ -9,7 +9,7 @@ import Link from "next/link";
 import Icon from "@/components/ui/Icon";
 import BrandMark from "@/components/ui/BrandMark";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode, useRef } from "react";
 import { AdminEmptyState, AdminMetricCard, AdminNote, AdminStatStrip, AdminStatusBadge } from "@/components/admin/AdminPrimitives";
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell";
 import { ENTERPRISE_ADMIN_NAVIGATION, filterAdminNavigation, labelPartnerNavigation } from "@/components/admin/adminNavigation";
@@ -358,11 +358,13 @@ const EMPTY_PORTFOLIO: EnterprisePortfolio = {
 export default function EnterpriseOperationsWorkspace() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const viewAsParam = useRef(searchParams.get("viewAs"));
   const [state, setState] = useState<"checking" | "ready" | "denied" | "error">("checking");
   const [message, setMessage] = useState("");
   const [identity, setIdentity] = useState({ label: "Enterprise user", detail: "" });
   const [navigationCapabilities, setNavigationCapabilities] = useState<string[]>([]);
   const [partnerMode, setPartnerMode] = useState(false);
+  const [viewAs, setViewAs] = useState<{ id: string; name: string } | null>(null);
   const [partnerInviteIntent, setPartnerInviteIntent] = useState(false);
   const [portfolio, setPortfolio] = useState<EnterprisePortfolio>(EMPTY_PORTFOLIO);
   const [activeTab, setActiveTab] = useState<EnterpriseTab>("overview");
@@ -496,8 +498,12 @@ export default function EnterpriseOperationsWorkspace() {
       label: String(user.user_metadata?.full_name ?? user.email ?? "Enterprise user"),
       detail: String(user.email ?? ""),
     });
-    const res = await authFetch("/api/internal/admin/enterprise");
-    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; portfolio?: EnterprisePortfolio; message?: string; uiAccess?: { organisationScoped: boolean; capabilities: string[] } };
+    // View as partner (23 Nov 2026): staff arrive with ?viewAs=<organisation>; the choice stays for this tab.
+    const viewAsId = readViewAs(viewAsParam.current);
+    const res = await authFetch(viewAsId ? `/api/internal/admin/enterprise?viewAs=${encodeURIComponent(viewAsId)}` : "/api/internal/admin/enterprise");
+    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; portfolio?: EnterprisePortfolio; message?: string; uiAccess?: { organisationScoped: boolean; capabilities: string[]; viewAs?: { id: string; name: string } } };
+    if (viewAsId && !res.ok) clearViewAs();
+    setViewAs(json.uiAccess?.viewAs ?? null);
     if (res.status === 401) {
       // Signed out, or no recent two-step sign-in.
       router.replace("/enterprise/sign-in?next=%2Fenterprise");
@@ -674,7 +680,8 @@ export default function EnterpriseOperationsWorkspace() {
     const allowed = filterAdminNavigation(ENTERPRISE_ADMIN_NAVIGATION, navigationCapabilities);
     return partnerMode ? labelPartnerNavigation(allowed) : allowed;
   }, [navigationCapabilities, partnerMode]);
-  const can = useCallback((capability: string) => navigationCapabilities.includes(capability), [navigationCapabilities]);
+  // Viewing as a partner is look-only: anything that changes something is switched off.
+  const can = useCallback((capability: string) => navigationCapabilities.includes(capability) && (!viewAs || !/(manage|create|edit|seats|renew|lifecycle|request)/.test(capability)), [navigationCapabilities, viewAs]);
   const TAB_COPY: Record<string, { title: string; partnerTitle?: string; description: string; partnerDescription?: string }> = {
     overview: { title: "Commercial overview", partnerTitle: "Overview", description: "Organisations, licences and invitations across the platform.", partnerDescription: "Your organisation’s seats, invitations and renewal. Clients’ Vaults stay private unless they share records with you." },
     organisations: { title: "Organisations", description: "Partner organisations, their licences and administrators. Members’ Vaults are never shown." },
@@ -753,6 +760,7 @@ export default function EnterpriseOperationsWorkspace() {
 
       {(!partnerMode || activeTab !== "overview") && portfolio.organisations.length > 1 ? <details className="lf-admin-more-filters" open={Object.values(filters).some(Boolean)}><summary>Filter by organisation, status and more</summary>{filterPanel}</details> : null}
 
+      {viewAs ? <div className="lf-view-as-banner" role="status"><Icon name="visibility" size={20} /><span>You’re viewing <strong>{viewAs.name}</strong>’s Partner Portal as they see it. Look only: nothing can be changed here.</span><a href={`/admin/organisations/${viewAs.id}`} onClick={() => clearViewAs()}>Back to Admin</a></div> : !partnerMode ? <div className="lf-view-as-banner is-staff" role="note"><Icon name="info" size={20} /><span>This is the staff view of every partner. To see exactly what one partner sees, open it in Admin › Partners and choose View as partner.</span></div> : null}
       {activeTab === "help" ? <PartnerHelp organisationId={portfolio.organisations.length === 1 ? portfolio.organisations[0].id : null} /> : null}
       {activeTab === "overview" ? partnerMode ? renderPartnerOverview(portfolio, openPartnerTab) : renderOverview(portfolio, filteredOrganisations, filteredLicences, filteredInvitations, openPartnerTab, setFilters) : null}
       {activeTab === "organisations" ? renderOrganisations(filteredOrganisations, portfolio, orgForm, setOrgForm, runAction, async () => {
@@ -860,12 +868,14 @@ function PartnerGetStarted({ portfolio, setActiveTab }: { portfolio: EnterpriseP
     { done: joined, label: "See who joined", detail: "Members appear in Team as they join.", tab: "users" },
   ];
   if (steps.every((step) => step.done)) return null;
+  // "What to do next" (owner decision 23 Nov 2026): ticks for what's done and one clear button for the next step.
+  const next = steps.find((step) => !step.done);
   return <section className="lf-partner-start" aria-labelledby="partner-start-title">
-    <h2 id="partner-start-title">Get started</h2>
-    <ol>{steps.map((step, index) => <li key={step.label} className={step.done ? "is-done" : undefined}>
+    <h2 id="partner-start-title">What to do next</h2>
+    <ol>{steps.map((step, index) => <li key={step.label} className={step.done ? "is-done" : step === next ? "is-next" : undefined}>
       <span className="lf-partner-start-mark" aria-hidden="true">{step.done ? <Icon name="check" size={18} /> : index + 1}</span>
       <span className="lf-partner-start-copy"><strong>{step.label}</strong><small>{step.detail}</small></span>
-      {!step.done && step.tab ? <button type="button" className="lf-admin-row-button" onClick={() => setActiveTab(step.tab as EnterpriseTab)}>Open</button> : null}
+      {!step.done && step.tab ? <button type="button" className={step === next ? "lf-admin-primary-button" : "lf-admin-row-button"} onClick={() => setActiveTab(step.tab as EnterpriseTab)}>{step === next ? "Do this next" : "Open"}</button> : null}
       <span className="lf-visually-hidden">{step.done ? "Done" : "To do"}</span>
     </li>)}</ol>
   </section>;
@@ -2170,3 +2180,14 @@ function PartnerUptake({ memberships }: { memberships: Array<{ joinedAt: string 
     ) : <p>No one has joined in the last 12 weeks. Share your sign-up link from Get started.</p>}
   </section>;
 }
+
+const VIEW_AS_KEY = "lf-view-as-partner";
+function readViewAs(fromUrl: string | null): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    if (fromUrl && /^[0-9a-f-]{36}$/i.test(fromUrl)) { window.sessionStorage.setItem(VIEW_AS_KEY, fromUrl); return fromUrl; }
+    const stored = window.sessionStorage.getItem(VIEW_AS_KEY);
+    return stored && /^[0-9a-f-]{36}$/i.test(stored) ? stored : null;
+  } catch { return null; }
+}
+function clearViewAs() { try { window.sessionStorage.removeItem(VIEW_AS_KEY); } catch { /* optional */ } }

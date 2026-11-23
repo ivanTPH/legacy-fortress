@@ -11,9 +11,9 @@ test("Partner labels only change permitted navigation presentation", () => {
   const permitted = filterAdminNavigation(ENTERPRISE_ADMIN_NAVIGATION, capabilities);
   const partner = labelPartnerNavigation(permitted);
   assert.deepEqual(partner.flatMap((group) => group.items.map((item) => item.key)), [
-    "enterprise-overview", "enterprise-users", "enterprise-invitations", "enterprise-settings", "enterprise-help",
+    "enterprise-overview", "enterprise-users", "enterprise-invitations", "enterprise-help", "enterprise-settings",
   ]);
-  assert.equal(partner[0].items.find((item) => item.key === "enterprise-users")?.label, "Team & seats");
+  assert.equal(partner[0].items.find((item) => item.key === "enterprise-users")?.label, "Members"); // plain partner menu (23 Nov 2026)
   assert.equal(ENTERPRISE_ADMIN_NAVIGATION[0].items.find((item) => item.key === "enterprise-users")?.label, "Users and seats");
 });
 

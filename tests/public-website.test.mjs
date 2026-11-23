@@ -31,10 +31,9 @@ test("signed-in people are offered their Vault; the website never reads what's i
   assert.match(js, /'\/dashboard'/);
 });
 
-test("forms say plainly that nothing is sent yet on TEST", () => {
-  for (const page of ["contact", "partners"]) {
-    assert.match(fs.readFileSync(`public/site/${page}.html`, "utf8"), /TEST site: messages aren’t sent anywhere yet/);
-  }
+test("the contact form says plainly that nothing is sent yet on TEST; the partners form sends enquiries", () => {
+  assert.match(fs.readFileSync("public/site/contact.html", "utf8"), /TEST site: messages aren’t sent anywhere yet/);
+  assert.match(fs.readFileSync("public/site/partners.html", "utf8"), /data-endpoint="\/api\/partners\/enquiry"/);
 });
 
 test("the tour opens from guided set-up with one clear way back (pages can't be framed: X-Frame-Options DENY)", () => {
