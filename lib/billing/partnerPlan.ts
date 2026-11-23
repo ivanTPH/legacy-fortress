@@ -1,4 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isDeliverableAddress } from "../email/deliverable.ts";
+import { validateStagingSender } from "../auth/sendEmailHook.ts";
 
 /**
  * Partner licences (owner decision 18 Nov 2026). Legacy Fortress invoices the partner; each member who joins on a
@@ -45,7 +47,36 @@ export async function endPartnerPremium(admin: SupabaseClient, userId: string, o
   if (!other.error && (other.data ?? []).length) return { changed: false as const };
   const result = await admin.from("billing_profiles").update({ ...FREE, plan_source: "partner_ended", updated_at: new Date().toISOString() }).eq("user_id", userId);
   if (result.error) throw new Error(result.error.message);
+  // The member is also told by email (23 Nov 2026); best effort, never blocks the change.
+  try { await sendPartnerEndedEmail(admin, userId); } catch { /* the in-app notice still shows */ }
   return { changed: true as const };
+}
+
+/** Content-free: names no organisation, record or value; real addresses only. */
+export function renderPartnerEndedEmail(appUrl: string) {
+  const link = `${appUrl.replace(/\/$/, "")}/account/billing`;
+  return {
+    subject: "Your Legacy Fortress plan has changed",
+    text: `The arrangement that gave you Legacy Fortress Premium has ended, so your Vault is now on the Free plan.\n\nNothing has been deleted. Sign in to choose whether to stay on Free or go Premium: ${link}`,
+    html: `<p>The arrangement that gave you Legacy Fortress Premium has ended, so your Vault is now on the Free plan.</p><p>Nothing has been deleted. <a href="${link}">Sign in to choose</a> whether to stay on Free or go Premium.</p>`,
+  };
+}
+
+async function sendPartnerEndedEmail(admin: SupabaseClient, userId: string) {
+  const apiKey = String(process.env.RESEND_API_KEY ?? "").trim();
+  if (!apiKey) return false;
+  const user = await admin.auth.admin.getUserById(userId);
+  const email = user.data.user?.email ?? null;
+  if (!isDeliverableAddress(email)) return false;
+  const from = validateStagingSender(String(process.env.RESEND_AUTH_FROM ?? ""));
+  const appUrl = String(process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "https://test.mylegacyfortress.com");
+  const message = renderPartnerEndedEmail(appUrl);
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", "Idempotency-Key": `lf-partner-ended/${userId}/${new Date().toISOString().slice(0, 10)}` },
+    body: JSON.stringify({ from, to: [email], subject: message.subject, text: message.text, html: message.html }),
+  });
+  return response.ok;
 }
 
 /** The member has seen the notice and chosen to stay on Free. */

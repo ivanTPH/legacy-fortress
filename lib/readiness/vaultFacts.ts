@@ -34,7 +34,8 @@ export async function loadVaultFacts(client: SupabaseClient, ownerUserId: string
 
   return {
     planSource: billing.error ? null : ((billing.data as { plan_source?: string | null } | null)?.plan_source ?? null),
-    unreadHelpReplies: rows<{ details: Record<string, unknown> | null }>(helpReplies).filter((row) => !row.details?.read_at).length,
+    // Partner Portal conversations are read in the Partner Portal's Help, not the Vault (23 Nov 2026).
+    unreadHelpReplies: rows<{ details: Record<string, unknown> | null }>(helpReplies).filter((row) => !row.details?.read_at && row.details?.place !== "partner_portal").length,
     rows: vaultRows,
     willDocumentCount,
     contacts: rows<{ id: string; full_name: string | null; contact_role: string | null; relationship: string | null; linked_user_id: string | null }>(contacts)

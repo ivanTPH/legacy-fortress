@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Icon from "../ui/Icon";
 import { supabase } from "../../lib/supabaseClient";
 import { waitForActiveUser } from "../../lib/auth/session";
+import { loadHelpThreads, type HelpThread as Thread } from "../../lib/support/helpThreads";
 
 /**
  * Help (owner-approved design "Help and info buttons", UX review Stage 4): search, Set up with me, the tour,
@@ -22,35 +23,6 @@ export const HELP_QUESTIONS: Array<{ id: string; q: string; a: string }> = [
   { id: "safe", q: "Is my information safe?", a: "Your Vault is private to you. Sign-in needs your password and, on a new device, a code. Files are only opened through short-lived links, and every access is recorded." },
 ];
 
-type Thread = { id: string; topic: string; text: string; at: string; replies: Array<{ id: string; text: string; at: string; isNew: boolean }> };
-
-/** The person's own messages to us and our replies (stage 3, 20 Nov 2026). Opening Help marks replies as read. */
-async function loadThreads(): Promise<Thread[]> {
-  const user = await waitForActiveUser(supabase, { attempts: 4, delayMs: 100 });
-  if (!user) return [];
-  const { data, error } = await supabase.from("section_entries").select("id,category_key,title,summary,details,created_at")
-    .eq("user_id", user.id).eq("section_key", "support").in("category_key", ["help_requests", "help_replies"])
-    .order("created_at", { ascending: true }).limit(200);
-  if (error) return [];
-  type Row = { id: string; category_key: string; title: string | null; summary: string | null; details: Record<string, unknown> | null; created_at: string };
-  const rows = (data ?? []) as Row[];
-  const threads = new Map<string, Thread>();
-  for (const row of rows.filter((item) => item.category_key === "help_requests")) {
-    threads.set(row.id, { id: row.id, topic: String(row.title ?? "Message"), text: String(row.summary ?? ""), at: row.created_at, replies: [] });
-  }
-  const unread: Row[] = [];
-  for (const row of rows.filter((item) => item.category_key === "help_replies")) {
-    const thread = threads.get(String(row.details?.reply_to ?? ""));
-    if (!thread) continue;
-    const isNew = !row.details?.read_at;
-    if (isNew) unread.push(row);
-    thread.replies.push({ id: row.id, text: String(row.summary ?? ""), at: row.created_at, isNew });
-  }
-  const readAt = new Date().toISOString();
-  await Promise.all(unread.map((row) => supabase.from("section_entries").update({ details: { ...(row.details ?? {}), read_at: readAt } }).eq("id", row.id)));
-  return [...threads.values()].reverse().slice(0, 10);
-}
-
 const TOPICS = ["Setting up my Vault", "Someone has died", "Billing and my plan", "Security or privacy", "Something else"] as const;
 
 export default function HelpWorkspace() {
@@ -62,7 +34,7 @@ export default function HelpWorkspace() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
   const [threads, setThreads] = useState<Thread[]>([]);
-  const refreshThreads = useCallback(() => { void loadThreads().then(setThreads).catch(() => setThreads([])); }, []);
+  const refreshThreads = useCallback(() => { void loadHelpThreads("help_page").then(setThreads).catch(() => setThreads([])); }, []);
   useEffect(() => { refreshThreads(); }, [refreshThreads]);
 
   const results = useMemo(() => {
