@@ -5,6 +5,24 @@ type AnySupabaseClient = SupabaseClient;
 
 const tableCache = new Map<string, boolean>();
 const columnCache = new Map<string, boolean>();
+/**
+ * Speed (23 Nov 2026): tables and columns every environment has had for months, checked against the migrations.
+ * Each full page load used to re-probe them (a request per check, about 20 per page); they are now known
+ * without asking. Anything not listed here is still checked the old way.
+ */
+export const KNOWN_SCHEMA: Record<string, readonly string[]> = {
+  user_onboarding_state: ["user_id", "current_step", "completed_steps", "is_completed", "terms_accepted", "marketing_opt_in", "tour_opt_in", "updated_at"],
+  terms_acceptances: ["user_id", "terms_version", "accepted", "accepted_at", "source", "updated_at"],
+  wallets: ["id", "owner_user_id", "organisation_id", "status", "label", "created_at"],
+  organisations: ["id", "owner_user_id", "created_at"],
+  user_profiles: ["user_id", "vault_preferences", "accessibility_preferences"],
+  assets: ["id", "updated_at", "owner_user_id", "wallet_id", "organisation_id", "deleted_at", "section_key", "category_key"],
+};
+for (const [table, columns] of Object.entries(KNOWN_SCHEMA)) {
+  tableCache.set(table, true);
+  for (const column of columns) columnCache.set(`${table}:${column}`, true);
+}
+
 // Checks already in flight are shared, so pages loading together don't repeat them.
 const pendingChecks = new Map<string, Promise<boolean>>();
 

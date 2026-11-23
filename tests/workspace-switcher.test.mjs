@@ -118,7 +118,7 @@ test("workspace switcher is present in admin shell, application shell, sign-in, 
   assert.match(switcher, /isTestPersonaAccessEnabled/);
   assert.match(switcher, /queryRole && adminFlag && prototypeFlag/);
   assert.match(switcher, /loadAdminPermissionRoles/);
-  assert.match(switcher, /\/api\/internal\/admin\/session/);
+  assert.match(switcher, /fetchAdminSession\(token\)/); // shared GET /api/internal/admin/session (speed, 23 Nov 2026)
   assert.match(switcher, /getMasterAdminRolesForEmail/);
   assert.match(switcher, /mergePlatformRoles\(metadataRoles, adminRoles, masterAdminRoles\)/);
   assert.doesNotMatch(switcher, /extractPlatformRolesFromMetadata\(user\.user_metadata\)/);

@@ -1,3 +1,4 @@
+import { clearSharedReads, sharedRead } from "./sharedRead.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { hasColumn, hasTable } from "./schemaSafe";
 import { isMissingColumnError, isMissingRelationError } from "./supabaseErrors";
@@ -384,7 +385,7 @@ export function filterNodesByVaultPreferences<T extends {
     });
 }
 
-export async function loadVaultPreferences(client: AnySupabaseClient, userId: string): Promise<VaultPreferences> {
+async function loadVaultPreferencesUncached(client: AnySupabaseClient, userId: string): Promise<VaultPreferences> {
   const tableExists = await hasTable(client, USER_PROFILES_TABLE);
   if (!tableExists) return getDefaultVaultPreferences();
 
@@ -415,6 +416,7 @@ export async function saveVaultPreferences(
   userId: string,
   preferences: VaultPreferences,
 ): Promise<VaultPreferences> {
+  clearSharedReads();
   const tableExists = await hasTable(client, USER_PROFILES_TABLE);
   if (!tableExists) return normalizeVaultPreferences(preferences);
 
@@ -445,4 +447,8 @@ export async function saveVaultPreferences(
   }
 
   return normalizeVaultPreferences((response.data as { vault_preferences?: unknown }).vault_preferences ?? preferences);
+}
+
+export function loadVaultPreferences(client: AnySupabaseClient, userId: string) {
+  return sharedRead(`vault-preferences:${userId}`, () => loadVaultPreferencesUncached(client, userId));
 }

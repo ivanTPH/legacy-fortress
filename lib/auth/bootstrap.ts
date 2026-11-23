@@ -28,14 +28,19 @@ export async function bootstrapAuthenticatedUser(
     roles?: PlatformRole[];
   },
 ): Promise<AuthBootstrapResult> {
-  const wallet = await ensureWalletContext(client, userId);
-  const onboarding = await getOrCreateOnboardingState(client, userId);
-  const linkedAccessAvailable = await hasLinkedAccountAccess(client, userId);
+  // Speed (23 Nov 2026): these checks don't depend on each other, so they run together instead of one after
+  // another (this runs before any signed-in page shows). The terms answer is only used when it's needed.
+  const [wallet, onboarding, linkedAccessAvailable, termsState] = await Promise.all([
+    ensureWalletContext(client, userId),
+    getOrCreateOnboardingState(client, userId),
+    hasLinkedAccountAccess(client, userId),
+    getTermsAcceptanceState(client, userId).catch(() => null),
+  ]);
   if (!linkedAccessAvailable) {
     await ensureOwnerPlanProfile(client, userId);
   }
   const canBypassOnboarding = linkedAccessAvailable || isInvitationAcceptPath(nextPath);
-  const terms = canBypassOnboarding ? null : await getTermsAcceptanceState(client, userId);
+  const terms = canBypassOnboarding ? null : termsState;
   const access = resolveBootstrapDestination({
     nextPath,
     // A person with their own Vault always lands in it; Admin and Partner are opened

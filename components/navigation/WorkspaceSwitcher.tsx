@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { fetchAdminSession } from "@/lib/auth/adminSessionClient";
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from "react";
 import Icon from "../ui/Icon";
 import BrandGlyph from "../ui/BrandGlyph";
@@ -444,12 +445,9 @@ function formatRole(role: PlatformRole | null) {
 }
 
 async function loadAdminPermissionRoles(token: string): Promise<PlatformRole[]> {
-  const response = await fetch("/api/internal/admin/session", {
-    headers: {
-      authorization: `Bearer ${token}`,
-    },
-  });
-  const raw = (await response.json().catch(() => null)) as {
+  const shared = await fetchAdminSession(token);
+  const response = { ok: shared.ok, status: shared.status };
+  const raw = shared.payload as {
     ok?: boolean;
     admin?: { isMasterAdmin?: boolean; role?: string; capabilities?: string[] };
     pendingAdmin?: { isMasterAdmin?: boolean; role?: string; capabilities?: string[] } | null;

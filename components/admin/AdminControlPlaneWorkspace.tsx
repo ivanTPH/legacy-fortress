@@ -610,6 +610,7 @@ export default function AdminControlPlaneWorkspace({
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [adminInvitations, setAdminInvitations] = useState<AdminInvitation[]>([]);
   const [metrics, setMetrics] = useState<DashboardMetric[]>([]);
+  const [metricsLoading, setMetricsLoading] = useState(false);
   const [funnel, setFunnel] = useState<ActivationFunnel | null>(null);
   const [support, setSupport] = useState<SupportSnapshot | null>(null);
   const [supportDetail, setSupportDetail] = useState<SupportInvitationDetail | null>(null);
@@ -715,7 +716,19 @@ export default function AdminControlPlaneWorkspace({
     setAdmins(sessionJson.admins ?? []);
     setAdminInvitations(sessionJson.invitations ?? []);
 
-    const requested = requestsForSection(section, sessionJson.admin.capabilities);
+    // Speed (23 Nov 2026): on the Overview the measures are the slowest request, so the page shows without
+    // waiting for them and they fill in when ready.
+    const allRequested = requestsForSection(section, sessionJson.admin.capabilities);
+    const deferSummary = section === "overview";
+    const requested = deferSummary ? allRequested.filter((item) => item.key !== "summary") : allRequested;
+    if (deferSummary && allRequested.some((item) => item.key === "summary")) {
+      setMetricsLoading(true);
+      void authFetch("/api/internal/admin/dashboard-summary")
+        .then(async (res) => (res.ok ? ((await res.json().catch(() => ({}))) as { summary?: { metrics?: DashboardMetric[] } }).summary?.metrics ?? [] : []))
+        .then((value) => setMetrics(value))
+        .catch(() => undefined)
+        .finally(() => setMetricsLoading(false));
+    }
     const responses = await Promise.all(requested.map((item) => authFetch(item.url).then(async (res) => ({ ...item, res, json: await res.json().catch(() => ({})) }))));
     for (const item of responses) {
       if (!item.res.ok) continue;
@@ -1197,7 +1210,7 @@ export default function AdminControlPlaneWorkspace({
           <label className="lf-admin-test-toggle lf-admin-page-test-toggle"><input type="checkbox" checked={includeTestAccounts} onChange={(event) => setIncludeTestAccounts(event.target.checked)} /> Show test accounts</label>
         ) : null}
         {section === "inbox" ? <AdminInbox authFetch={authFetch} /> : null}
-        {section === "overview" ? renderOverview(metrics, support, verificationQueue, probateCases, enterprisePortfolio, capabilities, funnel) : null}
+        {section === "overview" ? renderOverview(metrics, support, verificationQueue, probateCases, enterprisePortfolio, capabilities, funnel, metricsLoading) : null}
         {section === "organisations" ? renderPlatformOrganisations(enterpriseViews, {
           search: enterpriseSearch,
           status: enterpriseStatusFilter,
@@ -1335,7 +1348,7 @@ function ActivationFunnelCard({ funnel }: { funnel: ActivationFunnel }) {
   );
 }
 
-function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | null, verification: VerificationItem[], probate: ProbateCase[], _portfolio: EnterprisePortfolio | null, capabilities: string[], funnel: ActivationFunnel | null = null) {
+function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | null, verification: VerificationItem[], probate: ProbateCase[], _portfolio: EnterprisePortfolio | null, capabilities: string[], funnel: ActivationFunnel | null = null, metricsLoading = false) {
   const canVerify = capabilities.includes("verification:read");
   const canViewInvitations = capabilities.includes("support:read");
   const pending = support?.counts.verificationAwaitingReview ?? verification.length;
@@ -1374,7 +1387,7 @@ function renderOverview(metrics: DashboardMetric[], support: SupportSnapshot | n
           ]}
           rows={metrics.filter((metric) => metric.available && String(metric.status).toLowerCase() !== "unavailable")}
           getRowKey={(metric) => metric.key}
-          emptyState={<AdminEmptyState title="No measures">No summary metrics are available for this role.</AdminEmptyState>}
+          emptyState={metricsLoading ? <p role="status" className="lf-admin-muted">Loading measures…</p> : <AdminEmptyState title="No measures">No summary metrics are available for this role.</AdminEmptyState>}
         />
       </section>
     </div>

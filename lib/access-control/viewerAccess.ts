@@ -1,3 +1,4 @@
+import { sharedRead } from "../sharedRead.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { CURRENT_TERMS_VERSION } from "../../config/onboarding.config.ts";
 import {
@@ -147,7 +148,7 @@ export function clearStoredLinkedGrantId() {
   window.localStorage.removeItem(ACTIVE_LINKED_GRANT_STORAGE_KEY);
 }
 
-export async function hasLinkedAccountAccess(client: AnySupabaseClient, userId: string) {
+async function hasLinkedAccountAccessUncached(client: AnySupabaseClient, userId: string) {
   const res = await client
     .from("account_access_grants")
     .select("id")
@@ -159,7 +160,11 @@ export async function hasLinkedAccountAccess(client: AnySupabaseClient, userId: 
   return Boolean((res.data ?? []).length);
 }
 
-async function hasOwnVaultAccess(client: AnySupabaseClient, userId: string) {
+function hasOwnVaultAccess(client: AnySupabaseClient, userId: string) {
+  return sharedRead(`own-vault:${userId}`, () => hasOwnVaultAccessUncached(client, userId));
+}
+
+async function hasOwnVaultAccessUncached(client: AnySupabaseClient, userId: string) {
   const { data, error } = await client
     .from("user_onboarding_state")
     .select("is_completed")
@@ -607,4 +612,8 @@ export function linkedAccessStateFor(
   if (viewer.vaultLifecycleState !== "OWNER_ACTIVE") return "estate_locked";
   if (viewer.identityAssuranceLevel < viewer.requiredIdentityLevel) return "verification_required";
   return sharedRecordCount > 0 ? "records_shared" : "no_records";
+}
+
+export function hasLinkedAccountAccess(client: AnySupabaseClient, userId: string) {
+  return sharedRead(`linked-access:${userId}`, () => hasLinkedAccountAccessUncached(client, userId));
 }

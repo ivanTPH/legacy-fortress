@@ -1,3 +1,4 @@
+import { clearSharedReads, sharedRead } from "../sharedRead.ts";
 import { CURRENT_TERMS_VERSION, ONBOARDING_STEPS, type OnboardingStepId } from "../../config/onboarding.config";
 import { hasColumn, hasTable } from "../schemaSafe";
 import { isMissingRelationError } from "../supabaseErrors";
@@ -37,7 +38,7 @@ export function nextStep(step: OnboardingStepId): OnboardingStepId {
   return ONBOARDING_STEPS[idx + 1].id;
 }
 
-export async function getOrCreateOnboardingState(client: SupabaseClientLike, userId: string) {
+async function getOrCreateOnboardingStateUncached(client: SupabaseClientLike, userId: string) {
   const schema = await getOnboardingSchema(client);
   if (!schema.exists || !schema.columns.user_id || !schema.columns.is_completed) {
     return fallbackOnboardingState(userId);
@@ -80,6 +81,7 @@ export async function saveOnboardingState(
   userId: string,
   patch: Partial<OnboardingStateRow>,
 ) {
+  clearSharedReads();
   const schema = await getOnboardingSchema(client);
   if (!schema.exists || !schema.columns.user_id || !schema.columns.is_completed) {
     return fallbackOnboardingState(userId);
@@ -113,7 +115,7 @@ export function shouldGateToOnboarding(state: OnboardingStateRow | null) {
   return !state.is_completed;
 }
 
-export async function getTermsAcceptanceState(client: SupabaseClientLike, userId: string) {
+async function getTermsAcceptanceStateUncached(client: SupabaseClientLike, userId: string) {
   const tableExists = await hasTable(client, TERMS_TABLE);
   if (!tableExists) {
     return fallbackTermsAcceptanceState(userId);
@@ -172,6 +174,7 @@ export async function saveTermsAcceptance(
     termsVersion?: string;
   },
 ) {
+  clearSharedReads();
   const tableExists = await hasTable(client, TERMS_TABLE);
   if (!tableExists) {
     return fallbackTermsAcceptanceState(userId);
@@ -389,4 +392,12 @@ export function isCurrentTermsAcceptance(
 ) {
   if (!terms?.accepted) return false;
   return terms.terms_version === TERMS_POLICY.currentVersion;
+}
+
+export function getOrCreateOnboardingState(client: SupabaseClientLike, userId: string) {
+  return sharedRead(`onboarding:${userId}`, () => getOrCreateOnboardingStateUncached(client, userId));
+}
+
+export function getTermsAcceptanceState(client: SupabaseClientLike, userId: string) {
+  return sharedRead(`terms:${userId}`, () => getTermsAcceptanceStateUncached(client, userId));
 }

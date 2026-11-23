@@ -1,3 +1,4 @@
+import { clearSharedReads, sharedRead } from "./sharedRead.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { hasColumn, hasTable } from "./schemaSafe";
 
@@ -45,7 +46,7 @@ export function normalizeAccessibilityPreferences(input: unknown): Accessibility
   };
 }
 
-export async function loadAccessibilityPreferences(client: AnySupabaseClient, userId: string) {
+async function loadAccessibilityPreferencesUncached(client: AnySupabaseClient, userId: string) {
   if (!(await hasTable(client, USER_PROFILES_TABLE)) || !(await hasColumn(client, USER_PROFILES_TABLE, ACCESSIBILITY_COLUMN))) {
     return getDefaultAccessibilityPreferences();
   }
@@ -68,6 +69,7 @@ export async function saveAccessibilityPreferences(
   userId: string,
   preferences: AccessibilityPreferences,
 ) {
+  clearSharedReads();
   if (!(await hasTable(client, USER_PROFILES_TABLE)) || !(await hasColumn(client, USER_PROFILES_TABLE, ACCESSIBILITY_COLUMN))) {
     return preferences;
   }
@@ -89,4 +91,8 @@ export async function saveAccessibilityPreferences(
   }
 
   return normalized;
+}
+
+export function loadAccessibilityPreferences(client: AnySupabaseClient, userId: string) {
+  return sharedRead(`accessibility:${userId}`, () => loadAccessibilityPreferencesUncached(client, userId));
 }
