@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { tellStaff } from "../../lib/staffAlertClient";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Icon from "../ui/Icon";
 import { supabase } from "../../lib/supabaseClient";
@@ -62,6 +63,7 @@ export default function HelpWorkspace() {
       if (insertError) throw insertError;
       setSent(true); setMessage(""); setTopic("");
       refreshThreads();
+      void tellStaff("help_message");
     } catch {
       setError("That didn’t send. Please try again in a moment.");
     } finally {

@@ -1,6 +1,7 @@
 "use client";
 
 import HelpTip from "../ui/HelpTip";
+import { tellStaff } from "@/lib/staffAlertClient";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -446,6 +447,7 @@ function AttorneyDialog({ snapshot, ownerId, personId, onClose, onSaved }: { sna
     setSaving(true); setError("");
     try {
       await recordLegalAuthority(supabase, ownerId, { personId, authorityType: type, registered, registrationRef: reference, usableWhen: (usableWhen || "lacks_capacity_only") as "with_consent" | "lacks_capacity_only", document, areas });
+      void tellStaff("poa_check"); // staff who check authorities are told one is waiting (23 Nov 2026)
       await onSaved(`${name}’s authority is recorded. It isn’t in effect yet.`);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Couldn’t record the authority."); }
     finally { setSaving(false); }

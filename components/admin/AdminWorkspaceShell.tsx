@@ -5,6 +5,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import FounderTestLauncher, { useFounderTestLauncherAccess } from "@/components/navigation/FounderTestLauncher";
 import Icon from "@/components/ui/Icon";
+import { supabase } from "@/lib/supabaseClient";
 import WorkspaceAccountLinks from "@/components/navigation/WorkspaceAccountLinks";
 import type { AdminNavigationGroup, AdminNavigationItem } from "./adminNavigation";
 
@@ -58,6 +59,7 @@ export default function AdminWorkspaceShell({
   const isPartner = workspaceLabel === "Partner Portal";
   const isInternalEnterprise = workspaceLabel === "Enterprise operations";
   const isPlatform = !isPartner;
+  const waiting = useAdminWaiting(isPlatform && !isInternalEnterprise);
   const founderLauncherAvailable = useFounderTestLauncherAccess();
 
   // Short staff sessions (ADMIN_PARTNER.md): sign out after 30 minutes without activity.
@@ -197,6 +199,7 @@ export default function AdminWorkspaceShell({
                 <Link key={item.key} href={item.href} className={active ? "lf-admin-shell-nav-link active" : "lf-admin-shell-nav-link"} onClick={() => setMenuOpen(false)} prefetch={false}>
                   <Icon name={item.icon} size={18} />
                   <span>{item.label}</span>
+                  {item.key === "inbox" && waiting > 0 ? <span className="lf-admin-nav-badge" aria-label={`${waiting} waiting`}>{waiting > 99 ? "99+" : waiting}</span> : null}
                 </Link>
               );
             })}
@@ -349,7 +352,7 @@ export default function AdminWorkspaceShell({
       </section>
       {isPlatform || isPartner ? <nav className="lf-admin-shell-mobile-tabs" style={{ gridTemplateColumns: `repeat(${mobileTabs.length + 1}, minmax(0, 1fr))` }} aria-label={isPartner ? "Partner Portal quick navigation" : "Platform Admin quick navigation"}>
         {mobileTabs.map((item) => <Link key={item.key} href={item.href} aria-current={isItemActive(currentPathname, item) ? "page" : undefined} prefetch={false}>
-          <Icon name={item.icon} size={22} /><span>{MOBILE_TAB_LABEL[item.key] ?? item.label}</span>
+          <span className="lf-admin-tab-icon"><Icon name={item.icon} size={22} />{item.key === "inbox" && waiting > 0 ? <span className="lf-admin-nav-badge is-tab" aria-label={`${waiting} waiting`}>{waiting > 99 ? "99+" : waiting}</span> : null}</span><span>{MOBILE_TAB_LABEL[item.key] ?? item.label}</span>
         </Link>)}
         {/* CONSISTENCY › Mobile: 3 role tabs + Menu. Menu opens the same role-filtered menu as the top bar. */}
         <button type="button" className="lf-admin-shell-mobile-tab-menu" onClick={() => setMenuOpen(true)} aria-expanded={menuOpen} aria-controls="admin-mobile-navigation">
@@ -1018,3 +1021,26 @@ export const adminPanelStyle = {
   display: "grid",
   gap: 14,
 } satisfies CSSProperties;
+
+/** The red count on Admin's Inbox (owner decision 23 Nov 2026): things waiting that this admin can deal with. */
+function useAdminWaiting(enabled: boolean) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (!enabled) return;
+    let live = true;
+    const load = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
+        if (!token) return;
+        const res = await fetch("/api/internal/admin/waiting", { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
+        const json = (await res.json().catch(() => ({}))) as { total?: number };
+        if (live && res.ok) setCount(Number(json.total ?? 0));
+      } catch { /* the count is a hint; the Inbox itself is the record */ }
+    };
+    void load();
+    const timer = window.setInterval(() => { void load(); }, 120_000);
+    return () => { live = false; window.clearInterval(timer); };
+  }, [enabled]);
+  return count;
+}
