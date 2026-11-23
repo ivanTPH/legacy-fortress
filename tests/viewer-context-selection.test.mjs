@@ -9,6 +9,7 @@ import {
   selectOwnVault,
   setStoredLinkedGrantId,
 } from '../lib/access-control/viewerAccess.ts';
+import { clearSharedReads } from '../lib/sharedRead.ts';
 
 test('an explicit own-Vault choice survives hydration without selecting an unrelated linked grant', async () => {
   const originalWindow = globalThis.window;
@@ -57,6 +58,7 @@ test('an explicit own-Vault choice survives hydration without selecting an unrel
     assert.equal(viewer.targetOwnerUserId, 'signed-in-owner');
     assert.equal(viewer.grantId, null);
 
+    clearSharedReads(); // a different account state: in the app a save clears shared reads (speed, 23 Nov 2026)
     const linkedOnlyViewer = await loadViewerAccessState(makeClient(false), 'signed-in-owner', {
       preferOwnVault: true,
     });
