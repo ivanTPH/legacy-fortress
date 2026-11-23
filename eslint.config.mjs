@@ -18,7 +18,6 @@ const eslintConfig = defineConfig([
     "scripts/verify-ux-architecture.cjs",
     // Static design handoffs are reference prototypes, not application source.
     "design/**",
-    "design_update_v4/**",
     "design_handoff_legacy_fortress*/**",
   ]),
   {

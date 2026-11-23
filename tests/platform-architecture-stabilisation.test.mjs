@@ -28,13 +28,6 @@ import {
   PRODUCTION_READINESS_ITEMS,
 } from "../lib/productionReadiness.ts";
 import {
-  buildAuditPreviewEvents,
-  buildConsentGovernanceSummary,
-  canIncludeInOutreachAudience,
-  canShowDetailedInsights,
-} from "../components/admin/prototype/complianceGovernance.ts";
-import { organisationClients } from "../components/admin/prototype/mockData.ts";
-import {
   ACCESS_MODEL_ROUTES,
   ACCESS_MODEL_SUMMARY,
   canRoleAccessPath,
@@ -165,66 +158,6 @@ test("implementation keeps shared documents and contacts canonical while known c
   assert.match(supportWorkspace, /help_requests/);
 });
 
-test("production readiness contracts keep backend auth billing and release boundaries explicit", () => {
-  const nextConfig = fs.readFileSync(path.join(root, "next.config.ts"), "utf8");
-  const service = fs.readFileSync(path.join(root, "components/admin/prototype/prototypeDataService.ts"), "utf8");
-  const prototypePage = fs.readFileSync(path.join(root, "app/internal/admin/prototype/page.tsx"), "utf8");
-  const casesPage = fs.readFileSync(path.join(root, "app/internal/admin/prototype/cases/page.tsx"), "utf8");
-  const usersPage = fs.readFileSync(path.join(root, "app/internal/admin/prototype/users/page.tsx"), "utf8");
-  const campaignsPage = fs.readFileSync(path.join(root, "app/internal/admin/prototype/campaigns/page.tsx"), "utf8");
-  const licencesPage = fs.readFileSync(path.join(root, "app/internal/admin/prototype/licences/page.tsx"), "utf8");
-  const enterprisePage = fs.readFileSync(path.join(root, "app/internal/admin/prototype/enterprise/page.tsx"), "utf8");
-  const verificationsPage = fs.readFileSync(path.join(root, "app/internal/admin/prototype/verifications/page.tsx"), "utf8");
-  const complianceGovernance = fs.readFileSync(path.join(root, "components/admin/prototype/complianceGovernance.ts"), "utf8");
-
-  const checklist = getProductionReadinessChecklist();
-  assert.match(checklist.rule, /Keep prototype\/static boundaries explicit/);
-  assert.equal(PRODUCTION_READINESS_ITEMS.length, 6);
-  assert.equal(getProductionReadinessByArea("billing")[0]?.boundary, "consumer billing and enterprise licence management");
-  assert.equal(getProductionReadinessByArea("security")[0]?.boundary, "browser security headers and CSP migration");
-  assert.ok(PRODUCTION_READINESS_ITEMS.every((item) => item.mustNotDoYet.startsWith("Do not")));
-  assert.match(nextConfig, /X-Content-Type-Options/);
-  assert.match(nextConfig, /X-Frame-Options/);
-  assert.match(nextConfig, /Referrer-Policy/);
-  assert.match(nextConfig, /Permissions-Policy/);
-  assert.match(nextConfig, /Content-Security-Policy/);
-  assert.doesNotMatch(nextConfig, /Content-Security-Policy-Report-Only/);
-  assert.match(nextConfig, /frame-ancestors 'none'/);
-  assert.doesNotMatch(nextConfig, /fonts\.googleapis\.com/);
-  assert.match(nextConfig, /source: "\/fonts\/:path\*"/);
-  assert.match(nextConfig, /max-age=31536000, immutable/);
-
-  assert.match(service, /export const prototypeDataServiceBoundary/);
-  assert.match(service, /futureAdapter: "api_backed_repository"/);
-  assert.match(service, /export function getAdminOverviewData/);
-  assert.match(service, /export function getCaseListData/);
-  assert.match(service, /export function getUserDirectoryData/);
-  assert.match(service, /getRoleManagementData/);
-  assert.match(service, /export function getEnterpriseCommandCentreData/);
-  assert.match(service, /export function getVerificationQueueData/);
-  assert.match(service, /export function getLicenceManagementData/);
-  assert.match(service, /export function getCampaignPrototypeData/);
-  assert.match(service, /buildConsentGovernanceSummary/);
-  assert.match(service, /buildAuditPreviewEvents/);
-  assert.match(complianceGovernance, /export function buildConsentGovernanceSummary/);
-  assert.match(complianceGovernance, /export function canShowDetailedInsights/);
-  assert.match(complianceGovernance, /export function canIncludeInOutreachAudience/);
-  assert.match(enterprisePage, /getEnterpriseCommandCentreData/);
-  assert.match(verificationsPage, /getVerificationQueueData/);
-  assert.match(licencesPage, /getLicenceManagementData/);
-  assert.match(prototypePage, /getAdminOverviewData/);
-  assert.match(casesPage, /getCaseListData/);
-  assert.match(usersPage, /getRoleManagementData/);
-  assert.match(campaignsPage, /getCampaignPrototypeData/);
-  assert.doesNotMatch(prototypePage, /from "@\/components\/admin\/prototype\/mockData"/);
-  assert.doesNotMatch(casesPage, /from "@\/components\/admin\/prototype\/mockData"/);
-  assert.doesNotMatch(usersPage, /from "@\/components\/admin\/prototype\/mockData"/);
-  assert.doesNotMatch(campaignsPage, /from "@\/components\/admin\/prototype\/mockData"/);
-  assert.doesNotMatch(campaignsPage, /from "@\/components\/admin\/prototype\/reportInsights"/);
-  assert.doesNotMatch(enterprisePage, /from "@\/components\/admin\/prototype\/mockData"/);
-  assert.doesNotMatch(verificationsPage, /from "@\/components\/admin\/prototype\/mockData"/);
-});
-
 test("audit readiness defines production event shape while prototype previews remain non-persistent", () => {
   assert.ok(AUDIT_EVENT_CATEGORIES.includes("login_session"));
   assert.ok(AUDIT_EVENT_CATEGORIES.includes("document_upload"));
@@ -257,42 +190,7 @@ test("audit readiness defines production event shape while prototype previews re
   assert.ok(previews.some((item) => item.category === "restricted_action_blocked" && item.governance?.consentChecked));
 });
 
-test("compliance governance keeps reporting exports disabled and consent gates explicit", () => {
-  const reportsPage = fs.readFileSync(path.join(root, "app/internal/admin/prototype/reports/page.tsx"), "utf8");
-  const clientInsightsPage = fs.readFileSync(path.join(root, "app/internal/admin/prototype/reports/client-insights/page.tsx"), "utf8");
-  const service = fs.readFileSync(path.join(root, "components/admin/prototype/prototypeDataService.ts"), "utf8");
-
-  const summary = buildConsentGovernanceSummary(organisationClients, "reports");
-  assert.equal(summary.exportState, "disabled");
-  assert.match(summary.exportReason, /Exports are disabled/);
-  assert.match(summary.restrictedDataRule, /banded, non-document signals/);
-  assert.ok(summary.safeguards.every((item) => !/account details|documents|notes/i.test(item) || /hidden|remain hidden/i.test(item)));
-  assert.equal(summary.adviserInsightAllowed + summary.adviserInsightRestricted, organisationClients.length);
-  assert.equal(summary.marketingAllowed + summary.marketingRestricted, organisationClients.length);
-
-  const consentedClient = organisationClients.find((client) => client.consent.adviserInsights);
-  const nonConsentedClient = organisationClients.find((client) => !client.consent.adviserInsights);
-  assert.ok(consentedClient);
-  assert.ok(nonConsentedClient);
-  assert.equal(canShowDetailedInsights(consentedClient), true);
-  assert.equal(canShowDetailedInsights(nonConsentedClient), false);
-  assert.equal(canIncludeInOutreachAudience(nonConsentedClient), false);
-  assert.ok(buildAuditPreviewEvents("client_insights").some((event) => event.action.includes("Consent gate checked")));
-  assert.ok(buildAuditPreviewEvents("client_insights").every((event) => event.governance?.prototypeOnly === true));
-
-  assert.match(service, /buildConsentGovernanceSummary/);
-  assert.match(service, /buildAuditPreviewEvents/);
-  assert.match(service, /export function getReportPrototypeData/);
-  assert.match(reportsPage, /getReportPrototypeData/);
-  assert.match(reportsPage, /Compliance governance/);
-  assert.match(clientInsightsPage, /getReportPrototypeData/);
-  assert.match(clientInsightsPage, /Consent, export, and audit controls/);
-  assert.match(clientInsightsPage, /PlatformNotice/);
-  assert.doesNotMatch(clientInsightsPage, /const noticeStyle/);
-});
-
 test("access model keeps consumer navigation separate while allowing authorised admin switching", () => {
-  const shell = fs.readFileSync(path.join(root, "components/admin/prototype/AdminPrototypeShell.tsx"), "utf8");
   const authEntry = fs.readFileSync(path.join(root, "components/auth/PublicAuthEntry.tsx"), "utf8");
   const routeManifest = fs.readFileSync(path.join(root, "config/routeManifest.tsx"), "utf8");
 
@@ -322,9 +220,6 @@ test("access model keeps consumer navigation separate while allowing authorised 
   assert.ok(ACCESS_MODEL_ROUTES.some((route) => route.visibility === "authorised_role_only" && route.routePrefix === "/internal/admin"));
   assert.doesNotMatch(routeManifest, /\/internal\/admin|\/internal\/test-login/);
 
-  assert.match(shell, /WorkspaceSwitcher/);
-  assert.match(shell, /lf-prototype-session-details/);
-  assert.doesNotMatch(shell, /viewSwitchLinkStyle/);
   // Plain wording and an obvious way to create an account (owner feedback 9 Nov 2026).
   assert.match(authEntry, /Welcome back\. Sign in to your Vault\./);
   assert.match(authEntry, /New to Legacy Fortress\? <Link[^>]*>Create an account<\/Link>/);

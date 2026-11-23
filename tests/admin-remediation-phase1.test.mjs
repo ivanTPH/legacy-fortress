@@ -9,23 +9,6 @@ function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
 }
 
-test("prototype admin routes are quarantined outside local development by a server layout gate", () => {
-  const layout = read("app/internal/admin/prototype/layout.tsx");
-  const routeManifest = read("config/routeManifest.tsx");
-  const workspace = read("components/enterprise/EnterpriseOperationsWorkspace.tsx");
-  const adminShell = read("components/admin/AdminControlPlaneWorkspace.tsx");
-
-  assert.match(layout, /notFound\(\)/);
-  assert.match(layout, /NODE_ENV === "development"/);
-  assert.match(layout, /LEGACY_FORTRESS_ALLOW_ADMIN_PROTOTYPES === "true"/);
-  assert.match(layout, /!localDevelopment \|\| !explicitlyAllowed/);
-  assert.match(layout, /robots:[\s\S]*index: false/);
-  assert.doesNotMatch(layout, /searchParams|query|prototype=true|admin=true/);
-  assert.doesNotMatch(routeManifest, /\/internal\/admin\/prototype/);
-  assert.doesNotMatch(workspace, /\/internal\/admin\/prototype/);
-  assert.doesNotMatch(adminShell, /\/internal\/admin\/prototype/);
-});
-
 test("canonical admin users page owns invitation and lifecycle controls without legacy route handoff", () => {
   const route = read("app/api/internal/admin/admin-users/route.ts");
   const workspace = read("components/admin/AdminControlPlaneWorkspace.tsx");

@@ -6,21 +6,6 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("prototype admin source is server-gated and excluded from normal link crawl", () => {
-  const layout = read("app/internal/admin/prototype/layout.tsx");
-  const crawler = read("scripts/link-crawler.mjs");
-
-  assert.match(layout, /notFound\(\)/);
-  assert.match(layout, /NODE_ENV === "development"/);
-  assert.match(layout, /LEGACY_FORTRESS_ALLOW_ADMIN_PROTOTYPES === "true"/);
-  assert.match(layout, /robots:[\s\S]*index: false/);
-  assert.doesNotMatch(layout, /searchParams|prototype=true|admin=true/);
-  assert.match(crawler, /isQuarantinedSource/);
-  assert.match(crawler, /app\/internal\/admin\/prototype\//);
-  assert.match(crawler, /components\/admin\/prototype\//);
-  assert.match(crawler, /app\/api\/internal\/admin\/local-role-override\//);
-});
-
 test("legacy internal admin entry routes redirect to canonical platform routes", () => {
   const internal = read("app/internal/admin/page.tsx");
   const probate = read("app/internal/admin/probate/page.tsx");

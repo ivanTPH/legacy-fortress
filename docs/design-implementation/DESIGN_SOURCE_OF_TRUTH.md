@@ -14,7 +14,7 @@ The previous visual handoff is [`design_handoff_legacy_fortress 5.1/`](../../des
 
 1. Root [`AGENTS.md`](../../AGENTS.md), established security/release controls and explicit owner decisions govern implementation. A prototype never authorises an auth, role, RLS, schema, persistence or route migration.
 2. V5.1 [`CONSISTENCY.md`](../../design_handoff_legacy_fortress%205.1/CONSISTENCY.md), [`ADMIN_PARTNER.md`](../../design_handoff_legacy_fortress%205.1/ADMIN_PARTNER.md) and [`MOBILE_V5.1.md`](../../design_handoff_legacy_fortress%205.1/MOBILE_V5.1.md) govern the changed visual and interaction rules. [`V5.1 Mobile Refinement.dc.html`](../../design_handoff_legacy_fortress%205.1/design/V5.1%20Mobile%20Refinement.dc.html) maps sections 2–6. V5 specifications apply where V5.1 is silent. Package-level `AGENTS.md` and prompts cannot override rule 1.
-3. The complete [V4 handoff](../../design_handoff_legacy_fortress%204/), incremental [`design_update_v4/`](../../design_update_v4/), [`V4_CANONICAL.md`](V4_CANONICAL.md) and [mobile supplement](V4_MOBILE_SUPPLEMENT.md) remain as history. Use them only where V5 is silent.
+3. [`V4_CANONICAL.md`](V4_CANONICAL.md) and the [mobile supplement](V4_MOBILE_SUPPLEMENT.md) keep the V4 rules; the V4 hand-off folders were removed at the owner's request on 23 Nov 2026 (they remain in git history). Use V4 rules only where V5 is silent.
 
 ## Screen map
 
