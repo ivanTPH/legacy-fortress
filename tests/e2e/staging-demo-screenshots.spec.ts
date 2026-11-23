@@ -476,7 +476,7 @@ for (const kind of ["desk", "phone"] as const) {
 // Speed timings (owner request 23 Nov 2026): each main screen loaded fresh, timed until its content has settled
 // (no loading text, nothing marked busy, no requests in flight). Phone runs with 4G-like network and a slower CPU.
 // Read only: nothing is clicked or saved. Printed as "Perf:" lines.
-const PERF_PAGES = ["/dashboard", "/actions", "/finances", "/finances/bank", "/finances/insurance", "/property", "/legal", "/legal/wills", "/business", "/vault/digital", "/vault/personal", "/contacts", "/people-access", "/people-access?view=shared", "/account/billing", "/settings", "/help", "/account/executor-pack", "/profile"];
+const PERF_PAGES = ["/dashboard", "/actions", "/finances", "/finances/bank", "/property", "/legal/wills", "/vault/digital", "/contacts", "/people-access", "/account/billing", "/settings", "/help"];
 for (const kind of ["desk", "phone"] as const) {
   test(`speed timings (${kind})`, async ({ browser }) => {
     test.setTimeout(600_000);
@@ -494,9 +494,14 @@ for (const kind of ["desk", "phone"] as const) {
     let inFlight = 0;
     let lastChange = Date.now();
     const counts = { supabase: 0, api: 0, js: 0, bytes: 0 };
+    const seen: string[] = [];
     page.on("request", (request) => {
       inFlight += 1; lastChange = Date.now();
       const url = request.url();
+      if (url.includes("supabase-test.mylegacyfortress.com") || url.includes("/api/")) {
+        const parsed = new URL(url);
+        seen.push(`${request.method()} ${parsed.pathname.replace(/^\/rest\/v1\//, "db:").replace(/^\/auth\/v1\//, "auth:").replace(/^\/storage\/v1\/.*/, "storage")}`);
+      }
       if (url.includes("supabase-test.mylegacyfortress.com")) counts.supabase += 1;
       else if (url.includes("/api/")) counts.api += 1;
       else if (url.endsWith(".js")) counts.js += 1;
@@ -511,7 +516,7 @@ for (const kind of ["desk", "phone"] as const) {
     await page.goto(`${BASE_URL}/dashboard`, { waitUntil: "load" });
     await page.waitForLoadState("networkidle", { timeout: 30_000 }).catch(() => undefined);
     for (const path of PERF_PAGES) {
-      Object.assign(counts, { supabase: 0, api: 0, js: 0, bytes: 0 });
+      Object.assign(counts, { supabase: 0, api: 0, js: 0, bytes: 0 }); seen.length = 0;
       const start = Date.now();
       await page.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" });
       let heading = 0;
@@ -525,8 +530,17 @@ for (const kind of ["desk", "phone"] as const) {
           return { loading, h1 };
         }).catch(() => ({ loading: true, h1: false }));
         if (state.h1 && !heading) heading = Date.now() - start;
-        if (!state.loading && inFlight === 0 && Date.now() - lastChange > 500) { settled = lastChange - start; break; }
+        // Settled: nothing loading and no requests for 2s (anything later is background polling, counted below).
+        if (!state.loading && Date.now() - lastChange > 2000) { settled = lastChange - start; break; }
+        if (Date.now() - start > 20_000 && !state.loading) { settled = -1; break; }
         await page.waitForTimeout(100);
+      }
+      if (path === "/vault/digital" || path === "/dashboard") {
+        const grouped = new Map<string, number>();
+        for (const item of seen) grouped.set(item, (grouped.get(item) ?? 0) + 1);
+        console.log(`Perf-requests: ${kind} ${path} ${[...grouped.entries()].sort((a, b) => b[1] - a[1]).map(([k, v]) => `${v}x ${k}`).join(" | ")}`);
+        const before = seen.length; await page.waitForTimeout(10_000);
+        console.log(`Perf-background: ${kind} ${path} ${seen.length - before} requests in 10s idle: ${seen.slice(before).slice(0, 12).join(" | ")}`);
       }
       console.log(`Perf: ${kind} ${path} heading=${heading}ms settled=${settled || "timeout"}ms supabase=${counts.supabase} api=${counts.api} js=${counts.js} kb=${Math.round(counts.bytes / 1024)}`);
     }
