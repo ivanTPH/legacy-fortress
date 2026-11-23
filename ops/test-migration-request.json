@@ -1,8 +1,8 @@
 {
-  "approvedBy": "Ivan (owner), 20 Nov 2026 15:05: Approved (support action: sign out on every device)",
+  "approvedBy": "Ivan (owner), 23 Nov 2026 21:37: Approved (partner_enquiries for the Become a partner form)",
   "mode": "apply",
-  "attempt": 29,
+  "attempt": 30,
   "files": [
-    { "file": "20261120150000_admin_sign_out_everywhere.sql", "sha256": "7217141d8e1ef360532841c41e5df97b7a683b69d94f9f50d765d00a903c4aff" }
+    { "file": "20261123180000_partner_enquiries.sql", "sha256": "0a368dd16806b13bfde8ff878fc052a964ed3481cc877c2f10bef98cb620d847" }
   ]
 }
