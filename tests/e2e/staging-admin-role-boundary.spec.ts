@@ -535,6 +535,29 @@ async function trustSession(client: SupabaseClient, accessToken: string) {
   } catch { /* before the new-device migration there is nothing to record */ }
 }
 
+// Speed timings for Admin (owner request 23 Nov 2026): read only, printed as "Perf:" lines; never fails the release.
+test("speed timings: admin pages (read only)", async ({ page }) => {
+  test.setTimeout(240_000);
+  await signIn(page, users[0].email, "/admin");
+  await page.waitForLoadState("networkidle", { timeout: 30_000 }).catch(() => undefined);
+  for (const path of ["/admin", "/admin/inbox", "/admin/users", "/admin/verification", "/admin/support", "/admin/audit", "/admin/enterprise"]) {
+    let inFlight = 0; let lastChange = Date.now();
+    const onStart = () => { inFlight += 1; lastChange = Date.now(); };
+    const onEnd = () => { inFlight = Math.max(0, inFlight - 1); lastChange = Date.now(); };
+    page.on("request", onStart); page.on("requestfinished", onEnd); page.on("requestfailed", onEnd);
+    const start = Date.now();
+    await page.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" }).catch(() => undefined);
+    let settled = 0;
+    while (Date.now() - start < 45_000) {
+      const loading = await page.evaluate(() => /Checking admin access|Loading/.test((document.querySelector("main") ?? document.body).textContent || "") || Boolean(document.querySelector('[aria-busy="true"]'))).catch(() => true);
+      if (!loading && inFlight === 0 && Date.now() - lastChange > 500) { settled = lastChange - start; break; }
+      await page.waitForTimeout(100);
+    }
+    page.off("request", onStart); page.off("requestfinished", onEnd); page.off("requestfailed", onEnd);
+    console.log(`Perf: admin ${path} settled=${settled || "timeout"}ms`);
+  }
+});
+
 async function signIn(page: Page, email: string, next: string) {
   const authClient = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
   const auth = await authClient.auth.signInWithPassword({ email, password: PASSWORD });

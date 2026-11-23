@@ -473,6 +473,67 @@ for (const kind of ["desk", "phone"] as const) {
   });
 }
 
+// Speed timings (owner request 23 Nov 2026): each main screen loaded fresh, timed until its content has settled
+// (no loading text, nothing marked busy, no requests in flight). Phone runs with 4G-like network and a slower CPU.
+// Read only: nothing is clicked or saved. Printed as "Perf:" lines.
+const PERF_PAGES = ["/dashboard", "/actions", "/finances", "/finances/bank", "/finances/insurance", "/property", "/legal", "/legal/wills", "/business", "/vault/digital", "/vault/personal", "/contacts", "/people-access", "/people-access?view=shared", "/account/billing", "/settings", "/help", "/account/executor-pack", "/profile"];
+for (const kind of ["desk", "phone"] as const) {
+  test(`speed timings (${kind})`, async ({ browser }) => {
+    test.setTimeout(600_000);
+    const context = kind === "desk"
+      ? await browser.newContext({ viewport: { width: 1440, height: 900 } })
+      : await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+    const page = await context.newPage();
+    await signIn(page);
+    if (kind === "phone") {
+      const cdp = await context.newCDPSession(page);
+      await cdp.send("Network.enable");
+      await cdp.send("Network.emulateNetworkConditions", { offline: false, latency: 70, downloadThroughput: (9 * 1024 * 1024) / 8, uploadThroughput: (4 * 1024 * 1024) / 8 });
+      await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+    }
+    let inFlight = 0;
+    let lastChange = Date.now();
+    const counts = { supabase: 0, api: 0, js: 0, bytes: 0 };
+    page.on("request", (request) => {
+      inFlight += 1; lastChange = Date.now();
+      const url = request.url();
+      if (url.includes("supabase-test.mylegacyfortress.com")) counts.supabase += 1;
+      else if (url.includes("/api/")) counts.api += 1;
+      else if (url.endsWith(".js")) counts.js += 1;
+    });
+    const done = (request: import("@playwright/test").Request) => {
+      inFlight = Math.max(0, inFlight - 1); lastChange = Date.now();
+      void request.response().then(async (response) => { const sizes = await request.sizes().catch(() => null); counts.bytes += sizes?.responseBodySize ?? 0; return response; }).catch(() => undefined);
+    };
+    page.on("requestfinished", done);
+    page.on("requestfailed", done);
+    // Warm the app once (first visit downloads the shared code), then time each screen.
+    await page.goto(`${BASE_URL}/dashboard`, { waitUntil: "load" });
+    await page.waitForLoadState("networkidle", { timeout: 30_000 }).catch(() => undefined);
+    for (const path of PERF_PAGES) {
+      Object.assign(counts, { supabase: 0, api: 0, js: 0, bytes: 0 });
+      const start = Date.now();
+      await page.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" });
+      let heading = 0;
+      let settled = 0;
+      while (Date.now() - start < 45_000) {
+        const state = await page.evaluate(() => {
+          const main = document.querySelector("main") ?? document.body;
+          const text = (main as HTMLElement).innerText || "";
+          const loading = /(^|\n)\s*(Loading|Preparing|Checking|Fetching)[^\n]{0,40}(…|\.\.\.)/.test(text) || Boolean(document.querySelector('[aria-busy="true"], .lf-skeleton, .lf-loading-outline'));
+          const h1 = Array.from(document.querySelectorAll("h1")).some((el) => (el as HTMLElement).offsetParent !== null);
+          return { loading, h1 };
+        }).catch(() => ({ loading: true, h1: false }));
+        if (state.h1 && !heading) heading = Date.now() - start;
+        if (!state.loading && inFlight === 0 && Date.now() - lastChange > 500) { settled = lastChange - start; break; }
+        await page.waitForTimeout(100);
+      }
+      console.log(`Perf: ${kind} ${path} heading=${heading}ms settled=${settled || "timeout"}ms supabase=${counts.supabase} api=${counts.api} js=${counts.js} kb=${Math.round(counts.bytes / 1024)}`);
+    }
+    await context.close();
+  });
+}
+
 // Stage 4 (20 Nov 2026): the executor pack (screen and print) and Help with a sample reply. Look only: the sample
 // reply is answered here and any write (marking it read) is answered here too, so nothing changes on TEST.
 for (const kind of ["desk", "phone"] as const) {
