@@ -38,3 +38,15 @@ test("demo session detection works from email and metadata", () => {
     false,
   );
 });
+
+test("public demo is off unless switched on, and never on the live site (security review 23 Nov 2026)", () => {
+  const before = process.env.LF_PUBLIC_DEMO_ENABLED;
+  delete process.env.LF_PUBLIC_DEMO_ENABLED;
+  assert.equal(demoConfig.isPublicDemoEnabled("test.mylegacyfortress.com"), false);
+  process.env.LF_PUBLIC_DEMO_ENABLED = "true";
+  assert.equal(demoConfig.isPublicDemoEnabled("test.mylegacyfortress.com"), true);
+  assert.equal(demoConfig.isPublicDemoEnabled("mylegacyfortress.com"), false);
+  assert.equal(demoConfig.isPublicDemoEnabled("www.mylegacyfortress.com"), false);
+  assert.equal(demoConfig.isPublicDemoEnabled("legacy-fortress.vercel.app"), false);
+  if (before === undefined) delete process.env.LF_PUBLIC_DEMO_ENABLED; else process.env.LF_PUBLIC_DEMO_ENABLED = before;
+});

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import BrandMark from "../../app/(app)/components/BrandMark";
+import { PUBLIC_DEMO_LINK_VISIBLE } from "@/lib/demo/config";
 import Icon from "../ui/Icon";
 import SignInForm from "./SignInForm";
 
@@ -43,7 +44,7 @@ export default function PublicHomeEntry({
               <div className="lf-entry-panel-kicker">Secure access</div>
               <h2>Sign in</h2>
             </div>
-            <Link href="/demo" className="lf-entry-demo-link">Demo</Link>
+            {PUBLIC_DEMO_LINK_VISIBLE ? <Link href="/demo" className="lf-entry-demo-link">Demo</Link> : null}
           </div>
 
           <p className="lf-entry-panel-subtext">
