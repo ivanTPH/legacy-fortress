@@ -70,10 +70,31 @@
       });
       if (first) { first.focus(); return; }
       var card = form.closest('[data-when="form"]').parentElement;
-      card.querySelector('[data-when="form"]').hidden = true;
-      var done = card.querySelector('[data-when="sent"]');
-      done.hidden = false;
-      done.setAttribute('tabindex','-1'); done.focus();
+      function showSent() {
+        card.querySelector('[data-when="form"]').hidden = true;
+        var done = card.querySelector('[data-when="sent"]');
+        done.hidden = false;
+        done.setAttribute('tabindex','-1'); done.focus();
+      }
+      // Forms with an endpoint send their details (partner enquiries, 23 Nov 2026); others just say thanks.
+      var endpoint = form.getAttribute('data-endpoint');
+      if (!endpoint) { showSent(); return; }
+      var data = {};
+      form.querySelectorAll('[name]').forEach(function(field){
+        if (field.type === 'radio') { if (field.checked) data[field.name] = field.value; return; }
+        data[field.name] = field.tagName === 'SELECT' && field.selectedIndex <= 0 ? '' : field.value;
+      });
+      var error = form.querySelector('[data-form-error]');
+      var button = form.querySelector('button[type="submit"]');
+      if (button) { button.disabled = true; button.textContent = 'Sending…'; }
+      fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+        .then(function(res){ return res.json().catch(function(){ return {}; }).then(function(json){ return { ok: res.ok && json.ok, message: json.message }; }); })
+        .then(function(result){
+          if (result.ok) { showSent(); return; }
+          if (error) { error.textContent = result.message || 'That didn’t send. Please try again.'; error.hidden = false; }
+        })
+        .catch(function(){ if (error) { error.textContent = 'That didn’t send. Please check your connection and try again.'; error.hidden = false; } })
+        .finally(function(){ if (button) { button.disabled = false; button.textContent = 'Send'; } });
     });
   });
   // Partner form: the selected choice gets the strong border.

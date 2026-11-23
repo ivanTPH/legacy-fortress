@@ -28,15 +28,25 @@ export function validateEnquiry(body: Record<string, unknown>): { ok: true; valu
   if (contactName.length < 2) return { ok: false, message: "Add your name." };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(contactEmail)) return { ok: false, message: "Add a work email address we can reply to." };
   const type = clean(body.organisationType, 60);
-  const members = Number(body.membersEstimate);
+  // The website form sends a size band ("250 to 1,000") and a few extra details, kept with the message.
+  const band = clean(body.membersBand, 40);
+  const bandNumbers = band.replace(/,/g, "").match(/\d+/g)?.map(Number) ?? [];
+  const members = body.membersEstimate !== undefined && body.membersEstimate !== "" ? Number(body.membersEstimate) : bandNumbers.length ? Math.max(...bandNumbers) : NaN;
+  const extras = [
+    clean(body.request, 20) === "demo" ? "Asked for: a 20-minute demo" : clean(body.request, 20) === "register" ? "Asked for: a partner account" : "",
+    clean(body.contactRole, 80) ? `Role: ${clean(body.contactRole, 80)}` : "",
+    clean(body.registrationNumber, 40) ? `Company/FCA/SRA number: ${clean(body.registrationNumber, 40)}` : "",
+    band ? `Size: ${band}` : "",
+  ].filter(Boolean);
+  const userMessage = String(body.message ?? "").trim();
   return {
     ok: true,
     value: {
       organisationName, contactName, contactEmail,
-      organisationType: (ORGANISATION_TYPES as readonly string[]).includes(type) ? type : null,
+      organisationType: type || null,
       contactPhone: clean(body.contactPhone, 40) || null,
       membersEstimate: Number.isFinite(members) && members >= 0 ? Math.min(Math.round(members), 10_000_000) : null,
-      message: String(body.message ?? "").trim().slice(0, 4000) || null,
+      message: [extras.join(" · "), userMessage].filter(Boolean).join("\n\n").slice(0, 4000) || null,
     },
   };
 }

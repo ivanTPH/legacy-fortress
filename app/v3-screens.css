@@ -937,30 +937,6 @@ a.lf-topbar-shield:focus-visible { outline: 3px solid var(--lf-focus); outline-o
 .lf-admin-tab-icon { position: relative; display: inline-flex; }
 .lf-admin-nav-badge.is-tab { position: absolute; top: -6px; right: -12px; margin: 0; height: 18px; min-width: 18px; line-height: 18px; font-size: 11px; border: 2px solid var(--lf-surface-card, #fff); box-sizing: content-box; }
 
-/* Become a partner (owner decision 23 Nov 2026): public page with how it works and an enquiry form. */
-.lf-partners-page { max-width: 880px; margin: 0 auto; padding: 20px 20px 64px; display: grid; gap: 28px; color: var(--lf-ink, #1F1A17); }
-.lf-partners-top { display: flex; align-items: center; justify-content: space-between; }
-.lf-partners-brand { display: inline-flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; font-size: 18px; }
-.lf-partners-eyebrow { margin: 0; color: var(--lf-accent, #8C4A32); font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: .03em; }
-.lf-partners-hero h1 { margin: 6px 0 10px; font-size: clamp(28px, 4vw, 40px); line-height: 1.15; }
-.lf-partners-hero p { margin: 0; font-size: 17px; color: var(--lf-text-secondary, #6B625C); max-width: 680px; }
-.lf-partners-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
-.lf-partners-steps li { display: flex; gap: 12px; padding: 16px; border: 1px solid var(--lf-border, #EBE4DE); border-radius: 16px; background: var(--lf-surface-card, #fff); }
-.lf-partners-steps p { margin: 4px 0 0; color: var(--lf-text-secondary, #6B625C); font-size: 15px; }
-.lf-partners-step-icon { flex: none; display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--lf-tint, #F6EFEA); color: var(--lf-accent, #8C4A32); }
-.lf-partners-form { display: grid; gap: 14px; padding: 24px; border: 1px solid var(--lf-border, #EBE4DE); border-radius: 20px; background: var(--lf-surface-card, #fff); }
-.lf-partners-form h2 { margin: 0; }
-.lf-partners-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.lf-partners-form label { display: grid; gap: 6px; font-weight: 600; font-size: 15px; }
-.lf-partners-form input:not([type="checkbox"]), .lf-partners-form select, .lf-partners-form textarea { min-height: 44px; padding: 10px 12px; border: 1px solid var(--lf-border-input, #D9CFC8); border-radius: 12px; font: inherit; font-weight: 400; background: #fff; }
-.lf-partners-check { display: flex !important; grid-template-columns: none; align-items: center; gap: 10px; font-weight: 400 !important; }
-.lf-partners-check input { width: 20px; height: 20px; }
-.lf-partners-hp { position: absolute !important; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
-.lf-partners-send { justify-self: start; min-height: 48px; padding: 0 24px; border: 0; border-radius: 999px; background: var(--lf-ink, #2B1D17); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
-.lf-partners-send:disabled { opacity: .6; }
-.lf-partners-error { margin: 0; color: var(--lf-danger, #A3362B); }
-.lf-partners-sent { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--lf-success, #2F6B4F); font-weight: 600; }
-@media (max-width: 640px) { .lf-partners-grid { grid-template-columns: 1fr; } .lf-partners-form { padding: 16px; } }
 .lf-admin-enquiry-status { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
 .lf-admin-enquiry-status select { min-height: 36px; padding: 0 10px; border: 1px solid var(--lf-border-input, #D9CFC8); border-radius: 10px; font: inherit; font-weight: 400; background: #fff; }
 

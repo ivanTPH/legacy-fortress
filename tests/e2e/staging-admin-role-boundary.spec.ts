@@ -548,7 +548,7 @@ async function trustSession(client: SupabaseClient, accessToken: string) {
 // submitted, so no enquiry is saved and no staff email is sent.
 test("become a partner page and Admin Inbox Partners filter", async ({ page }) => {
   await page.goto(`${BASE_URL}/partners`, { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("heading", { name: "Give your people Legacy Fortress Premium" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: /Give your clients a place for everything/ })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByLabel("Type of organisation")).toBeVisible();
   const shot = await page.screenshot({ type: "jpeg", quality: 60, fullPage: true }).catch(() => null);
   if (shot) console.log(`Phone-shot: partners-page ${shot.toString("base64")}`);
