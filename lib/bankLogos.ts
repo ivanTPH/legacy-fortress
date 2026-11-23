@@ -1,4 +1,5 @@
 import { resolveInstitutionBrand } from "./institutions/logoMap";
+import { findProviderBrand } from "./assets/providerBrands.mjs";
 
 export type BankProviderKey =
   | "hsbc"
@@ -114,7 +115,9 @@ export function getBankLogoFromRecord(input: BankDetectionInput) {
     input.bank_name || input.provider || input.institution || input.account_provider || input.bank_identifier;
   const brand = resolveInstitutionBrand(bankLabel);
   const providerKey = resolveBankProviderKey(input);
-  const logoSrc = brand?.logoPath ?? bankLogos[providerKey];
+  // The well-known providers list has the most logos (23 Nov 2026).
+  const known = findProviderBrand(bankLabel);
+  const logoSrc = brand?.logoPath ?? known?.logo ?? bankLogos[providerKey];
   const altName = brand?.displayName ?? (providerKey === "default" ? "Bank" : readableBankName(providerKey));
 
   return {

@@ -963,3 +963,6 @@ a.lf-topbar-shield:focus-visible { outline: 3px solid var(--lf-focus); outline-o
 @media (max-width: 640px) { .lf-partners-grid { grid-template-columns: 1fr; } .lf-partners-form { padding: 16px; } }
 .lf-admin-enquiry-status { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
 .lf-admin-enquiry-status select { min-height: 36px; padding: 0 10px; border: 1px solid var(--lf-border-input, #D9CFC8); border-radius: 10px; font: inherit; font-weight: 400; background: #fff; }
+
+/* Provider tiles (owner decision 23 Nov 2026): the firm's colour and first letter when there's no logo. */
+.lf-v52-brand-mark.is-tile { border: 0; font-size: 20px; font-weight: 700; letter-spacing: 0; }

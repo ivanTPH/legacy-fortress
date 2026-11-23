@@ -144,6 +144,7 @@ import { getPlanLimitRedirectHref } from "../../lib/accountPlan";
 import { FAIR_USE_MESSAGE, isFairUseLimit, isPlanLimitError, isTypeLimitError, planLimitReason, showPremiumSheet } from "../../lib/billing/client";
 import { getWorkspaceHelpMessage } from "../../lib/workspaceHelp";
 import { resolveProviderLogoPath } from "../../lib/assets/providerLogoPath.mjs";
+import { findProviderBrand, tileColourFor } from "../../lib/assets/providerBrands.mjs";
 import BrandMark from "../ui/BrandMark";
 
 type RecordStatus = "active" | "archived";
@@ -650,6 +651,8 @@ const DEFAULT_PROVIDER_CATALOG: ProviderCatalogRow[] = [
   { provider_key: "mercedes", display_name: "Mercedes-Benz", provider_type: "vehicle", match_terms: ["mercedes", "mercedes-benz"], logo_path: null, icon_text: "mb", active: true },
   { provider_key: "tesla", display_name: "Tesla", provider_type: "vehicle", match_terms: ["tesla"], logo_path: null, icon_text: "t", active: true },
 ];
+
+const FINANCE_BRAND_CATEGORIES = new Set(["bank", "bank-accounts", "savings", "investments", "pensions", "insurance", "debts", "mortgages", "credit-cards"]);
 
 const POSSESSION_CATEGORY_ICONS: Record<string, string> = {
   jewellery: "diamond",
@@ -6508,6 +6511,15 @@ function ProviderBadge({
   categoryKey?: string;
 }) {
   const categoryIcon = categoryKey ? POSSESSION_CATEGORY_ICONS[categoryKey] || RECORD_CATEGORY_ICONS[categoryKey] : undefined;
+  // Money records (banks, savings, investments, pensions, insurance, debts): the provider's logo, or a tile in its
+  // colour with its first letter; any named provider gets a tile (owner decision 23 Nov 2026).
+  if (categoryKey && FINANCE_BRAND_CATEGORIES.has(categoryKey)) {
+    const name = (provider?.display_name || fallbackLabel || "").trim();
+    const brand = findProviderBrand(name);
+    const logoPath = resolveProviderLogoPath(provider) || brand?.logo || "";
+    const named = name && !/^(record|untitled record|unknown bank)$/i.test(name);
+    if (logoPath || named) return <BrandMark name={brand?.name || name} logoPath={logoPath} tileColor={brand?.color ?? tileColourFor(name)} />;
+  }
   return <BrandMark name={provider?.display_name || fallbackLabel} logoPath={resolveProviderLogoPath(provider)} categoryIcon={provider ? undefined : categoryIcon} markText={provider?.icon_text} />;
 }
 
