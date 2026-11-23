@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { PUBLIC_DEMO_LINK_VISIBLE } from "@/lib/demo/config";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -142,7 +143,7 @@ export default function PublicAuthEntry({
               <div className="lf-entry-panel-kicker">Secure access</div>
               <h2>{signedInAs ? "You’re signed in" : activeMode === "sign-in" ? (returning ? `Welcome back${returning.firstName ? `, ${returning.firstName}` : ""}` : "Sign in") : "Create account"}</h2>
             </div>
-            <Link href="/demo" className="lf-entry-demo-link">Demo</Link>
+            {PUBLIC_DEMO_LINK_VISIBLE ? <Link href="/demo" className="lf-entry-demo-link">Demo</Link> : null}
           </div>
 
           <p className="lf-entry-panel-subtext">

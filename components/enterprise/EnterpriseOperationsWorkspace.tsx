@@ -1,6 +1,8 @@
 "use client";
 
 import ShareSignupLink from "./ShareSignupLink";
+import PartnerHelp from "@/components/enterprise/PartnerHelp";
+import { invoiceLabel, weeklyJoins } from "@/lib/enterprise/partnerOverview";
 import type { VaultMix } from "../../lib/enterprise/vaultMix";
 import WorkspaceLoadingOutline from "./WorkspaceLoadingOutline";
 import Link from "next/link";
@@ -316,7 +318,7 @@ type EnterpriseMembershipLifecycleForm = {
   reason: string;
 };
 
-type EnterpriseTab = "overview" | "organisations" | "licences" | "users" | "invitations" | "registration-links" | "adoption" | "reports" | "consent" | "renewals" | "settings";
+type EnterpriseTab = "overview" | "organisations" | "licences" | "users" | "invitations" | "registration-links" | "adoption" | "reports" | "consent" | "renewals" | "settings" | "help";
 
 const EMPTY_PORTFOLIO: EnterprisePortfolio = {
   summary: {
@@ -685,6 +687,7 @@ export default function EnterpriseOperationsWorkspace() {
     consent: { title: "Reporting consent", description: "Members who agreed to organisation reporting." },
     renewals: { title: "Renewals", description: "Licences renewing in the next 90 days." },
     settings: { title: "Organisation settings", partnerTitle: "Settings", description: "Contact details and preferences for the organisation." },
+    help: { title: "Help", description: "Common questions, and Contact us. Messages reach the Legacy Fortress team." },
   };
   const tabCopy = TAB_COPY[activeTab] ?? { title: labelise(activeTab), description: "" };
   const partnerTitle = partnerMode ? (tabCopy.partnerTitle ?? tabCopy.title) : tabCopy.title;
@@ -750,6 +753,7 @@ export default function EnterpriseOperationsWorkspace() {
 
       {(!partnerMode || activeTab !== "overview") && portfolio.organisations.length > 1 ? <details className="lf-admin-more-filters" open={Object.values(filters).some(Boolean)}><summary>Filter by organisation, status and more</summary>{filterPanel}</details> : null}
 
+      {activeTab === "help" ? <PartnerHelp organisationId={portfolio.organisations.length === 1 ? portfolio.organisations[0].id : null} /> : null}
       {activeTab === "overview" ? partnerMode ? renderPartnerOverview(portfolio, openPartnerTab) : renderOverview(portfolio, filteredOrganisations, filteredLicences, filteredInvitations, openPartnerTab, setFilters) : null}
       {activeTab === "organisations" ? renderOrganisations(filteredOrganisations, portfolio, orgForm, setOrgForm, runAction, async () => {
         await runAction("create_organisation", orgForm);
@@ -791,6 +795,10 @@ function renderPartnerOverview(portfolio: EnterprisePortfolio, setActiveTab: (ta
     expiringInvitations.length ? { key: "invitations", icon: "forward_to_inbox", label: "Invitations expire this week", detail: "Remind or resend before they lapse", count: expiringInvitations.length, tab: "invitations" as EnterpriseTab } : null,
     expiringLinks.length ? { key: "links", icon: "link", label: "Sign-up links expire this week", detail: "Extend or replace the link", count: expiringLinks.length, tab: "registration-links" as EnterpriseTab } : null,
     freeSeats > 0 ? { key: "seats", icon: "event_seat", label: "Seats available", detail: "Invite advisers to use them", count: freeSeats, tab: "users" as EnterpriseTab } : null,
+    // Renewal reminder 30 days ahead (UX review 2, 23 Nov 2026).
+    renewal && new Date(renewal).getTime() >= now && new Date(renewal).getTime() < now + 30 * 86400000
+      ? { key: "renewal", icon: "event_repeat", label: `Licence renews on ${new Date(renewal).toLocaleDateString("en-GB", { day: "numeric", month: "long" })}`, detail: "Your account manager will send the renewal invoice", count: Math.max(1, Math.ceil((new Date(renewal).getTime() - now) / 86400000)), tab: "licences" as EnterpriseTab }
+      : null,
   ].filter((item): item is { key: string; icon: string; label: string; detail: string; count: number; tab: EnterpriseTab } => item !== null);
   // UX review 2: no licence yet reads as that, not "0 of 0" and "Not set".
   const noLicence = portfolio.licences.length === 0;
@@ -799,6 +807,7 @@ function renderPartnerOverview(portfolio: EnterprisePortfolio, setActiveTab: (ta
     { label: "Invitations waiting", value: String(portfolio.summary.pendingInvitations), tab: "invitations" as EnterpriseTab },
     { label: "Active sign-up links", value: String(activeLinks.length), tab: "registration-links" as EnterpriseTab },
     { label: "Renews", value: renewal ? new Date(renewal).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : noLicence ? "No licence yet" : "Not set", tab: null },
+    ...(noLicence ? [] : [{ label: "Invoice", value: invoiceLabel(portfolio.licences), tab: "licences" as EnterpriseTab }]),
   ];
   return <div className="lf-partner-overview">
     {noLicence ? <p className="lf-partner-no-licence">Your organisation doesn’t have a licence yet. Legacy Fortress sets this up once your agreement is in place; contact your account manager.</p> : null}
@@ -821,6 +830,7 @@ function renderPartnerOverview(portfolio: EnterprisePortfolio, setActiveTab: (ta
       </section>;
     })() : null}
     <PartnerGetStarted portfolio={portfolio} setActiveTab={setActiveTab} />
+    <PartnerUptake memberships={portfolio.memberships} />
     <PartnerVaultMix mix={portfolio.vaultMix ?? null} />
     <section className="lf-admin-overview-decisions" aria-labelledby="partner-attention-title">
       <h2 id="partner-attention-title">Needs attention</h2>
@@ -2090,7 +2100,7 @@ function organisationOptionLabel(org: EnterpriseOrganisation) {
 }
 
 function normalizeEnterpriseTab(value: string | null): EnterpriseTab | null {
-  if (value === "overview" || value === "organisations" || value === "licences" || value === "users" || value === "invitations" || value === "registration-links" || value === "adoption" || value === "reports" || value === "consent" || value === "renewals" || value === "settings") return value;
+  if (value === "overview" || value === "organisations" || value === "licences" || value === "users" || value === "invitations" || value === "registration-links" || value === "adoption" || value === "reports" || value === "consent" || value === "renewals" || value === "settings" || value === "help") return value;
   return null;
 }
 
@@ -2143,3 +2153,20 @@ const actionsCellStyle: CSSProperties = { display: "flex", gap: 8, flexWrap: "wr
 const linkCodeStyle: CSSProperties = { display: "block", maxWidth: 360, overflowWrap: "anywhere", color: "var(--lf-text-secondary)", fontSize: 13, marginTop: 5 };
 
 // Brief access check: a small centred card on the page colour, the same on a laptop and a phone.
+
+function PartnerUptake({ memberships }: { memberships: Array<{ joinedAt: string | null; status: string }> }) {
+  const weeks = weeklyJoins(memberships);
+  const total = weeks.reduce((sum, week) => sum + week.count, 0);
+  const max = Math.max(1, ...weeks.map((week) => week.count));
+  return <section className="lf-partner-uptake" aria-labelledby="partner-uptake-title">
+    <div className="lf-partner-usage-head"><h2 id="partner-uptake-title">Sign-ups each week</h2><strong>{total.toLocaleString("en-GB")} in 12 weeks</strong></div>
+    {total ? (
+      <ol className="lf-partner-uptake-bars">
+        {weeks.map((week) => {
+          const label = new Date(week.start).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+          return <li key={week.start} aria-label={`Week of ${label}: ${week.count}`}><span className="lf-partner-uptake-bar" style={{ height: `${Math.round((week.count / max) * 100)}%` }} /><small>{label}</small></li>;
+        })}
+      </ol>
+    ) : <p>No one has joined in the last 12 weeks. Share your sign-up link from Get started.</p>}
+  </section>;
+}

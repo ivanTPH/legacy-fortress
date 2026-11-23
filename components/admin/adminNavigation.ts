@@ -81,6 +81,7 @@ export const ENTERPRISE_ADMIN_NAVIGATION: AdminNavigationGroup[] = [
       { key: "enterprise-registration-links", label: "Registration links", href: "/enterprise?tab=registration-links", icon: "link", capability: "enterprise.enrolment_link.manage" },
       { key: "enterprise-reports", label: "Reports", href: "/enterprise?tab=reports", icon: "analytics", capability: "enterprise.report.read" },
       { key: "enterprise-settings", label: "Organisation settings", href: "/enterprise?tab=settings", icon: "settings", capability: "enterprise.workspace.access" },
+      { key: "enterprise-help", label: "Help", href: "/enterprise?tab=help", icon: "help", capability: "enterprise.workspace.access" },
     ],
   },
 ];
