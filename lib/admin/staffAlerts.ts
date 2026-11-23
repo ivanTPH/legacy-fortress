@@ -37,6 +37,8 @@ export async function staffRecipients(client: SupabaseClient, capability: AdminC
   const { data, error } = await client.from("admin_users").select("user_id,email_normalized,status,role,is_master").eq("status", "active");
   if (error) return [];
   return [...new Set(((data ?? []) as Array<{ email_normalized: string | null; role: string | null; is_master: boolean | null }>)
+    // Legacy Fortress staff only: partner organisation admins never get these.
+    .filter((row) => deriveAdminRole({ isMaster: row.is_master, role: row.role }) !== "enterprise_admin")
     .filter((row) => hasAdminCapability(deriveAdminRole({ isMaster: row.is_master, role: row.role }), capability))
     .map((row) => String(row.email_normalized ?? "").trim().toLowerCase())
     .filter((email) => isDeliverableAddress(email)))];

@@ -61,6 +61,7 @@ export default function PublicHomeEntry({
             <span><Icon name="lock" size={14} /> Private workspace</span>
             <span><Icon name="description" size={14} /> Guided setup</span>
             <span><Icon name="person_add" size={14} /> <Link className="lf-inline-link" href="/sign-up">Create account</Link></span>
+            <span><Icon name="business" size={14} /> <Link className="lf-inline-link" href="/partners">For organisations</Link></span>
           </div>
         </div>
       </section>

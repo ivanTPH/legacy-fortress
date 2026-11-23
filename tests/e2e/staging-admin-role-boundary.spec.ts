@@ -535,6 +535,18 @@ async function trustSession(client: SupabaseClient, accessToken: string) {
   } catch { /* before the new-device migration there is nothing to record */ }
 }
 
+// Become a partner (23 Nov 2026): the public page loads and the Admin Inbox has a Partners filter. Nothing is
+// submitted, so no enquiry is saved and no staff email is sent.
+test("become a partner page and Admin Inbox Partners filter", async ({ page }) => {
+  await page.goto(`${BASE_URL}/partners`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "Give your people Legacy Fortress Premium" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByLabel("Type of organisation")).toBeVisible();
+  const shot = await page.screenshot({ type: "jpeg", quality: 60, fullPage: true }).catch(() => null);
+  if (shot) console.log(`Phone-shot: partners-page ${shot.toString("base64")}`);
+  await signIn(page, users[0].email, "/admin/inbox");
+  await expect(page.getByRole("button", { name: /^Partners/ })).toBeVisible({ timeout: 30_000 });
+});
+
 // Speed timings for Admin (owner request 23 Nov 2026): read only, printed as "Perf:" lines; never fails the release.
 test("speed timings: admin pages (read only)", async ({ page }) => {
   test.setTimeout(300_000);
