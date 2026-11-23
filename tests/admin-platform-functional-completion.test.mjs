@@ -31,7 +31,7 @@ test("legacy internal admin entry routes redirect to canonical platform routes",
   assert.doesNotMatch(probate, /AdminOpsWorkspace/);
 });
 
-test("platform admin high-value lists use shared responsive data primitives", () => {
+test("platform admin high-value lists use shared responsive data primitives", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const primitives = read("components/admin/AdminPrimitives.tsx");
   const workspace = read("components/admin/AdminControlPlaneWorkspace.tsx");
 

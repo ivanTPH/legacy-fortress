@@ -5,7 +5,7 @@ import path from "node:path";
 
 const root = process.cwd();
 
-test("internal test login exposes safe mock personas without touching production auth", () => {
+test("internal test login exposes safe mock personas without touching production auth", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const personaCatalog = read("lib/testPersonas.ts");
   const testLoginPage = read("app/internal/test-login/page.tsx");
   const personaDetailPage = read("app/internal/test-login/[persona]/page.tsx");

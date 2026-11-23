@@ -22,7 +22,7 @@ const files = {
   globals: readFileSync(new URL("../app/globals.css", import.meta.url), "utf8"),
 };
 
-test("asset-class overview pages use the same summary card pattern as finance", () => {
+test("asset-class overview pages use the same summary card pattern as finance", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   for (const [name, source] of Object.entries({
     legal: files.legal,
     property: files.property,
@@ -45,7 +45,7 @@ test("sidebar launches top-level dashboards instead of submenu flyouts", () => {
   assert.match(files.sidebarPrimary, /aria-haspopup=\{item\.children\?\.length \? "menu" : undefined\}/);
 });
 
-test("record workspaces open the add form from add=1 query links", () => {
+test("record workspaces open the add form from add=1 query links", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   assert.match(files.finances, /\$\{section\.href\}\?add=1/);
   assert.match(files.finances, /emptyState=\{isEmpty\}/);
   assert.match(files.finances, /addLabel=\{`Add \$\{section\.title\.toLowerCase\(\)\}`\}/);

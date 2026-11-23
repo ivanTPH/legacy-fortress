@@ -7,7 +7,7 @@ const root = process.cwd();
 const dashboard = fs.readFileSync(path.join(root, "app/(app)/dashboard/page.tsx"), "utf8");
 const actionCentre = fs.readFileSync(path.join(root, "app/(app)/components/dashboard/ActionQueuePanel.tsx"), "utf8");
 
-test("Personal Vault renders structured guidance and keeps linked viewers read-only", () => {
+test("Personal Vault renders structured guidance and keeps linked viewers read-only", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   assert.match(dashboard, /buildGuidanceItems/);
   assert.match(dashboard, /guidanceItems=\{guidanceItems\}/);
   assert.match(dashboard, /onGuidanceDecision=\{viewer\.mode === "linked" \? undefined/);

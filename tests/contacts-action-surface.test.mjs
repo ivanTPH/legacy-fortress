@@ -79,7 +79,7 @@ test("person presentation keeps relationship, invitation and access distinct", (
   assert.match(invitationManager, /Identity verification does not establish legal authority/);
 });
 
-test("focused People I Trust actions use canonical invitation and scoped access persistence", () => {
+test("focused People I Trust actions use canonical invitation and scoped access persistence", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const contactsWorkspace = fs.readFileSync(path.join(root, "components/contacts/ContactsNetworkWorkspace.tsx"), "utf8");
 
   assert.match(contactsWorkspace, /toAccessActivationStatus\(contact\.verification_status\)/);

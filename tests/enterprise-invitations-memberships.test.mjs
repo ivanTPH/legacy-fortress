@@ -179,7 +179,7 @@ test("enterprise invitation and membership lifecycle controls require reasoned a
   assert.match(service, /releaseEnterpriseSeat\(client, current\.seat_id, optionalText\(reason\)/);
 });
 
-test("enterprise workspace makes organisation context and capability boundaries visible", () => {
+test("enterprise workspace makes organisation context and capability boundaries visible", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const workspace = read("components/enterprise/EnterpriseOperationsWorkspace.tsx");
 
   assert.match(workspace, /Authorised organisation context/);

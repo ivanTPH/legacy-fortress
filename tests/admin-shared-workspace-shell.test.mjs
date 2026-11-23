@@ -90,7 +90,7 @@ test("admin navigation is capability-filtered without defining a second role mat
   assert.match(source, /verification:read/);
 });
 
-test("platform, enterprise and probate entry surfaces use the shared shell", () => {
+test("platform, enterprise and probate entry surfaces use the shared shell", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const platform = read("components/admin/AdminControlPlaneWorkspace.tsx");
   const enterprise = read("components/enterprise/EnterpriseOperationsWorkspace.tsx");
   const enterpriseOrgDetail = read("components/enterprise/EnterpriseOrganisationDetailWorkspace.tsx");

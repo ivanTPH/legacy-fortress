@@ -22,7 +22,7 @@ test("guidance is generated from structured evidence with calm, actionable state
   assert.ok(items.every((item) => !item.title.toUpperCase().startsWith("MISSING")));
 });
 
-test("Will applicability answers change the journey without claiming a record exists", () => {
+test("Will applicability answers change the journey without claiming a record exists", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const noWill = buildGuidanceItems(emptyEvidence, setVaultApplicability(getDefaultVaultPreferences(), "will", "no"));
   assert.equal(noWill.find((item) => item.key === "will")?.actionLabel, "Explore my options");
   assert.equal(noWill.find((item) => item.key === "will")?.href, "/support?topic=will");

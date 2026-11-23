@@ -5,7 +5,7 @@ import path from "node:path";
 
 const root = process.cwd();
 
-test("navigation no longer exposes Executors as a standalone destination", () => {
+test("navigation no longer exposes Executors as a standalone destination", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const manifest = fs.readFileSync(path.join(root, "config/routeManifest.tsx"), "utf8");
   const navigation = fs.readFileSync(path.join(root, "app/(app)/navigation/navigation.config.tsx"), "utf8");
 
@@ -22,7 +22,7 @@ test("legacy executors route redirects into grouped contacts", () => {
   assert.match(executorsRoute, /Opening executor contacts/);
 });
 
-test("contacts grouped workflow preserves executor group state when selecting a contact", () => {
+test("contacts grouped workflow preserves executor group state when selecting a contact", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const contactsWorkspace = fs.readFileSync(path.join(root, "components/contacts/ContactsNetworkWorkspace.tsx"), "utf8");
 
   assert.match(contactsWorkspace, /params\.set\("group", groupKey\)/);

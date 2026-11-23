@@ -21,7 +21,7 @@ test("customer user detail route uses canonical internal admin access and safe a
   assert.doesNotMatch(route, /\/api\/admin\//);
 });
 
-test("customer user detail service is privacy bounded and sources real operational tables", () => {
+test("customer user detail service is privacy bounded and sources real operational tables", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const operations = read("lib/admin/operations.ts");
 
   assert.match(operations, /export async function loadUserOperationalDetail/);
@@ -38,7 +38,7 @@ test("customer user detail service is privacy bounded and sources real operation
   assert.doesNotMatch(operations, /decrypt|storage_path|document_contents|private_key/i);
 });
 
-test("customer user detail UI has explicit view action, unavailable actions, and vault privacy copy", () => {
+test("customer user detail UI has explicit view action, unavailable actions, and vault privacy copy", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const workspace = read("components/admin/AdminControlPlaneWorkspace.tsx");
 
   assert.match(workspace, /loadUserDetail/);

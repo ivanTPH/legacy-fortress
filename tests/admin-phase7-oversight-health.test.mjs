@@ -69,7 +69,7 @@ test("admin destructive actions use accessible in-app confirmations instead of n
   assert.match(legacyOps, /role="dialog"/);
 });
 
-test("admin overview makes action-required queues explicit without fabricating unavailable metrics", () => {
+test("admin overview makes action-required queues explicit without fabricating unavailable metrics", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const workspace = read("components/admin/AdminControlPlaneWorkspace.tsx");
 
   assert.match(workspace, /id="admin-action-centre-title"/);

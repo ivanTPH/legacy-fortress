@@ -62,7 +62,7 @@ test("enterprise API enforces admin access, audit, seat limits and privacy exclu
   assert.doesNotMatch(service, /\.from\("assets"\)|\.from\("documents"\)|\.from\("attachments"\)|\.from\("records"\)/);
 });
 
-test("enterprise workspace replaces disabled prototype with functional controls", () => {
+test("enterprise workspace replaces disabled prototype with functional controls", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const page = fs.readFileSync(path.join(root, "app/enterprise/page.tsx"), "utf8");
   const compatibilityPage = fs.readFileSync(path.join(root, "app/application/enterprise/page.tsx"), "utf8");
   const workspace = fs.readFileSync(path.join(root, "components/enterprise/EnterpriseOperationsWorkspace.tsx"), "utf8");

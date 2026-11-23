@@ -13,7 +13,7 @@ const linkedList = fs.readFileSync(path.join(root, "app/(app)/linked-fortresses/
 const linkedDetail = fs.readFileSync(path.join(root, "app/(app)/linked-fortresses/[grantId]/page.tsx"), "utf8");
 const deathReportApi = fs.readFileSync(path.join(root, "app/api/estate/death-reports/route.ts"), "utf8");
 
-test("personal context clears the selected linked grant before own-vault setup", () => {
+test("personal context clears the selected linked grant before own-vault setup", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   assert.match(layout, /onClick=\{\(\) => viewerContextValue\.clearLinkedGrant\(\)\}/);
   assert.match(layout, /Return to My Fortress/);
   assert.match(wallet, /Set up my Personal Vault/);

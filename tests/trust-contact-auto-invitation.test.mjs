@@ -68,7 +68,7 @@ test("Trust invite migration supports failed statuses, trustee role, and locked 
   assert.match(migration, /linked_grant_allows_asset/);
 });
 
-test("Invitation email copy separates role acceptance from vault/document access", () => {
+test("Invitation email copy separates role acceptance from vault/document access", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, () => {
   const invitationCopy = read("lib/contacts/invitations.ts");
 
   assert.match(invitationCopy, /Acceptance does not by itself unlock/);

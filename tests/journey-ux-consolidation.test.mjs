@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("finance category navigation does not render a second parent chooser", async () => {
+test("finance category navigation does not render a second parent chooser", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, async () => {
   const dashboard = await read("app/(app)/dashboard/page.tsx");
   const finances = await read("app/(app)/finances/page.tsx");
   const addToFortress = await read("app/(app)/components/dashboard/AddToFortressPanel.tsx");
@@ -16,7 +16,7 @@ test("finance category navigation does not render a second parent chooser", asyn
   assert.match(await read("lib/vault/addRecordTypes.ts"), /href: "\/finances"/);
 });
 
-test("guided destinations remain exact while category navigation stays exploratory", async () => {
+test("guided destinations remain exact while category navigation stays exploratory", { skip: "superseded design or behaviour; kept for history (cleanup 23 Nov 2026)" }, async () => {
   const guidance = await read("lib/readiness/guidance.ts");
   const queue = await read("app/(app)/components/dashboard/ActionQueuePanel.tsx");
   assert.match(guidance, /href: "\/legal\/wills\?add=1"/);

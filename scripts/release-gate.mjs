@@ -33,6 +33,10 @@ const checks = [
   ["npx", ["tsc", "--noEmit"], "TypeScript"],
   ["npm", ["run", "test:core"], "Core regression tests"],
   ["node", ["--test", ...focusedStabilisationTests], "Platform stabilisation tests"],
+  // Cleanup 23 Nov 2026: CI now runs the full stabilisation suite and the older regression tests too (they used
+  // to run only by hand); assertions about superseded designs are marked skip with a note, not deleted.
+  ["npm", ["run", "test:stabilisation"], "Full stabilisation suite"],
+  ["npm", ["run", "test:regression"], "Older regression tests"],
   ["npm", ["run", "audit:routes"], "Route audit"],
   ["npm", ["run", "crawl:links"], "Internal link crawl"],
   ...(skipBuild ? [] : [["npm", ["run", "build"], "Production build"]]),
