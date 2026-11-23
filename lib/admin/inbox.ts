@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isTestAccountEmail, listAuthUsersNewestFirst } from "./operations";
 import { DIRECT_ORIGIN, loadAccountOrigins, type AccountOrigin } from "./accountOrigins";
+import { loadEnquiries } from "../partners/enquiries.ts";
 import { loadHelpMessages } from "./helpMessages";
 
 /**
@@ -8,7 +9,7 @@ import { loadHelpMessages } from "./helpMessages";
  * already recorded. Privacy (owner-approved): account details only. Links and documents are COUNTS per account per
  * day; never the invited person's name or email, never file names, record names, values or contents.
  */
-export type AdminInboxKind = "accounts" | "plans" | "links" | "documents" | "messages" | "needs";
+export type AdminInboxKind = "accounts" | "plans" | "links" | "documents" | "messages" | "partners" | "needs";
 export type AdminInboxItem = {
   id: string;
   kind: AdminInboxKind;
@@ -19,6 +20,8 @@ export type AdminInboxItem = {
   accountEmail: string | null;
   /** Messages only: what the customer wrote to us from Help (they chose to send it to us). */
   message?: string;
+  /** Partner enquiries only (23 Nov 2026): where it stands. */
+  enquiryStatus?: string;
   /** Messages only: replies already sent from the Admin Inbox. */
   replies?: number;
   /** New accounts only: how the account was created, and whether it is a test account. */
@@ -95,6 +98,17 @@ export async function loadAdminInbox(client: AnyClient, options: { days?: number
   for (const row of await loadHelpMessages(client, since)) {
     if (isTest(row.userId)) continue;
     items.push({ id: `message:${row.id}`, kind: "messages", title: `Message: ${row.topic}`, detail: emailById.get(row.userId) || "Account", message: row.text, replies: row.replies, at: row.at, ...account(row.userId) });
+  }
+
+  // Partner enquiries from the public "Become a partner" form (23 Nov 2026). The organisation sent these to us,
+  // so its details are shown. Before the table exists this simply finds none.
+  for (const row of await loadEnquiries(client, since)) {
+    const size = row.membersEstimate ? ` · about ${row.membersEstimate.toLocaleString("en-GB")} people` : "";
+    items.push({
+      id: `partner:${row.id}`, kind: "partners", title: `Partner enquiry: ${row.organisationName}`,
+      detail: `${row.contactName} · ${row.contactEmail}${row.contactPhone ? ` · ${row.contactPhone}` : ""}${row.organisationType ? ` · ${row.organisationType}` : ""}${size}`,
+      message: row.message ?? undefined, enquiryStatus: row.status, at: row.at, href: "/admin/organisations", accountEmail: null,
+    });
   }
 
   // Needs you: what's waiting in the review queues (counts; each opens its own page).

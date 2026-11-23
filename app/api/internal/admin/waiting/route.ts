@@ -11,6 +11,8 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const admin = await requireAdminAccess(request);
   if (!admin.ok) return NextResponse.json({ ok: false, message: admin.message }, { status: admin.status });
+  // Platform staff only: a partner's own admins never see these (23 Nov 2026).
+  if (admin.access.enterpriseScope?.organisationScoped) return NextResponse.json({ ok: false, message: "Not available." }, { status: 403 });
   const kinds = (Object.keys(STAFF_ALERT_KINDS) as StaffAlertKind[]).filter((kind) => adminHasCapability(admin.access, STAFF_ALERT_KINDS[kind].capability));
   const counts = await Promise.all(kinds.map(async (kind) => [kind, await countWaiting(admin.adminClient, kind)] as const));
   const byKind = Object.fromEntries(counts);

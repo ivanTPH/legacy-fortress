@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Icon from "@/components/ui/Icon";
 import HelpReplyForm from "@/components/admin/HelpReplyForm";
+import EnquiryStatus from "@/components/admin/EnquiryStatus";
 import type { AdminInboxItem, AdminInboxKind } from "@/lib/admin/inbox";
 import { supabase } from "@/lib/supabaseClient";
 import { INCLUDE_TESTS_EVENT, readIncludeTests, writeIncludeTests } from "@/lib/admin/includeTestsPreference";
@@ -24,9 +25,10 @@ const FILTERS: Array<[AdminInboxKind | "all", string, string]> = [
   ["links", "Links", "link"],
   ["documents", "Documents", "description"],
   ["messages", "Messages", "mail"],
+  ["partners", "Partners", "handshake"],
   ["needs", "Needs you", "priority_high"],
 ];
-const ICONS: Record<AdminInboxKind, string> = { accounts: "person_add", plans: "workspace_premium", links: "link", documents: "description", messages: "mail", needs: "priority_high" };
+const ICONS: Record<AdminInboxKind, string> = { accounts: "person_add", plans: "workspace_premium", links: "link", documents: "description", messages: "mail", partners: "handshake", needs: "priority_high" };
 const READ_KEY = "lf:admin-inbox:read";
 
 function loadRead(): string[] {
@@ -157,10 +159,11 @@ export default function AdminInbox({ authFetch }: { authFetch: (input: string, i
                 <span className="lf-admin-inbox-copy">
                   <span className="lf-admin-inbox-top"><strong>{item.title}</strong><time dateTime={item.at}>{when(item.at)}</time></span>
                   <span className="lf-admin-inbox-detail">{item.detail}{item.kind === "accounts" ? <AdminAccountTags origin={item.origin} isTest={item.isTest} /> : null}</span>
-                  {item.kind === "messages" && item.message ? <span className="lf-admin-inbox-message">{item.message}</span> : null}
+                  {(item.kind === "messages" || item.kind === "partners") && item.message ? <span className="lf-admin-inbox-message">{item.message}</span> : null}
                 </span>
                 <Icon name="chevron_right" size={20} />
               </Link>
+              {item.kind === "partners" ? <EnquiryStatus id={item.id} status={item.enquiryStatus ?? "new"} authFetch={authFetch} /> : null}
               {item.kind === "messages" ? <HelpReplyForm messageId={item.id} replies={item.replies ?? 0} authFetch={authFetch} onSent={() => markRead([item.id])} /> : null}
             </li>
           );
