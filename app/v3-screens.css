@@ -967,3 +967,8 @@ a.lf-topbar-shield:focus-visible { outline: 3px solid var(--lf-focus); outline-o
 .lf-view-as-banner { display: flex; align-items: center; gap: 10px; padding: 12px 16px; margin-bottom: 12px; border-radius: 12px; background: #FFF4D6; border: 1px solid #E8C766; color: #4A3A12; }
 .lf-view-as-banner a { margin-left: auto; font-weight: 600; color: inherit; white-space: nowrap; }
 .lf-view-as-banner.is-staff { background: var(--lf-surface-muted, #F6EFEA); border-color: var(--lf-border, #EBE4DE); color: var(--lf-text, #2B1D17); }
+
+/* Brand changes (24 Nov 2026): small at the foot of a record; larger in the printed executor pack. */
+.lf-v52-record-brand-change { margin: 20px 0 0; font-size: 12px; line-height: 1.4; color: var(--lf-text-secondary); }
+.lf-pack-brand-note td { padding-top: 0; font-size: 15px; font-weight: 600; color: #4A3F3A; border-top: 0; }
+@media print { .lf-pack-brand-note td { font-size: 13pt; } }

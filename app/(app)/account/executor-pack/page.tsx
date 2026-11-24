@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import Icon from "../../../../components/ui/Icon";
 import { waitForActiveUser } from "../../../../lib/auth/session";
 import { supabase } from "../../../../lib/supabaseClient";
@@ -99,11 +99,14 @@ export default function ExecutorPackPage() {
                 <thead><tr><th scope="col">What</th><th scope="col">Type</th><th scope="col">Who it’s with</th>{includeValues ? <th scope="col">Estimated value</th> : null}<th scope="col">Copies in Vault</th></tr></thead>
                 <tbody>
                   {section.items.map((item) => (
-                    <tr key={item.id}>
-                      <td>{item.title}</td><td>{item.type ?? ""}</td><td>{item.provider ?? ""}</td>
-                      {includeValues ? <td>{item.value ?? ""}</td> : null}
-                      <td>{item.documents || ""}</td>
-                    </tr>
+                    <Fragment key={item.id}>
+                      <tr>
+                        <td>{item.title}</td><td>{item.type ?? ""}</td><td>{item.provider ?? ""}</td>
+                        {includeValues ? <td>{item.value ?? ""}</td> : null}
+                        <td>{item.documents || ""}</td>
+                      </tr>
+                      {item.brandNote ? <tr className="lf-pack-brand-note"><td colSpan={includeValues ? 5 : 4}>{item.brandNote}</td></tr> : null}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>

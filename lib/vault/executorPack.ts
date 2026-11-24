@@ -5,6 +5,7 @@
  * estimated values only appear if the owner ticks "Include estimated values". Owner-only: built in the browser from
  * the owner's own rows under their own row-level security. Nothing is stored or sent.
  */
+import { brandChangeNote } from "../assets/providerBrands.mjs";
 export type PackSourceRow = {
   id: string;
   section_key: string | null;
@@ -19,7 +20,7 @@ export type PackSourceRow = {
   currency_code?: string | null;
 };
 export type PackPerson = { name: string; role: string | null; relationship?: string | null; joined?: boolean };
-export type PackItem = { id: string; title: string; type: string | null; provider: string | null; documents: number; value: string | null };
+export type PackItem = { id: string; title: string; type: string | null; provider: string | null; documents: number; value: string | null; brandNote?: string | null };
 export type PackSection = { key: string; heading: string; items: PackItem[] };
 export type ExecutorPack = {
   ownerName: string;
@@ -88,8 +89,10 @@ export function buildExecutorPack(input: {
       type: pick(meta, TYPE_KEYS) ?? words(row.category_key),
       provider: (String(row.provider_name ?? "").trim().slice(0, 80) || null) ?? pick(meta, PROVIDER_KEYS),
       documents: input.documentCounts.get(row.id) ?? 0,
+      brandNote: null,
       value: input.includeValues ? money(row.value_minor ? Number(row.value_minor) / 100 : meta.estimated_value, row.currency_code ?? meta.currency) : null,
     };
+    item.brandNote = brandChangeNote(item.provider ?? item.title);
     groups.set(key, [...(groups.get(key) ?? []), item]);
   }
   const known = new Map(SECTION_ORDER);
