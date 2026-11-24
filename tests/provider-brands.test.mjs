@@ -41,3 +41,14 @@ test("tiles: steady colour, readable text, first letter", () => {
   assert.equal(tileLetter("The People’s Pension"), "P");
   assert.equal(tileLetter("first direct"), "F");
 });
+
+test("brand changes: a short note for providers that changed name, shown small on the record and larger in the pack", async () => {
+  const { brandChangeNote } = await import("../lib/assets/providerBrands.mjs");
+  assert.match(brandChangeNote("Halifax Reward current account"), /now Lloyds/);
+  assert.match(brandChangeNote("Prudential pension"), /M&G/);
+  assert.equal(brandChangeNote("Barclays"), null);
+  const record = readFileSync(new URL("../components/records/UniversalRecordWorkspace.tsx", import.meta.url), "utf8");
+  assert.match(record, /lf-v52-record-brand-change/);
+  const pack = readFileSync(new URL("../app/(app)/account/executor-pack/page.tsx", import.meta.url), "utf8");
+  assert.match(pack, /lf-pack-brand-note/);
+});

@@ -144,7 +144,7 @@ import { getPlanLimitRedirectHref } from "../../lib/accountPlan";
 import { FAIR_USE_MESSAGE, isFairUseLimit, isPlanLimitError, isTypeLimitError, planLimitReason, showPremiumSheet } from "../../lib/billing/client";
 import { getWorkspaceHelpMessage } from "../../lib/workspaceHelp";
 import { resolveProviderLogoPath } from "../../lib/assets/providerLogoPath.mjs";
-import { findProviderBrand, tileColourFor } from "../../lib/assets/providerBrands.mjs";
+import { brandChangeNote, findProviderBrand, tileColourFor } from "../../lib/assets/providerBrands.mjs";
 import BrandMark from "../ui/BrandMark";
 
 type RecordStatus = "active" | "archived";
@@ -4279,6 +4279,7 @@ export default function UniversalRecordWorkspace({
             {!isPossessions && !isTrustedContacts && !usesCanonicalAssets && !isFinanceSection && selectedRecord.status !== "archived" ? <button type="button" disabled={archivingFor === selectedRecord.id} onClick={() => void archiveRecord(selectedRecord.id)}>{archivingFor === selectedRecord.id ? "Archiving..." : "Archive record"}</button> : null}
             <button type="button" className="lf-v52-record-delete" onClick={() => void deleteRecord(selectedRecord.id)}>Delete record</button>
           </details> : null}
+          {(() => { const note = brandChangeNote(selectedRecord.provider_name || selectedRecord.title || ""); return note ? <p className="lf-v52-record-brand-change">{note}</p> : null; })()}
         </section>
       ) : <p role="alert">This record is unavailable or you do not have access. <Link href={pathname}>Back to {title}</Link></p> : null}
 
