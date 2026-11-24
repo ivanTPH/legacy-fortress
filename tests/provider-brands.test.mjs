@@ -16,7 +16,7 @@ test("well-known providers: names typed loosely still match", () => {
 
 test("every logo is a real repository file at an approved path; banks no longer point at missing files", () => {
   const logos = PROVIDER_BRANDS.filter((brand) => brand.logo);
-  assert.ok(logos.length >= 58);
+  assert.ok(logos.length >= 92);
   for (const brand of logos) {
     assert.ok(isApprovedLocalLogoPath(brand.logo), brand.logo);
     assert.ok(existsSync(new URL(`../public${brand.logo}`, import.meta.url)), brand.logo);
