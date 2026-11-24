@@ -865,7 +865,7 @@ function PartnerGetStarted({ portfolio, setActiveTab }: { portfolio: EnterpriseP
     { done: licenceActive, label: "Licence active", detail: licenceActive ? "Your licence is in place." : "Legacy Fortress turns this on once your agreement is in place.", tab: null },
     { done: hasLink, label: "Create a sign-up link", detail: "One link your members use to join.", tab: "registration-links" },
     { done: shared, label: "Share it", detail: "Copy the link, print the QR code or send the ready-made email.", tab: "registration-links" },
-    { done: joined, label: "See who joined", detail: "Members appear in Team as they join.", tab: "users" },
+    { done: joined, label: "See who joined", detail: "New members show under Members as they join.", tab: "users" },
   ];
   if (steps.every((step) => step.done)) return null;
   // "What to do next" (owner decision 23 Nov 2026): ticks for what's done and one clear button for the next step.
@@ -2177,7 +2177,7 @@ function PartnerUptake({ memberships }: { memberships: Array<{ joinedAt: string 
           return <li key={week.start} aria-label={`Week of ${label}: ${week.count}`}><span className="lf-partner-uptake-bar" style={{ height: `${Math.round((week.count / max) * 100)}%` }} /><small>{label}</small></li>;
         })}
       </ol>
-    ) : <p>No one has joined in the last 12 weeks. Share your sign-up link from Get started.</p>}
+    ) : <p>No one has joined in the last 12 weeks. Share your sign-up link from Sign-up link.</p>}
   </section>;
 }
 

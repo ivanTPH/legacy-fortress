@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
@@ -15,14 +16,22 @@ test("well-known providers: names typed loosely still match", () => {
 
 test("every logo is a real repository file at an approved path; banks no longer point at missing files", () => {
   const logos = PROVIDER_BRANDS.filter((brand) => brand.logo);
-  assert.ok(logos.length >= 25);
+  assert.ok(logos.length >= 58);
   for (const brand of logos) {
     assert.ok(isApprovedLocalLogoPath(brand.logo), brand.logo);
     assert.ok(existsSync(new URL(`../public${brand.logo}`, import.meta.url)), brand.logo);
   }
   assert.equal(resolveProviderLogoPath({ provider_type: "bank", provider_key: "natwest", display_name: "NatWest" }), "/logos/finance/natwest.png");
-  assert.equal(resolveProviderLogoPath({ provider_type: "bank", provider_key: "santander", display_name: "Santander" }), "");
+  assert.equal(resolveProviderLogoPath({ provider_type: "bank", provider_key: "santander", display_name: "Santander" }), "/logos/finance/santander.png");
+  assert.equal(resolveProviderLogoPath({ provider_type: "bank", provider_key: "danske", display_name: "Danske Bank" }), "");
   assert.equal(new Set(PROVIDER_BRANDS.map((brand) => brand.key)).size, PROVIDER_BRANDS.length, "keys are unique");
+});
+
+test("Wikimedia Commons logos are credited (CC BY and CC BY-SA files)", () => {
+  const terms = readFileSync(new URL("../public/site/terms.html", import.meta.url), "utf8");
+  const credits = readFileSync(new URL("../public/logos/finance/CREDITS.md", import.meta.url), "utf8");
+  for (const name of ["Ulster Bank", "Post Office", "AJ Bell", "interactive investor", "Nutmeg", "Bupa", "Simplyhealth", "M&amp;G"]) assert.match(terms, new RegExp(name));
+  assert.match(credits, /CC BY-SA 4\.0/);
 });
 
 test("tiles: steady colour, readable text, first letter", () => {
