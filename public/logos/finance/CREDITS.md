@@ -20,3 +20,7 @@ Creative Commons (our resized copies are shared under the same licence):
 
 From the providers' own websites (their official app or site icon, fetched 24 Nov 2026, resized to 128px):
 aib, canada-life, charles-stanley, chip, churchill, coventry-bs, direct-line, freetrade, halifax, hargreaves-lansdown, hastings, hiscox, jupiter, kroo, leeds-bs, lv, moneybox, ms-bank, nest, now-pensions, ns-and-i, pensionbee, peoples-pension, plum, royal-london, rsa, sainsburys-bank, scottish-widows, standard-life, sun-life, tesco-bank, trading-212, wealthify, yorkshire-bs.
+
+From the providers' own website headers (their official logo, drawn large in the browser and cut to the symbol where there is one; 24 Nov 2026):
+admiral, bank-of-scotland, brewin-dolphin, charles-stanley, coutts, danske, just, scottish-widows.
+Brand changes: Clydesdale Bank uses the Virgin Money logo, Prudential (UK) the M&G logo and Phoenix the Standard Life logo, as their own sites now redirect there.

@@ -16,14 +16,14 @@ test("well-known providers: names typed loosely still match", () => {
 
 test("every logo is a real repository file at an approved path; banks no longer point at missing files", () => {
   const logos = PROVIDER_BRANDS.filter((brand) => brand.logo);
-  assert.ok(logos.length >= 92);
+  assert.ok(logos.length >= 101);
   for (const brand of logos) {
     assert.ok(isApprovedLocalLogoPath(brand.logo), brand.logo);
     assert.ok(existsSync(new URL(`../public${brand.logo}`, import.meta.url)), brand.logo);
   }
   assert.equal(resolveProviderLogoPath({ provider_type: "bank", provider_key: "natwest", display_name: "NatWest" }), "/logos/finance/natwest.png");
   assert.equal(resolveProviderLogoPath({ provider_type: "bank", provider_key: "santander", display_name: "Santander" }), "/logos/finance/santander.png");
-  assert.equal(resolveProviderLogoPath({ provider_type: "bank", provider_key: "danske", display_name: "Danske Bank" }), "");
+  assert.equal(resolveProviderLogoPath({ provider_type: "bank", provider_key: "vanguard", display_name: "Vanguard" }), "");
   assert.equal(new Set(PROVIDER_BRANDS.map((brand) => brand.key)).size, PROVIDER_BRANDS.length, "keys are unique");
 });
 
