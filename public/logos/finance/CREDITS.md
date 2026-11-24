@@ -17,3 +17,6 @@ Creative Commons (our resized copies are shared under the same licence):
 - Bupa: "Bupa-logo 2022.png" by BUPA Corporate, CC BY-SA 4.0
 - Simplyhealth: "Simplyhealth Group.jpg" by CorpCommsSH, CC BY-SA 4.0
 - M&G: "RGB - M&G Investments Logo.png" by M&G PLC, CC BY-SA 4.0
+
+From the providers' own websites (their official app or site icon, fetched 24 Nov 2026, resized to 128px):
+aib, canada-life, charles-stanley, chip, churchill, coventry-bs, direct-line, freetrade, halifax, hargreaves-lansdown, hastings, hiscox, jupiter, kroo, leeds-bs, lv, moneybox, ms-bank, nest, now-pensions, ns-and-i, pensionbee, peoples-pension, plum, royal-london, rsa, sainsburys-bank, scottish-widows, standard-life, sun-life, tesco-bank, trading-212, wealthify, yorkshire-bs.
