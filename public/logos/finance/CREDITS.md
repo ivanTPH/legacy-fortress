@@ -28,3 +28,5 @@ Brand changes: Prudential (UK) uses the M&G logo (Pru is part of M&G). Clydesdal
 Official app icons (25 Nov 2026): public/logos/apps holds each provider's own app icon as published on its UK App Store listing (142 providers), resized to 192px. They replace the earlier logos wherever an app exists, so the app shows the same icon people see on their phone.
 
 From Google Play (25 Nov 2026), for providers with no App Store app: Schroders, Ecology, Furness, Saffron, Hinckley & Rugby, Melton, Scottish, Newbury and Hanley Economic building societies, and Quote Me Happy (published by Aviva).
+
+Group apps (25 Nov 2026), where the financial arm has no app of its own but the same company's main app carries the brand: Sainsbury's Bank uses the Sainsbury's app icon, Co-op Insurance the Co-op Membership app icon, John Lewis Money the John Lewis & Partners app icon.
