@@ -143,6 +143,11 @@ async function cleanup() {
     });
     if (!response.ok) failures.push(`evidence_cleanup:${redactId(requestId)}`);
   }
+  // Its own ID checks are closed so they never sit in Admin's review queue (25 Nov 2026).
+  for (const requestId of created.requests) {
+    const result = await admin.from("identity_verification_requests").update({ status: "cancelled", manual_review_required: false, last_reason_code: "test_check_closed", updated_at: new Date().toISOString() }).eq("id", requestId).eq("status", "review_required");
+    if (result.error) failures.push(`request:${redactId(requestId)}`);
+  }
   for (const grantId of created.grants) {
     const result = await admin.from("account_access_grants").update({ activation_status: "revoked", updated_at: new Date().toISOString() }).eq("id", grantId);
     if (result.error) failures.push(`grant:${redactId(grantId)}`);

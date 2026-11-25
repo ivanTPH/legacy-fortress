@@ -653,7 +653,7 @@ const DEFAULT_PROVIDER_CATALOG: ProviderCatalogRow[] = [
   { provider_key: "tesla", display_name: "Tesla", provider_type: "vehicle", match_terms: ["tesla"], logo_path: null, icon_text: "t", active: true },
 ];
 
-const DIGITAL_BRAND_CATEGORIES = new Set(["digital", "social-media"]);
+const DIGITAL_BRAND_CATEGORIES = new Set(["digital", "social-media", "subscriptions"]);
 const FINANCE_BRAND_CATEGORIES = new Set(["bank", "bank-accounts", "savings", "investments", "pensions", "insurance", "debts", "mortgages", "credit-cards"]);
 
 const POSSESSION_CATEGORY_ICONS: Record<string, string> = {

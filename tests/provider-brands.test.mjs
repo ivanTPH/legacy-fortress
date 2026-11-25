@@ -80,6 +80,6 @@ test("digital accounts: social media, subscriptions, email, cloud and wallets sh
   assert.equal(new Set(keys).size, keys.length, "no duplicate keys");
   for (const brand of DIGITAL_BRANDS) assert.ok(existsSync(new URL(`../public${brand.logo}`, import.meta.url)), brand.logo);
   const record = readFileSync(new URL("../components/records/UniversalRecordWorkspace.tsx", import.meta.url), "utf8");
-  assert.match(record, /DIGITAL_BRAND_CATEGORIES = new Set\(\["digital", "social-media"\]\)/);
+  assert.match(record, /DIGITAL_BRAND_CATEGORIES = new Set\(\["digital", "social-media", "subscriptions"\]\)/);
   assert.match(record, /findDigitalBrand\(/);
 });
