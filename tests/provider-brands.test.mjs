@@ -83,3 +83,24 @@ test("digital accounts: social media, subscriptions, email, cloud and wallets sh
   assert.match(record, /DIGITAL_BRAND_CATEGORIES = new Set\(\["digital", "social-media", "subscriptions"\]\)/);
   assert.match(record, /findDigitalBrand\(/);
 });
+
+test("everyday services: bills, loyalty and business tools match only on clear names", async () => {
+  const { findDigitalBrand, SERVICE_BRANDS, EVERYDAY_BRANDS } = await import("../lib/assets/digitalBrands.mjs");
+  assert.equal(findDigitalBrand("Octopus Energy electricity")?.key, "octopus-energy");
+  assert.equal(findDigitalBrand("Sky Broadband")?.key, "sky-broadband");
+  assert.equal(findDigitalBrand("Sky Go")?.key, "sky-go");
+  assert.equal(findDigitalBrand("BA Avios")?.key, "avios");
+  assert.equal(findDigitalBrand("Tesco Clubcard")?.key, "tesco-clubcard");
+  assert.equal(findDigitalBrand("Xero subscription")?.key, "xero");
+  for (const text of ["Three-bed house", "Villa on the Costa del Sol", "Hilton Road garage", "Market Square shop", "Boots and wellies"]) {
+    assert.equal(findDigitalBrand(text), null, text);
+  }
+  const { findServiceBrand } = await import("../lib/assets/digitalBrands.mjs");
+  assert.equal(findServiceBrand("Sales ledger"), null, "business records never match digital names");
+  assert.equal(findServiceBrand("British Gas account")?.key, "british-gas");
+  const record = readFileSync(new URL("../components/records/UniversalRecordWorkspace.tsx", import.meta.url), "utf8");
+  assert.match(record, /SERVICE_BRAND_CATEGORIES = new Set\(\["property", "business", "records"\]\)/);
+  const keys = EVERYDAY_BRANDS.map((b) => b.key);
+  assert.equal(new Set(keys).size, keys.length, "no duplicate keys across lists");
+  for (const brand of SERVICE_BRANDS) assert.ok(existsSync(new URL(`../public${brand.logo}`, import.meta.url)), brand.logo);
+});
