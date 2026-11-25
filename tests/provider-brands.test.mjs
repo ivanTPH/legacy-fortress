@@ -66,3 +66,20 @@ test("app icons: providers with an app show their official App Store icon, filli
   const mark = readFileSync(new URL("../components/ui/BrandMark.tsx", import.meta.url), "utf8");
   assert.match(mark, /is-app/);
 });
+
+test("digital accounts: social media, subscriptions, email, cloud and wallets show their official app icon", async () => {
+  const { findDigitalBrand, DIGITAL_BRANDS } = await import("../lib/assets/digitalBrands.mjs");
+  assert.equal(findDigitalBrand("My Instagram")?.logo, "/logos/apps/instagram.png");
+  assert.equal(findDigitalBrand("X")?.key, "x");
+  assert.equal(findDigitalBrand("Twitter")?.key, "x");
+  assert.equal(findDigitalBrand("YouTube Music")?.key, "youtube-music");
+  assert.equal(findDigitalBrand("Hotmail")?.key, "outlook");
+  assert.equal(findDigitalBrand("Family blog"), null);
+  assert.ok(DIGITAL_BRANDS.length >= 90);
+  const keys = DIGITAL_BRANDS.map((b) => b.key);
+  assert.equal(new Set(keys).size, keys.length, "no duplicate keys");
+  for (const brand of DIGITAL_BRANDS) assert.ok(existsSync(new URL(`../public${brand.logo}`, import.meta.url)), brand.logo);
+  const record = readFileSync(new URL("../components/records/UniversalRecordWorkspace.tsx", import.meta.url), "utf8");
+  assert.match(record, /DIGITAL_BRAND_CATEGORIES = new Set\(\["digital", "social-media"\]\)/);
+  assert.match(record, /findDigitalBrand\(/);
+});
