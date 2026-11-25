@@ -52,3 +52,22 @@ test("every kind maps to the capability that can deal with it; triggers are wire
   const shell = readFileSync(new URL("../components/admin/AdminWorkspaceShell.tsx", import.meta.url), "utf8");
   assert.match(shell, /item\.key === "inbox" && waiting > 0/);
 });
+
+test("test-account ID checks: email says so and links with test accounts shown; release checks close their own", async () => {
+  const email = renderStaffAlert("id_check", 2, "https://test.mylegacyfortress.com", { testOnly: true });
+  assert.match(email.subject, /^Admin: 2 test ID checks waiting$/);
+  assert.match(email.text, /\/admin\/verification\?tests=1/);
+  const { isTestEmail, isTestProject } = await import("../lib/admin/testIdChecks.ts");
+  assert.equal(isTestEmail("phase3b-idv-1-owner@example.test"), true);
+  assert.equal(isTestEmail("someone@gmail.com"), false);
+  assert.equal(isTestProject("https://supabase-test.mylegacyfortress.com"), true);
+  assert.equal(isTestProject("https://abc.supabase.co"), false, "never runs on production");
+  const daily = readFileSync(new URL("../app/api/internal/daily/run/route.ts", import.meta.url), "utf8");
+  assert.match(daily, /closeOldTestIdChecks\(admin\)/);
+  const acceptance = readFileSync(new URL("../scripts/staging/run-invitation-idv-acceptance.mjs", import.meta.url), "utf8");
+  assert.match(acceptance, /status: "cancelled"[^\n]+\.eq\("status", "review_required"\)/);
+  const workspace = readFileSync(new URL("../components/admin/AdminControlPlaneWorkspace.tsx", import.meta.url), "utf8");
+  assert.match(workspace, /get\("tests"\) === "1"\) writeIncludeTests\(true\)/);
+  const alerts = readFileSync(new URL("../lib/admin/staffAlerts.ts", import.meta.url), "utf8");
+  assert.match(alerts, /testOnly && options\.source !== "daily-run"/);
+});

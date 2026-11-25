@@ -641,6 +641,8 @@ export default function AdminControlPlaneWorkspace({
   // One "Show test accounts" choice for all of Admin; changing it reloads the page's data.
   const [includeTestAccounts, setIncludeTestAccountsState] = useState(false);
   useEffect(() => {
+    // A staff email about test-account checks links here with ?tests=1 so they are visible (25 Nov 2026).
+    try { if (new URLSearchParams(window.location.search).get("tests") === "1") writeIncludeTests(true); } catch { /* optional */ }
     queueMicrotask(() => setIncludeTestAccountsState(readIncludeTests()));
     const onChange = (event: Event) => setIncludeTestAccountsState(Boolean((event as CustomEvent<boolean>).detail));
     window.addEventListener(INCLUDE_TESTS_EVENT, onChange);

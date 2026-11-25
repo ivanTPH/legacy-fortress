@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { deriveAdminRole, hasAdminCapability, type AdminCapability } from "./capabilities.ts";
 import { isDeliverableAddress } from "../email/deliverable.ts";
 import { validateStagingSender } from "../auth/sendEmailHook.ts";
+import { countWaitingIdChecks } from "./testIdChecks.ts";
 
 /**
  * Staff alerts (owner decision 23 Nov 2026): when something needs a person, every active admin whose role can
@@ -21,12 +22,17 @@ export type StaffAlertKind = keyof typeof STAFF_ALERT_KINDS;
 const AUDIT_ACTION = "Staff alert sent";
 export const ALERT_GAP_MS = 60 * 60 * 1000;
 
-export function renderStaffAlert(kind: StaffAlertKind, count: number, appUrl: string) {
+/**
+ * `testOnly`: everything waiting belongs to test accounts (25 Nov 2026). Admin hides those by default, so the link
+ * turns "Show test accounts" on (?tests=1) and the email says they are test checks; otherwise the queue looks empty.
+ */
+export function renderStaffAlert(kind: StaffAlertKind, count: number, appUrl: string, options: { testOnly?: boolean } = {}) {
   const copy = STAFF_ALERT_KINDS[kind];
-  const link = `${appUrl.replace(/\/$/, "")}${copy.href}`;
-  const line = `${count} ${count === 1 ? copy.one : copy.many}.`;
+  const link = `${appUrl.replace(/\/$/, "")}${copy.href}${options.testOnly ? "?tests=1" : ""}`;
+  const test = options.testOnly ? "test " : "";
+  const line = `${count} ${test}${count === 1 ? copy.one : copy.many}.`;
   return {
-    subject: `Admin: ${count} ${count === 1 ? copy.one.split(" is ")[0] : copy.many.split(" are ")[0]} waiting`,
+    subject: `Admin: ${count} ${test}${count === 1 ? copy.one.split(" is ")[0] : copy.many.split(" are ")[0]} waiting`,
     text: `${line}\n\nOpen Admin to deal with it: ${link}\n\nThis email names no customer on purpose.`,
     html: `<p>${line}</p><p><a href="${link}">Open Admin</a> to deal with it.</p><p style="color:#6B625C">This email names no customer on purpose.</p>`,
   };
@@ -68,13 +74,18 @@ export async function countWaiting(client: SupabaseClient, kind: StaffAlertKind)
   return 0;
 }
 
-export type StaffAlertResult = { kind: StaffAlertKind; sent: number; skipped?: "nothing_waiting" | "recently_sent" | "no_recipients" | "not_configured" };
+export type StaffAlertResult = { kind: StaffAlertKind; sent: number; skipped?: "nothing_waiting" | "test_only" | "recently_sent" | "no_recipients" | "not_configured" };
 
 /** Send the alert for one kind if anything is waiting and none went out in the last hour. Never throws. */
 export async function alertStaff(client: SupabaseClient, kind: StaffAlertKind, options: { force?: boolean; source?: string } = {}): Promise<StaffAlertResult> {
   try {
-    const waiting = await countWaiting(client, kind);
+    // ID checks: real customers first; test-account checks only count when nothing real is waiting.
+    const split = kind === "id_check" && typeof (client as { auth?: unknown }).auth === "object" ? await countWaitingIdChecks(client) : null;
+    const testOnly = Boolean(split && !split.real && split.test);
+    const waiting = split ? split.real || split.test : await countWaiting(client, kind);
     if (!waiting) return { kind, sent: 0, skipped: "nothing_waiting" };
+    // Test-account checks (release checks on TEST) only appear in the daily reminder, never one email per release.
+    if (testOnly && options.source !== "daily-run") return { kind, sent: 0, skipped: "test_only" };
     if (!options.force) {
       const since = new Date(Date.now() - ALERT_GAP_MS).toISOString();
       const recent = await client.from("audit_events").select("id", { count: "exact", head: true })
@@ -87,7 +98,7 @@ export async function alertStaff(client: SupabaseClient, kind: StaffAlertKind, o
     if (!apiKey) return { kind, sent: 0, skipped: "not_configured" };
     const from = validateStagingSender(String(process.env.RESEND_AUTH_FROM ?? ""));
     const appUrl = String(process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "https://test.mylegacyfortress.com");
-    const message = renderStaffAlert(kind, waiting, appUrl);
+    const message = renderStaffAlert(kind, waiting, appUrl, { testOnly });
     const hour = new Date().toISOString().slice(0, 13);
     let sent = 0;
     for (const email of recipients) {
@@ -101,7 +112,7 @@ export async function alertStaff(client: SupabaseClient, kind: StaffAlertKind, o
     await client.from("audit_events").insert({
       category: "admin_review", action: AUDIT_ACTION, result: sent ? "success" : "rejected", actor_user_id: null,
       actor_role: "system", resource_type: "case", resource_id: kind, resource_label: "Staff alert", route: options.source ?? "staff-alerts",
-      policy_decision: "allowed", metadata: { waiting, recipients: recipients.length, sent }, created_at: new Date().toISOString(),
+      policy_decision: "allowed", metadata: { waiting, testOnly, recipients: recipients.length, sent }, created_at: new Date().toISOString(),
     });
     return { kind, sent };
   } catch {

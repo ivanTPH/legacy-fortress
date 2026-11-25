@@ -37,5 +37,5 @@ jobs:
           status="$(curl -sS -o result.json -w '%{http_code}' -X POST "$BASE_URL/api/internal/daily/run" -H "x-lf-timestamp: $ts" -H "x-lf-signature: $sig")"
           echo "HTTP $status"
           # Counts only.
-          node -e 'const r=require("./result.json"); console.log(JSON.stringify({ok:r.ok,evidence:r.evidence,summaries:r.summaries}))'
+          node -e 'const r=require("./result.json"); console.log(JSON.stringify({ok:r.ok,evidence:r.evidence,summaries:r.summaries,testIdChecks:r.testIdChecks,staff:r.staff}))'
           test "$status" = "200"
