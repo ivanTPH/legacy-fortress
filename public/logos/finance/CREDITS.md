@@ -32,3 +32,5 @@ From Google Play (25 Nov 2026), for providers with no App Store app: Schroders, 
 Group apps (25 Nov 2026), where the financial arm has no app of its own but the same company's main app carries the brand: Sainsbury's Bank uses the Sainsbury's app icon, Co-op Insurance the Co-op Membership app icon, John Lewis Money the John Lewis & Partners app icon.
 
 Digital accounts (25 Nov 2026): 98 social media, subscription, gaming, email, cloud, website, crypto wallet and shopping services (Facebook, Instagram, Netflix, Gmail, Dropbox, MetaMask, Amazon and others) use their official UK App Store icons, stored in public/logos/apps. Listed in lib/assets/digitalBrands.mjs.
+
+Everyday services (25 Nov 2026): 62 energy and water suppliers, broadband and mobile networks, loyalty and air-miles schemes, and business banking and accounting tools use their official UK App Store icons, stored in public/logos/apps. Listed in lib/assets/digitalBrands.mjs (SERVICE_BRANDS).
