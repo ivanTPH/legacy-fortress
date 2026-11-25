@@ -145,6 +145,7 @@ import { FAIR_USE_MESSAGE, isFairUseLimit, isPlanLimitError, isTypeLimitError, p
 import { getWorkspaceHelpMessage } from "../../lib/workspaceHelp";
 import { resolveProviderLogoPath } from "../../lib/assets/providerLogoPath.mjs";
 import { brandChangeNote, findProviderBrand, tileColourFor } from "../../lib/assets/providerBrands.mjs";
+import { findDigitalBrand } from "../../lib/assets/digitalBrands.mjs";
 import BrandMark from "../ui/BrandMark";
 
 type RecordStatus = "active" | "archived";
@@ -652,6 +653,7 @@ const DEFAULT_PROVIDER_CATALOG: ProviderCatalogRow[] = [
   { provider_key: "tesla", display_name: "Tesla", provider_type: "vehicle", match_terms: ["tesla"], logo_path: null, icon_text: "t", active: true },
 ];
 
+const DIGITAL_BRAND_CATEGORIES = new Set(["digital", "social-media"]);
 const FINANCE_BRAND_CATEGORIES = new Set(["bank", "bank-accounts", "savings", "investments", "pensions", "insurance", "debts", "mortgages", "credit-cards"]);
 
 const POSSESSION_CATEGORY_ICONS: Record<string, string> = {
@@ -6520,6 +6522,11 @@ function ProviderBadge({
     const logoPath = resolveProviderLogoPath(provider) || brand?.logo || "";
     const named = name && !/^(record|untitled record|unknown bank)$/i.test(name);
     if (logoPath || named) return <BrandMark name={brand?.name || name} logoPath={logoPath} tileColor={brand?.color ?? tileColourFor(name)} />;
+  }
+  // Digital accounts (social media, subscriptions, email, cloud, wallets): the service's own app icon when known.
+  if (categoryKey && DIGITAL_BRAND_CATEGORIES.has(categoryKey)) {
+    const brand = findDigitalBrand(provider?.display_name || "") ?? findDigitalBrand(fallbackLabel || "");
+    if (brand) return <BrandMark name={brand.name} logoPath={brand.logo} />;
   }
   return <BrandMark name={provider?.display_name || fallbackLabel} logoPath={resolveProviderLogoPath(provider)} categoryIcon={provider ? undefined : categoryIcon} markText={provider?.icon_text} />;
 }
