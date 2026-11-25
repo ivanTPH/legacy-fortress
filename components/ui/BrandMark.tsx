@@ -23,10 +23,12 @@ export default function BrandMark({ name, logoPath = "", categoryIcon, markText,
       </span>
     );
   }
+  // Official app icons (owner decision 25 Nov 2026) fill the whole tile, like the provider's app on a phone.
+  const isAppIcon = showLogo && trustedLogoPath.startsWith("/logos/apps/");
   return (
-    <span className={`lf-v52-brand-mark ${showLogo ? "is-logo" : categoryIcon ? "is-category" : "is-monogram"}`} aria-hidden="true">
+    <span className={`lf-v52-brand-mark ${showLogo ? (isAppIcon ? "is-logo is-app" : "is-logo") : categoryIcon ? "is-category" : "is-monogram"}`} aria-hidden="true">
       {trustedLogoPath && failedPath !== trustedLogoPath ? (
-        <Image src={trustedLogoPath} alt="" width={32} height={32} unoptimized onError={() => setFailedPath(trustedLogoPath)} />
+        <Image src={trustedLogoPath} alt="" width={isAppIcon ? 44 : 32} height={isAppIcon ? 44 : 32} unoptimized onError={() => setFailedPath(trustedLogoPath)} />
       ) : categoryIcon ? <Icon name={categoryIcon} size={22} /> : <span>{initials}</span>}
     </span>
   );

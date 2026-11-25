@@ -16,14 +16,14 @@ test("well-known providers: names typed loosely still match", () => {
 
 test("every logo is a real repository file at an approved path; banks no longer point at missing files", () => {
   const logos = PROVIDER_BRANDS.filter((brand) => brand.logo);
-  assert.ok(logos.length >= 101);
+  assert.ok(logos.length >= 150);
   for (const brand of logos) {
     assert.ok(isApprovedLocalLogoPath(brand.logo), brand.logo);
     assert.ok(existsSync(new URL(`../public${brand.logo}`, import.meta.url)), brand.logo);
   }
-  assert.equal(resolveProviderLogoPath({ provider_type: "bank", provider_key: "natwest", display_name: "NatWest" }), "/logos/finance/natwest.png");
-  assert.equal(resolveProviderLogoPath({ provider_type: "bank", provider_key: "santander", display_name: "Santander" }), "/logos/finance/santander.png");
-  assert.equal(resolveProviderLogoPath({ provider_type: "bank", provider_key: "vanguard", display_name: "Vanguard" }), "");
+  assert.equal(resolveProviderLogoPath({ provider_type: "bank", provider_key: "natwest", display_name: "NatWest" }), "/logos/apps/natwest.png");
+  assert.equal(resolveProviderLogoPath({ provider_type: "bank", provider_key: "santander", display_name: "Santander" }), "/logos/apps/santander.png");
+  assert.equal(resolveProviderLogoPath({ provider_type: "bank", provider_key: "nfu-mutual", display_name: "NFU Mutual" }), "");
   assert.equal(new Set(PROVIDER_BRANDS.map((brand) => brand.key)).size, PROVIDER_BRANDS.length, "keys are unique");
 });
 
@@ -51,4 +51,18 @@ test("brand changes: a short note for providers that changed name, shown small o
   assert.match(record, /lf-v52-record-brand-change/);
   const pack = readFileSync(new URL("../app/(app)/account/executor-pack/page.tsx", import.meta.url), "utf8");
   assert.match(pack, /lf-pack-brand-note/);
+});
+
+test("app icons: providers with an app show their official App Store icon, filling the tile", async () => {
+  const { findProviderBrand, PROVIDER_BRANDS } = await import("../lib/assets/providerBrands.mjs");
+  assert.equal(findProviderBrand("Quilter")?.logo, "/logos/apps/quilter.png");
+  assert.equal(findProviderBrand("HSBC current account")?.logo, "/logos/apps/hsbc.png");
+  assert.ok(PROVIDER_BRANDS.length >= 200, "complete suite of UK providers");
+  const keys = PROVIDER_BRANDS.map((b) => b.key);
+  assert.equal(new Set(keys).size, keys.length, "no duplicate keys");
+  for (const brand of PROVIDER_BRANDS.filter((b) => b.logo?.startsWith("/logos/apps/"))) {
+    assert.ok(existsSync(new URL(`../public${brand.logo}`, import.meta.url)), brand.logo);
+  }
+  const mark = readFileSync(new URL("../components/ui/BrandMark.tsx", import.meta.url), "utf8");
+  assert.match(mark, /is-app/);
 });

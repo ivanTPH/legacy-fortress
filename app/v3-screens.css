@@ -972,3 +972,8 @@ a.lf-topbar-shield:focus-visible { outline: 3px solid var(--lf-focus); outline-o
 .lf-v52-record-brand-change { margin: 20px 0 0; font-size: 12px; line-height: 1.4; color: var(--lf-text-secondary); }
 .lf-pack-brand-note td { padding-top: 0; font-size: 15px; font-weight: 600; color: #4A3F3A; border-top: 0; }
 @media print { .lf-pack-brand-note td { font-size: 13pt; } }
+
+/* Official app icons fill the tile (owner decision 25 Nov 2026). */
+.lf-v52-brand-mark.is-logo.is-app { padding: 0; border: 1px solid rgba(0, 0, 0, 0.08); }
+.lf-v52-brand-mark.is-logo.is-app img, .lf-v52-record-list .lf-v52-brand-mark.is-logo.is-app img { max-width: none; max-height: none; width: 100%; height: 100%; object-fit: cover; }
+.lf-v52-record-list .lf-v52-brand-mark.is-logo.is-app { padding: 0; }
