@@ -26,3 +26,5 @@ admiral, bank-of-scotland, brewin-dolphin, charles-stanley, coutts, danske, just
 Brand changes: Prudential (UK) uses the M&G logo (Pru is part of M&G). Clydesdale (clydesdaleonline.co.uk icon) and Phoenix Life (phoenixlife.co.uk header) keep their own logos.
 
 Official app icons (25 Nov 2026): public/logos/apps holds each provider's own app icon as published on its UK App Store listing (142 providers), resized to 192px. They replace the earlier logos wherever an app exists, so the app shows the same icon people see on their phone.
+
+From Google Play (25 Nov 2026), for providers with no App Store app: Schroders, Ecology, Furness, Saffron, Hinckley & Rugby, Melton, Scottish, Newbury and Hanley Economic building societies, and Quote Me Happy (published by Aviva).
