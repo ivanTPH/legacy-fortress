@@ -146,6 +146,18 @@ import { getWorkspaceHelpMessage } from "../../lib/workspaceHelp";
 import { resolveProviderLogoPath } from "../../lib/assets/providerLogoPath.mjs";
 import { brandChangeNote, findProviderBrand, tileColourFor } from "../../lib/assets/providerBrands.mjs";
 import { findDigitalBrand, findServiceBrand } from "../../lib/assets/digitalBrands.mjs";
+import {
+  AFTER_DEATH_OPTIONS,
+  DIRECT_DEBIT_CATEGORY,
+  KEEP_PAYING_HINT,
+  PAYMENT_FREQUENCY_OPTIONS,
+  PAYMENT_METHOD_OPTIONS,
+  findPayeeBrand,
+  linkRef,
+  optionLabel as paymentOptionLabel,
+  parseLinkRef,
+  payeeAddHref,
+} from "../../lib/vault/directDebits";
 import BrandMark from "../ui/BrandMark";
 
 type RecordStatus = "active" | "archived";
@@ -421,6 +433,15 @@ type EditForm = {
   creditor_phone: string;
   creditor_email: string;
   creditor_address: string;
+  payment_payee: string;
+  payment_link_id: string;
+  payment_from_id: string;
+  payment_method: string;
+  payment_amount: string;
+  payment_frequency: string;
+  payment_day: string;
+  payment_reference: string;
+  payment_after_death: string;
 };
 
 type LegalContactFormRow = {
@@ -616,6 +637,15 @@ const EMPTY_FORM: EditForm = {
   creditor_phone: "",
   creditor_email: "",
   creditor_address: "",
+  payment_payee: "",
+  payment_link_id: "",
+  payment_from_id: "",
+  payment_method: "",
+  payment_amount: "",
+  payment_frequency: "",
+  payment_day: "",
+  payment_reference: "",
+  payment_after_death: "",
 };
 
 const DEFAULT_PROVIDER_CATALOG: ProviderCatalogRow[] = [
@@ -851,6 +881,10 @@ export default function UniversalRecordWorkspace({
   const [linkedContactErrors, setLinkedContactErrors] = useState<Record<string, string>>({});
   const [catalog, setCatalog] = useState<ProviderCatalogRow[]>(DEFAULT_PROVIDER_CATALOG);
   const [taskRelationOptions, setTaskRelationOptions] = useState<Array<{ value: string; label: string }>>([]);
+  // Direct debits: the owner's accounts a payment can come from, and the records it can be paid to.
+  const [paymentLinkOptions, setPaymentLinkOptions] = useState<PaymentLinkOptions>({ from: [], to: [] });
+  // Bank account pages list the payments that come out of that account.
+  const [accountPayments, setAccountPayments] = useState<Array<Record<string, unknown>>>([]);
   const [taskExecutorOptions, setTaskExecutorOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [taskBeneficiaryOptions, setTaskBeneficiaryOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -889,6 +923,7 @@ export default function UniversalRecordWorkspace({
   const isTrustedContacts = variant === "trusted_contacts";
   const isFinanceSection = sectionKey === "finances";
   const isBankCategory = isFinanceSection && categoryKey === "bank";
+  const isDirectDebits = isFinanceSection && categoryKey === DIRECT_DEBIT_CATEGORY;
   const devBankTraceEnabled = isBankCategory && isDevBankTraceEnabled();
   useMemo(() => validateManagedAssetWorkspaceConfig(sectionKey, categoryKey), [sectionKey, categoryKey]);
   const managedAssetWorkspaceConfig = getManagedAssetWorkspaceConfig(sectionKey, categoryKey);
@@ -1086,6 +1121,14 @@ export default function UniversalRecordWorkspace({
           .eq("active", true),
       ]);
 
+      if (isDirectDebits || isBankCategory) {
+        const links = await loadPaymentLinkOptions(targetOwnerUserId);
+        if (mounted) {
+          setPaymentLinkOptions(links.options);
+          setAccountPayments(links.payments);
+        }
+      }
+
       if (isCanonicalTask) {
         const walletContext = await resolveWalletContextForRead(supabase, targetOwnerUserId);
         const taskLinkResult = await fetchCanonicalAssets(supabase, {
@@ -1213,7 +1256,7 @@ export default function UniversalRecordWorkspace({
     return () => {
       mounted = false;
     };
-  }, [categoryKey, forceCanonicalRead, isCanonicalTask, recordFilter, router, sectionKey, usesCanonicalAssetReadPath, viewer]);
+  }, [categoryKey, forceCanonicalRead, isBankCategory, isCanonicalTask, isDirectDebits, recordFilter, router, sectionKey, usesCanonicalAssetReadPath, viewer]);
 
   // Identity documents: "Expires soon", "Expired" or "Expired, replaced" (owner decision 5 Nov 2026).
   const identityStatuses = useMemo(
@@ -1351,6 +1394,14 @@ export default function UniversalRecordWorkspace({
         : false;
       if (hasCategory) nextForm.possession_category = possessionCategory;
       if (hasSubtype) nextForm.possession_subtype = possessionSubtype;
+    }
+    // "Add Netflix as an account too?" from a direct debit opens the right form with the name filled in.
+    const prefillName = (searchParams.get("name") ?? "").trim().slice(0, 80);
+    if (prefillName) {
+      nextForm.title = prefillName;
+      nextForm.provider_name = prefillName;
+      nextForm.insurer_name = prefillName;
+      nextForm.creditor_name = prefillName;
     }
     if (sectionKey === "finances" && categoryKey === "bank" && searchParams.get("prefill") === "document") {
       const prefill = takeBankPrefill();
@@ -1691,6 +1742,15 @@ export default function UniversalRecordWorkspace({
       creditor_phone: String(row.metadata?.creditor_phone ?? ""),
       creditor_email: String(row.metadata?.creditor_email ?? ""),
       creditor_address: String(row.metadata?.creditor_address ?? ""),
+      payment_payee: String(row.metadata?.payment_payee ?? ""),
+      payment_link_id: String(row.metadata?.payment_link_id ?? ""),
+      payment_from_id: String(row.metadata?.payment_from_id ?? ""),
+      payment_method: String(row.metadata?.payment_method ?? ""),
+      payment_amount: String(row.metadata?.payment_amount ?? ""),
+      payment_frequency: String(row.metadata?.payment_frequency ?? ""),
+      payment_day: String(row.metadata?.payment_day ?? ""),
+      payment_reference: String(row.metadata?.payment_reference ?? ""),
+      payment_after_death: String(row.metadata?.payment_after_death ?? ""),
     });
     setPendingPhotoFile(null);
     setPendingDocumentFiles([]);
@@ -2261,12 +2321,24 @@ export default function UniversalRecordWorkspace({
         typeValue: financeTypeValue,
         descriptionText: `${form.investment_provider} ${form.pension_provider} ${form.insurer_name} ${form.creditor_name} ${form.summary} ${form.notes}`,
       });
-      if (!financeTypeValidation.ok && categoryKey !== "bank") {
+      if (!financeTypeValidation.ok && categoryKey !== "bank" && categoryKey !== DIRECT_DEBIT_CATEGORY) {
         const validationMessage =
           financeTypeValidation.message ?? "Choose a valid record type for this section before saving.";
         setSubmitError(validationMessage);
         setStatus(validationMessage);
         setSaving(false);
+        return;
+      }
+    }
+    if (isDirectDebits) {
+      const missing = [
+        [form.payment_from_id, "Paid from"],
+        [form.payment_payee.trim(), "Paid to"],
+        [form.payment_method, "Payment type"],
+        [form.payment_amount, "Amount"],
+      ].find(([value]) => !String(value ?? "").trim());
+      if (missing) {
+        stopSaveForValidation(`${missing[1]} is required before saving.`);
         return;
       }
     }
@@ -3349,7 +3421,9 @@ export default function UniversalRecordWorkspace({
                 ? row.metadata?.insurer_name
                 : categoryKey === "debts"
                   ? row.metadata?.creditor_name
-                  : "") ?? "",
+                  : categoryKey === DIRECT_DEBIT_CATEGORY
+                    ? row.metadata?.payment_payee
+                    : "") ?? "",
       );
     const provider =
       findProviderByKey(row.provider_key, catalog) ??
@@ -3565,6 +3639,8 @@ export default function UniversalRecordWorkspace({
             ? getCategoryTypeLabel("finances", "insurance", row.metadata?.policy_type ?? "Insurance")
             : isFinanceSection && categoryKey === "debts"
               ? getCategoryTypeLabel("finances", "debts", row.metadata?.debt_type ?? "Debt")
+            : isDirectDebits
+              ? paymentOptionLabel(PAYMENT_METHOD_OPTIONS, row.metadata?.payment_method) ?? "Payment"
       : isCanonicalProperty
         ? canonicalPropertyAsset?.property_type || "Property"
         : isCanonicalBusiness
@@ -3771,6 +3847,11 @@ export default function UniversalRecordWorkspace({
                       {getCategoryTypeLabel("finances", "insurance", row.metadata?.policy_type ?? "Policy")} · {String(row.metadata?.policy_number ?? "No policy number")} · {String(row.metadata?.insured_item ?? "Insured item not set")}
                     </div>
                   ) : null}
+                  {isDirectDebits ? (
+                    <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
+                      {paymentSummaryLine(row.metadata ?? {}, paymentLinkOptions)}
+                    </div>
+                  ) : null}
                   {categoryKey === "debts" ? (
                     <div style={{ color: "var(--lf-text-secondary)", fontSize: 13 }}>
                       {getCategoryTypeLabel("finances", "debts", row.metadata?.debt_type ?? "Debt")} · Ref: {String(row.metadata?.debt_reference ?? "Not set")}
@@ -3955,6 +4036,7 @@ export default function UniversalRecordWorkspace({
                 {categoryKey === "pensions" ? <div>Scheme: {String(row.metadata?.scheme_name ?? "Not set")}</div> : null}
                 {categoryKey === "insurance" ? <div>Renewal date: {String(row.metadata?.renewal_date ?? "Not set")}</div> : null}
                 {categoryKey === "debts" ? <div>Repayment: {String(row.metadata?.repayment_amount ?? "Not set")} ({String(row.metadata?.repayment_frequency ?? "frequency not set")})</div> : null}
+                {isDirectDebits ? <PaymentDetail metadata={row.metadata ?? {}} options={paymentLinkOptions} /> : null}
                 {categoryKey !== "bank" ? <div>Notes: {String(row.metadata?.notes ?? "No additional notes.")}</div> : null}
               </section>
             ) : isIdentityDocuments ? (
@@ -4279,6 +4361,7 @@ export default function UniversalRecordWorkspace({
             <div><h1>{selectedRecord.title || "Untitled record"}</h1><p>{selectedRecord.provider_name || title} · Updated {formatDate(selectedRecord.updated_at)}</p>{selectedBankNickname ? <p className="lf-v52-record-nickname">Account nickname: <strong>{selectedBankNickname}</strong></p> : null}</div>
           </div>
           {renderRow(selectedRecord, true)}
+          {isBankCategory ? <AccountPaymentsList accountRef={linkRef("asset", selectedRecord.id)} payments={accountPayments} /> : null}
           {viewer.mode !== "linked" ? <details className="lf-v52-record-more-actions"><summary>More record actions</summary>
             {!isWillsWorkspace && canEditWorkspaceRow(selectedRecord.id) ? <Link href={`/access-sharing?asset=${encodeURIComponent(selectedRecord.id)}`}>Manage record access</Link> : null}
             {!isPossessions && !isTrustedContacts && !usesCanonicalAssets && !isFinanceSection && selectedRecord.status !== "archived" ? <button type="button" disabled={archivingFor === selectedRecord.id} onClick={() => void archiveRecord(selectedRecord.id)}>{archivingFor === selectedRecord.id ? "Archiving..." : "Archive record"}</button> : null}
@@ -4432,6 +4515,7 @@ export default function UniversalRecordWorkspace({
             categoryKey={categoryKey}
             form={form}
             setForm={setForm}
+            paymentLinkOptions={paymentLinkOptions}
             showValidation={Boolean(submitError)}
             taskRelationOptions={taskRelationOptions}
             taskExecutorOptions={taskExecutorOptions}
@@ -4959,9 +5043,11 @@ function FinanceFields({
   taskRelationOptions = [],
   taskExecutorOptions = [],
   taskBeneficiaryOptions = [],
+  paymentLinkOptions = { from: [], to: [] },
 }: {
   sectionKey: string;
   categoryKey: string;
+  paymentLinkOptions?: PaymentLinkOptions;
   form: EditForm;
   setForm: (value: EditForm | ((prev: EditForm) => EditForm)) => void;
   showValidation: boolean;
@@ -5334,6 +5420,10 @@ function FinanceFields({
         { title: "Notes", description: "Additional context", icon: "description", fields: <div className="lf-v4-form-span"><FieldTextArea label="Notes" value={form.notes} onChange={(value) => setForm((prev) => ({ ...prev, notes: value }))} /></div> },
       ]} />
     );
+  }
+
+  if (categoryKey === DIRECT_DEBIT_CATEGORY) {
+    return <DirectDebitFields form={form} setForm={setForm} options={paymentLinkOptions} />;
   }
 
   if (categoryKey === "insurance") {
@@ -6211,6 +6301,31 @@ function getFinanceDraft(categoryKey: string, form: EditForm) {
     };
   }
 
+  if (categoryKey === DIRECT_DEBIT_CATEGORY) {
+    const payee = form.payment_payee.trim();
+    // The amount is an outgoing, not an asset: it lives in metadata only, so no total or net worth ever adds it.
+    return {
+      title: payee || null,
+      providerName: payee || null,
+      summary: [paymentOptionLabel(PAYMENT_METHOD_OPTIONS, form.payment_method), paymentOptionLabel(PAYMENT_FREQUENCY_OPTIONS, form.payment_frequency)].filter(Boolean).join(" · ") || null,
+      valueMajor: "0",
+      currencyCode: form.currency_code || "GBP",
+      metadata: {
+        payment_payee: payee || null,
+        payment_link_id: parseLinkRef(form.payment_link_id) ? form.payment_link_id : null,
+        payment_from_id: parseLinkRef(form.payment_from_id) ? form.payment_from_id : null,
+        payment_method: form.payment_method || null,
+        payment_amount: form.payment_amount || null,
+        payment_frequency: form.payment_frequency || null,
+        payment_day: form.payment_day.trim() || null,
+        payment_reference: form.payment_reference.trim() || null,
+        payment_after_death: form.payment_after_death || null,
+        currency: form.currency_code || "GBP",
+        notes: form.notes.trim() || null,
+      },
+    };
+  }
+
   if (categoryKey === "debts") {
     const debtTypeKey = canonicalizeCategoryTypeValue("finances", "debts", form.debt_type);
     return {
@@ -6525,6 +6640,10 @@ function ProviderBadge({
     const logoPath = resolveProviderLogoPath(provider) || brand?.logo || "";
     const named = name && !/^(record|untitled record|unknown bank)$/i.test(name);
     if (logoPath || named) return <BrandMark name={brand?.name || name} logoPath={logoPath} tileColor={brand?.color ?? tileColourFor(name)} />;
+  }
+  if (categoryKey === DIRECT_DEBIT_CATEGORY) {
+    const brand = findPayeeBrand(provider?.display_name || "") ?? findPayeeBrand(fallbackLabel || "");
+    if (brand?.logo) return <BrandMark name={brand.name} logoPath={brand.logo} />;
   }
   // Digital accounts and everyday services (social media, subscriptions, email, bills, loyalty): the app icon when known.
   if (categoryKey && DIGITAL_BRAND_CATEGORIES.has(categoryKey)) {
@@ -7447,3 +7566,172 @@ const dangerBtn: CSSProperties = {
   color: "var(--lf-status-rejected-text)",
   background: "#fff1f2",
 };
+
+/* ---------------------------------------------------------------------------------------------------------------
+ * Direct debits (owner, 26 Nov 2026). "Paid from" lists only the owner's own bank accounts and credit cards; "Paid to"
+ * links to the provider's own record where there is one, and offers to add it where there isn't. Everything is read
+ * as the signed-in person under row-level security, so a linked viewer only ever sees what they were given.
+ * ------------------------------------------------------------------------------------------------------------- */
+type PaymentLinkOption = { value: string; label: string; category?: string };
+type PaymentLinkOptions = { from: PaymentLinkOption[]; to: PaymentLinkOption[] };
+
+const PAYMENT_TO_EXCLUDED = new Set([DIRECT_DEBIT_CATEGORY, "executors", "beneficiaries", "tasks", "next-of-kin", "contacts", "trusted-contacts", "wishes", "help_requests", "help_replies", "identity-documents"]);
+const PAYMENT_CATEGORY_LABELS: Record<string, string> = {
+  bank: "Bank account", investments: "Investment", pensions: "Pension", insurance: "Insurance", debts: "Debt",
+  subscriptions: "Subscription", "social-media": "Social media", digital: "Digital", property: "Property", business: "Business",
+};
+
+async function loadPaymentLinkOptions(ownerUserId: string): Promise<{ options: PaymentLinkOptions; payments: Array<Record<string, unknown>> }> {
+  const empty = { options: { from: [], to: [] }, payments: [] };
+  try {
+    const walletContext = await resolveWalletContextForRead(supabase, ownerUserId);
+    const [assetResult, recordResult] = await Promise.all([
+      fetchCanonicalAssets(supabase, { userId: ownerUserId, walletId: walletContext.walletId, select: "id,title,section_key,category_key" }),
+      supabase.from("records").select("id,section_key,category_key,title,provider_name,status,archived_at,metadata").eq("owner_user_id", ownerUserId).limit(2000),
+    ]);
+    const assets = (((assetResult.data ?? []) as unknown) as Array<Record<string, unknown>>);
+    const records = ((recordResult.data ?? []) as Array<Record<string, unknown>>).filter((row) => !row.archived_at && row.status !== "archived");
+    const label = (row: Record<string, unknown>) => String(row.title ?? row.provider_name ?? "").trim() || "Untitled";
+    const from: PaymentLinkOption[] = [
+      ...assets.filter((row) => row.category_key === "bank").map((row) => ({ value: linkRef("asset", String(row.id)), label: label(row), category: "bank" })),
+      ...records.filter((row) => row.category_key === "debts" && /credit/i.test(String((row.metadata as Record<string, unknown> | null)?.debt_type ?? "")))
+        .map((row) => ({ value: linkRef("record", String(row.id)), label: `${label(row)} (credit card)`, category: "debts" })),
+    ].sort((a, b) => a.label.localeCompare(b.label));
+    const to: PaymentLinkOption[] = [
+      ...assets.filter((row) => !PAYMENT_TO_EXCLUDED.has(String(row.category_key ?? ""))).map((row) => ({ value: linkRef("asset", String(row.id)), label: label(row), category: String(row.category_key ?? "") })),
+      ...records.filter((row) => !PAYMENT_TO_EXCLUDED.has(String(row.category_key ?? "")) && row.section_key !== "legal").map((row) => ({ value: linkRef("record", String(row.id)), label: label(row), category: String(row.category_key ?? "") })),
+    ].map((option) => ({ ...option, label: PAYMENT_CATEGORY_LABELS[option.category ?? ""] ? `${option.label} · ${PAYMENT_CATEGORY_LABELS[option.category ?? ""]}` : option.label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+    const payments = records.filter((row) => row.category_key === DIRECT_DEBIT_CATEGORY);
+    return { options: { from, to }, payments };
+  } catch {
+    return empty;
+  }
+}
+
+function paymentAmountText(metadata: Record<string, unknown>) {
+  const amount = Number(metadata.payment_amount);
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  const currency = /^[A-Z]{3}$/.test(String(metadata.currency ?? "")) ? String(metadata.currency) : "GBP";
+  return formatCurrency(amount, currency);
+}
+
+function paymentSummaryLine(metadata: Record<string, unknown>, options: PaymentLinkOptions) {
+  const from = options.from.find((option) => option.value === metadata.payment_from_id)?.label;
+  return [
+    [paymentAmountText(metadata), paymentOptionLabel(PAYMENT_FREQUENCY_OPTIONS, metadata.payment_frequency)?.toLowerCase()].filter(Boolean).join(" "),
+    from ? `from ${from}` : null,
+    paymentOptionLabel(AFTER_DEATH_OPTIONS, metadata.payment_after_death),
+  ].filter(Boolean).join(" · ") || "Payment details not set";
+}
+
+function PaymentDetail({ metadata, options }: { metadata: Record<string, unknown>; options: PaymentLinkOptions }) {
+  const from = options.from.find((option) => option.value === metadata.payment_from_id);
+  const to = options.to.find((option) => option.value === metadata.payment_link_id);
+  const toLink = parseLinkRef(metadata.payment_link_id);
+  const toHref = toLink && to ? `${paymentRecordHref(to.category)}?${toLink.kind === "asset" ? "asset" : "record"}=${encodeURIComponent(toLink.id)}` : null;
+  const fromLink = parseLinkRef(metadata.payment_from_id);
+  const fromHref = fromLink && from ? `${paymentRecordHref(from.category)}?${fromLink.kind === "asset" ? "asset" : "record"}=${encodeURIComponent(fromLink.id)}` : null;
+  return (
+    <dl className="lf-v52-account-rows">
+      <div><dt>Paid from</dt><dd>{from ? (fromHref ? <Link href={fromHref}>{from.label}</Link> : from.label) : "Not set"}</dd></div>
+      <div><dt>Paid to</dt><dd>{to ? (toHref ? <Link href={toHref}>{to.label}</Link> : to.label) : String(metadata.payment_payee ?? "Not set")}</dd></div>
+      <div><dt>Amount</dt><dd>{[paymentAmountText(metadata) ?? "Not set", paymentOptionLabel(PAYMENT_FREQUENCY_OPTIONS, metadata.payment_frequency)?.toLowerCase()].filter(Boolean).join(" ")}</dd></div>
+      {metadata.payment_day ? <div><dt>Usually paid</dt><dd>{String(metadata.payment_day)}</dd></div> : null}
+      {metadata.payment_reference ? <div><dt>Reference</dt><dd><MaskedField label="Reference" showLabel={false} value={String(metadata.payment_reference)} /></dd></div> : null}
+      <div><dt>After my death</dt><dd>{paymentOptionLabel(AFTER_DEATH_OPTIONS, metadata.payment_after_death) ?? "Not decided"}</dd></div>
+    </dl>
+  );
+}
+
+function paymentRecordHref(category: string | undefined) {
+  switch (category) {
+    case "bank": return "/finances/bank";
+    case "debts": return "/finances/debts";
+    case "insurance": return "/finances/insurance";
+    case "pensions": return "/finances/pensions";
+    case "investments": return "/finances/investments";
+    case "subscriptions": return "/personal/subscriptions";
+    case "social-media": return "/personal/social-media";
+    case "digital": return "/vault/digital";
+    case "property": return "/property";
+    case "business": return "/business";
+    default: return "/dashboard";
+  }
+}
+
+function AccountPaymentsList({ accountRef, payments }: { accountRef: string; payments: Array<Record<string, unknown>> }) {
+  const mine = payments.filter((row) => (row.metadata as Record<string, unknown> | null)?.payment_from_id === accountRef);
+  return (
+    <section className="lf-v52-account-payments" aria-label="Payments from this account">
+      <h2>Payments from this account</h2>
+      {mine.length ? (
+        <ul>
+          {mine.map((row) => {
+            const meta = (row.metadata ?? {}) as Record<string, unknown>;
+            const brand = findPayeeBrand(String(meta.payment_payee ?? row.title ?? ""));
+            return (
+              <li key={String(row.id)}>
+                <Link href={`/finances/direct-debits?record=${encodeURIComponent(String(row.id))}`}>
+                  <BrandMark name={String(meta.payment_payee ?? row.title ?? "Payment")} logoPath={brand?.logo ?? undefined} />
+                  <span><strong>{String(meta.payment_payee ?? row.title ?? "Payment")}</strong><small>{[paymentAmountText(meta), paymentOptionLabel(PAYMENT_FREQUENCY_OPTIONS, meta.payment_frequency)?.toLowerCase(), paymentOptionLabel(PAYMENT_METHOD_OPTIONS, meta.payment_method)].filter(Boolean).join(" · ")}</small></span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      ) : <p>No direct debits recorded for this account yet.</p>}
+      <Link href="/finances/direct-debits?add=1" className="lf-v52-account-payments-add"><Icon name="add" size={18} /> Add a direct debit</Link>
+    </section>
+  );
+}
+
+function DirectDebitFields({ form, setForm, options }: { form: EditForm; setForm: (value: EditForm | ((prev: EditForm) => EditForm)) => void; options: PaymentLinkOptions }) {
+  const set = (key: keyof EditForm) => (value: string) => setForm((prev) => ({ ...prev, [key]: value }));
+  const payee = form.payment_payee.trim();
+  const brand = findPayeeBrand(payee);
+  // Picking an existing record fills "Paid to"; typing a name with no record offers to add one.
+  const pickLinked = (value: string) => setForm((prev) => {
+    const option = options.to.find((item) => item.value === value);
+    const name = option ? option.label.split(" · ")[0] : prev.payment_payee;
+    return { ...prev, payment_link_id: value, payment_payee: option ? name : prev.payment_payee };
+  });
+  const linked = options.to.find((item) => item.value === form.payment_link_id);
+  const suggested = !linked && payee
+    ? options.to.find((item) => item.label.toLowerCase().startsWith(payee.toLowerCase()))
+    : null;
+  return (
+    <FinanceFormLayout required={<>
+      {options.from.length ? (
+        <FieldSelect label="Paid from" required value={form.payment_from_id} options={withSelectPlaceholder(options.from, "Choose one of your accounts")} onChange={set("payment_from_id")} />
+      ) : (
+        <div className="lf-v52-payment-hint">
+          <strong>Paid from</strong>
+          <p>Add the bank account or credit card this comes out of first.</p>
+          <Link href="/finances/bank?add=1">Add a bank account</Link>
+        </div>
+      )}
+      <FieldSelect label="Paid to (from your Vault)" value={form.payment_link_id} options={withSelectPlaceholder(options.to, "Choose an account you've added, or type a name below")} onChange={pickLinked} />
+      <div className="lf-v52-payee-field">
+        {brand?.logo ? <BrandMark name={brand.name} logoPath={brand.logo} /> : null}
+        <FieldInput label="Paid to" required value={form.payment_payee} onChange={(value) => setForm((prev) => ({ ...prev, payment_payee: value, payment_link_id: prev.payment_link_id && options.to.find((item) => item.value === prev.payment_link_id)?.label.split(" · ")[0] === value ? prev.payment_link_id : "" }))} />
+      </div>
+      {suggested ? (
+        <p className="lf-v52-payment-hint">Is this your <button type="button" onClick={() => pickLinked(suggested.value)}>{suggested.label}</button>? Link it so the two records point to each other.</p>
+      ) : !linked && payee.length > 1 ? (
+        <p className="lf-v52-payment-hint">{payee} isn&apos;t in your Vault yet. <Link href={payeeAddHref(payee)} target="_blank">Add {payee} as an account too</Link> (opens in a new tab, so you don&apos;t lose this form).</p>
+      ) : null}
+      <FieldSelect label="Payment type" required value={form.payment_method} options={withSelectPlaceholder(PAYMENT_METHOD_OPTIONS, "Select payment type")} onChange={set("payment_method")} />
+      <CurrencyAmountField label="Amount" value={form.payment_amount} currency={form.currency_code} onValueChange={set("payment_amount")} onCurrencyChange={set("currency_code")} />
+    </>} optional={[
+      { title: "When and after death", description: "How often, and what should happen", icon: "event_repeat", fields: <>
+        <FieldSelect label="How often" value={form.payment_frequency} options={withSelectPlaceholder(PAYMENT_FREQUENCY_OPTIONS, "Select how often")} onChange={set("payment_frequency")} />
+        <FieldInput label="Usually paid on" value={form.payment_day} onChange={set("payment_day")} />
+        <FieldInput label="Your reference with them" value={form.payment_reference} onChange={set("payment_reference")} />
+        <FieldSelect label="After my death" value={form.payment_after_death} options={withSelectPlaceholder(AFTER_DEATH_OPTIONS, "What should happen")} onChange={set("payment_after_death")} />
+        <p className="lf-v52-payment-hint lf-v4-form-span">{KEEP_PAYING_HINT}</p>
+      </> },
+      { title: "Notes", description: "Anything else your executors should know", icon: "description", fields: <div className="lf-v4-form-span"><FieldTextArea label="Notes" value={form.notes} onChange={set("notes")} /></div> },
+    ]} />
+  );
+}

@@ -2445,6 +2445,7 @@ function getFinanceWorkspaceHref(categoryKey: string) {
   if (categoryKey === "pensions") return "/finances/pensions";
   if (categoryKey === "insurance") return "/finances/insurance";
   if (categoryKey === "debts" || categoryKey === "loans-liabilities") return "/finances/debts";
+  if (categoryKey === "direct-debits") return "/finances/direct-debits";
   return "/finances/bank";
 }
 
@@ -3923,7 +3924,7 @@ function getDiscoveryAssetHref(asset: AssetRow) {
   const section = String(asset.section_key ?? "").trim();
   const category = String(asset.category_key ?? "").trim();
   let base = "";
-  if (section === "finances") base = ["bank", "investments", "pensions", "insurance", "debts", "loans-liabilities"].includes(category) ? getFinanceWorkspaceHref(category) : "";
+  if (section === "finances") base = ["bank", "investments", "pensions", "insurance", "debts", "loans-liabilities", "direct-debits"].includes(category) ? getFinanceWorkspaceHref(category) : "";
   else if (section === "legal") {
     const legalHref = getLegalWorkspaceHref(category);
     base = legalHref === "/legal" ? "" : legalHref;

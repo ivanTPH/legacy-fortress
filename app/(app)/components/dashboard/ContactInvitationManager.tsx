@@ -1691,6 +1691,7 @@ function mapSectionCategoryToVaultSubsection(sectionKey: SectionKey, categoryKey
     if (normalizedCategory === "investments") return "finances_investments";
     if (normalizedCategory === "insurance") return "finances_insurance";
     if (normalizedCategory === "debts") return "finances_debts";
+    if (normalizedCategory === "direct-debits") return "finances_direct_debits";
   }
 
   if (sectionKey === "legal") {

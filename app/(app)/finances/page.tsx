@@ -21,6 +21,17 @@ import {
   type FinanceCategoryKey,
 } from "../../../lib/dashboard/summary";
 import { loadFinanceDashboardRows } from "../../../lib/dashboard/financeRows";
+import { monthlyEquivalent } from "../../../lib/vault/directDebits";
+
+/** "£84 a month" across the owner's direct debits, from each payment's own amount and frequency. */
+function directDebitMonthlyText(rows: DashboardAssetRow[], currency: string) {
+  if (!rows.length) return "";
+  const total = rows.reduce((sum, row) => {
+    const meta = ((row as { metadata?: Record<string, unknown> }).metadata ?? row.metadata_json ?? {}) as Record<string, unknown>;
+    return sum + monthlyEquivalent(meta.payment_amount, meta.payment_frequency);
+  }, 0);
+  return total > 0 ? `${formatCurrencyWhole(total, currency)} a month` : "";
+}
 import { filterFinanceDashboardRowsForViewer } from "../../../lib/dashboard/financeViewerRows";
 import { isVaultSubsectionEnabled, type VaultSubsectionKey } from "../../../lib/vaultPreferences";
 import {
@@ -43,6 +54,7 @@ const FINANCE_SECTION_CARDS: FinanceSectionCard[] = [
   { key: "investments", preferenceKey: "finances_investments", title: "Investments", href: "/finances/investments", description: "Record portfolios, funds, and investment platforms.", icon: "trending_up" },
   { key: "insurance", preferenceKey: "finances_insurance", title: "Insurance", href: "/finances/insurance", description: "Capture life and protection policy references.", icon: "health_and_safety" },
   { key: "debts", preferenceKey: "finances_debts", title: "Debts", href: "/finances/debts", description: "Track liabilities and repayment obligations.", icon: "credit_card" },
+  { key: "direct-debits", preferenceKey: "finances_direct_debits", title: "Direct debits", href: "/finances/direct-debits", description: "Regular payments and what should happen to them.", icon: "event_repeat" },
 ];
 
 export default function FinancesOverviewPage() {
@@ -132,7 +144,8 @@ export default function FinancesOverviewPage() {
   // Estimated value: life cover on its own, debts taken off, whole pounds (owner decision 10 Nov 2026).
   const sectionTotal = (key: string) => populated.filter((section) => section.key === key).reduce((sum, section) => sum + section.summary.totalMajor, 0);
   const lifeCover = sectionTotal("insurance");
-  const total = populated.reduce((sum, section) => sum + (section.key === "insurance" ? 0 : section.key === "debts" ? -Math.abs(section.summary.totalMajor) : section.summary.totalMajor), 0);
+  // Direct debits are outgoings, never part of the estimated value.
+  const total = populated.reduce((sum, section) => sum + (section.key === "insurance" || section.key === "direct-debits" ? 0 : section.key === "debts" ? -Math.abs(section.summary.totalMajor) : section.summary.totalMajor), 0);
   const currencies = new Set(assetRows.map((row) => getFinanceRowCurrencyCode(row) || currency));
   const totalText = currencies.size > 1 ? "Multiple currencies"
     : `${formatCurrencyWhole(total, currency)} estimated value${lifeCover > 0 ? ` · ${formatCurrencyWhole(lifeCover, currency)} life cover` : ""}`;
@@ -146,7 +159,7 @@ export default function FinancesOverviewPage() {
     <VaultSectionGrid sections={(viewer.mode === "linked" ? populated : summaries).map((section) => ({
       key: section.href, title: section.title, icon: section.icon, href: section.href,
       count: section.summary.includedCount,
-      value: new Set(getAssetsForFinanceCategory(assetRows, section.key).map((row) => getFinanceRowCurrencyCode(row) || currency)).size > 1
+      value: section.key === "direct-debits" ? directDebitMonthlyText(getAssetsForFinanceCategory(assetRows, section.key), currency) : new Set(getAssetsForFinanceCategory(assetRows, section.key).map((row) => getFinanceRowCurrencyCode(row) || currency)).size > 1
         ? "Multiple currencies" : section.summary.valueText,
       addHref: viewer.mode === "linked" ? undefined : `${section.href}?add=1`,
       updatedAt: section.summary.addedAt,

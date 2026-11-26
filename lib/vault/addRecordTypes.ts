@@ -13,6 +13,7 @@ export const FINANCE_RECORD_CHOICES: AddRecordChoice[] = [
   { key: "investments", label: "Investment", description: "Portfolios, funds and investment platforms.", href: "/finances/investments?add=1", icon: "trending_up", ariaLabel: "Add investment" },
   { key: "insurance", label: "Insurance", description: "Life and protection policies.", href: "/finances/insurance?add=1", icon: "health_and_safety", ariaLabel: "Add insurance policy" },
   { key: "debts", label: "Debt", description: "Liabilities and repayment obligations.", href: "/finances/debts?add=1", icon: "credit_card", ariaLabel: "Add debt" },
+  { key: "direct-debits", label: "Direct debit", description: "A regular payment from one of your accounts.", href: "/finances/direct-debits?add=1", icon: "event_repeat", ariaLabel: "Add direct debit" },
 ];
 
 export function getAddRecordChoices(category: string) {
@@ -22,7 +23,7 @@ export function getAddRecordChoices(category: string) {
 
 export const FINANCE_CATEGORY_CHOICE = {
   label: "Finances",
-  description: "Bank accounts, pensions, investments, insurance and debts.",
+  description: "Bank accounts, pensions, investments, insurance, debts and direct debits.",
   href: "/finances",
   icon: "account_balance",
 };

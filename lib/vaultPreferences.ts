@@ -30,6 +30,7 @@ export type VaultSubsectionKey =
   | "finances_investments"
   | "finances_insurance"
   | "finances_debts"
+  | "finances_direct_debits"
   | "personal_possessions"
   | "personal_subscriptions"
   | "personal_social_media"
@@ -154,6 +155,7 @@ export const VAULT_SUBSECTION_DEFINITIONS: VaultSubsectionDefinition[] = [
   { key: "finances_investments", groupKey: "finances", label: "Investments", description: "Show investment accounts and holdings." },
   { key: "finances_insurance", groupKey: "finances", label: "Insurance", description: "Show insurance policies and protection records." },
   { key: "finances_debts", groupKey: "finances", label: "Debts", description: "Show liabilities and repayment records." },
+  { key: "finances_direct_debits", groupKey: "finances", label: "Direct debits", description: "Show regular payments and what should happen to them." },
   { key: "personal_possessions", groupKey: "personal", label: "Possessions", description: "Show possessions and keepsakes." },
   { key: "personal_subscriptions", groupKey: "personal", label: "Subscriptions", description: "Show recurring services and renewals." },
   { key: "personal_social_media", groupKey: "personal", label: "Social media", description: "Show social profiles and handover details." },
@@ -333,6 +335,7 @@ export function resolveVaultSubsectionForPath(pathname: string): VaultSubsection
   if (value.startsWith("/finances/investments")) return "finances_investments";
   if (value.startsWith("/finances/insurance")) return "finances_insurance";
   if (value.startsWith("/finances/debts")) return "finances_debts";
+  if (value.startsWith("/finances/direct-debits")) return "finances_direct_debits";
   if (value.startsWith("/vault/personal")) return "personal_possessions";
   if (value.startsWith("/personal/subscriptions")) return "personal_subscriptions";
   if (value.startsWith("/personal/social-media")) return "personal_social_media";

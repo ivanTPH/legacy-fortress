@@ -32,7 +32,7 @@ export type DashboardDocumentRow = {
 };
 
 export type DashboardAssetBucket = "finance" | "property" | "business" | "digital" | "tasks" | "other";
-export type FinanceCategoryKey = "bank" | "investments" | "pensions" | "insurance" | "debts";
+export type FinanceCategoryKey = "bank" | "investments" | "pensions" | "insurance" | "debts" | "direct-debits";
 export type DashboardSummaryItem = {
   id: string;
   label: string;
