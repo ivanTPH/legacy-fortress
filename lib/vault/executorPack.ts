@@ -6,6 +6,7 @@
  * the owner's own rows under their own row-level security. Nothing is stored or sent.
  */
 import { brandChangeNote } from "../assets/providerBrands.mjs";
+import { AFTER_DEATH_OPTIONS, DIRECT_DEBIT_CATEGORY, PAYMENT_FREQUENCY_OPTIONS, optionLabel } from "./directDebits.ts";
 export type PackSourceRow = {
   id: string;
   section_key: string | null;
@@ -35,6 +36,8 @@ export type ExecutorPack = {
 const SECTION_ORDER: Array<[string, string]> = [
   ["legal", "Legal"], ["finances", "Money"], ["property", "Property"], ["business", "Business"],
   ["digital", "Digital"], ["personal", "Possessions"], ["possessions", "Possessions"],
+  // Direct debits get their own list, with what the owner wants done to each (26 Nov 2026).
+  ["payments", "Payments to cancel, transfer or keep paying"],
 ];
 const EXCLUDED_CATEGORIES = new Set(["executors", "beneficiaries", "tasks", "next-of-kin", "help_requests", "help_replies"]);
 const EXCLUDED_SECTIONS = new Set(["support", "vault"]);
@@ -82,7 +85,8 @@ export function buildExecutorPack(input: {
   for (const row of live) {
     const meta = (row.metadata ?? {}) as Record<string, unknown>;
     const section = String(row.section_key ?? "other");
-    const key = section === "possessions" ? "personal" : section;
+    const isPayment = row.category_key === DIRECT_DEBIT_CATEGORY;
+    const key = isPayment ? "payments" : section === "possessions" ? "personal" : section;
     const item: PackItem = {
       id: row.id,
       title: String(row.title ?? "").trim().slice(0, 120) || words(row.category_key) || "Record",
@@ -92,6 +96,13 @@ export function buildExecutorPack(input: {
       brandNote: null,
       value: input.includeValues ? money(row.value_minor ? Number(row.value_minor) / 100 : meta.estimated_value, row.currency_code ?? meta.currency) : null,
     };
+    if (isPayment) {
+      item.type = optionLabel(AFTER_DEATH_OPTIONS, meta.payment_after_death) ?? "Not decided yet";
+      item.provider = null;
+      const amount = money(meta.payment_amount, meta.currency ?? row.currency_code);
+      const often = optionLabel(PAYMENT_FREQUENCY_OPTIONS, meta.payment_frequency)?.toLowerCase();
+      item.value = input.includeValues && amount ? [amount, often].filter(Boolean).join(" ") : null;
+    }
     item.brandNote = brandChangeNote(item.provider ?? item.title);
     groups.set(key, [...(groups.get(key) ?? []), item]);
   }
