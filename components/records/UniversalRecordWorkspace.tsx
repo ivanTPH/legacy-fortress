@@ -3899,7 +3899,14 @@ export default function UniversalRecordWorkspace({
         {isOpen ? (
           <div style={detailsPanelStyle} className="lf-v52-record-detail-grid">
             <div className="lf-v52-record-main">
-            {viewer.mode !== "linked" && (isFinanceSection || isCanonicalProperty || isCanonicalBusiness || isCanonicalDigital || isPossessions) ? (
+            {isDirectDebits ? (
+              // A payment is an outgoing, not a value: show what it costs and how often instead.
+              <section className="lf-v52-record-value" aria-label="Payment">
+                <div><strong>Payment</strong><span>{paymentOptionLabel(PAYMENT_METHOD_OPTIONS, row.metadata?.payment_method) ?? "Regular payment"}</span></div>
+                <p>{paymentAmountText(row.metadata ?? {}) ?? "Amount not recorded"}</p>
+                <div><span>{paymentOptionLabel(PAYMENT_FREQUENCY_OPTIONS, row.metadata?.payment_frequency) ?? "How often not recorded"}{row.metadata?.payment_day ? ` · usually ${String(row.metadata.payment_day)}` : ""}</span></div>
+              </section>
+            ) : viewer.mode !== "linked" && (isFinanceSection || isCanonicalProperty || isCanonicalBusiness || isCanonicalDigital || isPossessions) ? (
               <section className="lf-v52-record-value" aria-label="Record value">
                 <div><strong>Value</strong><span>Owner-recorded estimate</span></div>
                 <p>{hasRecordedValue ? formatCurrency(canonicalBankAsset?.current_balance ?? canonicalPropertyAsset?.estimated_value_major ?? canonicalBusinessAsset?.estimated_value_major ?? canonicalDigitalAsset?.estimated_value_major ?? toMajorUnits(row.value_minor), (row.currency_code ?? "GBP").toUpperCase()) : "Value not recorded"}</p>

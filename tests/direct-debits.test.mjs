@@ -47,3 +47,10 @@ test("executor pack lists payments with what should happen, never the reference"
   assert.equal(section.items[0].value, "£12 monthly");
   assert.doesNotMatch(JSON.stringify(pack), /REF-123/);
 });
+
+test("a payment's page shows what it costs, not a 'value', and names people linked to this payment", () => {
+  const workspace = read("components/records/UniversalRecordWorkspace.tsx");
+  assert.match(workspace, /isDirectDebits \? \(\n\s+\/\/ A payment is an outgoing/);
+  assert.match(read("lib/linkedPeople/recordLinkedPeople.ts"), /"People linked to this payment"/);
+  assert.match(read("app/v3-screens.css"), /\.lf-v52-payment-hint a \{/);
+});
