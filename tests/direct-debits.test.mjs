@@ -54,3 +54,7 @@ test("a payment's page shows what it costs, not a 'value', and names people link
   assert.match(read("lib/linkedPeople/recordLinkedPeople.ts"), /"People linked to this payment"/);
   assert.match(read("app/v3-screens.css"), /\.lf-v52-payment-hint a \{/);
 });
+
+test("the direct debits page header shows the monthly cost, not £0.00", () => {
+  assert.match(read("components/records/UniversalRecordWorkspace.tsx"), /isDirectDebits \? directDebitMonthlyHeader\(records\)/);
+});
