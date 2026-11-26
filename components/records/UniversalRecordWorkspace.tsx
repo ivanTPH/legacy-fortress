@@ -154,6 +154,7 @@ import {
   PAYMENT_METHOD_OPTIONS,
   findPayeeBrand,
   linkRef,
+  monthlyEquivalent,
   optionLabel as paymentOptionLabel,
   parseLinkRef,
   payeeAddHref,
@@ -4209,7 +4210,7 @@ export default function UniversalRecordWorkspace({
         <div className="lf-v52-category-title-row"><h1 ref={existingRecordsHeadingRef} tabIndex={-1}>{title.replace(/^Legal · /, "").replace(/^Finances · Bank accounts$/, "Banks").replace(/^Property · Assets$/, "Property")}</h1>
           {canCreateRecords ? <button ref={addRecordButtonRef} type="button" className="lf-v52-category-add" onClick={startCreate} aria-label={addLabel} aria-expanded={isCreatingRecord} aria-controls={createFormRegionId}><Icon name="add" size={20} /> {isWillsWorkspace ? "Add a Will" : addLabel}</button> : null}
         </div>
-        <p>{categoryActiveCount} record{categoryActiveCount === 1 ? "" : "s"}{viewer.mode !== "linked" && assetFormFamily !== "document" ? ` · ${formatCurrency(totals.active, "GBP")}` : ""}</p>
+        <p>{categoryActiveCount} record{categoryActiveCount === 1 ? "" : "s"}{viewer.mode !== "linked" && isDirectDebits ? directDebitMonthlyHeader(records) : viewer.mode !== "linked" && assetFormFamily !== "document" ? ` · ${formatCurrency(totals.active, "GBP")}` : ""}</p>
         {displaySubtitle ? <p className="lf-v52-category-description">{displaySubtitle}</p> : null}
         {showPageHeading && helpMessage ? <InfoTip label={`Explain ${title}`} message={helpMessage} /> : null}
         {viewer.mode === "linked" ? (
@@ -7614,6 +7615,13 @@ async function loadPaymentLinkOptions(ownerUserId: string): Promise<{ options: P
   } catch {
     return empty;
   }
+}
+
+/** Direct debits page header: what the payments cost a month, never a "value" (they hold none). */
+function directDebitMonthlyHeader(rows: Array<{ metadata?: Record<string, unknown> | null; status?: string | null; archived_at?: string | null }>) {
+  const total = rows.filter((row) => row.status !== "archived" && !row.archived_at)
+    .reduce((sum, row) => sum + monthlyEquivalent(row.metadata?.payment_amount, row.metadata?.payment_frequency), 0);
+  return total > 0 ? ` · about ${formatCurrency(total, "GBP")} a month` : "";
 }
 
 function paymentAmountText(metadata: Record<string, unknown>) {
