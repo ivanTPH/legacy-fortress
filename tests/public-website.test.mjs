@@ -3,12 +3,12 @@ import fs from "node:fs";
 import assert from "node:assert/strict";
 
 // The public website (owner decision 7 Nov 2026): served at the app's own address, with sign-in unchanged.
-const pages = ["index", "how-it-works", "pricing", "partners", "contact", "privacy", "terms"];
+const pages = ["index", "how-it-works", "pricing", "partners", "contact", "privacy", "terms", "digital-legacy"];
 
 test("each website page is served at its own address", () => {
   const config = fs.readFileSync("next.config.ts", "utf8");
   assert.match(config, /source: "\/", destination: "\/site\/index.html"/);
-  assert.match(config, /"how-it-works", "pricing", "partners", "contact", "privacy", "terms"/);
+  assert.match(config, /"how-it-works", "pricing", "partners", "contact", "privacy", "terms", "digital-legacy"/);
   for (const page of pages) assert.ok(fs.existsSync(`public/site/${page}.html`), page);
   for (const n of [0, 1, 2, 3, 4, 5, 6, 7]) assert.ok(fs.existsSync(`public/site/audio/scene-${n}.mp3`));
 });
@@ -46,4 +46,13 @@ test("the tour opens from guided set-up with one clear way back (pages can't be 
   assert.match(setup, /href="\/how-it-works\?from=setup"/);
   assert.doesNotMatch(setup, /<iframe/);
   assert.match(fs.readFileSync("next.config.ts", "utf8"), /frame-ancestors 'none'/, "framing stays blocked");
+});
+
+test("the online accounts guide advises recording where passwords are, never the passwords", () => {
+  const html = fs.readFileSync("public/site/digital-legacy.html", "utf8");
+  assert.match(html, /Never the password itself/);
+  assert.match(html, /Legacy Contact/);
+  assert.match(html, /Inactive Account Manager/);
+  assert.match(html, /not legal advice/);
+  for (const page of ["index", "pricing", "terms"]) assert.match(fs.readFileSync(`public/site/${page}.html`, "utf8"), /href="\/digital-legacy"/, page);
 });
