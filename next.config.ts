@@ -101,7 +101,7 @@ const nextConfig: NextConfig = {
     return {
       beforeFiles: [
         { source: "/", destination: "/site/index.html" },
-        ...["how-it-works", "pricing", "partners", "contact", "privacy", "terms"].map((page) => ({ source: `/${page}`, destination: `/site/${page}.html` })),
+        ...["how-it-works", "pricing", "partners", "contact", "privacy", "terms", "digital-legacy"].map((page) => ({ source: `/${page}`, destination: `/site/${page}.html` })),
       ],
       afterFiles: [],
       fallback: [],
