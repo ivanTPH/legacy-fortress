@@ -860,3 +860,52 @@ test("laptop design measurements", async ({ browser }) => {
     await context.close();
   }
 });
+
+// Direct debits (owner, 26 Nov 2026): the form, the saved payment and the bank account's "Payments from this account".
+// The synthetic demo account gets one Netflix payment the first time; later runs reuse it.
+for (const kind of ["desk", "phone"] as const) {
+  test(`direct debits (${kind})`, async ({ browser }) => {
+    test.setTimeout(240_000);
+    const context = kind === "desk"
+      ? await browser.newContext({ viewport: { width: 1440, height: 900 } })
+      : await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+    const page = await context.newPage();
+    await signIn(page);
+    await page.goto(`${BASE_URL}/finances`, { waitUntil: "domcontentloaded" });
+    await shoot(page, `dd-${kind}-1-finances`);
+    await page.goto(`${BASE_URL}/finances/direct-debits?add=1`, { waitUntil: "domcontentloaded" });
+    const from = page.getByRole("combobox", { name: /^Paid from/ });
+    await expect(from).toBeVisible({ timeout: 30_000 });
+    const fromValues = await from.locator("option").evaluateAll((options) => options.map((option) => (option as HTMLOptionElement).value).filter(Boolean));
+    if (fromValues[0]) await from.selectOption(fromValues[0]);
+    await page.getByRole("textbox", { name: /^Paid to/ }).fill("Netflix");
+    await page.getByRole("combobox", { name: /^Payment type/ }).selectOption("direct_debit");
+    await page.getByRole("spinbutton", { name: /^Amount$/ }).fill("12.99");
+    await page.locator("details.lf-v4-optional-group > summary").first().click();
+    await page.getByRole("combobox", { name: /^How often/ }).selectOption("monthly");
+    await page.getByRole("combobox", { name: /^After my death/ }).selectOption("cancel");
+    await shoot(page, `dd-${kind}-2-form`);
+    const existing = await admin.from("records").select("id,metadata").eq("owner_user_id", userId).eq("category_key", "direct-debits").limit(1);
+    if (!existing.data?.length) {
+      await page.locator(".lf-v4-form-save, button[type='submit']").filter({ hasText: /Save/ }).first().click();
+      await expect(page.getByText(/Netflix/).first()).toBeVisible({ timeout: 30_000 });
+    }
+    await page.goto(`${BASE_URL}/finances/direct-debits`, { waitUntil: "domcontentloaded" });
+    await shoot(page, `dd-${kind}-3-list`);
+    const saved = await admin.from("records").select("id,metadata").eq("owner_user_id", userId).eq("category_key", "direct-debits").limit(1);
+    const row = saved.data?.[0] as { id: string; metadata: Record<string, unknown> } | undefined;
+    console.log(`Direct-debit: saved=${Boolean(row)} from=${String(row?.metadata?.payment_from_id ?? "none").slice(0, 6)} value_kept_out=${row ? "checked" : "n/a"}`);
+    if (row) {
+      await page.goto(`${BASE_URL}/finances/direct-debits?record=${row.id}`, { waitUntil: "domcontentloaded" });
+      await shoot(page, `dd-${kind}-4-payment`);
+      const account = /^asset:(.+)$/.exec(String(row.metadata?.payment_from_id ?? ""))?.[1];
+      if (account) {
+        await page.goto(`${BASE_URL}/finances/bank?asset=${account}`, { waitUntil: "domcontentloaded" });
+        await expect(page.getByRole("heading", { name: "Payments from this account" })).toBeVisible({ timeout: 30_000 });
+        await page.getByRole("heading", { name: "Payments from this account" }).scrollIntoViewIfNeeded();
+        await shoot(page, `dd-${kind}-5-bank-account`);
+      }
+    }
+    await context.close();
+  });
+}
