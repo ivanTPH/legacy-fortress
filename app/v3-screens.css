@@ -994,5 +994,6 @@ a.lf-topbar-shield:focus-visible { outline: 3px solid var(--lf-focus); outline-o
 .lf-v52-payee-field .lf-v52-brand-mark { margin-bottom: 4px; flex: none; }
 .lf-v52-payment-hint { margin: 0; font-size: 13px; line-height: 1.45; color: var(--lf-text-secondary); }
 .lf-v52-payment-hint button { padding: 0; border: 0; background: none; color: var(--lf-link, #7A3D27); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.lf-v52-payment-hint a { color: var(--lf-link, #7A3D27); font-weight: 600; text-decoration: underline; }
 .lf-v52-payment-hint strong { display: block; color: var(--lf-text-primary, #1F1715); }
 @media (prefers-reduced-motion: reduce) { .lf-v52-account-payments li a { transition: none; } }
