@@ -174,6 +174,7 @@ import {
   resolveCardType,
 } from "../../lib/vault/cards";
 import BrandMark from "../ui/BrandMark";
+import LogoPicker from "../ui/LogoPicker";
 
 type RecordStatus = "active" | "archived";
 type WorkspaceVariant = "default" | "possessions" | "trusted_contacts";
@@ -4292,7 +4293,7 @@ export default function UniversalRecordWorkspace({
         <div className="lf-v52-category-title-row"><h1 ref={existingRecordsHeadingRef} tabIndex={-1}>{title.replace(/^Legal · /, "").replace(/^Finances · Bank accounts$/, "Banks").replace(/^Property · Assets$/, "Property")}</h1>
           {canCreateRecords ? <button ref={addRecordButtonRef} type="button" className="lf-v52-category-add" onClick={startCreate} aria-label={addLabel} aria-expanded={isCreatingRecord} aria-controls={createFormRegionId}><Icon name="add" size={20} /> {isWillsWorkspace ? "Add a Will" : addLabel}</button> : null}
         </div>
-        <p>{categoryActiveCount} record{categoryActiveCount === 1 ? "" : "s"}{viewer.mode !== "linked" && isDirectDebits ? directDebitMonthlyHeader(records) : viewer.mode !== "linked" && assetFormFamily !== "document" ? ` · ${formatCurrency(totals.active, "GBP")}` : ""}</p>
+        <p>{categoryActiveCount} record{categoryActiveCount === 1 ? "" : "s"}{viewer.mode !== "linked" && isDirectDebits ? directDebitMonthlyHeader(records) : viewer.mode !== "linked" && isCards ? cardsHeader(records) : viewer.mode !== "linked" && assetFormFamily !== "document" ? ` · ${formatCurrency(totals.active, "GBP")}` : ""}</p>
         {displaySubtitle ? <p className="lf-v52-category-description">{displaySubtitle}</p> : null}
         {showPageHeading && helpMessage ? <InfoTip label={`Explain ${title}`} message={helpMessage} /> : null}
         {viewer.mode === "linked" ? (
@@ -7708,7 +7709,7 @@ const dangerBtn: CSSProperties = {
  * links to the provider's own record where there is one, and offers to add it where there isn't. Everything is read
  * as the signed-in person under row-level security, so a linked viewer only ever sees what they were given.
  * ------------------------------------------------------------------------------------------------------------- */
-type PaymentLinkOption = { value: string; label: string; category?: string };
+type PaymentLinkOption = { value: string; label: string; category?: string; logo?: string | null };
 type PaymentLinkOptions = { from: PaymentLinkOption[]; to: PaymentLinkOption[] };
 
 const PAYMENT_TO_EXCLUDED = new Set([DIRECT_DEBIT_CATEGORY, CARDS_CATEGORY, "executors", "beneficiaries", "tasks", "next-of-kin", "contacts", "trusted-contacts", "wishes", "help_requests", "help_replies", "identity-documents"]);
@@ -7740,6 +7741,9 @@ async function loadPaymentLinkOptions(ownerUserId: string): Promise<{ options: P
       ...records.filter((row) => !PAYMENT_TO_EXCLUDED.has(String(row.category_key ?? "")) && row.section_key !== "legal").map((row) => ({ value: linkRef("record", String(row.id)), label: label(row), category: String(row.category_key ?? "") })),
     ].map((option) => ({ ...option, label: PAYMENT_CATEGORY_LABELS[option.category ?? ""] ? `${option.label} · ${PAYMENT_CATEGORY_LABELS[option.category ?? ""]}` : option.label }))
       .sort((a, b) => a.label.localeCompare(b.label));
+    // Each option carries its provider's logo, so pickers can show it beside the name (27 Nov 2026).
+    for (const option of from) option.logo = findCardBrand(option.label.replace(/\s*\(.*\)\s*$/, ""))?.logo ?? null;
+    for (const option of to) option.logo = findPayeeBrand(option.label.split(" · ")[0])?.logo ?? null;
     const payments = records.filter((row) => row.category_key === DIRECT_DEBIT_CATEGORY);
     const cards = records.filter((row) => row.category_key === CARDS_CATEGORY);
     return { options: { from, to }, payments, cards };
@@ -7850,7 +7854,7 @@ function DirectDebitFields({ form, setForm, options }: { form: EditForm; setForm
   return (
     <FinanceFormLayout required={<>
       {options.from.length ? (
-        <FieldSelect label="Paid from" required value={form.payment_from_id} options={withSelectPlaceholder(options.from, "Choose one of your accounts")} onChange={set("payment_from_id")} />
+        <FieldLogoPicker label="Paid from" required value={form.payment_from_id} options={toPickerOptions(options.from)} placeholder="Choose one of your accounts" onChange={set("payment_from_id")} />
       ) : (
         <div className="lf-v52-payment-hint">
           <strong>Paid from</strong>
@@ -7858,7 +7862,7 @@ function DirectDebitFields({ form, setForm, options }: { form: EditForm; setForm
           <Link href="/finances/bank?add=1">Add a bank account</Link>
         </div>
       )}
-      <FieldSelect label="Paid to (from your Vault)" value={form.payment_link_id} options={withSelectPlaceholder(options.to, "Choose an account you've added, or type a name below")} onChange={pickLinked} />
+      <FieldLogoPicker label="Paid to (from your Vault)" value={form.payment_link_id} options={toPickerOptions(options.to)} placeholder="Choose an account you've added, or type a name below" onChange={pickLinked} />
       <div className="lf-v52-payee-field">
         {brand?.logo ? <BrandMark name={brand.name} logoPath={brand.logo} /> : null}
         <FieldInput label="Paid to" required value={form.payment_payee} onChange={(value) => setForm((prev) => ({ ...prev, payment_payee: value, payment_link_id: prev.payment_link_id && options.to.find((item) => item.value === prev.payment_link_id)?.label.split(" · ")[0] === value ? prev.payment_link_id : "" }))} />
@@ -7902,7 +7906,7 @@ function CardFields({ form, setForm, options }: { form: EditForm; setForm: (valu
         <FieldInput label={providerLabel} required value={form.card_provider} onChange={set("card_provider")} />
       </div>
       {type === "debit_card" ? (bankAccounts.length ? (
-        <FieldSelect label="Bank account" required value={form.card_bank_id} options={withSelectPlaceholder(bankAccounts, "Which account is this card for?")} onChange={set("card_bank_id")} />
+        <FieldLogoPicker label="Bank account" required value={form.card_bank_id} options={toPickerOptions(bankAccounts)} placeholder="Which account is this card for?" onChange={set("card_bank_id")} />
       ) : (
         <div className="lf-v52-payment-hint">
           <strong>Bank account</strong>
@@ -7984,4 +7988,46 @@ function AccountCardsList({ accountRef, cards }: { accountRef: string; cards: Ar
       <Link href="/finances/cards?add=1" className="lf-v52-account-payments-add"><Icon name="add" size={18} /> Add a card</Link>
     </section>
   );
+}
+
+
+/** A form field whose dropdown shows each option's logo beside its name (owner request 27 Nov 2026). */
+function FieldLogoPicker({ label, value, options, placeholder, onChange, required = false }: { label: string; value: string; options: LogoPickerOptionInput[]; placeholder: string; onChange: (value: string) => void; required?: boolean }) {
+  return (
+    <FormField label={label} required={required}>
+      <LogoPicker value={value} options={options} placeholder={placeholder} onChange={onChange} />
+    </FormField>
+  );
+}
+
+type LogoPickerOptionInput = { value: string; label: string; logo?: string | null; detail?: string | null };
+
+/** "Netflix · Subscription" becomes the name with the kind underneath; "Amex (credit card)" likewise. */
+function toPickerOptions(options: PaymentLinkOption[]): LogoPickerOptionInput[] {
+  return options.map((option) => {
+    const [name, kind] = option.label.split(" · ");
+    const bracket = /^(.*?)\s*\(([^)]+)\)\s*$/.exec(name);
+    return {
+      value: option.value,
+      label: bracket ? bracket[1] : name,
+      detail: kind ?? (bracket ? bracket[2].replace(/^./, (letter) => letter.toUpperCase()) : option.category === "bank" ? "Bank account" : null),
+      logo: option.logo ?? null,
+    };
+  });
+}
+
+/** Cards page header: money owed on credit cards and what gift cards and points are worth, never a misleading £0.00. */
+function cardsHeader(rows: Array<{ category_key?: string | null; metadata?: Record<string, unknown> | null; status?: string | null; archived_at?: string | null }>) {
+  let owed = 0;
+  let worth = 0;
+  for (const row of rows) {
+    if (row.status === "archived" || row.archived_at) continue;
+    const meta = row.metadata ?? {};
+    const type = resolveCardType(row);
+    const amount = (value: unknown) => (Number.isFinite(Number(value)) ? Math.abs(Number(value)) : 0);
+    if (type === "credit_card") owed += amount(meta.card_balance ?? meta.outstanding_balance);
+    if (type === "gift_card") worth += amount(meta.card_balance);
+    if (type === "loyalty") worth += amount(meta.card_points_value);
+  }
+  return [owed ? ` · ${formatCurrency(owed, "GBP")} owed` : "", worth ? ` · ${formatCurrency(worth, "GBP")} in balances and points` : ""].join("");
 }
