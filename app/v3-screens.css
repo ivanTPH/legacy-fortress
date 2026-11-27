@@ -1068,3 +1068,8 @@ a.lf-topbar-shield:focus-visible { outline: 3px solid var(--lf-focus); outline-o
 .lf-add-photo-prompt.is-done { align-items: center; }
 .lf-add-photo-prompt.is-done > :last-child { margin-left: auto; min-height: 44px; padding: 8px 12px; border: 0; background: transparent; font: inherit; font-weight: 600; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .lf-add-photo-prompt-actions button { transition: none; } }
+
+/* Sign-in reminder (27 Nov 2026). */
+.lf-sign-in-reminder { display: grid; gap: 6px; }
+.lf-sign-in-reminder button { display: inline-flex; align-items: center; gap: 6px; justify-self: start; }
+.lf-sign-in-reminder p { margin: 0; font-size: 14px; color: var(--lf-text-secondary); }

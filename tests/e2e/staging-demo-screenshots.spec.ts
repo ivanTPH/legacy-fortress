@@ -1067,6 +1067,18 @@ for (const kind of ["desk", "phone"] as const) {
     const withPhoto = await page.locator(".lf-person-photo-avatar.has-photo").count();
     console.log(`Photos(${kind}): people_avatars_with_photo=${withPhoto}`);
     await shoot(page, `photos-${kind}-2-people`);
+    // An accepted person shows "Send sign-in reminder" (27 Nov 2026). Looked at only; never pressed.
+    const accepted = await admin.from("contacts").select("id,full_name").eq("owner_user_id", userId).not("linked_user_id", "is", null).limit(1);
+    const person = accepted.data?.[0] as { id: string; full_name: string } | undefined;
+    console.log(`Reminder(${kind}): accepted_linked_person=${Boolean(person)}`);
+    if (person) {
+      await page.getByText(person.full_name, { exact: true }).first().click();
+      const reminder = page.getByRole("button", { name: /Send sign-in reminder/ });
+      const visible = await reminder.waitFor({ state: "visible", timeout: 20_000 }).then(() => true).catch(() => false);
+      console.log(`Reminder(${kind}): button_visible=${visible}`);
+      if (visible) await reminder.scrollIntoViewIfNeeded();
+      await shoot(page, `photos-${kind}-3-reminder`);
+    }
     await context.close();
   });
 }
