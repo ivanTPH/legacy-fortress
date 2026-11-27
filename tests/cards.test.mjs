@@ -57,3 +57,7 @@ test("executor pack: cards say what they are and what to do, never the membershi
 test("cards in 'Paid from' say which card, so they are not mistaken for the account", () => {
   assert.match(read("components/records/UniversalRecordWorkspace.tsx"), /\$\{last4 \? ` ending \$\{last4\}` : ""\}\)`/);
 });
+
+test("a card's people panel says 'this card', not 'this investment'", () => {
+  assert.match(read("lib/linkedPeople/recordLinkedPeople.ts"), /category === "cards"\) return \{ heading: "People linked to this card"/);
+});
