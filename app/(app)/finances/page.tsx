@@ -154,10 +154,13 @@ export default function FinancesOverviewPage() {
   const cardsHeld = cardRows.reduce((sum, row) => sum + Math.max(0, getEstateValueMajor(row)), 0);
   const owed = Math.abs(sectionTotal("debts")) + cardsOwed;
   const held = total + owed;
+  const lifeCoverText = lifeCover > 0 ? ` · ${formatCurrencyWhole(lifeCover, currency)} life cover` : "";
+  // The owed figure takes the owed colour here too (27 Nov 2026).
   const totalText = currencies.size > 1 ? "Multiple currencies"
-    : `${owed > 0 ? `${formatCurrencyWhole(held, currency)} held · ${formatOwed(owed, currency)}` : `${formatCurrencyWhole(total, currency)} estimated value`}${lifeCover > 0 ? ` · ${formatCurrencyWhole(lifeCover, currency)} life cover` : ""}`;
+    : owed > 0 ? <>{formatCurrencyWhole(held, currency)} held · <span className="lf-amount-owed">{formatOwed(owed, currency)}</span>{lifeCoverText}</>
+    : `${formatCurrencyWhole(total, currency)} estimated value${lifeCoverText}`;
   return <section className="lf-v3-area-page lf-v52-finance-page">
-    <PageHeader title="Finances" description={loading ? "Loading records…" : `${recordCount} record${recordCount === 1 ? "" : "s"} · ${totalText}`}
+    <PageHeader title="Finances" description={loading ? "Loading records…" : <>{recordCount} record{recordCount === 1 ? "" : "s"} · {totalText}</>}
       action={viewer.mode !== "linked" ? <AddAssetLink href="/add?area=finances" label="Add to Finances" /> : undefined}>
       <nav className="lf-v52-finance-breadcrumb" aria-label="Breadcrumb"><Link href="/dashboard">Home</Link><Icon name="chevron_right" size={18} /><span aria-current="page">Finances</span></nav>
     </PageHeader>

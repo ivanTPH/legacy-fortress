@@ -1005,7 +1005,7 @@ for (const kind of ["desk", "phone"] as const) {
     console.log(`Loans: types=${typeLabels.filter(Boolean).join("|")}`);
     await type.selectOption("mortgage");
     await page.getByRole("textbox", { name: /^Mortgage lender/ }).fill("Nationwide");
-    await page.getByRole("spinbutton", { name: /^Amount left to pay$/ }).fill("185000");
+    await page.getByRole("spinbutton", { name: /^Amount left to pay$/ }).fill("112000");
     const securedOn = page.getByRole("combobox", { name: /^Secured on/ });
     await expect(securedOn).toBeVisible({ timeout: 30_000 });
     await securedOn.click();
@@ -1023,6 +1023,11 @@ for (const kind of ["desk", "phone"] as const) {
     const saved = await admin.from("records").select("id,metadata").eq("owner_user_id", userId).eq("category_key", "debts");
     const mortgage = (saved.data ?? []).find((row) => (row.metadata as Record<string, unknown> | null)?.debt_property_id) as { metadata: Record<string, unknown> } | undefined;
     const property = /^asset:(.+)$/.exec(String(mortgage?.metadata?.debt_property_id ?? ""))?.[1];
+    // Demo tidy (owner, 27 Nov 2026): the test mortgage matches the property's own £112,000, so the demo has one figure.
+    if (mortgage && String(mortgage.metadata?.outstanding_balance ?? "") !== "112000") {
+      const fix = await admin.from("records").update({ value_minor: 11200000, metadata: { ...mortgage.metadata, outstanding_balance: "112000" } }).eq("id", (mortgage as unknown as { id: string }).id).eq("owner_user_id", userId);
+      console.log(`Loans: demo mortgage set to 112000 ok=${!fix.error}`);
+    }
     const cards = await admin.from("records").select("id").eq("owner_user_id", userId).eq("category_key", "debts").eq("metadata->>debt_type", "credit_card");
     console.log(`Loans: mortgage_linked=${Boolean(property)} credit_cards_left_in_debts=${cards.data?.length ?? 0}`);
     if (property) {
@@ -1032,6 +1037,31 @@ for (const kind of ["desk", "phone"] as const) {
       await heading.scrollIntoViewIfNeeded();
       await shoot(page, `loans-${kind}-4-property`);
     }
+    await context.close();
+  });
+}
+
+// People's photos and the add-a-photo prompt (owner, 27 Nov 2026). Looks only; nothing is uploaded or dismissed.
+for (const kind of ["desk", "phone"] as const) {
+  test(`people photos (${kind})`, async ({ browser }) => {
+    test.setTimeout(180_000);
+    const context = kind === "desk"
+      ? await browser.newContext({ viewport: { width: 1440, height: 900 } })
+      : await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+    const page = await context.newPage();
+    await signIn(page);
+    const social = await admin.from("records").select("id").eq("owner_user_id", userId).eq("category_key", "social-media").limit(1);
+    console.log(`Photos(${kind}): demo_social_records=${social.data?.length ?? 0}`);
+    await page.goto(`${BASE_URL}/personal/social-media`, { waitUntil: "domcontentloaded" });
+    const prompt = page.getByRole("region", { name: "Add a photo of yourself" });
+    const shown = await prompt.waitFor({ state: "visible", timeout: 20_000 }).then(() => true).catch(() => false);
+    console.log(`Photos(${kind}): prompt_shown=${shown}`);
+    await shoot(page, `photos-${kind}-1-social`);
+    await page.goto(`${BASE_URL}/people`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(4000);
+    const withPhoto = await page.locator(".lf-person-photo-avatar.has-photo").count();
+    console.log(`Photos(${kind}): people_avatars_with_photo=${withPhoto}`);
+    await shoot(page, `photos-${kind}-2-people`);
     await context.close();
   });
 }

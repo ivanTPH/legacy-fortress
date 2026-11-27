@@ -28,7 +28,7 @@ test("Home and Finances use the estimated value and show life cover on its own l
   assert.match(overview, /Plus \{lifeCover\} life cover/);
   const finances = fs.readFileSync("app/(app)/finances/page.tsx", "utf8");
   // With anything owed the Finances total reads "held · −£X owed" (27 Nov 2026); otherwise "estimated value".
-  assert.match(finances, /estimated value`\}\$\{lifeCover > 0/);
+  assert.match(finances, /estimated value\$\{lifeCoverText\}`/);
 });
 
 test("the profile address shows the country typed for Other, and no repeated town", () => {

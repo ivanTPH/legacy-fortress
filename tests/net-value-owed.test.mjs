@@ -27,7 +27,7 @@ test("Home says 'Estimated net value' with assets and owed when anything is owed
 
 test("Finances, record lists and record pages show owed amounts as owed", () => {
   const finances = read("app/(app)/finances/page.tsx");
-  assert.match(finances, /held · \$\{formatOwed\(owed, currency\)\}/);
+  assert.match(finances, /held · <span className="lf-amount-owed">\{formatOwed\(owed, currency\)\}<\/span>/);
   assert.match(finances, /owed: section\.key === "debts" && section\.summary\.totalMajor \? formatOwed/);
   const workspace = read("components/records/UniversalRecordWorkspace.tsx");
   assert.match(workspace, /const isOwedRow = /);

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getRequestUser } from "@/lib/admin/access";
 import { getProfileAvatarPreview, resolveProfileIdentityDisplayName } from "@/lib/profile/workspace";
 import { createSupabaseAdminClient, getSupabaseAdminConfigIssue } from "@/lib/supabaseAdmin";
+import { importGooglePhotoIfMissing } from "@/lib/people/photos";
 
 export async function GET(request: Request) {
   const requestUser = await getRequestUser(request);
@@ -33,7 +34,10 @@ export async function GET(request: Request) {
     display_name?: string | null;
     avatar_path?: string | null;
   } | null;
-  const avatar = profile?.avatar_path ? await getProfileAvatarPreview(admin, profile.avatar_path) : null;
+  // Google sign-in with no photo of their own yet: copy the Google photo in once (27 Nov 2026).
+  const importedPath = await importGooglePhotoIfMissing(admin, requestUser.user, profile?.avatar_path);
+  const avatarPath = importedPath ?? profile?.avatar_path ?? null;
+  const avatar = avatarPath ? await getProfileAvatarPreview(admin, avatarPath) : null;
   const contactRes = await admin
     .from("contact_details")
     .select("telephone,mobile_number")
