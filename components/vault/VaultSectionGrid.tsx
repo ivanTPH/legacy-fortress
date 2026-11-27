@@ -9,6 +9,8 @@ export type VaultSectionTile = {
   href: string;
   count: number | null;
   value?: string;
+  /** "−£185,000 owed", shown after the value in the owed colour (27 Nov 2026). */
+  owed?: string | null;
   addHref?: string;
   description?: string;
   updatedAt?: string | null;
@@ -24,7 +26,7 @@ export default function VaultSectionGrid({ sections }: { sections: VaultSectionT
       </Link>
       <div className="lf-v52-section-meta">
         <span className="lf-v52-section-meta-primary">
-          <span className="lf-v52-section-count">{countLabel(section)}{section.count !== null && section.count > 0 && section.value ? <strong> · {section.value}</strong> : null}</span>
+          <span className="lf-v52-section-count">{countLabel(section)}{section.count !== null && section.count > 0 && section.value ? <strong> · {section.value}</strong> : null}{section.count !== null && section.count > 0 && section.owed ? <strong className="lf-amount-owed"> · {section.owed}</strong> : null}</span>
           {section.count !== null && section.count > 0 && section.updatedAt ? <span className="lf-v52-section-updated">Updated {formatSectionDate(section.updatedAt)}</span> : null}
         </span>
         {section.count === 0 && section.addHref ? <Link href={section.addHref} className="lf-v52-section-add" aria-label={`Add first record in ${section.title}`} title="Add first record"><Icon name="add" size={20} /></Link> : null}

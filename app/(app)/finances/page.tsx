@@ -7,7 +7,7 @@ import Icon from "../../../components/ui/Icon";
 import { PageHeader } from "../../../components/ui/V3Primitives";
 import { AddAssetLink } from "../../../components/ui/LFDesignSystem";
 import VaultSectionGrid from "../../../components/vault/VaultSectionGrid";
-import { formatCurrencyWhole } from "../../../lib/currency";
+import { formatCurrencyWhole, formatOwed } from "../../../lib/currency";
 import { useViewerAccess } from "../../../components/access/ViewerAccessContext";
 import { useVaultPreferences } from "../../../components/vault/VaultPreferencesContext";
 import { waitForActiveUser } from "../../../lib/auth/session";
@@ -148,8 +148,14 @@ export default function FinancesOverviewPage() {
   // Direct debits are outgoings, never part of the estimated value.
   const total = populated.reduce((sum, section) => sum + (section.key === "insurance" || section.key === "direct-debits" ? 0 : section.key === "debts" ? -Math.abs(section.summary.totalMajor) : section.key === "cards" ? getAssetsForFinanceCategory(assetRows, "cards").reduce((cardSum, row) => cardSum + getEstateValueMajor(row), 0) : section.summary.totalMajor), 0);
   const currencies = new Set(assetRows.map((row) => getFinanceRowCurrencyCode(row) || currency));
+  // Held and owed shown separately, never a bare negative total (owner, 27 Nov 2026).
+  const cardRows = getAssetsForFinanceCategory(assetRows, "cards");
+  const cardsOwed = cardRows.reduce((sum, row) => sum + Math.max(0, -getEstateValueMajor(row)), 0);
+  const cardsHeld = cardRows.reduce((sum, row) => sum + Math.max(0, getEstateValueMajor(row)), 0);
+  const owed = Math.abs(sectionTotal("debts")) + cardsOwed;
+  const held = total + owed;
   const totalText = currencies.size > 1 ? "Multiple currencies"
-    : `${formatCurrencyWhole(total, currency)} estimated value${lifeCover > 0 ? ` · ${formatCurrencyWhole(lifeCover, currency)} life cover` : ""}`;
+    : `${owed > 0 ? `${formatCurrencyWhole(held, currency)} held · ${formatOwed(owed, currency)}` : `${formatCurrencyWhole(total, currency)} estimated value`}${lifeCover > 0 ? ` · ${formatCurrencyWhole(lifeCover, currency)} life cover` : ""}`;
   return <section className="lf-v3-area-page lf-v52-finance-page">
     <PageHeader title="Finances" description={loading ? "Loading records…" : `${recordCount} record${recordCount === 1 ? "" : "s"} · ${totalText}`}
       action={viewer.mode !== "linked" ? <AddAssetLink href="/add?area=finances" label="Add to Finances" /> : undefined}>
@@ -161,7 +167,12 @@ export default function FinancesOverviewPage() {
       key: section.href, title: section.title, icon: section.icon, href: section.href,
       count: section.summary.includedCount,
       value: section.key === "direct-debits" ? directDebitMonthlyText(getAssetsForFinanceCategory(assetRows, section.key), currency) : new Set(getAssetsForFinanceCategory(assetRows, section.key).map((row) => getFinanceRowCurrencyCode(row) || currency)).size > 1
-        ? "Multiple currencies" : section.summary.valueText,
+        ? "Multiple currencies"
+        : section.key === "debts" ? undefined
+        : section.key === "cards" ? (cardsHeld > 0 ? formatCurrencyWhole(cardsHeld, currency) : undefined)
+        : section.summary.valueText,
+      owed: section.key === "debts" && section.summary.totalMajor ? formatOwed(section.summary.totalMajor, currency)
+        : section.key === "cards" && cardsOwed > 0 ? formatOwed(cardsOwed, currency) : null,
       addHref: viewer.mode === "linked" ? undefined : `${section.href}?add=1`,
       updatedAt: section.summary.addedAt,
     }))} />
