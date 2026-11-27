@@ -34,3 +34,5 @@ Group apps (25 Nov 2026), where the financial arm has no app of its own but the 
 Digital accounts (25 Nov 2026): 98 social media, subscription, gaming, email, cloud, website, crypto wallet and shopping services (Facebook, Instagram, Netflix, Gmail, Dropbox, MetaMask, Amazon and others) use their official UK App Store icons, stored in public/logos/apps. Listed in lib/assets/digitalBrands.mjs.
 
 Everyday services (25 Nov 2026): 62 energy and water suppliers, broadband and mobile networks, loyalty and air-miles schemes, and business banking and accounting tools use their official UK App Store icons, stored in public/logos/apps. Listed in lib/assets/digitalBrands.mjs (SERVICE_BRANDS).
+
+Cards (27 Nov 2026): Blue Light Card, Defence Discount Service, TOTUM, Railcard, One4all and Love2shop use their official UK App Store icons (public/logos/apps).

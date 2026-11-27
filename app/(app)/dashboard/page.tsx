@@ -832,7 +832,7 @@ const legalSummary = useMemo(() => {
       if (!searchQuery) return [];
       return buildDashboardDiscoveryResults({
         query: searchQuery,
-        assets: [...assetRows.filter((row) => row.metadata_json?.finance_record_source !== "records" || ["pensions", "insurance", "debts"].includes(String(row.category_key ?? ""))), ...recordSearchRows],
+        assets: [...assetRows.filter((row) => row.metadata_json?.finance_record_source !== "records" || ["pensions", "insurance", "debts", "cards"].includes(String(row.category_key ?? ""))), ...recordSearchRows],
         contacts: contactRows.map((row) => ({
           id: row.id,
           fullName: row.full_name ?? null,
@@ -2446,6 +2446,7 @@ function getFinanceWorkspaceHref(categoryKey: string) {
   if (categoryKey === "insurance") return "/finances/insurance";
   if (categoryKey === "debts" || categoryKey === "loans-liabilities") return "/finances/debts";
   if (categoryKey === "direct-debits") return "/finances/direct-debits";
+  if (categoryKey === "cards") return "/finances/cards";
   return "/finances/bank";
 }
 
@@ -3924,7 +3925,7 @@ function getDiscoveryAssetHref(asset: AssetRow) {
   const section = String(asset.section_key ?? "").trim();
   const category = String(asset.category_key ?? "").trim();
   let base = "";
-  if (section === "finances") base = ["bank", "investments", "pensions", "insurance", "debts", "loans-liabilities", "direct-debits"].includes(category) ? getFinanceWorkspaceHref(category) : "";
+  if (section === "finances") base = ["bank", "investments", "pensions", "insurance", "debts", "loans-liabilities", "direct-debits", "cards"].includes(category) ? getFinanceWorkspaceHref(category) : "";
   else if (section === "legal") {
     const legalHref = getLegalWorkspaceHref(category);
     base = legalHref === "/legal" ? "" : legalHref;
