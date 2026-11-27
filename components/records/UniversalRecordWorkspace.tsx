@@ -4309,7 +4309,7 @@ export default function UniversalRecordWorkspace({
         <div className="lf-v52-category-title-row"><h1 ref={existingRecordsHeadingRef} tabIndex={-1}>{title.replace(/^Legal · /, "").replace(/^Finances · Bank accounts$/, "Banks").replace(/^Property · Assets$/, "Property")}</h1>
           {canCreateRecords ? <button ref={addRecordButtonRef} type="button" className="lf-v52-category-add" onClick={startCreate} aria-label={addLabel} aria-expanded={isCreatingRecord} aria-controls={createFormRegionId}><Icon name="add" size={20} /> {isWillsWorkspace ? "Add a Will" : addLabel}</button> : null}
         </div>
-        <p>{categoryActiveCount} record{categoryActiveCount === 1 ? "" : "s"}{viewer.mode !== "linked" && isDirectDebits ? directDebitMonthlyHeader(records) : viewer.mode !== "linked" && isCards ? cardsHeader(records) : viewer.mode !== "linked" && assetFormFamily !== "document" ? ` · ${formatCurrency(totals.active, "GBP")}` : ""}</p>
+        <p>{categoryActiveCount} record{categoryActiveCount === 1 ? "" : "s"}{viewer.mode !== "linked" && isDirectDebits ? directDebitMonthlyHeader(records) : viewer.mode !== "linked" && isCards ? cardsHeader(records) : viewer.mode !== "linked" && isFinanceSection && categoryKey === "debts" ? (totals.active ? <> · <span className="lf-amount-owed">{formatOwed(totals.active, "GBP", { whole: false })}</span></> : "") : viewer.mode !== "linked" && assetFormFamily !== "document" ? ` · ${formatCurrency(totals.active, "GBP")}` : ""}</p>
         {displaySubtitle ? <p className="lf-v52-category-description">{displaySubtitle}</p> : null}
         {showPageHeading && helpMessage ? <InfoTip label={`Explain ${title}`} message={helpMessage} /> : null}
         {viewer.mode === "linked" ? (
@@ -4551,7 +4551,7 @@ export default function UniversalRecordWorkspace({
             {!hasDiscoveryFilters && canCreateRecords ? <button type="button" className="lf-v52-record-empty-add" onClick={startCreate}>{isWillsWorkspace ? "Add a Will" : "Add first record"}</button> : null}
           </div>
         ) : null}
-        {!loading && activeRecords.length > 0 ? <div className="lf-v52-record-list"><div className="lf-v52-record-list-head" aria-hidden="true"><span></span><span>Name and type</span><span>Updated</span><span>Value</span><span></span></div>{activeRecords.map((row) => renderRow(row))}</div> : null}
+        {!loading && activeRecords.length > 0 ? <div className="lf-v52-record-list"><div className="lf-v52-record-list-head" aria-hidden="true"><span></span><span>Name and type</span><span>Updated</span><span>{isFinanceSection && categoryKey === "debts" ? "Amount owed" : "Value"}</span><span></span></div>{activeRecords.map((row) => renderRow(row))}</div> : null}
         </section>
       ) : null}
 

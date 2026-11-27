@@ -44,3 +44,10 @@ test("executor pack prints debts as owed", () => {
   });
   assert.match(JSON.stringify(pack), /\\u2212£185,000 owed|−£185,000 owed/);
 });
+
+test("owed leftovers: section card colour wins, Loans header and column say owed", () => {
+  assert.match(read("app/v3-screens.css"), /\.lf-v52-section-count strong\.lf-amount-owed/);
+  const workspace = read("components/records/UniversalRecordWorkspace.tsx");
+  assert.match(workspace, /categoryKey === "debts" \? "Amount owed" : "Value"/);
+  assert.match(workspace, /categoryKey === "debts" \? \(totals\.active \? <> · <span className="lf-amount-owed">/);
+});
