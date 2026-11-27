@@ -1050,14 +1050,19 @@ for (const kind of ["desk", "phone"] as const) {
       : await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
     const page = await context.newPage();
     await signIn(page);
-    const social = await admin.from("records").select("id").eq("owner_user_id", userId).eq("category_key", "social-media").limit(1);
+    // The synthetic demo account gets one LinkedIn account the first time, so the prompt has something to follow.
+    let social = await admin.from("records").select("id").eq("owner_user_id", userId).eq("category_key", "social-media").limit(1);
+    if (!social.data?.length) {
+      await admin.from("records").insert({ owner_user_id: userId, section_key: "personal", category_key: "social-media", title: "LinkedIn", provider_name: "LinkedIn", status: "active", metadata: { platform: "LinkedIn" } });
+      social = await admin.from("records").select("id").eq("owner_user_id", userId).eq("category_key", "social-media").limit(1);
+    }
     console.log(`Photos(${kind}): demo_social_records=${social.data?.length ?? 0}`);
     await page.goto(`${BASE_URL}/personal/social-media`, { waitUntil: "domcontentloaded" });
     const prompt = page.getByRole("region", { name: "Add a photo of yourself" });
     const shown = await prompt.waitFor({ state: "visible", timeout: 20_000 }).then(() => true).catch(() => false);
     console.log(`Photos(${kind}): prompt_shown=${shown}`);
     await shoot(page, `photos-${kind}-1-social`);
-    await page.goto(`${BASE_URL}/people`, { waitUntil: "domcontentloaded" });
+    await page.goto(`${BASE_URL}/people-access`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(4000);
     const withPhoto = await page.locator(".lf-person-photo-avatar.has-photo").count();
     console.log(`Photos(${kind}): people_avatars_with_photo=${withPhoto}`);
