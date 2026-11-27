@@ -1227,6 +1227,8 @@ function PersonDetailDrawer({
               <div className="lf-pp-row"><span>Email</span>{contact.email ? <span className="lf-pp-value">{contact.email}</span> : !readOnly ? <button type="button" className="lf-pp-link" onClick={() => setManagementView("edit")}>Add email</button> : <span className="lf-pp-value">Not recorded</span>}</div>
               {contact.phone ? <div className="lf-pp-row"><span>Phone</span><span className="lf-pp-value">{contact.phone}</span></div> : null}
               {!readOnly && contact.email && ["invite_sent", "not_invited", "failed", "not_delivered", "expired"].includes(contact.invite_status) ? <div className="lf-pp-row-action"><button type="button" className="lf-pp-secondary" onClick={() => setManagementView("invitation")}>{contact.invite_status === "not_invited" ? "Send invitation" : "Manage invitation"}</button></div> : null}
+              {/* Accepted but forgotten how to get in: a sign-in reminder, not a second invitation (27 Nov 2026). */}
+              {!readOnly && contact.linked_user_id ? <SignInReminderButton contactId={contact.id} /> : null}
             </section>
             <PersonLinkedRecords contactId={contact.id} ownerUserId={ownerUserId} fallback={relatedContexts} />
             <PersonVaultAccessCard key={`${contact.id}:${accessRevision}`} contactId={contact.id} name={contact.full_name || "this person"} ownerUserId={ownerUserId} readOnly={readOnly} onManageNow={() => setManagementView("access")} />
@@ -2478,3 +2480,40 @@ const contactFormInputStyle: CSSProperties = {
   fontSize: 14,
   minWidth: 0,
 };
+
+
+/**
+ * "Send sign-in reminder" (owner, 27 Nov 2026): for someone who accepted and has since forgotten how to get in.
+ * The email names no one and goes to the address they sign in with; one a day per person.
+ */
+function SignInReminderButton({ contactId }: { contactId: string }) {
+  const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
+  const [message, setMessage] = useState("");
+  const send = async () => {
+    setState("sending");
+    setMessage("");
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const response = await fetch("/api/people/sign-in-reminder", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token ?? ""}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ contactId }),
+      });
+      const json = (await response.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+      if (!response.ok || !json?.ok) throw new Error(json?.error || "We couldn't send the reminder. Please try again later.");
+      setState("sent");
+      setMessage("Reminder sent. It tells them how to sign in and how to reset their password.");
+    } catch (caught) {
+      setState("idle");
+      setMessage(caught instanceof Error ? caught.message : "We couldn't send the reminder. Please try again later.");
+    }
+  };
+  return (
+    <div className="lf-pp-row-action lf-sign-in-reminder">
+      <button type="button" className="lf-pp-secondary" disabled={state !== "idle"} onClick={() => void send()}>
+        <Icon name="mark_email_unread" size={18} />{state === "sending" ? "Sending…" : state === "sent" ? "Reminder sent" : "Send sign-in reminder"}
+      </button>
+      {message ? <p role="status">{message}</p> : <p>For someone who has forgotten how to sign in. Not a new invitation.</p>}
+    </div>
+  );
+}
