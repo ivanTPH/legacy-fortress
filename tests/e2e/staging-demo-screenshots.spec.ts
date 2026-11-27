@@ -878,9 +878,9 @@ for (const kind of ["desk", "phone"] as const) {
     const from = page.getByRole("combobox", { name: /^Paid from/ });
     await expect(from).toBeVisible({ timeout: 30_000 });
     await from.click();
-    await expect(page.getByRole("option").first()).toBeVisible();
+    await expect(page.getByRole("listbox").getByRole("option").first()).toBeVisible();
     await shoot(page, `dd-${kind}-1b-picker`);
-    await page.getByRole("option").first().click();
+    await page.getByRole("listbox").getByRole("option").first().click();
     await page.getByRole("textbox", { name: /^Paid to/ }).fill("Netflix");
     await page.getByRole("combobox", { name: /^Payment type/ }).selectOption("direct_debit");
     await page.getByRole("spinbutton", { name: /^Amount$/ }).fill("12.99");
@@ -940,9 +940,9 @@ for (const kind of ["desk", "phone"] as const) {
     await addCard("debit_card", "HSBC", async () => {
       const bank = page.getByRole("combobox", { name: /^Bank account/ });
       await bank.click();
-      await expect(page.getByRole("option").first()).toBeVisible();
+      await expect(page.getByRole("listbox").getByRole("option").first()).toBeVisible();
       await shoot(page, `cards-${kind}-0-bank-picker`);
-      await page.getByRole("option").first().click();
+      await page.getByRole("listbox").getByRole("option").first().click();
       await page.locator("details.lf-v4-optional-group > summary").first().click();
       await page.getByRole("textbox", { name: /^Last four digits/ }).fill("4821");
       await page.getByRole("textbox", { name: /^Expiry/ }).fill("09/28");

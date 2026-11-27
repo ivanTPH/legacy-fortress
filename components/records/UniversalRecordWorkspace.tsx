@@ -7734,7 +7734,12 @@ async function loadPaymentLinkOptions(ownerUserId: string): Promise<{ options: P
       ...records.filter((row) => isLegacyCreditCard(row as { category_key?: unknown; metadata?: Record<string, unknown> | null }))
         .map((row) => ({ value: linkRef("record", String(row.id)), label: `${label(row)} (credit card)`, category: "cards" })),
       ...records.filter((row) => row.category_key === CARDS_CATEGORY && ["credit_card", "debit_card"].includes(String((row.metadata as Record<string, unknown> | null)?.card_type ?? "")))
-        .map((row) => ({ value: linkRef("record", String(row.id)), label: `${label(row)} (${cardTypeLabel((row.metadata as Record<string, unknown>).card_type)?.toLowerCase()})`, category: "cards" })),
+        .map((row) => {
+          // "HSBC (debit card ending 4821)", so a card is never mistaken for the account it belongs to.
+          const meta = row.metadata as Record<string, unknown>;
+          const last4 = cleanLast4(meta.card_last4);
+          return { value: linkRef("record", String(row.id)), label: `${label(row)} (${cardTypeLabel(meta.card_type)?.toLowerCase()}${last4 ? ` ending ${last4}` : ""})`, category: "cards" };
+        }),
     ].sort((a, b) => a.label.localeCompare(b.label));
     const to: PaymentLinkOption[] = [
       ...assets.filter((row) => !PAYMENT_TO_EXCLUDED.has(String(row.category_key ?? ""))).map((row) => ({ value: linkRef("asset", String(row.id)), label: label(row), category: String(row.category_key ?? "") })),
