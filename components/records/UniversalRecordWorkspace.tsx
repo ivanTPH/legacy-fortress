@@ -159,6 +159,20 @@ import {
   parseLinkRef,
   payeeAddHref,
 } from "../../lib/vault/directDebits";
+import {
+  CARD_AFTER_DEATH_OPTIONS,
+  CARD_TYPE_OPTIONS,
+  CARDS_CATEGORY,
+  POINTS_HINT,
+  cardAfterDeathLabel,
+  cardTypeLabel,
+  cleanExpiry,
+  cleanLast4,
+  findCardBrand,
+  isLegacyCreditCard,
+  looksLikeFullCardNumber,
+  resolveCardType,
+} from "../../lib/vault/cards";
 import BrandMark from "../ui/BrandMark";
 
 type RecordStatus = "active" | "archived";
@@ -443,6 +457,19 @@ type EditForm = {
   payment_day: string;
   payment_reference: string;
   payment_after_death: string;
+  card_type: string;
+  card_provider: string;
+  card_name: string;
+  card_last4: string;
+  card_expiry: string;
+  card_bank_id: string;
+  card_balance: string;
+  card_member_number: string;
+  card_points: string;
+  card_points_checked: string;
+  card_points_value: string;
+  card_renewal: string;
+  card_after_death: string;
 };
 
 type LegalContactFormRow = {
@@ -647,6 +674,19 @@ const EMPTY_FORM: EditForm = {
   payment_day: "",
   payment_reference: "",
   payment_after_death: "",
+  card_type: "",
+  card_provider: "",
+  card_name: "",
+  card_last4: "",
+  card_expiry: "",
+  card_bank_id: "",
+  card_balance: "",
+  card_member_number: "",
+  card_points: "",
+  card_points_checked: "",
+  card_points_value: "",
+  card_renewal: "",
+  card_after_death: "",
 };
 
 const DEFAULT_PROVIDER_CATALOG: ProviderCatalogRow[] = [
@@ -836,7 +876,8 @@ const CURRENCY_SELECT_OPTIONS = withSelectPlaceholder(
   "Select currency",
 );
 const INSURANCE_SELECT_OPTIONS = getCategoryTypeSelectOptions("finances", "insurance", "Select policy type");
-const DEBT_SELECT_OPTIONS = getCategoryTypeSelectOptions("finances", "debts", "Select debt type");
+// Credit cards moved to Cards (27 Nov 2026), so Debts no longer offers them.
+const DEBT_SELECT_OPTIONS = getCategoryTypeSelectOptions("finances", "debts", "Select debt type").filter((option: { value: string }) => option.value !== "credit_card");
 const OWNERSHIP_TYPE_OPTIONS = [
   { value: "", label: "Select ownership type" },
   { value: "Sole owner", label: "Sole owner" },
@@ -886,6 +927,8 @@ export default function UniversalRecordWorkspace({
   const [paymentLinkOptions, setPaymentLinkOptions] = useState<PaymentLinkOptions>({ from: [], to: [] });
   // Bank account pages list the payments that come out of that account.
   const [accountPayments, setAccountPayments] = useState<Array<Record<string, unknown>>>([]);
+  // Bank account pages also list the debit cards linked to that account.
+  const [accountCards, setAccountCards] = useState<Array<Record<string, unknown>>>([]);
   const [taskExecutorOptions, setTaskExecutorOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [taskBeneficiaryOptions, setTaskBeneficiaryOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -925,6 +968,7 @@ export default function UniversalRecordWorkspace({
   const isFinanceSection = sectionKey === "finances";
   const isBankCategory = isFinanceSection && categoryKey === "bank";
   const isDirectDebits = isFinanceSection && categoryKey === DIRECT_DEBIT_CATEGORY;
+  const isCards = isFinanceSection && categoryKey === CARDS_CATEGORY;
   const devBankTraceEnabled = isBankCategory && isDevBankTraceEnabled();
   useMemo(() => validateManagedAssetWorkspaceConfig(sectionKey, categoryKey), [sectionKey, categoryKey]);
   const managedAssetWorkspaceConfig = getManagedAssetWorkspaceConfig(sectionKey, categoryKey);
@@ -1122,11 +1166,12 @@ export default function UniversalRecordWorkspace({
           .eq("active", true),
       ]);
 
-      if (isDirectDebits || isBankCategory) {
+      if (isDirectDebits || isBankCategory || isCards) {
         const links = await loadPaymentLinkOptions(targetOwnerUserId);
         if (mounted) {
           setPaymentLinkOptions(links.options);
           setAccountPayments(links.payments);
+          setAccountCards(links.cards);
         }
       }
 
@@ -1257,7 +1302,7 @@ export default function UniversalRecordWorkspace({
     return () => {
       mounted = false;
     };
-  }, [categoryKey, forceCanonicalRead, isBankCategory, isCanonicalTask, isDirectDebits, recordFilter, router, sectionKey, usesCanonicalAssetReadPath, viewer]);
+  }, [categoryKey, forceCanonicalRead, isBankCategory, isCanonicalTask, isCards, isDirectDebits, recordFilter, router, sectionKey, usesCanonicalAssetReadPath, viewer]);
 
   // Identity documents: "Expires soon", "Expired" or "Expired, replaced" (owner decision 5 Nov 2026).
   const identityStatuses = useMemo(
@@ -1752,6 +1797,19 @@ export default function UniversalRecordWorkspace({
       payment_day: String(row.metadata?.payment_day ?? ""),
       payment_reference: String(row.metadata?.payment_reference ?? ""),
       payment_after_death: String(row.metadata?.payment_after_death ?? ""),
+      card_type: resolveCardType(row),
+      card_provider: String(row.metadata?.card_provider ?? (isLegacyCreditCard(row) ? row.metadata?.creditor_name ?? row.provider_name ?? "" : "")),
+      card_name: String(row.metadata?.card_name ?? ""),
+      card_last4: String(row.metadata?.card_last4 ?? ""),
+      card_expiry: String(row.metadata?.card_expiry ?? ""),
+      card_bank_id: String(row.metadata?.card_bank_id ?? ""),
+      card_balance: String(row.metadata?.card_balance ?? (isLegacyCreditCard(row) ? row.metadata?.outstanding_balance ?? "" : "")),
+      card_member_number: String(row.metadata?.card_member_number ?? ""),
+      card_points: String(row.metadata?.card_points ?? ""),
+      card_points_checked: String(row.metadata?.card_points_checked ?? ""),
+      card_points_value: String(row.metadata?.card_points_value ?? ""),
+      card_renewal: String(row.metadata?.card_renewal ?? ""),
+      card_after_death: String(row.metadata?.card_after_death ?? ""),
     });
     setPendingPhotoFile(null);
     setPendingDocumentFiles([]);
@@ -2322,12 +2380,31 @@ export default function UniversalRecordWorkspace({
         typeValue: financeTypeValue,
         descriptionText: `${form.investment_provider} ${form.pension_provider} ${form.insurer_name} ${form.creditor_name} ${form.summary} ${form.notes}`,
       });
-      if (!financeTypeValidation.ok && categoryKey !== "bank" && categoryKey !== DIRECT_DEBIT_CATEGORY) {
+      if (!financeTypeValidation.ok && categoryKey !== "bank" && categoryKey !== DIRECT_DEBIT_CATEGORY && categoryKey !== CARDS_CATEGORY) {
         const validationMessage =
           financeTypeValidation.message ?? "Choose a valid record type for this section before saving.";
         setSubmitError(validationMessage);
         setStatus(validationMessage);
         setSaving(false);
+        return;
+      }
+    }
+    if (isCards) {
+      if ([form.card_last4, form.card_member_number, form.card_name, form.notes].some(looksLikeFullCardNumber)) {
+        stopSaveForValidation("Please don't enter a full card number. Only the last four digits are kept.");
+        return;
+      }
+      const missing = [[form.card_type, "Card type"], [form.card_provider.trim(), "Card provider or scheme"]].find(([value]) => !String(value ?? "").trim());
+      if (missing) {
+        stopSaveForValidation(`${missing[1]} is required before saving.`);
+        return;
+      }
+      if (form.card_type === "debit_card" && !form.card_bank_id) {
+        stopSaveForValidation("Choose the bank account this debit card belongs to.");
+        return;
+      }
+      if (form.card_last4 && !cleanLast4(form.card_last4)) {
+        stopSaveForValidation("Last four digits must be exactly four numbers.");
         return;
       }
     }
@@ -3424,7 +3501,9 @@ export default function UniversalRecordWorkspace({
                   ? row.metadata?.creditor_name
                   : categoryKey === DIRECT_DEBIT_CATEGORY
                     ? row.metadata?.payment_payee
-                    : "") ?? "",
+                    : categoryKey === CARDS_CATEGORY
+                      ? row.metadata?.card_provider ?? row.metadata?.creditor_name
+                      : "") ?? "",
       );
     const provider =
       findProviderByKey(row.provider_key, catalog) ??
@@ -3642,6 +3721,8 @@ export default function UniversalRecordWorkspace({
               ? getCategoryTypeLabel("finances", "debts", row.metadata?.debt_type ?? "Debt")
             : isDirectDebits
               ? paymentOptionLabel(PAYMENT_METHOD_OPTIONS, row.metadata?.payment_method) ?? "Payment"
+            : isCards
+              ? [cardTypeLabel(resolveCardType(row)) ?? "Card", cleanLast4(row.metadata?.card_last4) ? `ending ${cleanLast4(row.metadata?.card_last4)}` : null].filter(Boolean).join(" · ")
       : isCanonicalProperty
         ? canonicalPropertyAsset?.property_type || "Property"
         : isCanonicalBusiness
@@ -4045,6 +4126,7 @@ export default function UniversalRecordWorkspace({
                 {categoryKey === "insurance" ? <div>Renewal date: {String(row.metadata?.renewal_date ?? "Not set")}</div> : null}
                 {categoryKey === "debts" ? <div>Repayment: {String(row.metadata?.repayment_amount ?? "Not set")} ({String(row.metadata?.repayment_frequency ?? "frequency not set")})</div> : null}
                 {isDirectDebits ? <PaymentDetail metadata={row.metadata ?? {}} options={paymentLinkOptions} /> : null}
+                {isCards ? <CardDetail row={row} options={paymentLinkOptions} /> : null}
                 {categoryKey !== "bank" ? <div>Notes: {String(row.metadata?.notes ?? "No additional notes.")}</div> : null}
               </section>
             ) : isIdentityDocuments ? (
@@ -4369,6 +4451,7 @@ export default function UniversalRecordWorkspace({
             <div><h1>{selectedRecord.title || "Untitled record"}</h1><p>{selectedRecord.provider_name || title} · Updated {formatDate(selectedRecord.updated_at)}</p>{selectedBankNickname ? <p className="lf-v52-record-nickname">Account nickname: <strong>{selectedBankNickname}</strong></p> : null}</div>
           </div>
           {renderRow(selectedRecord, true)}
+          {isBankCategory ? <AccountCardsList accountRef={linkRef("asset", selectedRecord.id)} cards={accountCards} /> : null}
           {isBankCategory ? <AccountPaymentsList accountRef={linkRef("asset", selectedRecord.id)} payments={accountPayments} /> : null}
           {viewer.mode !== "linked" ? <details className="lf-v52-record-more-actions"><summary>More record actions</summary>
             {!isWillsWorkspace && canEditWorkspaceRow(selectedRecord.id) ? <Link href={`/access-sharing?asset=${encodeURIComponent(selectedRecord.id)}`}>Manage record access</Link> : null}
@@ -5430,6 +5513,10 @@ function FinanceFields({
     );
   }
 
+  if (categoryKey === CARDS_CATEGORY) {
+    return <CardFields form={form} setForm={setForm} options={paymentLinkOptions} />;
+  }
+
   if (categoryKey === DIRECT_DEBIT_CATEGORY) {
     return <DirectDebitFields form={form} setForm={setForm} options={paymentLinkOptions} />;
   }
@@ -6309,6 +6396,38 @@ function getFinanceDraft(categoryKey: string, form: EditForm) {
     };
   }
 
+  if (categoryKey === CARDS_CATEGORY) {
+    const provider = form.card_provider.trim();
+    const type = form.card_type;
+    // The value is what the card is worth to the estate: a credit balance (taken off in totals), a gift balance, or
+    // the guide value of points. Debit cards and discount memberships hold none.
+    const value = type === "credit_card" ? form.card_balance : type === "gift_card" ? form.card_balance : type === "loyalty" ? form.card_points_value : "";
+    return {
+      title: [provider, form.card_name.trim()].filter(Boolean).join(" ") || provider || null,
+      providerName: provider || null,
+      summary: [cardTypeLabel(type), cleanLast4(form.card_last4) ? `ending ${cleanLast4(form.card_last4)}` : null].filter(Boolean).join(" · ") || null,
+      valueMajor: value || "0",
+      currencyCode: form.currency_code || "GBP",
+      metadata: {
+        card_type: type || null,
+        card_provider: provider || null,
+        card_name: form.card_name.trim() || null,
+        card_last4: cleanLast4(form.card_last4) || null,
+        card_expiry: cleanExpiry(form.card_expiry) || null,
+        card_bank_id: type === "debit_card" && parseLinkRef(form.card_bank_id) ? form.card_bank_id : null,
+        card_balance: type === "credit_card" || type === "gift_card" ? form.card_balance || null : null,
+        card_member_number: form.card_member_number.trim() || null,
+        card_points: type === "loyalty" ? form.card_points.trim() || null : null,
+        card_points_checked: type === "loyalty" ? form.card_points_checked || null : null,
+        card_points_value: type === "loyalty" ? form.card_points_value || null : null,
+        card_renewal: form.card_renewal || null,
+        card_after_death: form.card_after_death || null,
+        currency: form.currency_code || "GBP",
+        notes: form.notes.trim() || null,
+      },
+    };
+  }
+
   if (categoryKey === DIRECT_DEBIT_CATEGORY) {
     const payee = form.payment_payee.trim();
     // The amount is an outgoing, not an asset: it lives in metadata only, so no total or net worth ever adds it.
@@ -6648,6 +6767,10 @@ function ProviderBadge({
     const logoPath = resolveProviderLogoPath(provider) || brand?.logo || "";
     const named = name && !/^(record|untitled record|unknown bank)$/i.test(name);
     if (logoPath || named) return <BrandMark name={brand?.name || name} logoPath={logoPath} tileColor={brand?.color ?? tileColourFor(name)} />;
+  }
+  if (categoryKey === CARDS_CATEGORY) {
+    const brand = findCardBrand(provider?.display_name || "") ?? findCardBrand(fallbackLabel || "");
+    if (brand?.logo) return <BrandMark name={brand.name} logoPath={brand.logo} />;
   }
   if (categoryKey === DIRECT_DEBIT_CATEGORY) {
     const brand = findPayeeBrand(provider?.display_name || "") ?? findPayeeBrand(fallbackLabel || "");
@@ -7064,19 +7187,24 @@ async function loadWorkspaceRows({
   recordFilter?: (row: UniversalRecordRow) => boolean;
 }): Promise<{ ok: true; rows: UniversalRecordRow[]; warning?: string } | { ok: false; error: string }> {
   if (!usesCanonicalAssets) {
+    // Cards also shows credit cards saved in Debts before Cards existed; Debts stops showing them (27 Nov 2026).
+    const readsLegacyCards = sectionKey === "finances" && categoryKey === CARDS_CATEGORY;
     const recordsResult = await supabase
       .from("records")
       .select("id,owner_user_id,section_key,category_key,title,provider_name,provider_key,summary,value_minor,currency_code,status,metadata,created_at,updated_at,archived_at")
       .eq("owner_user_id", userId)
       .eq("section_key", sectionKey)
-      .eq("category_key", categoryKey)
+      .in("category_key", readsLegacyCards ? [categoryKey, "debts"] : [categoryKey])
       .order("created_at", { ascending: false });
 
     if (recordsResult.error) {
       return { ok: false, error: recordsResult.error.message };
     }
-    const rows = (recordsResult.data ?? []) as UniversalRecordRow[];
-    assertWorkspaceRowsMatchCategory(rows, { sectionKey, categoryKey });
+    const allRows = (recordsResult.data ?? []) as UniversalRecordRow[];
+    const rows = readsLegacyCards
+      ? allRows.filter((row) => row.category_key === categoryKey || isLegacyCreditCard(row))
+      : sectionKey === "finances" && categoryKey === "debts" ? allRows.filter((row) => !isLegacyCreditCard(row)) : allRows;
+    assertWorkspaceRowsMatchCategory(rows.filter((row) => row.category_key === categoryKey), { sectionKey, categoryKey });
     return { ok: true, rows: recordFilter ? rows.filter(recordFilter) : rows };
   }
 
@@ -7583,14 +7711,14 @@ const dangerBtn: CSSProperties = {
 type PaymentLinkOption = { value: string; label: string; category?: string };
 type PaymentLinkOptions = { from: PaymentLinkOption[]; to: PaymentLinkOption[] };
 
-const PAYMENT_TO_EXCLUDED = new Set([DIRECT_DEBIT_CATEGORY, "executors", "beneficiaries", "tasks", "next-of-kin", "contacts", "trusted-contacts", "wishes", "help_requests", "help_replies", "identity-documents"]);
+const PAYMENT_TO_EXCLUDED = new Set([DIRECT_DEBIT_CATEGORY, CARDS_CATEGORY, "executors", "beneficiaries", "tasks", "next-of-kin", "contacts", "trusted-contacts", "wishes", "help_requests", "help_replies", "identity-documents"]);
 const PAYMENT_CATEGORY_LABELS: Record<string, string> = {
   bank: "Bank account", investments: "Investment", pensions: "Pension", insurance: "Insurance", debts: "Debt",
   subscriptions: "Subscription", "social-media": "Social media", digital: "Digital", property: "Property", business: "Business",
 };
 
-async function loadPaymentLinkOptions(ownerUserId: string): Promise<{ options: PaymentLinkOptions; payments: Array<Record<string, unknown>> }> {
-  const empty = { options: { from: [], to: [] }, payments: [] };
+async function loadPaymentLinkOptions(ownerUserId: string): Promise<{ options: PaymentLinkOptions; payments: Array<Record<string, unknown>>; cards: Array<Record<string, unknown>> }> {
+  const empty = { options: { from: [], to: [] }, payments: [], cards: [] };
   try {
     const walletContext = await resolveWalletContextForRead(supabase, ownerUserId);
     const [assetResult, recordResult] = await Promise.all([
@@ -7602,8 +7730,10 @@ async function loadPaymentLinkOptions(ownerUserId: string): Promise<{ options: P
     const label = (row: Record<string, unknown>) => String(row.title ?? row.provider_name ?? "").trim() || "Untitled";
     const from: PaymentLinkOption[] = [
       ...assets.filter((row) => row.category_key === "bank").map((row) => ({ value: linkRef("asset", String(row.id)), label: label(row), category: "bank" })),
-      ...records.filter((row) => row.category_key === "debts" && /credit/i.test(String((row.metadata as Record<string, unknown> | null)?.debt_type ?? "")))
-        .map((row) => ({ value: linkRef("record", String(row.id)), label: `${label(row)} (credit card)`, category: "debts" })),
+      ...records.filter((row) => isLegacyCreditCard(row as { category_key?: unknown; metadata?: Record<string, unknown> | null }))
+        .map((row) => ({ value: linkRef("record", String(row.id)), label: `${label(row)} (credit card)`, category: "cards" })),
+      ...records.filter((row) => row.category_key === CARDS_CATEGORY && ["credit_card", "debit_card"].includes(String((row.metadata as Record<string, unknown> | null)?.card_type ?? "")))
+        .map((row) => ({ value: linkRef("record", String(row.id)), label: `${label(row)} (${cardTypeLabel((row.metadata as Record<string, unknown>).card_type)?.toLowerCase()})`, category: "cards" })),
     ].sort((a, b) => a.label.localeCompare(b.label));
     const to: PaymentLinkOption[] = [
       ...assets.filter((row) => !PAYMENT_TO_EXCLUDED.has(String(row.category_key ?? ""))).map((row) => ({ value: linkRef("asset", String(row.id)), label: label(row), category: String(row.category_key ?? "") })),
@@ -7611,7 +7741,8 @@ async function loadPaymentLinkOptions(ownerUserId: string): Promise<{ options: P
     ].map((option) => ({ ...option, label: PAYMENT_CATEGORY_LABELS[option.category ?? ""] ? `${option.label} · ${PAYMENT_CATEGORY_LABELS[option.category ?? ""]}` : option.label }))
       .sort((a, b) => a.label.localeCompare(b.label));
     const payments = records.filter((row) => row.category_key === DIRECT_DEBIT_CATEGORY);
-    return { options: { from, to }, payments };
+    const cards = records.filter((row) => row.category_key === CARDS_CATEGORY);
+    return { options: { from, to }, payments, cards };
   } catch {
     return empty;
   }
@@ -7663,6 +7794,7 @@ function paymentRecordHref(category: string | undefined) {
   switch (category) {
     case "bank": return "/finances/bank";
     case "debts": return "/finances/debts";
+    case "cards": return "/finances/cards";
     case "insurance": return "/finances/insurance";
     case "pensions": return "/finances/pensions";
     case "investments": return "/finances/investments";
@@ -7748,5 +7880,108 @@ function DirectDebitFields({ form, setForm, options }: { form: EditForm; setForm
       </> },
       { title: "Notes", description: "Anything else your executors should know", icon: "description", fields: <div className="lf-v4-form-span"><FieldTextArea label="Notes" value={form.notes} onChange={set("notes")} /></div> },
     ]} />
+  );
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+ * Cards (owner, 27 Nov 2026). Credit, debit (linked to one of the owner's bank accounts), loyalty and rewards,
+ * discount memberships and gift cards. Never the full card number, security code or PIN: last four digits only.
+ * ------------------------------------------------------------------------------------------------------------- */
+function CardFields({ form, setForm, options }: { form: EditForm; setForm: (value: EditForm | ((prev: EditForm) => EditForm)) => void; options: PaymentLinkOptions }) {
+  const set = (key: keyof EditForm) => (value: string) => setForm((prev) => ({ ...prev, [key]: value }));
+  const type = form.card_type;
+  const brand = findCardBrand(form.card_provider);
+  const bankAccounts = options.from.filter((option) => option.category === "bank");
+  const isPaymentCard = type === "credit_card" || type === "debit_card";
+  const providerLabel = type === "loyalty" ? "Scheme" : type === "discount" ? "Membership" : type === "gift_card" ? "Shop or brand" : "Card provider";
+  return (
+    <FinanceFormLayout required={<>
+      <FieldSelect label="Card type" required value={type} options={withSelectPlaceholder(CARD_TYPE_OPTIONS, "Select card type")} onChange={set("card_type")} />
+      <div className="lf-v52-payee-field">
+        {brand?.logo ? <BrandMark name={brand.name} logoPath={brand.logo} /> : null}
+        <FieldInput label={providerLabel} required value={form.card_provider} onChange={set("card_provider")} />
+      </div>
+      {type === "debit_card" ? (bankAccounts.length ? (
+        <FieldSelect label="Bank account" required value={form.card_bank_id} options={withSelectPlaceholder(bankAccounts, "Which account is this card for?")} onChange={set("card_bank_id")} />
+      ) : (
+        <div className="lf-v52-payment-hint">
+          <strong>Bank account</strong>
+          <p>Add the bank account this card belongs to first.</p>
+          <Link href="/finances/bank?add=1" target="_blank">Add a bank account</Link>
+        </div>
+      )) : null}
+      {type === "credit_card" ? <CurrencyAmountField label="Balance owed" value={form.card_balance} currency={form.currency_code} onValueChange={set("card_balance")} onCurrencyChange={set("currency_code")} /> : null}
+      {type === "gift_card" ? <CurrencyAmountField label="Balance left" value={form.card_balance} currency={form.currency_code} onValueChange={set("card_balance")} onCurrencyChange={set("currency_code")} /> : null}
+      {type === "loyalty" ? <FieldInput label="Points balance" value={form.card_points} onChange={set("card_points")} /> : null}
+    </>} optional={[
+      { title: "Card details", description: isPaymentCard ? "Last four digits and expiry only" : "Membership number and dates", icon: "credit_card", fields: <>
+        <FieldInput label="Card name (optional)" value={form.card_name} onChange={set("card_name")} />
+        {isPaymentCard || type === "gift_card" ? <FieldInput label="Last four digits" value={form.card_last4} onChange={(value) => setForm((prev) => ({ ...prev, card_last4: value.replace(/\D/g, "").slice(0, 4) }))} /> : null}
+        {type !== "loyalty" ? <FieldInput label="Expiry (MM/YY)" value={form.card_expiry} onChange={set("card_expiry")} /> : null}
+        {!isPaymentCard ? <FieldInput label={type === "gift_card" ? "Card or voucher code" : "Membership number"} value={form.card_member_number} onChange={set("card_member_number")} /> : null}
+        {type === "loyalty" ? <>
+          <FieldInput label="Points checked on" type="date" value={form.card_points_checked} onChange={set("card_points_checked")} />
+          <CurrencyAmountField label="Rough value of the points" value={form.card_points_value} currency={form.currency_code} onValueChange={set("card_points_value")} onCurrencyChange={set("currency_code")} />
+        </> : null}
+        {type === "discount" ? <FieldInput label="Renews on" type="date" value={form.card_renewal} onChange={set("card_renewal")} /> : null}
+        <p className="lf-v52-payment-hint lf-v4-form-span">We never keep a full card number, security code or PIN. The last four digits are enough to recognise a card.</p>
+      </> },
+      { title: "After my death", description: "What should happen to this card", icon: "event_repeat", fields: <>
+        <FieldSelect label="After my death" value={form.card_after_death} options={withSelectPlaceholder(CARD_AFTER_DEATH_OPTIONS, "What should happen")} onChange={set("card_after_death")} />
+        {type === "loyalty" ? <p className="lf-v52-payment-hint lf-v4-form-span">{POINTS_HINT}</p> : null}
+      </> },
+      { title: "Notes", description: "Anything else your executors should know", icon: "description", fields: <div className="lf-v4-form-span"><FieldTextArea label="Notes" value={form.notes} onChange={set("notes")} /></div> },
+    ]} />
+  );
+}
+
+function CardDetail({ row, options }: { row: UniversalRecordRow; options: PaymentLinkOptions }) {
+  const meta = (row.metadata ?? {}) as Record<string, unknown>;
+  const type = resolveCardType(row);
+  const bank = options.from.find((option) => option.value === meta.card_bank_id);
+  const bankRef = parseLinkRef(meta.card_bank_id);
+  const currency = /^[A-Z]{3}$/.test(String(meta.currency ?? row.currency_code ?? "")) ? String(meta.currency ?? row.currency_code) : "GBP";
+  const money = (value: unknown) => (Number.isFinite(Number(value)) && String(value ?? "") !== "" ? formatCurrency(Number(value), currency) : null);
+  const balance = money(meta.card_balance ?? (isLegacyCreditCard(row) ? meta.outstanding_balance : null));
+  return (
+    <dl className="lf-v52-account-rows">
+      <div><dt>Type</dt><dd>{cardTypeLabel(type) ?? "Card"}</dd></div>
+      {bank ? <div><dt>Bank account</dt><dd>{bankRef ? <Link href={`/finances/bank?asset=${encodeURIComponent(bankRef.id)}`}>{bank.label}</Link> : bank.label}</dd></div> : null}
+      {cleanLast4(meta.card_last4) ? <div><dt>Card ending</dt><dd>{cleanLast4(meta.card_last4)}</dd></div> : null}
+      {meta.card_expiry ? <div><dt>Expires</dt><dd>{String(meta.card_expiry)}</dd></div> : null}
+      {type === "credit_card" ? <div><dt>Balance owed</dt><dd>{balance ?? "Not recorded"}</dd></div> : null}
+      {type === "gift_card" ? <div><dt>Balance left</dt><dd>{balance ?? "Not recorded"}</dd></div> : null}
+      {type === "loyalty" ? <div><dt>Points</dt><dd>{[meta.card_points ? String(meta.card_points) : "Not recorded", meta.card_points_checked ? `checked ${formatDate(String(meta.card_points_checked))}` : null, money(meta.card_points_value) ? `about ${money(meta.card_points_value)}` : null].filter(Boolean).join(" · ")}</dd></div> : null}
+      {meta.card_member_number ? <div><dt>{type === "gift_card" ? "Code" : "Membership number"}</dt><dd><MaskedField label="Membership number" showLabel={false} value={String(meta.card_member_number)} /></dd></div> : null}
+      {meta.card_renewal ? <div><dt>Renews</dt><dd>{formatDate(String(meta.card_renewal))}</dd></div> : null}
+      <div><dt>After my death</dt><dd>{cardAfterDeathLabel(meta.card_after_death) ?? "Not decided"}</dd></div>
+    </dl>
+  );
+}
+
+function AccountCardsList({ accountRef, cards }: { accountRef: string; cards: Array<Record<string, unknown>> }) {
+  const mine = cards.filter((row) => (row.metadata as Record<string, unknown> | null)?.card_bank_id === accountRef);
+  return (
+    <section className="lf-v52-account-payments" aria-label="Cards on this account">
+      <h2>Cards on this account</h2>
+      {mine.length ? (
+        <ul>
+          {mine.map((row) => {
+            const meta = (row.metadata ?? {}) as Record<string, unknown>;
+            const name = String(meta.card_provider ?? row.title ?? "Card");
+            const brand = findCardBrand(name);
+            return (
+              <li key={String(row.id)}>
+                <Link href={`/finances/cards?record=${encodeURIComponent(String(row.id))}`}>
+                  <BrandMark name={name} logoPath={brand?.logo ?? undefined} />
+                  <span><strong>{String(row.title ?? name)}</strong><small>{[cardTypeLabel(meta.card_type), cleanLast4(meta.card_last4) ? `ending ${cleanLast4(meta.card_last4)}` : null, meta.card_expiry ? `expires ${String(meta.card_expiry)}` : null].filter(Boolean).join(" · ")}</small></span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      ) : <p>No cards recorded for this account yet.</p>}
+      <Link href="/finances/cards?add=1" className="lf-v52-account-payments-add"><Icon name="add" size={18} /> Add a card</Link>
+    </section>
   );
 }

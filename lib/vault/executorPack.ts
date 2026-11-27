@@ -7,6 +7,7 @@
  */
 import { brandChangeNote } from "../assets/providerBrands.mjs";
 import { AFTER_DEATH_OPTIONS, DIRECT_DEBIT_CATEGORY, PAYMENT_FREQUENCY_OPTIONS, optionLabel } from "./directDebits.ts";
+import { CARDS_CATEGORY, cardAfterDeathLabel, cardTypeLabel, cleanLast4, resolveCardType } from "./cards.ts";
 export type PackSourceRow = {
   id: string;
   section_key: string | null;
@@ -102,6 +103,14 @@ export function buildExecutorPack(input: {
       const amount = money(meta.payment_amount, meta.currency ?? row.currency_code);
       const often = optionLabel(PAYMENT_FREQUENCY_OPTIONS, meta.payment_frequency)?.toLowerCase();
       item.value = input.includeValues && amount ? [amount, often].filter(Boolean).join(" ") : null;
+    }
+    if (row.category_key === CARDS_CATEGORY || resolveCardType(row) === "credit_card") {
+      // Cards (27 Nov 2026): what kind, which one (last four digits only) and what should happen to it.
+      const cardType = resolveCardType(row);
+      const last4 = cleanLast4(meta.card_last4);
+      item.type = [cardTypeLabel(cardType) ?? "Card", last4 ? `ending ${last4}` : null, cardAfterDeathLabel(meta.card_after_death)].filter(Boolean).join(" · ");
+      item.provider = String(meta.card_provider ?? meta.creditor_name ?? "") || item.provider;
+      if (cardType === "debit_card" || cardType === "discount") item.value = null;
     }
     item.brandNote = brandChangeNote(item.provider ?? item.title);
     groups.set(key, [...(groups.get(key) ?? []), item]);

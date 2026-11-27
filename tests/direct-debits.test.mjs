@@ -23,7 +23,7 @@ test("direct debits: amounts are outgoings, never counted in value; paid-from li
   const workspace = read("components/records/UniversalRecordWorkspace.tsx");
   assert.match(workspace, /const payee = form\.payment_payee\.trim\(\);[\s\S]{0,600}valueMajor: "0"/);
   assert.match(workspace, /row\.category_key === "bank"\)\.map/);
-  assert.match(workspace, /\/credit\/i\.test/);
+  assert.match(workspace, /isLegacyCreditCard\(row as/);
   assert.match(workspace, /<AccountPaymentsList accountRef=\{linkRef\("asset", selectedRecord\.id\)\}/);
   assert.match(workspace, /payeeAddHref\(payee\)/);
   const finances = read("app/(app)/finances/page.tsx");

@@ -1,5 +1,6 @@
 import { normalizeBankAssetRow } from "../assets/bankAsset.ts";
 import { formatCurrency, formatCurrencyWhole } from "../currency.ts";
+import { cardEstateSign } from "../vault/cards.ts";
 
 export type DashboardAssetRow = {
   id: string;
@@ -32,7 +33,7 @@ export type DashboardDocumentRow = {
 };
 
 export type DashboardAssetBucket = "finance" | "property" | "business" | "digital" | "tasks" | "other";
-export type FinanceCategoryKey = "bank" | "investments" | "pensions" | "insurance" | "debts" | "direct-debits";
+export type FinanceCategoryKey = "bank" | "investments" | "pensions" | "insurance" | "debts" | "direct-debits" | "cards";
 export type DashboardSummaryItem = {
   id: string;
   label: string;
@@ -68,7 +69,7 @@ export type DashboardRecentActivityItem = {
   icon: string;
 };
 
-const FINANCE_CATEGORY_KEYS = new Set(["bank", "bank-account", "bank-accounts", "investments", "investment", "insurance", "pensions", "pension", "debts", "debt", "loans-liabilities"]);
+const FINANCE_CATEGORY_KEYS = new Set(["bank", "bank-account", "bank-accounts", "investments", "investment", "insurance", "pensions", "pension", "debts", "debt", "loans-liabilities", "cards"]);
 const PROPERTY_CATEGORY_KEYS = new Set(["property", "properties"]);
 const BUSINESS_CATEGORY_KEYS = new Set(["business-interests", "business", "businesses"]);
 const DIGITAL_CATEGORY_KEYS = new Set(["digital-assets", "digital", "digital-accounts"]);
@@ -164,7 +165,14 @@ export function getEstateValueMajor(row: DashboardAssetRow) {
   if (category === "insurance") return 0;
   const value = getDashboardAssetValueMajor(row);
   if (category === "debts") return -Math.abs(value);
+  // Cards (27 Nov 2026): credit balances are owed, gift balances and points are worth something, the rest nothing.
+  if (category === "cards") return cardEstateSign(cardTypeOf(row)) * Math.abs(value);
   return value;
+}
+
+function cardTypeOf(row: DashboardAssetRow) {
+  const meta = ((row as { metadata?: Record<string, unknown> | null }).metadata ?? row.metadata_json ?? {}) as Record<string, unknown>;
+  return String(meta.card_type ?? "");
 }
 
 /** Life cover, shown beside the estimated value rather than inside it. */
@@ -439,6 +447,7 @@ function getFinanceEstateValueMajor(row: DashboardAssetRow) {
   const category = canonicalizeFinanceCategoryKey(getNormalizedDashboardCategoryKey(row));
   if (category === "insurance") return 0;
   const value = getFinanceRowValueMajor(row);
+  if (category === "cards") return cardEstateSign(cardTypeOf(row)) * Math.abs(value);
   return category === "debts" ? -Math.abs(value) : value;
 }
 

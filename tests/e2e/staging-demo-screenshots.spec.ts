@@ -909,3 +909,57 @@ for (const kind of ["desk", "phone"] as const) {
     await context.close();
   });
 }
+
+// Cards (owner, 27 Nov 2026): a debit card on the demo HSBC account and a Nectar card, then the bank account page.
+for (const kind of ["desk", "phone"] as const) {
+  test(`cards (${kind})`, async ({ browser }) => {
+    test.setTimeout(240_000);
+    const context = kind === "desk"
+      ? await browser.newContext({ viewport: { width: 1440, height: 900 } })
+      : await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+    const page = await context.newPage();
+    await signIn(page);
+    const existing = await admin.from("records").select("id,metadata").eq("owner_user_id", userId).eq("category_key", "cards");
+    const have = (type: string) => (existing.data ?? []).some((row) => (row.metadata as Record<string, unknown> | null)?.card_type === type);
+    const addCard = async (type: string, provider: string, fill: () => Promise<void>, shot: string) => {
+      await page.goto(`${BASE_URL}/finances/cards?add=1`, { waitUntil: "domcontentloaded" });
+      const typeSelect = page.getByRole("combobox", { name: /^Card type/ });
+      await expect(typeSelect).toBeVisible({ timeout: 30_000 });
+      await typeSelect.selectOption(type);
+      await page.getByRole("textbox", { name: /^(Card provider|Scheme)/ }).fill(provider);
+      await fill();
+      await shoot(page, shot);
+      if (!have(type)) {
+        await page.locator(".lf-v4-form-save, button[type='submit']").filter({ hasText: /Save/ }).first().click();
+        await expect(page.getByText(new RegExp(provider)).first()).toBeVisible({ timeout: 30_000 });
+      }
+    };
+    await addCard("debit_card", "HSBC", async () => {
+      const bank = page.getByRole("combobox", { name: /^Bank account/ });
+      const values = await bank.locator("option").evaluateAll((options) => options.map((option) => (option as HTMLOptionElement).value).filter(Boolean));
+      if (values[0]) await bank.selectOption(values[0]);
+      await page.locator("details.lf-v4-optional-group > summary").first().click();
+      await page.getByRole("textbox", { name: /^Last four digits/ }).fill("4821");
+      await page.getByRole("textbox", { name: /^Expiry/ }).fill("09/28");
+    }, `cards-${kind}-1-debit-form`);
+    await addCard("loyalty", "Nectar", async () => {
+      await page.getByRole("textbox", { name: /^Points balance/ }).fill("4,250");
+    }, `cards-${kind}-2-loyalty-form`);
+    await page.goto(`${BASE_URL}/finances/cards`, { waitUntil: "domcontentloaded" });
+    await shoot(page, `cards-${kind}-3-list`);
+    await page.goto(`${BASE_URL}/finances`, { waitUntil: "domcontentloaded" });
+    await shoot(page, `cards-${kind}-4-finances`);
+    const saved = await admin.from("records").select("id,metadata").eq("owner_user_id", userId).eq("category_key", "cards");
+    const debit = (saved.data ?? []).find((row) => (row.metadata as Record<string, unknown> | null)?.card_type === "debit_card") as { metadata: Record<string, unknown> } | undefined;
+    console.log(`Cards: saved=${saved.data?.length ?? 0} debit_linked=${Boolean(debit?.metadata?.card_bank_id)} last4_only=${String(debit?.metadata?.card_last4 ?? "").length === 4}`);
+    const account = /^asset:(.+)$/.exec(String(debit?.metadata?.card_bank_id ?? ""))?.[1];
+    if (account) {
+      await page.goto(`${BASE_URL}/finances/bank?asset=${account}`, { waitUntil: "domcontentloaded" });
+      const heading = page.getByRole("heading", { name: "Cards on this account" });
+      await expect(heading).toBeVisible({ timeout: 30_000 });
+      await heading.scrollIntoViewIfNeeded();
+      await shoot(page, `cards-${kind}-5-bank-account`);
+    }
+    await context.close();
+  });
+}

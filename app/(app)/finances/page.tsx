@@ -13,7 +13,7 @@ import { useVaultPreferences } from "../../../components/vault/VaultPreferencesC
 import { waitForActiveUser } from "../../../lib/auth/session";
 import { supabase } from "../../../lib/supabaseClient";
 import { resolveWalletContextForRead } from "../../../lib/canonicalPersistence";
-import {
+import { getEstateValueMajor,
   buildFinanceCategorySummary,
   getAssetsForFinanceCategory,
   getFinanceRowCurrencyCode,
@@ -54,6 +54,7 @@ const FINANCE_SECTION_CARDS: FinanceSectionCard[] = [
   { key: "investments", preferenceKey: "finances_investments", title: "Investments", href: "/finances/investments", description: "Record portfolios, funds, and investment platforms.", icon: "trending_up" },
   { key: "insurance", preferenceKey: "finances_insurance", title: "Insurance", href: "/finances/insurance", description: "Capture life and protection policy references.", icon: "health_and_safety" },
   { key: "debts", preferenceKey: "finances_debts", title: "Debts", href: "/finances/debts", description: "Track liabilities and repayment obligations.", icon: "credit_card" },
+  { key: "cards", preferenceKey: "finances_cards", title: "Cards", href: "/finances/cards", description: "Credit, debit, loyalty and gift cards.", icon: "wallet" },
   { key: "direct-debits", preferenceKey: "finances_direct_debits", title: "Direct debits", href: "/finances/direct-debits", description: "Regular payments and what should happen to them.", icon: "event_repeat" },
 ];
 
@@ -145,7 +146,7 @@ export default function FinancesOverviewPage() {
   const sectionTotal = (key: string) => populated.filter((section) => section.key === key).reduce((sum, section) => sum + section.summary.totalMajor, 0);
   const lifeCover = sectionTotal("insurance");
   // Direct debits are outgoings, never part of the estimated value.
-  const total = populated.reduce((sum, section) => sum + (section.key === "insurance" || section.key === "direct-debits" ? 0 : section.key === "debts" ? -Math.abs(section.summary.totalMajor) : section.summary.totalMajor), 0);
+  const total = populated.reduce((sum, section) => sum + (section.key === "insurance" || section.key === "direct-debits" ? 0 : section.key === "debts" ? -Math.abs(section.summary.totalMajor) : section.key === "cards" ? getAssetsForFinanceCategory(assetRows, "cards").reduce((cardSum, row) => cardSum + getEstateValueMajor(row), 0) : section.summary.totalMajor), 0);
   const currencies = new Set(assetRows.map((row) => getFinanceRowCurrencyCode(row) || currency));
   const totalText = currencies.size > 1 ? "Multiple currencies"
     : `${formatCurrencyWhole(total, currency)} estimated value${lifeCover > 0 ? ` · ${formatCurrencyWhole(lifeCover, currency)} life cover` : ""}`;
