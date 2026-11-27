@@ -112,6 +112,10 @@ export function buildExecutorPack(input: {
       item.provider = String(meta.card_provider ?? meta.creditor_name ?? "") || item.provider;
       if (cardType === "debit_card" || cardType === "discount") item.value = null;
     }
+    // Money owed reads "−£12,000 owed", never a bare figure that looks like an asset (27 Nov 2026).
+    if (item.value && (["debts", "debt", "loans-liabilities"].includes(String(row.category_key ?? "")) || resolveCardType(row) === "credit_card")) {
+      item.value = `\u2212${item.value.replace(/^[-\u2212]/, "")} owed`;
+    }
     item.brandNote = brandChangeNote(item.provider ?? item.title);
     groups.set(key, [...(groups.get(key) ?? []), item]);
   }

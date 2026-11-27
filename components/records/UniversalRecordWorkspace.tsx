@@ -26,7 +26,7 @@ import AttachmentGallery, { AttachmentGallerySummary } from "../documents/Attach
 import LinkedPeopleSection from "./LinkedPeopleSection";
 import { linkedPeopleConfig } from "../../lib/linkedPeople/recordLinkedPeople";
 import { waitForActiveUser } from "../../lib/auth/session";
-import { formatCurrency } from "../../lib/currency";
+import { formatCurrency, formatOwed } from "../../lib/currency";
 import {
   CURRENCY_OPTIONS,
   COUNTRY_TO_CURRENCY_DEFAULT,
@@ -3742,6 +3742,10 @@ export default function UniversalRecordWorkspace({
       return value !== null && value !== undefined && value !== "";
     }));
     const showListValue = viewer.mode !== "linked" && !isNarrativeDocumentWorkspace && !isTrustedContacts && hasRecordedValue;
+    // Money owed (loans, mortgages, credit card balances) reads "−£12,000 owed" in the owed colour (27 Nov 2026).
+    const isOwedRow = (isFinanceSection && ["debts", "debt", "loans-liabilities"].includes(String(row.category_key ?? categoryKey))) || (isCards && resolveCardType(row) === "credit_card");
+    const rowCurrency = (row.currency_code ?? "GBP").toUpperCase();
+    const rowAmount = (major: number) => isOwedRow ? <span className="lf-amount-owed">{formatOwed(major, rowCurrency, { whole: false })}</span> : formatCurrency(major, rowCurrency);
     const valueAsOf = canonicalBankAsset?.valuation_date || canonicalPropertyAsset?.valuation_date || canonicalBusinessAsset?.valuation_date || canonicalDigitalAsset?.valuation_date || String(row.metadata?.valuation_date ?? "");
     return (
       <article key={row.id} className={`lf-record-card lf-v52-record-entry${detailMode ? " is-open lf-v52-detail-view" : ""}${detailMode && isFinanceSection ? " lf-v52-finance-detail" : ""}`} data-record-id={row.id}>
@@ -3761,7 +3765,7 @@ export default function UniversalRecordWorkspace({
             <small className="lf-v52-record-summary-mobile-date">Updated {formatDate(row.updated_at)}</small>
           </span>
           <span className="lf-v52-record-summary-date">{formatDate(row.updated_at)}</span>
-          {showListValue ? <span className="lf-v52-record-summary-value">{formatCurrency(toMajorUnits(row.value_minor), (row.currency_code ?? "GBP").toUpperCase())}</span> : null}
+          {showListValue ? <span className="lf-v52-record-summary-value">{rowAmount(toMajorUnits(row.value_minor))}</span> : null}
           <Icon name="chevron_right" size={20} />
         </button>
         {isOpen ? <div id={`record-detail-${row.id}`} className="lf-v52-record-expanded">
@@ -3964,7 +3968,7 @@ export default function UniversalRecordWorkspace({
                     {categoryLabel ? `${categoryLabel} · ` : ""}
                     {isNarrativeDocumentWorkspace ? null : (
                       <>
-                        {formatCurrency(toMajorUnits(row.value_minor), (row.currency_code ?? "GBP").toUpperCase())}
+                        {rowAmount(toMajorUnits(row.value_minor))}
                         {" · "}
                       </>
                     )}
@@ -3996,9 +4000,9 @@ export default function UniversalRecordWorkspace({
                 <div><span>{paymentOptionLabel(PAYMENT_FREQUENCY_OPTIONS, row.metadata?.payment_frequency) ?? "How often not recorded"}{row.metadata?.payment_day ? ` · usually ${String(row.metadata.payment_day)}` : ""}</span></div>
               </section>
             ) : viewer.mode !== "linked" && (isFinanceSection || isCanonicalProperty || isCanonicalBusiness || isCanonicalDigital || isPossessions) ? (
-              <section className="lf-v52-record-value" aria-label="Record value">
-                <div><strong>Value</strong><span>Owner-recorded estimate</span></div>
-                <p>{hasRecordedValue ? formatCurrency(canonicalBankAsset?.current_balance ?? canonicalPropertyAsset?.estimated_value_major ?? canonicalBusinessAsset?.estimated_value_major ?? canonicalDigitalAsset?.estimated_value_major ?? toMajorUnits(row.value_minor), (row.currency_code ?? "GBP").toUpperCase()) : "Value not recorded"}</p>
+              <section className="lf-v52-record-value" aria-label={isOwedRow ? "Amount owed" : "Record value"}>
+                <div><strong>{isOwedRow ? "Amount owed" : "Value"}</strong><span>Owner-recorded estimate</span></div>
+                <p>{isOwedRow ? (hasRecordedValue ? rowAmount(toMajorUnits(row.value_minor)) : "Amount not recorded") : hasRecordedValue ? formatCurrency(canonicalBankAsset?.current_balance ?? canonicalPropertyAsset?.estimated_value_major ?? canonicalBusinessAsset?.estimated_value_major ?? canonicalDigitalAsset?.estimated_value_major ?? toMajorUnits(row.value_minor), (row.currency_code ?? "GBP").toUpperCase()) : "Value not recorded"}</p>
                 <div><span>{valueAsOf ? `As of ${formatDate(valueAsOf)}` : "As of date not recorded"}</span></div>
               </section>
             ) : null}
@@ -7986,7 +7990,7 @@ function CardDetail({ row, options }: { row: UniversalRecordRow; options: Paymen
       {bank ? <div><dt>Bank account</dt><dd>{bankRef ? <Link href={`/finances/bank?asset=${encodeURIComponent(bankRef.id)}`}>{bank.label}</Link> : bank.label}</dd></div> : null}
       {cleanLast4(meta.card_last4) ? <div><dt>Card ending</dt><dd>{cleanLast4(meta.card_last4)}</dd></div> : null}
       {meta.card_expiry ? <div><dt>Expires</dt><dd>{String(meta.card_expiry)}</dd></div> : null}
-      {type === "credit_card" ? <div><dt>Balance owed</dt><dd>{balance ?? "Not recorded"}</dd></div> : null}
+      {type === "credit_card" ? <div><dt>Balance owed</dt><dd>{balance ? <span className="lf-amount-owed">{formatOwed(Number(meta.card_balance ?? meta.outstanding_balance), currency, { whole: false })}</span> : "Not recorded"}</dd></div> : null}
       {type === "gift_card" ? <div><dt>Balance left</dt><dd>{balance ?? "Not recorded"}</dd></div> : null}
       {type === "loyalty" ? <div><dt>Points</dt><dd>{[meta.card_points ? String(meta.card_points) : "Not recorded", meta.card_points_checked ? `checked ${formatDate(String(meta.card_points_checked))}` : null, money(meta.card_points_value) ? `about ${money(meta.card_points_value)}` : null].filter(Boolean).join(" · ")}</dd></div> : null}
       {meta.card_member_number ? <div><dt>{type === "gift_card" ? "Code" : "Membership number"}</dt><dd><MaskedField label="Membership number" showLabel={false} value={String(meta.card_member_number)} /></dd></div> : null}
@@ -8105,7 +8109,7 @@ function PropertyLoansList({ propertyRef, loans }: { propertyRef: string; loans:
               <li key={String(row.id)}>
                 <Link href={`/finances/debts?record=${encodeURIComponent(String(row.id))}`}>
                   <BrandMark name={name} logoPath={findProviderBrand(name)?.logo ?? undefined} tileColor={findProviderBrand(name)?.color ?? null} />
-                  <span><strong>{name}</strong><small>{[getCategoryTypeLabel("finances", "debts", String(meta.debt_type ?? "")), Number.isFinite(balance) && balance > 0 ? `${formatCurrency(balance, "GBP")} left to pay` : null].filter(Boolean).join(" · ")}</small></span>
+                  <span><strong>{name}</strong><small>{[getCategoryTypeLabel("finances", "debts", String(meta.debt_type ?? "")), ].filter(Boolean).join(" · ")}{Number.isFinite(balance) && balance > 0 ? <> · <span className="lf-amount-owed">{formatOwed(balance, "GBP")}</span></> : null}</small></span>
                 </Link>
               </li>
             );

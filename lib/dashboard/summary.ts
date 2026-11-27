@@ -1,5 +1,5 @@
 import { normalizeBankAssetRow } from "../assets/bankAsset.ts";
-import { formatCurrency, formatCurrencyWhole } from "../currency.ts";
+import { formatCurrency, formatCurrencyWhole, formatOwed } from "../currency.ts";
 import { cardEstateSign } from "../vault/cards.ts";
 
 export type DashboardAssetRow = {
@@ -49,6 +49,11 @@ export type DashboardBucketSummary = {
 };
 export type DashboardFinanceSummary = DashboardBucketSummary & {
   totalMajor: number;
+  /** What is held and what is owed, before netting (27 Nov 2026). */
+  heldMajor: number;
+  owedMajor: number;
+  /** "−£185,000 owed" when anything is owed, else null. */
+  owedText: string | null;
   includedCount: number;
   categoryCount: number;
 };
@@ -236,6 +241,8 @@ export function buildFinanceSummary<T extends DashboardAssetRow>(
 ): DashboardFinanceSummary {
   const canonicalFinanceRows = sortRowsByDescendingValue(prioritizeCreatedAsset(getAssetsForBucket(rows, "finance"), createdId));
   const totalMajor = canonicalFinanceRows.reduce((sum, row) => sum + getFinanceEstateValueMajor(row), 0);
+  const heldMajor = canonicalFinanceRows.reduce((sum, row) => sum + Math.max(0, getFinanceEstateValueMajor(row)), 0);
+  const owedMajor = canonicalFinanceRows.reduce((sum, row) => sum + Math.max(0, -getFinanceEstateValueMajor(row)), 0);
   const categoryCount = new Set(
     canonicalFinanceRows
       .map((row) => canonicalizeFinanceCategoryKey(getNormalizedDashboardCategoryKey(row)))
@@ -244,7 +251,11 @@ export function buildFinanceSummary<T extends DashboardAssetRow>(
 
   return {
     addedAt: latestTimestamp(canonicalFinanceRows.map((row) => row.updated_at ?? row.created_at)),
-    valueText: canonicalFinanceRows.length ? formatCurrencyWhole(totalMajor, currency) : "No records yet",
+    // With anything owed, show what is held and (separately) what is owed, never a bare negative total.
+    valueText: !canonicalFinanceRows.length ? "No records yet" : owedMajor > 0 ? `${formatCurrencyWhole(heldMajor, currency)} held` : formatCurrencyWhole(totalMajor, currency),
+    heldMajor,
+    owedMajor,
+    owedText: owedMajor > 0 ? formatOwed(owedMajor, currency) : null,
     detailText: canonicalFinanceRows.length
       ? `${canonicalFinanceRows.length} finance record(s) across ${categoryCount || 1} categor${(categoryCount || 1) === 1 ? "y" : "ies"}`
       : "No records yet",
