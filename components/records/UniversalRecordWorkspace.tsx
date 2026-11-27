@@ -471,6 +471,7 @@ type EditForm = {
   card_points_value: string;
   card_renewal: string;
   card_after_death: string;
+  debt_property_id: string;
 };
 
 type LegalContactFormRow = {
@@ -688,6 +689,7 @@ const EMPTY_FORM: EditForm = {
   card_points_value: "",
   card_renewal: "",
   card_after_death: "",
+  debt_property_id: "",
 };
 
 const DEFAULT_PROVIDER_CATALOG: ProviderCatalogRow[] = [
@@ -930,6 +932,8 @@ export default function UniversalRecordWorkspace({
   const [accountPayments, setAccountPayments] = useState<Array<Record<string, unknown>>>([]);
   // Bank account pages also list the debit cards linked to that account.
   const [accountCards, setAccountCards] = useState<Array<Record<string, unknown>>>([]);
+  // Property pages list the mortgages and loans secured on that property.
+  const [propertyLoans, setPropertyLoans] = useState<Array<Record<string, unknown>>>([]);
   const [taskExecutorOptions, setTaskExecutorOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [taskBeneficiaryOptions, setTaskBeneficiaryOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -1167,12 +1171,13 @@ export default function UniversalRecordWorkspace({
           .eq("active", true),
       ]);
 
-      if (isDirectDebits || isBankCategory || isCards) {
+      if (isDirectDebits || isBankCategory || isCards || (isFinanceSection && categoryKey === "debts") || isCanonicalProperty) {
         const links = await loadPaymentLinkOptions(targetOwnerUserId);
         if (mounted) {
           setPaymentLinkOptions(links.options);
           setAccountPayments(links.payments);
           setAccountCards(links.cards);
+          setPropertyLoans(links.loans);
         }
       }
 
@@ -1303,7 +1308,7 @@ export default function UniversalRecordWorkspace({
     return () => {
       mounted = false;
     };
-  }, [categoryKey, forceCanonicalRead, isBankCategory, isCanonicalTask, isCards, isDirectDebits, recordFilter, router, sectionKey, usesCanonicalAssetReadPath, viewer]);
+  }, [categoryKey, forceCanonicalRead, isBankCategory, isCanonicalProperty, isCanonicalTask, isCards, isDirectDebits, isFinanceSection, recordFilter, router, sectionKey, usesCanonicalAssetReadPath, viewer]);
 
   // Identity documents: "Expires soon", "Expired" or "Expired, replaced" (owner decision 5 Nov 2026).
   const identityStatuses = useMemo(
@@ -1811,6 +1816,7 @@ export default function UniversalRecordWorkspace({
       card_points_value: String(row.metadata?.card_points_value ?? ""),
       card_renewal: String(row.metadata?.card_renewal ?? ""),
       card_after_death: String(row.metadata?.card_after_death ?? ""),
+      debt_property_id: String(row.metadata?.debt_property_id ?? ""),
     });
     setPendingPhotoFile(null);
     setPendingDocumentFiles([]);
@@ -4452,6 +4458,7 @@ export default function UniversalRecordWorkspace({
             <div><h1>{selectedRecord.title || "Untitled record"}</h1><p>{selectedRecord.provider_name || title} · Updated {formatDate(selectedRecord.updated_at)}</p>{selectedBankNickname ? <p className="lf-v52-record-nickname">Account nickname: <strong>{selectedBankNickname}</strong></p> : null}</div>
           </div>
           {renderRow(selectedRecord, true)}
+          {isCanonicalProperty ? <PropertyLoansList propertyRef={linkRef("asset", selectedRecord.id)} loans={propertyLoans} /> : null}
           {isBankCategory ? <AccountCardsList accountRef={linkRef("asset", selectedRecord.id)} cards={accountCards} /> : null}
           {isBankCategory ? <AccountPaymentsList accountRef={linkRef("asset", selectedRecord.id)} payments={accountPayments} /> : null}
           {viewer.mode !== "linked" ? <details className="lf-v52-record-more-actions"><summary>More record actions</summary>
@@ -5547,18 +5554,27 @@ function FinanceFields({
 
   return (
     <FinanceFormLayout required={<>
-      <FieldInput label="Creditor name" required value={form.creditor_name} onChange={(value) => setForm((prev) => ({ ...prev, creditor_name: value }))} />
-      <FieldSelect label="Debt type" required value={form.debt_type} options={DEBT_SELECT_OPTIONS} onChange={(value) => setForm((prev) => ({ ...prev, debt_type: value }))} />
-      <CurrencyAmountField label="Outstanding balance" value={form.outstanding_balance} currency={form.currency_code} onValueChange={(value) => setForm((prev) => ({ ...prev, outstanding_balance: value }))} onCurrencyChange={(value) => setForm((prev) => ({ ...prev, currency_code: value }))} />
+      <FieldSelect label="Type" required value={form.debt_type} options={DEBT_SELECT_OPTIONS} onChange={(value) => setForm((prev) => ({ ...prev, debt_type: value }))} />
+      <div className="lf-v52-payee-field">
+        {findProviderBrand(form.creditor_name)?.logo ? <BrandMark name={form.creditor_name} logoPath={findProviderBrand(form.creditor_name)?.logo ?? undefined} /> : null}
+        <FieldInput label={debtLenderLabel(form.debt_type)} required value={form.creditor_name} onChange={(value) => setForm((prev) => ({ ...prev, creditor_name: value }))} />
+      </div>
+      <CurrencyAmountField label="Amount left to pay" value={form.outstanding_balance} currency={form.currency_code} onValueChange={(value) => setForm((prev) => ({ ...prev, outstanding_balance: value }))} onCurrencyChange={(value) => setForm((prev) => ({ ...prev, currency_code: value }))} />
+      {isSecuredDebt(form.debt_type) ? (paymentLinkOptions.properties?.length ? (
+        <FieldLogoPicker label="Secured on" value={form.debt_property_id} options={toPickerOptions(paymentLinkOptions.properties).map((option) => ({ ...option, detail: "Property" }))} placeholder="Which property is this mortgage on?" onChange={(value) => setForm((prev) => ({ ...prev, debt_property_id: value }))} />
+      ) : (
+        <p className="lf-v52-payment-hint">Add the property in Property to link this mortgage to it. <Link href="/property?add=1" target="_blank">Add a property</Link></p>
+      )) : null}
+      {debtTypeHint(form.debt_type) ? <p className="lf-v52-payment-hint lf-v4-form-span">{debtTypeHint(form.debt_type)}</p> : null}
     </>} optional={[
-      { title: "Debt details", description: "Reference, debtor and repayment", icon: "credit_card", fields: <>
+      { title: "Loan details", description: "Reference, borrower and repayment", icon: "credit_card", fields: <>
         <FieldInput label="Account/reference number" value={form.debt_reference} onChange={(value) => setForm((prev) => ({ ...prev, debt_reference: value }))} />
-        <FieldInput label="Debtor name" value={form.debtor_name} onChange={(value) => setForm((prev) => ({ ...prev, debtor_name: value }))} />
+        <FieldInput label="Borrower name" value={form.debtor_name} onChange={(value) => setForm((prev) => ({ ...prev, debtor_name: value }))} />
         <FieldInput label="Repayment amount" type="number" value={form.repayment_amount} onChange={(value) => setForm((prev) => ({ ...prev, repayment_amount: value }))} />
         <FieldInput label="Repayment frequency" value={form.repayment_frequency} onChange={(value) => setForm((prev) => ({ ...prev, repayment_frequency: value }))} />
         <FieldInput label="Interest rate" type="number" value={form.interest_rate} onChange={(value) => setForm((prev) => ({ ...prev, interest_rate: value }))} />
       </> },
-      { title: "Creditor contact", description: "Phone, email and address", icon: "support_agent", fields: <>
+      { title: "Lender contact", description: "Phone, email and address", icon: "support_agent", fields: <>
         <FieldInput label="Creditor phone" type="tel" value={form.creditor_phone} onChange={(value) => setForm((prev) => ({ ...prev, creditor_phone: value }))} />
         <FieldInput label="Creditor email" type="email" value={form.creditor_email} onChange={(value) => setForm((prev) => ({ ...prev, creditor_email: value }))} />
         <FieldInput label="Creditor address" value={form.creditor_address} onChange={(value) => setForm((prev) => ({ ...prev, creditor_address: value }))} />
@@ -6474,6 +6490,8 @@ function getFinanceDraft(categoryKey: string, form: EditForm) {
         creditor_phone: form.creditor_phone.trim() || null,
         creditor_email: form.creditor_email.trim() || null,
         creditor_address: form.creditor_address.trim() || null,
+        // A mortgage or secured loan can name the property it is secured on (27 Nov 2026).
+        debt_property_id: parseLinkRef(form.debt_property_id) ? form.debt_property_id : null,
       },
     };
   }
@@ -7710,16 +7728,16 @@ const dangerBtn: CSSProperties = {
  * as the signed-in person under row-level security, so a linked viewer only ever sees what they were given.
  * ------------------------------------------------------------------------------------------------------------- */
 type PaymentLinkOption = { value: string; label: string; category?: string; logo?: string | null };
-type PaymentLinkOptions = { from: PaymentLinkOption[]; to: PaymentLinkOption[] };
+type PaymentLinkOptions = { from: PaymentLinkOption[]; to: PaymentLinkOption[]; properties?: PaymentLinkOption[] };
 
 const PAYMENT_TO_EXCLUDED = new Set([DIRECT_DEBIT_CATEGORY, CARDS_CATEGORY, "executors", "beneficiaries", "tasks", "next-of-kin", "contacts", "trusted-contacts", "wishes", "help_requests", "help_replies", "identity-documents"]);
 const PAYMENT_CATEGORY_LABELS: Record<string, string> = {
-  bank: "Bank account", investments: "Investment", pensions: "Pension", insurance: "Insurance", debts: "Debt",
+  bank: "Bank account", investments: "Investment", pensions: "Pension", insurance: "Insurance", debts: "Loan",
   subscriptions: "Subscription", "social-media": "Social media", digital: "Digital", property: "Property", business: "Business",
 };
 
-async function loadPaymentLinkOptions(ownerUserId: string): Promise<{ options: PaymentLinkOptions; payments: Array<Record<string, unknown>>; cards: Array<Record<string, unknown>> }> {
-  const empty = { options: { from: [], to: [] }, payments: [], cards: [] };
+async function loadPaymentLinkOptions(ownerUserId: string): Promise<{ options: PaymentLinkOptions; payments: Array<Record<string, unknown>>; cards: Array<Record<string, unknown>>; loans: Array<Record<string, unknown>> }> {
+  const empty = { options: { from: [], to: [], properties: [] }, payments: [], cards: [], loans: [] };
   try {
     const walletContext = await resolveWalletContextForRead(supabase, ownerUserId);
     const [assetResult, recordResult] = await Promise.all([
@@ -7751,7 +7769,11 @@ async function loadPaymentLinkOptions(ownerUserId: string): Promise<{ options: P
     for (const option of to) option.logo = findPayeeBrand(option.label.split(" · ")[0])?.logo ?? null;
     const payments = records.filter((row) => row.category_key === DIRECT_DEBIT_CATEGORY);
     const cards = records.filter((row) => row.category_key === CARDS_CATEGORY);
-    return { options: { from, to }, payments, cards };
+    const properties: PaymentLinkOption[] = assets.filter((row) => row.section_key === "property")
+      .map((row) => ({ value: linkRef("asset", String(row.id)), label: label(row), category: "property", logo: null }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+    const loans = records.filter((row) => ["debts", "debt", "loans-liabilities"].includes(String(row.category_key ?? "")) && (row.metadata as Record<string, unknown> | null)?.debt_property_id);
+    return { options: { from, to, properties }, payments, cards, loans };
   } catch {
     return empty;
   }
@@ -8035,4 +8057,54 @@ function cardsHeader(rows: Array<{ category_key?: string | null; metadata?: Reco
     if (type === "loyalty") worth += amount(meta.card_points_value);
   }
   return [owed ? ` · ${formatCurrency(owed, "GBP")} owed` : "", worth ? ` · ${formatCurrency(worth, "GBP")} in balances and points` : ""].join("");
+}
+
+
+/* Loans & mortgages (owner, 27 Nov 2026). */
+function isSecuredDebt(type: string) {
+  return /^(mortgage|business_debt|personal_loan)$/.test(canonicalizeCategoryTypeValue("finances", "debts", type) || type);
+}
+
+function debtLenderLabel(type: string) {
+  const key = canonicalizeCategoryTypeValue("finances", "debts", type) || type;
+  if (key === "mortgage") return "Mortgage lender";
+  if (key === "family_loan") return "Who it is owed to";
+  if (key === "buy_now_pay_later") return "Provider (for example Klarna)";
+  if (key === "student_loan") return "Lender (usually Student Loans Company)";
+  return "Lender";
+}
+
+function debtTypeHint(type: string) {
+  const key = canonicalizeCategoryTypeValue("finances", "debts", type) || type;
+  if (key === "student_loan") return "UK student loans are normally cancelled when the borrower dies. Your executor tells the Student Loans Company and sends a copy of the death certificate.";
+  if (key === "family_loan") return "Saying who you owe, and how much, helps your executors settle it fairly and avoids misunderstandings in the family.";
+  if (key === "car_finance") return "On HP or PCP the car usually belongs to the finance company until the last payment. Your executor will need to settle or hand back the car.";
+  return null;
+}
+
+function PropertyLoansList({ propertyRef, loans }: { propertyRef: string; loans: Array<Record<string, unknown>> }) {
+  const mine = loans.filter((row) => (row.metadata as Record<string, unknown> | null)?.debt_property_id === propertyRef);
+  return (
+    <section className="lf-v52-account-payments" aria-label="Mortgages and loans on this property">
+      <h2>Mortgages and loans on this property</h2>
+      {mine.length ? (
+        <ul>
+          {mine.map((row) => {
+            const meta = (row.metadata ?? {}) as Record<string, unknown>;
+            const name = String(meta.creditor_name ?? row.title ?? "Loan");
+            const balance = Number(meta.outstanding_balance);
+            return (
+              <li key={String(row.id)}>
+                <Link href={`/finances/debts?record=${encodeURIComponent(String(row.id))}`}>
+                  <BrandMark name={name} logoPath={findProviderBrand(name)?.logo ?? undefined} tileColor={findProviderBrand(name)?.color ?? null} />
+                  <span><strong>{name}</strong><small>{[getCategoryTypeLabel("finances", "debts", String(meta.debt_type ?? "")), Number.isFinite(balance) && balance > 0 ? `${formatCurrency(balance, "GBP")} left to pay` : null].filter(Boolean).join(" · ")}</small></span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      ) : <p>No mortgage recorded for this property.</p>}
+      <Link href="/finances/debts?add=1" className="lf-v52-account-payments-add"><Icon name="add" size={18} /> Add a mortgage or loan</Link>
+    </section>
+  );
 }

@@ -368,11 +368,11 @@ const CATEGORY_FORM_CONFIGS: AssetCategoryFormConfig[] = [
   },
   {
     categorySlug: "debts",
-    title: "Debt",
+    title: "Loan or mortgage",
     fields: [
       SHARED_TITLE,
       field({ key: "creditor_name", label: "Creditor name", inputType: "text", required: true }),
-      field({ key: "debt_type", label: "Debt type", inputType: "select", required: true, options: DEBT_TYPE_OPTIONS, supportsOther: true, otherKey: "debt_type_other" }),
+      field({ key: "debt_type", label: "Type", inputType: "select", required: true, options: DEBT_TYPE_OPTIONS, supportsOther: true, otherKey: "debt_type_other" }),
       field({ key: "debt_reference", label: "Account/reference number", inputType: "text", required: true, sensitive: true }),
       field({ key: "outstanding_balance", label: "Outstanding balance", inputType: "number", required: true }),
       SHARED_CURRENCY,

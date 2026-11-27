@@ -17,7 +17,7 @@ const migrationSource = readFileSync(
   "utf8",
 );
 const latestMigrationSource = readFileSync(
-  new URL("../supabase/migrations/20260717120000_fix_finance_type_allowed_tokens.sql", import.meta.url),
+  new URL("../supabase/migrations/20261127120000_loans_and_cards.sql", import.meta.url),
   "utf8",
 );
 const fieldDictionarySource = readFileSync(new URL("../lib/assets/fieldDictionary.ts", import.meta.url), "utf8");

@@ -968,3 +968,52 @@ for (const kind of ["desk", "phone"] as const) {
     await context.close();
   });
 }
+
+// Loans & mortgages (owner, 27 Nov 2026): a Nationwide mortgage secured on the demo property, then the property page.
+for (const kind of ["desk", "phone"] as const) {
+  test(`finance links: loans and mortgages (${kind})`, async ({ browser }) => {
+    test.setTimeout(240_000);
+    const context = kind === "desk"
+      ? await browser.newContext({ viewport: { width: 1440, height: 900 } })
+      : await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+    const page = await context.newPage();
+    await signIn(page);
+    await page.goto(`${BASE_URL}/finances`, { waitUntil: "domcontentloaded" });
+    await shoot(page, `loans-${kind}-1-finances`);
+    await page.goto(`${BASE_URL}/finances/debts?add=1`, { waitUntil: "domcontentloaded" });
+    const type = page.getByRole("combobox", { name: /^Type/ });
+    await expect(type).toBeVisible({ timeout: 30_000 });
+    const typeLabels = await type.locator("option").allTextContents();
+    console.log(`Loans: types=${typeLabels.filter(Boolean).join("|")}`);
+    await type.selectOption("mortgage");
+    await page.getByRole("textbox", { name: /^Mortgage lender/ }).fill("Nationwide");
+    await page.getByRole("spinbutton", { name: /^Amount left to pay$/ }).fill("185000");
+    const securedOn = page.getByRole("combobox", { name: /^Secured on/ });
+    await expect(securedOn).toBeVisible({ timeout: 30_000 });
+    await securedOn.click();
+    await expect(page.getByRole("listbox").getByRole("option").first()).toBeVisible();
+    await shoot(page, `loans-${kind}-2-secured-on-picker`);
+    await page.getByRole("listbox").getByRole("option").first().click();
+    const existing = await admin.from("records").select("id,metadata").eq("owner_user_id", userId).eq("category_key", "debts");
+    const hasMortgage = (existing.data ?? []).some((row) => (row.metadata as Record<string, unknown> | null)?.debt_property_id);
+    if (!hasMortgage) {
+      await page.locator(".lf-v4-form-save, button[type='submit']").filter({ hasText: /Save/ }).first().click();
+      await expect(page.getByText(/Nationwide/).first()).toBeVisible({ timeout: 30_000 });
+    }
+    await page.goto(`${BASE_URL}/finances/debts`, { waitUntil: "domcontentloaded" });
+    await shoot(page, `loans-${kind}-3-list`);
+    const saved = await admin.from("records").select("id,metadata").eq("owner_user_id", userId).eq("category_key", "debts");
+    const mortgage = (saved.data ?? []).find((row) => (row.metadata as Record<string, unknown> | null)?.debt_property_id) as { metadata: Record<string, unknown> } | undefined;
+    const property = /^asset:(.+)$/.exec(String(mortgage?.metadata?.debt_property_id ?? ""))?.[1];
+    const cards = await admin.from("records").select("id").eq("owner_user_id", userId).eq("category_key", "debts").eq("metadata->>debt_type", "credit_card");
+    console.log(`Loans: mortgage_linked=${Boolean(property)} credit_cards_left_in_debts=${cards.data?.length ?? 0}`);
+    if (property) {
+      await page.goto(`${BASE_URL}/property?asset=${property}`, { waitUntil: "domcontentloaded" });
+      const heading = page.getByRole("heading", { name: "Mortgages and loans on this property" });
+      await expect(heading).toBeVisible({ timeout: 30_000 });
+      await heading.scrollIntoViewIfNeeded();
+      await shoot(page, `loans-${kind}-4-property`);
+    }
+    await context.close();
+  });
+}

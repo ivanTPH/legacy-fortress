@@ -37,7 +37,8 @@ test("manual finance branches use controlled selects for bounded type fields", (
   assert.match(workspace, /<select aria-label=\{`\$\{label\} currency`\} value=\{currency\}/);
   assert.match(workspace, /FieldSelect label="Ownership type" value=\{form\.ownership_type\} options=\{OWNERSHIP_TYPE_OPTIONS\}/);
   assert.match(workspace, /FieldSelect label="Policy type" required value=\{form\.policy_type\} options=\{INSURANCE_SELECT_OPTIONS\}/);
-  assert.match(workspace, /FieldSelect label="Debt type" required value=\{form\.debt_type\} options=\{DEBT_SELECT_OPTIONS\}/);
+  // Loans & mortgages (27 Nov 2026): the type field is now just "Type".
+  assert.match(workspace, /FieldSelect label="Type" required value=\{form\.debt_type\} options=\{DEBT_SELECT_OPTIONS\}/);
 });
 
 test("shared upload styling supports pending file chips", () => {
