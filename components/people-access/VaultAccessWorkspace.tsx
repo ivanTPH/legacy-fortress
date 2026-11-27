@@ -1,6 +1,7 @@
 "use client";
 
 import HelpTip from "../ui/HelpTip";
+import PersonAvatar, { usePeoplePhotos } from "../ui/PersonAvatar";
 import { tellStaff } from "@/lib/staffAlertClient";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -215,7 +216,7 @@ export default function VaultAccessWorkspace({ mode = "now" }: { mode?: "now" | 
                 <div className="lf-va-group" role="row"><span role="cell">{GROUP_TITLE[group]}</span></div>
                 {groupRows.map((row) => (
                   <button key={row.key} type="button" className="lf-va-row" role="row" onClick={() => setPanelKey(row.key)} aria-label={`Open Vault access for ${row.person?.name ?? "this person"}`}>
-                    <span role="cell" className="lf-va-person"><Avatar name={row.person?.name ?? "?"} /><span><strong>{row.person?.name ?? "Removed person"}</strong><small>{row.person?.relationship ?? "Relationship not recorded"}</small></span></span>
+                    <span role="cell" className="lf-va-person"><Avatar name={row.person?.name ?? "?"} personId={row.person?.id} /><span><strong>{row.person?.name ?? "Removed person"}</strong><small>{row.person?.relationship ?? "Relationship not recorded"}</small></span></span>
                     <span role="cell" className="lf-va-covers">{row.covers}</span>
                     <span role="cell" className="lf-va-kind">{row.kind}<small>{row.condition}</small></span>
                     <span role="cell" className="lf-va-chips">{row.chips.map((chip) => <Chip key={chip.label} {...chip} />)}</span>
@@ -357,7 +358,7 @@ function SetupDialog({ snapshot, ownerId, onClose, onSaved, onAttorney, initialP
           {snapshot.people.map((item) => (
             <label key={item.id} className={`lf-va-choice${personId === item.id ? " is-selected" : ""}`}>
               <input type="radio" name="va-person" value={item.id} checked={personId === item.id} onChange={() => { setPersonId(item.id); setNotify(item.joined); }} />
-              <Avatar name={item.name} />
+              <Avatar name={item.name} personId={item.id} />
               <span><strong>{item.name}</strong><small>{[item.relationship, nominated.has(item.id) ? "Already nominated for later" : null].filter(Boolean).join(" · ") || "Relationship not recorded"}</small></span>
             </label>
           ))}
@@ -577,9 +578,10 @@ function Chip({ tone, icon, label }: { tone: "ok" | "wait" | "neutral" | "stop";
   return <span className={`lf-va-chip is-${tone}`}><Icon name={icon} size={14} />{label}</span>;
 }
 
-function Avatar({ name }: { name: string }) {
-  const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "?";
-  return <span className="lf-va-avatar" aria-hidden="true">{initials}</span>;
+/** The person's own photo once they have accepted and linked their account; initials otherwise (27 Nov 2026). */
+function Avatar({ name, personId }: { name: string; personId?: string | null }) {
+  const photos = usePeoplePhotos();
+  return <PersonAvatar className="lf-va-avatar" name={name} photoUrl={personId ? photos[personId] : null} />;
 }
 
 /** "unverified" must never read as verified, and someone who hasn't joined can't have checked their ID. */

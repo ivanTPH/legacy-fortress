@@ -457,7 +457,8 @@ test("dashboard profile chip signs the avatar through the authenticated server r
   assert.match(layout, /authorization: `Bearer \$\{token\}`/);
   assert.match(route, /getRequestUser\(request\)/);
   assert.match(route, /createSupabaseAdminClient\(\)/);
-  assert.match(route, /getProfileAvatarPreview\(admin, profile\.avatar_path\)/);
+  // A Google sign-in photo may be copied in first (27 Nov 2026); the signed link still comes from the server.
+  assert.match(route, /getProfileAvatarPreview\(admin, avatarPath\)/);
   assert.match(route, /"Cache-Control": "no-store"/);
   assert.match(avatarRoute, /getRequestUser\(request\)/);
   assert.match(avatarRoute, /AVATAR_BUCKET_CANDIDATES/);

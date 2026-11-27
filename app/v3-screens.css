@@ -1047,3 +1047,24 @@ a.lf-topbar-shield:focus-visible { outline: 3px solid var(--lf-focus); outline-o
 .lf-amount-owed, .lf-v52-section-count strong.lf-amount-owed, .lf-v52-section-meta .lf-amount-owed { color: var(--lf-owed); font-variant-numeric: tabular-nums; }
 .lf-amount-owed.is-on-dark { color: var(--lf-owed-on-dark); }
 .lf-v3-value-breakdown { display: block; margin-top: 6px; font-size: 14px; opacity: 0.92; }
+
+/* People's photos (27 Nov 2026): the photo fills the round avatar; initials stay when there is none. */
+.lf-person-photo-avatar.has-photo { padding: 0; overflow: hidden; background: #EFE7E1; }
+.lf-person-photo-avatar.has-photo img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+
+/* "Add a photo of yourself?" (27 Nov 2026). */
+.lf-add-photo-prompt { display: flex; gap: 14px; align-items: flex-start; margin: 0 0 16px; padding: 16px; border: 1px solid var(--lf-border, #EBE4DE); border-radius: 16px; background: #FFFFFF; }
+.lf-add-photo-prompt-icon { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: #F6EFEA; color: #8C4A32; }
+.lf-add-photo-prompt strong { display: block; font-size: 17px; }
+.lf-add-photo-prompt p { margin: 4px 0 0; font-size: 15px; line-height: 1.45; color: var(--lf-text-secondary); }
+.lf-add-photo-prompt-error { color: var(--lf-owed, #A0412D) !important; }
+.lf-add-photo-prompt-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.lf-add-photo-prompt-actions button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 8px 14px; border: 1px solid var(--lf-border-input, #CFC4BC); border-radius: 12px; background: #FFFFFF; color: var(--lf-text); font: inherit; font-weight: 600; cursor: pointer; transition: background-color 120ms; }
+.lf-add-photo-prompt-actions button:hover { background: #F6EFEA; }
+.lf-add-photo-prompt-actions button:active { background: #EBE0D8; }
+.lf-add-photo-prompt-actions button:focus-visible { outline: 2px solid #8C4A32; outline-offset: 2px; }
+.lf-add-photo-prompt-actions button.is-primary { background: #2B1714; border-color: #2B1714; color: #FFFFFF; }
+.lf-add-photo-prompt-actions button.is-quiet { border-color: transparent; background: transparent; color: var(--lf-text-secondary); }
+.lf-add-photo-prompt.is-done { align-items: center; }
+.lf-add-photo-prompt.is-done > :last-child { margin-left: auto; min-height: 44px; padding: 8px 12px; border: 0; background: transparent; font: inherit; font-weight: 600; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .lf-add-photo-prompt-actions button { transition: none; } }

@@ -86,7 +86,7 @@ export function Row({
   </div>;
 }
 
-export function PageHeader({ title, description, action, children }: { title: string; description?: string; action?: ReactNode; children?: ReactNode }) {
+export function PageHeader({ title, description, action, children }: { title: string; description?: ReactNode; action?: ReactNode; children?: ReactNode }) {
   return <header className="lf-v3-page-header">{children}<div className="lf-v3-page-header-main"><div><h1>{title}</h1>{description ? <p>{description}</p> : null}</div>{action ? <div className="lf-v3-page-header-action">{action}</div> : null}</div></header>;
 }
 

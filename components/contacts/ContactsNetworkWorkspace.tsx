@@ -47,6 +47,7 @@ import { loadPersonRecordLinks, type PersonRecordLink } from "../../lib/linkedPe
 import { firstName, grantIsOpen, loadVaultAccess, type VaultAccessSnapshot } from "../../lib/vaultAccess/vaultAccess";
 import { ROLE_RULES, type CollaboratorRole, type SectionKey } from "../../lib/access-control/roles";
 import { cancelWaitingInvitation, resendWaitingInvitation, toAccessActivationStatus, toCollaboratorRole } from "../../lib/contacts/invitationActions";
+import PersonAvatar, { usePeoplePhotos } from "../ui/PersonAvatar";
 
 type ContactRow = {
   id: string;
@@ -112,6 +113,8 @@ type ContactAccessSummary = { count: number; recordKeys: string[]; readOnly: boo
 type SharingResource = { key: string; sectionKey: string; label: string };
 
 export default function ContactsNetworkWorkspace({ embedded = false, sharingView = false, basePath = "/contacts", pendingByContact = {} }: { embedded?: boolean; sharingView?: boolean; basePath?: string; pendingByContact?: Record<string, string> }) {
+  // People's own photos once they have accepted and linked their account (27 Nov 2026).
+  const peoplePhotos = usePeoplePhotos();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { viewer } = useViewerAccess();
@@ -789,7 +792,7 @@ export default function ContactsNetworkWorkspace({ embedded = false, sharingView
                       <article key={contact.id} className="lf-contact-row lf-contact-summary-row lf-pa-person-row" data-selected={selectedContactId === contact.id}>
                         <button type="button" className="lf-pa-person-open" onClick={(event) => openContact(contact.id, groupKey, event.currentTarget)} aria-label={`Open ${contact.full_name || "person"}`}>
                           <span className="lf-contact-summary-person">
-                            <span className="lf-contact-avatar lf-v3-person-avatar" aria-hidden="true">{contact.full_name.split(/\s+/).filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "LF"}</span>
+                            <PersonAvatar className="lf-contact-avatar lf-v3-person-avatar" name={contact.full_name || "LF"} photoUrl={peoplePhotos[contact.id]} />
                             <span style={{ display: "grid", gap: 3, minWidth: 0, textAlign: "left" }}>
                               <strong style={contactSummaryNameStyle}>{contact.full_name || "Unnamed person"}</strong>
                               <span style={contactSummaryRelationshipStyle}>{formatContactRoleLine(contact)}</span>

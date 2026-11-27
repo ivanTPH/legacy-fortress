@@ -175,6 +175,7 @@ import {
 } from "../../lib/vault/cards";
 import BrandMark from "../ui/BrandMark";
 import LogoPicker from "../ui/LogoPicker";
+import AddPhotoPrompt from "../profile/AddPhotoPrompt";
 
 type RecordStatus = "active" | "archived";
 type WorkspaceVariant = "default" | "possessions" | "trusted_contacts";
@@ -4551,6 +4552,8 @@ export default function UniversalRecordWorkspace({
             {!hasDiscoveryFilters && canCreateRecords ? <button type="button" className="lf-v52-record-empty-add" onClick={startCreate}>{isWillsWorkspace ? "Add a Will" : "Add first record"}</button> : null}
           </div>
         ) : null}
+        {/* After adding a social media or online account, offer to add a photo if they have none (27 Nov 2026). */}
+        <AddPhotoPrompt show={viewer.mode !== "linked" && (isSocialMedia || isCanonicalDigital) && !loading && activeRecords.length > 0} />
         {!loading && activeRecords.length > 0 ? <div className="lf-v52-record-list"><div className="lf-v52-record-list-head" aria-hidden="true"><span></span><span>Name and type</span><span>Updated</span><span>{isFinanceSection && categoryKey === "debts" ? "Amount owed" : "Value"}</span><span></span></div>{activeRecords.map((row) => renderRow(row))}</div> : null}
         </section>
       ) : null}
