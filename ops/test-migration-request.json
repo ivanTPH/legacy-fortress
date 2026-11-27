@@ -1,8 +1,8 @@
 {
-  "approvedBy": "Ivan (owner), 23 Nov 2026 21:37: Approved (partner_enquiries for the Become a partner form)",
+  "approvedBy": "Ivan (owner), 27 Nov 2026 11:42: i approve, go ahead (loans_and_cards, sha256 7dea0a907458ed7828ceaa70aa20f395c7567a7c1f19c846a674241629106eef, presented 11:37)",
   "mode": "apply",
-  "attempt": 30,
+  "attempt": 31,
   "files": [
-    { "file": "20261123180000_partner_enquiries.sql", "sha256": "0a368dd16806b13bfde8ff878fc052a964ed3481cc877c2f10bef98cb620d847" }
+    { "file": "20261127120000_loans_and_cards.sql", "sha256": "7dea0a907458ed7828ceaa70aa20f395c7567a7c1f19c846a674241629106eef" }
   ]
 }
