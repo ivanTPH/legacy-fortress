@@ -7,8 +7,8 @@ export default function DebtsPage() {
     <UniversalRecordWorkspace
       sectionKey="finances"
       categoryKey="debts"
-      title="Finances · Debts"
-      subtitle="Track loans, balances, repayment instructions, and supporting files."
+      title="Finances · Loans & mortgages"
+      subtitle="Mortgages, loans, car finance and anything else you owe, with who it is owed to and what is left to pay."
     />
   );
 }

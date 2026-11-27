@@ -25,12 +25,13 @@ test("legacy singular finance categories normalize into plural dashboard categor
   assert.match(financeRowsSource, /if \(normalized === "debt" \|\| normalized === "loans-liabilities"\) return "debts"/);
 });
 
-test("all finances category display order is banks, pensions, investments, insurance, debts", () => {
+test("all finances category display order is banks, pensions, investments, insurance, loans & mortgages", () => {
   const banksIndex = financesSource.indexOf('title: "Banks"');
   const pensionsIndex = financesSource.indexOf('title: "Pensions"');
   const investmentsIndex = financesSource.indexOf('title: "Investments"');
   const insuranceIndex = financesSource.indexOf('title: "Insurance"');
-  const debtsIndex = financesSource.indexOf('title: "Debts"');
+  // Debts was renamed "Loans & mortgages" (27 Nov 2026).
+  const debtsIndex = financesSource.indexOf('title: "Loans & mortgages"');
 
   assert.ok(banksIndex > -1, "Banks card should exist");
   assert.ok(pensionsIndex > banksIndex, "Pensions should follow Banks");

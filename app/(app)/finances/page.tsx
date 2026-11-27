@@ -53,7 +53,7 @@ const FINANCE_SECTION_CARDS: FinanceSectionCard[] = [
   { key: "pensions", preferenceKey: "finances_pensions", title: "Pensions", href: "/finances/pensions", description: "Track pension providers, values, and notes.", icon: "savings" },
   { key: "investments", preferenceKey: "finances_investments", title: "Investments", href: "/finances/investments", description: "Record portfolios, funds, and investment platforms.", icon: "trending_up" },
   { key: "insurance", preferenceKey: "finances_insurance", title: "Insurance", href: "/finances/insurance", description: "Capture life and protection policy references.", icon: "health_and_safety" },
-  { key: "debts", preferenceKey: "finances_debts", title: "Debts", href: "/finances/debts", description: "Track liabilities and repayment obligations.", icon: "credit_card" },
+  { key: "debts", preferenceKey: "finances_debts", title: "Loans & mortgages", href: "/finances/debts", description: "Mortgages, loans, car finance and what's owed.", icon: "real_estate_agent" },
   { key: "cards", preferenceKey: "finances_cards", title: "Cards", href: "/finances/cards", description: "Credit, debit, loyalty and gift cards.", icon: "wallet" },
   { key: "direct-debits", preferenceKey: "finances_direct_debits", title: "Direct debits", href: "/finances/direct-debits", description: "Regular payments and what should happen to them.", icon: "event_repeat" },
 ];

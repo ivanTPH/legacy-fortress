@@ -12,7 +12,7 @@ export const FINANCE_RECORD_CHOICES: AddRecordChoice[] = [
   { key: "pensions", label: "Pension", description: "State, workplace and private pensions.", href: "/finances/pensions?add=1", icon: "savings", ariaLabel: "Add pension" },
   { key: "investments", label: "Investment", description: "Portfolios, funds and investment platforms.", href: "/finances/investments?add=1", icon: "trending_up", ariaLabel: "Add investment" },
   { key: "insurance", label: "Insurance", description: "Life and protection policies.", href: "/finances/insurance?add=1", icon: "health_and_safety", ariaLabel: "Add insurance policy" },
-  { key: "debts", label: "Debt", description: "Liabilities and repayment obligations.", href: "/finances/debts?add=1", icon: "credit_card", ariaLabel: "Add debt" },
+  { key: "debts", label: "Loan or mortgage", description: "Mortgages, loans, car finance and more.", href: "/finances/debts?add=1", icon: "real_estate_agent", ariaLabel: "Add loan or mortgage" },
   { key: "cards", label: "Card", description: "Credit, debit, loyalty, discount or gift card.", href: "/finances/cards?add=1", icon: "wallet", ariaLabel: "Add card" },
   { key: "direct-debits", label: "Direct debit", description: "A regular payment from one of your accounts.", href: "/finances/direct-debits?add=1", icon: "event_repeat", ariaLabel: "Add direct debit" },
 ];

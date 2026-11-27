@@ -155,7 +155,7 @@ export const VAULT_SUBSECTION_DEFINITIONS: VaultSubsectionDefinition[] = [
   { key: "finances_pensions", groupKey: "finances", label: "Pensions", description: "Show pension providers and values." },
   { key: "finances_investments", groupKey: "finances", label: "Investments", description: "Show investment accounts and holdings." },
   { key: "finances_insurance", groupKey: "finances", label: "Insurance", description: "Show insurance policies and protection records." },
-  { key: "finances_debts", groupKey: "finances", label: "Debts", description: "Show liabilities and repayment records." },
+  { key: "finances_debts", groupKey: "finances", label: "Loans & mortgages", description: "Show mortgages, loans and what's owed." },
   { key: "finances_cards", groupKey: "finances", label: "Cards", description: "Show credit, debit, loyalty and gift cards." },
   { key: "finances_direct_debits", groupKey: "finances", label: "Direct debits", description: "Show regular payments and what should happen to them." },
   { key: "personal_possessions", groupKey: "personal", label: "Possessions", description: "Show possessions and keepsakes." },

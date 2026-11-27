@@ -46,7 +46,7 @@ const FINANCE_CHOICE_COPY: Record<string, { title: string; description: string }
   Pension: { title: "Pensions", description: "Workplace, personal, state" },
   Investment: { title: "Investments", description: "ISAs, shares, funds, bonds" },
   Insurance: { title: "Insurance", description: "Life, home, health, travel" },
-  Debt: { title: "Debts", description: "Loans, credit cards, mortgages" },
+  Debt: { title: "Loans & mortgages", description: "Mortgages, loans, car finance, buy now pay later" },
 };
 
 export default function AddToFortressPanel() {
