@@ -26,3 +26,9 @@ test("loans & mortgages: renamed everywhere, credit cards not offered, mortgages
   assert.match(workspace, /<PropertyLoansList propertyRef=\{linkRef\("asset", selectedRecord\.id\)\}/);
   assert.match(workspace, /UK student loans are normally cancelled when the borrower dies/);
 });
+
+test("property links point at the property records page", () => {
+  const workspace = read("components/records/UniversalRecordWorkspace.tsx");
+  assert.match(workspace, /href="\/vault\/property\?add=1"/);
+  assert.match(workspace, /case "property": return "\/vault\/property";/);
+});
