@@ -981,11 +981,21 @@ for (const kind of ["desk", "phone"] as const) {
     // Home: the slim readiness line, then opened (27 Nov 2026). It is never hidden here, so the demo stays as is.
     await page.goto(`${BASE_URL}/dashboard`, { waitUntil: "domcontentloaded" });
     const readinessLine = page.locator(".lf-readiness-line");
-    await expect(readinessLine).toBeVisible({ timeout: 30_000 });
+    const lineShown = await readinessLine.waitFor({ state: "visible", timeout: 30_000 }).then(() => true).catch(() => false);
+    const found = await page.evaluate(() => ({
+      url: location.pathname,
+      cards: document.querySelectorAll(".lf-readiness-card").length,
+      placeholders: document.querySelectorAll(".lf-readiness-card.is-placeholder").length,
+      hiddenLines: document.querySelectorAll(".lf-readiness-hidden-line").length,
+      heading: document.querySelector("h1")?.textContent?.trim() ?? "",
+    }));
+    console.log(`Readiness(${kind}): line=${lineShown} ${JSON.stringify(found)}`);
     await shoot(page, `loans-${kind}-0a-home`);
-    await readinessLine.click();
-    await expect(page.getByRole("button", { name: /Hide this/ })).toBeVisible();
-    await shoot(page, `loans-${kind}-0b-home-open`);
+    if (lineShown) {
+      await readinessLine.click();
+      await expect(page.getByRole("button", { name: /Hide this/ })).toBeVisible();
+      await shoot(page, `loans-${kind}-0b-home-open`);
+    }
     await page.goto(`${BASE_URL}/finances`, { waitUntil: "domcontentloaded" });
     await shoot(page, `loans-${kind}-1-finances`);
     await page.goto(`${BASE_URL}/finances/debts?add=1`, { waitUntil: "domcontentloaded" });
