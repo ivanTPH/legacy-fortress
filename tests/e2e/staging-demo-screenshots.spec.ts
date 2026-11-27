@@ -864,7 +864,7 @@ test("laptop design measurements", async ({ browser }) => {
 // Direct debits (owner, 26 Nov 2026): the form, the saved payment and the bank account's "Payments from this account".
 // The synthetic demo account gets one Netflix payment the first time; later runs reuse it.
 for (const kind of ["desk", "phone"] as const) {
-  test(`direct debits (${kind})`, async ({ browser }) => {
+  test(`finance links: direct debits (${kind})`, async ({ browser }) => {
     test.setTimeout(240_000);
     const context = kind === "desk"
       ? await browser.newContext({ viewport: { width: 1440, height: 900 } })
@@ -874,10 +874,13 @@ for (const kind of ["desk", "phone"] as const) {
     await page.goto(`${BASE_URL}/finances`, { waitUntil: "domcontentloaded" });
     await shoot(page, `dd-${kind}-1-finances`);
     await page.goto(`${BASE_URL}/finances/direct-debits?add=1`, { waitUntil: "domcontentloaded" });
+    // "Paid from" is a logo picker (27 Nov 2026): open it, show the logos, choose the first account.
     const from = page.getByRole("combobox", { name: /^Paid from/ });
     await expect(from).toBeVisible({ timeout: 30_000 });
-    const fromValues = await from.locator("option").evaluateAll((options) => options.map((option) => (option as HTMLOptionElement).value).filter(Boolean));
-    if (fromValues[0]) await from.selectOption(fromValues[0]);
+    await from.click();
+    await expect(page.getByRole("option").first()).toBeVisible();
+    await shoot(page, `dd-${kind}-1b-picker`);
+    await page.getByRole("option").first().click();
     await page.getByRole("textbox", { name: /^Paid to/ }).fill("Netflix");
     await page.getByRole("combobox", { name: /^Payment type/ }).selectOption("direct_debit");
     await page.getByRole("spinbutton", { name: /^Amount$/ }).fill("12.99");
@@ -912,7 +915,7 @@ for (const kind of ["desk", "phone"] as const) {
 
 // Cards (owner, 27 Nov 2026): a debit card on the demo HSBC account and a Nectar card, then the bank account page.
 for (const kind of ["desk", "phone"] as const) {
-  test(`cards (${kind})`, async ({ browser }) => {
+  test(`finance links: cards (${kind})`, async ({ browser }) => {
     test.setTimeout(240_000);
     const context = kind === "desk"
       ? await browser.newContext({ viewport: { width: 1440, height: 900 } })
@@ -936,8 +939,10 @@ for (const kind of ["desk", "phone"] as const) {
     };
     await addCard("debit_card", "HSBC", async () => {
       const bank = page.getByRole("combobox", { name: /^Bank account/ });
-      const values = await bank.locator("option").evaluateAll((options) => options.map((option) => (option as HTMLOptionElement).value).filter(Boolean));
-      if (values[0]) await bank.selectOption(values[0]);
+      await bank.click();
+      await expect(page.getByRole("option").first()).toBeVisible();
+      await shoot(page, `cards-${kind}-0-bank-picker`);
+      await page.getByRole("option").first().click();
       await page.locator("details.lf-v4-optional-group > summary").first().click();
       await page.getByRole("textbox", { name: /^Last four digits/ }).fill("4821");
       await page.getByRole("textbox", { name: /^Expiry/ }).fill("09/28");
