@@ -1008,7 +1008,7 @@ for (const kind of ["desk", "phone"] as const) {
     const cards = await admin.from("records").select("id").eq("owner_user_id", userId).eq("category_key", "debts").eq("metadata->>debt_type", "credit_card");
     console.log(`Loans: mortgage_linked=${Boolean(property)} credit_cards_left_in_debts=${cards.data?.length ?? 0}`);
     if (property) {
-      await page.goto(`${BASE_URL}/property?asset=${property}`, { waitUntil: "domcontentloaded" });
+      await page.goto(`${BASE_URL}/vault/property?asset=${property}`, { waitUntil: "domcontentloaded" });
       const heading = page.getByRole("heading", { name: "Mortgages and loans on this property" });
       await expect(heading).toBeVisible({ timeout: 30_000 });
       await heading.scrollIntoViewIfNeeded();

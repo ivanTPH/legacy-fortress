@@ -5563,7 +5563,7 @@ function FinanceFields({
       {isSecuredDebt(form.debt_type) ? (paymentLinkOptions.properties?.length ? (
         <FieldLogoPicker label="Secured on" value={form.debt_property_id} options={toPickerOptions(paymentLinkOptions.properties).map((option) => ({ ...option, detail: "Property" }))} placeholder="Which property is this mortgage on?" onChange={(value) => setForm((prev) => ({ ...prev, debt_property_id: value }))} />
       ) : (
-        <p className="lf-v52-payment-hint">Add the property in Property to link this mortgage to it. <Link href="/property?add=1" target="_blank">Add a property</Link></p>
+        <p className="lf-v52-payment-hint">Add the property in Property to link this mortgage to it. <Link href="/vault/property?add=1" target="_blank">Add a property</Link></p>
       )) : null}
       {debtTypeHint(form.debt_type) ? <p className="lf-v52-payment-hint lf-v4-form-span">{debtTypeHint(form.debt_type)}</p> : null}
     </>} optional={[
@@ -7832,8 +7832,8 @@ function paymentRecordHref(category: string | undefined) {
     case "subscriptions": return "/personal/subscriptions";
     case "social-media": return "/personal/social-media";
     case "digital": return "/vault/digital";
-    case "property": return "/property";
-    case "business": return "/business";
+    case "property": return "/vault/property";
+    case "business": return "/vault/business";
     default: return "/dashboard";
   }
 }
