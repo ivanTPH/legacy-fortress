@@ -109,6 +109,7 @@ export function linkedPeopleConfig(section: string, category: string) {
   if (section === "legal" && category === "power-of-attorney") return { heading: "Your attorney", action: "Add attorney", roles: ["Attorney", "Replacement attorney", "Solicitor", "Other"], defaultRole: "Attorney", formHeading: "Your attorney", formAction: "Save and choose attorney" };
   if (section === "property") return { heading: "People linked to this property", action: "Add person", roles: ["Joint owner", "Solicitor", "Managing agent", "Other"] };
   if (section === "finances") {
+    if (category === "cards") return { heading: "People linked to this card", action: "Add person", roles: ["Additional cardholder", "Joint account holder", "Executor", "Other"] };
     if (category === "direct-debits") return { heading: "People linked to this payment", action: "Add person", roles: ["Joint account holder", "Executor", "Other"] };
     const roles = category === "bank" ? ["Joint account holder", "Adviser", "Bank contact", "Other"]
       : category === "insurance" ? ["Beneficiary", "Broker", "Adviser", "Other"]
