@@ -41,7 +41,8 @@ import { getPlanLimitRedirectHref } from "../../../lib/accountPlan";
 import { assetMatchesLegalCategory } from "../../../lib/legalCategories";
 import { buildNextSteps, type VaultFacts } from "../../../lib/readiness/nextSteps";
 import { computeReadiness, READINESS_ITEMS, readinessPreferenceKey, type ReadinessKey } from "../../../lib/readiness/score";
-import ReadinessCard from "../components/dashboard/ReadinessCard";
+import ReadinessCard, { ReadinessHiddenLine, ReadinessPlaceholder } from "../components/dashboard/ReadinessCard";
+import { hideReadinessCard, readinessCardMode, showReadinessCard } from "../../../lib/readiness/cardVisibility";
 import { showPremiumSheet } from "../../../lib/billing/client";
 import { sendContactInvite } from "../../../lib/contacts/sendContactInvite";
 import { loadProfileWorkspace, saveProfileWorkspace } from "../../../lib/profile/workspace";
@@ -896,15 +897,18 @@ const legalSummary = useMemo(() => {
   // Next steps come from the one shared rule (lib/readiness/nextSteps.ts) that the notifications bell and
   // the summary email use too, built from the server's view of the Vault (4 Nov 2026).
   const [vaultFacts, setVaultFacts] = useState<VaultFacts | null>(null);
+  // True once the first attempt to load the facts has finished, so a failed load never leaves a placeholder behind.
+  const [vaultFactsSettled, setVaultFactsSettled] = useState(false);
   useEffect(() => {
     let active = true;
     if (viewer.mode !== "owner" || !viewer.sessionUserId) return;
     void (async () => {
       const token = (await supabase.auth.getSession()).data.session?.access_token;
-      if (!token) return;
+      if (!token) { if (active) setVaultFactsSettled(true); return; }
       const response = await fetch("/api/next-steps", { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" }).catch(() => null);
       const json = (await response?.json().catch(() => null)) as { facts?: VaultFacts } | null;
       if (active && json?.facts) setVaultFacts(json.facts);
+      if (active) setVaultFactsSettled(true);
     })();
     return () => { active = false; };
   }, [viewer.mode, viewer.sessionUserId, assetRows.length, contactRows.length, documentRows.length, recordSearchRows.length]);
@@ -932,6 +936,19 @@ const legalSummary = useMemo(() => {
       setReadinessBusyKey(null);
     }
   }, [preferences, setPreferences, viewer.mode]);
+  // Slim readiness card (owner, 27 Nov 2026): hidden by choice until a new next step appears; gone at 100%.
+  const readinessMode = readiness ? readinessCardMode(readiness.percent, readiness.nextSteps.map((item) => item.key), preferences) : null;
+  const setReadinessHidden = useCallback(async (hidden: boolean) => {
+    if (viewer.mode !== "owner" || !readiness) return;
+    const next = hidden ? hideReadinessCard(preferences, readiness.nextSteps.map((item) => item.key)) : showReadinessCard(preferences);
+    setPreferences(next);
+    try {
+      const user = await waitForActiveUser(supabase, { attempts: 4, delayMs: 120 });
+      if (user) setPreferences(await saveVaultPreferences(supabase, user.id, next));
+    } catch (error) {
+      setStatus(`⚠️ Could not save that choice: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
+  }, [preferences, readiness, setPreferences, viewer.mode]);
   // Early-access requests from nominees are Needs you items (va-v7). Asking never shares anything.
   const [earlyAccessRequests, setEarlyAccessRequests] = useState<Array<{ id: string; name: string }>>([]);
   useEffect(() => {
@@ -1747,7 +1764,12 @@ const legalSummary = useMemo(() => {
         peopleCount={viewer.mode === "linked" ? undefined : contactRows.length} recordedValue={recordedValue}
         actionCount={viewer.mode === "linked" ? undefined : getActionCentreToDoCount(dashboardState.actions.items, actionContext, guidanceItems)}
         canAddRecords={viewer.mode !== "linked"}
-        readiness={readiness && !loading ? <ReadinessCard readiness={readiness} busyKey={readinessBusyKey} onNotApplicable={(key, notApplicable) => void setReadinessApplies(key, notApplicable)} /> : null} />
+        readiness={viewer.mode !== "owner" ? null
+          : loading || (!readiness && !vaultFactsSettled) ? <ReadinessPlaceholder />
+          : !readiness ? null
+          : readinessMode === "shown" ? <ReadinessCard readiness={readiness} busyKey={readinessBusyKey} onNotApplicable={(key, notApplicable) => void setReadinessApplies(key, notApplicable)} onHide={() => void setReadinessHidden(true)} />
+          : null}
+        readinessFooter={readiness && !loading && readinessMode === "hidden" ? <ReadinessHiddenLine percent={readiness.percent} onShow={() => void setReadinessHidden(false)} /> : null} />
       {status ? (
         isPlanLimitStatus(status) ? (
           <button

@@ -9,7 +9,7 @@ import Icon from "./Icon";
  * provider's logo more easily than its name. A standard <select> cannot show pictures, so this is a listbox that
  * works the same way from the keyboard (arrows, Home, End, Enter, Escape, typing a letter) and with screen readers.
  */
-export type LogoPickerOption = { value: string; label: string; logo?: string | null; detail?: string | null };
+export type LogoPickerOption = { value: string; label: string; logo?: string | null; detail?: string | null; icon?: string };
 
 export default function LogoPicker({
   id,
@@ -118,7 +118,7 @@ export default function LogoPicker({
         onClick={() => (open ? setOpen(false) : openAt(selectedIndex))}
         onKeyDown={onKeyDown}
       >
-        {selected ? <BrandMark name={selected.label} logoPath={selected.logo ?? undefined} /> : null}
+        {selected ? <BrandMark name={selected.label} logoPath={selected.logo ?? undefined} categoryIcon={selected.icon} /> : null}
         <span className={selected ? "lf-logo-picker-value" : "lf-logo-picker-placeholder"}>
           {selected ? selected.label : placeholder}
           {selected?.detail ? <small>{selected.detail}</small> : null}
@@ -139,7 +139,7 @@ export default function LogoPicker({
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => choose(index)}
             >
-              <BrandMark name={option.label} logoPath={option.logo ?? undefined} />
+              <BrandMark name={option.label} logoPath={option.logo ?? undefined} categoryIcon={option.icon} />
               <span>
                 {option.label}
                 {option.detail ? <small>{option.detail}</small> : null}
