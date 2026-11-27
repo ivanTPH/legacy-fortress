@@ -1044,6 +1044,6 @@ a.lf-topbar-shield:focus-visible { outline: 3px solid var(--lf-focus); outline-o
 /* Money owed (owner, 27 Nov 2026): "−£12,000 owed" in a muted brick, never bright red; the minus sign and the word
    "owed" carry the meaning, the colour is only a hint. */
 :root { --lf-owed: #A0412D; --lf-owed-on-dark: #F2B8A6; }
-.lf-amount-owed { color: var(--lf-owed); font-variant-numeric: tabular-nums; }
+.lf-amount-owed, .lf-v52-section-count strong.lf-amount-owed, .lf-v52-section-meta .lf-amount-owed { color: var(--lf-owed); font-variant-numeric: tabular-nums; }
 .lf-amount-owed.is-on-dark { color: var(--lf-owed-on-dark); }
 .lf-v3-value-breakdown { display: block; margin-top: 6px; font-size: 14px; opacity: 0.92; }
