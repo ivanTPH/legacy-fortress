@@ -1056,7 +1056,7 @@ export default function UniversalRecordWorkspace({
     !isTrustedContacts &&
     !isWillsWorkspace &&
     !isTrustsWorkspace;
-  const financeTypeName = ({ bank: "bank account", pensions: "pension", investments: "investment", insurance: "insurance policy", debts: "debt" } as Record<string, string>)[categoryKey];
+  const financeTypeName = ({ bank: "bank account", pensions: "pension", investments: "investment", insurance: "insurance policy", debts: "loan or mortgage", cards: "card", "direct-debits": "direct debit" } as Record<string, string>)[categoryKey];
   const addLabel = isPossessions
     ? "Add possession"
     : isWillsWorkspace
@@ -4098,6 +4098,11 @@ export default function UniversalRecordWorkspace({
                 <div>Address: {canonicalPropertyAsset?.property_address || "Not set"}</div>
                 <div>Country: {canonicalPropertyAsset?.property_country || "Not set"}</div>
                 <div>Valuation date: {canonicalPropertyAsset?.valuation_date || "Not set"}</div>
+                {/* A linked mortgage (Loans & mortgages) replaces the property's own mortgage fields, so there is one
+                    figure, not two (owner, 27 Nov 2026). */}
+                {propertyLoans.some((loan) => (loan.metadata as Record<string, unknown> | null)?.debt_property_id === linkRef("asset", row.id)) ? (
+                  <div>Mortgage: see Mortgages and loans on this property</div>
+                ) : <>
                 <div>Mortgage status: {canonicalPropertyAsset?.mortgage_status || "Not set"}</div>
                 <div>Mortgage lender: {canonicalPropertyAsset?.mortgage_lender || "Not set"}</div>
                 <div>
@@ -4109,6 +4114,7 @@ export default function UniversalRecordWorkspace({
                       )
                     : "Not set"}
                 </div>
+                </>}
                 <div>Notes: {canonicalPropertyAsset?.notes || "No additional notes."}</div>
               </div>
             ) : isFinanceSection ? (
@@ -7727,7 +7733,7 @@ const dangerBtn: CSSProperties = {
  * links to the provider's own record where there is one, and offers to add it where there isn't. Everything is read
  * as the signed-in person under row-level security, so a linked viewer only ever sees what they were given.
  * ------------------------------------------------------------------------------------------------------------- */
-type PaymentLinkOption = { value: string; label: string; category?: string; logo?: string | null };
+type PaymentLinkOption = { value: string; label: string; category?: string; logo?: string | null; icon?: string };
 type PaymentLinkOptions = { from: PaymentLinkOption[]; to: PaymentLinkOption[]; properties?: PaymentLinkOption[] };
 
 const PAYMENT_TO_EXCLUDED = new Set([DIRECT_DEBIT_CATEGORY, CARDS_CATEGORY, "executors", "beneficiaries", "tasks", "next-of-kin", "contacts", "trusted-contacts", "wishes", "help_requests", "help_replies", "identity-documents"]);
@@ -7770,7 +7776,7 @@ async function loadPaymentLinkOptions(ownerUserId: string): Promise<{ options: P
     const payments = records.filter((row) => row.category_key === DIRECT_DEBIT_CATEGORY);
     const cards = records.filter((row) => row.category_key === CARDS_CATEGORY);
     const properties: PaymentLinkOption[] = assets.filter((row) => row.section_key === "property")
-      .map((row) => ({ value: linkRef("asset", String(row.id)), label: label(row), category: "property", logo: null }))
+      .map((row) => ({ value: linkRef("asset", String(row.id)), label: label(row), category: "property", logo: null, icon: "home" }))
       .sort((a, b) => a.label.localeCompare(b.label));
     const loans = records.filter((row) => ["debts", "debt", "loans-liabilities"].includes(String(row.category_key ?? "")) && (row.metadata as Record<string, unknown> | null)?.debt_property_id);
     return { options: { from, to, properties }, payments, cards, loans };
@@ -8027,7 +8033,7 @@ function FieldLogoPicker({ label, value, options, placeholder, onChange, require
   );
 }
 
-type LogoPickerOptionInput = { value: string; label: string; logo?: string | null; detail?: string | null };
+type LogoPickerOptionInput = { value: string; label: string; logo?: string | null; detail?: string | null; icon?: string };
 
 /** "Netflix · Subscription" becomes the name with the kind underneath; "Amex (credit card)" likewise. */
 function toPickerOptions(options: PaymentLinkOption[]): LogoPickerOptionInput[] {
@@ -8039,6 +8045,8 @@ function toPickerOptions(options: PaymentLinkOption[]): LogoPickerOptionInput[] 
       label: bracket ? bracket[1] : name,
       detail: kind ?? (bracket ? bracket[2].replace(/^./, (letter) => letter.toUpperCase()) : option.category === "bank" ? "Bank account" : null),
       logo: option.logo ?? null,
+      // No logo: a plain icon for the kind of thing (a house, a bank), never initials like "1O".
+      icon: option.icon ?? (option.category === "property" ? "home" : option.category === "bank" ? "account_balance" : option.category === "cards" ? "credit_card" : "folder"),
     };
   });
 }

@@ -978,6 +978,14 @@ for (const kind of ["desk", "phone"] as const) {
       : await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
     const page = await context.newPage();
     await signIn(page);
+    // Home: the slim readiness line, then opened (27 Nov 2026). It is never hidden here, so the demo stays as is.
+    await page.goto(`${BASE_URL}/dashboard`, { waitUntil: "domcontentloaded" });
+    const readinessLine = page.locator(".lf-readiness-line");
+    await expect(readinessLine).toBeVisible({ timeout: 30_000 });
+    await shoot(page, `loans-${kind}-0a-home`);
+    await readinessLine.click();
+    await expect(page.getByRole("button", { name: /Hide this/ })).toBeVisible();
+    await shoot(page, `loans-${kind}-0b-home-open`);
     await page.goto(`${BASE_URL}/finances`, { waitUntil: "domcontentloaded" });
     await shoot(page, `loans-${kind}-1-finances`);
     await page.goto(`${BASE_URL}/finances/debts?add=1`, { waitUntil: "domcontentloaded" });

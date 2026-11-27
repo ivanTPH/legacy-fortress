@@ -26,9 +26,11 @@ type Props = {
   canAddRecords?: boolean;
   /** Readiness score card (owner only), shown above the areas so it's seen first (owner, 18 Nov 2026). */
   readiness?: ReactNode;
+  /** Shown at the bottom of Home when the owner has hidden the readiness card (27 Nov 2026). */
+  readinessFooter?: ReactNode;
 };
 
-export default function V3DashboardOverview({ loading, areas, recordCount, peopleCount, recordedValue, lifeCover, actionCount, canAddRecords = true, readiness }: Props) {
+export default function V3DashboardOverview({ loading, areas, recordCount, peopleCount, recordedValue, lifeCover, actionCount, canAddRecords = true, readiness, readinessFooter }: Props) {
   const count = (value: number) => loading ? "…" : value;
 
   return <div className="lf-v3-screen-overview is-dashboard">
@@ -55,5 +57,6 @@ export default function V3DashboardOverview({ loading, areas, recordCount, peopl
         description: "Loading records…", addHref: canAddRecords ? `/add?area=${area.title.toLowerCase()}` : undefined,
       }))} />
     </section>
+    {readinessFooter}
   </div>;
 }

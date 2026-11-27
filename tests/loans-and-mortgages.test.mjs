@@ -32,3 +32,12 @@ test("property links point at the property records page", () => {
   assert.match(workspace, /href="\/vault\/property\?add=1"/);
   assert.match(workspace, /case "property": return "\/vault\/property";/);
 });
+
+test("loans wording: 'Add loan or mortgage', people linked to this loan, house icon not initials, one mortgage figure", () => {
+  const workspace = read("components/records/UniversalRecordWorkspace.tsx");
+  assert.match(workspace, /debts: "loan or mortgage", cards: "card", "direct-debits": "direct debit"/);
+  assert.match(workspace, /Mortgage: see Mortgages and loans on this property/);
+  assert.match(workspace, /option\.category === "property" \? "home"/);
+  assert.match(read("components/ui/LogoPicker.tsx"), /categoryIcon=\{option\.icon\}/);
+  assert.match(read("lib/linkedPeople/recordLinkedPeople.ts"), /heading: "People linked to this loan"/);
+});

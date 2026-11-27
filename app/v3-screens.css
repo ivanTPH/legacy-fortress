@@ -1017,3 +1017,26 @@ a.lf-topbar-shield:focus-visible { outline: 3px solid var(--lf-focus); outline-o
 .lf-logo-picker-empty { padding: 12px; color: var(--lf-text-secondary); }
 .lf-logo-picker .lf-v52-brand-mark { width: 40px; height: 40px; flex: none; }
 @media (prefers-reduced-motion: reduce) { .lf-logo-picker-button { transition: none; } }
+
+/* Slim readiness line (owner, 27 Nov 2026): one row by default, opens for next steps; placeholder keeps Home still. */
+.lf-readiness-card.is-slim { gap: 0; padding: 0; }
+.lf-readiness-card.is-slim.is-open { gap: 14px; padding-bottom: 16px; }
+.lf-readiness-line { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 10px 16px; border: 0; border-radius: 16px; background: transparent; color: var(--lf-text); font: inherit; text-align: left; cursor: pointer; transition: background-color 120ms; }
+.lf-readiness-line:hover { background: #F6EFEA; }
+.lf-readiness-line:active { background: #EBE0D8; }
+.lf-readiness-line:focus-visible { outline: 2px solid #8C4A32; outline-offset: 2px; }
+.lf-readiness-line > :last-child { margin-left: auto; flex: none; color: #8C4A32; }
+.lf-readiness-line-copy { min-width: 0; font-size: 17px; line-height: 1.3; }
+.lf-readiness-line-copy strong { font-weight: 700; }
+.lf-readiness-ring { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: #E6F2EA; }
+.lf-readiness-ring > span { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--lf-surface-card, #fff); color: #1F6B3A; font-size: 12px; font-weight: 800; }
+.lf-readiness-card.is-slim .lf-readiness-drawer { display: grid; gap: 14px; padding: 0 16px; }
+.lf-readiness-drawer-actions { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+.lf-readiness-drawer-actions .lf-readiness-toggle { gap: 6px; }
+.lf-readiness-card.is-placeholder { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 16px; }
+.lf-readiness-placeholder-bar { flex: 0 1 60%; height: 14px; border-radius: 999px; background: var(--lf-surface-sidebar, #F2ECE7); }
+.lf-readiness-hidden-line { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; margin-top: 8px; padding: 10px 16px; border: 1px dashed var(--lf-border-input, #CFC4BC); border-radius: 14px; background: transparent; color: var(--lf-text-secondary); font: inherit; font-size: 15px; text-align: left; cursor: pointer; transition: background-color 120ms; }
+.lf-readiness-hidden-line:hover { background: #F6EFEA; }
+.lf-readiness-hidden-line:focus-visible { outline: 2px solid #8C4A32; outline-offset: 2px; }
+.lf-readiness-hidden-line strong { margin-left: auto; color: #8C4A32; font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .lf-readiness-line, .lf-readiness-hidden-line { transition: none; } }
